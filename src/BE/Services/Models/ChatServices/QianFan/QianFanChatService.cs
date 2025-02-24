@@ -24,7 +24,7 @@ public class QianFanChatService(Model model) : OpenAIChatService(model, CreateCh
 
         oaic.AddPolicy(new AddHeaderPolicy("appid", cfg.AppId), PipelinePosition.PerCall);
         oaic.AddPolicy(new ReplaceSseContentPolicy("\"finish_reason\":\"normal\"", "\"finish_reason\":null"), PipelinePosition.PerCall);
-        OpenAIClient api = new(new ApiKeyCredential(model.ModelKey.Secret!), oaic);
+        OpenAIClient api = new(new ApiKeyCredential(cfg.ApiKey), oaic);
         return api.GetChatClient(model.ApiModelId);
     }
 }

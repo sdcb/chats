@@ -4,7 +4,7 @@ namespace Chats.BE.Services.Models.ChatServices.QianFan;
 
 public record JsonQianFanApiConfig
 {
-    [JsonPropertyName("AppId")]
+    [JsonPropertyName("appId")]
     public required string AppId { get; init; }
 
     [JsonPropertyName("apiKey")]
