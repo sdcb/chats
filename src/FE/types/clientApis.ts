@@ -140,6 +140,7 @@ export interface PostUserChatSpanResult {
   modelProviderId: number;
   temperature: number;
   enableSearch: boolean;
+  reasoningEffort: ReasoningEffortType
 }
 
 interface GetUserChatResult {

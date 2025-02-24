@@ -41,6 +41,7 @@ const ChatHeader = () => {
         modelProviderId: data.modelProviderId,
         temperature: data.temperature,
         enableSearch: data.enableSearch,
+        reasoningEffort: data?.reasoningEffort,
         prompt: defaultPrompt?.content!,
       });
       chatDispatch(setSelectedChat(selectedChat));
