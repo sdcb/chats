@@ -16,7 +16,7 @@ public static class ChatCompletionOptionsExtensions
         return false;
     }
 
-    public static void SetAllowSearch(this ChatCompletionOptions options, bool value)
+    public static void SetWebSearchEnabled_QwenStyle(this ChatCompletionOptions options, bool value)
     {
         IDictionary<string, BinaryData>? rawData = GetSerializedAdditionalRawData(options);
         if (rawData == null)
@@ -28,20 +28,21 @@ public static class ChatCompletionOptionsExtensions
         rawData["enable_search"] = BinaryData.FromObjectAsJson(value);
     }
 
-    public static void RemoveAllowSearch(this ChatCompletionOptions options)
+    public static void SetWebSearchEnabled_QianFanStyle(this ChatCompletionOptions options, bool value)
     {
         IDictionary<string, BinaryData>? rawData = GetSerializedAdditionalRawData(options);
-        rawData?.Remove("enable_search");
-    }
+        if (rawData == null)
+        {
+            rawData = new Dictionary<string, BinaryData>();
+            SetSerializedAdditionalRawData(options, rawData);
+        }
 
-    public static void SetModelName(this ChatCompletionOptions @this, string name)
-    {
-        Type internalCreateChatCompletionRequestModelType = typeof(ChatCompletionOptions).Assembly.GetType("OpenAI.Chat.InternalCreateChatCompletionRequestModel")
-            ?? throw new InvalidOperationException("InternalCreateChatCompletionRequestModel type not found");
-        object modelValue = Activator.CreateInstance(internalCreateChatCompletionRequestModelType, [name])
-            ?? throw new InvalidOperationException("Failed to create instance of InternalCreateChatCompletionRequestModel");
-        (typeof(ChatCompletionOptions).GetProperty("Model", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new InvalidOperationException("Model property not found"))
-            .SetValue(@this, modelValue);
+        rawData["web_search"] = BinaryData.FromObjectAsJson(new Dictionary<string, object>()
+        {
+            ["enable"] = true,
+            ["enable_citation"] = false,
+            ["enable_trace"] = false,
+        });
     }
 
     public static ulong? GetDashScopeSeed(this ChatCompletionOptions options)

@@ -100,10 +100,6 @@ public abstract partial class ChatService
             .ToAsyncEnumerable()
             .SelectAwait(async m => await FilterVision(Model.ModelReference.AllowVision, m, cancellationToken))
             .ToArrayAsync(cancellationToken);
-        if (!Model.ModelReference.AllowSearch)
-        {
-            options.RemoveAllowSearch();
-        }
         options.Temperature = Model.ModelReference.UnnormalizeTemperature(options.Temperature);
 
         return filteredMessage;

@@ -6,32 +6,6 @@ using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 
-//public record ChatRequest
-//{
-//    [JsonPropertyName("chatId")]
-//    public required string EncryptedChatId { get; init; }
-
-//    [JsonPropertyName("spans")]
-//    public required InternalChatSpanRequest[] Spans { get; init; }
-
-//    [JsonPropertyName("messageId")]
-//    public string? EncryptedMessageId { get; init; }
-
-//    [JsonPropertyName("userMessage")]
-//    public MessageContentRequest? UserMessage { get; init; }
-
-//    public DecryptedChatRequest Decrypt(IUrlEncryptionService idEncryption)
-//    {
-//        return new DecryptedChatRequest
-//        {
-//            ChatId = idEncryption.DecryptChatId(EncryptedChatId),
-//            Spans = Spans,
-//            MessageId = EncryptedMessageId == null ? null : idEncryption.DecryptMessageId(EncryptedMessageId),
-//            UserMessage = UserMessage,
-//        };
-//    }
-//}
-
 public record ChatSpanRequest : CreateChatSpanRequest
 {
     [JsonPropertyName("id")]
@@ -49,7 +23,6 @@ public record ChatSpanRequest : CreateChatSpanRequest
             Temperature = span.Temperature,
             EndUserId = userId.ToString(),
         };
-        cco.SetAllowSearch(span.EnableSearch);
         return cco;
     }
 }

@@ -28,6 +28,15 @@ public class DashScopeChatService : ChatService
         ChatClient = Client.TextGeneration;
     }
 
+    protected override Task<OpenAIChatMessage[]> FEPreprocess(IReadOnlyList<OpenAIChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, CancellationToken cancellationToken)
+    {
+        if (feOptions.WebSearchEnabled && Model.ModelReference.AllowSearch)
+        {
+            options.SetWebSearchEnabled_QwenStyle(true);
+        }
+        return base.FEPreprocess(messages, options, feOptions, cancellationToken);
+    }
+
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<OpenAIChatMessage> messages, ChatCompletionOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ChatParameters chatParameters = new()

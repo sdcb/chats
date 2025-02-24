@@ -6,9 +6,6 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI.PipelinePolicies;
 
 public class ReplaceSseContentPolicy(string SearchText, string ReplaceText) : PipelinePolicy
 {
-    //private const string SearchText = "\"finish_reason\":\"normal\"";
-    //private const string ReplaceText = "\"finish_reason\":\"stop\"";
-
     public override void Process(PipelineMessage message, IReadOnlyList<PipelinePolicy> pipeline, int currentIndex)
     {
         // 同步封装异步

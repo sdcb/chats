@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.BE.Services.Models.ChatServices.QianFan;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 
 public record JsonQianFanApiConfig
 {
