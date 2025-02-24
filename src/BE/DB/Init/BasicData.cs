@@ -120,27 +120,27 @@ internal static class BasicData
 
     private static void InsertModelProviders(ChatsDB db)
     {
-        // Generated from data, hash: cdb6412f42af7156061da2f79abbf833a92d2b899b1bd27b2c3b0adf85a388e8
+        // Generated from data, hash: 83ac19540fa3beff2525438ba04e37383f7607ce3b16e017c7a1a28c4a117864
         db.ModelProviders.AddRange(
         [
-            new(){ Id=0,  Name="Test",             InitialHost=null,                                        InitialSecret=null,                                  RequireDeploymentName=false, },
-            new(){ Id=1,  Name="Azure OpenAI",     InitialHost="https://<resource-name>.openai.azure.com/", InitialSecret="",                                    RequireDeploymentName=true,  },
-            new(){ Id=2,  Name="Tencent Hunyuan",  InitialHost="hunyuan.tencentcloudapi.com",               InitialSecret="""{"secretId":"", "secretKey":""}""", RequireDeploymentName=false, },
-            new(){ Id=3,  Name="01.ai",            InitialHost=null,                                        InitialSecret="",                                    RequireDeploymentName=false, },
-            new(){ Id=4,  Name="Moonshot",         InitialHost=null,                                        InitialSecret="",                                    RequireDeploymentName=false, },
-            new(){ Id=5,  Name="OpenAI",           InitialHost="https://api.openai.com/v1",                 InitialSecret="",                                    RequireDeploymentName=false, },
-            new(){ Id=6,  Name="Wenxin Qianfan",   InitialHost=null,                                        InitialSecret="""{"apiKey":"", "secret":""}""",      RequireDeploymentName=false, },
-            new(){ Id=7,  Name="DashScope",        InitialHost=null,                                        InitialSecret="",                                    RequireDeploymentName=false, },
-            new(){ Id=8,  Name="Xunfei SparkDesk", InitialHost=null,                                        InitialSecret="",                                    RequireDeploymentName=false, },
-            new(){ Id=9,  Name="Zhipu AI",         InitialHost=null,                                        InitialSecret="",                                    RequireDeploymentName=false, },
-            new(){ Id=10, Name="DeepSeek",         InitialHost=null,                                        InitialSecret="",                                    RequireDeploymentName=false, },
-            new(){ Id=11, Name="x.ai",             InitialHost=null,                                        InitialSecret="xai-yourkey",                         RequireDeploymentName=false, },
-            new(){ Id=12, Name="Github Models",    InitialHost=null,                                        InitialSecret="ghp_yourkey",                         RequireDeploymentName=false, },
-            new(){ Id=13, Name="Google AI",        InitialHost=null,                                        InitialSecret="",                                    RequireDeploymentName=false, },
-            new(){ Id=14, Name="Ollama",           InitialHost="http://localhost:11434/v1",                 InitialSecret="ollama",                              RequireDeploymentName=true,  },
-            new(){ Id=15, Name="MiniMax",          InitialHost=null,                                        InitialSecret="your-key",                            RequireDeploymentName=false, },
-            new(){ Id=16, Name="Doubao",           InitialHost=null,                                        InitialSecret="your-key",                            RequireDeploymentName=false, },
-            new(){ Id=17, Name="SiliconFlow",      InitialHost=null,                                        InitialSecret="sk-yourkey",                          RequireDeploymentName=false, }
+            new(){ Id=0,  Name="Test",             InitialHost=null,                                                       InitialSecret=null,                                              RequireDeploymentName=false, },
+            new(){ Id=1,  Name="Azure OpenAI",     InitialHost="https://<resource-name>.openai.azure.com/",                InitialSecret="",                                                RequireDeploymentName=true,  },
+            new(){ Id=2,  Name="Tencent Hunyuan",  InitialHost="https://api.hunyuan.cloud.tencent.com/v1",                 InitialSecret="sk-",                                             RequireDeploymentName=false, },
+            new(){ Id=3,  Name="01.ai",            InitialHost="https://api.lingyiwanwu.com/v1",                           InitialSecret="",                                                RequireDeploymentName=false, },
+            new(){ Id=4,  Name="Moonshot",         InitialHost="https://api.moonshot.cn/v1",                               InitialSecret="",                                                RequireDeploymentName=false, },
+            new(){ Id=5,  Name="OpenAI",           InitialHost="https://api.openai.com/v1",                                InitialSecret="",                                                RequireDeploymentName=false, },
+            new(){ Id=6,  Name="Wenxin Qianfan",   InitialHost="https://qianfan.baidubce.com/v2",                          InitialSecret="""{"appId": "app-***", "apiKey":"bce-v3/***"}""", RequireDeploymentName=false, },
+            new(){ Id=7,  Name="DashScope",        InitialHost="https://dashscope.aliyuncs.com/compatible-mode/v1",        InitialSecret="sk-***",                                          RequireDeploymentName=false, },
+            new(){ Id=8,  Name="Xunfei SparkDesk", InitialHost="https://spark-api-open.xf-yun.com/v1",                     InitialSecret="",                                                RequireDeploymentName=false, },
+            new(){ Id=9,  Name="Zhipu AI",         InitialHost="https://open.bigmodel.cn/api/paas/v4/",                    InitialSecret="",                                                RequireDeploymentName=false, },
+            new(){ Id=10, Name="DeepSeek",         InitialHost="https://api.deepseek.com/v1",                              InitialSecret="",                                                RequireDeploymentName=false, },
+            new(){ Id=11, Name="x.ai",             InitialHost="https://api.x.ai/v1",                                      InitialSecret="xai-yourkey",                                     RequireDeploymentName=false, },
+            new(){ Id=12, Name="Github Models",    InitialHost="https://models.inference.ai.azure.com",                    InitialSecret="ghp_yourkey",                                     RequireDeploymentName=false, },
+            new(){ Id=13, Name="Google AI",        InitialHost="https://generativelanguage.googleapis.com/v1beta/openai/", InitialSecret="",                                                RequireDeploymentName=false, },
+            new(){ Id=14, Name="Ollama",           InitialHost="http://localhost:11434/v1",                                InitialSecret="ollama",                                          RequireDeploymentName=true,  },
+            new(){ Id=15, Name="MiniMax",          InitialHost="https://api.minimax.chat/v1",                              InitialSecret="your-key",                                        RequireDeploymentName=false, },
+            new(){ Id=16, Name="Doubao",           InitialHost="https://ark.cn-beijing.volces.com/api/v3/",                InitialSecret="your-key",                                        RequireDeploymentName=false, },
+            new(){ Id=17, Name="SiliconFlow",      InitialHost="https://api.siliconflow.cn/v1",                            InitialSecret="sk-yourkey",                                      RequireDeploymentName=false, }
         ]);
     }
 
