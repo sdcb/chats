@@ -39,20 +39,33 @@ public static class ChatCompletionOptionsExtensions
 
         rawData["web_search"] = BinaryData.FromObjectAsJson(new Dictionary<string, object>()
         {
-            ["enable"] = true,
+            ["enable"] = value,
             ["enable_citation"] = false,
             ["enable_trace"] = false,
         });
     }
 
-    public static ulong? GetDashScopeSeed(this ChatCompletionOptions options)
+    public static void SetWebSearchEnabled_XunfeiStyle(this ChatCompletionOptions options, bool value)
     {
         IDictionary<string, BinaryData>? rawData = GetSerializedAdditionalRawData(options);
-        if (rawData != null && rawData.TryGetValue("seed", out BinaryData? binaryData))
+        if (rawData == null)
         {
-            return binaryData.ToObjectFromJson<ulong>();
+            rawData = new Dictionary<string, BinaryData>();
+            SetSerializedAdditionalRawData(options, rawData);
         }
-        return null;
+
+        rawData["tools"] = BinaryData.FromObjectAsJson(new[]
+        {
+            new
+            {
+                type = "web_search",
+                web_search = new
+                {
+                    enable = value,
+                    show_ref_label = false,
+                }
+            }
+        });
     }
 
     public static void SetMaxTokens(this ChatCompletionOptions options, int value)
