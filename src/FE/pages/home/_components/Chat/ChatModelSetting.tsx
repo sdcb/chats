@@ -6,8 +6,10 @@ import { formatPrompt } from '@/utils/promptVariable';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { DEFAULT_TEMPERATURE } from '@/types/chat';
+import { ReasoningEffortType } from '@/types/model';
 import { Prompt } from '@/types/prompt';
 
+import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 import TemperatureSlider from '@/components/TemperatureSlider/TemperatureSlider';
 
 import { setSelectedChat } from '../../_actions/chat.actions';
@@ -67,6 +69,16 @@ const ChatModelSetting = () => {
     chatDispatch(setSelectedChat({ ...selectedChat, spans }));
   };
 
+  const onChangeReasoningEffort = (
+    spanId: number,
+    value: ReasoningEffortType,
+  ) => {
+    const spans = selectedChat.spans.map((s) =>
+      s.spanId === spanId ? { ...s, reasoningEffort: value } : s,
+    );
+    chatDispatch(setSelectedChat({ ...selectedChat, spans }));
+  };
+
   return (
     <div
       className={cn(
@@ -120,6 +132,14 @@ const ChatModelSetting = () => {
                     enable={span.enableSearch}
                     onChange={(value) => {
                       onChangeEnableSearch(span.spanId, value);
+                    }}
+                  />
+                )}
+                {modelMap[span.modelId]?.allowReasoningEffort && (
+                  <ReasoningEffortRadio
+                    value={span.reasoningEffort || 'medium'}
+                    onValueChange={(value) => {
+                      onChangeReasoningEffort(span.spanId, value);
                     }}
                   />
                 )}

@@ -209,6 +209,7 @@ const Chat = memo(() => {
           setsTemperature: true,
           enableSearch: x.enableSearch,
           temperature: x.temperature,
+          reasoningEffort: x.reasoningEffort,
         })),
         timezoneOffset: new Date().getTimezoneOffset(),
         parentAssistantMessageId: messageId || null,

@@ -1,6 +1,6 @@
 import { ChatStatus, ImageDef } from './chat';
 import { IChatMessage } from './chatMessage';
-import { DBModelProvider } from './model';
+import { DBModelProvider, ReasoningEffortType } from './model';
 import { Paging } from './page';
 import { LoginType } from './user';
 
@@ -82,6 +82,7 @@ export interface ChatSpanDto {
   modelProviderId: DBModelProvider;
   temperature: number | null;
   enableSearch: boolean;
+  reasoningEffort: ReasoningEffortType;
 }
 
 export interface PostChatParams {
