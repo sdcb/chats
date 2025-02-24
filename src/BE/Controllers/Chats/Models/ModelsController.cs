@@ -39,6 +39,7 @@ public class ModelsController : ControllerBase
                 AllowVision = x.ModelReference.AllowVision,
                 AllowStreaming = x.ModelReference.AllowStreaming,
                 AllowSystemPrompt = x.ModelReference.AllowSystemPrompt,
+                AllowReasoningEffort = x.ModelReference.Name == "o1" || x.ModelReference.Name == "o3-mini",
                 AllowTemperature = x.ModelReference.MinTemperature < x.ModelReference.MaxTemperature,
                 ContextWindow = x.ModelReference.ContextWindow,
             })
