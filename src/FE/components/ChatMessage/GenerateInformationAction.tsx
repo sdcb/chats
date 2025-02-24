@@ -91,20 +91,20 @@ export const GenerateInformationAction = (props: Props) => {
                       : '-'
                   }
                 />
-                {!message.inputPrice && (
+                {message.inputPrice > 0 && (
                   <GenerateInformation
-                    name={'prompt_price'}
+                    name={'prompt cost'}
                     value={'￥' + formatNumberAsMoney(+message.inputPrice, 6)}
                   />
                 )}
-                {!message.outputPrice && (
+                {message.outputPrice > 0 && (
                   <GenerateInformation
-                    name={'response_price'}
+                    name={'response cost'}
                     value={'￥' + formatNumberAsMoney(+message.outputPrice, 6)}
                   />
                 )}
                 <GenerateInformation
-                  name={'total_price'}
+                  name={'total cost'}
                   value={
                     '￥' +
                     formatNumberAsMoney(
