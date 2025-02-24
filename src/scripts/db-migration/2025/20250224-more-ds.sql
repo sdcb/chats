@@ -31,3 +31,15 @@ GO
 
 update ModelKey set host = 'https://qianfan.baidubce.com/v2' where ModelProviderId = 6
 GO
+
+-- Region Parameters
+DECLARE @p0 SmallInt = 7
+DECLARE @p1 VarChar(1000) = 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+DECLARE @p2 VarChar(1000) = 'sk-***'
+-- EndRegion
+UPDATE [ModelProvider]
+SET [InitialHost] = @p1, [InitialSecret] = @p2
+WHERE [Id] = @p0
+
+update ModelKey set host = 'https://dashscope.aliyuncs.com/compatible-mode/v1' where ModelProviderId = 7
+GO

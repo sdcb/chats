@@ -11,14 +11,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OpenAI.Chat;
-using Sdcb.DashScope;
 using System.ClientModel;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Threading.Channels;
 using OpenAIChatMessage = OpenAI.Chat.ChatMessage;
-using System;
-using System.Reflection.Metadata.Ecma335;
 
 namespace Chats.BE.Controllers.Chats.Chats;
 
@@ -439,7 +436,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
             icc.FinishReason = cse.ErrorCode;
             errorText = cse.Message;
         }
-        catch (Exception e) when (e is DashScopeException or ClientResultException or TencentCloud.Common.TencentCloudSDKException)
+        catch (ClientResultException e)
         {
             icc.FinishReason = DBFinishReason.UpstreamError;
             errorText = e.Message;

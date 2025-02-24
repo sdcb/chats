@@ -1,6 +1,5 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.DB.Enums;
-using Chats.BE.Services.Models.ChatServices.DashScope;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 using Chats.BE.Services.Models.ChatServices.Test;
