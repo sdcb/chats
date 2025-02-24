@@ -24,13 +24,14 @@
     <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="1.0.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.3" />
     <PackageReference Include="OpenAI" Version="2.1.0" />
+    <!-- todo -->
     <PackageReference Include="Sdcb.DashScope" Version="2.0.0" />
+    <!-- todo -->
     <PackageReference Include="Sdcb.WenXinQianFan" Version="1.2.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.6.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" />
     <PackageReference Include="System.Runtime.Caching" Version="9.0.2" />
-    <PackageReference Include="TencentCloudSDK.Hunyuan" Version="3.0.1185" />
     <PackageReference Include="TencentCloudSDK.Sms" Version="3.0.1185" />
   </ItemGroup>
 

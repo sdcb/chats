@@ -93,7 +93,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
         UserApiUsage usage = new()
         {
             ApiKeyId = currentApiKey.ApiKeyId,
-            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, await clientInfoManager.GetClientInfo(cancellationToken), isApi: true),
+            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, userModel, await clientInfoManager.GetClientInfo(cancellationToken), isApi: true),
         };
         db.UserApiUsages.Add(usage);
         await db.SaveChangesAsync(cancellationToken);

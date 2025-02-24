@@ -17,6 +17,8 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Threading.Channels;
 using OpenAIChatMessage = OpenAI.Chat.ChatMessage;
+using System;
+using System.Reflection.Metadata.Ecma335;
 
 namespace Chats.BE.Controllers.Chats.Chats;
 
@@ -451,6 +453,12 @@ public class ChatController(ChatStopService stopService) : ControllerBase
             icc.FinishReason = DBFinishReason.Cancelled;
             errorText = "Conversation cancelled";
         }
+        catch (UriFormatException e)
+        {
+            icc.FinishReason = DBFinishReason.InvalidApiHostUrl;
+            errorText = e.Message;
+            logger.LogError(e, "Invalid URL in conversation for message: {userMessageId}", req.MessageId);
+        }
         catch (Exception e)
         {
             icc.FinishReason = DBFinishReason.UnknownError;
@@ -489,7 +497,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         {
             await writer.WriteAsync(SseResponseLine.Error(span.Id, errorText), cancellationToken);
         }
-        dbAssistantMessage.Usage = icc.ToUserModelUsage(currentUser.Id, await clientInfoTask, isApi: false);
+        dbAssistantMessage.Usage = icc.ToUserModelUsage(currentUser.Id, userModel, await clientInfoTask, isApi: false);
         await writer.WriteAsync(new SseResponseLine { Kind = SseResponseKind.End, Result = dbAssistantMessage, SpanId = span.Id }, cancellationToken);
         writer.Complete();
         return new ChatSpanResponse()

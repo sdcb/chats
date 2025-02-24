@@ -14,13 +14,13 @@ public partial class OpenAIChatService : ChatService
 {
     private readonly ChatClient _chatClient;
 
-    public OpenAIChatService(Model model, Uri? enforcedApiHost = null) : base(model)
+    public OpenAIChatService(Model model, Uri? suggestedApiUrl = null) : base(model)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Secret, nameof(model.ModelKey.Secret));
 
         OpenAIClient api = new(new ApiKeyCredential(model.ModelKey.Secret!), new OpenAIClientOptions()
         {
-            Endpoint = enforcedApiHost ?? (!string.IsNullOrWhiteSpace(model.ModelKey.Host) ? new Uri(model.ModelKey.Host) : null),
+            Endpoint = !string.IsNullOrWhiteSpace(model.ModelKey.Host) ? new Uri(model.ModelKey.Host) : suggestedApiUrl,
         });
         _chatClient = api.GetChatClient(model.ApiModelId);
     }
