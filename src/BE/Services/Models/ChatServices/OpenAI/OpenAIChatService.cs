@@ -10,24 +10,25 @@ using Chats.BE.Services.Models.ChatServices.OpenAI.ReasoningContents;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public partial class OpenAIChatService : ChatService
+public partial class OpenAIChatService(Model model, ChatClient chatClient) : ChatService(model)
 {
-    private readonly ChatClient _chatClient;
-
-    public OpenAIChatService(Model model, Uri? suggestedApiUrl = null) : base(model)
+    public OpenAIChatService(Model model, Uri? suggestedApiUrl = null, params PipelinePolicy[] perCallPolicies) : this(model, CreateChatClient(model, suggestedApiUrl, perCallPolicies))
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Secret, nameof(model.ModelKey.Secret));
-
-        OpenAIClient api = new(new ApiKeyCredential(model.ModelKey.Secret!), new OpenAIClientOptions()
-        {
-            Endpoint = !string.IsNullOrWhiteSpace(model.ModelKey.Host) ? new Uri(model.ModelKey.Host) : suggestedApiUrl,
-        });
-        _chatClient = api.GetChatClient(model.ApiModelId);
     }
 
-    public OpenAIChatService(Model model, ChatClient chatClient) : base(model)
+    private static ChatClient CreateChatClient(Model model, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
     {
-        _chatClient = chatClient;
+        ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Secret, nameof(model.ModelKey.Secret));
+        OpenAIClientOptions oaic = new()
+        {
+            Endpoint = !string.IsNullOrWhiteSpace(model.ModelKey.Host) ? new Uri(model.ModelKey.Host) : suggestedApiUrl,
+        };
+        foreach (PipelinePolicy policy in perCallPolicies)
+        {
+            oaic.AddPolicy(policy, PipelinePosition.PerCall);
+        }
+        OpenAIClient api = new(new ApiKeyCredential(model.ModelKey.Secret!), oaic);
+        return api.GetChatClient(model.ApiModelId);
     }
 
     static Func<StreamingChatCompletionUpdate, string?> StreamingReasoningContentAccessor { get; } = ReasoningContentFactory.CreateStreamingReasoningContentAccessor();
@@ -35,7 +36,7 @@ public partial class OpenAIChatService : ChatService
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (StreamingChatCompletionUpdate delta in _chatClient.CompleteChatStreamingAsync(messages, options, cancellationToken))
+        await foreach (StreamingChatCompletionUpdate delta in chatClient.CompleteChatStreamingAsync(messages, options, cancellationToken))
         {
             string? segment = delta.ContentUpdate.FirstOrDefault()?.Text;
             string? reasoningSegment = StreamingReasoningContentAccessor(delta);
@@ -72,7 +73,7 @@ public partial class OpenAIChatService : ChatService
             }).ToList();
         }
 
-        ClientResult<ChatCompletion> cc = await _chatClient.CompleteChatAsync(messages, options, cancellationToken);
+        ClientResult<ChatCompletion> cc = await chatClient.CompleteChatAsync(messages, options, cancellationToken);
         ChatCompletion delta = cc.Value;
         return new ChatSegment
         {
