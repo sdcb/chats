@@ -32,6 +32,7 @@ export interface AdminModelDto {
   allowSearch: boolean;
   allowVision: boolean;
   allowSystemPrompt: boolean;
+  allowReasoningEffort: boolean;
   allowStreaming: boolean;
   allowTemperature: boolean;
   contextWindow: number;
