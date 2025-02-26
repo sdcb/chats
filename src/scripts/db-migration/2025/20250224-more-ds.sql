@@ -213,3 +213,19 @@ UPDATE [ModelReference]
 SET [Name] = @p1, [PublishDate] = @p2, [InputTokenPrice1M] = @p3, [OutputTokenPrice1M] = @p4
 WHERE [Id] = @p0
 GO
+
+INSERT INTO[ModelReference](
+	[Id], [ProviderId], [Name], [DisplayName], [PublishDate], [MinTemperature], [MaxTemperature],
+	[AllowSearch], [AllowVision], [AllowSystemPrompt], [AllowStreaming], [ReasoningResponseKindId],
+	[ContextWindow], [MaxResponseTokens], [TokenizerId], [InputTokenPrice1M], [OutputTokenPrice1M], [CurrencyCode]
+)
+VALUES
+	(727, 7, 'deepseek-v3', 'DeepSeek-V3', NULL, 0, 2, 0, 0, 1, 1, 0, 65792, 8192, NULL, 2, 8, 'RMB'),
+    (728, 7, 'deepseek-r1', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 65792, 8192, NULL, 4, 16, 'RMB'),
+    (729, 7, 'deepseek-r1-distill-qwen-32b', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 32768, 16384, NULL, 2, 6, 'RMB'),
+    (730, 7, 'deepseek-r1-distill-qwen-14b', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 32768, 16384, NULL, 1, 3, 'RMB'),
+    (731, 7, 'deepseek-r1-distill-qwen-7b', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 32768, 16384, NULL, 0.5, 1, 'RMB'),
+	(732, 7, 'deepseek-r1-distill-qwen-1.5b', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 32768, 16384, NULL, 0, 0, 'RMB'),
+    (733, 7, 'deepseek-r1-distill-llama-70b', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 32768, 16384, NULL, 0, 0, 'RMB'),
+	(734, 7, 'deepseek-r1-distill-llama-8b', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 32768, 16384, NULL, 0, 0, 'RMB');
+GO
