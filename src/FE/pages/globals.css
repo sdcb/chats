@@ -114,7 +114,7 @@ html {
 }
 
 .prose {
-  max-width: 100% !important;
+  max-width: calc(100vw - 552px) !important;
 }
 
 @media (max-width: 640px) {
