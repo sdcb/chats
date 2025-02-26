@@ -15,5 +15,5 @@ public enum DBFinishReason : byte
     SubscriptionExpired = 104,
     BadParameter = 105,
     Cancelled = 106,
-    InvalidApiHostUrl = 107,
+    InternalConfigIssue = 107,
 }
