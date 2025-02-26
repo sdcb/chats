@@ -6,17 +6,7 @@ namespace Chats.BE.Services.Models.Extensions;
 
 public static class ChatCompletionOptionsExtensions
 {
-    public static bool IsSearchEnabled(this ChatCompletionOptions options)
-    {
-        IDictionary<string, BinaryData>? rawData = GetSerializedAdditionalRawData(options);
-        if (rawData != null && rawData.TryGetValue("enable_search", out BinaryData? binaryData))
-        {
-            return binaryData.ToObjectFromJson<bool>();
-        }
-        return false;
-    }
-
-    public static void SetWebSearchEnabled_QwenStyle(this ChatCompletionOptions options, bool value)
+    public static IDictionary<string, BinaryData> GetOrCreateSerializedAdditionalRawData(this ChatCompletionOptions options)
     {
         IDictionary<string, BinaryData>? rawData = GetSerializedAdditionalRawData(options);
         if (rawData == null)
@@ -25,47 +15,7 @@ public static class ChatCompletionOptionsExtensions
             SetSerializedAdditionalRawData(options, rawData);
         }
 
-        rawData["enable_search"] = BinaryData.FromObjectAsJson(value);
-    }
-
-    public static void SetWebSearchEnabled_QianFanStyle(this ChatCompletionOptions options, bool value)
-    {
-        IDictionary<string, BinaryData>? rawData = GetSerializedAdditionalRawData(options);
-        if (rawData == null)
-        {
-            rawData = new Dictionary<string, BinaryData>();
-            SetSerializedAdditionalRawData(options, rawData);
-        }
-
-        rawData["web_search"] = BinaryData.FromObjectAsJson(new Dictionary<string, object>()
-        {
-            ["enable"] = value,
-            ["enable_citation"] = false,
-            ["enable_trace"] = false,
-        });
-    }
-
-    public static void SetWebSearchEnabled_XunfeiStyle(this ChatCompletionOptions options, bool value)
-    {
-        IDictionary<string, BinaryData>? rawData = GetSerializedAdditionalRawData(options);
-        if (rawData == null)
-        {
-            rawData = new Dictionary<string, BinaryData>();
-            SetSerializedAdditionalRawData(options, rawData);
-        }
-
-        rawData["tools"] = BinaryData.FromObjectAsJson(new[]
-        {
-            new
-            {
-                type = "web_search",
-                web_search = new
-                {
-                    enable = value,
-                    show_ref_label = false,
-                }
-            }
-        });
+        return rawData;
     }
 
     public static void SetMaxTokens(this ChatCompletionOptions options, int value)

@@ -59,6 +59,48 @@ public abstract partial class ChatService : IDisposable
         return TokenPerConversation + messageTokens;
     }
 
+    protected virtual async Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, CancellationToken cancellationToken)
+    {
+        if (Model.ModelReference.AllowSearch)
+        {
+            SetWebSearchEnabled(options, feOptions.WebSearchEnabled);
+        }
+
+        if (!Model.ModelReference.AllowSystemPrompt)
+        {
+            // Remove system prompt
+            messages = messages.Where(m => m is not SystemChatMessage).ToArray();
+        }
+        else
+        {
+            // system message transform
+            SystemChatMessage? existingSystemPrompt = messages.OfType<SystemChatMessage>().FirstOrDefault();
+            DateTime now = feOptions.Now;
+            if (existingSystemPrompt is not null)
+            {
+                existingSystemPrompt.Content[0] = existingSystemPrompt.Content[0].Text
+                    .Replace("{{CURRENT_DATE}}", now.ToString("yyyy/MM/dd"))
+                    .Replace("{{MODEL_NAME}}", Model.ModelReference.DisplayName ?? Model.ModelReference.Name)
+                    .Replace("{{CURRENT_TIME}}", now.ToString("HH:mm:ss"));
+                ;
+            }
+        }
+
+        ChatMessage[] filteredMessage = await messages
+            .ToAsyncEnumerable()
+            .SelectAwait(async m => await FilterVision(Model.ModelReference.AllowVision, m, cancellationToken))
+            .ToArrayAsync(cancellationToken);
+        options.Temperature = Model.ModelReference.UnnormalizeTemperature(options.Temperature);
+
+        return filteredMessage;
+    }
+
+    protected virtual void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
+    {
+        // chat service not enable search by default, prompt a warning
+        Console.WriteLine($"{Model.ModelReference.Name} chat service not support web search.");
+    }
+
     public void Dispose()
     {
         Disposing();

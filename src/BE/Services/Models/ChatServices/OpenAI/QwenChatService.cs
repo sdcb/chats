@@ -6,12 +6,8 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 public class QwenChatService(Model model) : OpenAIChatService(model, new Uri("https://dashscope.aliyuncs.com/compatible-mode/v1"))
 {
-    protected override Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, CancellationToken cancellationToken)
+    protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {
-        if (Model.ModelReference.AllowSearch)
-        {
-            options.SetWebSearchEnabled_QwenStyle(feOptions.WebSearchEnabled);
-        }
-        return base.FEPreprocess(messages, options, feOptions, cancellationToken);
+        options.GetOrCreateSerializedAdditionalRawData()["enable_search"] = BinaryData.FromObjectAsJson(enabled);
     }
 }

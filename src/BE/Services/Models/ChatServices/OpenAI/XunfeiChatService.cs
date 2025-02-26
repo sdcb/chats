@@ -6,12 +6,19 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 public class XunfeiChatService(Model model) : OpenAIChatService(model, new Uri("https://spark-api-open.xf-yun.com/v1"))
 {
-    protected override async Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, CancellationToken cancellationToken)
+    protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {
-        if (Model.ModelReference.AllowSearch)
+        options.GetOrCreateSerializedAdditionalRawData()["tools"] = BinaryData.FromObjectAsJson(new[]
         {
-            options.SetWebSearchEnabled_XunfeiStyle(feOptions.WebSearchEnabled);
-        }
-        return await base.FEPreprocess(messages, options, feOptions, cancellationToken);
+            new
+            {
+                type = "web_search",
+                web_search = new
+                {
+                    enable = enabled,
+                    show_ref_label = false,
+                }
+            }
+        });
     }
 }

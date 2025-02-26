@@ -192,3 +192,24 @@ VALUES
     (619, 6, 'deepseek-r1-distill-qwen-7b', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 0, 0, 'RMB'),
     (620, 6, 'deepseek-r1-distill-llama-70b', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 2, 8, 'RMB');
 GO
+
+-- Region Parameters
+DECLARE @p0 SmallInt = 204
+DECLARE @p1 Bit = 0
+-- EndRegion
+UPDATE [ModelReference]
+SET [AllowSearch] = @p1
+WHERE [Id] = @p0
+GO
+
+-- Region Parameters
+DECLARE @p0 SmallInt = 1303
+DECLARE @p1 NVarChar(1000) = 'gemini-2.0-flash-lite'
+DECLARE @p2 Date = '2025-02-26'
+DECLARE @p3 Decimal(10,5) = 0.075
+DECLARE @p4 Decimal(8,5) = 0.3
+-- EndRegion
+UPDATE [ModelReference]
+SET [Name] = @p1, [PublishDate] = @p2, [InputTokenPrice1M] = @p3, [OutputTokenPrice1M] = @p4
+WHERE [Id] = @p0
+GO
