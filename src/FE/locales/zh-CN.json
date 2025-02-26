@@ -68,6 +68,7 @@
   "Generate information": "生成信息",
   "duration": "耗时",
   "total duration": "总耗时",
+  "reasoning duration": "推理用时",
   "first token latency": "首token延迟",
   "prompt tokens": "请求tokens",
   "response tokens": "响应tokens",

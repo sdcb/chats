@@ -59,6 +59,12 @@ export const GenerateInformationAction = (props: Props) => {
                   name={'total duration'}
                   value={message?.duration.toLocaleString() + 'ms'}
                 />
+                {!!message.reasoningDuration && (
+                  <GenerateInformation
+                    name={'reasoning duration'}
+                    value={message.reasoningDuration.toLocaleString() + 'ms'}
+                  />
+                )}
                 <GenerateInformation
                   name={'first token latency'}
                   value={message?.firstTokenLatency.toLocaleString() + 'ms'}
