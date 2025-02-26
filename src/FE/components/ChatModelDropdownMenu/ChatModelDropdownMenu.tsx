@@ -133,7 +133,7 @@ const ChatModelDropdownMenu = ({
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent
-                    className="max-w-[64px] md:max-w-[200px]"
+                    className="max-h-96 overflow-y-auto custom-scrollbar max-w-[64px] md:max-w-[256px]"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {m.child.map((x) => (
