@@ -185,10 +185,10 @@ INSERT INTO [ModelReference](
     [ContextWindow], [MaxResponseTokens], [TokenizerId], [InputTokenPrice1M], [OutputTokenPrice1M], [CurrencyCode]
 )
 VALUES 
-    (615, 6, 'deepseek-v3', 'DeepSeek-V3', NULL, 0, 2, 0, 0, 1, 1, 0, 64000, 8192, NULL, 0, 0, 'RMB'),
+    (615, 6, 'deepseek-v3', 'DeepSeek-V3', NULL, 0, 2, 0, 0, 1, 1, 0, 64000, 8192, NULL, 0.8, 1.6, 'RMB'),
     (616, 6, 'deepseek-r1', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 2, 8, 'RMB'),
-    (617, 6, 'DeepSeek-R1-Distill-Qwen-32B', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 1.5, 6, 'RMB'),
-    (618, 6, 'DeepSeek-R1-Distill-Qwen-14B', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 0.6, 2.4, 'RMB'),
-    (619, 6, 'DeepSeek-R1-Distill-Qwen-7B', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 0, 0, 'RMB'),
-    (620, 6, 'DeepSeek-R1-Distill-Llama-70B', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 2, 8, 'RMB');
+    (617, 6, 'deepseek-r1-distill-qwen-32b', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 1.5, 6, 'RMB'),
+    (618, 6, 'deepseek-r1-distill-qwen-14b', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 0.6, 2.4, 'RMB'),
+    (619, 6, 'deepseek-r1-distill-qwen-7b', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 0, 0, 'RMB'),
+    (620, 6, 'deepseek-r1-distill-llama-70b', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 2, 8, 'RMB');
 GO
