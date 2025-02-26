@@ -68,7 +68,6 @@
   "Generate information": "生成信息",
   "duration": "耗时",
   "total duration": "总耗时",
-  "reasoning duration": "推理用时",
   "first token latency": "首token延迟",
   "prompt tokens": "请求tokens",
   "response tokens": "响应tokens",
@@ -385,6 +384,6 @@
   "Group name already exists": "组名已存在",
   "Like": "赞",
   "Dislike": "踩",
-  "Reasoning...": "推理中...",
-  "Reasoning complete": "推理完成"
+  "Thinking...": "思考中...",
+  "Deeply thought (took {{time}} seconds)": "已深度思考（用时 {{time}} 秒）"
 }

@@ -9,7 +9,7 @@ import { ChatSpanStatus, Content } from '@/types/chat';
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
 
-import { IconChevronDown, IconChevronRight } from '../Icons';
+import { IconChevronDown, IconChevronRight, IconThink } from '../Icons';
 
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
@@ -37,14 +37,21 @@ const ThinkingMessage = (props: Props) => {
   return (
     <div className="mb-2">
       <div
-        className="inline-flex items-center px-3 py-1 bg-gray-300 dark:bg-gray-700 text-sm gap-1 rounded-sm"
+        className="inline-flex items-center px-3 py-1 bg-gray-300 dark:bg-gray-700 text-xs gap-1 rounded-sm"
         onClick={() => {
           setIsOpen(!isOpen);
         }}
       >
-        {chatStatus === ChatSpanStatus.Thinking
-          ? t('Reasoning...')
-          : t('Reasoning complete')}
+        {chatStatus === ChatSpanStatus.Thinking ? (
+          t('Thinking...')
+        ) : (
+          <div className="flex items-center h-6">
+            <IconThink size={16} />
+            {t('Deeply thought (took {{time}} seconds)', {
+              time: Math.floor((message.reasoningDuration || 0) / 1000),
+            })}
+          </div>
+        )}
         {isOpen ? (
           <IconChevronDown size={18} stroke="#6b7280" />
         ) : (
