@@ -143,382 +143,52 @@ SET [InitialHost] = @p1
 WHERE [Id] = @p0
 GO
 
--- Region Parameters
-DECLARE @p0 SmallInt = 601
-DECLARE @p1 NVarChar(1000) = 'ernie-4.0-8k'
--- EndRegion
 UPDATE [ModelReference]
-SET [Name] = @p1
-WHERE [Id] = @p0
-GO
+SET 
+    [Name] = CASE 
+        WHEN [Id] = 600 THEN 'ernie-4.0-turbo-128k'
+        WHEN [Id] = 601 THEN 'ernie-4.0-8k'
+        WHEN [Id] = 602 THEN 'ernie-3.5-8k'
+        WHEN [Id] = 607 THEN 'ernie-speed-8k'
+        ELSE [Name]
+    END,
+    [DisplayName] = CASE 
+        WHEN [Id] = 600 THEN 'ERNIE-4.0-Turbo'
+        WHEN [Id] = 601 THEN 'ERNIE-4.0'
+        WHEN [Id] = 602 THEN 'ERNIE-3.5'
+        WHEN [Id] = 603 THEN 'ERNIE-3.5'
+        WHEN [Id] = 604 THEN 'ERNIE-Speed-Pro'
+        WHEN [Id] = 605 THEN 'ERNIE-Novel'
+        WHEN [Id] = 606 THEN 'ERNIE-Speed'
+        WHEN [Id] = 607 THEN 'ERNIE-Speed'
+        WHEN [Id] = 609 THEN 'ERNIE-Lite'
+        WHEN [Id] = 611 THEN 'ERNIE-Tiny'
+        WHEN [Id] = 614 THEN 'ERNIE-Lite-Pro'
+        ELSE [DisplayName]
+    END,
+    [InputTokenPrice1M] = CASE 
+        WHEN [Id] = 600 THEN 20
+        WHEN [Id] = 601 THEN 30
+        ELSE [InputTokenPrice1M]
+    END,
+    [OutputTokenPrice1M] = CASE 
+        WHEN [Id] = 600 THEN 60
+        WHEN [Id] = 601 THEN 90
+        ELSE [OutputTokenPrice1M]
+    END
+WHERE [Id] BETWEEN 600 AND 614;
 
--- Region Parameters
-DECLARE @p0 SmallInt = 602
-DECLARE @p1 NVarChar(1000) = 'ernie-3.5-8k'
--- EndRegion
-UPDATE [ModelReference]
-SET [Name] = @p1
-WHERE [Id] = @p0
+-- 合并插入 Id>=615 的操作
+INSERT INTO [ModelReference](
+    [Id], [ProviderId], [Name], [DisplayName], [PublishDate], [MinTemperature], [MaxTemperature], 
+    [AllowSearch], [AllowVision], [AllowSystemPrompt], [AllowStreaming], [ReasoningResponseKindId], 
+    [ContextWindow], [MaxResponseTokens], [TokenizerId], [InputTokenPrice1M], [OutputTokenPrice1M], [CurrencyCode]
+)
+VALUES 
+    (615, 6, 'deepseek-v3', 'DeepSeek-V3', NULL, 0, 2, 0, 0, 1, 1, 0, 64000, 8192, NULL, 0, 0, 'RMB'),
+    (616, 6, 'deepseek-r1', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 2, 8, 'RMB'),
+    (617, 6, 'DeepSeek-R1-Distill-Qwen-32B', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 1.5, 6, 'RMB'),
+    (618, 6, 'DeepSeek-R1-Distill-Qwen-14B', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 0.6, 2.4, 'RMB'),
+    (619, 6, 'DeepSeek-R1-Distill-Qwen-7B', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 0, 0, 'RMB'),
+    (620, 6, 'DeepSeek-R1-Distill-Llama-70B', 'DeepSeek-R1', NULL, 0, 2, 0, 0, 1, 1, 1, 64000, 8192, NULL, 2, 8, 'RMB');
 GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 607
-DECLARE @p1 NVarChar(1000) = 'ernie-speed-8k'
--- EndRegion
-UPDATE [ModelReference]
-SET [Name] = @p1
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 615
-DECLARE @p1 SmallInt = 6
-DECLARE @p2 NVarChar(1000) = 'deepseek-v3'
-DECLARE @p3 NVarChar(1000) = 'DeepSeek'
-DECLARE @p4 Date = null
-DECLARE @p5 Decimal(5,2) = 0.6
-DECLARE @p6 Decimal(5,2) = 0.6
-DECLARE @p7 Bit = 0
-DECLARE @p8 Bit = 0
-DECLARE @p9 Bit = 1
-DECLARE @p10 Bit = 1
-DECLARE @p11 TinyInt = 1
-DECLARE @p12 Int = 64000
-DECLARE @p13 Int = 8192
-DECLARE @p14 SmallInt = null
-DECLARE @p15 Decimal(6,5) = 0
-DECLARE @p16 Decimal(6,5) = 0
-DECLARE @p17 Char(3) = null
--- EndRegion
-INSERT INTO [ModelReference]([Id], [ProviderId], [Name], [DisplayName], [PublishDate], [MinTemperature], [MaxTemperature], [AllowSearch], [AllowVision], [AllowSystemPrompt], [AllowStreaming], [ReasoningResponseKindId], [ContextWindow], [MaxResponseTokens], [TokenizerId], [InputTokenPrice1M], [OutputTokenPrice1M], [CurrencyCode])
-VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15, @p16, @p17)
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 615
-DECLARE @p1 SmallInt = 6
-DECLARE @p2 NVarChar(1000) = 'deepseek-v3'
-DECLARE @p3 NVarChar(1000) = 'DeepSeek'
-DECLARE @p4 Date = null
-DECLARE @p5 Decimal(3,2) = 0
-DECLARE @p6 Decimal(3,2) = 2
-DECLARE @p7 Bit = 0
-DECLARE @p8 Bit = 0
-DECLARE @p9 Bit = 1
-DECLARE @p10 Bit = 1
-DECLARE @p11 TinyInt = 1
-DECLARE @p12 Int = 64000
-DECLARE @p13 Int = 8192
-DECLARE @p14 SmallInt = null
-DECLARE @p15 Decimal(8,5) = 0.8
-DECLARE @p16 Decimal(8,5) = 1.6
-DECLARE @p17 Char(3) = 'RMB'
--- EndRegion
-INSERT INTO [ModelReference]([Id], [ProviderId], [Name], [DisplayName], [PublishDate], [MinTemperature], [MaxTemperature], [AllowSearch], [AllowVision], [AllowSystemPrompt], [AllowStreaming], [ReasoningResponseKindId], [ContextWindow], [MaxResponseTokens], [TokenizerId], [InputTokenPrice1M], [OutputTokenPrice1M], [CurrencyCode])
-VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15, @p16, @p17)
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 616
-DECLARE @p1 SmallInt = 6
-DECLARE @p2 NVarChar(1000) = 'deepseek-r1'
-DECLARE @p3 NVarChar(1000) = 'DeepSeek-R1'
-DECLARE @p4 Date = null
-DECLARE @p5 Decimal(3,2) = 0
-DECLARE @p6 Decimal(3,2) = 2
-DECLARE @p7 Bit = 0
-DECLARE @p8 Bit = 0
-DECLARE @p9 Bit = 1
-DECLARE @p10 Bit = 1
-DECLARE @p11 TinyInt = 1
-DECLARE @p12 Int = 64000
-DECLARE @p13 Int = 8192
-DECLARE @p14 SmallInt = null
-DECLARE @p15 Decimal(6,5) = 2
-DECLARE @p16 Decimal(6,5) = 8
-DECLARE @p17 Char(3) = 'RMB'
--- EndRegion
-INSERT INTO [ModelReference]([Id], [ProviderId], [Name], [DisplayName], [PublishDate], [MinTemperature], [MaxTemperature], [AllowSearch], [AllowVision], [AllowSystemPrompt], [AllowStreaming], [ReasoningResponseKindId], [ContextWindow], [MaxResponseTokens], [TokenizerId], [InputTokenPrice1M], [OutputTokenPrice1M], [CurrencyCode])
-VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15, @p16, @p17)
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 615
-DECLARE @p1 TinyInt = 0
--- EndRegion
-UPDATE [ModelReference]
-SET [ReasoningResponseKindId] = @p1
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 617
-DECLARE @p1 SmallInt = 6
-DECLARE @p2 NVarChar(1000) = 'DeepSeek-R1-Distill-Qwen-32B'
-DECLARE @p3 NVarChar(1000) = 'DeepSeek-R1'
-DECLARE @p4 Date = null
-DECLARE @p5 Decimal(3,2) = 0
-DECLARE @p6 Decimal(3,2) = 2
-DECLARE @p7 Bit = 0
-DECLARE @p8 Bit = 0
-DECLARE @p9 Bit = 1
-DECLARE @p10 Bit = 1
-DECLARE @p11 TinyInt = 1
-DECLARE @p12 Int = 64000
-DECLARE @p13 Int = 8192
-DECLARE @p14 SmallInt = null
-DECLARE @p15 Decimal(9,5) = 0.15
-DECLARE @p16 Decimal(6,5) = 6
-DECLARE @p17 Char(3) = 'RMB'
--- EndRegion
-INSERT INTO [ModelReference]([Id], [ProviderId], [Name], [DisplayName], [PublishDate], [MinTemperature], [MaxTemperature], [AllowSearch], [AllowVision], [AllowSystemPrompt], [AllowStreaming], [ReasoningResponseKindId], [ContextWindow], [MaxResponseTokens], [TokenizerId], [InputTokenPrice1M], [OutputTokenPrice1M], [CurrencyCode])
-VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15, @p16, @p17)
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 600
-DECLARE @p1 Decimal(7,5) = 20
-DECLARE @p2 Decimal(7,5) = 60
--- EndRegion
-UPDATE [ModelReference]
-SET [InputTokenPrice1M] = @p1, [OutputTokenPrice1M] = @p2
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 601
-DECLARE @p1 Decimal(7,5) = 30
-DECLARE @p2 Decimal(7,5) = 90
--- EndRegion
-UPDATE [ModelReference]
-SET [InputTokenPrice1M] = @p1, [OutputTokenPrice1M] = @p2
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 600
-DECLARE @p1 NVarChar(1000) = 'ernie-4.0-turbo-128k'
-DECLARE @p2 NVarChar(1000) = 'ERNIE-4.0-Turbo'
--- EndRegion
-UPDATE [ModelReference]
-SET [Name] = @p1, [DisplayName] = @p2
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 601
-DECLARE @p1 NVarChar(1000) = 'ERNIE-4.0'
--- EndRegion
-UPDATE [ModelReference]
-SET [DisplayName] = @p1
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 602
-DECLARE @p1 NVarChar(1000) = 'ERNIE-3.5'
--- EndRegion
-UPDATE [ModelReference]
-SET [DisplayName] = @p1
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 603
-DECLARE @p1 NVarChar(1000) = 'ERNIE-3.5'
--- EndRegion
-UPDATE [ModelReference]
-SET [DisplayName] = @p1
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 604
-DECLARE @p1 NVarChar(1000) = 'ERNIE-Speed-Pro'
--- EndRegion
-UPDATE [ModelReference]
-SET [DisplayName] = @p1
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 605
-DECLARE @p1 NVarChar(1000) = 'ERNIE-Novel'
--- EndRegion
-UPDATE [ModelReference]
-SET [DisplayName] = @p1
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 606
-DECLARE @p1 NVarChar(1000) = 'ERNIE-Speed'
--- EndRegion
-UPDATE [ModelReference]
-SET [DisplayName] = @p1
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 607
-DECLARE @p1 NVarChar(1000) = 'ERNIE-Speed'
--- EndRegion
-UPDATE [ModelReference]
-SET [DisplayName] = @p1
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 609
-DECLARE @p1 NVarChar(1000) = 'ERNIE-Lite'
--- EndRegion
-UPDATE [ModelReference]
-SET [DisplayName] = @p1
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 611
-DECLARE @p1 NVarChar(1000) = 'ERNIE-Tiny'
--- EndRegion
-UPDATE [ModelReference]
-SET [DisplayName] = @p1
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 614
-DECLARE @p1 NVarChar(1000) = 'ERNIE-Lite-Pro'
--- EndRegion
-UPDATE [ModelReference]
-SET [DisplayName] = @p1
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 618
-DECLARE @p1 SmallInt = 6
-DECLARE @p2 NVarChar(1000) = 'DeepSeek-R1-Distill-Qwen-14B'
-DECLARE @p3 NVarChar(1000) = 'DeepSeek-R1'
-DECLARE @p4 Date = null
-DECLARE @p5 Decimal(3,2) = 0
-DECLARE @p6 Decimal(3,2) = 2
-DECLARE @p7 Bit = 0
-DECLARE @p8 Bit = 0
-DECLARE @p9 Bit = 1
-DECLARE @p10 Bit = 1
-DECLARE @p11 TinyInt = 1
-DECLARE @p12 Int = 64000
-DECLARE @p13 Int = 8192
-DECLARE @p14 SmallInt = null
-DECLARE @p15 Decimal(6,5) = 0
-DECLARE @p16 Decimal(6,5) = 0
-DECLARE @p17 Char(3) = null
--- EndRegion
-INSERT INTO [ModelReference]([Id], [ProviderId], [Name], [DisplayName], [PublishDate], [MinTemperature], [MaxTemperature], [AllowSearch], [AllowVision], [AllowSystemPrompt], [AllowStreaming], [ReasoningResponseKindId], [ContextWindow], [MaxResponseTokens], [TokenizerId], [InputTokenPrice1M], [OutputTokenPrice1M], [CurrencyCode])
-VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15, @p16, @p17)
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 618
-DECLARE @p1 SmallInt = 6
-DECLARE @p2 NVarChar(1000) = 'DeepSeek-R1-Distill-Qwen-14B'
-DECLARE @p3 NVarChar(1000) = 'DeepSeek-R1'
-DECLARE @p4 Date = null
-DECLARE @p5 Decimal(3,2) = 0
-DECLARE @p6 Decimal(3,2) = 2
-DECLARE @p7 Bit = 0
-DECLARE @p8 Bit = 0
-DECLARE @p9 Bit = 1
-DECLARE @p10 Bit = 1
-DECLARE @p11 TinyInt = 1
-DECLARE @p12 Int = 64000
-DECLARE @p13 Int = 8192
-DECLARE @p14 SmallInt = null
-DECLARE @p15 Decimal(8,5) = 0.6
-DECLARE @p16 Decimal(8,5) = 2.4
-DECLARE @p17 Char(3) = null
--- EndRegion
-INSERT INTO [ModelReference]([Id], [ProviderId], [Name], [DisplayName], [PublishDate], [MinTemperature], [MaxTemperature], [AllowSearch], [AllowVision], [AllowSystemPrompt], [AllowStreaming], [ReasoningResponseKindId], [ContextWindow], [MaxResponseTokens], [TokenizerId], [InputTokenPrice1M], [OutputTokenPrice1M], [CurrencyCode])
-VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15, @p16, @p17)
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 618
-DECLARE @p1 SmallInt = 6
-DECLARE @p2 NVarChar(1000) = 'DeepSeek-R1-Distill-Qwen-14B'
-DECLARE @p3 NVarChar(1000) = 'DeepSeek-R1'
-DECLARE @p4 Date = null
-DECLARE @p5 Decimal(3,2) = 0
-DECLARE @p6 Decimal(3,2) = 2
-DECLARE @p7 Bit = 0
-DECLARE @p8 Bit = 0
-DECLARE @p9 Bit = 1
-DECLARE @p10 Bit = 1
-DECLARE @p11 TinyInt = 1
-DECLARE @p12 Int = 64000
-DECLARE @p13 Int = 8192
-DECLARE @p14 SmallInt = null
-DECLARE @p15 Decimal(8,5) = 0.6
-DECLARE @p16 Decimal(8,5) = 2.4
-DECLARE @p17 Char(3) = 'RMB'
--- EndRegion
-INSERT INTO [ModelReference]([Id], [ProviderId], [Name], [DisplayName], [PublishDate], [MinTemperature], [MaxTemperature], [AllowSearch], [AllowVision], [AllowSystemPrompt], [AllowStreaming], [ReasoningResponseKindId], [ContextWindow], [MaxResponseTokens], [TokenizerId], [InputTokenPrice1M], [OutputTokenPrice1M], [CurrencyCode])
-VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15, @p16, @p17)
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 617
-DECLARE @p1 Decimal(8,5) = 1.5
--- EndRegion
-UPDATE [ModelReference]
-SET [InputTokenPrice1M] = @p1
-WHERE [Id] = @p0
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 619
-DECLARE @p1 SmallInt = 6
-DECLARE @p2 NVarChar(1000) = 'DeepSeek-R1-Distill-Qwen-7B'
-DECLARE @p3 NVarChar(1000) = 'DeepSeek-R1'
-DECLARE @p4 Date = null
-DECLARE @p5 Decimal(3,2) = 0
-DECLARE @p6 Decimal(3,2) = 2
-DECLARE @p7 Bit = 0
-DECLARE @p8 Bit = 0
-DECLARE @p9 Bit = 1
-DECLARE @p10 Bit = 1
-DECLARE @p11 TinyInt = 1
-DECLARE @p12 Int = 64000
-DECLARE @p13 Int = 8192
-DECLARE @p14 SmallInt = null
-DECLARE @p15 Decimal(6,5) = 0
-DECLARE @p16 Decimal(6,5) = 0
-DECLARE @p17 Char(3) = 'RMB'
--- EndRegion
-INSERT INTO [ModelReference]([Id], [ProviderId], [Name], [DisplayName], [PublishDate], [MinTemperature], [MaxTemperature], [AllowSearch], [AllowVision], [AllowSystemPrompt], [AllowStreaming], [ReasoningResponseKindId], [ContextWindow], [MaxResponseTokens], [TokenizerId], [InputTokenPrice1M], [OutputTokenPrice1M], [CurrencyCode])
-VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15, @p16, @p17)
-GO
-
--- Region Parameters
-DECLARE @p0 SmallInt = 620
-DECLARE @p1 SmallInt = 6
-DECLARE @p2 NVarChar(1000) = 'DeepSeek-R1-Distill-Llama-70B'
-DECLARE @p3 NVarChar(1000) = 'DeepSeek-R1'
-DECLARE @p4 Date = null
-DECLARE @p5 Decimal(3,2) = 0
-DECLARE @p6 Decimal(3,2) = 2
-DECLARE @p7 Bit = 0
-DECLARE @p8 Bit = 0
-DECLARE @p9 Bit = 1
-DECLARE @p10 Bit = 1
-DECLARE @p11 TinyInt = 1
-DECLARE @p12 Int = 64000
-DECLARE @p13 Int = 8192
-DECLARE @p14 SmallInt = null
-DECLARE @p15 Decimal(6,5) = 2
-DECLARE @p16 Decimal(6,5) = 8
-DECLARE @p17 Char(3) = 'RMB'
--- EndRegion
-INSERT INTO [ModelReference]([Id], [ProviderId], [Name], [DisplayName], [PublishDate], [MinTemperature], [MaxTemperature], [AllowSearch], [AllowVision], [AllowSystemPrompt], [AllowStreaming], [ReasoningResponseKindId], [ContextWindow], [MaxResponseTokens], [TokenizerId], [InputTokenPrice1M], [OutputTokenPrice1M], [CurrencyCode])
-VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15, @p16, @p17)
