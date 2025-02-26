@@ -175,6 +175,23 @@ const Chat = memo(() => {
     messageDispatch(setSelectedMessages(selectedMsgs));
   };
 
+  const changeSelectedResponseReasoningDuration = (
+    selectedMsgs: IChatMessage[][],
+    messageId: string,
+    time: number,
+  ) => {
+    const messageCount = selectedMsgs.length - 1;
+    let messageList = selectedMsgs[messageCount];
+    messageList.map((x) => {
+      if (x.id === messageId) {
+        x.reasoningDuration = time;
+      }
+      return x;
+    });
+    selectedMsgs.splice(messageCount, 1, messageList);
+    messageDispatch(setSelectedMessages(selectedMsgs));
+  };
+
   const checkSelectChatModelIsExist = (spans: ChatSpanDto[]) => {
     const modelList = spans
       .filter((x) => !models.find((m) => m.modelId === x.modelId))
@@ -408,6 +425,14 @@ const Chat = memo(() => {
           ChatSpanStatus.None,
         );
         messageList.push(msg);
+      } else if (value.k === SseResponseKind.StartResponse) {
+        const { r: time, i: spanId } = value;
+        const msgId = `${ResponseMessageTempId}-${spanId}`;
+        changeSelectedResponseReasoningDuration(
+          selectedMessageList,
+          msgId,
+          time,
+        );
       } else if (value.k === SseResponseKind.UpdateTitle) {
         changeChatTitle(value.r);
       } else if (value.k === SseResponseKind.TitleSegment) {
