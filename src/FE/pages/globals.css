@@ -95,6 +95,23 @@ html {
   display: none;
 }
 
+.custom-scrollbar::-webkit-scrollbar {
+  background-color: var(--scrollbar);
+  border-radius   : 10px;
+  width           : 2px;
+  height          : 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  border-radius: 10px;
+  background   : var(--scrollbar);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  background   : hsl(var(--foreground));
+}
+
 @layer utilities {
   .group:hover .group-hover\:rotate-right {
     transform: translateY(0.15rem) rotate(-15deg) translateZ(0px);
