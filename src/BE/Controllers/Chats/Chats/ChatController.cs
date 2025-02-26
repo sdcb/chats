@@ -456,9 +456,15 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         }
         catch (UriFormatException e)
         {
-            icc.FinishReason = DBFinishReason.InvalidApiHostUrl;
+            icc.FinishReason = DBFinishReason.InternalConfigIssue;
             errorText = e.Message;
             logger.LogError(e, "Invalid URL in conversation for message: {userMessageId}", req.MessageId);
+        }
+        catch (JsonException e)
+        {
+            icc.FinishReason = DBFinishReason.InternalConfigIssue;
+            errorText = e.Message;
+            logger.LogError(e, "Invalid JSON config in conversation for message: {userMessageId}", req.MessageId);
         }
         catch (Exception e)
         {

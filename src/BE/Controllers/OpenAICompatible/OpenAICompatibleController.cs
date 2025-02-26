@@ -79,8 +79,14 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
         }
         catch (UriFormatException e)
         {
-            icc.FinishReason = DBFinishReason.InvalidApiHostUrl;
+            icc.FinishReason = DBFinishReason.InternalConfigIssue;
             logger.LogError(e, "Invalid API host URL");
+            errorToReturn = await YieldError(hasSuccessYield && cco.Stream, icc.FinishReason, e.Message, cancellationToken);
+        }
+        catch (JsonException e)
+        {
+            icc.FinishReason = DBFinishReason.InternalConfigIssue;
+            logger.LogError(e, "Invalid JSON config");
             errorToReturn = await YieldError(hasSuccessYield && cco.Stream, icc.FinishReason, e.Message, cancellationToken);
         }
         catch (Exception e)
