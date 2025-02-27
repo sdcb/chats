@@ -17,8 +17,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
     public async Task<ActionResult<ModelKeyDto[]>> GetAllModelKeys(CancellationToken cancellationToken)
     {
         ModelKeyDto[] result = await db.ModelKeys
-            .OrderBy(x => x.ModelProviderId)
-            .ThenBy(x => x.Id)
+            .OrderByDescending(x => x.Id)
             .Select(x => new ModelKeyDto
             {
                 Id = x.Id,

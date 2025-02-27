@@ -31,6 +31,7 @@ public class ChatFactory(ILogger<ChatFactory> logger)
             DBModelProvider.GoogleAI => new GoogleAIChatService(model),
             DBModelProvider.Ollama => new OllamaChatService(model),
             DBModelProvider.MiniMax => new MiniMaxChatService(model),
+            DBModelProvider.Doubao => new DoubaoChatService(model),
             DBModelProvider.SiliconFlow => new SiliconFlowChatService(model),
             _ => throw new NotSupportedException($"Unknown model provider: {modelProvider}")
         };
@@ -57,6 +58,7 @@ public class ChatFactory(ILogger<ChatFactory> logger)
             DBModelProvider.GoogleAI => null,
             DBModelProvider.Ollama => new OpenAIModelLoader(),
             DBModelProvider.MiniMax => null,
+            DBModelProvider.Doubao => null,
             DBModelProvider.SiliconFlow => null,
             _ => throw new NotSupportedException($"Unknown model provider: {modelProvider}")
         };
