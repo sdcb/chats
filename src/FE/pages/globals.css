@@ -131,12 +131,12 @@ html {
 }
 
 .prose {
-  max-width: calc(100vw - 552px) !important;
+  max-width: 100% !important;
 }
 
 @media (max-width: 640px) {
   .prose {
-    width: 344px;
+    width    : 344px;
   }
 }
 
