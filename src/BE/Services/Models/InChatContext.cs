@@ -47,14 +47,14 @@ public class InChatContext(long firstTick)
                 if (seg.IsFromUpstream)
                 {
                     _segmentCount++;
-                    if (seg.ReasoningSegment != null)
+                    if (!string.IsNullOrEmpty(seg.ReasoningSegment))
                     {
                         if (_firstReasoningTick == _preprocessTick) // never reasoning
                         {
                             _firstReasoningTick = Stopwatch.GetTimestamp();
                         }
                     }
-                    if (seg.Segment != null)
+                    if (!string.IsNullOrEmpty(seg.Segment))
                     {
                         if (_firstResponseTick == _preprocessTick) // never response
                         {
