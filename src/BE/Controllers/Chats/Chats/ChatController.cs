@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OpenAI.Chat;
-using Sdcb.DashScope;
 using System.ClientModel;
 using System.Diagnostics;
 using System.Text.Json;
@@ -256,7 +255,6 @@ public class ChatController(ChatStopService stopService) : ControllerBase
                 GetMessageTree(existingMessages, req.MessageId),
                 systemMessages.Where(x => x.Role == DBChatRole.System && x.SpanId == span.Id || x.SpanId == null).ToArray(),
                 dbUserMessage,
-                new ChatExtraDetails() { TimezoneOffset = req.TimezoneOffset },
                 userBalance,
                 clientInfoTask,
                 channels[index].Writer,
@@ -376,7 +374,6 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         IEnumerable<MessageLiteDto> messageTree,
         MessageLiteDto[] systemMessages,
         Message? dbUserMessage,
-        ChatExtraDetails extraDetails,
         UserBalance userBalance,
         Task<ClientInfo> clientInfoTask,
         ChannelWriter<SseResponseLine> writer,
@@ -392,7 +389,13 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         .SelectAwait(async x => await x.ToOpenAI(fup, cancellationToken))
         .ToArrayAsync(cancellationToken);
 
-        ChatCompletionOptions cco = span.ToChatCompletionOptions(currentUser.Id, chat.ChatSpans.First(cs => cs.SpanId == span.Id));
+        ChatSpan chatSpan = chat.ChatSpans.First(cs => cs.SpanId == span.Id);
+        ChatCompletionOptions cco = span.ToChatCompletionOptions(currentUser.Id, chatSpan);
+        ChatExtraDetails ced = new()
+        { 
+            TimezoneOffset = req.TimezoneOffset,
+            WebSearchEnabled = chatSpan.EnableSearch,
+        };
 
         InChatContext icc = new(firstTick);
 
@@ -401,7 +404,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         {
             using ChatService s = chatFactory.CreateChatService(userModel.Model);
             bool responseStated = false, reasoningStarted = false;
-            await foreach (InternalChatSegment seg in icc.Run(userBalance.Balance, userModel, s.ChatStreamedFEProcessed(messageToSend, cco, extraDetails, cancellationToken)))
+            await foreach (InternalChatSegment seg in icc.Run(userBalance.Balance, userModel, s.ChatStreamedFEProcessed(messageToSend, cco, ced, cancellationToken)))
             {
                 if (!string.IsNullOrEmpty(seg.ReasoningSegment))
                 {
@@ -433,7 +436,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
             icc.FinishReason = cse.ErrorCode;
             errorText = cse.Message;
         }
-        catch (Exception e) when (e is DashScopeException or ClientResultException or TencentCloud.Common.TencentCloudSDKException)
+        catch (ClientResultException e)
         {
             icc.FinishReason = DBFinishReason.UpstreamError;
             errorText = e.Message;
@@ -450,6 +453,18 @@ public class ChatController(ChatStopService stopService) : ControllerBase
             // do nothing if cancelled
             icc.FinishReason = DBFinishReason.Cancelled;
             errorText = "Conversation cancelled";
+        }
+        catch (UriFormatException e)
+        {
+            icc.FinishReason = DBFinishReason.InternalConfigIssue;
+            errorText = e.Message;
+            logger.LogError(e, "Invalid URL in conversation for message: {userMessageId}", req.MessageId);
+        }
+        catch (JsonException e)
+        {
+            icc.FinishReason = DBFinishReason.InternalConfigIssue;
+            errorText = e.Message;
+            logger.LogError(e, "Invalid JSON config in conversation for message: {userMessageId}", req.MessageId);
         }
         catch (Exception e)
         {
@@ -489,7 +504,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         {
             await writer.WriteAsync(SseResponseLine.Error(span.Id, errorText), cancellationToken);
         }
-        dbAssistantMessage.Usage = icc.ToUserModelUsage(currentUser.Id, await clientInfoTask, isApi: false);
+        dbAssistantMessage.Usage = icc.ToUserModelUsage(currentUser.Id, userModel, await clientInfoTask, isApi: false);
         await writer.WriteAsync(new SseResponseLine { Kind = SseResponseKind.End, Result = dbAssistantMessage, SpanId = span.Id }, cancellationToken);
         writer.Complete();
         return new ChatSpanResponse()

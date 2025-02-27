@@ -1,8 +1,8 @@
 import { useFetch } from '@/hooks/useFetch';
 
 import {
+  AdminChatsDto,
   AdminModelDto,
-  AutoCreateModelResult,
   ErrorResult,
   GetConfigsResult,
   GetFileServicesResult,
@@ -16,7 +16,6 @@ import {
   GetRequestLogsParams,
   GetUserInitialConfigResult,
   GetUserMessageParams,
-  AdminChatsDto,
   GetUsersParams,
   GetUsersResult,
   ModelFastCreateParams,
@@ -380,6 +379,11 @@ export const getAdminMessage = (chatId: string) => {
   return fetchServer.get<GetChatShareResult>(
     `/api/admin/message-details?chatId=${chatId}`,
   );
+};
+
+export const getChatsVersion = () => {
+  const fetchServer = useFetch();
+  return fetchServer.get<number>(`/api/version`);
 };
 
 export const defaultFileConfig: ChatModelFileConfig = {
