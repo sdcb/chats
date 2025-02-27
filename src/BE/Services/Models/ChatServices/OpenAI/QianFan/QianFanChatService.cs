@@ -28,12 +28,13 @@ public class QianFanChatService(Model model) : OpenAIChatService(model, CreateCh
         return api.GetChatClient(model.ApiModelId);
     }
 
-    protected override Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, CancellationToken cancellationToken)
+    protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {
-        if (feOptions.WebSearchEnabled && Model.ModelReference.AllowSearch)
+        options.GetOrCreateSerializedAdditionalRawData()["web_search"] = BinaryData.FromObjectAsJson(new Dictionary<string, object>()
         {
-            options.SetWebSearchEnabled_QianFanStyle(true);
-        }
-        return base.FEPreprocess(messages, options, feOptions, cancellationToken);
+            ["enable"] = enabled,
+            ["enable_citation"] = false,
+            ["enable_trace"] = false,
+        });
     }
 }

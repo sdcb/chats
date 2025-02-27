@@ -26,7 +26,7 @@ public class ChatCompletionOptionsTests
         });
 
         // Act
-        bool result = options.IsSearchEnabled();
+        bool result = IsSearchEnabled(options);
 
         // Assert
         Assert.True(result);
@@ -42,7 +42,7 @@ public class ChatCompletionOptionsTests
         });
 
         // Act
-        bool result = options.IsSearchEnabled();
+        bool result = IsSearchEnabled(options);
 
         // Assert
         Assert.False(result);
@@ -55,9 +55,19 @@ public class ChatCompletionOptionsTests
         var options = CreateCCOWithDictionary([]);
 
         // Act
-        bool result = options.IsSearchEnabled();
+        bool result = IsSearchEnabled(options);
 
         // Assert
         Assert.False(result);
+    }
+
+    static bool IsSearchEnabled(ChatCompletionOptions options)
+    {
+        IDictionary<string, BinaryData>? rawData = options.GetOrCreateSerializedAdditionalRawData();
+        if (rawData != null && rawData.TryGetValue("enable_search", out BinaryData? binaryData))
+        {
+            return binaryData.ToObjectFromJson<bool>();
+        }
+        return false;
     }
 }
