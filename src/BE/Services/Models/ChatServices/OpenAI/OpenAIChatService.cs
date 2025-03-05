@@ -34,12 +34,15 @@ public partial class OpenAIChatService(Model model, ChatClient chatClient) : Cha
     static Func<StreamingChatCompletionUpdate, string?> StreamingReasoningContentAccessor { get; } = ReasoningContentFactory.CreateStreamingReasoningContentAccessor();
     static Func<ChatCompletion, string?> ReasoningContentAccessor { get; } = ReasoningContentFactory.CreateReasoningContentAccessor();
 
+    protected virtual string? GetReasoningContent(ChatCompletion delta) => ReasoningContentAccessor(delta);
+    protected virtual string? GetReasoningContent(StreamingChatCompletionUpdate delta) => StreamingReasoningContentAccessor(delta);
+
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         await foreach (StreamingChatCompletionUpdate delta in chatClient.CompleteChatStreamingAsync(messages, options, cancellationToken))
         {
             string? segment = delta.ContentUpdate.FirstOrDefault()?.Text;
-            string? reasoningSegment = StreamingReasoningContentAccessor(delta);
+            string? reasoningSegment = GetReasoningContent(delta);
 
             if (segment == null && reasoningSegment == null && delta.Usage == null)
             {
@@ -78,7 +81,7 @@ public partial class OpenAIChatService(Model model, ChatClient chatClient) : Cha
         return new ChatSegment
         {
             Segment = delta.Content[0].Text,
-            ReasoningSegment = ReasoningContentAccessor(delta),
+            ReasoningSegment = GetReasoningContent(delta),
             FinishReason = delta.FinishReason,
             Usage = delta.Usage != null ? GetUsage(delta.Usage) : null,
         };

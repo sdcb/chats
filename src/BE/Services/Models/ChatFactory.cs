@@ -33,6 +33,7 @@ public class ChatFactory(ILogger<ChatFactory> logger)
             DBModelProvider.MiniMax => new MiniMaxChatService(model),
             DBModelProvider.Doubao => new DoubaoChatService(model),
             DBModelProvider.SiliconFlow => new SiliconFlowChatService(model),
+            DBModelProvider.OpenRouter => new OpenRouterChatService(model),
             _ => throw new NotSupportedException($"Unknown model provider: {modelProvider}")
         };
         return cs;
@@ -60,6 +61,7 @@ public class ChatFactory(ILogger<ChatFactory> logger)
             DBModelProvider.MiniMax => null,
             DBModelProvider.Doubao => null,
             DBModelProvider.SiliconFlow => null,
+            DBModelProvider.OpenRouter => new OpenAIModelLoader(),
             _ => throw new NotSupportedException($"Unknown model provider: {modelProvider}")
         };
         return ml;

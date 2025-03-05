@@ -11,7 +11,7 @@ public class ReasoningContentFactory
     /// 如果未找到或无法解析，则返回 null。
     /// </summary>
     /// <returns>Func<StreamingChatCompletionUpdate, string?></returns>
-    public static Func<StreamingChatCompletionUpdate, string?> CreateStreamingReasoningContentAccessor()
+    public static Func<StreamingChatCompletionUpdate, string?> CreateStreamingReasoningContentAccessor(string reasoningContentProp = "reasoning_content")
     {
         // 1. 获取 StreamingChatCompletionUpdate 类型
         var streamingChatType = typeof(StreamingChatCompletionUpdate);
@@ -77,7 +77,7 @@ public class ReasoningContentFactory
                 if (rawDataValue is not Dictionary<string, BinaryData> dict) continue;
 
                 // 从字典里查找 "reasoning_content"
-                if (dict.TryGetValue("reasoning_content", out BinaryData? binaryData))
+                if (dict.TryGetValue(reasoningContentProp, out BinaryData? binaryData))
                 {
                     return binaryData.ToObjectFromJson<string>();
                 }
@@ -93,7 +93,7 @@ public class ReasoningContentFactory
     /// from its internal structure via reflection. Returns null if not found.
     /// </summary>
     /// <returns>A delegate that takes a <see cref="ChatCompletion"/> and returns a string or null.</returns>
-    public static Func<ChatCompletion, string?> CreateReasoningContentAccessor()
+    public static Func<ChatCompletion, string?> CreateReasoningContentAccessor(string reasoningContentProp = "reasoning_content")
     {
         // 1. Get ChatCompletion type
         var chatCompletionType = typeof(ChatCompletion);
@@ -123,22 +123,14 @@ public class ReasoningContentFactory
         PropertyInfo? messageProp = choiceType.GetProperty(
             "Message",
             BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
-        );
-        if (messageProp == null)
-        {
-            throw new InvalidOperationException("Unable to reflect property 'Message' in choice type.");
-        }
+        ) ?? throw new InvalidOperationException("Unable to reflect property 'Message' in choice type.");
 
         // 5. From the message type, get "SerializedAdditionalRawData"
         Type messageType = messageProp.PropertyType;
         PropertyInfo? rawDataProp = messageType.GetProperty(
             "SerializedAdditionalRawData",
             BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
-        );
-        if (rawDataProp == null)
-        {
-            throw new InvalidOperationException("Unable to reflect property 'SerializedAdditionalRawData' in message type.");
-        }
+        ) ?? throw new InvalidOperationException("Unable to reflect property 'SerializedAdditionalRawData' in message type.");
 
         // ---
         // Create and return the delegate
@@ -171,7 +163,7 @@ public class ReasoningContentFactory
                 if (rawDataValue is not Dictionary<string, BinaryData> dict) continue;
 
                 // Check if "reasoning_content" exists
-                if (dict.TryGetValue("reasoning_content", out BinaryData? binaryData))
+                if (dict.TryGetValue(reasoningContentProp, out BinaryData? binaryData))
                 {
                     return binaryData.ToObjectFromJson<string>();
                 }
