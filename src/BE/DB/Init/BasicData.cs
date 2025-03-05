@@ -121,7 +121,7 @@ internal static class BasicData
 
     private static void InsertModelProviders(ChatsDB db)
     {
-        // Generated from data, hash: 83ac19540fa3beff2525438ba04e37383f7607ce3b16e017c7a1a28c4a117864
+        // Generated from data, hash: 34e02e74fc8bbc0aad77d4836e3f2805ee4f3561a7b3a39c44e1c16416c2dee5
         db.ModelProviders.AddRange(
         [
             new(){ Id=0,  Name="Test",             InitialHost=null,                                                       InitialSecret=null,                                              RequireDeploymentName=false, },
@@ -141,13 +141,14 @@ internal static class BasicData
             new(){ Id=14, Name="Ollama",           InitialHost="http://localhost:11434/v1",                                InitialSecret="ollama",                                          RequireDeploymentName=true,  },
             new(){ Id=15, Name="MiniMax",          InitialHost="https://api.minimax.chat/v1",                              InitialSecret="your-key",                                        RequireDeploymentName=false, },
             new(){ Id=16, Name="Doubao",           InitialHost="https://ark.cn-beijing.volces.com/api/v3/",                InitialSecret="your-key",                                        RequireDeploymentName=false, },
-            new(){ Id=17, Name="SiliconFlow",      InitialHost="https://api.siliconflow.cn/v1",                            InitialSecret="sk-yourkey",                                      RequireDeploymentName=false, }
+            new(){ Id=17, Name="SiliconFlow",      InitialHost="https://api.siliconflow.cn/v1",                            InitialSecret="sk-yourkey",                                      RequireDeploymentName=false, },
+            new(){ Id=18, Name="OpenRouter",       InitialHost="https://openrouter.ai/api/v1",                             InitialSecret="sk-or-v1-***",                                    RequireDeploymentName=false, }
         ]);
     }
 
     private static void InsertModelReferences(ChatsDB db)
     {
-        // Generated from data, hash: 87f324ff7f887ef77bbd5a7fb1aa333a6c0b05381f3d74fc5d1c677a7efae367
+        // Generated from data, hash: eada789945baa7a769b48afdb9ec5f2bf682fc0b1ea990c02270477eae83b08e
         db.ModelReferences.AddRange(
         [
             new(){ Id=0,    ProviderId=0,  Name="Test",                                      DisplayName=null,                    PublishDate=null,                       MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=true,  AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=0, ContextWindow=2048,     MaxResponseTokens=2048,   TokenizerId=1,    InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="RMB", },
@@ -333,7 +334,9 @@ internal static class BasicData
             new(){ Id=1706, ProviderId=17, Name="deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",  DisplayName="DeepSeek-R1",           PublishDate=new DateOnly(2025,  1, 20), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=32000,    MaxResponseTokens=16000,  TokenizerId=null, InputTokenPrice1M=0.70000M,   OutputTokenPrice1M=0.70000M,   CurrencyCode="RMB", },
             new(){ Id=1707, ProviderId=17, Name="deepseek-ai/DeepSeek-R1-Distill-Llama-8B",  DisplayName="DeepSeek-R1",           PublishDate=new DateOnly(2025,  1, 20), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=32000,    MaxResponseTokens=16000,  TokenizerId=null, InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="RMB", },
             new(){ Id=1708, ProviderId=17, Name="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",   DisplayName="DeepSeek-R1",           PublishDate=new DateOnly(2025,  1, 20), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=32000,    MaxResponseTokens=16000,  TokenizerId=null, InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="RMB", },
-            new(){ Id=1709, ProviderId=17, Name="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", DisplayName="DeepSeek-R1",           PublishDate=new DateOnly(2025,  1, 20), MinTemperature=0.00M, MaxTemperature=0.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=32000,    MaxResponseTokens=16000,  TokenizerId=null, InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="RMB", }
+            new(){ Id=1709, ProviderId=17, Name="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", DisplayName="DeepSeek-R1",           PublishDate=new DateOnly(2025,  1, 20), MinTemperature=0.00M, MaxTemperature=0.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=32000,    MaxResponseTokens=16000,  TokenizerId=null, InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="RMB", },
+            new(){ Id=1800, ProviderId=18, Name="openrouter-general",                        DisplayName=null,                    PublishDate=null,                       MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=true,  AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=0, ContextWindow=128000,   MaxResponseTokens=8000,   TokenizerId=null, InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="USD", },
+            new(){ Id=1801, ProviderId=18, Name="openrouter-vision",                         DisplayName=null,                    PublishDate=null,                       MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=true,  AllowVision=true,  AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=0, ContextWindow=128000,   MaxResponseTokens=8000,   TokenizerId=null, InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="USD", }
         ]);
     }
 };

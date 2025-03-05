@@ -20,4 +20,5 @@ public enum DBModelProvider
     MiniMax = 15,
     Doubao = 16, 
     SiliconFlow = 17, 
+    OpenRouter = 18,
 }
