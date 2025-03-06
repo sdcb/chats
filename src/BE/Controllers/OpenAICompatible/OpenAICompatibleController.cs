@@ -45,9 +45,9 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
         bool hasSuccessYield = false;
         try
         {
-            await foreach (InternalChatSegment seg in icc.Run(userBalance.Balance, userModel, s.ChatStreamedSimulated(cco.Stream, [.. cco.Messages], cco.ToCleanCco(), cancellationToken)))
+            await foreach (InternalChatSegment seg in icc.Run(userBalance.Balance, userModel, s.ChatStreamedSimulated(cco.Stream, [.. cco.Messages!], cco.ToCleanCco(), cancellationToken)))
             {
-                if (seg.Segment == string.Empty) continue;
+                if (string.IsNullOrEmpty(seg.Segment) && string.IsNullOrEmpty(seg.ReasoningSegment)) continue;
 
                 if (cco.Stream)
                 {
