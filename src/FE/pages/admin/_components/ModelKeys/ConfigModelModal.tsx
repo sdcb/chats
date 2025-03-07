@@ -133,7 +133,7 @@ const ConfigModelModal = (props: IProps) => {
         <DialogHeader>
           <DialogTitle>{t('Add Model')}</DialogTitle>
         </DialogHeader>
-        <div className="h-96 overflow-scroll flex justify-start gap-2 flex-wrap">
+        <div className="h-[75vh] overflow-scroll flex justify-start gap-2 flex-wrap">
           <Table>
             <TableHeader>
               <TableRow className="pointer-events-none">
@@ -147,7 +147,7 @@ const ConfigModelModal = (props: IProps) => {
                 <TableRow key={model.modelReferenceId}>
                   <TableCell>
                     <Input
-                      className="max-w-[200px]"
+                      className="max-w-[300px]"
                       disabled={model.isExists}
                       value={model.deploymentName || ''}
                       onChange={(e) => {

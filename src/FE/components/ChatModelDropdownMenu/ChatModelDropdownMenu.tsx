@@ -20,16 +20,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-import RegenerateModel from '../ChatMessage/RegenerateModel';
-
 import { cn } from '@/lib/utils';
 
 const ChatModelDropdownMenu = ({
   models,
-  modelId,
-  modelName,
   readonly,
-  showRegenerate,
   content,
   className,
   hideIcon,
@@ -133,7 +128,7 @@ const ChatModelDropdownMenu = ({
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent
-                    className="max-w-[64px] md:max-w-[200px]"
+                    className="max-h-96 overflow-y-auto custom-scrollbar max-w-[64px] md:max-w-[256px]"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {m.child.map((x) => (
@@ -153,15 +148,6 @@ const ChatModelDropdownMenu = ({
             );
           })}
         </DropdownMenuGroup>
-        {/* <RegenerateModel
-          hidden={!showRegenerate}
-          onRegenerate={(e) => {
-            const model = models.find((x) => x.modelId === modelId);
-            onChangeModel(model!);
-            e.stopPropagation();
-          }}
-          modelName={modelName}
-        /> */}
       </DropdownMenuContent>
     </DropdownMenu>
   );

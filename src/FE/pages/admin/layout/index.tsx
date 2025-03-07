@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useRouter } from 'next/router';
 
@@ -18,8 +18,11 @@ import {
   IconUserCog,
   IconUsers,
 } from '@/components/Icons/index';
+import { Badge } from '@/components/ui/badge';
 
 import Nav from '../_components/Nav/Nav';
+
+import { getChatsVersion } from '@/apis/adminApis';
 
 const AdminLayout = ({
   children,
@@ -29,6 +32,7 @@ const AdminLayout = ({
 }) => {
   const router = useRouter();
   const { t } = useTranslation();
+  const [version, setVersion] = useState(0);
 
   const menus = [
     // {
@@ -112,6 +116,9 @@ const AdminLayout = ({
 
   useEffect(() => {
     document.title = 'Chats Admin';
+    getChatsVersion().then((v) => {
+      setVersion(v);
+    });
   }, []);
 
   return (
@@ -130,7 +137,10 @@ const AdminLayout = ({
               src="/icons/logo.png"
             />
             <span className="self-center text-2xl font-medium whitespace-nowrap">
-              Chats
+              Chats&nbsp;
+              <Badge variant="outline" className="text-xs">
+                {version}
+              </Badge>
             </span>
           </a>
         </div>

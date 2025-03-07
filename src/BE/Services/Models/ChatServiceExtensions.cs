@@ -74,41 +74,6 @@ public abstract partial class ChatService
         }
     }
 
-    protected virtual async Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, CancellationToken cancellationToken)
-    {
-        if (!Model.ModelReference.AllowSystemPrompt)
-        {
-            // Remove system prompt
-            messages = messages.Where(m => m is not SystemChatMessage).ToArray();
-        }
-        else
-        {
-            // system message transform
-            SystemChatMessage? existingSystemPrompt = messages.OfType<SystemChatMessage>().FirstOrDefault();
-            DateTime now = feOptions.Now;
-            if (existingSystemPrompt is not null)
-            {
-                existingSystemPrompt.Content[0] = existingSystemPrompt.Content[0].Text
-                    .Replace("{{CURRENT_DATE}}", now.ToString("yyyy/MM/dd"))
-                    .Replace("{{MODEL_NAME}}", Model.ModelReference.DisplayName ?? Model.ModelReference.Name)
-                    .Replace("{{CURRENT_TIME}}", now.ToString("HH:mm:ss"));
-                ;
-            }
-        }
-
-        ChatMessage[] filteredMessage = await messages
-            .ToAsyncEnumerable()
-            .SelectAwait(async m => await FilterVision(Model.ModelReference.AllowVision, m, cancellationToken))
-            .ToArrayAsync(cancellationToken);
-        if (!Model.ModelReference.AllowSearch)
-        {
-            options.RemoveAllowSearch();
-        }
-        options.Temperature = Model.ModelReference.UnnormalizeTemperature(options.Temperature);
-
-        return filteredMessage;
-    }
-
     protected virtual bool SupportsVisionLink => true;
 
     protected virtual async Task<ChatMessage> FilterVision(bool allowVision, ChatMessage message, CancellationToken cancellationToken)

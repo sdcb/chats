@@ -1,15 +1,13 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.Services.Models.Extensions;
-using Microsoft.OpenApi.Services;
 using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class GLMChatService(Model model) : OpenAIChatService(model, new Uri("https://open.bigmodel.cn/api/paas/v4/"))
+public class XunfeiChatService(Model model) : OpenAIChatService(model, new Uri("https://spark-api-open.xf-yun.com/v1"))
 {
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {
-        // https://bigmodel.cn/dev/howuse/websearch
         options.GetOrCreateSerializedAdditionalRawData()["tools"] = BinaryData.FromObjectAsJson(new[]
         {
             new
@@ -18,7 +16,8 @@ public class GLMChatService(Model model) : OpenAIChatService(model, new Uri("htt
                 web_search = new
                 {
                     enable = enabled,
-                },
+                    show_ref_label = false,
+                }
             }
         });
     }

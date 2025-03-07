@@ -2,12 +2,11 @@
 
 public record ChatExtraDetails
 {
-    public required short TimezoneOffset { get; init; }
+    public short TimezoneOffset { get; init; }
+
+    public bool WebSearchEnabled { get; init; }
 
     public DateTime Now => DateTime.UtcNow.AddMinutes(TimezoneOffset);
 
-    public static ChatExtraDetails Default => new()
-    {
-        TimezoneOffset = 0
-    };
+    public static ChatExtraDetails Default => new();
 }

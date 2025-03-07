@@ -17,8 +17,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
     public async Task<ActionResult<ModelKeyDto[]>> GetAllModelKeys(CancellationToken cancellationToken)
     {
         ModelKeyDto[] result = await db.ModelKeys
-            .OrderBy(x => x.ModelProviderId)
-            .ThenBy(x => x.Id)
+            .OrderByDescending(x => x.Id)
             .Select(x => new ModelKeyDto
             {
                 Id = x.Id,
@@ -139,7 +138,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
                 .Select(x => x.DeploymentName!)
                 .ToHashSetAsync(cancellationToken);
 
-            if (modelProvider == DBModelProvider.Ollama)
+            if (modelProvider == DBModelProvider.Ollama || modelProvider == DBModelProvider.OpenRouter)
             {
                 Dictionary<short, ModelReference> referenceOptions = await db.ModelReferences
                     .Where(x => x.ProviderId == modelKey.ModelProviderId)
@@ -147,9 +146,12 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
 
                 return Ok(models.Select(model =>
                 {
-                    bool isVision = model.Contains("qvq", StringComparison.OrdinalIgnoreCase) ||
-                        model.Contains("vision", StringComparison.OrdinalIgnoreCase);
-                    short modelReferenceId = isVision ? (short)1401 : (short)1400;
+                    bool isVision = 
+                        model.Contains("qvq", StringComparison.OrdinalIgnoreCase) ||
+                        model.Contains("vision", StringComparison.OrdinalIgnoreCase) ||
+                        model.Contains("vl", StringComparison.OrdinalIgnoreCase);
+                    // 1401, 1400 -> ollama, 1801, 1800 -> openrouter
+                    short modelReferenceId = (short)((int)modelProvider * 100 + (isVision ? 1 : 0));
                     return new PossibleModelDto()
                     {
                         DeploymentName = model,

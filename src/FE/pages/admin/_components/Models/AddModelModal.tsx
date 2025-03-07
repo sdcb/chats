@@ -246,7 +246,7 @@ const AddModelModal = (props: IProps) => {
                   return (
                     <FormInput
                       type="number"
-                      label={`1M ${t('1M output tokens price')}(${t('Yuan')})`}
+                      label={`${t('1M output tokens price')}(${t('Yuan')})`}
                       field={field}
                     />
                   );

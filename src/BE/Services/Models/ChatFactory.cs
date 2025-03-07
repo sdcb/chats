@@ -1,9 +1,7 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.DB.Enums;
-using Chats.BE.Services.Models.ChatServices.DashScope;
-using Chats.BE.Services.Models.ChatServices.Hunyuan;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
-using Chats.BE.Services.Models.ChatServices.QianFan;
+using Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 using Chats.BE.Services.Models.ChatServices.Test;
 using Chats.BE.Services.Models.ModelLoaders;
 using OpenAI.Chat;
@@ -21,11 +19,11 @@ public class ChatFactory(ILogger<ChatFactory> logger)
             DBModelProvider.OpenAI => new OpenAIChatService(model),
             DBModelProvider.AzureOpenAI => new AzureChatService(model),
             DBModelProvider.WenXinQianFan => new QianFanChatService(model),
-            DBModelProvider.AliyunDashscope => new DashScopeChatService(model),
+            DBModelProvider.AliyunDashscope => new QwenChatService(model),
             DBModelProvider.ZhiPuAI => new GLMChatService(model),
             DBModelProvider.Moonshot => new KimiChatService(model),
             DBModelProvider.HunYuan => new HunyuanChatService(model),
-            DBModelProvider.Sparkdesk => new SparkDeskChatService(model),
+            DBModelProvider.Sparkdesk => new XunfeiChatService(model),
             DBModelProvider.LingYi => new LingYiChatService(model),
             DBModelProvider.DeepSeek => new DeepSeekChatService(model),
             DBModelProvider.xAI => new XAIChatService(model),
@@ -33,7 +31,9 @@ public class ChatFactory(ILogger<ChatFactory> logger)
             DBModelProvider.GoogleAI => new GoogleAIChatService(model),
             DBModelProvider.Ollama => new OllamaChatService(model),
             DBModelProvider.MiniMax => new MiniMaxChatService(model),
+            DBModelProvider.Doubao => new DoubaoChatService(model),
             DBModelProvider.SiliconFlow => new SiliconFlowChatService(model),
+            DBModelProvider.OpenRouter => new OpenRouterChatService(model),
             _ => throw new NotSupportedException($"Unknown model provider: {modelProvider}")
         };
         return cs;
@@ -59,7 +59,9 @@ public class ChatFactory(ILogger<ChatFactory> logger)
             DBModelProvider.GoogleAI => null,
             DBModelProvider.Ollama => new OpenAIModelLoader(),
             DBModelProvider.MiniMax => null,
+            DBModelProvider.Doubao => null,
             DBModelProvider.SiliconFlow => null,
+            DBModelProvider.OpenRouter => new OpenAIModelLoader(),
             _ => throw new NotSupportedException($"Unknown model provider: {modelProvider}")
         };
         return ml;

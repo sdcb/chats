@@ -6,7 +6,6 @@ using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.OpenAIApiKeySession;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Sdcb.DashScope;
 using System.ClientModel;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -46,9 +45,9 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
         bool hasSuccessYield = false;
         try
         {
-            await foreach (InternalChatSegment seg in icc.Run(userBalance.Balance, userModel, s.ChatStreamedSimulated(cco.Stream, [.. cco.Messages], cco.ToCleanCco(), cancellationToken)))
+            await foreach (InternalChatSegment seg in icc.Run(userBalance.Balance, userModel, s.ChatStreamedSimulated(cco.Stream, [.. cco.Messages!], cco.ToCleanCco(), cancellationToken)))
             {
-                if (seg.Segment == string.Empty) continue;
+                if (string.IsNullOrEmpty(seg.Segment) && string.IsNullOrEmpty(seg.ReasoningSegment)) continue;
 
                 if (cco.Stream)
                 {
@@ -68,7 +67,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
             icc.FinishReason = cse.ErrorCode;
             errorToReturn = await YieldError(hasSuccessYield && cco.Stream, cse.ErrorCode, cse.Message, cancellationToken);
         }
-        catch (Exception e) when (e is DashScopeException || e is ClientResultException)
+        catch (ClientResultException e)
         {
             icc.FinishReason = DBFinishReason.UpstreamError;
             logger.LogError(e, "Upstream error");
@@ -77,6 +76,18 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
         catch (TaskCanceledException)
         {
             icc.FinishReason = DBFinishReason.Cancelled;
+        }
+        catch (UriFormatException e)
+        {
+            icc.FinishReason = DBFinishReason.InternalConfigIssue;
+            logger.LogError(e, "Invalid API host URL");
+            errorToReturn = await YieldError(hasSuccessYield && cco.Stream, icc.FinishReason, e.Message, cancellationToken);
+        }
+        catch (JsonException e)
+        {
+            icc.FinishReason = DBFinishReason.InternalConfigIssue;
+            logger.LogError(e, "Invalid JSON config");
+            errorToReturn = await YieldError(hasSuccessYield && cco.Stream, icc.FinishReason, e.Message, cancellationToken);
         }
         catch (Exception e)
         {
@@ -93,7 +104,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
         UserApiUsage usage = new()
         {
             ApiKeyId = currentApiKey.ApiKeyId,
-            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, await clientInfoManager.GetClientInfo(cancellationToken), isApi: true),
+            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, userModel, await clientInfoManager.GetClientInfo(cancellationToken), isApi: true),
         };
         db.UserApiUsages.Add(usage);
         await db.SaveChangesAsync(cancellationToken);

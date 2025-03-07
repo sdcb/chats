@@ -23,6 +23,7 @@ export enum DBModelProvider {
   MiniMax = 15,
   Doubao = 16,
   SiliconFlow = 17,
+  OpenRouter = 18,
 }
 
 export type FEModelProvider = {
@@ -85,11 +86,8 @@ export const feModelProviders: FEModelProvider[] = [
   { id: DBModelProvider.Ollama, name: 'Ollama', icon: '/logos/ollama.svg' },
   { id: DBModelProvider.MiniMax, name: 'MiniMax', icon: '/logos/minimax.svg' },
   { id: DBModelProvider.Doubao, name: 'Doubao', icon: '/logos/doubao.svg' },
-  {
-    id: DBModelProvider.SiliconFlow,
-    name: 'SiliconFlow',
-    icon: '/logos/siliconflow.svg',
-  },
+  { id: DBModelProvider.SiliconFlow, name: 'SiliconFlow', icon: '/logos/siliconflow.svg' },
+  { id: DBModelProvider.OpenRouter, name: 'OpenRouter', icon: '/logos/openrouter.svg' },
 ];
 
 export interface ChatModelFileConfig {

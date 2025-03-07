@@ -14,7 +14,6 @@ public class InChatContext(long firstTick)
     private long _preprocessTick, _firstReasoningTick, _firstResponseTick, _endResponseTick, _finishTick;
     private short _segmentCount;
     public UserModelBalanceCost Cost { get; private set; } = UserModelBalanceCost.Empty;
-    private UserModel _userModel = null!;
     private InternalChatSegment _lastSegment = InternalChatSegment.Empty;
     private readonly StringBuilder _fullContent = new();
     private readonly StringBuilder _fullReasoningContent = new();
@@ -24,7 +23,6 @@ public class InChatContext(long firstTick)
     public async IAsyncEnumerable<InternalChatSegment> Run(decimal userBalance, UserModel userModel, IAsyncEnumerable<InternalChatSegment> segments)
     {
         _preprocessTick = _firstReasoningTick = _firstResponseTick = _endResponseTick = _finishTick = Stopwatch.GetTimestamp();
-        _userModel = userModel;
         if (userModel.ExpiresAt.IsExpired())
         {
             throw new SubscriptionExpiredException(userModel.ExpiresAt);
@@ -49,14 +47,14 @@ public class InChatContext(long firstTick)
                 if (seg.IsFromUpstream)
                 {
                     _segmentCount++;
-                    if (seg.ReasoningSegment != null)
+                    if (!string.IsNullOrEmpty(seg.ReasoningSegment))
                     {
                         if (_firstReasoningTick == _preprocessTick) // never reasoning
                         {
                             _firstReasoningTick = Stopwatch.GetTimestamp();
                         }
                     }
-                    if (seg.Segment != null)
+                    if (!string.IsNullOrEmpty(seg.Segment))
                     {
                         if (_firstResponseTick == _preprocessTick) // never response
                         {
@@ -94,14 +92,14 @@ public class InChatContext(long firstTick)
 
     public int ReasoningDurationMs => (int)Stopwatch.GetElapsedTime(_firstReasoningTick, _firstResponseTick).TotalMilliseconds;
 
-    public UserModelUsage ToUserModelUsage(int userId, ClientInfo clientInfo, bool isApi)
+    public UserModelUsage ToUserModelUsage(int userId, UserModel userModel, ClientInfo clientInfo, bool isApi)
     {
         if (_finishTick == _preprocessTick) _finishTick = Stopwatch.GetTimestamp();
 
         UserModelUsage usage = new()
         {
-            UserModelId = _userModel.Id,
-            UserModel = _userModel,
+            UserModelId = userModel.Id,
+            UserModel = userModel,
             CreatedAt = DateTime.UtcNow,
             FinishReasonId = (byte)FinishReason,
             SegmentCount = _segmentCount,
@@ -135,7 +133,7 @@ public class InChatContext(long firstTick)
         {
             usage.UsageTransaction = new()
             {
-                UserModelId = _userModel.Id,
+                UserModelId = userModel.Id,
                 CreditUserId = userId,
                 CreatedAt = usage.CreatedAt,
                 CountAmount = -Cost.CostCount,

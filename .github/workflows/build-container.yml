@@ -219,7 +219,7 @@ jobs:
             args: -r osx-arm64 --self-contained true /p:PublishReadyToRun=false /p:PublishSingleFile=false
           - id: chats-osx-x64
             args: -r osx-x64 --self-contained true /p:PublishReadyToRun=false /p:PublishSingleFile=false
-
+    if: needs.build-fe.outputs.is_release == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Download BE src folder
@@ -227,17 +227,42 @@ jobs:
         with:
           name: be-src
           path: ./be-src
-
       - name: build binary
         run: |
-          dotnet publish ./be-src/Chats.BE.csproj -c Release -o ./Publish ${{ matrix.args }} /p:DeleteExistingFiles=True
-  
+          dotnet publish ./be-src/Chats.BE.csproj -c Release -o ./Publish ${{ matrix.args }} /p:DeleteExistingFiles=True  
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.id }}
           path: ./Publish
+      - name: Upload to Minio
+        run: |
+          curl -s -i -X POST "https://chats-release-webhook.starworks.cc:88/sync/${{ github.run_id }}/${{ matrix.id }}/async" -N \
+            -H "Authorization: Basic $(echo -n "${{ secrets.CHATS_RELEASE_WEBHOOK_CREDENTIAL }}" | openssl base64)"
 
+  build-binaries-non-release:
+    needs: build-fe
+    strategy:
+      matrix:
+        include:
+          - id: chats-win-x64
+            args: -r win-x64 --self-contained true /p:PublishReadyToRun=false /p:PublishSingleFile=false
+    if: needs.build-fe.outputs.is_release == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download BE src folder
+        uses: actions/download-artifact@v4
+        with:
+          name: be-src
+          path: ./be-src
+      - name: build binary
+        run: |
+          dotnet publish ./be-src/Chats.BE.csproj -c Release -o ./Publish ${{ matrix.args }} /p:DeleteExistingFiles=True  
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.id }}
+          path: ./Publish
       - name: Upload to Minio
         run: |
           curl -s -i -X POST "https://chats-release-webhook.starworks.cc:88/sync/${{ github.run_id }}/${{ matrix.id }}/async" -N \

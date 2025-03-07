@@ -14,5 +14,6 @@ public enum DBFinishReason : byte
     InvalidModel = 103,
     SubscriptionExpired = 104,
     BadParameter = 105,
-    Cancelled = 106
+    Cancelled = 106,
+    InternalConfigIssue = 107,
 }

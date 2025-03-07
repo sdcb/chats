@@ -79,9 +79,9 @@
   "total_tokens": "总token数",
   "speed": "速度",
   "response speed": "响应速度",
-  "total_price": "总成本",
-  "prompt_price": "请求成本",
-  "response_price": "响应成本",
+  "total cost": "总消费",
+  "prompt cost": "请求消费",
+  "response cost": "响应消费",
   "Large language models may generate misleading error messages, please validate key information.": "大语言模型可能会生成误导性错误信息，请对关键信息加以验证。",
   "Dark": "深色模式",
   "Light": "浅色模式",
@@ -337,7 +337,7 @@
   "Xunfei SparkDesk": "讯飞星火",
   "Zhipu AI": "智谱AI",
   "Google AI": "谷歌AI",
-  "Doubao": "豆包",
+  "Doubao": "火山方舟",
   "SiliconFlow": "硅基流动",
   "Invalid JSON config": "无效的JSON配置",
   "Invalid host": "无效的host",
@@ -388,6 +388,6 @@
   "Group name already exists": "组名已存在",
   "Like": "赞",
   "Dislike": "踩",
-  "Reasoning...": "推理中...",
-  "Reasoning complete": "推理完成"
+  "Thinking...": "思考中...",
+  "Deeply thought (took {{time}} seconds)": "已深度思考（用时 {{time}} 秒）"
 }
