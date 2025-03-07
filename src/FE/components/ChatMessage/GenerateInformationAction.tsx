@@ -83,7 +83,7 @@ export const GenerateInformationAction = (props: Props) => {
                   name={'response speed'}
                   value={
                     message.duration
-                      ? ((message.outputTokens / (message.duration || 0 - message.firstTokenLatency || 0)) * 1000).toFixed(2) + ' token/s'
+                      ? ((message.outputTokens / (message.duration || 0)) * 1000).toFixed(2) + ' token/s'
                       : '-'
                   }
                 />
