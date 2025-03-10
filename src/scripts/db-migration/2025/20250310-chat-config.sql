@@ -1,0 +1,121 @@
+--DROP TABLE dbo.ChatConfig
+CREATE TABLE dbo.ChatConfig
+	(
+	Id int NOT NULL IDENTITY (1, 1),
+	IsFrozen bit NOT NULL,
+	ModelId smallint NOT NULL,
+	SystemPrompt nvarchar(MAX) NULL,
+	Temperature real NULL,
+	WebSearchEnabled bit NOT NULL,
+	MaxOutputTokens int NULL,
+	ReasoningEffort tinyint NULL,
+	)  ON [PRIMARY]
+	 TEXTIMAGE_ON [PRIMARY]
+GO
+ALTER TABLE dbo.ChatConfig ADD CONSTRAINT
+	PK_ChatConfig PRIMARY KEY CLUSTERED 
+	(
+	Id
+	) WITH( STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+
+GO
+CREATE NONCLUSTERED INDEX IX_ChatConfig_ModelId ON dbo.ChatConfig
+	(
+	ModelId
+	) WITH( STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+GO
+ALTER TABLE dbo.ChatConfig ADD CONSTRAINT
+	FK_ChatConfig_Model FOREIGN KEY
+	(
+	ModelId
+	) REFERENCES dbo.Model
+	(
+	Id
+	) ON UPDATE  NO ACTION 
+	 ON DELETE  NO ACTION 
+GO
+
+/* 为了防止任何可能出现的数据丢失问题，您应该先仔细检查此脚本，然后再在数据库设计器的上下文之外运行此脚本。*/
+BEGIN TRANSACTION
+GO
+ALTER TABLE dbo.ChatSpan DROP CONSTRAINT FK_ChatSpan_Chat
+GO
+ALTER TABLE dbo.Chat SET (LOCK_ESCALATION = TABLE)
+GO
+COMMIT
+BEGIN TRANSACTION
+GO
+ALTER TABLE dbo.ChatSpan DROP CONSTRAINT FK_ChatSpan_Model
+GO
+ALTER TABLE dbo.Model SET (LOCK_ESCALATION = TABLE)
+GO
+COMMIT
+BEGIN TRANSACTION
+GO
+CREATE TABLE dbo.Tmp_ChatSpan
+	(
+	ChatId int NOT NULL,
+	SpanId tinyint NOT NULL,
+	Enabled bit NOT NULL,
+	ChatConfigId int NULL
+	)  ON [PRIMARY]
+GO
+ALTER TABLE dbo.Tmp_ChatSpan SET (LOCK_ESCALATION = TABLE)
+GO
+ALTER TABLE dbo.Tmp_ChatSpan ADD CONSTRAINT
+	DF_ChatSpan_Enabled DEFAULT 1 FOR Enabled
+GO
+IF EXISTS(SELECT * FROM dbo.ChatSpan)
+	 EXEC('INSERT INTO dbo.Tmp_ChatSpan (ChatId, SpanId)
+		SELECT ChatId, SpanId FROM dbo.ChatSpan WITH (HOLDLOCK TABLOCKX)')
+GO
+DROP TABLE dbo.ChatSpan
+GO
+EXECUTE sp_rename N'dbo.Tmp_ChatSpan', N'ChatSpan', 'OBJECT' 
+GO
+ALTER TABLE dbo.ChatSpan ADD CONSTRAINT
+	PK_ChatSpan PRIMARY KEY CLUSTERED 
+	(
+	ChatId,
+	SpanId
+	) WITH( STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+GO
+ALTER TABLE dbo.ChatSpan ADD CONSTRAINT FK_ChatSpan_ChatConfig FOREIGN KEY
+	(
+	ChatConfigId
+	) REFERENCES dbo.ChatConfig
+	(
+	Id
+	) ON UPDATE  NO ACTION 
+	 ON DELETE  NO ACTION
+GO
+CREATE NONCLUSTERED INDEX IX_ChatSpan_ChatConfigId ON dbo.ChatSpan
+	(
+	ChatConfigId
+	) WITH( STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+GO
+ALTER TABLE dbo.ChatSpan ADD CONSTRAINT
+	FK_ChatSpan_Chat FOREIGN KEY
+	(
+	ChatId
+	) REFERENCES dbo.Chat
+	(
+	Id
+	) ON UPDATE  CASCADE 
+	 ON DELETE  CASCADE 
+	
+GO
+ALTER TABLE dbo.ChatSpan ADD CONSTRAINT
+	FK_ChatSpan_ChatSpan FOREIGN KEY
+	(
+	ChatId,
+	SpanId
+	) REFERENCES dbo.ChatSpan
+	(
+	ChatId,
+	SpanId
+	) ON UPDATE  NO ACTION 
+	 ON DELETE  NO ACTION 
+	
+GO
+COMMIT
