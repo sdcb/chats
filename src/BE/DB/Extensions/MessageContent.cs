@@ -55,7 +55,7 @@ public partial class MessageContent
         {
             yield return FromError(errorText);
         }
-        if (lastSegment.ReasoningSegment is not null)
+        if (!string.IsNullOrEmpty(lastSegment.ReasoningSegment))
         {
             yield return FromReasoningContent(lastSegment.ReasoningSegment);
         }
