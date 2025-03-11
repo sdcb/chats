@@ -2,7 +2,7 @@
 CREATE TABLE dbo.ChatConfig
 	(
 	Id int NOT NULL IDENTITY (1, 1),
-	IsFrozen bit NOT NULL,
+	HashCode binary(8) NOT NULL,
 	ModelId smallint NOT NULL,
 	SystemPrompt nvarchar(MAX) NULL,
 	Temperature real NULL,
@@ -12,27 +12,14 @@ CREATE TABLE dbo.ChatConfig
 	)  ON [PRIMARY]
 	 TEXTIMAGE_ON [PRIMARY]
 GO
-ALTER TABLE dbo.ChatConfig ADD CONSTRAINT
-	PK_ChatConfig PRIMARY KEY CLUSTERED 
-	(
-	Id
-	) WITH( STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-
+ALTER TABLE dbo.ChatConfig ADD CONSTRAINT PK_ChatConfig PRIMARY KEY CLUSTERED (Id)
 GO
-CREATE NONCLUSTERED INDEX IX_ChatConfig_ModelId ON dbo.ChatConfig
-	(
-	ModelId
-	) WITH( STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+CREATE NONCLUSTERED INDEX IX_ChatConfig_ModelId ON dbo.ChatConfig (ModelId)
+CREATE NONCLUSTERED INDEX IX_ChatConfig_HashCode ON dbo.ChatConfig (HashCode)
 GO
-ALTER TABLE dbo.ChatConfig ADD CONSTRAINT
-	FK_ChatConfig_Model FOREIGN KEY
-	(
-	ModelId
-	) REFERENCES dbo.Model
-	(
-	Id
-	) ON UPDATE  NO ACTION 
-	 ON DELETE  NO ACTION 
+ALTER TABLE dbo.ChatConfig ADD CONSTRAINT FK_ChatConfig_Model FOREIGN KEY(ModelId) REFERENCES dbo.Model(Id)
+	ON UPDATE NO ACTION
+	ON DELETE NO ACTION
 GO
 
 /* 为了防止任何可能出现的数据丢失问题，您应该先仔细检查此脚本，然后再在数据库设计器的上下文之外运行此脚本。*/
