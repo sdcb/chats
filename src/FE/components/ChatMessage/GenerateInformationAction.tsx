@@ -82,12 +82,8 @@ export const GenerateInformationAction = (props: Props) => {
                 <GenerateInformation
                   name={'response speed'}
                   value={
-                    message?.duration
-                      ? (
-                          ((message.outputTokens - message.reasoningTokens) /
-                            (message?.duration || 0)) *
-                          1000
-                        ).toFixed(2) + ' token/s'
+                    message.duration
+                      ? ((message.outputTokens / (message.duration || 0)) * 1000).toFixed(2) + ' token/s'
                       : '-'
                   }
                 />
