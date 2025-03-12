@@ -41,7 +41,7 @@ public partial class Model
     public DateTime UpdatedAt { get; set; }
 
     [InverseProperty("Model")]
-    public virtual ICollection<ChatSpan> ChatSpans { get; set; } = new List<ChatSpan>();
+    public virtual ICollection<ChatConfig> ChatConfigs { get; set; } = new List<ChatConfig>();
 
     [ForeignKey("ModelKeyId")]
     [InverseProperty("Models")]

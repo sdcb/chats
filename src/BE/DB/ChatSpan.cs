@@ -8,7 +8,7 @@ namespace Chats.BE.DB;
 
 [PrimaryKey("ChatId", "SpanId")]
 [Table("ChatSpan")]
-[Index("ModelId", Name = "IX_ChatSpan_Model")]
+[Index("ChatConfigId", Name = "IX_ChatSpan_ChatConfigId")]
 public partial class ChatSpan
 {
     [Key]
@@ -17,17 +17,15 @@ public partial class ChatSpan
     [Key]
     public byte SpanId { get; set; }
 
-    public short ModelId { get; set; }
+    public bool Enabled { get; set; }
 
-    public float? Temperature { get; set; }
-
-    public bool EnableSearch { get; set; }
+    public int ChatConfigId { get; set; }
 
     [ForeignKey("ChatId")]
     [InverseProperty("ChatSpans")]
     public virtual Chat Chat { get; set; } = null!;
 
-    [ForeignKey("ModelId")]
+    [ForeignKey("ChatConfigId")]
     [InverseProperty("ChatSpans")]
-    public virtual Model Model { get; set; } = null!;
+    public virtual ChatConfig ChatConfig { get; set; } = null!;
 }

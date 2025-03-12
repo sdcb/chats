@@ -18,8 +18,14 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         [FromServices] UserModelManager userModelManager,
         CancellationToken cancellationToken)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans.OrderByDescending(x => x.SpanId))
+            .Include(x => x.ChatSpans.First().ChatConfig)
             .FirstOrDefaultAsync(x => x.Id == idEncryption.DecryptChatId(encryptedChatId) && x.UserId == currentUser.Id && !x.IsArchived, cancellationToken);
         if (chat == null)
         {
@@ -46,10 +52,18 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
             {
                 ChatId = chat.Id,
                 SpanId = 0,
-                ModelId = um.ModelId,
-                Model = um.Model,
-                Temperature = request.SetsTemperature ? request.Temperature : null,
-                EnableSearch = request.EnableSearch ?? false,
+                Enabled = true, 
+                ChatConfig = new ChatConfig
+                {
+                    ModelId = um.ModelId,
+                    Model = um.Model,
+                    Temperature = request.SetsTemperature ? request.Temperature : null,
+                    WebSearchEnabled = request.EnableSearch ?? false,
+                    HashCode = 0,
+                    MaxOutputTokens = null,
+                    ReasoningEffort = null,
+                    SystemPrompt = null,
+                }
             };
         }
         else
@@ -71,15 +85,17 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
             {
                 ChatId = chat.Id,
                 SpanId = FindAvailableSpanId(chat.ChatSpans),
-                ModelId = request.ModelId ?? refSpan.ModelId,
-                Model = um.Model,
-                Temperature = request.SetsTemperature ? request.Temperature : refSpan.Temperature,
-                EnableSearch = request.EnableSearch ?? refSpan.EnableSearch,
+                Enabled = true, 
+                ChatConfig = new()
+                {
+                    Model = um.Model,
+                }
             };
         }
-
+        request.ApplyTo(toAdd);
         chat.ChatSpans.Add(toAdd);
         await db.SaveChangesAsync(cancellationToken);
+
         return Created(default(string), ChatSpanDto.FromDB(toAdd));
     }
 
