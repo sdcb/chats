@@ -73,14 +73,9 @@ OUTER APPLY (
     WHERE p.IsSystem = 1 AND p.IsDefault = 1
 ) AS DefaultPrompt;
 
--- 验证插入的数据，包括 RowNumber
-SELECT * FROM #TempChatSpan;
-
--- 开启 IDENTITY_INSERT，允许向自增列插入值
-SET IDENTITY_INSERT dbo.ChatConfig ON;
 
 -- 从临时表 #TempChatSpan 插入数据到 ChatConfig
-TRUNCATE TABLE dbo.ChatConfig
+SET IDENTITY_INSERT dbo.ChatConfig ON;
 INSERT INTO dbo.ChatConfig (Id, HashCode, ModelId, SystemPrompt, Temperature, WebSearchEnabled, MaxOutputTokens, ReasoningEffort)
 SELECT
     RowNumber, -- 使用 RowNumber 作为 Id 的值
@@ -93,94 +88,26 @@ SELECT
     t.ReasoningEffort
 FROM
     #TempChatSpan t;
-
--- 关闭 IDENTITY_INSERT
 SET IDENTITY_INSERT dbo.ChatConfig OFF;
 
 /* 为了防止任何可能出现的数据丢失问题，您应该先仔细检查此脚本，然后再在数据库设计器的上下文之外运行此脚本。*/
-BEGIN TRANSACTION
-GO
-ALTER TABLE dbo.ChatSpan DROP CONSTRAINT FK_ChatSpan_Chat
-GO
-ALTER TABLE dbo.Chat SET (LOCK_ESCALATION = TABLE)
-GO
-COMMIT
-BEGIN TRANSACTION
-GO
-ALTER TABLE dbo.ChatSpan DROP CONSTRAINT FK_ChatSpan_Model
-GO
-ALTER TABLE dbo.Model SET (LOCK_ESCALATION = TABLE)
-GO
-COMMIT
-BEGIN TRANSACTION
-GO
-CREATE TABLE dbo.Tmp_ChatSpan
-	(
-	ChatId int NOT NULL,
-	SpanId tinyint NOT NULL,
-	Enabled bit NOT NULL,
+ALTER TABLE dbo.ChatSpan DROP CONSTRAINT FK_ChatSpan_Chat, FK_ChatSpan_Model; 
+CREATE TABLE dbo.Tmp_ChatSpan 
+(
+	ChatId int NOT NULL, 
+	SpanId tinyint NOT NULL, 
+	Enabled bit NOT NULL CONSTRAINT DF_ChatSpan_Enabled DEFAULT 1, 
 	ChatConfigId int NULL
-	)  ON [PRIMARY]
-GO
-ALTER TABLE dbo.Tmp_ChatSpan SET (LOCK_ESCALATION = TABLE)
-GO
-ALTER TABLE dbo.Tmp_ChatSpan ADD CONSTRAINT
-	DF_ChatSpan_Enabled DEFAULT 1 FOR Enabled
-GO
-IF EXISTS(SELECT * FROM dbo.ChatSpan)
-	 EXEC('INSERT INTO dbo.Tmp_ChatSpan (ChatId, SpanId)
-		SELECT ChatId, SpanId FROM dbo.ChatSpan WITH (HOLDLOCK TABLOCKX)')
-GO
-DROP TABLE dbo.ChatSpan
-GO
-EXECUTE sp_rename N'dbo.Tmp_ChatSpan', N'ChatSpan', 'OBJECT' 
-GO
-ALTER TABLE dbo.ChatSpan ADD CONSTRAINT
-	PK_ChatSpan PRIMARY KEY CLUSTERED 
-	(
-	ChatId,
-	SpanId
-	) WITH( STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-GO
-ALTER TABLE dbo.ChatSpan ADD CONSTRAINT FK_ChatSpan_ChatConfig FOREIGN KEY
-	(
-	ChatConfigId
-	) REFERENCES dbo.ChatConfig
-	(
-	Id
-	) ON UPDATE  NO ACTION 
-	 ON DELETE  NO ACTION
-GO
-CREATE NONCLUSTERED INDEX IX_ChatSpan_ChatConfigId ON dbo.ChatSpan
-	(
-	ChatConfigId
-	) WITH( STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-GO
-ALTER TABLE dbo.ChatSpan ADD CONSTRAINT
-	FK_ChatSpan_Chat FOREIGN KEY
-	(
-	ChatId
-	) REFERENCES dbo.Chat
-	(
-	Id
-	) ON UPDATE  CASCADE 
-	 ON DELETE  CASCADE 
-	
-GO
-ALTER TABLE dbo.ChatSpan ADD CONSTRAINT
-	FK_ChatSpan_ChatSpan FOREIGN KEY
-	(
-	ChatId,
-	SpanId
-	) REFERENCES dbo.ChatSpan
-	(
-	ChatId,
-	SpanId
-	) ON UPDATE  NO ACTION 
-	 ON DELETE  NO ACTION 
-	
-GO
-COMMIT
+);
+INSERT INTO dbo.Tmp_ChatSpan (ChatId, SpanId) SELECT ChatId, SpanId FROM dbo.ChatSpan;
+DROP TABLE dbo.ChatSpan; 
+EXECUTE sp_rename N'dbo.Tmp_ChatSpan', N'ChatSpan', 'OBJECT'; 
+ALTER TABLE dbo.ChatSpan ADD CONSTRAINT PK_ChatSpan PRIMARY KEY CLUSTERED (ChatId, SpanId);
+ALTER TABLE dbo.ChatSpan ADD CONSTRAINT FK_ChatSpan_ChatConfig FOREIGN KEY (ChatConfigId) REFERENCES dbo.ChatConfig (Id) ON UPDATE NO ACTION ON DELETE NO ACTION;
+CREATE NONCLUSTERED INDEX IX_ChatSpan_ChatConfigId ON dbo.ChatSpan (ChatConfigId);
+ALTER TABLE dbo.ChatSpan ADD 
+	CONSTRAINT FK_ChatSpan_Chat FOREIGN KEY (ChatId) REFERENCES dbo.Chat (Id) ON UPDATE CASCADE ON DELETE CASCADE, 
+	CONSTRAINT FK_ChatSpan_ChatSpan FOREIGN KEY (ChatId, SpanId) REFERENCES dbo.ChatSpan (ChatId, SpanId) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
 -- 使用 CTE (Common Table Expression) 来更新 ChatSpan 表
 WITH ChatSpanUpdate AS (
