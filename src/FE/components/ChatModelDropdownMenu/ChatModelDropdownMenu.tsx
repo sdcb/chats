@@ -29,6 +29,7 @@ const ChatModelDropdownMenu = ({
   className,
   hideIcon,
   triggerClassName,
+  groupClassName,
   onChangeModel,
 }: {
   models: AdminModelDto[];
@@ -39,6 +40,7 @@ const ChatModelDropdownMenu = ({
   content?: string | React.JSX.Element;
   className?: string;
   triggerClassName?: string;
+  groupClassName?: string;
   hideIcon?: boolean;
   onChangeModel: (model: AdminModelDto) => void;
 }) => {
@@ -113,7 +115,7 @@ const ChatModelDropdownMenu = ({
           onSearch={handleSearch}
         />
         <NoModelRender />
-        <DropdownMenuGroup>
+        <DropdownMenuGroup className={groupClassName}>
           {modelGroup.map((m) => {
             return (
               <DropdownMenuSub key={m.providerId}>

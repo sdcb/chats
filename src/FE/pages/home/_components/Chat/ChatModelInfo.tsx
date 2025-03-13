@@ -8,10 +8,10 @@ import { ModelUsageDto } from '@/types/clientApis';
 
 import { getModelUsage } from '@/apis/clientApis';
 
-const ChatModelInfo = (props: { modelId: number; modelName: string }) => {
+const ChatModelInfo = (props: { modelId: number }) => {
   const { t } = useTranslation();
 
-  const { modelId, modelName } = props;
+  const { modelId } = props;
 
   const [modelUsage, setModelUsage] = useState<ModelUsageDto>();
 
@@ -43,12 +43,8 @@ const ChatModelInfo = (props: { modelId: number; modelName: string }) => {
   }
 
   return (
-    <div className="flex flex-col">
-      <label className="mb-2 text-left">
-        {modelName}
-      </label>
+    <div className="flex flex-col text-gray-600 text-sm">
       <div className="flex items-center">
-        <label>{getTitle()}: </label>
         {modelUsage.tokens === 0 && modelUsage.counts === 0 ? (
           <span>
             ￥{modelUsage.inputTokenPrice1M.toFixed(4)}/

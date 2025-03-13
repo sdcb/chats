@@ -6,6 +6,7 @@ import { ReasoningEffortType } from '@/types/model';
 
 import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { IconReasoning } from '../Icons';
 
 interface Props {
   value?: ReasoningEffortType;
@@ -19,32 +20,39 @@ const ReasoningEffortRadio: FC<Props> = ({
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col">
+    <div className="flex justify-between items-center">
       <label
         className={
-          'mb-3 text-left text-neutral-700 dark:text-neutral-400 flex gap-1 items-center'
+          'mb-3 text-left  dark:text-neutral-400 flex gap-1 items-center'
         }
       >
+        <IconReasoning />
         {t('Reasoning Effort')}
       </label>
 
       <RadioGroup
-        className="flex gap-6"
+        className="flex gap-4"
         defaultValue={'medium'}
         value={value}
         onValueChange={onValueChange}
       >
         <div className="flex items-center space-x-2">
           <RadioGroupItem value="low" id="low" />
-          <Label htmlFor="low">{t('Low')}</Label>
+          <Label className="text-base" htmlFor="low">
+            {t('Low')}
+          </Label>
         </div>
         <div className="flex items-center space-x-2">
           <RadioGroupItem value="medium" id="medium" />
-          <Label htmlFor="medium">{t('Medium')}</Label>
+          <Label className="text-base" htmlFor="medium">
+            {t('Medium')}
+          </Label>
         </div>
         <div className="flex items-center space-x-2">
           <RadioGroupItem value="high" id="high" />
-          <Label htmlFor="high">{t('High')}</Label>
+          <Label className="text-base" htmlFor="high">
+            {t('High')}
+          </Label>
         </div>
       </RadioGroup>
     </div>

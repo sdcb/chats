@@ -49,6 +49,7 @@ const TemperatureSlider: FC<Props> = ({
       >
         {label}
         <Tips
+          delayDuration={100}
           trigger={
             <Button variant="ghost" className="p-0 m-0 h-auto">
               <IconInfo size={18} />
@@ -70,7 +71,7 @@ const TemperatureSlider: FC<Props> = ({
         value={[temperature]}
         onValueChange={handleChange}
       />
-      <ul className="mt-2 flex justify-between text-sm">
+      <ul className="mt-2 flex justify-between">
         <span>{t('Precise')}</span>
         <span>{t('Neutral')}</span>
         <span>{t('Creative')}</span>
