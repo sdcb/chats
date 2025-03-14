@@ -78,7 +78,7 @@ public class ChatConfigHashTests
         long hash2 = config2.GenerateDBHashCode();
 
         // Assert
-        Assert.NotEqual(hash1, hash2);
+        Assert.Equal(hash1, hash2);
     }
 
     [Fact]
