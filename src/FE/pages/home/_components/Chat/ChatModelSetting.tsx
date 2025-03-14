@@ -96,7 +96,6 @@ const ChatModelSetting = () => {
               >
                 <ChatModelInfo
                   modelId={span.modelId}
-                  modelName={span.modelName}
                 />
                 {modelMap[span.modelId]?.allowSystemPrompt && (
                   <SystemPrompt
