@@ -1,4 +1,6 @@
-﻿using Chats.BE.Controllers.Chats.UserChats.Dtos;
+﻿using Chats.BE.Controllers.Chats.Prompts.Dtos;
+using Chats.BE.Controllers.Chats.Prompts;
+using Chats.BE.Controllers.Chats.UserChats.Dtos;
 using Chats.BE.Controllers.Common;
 using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.DB;
@@ -9,6 +11,7 @@ using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace Chats.BE.Controllers.Chats.UserChats;
 
@@ -28,14 +31,17 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                 IsShared = x.ChatShares.Any(),
                 GroupId = idEncryption.EncryptChatGroupId(x.ChatGroupId),
                 Tags = x.ChatTags.Select(x => x.Name).ToArray(),
-                Spans = x.ChatSpans.Select(s => new ChatSpanDto
+                Spans = x.ChatSpans.Select(span => new ChatSpanDto
                 {
-                    SpanId = s.SpanId,
-                    ModelId = s.ModelId,
-                    ModelName = s.Model.Name,
-                    ModelProviderId = s.Model.ModelKey.ModelProviderId,
-                    Temperature = s.Temperature,
-                    EnableSearch = s.EnableSearch,
+                    SpanId = span.SpanId,
+                    Enabled = span.Enabled,
+                    ModelId = span.ChatConfig.ModelId,
+                    ModelName = span.ChatConfig.Model.Name,
+                    ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
+                    Temperature = span.ChatConfig.Temperature,
+                    WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
+                    MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
+                    ReasoningEffort = span.ChatConfig.ReasoningEffort,
                 }).ToArray(),
                 LeafMessageId = idEncryption.EncryptMessageId(x.LeafMessageId),
                 UpdatedAt = x.UpdatedAt,
@@ -67,17 +73,20 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                 Id = idEncryption.EncryptChatId(x.Id),
                 Title = x.Title,
                 IsTopMost = x.IsTopMost,
-                IsShared = x.ChatShares.Any(),
+                IsShared = x.ChatShares.Count != 0,
                 GroupId = idEncryption.EncryptChatGroupId(x.ChatGroupId),
                 Tags = x.ChatTags.Select(x => x.Name).ToArray(),
-                Spans = x.ChatSpans.Select(s => new ChatSpanDto
+                Spans = x.ChatSpans.Select(span => new ChatSpanDto
                 {
-                    SpanId = s.SpanId,
-                    ModelId = s.ModelId,
-                    ModelName = s.Model.Name,
-                    ModelProviderId = s.Model.ModelKey.ModelProviderId,
-                    Temperature = s.Temperature,
-                    EnableSearch = s.EnableSearch,
+                    SpanId = span.SpanId,
+                    Enabled = span.Enabled,
+                    ModelId = span.ChatConfig.ModelId,
+                    ModelName = span.ChatConfig.Model.Name,
+                    ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
+                    Temperature = span.ChatConfig.Temperature,
+                    WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
+                    MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
+                    ReasoningEffort = span.ChatConfig.ReasoningEffort,
                 }).ToArray(),
                 LeafMessageId = idEncryption.EncryptMessageId(x.LeafMessageId),
                 UpdatedAt = x.UpdatedAt,
@@ -107,14 +116,17 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                 IsShared = x.ChatShares.Any(),
                 GroupId = idEncryption.EncryptChatGroupId(x.ChatGroupId),
                 Tags = x.ChatTags.Select(x => x.Name).ToArray(),
-                Spans = x.ChatSpans.Select(s => new ChatSpanDto
+                Spans = x.ChatSpans.Select(span => new ChatSpanDto
                 {
-                    SpanId = s.SpanId,
-                    ModelId = s.ModelId,
-                    ModelName = s.Model.Name,
-                    ModelProviderId = s.Model.ModelKey.ModelProviderId,
-                    Temperature = s.Temperature,
-                    EnableSearch = s.EnableSearch,
+                    SpanId = span.SpanId,
+                    Enabled = span.Enabled,
+                    ModelId = span.ChatConfig.ModelId,
+                    ModelName = span.ChatConfig.Model.Name,
+                    ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
+                    Temperature = span.ChatConfig.Temperature,
+                    WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
+                    MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
+                    ReasoningEffort = span.ChatConfig.ReasoningEffort,
                 }).ToArray(),
                 LeafMessageId = idEncryption.EncryptMessageId(x.LeafMessageId),
                 UpdatedAt = x.UpdatedAt,
@@ -157,31 +169,46 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
         };
 
         Chat? lastChat = await db.Chats
-            .Include(x => x.ChatSpans.OrderBy(x => x.SpanId))
+            .Include(x => x.ChatSpans.OrderBy(x => x.SpanId)).ThenInclude(x => x.ChatConfig)
             .Where(x => x.UserId == currentUser.Id && !x.IsArchived && x.ChatSpans.Any())
             .OrderByDescending(x => x.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
-        if (lastChat != null && lastChat.ChatSpans.All(cs => validModels.ContainsKey(cs.ModelId)))
+        if (lastChat != null && lastChat.ChatSpans.All(cs => validModels.ContainsKey(cs.ChatConfig.ModelId)))
         {
-            chat.ChatSpans = lastChat.ChatSpans.Select((cs, i) => new ChatSpan()
+            chat.ChatSpans = [.. lastChat.ChatSpans.Select((cs, i) =>
             {
-                ModelId = cs.ModelId,
-                Model = validModels[cs.ModelId].Model,
-                EnableSearch = cs.EnableSearch,
-                Temperature = cs.Temperature,
-                SpanId = (byte)i,
-            }).ToList();
+                ChatSpan newCs = new()
+                {
+                    Enabled = cs.Enabled,
+                    ChatConfig = cs.ChatConfig.Clone(),
+                    SpanId = (byte)i,
+                };
+                newCs.ChatConfig.Id = 0;
+                newCs.ChatConfig.Model = validModels[cs.ChatConfig.ModelId].Model;
+                return newCs;
+            })];
         }
         else
         {
+            PromptDto defaultPrompt = await PromptsController.GetDefaultPrompt(db, currentUser.Id, cancellationToken);
             chat.ChatSpans =
             [
-                new ChatSpan()
+                new()
                 {
-                    ModelId = validModels.Values.First().ModelId,
-                    Model = validModels.Values.First().Model,
-                    EnableSearch = false,
-                    Temperature = ChatService.DefaultTemperature,
+                    ChatId = chat.Id,
+                    SpanId = 0,
+                    Enabled = true,
+                    ChatConfig = new ChatConfig
+                    {
+                        ModelId = validModels.First().Key,
+                        Model = validModels.First().Value.Model,
+                        Temperature = null,
+                        WebSearchEnabled = false,
+                        HashCode = 0,
+                        MaxOutputTokens = null,
+                        ReasoningEffort = null,
+                        SystemPrompt = defaultPrompt.Content,
+                    }
                 }
             ];
         }
@@ -196,15 +223,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             IsShared = false,
             GroupId = idEncryption.EncryptChatGroupId(chat.ChatGroupId),
             Tags = [],
-            Spans = chat.ChatSpans.Select(s => new ChatSpanDto
-            {
-                SpanId = s.SpanId,
-                ModelId = s.ModelId,
-                ModelName = s.Model.Name,
-                ModelProviderId = s.Model.ModelKey.ModelProviderId,
-                Temperature = s.Temperature,
-                EnableSearch = s.EnableSearch,
-            }).ToArray(),
+            Spans = [.. chat.ChatSpans.Select(ChatSpanDto.FromDB)],
             LeafMessageId = idEncryption.EncryptMessageId(chat.LeafMessageId),
             UpdatedAt = chat.UpdatedAt,
         });

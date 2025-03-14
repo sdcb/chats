@@ -151,16 +151,16 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
             .Where(x => x.Id == modelId)
             .Select(x => new
             {
-                ChatSpans = x.ChatSpans.Any(),
+                ChatConfigs = x.ChatConfigs.Any(),
                 UserModels = x.UserModels.Any(),
                 ApiKeys = x.ApiKeys.Any(),
             })
             .SingleAsync(cancellationToken);
 
-        if (refInfo.ChatSpans || refInfo.UserModels || refInfo.ApiKeys)
+        if (refInfo.ChatConfigs || refInfo.UserModels || refInfo.ApiKeys)
         {
             string message = "Cannot delete model because it is referenced by: ";
-            if (refInfo.ChatSpans) message += "Chats, ";
+            if (refInfo.ChatConfigs) message += "ChatConfigs, ";
             if (refInfo.UserModels) message += "UserModels, ";
             if (refInfo.ApiKeys) message += "ApiKeys, ";
             return this.BadRequestMessage(message);
