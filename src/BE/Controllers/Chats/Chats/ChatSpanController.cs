@@ -1,4 +1,6 @@
 ﻿using Chats.BE.Controllers.Chats.Chats.Dtos;
+using Chats.BE.Controllers.Chats.Prompts;
+using Chats.BE.Controllers.Chats.Prompts.Dtos;
 using Chats.BE.Controllers.Chats.UserChats.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Infrastructure;
@@ -25,77 +27,46 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
 
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans.OrderByDescending(x => x.SpanId))
-            .Include(x => x.ChatSpans.First().ChatConfig)
             .FirstOrDefaultAsync(x => x.Id == idEncryption.DecryptChatId(encryptedChatId) && x.UserId == currentUser.Id && !x.IsArchived, cancellationToken);
         if (chat == null)
         {
             return NotFound();
         }
 
-        ChatSpan toAdd = null!;
-        if (chat.ChatSpans.Count == 0)
+        if (chat.ChatSpans.Count >= 10)
         {
-            IQueryable<UserModel> query = userModelManager.GetValidModelsByUserId(currentUser.Id);
-
-            if (request.ModelId != null)
-            {
-                query = query.Where(x => x.ModelId == request.ModelId.Value);
-            }
-
-            UserModel? um = await query.FirstOrDefaultAsync(cancellationToken);
-            if (um == null)
-            {
-                return BadRequest("No models available");
-            }
-
-            toAdd = new ChatSpan
-            {
-                ChatId = chat.Id,
-                SpanId = 0,
-                Enabled = true, 
-                ChatConfig = new ChatConfig
-                {
-                    ModelId = um.ModelId,
-                    Model = um.Model,
-                    Temperature = request.SetsTemperature ? request.Temperature : null,
-                    WebSearchEnabled = request.EnableSearch ?? false,
-                    HashCode = 0,
-                    MaxOutputTokens = null,
-                    ReasoningEffort = null,
-                    SystemPrompt = null,
-                }
-            };
+            return BadRequest("Max span count reached");
         }
-        else
+
+        UserModel? um = await userModelManager.GetValidModelsByUserId(currentUser.Id)
+                .Where(x => x.ModelId == request.ModelId)
+                .FirstOrDefaultAsync(cancellationToken);
+        if (um == null)
         {
-            if (chat.ChatSpans.Count >= 10)
-            {
-                return BadRequest("Max span count reached");
-            }
-
-            ChatSpan refSpan = chat.ChatSpans.First();
-            short modelId = request.ModelId ?? refSpan.ModelId;
-            UserModel? um = await userModelManager.GetValidModelsByUserId(currentUser.Id).FirstOrDefaultAsync(x => x.ModelId == modelId, cancellationToken);
-            if (um == null)
-            {
-                return BadRequest("Model not available");
-            }
-
-            toAdd = new ChatSpan()
-            {
-                ChatId = chat.Id,
-                SpanId = FindAvailableSpanId(chat.ChatSpans),
-                Enabled = true, 
-                ChatConfig = new()
-                {
-                    Model = um.Model,
-                }
-            };
+            return BadRequest("No models available");
         }
-        request.ApplyTo(toAdd);
+
+        PromptDto defaultPrompt = await PromptsController.GetDefaultPrompt(db, currentUser.Id, cancellationToken);
+        ChatSpan toAdd = new()
+        {
+            ChatId = chat.Id,
+            SpanId = FindAvailableSpanId(chat.ChatSpans),
+            Enabled = true,
+            ChatConfig = new ChatConfig
+            {
+                ModelId = um.ModelId,
+                Model = um.Model,
+                Temperature = null,
+                WebSearchEnabled = false,
+                HashCode = 0,
+                MaxOutputTokens = null,
+                ReasoningEffort = null,
+                SystemPrompt = defaultPrompt.Content,
+            }
+        };
+
         chat.ChatSpans.Add(toAdd);
         await db.SaveChangesAsync(cancellationToken);
-
         return Created(default(string), ChatSpanDto.FromDB(toAdd));
     }
 
@@ -106,6 +77,11 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
     /// <returns>The next available SpanId.</returns>
     static byte FindAvailableSpanId(ICollection<ChatSpan> spans)
     {
+        if (spans.Count == 0)
+        {
+            return 0;
+        }
+
         // Suggest the next SpanId based on the last SpanId in the collection
         byte suggested = spans.First().SpanId;
         if (suggested < 255)
@@ -126,20 +102,24 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
     }
 
     [HttpPut("{spanId}")]
-    public async Task<ActionResult<ChatSpanDto>> UpdateChatSpan(string encryptedChatId, byte spanId, [FromBody] CreateChatSpanRequest request,
+    public async Task<ActionResult<ChatSpanDto>> UpdateChatSpan(string encryptedChatId, byte spanId, [FromBody] UpdateChatSpanRequest request,
         [FromServices] UserModelManager userModelManager,
         CancellationToken cancellationToken)
     {
-        int chatId = idEncryption.DecryptChatId(encryptedChatId);
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
 
-        ChatSpan? span = await db.ChatSpans.FirstOrDefaultAsync(x => 
+        int chatId = idEncryption.DecryptChatId(encryptedChatId);
+        ChatSpan? span = await db.ChatSpans.FirstOrDefaultAsync(x =>
             x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id && !x.Chat.IsArchived, cancellationToken);
         if (span == null)
         {
             return NotFound();
         }
 
-        if (request.ModelId != null)
+        if (span.ChatConfig.ModelId != request.ModelId)
         {
             UserModel? um = await userModelManager.GetValidModelsByUserId(currentUser.Id).FirstOrDefaultAsync(x => x.ModelId == request.ModelId, cancellationToken);
             if (um == null)
@@ -147,21 +127,14 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
                 return BadRequest("Model not available");
             }
 
-            span.ModelId = request.ModelId.Value;
-            span.Model = um.Model;
+            span.ChatConfig.Model = um.Model;
         }
+        request.ApplyTo(span);
 
-        if (request.SetsTemperature)
+        if (db.ChangeTracker.HasChanges())
         {
-            span.Temperature = request.Temperature;
+            await db.SaveChangesAsync(cancellationToken);
         }
-
-        if (request.EnableSearch != null)
-        {
-            span.EnableSearch = request.EnableSearch.Value;
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
         return Ok(ChatSpanDto.FromDB(span));
     }
 

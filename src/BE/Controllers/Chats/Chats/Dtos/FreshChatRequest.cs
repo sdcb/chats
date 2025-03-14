@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 
-public abstract record BaseChatRequest
+public abstract record ChatRequest
 {
     [JsonPropertyName("chatId")]
     public required string EncryptedChatId { get; init; }
@@ -12,38 +12,10 @@ public abstract record BaseChatRequest
     [JsonPropertyName("timezoneOffset")]
     public required short TimezoneOffset { get; init; }
 
-    public abstract ChatRequest ToChatRequest(IUrlEncryptionService idEncryption);
+    public abstract DecryptedChatRequest Decrypt(IUrlEncryptionService urlEncryption);
 }
 
-public record FreshChatRequest : BaseChatRequest
-{
-    [JsonPropertyName("spans")]
-    public required ChatSpanRequest[] Spans { get; init; }
-
-    [JsonPropertyName("userMessage")]
-    public required MessageContentRequest UserMessage { get; init; }
-
-    [JsonPropertyName("parentAssistantMessageId")]
-    public required string? ParentAssistantMessageId { get; init; }
-
-    public override ChatRequest ToChatRequest(IUrlEncryptionService idEncryption)
-    {
-        return new ChatRequest
-        {
-            ChatId = idEncryption.DecryptChatId(EncryptedChatId),
-            Spans = Spans,
-            UserMessage = UserMessage,
-            MessageId = ParentAssistantMessageId switch
-            {
-                null => null, 
-                _ => idEncryption.DecryptMessageId(ParentAssistantMessageId)
-            },
-            TimezoneOffset = TimezoneOffset,
-        };
-    }
-}
-
-public record RegenerateAssistantMessageRequest : BaseChatRequest
+public record RegenerateAssistantMessageRequest : ChatRequest
 {
     [JsonPropertyName("parentUserMessageId")]
     public required string ParentUserMessageId { get; init; }
@@ -54,43 +26,64 @@ public record RegenerateAssistantMessageRequest : BaseChatRequest
     [JsonPropertyName("modelId")]
     public required short ModelId { get; init; }
 
-    public override ChatRequest ToChatRequest(IUrlEncryptionService idEncryption)
+    public override DecryptedChatRequest Decrypt(IUrlEncryptionService urlEncryption)
     {
-        return new ChatRequest
+        return new DecryptedRegenerateAssistantMessageRequest
         {
-            ChatId = idEncryption.DecryptChatId(EncryptedChatId),
-            MessageId = idEncryption.DecryptMessageId(ParentUserMessageId),
-            Spans = [new ChatSpanRequest { Id = SpanId, ModelId = ModelId }],
-            UserMessage = null,
+            ChatId = urlEncryption.DecryptChatId(EncryptedChatId),
             TimezoneOffset = TimezoneOffset,
+            ParentUserMessageId = urlEncryption.DecryptMessageId(ParentUserMessageId),
+            SpanId = SpanId,
+            ModelId = ModelId
         };
     }
 }
 
-public record GeneralChatRequest : BaseChatRequest
+public record GeneralChatRequest : ChatRequest
 {
-    [JsonPropertyName("spanIds")]
-    public required int[] SpanIds { get; init; }
-
     [JsonPropertyName("userMessage")]
     public required MessageContentRequest UserMessage { get; init; }
 
     [JsonPropertyName("parentAssistantMessageId")]
     public required string? ParentAssistantMessageId { get; init; }
 
-    public override ChatRequest ToChatRequest(IUrlEncryptionService idEncryption)
+    public override DecryptedChatRequest Decrypt(IUrlEncryptionService urlEncryption)
     {
-        return new ChatRequest
+        return new DecryptedGeneralChatRequest
         {
-            ChatId = idEncryption.DecryptChatId(EncryptedChatId),
-            MessageId = ParentAssistantMessageId switch
-            {
-                null => null,
-                _ => idEncryption.DecryptMessageId(ParentAssistantMessageId)
-            },
-            Spans = SpanIds.Select(x => new ChatSpanRequest() { Id = (byte)x }).ToArray(),
-            UserMessage = UserMessage,
+            ChatId = urlEncryption.DecryptChatId(EncryptedChatId),
             TimezoneOffset = TimezoneOffset,
+            UserMessage = UserMessage,
+            ParentAssistantMessageId = urlEncryption.DecryptMessageIdOrNull(ParentAssistantMessageId)
         };
     }
+}
+
+public abstract record DecryptedChatRequest
+{
+    public required int ChatId { get; init; }
+
+    public required short TimezoneOffset { get; init; }
+
+    public abstract long? LastMessageId { get; }
+}
+
+public record DecryptedRegenerateAssistantMessageRequest : DecryptedChatRequest
+{
+    public required long ParentUserMessageId { get; init; }
+
+    public required byte SpanId { get; init; }
+
+    public required short ModelId { get; init; }
+
+    public override long? LastMessageId => ParentUserMessageId;
+}
+
+public record DecryptedGeneralChatRequest : DecryptedChatRequest
+{
+    public required MessageContentRequest UserMessage { get; init; }
+
+    public required long? ParentAssistantMessageId { get; init; }
+
+    public override long? LastMessageId => ParentAssistantMessageId;
 }
