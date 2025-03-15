@@ -33,10 +33,9 @@ internal static class BasicData
 
     private static void InsertChatRoles(ChatsDB db)
     {
-        // Generated from data, hash: e2b927c371db77befad6f04b1844b97f12985d9ffdec513fdf08aee842f75cf1
+        // Generated from data, hash: 88c3bc8417abed479ab20a5da2d3bf139cd21c046354d830571a60d040410616
         db.ChatRoles.AddRange(
         [
-            new(){ Id=1, Name="system",    },
             new(){ Id=2, Name="user",      },
             new(){ Id=3, Name="assistant", }
         ]);
