@@ -50,7 +50,6 @@ public record MessageLiteDto
     {
         return Role switch
         {
-            DBChatRole.System => new SystemChatMessage(await Content[0].ToOpenAI(fup, cancellationToken)),
             DBChatRole.User => new UserChatMessage(await Content
                 .ToAsyncEnumerable()
                 .SelectAwait(async c => await c.ToOpenAI(fup, cancellationToken))
