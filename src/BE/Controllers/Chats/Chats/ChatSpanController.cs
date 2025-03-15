@@ -101,7 +101,36 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         }
     }
 
-    [HttpPut("{spanId}")]
+    [HttpPut("{spanId:int}/{action}")]
+    public async Task<ActionResult<ChatSpanDto>> ToggleEnable(string encryptedChatId, byte spanId, string action, CancellationToken cancellationToken)
+    {
+        bool enable = default;
+        if (action == "enable")
+        {
+            enable = true;
+        }
+        else if (action == "disable")
+        {
+            enable = false;
+        }
+        else
+        {
+            return BadRequest("Invalid action");
+        }
+
+        int chatId = idEncryption.DecryptChatId(encryptedChatId);
+        ChatSpan? span = await db.ChatSpans.FirstOrDefaultAsync(x =>
+            x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id && !x.Chat.IsArchived, cancellationToken);
+        if (span == null)
+        {
+            return NotFound();
+        }
+        span.Enabled = enable;
+        await db.SaveChangesAsync(cancellationToken);
+        return Ok(ChatSpanDto.FromDB(span));
+    }
+
+    [HttpPut("{spanId:int}")]
     public async Task<ActionResult<ChatSpanDto>> UpdateChatSpan(string encryptedChatId, byte spanId, [FromBody] UpdateChatSpanRequest request,
         [FromServices] UserModelManager userModelManager,
         CancellationToken cancellationToken)
@@ -142,8 +171,9 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
     public async Task<IActionResult> DeleteChatSpan(string encryptedChatId, byte spanId, CancellationToken cancellationToken)
     {
         int chatId = idEncryption.DecryptChatId(encryptedChatId);
-        ChatSpan? span = await db.ChatSpans.FirstOrDefaultAsync(x =>
-            x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id && !x.Chat.IsArchived, cancellationToken);
+        ChatSpan? span = await db.ChatSpans
+            .Include(x => x.ChatConfig).ThenInclude(x => x.ChatSpans)
+            .FirstOrDefaultAsync(x => x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id && !x.Chat.IsArchived, cancellationToken);
         if (span == null)
         {
             return NotFound();
