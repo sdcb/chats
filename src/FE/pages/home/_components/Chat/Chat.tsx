@@ -220,14 +220,14 @@ const Chat = memo(() => {
       const { text: contentText, fileIds } = message.content;
       let chatBody = {
         chatId,
-        spans: chatSpans.map((x) => ({
-          id: x.spanId,
-          systemPrompt: x.prompt || defaultPrompt?.content,
-          setsTemperature: true,
-          enableSearch: x.enableSearch,
-          temperature: x.temperature,
-          reasoningEffort: x.reasoningEffort,
-        })),
+        // spans: chatSpans.map((x) => ({
+        //   id: x.spanId,
+        //   systemPrompt: x.prompt || defaultPrompt?.content,
+        //   setsTemperature: true,
+        //   enableSearch: x.enableSearch,
+        //   temperature: x.temperature,
+        //   reasoningEffort: x.reasoningEffort,
+        // })),
         timezoneOffset: new Date().getTimezoneOffset(),
         parentAssistantMessageId: messageId || null,
         userMessage: {
@@ -237,7 +237,7 @@ const Chat = memo(() => {
       };
 
       const response = await fetch(
-        `${getApiUrl()}/api/chats/fresh-chat-message`,
+        `${getApiUrl()}/api/chats/general-chat`,
         {
           method: 'POST',
           headers: {

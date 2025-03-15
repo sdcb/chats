@@ -174,3 +174,14 @@ WHERE m.ChatRoleId = 3
 ALTER TABLE dbo.Message DROP CONSTRAINT FK_Message_UserModelUsage;
 DROP INDEX IX_Message_UsageId ON dbo.Message;
 ALTER TABLE dbo.Message DROP COLUMN UsageId, ReactionId;
+GO
+
+UPDATE Chat
+SET LeafMessageId = NULL
+WHERE LeafMessageId IN (
+    SELECT Id
+    FROM Message
+    WHERE ChatRoleId = 1
+);
+delete from Message where ChatRoleId = 1; -- delete all system messages
+delete from ChatRole where id = 1; -- delete system role

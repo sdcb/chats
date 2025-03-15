@@ -21,6 +21,16 @@ public partial class ChatConfig
         };
     }
 
+    public bool ContentEquals(ChatConfig other)
+    {
+        return ModelId == other.ModelId
+            && (SystemPrompt ?? "") == (other.SystemPrompt ?? "")
+            && Temperature == other.Temperature
+            && WebSearchEnabled == other.WebSearchEnabled
+            && MaxOutputTokens == other.MaxOutputTokens
+            && ReasoningEffort == other.ReasoningEffort;
+    }
+
     /// <summary>
     /// 计算当前实例的哈希值，采用 SHA256 算法：每个字段的原始内存表示内部使用分隔符分隔，
     /// 其中 SystemPrompt 的字符数据直接使用其底层 UTF‑16 编码，不额外生成中间字符串。

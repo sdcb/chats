@@ -34,6 +34,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         [FromServices] UserModelManager userModelManager,
         [FromServices] ClientInfoManager clientInfoManager,
         [FromServices] FileUrlProvider fup,
+        [FromServices] ChatConfigService chatConfigService,
         CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -43,7 +44,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
 
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, clientInfoManager, fup,
+            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, clientInfoManager, fup, chatConfigService,
             cancellationToken);
     }
 
@@ -59,6 +60,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         [FromServices] UserModelManager userModelManager,
         [FromServices] ClientInfoManager clientInfoManager,
         [FromServices] FileUrlProvider fup,
+        [FromServices] ChatConfigService chatConfigService,
         CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -68,7 +70,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
 
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, clientInfoManager, fup,
+            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, clientInfoManager, fup, chatConfigService,
             cancellationToken);
     }
 
@@ -83,17 +85,14 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         UserModelManager userModelManager,
         ClientInfoManager clientInfoManager,
         FileUrlProvider fup,
+        ChatConfigService chatConfigService,
         CancellationToken cancellationToken)
     {
         long firstTick = Stopwatch.GetTimestamp();
 
         Chat? chat = await db.Chats
-            .Include(x => x.ChatSpans).ThenInclude(x => x.First().ChatConfig)
+            .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig)
             .Include(x => x.Messages.Where(x => x.ChatRoleId == (byte)DBChatRole.User || x.ChatRoleId == (byte)DBChatRole.Assistant))
-            //.Include(x => x.Messages).ThenInclude(x => x.MessageContents).ThenInclude(x => x.MessageContentBlob)
-            //.Include(x => x.Messages).ThenInclude(x => x.MessageContents).ThenInclude(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
-            //.Include(x => x.Messages).ThenInclude(x => x.MessageContents).ThenInclude(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileImageInfo)
-            //.Include(x => x.Messages).ThenInclude(x => x.MessageContents).ThenInclude(x => x.MessageContentText)
             .FirstOrDefaultAsync(x => x.Id == req.ChatId && x.UserId == currentUser.Id, cancellationToken);
         if (chat == null)
         {
@@ -197,6 +196,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
                 currentUser,
                 logger,
                 chatFactory,
+                chatConfigService,
                 fup,
                 span,
                 firstTick,
@@ -288,6 +288,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         CurrentUser currentUser,
         ILogger<ChatController> logger,
         ChatFactory chatFactory,
+        ChatConfigService chatConfigService,
         FileUrlProvider fup,
         ChatSpan chatSpan,
         long firstTick,
@@ -324,8 +325,10 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         InChatContext icc = new(firstTick);
 
         string? errorText = null;
+        Task<ChatConfig> chatConfigTask = null!;
         try
         {
+            chatConfigTask = chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, cancellationToken);
             using ChatService s = chatFactory.CreateChatService(userModel.Model);
             bool responseStated = false, reasoningStarted = false;
             await foreach (InternalChatSegment seg in icc.Run(userBalance.Balance, userModel, s.ChatStreamedFEProcessed(messageToSend, cco, ced, cancellationToken)))
@@ -428,10 +431,13 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         {
             await writer.WriteAsync(SseResponseLine.Error(chatSpan.SpanId, errorText), cancellationToken);
         }
-        UserModelUsage usage = icc.ToUserModelUsage(currentUser.Id, userModel, await clientInfoTask, isApi: false);
+        ClientInfo clientInfo = await clientInfoTask;
+        ChatConfig chatConfig = await chatConfigTask;
+        UserModelUsage usage = icc.ToUserModelUsage(currentUser.Id, userModel, clientInfo, isApi: false);
         dbAssistantMessage.MessageResponse = new MessageResponse()
         {
-            Usage = usage, 
+            Usage = usage,
+            ChatConfig = chatConfig,
         };
         await writer.WriteAsync(new SseResponseLine { Kind = SseResponseKind.End, Result = dbAssistantMessage, SpanId = chatSpan.SpanId }, cancellationToken);
         writer.Complete();

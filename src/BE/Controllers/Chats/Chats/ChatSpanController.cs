@@ -101,7 +101,33 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         }
     }
 
-    [HttpPut("{spanId}")]
+    [HttpPost("{spanId:int}/enable")]
+    public async Task<ActionResult> ToggleEnable(string encryptedChatId, byte spanId, CancellationToken cancellationToken)
+    {
+        return await ToggleEnableDisable(encryptedChatId, spanId, true, cancellationToken);
+    }
+
+    [HttpPost("{spanId:int}/disable")]
+    public async Task<ActionResult> ToggleDisable(string encryptedChatId, byte spanId, CancellationToken cancellationToken)
+    {
+        return await ToggleEnableDisable(encryptedChatId, spanId, false, cancellationToken);
+    }
+
+    private async Task<ActionResult> ToggleEnableDisable(string encryptedChatId, byte spanId, bool enabled, CancellationToken cancellationToken)
+    {
+        int chatId = idEncryption.DecryptChatId(encryptedChatId);
+        ChatSpan? span = await db.ChatSpans.FirstOrDefaultAsync(x =>
+            x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id && !x.Chat.IsArchived, cancellationToken);
+        if (span == null)
+        {
+            return NotFound();
+        }
+        span.Enabled = enabled;
+        await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPut("{spanId:int}")]
     public async Task<ActionResult<ChatSpanDto>> UpdateChatSpan(string encryptedChatId, byte spanId, [FromBody] UpdateChatSpanRequest request,
         [FromServices] UserModelManager userModelManager,
         CancellationToken cancellationToken)
@@ -119,22 +145,18 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
             return NotFound();
         }
 
-        if (span.ChatConfig.ModelId != request.ModelId)
+        UserModel? um = await userModelManager.GetValidModelsByUserId(currentUser.Id).FirstOrDefaultAsync(x => x.ModelId == request.ModelId, cancellationToken);
+        if (um == null)
         {
-            UserModel? um = await userModelManager.GetValidModelsByUserId(currentUser.Id).FirstOrDefaultAsync(x => x.ModelId == request.ModelId, cancellationToken);
-            if (um == null)
-            {
-                return BadRequest("Model not available");
-            }
-
-            span.ChatConfig.Model = um.Model;
+            return BadRequest("Model not available");
         }
-        request.ApplyTo(span);
 
+        request.ApplyTo(span);
         if (db.ChangeTracker.HasChanges())
         {
             await db.SaveChangesAsync(cancellationToken);
         }
+        span.ChatConfig.Model = um.Model;
         return Ok(ChatSpanDto.FromDB(span));
     }
 
@@ -142,14 +164,19 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
     public async Task<IActionResult> DeleteChatSpan(string encryptedChatId, byte spanId, CancellationToken cancellationToken)
     {
         int chatId = idEncryption.DecryptChatId(encryptedChatId);
-        ChatSpan? span = await db.ChatSpans.FirstOrDefaultAsync(x =>
-            x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id && !x.Chat.IsArchived, cancellationToken);
+        ChatSpan? span = await db.ChatSpans
+            .Include(x => x.ChatConfig).ThenInclude(x => x.ChatSpans)
+            .FirstOrDefaultAsync(x => x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id && !x.Chat.IsArchived, cancellationToken);
         if (span == null)
         {
             return NotFound();
         }
 
         db.ChatSpans.Remove(span);
+        if (span.ChatConfig.ChatSpans.Count == 1)
+        {
+            db.ChatConfigs.Remove(span.ChatConfig);
+        }
         await db.SaveChangesAsync(cancellationToken);
         return NoContent();
     }

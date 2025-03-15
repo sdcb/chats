@@ -15,6 +15,9 @@ public record UpdateChatSpanRequest
     [JsonPropertyName("modelId")]
     public short ModelId { get; init; }
 
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; init; }
+
     [JsonPropertyName("systemPrompt")]
     public string? SystemPrompt { get; init; }
 
@@ -32,6 +35,8 @@ public record UpdateChatSpanRequest
 
     public void ApplyTo(ChatSpan span)
     {
+        span.Enabled = span.Enabled;
+
         ChatConfig config = span.ChatConfig ?? throw new InvalidOperationException("ChatSpan.ChatConfig is null");
         config.ModelId = ModelId;
         config.SystemPrompt = string.IsNullOrEmpty(SystemPrompt) ? null : SystemPrompt;

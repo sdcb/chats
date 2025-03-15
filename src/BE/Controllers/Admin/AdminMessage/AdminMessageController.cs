@@ -95,7 +95,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentBlob)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentText)
-            .Where(m => m.ChatId == chatId && m.ChatRoleId != (byte)DBChatRole.System)
+            .Where(m => m.ChatId == chatId)
             .Select(x => new ChatMessageTemp()
             {
                 Id = x.Id,

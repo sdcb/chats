@@ -1,4 +1,4 @@
-using Chats.BE.DB;
+﻿using Chats.BE.DB;
 using Chats.BE.DB.Init;
 using Chats.BE.Infrastructure;
 using Chats.BE.Services;
@@ -56,6 +56,7 @@ public class Program
         builder.Services.AddScoped<FileUrlProvider>();
         builder.Services.AddSingleton<FileServiceFactory>();
         builder.Services.AddSingleton<ChatStopService>();
+        builder.Services.AddSingleton<ChatConfigService>();
         builder.Services.AddUrlEncryption();
         builder.Services.AddHttpContextAccessor();
 
