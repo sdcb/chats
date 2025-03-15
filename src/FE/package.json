@@ -8,8 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "format": "prettier --write .",
-    "prepare": "husky && git config --local core.hooksPath src/FE/.husky"
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
@@ -63,7 +62,6 @@
     "cross-env": "^7.0.3",
     "eslint": "8.49.0",
     "eslint-config-next": "13.4.19",
-    "husky": "^9.1.7",
     "postcss": "^8.4.41",
     "prettier": "^2.8.7",
     "prettier-plugin-tailwindcss": "^0.2.5",
