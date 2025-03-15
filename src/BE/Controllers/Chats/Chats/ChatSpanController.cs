@@ -101,7 +101,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         }
     }
 
-    [HttpPut("{spanId:int}/{action}")]
+    [HttpPut("{spanId:int}/{action:regex(enable|disable)}")]
     public async Task<ActionResult<ChatSpanDto>> ToggleEnable(string encryptedChatId, byte spanId, string action, CancellationToken cancellationToken)
     {
         bool enable = default;
