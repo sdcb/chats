@@ -13,9 +13,9 @@ public partial class ChatSpan
             Temperature = span.ChatConfig.Temperature,
             EndUserId = userId.ToString(),
         };
-        if (span.ChatConfig.ReasoningEffort.HasValue)
+        if (span.ChatConfig.ReasoningEffort.HasValue && userModel.Model.ModelReference.SupportReasoningEffort)
         {
-            cco.GetOrCreateSerializedAdditionalRawData()["reasoning_effort"] = BinaryData.FromString((DBReasoningEffort)span.ChatConfig.ReasoningEffort.Value switch
+            cco.GetOrCreateSerializedAdditionalRawData()["reasoning_effort"] = BinaryData.FromObjectAsJson((DBReasoningEffort)span.ChatConfig.ReasoningEffort.Value switch
             {
                 DBReasoningEffort.Low => "low",
                 DBReasoningEffort.Medium => "medium",

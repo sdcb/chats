@@ -127,6 +127,41 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         return NoContent();
     }
 
+    [HttpPost("{spanId:int}/switch-model/{modelId:int}")]
+    public async Task<ActionResult<ChatSpanDto>> SwitchModel(string encryptedChatId, byte spanId, short modelId,
+        [FromServices] UserModelManager userModelManager,
+        CancellationToken cancellationToken)
+    {
+        int chatId = idEncryption.DecryptChatId(encryptedChatId);
+        ChatSpan? span = await db.ChatSpans
+            .Include(x => x.ChatConfig)
+            .FirstOrDefaultAsync(x => x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id && !x.Chat.IsArchived, cancellationToken);
+        if (span == null)
+        {
+            return NotFound();
+        }
+
+        UserModel? um = await userModelManager.GetValidModelsByUserId(currentUser.Id).FirstOrDefaultAsync(x => x.ModelId == modelId, cancellationToken);
+        if (um == null)
+        {
+            return BadRequest("Model not available");
+        }
+
+        span.ChatConfig.Model = um.Model;
+        span.ChatConfig.ModelId = um.ModelId;
+        span.ChatConfig.WebSearchEnabled = um.Model.ModelReference.AllowSearch && span.ChatConfig.WebSearchEnabled;
+        if (span.ChatConfig.Temperature != null)
+        {
+            span.ChatConfig.Temperature = (float)Math.Clamp((decimal)span.ChatConfig.Temperature.Value, um.Model.ModelReference.MinTemperature, um.Model.ModelReference.MaxTemperature);
+        }
+        if (span.ChatConfig.MaxOutputTokens != null)
+        {
+            span.ChatConfig.MaxOutputTokens = Math.Min(span.ChatConfig.MaxOutputTokens.Value, um.Model.ModelReference.MaxResponseTokens);
+        }
+        await db.SaveChangesAsync(cancellationToken);
+        return Ok(ChatSpanDto.FromDB(span));
+    }
+
     [HttpPut("{spanId:int}")]
     public async Task<ActionResult<ChatSpanDto>> UpdateChatSpan(string encryptedChatId, byte spanId, [FromBody] UpdateChatSpanRequest request,
         [FromServices] UserModelManager userModelManager,

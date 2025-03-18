@@ -54,7 +54,7 @@ SELECT
     cs.EnableSearch AS WebSearchEnabled,
     COALESCE(SystemPrompt.Content, DefaultPrompt.Content) AS SystemPrompt,
     NULL AS MaxOutputTokens,
-    0 AS ReasoningEffort
+    NULL AS ReasoningEffort
 FROM
     ChatSpan cs
 INNER JOIN
