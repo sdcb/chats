@@ -65,6 +65,9 @@ public record ChatSpanDto
     [JsonPropertyName("enabled")]
     public required bool Enabled { get; init; }
 
+    [JsonPropertyName("systemPrompt")]
+    public required string? SystemPrompt { get; init; }
+
     [JsonPropertyName("modelId")]
     public required int ModelId { get; init; }
 
@@ -90,6 +93,7 @@ public record ChatSpanDto
     {
         SpanId = span.SpanId,
         Enabled = span.Enabled,
+        SystemPrompt = span.ChatConfig.SystemPrompt,
         ModelId = span.ChatConfig.ModelId,
         ModelName = span.ChatConfig.Model.Name,
         ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,

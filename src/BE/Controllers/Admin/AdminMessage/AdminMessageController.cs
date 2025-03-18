@@ -40,6 +40,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                 {
                     SpanId = span.SpanId,
                     Enabled = span.Enabled,
+                    SystemPrompt = span.ChatConfig.SystemPrompt,
                     ModelId = span.ChatConfig.ModelId,
                     ModelName = span.ChatConfig.Model.Name,
                     ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
@@ -76,6 +77,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                 {
                     SpanId = span.SpanId,
                     Enabled = span.Enabled,
+                    SystemPrompt = span.ChatConfig.SystemPrompt,
                     ModelId = span.ChatConfig.ModelId,
                     ModelName = span.ChatConfig.Model.Name,
                     ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
