@@ -2,15 +2,13 @@ import { FC } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { ReasoningEffortType } from '@/types/model';
-
+import { IconReasoning } from '../Icons';
 import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
-import { IconReasoning } from '../Icons';
 
 interface Props {
-  value?: ReasoningEffortType;
-  onValueChange: (value: ReasoningEffortType) => void;
+  value?: string;
+  onValueChange: (value: string) => void;
 }
 
 const ReasoningEffortRadio: FC<Props> = ({
@@ -37,19 +35,19 @@ const ReasoningEffortRadio: FC<Props> = ({
         onValueChange={onValueChange}
       >
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="low" id="low" />
+          <RadioGroupItem value="0" id="low" />
           <Label className="text-base" htmlFor="low">
             {t('Low')}
           </Label>
         </div>
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="medium" id="medium" />
+          <RadioGroupItem value="1" id="medium" />
           <Label className="text-base" htmlFor="medium">
             {t('Medium')}
           </Label>
         </div>
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="high" id="high" />
+          <RadioGroupItem value="2" id="high" />
           <Label className="text-base" htmlFor="high">
             {t('High')}
           </Label>

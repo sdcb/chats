@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useContext, useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -6,7 +6,7 @@ import { formatPrompt } from '@/utils/promptVariable';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { DEFAULT_TEMPERATURE } from '@/types/chat';
-import { ReasoningEffortType } from '@/types/model';
+import { ChatSpanDto } from '@/types/clientApis';
 import { Prompt } from '@/types/prompt';
 
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
@@ -23,73 +23,79 @@ import ChatModelInfo from './ChatModelInfo';
 import EnableNetworkSearch from './EnableNetworkSearch';
 import SystemPrompt from './SystemPrompt';
 
+import { putChatSpan } from '@/apis/clientApis';
+
 interface Props {
   spanId: number;
   isOpen: boolean;
   onClose: () => void;
   onRemove: (spanId: number) => void;
-  onChangeModel: (spanId: number, modelId: number) => void;
 }
 const ChatModelSettingModal = (props: Props) => {
-  const { spanId, isOpen, onRemove, onChangeModel, onClose } = props;
+  const { spanId, isOpen, onRemove, onClose } = props;
   const {
     state: { defaultPrompt, selectedChat, modelMap, prompts, models },
     hasModel,
     chatDispatch,
   } = useContext(HomeContext);
-  const span = selectedChat.spans.find((x) => x.spanId === spanId);
+  const [span, setSpan] = useState<ChatSpanDto>();
+
+  useEffect(() => {
+    setSpan(selectedChat.spans.find((x) => x.spanId === spanId)!);
+  }, [isOpen]);
 
   const { t } = useTranslation();
 
-  const onChangePrompt = (
-    spanId: number,
-    prompt: Prompt,
-    model: AdminModelDto,
-  ) => {
-    const text = formatPrompt(prompt.content || '', { model });
+  const onChangeModel = (modelId: number, modelName: string) => {
+    setSpan({ ...span!, modelId, modelName });
+  };
+
+  const onChangePrompt = (prompt: Prompt) => {
     const promptTemperature = prompt.temperature;
-    const spans = selectedChat.spans.map((s) =>
-      s.spanId === spanId
-        ? {
-            ...s,
-            prompt: text,
-            temperature:
-              promptTemperature != null ? promptTemperature : s.temperature,
-          }
-        : s,
-    );
-    chatDispatch(setSelectedChat({ ...selectedChat, spans }));
+    setSpan({
+      ...span!,
+      systemPrompt: prompt.content,
+      temperature:
+        promptTemperature != null ? promptTemperature : span!.temperature,
+    });
   };
 
-  const onChangePromptText = (spanId: number, value: string) => {
-    const spans = selectedChat.spans.map((s) =>
-      s.spanId === spanId ? { ...s, prompt: value } : s,
-    );
-    chatDispatch(setSelectedChat({ ...selectedChat, spans }));
+  const onChangePromptText = (value: string) => {
+    setSpan({ ...span!, systemPrompt: value });
   };
 
-  const onChangeTemperature = (spanId: number, value: number) => {
-    const spans = selectedChat.spans.map((s) =>
-      s.spanId === spanId ? { ...s, temperature: value } : s,
-    );
-    chatDispatch(setSelectedChat({ ...selectedChat, spans }));
+  const onChangeTemperature = (value: number) => {
+    setSpan({ ...span!, temperature: value });
   };
 
-  const onChangeEnableSearch = (spanId: number, value: boolean) => {
-    const spans = selectedChat.spans.map((s) =>
-      s.spanId === spanId ? { ...s, enableSearch: value } : s,
-    );
-    chatDispatch(setSelectedChat({ ...selectedChat, spans }));
+  const onChangeEnableSearch = (value: boolean) => {
+    setSpan({ ...span!, enableSearch: value });
   };
 
-  const onChangeReasoningEffort = (
-    spanId: number,
-    value: ReasoningEffortType,
-  ) => {
-    const spans = selectedChat.spans.map((s) =>
-      s.spanId === spanId ? { ...s, reasoningEffort: value } : s,
-    );
-    chatDispatch(setSelectedChat({ ...selectedChat, spans }));
+  const onChangeReasoningEffort = (value: string) => {
+    setSpan({ ...span!, reasoningEffort: Number(value) });
+  };
+
+  const onChangeSpanEnable = (value: boolean) => {
+    setSpan({ ...span!, enabled: value });
+  };
+
+  const handleSave = () => {
+    if (!span) return;
+    putChatSpan(span!.spanId, selectedChat.id, {
+      enabled: span.enabled,
+      modelId: span.modelId,
+      systemPrompt: span.systemPrompt,
+      maxOutputTokens: span?.maxOutputTokens || null,
+      temperature: span?.temperature || null,
+      reasoningEffort: span?.reasoningEffort || null,
+      webSearchEnabled: !!span.enableSearch,
+    }).then(() => {
+      const spans = selectedChat.spans.map((s) =>
+        s.spanId === spanId ? { ...span! } : s,
+      );
+      chatDispatch(setSelectedChat({ ...selectedChat, spans }));
+    });
   };
 
   return (
@@ -114,7 +120,7 @@ const ChatModelSettingModal = (props: Props) => {
                   }
                   hideIcon={true}
                   onChangeModel={(model) => {
-                    onChangeModel(spanId, model.modelId);
+                    onChangeModel(model.modelId, model.name);
                   }}
                 />
                 <ChatModelInfo modelId={span.modelId} />
@@ -125,10 +131,10 @@ const ChatModelSettingModal = (props: Props) => {
                   prompts={prompts}
                   model={modelMap[span.modelId]}
                   onChangePromptText={(value) => {
-                    onChangePromptText(span.spanId, value);
+                    onChangePromptText(value);
                   }}
                   onChangePrompt={(prompt) => {
-                    onChangePrompt(span.spanId, prompt, modelMap[span.modelId]);
+                    onChangePrompt(prompt);
                   }}
                 />
               )}
@@ -139,7 +145,7 @@ const ChatModelSettingModal = (props: Props) => {
                   max={1}
                   defaultTemperature={span.temperature || DEFAULT_TEMPERATURE}
                   onChangeTemperature={(value) => {
-                    onChangeTemperature(span.spanId, value);
+                    onChangeTemperature(value);
                   }}
                 />
               )}
@@ -148,21 +154,24 @@ const ChatModelSettingModal = (props: Props) => {
                   label={t('Internet Search')}
                   enable={span.enableSearch}
                   onChange={(value) => {
-                    onChangeEnableSearch(span.spanId, value);
+                    onChangeEnableSearch(value);
                   }}
                 />
               )}
               {modelMap[span.modelId]?.allowReasoningEffort && (
                 <ReasoningEffortRadio
-                  value={span.reasoningEffort || 'medium'}
+                  value={`${span.reasoningEffort || 0}`}
                   onValueChange={(value) => {
-                    onChangeReasoningEffort(span.spanId, value);
+                    onChangeReasoningEffort(value);
                   }}
                 />
               )}
             </div>
             <div className="flex gap-4 justify-end mt-5 items-center">
-              <Switch />
+              <Switch
+                onCheckedChange={onChangeSpanEnable}
+                checked={span.enabled}
+              />
               <Button
                 variant="destructive"
                 onClick={() => {
@@ -171,6 +180,15 @@ const ChatModelSettingModal = (props: Props) => {
                 }}
               >
                 {t('Remove')}
+              </Button>
+              <Button
+                variant="default"
+                onClick={() => {
+                  handleSave();
+                  onClose();
+                }}
+              >
+                {t('Save')}
               </Button>
             </div>
           </div>

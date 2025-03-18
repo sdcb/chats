@@ -20,6 +20,8 @@ import ChatModelSettingModal from './ChatModelSettingsModal';
 
 import {
   deleteUserChatSpan,
+  postChatDisableSpan,
+  postChatEnableSpan,
   postUserChatSpan,
   putUserChatSpan,
 } from '@/apis/clientApis';
@@ -39,19 +41,21 @@ const ChatHeader = () => {
     chatDispatch,
   } = useContext(HomeContext);
 
-  const [selectedSpanId, setSelectedSpanId] = useState(0);
+  const [selectedSpanId, setSelectedSpanId] = useState<number | null>(null);
 
   const handleAddChatModel = async (modelId: number) => {
     await postUserChatSpan(selectedChat.id, { modelId }).then((data) => {
       selectedChat.spans.push({
+        maxOutputTokens: data.maxOutputTokens,
         spanId: data.spanId,
+        enabled: data.enabled,
         modelId: data.modelId,
         modelName: data.modelName,
         modelProviderId: data.modelProviderId,
         temperature: data.temperature,
         enableSearch: data.enableSearch,
         reasoningEffort: data?.reasoningEffort,
-        prompt: defaultPrompt?.content!,
+        systemPrompt: defaultPrompt?.content!,
       });
       chatDispatch(setSelectedChat(selectedChat));
     });
@@ -72,6 +76,7 @@ const ChatHeader = () => {
         if (s.spanId === spanId) {
           return {
             ...s,
+            enabled: data.enabled,
             modelId: data.modelId,
             modelName: data.modelName,
             modelProviderId: data.modelProviderId,
@@ -107,6 +112,24 @@ const ChatHeader = () => {
     </div>
   );
 
+  const handleChangeChatSpan = (spanId: number, enable: boolean) => {
+    if (enable) {
+      postChatEnableSpan(spanId, selectedChat.id);
+    } else {
+      postChatDisableSpan(spanId, selectedChat.id);
+    }
+    selectedChat.spans = selectedChat.spans.map((s) => {
+      if (s.spanId === spanId) {
+        return {
+          ...s,
+          enabled: enable,
+        };
+      }
+      return s;
+    });
+    chatDispatch(setSelectedChat(selectedChat));
+  };
+
   return (
     <>
       <div className="sticky top-0 z-10 text-sm bg-background right-0">
@@ -128,7 +151,7 @@ const ChatHeader = () => {
                       <TooltipTrigger asChild>
                         <Button
                           variant="ghost"
-                          className="h-auto p-4 sm:p-2 m-0 gap-2"
+                          className={cn('h-auto p-4 sm:p-2 m-0 gap-2', !span.enabled && 'opacity-50')}
                           onClick={() => {
                             setSelectedSpanId(span.spanId);
                           }}
@@ -146,7 +169,7 @@ const ChatHeader = () => {
                       <TooltipContent
                         sideOffset={-48}
                         side="right"
-                        className="flex items-center border-none gap-2 hidden sm:block"
+                        className="flex items-center border-none gap-2"
                       >
                         <Button variant="ghost" className="w-6 h-6 p-0 m-0">
                           <IconDots
@@ -157,7 +180,12 @@ const ChatHeader = () => {
                             }}
                           />
                         </Button>
-                        <Switch checked={true}></Switch>
+                        <Switch
+                          onCheckedChange={(checked) => {
+                            handleChangeChatSpan(span.spanId, checked);
+                          }}
+                          checked={span.enabled}
+                        ></Switch>
                         <Button
                           disabled={selectedChat.spans.length === 1}
                           onClick={() => {
@@ -179,12 +207,11 @@ const ChatHeader = () => {
         </div>
       </div>
       <ChatModelSettingModal
-        spanId={selectedSpanId}
-        isOpen={selectedSpanId !== 0}
-        onChangeModel={handleUpdateChatModel}
+        spanId={selectedSpanId!}
+        isOpen={selectedSpanId !== null}
         onRemove={handleRemoveChatModel}
         onClose={() => {
-          setSelectedSpanId(0);
+          setSelectedSpanId(null);
         }}
       />
     </>

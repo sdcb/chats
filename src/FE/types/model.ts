@@ -86,8 +86,16 @@ export const feModelProviders: FEModelProvider[] = [
   { id: DBModelProvider.Ollama, name: 'Ollama', icon: '/logos/ollama.svg' },
   { id: DBModelProvider.MiniMax, name: 'MiniMax', icon: '/logos/minimax.svg' },
   { id: DBModelProvider.Doubao, name: 'Doubao', icon: '/logos/doubao.svg' },
-  { id: DBModelProvider.SiliconFlow, name: 'SiliconFlow', icon: '/logos/siliconflow.svg' },
-  { id: DBModelProvider.OpenRouter, name: 'OpenRouter', icon: '/logos/openrouter.svg' },
+  {
+    id: DBModelProvider.SiliconFlow,
+    name: 'SiliconFlow',
+    icon: '/logos/siliconflow.svg',
+  },
+  {
+    id: DBModelProvider.OpenRouter,
+    name: 'OpenRouter',
+    icon: '/logos/openrouter.svg',
+  },
 ];
 
 export interface ChatModelFileConfig {
@@ -99,5 +107,3 @@ export interface ChatModelPriceConfig {
   input: number;
   out: number;
 }
-
-export type ReasoningEffortType = 'low' | 'medium' | 'high';

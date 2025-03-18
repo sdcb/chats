@@ -6,7 +6,6 @@ import { formatPrompt } from '@/utils/promptVariable';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { DEFAULT_TEMPERATURE } from '@/types/chat';
-import { ReasoningEffortType } from '@/types/model';
 import { Prompt } from '@/types/prompt';
 
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
@@ -40,7 +39,7 @@ const ChatModelSetting = () => {
       s.spanId === spanId
         ? {
             ...s,
-            prompt: text,
+            systemPrompt: text,
             temperature:
               promptTemperature != null ? promptTemperature : s.temperature,
           }
@@ -50,7 +49,7 @@ const ChatModelSetting = () => {
   };
   const onChangePromptText = (spanId: number, value: string) => {
     const spans = selectedChat.spans.map((s) =>
-      s.spanId === spanId ? { ...s, prompt: value } : s,
+      s.spanId === spanId ? { ...s, systemPrompt: value } : s,
     );
     chatDispatch(setSelectedChat({ ...selectedChat, spans }));
   };
@@ -69,12 +68,9 @@ const ChatModelSetting = () => {
     chatDispatch(setSelectedChat({ ...selectedChat, spans }));
   };
 
-  const onChangeReasoningEffort = (
-    spanId: number,
-    value: ReasoningEffortType,
-  ) => {
+  const onChangeReasoningEffort = (spanId: number, value: string) => {
     const spans = selectedChat.spans.map((s) =>
-      s.spanId === spanId ? { ...s, reasoningEffort: value } : s,
+      s.spanId === spanId ? { ...s, reasoningEffort: Number(value) } : s,
     );
     chatDispatch(setSelectedChat({ ...selectedChat, spans }));
   };
@@ -94,9 +90,7 @@ const ChatModelSetting = () => {
                 key={'chat-model-' + span.spanId}
                 className="space-y-4 rounded-lg p-4 border"
               >
-                <ChatModelInfo
-                  modelId={span.modelId}
-                />
+                <ChatModelInfo modelId={span.modelId} />
                 {modelMap[span.modelId]?.allowSystemPrompt && (
                   <SystemPrompt
                     currentPrompt={defaultPrompt?.content || null}
@@ -136,7 +130,7 @@ const ChatModelSetting = () => {
                 )}
                 {modelMap[span.modelId]?.allowReasoningEffort && (
                   <ReasoningEffortRadio
-                    value={span.reasoningEffort || 'medium'}
+                    value={`${span.reasoningEffort || 0}`}
                     onValueChange={(value) => {
                       onChangeReasoningEffort(span.spanId, value);
                     }}

@@ -23,27 +23,12 @@ const ChatModelInfo = (props: { modelId: number }) => {
     }
   }, [modelId]);
 
-  const getTitle = () => {
-    if (modelUsage) {
-      if (modelUsage.tokens === 0 && modelUsage.counts === 0) {
-        return t('unit-price');
-      } else if (+modelUsage.counts > 0) {
-        return t('Remaining Chat Counts');
-      } else if (+modelUsage.tokens > 0) {
-        return t('Remaining Tokens');
-      } else {
-        return t('unit-price');
-      }
-    }
-    return '';
-  };
-
   if (!modelUsage) {
     return <></>;
   }
 
   return (
-    <div className="flex flex-col text-gray-600 text-sm">
+    <div className="flex flex-col text-gray-600 text-sm h-5">
       <div className="flex items-center">
         {modelUsage.tokens === 0 && modelUsage.counts === 0 ? (
           <span>
