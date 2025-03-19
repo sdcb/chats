@@ -29,6 +29,9 @@ public partial class ChatConfig
     public byte ReasoningEffort { get; set; }
 
     [InverseProperty("ChatConfig")]
+    public virtual ICollection<ChatPresetSpan> ChatPresetSpans { get; set; } = new List<ChatPresetSpan>();
+
+    [InverseProperty("ChatConfig")]
     public virtual ICollection<ChatSpan> ChatSpans { get; set; } = new List<ChatSpan>();
 
     [InverseProperty("ChatConfig")]
