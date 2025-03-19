@@ -39,8 +39,11 @@ public class ModelsController : ControllerBase
                 AllowVision = x.ModelReference.AllowVision,
                 AllowStreaming = x.ModelReference.AllowStreaming,
                 AllowSystemPrompt = x.ModelReference.AllowSystemPrompt,
-                AllowTemperature = x.ModelReference.MinTemperature < x.ModelReference.MaxTemperature,
+                AllowReasoningEffort = ModelReference.SupportReasoningEffort(x.ModelReference.Name),
+                MinTemperature = x.ModelReference.MinTemperature,
+                MaxTemperature = x.ModelReference.MaxTemperature,
                 ContextWindow = x.ModelReference.ContextWindow,
+                MaxResponseTokens = x.ModelReference.MaxResponseTokens,
             })
             .ToArrayAsync(cancellationToken);
         return data;

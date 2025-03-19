@@ -62,6 +62,12 @@ public record ChatSpanDto
     [JsonPropertyName("spanId")]
     public required byte SpanId { get; init; }
 
+    [JsonPropertyName("enabled")]
+    public required bool Enabled { get; init; }
+
+    [JsonPropertyName("systemPrompt")]
+    public required string? SystemPrompt { get; init; }
+
     [JsonPropertyName("modelId")]
     public required int ModelId { get; init; }
 
@@ -74,16 +80,26 @@ public record ChatSpanDto
     [JsonPropertyName("temperature")]
     public required float? Temperature { get; init; }
 
-    [JsonPropertyName("enableSearch")]
-    public required bool EnableSearch { get; init; }
+    [JsonPropertyName("webSearchEnabled")]
+    public required bool WebSearchEnabled { get; init; }
+
+    [JsonPropertyName("maxOutputTokens")]
+    public required int? MaxOutputTokens { get; init; }
+
+    [JsonPropertyName("reasoningEffort")]
+    public required int? ReasoningEffort { get; init; }
 
     public static ChatSpanDto FromDB(ChatSpan span) => new()
     {
         SpanId = span.SpanId,
-        ModelId = span.ModelId,
-        ModelName = span.Model.Name,
-        ModelProviderId = span.Model.ModelKey.ModelProviderId,
-        Temperature = span.Temperature,
-        EnableSearch = span.EnableSearch,
+        Enabled = span.Enabled,
+        SystemPrompt = span.ChatConfig.SystemPrompt,
+        ModelId = span.ChatConfig.ModelId,
+        ModelName = span.ChatConfig.Model.Name,
+        ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
+        Temperature = span.ChatConfig.Temperature,
+        WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
+        MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
+        ReasoningEffort = span.ChatConfig.ReasoningEffort,
     };
 }

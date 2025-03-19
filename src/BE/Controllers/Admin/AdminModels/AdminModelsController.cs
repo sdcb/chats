@@ -43,8 +43,11 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
                 AllowVision = x.ModelReference.AllowVision,
                 AllowStreaming = x.ModelReference.AllowStreaming,
                 AllowSystemPrompt = x.ModelReference.AllowSystemPrompt,
-                AllowTemperature = x.ModelReference.MinTemperature < x.ModelReference.MaxTemperature,
+                AllowReasoningEffort = ModelReference.SupportReasoningEffort(x.ModelReference.Name),
+                MinTemperature = x.ModelReference.MinTemperature,
+                MaxTemperature = x.ModelReference.MaxTemperature,
                 ContextWindow = x.ModelReference.ContextWindow,
+                MaxResponseTokens = x.ModelReference.MaxResponseTokens,
             })
             .ToArrayAsync(cancellationToken);
         return data;
@@ -150,16 +153,16 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
             .Where(x => x.Id == modelId)
             .Select(x => new
             {
-                ChatSpans = x.ChatSpans.Any(),
+                ChatConfigs = x.ChatConfigs.Any(),
                 UserModels = x.UserModels.Any(),
                 ApiKeys = x.ApiKeys.Any(),
             })
             .SingleAsync(cancellationToken);
 
-        if (refInfo.ChatSpans || refInfo.UserModels || refInfo.ApiKeys)
+        if (refInfo.ChatConfigs || refInfo.UserModels || refInfo.ApiKeys)
         {
             string message = "Cannot delete model because it is referenced by: ";
-            if (refInfo.ChatSpans) message += "Chats, ";
+            if (refInfo.ChatConfigs) message += "ChatConfigs, ";
             if (refInfo.UserModels) message += "UserModels, ";
             if (refInfo.ApiKeys) message += "ApiKeys, ";
             return this.BadRequestMessage(message);

@@ -5,6 +5,7 @@ using Chats.BE.Services.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Threading;
 
 namespace Chats.BE.Controllers.Chats.Prompts;
 
@@ -76,9 +77,15 @@ public class PromptsController(ChatsDB db, CurrentUser currentUser) : Controller
     [HttpGet("default")]
     public async Task<ActionResult<PromptDto>> GetDefaultPrompt(CancellationToken cancellationToken)
     {
+        PromptDto dto = await GetDefaultPrompt(db, currentUser.Id, cancellationToken);
+        return Ok(dto);
+    }
+
+    internal static async Task<PromptDto> GetDefaultPrompt(ChatsDB db, int userId, CancellationToken cancellationToken)
+    {
         Prompt? userDefault = await db.Prompts
                 .OrderByDescending(x => x.UpdatedAt)
-                .Where(x => !x.IsSystem && x.IsDefault && x.CreateUserId == currentUser.Id)
+                .Where(x => !x.IsSystem && x.IsDefault && x.CreateUserId == userId)
                 .FirstOrDefaultAsync(cancellationToken);
         Prompt? systemDefault = await db.Prompts
                 .OrderByDescending(x => x.UpdatedAt)
@@ -106,7 +113,7 @@ public class PromptsController(ChatsDB db, CurrentUser currentUser) : Controller
             IsSystem = true
         };
 
-        return Ok(dto);
+        return dto;
     }
 
     [HttpPost]

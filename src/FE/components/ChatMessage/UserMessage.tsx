@@ -60,16 +60,14 @@ const UserMessage = (props: Props) => {
   const currentMessageIndex = siblingIds.findIndex((x) => x === messageId);
 
   const handleEditMessage = (isOnlySave: boolean = false) => {
-    if (content != messageContent) {
-      if (isOnlySave) {
-        onEditUserMessage && onEditUserMessage(message.id, messageContent);
-      } else {
-        if (selectedChat.id && onEditAndSendMessage) {
-          onEditAndSendMessage(
-            { ...message, content: messageContent },
-            parentId || undefined,
-          );
-        }
+    if (isOnlySave) {
+      onEditUserMessage && onEditUserMessage(message.id, messageContent);
+    } else {
+      if (selectedChat.id && onEditAndSendMessage) {
+        onEditAndSendMessage(
+          { ...message, content: messageContent },
+          parentId || undefined,
+        );
       }
     }
     setIsEditing(false);
@@ -194,7 +192,10 @@ const UserMessage = (props: Props) => {
           <>
             <EditAction
               isHoverVisible
-              disabled={chatStatus === ChatSpanStatus.Chatting || chatStatus === ChatSpanStatus.Thinking}
+              disabled={
+                chatStatus === ChatSpanStatus.Chatting ||
+                chatStatus === ChatSpanStatus.Thinking
+              }
               onToggleEditing={handleToggleEditing}
             />
             <CopyAction
@@ -214,12 +215,12 @@ const UserMessage = (props: Props) => {
               hidden={siblingIds.length <= 1}
               disabledPrev={
                 currentMessageIndex === 0 ||
-                chatStatus === ChatSpanStatus.Chatting || 
+                chatStatus === ChatSpanStatus.Chatting ||
                 chatStatus === ChatSpanStatus.Thinking
               }
               disabledNext={
                 currentMessageIndex === siblingIds.length - 1 ||
-                chatStatus === ChatSpanStatus.Chatting || 
+                chatStatus === ChatSpanStatus.Chatting ||
                 chatStatus === ChatSpanStatus.Thinking
               }
               currentSelectIndex={currentMessageIndex}

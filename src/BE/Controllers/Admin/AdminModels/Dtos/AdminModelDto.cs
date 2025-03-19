@@ -46,11 +46,17 @@ public record AdminModelDto
     [JsonPropertyName("allowSystemPrompt")]
     public required bool AllowSystemPrompt { get; init; }
 
+    [JsonPropertyName("allowReasoningEffort")]
+    public required bool AllowReasoningEffort { get; init; }
+
     [JsonPropertyName("allowStreaming")]
     public required bool AllowStreaming { get; init; }
 
-    [JsonPropertyName("allowTemperature")]
-    public required bool AllowTemperature { get; init; }
+    [JsonPropertyName("minTemperature")]
+    public required decimal MinTemperature { get; init; }
+
+    [JsonPropertyName("maxTemperature")]
+    public required decimal MaxTemperature { get; init; }
 
     [JsonPropertyName("inputTokenPrice1M")]
     public required decimal InputTokenPrice1M { get; init; }
@@ -60,4 +66,7 @@ public record AdminModelDto
 
     [JsonPropertyName("contextWindow")]
     public required int ContextWindow { get; init; }
+
+    [JsonPropertyName("maxResponseTokens")]
+    public required int MaxResponseTokens { get; init; }
 }

@@ -24,6 +24,10 @@
   "Precise": "保守",
   "Neutral": "中立",
   "Creative": "随性",
+  "Reasoning Effort": "推理努力",
+  "Low": "低",
+  "Medium": "中",
+  "High": "高",
   "Type a message...": "输入一条消息...",
   "File upload failed": "文件上传失败",
   "The file size limit is {{fileSize}}": "文件大小限制为 {{fileSize}}",
@@ -385,5 +389,7 @@
   "Like": "赞",
   "Dislike": "踩",
   "Thinking...": "思考中...",
-  "Deeply thought (took {{time}} seconds)": "已深度思考（用时 {{time}} 秒）"
+  "Deeply thought (took {{time}} seconds)": "已深度思考（用时 {{time}} 秒）",
+  "Default": "默认",
+  "Max Tokens":"最多 Tokens"
 }
