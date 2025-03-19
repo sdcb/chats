@@ -173,8 +173,9 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         }
 
         int chatId = idEncryption.DecryptChatId(encryptedChatId);
-        ChatSpan? span = await db.ChatSpans.FirstOrDefaultAsync(x =>
-            x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id && !x.Chat.IsArchived, cancellationToken);
+        ChatSpan? span = await db.ChatSpans
+            .Include(x => x.ChatConfig)
+            .FirstOrDefaultAsync(x =>x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id && !x.Chat.IsArchived, cancellationToken);
         if (span == null)
         {
             return NotFound();
