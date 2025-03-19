@@ -209,7 +209,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                         WebSearchEnabled = false,
                         HashCode = 0,
                         MaxOutputTokens = null,
-                        ReasoningEffort = null,
+                        ReasoningEffort = 0,
                         SystemPrompt = defaultPrompt.Content,
                     }
                 }
