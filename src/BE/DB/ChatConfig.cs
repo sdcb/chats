@@ -26,7 +26,7 @@ public partial class ChatConfig
 
     public int? MaxOutputTokens { get; set; }
 
-    public byte? ReasoningEffort { get; set; }
+    public byte ReasoningEffort { get; set; }
 
     [InverseProperty("ChatConfig")]
     public virtual ICollection<ChatSpan> ChatSpans { get; set; } = new List<ChatSpan>();
