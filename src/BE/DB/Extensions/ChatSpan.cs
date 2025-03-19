@@ -13,7 +13,7 @@ public partial class ChatSpan
             Temperature = span.ChatConfig.Temperature,
             EndUserId = userId.ToString(),
         };
-        if (span.ChatConfig.ReasoningEffort.HasValue && userModel.Model.ModelReference.SupportReasoningEffort)
+        if (span.ChatConfig.ReasoningEffort.HasValue && ModelReference.SupportReasoningEffort(userModel.Model.ModelReference.Name))
         {
             cco.GetOrCreateSerializedAdditionalRawData()["reasoning_effort"] = BinaryData.FromObjectAsJson((DBReasoningEffort)span.ChatConfig.ReasoningEffort.Value switch
             {

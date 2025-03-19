@@ -8,8 +8,15 @@ public partial class ModelReference
         return temperature * (float)(MaxTemperature - MinTemperature) + (float)MinTemperature;
     }
 
-    public bool IsSdkUnsupportedO1 =>
-        Name == "o1-2024-12-17" || Name == "o3-mini-2025-01-31";
+    public bool IsSdkUnsupportedO1 => SupportReasoningEffort(Name);
 
-    public bool SupportReasoningEffort => IsSdkUnsupportedO1;
+    public static bool SupportReasoningEffort(string modelReferenceName)
+    {
+        return modelReferenceName switch
+        {
+            "o1-2024-12-17" => true,
+            "o3-mini-2025-01-31" => true,
+            _ => false
+        };
+    }
 }

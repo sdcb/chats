@@ -52,8 +52,11 @@ public record AdminModelDto
     [JsonPropertyName("allowStreaming")]
     public required bool AllowStreaming { get; init; }
 
-    [JsonPropertyName("allowTemperature")]
-    public required bool AllowTemperature { get; init; }
+    [JsonPropertyName("minTemperature")]
+    public required decimal MinTemperature { get; init; }
+
+    [JsonPropertyName("maxTemperature")]
+    public required decimal MaxTemperature { get; init; }
 
     [JsonPropertyName("inputTokenPrice1M")]
     public required decimal InputTokenPrice1M { get; init; }
