@@ -108,7 +108,7 @@ const ChatModelSetting = () => {
                     }}
                   />
                 )}
-                {modelMap[span.modelId] && modelMap[span.modelId].minTemperature === modelMap[span.modelId].maxTemperature && (
+                {modelMap[span.modelId] && modelMap[span.modelId].minTemperature !== modelMap[span.modelId].maxTemperature && (
                   <TemperatureSlider
                     label={t('Temperature')}
                     min={modelMap[span.modelId].minTemperature}
