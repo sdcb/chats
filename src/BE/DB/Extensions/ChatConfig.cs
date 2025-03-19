@@ -92,15 +92,9 @@ public partial class ChatConfig
             AppendField(intBuffer);
         }
 
-        // 6. ReasoningEffort (byte?): 先写存在标志，再写 1 字节（如有值）
-        flagBuffer[0] = (byte)(ReasoningEffort.HasValue ? 1 : 0);
-        AppendField(flagBuffer, withSeparator: false);
-        if (ReasoningEffort.HasValue)
-        {
-            // 由于单字节的写入，我们复用 flagBuffer 直接写入实际值
-            flagBuffer[0] = ReasoningEffort.Value;
-            AppendField(flagBuffer);
-        }
+        // 6. ReasoningEffort (byte): 用 1 字节表示
+        flagBuffer[0] = ReasoningEffort;
+        AppendField(flagBuffer);
 
         // 计算 SHA256 哈希，取前 8 字节转换为 long 类型
         byte[] fullHash = incrementalHash.GetHashAndReset();

@@ -13,14 +13,15 @@ public partial class ChatSpan
             Temperature = span.ChatConfig.Temperature,
             EndUserId = userId.ToString(),
         };
-        if (span.ChatConfig.ReasoningEffort.HasValue && ModelReference.SupportReasoningEffort(userModel.Model.ModelReference.Name))
+        if (span.ChatConfig.ReasoningEffort != (byte)DBReasoningEffort.Default && ModelReference.SupportReasoningEffort(userModel.Model.ModelReference.Name))
         {
-            cco.GetOrCreateSerializedAdditionalRawData()["reasoning_effort"] = BinaryData.FromObjectAsJson((DBReasoningEffort)span.ChatConfig.ReasoningEffort.Value switch
+            cco.GetOrCreateSerializedAdditionalRawData()["reasoning_effort"] = BinaryData.FromObjectAsJson((DBReasoningEffort)span.ChatConfig.ReasoningEffort switch
             {
+                //DBReasoningEffort.Default => "medium",
                 DBReasoningEffort.Low => "low",
                 DBReasoningEffort.Medium => "medium",
                 DBReasoningEffort.High => "high",
-                _ => throw new ArgumentOutOfRangeException(nameof(span.ChatConfig.ReasoningEffort), span.ChatConfig.ReasoningEffort.Value, null),
+                _ => throw new ArgumentOutOfRangeException(nameof(span.ChatConfig.ReasoningEffort), span.ChatConfig.ReasoningEffort, null),
             });
         }
         if (span.ChatConfig.MaxOutputTokens.HasValue)

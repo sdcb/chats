@@ -25,7 +25,7 @@ public record UpdateChatSpanRequest
     public int? MaxOutputTokens { get; init; }
 
     [JsonPropertyName("reasoningEffort")]
-    public DBReasoningEffort? ReasoningEffort { get; init; }
+    public DBReasoningEffort ReasoningEffort { get; init; }
 
     public void ApplyTo(ChatSpan span)
     {
@@ -37,6 +37,6 @@ public record UpdateChatSpanRequest
         config.Temperature = Temperature;
         config.WebSearchEnabled = WebSearchEnabled;
         config.MaxOutputTokens = MaxOutputTokens;
-        config.ReasoningEffort = (byte?)ReasoningEffort;
+        config.ReasoningEffort = (byte)ReasoningEffort;
     }
 }

@@ -60,7 +60,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
                 WebSearchEnabled = false,
                 HashCode = 0,
                 MaxOutputTokens = null,
-                ReasoningEffort = null,
+                ReasoningEffort = 0,
                 SystemPrompt = defaultPrompt.Content,
             }
         };

@@ -8,7 +8,7 @@ CREATE TABLE dbo.ChatConfig
     Temperature    REAL          NULL,
     WebSearchEnabled BIT           NOT NULL,
     MaxOutputTokens  INT           NULL,
-    ReasoningEffort TINYINT      NULL,
+    ReasoningEffort TINYINT      NOT NULL,
 );
 GO
 
@@ -54,7 +54,7 @@ SELECT
     cs.EnableSearch AS WebSearchEnabled,
     COALESCE(SystemPrompt.Content, DefaultPrompt.Content) AS SystemPrompt,
     NULL AS MaxOutputTokens,
-    NULL AS ReasoningEffort
+    0 AS ReasoningEffort
 FROM
     ChatSpan cs
 INNER JOIN
