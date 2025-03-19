@@ -175,7 +175,7 @@ public class ChatConfigHashTests
     public void GenerateDBHashCode_ShouldHandleNullReasoningEffort()
     {
         // Arrange
-        ChatConfig config1 = new() { ReasoningEffort = null };
+        ChatConfig config1 = new() { ReasoningEffort = 0 };
         ChatConfig config2 = new() { ReasoningEffort = 1 };
 
         // Act
