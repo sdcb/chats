@@ -5,7 +5,7 @@ public partial class ModelReference
     public float? UnnormalizeTemperature(float? temperature)
     {
         if (temperature == null) return null;
-        return temperature * (float)(MaxTemperature - MinTemperature) + (float)MinTemperature;
+        return (float)Math.Clamp(temperature.Value, (float)MinTemperature, (float)MaxTemperature);
     }
 
     public bool IsSdkUnsupportedO1 => SupportReasoningEffort(Name);
