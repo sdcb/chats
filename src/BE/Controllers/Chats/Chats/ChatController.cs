@@ -128,6 +128,10 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         {
             toGenerateSpans = [.. chat.ChatSpans.Where(x => x.Enabled)];
         }
+        if (toGenerateSpans.Length == 0)
+        {
+            return BadRequest("No enabled spans");
+        }
 
         Dictionary<short, UserModel> userModels = await userModelManager.GetUserModels(currentUser.Id, [.. toGenerateSpans.Select(x => x.ChatConfig.ModelId)], cancellationToken);
         {
