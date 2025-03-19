@@ -37,6 +37,7 @@ export interface AdminModelDto {
   minTemperature: number;
   maxTemperature: number;
   contextWindow: number;
+  maxResponseTokens: number;
 }
 
 export interface UpdateModelDto {

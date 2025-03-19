@@ -210,7 +210,7 @@ const Chat = memo(() => {
     async (message: Message, messageId?: string) => {
       if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
       startChat();
-      let { id: chatId, spans: chatSpans } = selectedChat;
+      let { id: chatId } = selectedChat;
       let selectedMessageList = [...selectedMessages];
       let userMessage = generateUserMessage(message.content, messageId);
       selectedMessageList.push([userMessage]);
@@ -220,14 +220,6 @@ const Chat = memo(() => {
       const { text: contentText, fileIds } = message.content;
       let chatBody = {
         chatId,
-        // spans: chatSpans.map((x) => ({
-        //   id: x.spanId,
-        //   systemPrompt: x.prompt || defaultPrompt?.content,
-        //   setsTemperature: true,
-        //   enableSearch: x.enableSearch,
-        //   temperature: x.temperature,
-        //   reasoningEffort: x.reasoningEffort,
-        // })),
         timezoneOffset: new Date().getTimezoneOffset(),
         parentAssistantMessageId: messageId || null,
         userMessage: {
@@ -236,17 +228,14 @@ const Chat = memo(() => {
         },
       };
 
-      const response = await fetch(
-        `${getApiUrl()}/api/chats/general-chat`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${getUserSession()}`,
-          },
-          body: JSON.stringify(chatBody),
+      const response = await fetch(`${getApiUrl()}/api/chats/general-chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getUserSession()}`,
         },
-      );
+        body: JSON.stringify(chatBody),
+      });
 
       await handleChatMessage(response, selectedMessageList);
     },
@@ -693,7 +682,7 @@ const Chat = memo(() => {
       >
         {selectedChat && <ChatHeader />}
 
-        {selectedChat && selectedMessages.length === 0 && <ChatModelSetting />}
+        {/* {selectedChat && selectedMessages.length === 0 && <ChatModelSetting />} */}
 
         <ChatMessageMemoized
           selectedChat={selectedChat}

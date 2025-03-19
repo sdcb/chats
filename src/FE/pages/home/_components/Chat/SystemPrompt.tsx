@@ -56,9 +56,7 @@ const SystemPrompt: FC<Props> = ({
     setValue(value);
     updatePromptListVisibility(value);
 
-    if (value.length > 0) {
-      onChangePromptText(value);
-    }
+    onChangePromptText(value);
   };
 
   const handleInitModal = () => {

@@ -389,5 +389,7 @@
   "Like": "赞",
   "Dislike": "踩",
   "Thinking...": "思考中...",
-  "Deeply thought (took {{time}} seconds)": "已深度思考（用时 {{time}} 秒）"
+  "Deeply thought (took {{time}} seconds)": "已深度思考（用时 {{time}} 秒）",
+  "Default": "默认",
+  "Max Tokens":"最多 Tokens"
 }

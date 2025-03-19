@@ -8,7 +8,6 @@ import { AdminModelDto } from '@/types/adminApis';
 import { DEFAULT_TEMPERATURE } from '@/types/chat';
 import { Prompt } from '@/types/prompt';
 
-import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 import TemperatureSlider from '@/components/TemperatureSlider/TemperatureSlider';
 
 import { setSelectedChat } from '../../_actions/chat.actions';
@@ -18,6 +17,7 @@ import EnableNetworkSearch from './EnableNetworkSearch';
 import SystemPrompt from './SystemPrompt';
 
 import { cn } from '@/lib/utils';
+import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 
 const ChatModelSetting = () => {
   const { t } = useTranslation();
@@ -130,7 +130,7 @@ const ChatModelSetting = () => {
                 )}
                 {modelMap[span.modelId]?.allowReasoningEffort && (
                   <ReasoningEffortRadio
-                    value={`${span.reasoningEffort || 0}`}
+                    value={`${span.reasoningEffort}`}
                     onValueChange={(value) => {
                       onChangeReasoningEffort(span.spanId, value);
                     }}

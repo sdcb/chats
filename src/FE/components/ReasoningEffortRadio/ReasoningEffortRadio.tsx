@@ -21,7 +21,7 @@ const ReasoningEffortRadio: FC<Props> = ({
     <div className="flex justify-between items-center">
       <label
         className={
-          'mb-3 text-left  dark:text-neutral-400 flex gap-1 items-center'
+          'mb-2 text-left dark:text-neutral-400 flex gap-1 items-center'
         }
       >
         <IconReasoning />
@@ -30,24 +30,30 @@ const ReasoningEffortRadio: FC<Props> = ({
 
       <RadioGroup
         className="flex gap-4"
-        defaultValue={'medium'}
+        defaultValue={'0'}
         value={value}
         onValueChange={onValueChange}
       >
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="0" id="low" />
+          <RadioGroupItem value="0" id="default" />
+          <Label className="text-base" htmlFor="default">
+            {t('Default')}
+          </Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="1" id="low" />
           <Label className="text-base" htmlFor="low">
             {t('Low')}
           </Label>
         </div>
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="1" id="medium" />
+          <RadioGroupItem value="2" id="medium" />
           <Label className="text-base" htmlFor="medium">
             {t('Medium')}
           </Label>
         </div>
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="2" id="high" />
+          <RadioGroupItem value="3" id="high" />
           <Label className="text-base" htmlFor="high">
             {t('High')}
           </Label>

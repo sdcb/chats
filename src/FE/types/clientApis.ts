@@ -83,7 +83,7 @@ export interface ChatSpanDto {
   modelProviderId: DBModelProvider;
   temperature: number | null;
   enableSearch: boolean;
-  reasoningEffort: number | null;
+  reasoningEffort: number;
   maxOutputTokens: number | null;
 }
 

@@ -2,19 +2,18 @@ import { useContext, useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { formatPrompt } from '@/utils/promptVariable';
-
-import { AdminModelDto } from '@/types/adminApis';
 import { DEFAULT_TEMPERATURE } from '@/types/chat';
 import { ChatSpanDto } from '@/types/clientApis';
 import { Prompt } from '@/types/prompt';
 
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
+import ModelSlider from '@/components/ModelSlider/ModelSlider';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 import TemperatureSlider from '@/components/TemperatureSlider/TemperatureSlider';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 
 import { setSelectedChat } from '../../_actions/chat.actions';
@@ -27,14 +26,15 @@ import { putChatSpan } from '@/apis/clientApis';
 
 interface Props {
   spanId: number;
+  notSetSpanDisabled: boolean;
   isOpen: boolean;
   onClose: () => void;
   onRemove: (spanId: number) => void;
 }
 const ChatModelSettingModal = (props: Props) => {
-  const { spanId, isOpen, onRemove, onClose } = props;
+  const { spanId, notSetSpanDisabled, isOpen, onRemove, onClose } = props;
   const {
-    state: { defaultPrompt, selectedChat, modelMap, prompts, models },
+    state: { selectedChat, modelMap, prompts, models },
     hasModel,
     chatDispatch,
   } = useContext(HomeContext);
@@ -76,7 +76,14 @@ const ChatModelSettingModal = (props: Props) => {
     setSpan({ ...span!, reasoningEffort: Number(value) });
   };
 
+  const onChangeMaxOutputTokens = (value: number) => {
+    setSpan({ ...span!, maxOutputTokens: value });
+  };
+
   const onChangeSpanEnable = (value: boolean) => {
+    if (notSetSpanDisabled && value === false) {
+      return;
+    }
     setSpan({ ...span!, enabled: value });
   };
 
@@ -88,7 +95,7 @@ const ChatModelSettingModal = (props: Props) => {
       systemPrompt: span.systemPrompt,
       maxOutputTokens: span?.maxOutputTokens || null,
       temperature: span?.temperature || null,
-      reasoningEffort: span?.reasoningEffort || null,
+      reasoningEffort: span.reasoningEffort,
       webSearchEnabled: !!span.enableSearch,
     }).then(() => {
       const spans = selectedChat.spans.map((s) =>
@@ -100,7 +107,7 @@ const ChatModelSettingModal = (props: Props) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full sm:w-[560px]">
+      <DialogContent className="w-full sm:w-[560px] max-h-[560px] overflow-y-auto">
         {span && hasModel() && (
           <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] mt-5">
             <div className="space-y-4 rounded-lg">
@@ -127,7 +134,7 @@ const ChatModelSettingModal = (props: Props) => {
               </div>
               {modelMap[span.modelId]?.allowSystemPrompt && (
                 <SystemPrompt
-                  currentPrompt={defaultPrompt?.content || null}
+                  currentPrompt={span.systemPrompt || null}
                   prompts={prompts}
                   model={modelMap[span.modelId]}
                   onChangePromptText={(value) => {
@@ -138,17 +145,19 @@ const ChatModelSettingModal = (props: Props) => {
                   }}
                 />
               )}
-              {modelMap[span.modelId] && modelMap[span.modelId].minTemperature !== modelMap[span.modelId].maxTemperature && (
-                <TemperatureSlider
-                  label={t('Temperature')}
-                  min={modelMap[span.modelId].minTemperature}
-                  max={modelMap[span.modelId].maxTemperature}
-                  defaultTemperature={span.temperature || DEFAULT_TEMPERATURE}
-                  onChangeTemperature={(value) => {
-                    onChangeTemperature(value);
-                  }}
-                />
-              )}
+              {modelMap[span.modelId] &&
+                modelMap[span.modelId].minTemperature !==
+                  modelMap[span.modelId].maxTemperature && (
+                  <TemperatureSlider
+                    label={t('Temperature')}
+                    min={modelMap[span.modelId].minTemperature}
+                    max={modelMap[span.modelId].maxTemperature}
+                    defaultTemperature={span.temperature || DEFAULT_TEMPERATURE}
+                    onChangeTemperature={(value) => {
+                      onChangeTemperature(value);
+                    }}
+                  />
+                )}
               {modelMap[span.modelId]?.allowSearch && (
                 <EnableNetworkSearch
                   label={t('Internet Search')}
@@ -160,12 +169,22 @@ const ChatModelSettingModal = (props: Props) => {
               )}
               {modelMap[span.modelId]?.allowReasoningEffort && (
                 <ReasoningEffortRadio
-                  value={`${span.reasoningEffort || 0}`}
+                  value={`${span?.reasoningEffort}`}
                   onValueChange={(value) => {
                     onChangeReasoningEffort(value);
                   }}
                 />
               )}
+              <ModelSlider
+                label={t('Max Tokens')}
+                min={0}
+                max={modelMap[span.modelId]?.maxResponseTokens}
+                defaultValue={
+                  span.maxOutputTokens ||
+                  modelMap[span.modelId]?.maxResponseTokens
+                }
+                onChangeValue={onChangeMaxOutputTokens}
+              />
             </div>
             <div className="flex gap-4 justify-end mt-5 items-center">
               <Switch
