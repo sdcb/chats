@@ -66,4 +66,7 @@ public record AdminModelDto
 
     [JsonPropertyName("contextWindow")]
     public required int ContextWindow { get; init; }
+
+    [JsonPropertyName("maxResponseTokens")]
+    public required int MaxResponseTokens { get; init; }
 }

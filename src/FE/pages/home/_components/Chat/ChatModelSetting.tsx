@@ -108,11 +108,11 @@ const ChatModelSetting = () => {
                     }}
                   />
                 )}
-                {modelMap[span.modelId]?.allowTemperature && (
+                {modelMap[span.modelId] && modelMap[span.modelId].minTemperature === modelMap[span.modelId].maxTemperature && (
                   <TemperatureSlider
                     label={t('Temperature')}
-                    min={0}
-                    max={1}
+                    min={modelMap[span.modelId].minTemperature}
+                    max={modelMap[span.modelId].maxTemperature}
                     defaultTemperature={span.temperature || DEFAULT_TEMPERATURE}
                     onChangeTemperature={(value) => {
                       onChangeTemperature(span.spanId, value);

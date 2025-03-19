@@ -43,6 +43,7 @@ public class ModelsController : ControllerBase
                 MinTemperature = x.ModelReference.MinTemperature,
                 MaxTemperature = x.ModelReference.MaxTemperature,
                 ContextWindow = x.ModelReference.ContextWindow,
+                MaxResponseTokens = x.ModelReference.MaxResponseTokens,
             })
             .ToArrayAsync(cancellationToken);
         return data;

@@ -34,7 +34,8 @@ export interface AdminModelDto {
   allowSystemPrompt: boolean;
   allowReasoningEffort: boolean;
   allowStreaming: boolean;
-  allowTemperature: boolean;
+  minTemperature: number;
+  maxTemperature: number;
   contextWindow: number;
 }
 

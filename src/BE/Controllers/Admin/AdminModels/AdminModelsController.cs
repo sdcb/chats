@@ -47,6 +47,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
                 MinTemperature = x.ModelReference.MinTemperature,
                 MaxTemperature = x.ModelReference.MaxTemperature,
                 ContextWindow = x.ModelReference.ContextWindow,
+                MaxResponseTokens = x.ModelReference.MaxResponseTokens,
             })
             .ToArrayAsync(cancellationToken);
         return data;
