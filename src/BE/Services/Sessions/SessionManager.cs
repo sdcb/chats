@@ -34,7 +34,7 @@ public class SessionManager(JwtKeyManager jwtKeyManager, IConfiguration configur
             IssuerSigningKey = signingKey,      // 设置用于验证签名的密钥
 
             ValidateLifetime = true,            // 验证令牌的生存期
-            ClockSkew = TimeSpan.FromSeconds(3) // 设置时钟偏移为3秒
+            ClockSkew = TimeSpan.FromSeconds(3),// 设置时钟偏移为3秒
         };
 
         // 创建一个 JwtSecurityTokenHandler 实例
