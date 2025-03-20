@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build-fe:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-2204
     outputs:
       is_release: ${{ github.ref_name == 'main' && 'true' || 'false' }}
     steps:
