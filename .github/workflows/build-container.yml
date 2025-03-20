@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build-fe:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     outputs:
       is_release: ${{ github.ref_name == 'main' && 'true' || 'false' }}
     steps:
@@ -118,17 +118,17 @@ jobs:
             runs-on: windows-latest
             os: win
             arch: x64
-            args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:9.0-nanoserver-1809
+            args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:8.0-nanoserver-1809
           - tag: r${{ github.run_number }}-nanoserver-ltsc2022
             runs-on: windows-latest
             os: win
             arch: x64
-            args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:9.0-nanoserver-ltsc2022
+            args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:8.0-nanoserver-ltsc2022
           - tag: r${{ github.run_number }}-nanoserver-ltsc2025
             runs-on: windows-latest
             os: win
             arch: x64
-            args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:9.0-nanoserver-ltsc2025
+            args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:8.0-nanoserver-ltsc2025
           - tag: r${{ github.run_number }}-linux-arm64
             runs-on: ubuntu-latest
             os: linux
