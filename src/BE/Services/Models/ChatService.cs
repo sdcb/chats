@@ -16,7 +16,7 @@ public abstract partial class ChatService : IDisposable
     internal protected Model Model { get; }
     internal protected Tokenizer Tokenizer { get; }
 
-    internal static Tokenizer DefaultTokenizer = TiktokenTokenizer.CreateForEncoding("cl100k_base");
+    internal static Tokenizer DefaultTokenizer { get; } = TiktokenTokenizer.CreateForEncoding("cl100k_base");
 
     public ChatService(Model model)
     {
