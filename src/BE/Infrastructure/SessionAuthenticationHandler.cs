@@ -31,7 +31,7 @@ public class SessionAuthenticationHandler(
         try
         {
             SessionEntry userInfo = await sessionManager.GetCachedUserInfoBySession(jwt);
-            ClaimsIdentity identity = new(userInfo.ToClaims(), Scheme.Name);
+            ClaimsIdentity identity = new(userInfo.ToClaims(), Scheme.Name, JwtPropertyKeys.UserId, JwtPropertyKeys.Role);
             ClaimsPrincipal principal = new(identity);
             AuthenticationTicket ticket = new(principal, Scheme.Name);
 
