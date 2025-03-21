@@ -1,18 +1,31 @@
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { isMobile } from '@/utils/common';
+
+import { ChatStatus } from '@/types/chat';
+
+import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
-import { IconPlus, IconX } from '@/components/Icons';
-import Tips from '@/components/Tips/Tips';
+import { IconDots, IconPlus, IconX } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 import { setSelectedChat } from '../../_actions/chat.actions';
 import HomeContext from '../../_contexts/home.context';
-import ModeToggle from '../ModeToggle/ModeToggle';
+import ChatModelSettingModal from './ChatModelSettingsModal';
 
 import {
   deleteUserChatSpan,
+  postChatDisableSpan,
+  postChatEnableSpan,
   postUserChatSpan,
   putUserChatSpan,
 } from '@/apis/clientApis';
@@ -22,26 +35,27 @@ const ChatHeader = () => {
   const { t } = useTranslation();
   const MAX_SELECT_MODEL_COUNT = 10;
   const {
-    state: {
-      selectedChat,
-      models,
-
-      defaultPrompt,
-      showChatBar,
-    },
+    state: { selectedChat, models, defaultPrompt, showChatBar },
     chatDispatch,
   } = useContext(HomeContext);
+
+  const [selectedSpanId, setSelectedSpanId] = useState<number | null>(null);
+  const notSetSpanDisabled =
+    selectedChat.spans.filter((x) => x.enabled).length === 1;
 
   const handleAddChatModel = async (modelId: number) => {
     await postUserChatSpan(selectedChat.id, { modelId }).then((data) => {
       selectedChat.spans.push({
+        maxOutputTokens: data.maxOutputTokens,
         spanId: data.spanId,
+        enabled: data.enabled,
         modelId: data.modelId,
         modelName: data.modelName,
         modelProviderId: data.modelProviderId,
         temperature: data.temperature,
         enableSearch: data.enableSearch,
-        prompt: defaultPrompt?.content!,
+        reasoningEffort: data?.reasoningEffort,
+        systemPrompt: defaultPrompt?.content!,
       });
       chatDispatch(setSelectedChat(selectedChat));
     });
@@ -62,6 +76,7 @@ const ChatHeader = () => {
         if (s.spanId === spanId) {
           return {
             ...s,
+            enabled: data.enabled,
             modelId: data.modelId,
             modelName: data.modelName,
             modelProviderId: data.modelProviderId,
@@ -76,23 +91,17 @@ const ChatHeader = () => {
   };
 
   const AddBtnRender = () => (
-    <div className="flex items-center rounded-md mx-1">
+    <div className="flex items-center">
       {selectedChat.spans.length < MAX_SELECT_MODEL_COUNT && (
         <ChatModelDropdownMenu
+          className="p-0"
+          triggerClassName={'hover:bg-transparent p-0'}
           models={models}
-          className="text-sm"
           content={
-            <Tips
-              trigger={
-                <Button
-                  variant="ghost"
-                  className="p-1 m-0 h-auto hover:bg-transparent"
-                >
-                  <IconPlus />
-                </Button>
-              }
-              content={t('Add Model')}
-            />
+            <Button variant="ghost" className="bg-muted">
+              <IconPlus />
+              {t('Add Model')}
+            </Button>
           }
           hideIcon={true}
           onChangeModel={(model) => {
@@ -103,57 +112,163 @@ const ChatHeader = () => {
     </div>
   );
 
-  return (
-    <div className="sticky top-0 z-10 text-sm bg-background right-0">
-      <div className="flex justify-between items-center w-full">
-        <div
-          className={cn(
-            'flex justify-start ml-24 h-12 items-center overflow-auto',
-            showChatBar && 'ml-6',
-          )}
-        >
-          <div className="flex gap-2 flex-wrap h-10 items-center overflow-auto">
-            {selectedChat.spans.map((span) => (
-              <div
-                className="flex bg-muted rounded-md"
-                key={'chat-header-' + span.spanId}
-              >
-                <ChatModelDropdownMenu
-                  key={'change-model-' + span.modelId}
-                  models={models}
-                  modelName={span.modelName}
-                  className="text-sm"
-                  content={span?.modelName}
-                  hideIcon={true}
-                  onChangeModel={(model) => {
-                    handleUpdateChatModel(span.spanId, model.modelId);
-                  }}
-                />
+  const handleChangeChatSpan = (spanId: number, enable: boolean) => {
+    if (notSetSpanDisabled && enable === false) {
+      return;
+    }
+    if (enable) {
+      postChatEnableSpan(spanId, selectedChat.id);
+    } else {
+      postChatDisableSpan(spanId, selectedChat.id);
+    }
+    selectedChat.spans = selectedChat.spans.map((s) => {
+      if (s.spanId === spanId) {
+        return {
+          ...s,
+          enabled: enable,
+        };
+      }
+      return s;
+    });
+    chatDispatch(setSelectedChat(selectedChat));
+  };
 
-                <div hidden={selectedChat.spans.length === 1}>
-                  <Tips
-                    trigger={
+  return (
+    <>
+      <div className="sticky top-0 z-10 text-sm bg-background right-0">
+        <div className="flex justify-between items-center w-full">
+          <div
+            className={cn(
+              'flex justify-start ml-24 h-12 items-center',
+              showChatBar && 'ml-6',
+            )}
+          >
+            <div
+              className={cn(
+                'flex gap-2 items-center overflow-x-auto max-w-[calc(100vw-98px)]',
+                selectedChat.status === ChatStatus.Chatting &&
+                  'pointer-events-none',
+              )}
+            >
+              {selectedChat.spans.map((span) => (
+                <div
+                  className="flex bg-muted rounded-md h-10"
+                  key={'chat-header-' + span.spanId}
+                >
+                  {isMobile() ? (
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        'h-auto p-4 sm:p-2 m-0 gap-2',
+                        !span.enabled && 'opacity-50',
+                      )}
+                      onClick={() => {
+                        setSelectedSpanId(span.spanId);
+                      }}
+                    >
+                      <ChatIcon providerId={span.modelProviderId} />
+                      <span>{span?.modelName}</span>
                       <Button
-                        onClick={() => {
-                          handleRemoveChatModel(span.spanId);
-                        }}
                         variant="ghost"
-                        className="py-1 px-0 pr-1 m-0 h-auto hover:bg-transparent"
+                        className="w-6 h-6 p-0 m-0 hidden sm:block"
                       >
-                        <IconX />
+                        <IconDots className="rotate-90" size={16} />
                       </Button>
-                    }
-                    content={t('Remove')}
-                  />
+                    </Button>
+                  ) : (
+                    <div className="flex items-center">
+                      <div
+                        className={cn(
+                          'flex items-center pl-2',
+                          !span.enabled && 'opacity-50',
+                        )}
+                      >
+                        <ChatIcon providerId={span.modelProviderId} />
+                        <ChatModelDropdownMenu
+                          key={'change-model-' + span.modelId}
+                          models={models}
+                          modelName={span.modelName}
+                          className="text-sm"
+                          content={span?.modelName}
+                          hideIcon={true}
+                          onChangeModel={(model) => {
+                            handleUpdateChatModel(span.spanId, model.modelId);
+                          }}
+                        />
+                      </div>
+                      <TooltipProvider>
+                        <Tooltip delayDuration={100}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              className={cn(
+                                'h-auto p-4 sm:p-1 m-0 gap-2',
+                                !span.enabled && 'opacity-50',
+                              )}
+                              onClick={() => {
+                                setSelectedSpanId(span.spanId);
+                              }}
+                            >
+                              <Button
+                                variant="ghost"
+                                className="w-6 h-6 p-0 m-0 hidden sm:block"
+                              >
+                                <IconDots className="rotate-90" size={16} />
+                              </Button>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            sideOffset={-44}
+                            side="right"
+                            className="flex items-center border-none gap-2"
+                          >
+                            <Button variant="ghost" className="w-6 h-6 p-0 m-0">
+                              <IconDots
+                                className="rotate-90"
+                                size={16}
+                                onClick={() => {
+                                  setSelectedSpanId(span.spanId);
+                                }}
+                              />
+                            </Button>
+                            <Switch
+                              onCheckedChange={(checked) => {
+                                handleChangeChatSpan(span.spanId, checked);
+                              }}
+                              checked={span.enabled}
+                            ></Switch>
+                            <Button
+                              disabled={selectedChat.spans.length === 1}
+                              onClick={() => {
+                                handleRemoveChatModel(span.spanId);
+                              }}
+                              variant="ghost"
+                              className="h-6 w-6 m-0 p-0 hover:bg-none"
+                            >
+                              <IconX />
+                            </Button>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              ))}
+              <AddBtnRender />
+            </div>
           </div>
-          <AddBtnRender />
         </div>
-        <div className="ml-2 mr-2 md:mr-4">{<ModeToggle />}</div>
       </div>
-    </div>
+      <ChatModelSettingModal
+        spanId={selectedSpanId!}
+        isOpen={selectedSpanId !== null}
+        onRemove={handleRemoveChatModel}
+        notSetSpanDisabled={notSetSpanDisabled}
+        onClose={() => {
+          setSelectedSpanId(null);
+        }}
+      />
+    </>
   );
 };
 

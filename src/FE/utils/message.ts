@@ -146,15 +146,17 @@ export function generateResponseMessages(
   parentId?: string,
   status = ChatSpanStatus.Chatting,
 ) {
-  return selectedChat.spans.map((x) => {
-    return generateResponseMessage(
-      x.spanId,
-      parentId,
-      x.modelId,
-      x.modelName,
-      status,
-    );
-  });
+  return selectedChat.spans
+    .filter((x) => x.enabled)
+    .map((x) => {
+      return generateResponseMessage(
+        x.spanId,
+        parentId,
+        x.modelId,
+        x.modelName,
+        status,
+      );
+    });
 }
 
 export function generateResponseMessage(

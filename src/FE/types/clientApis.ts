@@ -1,4 +1,4 @@
-import { ChatStatus, ImageDef } from './chat';
+import { ChatStatus } from './chat';
 import { IChatMessage } from './chatMessage';
 import { DBModelProvider } from './model';
 import { Paging } from './page';
@@ -76,12 +76,15 @@ export interface ChatResult {
 
 export interface ChatSpanDto {
   spanId: number;
+  enabled: boolean;
   modelId: number;
   modelName: string;
-  prompt: string;
+  systemPrompt: string;
   modelProviderId: DBModelProvider;
   temperature: number | null;
   enableSearch: boolean;
+  reasoningEffort: number;
+  maxOutputTokens: number | null;
 }
 
 export interface PostChatParams {
@@ -133,12 +136,15 @@ export interface PostUserChatSpanParams {
 }
 
 export interface PostUserChatSpanResult {
+  enabled: boolean;
   spanId: number;
   modelId: number;
   modelName: string;
   modelProviderId: number;
   temperature: number;
   enableSearch: boolean;
+  reasoningEffort: number;
+  maxOutputTokens: number;
 }
 
 interface GetUserChatResult {
@@ -222,4 +228,14 @@ export interface PutResponseMessageEditAndSaveNewResult {
 export interface PutResponseMessageEditInPlaceParams {
   messageId: string;
   content: PutResponseMessageContent;
+}
+
+export interface PutChatSpanParams {
+  modelId: number;
+  enabled: boolean;
+  systemPrompt: string;
+  temperature?: number | null;
+  webSearchEnabled?: boolean;
+  maxOutputTokens: number | null;
+  reasoningEffort?: number | null;
 }

@@ -235,7 +235,7 @@ public record ChatMessageTemp
     {
         if (assistantMessage.ChatRoleId == (byte)DBChatRole.Assistant)
         {
-            if (assistantMessage.Usage == null) throw new InvalidOperationException("Assistant message must have usage data");
+            if (assistantMessage.MessageResponse?.Usage == null) throw new InvalidOperationException("Assistant message must have usage data");
 
             return new()
             {
@@ -246,20 +246,20 @@ public record ChatMessageTemp
                 Role = (DBChatRole)assistantMessage.ChatRoleId,
                 SpanId = assistantMessage.SpanId,
                 Edited = assistantMessage.Edited,
-                Usage = assistantMessage.Usage == null ? null : new ChatMessageTempUsage()
+                Usage = new ChatMessageTempUsage()
                 {
-                    Duration = assistantMessage.Usage.TotalDurationMs - assistantMessage.Usage.PreprocessDurationMs,
-                    ReasoningDuration = assistantMessage.Usage.ReasoningDurationMs,
-                    FirstTokenLatency = assistantMessage.Usage.FirstResponseDurationMs,
-                    InputPrice = assistantMessage.Usage.InputCost,
-                    InputTokens = assistantMessage.Usage.InputTokens,
-                    ModelId = assistantMessage.Usage.UserModel.ModelId,
-                    ModelName = assistantMessage.Usage.UserModel.Model.Name,
-                    OutputPrice = assistantMessage.Usage.OutputCost,
-                    OutputTokens = assistantMessage.Usage.OutputTokens,
-                    ReasoningTokens = assistantMessage.Usage.ReasoningTokens,
-                    ModelProviderId = assistantMessage.Usage.UserModel.Model.ModelKey.ModelProviderId,
-                    Reaction = assistantMessage.ReactionId,
+                    Duration = assistantMessage.MessageResponse.Usage.TotalDurationMs - assistantMessage.MessageResponse.Usage.PreprocessDurationMs,
+                    ReasoningDuration = assistantMessage.MessageResponse.Usage.ReasoningDurationMs,
+                    FirstTokenLatency = assistantMessage.MessageResponse.Usage.FirstResponseDurationMs,
+                    InputPrice = assistantMessage.MessageResponse.Usage.InputCost,
+                    InputTokens = assistantMessage.MessageResponse.Usage.InputTokens,
+                    ModelId = assistantMessage.MessageResponse.Usage.UserModel.ModelId,
+                    ModelName = assistantMessage.MessageResponse.Usage.UserModel.Model.Name,
+                    OutputPrice = assistantMessage.MessageResponse.Usage.OutputCost,
+                    OutputTokens = assistantMessage.MessageResponse.Usage.OutputTokens,
+                    ReasoningTokens = assistantMessage.MessageResponse.Usage.ReasoningTokens,
+                    ModelProviderId = assistantMessage.MessageResponse.Usage.UserModel.Model.ModelKey.ModelProviderId,
+                    Reaction = assistantMessage.MessageResponse.ReactionId,
                 },
             };
         }

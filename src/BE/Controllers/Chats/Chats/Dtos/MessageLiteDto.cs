@@ -6,6 +6,26 @@ using OpenAI.Chat;
 
 namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 
+public record MessageLiteDtoNoContent
+{
+    public required long Id { get; init; }
+    public required long? ParentId { get; init; }
+    public required DBChatRole Role { get; init; }
+    public required byte? SpanId { get; init; }
+
+    public MessageLiteDto WithContent(MessageContent[] content)
+    {
+        return new MessageLiteDto
+        {
+            Id = Id,
+            ParentId = ParentId,
+            Role = Role,
+            SpanId = SpanId,
+            Content = content
+        };
+    }
+}
+
 public record MessageLiteDto
 {
     public required long Id { get; init; }
@@ -30,7 +50,6 @@ public record MessageLiteDto
     {
         return Role switch
         {
-            DBChatRole.System => new SystemChatMessage(await Content[0].ToOpenAI(fup, cancellationToken)),
             DBChatRole.User => new UserChatMessage(await Content
                 .ToAsyncEnumerable()
                 .SelectAwait(async c => await c.ToOpenAI(fup, cancellationToken))

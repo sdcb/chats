@@ -36,14 +36,18 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                 IsShared = x.ChatShares.Any(),
                 Title = x.Title,
                 UserName = x.User.UserName,
-                Spans = x.ChatSpans.Select(s => new ChatSpanDto
+                Spans = x.ChatSpans.Select(span => new ChatSpanDto
                 {
-                    SpanId = s.SpanId,
-                    ModelId = s.ModelId,
-                    ModelName = s.Model.Name,
-                    ModelProviderId = s.Model.ModelKey.ModelProviderId,
-                    Temperature = s.Temperature,
-                    EnableSearch = s.EnableSearch,
+                    SpanId = span.SpanId,
+                    Enabled = span.Enabled,
+                    SystemPrompt = span.ChatConfig.SystemPrompt,
+                    ModelId = span.ChatConfig.ModelId,
+                    ModelName = span.ChatConfig.Model.Name,
+                    ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
+                    Temperature = span.ChatConfig.Temperature,
+                    WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
+                    MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
+                    ReasoningEffort = span.ChatConfig.ReasoningEffort,
                 }).ToArray(),
             }), req, cancellationToken);
     }
@@ -69,14 +73,18 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                 IsTopMost = x.IsTopMost,
                 GroupId = urlEncryption.EncryptChatGroupId(x.ChatGroupId),
                 Tags = x.ChatTags.Select(x => x.Name).ToArray(),
-                Spans = x.ChatSpans.Select(s => new ChatSpanDto
+                Spans = x.ChatSpans.Select(span => new ChatSpanDto
                 {
-                    SpanId = s.SpanId,
-                    ModelId = s.ModelId,
-                    ModelName = s.Model.Name,
-                    ModelProviderId = s.Model.ModelKey.ModelProviderId,
-                    Temperature = s.Temperature,
-                    EnableSearch = s.EnableSearch,
+                    SpanId = span.SpanId,
+                    Enabled = span.Enabled,
+                    SystemPrompt = span.ChatConfig.SystemPrompt,
+                    ModelId = span.ChatConfig.ModelId,
+                    ModelName = span.ChatConfig.Model.Name,
+                    ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
+                    Temperature = span.ChatConfig.Temperature,
+                    WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
+                    MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
+                    ReasoningEffort = span.ChatConfig.ReasoningEffort,
                 }).ToArray(),
                 LeafMessageId = urlEncryption.EncryptMessageId(x.LeafMessageId),
                 UpdatedAt = x.UpdatedAt,
@@ -89,7 +97,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentBlob)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentText)
-            .Where(m => m.ChatId == chatId && m.ChatRoleId != (byte)DBChatRole.System)
+            .Where(m => m.ChatId == chatId)
             .Select(x => new ChatMessageTemp()
             {
                 Id = x.Id,
@@ -101,20 +109,20 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                 CreatedAt = x.CreatedAt,
                 SpanId = x.SpanId,
                 Edited = x.Edited,
-                Usage = x.Usage == null ? null : new ChatMessageTempUsage()
+                Usage = x.MessageResponse!.Usage == null ? null : new ChatMessageTempUsage()
                 {
-                    InputTokens = x.Usage.InputTokens,
-                    OutputTokens = x.Usage.OutputTokens,
-                    InputPrice = x.Usage.InputCost,
-                    OutputPrice = x.Usage.OutputCost,
-                    ReasoningTokens = x.Usage.ReasoningTokens,
-                    Duration = x.Usage.TotalDurationMs - x.Usage.PreprocessDurationMs,
-                    ReasoningDuration = x.Usage.ReasoningDurationMs,
-                    FirstTokenLatency = x.Usage.FirstResponseDurationMs,
-                    ModelId = x.Usage.UserModel.ModelId,
-                    ModelName = x.Usage.UserModel.Model.Name,
-                    ModelProviderId = x.Usage.UserModel.Model.ModelKey.ModelProviderId,
-                    Reaction = x.ReactionId,
+                    InputTokens = x.MessageResponse.Usage.InputTokens,
+                    OutputTokens = x.MessageResponse.Usage.OutputTokens,
+                    InputPrice = x.MessageResponse.Usage.InputCost,
+                    OutputPrice = x.MessageResponse.Usage.OutputCost,
+                    ReasoningTokens = x.MessageResponse.Usage.ReasoningTokens,
+                    Duration = x.MessageResponse.Usage.TotalDurationMs - x.MessageResponse.Usage.PreprocessDurationMs,
+                    ReasoningDuration = x.MessageResponse.Usage.ReasoningDurationMs,
+                    FirstTokenLatency = x.MessageResponse.Usage.FirstResponseDurationMs,
+                    ModelId = x.MessageResponse.Usage.UserModel.ModelId,
+                    ModelName = x.MessageResponse.Usage.UserModel.Model.Name,
+                    ModelProviderId = x.MessageResponse.Usage.UserModel.Model.ModelKey.ModelProviderId,
+                    Reaction = x.MessageResponse.ReactionId,
                 },
             })
             .OrderBy(x => x.CreatedAt)

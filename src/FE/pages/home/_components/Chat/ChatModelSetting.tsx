@@ -17,6 +17,7 @@ import EnableNetworkSearch from './EnableNetworkSearch';
 import SystemPrompt from './SystemPrompt';
 
 import { cn } from '@/lib/utils';
+import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 
 const ChatModelSetting = () => {
   const { t } = useTranslation();
@@ -38,7 +39,7 @@ const ChatModelSetting = () => {
       s.spanId === spanId
         ? {
             ...s,
-            prompt: text,
+            systemPrompt: text,
             temperature:
               promptTemperature != null ? promptTemperature : s.temperature,
           }
@@ -48,7 +49,7 @@ const ChatModelSetting = () => {
   };
   const onChangePromptText = (spanId: number, value: string) => {
     const spans = selectedChat.spans.map((s) =>
-      s.spanId === spanId ? { ...s, prompt: value } : s,
+      s.spanId === spanId ? { ...s, systemPrompt: value } : s,
     );
     chatDispatch(setSelectedChat({ ...selectedChat, spans }));
   };
@@ -63,6 +64,13 @@ const ChatModelSetting = () => {
   const onChangeEnableSearch = (spanId: number, value: boolean) => {
     const spans = selectedChat.spans.map((s) =>
       s.spanId === spanId ? { ...s, enableSearch: value } : s,
+    );
+    chatDispatch(setSelectedChat({ ...selectedChat, spans }));
+  };
+
+  const onChangeReasoningEffort = (spanId: number, value: string) => {
+    const spans = selectedChat.spans.map((s) =>
+      s.spanId === spanId ? { ...s, reasoningEffort: Number(value) } : s,
     );
     chatDispatch(setSelectedChat({ ...selectedChat, spans }));
   };
@@ -82,10 +90,7 @@ const ChatModelSetting = () => {
                 key={'chat-model-' + span.spanId}
                 className="space-y-4 rounded-lg p-4 border"
               >
-                <ChatModelInfo
-                  modelId={span.modelId}
-                  modelName={span.modelName}
-                />
+                <ChatModelInfo modelId={span.modelId} />
                 {modelMap[span.modelId]?.allowSystemPrompt && (
                   <SystemPrompt
                     currentPrompt={defaultPrompt?.content || null}
@@ -103,11 +108,11 @@ const ChatModelSetting = () => {
                     }}
                   />
                 )}
-                {modelMap[span.modelId]?.allowTemperature && (
+                {modelMap[span.modelId] && modelMap[span.modelId].minTemperature !== modelMap[span.modelId].maxTemperature && (
                   <TemperatureSlider
                     label={t('Temperature')}
-                    min={0}
-                    max={1}
+                    min={modelMap[span.modelId].minTemperature}
+                    max={modelMap[span.modelId].maxTemperature}
                     defaultTemperature={span.temperature || DEFAULT_TEMPERATURE}
                     onChangeTemperature={(value) => {
                       onChangeTemperature(span.spanId, value);
@@ -120,6 +125,14 @@ const ChatModelSetting = () => {
                     enable={span.enableSearch}
                     onChange={(value) => {
                       onChangeEnableSearch(span.spanId, value);
+                    }}
+                  />
+                )}
+                {modelMap[span.modelId]?.allowReasoningEffort && (
+                  <ReasoningEffortRadio
+                    value={`${span.reasoningEffort}`}
+                    onValueChange={(value) => {
+                      onChangeReasoningEffort(span.spanId, value);
                     }}
                   />
                 )}

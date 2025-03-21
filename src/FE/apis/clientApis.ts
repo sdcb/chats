@@ -22,6 +22,7 @@ import {
   PostUserPassword,
   PutChatGroupParams,
   PutChatParams,
+  PutChatSpanParams,
   PutMoveChatGroupParams,
   PutResponseMessageEditAndSaveNewParams,
   PutResponseMessageEditAndSaveNewResult,
@@ -388,4 +389,30 @@ export const deleteMessage = (messageId: string, leafId: string) => {
   return fetchServer.delete(
     `/api/messages/${messageId}?encryptedLeafMessageId=${leafId}&recursive=true`,
   );
+};
+
+export const postChatEnableSpan = (spanId: number, encryptedChatId: string) => {
+  const fetchServer = useFetch();
+  return fetchServer.post(`/api/chat/${encryptedChatId}/span/${spanId}/enable`);
+};
+
+export const postChatDisableSpan = (
+  spanId: number,
+  encryptedChatId: string,
+) => {
+  const fetchServer = useFetch();
+  return fetchServer.post(
+    `/api/chat/${encryptedChatId}/span/${spanId}/disable`,
+  );
+};
+
+export const putChatSpan = (
+  spanId: number,
+  encryptedChatId: string,
+  params: PutChatSpanParams,
+) => {
+  const fetchServer = useFetch();
+  return fetchServer.put(`/api/chat/${encryptedChatId}/span/${spanId}`, {
+    body: params,
+  });
 };

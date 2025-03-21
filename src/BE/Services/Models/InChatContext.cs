@@ -42,6 +42,7 @@ public class InChatContext(long firstTick)
 
         try
         {
+            _preprocessTick = _firstReasoningTick = _firstResponseTick = _endResponseTick = _finishTick = Stopwatch.GetTimestamp();
             await foreach (InternalChatSegment seg in segments)
             {
                 if (seg.IsFromUpstream)

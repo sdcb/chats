@@ -32,9 +32,12 @@ export interface AdminModelDto {
   allowSearch: boolean;
   allowVision: boolean;
   allowSystemPrompt: boolean;
+  allowReasoningEffort: boolean;
   allowStreaming: boolean;
-  allowTemperature: boolean;
+  minTemperature: number;
+  maxTemperature: number;
   contextWindow: number;
+  maxResponseTokens: number;
 }
 
 export interface UpdateModelDto {
