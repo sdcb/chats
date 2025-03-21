@@ -53,8 +53,7 @@ export const getChatsByPaging = (
   const { groupId, query, page, pageSize } = params;
   const fetchService = useFetch();
   return fetchService.get(
-    `/api/user/chats?groupId=${
-      groupId || ''
+    `/api/user/chats?groupId=${groupId || ''
     }&page=${page}&pageSize=${pageSize}&query=${query || ''}`,
   );
 };
@@ -267,6 +266,17 @@ export const putUserChatSpan = (
   );
 };
 
+export const switchUserChatSpanModel = (
+  chatId: string,
+  spanId: number,
+  modelId: number
+) => {
+  const fetchServer = useFetch();
+  return fetchServer.post<PostUserChatSpanResult>(
+    `/api/chat/${chatId}/span/${spanId}/switch-model/${modelId}`, {},
+  );
+};
+
 export const deleteUserChatSpan = (chatId: string, spanId: number) => {
   const fetchServer = useFetch();
   return fetchServer.delete(`/api/chat/${chatId}/span/${spanId}`);
@@ -278,8 +288,7 @@ export const getUserChatGroupWithMessages = (
   const { query, page, pageSize } = params;
   const fetchServer = useFetch();
   return fetchServer.get(
-    `/api/chat/group/with-chats?page=${page}&pageSize=${pageSize}&query=${
-      query || ''
+    `/api/chat/group/with-chats?page=${page}&pageSize=${pageSize}&query=${query || ''
     }`,
   );
 };
