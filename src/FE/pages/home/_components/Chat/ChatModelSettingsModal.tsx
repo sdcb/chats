@@ -2,15 +2,16 @@ import { useContext, useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { AdminModelDto } from '@/types/adminApis';
 import { DEFAULT_TEMPERATURE } from '@/types/chat';
 import { ChatSpanDto } from '@/types/clientApis';
 import { Prompt } from '@/types/prompt';
 
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
-import ModelSlider from '@/components/ModelSlider/ModelSlider';
+import { IconChevronDown, IconChevronRight } from '@/components/Icons';
+import ModelParams from '@/components/ModelParams/ModelParams';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
-import TemperatureSlider from '@/components/TemperatureSlider/TemperatureSlider';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Slider } from '@/components/ui/slider';
@@ -23,6 +24,7 @@ import EnableNetworkSearch from './EnableNetworkSearch';
 import SystemPrompt from './SystemPrompt';
 
 import { putChatSpan } from '@/apis/clientApis';
+import { cn } from '@/lib/utils';
 
 interface Props {
   spanId: number;
@@ -39,9 +41,14 @@ const ChatModelSettingModal = (props: Props) => {
     chatDispatch,
   } = useContext(HomeContext);
   const [span, setSpan] = useState<ChatSpanDto>();
+  const [model, setModel] = useState<AdminModelDto>();
+  const [isShowAdvParams, setIsShowAdvParams] = useState(false);
 
   useEffect(() => {
-    setSpan(selectedChat.spans.find((x) => x.spanId === spanId)!);
+    const sp = selectedChat.spans.find((x) => x.spanId === spanId)!;
+    setSpan(sp);
+    setModel(modelMap[sp?.modelId]);
+    setIsShowAdvParams(false);
   }, [isOpen]);
 
   const { t } = useTranslation();
@@ -64,7 +71,7 @@ const ChatModelSettingModal = (props: Props) => {
     setSpan({ ...span!, systemPrompt: value });
   };
 
-  const onChangeTemperature = (value: number) => {
+  const onChangeTemperature = (value: number | null) => {
     setSpan({ ...span!, temperature: value });
   };
 
@@ -76,7 +83,7 @@ const ChatModelSettingModal = (props: Props) => {
     setSpan({ ...span!, reasoningEffort: Number(value) });
   };
 
-  const onChangeMaxOutputTokens = (value: number) => {
+  const onChangeMaxOutputTokens = (value: number | null) => {
     setSpan({ ...span!, maxOutputTokens: value });
   };
 
@@ -108,7 +115,7 @@ const ChatModelSettingModal = (props: Props) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-full sm:w-[560px] max-h-[560px] overflow-y-auto">
-        {span && hasModel() && (
+        {span && model && hasModel() && (
           <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] mt-5">
             <div className="space-y-4 rounded-lg">
               <div className="flex flex-col gap-1">
@@ -145,20 +152,7 @@ const ChatModelSettingModal = (props: Props) => {
                   }}
                 />
               )}
-              {modelMap[span.modelId] &&
-                modelMap[span.modelId].minTemperature !==
-                  modelMap[span.modelId].maxTemperature && (
-                  <TemperatureSlider
-                    label={t('Temperature')}
-                    min={modelMap[span.modelId].minTemperature}
-                    max={modelMap[span.modelId].maxTemperature}
-                    defaultTemperature={span.temperature || DEFAULT_TEMPERATURE}
-                    onChangeTemperature={(value) => {
-                      onChangeTemperature(value);
-                    }}
-                  />
-                )}
-              {modelMap[span.modelId]?.allowSearch && (
+              {model?.allowSearch && (
                 <EnableNetworkSearch
                   label={t('Internet Search')}
                   enable={span.enableSearch}
@@ -167,7 +161,7 @@ const ChatModelSettingModal = (props: Props) => {
                   }}
                 />
               )}
-              {modelMap[span.modelId]?.allowReasoningEffort && (
+              {model?.allowReasoningEffort && (
                 <ReasoningEffortRadio
                   value={`${span?.reasoningEffort}`}
                   onValueChange={(value) => {
@@ -175,16 +169,74 @@ const ChatModelSettingModal = (props: Props) => {
                   }}
                 />
               )}
-              <ModelSlider
-                label={t('Max Tokens')}
-                min={0}
-                max={modelMap[span.modelId]?.maxResponseTokens}
-                defaultValue={
-                  span.maxOutputTokens ||
-                  modelMap[span.modelId]?.maxResponseTokens
-                }
-                onChangeValue={onChangeMaxOutputTokens}
-              />
+              <div className="flex flex-col gap-4">
+                <div
+                  className="flex justify-between"
+                  onClick={() => {
+                    setIsShowAdvParams(!isShowAdvParams);
+                  }}
+                >
+                  <div>{t('Advanced Params')}</div>
+                  <div>
+                    {isShowAdvParams ? (
+                      <IconChevronDown />
+                    ) : (
+                      <IconChevronRight />
+                    )}
+                  </div>
+                </div>
+                <div className={cn('hidden', isShowAdvParams && 'flex flex-col gap-2')}>
+                  <ModelParams
+                    label={t('Temperature')}
+                    isExpand={span.temperature !== null}
+                    hidden={!(model.minTemperature !== model.maxTemperature)}
+                    value={span.temperature || DEFAULT_TEMPERATURE}
+                    tool={
+                      <Slider
+                        className="cursor-pointer"
+                        min={model.minTemperature}
+                        max={model.maxTemperature}
+                        step={0.01}
+                        value={[span.temperature || DEFAULT_TEMPERATURE]}
+                        onValueChange={(values) => {
+                          onChangeTemperature(values[0]);
+                        }}
+                      />
+                    }
+                    onChangeToDefault={() => {
+                      onChangeTemperature(null);
+                    }}
+                    onChangeToCustom={() => {
+                      onChangeTemperature(DEFAULT_TEMPERATURE);
+                    }}
+                  />
+                  <ModelParams
+                    label={t('Max Tokens')}
+                    isExpand={span.maxOutputTokens !== null}
+                    value={span.maxOutputTokens || model.maxResponseTokens}
+                    tool={
+                      <Slider
+                        className="cursor-pointer"
+                        min={0}
+                        max={model.maxResponseTokens}
+                        step={1}
+                        value={[
+                          span.maxOutputTokens || model.maxResponseTokens,
+                        ]}
+                        onValueChange={(values) => {
+                          onChangeMaxOutputTokens(values[0]);
+                        }}
+                      />
+                    }
+                    onChangeToDefault={() => {
+                      onChangeMaxOutputTokens(null);
+                    }}
+                    onChangeToCustom={() => {
+                      onChangeMaxOutputTokens(model.maxResponseTokens);
+                    }}
+                  />
+                </div>
+              </div>
             </div>
             <div className="flex gap-4 justify-end mt-5 items-center">
               <Switch

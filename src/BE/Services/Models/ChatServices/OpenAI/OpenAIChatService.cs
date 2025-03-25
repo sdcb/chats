@@ -22,6 +22,7 @@ public partial class OpenAIChatService(Model model, ChatClient chatClient) : Cha
         OpenAIClientOptions oaic = new()
         {
             Endpoint = !string.IsNullOrWhiteSpace(model.ModelKey.Host) ? new Uri(model.ModelKey.Host) : suggestedApiUrl,
+            NetworkTimeout = TimeSpan.FromHours(1),
         };
         foreach (PipelinePolicy policy in perCallPolicies)
         {

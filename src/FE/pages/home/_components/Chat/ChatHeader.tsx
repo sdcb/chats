@@ -28,6 +28,7 @@ import {
   postChatEnableSpan,
   postUserChatSpan,
   putUserChatSpan,
+  switchUserChatSpanModel,
 } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
@@ -71,7 +72,7 @@ const ChatHeader = () => {
   };
 
   const handleUpdateChatModel = async (spanId: number, modelId: number) => {
-    await putUserChatSpan(selectedChat.id, spanId, { modelId }).then((data) => {
+    await switchUserChatSpanModel(selectedChat.id, spanId, modelId).then((data) => {
       selectedChat.spans = selectedChat.spans.map((s) => {
         if (s.spanId === spanId) {
           return {

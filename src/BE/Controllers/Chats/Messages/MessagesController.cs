@@ -169,6 +169,34 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             ChatRole = message.ChatRole,
             MessageContents = await content.ToMessageContents(fup, cancellationToken),
         };
+        if (message.MessageResponse != null)
+        {
+            newMessage.MessageResponse = new MessageResponse()
+            {
+                Usage = new UserModelUsage()
+                {
+                    UserModelId = message.MessageResponse.Usage.UserModelId,
+                    UserModel = message.MessageResponse.Usage.UserModel,
+                    FinishReasonId = (byte)DBFinishReason.Success,
+                    SegmentCount = 1,
+                    InputTokens = message.MessageResponse.Usage.InputTokens,
+                    OutputTokens = ChatService.DefaultTokenizer.CountTokens(content.Text),
+                    ReasoningTokens = 0,
+                    IsUsageReliable = false,
+                    PreprocessDurationMs = 0,
+                    FirstResponseDurationMs = 0,
+                    PostprocessDurationMs = 0,
+                    TotalDurationMs = 0,
+                    InputCost = 0,
+                    OutputCost = 0,
+                    BalanceTransactionId = null,
+                    UsageTransactionId = null,
+                    ClientInfo = await clientInfoManager.GetClientInfo(cancellationToken),
+                    CreatedAt = DateTime.UtcNow,
+                },
+                ChatConfigId = message.MessageResponse.ChatConfigId,
+            };
+        }
         db.Messages.Add(newMessage);
         message.Chat.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
