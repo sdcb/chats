@@ -19,6 +19,8 @@ public partial class ChatPresetSpan
 
     public int ChatConfigId { get; set; }
 
+    public bool Enabled { get; set; }
+
     [ForeignKey("ChatConfigId")]
     [InverseProperty("ChatPresetSpans")]
     public virtual ChatConfig ChatConfig { get; set; } = null!;

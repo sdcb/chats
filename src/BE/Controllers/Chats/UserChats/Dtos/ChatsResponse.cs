@@ -102,4 +102,18 @@ public record ChatSpanDto
         MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
         ReasoningEffort = span.ChatConfig.ReasoningEffort,
     };
+
+    public static ChatSpanDto FromDB(ChatPresetSpan span) => new()
+    {
+        SpanId = span.SpanId,
+        Enabled = span.Enabled,
+        SystemPrompt = span.ChatConfig.SystemPrompt,
+        ModelId = span.ChatConfig.ModelId,
+        ModelName = span.ChatConfig.Model.Name,
+        ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
+        Temperature = span.ChatConfig.Temperature,
+        WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
+        MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
+        ReasoningEffort = span.ChatConfig.ReasoningEffort,
+    };
 }

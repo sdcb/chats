@@ -39,4 +39,17 @@ public record UpdateChatSpanRequest
         config.MaxOutputTokens = MaxOutputTokens;
         config.ReasoningEffort = (byte)ReasoningEffort;
     }
+
+    public void ApplyTo(ChatPresetSpan span)
+    {
+        span.Enabled = span.Enabled;
+
+        ChatConfig config = span.ChatConfig ?? throw new InvalidOperationException("ChatPresetSpan.ChatConfig is null");
+        config.ModelId = ModelId;
+        config.SystemPrompt = string.IsNullOrEmpty(SystemPrompt) ? null : SystemPrompt;
+        config.Temperature = Temperature;
+        config.WebSearchEnabled = WebSearchEnabled;
+        config.MaxOutputTokens = MaxOutputTokens;
+        config.ReasoningEffort = (byte)ReasoningEffort;
+    }
 }

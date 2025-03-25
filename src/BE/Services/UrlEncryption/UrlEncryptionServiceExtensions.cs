@@ -84,4 +84,14 @@ public static class UrlEncryptionServiceExtensions
     {
         return that.DecryptAsInt32(encryptedChatShareId, EncryptionPurpose.ChatShareId);
     }
+
+    public static string EncryptChatPresetId(this IUrlEncryptionService that, int chatPresetId)
+    {
+        return that.Encrypt(chatPresetId, EncryptionPurpose.ChatPresetId);
+    }
+
+    public static int DecryptChatPresetId(this IUrlEncryptionService that, string encryptedChatPresetId)
+    {
+        return that.DecryptAsInt32(encryptedChatPresetId, EncryptionPurpose.ChatPresetId);
+    }
 }
