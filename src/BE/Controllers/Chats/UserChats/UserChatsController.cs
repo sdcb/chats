@@ -6,12 +6,10 @@ using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Infrastructure;
 using Chats.BE.Services;
-using Chats.BE.Services.Models;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System;
 
 namespace Chats.BE.Controllers.Chats.UserChats;
 
@@ -236,16 +234,24 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
     public async Task<IActionResult> DeleteChats(string encryptedChatId, CancellationToken cancellationToken)
     {
         int chatId = idEncryption.DecryptChatId(encryptedChatId);
-        bool exists = await db.Chats
-            .AnyAsync(x => x.Id == chatId && x.UserId == currentUser.Id, cancellationToken);
+        bool exists = await db.Chats.AnyAsync(x => x.Id == chatId && x.UserId == currentUser.Id, cancellationToken);
         if (!exists)
         {
             return NotFound();
         }
 
-        await db.Chats
-            .Where(x => x.Id == chatId)
-            .ExecuteDeleteAsync(cancellationToken);
+        if (currentUser.IsAdmin)
+        {
+            await db.Chats
+                .Where(x => x.Id == chatId)
+                .ExecuteDeleteAsync(cancellationToken);
+        }
+        else
+        {
+            await db.Chats
+                .Where(x => x.Id == chatId)
+                .ExecuteUpdateAsync(x => x.SetProperty(p => p.IsArchived, true), cancellationToken);
+        }
 
         return NoContent();
     }
