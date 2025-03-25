@@ -59,7 +59,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         return Ok(result);
     }
 
-    [HttpPut("{presetId}/name")]
+    [HttpPatch("{presetId}/name")]
     public async Task<ActionResult<ChatPresetDto>> UpdateChatPresetName(string presetId, [FromBody] string name, CancellationToken cancellationToken)
     {
         ChatPreset? preset = await LoadOneChatPreset(presetId, cancellationToken);
@@ -69,7 +69,10 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         }
 
         preset.Name = name;
-        preset.UpdatedAt = DateTime.UtcNow;
+        if (db.ChangeTracker.HasChanges())
+        {
+            preset.UpdatedAt = DateTime.UtcNow;
+        }
         await db.SaveChangesAsync(cancellationToken);
         ChatPresetDto result = ChatPresetDto.FromDB(preset, idEncryption);
         return Ok(result);
