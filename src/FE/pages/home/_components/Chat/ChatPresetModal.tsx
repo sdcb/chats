@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -18,6 +19,7 @@ import ModelParams from '@/components/ModelParams/ModelParams';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 
@@ -83,7 +85,10 @@ const ChatPresetModal = (props: Props) => {
   };
 
   const handleSave = () => {
-    if (!chatPreset) return;
+    if (!chatPreset || !name?.trim()) {
+      toast.error(t('Please enter a name'));
+      return;
+    }
     putChatPreset(chatPreset.id, {
       name: name!,
       spans: spans.map((span) => ({
@@ -249,7 +254,12 @@ const ChatPresetModal = (props: Props) => {
 
   const onRemoveSpan = () => {
     setSpans((prev) => {
-      return prev.filter((x) => x.spanId !== selectedSpan!.spanId);
+      const spanList = prev.filter((x) => x.spanId !== selectedSpan!.spanId);
+      const spanCount = spanList.length;
+      setSelectedSpan(
+        spanList.length > 0 ? spanList[spanCount - 1] : undefined,
+      );
+      return spanList;
     });
   };
 
@@ -279,7 +289,16 @@ const ChatPresetModal = (props: Props) => {
           </div>
         ) : (
           <>
-            <div className="flex overflow-x-auto custom-scrollbar gap-2 items-center">
+            <div>
+              <Input
+                required
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                }}
+              ></Input>
+            </div>
+            <div className="flex overflow-x-auto custom-scrollbar gap-2 items-center my-4">
               {spans.map((span) => (
                 <div
                   key={'chat-preset-' + span.spanId}
@@ -311,7 +330,7 @@ const ChatPresetModal = (props: Props) => {
             </div>
             <div className="flex flex-col">
               {selectedSpan && (
-                <div className="flex w-full flex-col mt-5 gap-2">
+                <div className="flex w-full flex-col gap-2">
                   <div className="flex-col justify-between items-center w-full h-16">
                     <div className="flex gap-2 w-full items-center">
                       <ChatModelDropdownMenu
@@ -473,18 +492,18 @@ const ChatPresetModal = (props: Props) => {
                 </div>
               )}
             </div>
-            <div className="absolute bottom-4 right-6 flex gap-4 justify-end mt-5 items-center">
-              <Button
-                variant="default"
-                onClick={() => {
-                  handleSave();
-                }}
-              >
-                {t('Save')}
-              </Button>
-            </div>
           </>
         )}
+        <div className="absolute bottom-4 right-6 flex gap-4 justify-end mt-5 items-center">
+          <Button
+            variant="default"
+            onClick={() => {
+              handleSave();
+            }}
+          >
+            {t('Save')}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
