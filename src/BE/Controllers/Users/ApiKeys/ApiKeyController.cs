@@ -62,7 +62,7 @@ public class ApiKeyController(ChatsDB db, CurrentUser currentUser) : ControllerB
     [HttpPost]
     public async Task<ListApiKeyDto> CreateApiKey(CancellationToken cancellationToken)
     {
-        const int keyLength = 48;
+        const int keyLength = 36;
         UserApiKey dbEntry = new()
         {
             UserId = currentUser.Id,

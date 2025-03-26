@@ -1,6 +1,4 @@
-﻿using Azure.Core;
-using Chats.BE.Controllers.Chats.ChatPresets.Dtos;
-using Chats.BE.Controllers.Chats.Chats;
+﻿using Chats.BE.Controllers.Chats.ChatPresets.Dtos;
 using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Controllers.Chats.Prompts.Dtos;
 using Chats.BE.Controllers.Chats.Prompts;
@@ -61,7 +59,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         return Ok(result);
     }
 
-    [HttpPut("{presetId}/name")]
+    [HttpPatch("{presetId}/name")]
     public async Task<ActionResult<ChatPresetDto>> UpdateChatPresetName(string presetId, [FromBody] string name, CancellationToken cancellationToken)
     {
         ChatPreset? preset = await LoadOneChatPreset(presetId, cancellationToken);
@@ -71,8 +69,73 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         }
 
         preset.Name = name;
-        preset.UpdatedAt = DateTime.UtcNow;
+        if (db.ChangeTracker.HasChanges())
+        {
+            preset.UpdatedAt = DateTime.UtcNow;
+        }
         await db.SaveChangesAsync(cancellationToken);
+        ChatPresetDto result = ChatPresetDto.FromDB(preset, idEncryption);
+        return Ok(result);
+    }
+
+    [HttpPut("{presetId}")]
+    public async Task<ActionResult<ChatPresetDto>> UpdateChatPreset(string presetId, [FromBody] UpdateChatPresetRequest req,
+        [FromServices] UserModelManager userModelManager,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if (req.Spans.Length >= CreateChatSpanRequest.MaxSpanCount)
+        {
+            return BadRequest("Max span count reached");
+        }
+
+        Dictionary<short, UserModel> userModels = await userModelManager.GetUserModels(currentUser.Id, [.. req.Spans.Select(x => x.ModelId)], cancellationToken);
+        if (userModels.Count != req.Spans.Length)
+        {
+            return BadRequest("Model not available");
+        }
+
+        ChatPreset? preset = await LoadOneChatPreset(presetId, cancellationToken);
+        if (preset == null)
+        {
+            return NotFound();
+        }
+
+        preset.Name = req.Name;
+        Dictionary<byte, ChatPresetSpan> dbSpans = preset.ChatPresetSpans.ToDictionary(x => x.SpanId, v => v);
+        HashSet<byte> spanIds = [.. Enumerable.Range(0, req.Spans.Length).Select(x => (byte)x), .. dbSpans.Keys];
+        // Compare and update/insert/delete spans
+        foreach (byte spanId in spanIds)
+        {
+            ChatPresetSpan? existingSpan = dbSpans.GetValueOrDefault(spanId);
+            UpdateChatSpanRequest? toUpdateRaw = req.Spans.ElementAtOrDefault(spanId);
+
+            if (existingSpan != null && toUpdateRaw != null)
+            {
+                // update existing span
+                toUpdateRaw.ApplyTo(existingSpan, userModels[toUpdateRaw.ModelId].Model);
+            }
+            else if (existingSpan != null)
+            {
+                // delete existing span
+                db.ChatPresetSpans.Remove(existingSpan);
+            }
+            else if (toUpdateRaw != null)
+            {
+                // insert new span
+                preset.ChatPresetSpans.Add(toUpdateRaw.ToDB(userModels[toUpdateRaw.ModelId].Model));
+            }
+        }
+        if (db.ChangeTracker.HasChanges())
+        {
+            preset.UpdatedAt = DateTime.UtcNow;
+        }
+        await db.SaveChangesAsync(cancellationToken);
+
         ChatPresetDto result = ChatPresetDto.FromDB(preset, idEncryption);
         return Ok(result);
     }
@@ -197,9 +260,12 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
             return BadRequest("Model not available");
         }
 
-        dto.ApplyTo(span);
-        span.ChatConfig.Model = um.Model;
+        dto.ApplyTo(span, um.Model);
         span.ChatPreset.UpdatedAt = DateTime.UtcNow;
+        if (db.ChangeTracker.HasChanges())
+        {
+            span.ChatPreset.UpdatedAt = DateTime.UtcNow;
+        }
         await db.SaveChangesAsync(cancellationToken);
         ChatSpanDto response = ChatSpanDto.FromDB(span);
         return Ok(response);

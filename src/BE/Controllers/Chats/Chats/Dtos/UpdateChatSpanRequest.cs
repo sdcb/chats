@@ -40,8 +40,13 @@ public record UpdateChatSpanRequest
         config.ReasoningEffort = (byte)ReasoningEffort;
     }
 
-    public void ApplyTo(ChatPresetSpan span)
+    public void ApplyTo(ChatPresetSpan span, Model model)
     {
+        if (model.Id != ModelId)
+        {
+            throw new ArgumentException("ModelId does not match the provided model", nameof(ModelId));
+        }
+
         span.Enabled = span.Enabled;
 
         ChatConfig config = span.ChatConfig ?? throw new InvalidOperationException("ChatPresetSpan.ChatConfig is null");
@@ -51,5 +56,28 @@ public record UpdateChatSpanRequest
         config.WebSearchEnabled = WebSearchEnabled;
         config.MaxOutputTokens = MaxOutputTokens;
         config.ReasoningEffort = (byte)ReasoningEffort;
+    }
+
+    public ChatPresetSpan ToDB(Model model)
+    {
+        if (model.Id != ModelId)
+        {
+            throw new ArgumentException("ModelId does not match the provided model", nameof(ModelId));
+        }
+
+        return new ChatPresetSpan()
+        {
+            Enabled = Enabled,
+            ChatConfig = new ChatConfig()
+            {
+                ModelId = ModelId,
+                Model = model,
+                SystemPrompt = string.IsNullOrEmpty(SystemPrompt) ? null : SystemPrompt,
+                Temperature = Temperature,
+                WebSearchEnabled = WebSearchEnabled,
+                MaxOutputTokens = MaxOutputTokens,
+                ReasoningEffort = (byte)ReasoningEffort,
+            },
+        };
     }
 }
