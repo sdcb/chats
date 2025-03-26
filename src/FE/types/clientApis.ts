@@ -239,3 +239,25 @@ export interface PutChatSpanParams {
   maxOutputTokens: number | null;
   reasoningEffort?: number | null;
 }
+
+export interface GetChatPresetResult {
+  id: string;
+  name: string;
+  updatedAt: string;
+  spans: ChatSpanDto[];
+}
+
+export interface PutChatPresetParams {
+  name: string;
+  spans: PutChatPresetSpanParams[];
+}
+
+export interface PutChatPresetSpanParams {
+  modelId: number;
+  enabled: boolean;
+  systemPrompt: string;
+  temperature?: number | null;
+  webSearchEnabled?: boolean;
+  maxOutputTokens: number | null;
+  reasoningEffort?: number | null;
+}

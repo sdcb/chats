@@ -5,6 +5,7 @@ import { IChatMessage } from '@/types/chatMessage';
 import {
   ChatResult,
   GetBalance7DaysUsageResult,
+  GetChatPresetResult,
   GetChatShareResult,
   GetChatsParams,
   GetLoginProvidersResult,
@@ -22,6 +23,7 @@ import {
   PostUserPassword,
   PutChatGroupParams,
   PutChatParams,
+  PutChatPresetParams,
   PutChatSpanParams,
   PutMoveChatGroupParams,
   PutResponseMessageEditAndSaveNewParams,
@@ -53,7 +55,8 @@ export const getChatsByPaging = (
   const { groupId, query, page, pageSize } = params;
   const fetchService = useFetch();
   return fetchService.get(
-    `/api/user/chats?groupId=${groupId || ''
+    `/api/user/chats?groupId=${
+      groupId || ''
     }&page=${page}&pageSize=${pageSize}&query=${query || ''}`,
   );
 };
@@ -269,11 +272,12 @@ export const putUserChatSpan = (
 export const switchUserChatSpanModel = (
   chatId: string,
   spanId: number,
-  modelId: number
+  modelId: number,
 ) => {
   const fetchServer = useFetch();
   return fetchServer.post<PostUserChatSpanResult>(
-    `/api/chat/${chatId}/span/${spanId}/switch-model/${modelId}`, {},
+    `/api/chat/${chatId}/span/${spanId}/switch-model/${modelId}`,
+    {},
   );
 };
 
@@ -288,7 +292,8 @@ export const getUserChatGroupWithMessages = (
   const { query, page, pageSize } = params;
   const fetchServer = useFetch();
   return fetchServer.get(
-    `/api/chat/group/with-chats?page=${page}&pageSize=${pageSize}&query=${query || ''
+    `/api/chat/group/with-chats?page=${page}&pageSize=${pageSize}&query=${
+      query || ''
     }`,
   );
 };
@@ -422,6 +427,25 @@ export const putChatSpan = (
 ) => {
   const fetchServer = useFetch();
   return fetchServer.put(`/api/chat/${encryptedChatId}/span/${spanId}`, {
+    body: params,
+  });
+};
+
+export const getChatPreset = () => {
+  const fetchServer = useFetch();
+  return fetchServer.get<GetChatPresetResult[]>(`/api/chat-preset`);
+};
+
+export const postChatPreset = (name: string) => {
+  const fetchServer = useFetch();
+  return fetchServer.post<GetChatPresetResult>(`/api/chat-preset`, {
+    body: { name },
+  });
+};
+
+export const putChatPreset = (id: string, params: PutChatPresetParams) => {
+  const fetchServer = useFetch();
+  return fetchServer.put<GetChatPresetResult>(`/api/chat-preset/${id}`, {
     body: params,
   });
 };
