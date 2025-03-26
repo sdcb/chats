@@ -9,10 +9,11 @@ using Chats.BE.Services;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Chats.BE.Controllers.Chats.ChatPresets;
 
-[Route("api/chat-preset")]
+[Route("api/chat-preset"), Authorize]
 public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncryptionService idEncryption) : ControllerBase
 {
     [HttpGet]
@@ -127,7 +128,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
             else if (toUpdateRaw != null)
             {
                 // insert new span
-                preset.ChatPresetSpans.Add(toUpdateRaw.ToDB(userModels[toUpdateRaw.ModelId].Model));
+                preset.ChatPresetSpans.Add(toUpdateRaw.ToDB(userModels[toUpdateRaw.ModelId].Model, spanId));
             }
         }
         if (db.ChangeTracker.HasChanges())

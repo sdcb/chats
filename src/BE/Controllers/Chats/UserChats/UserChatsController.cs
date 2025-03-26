@@ -63,7 +63,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
     }
 
     [HttpGet("archived")]
-    public async Task<ActionResult<PagedResult<ChatsResponse>>> ListArchived(PagingRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<ChatsResponse>>> ListArchived(QueryPagingRequest request, CancellationToken cancellationToken)
     {
         PagedResult<ChatsResponse> result = await PagedResult.FromQuery(db.Chats
             .Where(x => x.UserId == currentUser.Id && x.IsArchived)

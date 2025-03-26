@@ -58,7 +58,7 @@ public record UpdateChatSpanRequest
         config.ReasoningEffort = (byte)ReasoningEffort;
     }
 
-    public ChatPresetSpan ToDB(Model model)
+    public ChatPresetSpan ToDB(Model model, byte spanId)
     {
         if (model.Id != ModelId)
         {
@@ -67,6 +67,7 @@ public record UpdateChatSpanRequest
 
         return new ChatPresetSpan()
         {
+            SpanId = spanId, 
             Enabled = Enabled,
             ChatConfig = new ChatConfig()
             {

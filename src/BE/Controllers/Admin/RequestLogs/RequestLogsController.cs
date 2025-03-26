@@ -10,7 +10,7 @@ public class RequestLogsController : ControllerBase
 {
     [HttpPost]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:删除未使用的参数", Justification = "<挂起>")]
-    public ActionResult<PagedResult<RequestLogDto>> GetRequestLogs([FromBody] PagingRequest pagingRequest)
+    public ActionResult<PagedResult<RequestLogDto>> GetRequestLogs([FromBody] QueryPagingRequest pagingRequest)
     {
         //IQueryable<RequestLogDto> query = db.RequestLogs
         //    .Select(x => new RequestLogDto()
