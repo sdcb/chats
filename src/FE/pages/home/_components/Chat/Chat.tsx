@@ -54,7 +54,7 @@ import {
 import HomeContext from '../../_contexts/home.context';
 import ChatHeader from './ChatHeader';
 import ChatInput from './ChatInput';
-import ChatModelSetting from './ChatModelSetting';
+import ChatPresetList from './ChatPresetList';
 import ChatMessageMemoized from './MemoizedChatMessage';
 import NoModel from './NoModel';
 
@@ -682,7 +682,7 @@ const Chat = memo(() => {
       >
         {selectedChat && <ChatHeader />}
 
-        {/* {selectedChat && selectedMessages.length === 0 && <ChatModelSetting />} */}
+        {selectedChat && selectedMessages.length === 0 && <ChatPresetList />}
 
         <ChatMessageMemoized
           selectedChat={selectedChat}

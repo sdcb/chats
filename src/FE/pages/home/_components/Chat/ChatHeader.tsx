@@ -4,7 +4,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { isMobile } from '@/utils/common';
 
-import { ChatStatus } from '@/types/chat';
+import { ChatStatus, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
 
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
@@ -34,7 +34,6 @@ import { cn } from '@/lib/utils';
 
 const ChatHeader = () => {
   const { t } = useTranslation();
-  const MAX_SELECT_MODEL_COUNT = 10;
   const {
     state: { selectedChat, models, defaultPrompt, showChatBar },
     chatDispatch,
