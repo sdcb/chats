@@ -94,8 +94,10 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
             return BadRequest("Max span count reached");
         }
 
-        Dictionary<short, UserModel> userModels = await userModelManager.GetUserModels(currentUser.Id, [.. req.Spans.Select(x => x.ModelId)], cancellationToken);
-        if (userModels.Count != req.Spans.Length)
+        HashSet<short> modelIds = [.. req.Spans.Select(x => x.ModelId)];
+
+        Dictionary<short, UserModel> userModels = await userModelManager.GetUserModels(currentUser.Id, modelIds, cancellationToken);
+        if (userModels.Count != modelIds.Count)
         {
             return BadRequest("Model not available");
         }
