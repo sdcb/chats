@@ -56,7 +56,10 @@ const ChatPresetList = () => {
                 </div>
                 <div>
                   {item.spans.map((s) => (
-                    <ChatIcon providerId={s.modelProviderId} />
+                    <ChatIcon
+                      key={'chat-icon-' + s.spanId}
+                      providerId={s.modelProviderId}
+                    />
                   ))}
                 </div>
               </div>

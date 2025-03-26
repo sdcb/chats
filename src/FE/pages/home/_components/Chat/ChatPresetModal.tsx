@@ -282,6 +282,7 @@ const ChatPresetModal = (props: Props) => {
             <div className="flex overflow-x-auto custom-scrollbar gap-2 items-center">
               {spans.map((span) => (
                 <div
+                  key={'chat-preset-' + span.spanId}
                   className="flex flex-shrink-0 flex-nowrap items-center gap-2 rounded-sm px-2 bg-muted h-10 cursor-pointer"
                   onClick={() => {
                     setSelectedSpan(span);
