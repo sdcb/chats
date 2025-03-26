@@ -94,4 +94,19 @@ public static class UrlEncryptionServiceExtensions
     {
         return that.DecryptAsInt32(encryptedChatPresetId, EncryptionPurpose.ChatPresetId);
     }
+
+    public static string EncryptApiKeyId(this IUrlEncryptionService that, int apiKeyId)
+    {
+        return that.Encrypt(apiKeyId, EncryptionPurpose.ApiKeyId);
+    }
+
+    public static string? EncryptApiKeyId(this IUrlEncryptionService that, int? apiKeyId)
+    {
+        return apiKeyId == null ? null : that.Encrypt(apiKeyId.Value, EncryptionPurpose.ApiKeyId);
+    }
+
+    public static int DecryptApiKeyId(this IUrlEncryptionService that, string encryptedApiKeyId)
+    {
+        return that.DecryptAsInt32(encryptedApiKeyId, EncryptionPurpose.ApiKeyId);
+    }
 }

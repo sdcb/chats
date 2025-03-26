@@ -2,13 +2,15 @@
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Infrastructure;
+using Chats.BE.Services.Common;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Chats.BE.Controllers.Users.Usages;
 
 [Route("api/usage"), Authorize]
-public class UsageController(ChatsDB db, CurrentUser currentUser) : ControllerBase
+public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryptionService idEncryption) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PagedResult<UsageDto>>> GetUsages(UsageQuery query, CancellationToken cancellationToken)
@@ -29,9 +31,9 @@ public class UsageController(ChatsDB db, CurrentUser currentUser) : ControllerBa
             usagesQuery = usagesQuery.Where(u => u.UserModel.UserId == currentUser.Id);
         }
 
-        if (!string.IsNullOrEmpty(query.ApiKey))
+        if (!string.IsNullOrEmpty(query.ApiKeyId))
         {
-            usagesQuery = usagesQuery.Where(u => u.UserApiUsage!.ApiKey.Key == query.ApiKey);
+            usagesQuery = usagesQuery.Where(u => u.UserApiUsage!.ApiKey.Id == idEncryption.DecryptChatId(query.ApiKeyId));
         }
 
         if (!string.IsNullOrEmpty(query.Provider))
@@ -56,7 +58,8 @@ public class UsageController(ChatsDB db, CurrentUser currentUser) : ControllerBa
             .Select(u => new UsageDto
             {
                 UserName = u.UserModel.User.UserName,
-                ApiKey = u.UserApiUsage!.ApiKey.Key,
+                ApiKeyId = idEncryption.EncryptApiKeyId((int?)u.UserApiUsage!.ApiKey.Id),
+                ApiKey = u.UserApiUsage!.ApiKey.Key.ToMasked(),
                 ModelProviderName = u.UserModel.Model.ModelReference.Provider.Name,
                 ModelReferenceName = u.UserModel.Model.ModelReference.Name,
                 ModelName = u.UserModel.Model.Name,

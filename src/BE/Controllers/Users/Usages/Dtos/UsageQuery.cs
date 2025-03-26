@@ -6,7 +6,7 @@ public record UsageQuery : PagingRequest
 {
     public string? User { get; init; }
 
-    public string? ApiKey { get; init; }
+    public string? ApiKeyId { get; init; }
 
     public string? Provider { get; init; }
 

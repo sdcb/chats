@@ -4,6 +4,8 @@ public record UsageDto
 {
     public required string? UserName { get; init; }
 
+    public required string? ApiKeyId { get; init; }
+
     public required string? ApiKey { get; init; }
 
     public required string ModelProviderName { get; init; }

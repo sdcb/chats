@@ -8,4 +8,5 @@ public enum EncryptionPurpose
     ChatGroupId,
     ChatShareId,
     ChatPresetId,
+    ApiKeyId, 
 }
