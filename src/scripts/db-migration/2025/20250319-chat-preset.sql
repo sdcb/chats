@@ -27,3 +27,8 @@ CREATE TABLE dbo.ChatPresetSpan
         ON DELETE NO ACTION,
     INDEX IX_ChatPresetSpan_Config NONCLUSTERED (ChatConfigId)
 );
+
+INSERT INTO [ModelReference]([Id], [ProviderId], [Name], [DisplayName], [PublishDate], [MinTemperature], [MaxTemperature], [AllowSearch], [AllowVision], [AllowSystemPrompt], [AllowStreaming], [ReasoningResponseKindId], [ContextWindow], [MaxResponseTokens], [TokenizerId], [InputTokenPrice1M], [OutputTokenPrice1M], [CurrencyCode])
+VALUES 
+(120, 1, 'gpt-4.5-preview', 'gpt-4.5', '2025-02-27', 0, 2, 0, 1, 1, 1, 0, 128000, 16384, 2, 75, 150, 'USD'),
+(520, 5, 'gpt-4.5-preview', 'gpt-4.5', '2025-02-27', 0, 2, 0, 1, 1, 1, 0, 128000, 16384, 2, 75, 150, 'USD');
