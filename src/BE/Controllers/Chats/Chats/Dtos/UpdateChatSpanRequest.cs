@@ -29,7 +29,7 @@ public record UpdateChatSpanRequest
 
     public void ApplyTo(ChatSpan span)
     {
-        span.Enabled = span.Enabled;
+        span.Enabled = Enabled;
 
         ChatConfig config = span.ChatConfig ?? throw new InvalidOperationException("ChatSpan.ChatConfig is null");
         config.ModelId = ModelId;
@@ -47,7 +47,7 @@ public record UpdateChatSpanRequest
             throw new ArgumentException("ModelId does not match the provided model", nameof(ModelId));
         }
 
-        span.Enabled = span.Enabled;
+        span.Enabled = Enabled;
 
         ChatConfig config = span.ChatConfig ?? throw new InvalidOperationException("ChatPresetSpan.ChatConfig is null");
         config.ModelId = ModelId;
