@@ -56,7 +56,7 @@ public class Program
         builder.Services.AddScoped<FileUrlProvider>();
         builder.Services.AddSingleton<FileServiceFactory>();
         builder.Services.AddSingleton<ChatStopService>();
-        builder.Services.AddSingleton<ChatConfigService>();
+        builder.Services.AddTransient<ChatConfigService>();
         builder.Services.AddUrlEncryption();
         builder.Services.AddHttpContextAccessor();
 
