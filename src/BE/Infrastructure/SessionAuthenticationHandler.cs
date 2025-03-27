@@ -1,4 +1,5 @@
 ﻿using Chats.BE.Services.Sessions;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -11,7 +12,8 @@ public class SessionAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory loggerFactory,
     SessionManager sessionManager,
-    UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, loggerFactory, encoder)
+    UrlEncoder encoder, 
+    IUrlEncryptionService idEncryption) : AuthenticationHandler<AuthenticationSchemeOptions>(options, loggerFactory, encoder)
 {
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -31,7 +33,7 @@ public class SessionAuthenticationHandler(
         try
         {
             SessionEntry userInfo = await sessionManager.GetCachedUserInfoBySession(jwt);
-            ClaimsIdentity identity = new(userInfo.ToClaims(), Scheme.Name, JwtPropertyKeys.UserId, JwtPropertyKeys.Role);
+            ClaimsIdentity identity = new(userInfo.ToClaims(idEncryption), Scheme.Name, JwtPropertyKeys.UserId, JwtPropertyKeys.Role);
             ClaimsPrincipal principal = new(identity);
             AuthenticationTicket ticket = new(principal, Scheme.Name);
 

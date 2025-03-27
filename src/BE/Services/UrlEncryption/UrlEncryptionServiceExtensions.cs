@@ -109,4 +109,19 @@ public static class UrlEncryptionServiceExtensions
     {
         return that.DecryptAsInt32(encryptedApiKeyId, EncryptionPurpose.ApiKeyId);
     }
+
+    public static string EncryptUserId(this IUrlEncryptionService that, int userId)
+    {
+        return that.Encrypt(userId, EncryptionPurpose.UserId);
+    }
+
+    public static int DecryptUserId(this IUrlEncryptionService that, string encryptedUserId)
+    {
+        return that.DecryptAsInt32(encryptedUserId, EncryptionPurpose.UserId);
+    }
+
+    public static int? DecryptUserIdOrNull(this IUrlEncryptionService that, string? encryptedUserId)
+    {
+        return encryptedUserId == null ? null : that.DecryptUserId(encryptedUserId);
+    }
 }

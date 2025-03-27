@@ -144,7 +144,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         int chatId = idEncryption.DecryptChatId(encryptedChatId);
         ChatSpan? span = await db.ChatSpans
             .Include(x => x.ChatConfig)
-            .FirstOrDefaultAsync(x =>x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id && !x.Chat.IsArchived, cancellationToken);
+            .FirstOrDefaultAsync(x => x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id && !x.Chat.IsArchived, cancellationToken);
         if (span == null)
         {
             return NotFound();
@@ -193,7 +193,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
     {
         int chatId = idEncryption.DecryptChatId(encryptedChatId);
         Chat? chat = await db.Chats
-            .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig)
+            .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig).ThenInclude(x => x.ChatSpans)
             .FirstOrDefaultAsync(x => x.Id == chatId && x.UserId == currentUser.Id && !x.IsArchived, cancellationToken);
         if (chat == null)
         {
@@ -201,7 +201,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         }
 
         ChatPreset? preset = await db.ChatPresets
-            .Include(x => x.ChatPresetSpans)
+            .Include(x => x.ChatPresetSpans).ThenInclude(x => x.ChatConfig)
             .FirstOrDefaultAsync(x => x.Id == idEncryption.DecryptChatPresetId(presetId) && x.UserId == currentUser.Id, cancellationToken);
         if (preset == null)
         {
@@ -214,36 +214,38 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
             return BadRequest("No models available");
         }
 
-        // delete all existing spans and then add new ones
-        foreach (ChatSpan span in chat.ChatSpans)
+        Dictionary<byte, ChatSpan> dbSpans = chat.ChatSpans.ToDictionary(x => x.SpanId, v => v);
+        Dictionary<byte, ChatPresetSpan> presetSpans = preset.ChatPresetSpans.ToDictionary(x => x.SpanId, v => v);
+        HashSet<byte> allSpans = [.. preset.ChatPresetSpans.Select(x => x.SpanId), .. dbSpans.Keys];
+        // Compare and update/insert/delete spans
+        foreach (byte spanId in allSpans)
         {
-            db.ChatConfigs.Remove(span.ChatConfig);
-        }
-        db.ChatSpans.RemoveRange(chat.ChatSpans);
-        byte spanId = 0;
-        foreach (ChatPresetSpan presetSpan in preset.ChatPresetSpans)
-        {
-            if (userModels.TryGetValue(presetSpan.ChatConfig.ModelId, out UserModel? um))
+            ChatSpan? existingSpan = dbSpans.GetValueOrDefault(spanId);
+            ChatPresetSpan? toUpdate = presetSpans.GetValueOrDefault(spanId);
+
+            if (existingSpan != null && toUpdate != null)
             {
-                ChatSpan span = new()
-                {
-                    ChatId = chat.Id,
-                    SpanId = spanId++,
-                    Enabled = presetSpan.Enabled,
-                    ChatConfig = new ChatConfig
-                    {
-                        ModelId = um.ModelId,
-                        Model = um.Model,
-                        Temperature = presetSpan.ChatConfig.Temperature,
-                        WebSearchEnabled = presetSpan.ChatConfig.WebSearchEnabled,
-                        HashCode = presetSpan.ChatConfig.HashCode,
-                        MaxOutputTokens = presetSpan.ChatConfig.MaxOutputTokens,
-                        ReasoningEffort = presetSpan.ChatConfig.ReasoningEffort,
-                        SystemPrompt = presetSpan.ChatConfig.SystemPrompt,
-                    }
-                };
-                chat.ChatSpans.Add(span);
+                // update existing span
+                toUpdate.ApplyTo(existingSpan, userModels[toUpdate.ChatConfig.ModelId].Model);
             }
+            else if (existingSpan != null)
+            {
+                // delete existing span
+                chat.ChatSpans.Remove(existingSpan);
+                if (existingSpan.ChatConfig.ChatSpans.Count == 1)
+                {
+                    db.ChatConfigs.Remove(existingSpan.ChatConfig);
+                }
+            }
+            else if (toUpdate != null)
+            {
+                // insert new span
+                chat.ChatSpans.Add(toUpdate.ToChatSpan(userModels[toUpdate.ChatConfig.ModelId].Model, spanId));
+            }
+        }
+        if (db.ChangeTracker.HasChanges())
+        {
+            chat.UpdatedAt = DateTime.UtcNow;
         }
 
         await db.SaveChangesAsync(cancellationToken);

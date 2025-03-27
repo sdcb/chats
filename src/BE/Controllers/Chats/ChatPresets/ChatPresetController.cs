@@ -21,7 +21,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
     {
         ChatPresetDto[] result = await db.ChatPresets
             .Where(x => x.UserId == currentUser.Id)
-            .OrderByDescending(x => x.Id)
+            .OrderBy(x => x.Id)
             .Select(x => new ChatPresetDto
             {
                 Id = idEncryption.EncryptChatPresetId(x.Id),
@@ -45,21 +45,6 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         return Ok(result);
     }
 
-    [HttpPost]
-    public async Task<ActionResult<ChatPresetDto>> CreateChatPreset([FromBody] CreateChatPresetRequest request, CancellationToken cancellationToken)
-    {
-        ChatPreset preset = new()
-        {
-            Name = request.Name,
-            UserId = currentUser.Id,
-            UpdatedAt = DateTime.UtcNow,
-        };
-        db.ChatPresets.Add(preset);
-        await db.SaveChangesAsync(cancellationToken);
-        ChatPresetDto result = ChatPresetDto.FromDB(preset, idEncryption);
-        return Ok(result);
-    }
-
     [HttpPatch("{presetId}/name")]
     public async Task<ActionResult<ChatPresetDto>> UpdateChatPresetName(string presetId, [FromBody] string name, CancellationToken cancellationToken)
     {
@@ -74,6 +59,47 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         {
             preset.UpdatedAt = DateTime.UtcNow;
         }
+        await db.SaveChangesAsync(cancellationToken);
+        ChatPresetDto result = ChatPresetDto.FromDB(preset, idEncryption);
+        return Ok(result);
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<ChatPresetDto>> CreateChatPreset([FromBody] UpdateChatPresetRequest req,
+        [FromServices] UserModelManager userModelManager,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if (req.Spans.Length >= CreateChatSpanRequest.MaxSpanCount)
+        {
+            return BadRequest("Max span count reached");
+        }
+
+        if (req.Spans.Length == 0)
+        {
+            return BadRequest("At least one span is required");
+        }
+
+        HashSet<short> modelIds = [.. req.Spans.Select(x => x.ModelId)];
+
+        Dictionary<short, UserModel> userModels = await userModelManager.GetUserModels(currentUser.Id, modelIds, cancellationToken);
+        if (userModels.Count != modelIds.Count)
+        {
+            return BadRequest("Model not available");
+        }
+
+        ChatPreset preset = new()
+        {
+            Name = req.Name,
+            UserId = currentUser.Id,
+            UpdatedAt = DateTime.UtcNow,
+            ChatPresetSpans = [.. req.Spans.Select((x, i) => x.ToDB(userModels[x.ModelId].Model, (byte)i))],
+        };
+        db.ChatPresets.Add(preset);
         await db.SaveChangesAsync(cancellationToken);
         ChatPresetDto result = ChatPresetDto.FromDB(preset, idEncryption);
         return Ok(result);
@@ -125,7 +151,8 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
             else if (existingSpan != null)
             {
                 // delete existing span
-                db.ChatPresetSpans.Remove(existingSpan);
+                preset.ChatPresetSpans.Remove(existingSpan);
+                db.ChatConfigs.Remove(existingSpan.ChatConfig);
             }
             else if (toUpdateRaw != null)
             {
