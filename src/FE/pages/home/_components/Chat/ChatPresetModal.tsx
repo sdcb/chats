@@ -46,16 +46,21 @@ const ChatPresetModal = (props: Props) => {
   const [selectedSpan, setSelectedSpan] = useState<ChatSpanDto>();
   const [name, setName] = useState(chatPreset?.name);
   const [isShowAdvParams, setIsShowAdvParams] = useState(false);
+  const [presetSpanCount, setPresetSpanCount] = useState(0);
 
   useEffect(() => {
+    setName(chatPreset?.name);
     if (chatPreset) {
-      setName(chatPreset.name);
       setSpans(chatPreset.spans);
       if (chatPreset.spans.length > 0) {
         setSelectedSpan(chatPreset.spans[0]);
       }
-      setIsShowAdvParams(false);
+    } else {
+      setSpans([]);
+      setSelectedSpan(undefined);
     }
+    setPresetSpanCount(chatPreset?.spans.length || 0);
+    setIsShowAdvParams(false);
   }, [isOpen]);
 
   const { t } = useTranslation();
@@ -107,8 +112,10 @@ const ChatPresetModal = (props: Props) => {
 
   const handleAddChatModel = async (modelId: number) => {
     const m = modelMap[modelId];
+    const count = presetSpanCount + 1;
+    setPresetSpanCount(count);
     const span = {
-      spanId: spans.length + 1,
+      spanId: count,
       enabled: true,
       modelId: m.modelId,
       modelName: m.name,
@@ -265,7 +272,7 @@ const ChatPresetModal = (props: Props) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full sm:w-[560px] h-[560px] gap-0 block">
+      <DialogContent className="w-full sm:w-[560px] h-[560px] gap-0 block select-none">
         {spans?.length === 0 ? (
           <div className="flex items-center w-full justify-center h-96">
             <ChatModelDropdownMenu
@@ -291,7 +298,6 @@ const ChatPresetModal = (props: Props) => {
           <>
             <div>
               <Input
-                required
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);
@@ -302,7 +308,10 @@ const ChatPresetModal = (props: Props) => {
               {spans.map((span) => (
                 <div
                   key={'chat-preset-' + span.spanId}
-                  className="flex flex-shrink-0 flex-nowrap items-center gap-2 rounded-sm px-2 bg-muted h-10 cursor-pointer"
+                  className={cn(
+                    'flex flex-shrink-0 flex-nowrap items-center gap-2 rounded-sm px-2 h-10 cursor-pointer bg-transparent border',
+                    selectedSpan?.spanId === span.spanId ? 'bg-muted' : '',
+                  )}
                   onClick={() => {
                     setSelectedSpan(span);
                   }}

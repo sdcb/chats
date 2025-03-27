@@ -449,3 +449,18 @@ export const putChatPreset = (id: string, params: PutChatPresetParams) => {
     body: params,
   });
 };
+
+export const deleteChatPreset = (id: string) => {
+  const fetchServer = useFetch();
+  return fetchServer.delete<GetChatPresetResult>(`/api/chat-preset/${id}`);
+};
+
+export const postCloneChatPreset = (id: string) => {
+  const fetchServer = useFetch();
+  return fetchServer.post(`/api/chat-preset/${id}/clone`);
+};
+
+export const postApplyChatPreset = (chatId: string, presetId: string) => {
+  const fetchServer = useFetch();
+  return fetchServer.post(`/api/chat/${chatId}/span/apply-preset/${presetId}`);
+};

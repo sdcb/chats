@@ -27,7 +27,6 @@ import {
   postChatDisableSpan,
   postChatEnableSpan,
   postUserChatSpan,
-  putUserChatSpan,
   switchUserChatSpanModel,
 } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
@@ -35,7 +34,7 @@ import { cn } from '@/lib/utils';
 const ChatHeader = () => {
   const { t } = useTranslation();
   const {
-    state: { selectedChat, models, defaultPrompt, showChatBar },
+    state: { selectedChat, models, defaultPrompt, showChatBar, showPromptBar },
     chatDispatch,
   } = useContext(HomeContext);
 
@@ -71,23 +70,25 @@ const ChatHeader = () => {
   };
 
   const handleUpdateChatModel = async (spanId: number, modelId: number) => {
-    await switchUserChatSpanModel(selectedChat.id, spanId, modelId).then((data) => {
-      selectedChat.spans = selectedChat.spans.map((s) => {
-        if (s.spanId === spanId) {
-          return {
-            ...s,
-            enabled: data.enabled,
-            modelId: data.modelId,
-            modelName: data.modelName,
-            modelProviderId: data.modelProviderId,
-            temperature: data.temperature,
-            enableSearch: data.enableSearch,
-          };
-        }
-        return s;
-      });
-      chatDispatch(setSelectedChat(selectedChat));
-    });
+    await switchUserChatSpanModel(selectedChat.id, spanId, modelId).then(
+      (data) => {
+        selectedChat.spans = selectedChat.spans.map((s) => {
+          if (s.spanId === spanId) {
+            return {
+              ...s,
+              enabled: data.enabled,
+              modelId: data.modelId,
+              modelName: data.modelName,
+              modelProviderId: data.modelProviderId,
+              temperature: data.temperature,
+              enableSearch: data.enableSearch,
+            };
+          }
+          return s;
+        });
+        chatDispatch(setSelectedChat(selectedChat));
+      },
+    );
   };
 
   const AddBtnRender = () => (
@@ -136,7 +137,12 @@ const ChatHeader = () => {
   return (
     <>
       <div className="sticky top-0 z-10 text-sm bg-background right-0">
-        <div className="flex justify-between items-center w-full">
+        <div
+          className={cn(
+            'flex justify-between select-none items-center custom-scrollbar overflow-x-auto',
+            `w-[calc(100vw-260px)]`,
+          )}
+        >
           <div
             className={cn(
               'flex justify-start ml-24 h-12 items-center',
@@ -145,7 +151,7 @@ const ChatHeader = () => {
           >
             <div
               className={cn(
-                'flex gap-2 items-center overflow-x-auto max-w-[calc(100vw-98px)]',
+                'flex gap-2 items-center',
                 selectedChat.status === ChatStatus.Chatting &&
                   'pointer-events-none',
               )}
@@ -176,7 +182,7 @@ const ChatHeader = () => {
                       </Button>
                     </Button>
                   ) : (
-                    <div className="flex items-center">
+                    <div className="flex items-center flex-shrink-0">
                       <div
                         className={cn(
                           'flex items-center pl-2',
