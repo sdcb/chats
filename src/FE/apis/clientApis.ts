@@ -436,10 +436,10 @@ export const getChatPreset = () => {
   return fetchServer.get<GetChatPresetResult[]>(`/api/chat-preset`);
 };
 
-export const postChatPreset = (name: string) => {
+export const postChatPreset = (params: PutChatPresetParams) => {
   const fetchServer = useFetch();
   return fetchServer.post<GetChatPresetResult>(`/api/chat-preset`, {
-    body: { name },
+    body: params,
   });
 };
 

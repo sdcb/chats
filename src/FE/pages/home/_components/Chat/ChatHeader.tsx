@@ -140,7 +140,7 @@ const ChatHeader = () => {
         <div
           className={cn(
             'flex justify-between select-none items-center custom-scrollbar overflow-x-auto',
-            `w-[calc(100vw-260px)]`,
+            `w-[calc(100vw-${showChatBar ? 260 : 0}px)]`,
           )}
         >
           <div
@@ -158,7 +158,7 @@ const ChatHeader = () => {
             >
               {selectedChat.spans.map((span) => (
                 <div
-                  className="flex bg-muted rounded-md h-10"
+                  className="flex bg-muted rounded-md h-10 flex-shrink-0"
                   key={'chat-header-' + span.spanId}
                 >
                   {isMobile() ? (
@@ -182,7 +182,7 @@ const ChatHeader = () => {
                       </Button>
                     </Button>
                   ) : (
-                    <div className="flex items-center flex-shrink-0">
+                    <div className="flex items-center">
                       <div
                         className={cn(
                           'flex items-center pl-2',

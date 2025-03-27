@@ -28,7 +28,7 @@ import ChatModelInfo from './ChatModelInfo';
 import EnableNetworkSearch from './EnableNetworkSearch';
 import SystemPrompt from './SystemPrompt';
 
-import { putChatPreset } from '@/apis/clientApis';
+import { postChatPreset, putChatPreset } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -40,7 +40,7 @@ interface Props {
 const ChatPresetModal = (props: Props) => {
   const { chatPreset, isOpen, onClose } = props;
   const {
-    state: { selectedChat, modelMap, prompts, models },
+    state: { selectedChat, modelMap, prompts, models, defaultPrompt },
   } = useContext(HomeContext);
   const [spans, setSpans] = useState<ChatSpanDto[]>([]);
   const [selectedSpan, setSelectedSpan] = useState<ChatSpanDto>();
@@ -49,13 +49,14 @@ const ChatPresetModal = (props: Props) => {
   const [presetSpanCount, setPresetSpanCount] = useState(0);
 
   useEffect(() => {
-    setName(chatPreset?.name);
     if (chatPreset) {
+      setName(chatPreset.name);
       setSpans(chatPreset.spans);
       if (chatPreset.spans.length > 0) {
         setSelectedSpan(chatPreset.spans[0]);
       }
     } else {
+      setName(t('New preset model group'));
       setSpans([]);
       setSelectedSpan(undefined);
     }
@@ -90,11 +91,11 @@ const ChatPresetModal = (props: Props) => {
   };
 
   const handleSave = () => {
-    if (!chatPreset || !name?.trim()) {
+    if (!name?.trim()) {
       toast.error(t('Please enter a name'));
       return;
     }
-    putChatPreset(chatPreset.id, {
+    const params = {
       name: name!,
       spans: spans.map((span) => ({
         enabled: span.enabled,
@@ -105,9 +106,16 @@ const ChatPresetModal = (props: Props) => {
         reasoningEffort: span.reasoningEffort,
         webSearchEnabled: !!span.enableSearch,
       })),
-    }).then(() => {
-      onClose();
-    });
+    };
+    if (chatPreset) {
+      putChatPreset(chatPreset.id, params).then(() => {
+        onClose();
+      });
+    } else {
+      postChatPreset(params).then(() => {
+        onClose();
+      });
+    }
   };
 
   const handleAddChatModel = async (modelId: number) => {
@@ -120,7 +128,7 @@ const ChatPresetModal = (props: Props) => {
       modelId: m.modelId,
       modelName: m.name,
       modelProviderId: m.modelProviderId,
-      systemPrompt: '',
+      systemPrompt: defaultPrompt?.content || '',
       maxOutputTokens: null,
       temperature: null,
       reasoningEffort: 0,
@@ -273,6 +281,15 @@ const ChatPresetModal = (props: Props) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-full sm:w-[560px] h-[560px] gap-0 block select-none">
+        <div>
+          <Input
+            value={name}
+            placeholder={t('Please enter a name')}
+            onChange={(e) => {
+              setName(e.target.value);
+            }}
+          ></Input>
+        </div>
         {spans?.length === 0 ? (
           <div className="flex items-center w-full justify-center h-96">
             <ChatModelDropdownMenu
@@ -296,14 +313,6 @@ const ChatPresetModal = (props: Props) => {
           </div>
         ) : (
           <>
-            <div>
-              <Input
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                }}
-              ></Input>
-            </div>
             <div className="flex overflow-x-auto custom-scrollbar gap-2 items-center my-4">
               {spans.map((span) => (
                 <div
@@ -506,6 +515,7 @@ const ChatPresetModal = (props: Props) => {
         <div className="absolute bottom-4 right-6 flex gap-4 justify-end mt-5 items-center">
           <Button
             variant="default"
+            disabled={presetSpanCount === 0}
             onClick={() => {
               handleSave();
             }}

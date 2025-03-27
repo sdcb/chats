@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { MAX_CREATE_PRESET_CHAT_COUNT } from '@/types/chat';
 import { GetChatPresetResult } from '@/types/clientApis';
 
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
@@ -34,7 +35,6 @@ import {
   deleteChatPreset,
   getChatPreset,
   postApplyChatPreset,
-  postChatPreset,
   postCloneChatPreset,
 } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
@@ -43,7 +43,7 @@ const ChatPresetList = () => {
   const {
     hasModel,
     chatDispatch,
-    state: { selectedChat, showPromptBar },
+    state: { selectedChat },
   } = useContext(HomeContext);
   const [chatPresets, setChatPresets] = useState<GetChatPresetResult[]>([]);
   const [chatPreset, setChatPreset] = useState<GetChatPresetResult>();
@@ -61,13 +61,8 @@ const ChatPresetList = () => {
   }, []);
 
   const handleCreateChatPreset = () => {
-    postChatPreset(
-      t('Preset model group {{count}}', { count: chatPresets.length + 1 }),
-    ).then((item) => {
-      setChatPresets((prev) => {
-        return [...prev, item];
-      });
-    });
+    setChatPreset(undefined);
+    setIsOpen(true);
   };
 
   const handleDeleteChatPreset = (id: string) => {
@@ -100,8 +95,7 @@ const ChatPresetList = () => {
   return (
     <div
       className={cn(
-        'grid place-items-center w-full h-[calc(100vh-120px)] px-0 md:px-8 pt-6 pb-32',
-        `sm:w-[calc(100vw-260px-${showPromptBar ? '260px' : '0'})]`,
+        'grid place-items-center h-[calc(100vh-320px)] px-0 md:px-8 pt-6 pb-32',
       )}
     >
       {hasModel() && (
@@ -184,13 +178,15 @@ const ChatPresetList = () => {
               </div>
             );
           })}
-          <div
-            className="rounded-sm px-4 border flex justify-center items-center h-32 hover:bg-muted"
-            onClick={handleCreateChatPreset}
-          >
-            <IconPlus size={20} />
-            {t('Add a preset model group')}
-          </div>
+          {chatPresets.length < MAX_CREATE_PRESET_CHAT_COUNT && (
+            <div
+              className="rounded-sm px-4 border flex justify-center items-center h-32 hover:bg-muted"
+              onClick={handleCreateChatPreset}
+            >
+              <IconPlus size={20} />
+              {t('Add a preset model group')}
+            </div>
+          )}
         </div>
       )}
       <ChatPresetModal

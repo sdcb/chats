@@ -54,6 +54,7 @@ const ChatModelSettingModal = (props: Props) => {
   const { t } = useTranslation();
 
   const onChangeModel = (model: AdminModelDto) => {
+    setModel(modelMap[model?.modelId]);
     setSpan({
       ...span!,
       modelId: model.modelId,
