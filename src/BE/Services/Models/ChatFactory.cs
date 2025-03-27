@@ -8,7 +8,7 @@ using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models;
 
-public class ChatFactory(ILogger<ChatFactory> logger)
+public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlService)
 {
     public ChatService CreateChatService(Model model)
     {
@@ -33,7 +33,7 @@ public class ChatFactory(ILogger<ChatFactory> logger)
             DBModelProvider.MiniMax => new MiniMaxChatService(model),
             DBModelProvider.Doubao => new DoubaoChatService(model),
             DBModelProvider.SiliconFlow => new SiliconFlowChatService(model),
-            DBModelProvider.OpenRouter => new OpenRouterChatService(model),
+            DBModelProvider.OpenRouter => new OpenRouterChatService(model, hostUrlService),
             _ => throw new NotSupportedException($"Unknown model provider: {modelProvider}")
         };
         return cs;
