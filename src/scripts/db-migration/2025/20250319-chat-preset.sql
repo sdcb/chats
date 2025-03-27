@@ -32,7 +32,8 @@ INSERT INTO [ModelReference]([Id], [ProviderId], [Name], [DisplayName], [Publish
 VALUES 
 (120, 1, 'gpt-4.5-preview', 'gpt-4.5', '2025-02-27', 0, 2, 0, 1, 1, 1, 0, 128000, 16384, 2, 75, 150, 'USD'),
 (520, 5, 'gpt-4.5-preview', 'gpt-4.5', '2025-02-27', 0, 2, 0, 1, 1, 1, 0, 128000, 16384, 2, 75, 150, 'USD'),
-(737, 7, 'qwen2.5-omni-7b', 'qwen2.5-omni', '2025-03-27', 0, 1.99, 0, 1, 1, 1, 0, 32768, 2048, NULL, 0, 0, 'RMB');
+(737, 7, 'qwen2.5-omni-7b', 'qwen2.5-omni', '2025-03-27', 0, 1.99, 0, 1, 1, 1, 0, 32768, 2048, NULL, 0, 0, 'RMB'),
+(621, 6, 'ernie-4.5-8k-preview', 'ERNIE-4.5', NULL, 0.01, 1, 1, 0, 1, 1, 0, 8192, 2048, NULL, 4, 16, 'RMB');
 
 UPDATE [ModelReference]
 SET [Name] = 'gemini-2.5-pro-exp-03-25', 

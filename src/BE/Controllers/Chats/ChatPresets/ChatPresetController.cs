@@ -125,7 +125,8 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
             else if (existingSpan != null)
             {
                 // delete existing span
-                db.ChatPresetSpans.Remove(existingSpan);
+                preset.ChatPresetSpans.Remove(existingSpan);
+                db.ChatConfigs.Remove(existingSpan.ChatConfig);
             }
             else if (toUpdateRaw != null)
             {
