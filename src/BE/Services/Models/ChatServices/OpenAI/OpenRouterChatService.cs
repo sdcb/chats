@@ -1,11 +1,16 @@
 ﻿using Chats.BE.DB;
+using Chats.BE.Services.Models.ChatServices.OpenAI.PipelinePolicies;
 using Chats.BE.Services.Models.ChatServices.OpenAI.ReasoningContents;
 using Chats.BE.Services.Models.Extensions;
 using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class OpenRouterChatService(Model model) : OpenAIChatService(model, new Uri("https://openrouter.ai/api/v1"))
+public class OpenRouterChatService(Model model, HostUrlService hostUrlService) : OpenAIChatService(model, new Uri("https://openrouter.ai/api/v1"),
+    [
+        new AddHeaderPolicy("X-Title", "Sdcb Chats"), 
+        new AddHeaderPolicy("HTTP-Referer", hostUrlService.GetFEUrl())
+    ])
 {
     static Func<ChatCompletion, string?> ReasoningContentAccessor { get; } = ReasoningContentFactory.CreateReasoningContentAccessor("reasoning");
     static Func<StreamingChatCompletionUpdate, string?> StreamingReasoningContentAccessor { get; } = ReasoningContentFactory.CreateStreamingReasoningContentAccessor("reasoning");
