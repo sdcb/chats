@@ -201,7 +201,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         }
 
         ChatPreset? preset = await db.ChatPresets
-            .Include(x => x.ChatPresetSpans)
+            .Include(x => x.ChatPresetSpans).ThenInclude(x => x.ChatConfig)
             .FirstOrDefaultAsync(x => x.Id == idEncryption.DecryptChatPresetId(presetId) && x.UserId == currentUser.Id, cancellationToken);
         if (preset == null)
         {
