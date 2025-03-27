@@ -15,8 +15,6 @@ public class OpenAIApiKeySessionManager(ChatsDB db)
                 UserId = x.User.Id,
                 UserName = x.User.DisplayName,
                 Role = x.User.Role,
-                Sub = x.User.Sub,
-                Provider = x.User.Provider,
                 ApiKey = apiKey,
                 ApiKeyId = x.Id,
                 Expires = x.Expires
