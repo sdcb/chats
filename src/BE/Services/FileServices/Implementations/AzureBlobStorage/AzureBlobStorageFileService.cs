@@ -14,6 +14,12 @@ public class AzureBlobStorageFileService(AzureBlobStorageConfig config) : IFileS
         return blobClient.GenerateSasUri(BlobSasPermissions.Read, req.ValidEnd);
     }
 
+    public async Task<bool> Delete(string storageKey, CancellationToken cancellationToken)
+    {
+        BlobClient blobClient = _containerClient.GetBlobClient(storageKey);
+        return await blobClient.DeleteIfExistsAsync(DeleteSnapshotsOption.IncludeSnapshots, cancellationToken: cancellationToken);
+    }
+
     public Task<Stream> Download(string storageKey, CancellationToken cancellationToken)
     {
         BlobClient blobClient = _containerClient.GetBlobClient(storageKey);

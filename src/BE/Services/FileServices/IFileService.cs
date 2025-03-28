@@ -33,4 +33,12 @@ public interface IFileService
     /// <param name="request">The request containing details for creating the download URL.</param>
     /// <returns>The URI of the created download URL.</returns>
     Uri CreateDownloadUrl(CreateDownloadUrlRequest request);
+
+    /// <summary>
+    /// Deletes a file from the storage.
+    /// </summary>
+    /// <param name="storageKey">The storage key of the file to delete.</param>
+    /// <param name="cancellationToken">Token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a value indicating whether the file was deleted.</returns>
+    Task<bool> Delete(string storageKey, CancellationToken cancellationToken);
 }
