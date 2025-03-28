@@ -9,6 +9,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
 using File = Chats.BE.DB.File;
 
+Console.WriteLine("Press enter to start the migration...");
+Console.ReadLine();
+
 // Load configuration from user secrets
 IConfiguration configuration = new ConfigurationBuilder()
     .AddUserSecrets<Program>()
