@@ -209,6 +209,12 @@ export interface GetChatShareResult {
   messages: IChatMessage[];
 }
 
+export interface GetChatVersionResult {
+  hasNewVersion: boolean;
+  tagName: string;
+  currentVersion: number;
+}
+
 export interface PutResponseMessageContent {
   text?: string;
   fileIds?: string[];

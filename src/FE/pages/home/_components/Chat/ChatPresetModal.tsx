@@ -281,8 +281,9 @@ const ChatPresetModal = (props: Props) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-full sm:w-[560px] h-[560px] gap-0 block select-none">
-        <div>
+        <div className="mt-5">
           <Input
+            autoFocus={false}
             value={name}
             placeholder={t('Please enter a name')}
             onChange={(e) => {
@@ -295,6 +296,7 @@ const ChatPresetModal = (props: Props) => {
             <ChatModelDropdownMenu
               className="p-0"
               triggerClassName={'hover:bg-transparent p-0 h-10'}
+              groupClassName="overflow-y-scroll max-h-60 sm:max-h-full custom-scrollbar"
               models={models}
               content={
                 <Button
@@ -313,7 +315,7 @@ const ChatPresetModal = (props: Props) => {
           </div>
         ) : (
           <>
-            <div className="flex overflow-x-auto custom-scrollbar gap-2 items-center my-4">
+            <div className="flex overflow-x-auto custom-scrollbar gap-2 items-center mt-4 mb-2 pb-2">
               {spans.map((span) => (
                 <div
                   key={'chat-preset-' + span.spanId}
@@ -333,6 +335,7 @@ const ChatPresetModal = (props: Props) => {
                 <ChatModelDropdownMenu
                   className="p-0"
                   triggerClassName={'hover:bg-transparent p-0 h-10'}
+                  groupClassName="overflow-y-scroll max-h-60 sm:max-h-full custom-scrollbar"
                   models={models}
                   content={
                     <Button variant="ghost" className="bg-muted">
@@ -356,7 +359,7 @@ const ChatPresetModal = (props: Props) => {
                         triggerClassName={
                           'hover:bg-transparent px-2 border w-full h-10'
                         }
-                        groupClassName="overflow-y-scroll max-h-80 sm:max-h-full custom-scrollbar"
+                        groupClassName="overflow-y-scroll max-h-60 sm:max-h-full custom-scrollbar"
                         models={models}
                         content={
                           <div className="flex gap-2 items-center">
@@ -512,7 +515,7 @@ const ChatPresetModal = (props: Props) => {
             </div>
           </>
         )}
-        <div className="absolute bottom-4 right-6 flex gap-4 justify-end mt-5 items-center">
+        <div className="absolute bottom-4 right-6 flex gap-4 justify-end items-center">
           <Button
             variant="default"
             disabled={presetSpanCount === 0}
