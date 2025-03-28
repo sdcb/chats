@@ -4,7 +4,10 @@ import { useEffect, useState } from 'react';
 
 import { useRouter } from 'next/router';
 
+import { useToast } from '@/hooks/useToast';
 import useTranslation from '@/hooks/useTranslation';
+
+import { GetChatVersionResult } from '@/types/clientApis';
 
 import {
   IconFiles,
@@ -19,10 +22,12 @@ import {
   IconUsers,
 } from '@/components/Icons/index';
 import { Badge } from '@/components/ui/badge';
+import { ToastAction } from '@/components/ui/toast';
+import { Toaster } from '@/components/ui/toaster';
 
 import Nav from '../_components/Nav/Nav';
 
-import { getChatsVersion } from '@/apis/adminApis';
+import { postChatsVersion } from '@/apis/adminApis';
 
 const AdminLayout = ({
   children,
@@ -32,7 +37,8 @@ const AdminLayout = ({
 }) => {
   const router = useRouter();
   const { t } = useTranslation();
-  const [version, setVersion] = useState(0);
+  const { toast } = useToast();
+  const [version, setVersion] = useState<GetChatVersionResult>();
 
   const menus = [
     // {
@@ -116,8 +122,26 @@ const AdminLayout = ({
 
   useEffect(() => {
     document.title = 'Chats Admin';
-    getChatsVersion().then((v) => {
+
+    postChatsVersion().then((v) => {
       setVersion(v);
+      if (v.hasNewVersion) {
+        toast({
+          description: t(
+            'A new version is now available. Update for the latest features and improvements.',
+          ),
+          action: (
+            <ToastAction
+              altText={t('Go to upgrade')}
+              onClick={() => {
+                location.href = 'https://github.com/sdcb/chats/releases';
+              }}
+            >
+              {t('Go to upgrade')}
+            </ToastAction>
+          ),
+        });
+      }
     });
   }, []);
 
@@ -139,11 +163,12 @@ const AdminLayout = ({
             <span className="self-center text-2xl font-medium whitespace-nowrap">
               Chats&nbsp;
               <Badge variant="outline" className="text-xs">
-                {version}
+                {version?.currentVersion}
               </Badge>
             </span>
           </a>
         </div>
+        <Toaster />
         <Nav menus={menus} />
       </div>
       <div className="w-full">

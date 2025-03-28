@@ -47,6 +47,7 @@ const ChatPresetList = () => {
   } = useContext(HomeContext);
   const [chatPresets, setChatPresets] = useState<GetChatPresetResult[]>([]);
   const [chatPreset, setChatPreset] = useState<GetChatPresetResult>();
+  const [selectedChatPresetId, setSelectedChatPresetId] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
 
@@ -79,6 +80,7 @@ const ChatPresetList = () => {
 
   const handleSelectChatPreset = (item: GetChatPresetResult) => {
     if (item.spans.length > 0) {
+      setSelectedChatPresetId(item.id);
       postApplyChatPreset(selectedChat.id, item.id).then(() => {
         chatDispatch(
           setSelectedChat({
@@ -104,13 +106,16 @@ const ChatPresetList = () => {
             return (
               <div
                 key={'chat-preset' + item.id}
-                className="rounded-sm p-4 border h-32 hover:bg-muted"
+                className={cn(
+                  'rounded-sm p-4 border h-32 hover:bg-muted cursor-pointer',
+                  selectedChatPresetId === item.id && 'bg-muted',
+                )}
                 onClick={() => {
                   handleSelectChatPreset(item);
                 }}
               >
                 <div className="flex justify-between">
-                  <span>{item.name}</span>
+                  <span className='text-ellipsis whitespace-nowrap overflow-hidden'>{item.name}</span>
                   <span>
                     <DropdownMenu>
                       <DropdownMenuTrigger className="focus:outline-none p-[6px]">
@@ -180,7 +185,7 @@ const ChatPresetList = () => {
           })}
           {chatPresets.length < MAX_CREATE_PRESET_CHAT_COUNT && (
             <div
-              className="rounded-sm px-4 border flex justify-center items-center h-32 hover:bg-muted"
+              className="rounded-sm px-4 border flex justify-center items-center h-32 cursor-pointer hover:bg-muted"
               onClick={handleCreateChatPreset}
             >
               <IconPlus size={20} />
