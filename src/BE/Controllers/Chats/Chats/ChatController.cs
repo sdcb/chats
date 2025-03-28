@@ -200,7 +200,6 @@ public class ChatController(ChatStopService stopService) : ControllerBase
                 currentUser,
                 logger,
                 chatFactory,
-                chatConfigService,
                 fup,
                 span,
                 firstTick,
@@ -225,6 +224,8 @@ public class ChatController(ChatStopService stopService) : ControllerBase
             if (line.Kind == SseResponseKind.End)
             {
                 Message dbAssistantMessage = (Message)line.Result;
+                ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == dbAssistantMessage.SpanId);
+                dbAssistantMessage.MessageResponse!.ChatConfig = await chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, cancellationToken);
                 chat.Messages.Add(dbAssistantMessage);
                 bool isLast = line.SpanId == toGenerateSpans.Last().SpanId;
                 if (isLast)
@@ -292,7 +293,6 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         CurrentUser currentUser,
         ILogger<ChatController> logger,
         ChatFactory chatFactory,
-        ChatConfigService chatConfigService,
         FileUrlProvider fup,
         ChatSpan chatSpan,
         long firstTick,
@@ -329,10 +329,8 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         InChatContext icc = new(firstTick);
 
         string? errorText = null;
-        Task<ChatConfig> chatConfigTask = null!;
         try
         {
-            chatConfigTask = chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, cancellationToken);
             using ChatService s = chatFactory.CreateChatService(userModel.Model);
             bool responseStated = false, reasoningStarted = false;
             await foreach (InternalChatSegment seg in icc.Run(userBalance.Balance, userModel, s.ChatStreamedFEProcessed(messageToSend, cco, ced, cancellationToken)))
@@ -436,12 +434,10 @@ public class ChatController(ChatStopService stopService) : ControllerBase
             await writer.WriteAsync(SseResponseLine.Error(chatSpan.SpanId, errorText), cancellationToken);
         }
         ClientInfo clientInfo = await clientInfoTask;
-        ChatConfig chatConfig = await chatConfigTask;
         UserModelUsage usage = icc.ToUserModelUsage(currentUser.Id, userModel, clientInfo, isApi: false);
         dbAssistantMessage.MessageResponse = new MessageResponse()
         {
             Usage = usage,
-            ChatConfig = chatConfig,
         };
         await writer.WriteAsync(new SseResponseLine { Kind = SseResponseKind.End, Result = dbAssistantMessage, SpanId = chatSpan.SpanId }, cancellationToken);
         writer.Complete();
