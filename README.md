@@ -1,4 +1,4 @@
-**[English](README_EN.md)** | **简体中文** [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS)
+﻿**[English](README_EN.md)** | **简体中文** [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS)
 
 
 Sdcb Chats 是一个强大且灵活的大语言模型前端，支持多种功能和平台。无论您是希望管理多种模型接口，还是需要一个简单的部署流程，Sdcb Chats 都能满足您的需求。
@@ -144,14 +144,24 @@ C:\Users\ZhouJie\Downloads\chats-win-x64>dir
 
 ### 支持的大模型服务
 
-- Azure OpenAI
-- 腾讯混元(HunYuan)
-- 零一万物(01.ai)
-- 月之暗面(Moonshot)
-- OpenAI(或兼容OpenAI协议的API，如ollama)
-- 文心千帆(Wenxin Qianfan)
-- 阿里灵积大模型平台(Aliyun DashScope)
-- 讯飞星火(Xunfei Sparkdesk)
-- DeepSeek
-- x.AI
-- Github Models
+| Id  | Name             | Host                                                     | Comment                               |
+| --- | ---------------- | -------------------------------------------------------- | ------------------------------------- |
+| 0   | Test             | null                                                     |                                       |
+| 1   | Azure OpenAI     | https://<resource-name>.openai.azure.com/                |                                       |
+| 2   | Tencent Hunyuan  | https://api.hunyuan.cloud.tencent.com/v1                 |                                       |
+| 3   | 01.ai            | https://api.lingyiwanwu.com/v1                           |                                       |
+| 4   | Moonshot         | https://api.moonshot.cn/v1                               |                                       |
+| 5   | OpenAI           | https://api.openai.com/v1                                |                                       |
+| 6   | Wenxin Qianfan   | https://qianfan.baidubce.com/v2                          |                                       |
+| 7   | DashScope        | https://dashscope.aliyuncs.com/compatible-mode/v1        |                                       |
+| 8   | Xunfei SparkDesk | https://spark-api-open.xf-yun.com/v1                     |                                       |
+| 9   | Zhipu AI         | https://open.bigmodel.cn/api/paas/v4/                    |                                       |
+| 10  | DeepSeek         | https://api.deepseek.com/v1                              |                                       |
+| 11  | x.ai             | https://api.x.ai/v1                                      |                                       |
+| 12  | Github Models    | https://models.inference.ai.azure.com                    |                                       |
+| 13  | Google AI        | https://generativelanguage.googleapis.com/v1beta/openai/ |                                       |
+| 14  | Ollama           | http://localhost:11434/v1                                | 任何支持OpenAI协议的API都可以用Ollama |
+| 15  | MiniMax          | https://api.minimax.chat/v1                              |                                       |
+| 16  | Doubao           | https://ark.cn-beijing.volces.com/api/v3/                |                                       |
+| 17  | SiliconFlow      | https://api.siliconflow.cn/v1                            |                                       |
+| 18  | OpenRouter       | https://openrouter.ai/api/v1                             |                                       |
