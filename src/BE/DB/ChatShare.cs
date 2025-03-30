@@ -17,10 +17,8 @@ public partial class ChatShare
 
     public DateTimeOffset ExpiresAt { get; set; }
 
-    [Column(TypeName = "datetime")]
     public DateTime SnapshotTime { get; set; }
 
-    [Column(TypeName = "datetime")]
     public DateTime CreatedAt { get; set; }
 
     [ForeignKey("ChatId")]
