@@ -104,8 +104,8 @@ public class InitService(IServiceScopeFactory scopeFactory)
             Key = DBConfigKey.SiteInfo,
             Value = JsonSerializer.Serialize(new SiteInfo()
             {
-                CustomizedLine1 = "Default UserName/Password: chats/RESET!!!",
-                CustomizedLine2 = "Please reset your password ASAP, text here can be customized in Global Config -> siteInfo",
+                CustomizedLine1 = "Default UserName/Password(PLEASE RESET ASAP): chats/RESET!!!",
+                CustomizedLine2 = "Text here can be customized in Admin -> Global Config -> siteInfo",
             })
         });
         await db.SaveChangesAsync(cancellationToken);

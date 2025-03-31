@@ -51,10 +51,10 @@ SET Value =
     JSON_MODIFY(
         JSON_MODIFY(
             '{}',
-            '$.customizedLine1', 
+            '$.customizedLine2', 
             JSON_VALUE(Value, '$.companyName')
         ),
-        '$.customizedLine2', 
+        '$.customizedLine1', 
         JSON_VALUE(Value, '$.filingNumber')
     )
 WHERE [Key] = 'siteInfo';

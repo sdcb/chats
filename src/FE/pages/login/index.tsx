@@ -224,10 +224,10 @@ export default function LoginPage() {
               </>
               <div className="flex flex-col justify-center text-center text-sm text-muted-foreground">
                 <div className="flex text-sm justify-center items-center pb-[2px]">
-                  {webSiteInfo?.customizedLine2}
+                  {webSiteInfo?.customizedLine1}
                 </div>
                 <div className="flex text-sm justify-center items-center">
-                  {webSiteInfo?.customizedLine1}
+                  {webSiteInfo?.customizedLine2}
                 </div>
               </div>
             </div>
