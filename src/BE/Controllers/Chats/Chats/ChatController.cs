@@ -49,8 +49,34 @@ public class ChatController(ChatStopService stopService) : ControllerBase
             cancellationToken);
     }
 
-    [HttpPost("general-chat")]
+    [HttpPost("general-chat"), Obsolete("Use general instead")]
     public async Task<IActionResult> GeneralChat(
+        [FromBody] ObsoleteGeneralChatRequest req,
+        [FromServices] ChatsDB db,
+        [FromServices] CurrentUser currentUser,
+        [FromServices] ILogger<ChatController> logger,
+        [FromServices] IUrlEncryptionService idEncryption,
+        [FromServices] BalanceService balanceService,
+        [FromServices] ChatFactory chatFactory,
+        [FromServices] UserModelManager userModelManager,
+        [FromServices] ClientInfoManager clientInfoManager,
+        [FromServices] FileUrlProvider fup,
+        [FromServices] ChatConfigService chatConfigService,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        return await ChatPrivate(
+            req.Decrypt(idEncryption),
+            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, clientInfoManager, fup, chatConfigService,
+            cancellationToken);
+    }
+
+    [HttpPost("general")]
+    public async Task<IActionResult> GeneralChat2(
         [FromBody] GeneralChatRequest req,
         [FromServices] ChatsDB db,
         [FromServices] CurrentUser currentUser,

@@ -41,3 +41,34 @@ public record FileContentRequestItem : ContentRequestItem
         return await fup.CreateFileContent(FileId, cancellationToken);
     }
 }
+
+[Obsolete("Use ContentRequestItem instead")]
+public record MessageContentRequest
+{
+    [JsonPropertyName("text")]
+    public required string Text { get; init; }
+
+    [JsonPropertyName("fileIds")]
+    public List<string>? FileIds { get; init; }
+
+    public async Task<MessageContent[]> ToMessageContents(FileUrlProvider fup, CancellationToken cancellationToken)
+    {
+        return
+        [
+            MessageContent.FromContent(Text),
+            ..(await (FileIds ?? [])
+                .ToAsyncEnumerable()
+                .SelectAwait(async fileId => await fup.CreateFileContent(fileId, cancellationToken))
+                .ToArrayAsync(cancellationToken)),
+        ];
+    }
+
+    public ContentRequestItem[] ToRequestItem()
+    {
+        return
+        [
+            new TextContentRequestItem { Text = Text },
+            ..(FileIds ?? []).Select(fileId => new FileContentRequestItem { FileId = fileId }),
+        ];
+    }
+}
