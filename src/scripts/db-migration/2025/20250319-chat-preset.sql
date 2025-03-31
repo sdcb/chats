@@ -42,3 +42,6 @@ SET [Name] = 'gemini-2.5-pro-exp-03-25',
     [ContextWindow] = 1000000, 
     [MaxResponseTokens] = 64000
 WHERE [Id] = 1302;
+
+ALTER TABLE ChatShare ALTER COLUMN SnapshotTime DATETIME2 NOT NULL;
+ALTER TABLE ChatShare ALTER COLUMN CreatedAt DATETIME2 NOT NULL;
