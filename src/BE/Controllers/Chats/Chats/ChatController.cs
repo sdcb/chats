@@ -16,6 +16,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Threading.Channels;
 using OpenAIChatMessage = OpenAI.Chat.ChatMessage;
+using Chats.BE.Controllers.Chats.Messages.Dtos;
 
 namespace Chats.BE.Controllers.Chats.Chats;
 
@@ -66,6 +67,11 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
+        }
+
+        if (!req.UserMessage.OfType<TextContentRequestItem>().Any())
+        {
+            return BadRequest("User message must have at least one text content");
         }
 
         return await ChatPrivate(
@@ -163,7 +169,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
             newDbUserMessage = new()
             {
                 ChatRoleId = (byte)DBChatRole.User,
-                MessageContents = await generalRequest.UserMessage.ToMessageContents(fup, cancellationToken),
+                MessageContents = await MessageContent.FromRequest(generalRequest.UserMessage, fup, cancellationToken),
                 CreatedAt = DateTime.UtcNow,
                 ParentId = generalRequest.ParentAssistantMessageId,
             };
@@ -186,7 +192,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         MessageLiteDto[] messageTree = await FillContents(messageTreeNoContent, db, cancellationToken);
 
         Response.Headers.ContentType = "text/event-stream";
-        Response.Headers.CacheControl = "no-cache";
+        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
         Response.Headers.Connection = "keep-alive";
         string stopId = stopService.CreateAndCombineCancellationToken(ref cancellationToken);
         await YieldResponse(SseResponseLine.StopId(stopId));
@@ -215,7 +221,11 @@ public class ChatController(ChatStopService stopService) : ControllerBase
 
         if (isEmptyChat && req is DecryptedGeneralChatRequest generalChatRequest)
         {
-            chat.Title = generalChatRequest.UserMessage.Text[..Math.Min(50, generalChatRequest.UserMessage.Text.Length)];
+            string text = generalChatRequest.UserMessage
+                .OfType<TextContentRequestItem>()
+                .Single()
+                .Text;
+            chat.Title = text[..Math.Min(50, text.Length)];
         }
         
         bool dbUserMessageYield = false;

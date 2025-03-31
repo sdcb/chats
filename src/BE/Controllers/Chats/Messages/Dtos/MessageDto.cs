@@ -1,5 +1,4 @@
 ﻿using Chats.BE.DB;
-using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.UrlEncryption;
@@ -22,7 +21,7 @@ public abstract record MessageDto
     public required DBChatRole Role { get; init; }
 
     [JsonPropertyName("content")]
-    public required MessageContentResponse Content { get; init; }
+    public required ContentResponseItem[] Content { get; init; }
 
     [JsonPropertyName("createdAt")]
     public required DateTime CreatedAt { get; init; }
@@ -43,7 +42,7 @@ public record RequestMessageDto : MessageDto
             Id = urlEncryption.EncryptMessageId(message.Id),
             ParentId = urlEncryption.EncryptMessageId(message.ParentId),
             Role = (DBChatRole)message.ChatRoleId,
-            Content = MessageContentResponse.FromSegments([.. message.MessageContents], fup),
+            Content = ContentResponseItem.FromSegment([.. message.MessageContents], fup),
             CreatedAt = message.CreatedAt,
             SpanId = message.SpanId,
             Edited = message.Edited,
@@ -88,67 +87,6 @@ public record ResponseMessageDto : MessageDto
 
     [JsonPropertyName("reaction")]
     public required bool? Reaction { get; init; }
-}
-
-public record MessageContentRequest
-{
-    [JsonPropertyName("text")]
-    public required string Text { get; init; }
-
-    [JsonPropertyName("fileIds")]
-    public List<string>? FileIds { get; init; }
-
-    public async Task<MessageContent[]> ToMessageContents(FileUrlProvider fup, CancellationToken cancellationToken)
-    {
-        return
-        [
-            MessageContent.FromContent(Text),
-            ..(await (FileIds ?? [])
-                .ToAsyncEnumerable()
-                .SelectAwait(async fileId => await fup.CreateFileContent(fileId, cancellationToken))
-                .ToArrayAsync(cancellationToken)),
-        ];
-    }
-}
-
-public record MessageContentResponse
-{
-    [JsonPropertyName("text")]
-    public required string Text { get; init; }
-
-    [JsonPropertyName("think"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public required string? Think { get; init; }
-
-    [JsonPropertyName("fileIds"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public required FileDto[]? FileIds { get; init; }
-
-    [JsonPropertyName("error"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public required string? Error { get; init; }
-
-    public static MessageContentResponse FromSegments(MessageContent[] segments, FileUrlProvider fup)
-    {
-        Dictionary<DBMessageContentType, MessageContent[]> groups = segments
-            .GroupBy(x => (DBMessageContentType)x.ContentTypeId)
-            .ToDictionary(k => k.Key, v => v.Select(x => x).ToArray());
-        foreach (DBMessageContentType ct in Enum.GetValuesAsUnderlyingType<DBMessageContentType>())
-        {
-            if (!groups.ContainsKey(ct)) groups[ct] = [];
-        }
-
-        return new MessageContentResponse()
-        {
-            Text = string.Join("\n", groups[DBMessageContentType.Text].Select(x => x.ToString())),
-            Think = string.Join("\n", groups[DBMessageContentType.Reasoning].Select(x => x.ToString())) switch { "" => null, var x => x },
-            FileIds = groups[DBMessageContentType.FileId]
-                .Select(x => fup.CreateFileDto(x.MessageContentFile!.File))
-                .ToArray() switch 
-                {
-                    [] => null,
-                    var x => x
-                },
-            Error = string.Join("\n", groups[DBMessageContentType.Error].Select(x => x.ToString())) switch { "" => null, var x => x }
-        };
-    }
 }
 
 public record FileDto
@@ -197,7 +135,7 @@ public record ChatMessageTemp
                 Id = urlEncryption.EncryptMessageId(Id),
                 ParentId = ParentId != null ? urlEncryption.EncryptMessageId(ParentId.Value) : null, 
                 Role = Role,
-                Content = MessageContentResponse.FromSegments(Content, fup),
+                Content = ContentResponseItem.FromSegment(Content, fup),
                 CreatedAt = CreatedAt,
                 SpanId = SpanId,
                 Edited = Edited,
@@ -210,7 +148,7 @@ public record ChatMessageTemp
                 Id = urlEncryption.EncryptMessageId(Id),
                 ParentId = ParentId != null ? urlEncryption.EncryptMessageId(ParentId.Value) : null, 
                 Role = Role,
-                Content = MessageContentResponse.FromSegments(Content, fup),
+                Content = ContentResponseItem.FromSegment(Content, fup),
                 CreatedAt = CreatedAt,
                 SpanId = SpanId,
                 Edited = Edited,

@@ -42,7 +42,7 @@ public record RegenerateAssistantMessageRequest : ChatRequest
 public record GeneralChatRequest : ChatRequest
 {
     [JsonPropertyName("userMessage")]
-    public required MessageContentRequest UserMessage { get; init; }
+    public required MessageContentRequestItem[] UserMessage { get; init; }
 
     [JsonPropertyName("parentAssistantMessageId")]
     public required string? ParentAssistantMessageId { get; init; }
@@ -81,7 +81,7 @@ public record DecryptedRegenerateAssistantMessageRequest : DecryptedChatRequest
 
 public record DecryptedGeneralChatRequest : DecryptedChatRequest
 {
-    public required MessageContentRequest UserMessage { get; init; }
+    public required MessageContentRequestItem[] UserMessage { get; init; }
 
     public required long? ParentAssistantMessageId { get; init; }
 

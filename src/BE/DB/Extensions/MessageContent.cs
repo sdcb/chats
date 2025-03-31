@@ -1,4 +1,5 @@
-﻿using Chats.BE.DB.Enums;
+﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
+using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.Dtos;
 using OpenAI.Chat;
@@ -47,6 +48,14 @@ public partial class MessageContent
     public static MessageContent FromError(string error)
     {
         return new MessageContent { MessageContentText = new() { Content = error }, ContentTypeId = (byte)DBMessageContentType.Error };
+    }
+
+    public static async Task<MessageContent[]> FromRequest(MessageContentRequestItem[] items, FileUrlProvider fup, CancellationToken cancellationToken)
+    {
+        return await items
+            .ToAsyncEnumerable()
+            .SelectAwait(async item => await item.ToMessageContent(fup, cancellationToken))
+            .ToArrayAsync(cancellationToken);
     }
 
     public static IEnumerable<MessageContent> FromFullResponse(InternalChatSegment lastSegment, string? errorText)

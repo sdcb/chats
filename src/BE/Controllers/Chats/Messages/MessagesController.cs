@@ -106,7 +106,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
     }
 
     [HttpPut("{encryptedMessageId}/edit-in-place")]
-    public async Task<ActionResult> EditMessageInPlace(string encryptedMessageId, [FromBody] MessageContentRequest content,
+    public async Task<ActionResult> EditMessageInPlace(string encryptedMessageId, [FromBody] MessageContentRequestItem[] content,
         [FromServices] FileUrlProvider fup,
         CancellationToken cancellationToken)
     {
@@ -125,7 +125,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         }
 
         message.MessageContents.Clear();
-        foreach (MessageContent c in await content.ToMessageContents(fup, cancellationToken))
+        foreach (MessageContent c in await MessageContent.FromRequest(content, fup, cancellationToken))
         {
             message.MessageContents.Add(c);
         }
@@ -136,7 +136,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
     }
 
     [HttpPut("{encryptedMessageId}/edit-and-save-new")]
-    public async Task<ActionResult<RequestMessageDto>> EditAndSaveNew(string encryptedMessageId, [FromBody] MessageContentRequest content,
+    public async Task<ActionResult<RequestMessageDto>> EditAndSaveNew(string encryptedMessageId, [FromBody] MessageContentRequestItem[] content,
     [FromServices] FileUrlProvider fup,
     [FromServices] ClientInfoManager clientInfoManager,
     CancellationToken cancellationToken)
@@ -167,10 +167,11 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             ParentId = message.ParentId,
             ChatRoleId = message.ChatRoleId,
             ChatRole = message.ChatRole,
-            MessageContents = await content.ToMessageContents(fup, cancellationToken),
+            MessageContents = await MessageContent.FromRequest(content, fup, cancellationToken),
         };
         if (message.MessageResponse != null)
         {
+            string textPart = content.OfType<TextContentRequestItem>().FirstOrDefault()?.Text ?? "";
             newMessage.MessageResponse = new MessageResponse()
             {
                 Usage = new UserModelUsage()
@@ -180,7 +181,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                     FinishReasonId = (byte)DBFinishReason.Success,
                     SegmentCount = 1,
                     InputTokens = message.MessageResponse.Usage.InputTokens,
-                    OutputTokens = ChatService.DefaultTokenizer.CountTokens(content.Text),
+                    OutputTokens = ChatService.DefaultTokenizer.CountTokens(textPart),
                     ReasoningTokens = 0,
                     IsUsageReliable = false,
                     PreprocessDurationMs = 0,
