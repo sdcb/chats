@@ -106,7 +106,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
     }
 
     [HttpPut("{encryptedMessageId}/edit-in-place")]
-    public async Task<ActionResult> EditMessageInPlace(string encryptedMessageId, [FromBody] MessageContentRequestItem[] content,
+    public async Task<ActionResult> EditMessageInPlace(string encryptedMessageId, [FromBody] ContentRequestItem[] content,
         [FromServices] FileUrlProvider fup,
         CancellationToken cancellationToken)
     {
@@ -136,7 +136,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
     }
 
     [HttpPut("{encryptedMessageId}/edit-and-save-new")]
-    public async Task<ActionResult<RequestMessageDto>> EditAndSaveNew(string encryptedMessageId, [FromBody] MessageContentRequestItem[] content,
+    public async Task<ActionResult<RequestMessageDto>> EditAndSaveNew(string encryptedMessageId, [FromBody] ContentRequestItem[] content,
     [FromServices] FileUrlProvider fup,
     [FromServices] ClientInfoManager clientInfoManager,
     CancellationToken cancellationToken)

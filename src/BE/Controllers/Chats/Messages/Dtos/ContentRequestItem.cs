@@ -7,11 +7,11 @@ namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 [JsonPolymorphic]
 [JsonDerivedType(typeof(TextContentRequestItem), typeDiscriminator: 0)]
 [JsonDerivedType(typeof(FileContentRequestItem), typeDiscriminator: 1)]
-public abstract record MessageContentRequestItem
+public abstract record ContentRequestItem
 {
     public abstract Task<MessageContent> ToMessageContent(FileUrlProvider fup, CancellationToken cancellationToken);
 
-    public static async Task<MessageContent[]> ToMessageContents(MessageContentRequestItem[] items, FileUrlProvider fup, CancellationToken cancellationToken)
+    public static async Task<MessageContent[]> ToMessageContents(ContentRequestItem[] items, FileUrlProvider fup, CancellationToken cancellationToken)
     {
         return await items
             .ToAsyncEnumerable()
@@ -20,7 +20,7 @@ public abstract record MessageContentRequestItem
     }
 }
 
-public record TextContentRequestItem : MessageContentRequestItem
+public record TextContentRequestItem : ContentRequestItem
 {
     [JsonPropertyName("c")]
     public required string Text { get; init; }
@@ -31,7 +31,7 @@ public record TextContentRequestItem : MessageContentRequestItem
     }
 }
 
-public record FileContentRequestItem : MessageContentRequestItem
+public record FileContentRequestItem : ContentRequestItem
 {
     [JsonPropertyName("c")]
     public required string FileId { get; init; }

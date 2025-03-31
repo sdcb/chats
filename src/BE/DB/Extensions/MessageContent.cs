@@ -50,7 +50,7 @@ public partial class MessageContent
         return new MessageContent { MessageContentText = new() { Content = error }, ContentTypeId = (byte)DBMessageContentType.Error };
     }
 
-    public static async Task<MessageContent[]> FromRequest(MessageContentRequestItem[] items, FileUrlProvider fup, CancellationToken cancellationToken)
+    public static async Task<MessageContent[]> FromRequest(ContentRequestItem[] items, FileUrlProvider fup, CancellationToken cancellationToken)
     {
         return await items
             .ToAsyncEnumerable()
