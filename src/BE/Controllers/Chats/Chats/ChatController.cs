@@ -225,7 +225,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
             {
                 Message dbAssistantMessage = (Message)line.Result;
                 ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == dbAssistantMessage.SpanId);
-                dbAssistantMessage.MessageResponse!.ChatConfig = await chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, cancellationToken);
+                dbAssistantMessage.MessageResponse!.ChatConfig = await chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, default);
                 chat.Messages.Add(dbAssistantMessage);
                 bool isLast = line.SpanId == toGenerateSpans.Last().SpanId;
                 if (isLast)
