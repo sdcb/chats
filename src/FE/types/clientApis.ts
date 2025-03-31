@@ -52,11 +52,6 @@ export interface GetLoginProvidersResult {
   };
 }
 
-export interface GetSiteInfoResult {
-  filingNumber: string;
-  companyName: string;
-}
-
 export interface GetChatsParams extends Paging {
   groupId: string | null;
   query?: string;

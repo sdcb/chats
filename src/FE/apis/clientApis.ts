@@ -9,7 +9,6 @@ import {
   GetChatShareResult,
   GetChatsParams,
   GetLoginProvidersResult,
-  GetSiteInfoResult,
   GetUserApiKeyResult,
   GetUserBalanceResult,
   GetUserChatGroupWithMessagesResult as GetUserChatGroupWithChatsResult,
@@ -32,6 +31,7 @@ import {
   SingInParams,
   SingInResult,
 } from '@/types/clientApis';
+import { SiteInfoConfig } from '@/types/config';
 import { IChatGroup } from '@/types/group';
 import { PageResult } from '@/types/page';
 import { Prompt, PromptSlim } from '@/types/prompt';
@@ -210,7 +210,7 @@ export const getLoginProviders = () => {
 
 export const getSiteInfo = () => {
   const fetchServer = useFetch();
-  return fetchServer.get<GetSiteInfoResult>('/api/public/siteInfo');
+  return fetchServer.get<SiteInfoConfig>('/api/public/siteInfo');
 };
 
 export const putUserChatModel = (chatId: string, modelId: number) => {

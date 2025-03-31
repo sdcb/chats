@@ -45,3 +45,16 @@ WHERE [Id] = 1302;
 
 ALTER TABLE ChatShare ALTER COLUMN SnapshotTime DATETIME2 NOT NULL;
 ALTER TABLE ChatShare ALTER COLUMN CreatedAt DATETIME2 NOT NULL;
+
+UPDATE Config
+SET Value = 
+    JSON_MODIFY(
+        JSON_MODIFY(
+            '{}',
+            '$.customizedLine1', 
+            JSON_VALUE(Value, '$.companyName')
+        ),
+        '$.customizedLine2', 
+        JSON_VALUE(Value, '$.filingNumber')
+    )
+WHERE [Key] = 'siteInfo';
