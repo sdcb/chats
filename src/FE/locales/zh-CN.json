@@ -54,6 +54,7 @@
   "Share": "分享",
   "Close Shared": "关闭分享",
   "Copy": "复制",
+  "Clone": "克隆",
   "Change Model": "更改模型",
   "Regenerate": "重新生成",
   "Edit message": "编辑消息",
@@ -176,6 +177,7 @@
   "Your password": "用户密码",
   "Please enter you user name": "请输入你的用户名",
   "Please enter you password": "请输入你的密码",
+  "Please enter a name": "请输入一个名称",
   "Remember me": "记住我",
   "WeChat Login": "微信登录",
   "Login to your account": "登录",
@@ -393,5 +395,9 @@
   "Default": "默认",
   "Custom": "自定义",
   "Max Tokens": "最多 Tokens",
-  "Advanced Params": "高级参数"
+  "Advanced Params": "高级参数",
+  "Add a preset model group": "添加一个预设模型组",
+  "New preset model group": "新预设模型组",
+  "A new version is now available. Update for the latest features and improvements.": "新版本现已发布。 更新以获得最新功能和改进。",
+  "Go to upgrade": "去升级"
 }

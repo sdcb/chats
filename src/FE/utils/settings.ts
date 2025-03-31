@@ -1,3 +1,5 @@
+import { isMobile } from './common';
+
 const STORAGE_KEY = 'settings';
 
 export interface Settings {
@@ -6,7 +8,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS = {
-  showChatBar: true,
+  showChatBar: typeof window !== 'undefined'  && isMobile() ? false : true,
   showPromptBar: false,
 };
 

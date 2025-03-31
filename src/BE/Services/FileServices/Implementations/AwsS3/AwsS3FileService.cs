@@ -1,5 +1,6 @@
 ﻿using Amazon.S3;
 using Amazon.S3.Model;
+using System.Net;
 
 namespace Chats.BE.Services.FileServices.Implementations.AwsS3;
 
@@ -53,5 +54,15 @@ public class AwsS3FileService : IFileService
             ContentType = request.ContentType
         }, cancellationToken);
         return ssi.StorageKey;
+    }
+
+    public async Task<bool> Delete(string storageKey, CancellationToken cancellationToken)
+    {
+        DeleteObjectResponse resp = await _s3.DeleteObjectAsync(new DeleteObjectRequest
+        {
+            BucketName = _bucketName,
+            Key = storageKey
+        }, cancellationToken);
+        return resp.HttpStatusCode == HttpStatusCode.NoContent; // to be confirmed
     }
 }

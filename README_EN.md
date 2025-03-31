@@ -142,14 +142,24 @@ C:\Users\ZhouJie\Downloads\chats-win-x64>dir
 
 ### Supported LLMs
 
-- Azure OpenAI
-- Tencent HunYuan
-- 01.ai
-- Moonshot
-- OpenAI (or OpenAI API compatible APIs, like ollama)
-- Wenxin Qianfan
-- Aliyun DashScope
-- Xunfei Sparkdesk
-- DeepSeek
-- x.AI
-- GitHub Models
+| Id  | Name             | Host                                                     | Comment                               |
+| --- | ---------------- | -------------------------------------------------------- | ------------------------------------- |
+| 0   | Test             | null                                                     |                                       |
+| 1   | Azure OpenAI     | https://<resource-name>.openai.azure.com/                |                                       |
+| 2   | Tencent Hunyuan  | https://api.hunyuan.cloud.tencent.com/v1                 |                                       |
+| 3   | 01.ai            | https://api.lingyiwanwu.com/v1                           |                                       |
+| 4   | Moonshot         | https://api.moonshot.cn/v1                               |                                       |
+| 5   | OpenAI           | https://api.openai.com/v1                                |                                       |
+| 6   | Wenxin Qianfan   | https://qianfan.baidubce.com/v2                          |                                       |
+| 7   | DashScope        | https://dashscope.aliyuncs.com/compatible-mode/v1        |                                       |
+| 8   | Xunfei SparkDesk | https://spark-api-open.xf-yun.com/v1                     |                                       |
+| 9   | Zhipu AI         | https://open.bigmodel.cn/api/paas/v4/                    |                                       |
+| 10  | DeepSeek         | https://api.deepseek.com/v1                              |                                       |
+| 11  | x.ai             | https://api.x.ai/v1                                      |                                       |
+| 12  | Github Models    | https://models.inference.ai.azure.com                    |                                       |
+| 13  | Google AI        | https://generativelanguage.googleapis.com/v1beta/openai/ |                                       |
+| 14  | Ollama           | http://localhost:11434/v1                                | Any API that supports the OpenAI protocol can be used with Ollama |
+| 15  | MiniMax          | https://api.minimax.chat/v1                              |                                       |
+| 16  | Doubao           | https://ark.cn-beijing.volces.com/api/v3/                |                                       |
+| 17  | SiliconFlow      | https://api.siliconflow.cn/v1                            |                                       |
+| 18  | OpenRouter       | https://openrouter.ai/api/v1                             |                                       |

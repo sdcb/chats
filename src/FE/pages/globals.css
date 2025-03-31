@@ -98,8 +98,8 @@ html {
 .custom-scrollbar::-webkit-scrollbar {
   background-color: var(--scrollbar);
   border-radius   : 10px;
-  width           : 2px;
-  height          : 2px;
+  width           : 6px;
+  height          : 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -109,7 +109,7 @@ html {
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   border-radius: 10px;
-  background   : hsl(var(--foreground));
+  background   : hsl(var(--muted));
 }
 
 @layer utilities {
@@ -136,7 +136,7 @@ html {
 
 @media (max-width: 640px) {
   .prose {
-    width    : 344px;
+    width: 344px;
   }
 }
 
@@ -174,4 +174,14 @@ select:focus {
 .no-spin-button::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin            : 0;
+}
+
+/* chat-container */
+.chat-container {
+  width: auto;
+}
+@media (width < 640px) {
+  .chat-container {
+    width: 100vw !important;
+  }
 }

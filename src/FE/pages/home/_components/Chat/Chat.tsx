@@ -54,7 +54,7 @@ import {
 import HomeContext from '../../_contexts/home.context';
 import ChatHeader from './ChatHeader';
 import ChatInput from './ChatInput';
-import ChatModelSetting from './ChatModelSetting';
+import ChatPresetList from './ChatPresetList';
 import ChatMessageMemoized from './MemoizedChatMessage';
 import NoModel from './NoModel';
 
@@ -66,6 +66,7 @@ import {
   putResponseMessageEditAndSaveNew,
   putResponseMessageEditInPlace,
 } from '@/apis/clientApis';
+import { cn } from '@/lib/utils';
 
 const Chat = memo(() => {
   const { t } = useTranslation();
@@ -76,7 +77,8 @@ const Chat = memo(() => {
       messages,
       selectedMessages,
       models,
-      defaultPrompt,
+      showChatBar,
+      showPromptBar,
     },
 
     hasModel,
@@ -676,13 +678,26 @@ const Chat = memo(() => {
   return (
     <div className="relative flex-1">
       <div
-        className="relative max-h-full overflow-x-hidden scroll-container"
+        className="relative max-h-full overflow-x-hidden scroll-container w-full"
         ref={chatContainerRef}
         onScroll={handleScroll}
       >
-        {selectedChat && <ChatHeader />}
+        <div
+          className={cn('sm:w-full', 'chat-container')}
+          style={{
+            width: `calc(100vw - ${
+              showChatBar && showPromptBar
+                ? 520
+                : showChatBar || showPromptBar
+                ? 260
+                : 0
+            }px)`,
+          }}
+        >
+          {selectedChat && <ChatHeader />}
 
-        {/* {selectedChat && selectedMessages.length === 0 && <ChatModelSetting />} */}
+          {selectedChat && selectedMessages.length === 0 && <ChatPresetList />}
+        </div>
 
         <ChatMessageMemoized
           selectedChat={selectedChat}

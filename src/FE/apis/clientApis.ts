@@ -5,10 +5,10 @@ import { IChatMessage } from '@/types/chatMessage';
 import {
   ChatResult,
   GetBalance7DaysUsageResult,
+  GetChatPresetResult,
   GetChatShareResult,
   GetChatsParams,
   GetLoginProvidersResult,
-  GetSiteInfoResult,
   GetUserApiKeyResult,
   GetUserBalanceResult,
   GetUserChatGroupWithMessagesResult as GetUserChatGroupWithChatsResult,
@@ -22,6 +22,7 @@ import {
   PostUserPassword,
   PutChatGroupParams,
   PutChatParams,
+  PutChatPresetParams,
   PutChatSpanParams,
   PutMoveChatGroupParams,
   PutResponseMessageEditAndSaveNewParams,
@@ -30,6 +31,7 @@ import {
   SingInParams,
   SingInResult,
 } from '@/types/clientApis';
+import { SiteInfoConfig } from '@/types/config';
 import { IChatGroup } from '@/types/group';
 import { PageResult } from '@/types/page';
 import { Prompt, PromptSlim } from '@/types/prompt';
@@ -53,7 +55,8 @@ export const getChatsByPaging = (
   const { groupId, query, page, pageSize } = params;
   const fetchService = useFetch();
   return fetchService.get(
-    `/api/user/chats?groupId=${groupId || ''
+    `/api/user/chats?groupId=${
+      groupId || ''
     }&page=${page}&pageSize=${pageSize}&query=${query || ''}`,
   );
 };
@@ -207,7 +210,7 @@ export const getLoginProviders = () => {
 
 export const getSiteInfo = () => {
   const fetchServer = useFetch();
-  return fetchServer.get<GetSiteInfoResult>('/api/public/siteInfo');
+  return fetchServer.get<SiteInfoConfig>('/api/public/siteInfo');
 };
 
 export const putUserChatModel = (chatId: string, modelId: number) => {
@@ -269,11 +272,12 @@ export const putUserChatSpan = (
 export const switchUserChatSpanModel = (
   chatId: string,
   spanId: number,
-  modelId: number
+  modelId: number,
 ) => {
   const fetchServer = useFetch();
   return fetchServer.post<PostUserChatSpanResult>(
-    `/api/chat/${chatId}/span/${spanId}/switch-model/${modelId}`, {},
+    `/api/chat/${chatId}/span/${spanId}/switch-model/${modelId}`,
+    {},
   );
 };
 
@@ -288,7 +292,8 @@ export const getUserChatGroupWithMessages = (
   const { query, page, pageSize } = params;
   const fetchServer = useFetch();
   return fetchServer.get(
-    `/api/chat/group/with-chats?page=${page}&pageSize=${pageSize}&query=${query || ''
+    `/api/chat/group/with-chats?page=${page}&pageSize=${pageSize}&query=${
+      query || ''
     }`,
   );
 };
@@ -424,4 +429,38 @@ export const putChatSpan = (
   return fetchServer.put(`/api/chat/${encryptedChatId}/span/${spanId}`, {
     body: params,
   });
+};
+
+export const getChatPreset = () => {
+  const fetchServer = useFetch();
+  return fetchServer.get<GetChatPresetResult[]>(`/api/chat-preset`);
+};
+
+export const postChatPreset = (params: PutChatPresetParams) => {
+  const fetchServer = useFetch();
+  return fetchServer.post<GetChatPresetResult>(`/api/chat-preset`, {
+    body: params,
+  });
+};
+
+export const putChatPreset = (id: string, params: PutChatPresetParams) => {
+  const fetchServer = useFetch();
+  return fetchServer.put<GetChatPresetResult>(`/api/chat-preset/${id}`, {
+    body: params,
+  });
+};
+
+export const deleteChatPreset = (id: string) => {
+  const fetchServer = useFetch();
+  return fetchServer.delete<GetChatPresetResult>(`/api/chat-preset/${id}`);
+};
+
+export const postCloneChatPreset = (id: string) => {
+  const fetchServer = useFetch();
+  return fetchServer.post(`/api/chat-preset/${id}/clone`);
+};
+
+export const postApplyChatPreset = (chatId: string, presetId: string) => {
+  const fetchServer = useFetch();
+  return fetchServer.post(`/api/chat/${chatId}/span/apply-preset/${presetId}`);
 };

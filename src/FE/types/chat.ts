@@ -96,3 +96,6 @@ export enum CHATS_SELECT_TYPE {
   DELETE = 2,
   ARCHIVE = 3,
 }
+
+export const MAX_SELECT_MODEL_COUNT = 10;
+export const MAX_CREATE_PRESET_CHAT_COUNT = 24;

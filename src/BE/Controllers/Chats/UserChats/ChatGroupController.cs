@@ -38,7 +38,7 @@ public class ChatGroupController(ChatsDB db, CurrentUser user, IUrlEncryptionSer
     }
 
     [HttpGet("with-chats")]
-    public async Task<ActionResult<ChatGroupDtoWithChats[]>> ListGroupsWithChats([FromQuery] PagingRequest req, [FromServices] IServiceScopeFactory scopeFactory, CancellationToken cancellationToken)
+    public async Task<ActionResult<ChatGroupDtoWithChats[]>> ListGroupsWithChats([FromQuery] QueryPagingRequest req, [FromServices] IServiceScopeFactory scopeFactory, CancellationToken cancellationToken)
     {
         List<ChatGroupDtoWithChats> groups = await UserOrderedChatGroups
             .Select(x => new ChatGroupDtoWithChats

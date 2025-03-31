@@ -18,6 +18,7 @@ import {
 import FileServiceModal from '../_components/Files/FileServiceModal';
 
 import { getFileServices } from '@/apis/adminApis';
+import { feFileServiceTypes } from '@/types/file';
 
 export default function FileService() {
   const { t } = useTranslation();
@@ -89,7 +90,7 @@ export default function FileService() {
                   ></div>
                   {item.name}
                 </TableCell>
-                <TableCell>{item.fileServiceTypeId}</TableCell>
+                <TableCell>{t(feFileServiceTypes[item.fileServiceTypeId].name)}</TableCell>
                 <TableCell>{item.fileCount}</TableCell>
                 <TableCell>
                   {new Date(item.updatedAt).toLocaleString()}

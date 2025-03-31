@@ -33,7 +33,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
             return NotFound();
         }
 
-        if (chat.ChatSpans.Count >= 10)
+        if (chat.ChatSpans.Count >= CreateChatSpanRequest.MaxSpanCount)
         {
             return BadRequest("Max span count reached");
         }
@@ -50,7 +50,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         ChatSpan toAdd = new()
         {
             ChatId = chat.Id,
-            SpanId = FindAvailableSpanId(chat.ChatSpans),
+            SpanId = CreateChatSpanRequest.FindAvailableSpanId([.. chat.ChatSpans.Select(x => x.SpanId)]),
             Enabled = true,
             ChatConfig = new ChatConfig
             {
@@ -68,37 +68,6 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         chat.ChatSpans.Add(toAdd);
         await db.SaveChangesAsync(cancellationToken);
         return Created(default(string), ChatSpanDto.FromDB(toAdd));
-    }
-
-    /// <summary>
-    /// Finds the next available SpanId for a new ChatSpan.
-    /// </summary>
-    /// <param name="spans">The SpanId desc ordered collection of existing ChatSpans.</param>
-    /// <returns>The next available SpanId.</returns>
-    static byte FindAvailableSpanId(ICollection<ChatSpan> spans)
-    {
-        if (spans.Count == 0)
-        {
-            return 0;
-        }
-
-        // Suggest the next SpanId based on the last SpanId in the collection
-        byte suggested = spans.First().SpanId;
-        if (suggested < 255)
-        {
-            // If the suggested SpanId is less than 255, increment it by 1
-            return (byte)(suggested + 1);
-        }
-        else
-        {
-            // If the suggested SpanId is 255, find the first available SpanId starting from 0
-            byte spanId = 0;
-            while (spans.Any(x => x.SpanId == spanId))
-            {
-                spanId++;
-            }
-            return spanId;
-        }
     }
 
     [HttpPost("{spanId:int}/enable")]
@@ -175,7 +144,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         int chatId = idEncryption.DecryptChatId(encryptedChatId);
         ChatSpan? span = await db.ChatSpans
             .Include(x => x.ChatConfig)
-            .FirstOrDefaultAsync(x =>x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id && !x.Chat.IsArchived, cancellationToken);
+            .FirstOrDefaultAsync(x => x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id && !x.Chat.IsArchived, cancellationToken);
         if (span == null)
         {
             return NotFound();
@@ -215,5 +184,72 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         }
         await db.SaveChangesAsync(cancellationToken);
         return NoContent();
+    }
+
+    [HttpPost("apply-preset/{presetId}")]
+    public async Task<ActionResult<ChatSpanDto[]>> ApplyPreset(string encryptedChatId, string presetId,
+        [FromServices] UserModelManager userModelManager,
+        CancellationToken cancellationToken)
+    {
+        int chatId = idEncryption.DecryptChatId(encryptedChatId);
+        Chat? chat = await db.Chats
+            .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig).ThenInclude(x => x.ChatSpans)
+            .FirstOrDefaultAsync(x => x.Id == chatId && x.UserId == currentUser.Id && !x.IsArchived, cancellationToken);
+        if (chat == null)
+        {
+            return NotFound();
+        }
+
+        ChatPreset? preset = await db.ChatPresets
+            .Include(x => x.ChatPresetSpans).ThenInclude(x => x.ChatConfig)
+            .FirstOrDefaultAsync(x => x.Id == idEncryption.DecryptChatPresetId(presetId) && x.UserId == currentUser.Id, cancellationToken);
+        if (preset == null)
+        {
+            return NotFound();
+        }
+
+        Dictionary<short, UserModel> userModels = await userModelManager.GetUserModels(currentUser.Id, [.. preset.ChatPresetSpans.Select(x => x.ChatConfig.ModelId)], cancellationToken);
+        if (userModels.Count == 0)
+        {
+            return BadRequest("No models available");
+        }
+
+        Dictionary<byte, ChatSpan> dbSpans = chat.ChatSpans.ToDictionary(x => x.SpanId, v => v);
+        Dictionary<byte, ChatPresetSpan> presetSpans = preset.ChatPresetSpans.ToDictionary(x => x.SpanId, v => v);
+        HashSet<byte> allSpans = [.. preset.ChatPresetSpans.Select(x => x.SpanId), .. dbSpans.Keys];
+        // Compare and update/insert/delete spans
+        foreach (byte spanId in allSpans)
+        {
+            ChatSpan? existingSpan = dbSpans.GetValueOrDefault(spanId);
+            ChatPresetSpan? toUpdate = presetSpans.GetValueOrDefault(spanId);
+
+            if (existingSpan != null && toUpdate != null)
+            {
+                // update existing span
+                toUpdate.ApplyTo(existingSpan, userModels[toUpdate.ChatConfig.ModelId].Model);
+            }
+            else if (existingSpan != null)
+            {
+                // delete existing span
+                chat.ChatSpans.Remove(existingSpan);
+                if (existingSpan.ChatConfig.ChatSpans.Count == 1)
+                {
+                    db.ChatConfigs.Remove(existingSpan.ChatConfig);
+                }
+            }
+            else if (toUpdate != null)
+            {
+                // insert new span
+                chat.ChatSpans.Add(toUpdate.ToChatSpan(userModels[toUpdate.ChatConfig.ModelId].Model, spanId));
+            }
+        }
+        if (db.ChangeTracker.HasChanges())
+        {
+            chat.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        ChatSpanDto[] result = [.. chat.ChatSpans.Select(ChatSpanDto.FromDB)];
+        return Ok(result);
     }
 }

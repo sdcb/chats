@@ -13,7 +13,7 @@ namespace Chats.BE.Controllers.Admin.AdminUser;
 public class AdminUserController(ChatsDB db, CurrentUser adminUser) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<PagedResult<AdminUserDto>>> GetUsers(PagingRequest pagingRequest, CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<AdminUserDto>>> GetUsers(QueryPagingRequest pagingRequest, CancellationToken cancellationToken)
     {
         IQueryable<User> query = db.Users
             .OrderByDescending(x => x.UpdatedAt);

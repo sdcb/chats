@@ -42,7 +42,7 @@ import {
   UserModelDisplayDto,
   ValidateModelParams,
 } from '@/types/adminApis';
-import { GetChatShareResult } from '@/types/clientApis';
+import { GetChatShareResult, GetChatVersionResult } from '@/types/clientApis';
 import { ChatModelFileConfig, DBModelProvider } from '@/types/model';
 import { PageResult } from '@/types/page';
 
@@ -381,9 +381,9 @@ export const getAdminMessage = (chatId: string) => {
   );
 };
 
-export const getChatsVersion = () => {
+export const postChatsVersion = () => {
   const fetchServer = useFetch();
-  return fetchServer.get<number>(`/api/version`);
+  return fetchServer.post<GetChatVersionResult>(`/api/version/check-update`);
 };
 
 export const defaultFileConfig: ChatModelFileConfig = {

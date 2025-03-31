@@ -4,7 +4,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { isMobile } from '@/utils/common';
 
-import { ChatStatus } from '@/types/chat';
+import { ChatStatus, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
 
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
@@ -27,16 +27,14 @@ import {
   postChatDisableSpan,
   postChatEnableSpan,
   postUserChatSpan,
-  putUserChatSpan,
   switchUserChatSpanModel,
 } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
 const ChatHeader = () => {
   const { t } = useTranslation();
-  const MAX_SELECT_MODEL_COUNT = 10;
   const {
-    state: { selectedChat, models, defaultPrompt, showChatBar },
+    state: { selectedChat, models, defaultPrompt, showChatBar, showPromptBar },
     chatDispatch,
   } = useContext(HomeContext);
 
@@ -72,23 +70,25 @@ const ChatHeader = () => {
   };
 
   const handleUpdateChatModel = async (spanId: number, modelId: number) => {
-    await switchUserChatSpanModel(selectedChat.id, spanId, modelId).then((data) => {
-      selectedChat.spans = selectedChat.spans.map((s) => {
-        if (s.spanId === spanId) {
-          return {
-            ...s,
-            enabled: data.enabled,
-            modelId: data.modelId,
-            modelName: data.modelName,
-            modelProviderId: data.modelProviderId,
-            temperature: data.temperature,
-            enableSearch: data.enableSearch,
-          };
-        }
-        return s;
-      });
-      chatDispatch(setSelectedChat(selectedChat));
-    });
+    await switchUserChatSpanModel(selectedChat.id, spanId, modelId).then(
+      (data) => {
+        selectedChat.spans = selectedChat.spans.map((s) => {
+          if (s.spanId === spanId) {
+            return {
+              ...s,
+              enabled: data.enabled,
+              modelId: data.modelId,
+              modelName: data.modelName,
+              modelProviderId: data.modelProviderId,
+              temperature: data.temperature,
+              enableSearch: data.enableSearch,
+            };
+          }
+          return s;
+        });
+        chatDispatch(setSelectedChat(selectedChat));
+      },
+    );
   };
 
   const AddBtnRender = () => (
@@ -137,7 +137,12 @@ const ChatHeader = () => {
   return (
     <>
       <div className="sticky top-0 z-10 text-sm bg-background right-0">
-        <div className="flex justify-between items-center w-full">
+        <div
+          className={cn(
+            'flex justify-between select-none items-center custom-scrollbar overflow-x-auto',
+            `w-[calc(100vw-${showChatBar ? 260 : 0}px)]`,
+          )}
+        >
           <div
             className={cn(
               'flex justify-start ml-24 h-12 items-center',
@@ -146,14 +151,14 @@ const ChatHeader = () => {
           >
             <div
               className={cn(
-                'flex gap-2 items-center overflow-x-auto max-w-[calc(100vw-98px)]',
+                'flex gap-2 items-center',
                 selectedChat.status === ChatStatus.Chatting &&
                   'pointer-events-none',
               )}
             >
               {selectedChat.spans.map((span) => (
                 <div
-                  className="flex bg-muted rounded-md h-10"
+                  className="flex bg-muted rounded-md h-10 flex-shrink-0"
                   key={'chat-header-' + span.spanId}
                 >
                   {isMobile() ? (

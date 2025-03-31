@@ -4,7 +4,7 @@ namespace Chats.BE.DB.Init;
 
 public static class DBConfigure
 {
-    public static void Configure(this DbContextOptionsBuilder dbContextOptionsBuilder, IConfiguration configuration, IWebHostEnvironment environment)
+    public static void Configure(this DbContextOptionsBuilder dbContextOptionsBuilder, IConfiguration configuration, IHostEnvironment environment)
     {
         string? dbType = configuration["DBType"];
         string? connectionString = configuration.GetConnectionString("ChatsDB") ?? throw new Exception("ConnectionStrings:ChatsDB not found");

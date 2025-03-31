@@ -2,7 +2,7 @@
   <Namespace>System.Threading.Tasks</Namespace>
 </Query>
 
-string projectFolder = new FileInfo(Util.CurrentQueryPath).Directory!.Parent!.ToString();
+string projectFolder = Path.Combine(new FileInfo(Util.CurrentQueryPath).Directory!.Parent!.Parent!.ToString(), "BE");
 string provider = "Microsoft.EntityFrameworkCore.SqlServer";
 
 Directory.SetCurrentDirectory(projectFolder);

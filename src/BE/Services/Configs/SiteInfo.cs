@@ -4,9 +4,9 @@ namespace Chats.BE.Services.Configs;
 
 public record SiteInfo
 {
-    [JsonPropertyName("filingNumber")]
-    public string? WebsiteRegistrationNumber { get; init; }
+    [JsonPropertyName("customizedLine1")]
+    public string? CustomizedLine1 { get; init; }
 
-    [JsonPropertyName("companyName")]
-    public string? CompanyName { get; init; }
+    [JsonPropertyName("customizedLine2")]
+    public string? CustomizedLine2 { get; init; }
 }

@@ -52,11 +52,6 @@ export interface GetLoginProvidersResult {
   };
 }
 
-export interface GetSiteInfoResult {
-  filingNumber: string;
-  companyName: string;
-}
-
 export interface GetChatsParams extends Paging {
   groupId: string | null;
   query?: string;
@@ -209,6 +204,12 @@ export interface GetChatShareResult {
   messages: IChatMessage[];
 }
 
+export interface GetChatVersionResult {
+  hasNewVersion: boolean;
+  tagName: string;
+  currentVersion: number;
+}
+
 export interface PutResponseMessageContent {
   text?: string;
   fileIds?: string[];
@@ -231,6 +232,28 @@ export interface PutResponseMessageEditInPlaceParams {
 }
 
 export interface PutChatSpanParams {
+  modelId: number;
+  enabled: boolean;
+  systemPrompt: string;
+  temperature?: number | null;
+  webSearchEnabled?: boolean;
+  maxOutputTokens: number | null;
+  reasoningEffort?: number | null;
+}
+
+export interface GetChatPresetResult {
+  id: string;
+  name: string;
+  updatedAt: string;
+  spans: ChatSpanDto[];
+}
+
+export interface PutChatPresetParams {
+  name: string;
+  spans: PutChatPresetSpanParams[];
+}
+
+export interface PutChatPresetSpanParams {
   modelId: number;
   enabled: boolean;
   systemPrompt: string;

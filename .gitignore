@@ -61,3 +61,5 @@ logs.txt
 /src/BE/AppData/*
 /eng/ReleaseWebhook/bin
 /eng/ReleaseWebhook/obj
+/AzureFileMigrator/bin
+/AzureFileMigrator/obj

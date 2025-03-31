@@ -4,8 +4,8 @@ export enum GlobalConfigKeys {
 }
 
 export interface SiteInfoConfig {
-  filingNumber: string;
-  companyName: string;
+  customizedLine1: string;
+  customizedLine2: string;
 }
 
 export const GlobalDefaultConfigs = {
@@ -17,7 +17,7 @@ export const GlobalDefaultConfigs = {
     templateId: '',
   },
   siteInfo: {
-    filingNumber: '',
-    companyName: '',
+    customizedLine1: '',
+    customizedLine2: '',
   },
 };

@@ -84,4 +84,44 @@ public static class UrlEncryptionServiceExtensions
     {
         return that.DecryptAsInt32(encryptedChatShareId, EncryptionPurpose.ChatShareId);
     }
+
+    public static string EncryptChatPresetId(this IUrlEncryptionService that, int chatPresetId)
+    {
+        return that.Encrypt(chatPresetId, EncryptionPurpose.ChatPresetId);
+    }
+
+    public static int DecryptChatPresetId(this IUrlEncryptionService that, string encryptedChatPresetId)
+    {
+        return that.DecryptAsInt32(encryptedChatPresetId, EncryptionPurpose.ChatPresetId);
+    }
+
+    public static string EncryptApiKeyId(this IUrlEncryptionService that, int apiKeyId)
+    {
+        return that.Encrypt(apiKeyId, EncryptionPurpose.ApiKeyId);
+    }
+
+    public static string? EncryptApiKeyId(this IUrlEncryptionService that, int? apiKeyId)
+    {
+        return apiKeyId == null ? null : that.Encrypt(apiKeyId.Value, EncryptionPurpose.ApiKeyId);
+    }
+
+    public static int DecryptApiKeyId(this IUrlEncryptionService that, string encryptedApiKeyId)
+    {
+        return that.DecryptAsInt32(encryptedApiKeyId, EncryptionPurpose.ApiKeyId);
+    }
+
+    public static string EncryptUserId(this IUrlEncryptionService that, int userId)
+    {
+        return that.Encrypt(userId, EncryptionPurpose.UserId);
+    }
+
+    public static int DecryptUserId(this IUrlEncryptionService that, string encryptedUserId)
+    {
+        return that.DecryptAsInt32(encryptedUserId, EncryptionPurpose.UserId);
+    }
+
+    public static int? DecryptUserIdOrNull(this IUrlEncryptionService that, string? encryptedUserId)
+    {
+        return encryptedUserId == null ? null : that.DecryptUserId(encryptedUserId);
+    }
 }

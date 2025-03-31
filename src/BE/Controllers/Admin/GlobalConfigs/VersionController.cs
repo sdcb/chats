@@ -17,9 +17,20 @@ public class VersionController : ControllerBase
     }
 
     [HttpPost("check-update")]
-    public async Task<ActionResult<CheckUpdateResponse>> CheckUpdate(CancellationToken cancellationToken)
+    public async Task<ActionResult<CheckUpdateResponse>> CheckUpdate(
+        [FromServices] ILogger<VersionController> logger,
+        CancellationToken cancellationToken)
     {
-        string tagName = await GitHubReleaseChecker.SdcbChats.GetLatestReleaseTagNameAsync(cancellationToken);
+        string tagName = "r-" + buildVersion;
+        try
+        {
+            tagName = await GitHubReleaseChecker.SdcbChats.GetLatestReleaseTagNameAsync(cancellationToken);
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning(e, "Failed to get latest release tag name from GitHub.");
+        }
+
         bool hasNewVersion = GitHubReleaseChecker.IsNewVersionAvailableAsync(tagName, buildVersion);
         return Ok(new CheckUpdateResponse
         {

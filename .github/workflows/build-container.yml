@@ -245,8 +245,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - id: chats-win-x64
-            args: -r win-x64 --self-contained true /p:PublishReadyToRun=false /p:PublishSingleFile=false
+          - id: chats
     if: needs.build-fe.outputs.is_release == 'false'
     runs-on: ubuntu-latest
     steps:

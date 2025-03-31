@@ -7,4 +7,7 @@ public enum EncryptionPurpose
     MessageId,
     ChatGroupId,
     ChatShareId,
+    ChatPresetId,
+    ApiKeyId, 
+    UserId,
 }

@@ -1,5 +1,6 @@
 ﻿using Chats.BE.Controllers.Public.AccountLogin.Dtos;
 using Chats.BE.DB;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -7,7 +8,7 @@ using System.Security.Cryptography;
 
 namespace Chats.BE.Services.Sessions;
 
-public class SessionManager(JwtKeyManager jwtKeyManager, IConfiguration configuration)
+public class SessionManager(JwtKeyManager jwtKeyManager, IConfiguration configuration, IUrlEncryptionService idEncryption)
 {
     private const string ValidIssuer = "chats";
     private const string ValidAudience = "chats";
@@ -16,7 +17,7 @@ public class SessionManager(JwtKeyManager jwtKeyManager, IConfiguration configur
     public Task<SessionEntry> GetCachedUserInfoBySession(string jwt, CancellationToken _ = default)
     {
         ClaimsPrincipal claims = ValidateJwt(jwt, GetSecurityKey());
-        return Task.FromResult(SessionEntry.FromClaims(claims));
+        return Task.FromResult(SessionEntry.FromClaims(claims, idEncryption));
     }
 
     private static ClaimsPrincipal ValidateJwt(string jwt, SecurityKey signingKey)
@@ -61,13 +62,11 @@ public class SessionManager(JwtKeyManager jwtKeyManager, IConfiguration configur
             UserId = user.Id,
             UserName = user.DisplayName,
             Role = user.Role,
-            Sub = user.Sub,
-            Provider = user.Provider
         };
         JwtSecurityToken token = new(
             issuer: ValidIssuer,
             audience: ValidAudience,
-            claims: sessionEntry.ToClaims(),
+            claims: sessionEntry.ToClaims(idEncryption),
             expires: DateTime.UtcNow.Add(TokenValidPeriod),
             signingCredentials: cred);
 

@@ -1,5 +1,6 @@
 ﻿using Chats.BE.Services.Common;
 using Chats.BE.Services.OpenAIApiKeySession;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
@@ -11,7 +12,8 @@ public class OpenAIApiKeyAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory loggerFactory,
     OpenAIApiKeySessionManager sessionManager,
-    UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, loggerFactory, encoder)
+    UrlEncoder encoder, 
+    IUrlEncryptionService idEncryption) : AuthenticationHandler<AuthenticationSchemeOptions>(options, loggerFactory, encoder)
 {
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -35,7 +37,7 @@ public class OpenAIApiKeyAuthenticationHandler(
             return AuthenticateResult.Fail($"API Key expired: {apiKey}");
         }
 
-        ClaimsIdentity identity = new(apiKeyInfo.ToClaims(), Scheme.Name);
+        ClaimsIdentity identity = new(apiKeyInfo.ToClaims(idEncryption), Scheme.Name);
         ClaimsPrincipal principal = new(identity);
         AuthenticationTicket ticket = new(principal, Scheme.Name);
 

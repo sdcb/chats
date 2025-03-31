@@ -3,20 +3,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chats.BE.Services;
 
-public class ChatConfigService(IServiceScopeFactory serviceScopeFactory, ILogger<ChatConfigService> logger)
+public class ChatConfigService(ChatsDB db, ILogger<ChatConfigService> logger)
 {
     public async Task<ChatConfig> GetOrCreateChatConfig(ChatConfig raw, CancellationToken cancellationToken)
     {
-        using IServiceScope scope = serviceScopeFactory.CreateScope();
-        using ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
-
         long hashCode = raw.GenerateDBHashCode();
-        ChatConfig[] matchingConfigs = await db.ChatConfigs
-            .Where(c => c.HashCode == hashCode && c.ModelId == raw.ModelId)
+        ChatConfig? matchingConfig = await db.ChatConfigs
+            .Where(c => 
+                c.HashCode == hashCode && 
+                c.ModelId == raw.ModelId && 
+                c.SystemPrompt == raw.SystemPrompt && 
+                c.WebSearchEnabled == raw.WebSearchEnabled && 
+                c.ReasoningEffort == raw.ReasoningEffort && 
+                c.Temperature == raw.Temperature)
             .OrderByDescending(x => x.Id)
-            .Take(5)
-            .ToArrayAsync(cancellationToken);
-        ChatConfig? matchingConfig = matchingConfigs.FirstOrDefault(c => c.ContentEquals(raw));
+            .FirstOrDefaultAsync(cancellationToken);
         if (matchingConfig is not null)
         {
             return matchingConfig;

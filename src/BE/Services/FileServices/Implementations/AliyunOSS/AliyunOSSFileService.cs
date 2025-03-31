@@ -1,4 +1,5 @@
 ﻿using Aliyun.OSS;
+using System.Net;
 
 namespace Chats.BE.Services.FileServices.Implementations.AliyunOSS;
 
@@ -24,5 +25,12 @@ public class AliyunOSSFileService(AliyunOssConfig config) : IFileService
         SuggestedStorageInfo ssi = SuggestedStorageInfo.FromFileName(request.FileName);
         _ = _oss.PutObject(config.Bucket, ssi.StorageKey, request.Stream);
         return Task.FromResult(ssi.StorageKey);
+    }
+
+    public Task<bool> Delete(string storageKey, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        DeleteObjectResult r = _oss.DeleteObject(config.Bucket, storageKey);
+        return Task.FromResult(r.HttpStatusCode == HttpStatusCode.NoContent);
     }
 }

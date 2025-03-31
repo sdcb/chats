@@ -53,8 +53,14 @@ const ChatModelSettingModal = (props: Props) => {
 
   const { t } = useTranslation();
 
-  const onChangeModel = (modelId: number, modelName: string) => {
-    setSpan({ ...span!, modelId, modelName });
+  const onChangeModel = (model: AdminModelDto) => {
+    setModel(modelMap[model?.modelId]);
+    setSpan({
+      ...span!,
+      modelId: model.modelId,
+      modelName: model.name,
+      modelProviderId: model.modelProviderId,
+    });
   };
 
   const onChangePrompt = (prompt: Prompt) => {
@@ -134,7 +140,7 @@ const ChatModelSettingModal = (props: Props) => {
                   }
                   hideIcon={true}
                   onChangeModel={(model) => {
-                    onChangeModel(model.modelId, model.name);
+                    onChangeModel(model);
                   }}
                 />
                 <ChatModelInfo modelId={span.modelId} />
@@ -185,7 +191,12 @@ const ChatModelSettingModal = (props: Props) => {
                     )}
                   </div>
                 </div>
-                <div className={cn('hidden', isShowAdvParams && 'flex flex-col gap-2')}>
+                <div
+                  className={cn(
+                    'hidden',
+                    isShowAdvParams && 'flex flex-col gap-2',
+                  )}
+                >
                   <ModelParams
                     label={t('Temperature')}
                     isExpand={span.temperature !== null}

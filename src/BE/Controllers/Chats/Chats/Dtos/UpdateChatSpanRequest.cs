@@ -29,7 +29,7 @@ public record UpdateChatSpanRequest
 
     public void ApplyTo(ChatSpan span)
     {
-        span.Enabled = span.Enabled;
+        span.Enabled = Enabled;
 
         ChatConfig config = span.ChatConfig ?? throw new InvalidOperationException("ChatSpan.ChatConfig is null");
         config.ModelId = ModelId;
@@ -38,5 +38,47 @@ public record UpdateChatSpanRequest
         config.WebSearchEnabled = WebSearchEnabled;
         config.MaxOutputTokens = MaxOutputTokens;
         config.ReasoningEffort = (byte)ReasoningEffort;
+    }
+
+    public void ApplyTo(ChatPresetSpan span, Model model)
+    {
+        if (model.Id != ModelId)
+        {
+            throw new ArgumentException("ModelId does not match the provided model", nameof(ModelId));
+        }
+
+        span.Enabled = Enabled;
+
+        ChatConfig config = span.ChatConfig ?? throw new InvalidOperationException("ChatPresetSpan.ChatConfig is null");
+        config.ModelId = ModelId;
+        config.SystemPrompt = string.IsNullOrEmpty(SystemPrompt) ? null : SystemPrompt;
+        config.Temperature = Temperature;
+        config.WebSearchEnabled = WebSearchEnabled;
+        config.MaxOutputTokens = MaxOutputTokens;
+        config.ReasoningEffort = (byte)ReasoningEffort;
+    }
+
+    public ChatPresetSpan ToDB(Model model, byte spanId)
+    {
+        if (model.Id != ModelId)
+        {
+            throw new ArgumentException("ModelId does not match the provided model", nameof(ModelId));
+        }
+
+        return new ChatPresetSpan()
+        {
+            SpanId = spanId, 
+            Enabled = Enabled,
+            ChatConfig = new ChatConfig()
+            {
+                ModelId = ModelId,
+                Model = model,
+                SystemPrompt = string.IsNullOrEmpty(SystemPrompt) ? null : SystemPrompt,
+                Temperature = Temperature,
+                WebSearchEnabled = WebSearchEnabled,
+                MaxOutputTokens = MaxOutputTokens,
+                ReasoningEffort = (byte)ReasoningEffort,
+            },
+        };
     }
 }

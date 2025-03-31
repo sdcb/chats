@@ -5,7 +5,7 @@ namespace Chats.BE.Services;
 
 public class HostUrlService(IHttpContextAccessor _ctx)
 {
-    public string GetBEUrl()
+    public virtual string GetBEUrl()
     {
         HttpRequest request = _ctx.HttpContext!.Request;
         IHeaderDictionary headers = request.Headers;
@@ -18,7 +18,7 @@ public class HostUrlService(IHttpContextAccessor _ctx)
         return url;
     }
 
-    public string GetFEUrl()
+    public virtual string GetFEUrl()
     {
         HttpRequest request = _ctx.HttpContext!.Request;
         IHeaderDictionary headers = request.Headers;
@@ -26,7 +26,7 @@ public class HostUrlService(IHttpContextAccessor _ctx)
         return origin;
     }
 
-    public string GetKeycloakSsoRedirectUrl()
+    public virtual string GetKeycloakSsoRedirectUrl()
     {
         return $"{GetFEUrl()}/authorizing?provider={KnownLoginProviders.Keycloak}";
     }
