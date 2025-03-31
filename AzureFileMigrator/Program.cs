@@ -44,19 +44,19 @@ List<File> files = db.Files
     .Include(x => x.FileContentType)
     .Where(x => x.FileService.FileServiceTypeId == (byte)DBFileServiceType.AzureBlobStorage)
     .OrderByDescending(x => x.Id)
-    .Take(1)
     .ToList();
 for (int i = 0; i < files.Count; i++)
 {
     File file = files[i];
     Console.Write($"Processing {i + 1}/{files.Count}: {file.FileName}...");
-    using Stream stream = await azureFileService.Download(file.StorageKey, default);
+    using Stream stream = await azureFileService.Download(file.StorageKey);
     string newStorageKey = await minioFileService.Upload(new FileUploadRequest()
     {
         ContentType = file.FileContentType.ContentType,
         FileName = file.FileName,
         Stream = stream
     }, default);
+    await azureFileService.Delete(file.StorageKey);
     file.FileServiceId = minioConfig.Id;
     file.StorageKey = newStorageKey;
     await db.SaveChangesAsync(default);
