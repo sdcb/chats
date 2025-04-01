@@ -27,7 +27,9 @@ import {
   ChatSpanStatus,
   ChatStatus,
   Content,
+  ImageDef,
   Message,
+  MessageContentType,
 } from '@/types/chat';
 import {
   IChatMessage,
@@ -134,10 +136,21 @@ const Chat = memo(() => {
     let messageList = selectedMsgs[messageCount];
     messageList.map((x) => {
       if (x.id === messageId) {
-        x.content.text += text;
+        const contentCount = x.content.length - 1;
+        if (
+          contentCount >= 0 &&
+          x.content[contentCount].$type === MessageContentType.text
+        ) {
+          x.content[contentCount].c += text;
+        } else {
+          x.content.push({ i: '', $type: MessageContentType.text, c: text });
+        }
+
         if (status) {
           x.status = status;
-          status === ChatSpanStatus.Failed && (x.content.error = text);
+          if (status === ChatSpanStatus.Failed) {
+            x.content.push({ i: '', $type: MessageContentType.error, c: text });
+          }
           if (status === ChatSpanStatus.None) {
             x.siblingIds.push(messageId);
             x.id = finalMessageId!;
@@ -150,25 +163,53 @@ const Chat = memo(() => {
     messageDispatch(setSelectedMessages(selectedMsgs));
   };
 
-  const changeSelectedResponseReason = (
+  const changeSelectedResponseFile = (
     selectedMsgs: IChatMessage[][],
     messageId: string,
-    text: string,
-    status?: ChatSpanStatus,
-    finalMessageId?: string,
+    text: ImageDef,
   ) => {
     const messageCount = selectedMsgs.length - 1;
     let messageList = selectedMsgs[messageCount];
     messageList.map((x) => {
       if (x.id === messageId) {
-        x.content.think += text;
-        if (status) {
-          x.status = status;
-          status === ChatSpanStatus.Failed && (x.content.error = text);
-          if (status === ChatSpanStatus.None) {
-            x.siblingIds.push(messageId);
-            x.id = finalMessageId!;
-          }
+        const contentCount = x.content.length - 1;
+        if (
+          contentCount >= 0 &&
+          x.content[contentCount].$type === MessageContentType.fileId
+        ) {
+          x.content[contentCount].c = text;
+        } else {
+          x.content.push({ i: '', $type: MessageContentType.fileId, c: text });
+        }
+      }
+      return x;
+    });
+    selectedMsgs.splice(messageCount, 1, messageList);
+    messageDispatch(setSelectedMessages(selectedMsgs));
+  };
+
+  const changeSelectedResponseReason = (
+    selectedMsgs: IChatMessage[][],
+    messageId: string,
+    text: string,
+  ) => {
+    const messageCount = selectedMsgs.length - 1;
+    let messageList = selectedMsgs[messageCount];
+    messageList.map((x) => {
+      if (x.id === messageId) {
+        x.status === ChatSpanStatus.Reasoning;
+        const contentCount = x.content.length - 1;
+        if (
+          contentCount >= 0 &&
+          x.content[contentCount].$type === MessageContentType.reasoning
+        ) {
+          x.content[contentCount].c += text;
+        } else {
+          x.content.push({
+            i: '',
+            $type: MessageContentType.reasoning,
+            c: text,
+          });
         }
       }
       return x;
@@ -219,18 +260,14 @@ const Chat = memo(() => {
       let responseMessages = generateResponseMessages(selectedChat, messageId);
       selectedMessageList.push(responseMessages);
       messageDispatch(setSelectedMessages(selectedMessageList));
-      const { text: contentText, fileIds } = message.content;
       let chatBody = {
         chatId,
         timezoneOffset: new Date().getTimezoneOffset(),
         parentAssistantMessageId: messageId || null,
-        userMessage: {
-          text: contentText,
-          fileIds: fileIds?.map((x) => x.id),
-        },
+        userMessage: message.content,
       };
 
-      const response = await fetch(`${getApiUrl()}/api/chats/general-chat`, {
+      const response = await fetch(`${getApiUrl()}/api/chats/general`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -309,16 +346,12 @@ const Chat = memo(() => {
     let responseMessages = generateResponseMessages(selectedChat, messageId);
     selectedMessageList.push(responseMessages);
     messageDispatch(setSelectedMessages(selectedMessageList));
-    const { text: contentText, fileIds } = message.content;
 
     let chatBody = {
       chatId,
       spanIds: chatSpans.map((x) => x.spanId),
       parentAssistantMessageId: messageId || null,
-      userMessage: {
-        text: contentText,
-        fileIds: fileIds?.map((x) => x.id),
-      },
+      userMessage: message.content,
       timezoneOffset: new Date().getTimezoneOffset(),
     };
 
@@ -381,12 +414,7 @@ const Chat = memo(() => {
       } else if (value.k === SseResponseKind.ReasoningSegment) {
         const { r: msg, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
-        changeSelectedResponseReason(
-          selectedMessageList,
-          msgId,
-          msg,
-          ChatSpanStatus.Thinking,
-        );
+        changeSelectedResponseReason(selectedMessageList, msgId, msg);
       } else if (value.k === SseResponseKind.Segment) {
         const { r: msg, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
@@ -560,7 +588,8 @@ const Chat = memo(() => {
     let data: PutResponseMessageEditAndSaveNewResult;
     const params = {
       messageId,
-      content: { ...content, fileIds: content.fileIds?.map((x) => x.id) || [] },
+      contentId: content.i,
+      c: content.c as string,
     };
     if (isCopy) {
       data = await putResponseMessageEditAndSaveNew(params);
@@ -572,7 +601,11 @@ const Chat = memo(() => {
 
     let msgs = messages.map((x) => {
       if (x.id === messageId && !isCopy) {
-        return { ...x, content, edited: true };
+        const newContent = x.content.map((c) => {
+          if (c.i === content.i) return content;
+          return c;
+        });
+        return { ...x, content: newContent, edited: true };
       }
       return x;
     });
@@ -587,17 +620,21 @@ const Chat = memo(() => {
           const msgSiblingIds = isCopy
             ? [...m.siblingIds, data.id]
             : m.siblingIds;
+          const newContent = m.content.map((c) => {
+            if (c.i === content.i) return content;
+            return c;
+          });
           copyMsg = {
             ...m,
             id: data?.id,
-            content,
+            content: newContent,
             edited: true,
             siblingIds: msgSiblingIds,
           };
 
           return {
             ...m,
-            content: isCopy ? m.content : content,
+            content: isCopy ? m.content : newContent,
             edited: true,
             siblingIds: msgSiblingIds,
           };
@@ -621,13 +658,18 @@ const Chat = memo(() => {
   ) => {
     const params = {
       messageId,
-      content: { ...content, fileIds: content.fileIds?.map((x) => x.id) || [] },
+      contentId: content.i,
+      c: content.c as string,
     };
     await putResponseMessageEditInPlace(params);
 
     const msgs = messages.map((x) => {
       if (x.id === messageId && x.role === ChatRole.User) {
-        return { ...x, content };
+        const newContent = x.content.map((c) => {
+          if (c.i === content.i) return content;
+          return c;
+        });
+        return { ...x, content: newContent };
       }
       return x;
     });
@@ -635,9 +677,13 @@ const Chat = memo(() => {
     const selectedMsgs = selectedMessages.map((msg) => {
       return msg.map((m) => {
         if (m.id === messageId && m.role === ChatRole.User) {
+          const newContent = m.content.map((c) => {
+            if (c.i === content.i) return content;
+            return c;
+          });
           return {
             ...m,
-            content,
+            content: newContent,
           };
         }
         return m;

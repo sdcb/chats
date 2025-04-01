@@ -13,7 +13,14 @@ import useTranslation from '@/hooks/useTranslation';
 import { isMobile } from '@/utils/common';
 import { formatPrompt } from '@/utils/promptVariable';
 
-import { ChatRole, ChatStatus, Content, ImageDef, Message } from '@/types/chat';
+import {
+  ChatRole,
+  ChatStatus,
+  Content,
+  ImageDef,
+  Message,
+  MessageContentType,
+} from '@/types/chat';
 import { Prompt } from '@/types/prompt';
 
 import {
@@ -57,11 +64,9 @@ const ChatInput = ({
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const promptListRef = useRef<HTMLUListElement | null>(null);
+  const [contentText, setContentText] = useState('');
+  const [contentFiles, setContentFiles] = useState<ImageDef[]>([]);
 
-  const [content, setContent] = useState<Content>({
-    text: '',
-    fileIds: [],
-  });
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
   const [showPromptList, setShowPromptList] = useState(false);
@@ -88,7 +93,7 @@ const ChatInput = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
-    setContent({ ...content, text: value });
+    setContentText(value);
     updatePromptListVisibility(value);
   };
 
@@ -97,12 +102,20 @@ const ChatInput = ({
       return;
     }
 
-    if (!content.text) {
+    if (!contentText) {
       toast.error(t('Please enter a message'));
       return;
     }
-    onSend({ role: ChatRole.User, content });
-    setContent({ text: '', fileIds: [] });
+    const fileIds = contentFiles.map((f) => ({
+      $type: MessageContentType.fileId,
+      c: f.id,
+    }));
+    onSend({
+      role: ChatRole.User,
+      content: [...fileIds, { $type: MessageContentType.text, c: contentText }],
+    });
+    setContentText('');
+    setContentFiles([]);
 
     if (window.innerWidth < 640 && textareaRef && textareaRef.current) {
       textareaRef.current.blur();
@@ -162,12 +175,8 @@ const ChatInput = ({
     if (parsedVariables.length > 0) {
       setIsModalVisible(true);
     } else {
-      const text = content.text?.replace(/\/\w*$/, formatted);
-
-      setContent({
-        ...content,
-        text,
-      });
+      const text = contentText?.replace(/\/\w*$/, formatted);
+      setContentText(text);
 
       updatePromptListVisibility(formatted);
     }
@@ -177,9 +186,8 @@ const ChatInput = ({
     const selectedPrompt = filteredPrompts[activePromptIndex];
     selectedPrompt &&
       getUserPromptDetail(selectedPrompt.id).then((data) => {
-        setContent((prevContent) => {
-          const newContent = prevContent.text?.replace(/\/\w*$/, data.content);
-          return { ...prevContent, text: newContent };
+        setContentText((prevContent) => {
+          return prevContent?.replace(/\/\w*$/, data.content);
         });
         handlePromptSelect(data);
         setShowPromptList(false);
@@ -187,12 +195,12 @@ const ChatInput = ({
   };
 
   const handleSubmit = (updatedVariables: string[]) => {
-    const newContent = content.text?.replace(/{{(.*?)}}/g, (_, variable) => {
+    const newContent = contentText?.replace(/{{(.*?)}}/g, (_, variable) => {
       const index = variables.indexOf(variable);
       return updatedVariables[index];
     });
 
-    setContent({ ...content, text: newContent });
+    setContentText(newContent);
 
     if (textareaRef && textareaRef.current) {
       textareaRef.current.focus();
@@ -201,7 +209,10 @@ const ChatInput = ({
 
   const canUploadFile = () => {
     return (
-      !uploading && (content?.fileIds?.length ?? 0) <= defaultFileConfig.count && selectedChat.spans.filter(x => modelMap[x.modelId]?.allowVision).length > 0
+      !uploading &&
+      contentFiles.length <= defaultFileConfig.count &&
+      selectedChat.spans.filter((x) => modelMap[x.modelId]?.allowVision)
+        .length > 0
     );
   };
 
@@ -215,11 +226,8 @@ const ChatInput = ({
   };
 
   const handleUploadSuccessful = (def: ImageDef) => {
-    setContent((old) => {
-      return {
-        ...old,
-        fileIds: old.fileIds!.concat(def),
-      };
+    setContentFiles((prev) => {
+      return prev.concat(def);
     });
     setUploading(false);
   };
@@ -236,10 +244,11 @@ const ChatInput = ({
         textareaRef?.current?.scrollHeight > 400 ? 'auto' : 'hidden'
       }`;
     }
-  }, [content]);
+  }, [contentText, contentFiles]);
 
   useEffect(() => {
-    setContent({ ...content, fileIds: [] });
+    setContentFiles([]);
+    setContentText('');
   }, [selectedChat]);
 
   return (
@@ -247,35 +256,30 @@ const ChatInput = ({
       <div className="stretch mx-2 mt-4 flex flex-row gap-3 last:mb-2 md:mx-4 md:mt-[52px] md:last:mb-6 lg:mx-auto lg:max-w-5xl">
         <div className="relative flex w-full flex-grow flex-col rounded-md bg-background shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:border-gray-900/50  dark:text-white dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]">
           <div className="absolute mb-1 bottom-full mx-auto flex w-full justify-start z-10">
-            {content?.fileIds &&
-              content.fileIds.map((img, index) => (
-                <div className="relative group" key={index}>
-                  <div className="mr-1 w-[4rem] h-[4rem] rounded overflow-hidden">
-                    <img
-                      src={img.url}
-                      alt=""
-                      className="w-full h-full object-cover shadow-lg"
+            {contentFiles.map((file, index) => (
+              <div className="relative group" key={index}>
+                <div className="mr-1 w-[4rem] h-[4rem] rounded overflow-hidden">
+                  <img
+                    src={file.url}
+                    alt=""
+                    className="w-full h-full object-cover shadow-lg"
+                  />
+                  <button
+                    onClick={() => {
+                      setContentFiles((prev) => {
+                        return prev.filter((f) => f !== file);
+                      });
+                    }}
+                    className="absolute top-[-4px] right-[0px]"
+                  >
+                    <IconCircleX
+                      className="bg-background rounded-full text-black/50 dark:text-white/50"
+                      size={20}
                     />
-                    <button
-                      onClick={() => {
-                        setContent((pre) => {
-                          const fileIds = pre.fileIds?.filter((x) => x !== img);
-                          return {
-                            text: pre.text,
-                            fileIds,
-                          };
-                        });
-                      }}
-                      className="absolute top-[-4px] right-[0px]"
-                    >
-                      <IconCircleX
-                        className="bg-background rounded-full text-black/50 dark:text-white/50"
-                        size={20}
-                      />
-                    </button>
-                  </div>
+                  </button>
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
 
           {showScrollDownButton && (
@@ -303,7 +307,7 @@ const ChatInput = ({
             placeholder={
               t('Type a message or type "/" to select a prompt...') || ''
             }
-            value={content?.text}
+            value={contentText}
             rows={1}
             onCompositionStart={() => setIsTyping(true)}
             onCompositionEnd={() => setIsTyping(false)}

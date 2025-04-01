@@ -217,7 +217,8 @@ export interface PutResponseMessageContent {
 
 export interface PutResponseMessageEditAndSaveNewParams {
   messageId: string;
-  content: PutResponseMessageContent;
+  contentId: string;
+  c: string;
 }
 
 export interface PutResponseMessageEditAndSaveNewResult {
@@ -228,7 +229,8 @@ export interface PutResponseMessageEditAndSaveNewResult {
 
 export interface PutResponseMessageEditInPlaceParams {
   messageId: string;
-  content: PutResponseMessageContent;
+  contentId: string;
+  c: string;
 }
 
 export interface PutChatSpanParams {

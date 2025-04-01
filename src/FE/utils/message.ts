@@ -1,4 +1,10 @@
-import { ChatRole, ChatSpanStatus, Content, IChat } from '@/types/chat';
+import {
+  ChatRole,
+  ChatSpanStatus,
+  Content,
+  IChat,
+  MessageContentType,
+} from '@/types/chat';
 import {
   ChatMessageNode,
   IChatMessage,
@@ -86,12 +92,15 @@ export function findSelectedMessageByLeafId(
         let selectedMessage: ChatMessageNode | null = null;
 
         siblingGroup.forEach((x) => {
+          const messageIsError = !!x.content.find(
+            (x) => x.$type === MessageContentType.error,
+          );
           if (x.id === currentMessage!.id) {
             selectedMessage = {
               ...x,
               siblingIds,
               isActive: true,
-              status: x.content?.error
+              status: messageIsError
                 ? ChatSpanStatus.Failed
                 : ChatSpanStatus.None,
             };
@@ -100,7 +109,7 @@ export function findSelectedMessageByLeafId(
               ...x,
               siblingIds,
               isActive: true,
-              status: x.content?.error
+              status: messageIsError
                 ? ChatSpanStatus.Failed
                 : ChatSpanStatus.None,
             };
@@ -109,11 +118,14 @@ export function findSelectedMessageByLeafId(
 
         if (!selectedMessage) {
           const lastMessage = siblingGroup[siblingGroup.length - 1];
+          const messageIsError = !!lastMessage.content.find(
+            (x) => x.$type === MessageContentType.error,
+          );
           selectedMessage = {
             ...lastMessage,
             siblingIds,
             isActive: false,
-            status: lastMessage.content?.error
+            status: messageIsError
               ? ChatSpanStatus.Failed
               : ChatSpanStatus.None,
           };
@@ -174,7 +186,7 @@ export function generateResponseMessage(
     status,
     siblingIds: [],
     isActive: false,
-    content: { text: '', think: '', error: undefined, fileIds: [] },
+    content: [],
     inputTokens: 0,
     outputTokens: 0,
     inputPrice: 0,
@@ -187,7 +199,7 @@ export function generateResponseMessage(
   } as IChatMessage;
 }
 
-export function generateUserMessage(content: Content, parentId?: string) {
+export function generateUserMessage(content: Content[], parentId?: string) {
   return {
     spanId: null,
     id: UserMessageTempId,

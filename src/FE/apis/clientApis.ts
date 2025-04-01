@@ -382,10 +382,10 @@ export const putResponseMessageEditAndSaveNew = (
   params: PutResponseMessageEditAndSaveNewParams,
 ) => {
   const fetchServer = useFetch();
-  return fetchServer.put<PutResponseMessageEditAndSaveNewResult>(
-    `/api/messages/${params.messageId}/edit-and-save-new`,
+  return fetchServer.patch<PutResponseMessageEditAndSaveNewResult>(
+    `/api/messages/${params.messageId}/${params.contentId}/text-and-save-new`,
     {
-      body: params.content,
+      body: { c: params.c },
     },
   );
 };
@@ -393,9 +393,12 @@ export const putResponseMessageEditInPlace = (
   params: PutResponseMessageEditInPlaceParams,
 ) => {
   const fetchServer = useFetch();
-  return fetchServer.put(`/api/messages/${params.messageId}/edit-in-place`, {
-    body: params.content,
-  });
+  return fetchServer.patch(
+    `/api/messages/${params.messageId}/${params.contentId}/text`,
+    {
+      body: { c: params.c },
+    },
+  );
 };
 
 export const deleteMessage = (messageId: string, leafId: string) => {

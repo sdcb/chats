@@ -4,7 +4,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { preprocessLaTeX } from '@/utils/chats';
 
-import { ChatSpanStatus, Content } from '@/types/chat';
+import { ChatSpanStatus } from '@/types/chat';
 
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
@@ -15,23 +15,16 @@ import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 
-export interface ResponseMessage {
-  id: string;
-  content: Content;
-  status: ChatSpanStatus;
-  spanId: number | null;
+interface Props {
+  readonly?: boolean;
+  content: string;
+  chatStatus: ChatSpanStatus;
   reasoningDuration?: number;
 }
 
-interface Props {
-  readonly?: boolean;
-  message: ResponseMessage;
-}
-
 const ThinkingMessage = (props: Props) => {
-  const { message } = props;
+  const { content, chatStatus, reasoningDuration } = props;
   const { t } = useTranslation();
-  const { status: chatStatus } = message;
 
   const [isOpen, setIsOpen] = useState(true);
   return (
@@ -42,13 +35,13 @@ const ThinkingMessage = (props: Props) => {
           setIsOpen(!isOpen);
         }}
       >
-        {chatStatus === ChatSpanStatus.Thinking ? (
+        {chatStatus === ChatSpanStatus.Reasoning ? (
           t('Thinking...')
         ) : (
           <div className="flex items-center h-6">
             <IconThink size={16} />
             {t('Deeply thought (took {{time}} seconds)', {
-              time: Math.floor((message.reasoningDuration || 0) / 1000),
+              time: Math.floor((reasoningDuration || 0) / 1000),
             })}
           </div>
         )}
@@ -118,8 +111,8 @@ const ThinkingMessage = (props: Props) => {
               },
             }}
           >
-            {`${preprocessLaTeX(message.content.think!)}${
-              chatStatus === ChatSpanStatus.Thinking ? '`▍`' : ''
+            {`${preprocessLaTeX(content!)}${
+              chatStatus === ChatSpanStatus.Reasoning ? '`▍`' : ''
             }`}
           </MemoizedReactMarkdown>
         </div>

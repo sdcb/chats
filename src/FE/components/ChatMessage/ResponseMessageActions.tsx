@@ -68,7 +68,7 @@ const ResponseMessageActions = (props: Props) => {
   return (
     <>
       {chatStatus === ChatSpanStatus.Chatting ||
-      chatStatus === ChatSpanStatus.Thinking ? (
+      chatStatus === ChatSpanStatus.Reasoning ? (
         <div className="h-9"></div>
       ) : (
         <div className="flex gap-1 flex-wrap mt-1">
@@ -81,12 +81,12 @@ const ResponseMessageActions = (props: Props) => {
             onChangeMessage={onChangeMessage}
           />
           <div className="visible flex gap-0 items-center">
-            <EditAction
+            {/* <EditAction
               hovered={message.edited}
               onToggleEditing={() => {
                 onToggleEditingMessage && onToggleEditingMessage(messageId);
               }}
-            />
+            /> */}
 
             <CopyAction text={message.content.text} />
 

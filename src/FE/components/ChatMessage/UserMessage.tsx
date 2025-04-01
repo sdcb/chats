@@ -7,7 +7,9 @@ import {
   ChatSpanStatus,
   Content,
   IChat,
+  ImageDef,
   Message,
+  MessageContentType,
 } from '@/types/chat';
 
 import { Button } from '@/components/ui/button';
@@ -20,7 +22,7 @@ import PaginationAction from './PaginationAction';
 export interface UserMessage {
   id: string;
   role: ChatRole;
-  content: Content;
+  content: Content[];
   status: ChatSpanStatus;
   parentId: string | null;
   siblingIds: string[];
@@ -31,7 +33,7 @@ interface Props {
   selectedChat: IChat;
   onChangeMessage?: (messageId: string) => void;
   onEditAndSendMessage?: (editedMessage: Message, parentId?: string) => void;
-  onEditUserMessage?: (messageId: string, content: Content) => void;
+  onEditUserMessage?: (messageId: string, content: Content[]) => void;
   onDeleteMessage?: (messageId: string) => void;
 }
 
@@ -50,6 +52,9 @@ const UserMessage = (props: Props) => {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [messageContent, setMessageContent] = useState(message.content);
+  const [messageText, setMessageText] = useState(
+    message.content.find((x) => x.$type === MessageContentType.text)?.c || '',
+  );
   const {
     id: messageId,
     siblingIds,
@@ -74,9 +79,13 @@ const UserMessage = (props: Props) => {
   };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessageContent({
-      text: event.target.value,
-      fileIds: content.fileIds,
+    setMessageContent((prev) => {
+      return prev.map((x) => {
+        if (x.$type === MessageContentType.text) {
+          x.c = event.target.value;
+        }
+        return x;
+      });
     });
     if (textareaRef.current) {
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
@@ -96,6 +105,9 @@ const UserMessage = (props: Props) => {
 
   useEffect(() => {
     setMessageContent(content);
+    setMessageText(
+      content.find((x) => x.$type === MessageContentType.text)?.c || '',
+    );
   }, [content]);
 
   useEffect(() => {
@@ -113,7 +125,7 @@ const UserMessage = (props: Props) => {
             <textarea
               ref={textareaRef}
               className="w-full outline-none resize-none whitespace-pre-wrap border-none rounded-md bg-muted"
-              value={messageContent.text}
+              value={messageText}
               onChange={handleInputChange}
               onKeyDown={handlePressEnter}
               onCompositionStart={() => setIsTyping(true)}
@@ -136,7 +148,7 @@ const UserMessage = (props: Props) => {
                 onClick={() => {
                   handleEditMessage(true);
                 }}
-                disabled={(messageContent.text || '')?.trim().length <= 0}
+                disabled={(messageText || '')?.trim().length <= 0}
               >
                 {t('Save')}
               </Button>
@@ -146,7 +158,7 @@ const UserMessage = (props: Props) => {
                 onClick={() => {
                   handleEditMessage();
                 }}
-                disabled={(messageContent.text || '')?.trim().length <= 0}
+                disabled={(messageText || '')?.trim().length <= 0}
               >
                 {t('Send')}
               </Button>
@@ -165,23 +177,27 @@ const UserMessage = (props: Props) => {
         ) : (
           <div className="bg-muted py-2 px-3 rounded-md overflow-x-scroll">
             <div className="flex flex-wrap justify-end text-right gap-2">
-              {content?.fileIds &&
-                content.fileIds.map((img, index) => (
+              {content
+                .filter((x) => x.$type === MessageContentType.fileId)
+                .map((img, index) => (
                   <img
                     className="rounded-md mr-2 not-prose"
                     key={index}
                     style={{ maxWidth: 268, maxHeight: 168 }}
-                    src={img.url}
+                    src={img.c.url}
                     alt=""
                   />
                 ))}
             </div>
             <div
               className={`prose whitespace-pre-wrap dark:prose-invert text-base overflow-x-auto ${
-                content?.fileIds && content.fileIds.length > 0 ? 'mt-2' : ''
+                content.filter((x) => x.$type === MessageContentType.fileId)
+                  .length > 0
+                  ? 'mt-2'
+                  : ''
               }`}
             >
-              {content.text}
+              {messageText}
             </div>
           </div>
         )}
@@ -194,13 +210,13 @@ const UserMessage = (props: Props) => {
               isHoverVisible
               disabled={
                 chatStatus === ChatSpanStatus.Chatting ||
-                chatStatus === ChatSpanStatus.Thinking
+                chatStatus === ChatSpanStatus.Reasoning
               }
               onToggleEditing={handleToggleEditing}
             />
             <CopyAction
               triggerClassName="invisible group-hover:visible focus:visible"
-              text={content.text}
+              text={messageText}
             />
             <DeleteAction
               hidden={
@@ -216,12 +232,12 @@ const UserMessage = (props: Props) => {
               disabledPrev={
                 currentMessageIndex === 0 ||
                 chatStatus === ChatSpanStatus.Chatting ||
-                chatStatus === ChatSpanStatus.Thinking
+                chatStatus === ChatSpanStatus.Reasoning
               }
               disabledNext={
                 currentMessageIndex === siblingIds.length - 1 ||
                 chatStatus === ChatSpanStatus.Chatting ||
-                chatStatus === ChatSpanStatus.Thinking
+                chatStatus === ChatSpanStatus.Reasoning
               }
               currentSelectIndex={currentMessageIndex}
               messageIds={siblingIds}

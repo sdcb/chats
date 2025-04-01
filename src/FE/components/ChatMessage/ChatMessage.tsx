@@ -92,7 +92,7 @@ export const ChatMessage: FC<Props> = memo(
                         }
                         key={'response-message-' + message.id}
                         className={cn(
-                          'border-[1px] rounded-md flex w-full',
+                          'border-[1px] rounded-md flex w-full group',
                           hasMultipleSpan &&
                             message.isActive &&
                             'border-primary/50',

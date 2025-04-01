@@ -90,7 +90,7 @@ export interface IChatMessage {
   parentId: string | null;
   siblingIds: string[];
   role: ChatRole;
-  content: Content;
+  content: Content[];
   status: ChatSpanStatus;
   isActive?: boolean;
   modelName?: string;
@@ -111,7 +111,7 @@ export interface IChatMessage {
 export interface MessageNode {
   id: string;
   parentId: string | null;
-  content: Content;
+  content: Content[];
   siblingIds: string[];
   modelName?: string;
   role: Role;
@@ -125,7 +125,7 @@ export interface MessageNode {
 export interface ChatMessageNode {
   id: string;
   parentId: string | null;
-  content: Content;
+  content: Content[];
   siblingIds: string[];
   isActive?: boolean;
   status: ChatSpanStatus;
