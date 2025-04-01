@@ -7,10 +7,10 @@ using System.Text.Json.Serialization;
 namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 
 [JsonPolymorphic]
-[JsonDerivedType(typeof(ErrorContentResponseItem), typeDiscriminator: 0)]
-[JsonDerivedType(typeof(TextContentResponseItem), typeDiscriminator: 1)]
-[JsonDerivedType(typeof(FileResponseItem), typeDiscriminator: 2)]
-[JsonDerivedType(typeof(ReasoningResponseItem), typeDiscriminator: 3)]
+[JsonDerivedType(typeof(ErrorContentResponseItem), typeDiscriminator: (int)DBMessageContentType.Error)]
+[JsonDerivedType(typeof(TextContentResponseItem), typeDiscriminator: (int)DBMessageContentType.Text)]
+[JsonDerivedType(typeof(FileResponseItem), typeDiscriminator: (int)DBMessageContentType.FileId)]
+[JsonDerivedType(typeof(ReasoningResponseItem), typeDiscriminator: (int)DBMessageContentType.Reasoning)]
 public abstract record ContentResponseItem
 {
     [JsonPropertyName("i")]

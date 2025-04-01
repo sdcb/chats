@@ -7,8 +7,8 @@ using System.Text.Json.Serialization;
 namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 
 [JsonPolymorphic]
-[JsonDerivedType(typeof(TextContentRequestItem), typeDiscriminator: 0)]
-[JsonDerivedType(typeof(FileContentRequestItem), typeDiscriminator: 1)]
+[JsonDerivedType(typeof(TextContentRequestItem), typeDiscriminator: (int)DBMessageContentType.Text)]
+[JsonDerivedType(typeof(FileContentRequestItem), typeDiscriminator: (int)DBMessageContentType.FileId)]
 public abstract record ContentRequestItem
 {
     public abstract Task<MessageContent> ToMessageContent(FileUrlProvider fup, CancellationToken cancellationToken);
