@@ -16,38 +16,38 @@ public abstract record ContentResponseItem
     [JsonPropertyName("i")]
     public required string Id { get; init; }
 
-    public static ContentResponseItem FromSegment(MessageContent segment, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
+    public static ContentResponseItem FromContent(MessageContent content, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
     {
-        string id = urlEncryption.EncryptMessageId(segment.Id);
-        return (DBMessageContentType)segment.ContentTypeId switch
+        string encryptedMessageContentId = urlEncryption.EncryptMessageContentId(content.Id);
+        return (DBMessageContentType)content.ContentTypeId switch
         {
             DBMessageContentType.Text => new TextContentResponseItem()
             {
-                Id = id, 
-                Content = segment.MessageContentText!.Content
+                Id = encryptedMessageContentId, 
+                Content = content.MessageContentText!.Content
             },
             DBMessageContentType.Error => new ErrorContentResponseItem()
             {
-                Id = id,
-                Content = segment.MessageContentText!.Content
+                Id = encryptedMessageContentId,
+                Content = content.MessageContentText!.Content
             },
             DBMessageContentType.Reasoning => new ReasoningResponseItem()
             {
-                Id = id,
-                Content = segment.MessageContentText!.Content
+                Id = encryptedMessageContentId,
+                Content = content.MessageContentText!.Content
             },
             DBMessageContentType.FileId => new FileResponseItem()
             {
-                Id = id,
-                Content = fup.CreateFileDto(segment.MessageContentFile!.File)
+                Id = encryptedMessageContentId,
+                Content = fup.CreateFileDto(content.MessageContentFile!.File)
             },
             _ => throw new NotSupportedException(),
         };
     }
 
-    public static ContentResponseItem[] FromSegment(MessageContent[] segments, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
+    public static ContentResponseItem[] FromContent(MessageContent[] contents, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
     {
-        return [.. segments.Select(x => FromSegment(x, fup, urlEncryption))];
+        return [.. contents.Select(x => FromContent(x, fup, urlEncryption))];
     }
 }
 
