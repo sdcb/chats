@@ -2,12 +2,17 @@
 using Chats.BE.DB.Enums;
 using Chats.BE.Infrastructure;
 using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models.Dtos;
+using System.Text.Json.Serialization;
 
 namespace Chats.BE.Services.Models.ChatServices;
 
-public abstract record ChatRespImage
+[JsonPolymorphic]
+[JsonDerivedType(typeof(Base64Image), typeDiscriminator: "base64")]
+[JsonDerivedType(typeof(UrlImage), typeDiscriminator: "url")]
+public abstract record ChatRespImage : ChatSegmentItem
 {
-    public async Task<MessageContent> ToDB(
+    public override async Task<MessageContent> ToDB(
         IFileService fileService, 
         FileContentTypeService contentTypeService, 
         ClientInfoManager clientInfoManager,

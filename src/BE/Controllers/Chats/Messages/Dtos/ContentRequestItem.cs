@@ -57,7 +57,7 @@ public record TextContentRequestItem : ContentRequestItem
 
     public override Task<MessageContent> ToMessageContent(FileUrlProvider fup, CancellationToken cancellationToken)
     {
-        return Task.FromResult(MessageContent.FromContent(Text));
+        return Task.FromResult(MessageContent.FromText(Text));
     }
 }
 
@@ -85,7 +85,7 @@ public record MessageContentRequest
     {
         return
         [
-            MessageContent.FromContent(Text),
+            MessageContent.FromText(Text),
             ..(await (FileIds ?? [])
                 .ToAsyncEnumerable()
                 .SelectAwait(async fileId => await fup.CreateFileContent(fileId, cancellationToken))

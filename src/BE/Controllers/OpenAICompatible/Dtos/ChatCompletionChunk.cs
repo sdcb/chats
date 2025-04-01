@@ -1,14 +1,18 @@
-﻿using System.Text.Json.Serialization;
+﻿using Chats.BE.Services.Models.ChatServices;
+using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.OpenAICompatible.Dtos;
 
-public record Delta
+public record OpenAIDelta
 {
     [JsonPropertyName("content")]
     public required string? Content { get; init; }
 
     [JsonPropertyName("reasoning_content"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public required string? ReasoningContent { get; init; }
+
+    [JsonPropertyName("image"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public required ChatRespImage? Image { get; init; }
 }
 
 public record DeltaChoice
@@ -17,7 +21,7 @@ public record DeltaChoice
     public required int Index { get; init; }
 
     [JsonPropertyName("delta")]
-    public required Delta Delta { get; init; }
+    public required OpenAIDelta Delta { get; init; }
 
     [JsonPropertyName("logprobs")]
     public object? Logprobs { get; init; }

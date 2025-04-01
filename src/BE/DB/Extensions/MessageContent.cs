@@ -30,12 +30,12 @@ public partial class MessageContent
         };
     }
 
-    public static MessageContent FromContent(string text)
+    public static MessageContent FromText(string text)
     {
         return new MessageContent { MessageContentText = new() { Content = text }, ContentTypeId = (byte)DBMessageContentType.Text };
     }
 
-    public static MessageContent FromReasoningContent(string text)
+    public static MessageContent FromThink(string text)
     {
         return new MessageContent { MessageContentText = new() { Content = text }, ContentTypeId = (byte)DBMessageContentType.Reasoning };
     }
@@ -66,11 +66,11 @@ public partial class MessageContent
         }
         if (!string.IsNullOrEmpty(lastSegment.ReasoningSegment))
         {
-            yield return FromReasoningContent(lastSegment.ReasoningSegment);
+            yield return FromThink(lastSegment.ReasoningSegment);
         }
         if (lastSegment.Segment is not null)
         {
-            yield return FromContent(lastSegment.Segment);
+            yield return FromText(lastSegment.Segment);
         }
     }
 }
