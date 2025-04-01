@@ -1,6 +1,7 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
+using Chats.BE.Services.UrlEncryption;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Messages.Dtos;
@@ -12,33 +13,41 @@ namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 [JsonDerivedType(typeof(ReasoningResponseItem), typeDiscriminator: 3)]
 public abstract record ContentResponseItem
 {
-    public static ContentResponseItem FromSegment(MessageContent segment, FileUrlProvider fup)
+    [JsonPropertyName("i")]
+    public required string Id { get; init; }
+
+    public static ContentResponseItem FromSegment(MessageContent segment, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
     {
+        string id = urlEncryption.EncryptMessageId(segment.Id);
         return (DBMessageContentType)segment.ContentTypeId switch
         {
             DBMessageContentType.Text => new TextContentResponseItem()
             {
+                Id = id, 
                 Content = segment.MessageContentText!.Content
             },
             DBMessageContentType.Error => new ErrorContentResponseItem()
             {
+                Id = id,
                 Content = segment.MessageContentText!.Content
             },
             DBMessageContentType.Reasoning => new ReasoningResponseItem()
             {
+                Id = id,
                 Content = segment.MessageContentText!.Content
             },
             DBMessageContentType.FileId => new FileResponseItem()
             {
+                Id = id,
                 Content = fup.CreateFileDto(segment.MessageContentFile!.File)
             },
             _ => throw new NotSupportedException(),
         };
     }
 
-    public static ContentResponseItem[] FromSegment(MessageContent[] segments, FileUrlProvider fup)
+    public static ContentResponseItem[] FromSegment(MessageContent[] segments, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
     {
-        return [.. segments.Select(x => FromSegment(x, fup))];
+        return [.. segments.Select(x => FromSegment(x, fup, urlEncryption))];
     }
 }
 
