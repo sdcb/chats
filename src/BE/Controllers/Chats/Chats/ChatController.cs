@@ -17,6 +17,7 @@ using System.Text.Json;
 using System.Threading.Channels;
 using OpenAIChatMessage = OpenAI.Chat.ChatMessage;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
+using Chats.BE.Services.Models.ChatServices;
 
 namespace Chats.BE.Controllers.Chats.Chats;
 

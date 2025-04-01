@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Runtime.CompilerServices;
 using Chats.BE.Services.FileServices;
 using Microsoft.AspNetCore.StaticFiles;
+using Chats.BE.Services.Models.ChatServices;
 
 [assembly: InternalsVisibleTo("Chats.BE.Tests")]
 

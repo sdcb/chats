@@ -12,6 +12,7 @@ using System.Text.Json.Nodes;
 using Chats.BE.Controllers.OpenAICompatible.Dtos;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
+using Chats.BE.Services.Models.ChatServices;
 
 namespace Chats.BE.Controllers.OpenAICompatible;
 
