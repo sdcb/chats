@@ -1,4 +1,5 @@
-﻿using Chats.BE.DB.Enums;
+﻿using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices.Implementations.AliyunOSS;
 using Chats.BE.Services.FileServices.Implementations.AwsS3;
 using Chats.BE.Services.FileServices.Implementations.AzureBlobStorage;
@@ -14,30 +15,36 @@ public class FileServiceFactory(HostUrlService hostUrlService, IUrlEncryptionSer
 {
     private readonly ConcurrentDictionary<CacheKey, IFileService> _cache = [];
 
-    public IFileService Create(DBFileServiceType fileServiceType, string config)
+    public IFileService Create(FileService dbfs)
     {
-        CacheKey key = new(fileServiceType, config);
+        CacheKey key = new(dbfs.Id, (DBFileServiceType)dbfs.FileServiceTypeId, dbfs.Configs);
         if (_cache.TryGetValue(key, out IFileService? fileService))
         {
             return fileService;
         }
-        fileService = CreateNoCache(fileServiceType, config);
+        fileService = CreateNoCache(dbfs);
         _cache[key] = fileService;
         return fileService;
     }
 
-    private IFileService CreateNoCache(DBFileServiceType fileServiceType, string config)
+    internal IFileService Create(DB.File file)
     {
-        return fileServiceType switch
+        throw new NotImplementedException();
+    }
+
+    private IFileService CreateNoCache(FileService dbfs)
+    {
+        DBFileServiceType fst = (DBFileServiceType)dbfs.FileServiceTypeId;
+        return fst switch
         {
-            DBFileServiceType.Local => new LocalFileService(config, hostUrlService, urlEncryption),
-            DBFileServiceType.Minio => new MinioFileService(JsonSerializer.Deserialize<MinioConfig>(config)!),
-            DBFileServiceType.AwsS3 => new AwsS3FileService(JsonSerializer.Deserialize<AwsS3Config>(config)!),
-            DBFileServiceType.AliyunOSS => new AliyunOSSFileService(JsonSerializer.Deserialize<AliyunOssConfig>(config)!),
-            DBFileServiceType.AzureBlobStorage => new AzureBlobStorageFileService(JsonSerializer.Deserialize<AzureBlobStorageConfig>(config)!),
-            _ => throw new ArgumentException($"Unsupported file service type: {fileServiceType}")
+            DBFileServiceType.Local => new LocalFileService(dbfs.Id, fst, dbfs.Configs, hostUrlService, urlEncryption),
+            DBFileServiceType.Minio => new MinioFileService(dbfs.Id, fst, JsonSerializer.Deserialize<MinioConfig>(dbfs.Configs)!),
+            DBFileServiceType.AwsS3 => new AwsS3FileService(dbfs.Id, fst, JsonSerializer.Deserialize<AwsS3Config>(dbfs.Configs)!),
+            DBFileServiceType.AliyunOSS => new AliyunOSSFileService(dbfs.Id, fst, JsonSerializer.Deserialize<AliyunOssConfig>(dbfs.Configs)!),
+            DBFileServiceType.AzureBlobStorage => new AzureBlobStorageFileService(dbfs.Id, fst, JsonSerializer.Deserialize<AzureBlobStorageConfig>(dbfs.Configs)!),
+            _ => throw new ArgumentException($"Unsupported file service type: {dbfs.FileServiceTypeId}")
         };
     }
 
-    private record CacheKey(DBFileServiceType FileServiceType, string Config);
+    private record CacheKey(int Id, DBFileServiceType FileServiceType, string Config);
 }

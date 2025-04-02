@@ -36,8 +36,8 @@ Console.WriteLine($"AzureBlobStorage: {azureConfig.Configs}");
 Console.WriteLine($"Minio: {minioConfig.Configs}");
 
 FileServiceFactory fileServiceFactory = new(new DummyHostUrlService(), new NoOpUrlEncryptionService());
-IFileService azureFileService = fileServiceFactory.Create(DBFileServiceType.AzureBlobStorage, azureConfig.Configs);
-IFileService minioFileService = fileServiceFactory.Create(DBFileServiceType.Minio, minioConfig.Configs);
+IFileService azureFileService = fileServiceFactory.Create(azureConfig);
+IFileService minioFileService = fileServiceFactory.Create(minioConfig);
 
 List<File> files = db.Files
     .Include(x => x.FileService)

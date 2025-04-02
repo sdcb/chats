@@ -12,7 +12,7 @@ public record OpenAIDelta
     public required string? ReasoningContent { get; init; }
 
     [JsonPropertyName("image"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public required ChatRespImage? Image { get; init; }
+    public required ImageChatSegment? Image { get; init; }
 }
 
 public record DeltaChoice

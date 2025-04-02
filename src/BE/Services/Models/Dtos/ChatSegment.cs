@@ -7,7 +7,7 @@ public record ChatSegment
 {
     public required ChatFinishReason? FinishReason { get; init; }
 
-    public required ChatSegmentItem[] Segments { get; init; }
+    public required ICollection<ChatSegmentItem> Items { get; init; }
 
     public required ChatTokenUsage? Usage { get; init; }
 
@@ -19,7 +19,7 @@ public record ChatSegment
             {
                 Usage = Usage,
                 FinishReason = FinishReason,
-                Segments = Segments,
+                Items = Items,
                 IsUsageReliable = true,
                 IsFromUpstream = true, 
             };
@@ -30,7 +30,7 @@ public record ChatSegment
             {
                 Usage = Usage ?? usageCalculator(),
                 FinishReason = FinishReason,
-                Segments = Segments,
+                Items = Items,
                 IsUsageReliable = false,
                 IsFromUpstream = true,
             };

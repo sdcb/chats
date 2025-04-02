@@ -1,5 +1,4 @@
 ﻿using Chats.BE.Controllers.OpenAICompatible.Dtos;
-using Chats.BE.Services.Models.ChatServices;
 using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.Dtos;
@@ -8,7 +7,7 @@ public record InternalChatSegment
 {
     public required ChatFinishReason? FinishReason { get; init; }
 
-    public required ChatSegmentItem[] Segments { get; init; }
+    public required ICollection<ChatSegmentItem> Items { get; init; }
 
     public required ChatTokenUsage Usage { get; init; }
 
@@ -20,7 +19,7 @@ public record InternalChatSegment
     {
         Usage = ChatTokenUsage.Zero,
         FinishReason = null,
-        Segments = [],
+        Items = [],
         IsUsageReliable = false, 
         IsFromUpstream = false,
     };
@@ -85,7 +84,7 @@ public record InternalChatSegment
             [
                 new DeltaChoice
                 {
-                    Delta = Segments.ToOpenAIDelta(),
+                    Delta = Items.ToOpenAIDelta(),
                     FinishReason = GetFinishReasonText(),
                     Index = 0,
                     Logprobs = null,
@@ -108,7 +107,7 @@ public record InternalChatSegment
                     Index = 0,
                     FinishReason = GetFinishReasonText(),
                     Logprobs = null,
-                    Message = Segments.OpenAIFullResponse("assistant", null),
+                    Message = Items.OpenAIFullResponse("assistant", null),
                 }
             ],
             Object = "chat.completion",

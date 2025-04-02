@@ -1,4 +1,5 @@
 ﻿using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.Services.Models.Dtos;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.OpenAICompatible.Dtos;
@@ -53,8 +54,8 @@ public record OpenAIFullResponse
     [JsonPropertyName("reasoning_content"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public required string? ReasoningContent { get; init; }
 
-    [JsonPropertyName("images"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public required ChatRespImage[]? Images { get; init; }
+    [JsonPropertyName("segments"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public required ICollection<ChatSegmentItem> Segments { get; init; }
 
     [JsonPropertyName("refusal")]
     public object? Refusal { get; init; }

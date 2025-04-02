@@ -37,6 +37,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         [FromServices] ClientInfoManager clientInfoManager,
         [FromServices] FileUrlProvider fup,
         [FromServices] ChatConfigService chatConfigService,
+        [FromServices] IServiceScopeFactory scopeFactory,
         CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -46,7 +47,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
 
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, clientInfoManager, fup, chatConfigService,
+            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, clientInfoManager, fup, chatConfigService, scopeFactory,
             cancellationToken);
     }
 
@@ -63,6 +64,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         [FromServices] ClientInfoManager clientInfoManager,
         [FromServices] FileUrlProvider fup,
         [FromServices] ChatConfigService chatConfigService,
+        [FromServices] IServiceScopeFactory scopeFactory,
         CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -72,7 +74,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
 
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, clientInfoManager, fup, chatConfigService,
+            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, clientInfoManager, fup, chatConfigService, scopeFactory,
             cancellationToken);
     }
 
@@ -89,6 +91,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         [FromServices] ClientInfoManager clientInfoManager,
         [FromServices] FileUrlProvider fup,
         [FromServices] ChatConfigService chatConfigService,
+        [FromServices] IServiceScopeFactory scopeFactory,
         CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -103,7 +106,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
 
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, clientInfoManager, fup, chatConfigService,
+            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, clientInfoManager, fup, chatConfigService, scopeFactory,
             cancellationToken);
     }
 
@@ -119,6 +122,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         ClientInfoManager clientInfoManager,
         FileUrlProvider fup,
         ChatConfigService chatConfigService,
+        IServiceScopeFactory scopeFactory,
         CancellationToken cancellationToken)
     {
         long firstTick = Stopwatch.GetTimestamp();
@@ -243,6 +247,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
                 newDbUserMessage,
                 userBalance,
                 clientInfoTask,
+                scopeFactory,
                 channels[index].Writer,
                 cancellationToken))];
 
@@ -254,7 +259,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
                 .Text;
             chat.Title = text[..Math.Min(50, text.Length)];
         }
-        
+
         bool dbUserMessageYield = false;
         await foreach (SseResponseLine line in MergeChannels(channels).Reader.ReadAllAsync(CancellationToken.None))
         {
@@ -340,6 +345,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         Message? dbUserMessage,
         UserBalance userBalance,
         Task<ClientInfo> clientInfoTask,
+        IServiceScopeFactory scopeFactory,
         ChannelWriter<SseResponseLine> writer,
         CancellationToken cancellationToken)
     {
@@ -366,29 +372,43 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         InChatContext icc = new(firstTick);
 
         string? errorText = null;
+        Dictionary<ImageChatSegment, MessageContent> imageMcCache = [];
         try
         {
             using ChatService s = chatFactory.CreateChatService(userModel.Model);
+            using IServiceScope scope = scopeFactory.CreateScope();
+            DBFileService dbfs = scope.ServiceProvider.GetRequiredService<DBFileService>();
+
             bool responseStated = false, reasoningStarted = false;
             await foreach (InternalChatSegment seg in icc.Run(userBalance.Balance, userModel, s.ChatStreamedFEProcessed(messageToSend, cco, ced, cancellationToken)))
             {
-                if (!string.IsNullOrEmpty(seg.ReasoningSegment))
+                string? think = seg.Items.GetThink();
+                if (!string.IsNullOrEmpty(think))
                 {
                     if (!reasoningStarted)
                     {
                         await writer.WriteAsync(SseResponseLine.StartReasoning(chatSpan.SpanId), cancellationToken);
                         reasoningStarted = true;
                     }
-                    await writer.WriteAsync(SseResponseLine.ReasoningSegment(chatSpan.SpanId, seg.ReasoningSegment), cancellationToken);
+                    await writer.WriteAsync(SseResponseLine.ReasoningSegment(chatSpan.SpanId, think), cancellationToken);
                 }
-                if (!string.IsNullOrEmpty(seg.Segment))
+                string? text = seg.Items.GetText();
+                if (!string.IsNullOrEmpty(text))
                 {
                     if (!responseStated)
                     {
                         await writer.WriteAsync(SseResponseLine.StartResponse(chatSpan.SpanId, icc.ReasoningDurationMs), cancellationToken);
                         responseStated = true;
                     }
-                    await writer.WriteAsync(SseResponseLine.Segment(chatSpan.SpanId, seg.Segment), cancellationToken);
+                    await writer.WriteAsync(SseResponseLine.Segment(chatSpan.SpanId, text), cancellationToken);
+                }
+                ImageChatSegment[] imgs = seg.Items.GetImages();
+                foreach (ImageChatSegment img in imgs)
+                {
+                    MessageContent mc = await img.ToDB(dbfs, cancellationToken);
+                    imageMcCache[img] = mc;
+                    FileDto fileDto = fup.CreateFileDto(mc.MessageContentFile!.File);
+                    await writer.WriteAsync(SseResponseLine.ImageGenerated(chatSpan.SpanId, fileDto), cancellationToken);
                 }
 
                 if (cancellationToken.IsCancellationRequested)
@@ -461,7 +481,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         {
             dbAssistantMessage.ParentId = decryptedRegenerateAssistantMessageRequest.ParentUserMessageId;
         }
-        foreach (MessageContent mc in MessageContent.FromFullResponse(icc.FullResponse, errorText))
+        foreach (MessageContent mc in MessageContent.FromFullResponse(icc.FullResponse, errorText, imageMcCache))
         {
             dbAssistantMessage.MessageContents.Add(mc);
         }

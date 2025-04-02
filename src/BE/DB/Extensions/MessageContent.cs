@@ -1,6 +1,7 @@
 ﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
 using OpenAI.Chat;
 
@@ -58,19 +59,25 @@ public partial class MessageContent
             .ToArrayAsync(cancellationToken);
     }
 
-    public static IEnumerable<MessageContent> FromFullResponse(InternalChatSegment lastSegment, string? errorText)
+    public static IEnumerable<MessageContent> FromFullResponse(InternalChatSegment lastSegment, string? errorText, Dictionary<ImageChatSegment, MessageContent> imageMcCache)
     {
         if (errorText is not null)
         {
             yield return FromError(errorText);
         }
-        if (!string.IsNullOrEmpty(lastSegment.ReasoningSegment))
+        List<ChatSegmentItem> items = lastSegment.Items.Combine();
+        foreach (MessageContent item in items.Select(x =>
+            {
+                return x switch
+                {
+                    TextChatSegment text => FromText(text.Text),
+                    ThinkChatSegment think => FromThink(think.Think),
+                    ImageChatSegment image => imageMcCache[image],
+                    _ => throw new NotSupportedException(),
+                };
+            }))
         {
-            yield return FromThink(lastSegment.ReasoningSegment);
-        }
-        if (lastSegment.Segment is not null)
-        {
-            yield return FromText(lastSegment.Segment);
+            yield return item;
         }
     }
 }
