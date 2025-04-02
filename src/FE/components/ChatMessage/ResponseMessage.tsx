@@ -113,6 +113,7 @@ const ResponseMessage = (props: Props) => {
         if (c.$type === MessageContentType.reasoning) {
           return (
             <ThinkingMessage
+              key={c.i}
               content={c.c}
               chatStatus={message.status}
               reasoningDuration={message.reasoningDuration}
@@ -122,7 +123,7 @@ const ResponseMessage = (props: Props) => {
           return <></>;
         } else if (c.$type === MessageContentType.text) {
           return editId ? (
-            <div className="flex relative">
+            <div className="flex relative" key={c.i}>
               <div className="flex w-full flex-col">
                 <textarea
                   ref={textareaRef}
@@ -179,7 +180,7 @@ const ResponseMessage = (props: Props) => {
               </div>
             </div>
           ) : (
-            <div>
+            <div key={c.i}>
               <MemoizedReactMarkdown
                 remarkPlugins={[remarkMath, remarkGfm]}
                 rehypePlugins={[rehypeKatex as any]}
@@ -263,7 +264,7 @@ const ResponseMessage = (props: Props) => {
         } else if (c.$type === MessageContentType.error) {
           return (
             message.status === ChatSpanStatus.Failed && (
-              <ChatError error={c.c} />
+              <ChatError key={c.i} error={c.c} />
             )
           );
         } else {

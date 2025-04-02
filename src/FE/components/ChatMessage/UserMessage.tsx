@@ -51,9 +51,7 @@ const UserMessage = (props: Props) => {
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [contentText, setContentText] = useState(
-    message.content.find((x) => x.$type === MessageContentType.text)?.c || '',
-  );
+  const [contentText, setContentText] = useState('');
   const {
     id: messageId,
     siblingIds,
@@ -72,8 +70,10 @@ const UserMessage = (props: Props) => {
       onEditUserMessage && onEditUserMessage(message.id, msgContent);
     } else {
       if (selectedChat.id && onEditAndSendMessage) {
-        const messageContent = message.content.map((x) => {
-          if (x.$type === MessageContentType.text) x.c = contentText;
+        const messageContent = message.content.map((x: any) => {
+          if (x.$type === MessageContentType.text) {
+            x.c = contentText;
+          }
           return x;
         });
         onEditAndSendMessage(
@@ -104,9 +104,9 @@ const UserMessage = (props: Props) => {
   };
 
   const init = () => {
-    setContentText(
-      content.find((x) => x.$type === MessageContentType.text)?.c || '',
-    );
+    const text =
+      content.find((x) => x.$type === MessageContentType.text)?.c || '';
+    setContentText(text as string);
   };
 
   useEffect(() => {
