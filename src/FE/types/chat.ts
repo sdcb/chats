@@ -23,7 +23,7 @@ export enum ChatStatus {
 
 export interface Message {
   role: ChatRole;
-  content: Content[];
+  content: ResponseContent[];
 }
 
 export interface ImageDef {
@@ -31,7 +31,7 @@ export interface ImageDef {
   url: string;
 }
 
-export type Content =
+export type ResponseContent =
   | ReasoningContent
   | TextContent
   | FileContent
@@ -60,6 +60,18 @@ export type ErrorContent = {
   $type: MessageContentType.error;
   c: string;
 };
+
+export type TextRequestContent = {
+  $type: MessageContentType.text;
+  c: string;
+}
+
+export type FileRequestContent = {
+  $type: MessageContentType.fileId;
+  c: string;
+}
+
+export type RequestContent = TextRequestContent | FileRequestContent;
 
 export interface ContentRequest {
   text: string;

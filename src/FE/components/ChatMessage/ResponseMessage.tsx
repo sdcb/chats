@@ -5,7 +5,7 @@ import useTranslation from '@/hooks/useTranslation';
 import { preprocessLaTeX } from '@/utils/chats';
 
 import { AdminModelDto } from '@/types/adminApis';
-import { ChatSpanStatus, Content, MessageContentType } from '@/types/chat';
+import { ChatSpanStatus, ResponseContent, MessageContentType } from '@/types/chat';
 import { ReactionMessageType } from '@/types/chatMessage';
 
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
@@ -25,7 +25,7 @@ import remarkMath from 'remark-math';
 
 export interface ResponseMessage {
   id: string;
-  content: Content[];
+  content: ResponseContent[];
   status: ChatSpanStatus;
   spanId: number | null;
   reasoningDuration?: number;
@@ -42,7 +42,7 @@ interface Props {
   onReactionMessage?: (type: ReactionMessageType, messageId: string) => void;
   onEditResponseMessage?: (
     messageId: string,
-    content: Content,
+    content: ResponseContent,
     isCopy?: boolean,
   ) => void;
   onDeleteMessage?: (messageId: string) => void;

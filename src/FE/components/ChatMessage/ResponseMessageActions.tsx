@@ -2,7 +2,7 @@ import { AdminModelDto } from '@/types/adminApis';
 import {
   ChatRole,
   ChatSpanStatus,
-  Content,
+  ResponseContent,
   MessageContentType,
 } from '@/types/chat';
 import { ReactionMessageType } from '@/types/chatMessage';
@@ -22,7 +22,7 @@ export interface ResponseMessage {
   siblingIds: string[];
   parentId: string | null;
   role: ChatRole;
-  content: Content[];
+  content: ResponseContent[];
   inputTokens: number;
   outputTokens: number;
   reasoningTokens: number;

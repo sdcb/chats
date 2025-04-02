@@ -1,6 +1,7 @@
 import { useFetch } from '@/hooks/useFetch';
 
 import { AdminModelDto, PostPromptParams } from '@/types/adminApis';
+import { MessageContentType, RequestContent, ResponseContent } from '@/types/chat';
 import { IChatMessage } from '@/types/chatMessage';
 import {
   ChatResult,
@@ -55,8 +56,7 @@ export const getChatsByPaging = (
   const { groupId, query, page, pageSize } = params;
   const fetchService = useFetch();
   return fetchService.get(
-    `/api/user/chats?groupId=${
-      groupId || ''
+    `/api/user/chats?groupId=${groupId || ''
     }&page=${page}&pageSize=${pageSize}&query=${query || ''}`,
   );
 };
@@ -292,8 +292,7 @@ export const getUserChatGroupWithMessages = (
   const { query, page, pageSize } = params;
   const fetchServer = useFetch();
   return fetchServer.get(
-    `/api/chat/group/with-chats?page=${page}&pageSize=${pageSize}&query=${
-      query || ''
+    `/api/chat/group/with-chats?page=${page}&pageSize=${pageSize}&query=${query || ''
     }`,
   );
 };
@@ -466,4 +465,19 @@ export const postCloneChatPreset = (id: string) => {
 export const postApplyChatPreset = (chatId: string, presetId: string) => {
   const fetchServer = useFetch();
   return fetchServer.post(`/api/chat/${chatId}/span/apply-preset/${presetId}`);
+};
+
+export const responseContentToRequest = (responseContent: ResponseContent[]) => {
+  const requestContent: RequestContent[] = responseContent
+    .filter((x => x.$type === MessageContentType.text || x.$type === MessageContentType.fileId))
+    .map((x) => {
+      if (x.$type === MessageContentType.text) {
+        return { $type: MessageContentType.text, c: x.c };
+      } else if (x.$type === MessageContentType.fileId) {
+        return { $type: MessageContentType.fileId, c: x.c as string };
+      } else {
+        throw new Error('Invalid message content type');
+      }
+    });
+  return requestContent;
 };

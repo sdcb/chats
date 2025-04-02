@@ -1,7 +1,7 @@
 import { FC, memo } from 'react';
 
 import { AdminModelDto } from '@/types/adminApis';
-import { ChatRole, Content, IChat, Message } from '@/types/chat';
+import { ChatRole, ResponseContent, IChat, Message } from '@/types/chat';
 import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
 
 import { IconRobot } from '../Icons';
@@ -22,10 +22,10 @@ export interface Props {
   onReactionMessage?: (type: ReactionMessageType, messageId: string) => void;
   onEditResponseMessage?: (
     messageId: string,
-    content: Content,
+    content: ResponseContent,
     isCopy?: boolean,
   ) => void;
-  onEditUserMessage?: (messageId: string, content: Content) => void;
+  onEditUserMessage?: (messageId: string, content: ResponseContent) => void;
   onDeleteMessage?: (messageId: string) => void;
 }
 

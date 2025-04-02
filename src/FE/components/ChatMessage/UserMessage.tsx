@@ -5,7 +5,7 @@ import useTranslation from '@/hooks/useTranslation';
 import {
   ChatRole,
   ChatSpanStatus,
-  Content,
+  ResponseContent,
   IChat,
   ImageDef,
   Message,
@@ -22,7 +22,7 @@ import PaginationAction from './PaginationAction';
 export interface UserMessage {
   id: string;
   role: ChatRole;
-  content: Content[];
+  content: ResponseContent[];
   status: ChatSpanStatus;
   parentId: string | null;
   siblingIds: string[];
@@ -33,7 +33,7 @@ interface Props {
   selectedChat: IChat;
   onChangeMessage?: (messageId: string) => void;
   onEditAndSendMessage?: (editedMessage: Message, parentId?: string) => void;
-  onEditUserMessage?: (messageId: string, content: Content) => void;
+  onEditUserMessage?: (messageId: string, content: ResponseContent) => void;
   onDeleteMessage?: (messageId: string) => void;
 }
 

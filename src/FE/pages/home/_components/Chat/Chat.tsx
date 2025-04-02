@@ -26,10 +26,11 @@ import {
   ChatRole,
   ChatSpanStatus,
   ChatStatus,
-  Content,
+  ResponseContent,
   ImageDef,
   Message,
   MessageContentType,
+  RequestContent,
 } from '@/types/chat';
 import {
   IChatMessage,
@@ -67,6 +68,7 @@ import {
   putMessageReactionUp,
   putResponseMessageEditAndSaveNew,
   putResponseMessageEditInPlace,
+  responseContentToRequest,
 } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
@@ -260,11 +262,12 @@ const Chat = memo(() => {
       let responseMessages = generateResponseMessages(selectedChat, messageId);
       selectedMessageList.push(responseMessages);
       messageDispatch(setSelectedMessages(selectedMessageList));
+      const requestContent: RequestContent[] = responseContentToRequest(message.content);
       let chatBody = {
         chatId,
         timezoneOffset: new Date().getTimezoneOffset(),
         parentAssistantMessageId: messageId || null,
-        userMessage: message.content,
+        userMessage: requestContent,
       };
 
       const response = await fetch(`${getApiUrl()}/api/chats/general`, {
@@ -347,15 +350,16 @@ const Chat = memo(() => {
     selectedMessageList.push(responseMessages);
     messageDispatch(setSelectedMessages(selectedMessageList));
 
+    const requestContent: RequestContent[] = responseContentToRequest(message.content);
     let chatBody = {
       chatId,
       spanIds: chatSpans.map((x) => x.spanId),
       parentAssistantMessageId: messageId || null,
-      userMessage: message.content,
+      userMessage: requestContent,
       timezoneOffset: new Date().getTimezoneOffset(),
     };
 
-    const response = await fetch(`${getApiUrl()}/api/chats/general-chat`, {
+    const response = await fetch(`${getApiUrl()}/api/chats/general`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -582,7 +586,7 @@ const Chat = memo(() => {
 
   const handleUpdateResponseMessage = async (
     messageId: string,
-    content: Content,
+    content: ResponseContent,
     isCopy: boolean = false,
   ) => {
     let data: PutResponseMessageEditAndSaveNewResult;
@@ -651,7 +655,7 @@ const Chat = memo(() => {
 
   const handleUpdateUserMessage = async (
     messageId: string,
-    content: Content,
+    content: ResponseContent,
   ) => {
     const params = {
       messageId,

@@ -61,6 +61,7 @@ public class Program
         builder.Services.AddScoped<FileUrlProvider>();
         builder.Services.AddScoped<ChatConfigService>();
         builder.Services.AddScoped<FileContentTypeService>();
+        builder.Services.AddScoped<DBFileService>();
 
         builder.Services.AddUrlEncryption();
         builder.Services.AddHttpContextAccessor();

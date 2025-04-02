@@ -16,7 +16,7 @@ import { formatPrompt } from '@/utils/promptVariable';
 import {
   ChatRole,
   ChatStatus,
-  Content,
+  ResponseContent,
   ImageDef,
   Message,
   MessageContentType,

@@ -1,7 +1,7 @@
 import {
   ChatRole,
   ChatSpanStatus,
-  Content,
+  ResponseContent,
   IChat,
   MessageContentType,
 } from '@/types/chat';
@@ -199,7 +199,7 @@ export function generateResponseMessage(
   } as IChatMessage;
 }
 
-export function generateUserMessage(content: Content[], parentId?: string) {
+export function generateUserMessage(content: ResponseContent[], parentId?: string) {
   return {
     spanId: null,
     id: UserMessageTempId,
