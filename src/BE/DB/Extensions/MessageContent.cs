@@ -1,6 +1,7 @@
 ﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
 using OpenAI.Chat;
 
@@ -30,12 +31,12 @@ public partial class MessageContent
         };
     }
 
-    public static MessageContent FromContent(string text)
+    public static MessageContent FromText(string text)
     {
         return new MessageContent { MessageContentText = new() { Content = text }, ContentTypeId = (byte)DBMessageContentType.Text };
     }
 
-    public static MessageContent FromReasoningContent(string text)
+    public static MessageContent FromThink(string text)
     {
         return new MessageContent { MessageContentText = new() { Content = text }, ContentTypeId = (byte)DBMessageContentType.Reasoning };
     }
@@ -58,19 +59,25 @@ public partial class MessageContent
             .ToArrayAsync(cancellationToken);
     }
 
-    public static IEnumerable<MessageContent> FromFullResponse(InternalChatSegment lastSegment, string? errorText)
+    public static IEnumerable<MessageContent> FromFullResponse(InternalChatSegment lastSegment, string? errorText, Dictionary<ImageChatSegment, MessageContent> imageMcCache)
     {
         if (errorText is not null)
         {
             yield return FromError(errorText);
         }
-        if (!string.IsNullOrEmpty(lastSegment.ReasoningSegment))
+        List<ChatSegmentItem> items = lastSegment.Items.Combine();
+        foreach (MessageContent item in items.Select(x =>
+            {
+                return x switch
+                {
+                    TextChatSegment text => FromText(text.Text),
+                    ThinkChatSegment think => FromThink(think.Think),
+                    ImageChatSegment image => imageMcCache[image],
+                    _ => throw new NotSupportedException(),
+                };
+            }))
         {
-            yield return FromReasoningContent(lastSegment.ReasoningSegment);
-        }
-        if (lastSegment.Segment is not null)
-        {
-            yield return FromContent(lastSegment.Segment);
+            yield return item;
         }
     }
 }

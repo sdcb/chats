@@ -1,27 +1,29 @@
 ﻿using Amazon.S3;
 using Amazon.S3.Model;
+using Chats.BE.DB.Enums;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 
 namespace Chats.BE.Services.FileServices.Implementations.AwsS3;
 
-public class AwsS3FileService : IFileService
+public class AwsS3FileService(int id, DBFileServiceType fileServiceType) : IFileService(id, fileServiceType)
 {
-    private readonly string _bucketName;
-    private readonly AmazonS3Client _s3;
+    private readonly string _bucketName = null!;
+    private readonly AmazonS3Client _s3 = null!;
 
-    public AwsS3FileService(AwsS3Config config)
+    public AwsS3FileService(int id, DBFileServiceType fileServiceType, AwsS3Config config) : this(id, fileServiceType) 
     {
         _bucketName = config.Bucket;
         _s3 = config.CreateS3();
     }
 
-    public AwsS3FileService(string bucketName, AmazonS3Client s3)
+    public AwsS3FileService(int id, DBFileServiceType fileServiceType, string bucketName, AmazonS3Client s3) : this(id, fileServiceType)
     {
         _bucketName = bucketName;
         _s3 = s3;
     }
 
-    public Uri CreateDownloadUrl(CreateDownloadUrlRequest req)
+    public override Uri CreateDownloadUrl(CreateDownloadUrlRequest req)
     {
         string url = _s3.GetPreSignedURL(new GetPreSignedUrlRequest
         {
@@ -33,7 +35,7 @@ public class AwsS3FileService : IFileService
         return new Uri(url);
     }
 
-    public async Task<Stream> Download(string storageKey, CancellationToken cancellationToken)
+    public override async Task<Stream> Download(string storageKey, CancellationToken cancellationToken)
     {
         GetObjectResponse resp = await _s3.GetObjectAsync(new GetObjectRequest
         {
@@ -43,7 +45,7 @@ public class AwsS3FileService : IFileService
         return resp.ResponseStream;
     }
 
-    public async Task<string> Upload(FileUploadRequest request, CancellationToken cancellationToken)
+    public override async Task<string> Upload(FileUploadRequest request, CancellationToken cancellationToken)
     {
         SuggestedStorageInfo ssi = SuggestedStorageInfo.FromFileName(request.FileName);
         _ = await _s3.PutObjectAsync(new PutObjectRequest()
@@ -56,7 +58,7 @@ public class AwsS3FileService : IFileService
         return ssi.StorageKey;
     }
 
-    public async Task<bool> Delete(string storageKey, CancellationToken cancellationToken)
+    public override async Task<bool> Delete(string storageKey, CancellationToken cancellationToken)
     {
         DeleteObjectResponse resp = await _s3.DeleteObjectAsync(new DeleteObjectRequest
         {

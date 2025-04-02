@@ -22,8 +22,7 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
 
         DB.File file = mcFile.File;
 
-        DBFileServiceType fileServiceType = (DBFileServiceType)file.FileService.FileServiceTypeId;
-        IFileService fs = fileServiceFactory.Create(fileServiceType, file.FileService.Configs);
+        IFileService fs = fileServiceFactory.Create(file.FileService);
         if (file.FileService.FileServiceTypeId == (byte)DBFileServiceType.Local)
         {
             MemoryStream ms = new();
@@ -43,8 +42,7 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
 
     public FileDto CreateFileDto(DB.File file)
     {
-        DBFileServiceType fileServiceType = (DBFileServiceType)file.FileService.FileServiceTypeId;
-        IFileService fs = fileServiceFactory.Create(fileServiceType, file.FileService.Configs);
+        IFileService fs = fileServiceFactory.Create(file.FileService);
         Uri downloadUrl = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
 
         return new FileDto

@@ -36,22 +36,19 @@ public abstract partial class ChatService : IDisposable
 
     public virtual async Task<ChatSegment> Chat(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, CancellationToken cancellationToken)
     {
-        StringBuilder content = new();
-        StringBuilder reasoningContent = new();
+        List<ChatSegmentItem> segments = [];
         ChatSegment? lastSegment = null;
         await foreach (ChatSegment seg in ChatStreamed(messages, options, cancellationToken))
         {
             lastSegment = seg;
-            content.Append(seg.Segment);
-            content.Append(seg.ReasoningSegment);
+            segments.AddRange(seg.Items);
         }
 
         return new ChatSegment()
         {
             Usage = lastSegment?.Usage,
             FinishReason = lastSegment?.FinishReason,
-            Segment = content.ToString(),
-            ReasoningSegment = reasoningContent.ToString(),
+            Items = segments,
         };
     }
 

@@ -27,7 +27,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         [FromServices] FileImageInfoService fileImageInfoService,
         CancellationToken cancellationToken)
     {
-        FileService? fileService = await FileService.GetDefault(db, cancellationToken);
+        DB.FileService? fileService = await DB.FileService.GetDefault(db, cancellationToken);
         if (fileService == null)
         {
             return NotFound("File service config not found.");
@@ -45,7 +45,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         [FromServices] FileImageInfoService fileImageInfoService,
         CancellationToken cancellationToken)
     {
-        FileService? fileService = await db.FileServices.FindAsync([fileServiceId], cancellationToken);
+        DB.FileService? fileService = await db.FileServices.FindAsync([fileServiceId], cancellationToken);
         if (fileService == null)
         {
             return NotFound("File server config not found.");
@@ -59,8 +59,8 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         ILogger<FileController> logger, 
         ClientInfoManager clientInfoManager, 
         FileUrlProvider fdup, 
-        CurrentUser currentUser, 
-        FileService fileService, 
+        CurrentUser currentUser,
+        DB.FileService fileService, 
         FileContentTypeService fileContentTypeService,
         FileImageInfoService fileImageInfoService,
         CancellationToken cancellationToken)
@@ -84,7 +84,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
             return NotFound("File service config not found.");
         }
 
-        IFileService fs = fileServiceFactory.Create((DBFileServiceType)fileService.FileServiceTypeId, fileService.Configs);
+        IFileService fs = fileServiceFactory.Create(fileService);
         using Stream baseStream = file.OpenReadStream();
         using PartialBufferedStream pbStream = new(baseStream, 4 * 1024);
         string storageKey = await fs.Upload(new FileUploadRequest
@@ -162,7 +162,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
     internal ActionResult ServeStaticFile(DB.File file)
     {
         DBFileServiceType fileServiceType = (DBFileServiceType)file.FileService.FileServiceTypeId;
-        IFileService fs = fileServiceFactory.Create(fileServiceType, file.FileService.Configs);
+        IFileService fs = fileServiceFactory.Create(file);
         if (fileServiceType == DBFileServiceType.Local)
         {
             FileInfo fileInfo = new(Path.Combine(file.FileService.Configs, file.StorageKey));
