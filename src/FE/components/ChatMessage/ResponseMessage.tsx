@@ -239,7 +239,7 @@ const ResponseMessage = (props: Props) => {
                 }}
               >
                 {`${preprocessLaTeX(c.c!)}${
-                  chatStatus === ChatSpanStatus.Chatting ? '`▍`' : ''
+                  chatStatus === ChatSpanStatus.Chatting ? '▍' : ''
                 }`}
               </MemoizedReactMarkdown>
               <div className="flex justify-end">
@@ -277,8 +277,7 @@ const ResponseMessage = (props: Props) => {
         models={models}
         chatStatus={message.status}
         message={message as any}
-        // onToggleEditingMessage={handleToggleEditing}
-        // onChangeMessage={onChangeChatLeafMessageId}
+        onChangeMessage={onChangeChatLeafMessageId}
         onReactionMessage={onReactionMessage}
         onRegenerate={(messageId: string, modelId: number) => {
           onRegenerate && onRegenerate(message.spanId!, messageId, modelId);

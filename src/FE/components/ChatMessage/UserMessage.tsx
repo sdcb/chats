@@ -33,7 +33,7 @@ interface Props {
   selectedChat: IChat;
   onChangeMessage?: (messageId: string) => void;
   onEditAndSendMessage?: (editedMessage: Message, parentId?: string) => void;
-  onEditUserMessage?: (messageId: string, content: Content[]) => void;
+  onEditUserMessage?: (messageId: string, content: Content) => void;
   onDeleteMessage?: (messageId: string) => void;
 }
 
@@ -51,8 +51,7 @@ const UserMessage = (props: Props) => {
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [messageContent, setMessageContent] = useState(message.content);
-  const [messageText, setMessageText] = useState(
+  const [contentText, setContentText] = useState(
     message.content.find((x) => x.$type === MessageContentType.text)?.c || '',
   );
   const {
@@ -66,9 +65,17 @@ const UserMessage = (props: Props) => {
 
   const handleEditMessage = (isOnlySave: boolean = false) => {
     if (isOnlySave) {
-      onEditUserMessage && onEditUserMessage(message.id, messageContent);
+      let msgContent = message.content.find(
+        (x) => x.$type === MessageContentType.text,
+      )!;
+      msgContent.c = contentText;
+      onEditUserMessage && onEditUserMessage(message.id, msgContent);
     } else {
       if (selectedChat.id && onEditAndSendMessage) {
+        const messageContent = message.content.map((x) => {
+          if (x.$type === MessageContentType.text) x.c = contentText;
+          return x;
+        });
         onEditAndSendMessage(
           { ...message, content: messageContent },
           parentId || undefined,
@@ -79,14 +86,7 @@ const UserMessage = (props: Props) => {
   };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessageContent((prev) => {
-      return prev.map((x) => {
-        if (x.$type === MessageContentType.text) {
-          x.c = event.target.value;
-        }
-        return x;
-      });
-    });
+    setContentText(event.target.value);
     if (textareaRef.current) {
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
@@ -103,11 +103,14 @@ const UserMessage = (props: Props) => {
     setIsEditing(!isEditing);
   };
 
-  useEffect(() => {
-    setMessageContent(content);
-    setMessageText(
+  const init = () => {
+    setContentText(
       content.find((x) => x.$type === MessageContentType.text)?.c || '',
     );
+  };
+
+  useEffect(() => {
+    init();
   }, [content]);
 
   useEffect(() => {
@@ -125,7 +128,7 @@ const UserMessage = (props: Props) => {
             <textarea
               ref={textareaRef}
               className="w-full outline-none resize-none whitespace-pre-wrap border-none rounded-md bg-muted"
-              value={messageText}
+              value={contentText}
               onChange={handleInputChange}
               onKeyDown={handlePressEnter}
               onCompositionStart={() => setIsTyping(true)}
@@ -148,7 +151,7 @@ const UserMessage = (props: Props) => {
                 onClick={() => {
                   handleEditMessage(true);
                 }}
-                disabled={(messageText || '')?.trim().length <= 0}
+                disabled={(contentText || '')?.trim().length <= 0}
               >
                 {t('Save')}
               </Button>
@@ -158,7 +161,7 @@ const UserMessage = (props: Props) => {
                 onClick={() => {
                   handleEditMessage();
                 }}
-                disabled={(messageText || '')?.trim().length <= 0}
+                disabled={(contentText || '')?.trim().length <= 0}
               >
                 {t('Send')}
               </Button>
@@ -166,7 +169,7 @@ const UserMessage = (props: Props) => {
                 variant="outline"
                 className="rounded-md border border-neutral-300 px-4 py-1 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
                 onClick={() => {
-                  setMessageContent(content);
+                  init();
                   setIsEditing(false);
                 }}
               >
@@ -179,7 +182,7 @@ const UserMessage = (props: Props) => {
             <div className="flex flex-wrap justify-end text-right gap-2">
               {content
                 .filter((x) => x.$type === MessageContentType.fileId)
-                .map((img, index) => (
+                .map((img: any, index) => (
                   <img
                     className="rounded-md mr-2 not-prose"
                     key={index}
@@ -197,7 +200,7 @@ const UserMessage = (props: Props) => {
                   : ''
               }`}
             >
-              {messageText}
+              {contentText}
             </div>
           </div>
         )}
@@ -216,7 +219,7 @@ const UserMessage = (props: Props) => {
             />
             <CopyAction
               triggerClassName="invisible group-hover:visible focus:visible"
-              text={messageText}
+              text={contentText}
             />
             <DeleteAction
               hidden={

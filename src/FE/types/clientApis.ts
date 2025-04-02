@@ -1,4 +1,4 @@
-import { ChatStatus } from './chat';
+import { ChatStatus, Content } from './chat';
 import { IChatMessage } from './chatMessage';
 import { DBModelProvider } from './model';
 import { Paging } from './page';
@@ -225,6 +225,7 @@ export interface PutResponseMessageEditAndSaveNewResult {
   id: string;
   parentId: string;
   edited: boolean;
+  content: Content[];
 }
 
 export interface PutResponseMessageEditInPlaceParams {

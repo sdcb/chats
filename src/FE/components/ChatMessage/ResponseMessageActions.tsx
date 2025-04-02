@@ -1,5 +1,10 @@
 import { AdminModelDto } from '@/types/adminApis';
-import { ChatRole, ChatSpanStatus, Content } from '@/types/chat';
+import {
+  ChatRole,
+  ChatSpanStatus,
+  Content,
+  MessageContentType,
+} from '@/types/chat';
 import { ReactionMessageType } from '@/types/chatMessage';
 
 import ChangeModelAction from './ChangeModelAction';
@@ -17,7 +22,7 @@ export interface ResponseMessage {
   siblingIds: string[];
   parentId: string | null;
   role: ChatRole;
-  content: Content;
+  content: Content[];
   inputTokens: number;
   outputTokens: number;
   reasoningTokens: number;
@@ -81,14 +86,12 @@ const ResponseMessageActions = (props: Props) => {
             onChangeMessage={onChangeMessage}
           />
           <div className="visible flex gap-0 items-center">
-            {/* <EditAction
-              hovered={message.edited}
-              onToggleEditing={() => {
-                onToggleEditingMessage && onToggleEditingMessage(messageId);
-              }}
-            /> */}
-
-            <CopyAction text={message.content.text} />
+            <CopyAction
+              text={message.content
+                .filter((x) => x.$type === MessageContentType.text)
+                .map((x) => x.c)
+                .join('')}
+            />
 
             <DeleteAction
               hidden={siblingIds.length <= 1}

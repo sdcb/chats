@@ -617,24 +617,21 @@ const Chat = memo(() => {
         if (m.id === messageId) {
           msgGroupIndex = groupIndex;
           msgIndex = i;
+          const content = isCopy ? data.content : m.content;
           const msgSiblingIds = isCopy
             ? [...m.siblingIds, data.id]
             : m.siblingIds;
-          const newContent = m.content.map((c) => {
-            if (c.i === content.i) return content;
-            return c;
-          });
           copyMsg = {
             ...m,
             id: data?.id,
-            content: newContent,
+            content,
             edited: true,
             siblingIds: msgSiblingIds,
           };
 
           return {
             ...m,
-            content: isCopy ? m.content : newContent,
+            content,
             edited: true,
             siblingIds: msgSiblingIds,
           };
