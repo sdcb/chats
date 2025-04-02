@@ -99,7 +99,7 @@ const ChatHeader = () => {
           triggerClassName={'hover:bg-transparent p-0'}
           models={models}
           content={
-            <Button variant="ghost" className="bg-muted">
+            <Button variant="ghost" className="bg-button">
               <IconPlus />
               {t('Add Model')}
             </Button>
@@ -158,7 +158,7 @@ const ChatHeader = () => {
             >
               {selectedChat.spans.map((span) => (
                 <div
-                  className="flex bg-muted rounded-md h-10 flex-shrink-0"
+                  className="flex bg-card rounded-md h-10 flex-shrink-0"
                   key={'chat-header-' + span.spanId}
                 >
                   {isMobile() ? (
@@ -182,7 +182,7 @@ const ChatHeader = () => {
                       </Button>
                     </Button>
                   ) : (
-                    <div className="flex items-center">
+                    <div className="flex items-center bg-card rounded-md hover:bg-muted">
                       <div
                         className={cn(
                           'flex items-center pl-2',
