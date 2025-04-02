@@ -1,4 +1,4 @@
-﻿namespace Chats.BE.Services.Models;
+﻿namespace Chats.BE.Services.Models.ChatServices;
 
 public record ChatExtraDetails
 {

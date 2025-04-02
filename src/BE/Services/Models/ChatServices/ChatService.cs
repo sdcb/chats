@@ -5,6 +5,7 @@ using OpenAI.Chat;
 using System.Text;
 using Microsoft.ML.Tokenizers;
 using Chats.BE.Services.Models.Extensions;
+using Chats.BE.Services.Models.ChatServices;
 
 namespace Chats.BE.Services.Models;
 

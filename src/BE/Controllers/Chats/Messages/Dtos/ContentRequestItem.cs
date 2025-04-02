@@ -1,12 +1,14 @@
 ﻿using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
+using Chats.BE.Services.UrlEncryption;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 
 [JsonPolymorphic]
-[JsonDerivedType(typeof(TextContentRequestItem), typeDiscriminator: 0)]
-[JsonDerivedType(typeof(FileContentRequestItem), typeDiscriminator: 1)]
+[JsonDerivedType(typeof(TextContentRequestItem), typeDiscriminator: (int)DBMessageContentType.Text)]
+[JsonDerivedType(typeof(FileContentRequestItem), typeDiscriminator: (int)DBMessageContentType.FileId)]
 public abstract record ContentRequestItem
 {
     public abstract Task<MessageContent> ToMessageContent(FileUrlProvider fup, CancellationToken cancellationToken);
@@ -17,6 +19,34 @@ public abstract record ContentRequestItem
             .ToAsyncEnumerable()
             .SelectAwait(async item => await item.ToMessageContent(fup, cancellationToken))
             .ToArrayAsync(cancellationToken);
+    }
+
+    public static ContentRequestItem FromDB(MessageContent mc, IUrlEncryptionService idEncryption)
+    {
+        return (DBMessageContentType)mc.ContentTypeId switch
+        {
+            DBMessageContentType.Text => new TextContentRequestItem { Text = mc.MessageContentText!.Content },
+            DBMessageContentType.FileId => new FileContentRequestItem { FileId = idEncryption.EncryptFileId(mc.MessageContentFile!.FileId) },
+            _ => throw new NotSupportedException(),
+        };
+    }
+
+    public static ContentRequestItem[] FromDB(ICollection<MessageContent> mcs, IUrlEncryptionService idEncryption)
+    {
+        return [.. mcs
+            .Where(x => x.ContentTypeId == (byte)DBMessageContentType.Text || x.ContentTypeId == (byte)DBMessageContentType.FileId)
+            .Select(mc => FromDB(mc, idEncryption))];
+    }
+
+    public static ContentRequestItem[] FromDB(ICollection<MessageContent> mcs, IUrlEncryptionService idEncryption, long patchContentId, TextContentRequestItem patchText)
+    {
+        return [.. mcs
+            .Where(x => x.ContentTypeId == (byte)DBMessageContentType.Text || x.ContentTypeId == (byte)DBMessageContentType.FileId)
+            .Select(mc => mc.Id switch 
+            {
+                var x when x == patchContentId => patchText,
+                _ => FromDB(mc, idEncryption),
+            })];
     }
 }
 

@@ -1,6 +1,6 @@
 ﻿using Chats.BE.DB.Enums;
+using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
-using Chats.BE.Services.Models.Extensions;
 using OpenAI.Chat;
 using System.Runtime.CompilerServices;
 

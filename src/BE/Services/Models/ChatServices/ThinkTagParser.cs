@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 
-namespace Chats.BE.Services.Models;
+namespace Chats.BE.Services.Models.ChatServices;
 
 public record ThinkAndResponseSegment // Think/Response 可以同时存在（但不会同时不存在）
 {

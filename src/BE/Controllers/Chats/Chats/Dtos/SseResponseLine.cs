@@ -133,4 +133,24 @@ public record SseResponseLine
             Kind = SseResponseKind.ChatLeafMessageId,
         };
     }
+
+    public static SseResponseLine ImageGenerating(byte spanId, FileDto fileDto)
+    {
+        return new SseResponseLine
+        {
+            SpanId = spanId,
+            Result = fileDto,
+            Kind = SseResponseKind.ImageGenerating,
+        };
+    }
+
+    public static SseResponseLine ImageGenerated(byte spanId, FileDto fileDto)
+    {
+        return new SseResponseLine
+        {
+            SpanId = spanId,
+            Result = fileDto,
+            Kind = SseResponseKind.ImageGenerated,
+        };
+    }
 }

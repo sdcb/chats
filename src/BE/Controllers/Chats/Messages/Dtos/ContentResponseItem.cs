@@ -1,44 +1,53 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
+using Chats.BE.Services.UrlEncryption;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 
 [JsonPolymorphic]
-[JsonDerivedType(typeof(ErrorContentResponseItem), typeDiscriminator: 0)]
-[JsonDerivedType(typeof(TextContentResponseItem), typeDiscriminator: 1)]
-[JsonDerivedType(typeof(FileResponseItem), typeDiscriminator: 2)]
-[JsonDerivedType(typeof(ReasoningResponseItem), typeDiscriminator: 3)]
+[JsonDerivedType(typeof(ErrorContentResponseItem), typeDiscriminator: (int)DBMessageContentType.Error)]
+[JsonDerivedType(typeof(TextContentResponseItem), typeDiscriminator: (int)DBMessageContentType.Text)]
+[JsonDerivedType(typeof(FileResponseItem), typeDiscriminator: (int)DBMessageContentType.FileId)]
+[JsonDerivedType(typeof(ReasoningResponseItem), typeDiscriminator: (int)DBMessageContentType.Reasoning)]
 public abstract record ContentResponseItem
 {
-    public static ContentResponseItem FromSegment(MessageContent segment, FileUrlProvider fup)
+    [JsonPropertyName("i")]
+    public required string Id { get; init; }
+
+    public static ContentResponseItem FromContent(MessageContent content, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
     {
-        return (DBMessageContentType)segment.ContentTypeId switch
+        string encryptedMessageContentId = urlEncryption.EncryptMessageContentId(content.Id);
+        return (DBMessageContentType)content.ContentTypeId switch
         {
             DBMessageContentType.Text => new TextContentResponseItem()
             {
-                Content = segment.MessageContentText!.Content
+                Id = encryptedMessageContentId, 
+                Content = content.MessageContentText!.Content
             },
             DBMessageContentType.Error => new ErrorContentResponseItem()
             {
-                Content = segment.MessageContentText!.Content
+                Id = encryptedMessageContentId,
+                Content = content.MessageContentText!.Content
             },
             DBMessageContentType.Reasoning => new ReasoningResponseItem()
             {
-                Content = segment.MessageContentText!.Content
+                Id = encryptedMessageContentId,
+                Content = content.MessageContentText!.Content
             },
             DBMessageContentType.FileId => new FileResponseItem()
             {
-                Content = fup.CreateFileDto(segment.MessageContentFile!.File)
+                Id = encryptedMessageContentId,
+                Content = fup.CreateFileDto(content.MessageContentFile!.File)
             },
             _ => throw new NotSupportedException(),
         };
     }
 
-    public static ContentResponseItem[] FromSegment(MessageContent[] segments, FileUrlProvider fup)
+    public static ContentResponseItem[] FromContent(MessageContent[] contents, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
     {
-        return [.. segments.Select(x => FromSegment(x, fup))];
+        return [.. contents.Select(x => FromContent(x, fup, urlEncryption))];
     }
 }
 

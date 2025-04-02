@@ -6,7 +6,7 @@ using Chats.BE.Services.Models.ChatServices.Test;
 using Chats.BE.Services.Models.ModelLoaders;
 using OpenAI.Chat;
 
-namespace Chats.BE.Services.Models;
+namespace Chats.BE.Services.Models.ChatServices;
 
 public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlService)
 {
