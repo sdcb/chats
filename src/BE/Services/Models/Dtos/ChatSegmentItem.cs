@@ -1,6 +1,4 @@
 ﻿using Chats.BE.Controllers.OpenAICompatible.Dtos;
-using Chats.BE.DB;
-using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices;
 
 namespace Chats.BE.Services.Models.Dtos;
@@ -9,27 +7,30 @@ public abstract record ChatSegmentItem
 {
     public static ChatSegmentItem FromText(string text)
     {
+        ArgumentException.ThrowIfNullOrEmpty(text, nameof(text));
         return new TextChatSegment { Text = text };
     }
 
     public static ChatSegmentItem FromThink(string think)
     {
+        ArgumentException.ThrowIfNullOrEmpty(think, nameof(think));
         return new ThinkChatSegment { Think = think };
     }
 
     public static ChatSegmentItem FromImage(ImageChatSegment image)
     {
+        ArgumentNullException.ThrowIfNull(image, nameof(image));
         return image;
     }
 
     public static List<ChatSegmentItem> FromTextAndThink(string? text, string? think)
     {
-        List<ChatSegmentItem> segments = [];
-        if (text != null)
+        List<ChatSegmentItem> segments = new(capacity: 2);
+        if (!string.IsNullOrEmpty(text))
         {
             segments.Add(FromText(text));
         }
-        if (think != null)
+        if (!string.IsNullOrEmpty(think))
         {
             segments.Add(FromThink(think));
         }
