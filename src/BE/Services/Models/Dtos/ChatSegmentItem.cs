@@ -7,8 +7,6 @@ namespace Chats.BE.Services.Models.Dtos;
 
 public abstract record ChatSegmentItem
 {
-    public abstract Task<MessageContent> ToDB(DBFileService dbFileService, CancellationToken cancellationToken = default);
-
     public static ChatSegmentItem FromText(string text)
     {
         return new TextChatSegment { Text = text };
@@ -42,33 +40,15 @@ public abstract record ChatSegmentItem
 public record TextChatSegment : ChatSegmentItem
 {
     public required string Text { get; init; }
-
-    public override Task<MessageContent> ToDB(DBFileService dbFileService, CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult(MessageContent.FromText(Text));
-    }
 }
 
 public record ThinkChatSegment : ChatSegmentItem
 {
     public required string Think { get; init; }
-
-    public override Task<MessageContent> ToDB(DBFileService dbFileService, CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult(MessageContent.FromThink(Think));
-    }
 }
 
 public static class ChatSegmentItemExtensions
 {
-    public static async Task<MessageContent[]> ToDB(this ChatSegmentItem[] items, DBFileService dbFileService, CancellationToken cancellationToken = default)
-    {
-        return await items
-            .ToAsyncEnumerable()
-            .SelectAwait(async item => await item.ToDB(dbFileService, cancellationToken))
-            .ToArrayAsync(cancellationToken);
-    }
-
     public static OpenAIDelta ToOpenAIDelta(this ICollection<ChatSegmentItem> items)
     {
         return new OpenAIDelta
@@ -92,7 +72,7 @@ public static class ChatSegmentItemExtensions
             }
 
             // 否则尝试合并
-            var last = segments[^1];
+            ChatSegmentItem last = segments[^1];
             if (last is TextChatSegment lastText && item is TextChatSegment currentText)
             {
                 // 两个连续 Text，合并文本

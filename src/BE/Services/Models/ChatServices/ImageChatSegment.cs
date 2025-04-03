@@ -12,7 +12,7 @@ namespace Chats.BE.Services.Models.ChatServices;
 [JsonDerivedType(typeof(UrlImage), typeDiscriminator: "url")]
 public abstract record ImageChatSegment : ChatSegmentItem
 {
-    public override async Task<MessageContent> ToDB(DBFileService fs, CancellationToken cancellationToken = default)
+    public async Task<MessageContent> ToDB(DBFileService fs, CancellationToken cancellationToken = default)
     {
         DBFileDef def = await Download(cancellationToken);
         File file = await fs.StoreNoSave(def, cancellationToken: cancellationToken);
