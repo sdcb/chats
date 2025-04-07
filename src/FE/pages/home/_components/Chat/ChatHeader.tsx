@@ -141,7 +141,7 @@ const ChatHeader = () => {
           <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]">
             <div
               className={cn(
-                'flex justify-between select-none items-center custom-scrollbar overflow-x-auto',
+                'flex justify-between select-none items-center custom-scrollbar overflow-x-auto px-3',
               )}
             >
               <div className={cn('flex justify-start h-12 items-center')}>

@@ -52,7 +52,7 @@ const ThinkingMessage = (props: Props) => {
         )}
       </div>
       {isOpen && (
-        <div className="border-l-2 ml-2 pl-2 text-gray-400 text-sm mt-2">
+        <div className="px-2 text-gray-400 text-sm mt-2">
           <MemoizedReactMarkdown
             remarkPlugins={[remarkMath, remarkGfm]}
             rehypePlugins={[rehypeKatex as any]}
@@ -67,7 +67,7 @@ const ThinkingMessage = (props: Props) => {
                     );
                   }
 
-                  children[0] = (children[0] as string).replace('`▍`', '▍');
+                  children[0] = (children[0] as string).replace('▍', '▍');
                 }
 
                 const match = /language-(\w+)/.exec(className || '');
@@ -112,7 +112,7 @@ const ThinkingMessage = (props: Props) => {
             }}
           >
             {`${preprocessLaTeX(content!)}${
-              chatStatus === ChatSpanStatus.Reasoning ? '`▍`' : ''
+              chatStatus === ChatSpanStatus.Reasoning ? '▍' : ''
             }`}
           </MemoizedReactMarkdown>
         </div>

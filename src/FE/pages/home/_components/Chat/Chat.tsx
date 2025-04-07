@@ -131,7 +131,7 @@ const Chat = memo(() => {
     selectedMsgs: IChatMessage[][],
     messageId: string,
     text: string,
-    status?: ChatSpanStatus,
+    status: ChatSpanStatus,
     finalMessageId?: string,
   ) => {
     const messageCount = selectedMsgs.length - 1;
@@ -148,15 +148,13 @@ const Chat = memo(() => {
           x.content.push({ i: '', $type: MessageContentType.text, c: text });
         }
 
-        if (status) {
-          x.status = status;
-          if (status === ChatSpanStatus.Failed) {
-            x.content.push({ i: '', $type: MessageContentType.error, c: text });
-          }
-          if (status === ChatSpanStatus.None) {
-            x.siblingIds.push(messageId);
-            x.id = finalMessageId!;
-          }
+        x.status = status;
+        if (status === ChatSpanStatus.Failed) {
+          x.content.push({ i: '', $type: MessageContentType.error, c: text });
+        }
+        if (status === ChatSpanStatus.None) {
+          x.siblingIds.push(messageId);
+          x.id = finalMessageId!;
         }
       }
       return x;
@@ -199,7 +197,7 @@ const Chat = memo(() => {
     let messageList = selectedMsgs[messageCount];
     messageList.map((x) => {
       if (x.id === messageId) {
-        x.status === ChatSpanStatus.Reasoning;
+        x.status = ChatSpanStatus.Reasoning;
         const contentCount = x.content.length - 1;
         if (
           contentCount >= 0 &&
@@ -750,7 +748,7 @@ const Chat = memo(() => {
         </div>
 
         <ChatMessageMemoized
-          className='mt-16'
+          className="mt-16"
           selectedChat={selectedChat}
           selectedMessages={selectedMessages}
           models={models}

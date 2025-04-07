@@ -5,14 +5,25 @@ import useTranslation from '@/hooks/useTranslation';
 import { preprocessLaTeX } from '@/utils/chats';
 
 import { AdminModelDto } from '@/types/adminApis';
-import { ChatSpanStatus, ResponseContent, MessageContentType } from '@/types/chat';
+import {
+  ChatSpanStatus,
+  MessageContentType,
+  ResponseContent,
+} from '@/types/chat';
 import { ReactionMessageType } from '@/types/chatMessage';
 
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
 
 import ChatError from '../ChatError/ChatError';
+import { IconDots, IconEdit } from '../Icons';
 import { Button } from '../ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
 import CopyAction from './CopyAction';
 import DeleteAction from './DeleteAction';
 import EditAction from './EditAction';
@@ -180,7 +191,7 @@ const ResponseMessage = (props: Props) => {
               </div>
             </div>
           ) : (
-            <div key={c.i}>
+            <div key={c.i} className="group relative">
               <MemoizedReactMarkdown
                 remarkPlugins={[remarkMath, remarkGfm]}
                 rehypePlugins={[rehypeKatex as any]}
@@ -195,7 +206,7 @@ const ResponseMessage = (props: Props) => {
                         );
                       }
 
-                      children[0] = (children[0] as string).replace('`▍`', '▍');
+                      children[0] = (children[0] as string).replace('▍', '▍');
                     }
 
                     const match = /language-(\w+)/.exec(className || '');
@@ -243,21 +254,40 @@ const ResponseMessage = (props: Props) => {
                   chatStatus === ChatSpanStatus.Chatting ? '▍' : ''
                 }`}
               </MemoizedReactMarkdown>
-              <div className="flex justify-end">
-                <EditAction
-                  isHoverVisible
-                  disabled={
-                    chatStatus === ChatSpanStatus.Chatting ||
-                    chatStatus === ChatSpanStatus.Reasoning
-                  }
-                  onToggleEditing={() => {
-                    handleToggleEditing(c.i, c.c);
-                  }}
-                />
-                <CopyAction
-                  triggerClassName="invisible group-hover:visible focus:visible"
-                  text={c.c}
-                />
+              <div className={`absolute -bottom-0.5 right-0`}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    disabled={
+                      chatStatus === ChatSpanStatus.Chatting ||
+                      chatStatus === ChatSpanStatus.Reasoning
+                    }
+                    className="focus:outline-none visible group-hover:visible"
+                  >
+                    <IconDots
+                      className="rotate-90 hover:opacity-50"
+                      size={16}
+                    />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-42 border-none">
+                    <DropdownMenuItem>
+                      <CopyAction
+                        text={c.c}
+                        content={t('Copy')}
+                        triggerClassName="w-full gap-3 justify-start py-2"
+                      />
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="flex justify-start gap-3 ml-1"
+                      onClick={(e) => {
+                        handleToggleEditing(c.i, c.c);
+                        e.stopPropagation();
+                      }}
+                    >
+                      <IconEdit />
+                      {t('Edit')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           );

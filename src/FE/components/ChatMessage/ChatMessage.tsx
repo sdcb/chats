@@ -103,11 +103,6 @@ export const ChatMessage: FC<Props> = memo(
                           !hasMultipleSpan && 'border-none',
                         )}
                       >
-                        {!hasMultipleSpan && (
-                          <div className="w-9 h-9 hidden md:block">
-                            <IconRobot className="w-7 h-7 mr-1 mt-4" />
-                          </div>
-                        )}
                         <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base pb-4 px-1">
                           <ResponseMessage
                             key={'response-message-' + message.id}
