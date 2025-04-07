@@ -17,6 +17,7 @@ public class FileServiceFactory(HostUrlService hostUrlService, IUrlEncryptionSer
 
     public IFileService Create(FileService dbfs)
     {
+        ArgumentNullException.ThrowIfNull(dbfs);
         CacheKey key = new(dbfs.Id, (DBFileServiceType)dbfs.FileServiceTypeId, dbfs.Configs);
         if (_cache.TryGetValue(key, out IFileService? fileService))
         {

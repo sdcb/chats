@@ -15,7 +15,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
         DBModelProvider modelProvider = (DBModelProvider)model.ModelKey.ModelProviderId;
         ChatService cs = modelProvider switch
         {
-            DBModelProvider.Test => new TestChatService(model),
+            DBModelProvider.Test => new Test2ChatService(model),
             DBModelProvider.OpenAI => new OpenAIChatService(model),
             DBModelProvider.AzureOpenAI => new AzureChatService(model),
             DBModelProvider.WenXinQianFan => new QianFanChatService(model),

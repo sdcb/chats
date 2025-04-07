@@ -405,8 +405,9 @@ public class ChatController(ChatStopService stopService) : ControllerBase
                 ImageChatSegment[] imgs = seg.Items.GetImages();
                 foreach (ImageChatSegment img in imgs)
                 {
-                    MessageContent mc = await img.ToDB(dbfs, cancellationToken);
+                    MessageContent mc = await img.ToDB(dbfs, clientInfo: await clientInfoTask, cancellationToken);
                     imageMcCache[img] = mc;
+                    
                     FileDto fileDto = fup.CreateFileDto(mc.MessageContentFile!.File);
                     await writer.WriteAsync(SseResponseLine.ImageGenerated(chatSpan.SpanId, fileDto), cancellationToken);
                 }
