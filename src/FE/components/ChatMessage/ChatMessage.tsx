@@ -1,7 +1,7 @@
 import { FC, memo } from 'react';
 
 import { AdminModelDto } from '@/types/adminApis';
-import { ChatRole, ResponseContent, IChat, Message } from '@/types/chat';
+import { ChatRole, IChat, Message, ResponseContent } from '@/types/chat';
 import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
 
 import { IconRobot } from '../Icons';
@@ -16,6 +16,7 @@ export interface Props {
   models?: AdminModelDto[];
   messagesEndRef: any;
   readonly?: boolean;
+  className?: string;
   onChangeChatLeafMessageId?: (messageId: string) => void;
   onEditAndSendMessage?: (editedMessage: Message, parentId?: string) => void;
   onRegenerate?: (spanId: number, messageId: string, modelId: number) => void;
@@ -36,6 +37,7 @@ export const ChatMessage: FC<Props> = memo(
     models = [],
     messagesEndRef,
     readonly,
+    className,
     onChangeChatLeafMessageId,
     onEditAndSendMessage,
     onRegenerate,
@@ -50,6 +52,7 @@ export const ChatMessage: FC<Props> = memo(
         className={cn(
           'w-11/12 m-auto p-0 md:p-4',
           !hasMultipleSpan && 'w-full md:w-4/5',
+          className,
         )}
       >
         {selectedMessages.map((messages, index) => {
@@ -92,20 +95,20 @@ export const ChatMessage: FC<Props> = memo(
                         }
                         key={'response-message-' + message.id}
                         className={cn(
-                          'border-[1px] rounded-md flex w-full group',
+                          'border-[1px] border-background rounded-md flex w-full group bg-card mt-4',
                           hasMultipleSpan &&
                             message.isActive &&
-                            'border-primary/50',
-                          hasMultipleSpan && 'p-0 md:p-4',
+                            'border-primary/50 border-gray-400',
+                          hasMultipleSpan && 'p-1 md:p-2',
                           !hasMultipleSpan && 'border-none',
                         )}
                       >
                         {!hasMultipleSpan && (
                           <div className="w-9 h-9 hidden md:block">
-                            <IconRobot className="w-7 h-7 mr-1" />
+                            <IconRobot className="w-7 h-7 mr-1 mt-4" />
                           </div>
                         )}
-                        <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base">
+                        <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base pb-4 px-1">
                           <ResponseMessage
                             key={'response-message-' + message.id}
                             message={message}

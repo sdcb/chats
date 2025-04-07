@@ -26,11 +26,11 @@ import {
   ChatRole,
   ChatSpanStatus,
   ChatStatus,
-  ResponseContent,
   ImageDef,
   Message,
   MessageContentType,
   RequestContent,
+  ResponseContent,
 } from '@/types/chat';
 import {
   IChatMessage,
@@ -262,7 +262,9 @@ const Chat = memo(() => {
       let responseMessages = generateResponseMessages(selectedChat, messageId);
       selectedMessageList.push(responseMessages);
       messageDispatch(setSelectedMessages(selectedMessageList));
-      const requestContent: RequestContent[] = responseContentToRequest(message.content);
+      const requestContent: RequestContent[] = responseContentToRequest(
+        message.content,
+      );
       let chatBody = {
         chatId,
         timezoneOffset: new Date().getTimezoneOffset(),
@@ -350,7 +352,9 @@ const Chat = memo(() => {
     selectedMessageList.push(responseMessages);
     messageDispatch(setSelectedMessages(selectedMessageList));
 
-    const requestContent: RequestContent[] = responseContentToRequest(message.content);
+    const requestContent: RequestContent[] = responseContentToRequest(
+      message.content,
+    );
     let chatBody = {
       chatId,
       spanIds: chatSpans.map((x) => x.spanId),
@@ -742,12 +746,11 @@ const Chat = memo(() => {
             }px)`,
           }}
         >
-          {selectedChat && <ChatHeader />}
-
           {selectedChat && selectedMessages.length === 0 && <ChatPresetList />}
         </div>
 
         <ChatMessageMemoized
+          className='mt-16'
           selectedChat={selectedChat}
           selectedMessages={selectedMessages}
           models={models}
@@ -761,6 +764,7 @@ const Chat = memo(() => {
           onDeleteMessage={handleDeleteMessage}
         />
       </div>
+      {selectedChat && <ChatHeader />}
       {hasModel() && selectedChat && (
         <ChatInput
           onSend={(message) => {

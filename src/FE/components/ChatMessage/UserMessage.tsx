@@ -122,12 +122,12 @@ const UserMessage = (props: Props) => {
 
   return (
     <>
-      <div className="flex flex-row-reverse relative">
+      <div className="flex flex-row-reverse relative rounded-md">
         {isEditing ? (
           <div className="flex w-full flex-col">
             <textarea
               ref={textareaRef}
-              className="w-full outline-none resize-none whitespace-pre-wrap border-none rounded-md bg-muted"
+              className="w-full outline-none resize-none whitespace-pre-wrap border-none rounded-md bg-card shadow-sm"
               value={contentText}
               onChange={handleInputChange}
               onKeyDown={handlePressEnter}
@@ -178,13 +178,13 @@ const UserMessage = (props: Props) => {
             </div>
           </div>
         ) : (
-          <div className="bg-muted py-2 px-3 rounded-md overflow-x-scroll">
+          <div className="bg-card py-2 px-3 rounded-md overflow-x-scroll">
             <div className="flex flex-wrap justify-end text-right gap-2">
               {content
                 .filter((x) => x.$type === MessageContentType.fileId)
                 .map((img: any, index) => (
                   <img
-                    className="rounded-md mr-2 not-prose"
+                    className="rounded-md not-prose"
                     key={index}
                     style={{ maxWidth: 268, maxHeight: 168 }}
                     src={img.c.url}

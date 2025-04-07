@@ -96,9 +96,7 @@ const ChatPresetList = () => {
 
   return (
     <div
-      className={cn(
-        'grid place-items-center h-[calc(100vh-320px)] px-0 md:px-8 pt-6 pb-32',
-      )}
+      className={cn('grid h-[calc(100vh-320px)] px-0 md:px-8 pt-6 pb-32 mt-10')}
     >
       {hasModel() && (
         <div className="grid grid-cols-[repeat(auto-fit,minmax(144px,320px))] place-content-center gap-4 w-full">
@@ -115,7 +113,9 @@ const ChatPresetList = () => {
                 }}
               >
                 <div className="flex justify-between">
-                  <span className='text-ellipsis whitespace-nowrap overflow-hidden'>{item.name}</span>
+                  <span className="text-ellipsis whitespace-nowrap overflow-hidden">
+                    {item.name}
+                  </span>
                   <span>
                     <DropdownMenu>
                       <DropdownMenuTrigger className="focus:outline-none p-[6px]">

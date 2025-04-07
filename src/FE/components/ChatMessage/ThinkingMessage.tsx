@@ -28,7 +28,7 @@ const ThinkingMessage = (props: Props) => {
 
   const [isOpen, setIsOpen] = useState(true);
   return (
-    <div className="mb-2">
+    <div className="my-4">
       <div
         className="inline-flex items-center px-3 py-1 bg-gray-300 dark:bg-gray-700 text-xs gap-1 rounded-sm"
         onClick={() => {
@@ -52,7 +52,7 @@ const ThinkingMessage = (props: Props) => {
         )}
       </div>
       {isOpen && (
-        <div className="border-l-2 border-gray-200 ml-2 pl-2 text-gray-500 text-sm mt-2">
+        <div className="border-l-2 ml-2 pl-2 text-gray-400 text-sm mt-2">
           <MemoizedReactMarkdown
             remarkPlugins={[remarkMath, remarkGfm]}
             rehypePlugins={[rehypeKatex as any]}

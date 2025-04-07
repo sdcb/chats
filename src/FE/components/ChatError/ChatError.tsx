@@ -23,7 +23,7 @@ const ChatError = (props: Props) => {
   return (
     <Alert
       variant="destructive"
-      className="bg-background my-2 mt-0 border-none p-0 px-1 pt-1"
+      className="bg-card my-2 mt-0 border-none p-0 px-1 pt-1"
     >
       <AlertDescription className="flex items-center gap-1">
         {errorMessage()}

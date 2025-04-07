@@ -16,7 +16,6 @@ import { formatPrompt } from '@/utils/promptVariable';
 import {
   ChatRole,
   ChatStatus,
-  ResponseContent,
   ImageDef,
   Message,
   MessageContentType,
@@ -32,6 +31,7 @@ import {
   IconStopFilled,
 } from '@/components/Icons/index';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 import HomeContext from '../../_contexts/home.context';
 import UploadButton from '../Button/UploadButton';
@@ -256,17 +256,17 @@ const ChatInput = ({
   }, [selectedChat]);
 
   return (
-    <div className="absolute bottom-0 left-0 w-full border-transparent bg-gradient-to-b from-transparent via-white to-white pt-6 dark:border-white/20 dark:via-[#262630] dark:to-[#262630] md:pt-2">
-      <div className="stretch mx-2 mt-4 flex flex-row gap-3 last:mb-2 md:mx-4 md:mt-[52px] md:last:mb-6 lg:mx-auto lg:max-w-5xl">
-        <div className="relative flex w-full flex-grow flex-col rounded-md bg-background shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:border-gray-900/50  dark:text-white dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]">
+    <div className="absolute bottom-0 left-0 w-full border-transparent bg-background md:pt-2">
+      <div className="stretch mx-4 mt-4 flex flex-row rounded-md">
+        <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] p-2">
           <div className="absolute mb-1 bottom-full mx-auto flex w-full justify-start z-10">
             {contentFiles.map((file, index) => (
-              <div className="relative group" key={index}>
+              <div className="relative group shadow-sm" key={index}>
                 <div className="mr-1 w-[4rem] h-[4rem] rounded overflow-hidden">
                   <img
                     src={file.url}
                     alt=""
-                    className="w-full h-full object-cover shadow-lg"
+                    className="w-full h-full object-cover shadow-sm"
                   />
                   <button
                     onClick={() => {
@@ -288,20 +288,21 @@ const ChatInput = ({
 
           {showScrollDownButton && (
             <Button
-              className="absolute w-auto h-auto -right-1 bottom-12 rounded-full bg-transparent hover:bg-transparent"
+              className="absolute left-1/2 -translate-x-1/2 -top-10 w-auto h-auto rounded-full bg-card hover:bg-card z-50"
               onClick={onScrollDownClick}
             >
               <IconArrowDown />
             </Button>
           )}
 
-          <textarea
+          <Textarea
             ref={textareaRef}
-            className="m-0 w-full resize-none border-none outline-none rounded-md p-0 py-2 pr-16 pl-4 bg-background md:py-3 md:pl-4"
+            className="m-0 w-full resize-none border-none outline-none rounded-md p-3 bg-card"
             style={{
               resize: 'none',
               bottom: `${textareaRef?.current?.scrollHeight}px`,
               maxHeight: '400px',
+              minHeight: '20px',
               overflow: `${
                 textareaRef.current && textareaRef.current.scrollHeight > 400
                   ? 'auto'
@@ -319,38 +320,44 @@ const ChatInput = ({
             onKeyDown={handleKeyDown}
           />
 
-          <div className="flex">
-            <Button
-              className="absolute right-2 md:top-2.5 top-1 rounded-sm p-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
-              onClick={handleSend}
-            >
-              {selectedChat.status === ChatStatus.Chatting ? (
-                <IconStopFilled onClick={handleStopChats} className="h-4 w-4" />
-              ) : (
-                <IconSend />
+          <div className="flex px-3 justify-between">
+            <div className="">
+              {canUploadFile() && (
+                <UploadButton
+                  fileConfig={defaultFileConfig}
+                  onUploading={handleUploading}
+                  onFailed={handleUploadFailed}
+                  onSuccessful={handleUploadSuccessful}
+                >
+                  <IconPaperclip />
+                </UploadButton>
               )}
-            </Button>
-            {uploading && (
-              <IconLoader className="absolute right-10 md:top-3.5 top-2 animate-spin" />
-            )}
-            {canUploadFile() && (
-              <UploadButton
-                fileConfig={defaultFileConfig}
-                onUploading={handleUploading}
-                onFailed={handleUploadFailed}
-                onSuccessful={handleUploadSuccessful}
+              {canUploadFile() && (
+                <PasteUpload
+                  fileConfig={defaultFileConfig}
+                  onUploading={handleUploading}
+                  onFailed={handleUploadFailed}
+                  onSuccessful={handleUploadSuccessful}
+                />
+              )}
+
+              {uploading && <IconLoader className="animate-spin" />}
+            </div>
+            <div className="">
+              <Button
+                className="rounded-sm p-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                onClick={handleSend}
               >
-                <IconPaperclip />
-              </UploadButton>
-            )}
-            {canUploadFile() && (
-              <PasteUpload
-                fileConfig={defaultFileConfig}
-                onUploading={handleUploading}
-                onFailed={handleUploadFailed}
-                onSuccessful={handleUploadSuccessful}
-              />
-            )}
+                {selectedChat.status === ChatStatus.Chatting ? (
+                  <IconStopFilled
+                    onClick={handleStopChats}
+                    className="h-4 w-4"
+                  />
+                ) : (
+                  <IconSend />
+                )}
+              </Button>
+            </div>
           </div>
 
           {showPromptList && filteredPrompts.length > 0 && (
