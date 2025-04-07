@@ -42,6 +42,11 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
 
     public FileDto CreateFileDto(DB.File file)
     {
+        if (file.FileService == null)
+        {
+            throw new ArgumentNullException(nameof(file.FileService));
+        }
+
         IFileService fs = fileServiceFactory.Create(file.FileService);
         Uri downloadUrl = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
 

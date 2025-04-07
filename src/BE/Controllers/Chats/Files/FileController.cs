@@ -110,8 +110,6 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
 
         FileDto fileDto = fdup.CreateFileDto(dbFile);
         return Created(fileDto.Url, value: fileDto);
-
-        
     }
 
     [Route("file/private/{encryptedFileId}"), HttpGet]

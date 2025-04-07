@@ -17,10 +17,21 @@ public abstract record ChatSegmentItem
         return new ThinkChatSegment { Think = think };
     }
 
-    public static ChatSegmentItem FromImage(ImageChatSegment image)
+    public static ImageChatSegment FromBase64Image(string base64, string contentType)
     {
-        ArgumentNullException.ThrowIfNull(image, nameof(image));
-        return image;
+        return new Base64Image
+        {
+            Base64 = base64,
+            ContentType = contentType
+        };
+    }
+
+    public static ImageChatSegment FromUrlImage(string url)
+    {
+        return new UrlImage
+        {
+            Url = url
+        };
     }
 
     public static List<ChatSegmentItem> FromTextAndThink(string? text, string? think)
