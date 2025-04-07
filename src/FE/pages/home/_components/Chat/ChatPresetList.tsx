@@ -107,7 +107,7 @@ const ChatPresetList = () => {
               <div
                 key={'chat-preset' + item.id}
                 className={cn(
-                  'rounded-sm p-4 border h-32 hover:bg-muted cursor-pointer',
+                  'rounded-sm p-4 h-32 hover:bg-muted cursor-pointer shadow-sm bg-card',
                   selectedChatPresetId === item.id && 'bg-muted',
                 )}
                 onClick={() => {
@@ -185,7 +185,7 @@ const ChatPresetList = () => {
           })}
           {chatPresets.length < MAX_CREATE_PRESET_CHAT_COUNT && (
             <div
-              className="rounded-sm px-4 border flex justify-center items-center h-32 cursor-pointer hover:bg-muted"
+              className="rounded-sm px-4 flex justify-center items-center h-32 cursor-pointer hover:bg-muted bg-card"
               onClick={handleCreateChatPreset}
             >
               <IconPlus size={20} />

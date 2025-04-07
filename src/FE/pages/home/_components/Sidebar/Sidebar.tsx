@@ -71,7 +71,7 @@ const Sidebar = <T,>({
       <div
         className={`${
           isOpen ? 'w-[260px]' : 'w-0 hidden'
-        } fixed top-0 ${side}-0 z-40 flex h-full flex-none flex-col bg-gray-50 dark:bg-[#202123] p-2 text-[14px] sm:relative sm:top-0`}
+        } fixed top-0 ${side}-0 z-40 flex h-full flex-none flex-col bg-gray-50 bg-sidebar p-2 text-[14px] sm:relative sm:top-0 shadow-sm`}
       >
         <div className="sticky">
           <div
