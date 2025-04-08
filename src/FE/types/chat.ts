@@ -142,3 +142,5 @@ export enum MessageContentType {
   fileId = 2,
   reasoning = 3,
 }
+
+export const EMPTY_ID = 'EMPTY_ID';

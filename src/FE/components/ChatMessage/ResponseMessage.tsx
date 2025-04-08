@@ -7,6 +7,7 @@ import { isChatting, preprocessLaTeX } from '@/utils/chats';
 import { AdminModelDto } from '@/types/adminApis';
 import {
   ChatSpanStatus,
+  EMPTY_ID,
   ImageDef,
   MessageContentType,
   ResponseContent,
@@ -73,7 +74,7 @@ const ResponseMessage = (props: Props) => {
 
   const { id: messageId, status: chatStatus, content } = message;
   const [isTyping, setIsTyping] = useState<boolean>(false);
-  const [editId, setEditId] = useState('');
+  const [editId, setEditId] = useState(EMPTY_ID);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [messageContent, setMessageContent] = useState(message.content);
   const [contentText, setContentText] = useState('');
@@ -83,7 +84,7 @@ const ResponseMessage = (props: Props) => {
     newContent.c = contentText;
     onEditResponseMessage &&
       onEditResponseMessage(messageId, newContent, isCopyAndSave);
-    setEditId('');
+    setEditId(EMPTY_ID);
   };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
