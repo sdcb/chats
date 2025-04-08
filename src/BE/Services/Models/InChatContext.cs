@@ -64,7 +64,7 @@ public class InChatContext(long firstTick)
                     }
                 }
                 _lastSegment = seg;
-                _items.AddRange(seg.Items);
+                _items.AddOne(seg.Items);
 
                 UserModelBalanceCost currentCost = calculator.GetNewBalance(seg.Usage.InputTokens, seg.Usage.OutputTokens, priceConfig);
                 if (!currentCost.IsSufficient)
