@@ -26,6 +26,7 @@ public class DBFileService(ChatsDB db, FileServiceFactory fsf, ClientInfoManager
         {
             FileName = def.FileName,
             FileContentTypeId = fileContentType.Id,
+            FileContentType = fileContentType,
             StorageKey = storageKey,
             Size = def.Bytes.Length,
             ClientInfo = clientInfo,
@@ -33,6 +34,7 @@ public class DBFileService(ChatsDB db, FileServiceFactory fsf, ClientInfoManager
             CreatedAt = DateTime.UtcNow,
             CreateUserId = currentUser.Id,
             FileServiceId = fs.Id,
+            FileService = dbfs,
             FileImageInfo = fiis.GetImageInfo(def.FileName, def.ContentType, def.Bytes),
         };
         db.Files.Add(file);

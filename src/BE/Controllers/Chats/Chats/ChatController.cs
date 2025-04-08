@@ -230,7 +230,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
 
         UserBalance userBalance = await db.UserBalances.Where(x => x.UserId == currentUser.Id).SingleAsync(cancellationToken);
         Task<ClientInfo> clientInfoTask = clientInfoManager.GetClientInfo(cancellationToken);
-        Task<FileService?> fsTask = FileService.GetDefault(db, cancellationToken);
+        Task<FileService?> fsTask = clientInfoTask.ContinueWith(x => FileService.GetDefault(db, cancellationToken)).Unwrap();
 
         Channel<SseResponseLine>[] channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
         Dictionary<ImageChatSegment, DB.File> imageFileCache = [];
@@ -270,23 +270,6 @@ public class ChatController(ChatStopService stopService) : ControllerBase
                 Message dbAssistantMessage = (Message)line.Result;
                 ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == dbAssistantMessage.SpanId);
                 dbAssistantMessage.MessageResponse!.ChatConfig = await chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, default);
-                // Fill Files
-                HashSet<int> fileIds = [.. dbAssistantMessage.MessageContents
-                    .Select(x => x.MessageContentFile)
-                    .Where(x => x != null)
-                    .Select(x => x!.FileId)];
-                if (fileIds.Count > 0)
-                {
-                    Dictionary<int, DB.File> files = await db.Files
-                        .Where(x => fileIds.Contains(x.Id))
-                        .Include(x => x.FileContentType)
-                        .Include(x => x.FileService)
-                        .ToDictionaryAsync(x => x.Id, cancellationToken);
-                    foreach (MessageContent mc in dbAssistantMessage.MessageContents.Where(x => x.MessageContentFile != null))
-                    {
-                        mc.MessageContentFile!.File = files[mc.MessageContentFile.FileId];
-                    }
-                }
                 chat.Messages.Add(dbAssistantMessage);
                 bool isLast = line.SpanId == toGenerateSpans.Last().SpanId;
                 if (isLast)

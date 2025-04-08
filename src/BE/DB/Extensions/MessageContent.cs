@@ -67,17 +67,30 @@ public partial class MessageContent
         }
         // lastSegment.Items is merged now
         foreach (MessageContent item in lastSegment.Items.Select(x =>
+        {
+            return x switch
             {
-                return x switch
-                {
-                    TextChatSegment text => FromText(text.Text),
-                    ThinkChatSegment think => FromThink(think.Think),
-                    ImageChatSegment image => FromFile(imageMcCache[image]),
-                    _ => throw new NotSupportedException(),
-                };
-            }))
+                TextChatSegment text => FromText(text.Text),
+                ThinkChatSegment think => FromThink(think.Think),
+                ImageChatSegment image => WaitCache(imageMcCache, image),
+                _ => throw new NotSupportedException(),
+            };
+        }))
         {
             yield return item;
+        }
+    }
+
+    private static MessageContent WaitCache(Dictionary<ImageChatSegment, File> imageMcCache, ImageChatSegment image)
+    {
+        for (int i = 0; ; ++i)
+        {
+            if (imageMcCache.TryGetValue(image, out File? file))
+            {
+                return FromFile(file);
+            }
+            Thread.Sleep(100);
+            Console.WriteLine($"Waiting for image cache {i}");
         }
     }
 }
