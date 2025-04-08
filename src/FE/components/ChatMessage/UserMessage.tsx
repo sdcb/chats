@@ -186,7 +186,7 @@ const UserMessage = (props: Props) => {
                 .map((img: any, index) => (
                   <img
                     className="rounded-md not-prose"
-                    key={index}
+                    key={'user-img-' + index}
                     style={{ maxWidth: 268, maxHeight: 168 }}
                     src={img.c.url}
                     alt=""

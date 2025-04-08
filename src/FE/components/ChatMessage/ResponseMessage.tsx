@@ -123,11 +123,11 @@ const ResponseMessage = (props: Props) => {
       {chatStatus === ChatSpanStatus.Pending && (
         <span className="animate-pulse">▍</span>
       )}
-      {message.content.map((c) => {
+      {message.content.map((c, index) => {
         if (c.$type === MessageContentType.reasoning) {
           return (
             <ThinkingMessage
-              key={c.i}
+              key={'reasoning-' + index}
               content={c.c}
               chatStatus={message.status}
               reasoningDuration={message.reasoningDuration}
@@ -136,14 +136,14 @@ const ResponseMessage = (props: Props) => {
         } else if (c.$type === MessageContentType.fileId) {
           return (
             <img
-              key={c.i}
+              key={'file-' + index}
               className="w-full md:w-1/2 rounded-md"
               src={(c.c as ImageDef).url}
             />
           );
         } else if (c.$type === MessageContentType.text) {
           return editId === c.i ? (
-            <div className="flex relative" key={c.i}>
+            <div className="flex relative" key={'edit-text-' + c.i}>
               <div className="flex w-full flex-col flex-wrap rounded-md bg-muted">
                 <textarea
                   ref={textareaRef}
@@ -199,7 +199,7 @@ const ResponseMessage = (props: Props) => {
               </div>
             </div>
           ) : (
-            <div key={c.i} className="relative group/item">
+            <div key={'text-' + index} className="relative group/item">
               <MemoizedReactMarkdown
                 remarkPlugins={[remarkMath, remarkGfm]}
                 rehypePlugins={[rehypeKatex as any]}
@@ -213,8 +213,6 @@ const ResponseMessage = (props: Props) => {
                           </span>
                         );
                       }
-
-                      children[0] = (children[0] as string).replace('▍', '▍');
                     }
 
                     const match = /language-(\w+)/.exec(className || '');
@@ -258,9 +256,7 @@ const ResponseMessage = (props: Props) => {
                   },
                 }}
               >
-                {`${preprocessLaTeX(c.c!)}${
-                  chatStatus === ChatSpanStatus.Chatting ? '▍' : ''
-                }`}
+                {`${preprocessLaTeX(c.c!)}`}
               </MemoizedReactMarkdown>
               <div className="absolute -bottom-0.5 right-0">
                 <DropdownMenu>
@@ -299,7 +295,7 @@ const ResponseMessage = (props: Props) => {
         } else if (c.$type === MessageContentType.error) {
           return (
             message.status === ChatSpanStatus.Failed && (
-              <ChatError key={c.i} error={c.c} />
+              <ChatError key={'error-' + index} error={c.c} />
             )
           );
         } else {

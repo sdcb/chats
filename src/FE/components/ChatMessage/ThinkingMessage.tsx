@@ -66,8 +66,6 @@ const ThinkingMessage = (props: Props) => {
                       </span>
                     );
                   }
-
-                  children[0] = (children[0] as string).replace('▍', '▍');
                 }
 
                 const match = /language-(\w+)/.exec(className || '');
