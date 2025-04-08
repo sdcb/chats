@@ -83,14 +83,15 @@ public partial class MessageContent
 
     private static MessageContent WaitCache(Dictionary<ImageChatSegment, File> imageMcCache, ImageChatSegment image)
     {
-        for (int i = 0; ; ++i)
+        for (int i = 0; i < 2000; ++i) // max wait 2000 * 50ms = 100s
         {
             if (imageMcCache.TryGetValue(image, out File? file))
             {
                 return FromFile(file);
             }
-            Thread.Sleep(100);
+            Thread.Sleep(50);
             Console.WriteLine($"Waiting for image cache {i}");
         }
+        throw new TimeoutException("Image cache wait timeout");
     }
 }
