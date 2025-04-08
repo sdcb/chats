@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { preprocessLaTeX } from '@/utils/chats';
+import { isChatting, preprocessLaTeX } from '@/utils/chats';
 
 import { AdminModelDto } from '@/types/adminApis';
 import {
   ChatSpanStatus,
+  ImageDef,
   MessageContentType,
   ResponseContent,
 } from '@/types/chat';
@@ -25,8 +26,6 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import CopyAction from './CopyAction';
-import DeleteAction from './DeleteAction';
-import EditAction from './EditAction';
 import ResponseMessageActions from './ResponseMessageActions';
 import ThinkingMessage from './ThinkingMessage';
 
@@ -120,6 +119,9 @@ const ResponseMessage = (props: Props) => {
 
   return (
     <>
+      {chatStatus === ChatSpanStatus.Pending && (
+        <span className="animate-pulse">▍</span>
+      )}
       {message.content.map((c) => {
         if (c.$type === MessageContentType.reasoning) {
           return (
@@ -131,11 +133,17 @@ const ResponseMessage = (props: Props) => {
             />
           );
         } else if (c.$type === MessageContentType.fileId) {
-          return <img key={c.i} className="w-full md:w-1/2" src={c.c.url} />;
+          return (
+            <img
+              key={c.i}
+              className="w-full md:w-1/2 rounded-md"
+              src={(c.c as ImageDef).url}
+            />
+          );
         } else if (c.$type === MessageContentType.text) {
           return editId ? (
             <div className="flex relative" key={c.i}>
-              <div className="flex w-full flex-col">
+              <div className="flex w-full flex-col flex-wrap rounded-md bg-muted">
                 <textarea
                   ref={textareaRef}
                   className="w-full h-auto outline-none resize-none whitespace-pre-wrap border-none rounded-md bg-muted"
@@ -154,8 +162,7 @@ const ResponseMessage = (props: Props) => {
                     overflow: 'hidden',
                   }}
                 />
-
-                <div className="absolute right-2 bottom-2 flex justify-end space-x-4">
+                <div className="w-full flex justify-end p-3 gap-3">
                   <Button
                     variant="link"
                     className="rounded-md px-4 py-1 text-sm font-medium"
@@ -257,10 +264,7 @@ const ResponseMessage = (props: Props) => {
               <div className={`absolute -bottom-0.5 right-0`}>
                 <DropdownMenu>
                   <DropdownMenuTrigger
-                    disabled={
-                      chatStatus === ChatSpanStatus.Chatting ||
-                      chatStatus === ChatSpanStatus.Reasoning
-                    }
+                    disabled={isChatting(chatStatus)}
                     className="focus:outline-none invisible group-hover:visible"
                   >
                     <IconDots

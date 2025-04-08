@@ -1,9 +1,11 @@
+import { isChatting } from '@/utils/chats';
+
 import { AdminModelDto } from '@/types/adminApis';
 import {
   ChatRole,
   ChatSpanStatus,
-  ResponseContent,
   MessageContentType,
+  ResponseContent,
 } from '@/types/chat';
 import { ReactionMessageType } from '@/types/chatMessage';
 
@@ -72,8 +74,7 @@ const ResponseMessageActions = (props: Props) => {
 
   return (
     <>
-      {chatStatus === ChatSpanStatus.Chatting ||
-      chatStatus === ChatSpanStatus.Reasoning ? (
+      {isChatting(chatStatus) ? (
         <div className="h-9"></div>
       ) : (
         <div className="flex gap-1 flex-wrap mt-1">

@@ -2,14 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { isChatting } from '@/utils/chats';
+
 import {
   ChatRole,
   ChatSpanStatus,
-  ResponseContent,
   IChat,
   ImageDef,
   Message,
   MessageContentType,
+  ResponseContent,
 } from '@/types/chat';
 
 import { Button } from '@/components/ui/button';
@@ -122,12 +124,12 @@ const UserMessage = (props: Props) => {
 
   return (
     <>
-      <div className="flex flex-row-reverse relative rounded-md">
+      <div className="flex flex-row-reverse relative">
         {isEditing ? (
-          <div className="flex w-full flex-col">
+          <div className="flex w-full flex-col flex-wrap rounded-md bg-muted shadow-sm mb-3">
             <textarea
               ref={textareaRef}
-              className="w-full outline-none resize-none whitespace-pre-wrap border-none rounded-md bg-card shadow-sm"
+              className="w-full outline-none resize-none whitespace-pre-wrap border-none rounded-md bg-muted"
               value={contentText}
               onChange={handleInputChange}
               onKeyDown={handlePressEnter}
@@ -138,13 +140,12 @@ const UserMessage = (props: Props) => {
                 fontSize: 'inherit',
                 lineHeight: 'inherit',
                 padding: '10px',
-                paddingBottom: '60px',
                 margin: '0',
                 overflow: 'hidden',
               }}
             />
 
-            <div className="absolute right-2 bottom-2 flex justify-end space-x-4">
+            <div className="flex justify-end p-3 gap-3">
               <Button
                 variant="link"
                 className="rounded-md px-4 py-1 text-sm font-medium"
@@ -211,10 +212,7 @@ const UserMessage = (props: Props) => {
           <>
             <EditAction
               isHoverVisible
-              disabled={
-                chatStatus === ChatSpanStatus.Chatting ||
-                chatStatus === ChatSpanStatus.Reasoning
-              }
+              disabled={isChatting(chatStatus)}
               onToggleEditing={handleToggleEditing}
             />
             <CopyAction
@@ -232,15 +230,10 @@ const UserMessage = (props: Props) => {
             />
             <PaginationAction
               hidden={siblingIds.length <= 1}
-              disabledPrev={
-                currentMessageIndex === 0 ||
-                chatStatus === ChatSpanStatus.Chatting ||
-                chatStatus === ChatSpanStatus.Reasoning
-              }
+              disabledPrev={currentMessageIndex === 0 || isChatting(chatStatus)}
               disabledNext={
                 currentMessageIndex === siblingIds.length - 1 ||
-                chatStatus === ChatSpanStatus.Chatting ||
-                chatStatus === ChatSpanStatus.Reasoning
+                isChatting(chatStatus)
               }
               currentSelectIndex={currentMessageIndex}
               messageIds={siblingIds}

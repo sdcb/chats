@@ -13,6 +13,7 @@ export enum ChatSpanStatus {
   Chatting = 2,
   Failed = 3,
   Reasoning = 4,
+  Pending = 5,
 }
 
 export enum ChatStatus {
@@ -64,12 +65,12 @@ export type ErrorContent = {
 export type TextRequestContent = {
   $type: MessageContentType.text;
   c: string;
-}
+};
 
 export type FileRequestContent = {
   $type: MessageContentType.fileId;
   c: string;
-}
+};
 
 export type RequestContent = TextRequestContent | FileRequestContent;
 
