@@ -65,12 +65,12 @@ export const ChatMessage: FC<Props> = memo(
                   : 'md:grid md:grid-cols-[repeat(auto-fit,minmax(375px,1fr))] gap-4',
               )}
             >
-              {messages.map((message) => {
+              {messages.map((message, index) => {
                 return (
                   <>
                     {message.role === ChatRole.User && (
                       <div
-                        key={'user-message-' + message.id}
+                        key={'user-message-' + index}
                         className={cn(
                           'prose w-full dark:prose-invert rounded-r-md group sm:w-[50vw] xl:w-[50vw]',
                           index > 0 && 'mt-4',
@@ -93,19 +93,19 @@ export const ChatMessage: FC<Props> = memo(
                           onChangeChatLeafMessageId &&
                           onChangeChatLeafMessageId(message.id)
                         }
-                        key={'response-message-' + message.id}
+                        key={'response-group-message-' + index}
                         className={cn(
                           'border-[1px] border-background rounded-md flex w-full group bg-card mb-4 md:mb-0',
                           hasMultipleSpan &&
                             message.isActive &&
-                            'border-primary/50 border-gray-400',
+                            'border-primary/50 border-gray-300',
                           hasMultipleSpan && 'p-1 md:p-2',
                           !hasMultipleSpan && 'border-none',
                         )}
                       >
                         <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3">
                           <ResponseMessage
-                            key={'response-message-' + message.id}
+                            key={'response-message-' + index}
                             message={message}
                             readonly={readonly}
                             models={models}
