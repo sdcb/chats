@@ -156,7 +156,7 @@ function groupBy<T>(array: T[], key: keyof T): T[][] {
 export function generateResponseMessages(
   selectedChat: IChat,
   parentId?: string,
-  status = ChatSpanStatus.Chatting,
+  status = ChatSpanStatus.Pending,
 ) {
   return selectedChat.spans
     .filter((x) => x.enabled)
@@ -176,7 +176,7 @@ export function generateResponseMessage(
   parentId?: string,
   modelId?: number,
   modelName?: string,
-  status = ChatSpanStatus.Chatting,
+  status = ChatSpanStatus.Pending,
 ) {
   return {
     spanId: spanId,
