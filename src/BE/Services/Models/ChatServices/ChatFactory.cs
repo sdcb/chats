@@ -1,5 +1,6 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.DB.Enums;
+using Chats.BE.Services.Models.ChatServices.GoogleAI;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 using Chats.BE.Services.Models.ChatServices.Test;
@@ -28,7 +29,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
             DBModelProvider.DeepSeek => new DeepSeekChatService(model),
             DBModelProvider.xAI => new XAIChatService(model),
             DBModelProvider.GithubModels => new GithubModelsChatService(model),
-            DBModelProvider.GoogleAI => new GoogleAIChatService(model),
+            DBModelProvider.GoogleAI => new GoogleAI2ChatService(model),
             DBModelProvider.Ollama => new OllamaChatService(model),
             DBModelProvider.MiniMax => new MiniMaxChatService(model),
             DBModelProvider.Doubao => new DoubaoChatService(model),
