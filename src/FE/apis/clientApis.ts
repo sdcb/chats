@@ -474,7 +474,7 @@ export const responseContentToRequest = (responseContent: ResponseContent[]) => 
       if (x.$type === MessageContentType.text) {
         return { $type: MessageContentType.text, c: x.c };
       } else if (x.$type === MessageContentType.fileId) {
-        return { $type: MessageContentType.fileId, c: (x.c as ImageDef).id };
+        return { $type: MessageContentType.fileId, c: typeof x.c === 'string' ? x.c : (x.c as ImageDef).id };
       } else {
         throw new Error('Invalid message content type');
       }
