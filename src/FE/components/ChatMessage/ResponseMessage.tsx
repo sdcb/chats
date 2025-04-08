@@ -141,7 +141,7 @@ const ResponseMessage = (props: Props) => {
             />
           );
         } else if (c.$type === MessageContentType.text) {
-          return editId ? (
+          return editId === c.i ? (
             <div className="flex relative" key={c.i}>
               <div className="flex w-full flex-col flex-wrap rounded-md bg-muted">
                 <textarea
@@ -198,7 +198,7 @@ const ResponseMessage = (props: Props) => {
               </div>
             </div>
           ) : (
-            <div key={c.i} className="relative">
+            <div key={c.i} className="relative group/item">
               <MemoizedReactMarkdown
                 remarkPlugins={[remarkMath, remarkGfm]}
                 rehypePlugins={[rehypeKatex as any]}
@@ -232,7 +232,7 @@ const ResponseMessage = (props: Props) => {
                     );
                   },
                   p({ children }) {
-                    return <p className="md-p group">{children}</p>;
+                    return <p className="md-p">{children}</p>;
                   },
                   table({ children }) {
                     return (
@@ -261,11 +261,11 @@ const ResponseMessage = (props: Props) => {
                   chatStatus === ChatSpanStatus.Chatting ? '▍' : ''
                 }`}
               </MemoizedReactMarkdown>
-              <div className={`absolute -bottom-0.5 right-0`}>
+              <div className="absolute -bottom-0.5 right-0">
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     disabled={isChatting(chatStatus)}
-                    className="focus:outline-none invisible group-hover:visible"
+                    className="focus:outline-none invisible group-hover/item:visible"
                   >
                     <IconDots
                       className="rotate-90 hover:opacity-50"

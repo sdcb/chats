@@ -177,7 +177,7 @@ const Chat = memo(() => {
           contentCount >= 0 &&
           x.content[contentCount].$type === MessageContentType.fileId
         ) {
-          x.content[contentCount].c = text;
+          // x.content[contentCount].c = text;
         } else {
           x.content.push({ i: '', $type: MessageContentType.fileId, c: text });
         }
