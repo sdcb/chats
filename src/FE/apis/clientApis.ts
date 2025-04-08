@@ -1,7 +1,7 @@
 import { useFetch } from '@/hooks/useFetch';
 
 import { AdminModelDto, PostPromptParams } from '@/types/adminApis';
-import { MessageContentType, RequestContent, ResponseContent } from '@/types/chat';
+import { ImageDef, MessageContentType, RequestContent, ResponseContent } from '@/types/chat';
 import { IChatMessage } from '@/types/chatMessage';
 import {
   ChatResult,
@@ -474,7 +474,7 @@ export const responseContentToRequest = (responseContent: ResponseContent[]) => 
       if (x.$type === MessageContentType.text) {
         return { $type: MessageContentType.text, c: x.c };
       } else if (x.$type === MessageContentType.fileId) {
-        return { $type: MessageContentType.fileId, c: x.c as string };
+        return { $type: MessageContentType.fileId, c: (x.c as ImageDef).id };
       } else {
         throw new Error('Invalid message content type');
       }

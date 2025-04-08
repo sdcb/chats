@@ -119,7 +119,7 @@ public class GoogleAI2ChatService : ChatService
             {
                 SystemChatMessage s => new Content("") { Role = "system", Parts = [.. msg.Content.Select(OpenAIPartToGooglePart)] },
                 UserChatMessage u => new Content("") { Role = "user", Parts = [.. msg.Content.Select(OpenAIPartToGooglePart)] },
-                AssistantChatMessage a => new Content("") { Role = "assistant", Parts = [.. msg.Content.Select(OpenAIPartToGooglePart)] },
+                AssistantChatMessage a => new Content("") { Role = "model", Parts = [.. msg.Content.Select(OpenAIPartToGooglePart)] },
                 _ => throw new NotSupportedException($"Unsupported message type: {msg.GetType()} in {nameof(GoogleAI2ChatService)}"),
             })];
     }

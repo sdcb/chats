@@ -69,7 +69,7 @@ public abstract partial class ChatService : IDisposable
         if (!Model.ModelReference.AllowSystemPrompt)
         {
             // Remove system prompt
-            messages = messages.Where(m => m is not SystemChatMessage).ToArray();
+            messages = [.. messages.Where(m => m is not SystemChatMessage)];
         }
         else
         {

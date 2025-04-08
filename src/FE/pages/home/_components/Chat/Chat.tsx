@@ -355,7 +355,6 @@ const Chat = memo(() => {
     );
     let chatBody = {
       chatId,
-      spanIds: chatSpans.map((x) => x.spanId),
       parentAssistantMessageId: messageId || null,
       userMessage: requestContent,
       timezoneOffset: new Date().getTimezoneOffset(),

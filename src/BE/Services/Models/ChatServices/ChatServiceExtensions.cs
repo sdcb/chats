@@ -114,6 +114,14 @@ public abstract partial class ChatService
                         _ => c,
                     })
                     .ToArrayAsync(cancellationToken)),
+                AssistantChatMessage assistantChatMessage => new AssistantChatMessage(await assistantChatMessage.Content
+                    .ToAsyncEnumerable()
+                    .SelectAwait(async c => c switch
+                    {
+                        { Kind: ChatMessageContentPartKind.Image, ImageUri: not null } => await DownloadImagePart(http, c.ImageUri, cancellationToken),
+                        _ => c,
+                    })
+                    .ToArrayAsync(cancellationToken)),
                 _ => message,
             };
 

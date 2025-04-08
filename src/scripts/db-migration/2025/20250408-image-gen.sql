@@ -1,3 +1,3 @@
 UPDATE [ModelReference] SET [AllowSearch] = 1 WHERE [Id] = 1301;
 INSERT INTO [ModelReference] ([Id], [ProviderId], [Name], [DisplayName], [PublishDate], [MinTemperature], [MaxTemperature], [AllowSearch], [AllowVision], [AllowSystemPrompt], [AllowStreaming], [ReasoningResponseKindId], [ContextWindow], [MaxResponseTokens], [TokenizerId], [InputTokenPrice1M], [OutputTokenPrice1M], [CurrencyCode])
-VALUES (1304, 13, 'gemini-2.0-flash-exp', 'gemini', '2025-03-25', 0, 2, 0, 1, 1, 1, 0, 32768, 8000, NULL, 0, 0, 'USD');
+VALUES (1304, 13, 'gemini-2.0-flash-exp', 'gemini', '2025-03-25', 0, 2, 0, 1, 0, 1, 0, 32768, 8000, NULL, 0, 0, 'USD');
