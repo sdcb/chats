@@ -1,15 +1,17 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.Infrastructure;
+using Chats.BE.Services.Models.ChatServices;
 using File = Chats.BE.DB.File;
 
 namespace Chats.BE.Services.FileServices;
 
-public class DBFileService(ChatsDB db, FileServiceFactory fsf, FileContentTypeService fstService, ClientInfoManager clientInfoManager, CurrentUser currentUser, FileImageInfoService fiis)
+public class DBFileService(ChatsDB db, FileServiceFactory fsf, ClientInfoManager clientInfoManager, CurrentUser currentUser, FileImageInfoService fiis)
 {
-    public async Task<File> StoreNoSave(DBFileDef def, ClientInfo clientInfo, CancellationToken cancellationToken = default)
+    public async Task<File> StoreImage(ImageChatSegment image, ClientInfo clientInfo, FileService dbfs, CancellationToken cancellationToken = default)
     {
-        FileService dbfs = await FileService.GetDefault(db, cancellationToken) ?? throw new InvalidOperationException("Default file service config not found.");
+        DBFileDef def = await image.Download(cancellationToken);
         IFileService fs = fsf.Create(dbfs);
+        FileContentTypeService fstService = new(db);
 
         string storageKey = await fs.Upload(new FileUploadRequest
         {
@@ -23,7 +25,6 @@ public class DBFileService(ChatsDB db, FileServiceFactory fsf, FileContentTypeSe
         File file = new()
         {
             FileName = def.FileName,
-            FileContentType = fileContentType,
             FileContentTypeId = fileContentType.Id,
             StorageKey = storageKey,
             Size = def.Bytes.Length,
@@ -32,9 +33,10 @@ public class DBFileService(ChatsDB db, FileServiceFactory fsf, FileContentTypeSe
             CreatedAt = DateTime.UtcNow,
             CreateUserId = currentUser.Id,
             FileServiceId = fs.Id,
-            FileImageInfo = fiis.GetImageInfo(def.FileName, def.ContentType, def.Bytes), 
-            FileService = dbfs,
+            FileImageInfo = fiis.GetImageInfo(def.FileName, def.ContentType, def.Bytes),
         };
+        db.Files.Add(file);
+        await db.SaveChangesAsync(cancellationToken);
 
         return file;
     }

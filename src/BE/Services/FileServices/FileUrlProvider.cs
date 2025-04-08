@@ -44,7 +44,7 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
     {
         if (file.FileService == null)
         {
-            throw new ArgumentNullException(nameof(file.FileService));
+            throw new ArgumentNullException(nameof(file), "The FileService property of the provided file is null.");
         }
 
         IFileService fs = fileServiceFactory.Create(file.FileService);
@@ -65,6 +65,6 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
             .Include(x => x.FileService)
             .Include(x => x.FileImageInfo)
             .FirstAsync(x => x.Id == fileId, cancellationToken);
-        return MessageContent.FromFile(fileId, file);
+        return MessageContent.FromFile(file);
     }
 }

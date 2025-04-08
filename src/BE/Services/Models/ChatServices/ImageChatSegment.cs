@@ -1,9 +1,6 @@
-﻿using Chats.BE.DB;
-using Chats.BE.DB.Enums;
-using Chats.BE.Services.FileServices;
+﻿using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.Dtos;
 using System.Text.Json.Serialization;
-using File = Chats.BE.DB.File;
 
 namespace Chats.BE.Services.Models.ChatServices;
 
@@ -12,21 +9,6 @@ namespace Chats.BE.Services.Models.ChatServices;
 [JsonDerivedType(typeof(UrlImage), typeDiscriminator: "url")]
 public abstract record ImageChatSegment : ChatSegmentItem
 {
-    public async Task<MessageContent> ToDB(DBFileService fs, ClientInfo clientInfo, CancellationToken cancellationToken = default)
-    {
-        DBFileDef def = await Download(cancellationToken);
-        File file = await fs.StoreNoSave(def, clientInfo: clientInfo, cancellationToken: cancellationToken);
-
-        return new MessageContent()
-        {
-            ContentTypeId = (byte)DBMessageContentType.FileId,
-            MessageContentFile = new()
-            {
-                File = file
-            }
-        };
-    }
-
     public abstract Task<DBFileDef> Download(CancellationToken cancellationToken = default);
 }
 

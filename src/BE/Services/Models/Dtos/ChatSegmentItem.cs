@@ -71,48 +71,44 @@ public static class ChatSegmentItemExtensions
         };
     }
 
-    public static List<ChatSegmentItem> Combine(this ICollection<ChatSegmentItem> items)
+    public static void AddOne(this List<ChatSegmentItem> items, ICollection<ChatSegmentItem> toAddItems)
     {
-        List<ChatSegmentItem> segments = new(items.Count);
-
-        foreach (ChatSegmentItem item in items)
+        foreach (ChatSegmentItem item in toAddItems)
         {
-            if (segments.Count == 0)
+            if (items.Count == 0)
             {
-                segments.Add(item);
-                continue;
+                items.Add(item);
+                return;
             }
 
             // 否则尝试合并
-            ChatSegmentItem last = segments[^1];
+            ChatSegmentItem last = items[^1];
             if (last is TextChatSegment lastText && item is TextChatSegment currentText)
             {
                 // 两个连续 Text，合并文本
-                segments[^1] = lastText with { Text = lastText.Text + currentText.Text };
+                items[^1] = lastText with { Text = lastText.Text + currentText.Text };
             }
             else if (last is ThinkChatSegment lastThink && item is ThinkChatSegment currentThink)
             {
                 // 两个连续 Think，合并文本
-                segments[^1] = lastThink with { Think = lastThink.Think + currentThink.Think };
+                items[^1] = lastThink with { Think = lastThink.Think + currentThink.Think };
             }
             else
             {
                 // 其他情况都不合并，直接添加
-                segments.Add(item);
+                items.Add(item);
             }
         }
-
-        return segments;
     }
 
     public static OpenAIFullResponse OpenAIFullResponse(this ICollection<ChatSegmentItem> items, string role, object? refusal)
     {
-        List<ChatSegmentItem> full = items.Combine();
+        // items is combined
         return new OpenAIFullResponse
         {
             Role = role,
-            Content = GetText(full),
-            ReasoningContent = GetThink(full),
+            Content = GetText(items),
+            ReasoningContent = GetThink(items),
             Segments = items,
             Refusal = refusal,
         };

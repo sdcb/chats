@@ -41,9 +41,9 @@ public partial class MessageContent
         return new MessageContent { MessageContentText = new() { Content = text }, ContentTypeId = (byte)DBMessageContentType.Reasoning };
     }
 
-    public static MessageContent FromFile(int fileId, File file)
+    public static MessageContent FromFile(File file)
     {
-        return new MessageContent { MessageContentFile = new() { FileId = fileId, File = file }, ContentTypeId = (byte)DBMessageContentType.FileId };
+        return new MessageContent { MessageContentFile = new() { FileId = file.Id, File = file }, ContentTypeId = (byte)DBMessageContentType.FileId };
     }
 
     public static MessageContent FromError(string error)
@@ -59,20 +59,20 @@ public partial class MessageContent
             .ToArrayAsync(cancellationToken);
     }
 
-    public static IEnumerable<MessageContent> FromFullResponse(InternalChatSegment lastSegment, string? errorText, Dictionary<ImageChatSegment, MessageContent> imageMcCache)
+    public static IEnumerable<MessageContent> FromFullResponse(InternalChatSegment lastSegment, string? errorText, Dictionary<ImageChatSegment, File> imageMcCache)
     {
         if (errorText is not null)
         {
             yield return FromError(errorText);
         }
-        List<ChatSegmentItem> items = lastSegment.Items.Combine();
-        foreach (MessageContent item in items.Select(x =>
+        // lastSegment.Items is merged now
+        foreach (MessageContent item in lastSegment.Items.Select(x =>
             {
                 return x switch
                 {
                     TextChatSegment text => FromText(text.Text),
                     ThinkChatSegment think => FromThink(think.Think),
-                    ImageChatSegment image => imageMcCache[image],
+                    ImageChatSegment image => FromFile(imageMcCache[image]),
                     _ => throw new NotSupportedException(),
                 };
             }))
