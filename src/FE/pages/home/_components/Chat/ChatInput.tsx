@@ -257,7 +257,7 @@ const ChatInput = ({
 
   return (
     <div className="absolute bottom-0 left-0 w-full border-transparent bg-background md:pt-2">
-      <div className="stretch mx-4 mt-4 flex flex-row rounded-md">
+      <div className="stretch mt-4 flex flex-row rounded-md lg:w-11/12 mx-auto md:w-4/5 px-4">
         <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] p-2">
           <div className="absolute mb-1 bottom-full mx-auto flex w-full justify-start z-10">
             {contentFiles.map((file, index) => (

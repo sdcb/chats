@@ -459,7 +459,12 @@ const Chat = memo(() => {
           msgId,
           time,
         );
-      } else if (value.k === SseResponseKind.UpdateTitle) {
+      } else if(value.k === SseResponseKind.ImageGenerated) {
+        const { r, i: spanId } = value;
+        const msgId = `${ResponseMessageTempId}-${spanId}`;
+        changeSelectedResponseFile(selectedMessageList, msgId, r)
+      } 
+      else if (value.k === SseResponseKind.UpdateTitle) {
         changeChatTitle(value.r);
       } else if (value.k === SseResponseKind.TitleSegment) {
         changeChatTitle(value.r, true);

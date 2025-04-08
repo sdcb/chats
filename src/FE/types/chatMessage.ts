@@ -1,4 +1,10 @@
-import { ChatRole, ChatSpanStatus, ResponseContent, Role } from './chat';
+import {
+  ChatRole,
+  ChatSpanStatus,
+  ImageDef,
+  ResponseContent,
+  Role,
+} from './chat';
 
 // Enum equivalent to SseResponseKind
 export enum SseResponseKind {
@@ -13,6 +19,8 @@ export enum SseResponseKind {
   ReasoningSegment = 8,
   StartResponse = 9,
   StartReasoning = 10,
+  ImageGenerating = 11,
+  ImageGenerated = 12,
 }
 
 // Discriminated unions for SseResponseLine
@@ -71,6 +79,12 @@ interface SseResponseLineStartReasoning {
   i: number; // SpanId is required for StartReasoning
 }
 
+interface SseResponseLineImageGenerated {
+  k: SseResponseKind.ImageGenerated; // Kind is StartReasoning
+  i: number; // SpanId is required for StartReasoning
+  r: ImageDef;
+}
+
 // Combined type for SseResponseLine
 export type SseResponseLine =
   | SseResponseLineStopId
@@ -82,7 +96,8 @@ export type SseResponseLine =
   | SseResponseLineTitleSegment
   | SseResponseLineReasoningSegment
   | SseResponseLineStartResponse
-  | SseResponseLineStartReasoning;
+  | SseResponseLineStartReasoning
+  | SseResponseLineImageGenerated;
 
 export interface IChatMessage {
   id: string;

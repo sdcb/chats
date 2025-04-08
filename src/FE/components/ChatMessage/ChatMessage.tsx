@@ -73,7 +73,7 @@ export const ChatMessage: FC<Props> = memo(
                         key={'user-message-' + message.id}
                         className={cn(
                           'prose w-full dark:prose-invert rounded-r-md group sm:w-[50vw] xl:w-[50vw]',
-                          index > 0 && 'mt-6',
+                          index > 0 && 'mt-4',
                         )}
                       >
                         <UserMessage
@@ -95,7 +95,7 @@ export const ChatMessage: FC<Props> = memo(
                         }
                         key={'response-message-' + message.id}
                         className={cn(
-                          'border-[1px] border-background rounded-md flex w-full group bg-card mt-4',
+                          'border-[1px] border-background rounded-md flex w-full group bg-card mb-4 md:mb-0',
                           hasMultipleSpan &&
                             message.isActive &&
                             'border-primary/50 border-gray-400',
@@ -103,7 +103,7 @@ export const ChatMessage: FC<Props> = memo(
                           !hasMultipleSpan && 'border-none',
                         )}
                       >
-                        <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base pb-4 px-1">
+                        <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3">
                           <ResponseMessage
                             key={'response-message-' + message.id}
                             message={message}

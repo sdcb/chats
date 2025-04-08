@@ -131,14 +131,14 @@ const ResponseMessage = (props: Props) => {
             />
           );
         } else if (c.$type === MessageContentType.fileId) {
-          return <></>;
+          return <img key={c.i} className="w-full md:w-1/2" src={c.c.url} />;
         } else if (c.$type === MessageContentType.text) {
           return editId ? (
             <div className="flex relative" key={c.i}>
               <div className="flex w-full flex-col">
                 <textarea
                   ref={textareaRef}
-                  className="w-full h-auto outline-none resize-none whitespace-pre-wrap border-none rounded-md bg-card"
+                  className="w-full h-auto outline-none resize-none whitespace-pre-wrap border-none rounded-md bg-muted"
                   value={contentText}
                   onChange={handleInputChange}
                   onKeyDown={handlePressEnter}
@@ -191,7 +191,7 @@ const ResponseMessage = (props: Props) => {
               </div>
             </div>
           ) : (
-            <div key={c.i} className="group relative">
+            <div key={c.i} className="relative">
               <MemoizedReactMarkdown
                 remarkPlugins={[remarkMath, remarkGfm]}
                 rehypePlugins={[rehypeKatex as any]}
@@ -225,7 +225,7 @@ const ResponseMessage = (props: Props) => {
                     );
                   },
                   p({ children }) {
-                    return <p className="md-p">{children}</p>;
+                    return <p className="md-p group">{children}</p>;
                   },
                   table({ children }) {
                     return (
@@ -261,7 +261,7 @@ const ResponseMessage = (props: Props) => {
                       chatStatus === ChatSpanStatus.Chatting ||
                       chatStatus === ChatSpanStatus.Reasoning
                     }
-                    className="focus:outline-none visible group-hover:visible"
+                    className="focus:outline-none invisible group-hover:visible"
                   >
                     <IconDots
                       className="rotate-90 hover:opacity-50"
