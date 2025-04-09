@@ -1,9 +1,9 @@
 import {
   ChatRole,
   ChatSpanStatus,
-  ResponseContent,
   IChat,
   MessageContentType,
+  ResponseContent,
 } from '@/types/chat';
 import {
   ChatMessageNode,
@@ -194,14 +194,19 @@ export function generateResponseMessage(
     modelName: modelName,
     modelId: modelId,
     reasoningTokens: 0,
+    reasoningDuration: 0,
     duration: 0,
     firstTokenLatency: 0,
   } as IChatMessage;
 }
 
-export function generateUserMessage(content: ResponseContent[], parentId?: string) {
+export function generateUserMessage(
+  content: ResponseContent[],
+  parentId?: string,
+) {
   return {
     spanId: null,
+    modelId: 0,
     id: UserMessageTempId,
     role: ChatRole.User,
     status: ChatSpanStatus.None,
@@ -209,5 +214,13 @@ export function generateUserMessage(content: ResponseContent[], parentId?: strin
     siblingIds: [],
     isActive: false,
     content,
+    inputTokens: 0,
+    outputTokens: 0,
+    inputPrice: 0,
+    outputPrice: 0,
+    reasoningTokens: 0,
+    reasoningDuration: 0,
+    duration: 0,
+    firstTokenLatency: 0,
   } as IChatMessage;
 }

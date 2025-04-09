@@ -109,16 +109,16 @@ export interface IChatMessage {
   status: ChatSpanStatus;
   isActive?: boolean;
   modelName?: string;
-  modelId?: number;
+  modelId: number;
   modelProviderId?: number;
-  inputPrice?: number;
-  outputPrice?: number;
-  inputTokens?: number;
-  outputTokens?: number;
-  reasoningTokens?: number;
-  reasoningDuration?: number;
-  duration?: number;
-  firstTokenLatency?: number;
+  inputPrice: number;
+  outputPrice: number;
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  reasoningDuration: number;
+  duration: number;
+  firstTokenLatency: number;
   reaction?: boolean | null;
   edited?: boolean;
 }
@@ -140,6 +140,7 @@ export interface MessageNode {
 export interface ChatMessageNode {
   id: string;
   parentId: string | null;
+  modelId: number;
   content: ResponseContent[];
   siblingIds: string[];
   isActive?: boolean;
@@ -147,11 +148,16 @@ export interface ChatMessageNode {
   spanId: number | null;
   role: ChatRole;
   modelName?: string;
-  inputTokens?: number;
-  outputTokens?: number;
-  reasoningTokens?: number;
-  inputPrice?: number;
-  outputPrice?: number;
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  inputPrice: number;
+  outputPrice: number;
+  reasoningDuration: number;
+  duration: number;
+  firstTokenLatency: number;
+  reaction?: boolean | null;
+  edited?: boolean;
 }
 
 export const ResponseMessageTempId = 'RESPONSE_MESSAGE_TEMP_ID';

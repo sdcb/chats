@@ -497,6 +497,31 @@ const IconMessage = (props: IconProps) => {
     </svg>
   );
 };
+const IconMessageChatbot = (props: IconProps) => {
+  const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      onClick={onClick}
+      className={className}
+      width={size}
+      height={size}
+      strokeWidth={strokeWidth}
+      stroke={stroke || 'var(--foreground)'}
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z" />
+      <path d="M9.5 9h.01" />
+      <path d="M14.5 9h.01" />
+      <path d="M9.5 13a3.5 3.5 0 0 0 5 0" />
+    </svg>
+  );
+};
 const IconMessageShare = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
 
@@ -1384,10 +1409,11 @@ var IconModelSearch = (props: IconProps) => {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
-      <path d="M21 21l-6 -6" />
-      <path d="M10 13v.01" />
-      <path d="M10 7v3" />
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M11.5 20h-6.5a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v5.5" />
+      <path d="M9 17h2" />
+      <path d="M18 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+      <path d="M20.2 20.2l1.8 1.8" />
     </svg>
   );
 };
@@ -1733,4 +1759,5 @@ export {
   IconThink,
   IconWorld,
   IconReasoning,
+  IconMessageChatbot,
 };

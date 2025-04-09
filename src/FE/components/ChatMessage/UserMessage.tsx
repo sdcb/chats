@@ -8,7 +8,6 @@ import {
   ChatRole,
   ChatSpanStatus,
   IChat,
-  ImageDef,
   Message,
   MessageContentType,
   ResponseContent,
@@ -16,6 +15,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 
+import { Textarea } from '../ui/textarea';
 import CopyAction from './CopyAction';
 import DeleteAction from './DeleteAction';
 import EditAction from './EditAction';
@@ -54,13 +54,8 @@ const UserMessage = (props: Props) => {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [contentText, setContentText] = useState('');
-  const {
-    id: messageId,
-    siblingIds,
-    parentId,
-    content,
-    status: chatStatus,
-  } = message;
+  const { id: messageId, siblingIds, parentId, content } = message;
+  const { status: chatStatus } = selectedChat;
   const currentMessageIndex = siblingIds.findIndex((x) => x === messageId);
 
   const handleEditMessage = (isOnlySave: boolean = false) => {
@@ -127,7 +122,7 @@ const UserMessage = (props: Props) => {
       <div className="flex flex-row-reverse relative">
         {isEditing ? (
           <div className="flex w-full flex-col flex-wrap rounded-md bg-muted shadow-sm mb-3">
-            <textarea
+            <Textarea
               ref={textareaRef}
               className="w-full outline-none resize-none whitespace-pre-wrap border-none rounded-md bg-muted"
               value={contentText}
@@ -221,7 +216,9 @@ const UserMessage = (props: Props) => {
             />
             <DeleteAction
               hidden={
-                !(message.parentId !== null || message?.siblingIds?.length > 1)
+                !(
+                  message.parentId !== null || message?.siblingIds?.length > 1
+                ) || isChatting(chatStatus)
               }
               isHoverVisible
               onDelete={() => {

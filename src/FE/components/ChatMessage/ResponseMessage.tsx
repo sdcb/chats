@@ -7,18 +7,19 @@ import { isChatting, preprocessLaTeX } from '@/utils/chats';
 import { AdminModelDto } from '@/types/adminApis';
 import {
   ChatSpanStatus,
+  ChatStatus,
   EMPTY_ID,
   ImageDef,
   MessageContentType,
   ResponseContent,
 } from '@/types/chat';
-import { ReactionMessageType } from '@/types/chatMessage';
+import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
 
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
 
 import ChatError from '../ChatError/ChatError';
-import { IconDots, IconEdit } from '../Icons';
+import { IconCopy, IconDots, IconEdit } from '../Icons';
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
@@ -26,7 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import CopyAction from './CopyAction';
+import { Textarea } from '../ui/textarea';
 import ResponseMessageActions from './ResponseMessageActions';
 import ThinkingMessage from './ThinkingMessage';
 
@@ -34,20 +35,11 @@ import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 
-export interface ResponseMessage {
-  id: string;
-  content: ResponseContent[];
-  status: ChatSpanStatus;
-  spanId: number | null;
-  reasoningDuration?: number;
-  parentId: string | null;
-  siblingIds: string[];
-}
-
 interface Props {
   readonly?: boolean;
-  message: ResponseMessage;
+  message: IChatMessage;
   models: AdminModelDto[];
+  chatStatus: ChatStatus;
   onChangeChatLeafMessageId?: (messageId: string) => void;
   onRegenerate?: (spanId: number, messageId: string, modelId: number) => void;
   onReactionMessage?: (type: ReactionMessageType, messageId: string) => void;
@@ -64,6 +56,7 @@ const ResponseMessage = (props: Props) => {
     message,
     readonly,
     models,
+    chatStatus,
     onChangeChatLeafMessageId,
     onRegenerate,
     onReactionMessage,
@@ -72,7 +65,7 @@ const ResponseMessage = (props: Props) => {
   } = props;
   const { t } = useTranslation();
 
-  const { id: messageId, status: chatStatus, content } = message;
+  const { id: messageId, status: messageStatus, content } = message;
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [editId, setEditId] = useState(EMPTY_ID);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -107,6 +100,10 @@ const ResponseMessage = (props: Props) => {
     setEditId(id);
   };
 
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text || '');
+  };
+
   useEffect(() => {
     setMessageContent(content);
   }, [content]);
@@ -120,7 +117,7 @@ const ResponseMessage = (props: Props) => {
 
   return (
     <>
-      {chatStatus === ChatSpanStatus.Pending && (
+      {messageStatus === ChatSpanStatus.Pending && (
         <span className="animate-pulse">▍</span>
       )}
       {message.content.map((c, index) => {
@@ -145,7 +142,7 @@ const ResponseMessage = (props: Props) => {
           return editId === c.i ? (
             <div className="flex relative" key={'edit-text-' + c.i}>
               <div className="flex w-full flex-col flex-wrap rounded-md bg-muted">
-                <textarea
+                <Textarea
                   ref={textareaRef}
                   className="w-full h-auto outline-none resize-none whitespace-pre-wrap border-none rounded-md bg-muted"
                   value={contentText}
@@ -258,37 +255,42 @@ const ResponseMessage = (props: Props) => {
               >
                 {`${preprocessLaTeX(c.c!)}`}
               </MemoizedReactMarkdown>
-              <div className="absolute -bottom-0.5 right-0">
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    disabled={isChatting(chatStatus)}
-                    className="focus:outline-none invisible group-hover/item:visible"
-                  >
-                    <IconDots
-                      className="rotate-90 hover:opacity-50"
-                      size={16}
-                    />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-42 border-none">
-                    <DropdownMenuItem>
-                      <CopyAction
-                        text={c.c}
-                        content={t('Copy')}
-                        triggerClassName="w-full gap-3 justify-start py-2"
-                      />
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="flex justify-start gap-3 ml-1"
-                      onClick={(e) => {
-                        handleToggleEditing(c.i, c.c);
-                        e.stopPropagation();
-                      }}
+              <div className="absolute -bottom-0.5 right-0 z-10">
+                {!isChatting(chatStatus) && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      disabled={isChatting(messageStatus)}
+                      className="focus:outline-none invisible group-hover/item:visible bg-card rounded-full p-1"
                     >
-                      <IconEdit />
-                      {t('Edit')}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      <IconDots
+                        className="rotate-90 hover:opacity-50"
+                        size={16}
+                      />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-42 border-none">
+                      <DropdownMenuItem
+                        className="flex justify-start gap-3"
+                        onClick={(e) => {
+                          handleCopy(c.c);
+                          e.stopPropagation();
+                        }}
+                      >
+                        <IconCopy />
+                        {t('Copy')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="flex justify-start gap-3"
+                        onClick={(e) => {
+                          handleToggleEditing(c.i, c.c);
+                          e.stopPropagation();
+                        }}
+                      >
+                        <IconEdit />
+                        {t('Edit')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             </div>
           );
@@ -307,12 +309,13 @@ const ResponseMessage = (props: Props) => {
         key={'response-actions-' + message.id}
         readonly={readonly}
         models={models}
-        chatStatus={message.status}
-        message={message as any}
+        chatStatus={chatStatus}
+        message={message}
         onChangeMessage={onChangeChatLeafMessageId}
         onReactionMessage={onReactionMessage}
         onRegenerate={(messageId: string, modelId: number) => {
           onRegenerate && onRegenerate(message.spanId!, messageId, modelId);
+          setEditId(EMPTY_ID);
         }}
         onDeleteMessage={onDeleteMessage}
       />

@@ -59,6 +59,7 @@ import ChatHeader from './ChatHeader';
 import ChatInput from './ChatInput';
 import ChatPresetList from './ChatPresetList';
 import ChatMessageMemoized from './MemoizedChatMessage';
+import NoChat from './NoChat';
 import NoModel from './NoModel';
 
 import {
@@ -458,12 +459,11 @@ const Chat = memo(() => {
           msgId,
           time,
         );
-      } else if(value.k === SseResponseKind.ImageGenerated) {
+      } else if (value.k === SseResponseKind.ImageGenerated) {
         const { r, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
-        changeSelectedResponseFile(selectedMessageList, msgId, r)
-      } 
-      else if (value.k === SseResponseKind.UpdateTitle) {
+        changeSelectedResponseFile(selectedMessageList, msgId, r);
+      } else if (value.k === SseResponseKind.UpdateTitle) {
         changeChatTitle(value.r);
       } else if (value.k === SseResponseKind.TitleSegment) {
         changeChatTitle(value.r, true);
@@ -779,6 +779,7 @@ const Chat = memo(() => {
         />
       )}
       {!hasModel() && !selectedChat?.id && <NoModel />}
+      {hasModel() && !selectedChat?.id && <NoChat />}
     </div>
   );
 });

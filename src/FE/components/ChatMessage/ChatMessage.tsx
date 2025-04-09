@@ -4,7 +4,6 @@ import { AdminModelDto } from '@/types/adminApis';
 import { ChatRole, IChat, Message, ResponseContent } from '@/types/chat';
 import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
 
-import { IconRobot } from '../Icons';
 import ResponseMessage from './ResponseMessage';
 import UserMessage from './UserMessage';
 
@@ -51,7 +50,7 @@ export const ChatMessage: FC<Props> = memo(
       <div
         className={cn(
           'w-11/12 m-auto p-2 md:p-4',
-          !hasMultipleSpan && 'w-full md:w-4/5',
+          !hasMultipleSpan && 'w-full lg:w-11/12 md:w-4/5',
           className,
         )}
       >
@@ -106,6 +105,7 @@ export const ChatMessage: FC<Props> = memo(
                         <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3">
                           <ResponseMessage
                             key={'response-message-' + index}
+                            chatStatus={selectedChat.status}
                             message={message}
                             readonly={readonly}
                             models={models}

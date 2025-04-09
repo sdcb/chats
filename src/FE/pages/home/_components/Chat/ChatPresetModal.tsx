@@ -18,7 +18,7 @@ import {
 import ModelParams from '@/components/ModelParams/ModelParams';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
@@ -280,10 +280,10 @@ const ChatPresetModal = (props: Props) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogTitle></DialogTitle>
       <DialogContent className="w-full sm:w-[560px] h-[560px] gap-0 block select-none">
         <div className="mt-5">
           <Input
-            autoFocus={false}
             value={name}
             placeholder={t('Please enter a name')}
             onChange={(e) => {

@@ -43,10 +43,10 @@ const Search: FC<Props> = ({
   };
 
   return (
-    <div className={cn('relative flex items-center h-14', containerClassName)}>
+    <div className={cn('relative flex items-center h-11 w-full', containerClassName)}>
       <input
         className={cn(
-          'w-full flex-1 rounded-md px-3 py-2.5 pr-10 text-[14px] bg-muted leading-3 border-none outline-none',
+          'w-full flex-1 rounded-md px-3 py-3 pr-10 text-[14px] bg-muted leading-3 border-none outline-none',
           className,
         )}
         type="text"

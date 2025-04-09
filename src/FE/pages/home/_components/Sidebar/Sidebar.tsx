@@ -113,18 +113,19 @@ const Sidebar = <T,>({
               />
             )}
           </div>
-          <div
-            className={cn(
-              'pr-1.5 h-16',
-              actionComponent && 'flex items-center gap-x-1',
-            )}
-          >
+          <div className="mt-3">
             <Search
               placeholder={t('Search...') || ''}
               searchTerm={searchTerm}
               onSearch={handleSearchTerm}
             />
-            {actionComponent}
+            {!searchTerm && actionComponent && (
+              <div className="relative">
+                <div className="absolute right-1 bottom-2">
+                  {actionComponent}
+                </div>
+              </div>
+            )}
           </div>
           {actionConfirmComponent}
         </div>
@@ -140,9 +141,7 @@ const Sidebar = <T,>({
         <div className="flex-grow overflow-hidden overflow-y-scroll scroll-container">
           <div className="flex">{folderComponent}</div>
 
-          {items?.length > 0 && !isLoading && (
-            <div className="pt-2">{itemComponent}</div>
-          )}
+          {items?.length > 0 && !isLoading && <div>{itemComponent}</div>}
           {NoDataRender()}
         </div>
         {footerComponent}
