@@ -266,16 +266,21 @@ public class ChatController(ChatStopService stopService) : ControllerBase
             else if (line.Kind == SseResponseKind.ImageGenerated)
             {
                 ImageChatSegment image = (ImageChatSegment)line.Result;
-                FileService fs = await fsTask ?? throw new InvalidOperationException("Default file service config not found.");
                 if (!imageFileCache.TryGetValue(image, out TaskCompletionSource<DB.File>? tcs))
                 {
                     throw new InvalidOperationException("Image file cache not found.");
                 }
+
+                await YieldResponse(SseResponseLine.ImageGenerated(line.SpanId!.Value, new FileDto()
+                {
+                    Id = Guid.NewGuid().ToString(), 
+                    Url = image.ToTempUrl(), 
+                }));
                 try
                 {
+                    FileService fs = await fsTask ?? throw new InvalidOperationException("Default file service config not found.");
                     DB.File file = await dbFileService.StoreImage(image, await clientInfoTask, fs, cancellationToken: default);
                     tcs.SetResult(file);
-                    await YieldResponse(SseResponseLine.ImageGenerated(line.SpanId!.Value, fup.CreateFileDto(file)));
                 }
                 catch (Exception e)
                 {
@@ -398,6 +403,11 @@ public class ChatController(ChatStopService stopService) : ControllerBase
                         imageFileCache[imgSeg] = new TaskCompletionSource<DB.File>();
                         await writer.WriteAsync(SseResponseLine.ImageGeneratedTemp(chatSpan.SpanId, imgSeg), cancellationToken);
                     }
+                }
+
+                if (seg.FinishReason == ChatFinishReason.ContentFilter)
+                {
+                    errorText = "Content Filtered";
                 }
 
                 if (cancellationToken.IsCancellationRequested)

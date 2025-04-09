@@ -53,7 +53,7 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
         return new FileDto
         {
             Id = urlEncryptionService.EncryptFileId(file.Id),
-            Url = downloadUrl,
+            Url = downloadUrl.ToString(),
         };
     }
 

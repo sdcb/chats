@@ -95,7 +95,7 @@ public record FileDto
     public required string Id { get; init; }
 
     [JsonPropertyName("url")]
-    public required Uri Url { get; init; }
+    public required string Url { get; init; }
 }
 
 public record ChatMessageTempUsage
