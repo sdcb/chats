@@ -59,7 +59,7 @@ public partial class MessageContent
             .ToArrayAsync(cancellationToken);
     }
 
-    public static IEnumerable<MessageContent> FromFullResponse(InternalChatSegment lastSegment, string? errorText, Dictionary<ImageChatSegment, File> imageMcCache)
+    public static IEnumerable<MessageContent> FromFullResponse(InternalChatSegment lastSegment, string? errorText, Dictionary<ImageChatSegment, TaskCompletionSource<File>> imageMcCache)
     {
         if (errorText is not null)
         {
@@ -72,26 +72,12 @@ public partial class MessageContent
             {
                 TextChatSegment text => FromText(text.Text),
                 ThinkChatSegment think => FromThink(think.Think),
-                ImageChatSegment image => WaitCache(imageMcCache, image),
+                ImageChatSegment image => FromFile(imageMcCache[image].Task.GetAwaiter().GetResult()),
                 _ => throw new NotSupportedException(),
             };
         }))
         {
             yield return item;
         }
-    }
-
-    private static MessageContent WaitCache(Dictionary<ImageChatSegment, File> imageMcCache, ImageChatSegment image)
-    {
-        for (int i = 0; i < 2000; ++i) // max wait 2000 * 50ms = 100s
-        {
-            if (imageMcCache.TryGetValue(image, out File? file))
-            {
-                return FromFile(file);
-            }
-            Thread.Sleep(50);
-            Console.WriteLine($"Waiting for image cache {i}");
-        }
-        throw new TimeoutException("Image cache wait timeout");
     }
 }

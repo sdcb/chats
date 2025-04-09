@@ -206,7 +206,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         Task<FileService?> fsTask = clientInfoTask.ContinueWith(x => FileService.GetDefault(db, cancellationToken)).Unwrap();
 
         Channel<SseResponseLine>[] channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
-        Dictionary<ImageChatSegment, DB.File> imageFileCache = [];
+        Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache = [];
         Task<ChatSpanResponse>[] streamTasks = [.. toGenerateSpans
             .Select((span, index) => ProcessChatSpan(
                 currentUser,
@@ -267,9 +267,20 @@ public class ChatController(ChatStopService stopService) : ControllerBase
             {
                 ImageChatSegment image = (ImageChatSegment)line.Result;
                 FileService fs = await fsTask ?? throw new InvalidOperationException("Default file service config not found.");
-                DB.File file = await dbFileService.StoreImage(image, await clientInfoTask, fs, cancellationToken: default);
-                imageFileCache[image] = file;
-                await YieldResponse(SseResponseLine.ImageGenerated(line.SpanId!.Value, fup.CreateFileDto(file)));
+                if (!imageFileCache.TryGetValue(image, out TaskCompletionSource<DB.File>? tcs))
+                {
+                    throw new InvalidOperationException("Image file cache not found.");
+                }
+                try
+                {
+                    DB.File file = await dbFileService.StoreImage(image, await clientInfoTask, fs, cancellationToken: default);
+                    tcs.SetResult(file);
+                    await YieldResponse(SseResponseLine.ImageGenerated(line.SpanId!.Value, fup.CreateFileDto(file)));
+                }
+                catch (Exception e)
+                {
+                    tcs.SetException(e);
+                }
             }
             else
             {
@@ -328,7 +339,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         Message? dbUserMessage,
         UserBalance userBalance,
         Task<ClientInfo> clientInfoTask,
-        Dictionary<ImageChatSegment, DB.File> imageFileCache,
+        Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache,
         ChannelWriter<SseResponseLine> writer,
         CancellationToken cancellationToken)
     {
@@ -384,6 +395,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
                     }
                     else if (item is ImageChatSegment imgSeg)
                     {
+                        imageFileCache[imgSeg] = new TaskCompletionSource<DB.File>();
                         await writer.WriteAsync(SseResponseLine.ImageGeneratedTemp(chatSpan.SpanId, imgSeg), cancellationToken);
                     }
                 }
