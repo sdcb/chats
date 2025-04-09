@@ -57,10 +57,7 @@ const InvitationCodeModal = (props: IProps) => {
   ];
 
   const formSchema = z.object({
-    value: z
-      .string()
-      .min(1, `${t('This field is require')}`)
-      .optional(),
+    value: z.string().min(1, `${t('This field is require')}`),
     count: z.union([z.string(), z.number()]).optional(),
   });
 
