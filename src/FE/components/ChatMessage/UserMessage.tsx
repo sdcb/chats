@@ -67,7 +67,7 @@ const UserMessage = (props: Props) => {
       onEditUserMessage && onEditUserMessage(message.id, msgContent);
     } else {
       if (selectedChat.id && onEditAndSendMessage) {
-        const messageContent = message.content.map((x: any) => {
+        const messageContent = structuredClone(message.content).map((x: any) => {
           if (x.$type === MessageContentType.text) {
             x.c = contentText;
           }
