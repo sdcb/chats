@@ -14,8 +14,10 @@ public abstract record ImageChatSegment : ChatSegmentItem
 
 public record Base64Image : ImageChatSegment
 {
+    [JsonPropertyName("contentType")]
     public required string ContentType { get; init; }
 
+    [JsonPropertyName("base64")]
     public required string Base64 { get; init; }
 
     public override Task<DBFileDef> Download(CancellationToken cancellationToken = default)
@@ -29,6 +31,7 @@ public record Base64Image : ImageChatSegment
 
 public record UrlImage : ImageChatSegment
 {
+    [JsonPropertyName("url")]
     public required string Url { get; init; }
 
     public override async Task<DBFileDef> Download(CancellationToken cancellationToken = default)
