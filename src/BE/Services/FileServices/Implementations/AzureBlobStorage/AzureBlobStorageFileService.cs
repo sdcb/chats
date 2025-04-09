@@ -1,7 +1,6 @@
 ﻿using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
-using Chats.BE.DB.Enums;
 
 namespace Chats.BE.Services.FileServices.Implementations.AzureBlobStorage;
 
