@@ -3,16 +3,16 @@ using Chats.BE.Services.UrlEncryption;
 
 namespace Chats.BE.Services.FileServices.Implementations.Local;
 
-public class LocalFileService(int id, DBFileServiceType fileServiceType, string localFolder, HostUrlService hostUrlservice, IUrlEncryptionService urlEncryption) : IFileService(id, fileServiceType)
+public class LocalFileService(string localFolder, HostUrlService hostUrlservice, IUrlEncryptionService urlEncryption) : IFileService
 {
-    public override Uri CreateDownloadUrl(CreateDownloadUrlRequest request)
+    public Uri CreateDownloadUrl(CreateDownloadUrlRequest request)
     {
         TimedId timedId = TimedId.CreateFor(request.FileId, request.ValidPeriod);
         string path = urlEncryption.CreateFileIdPath(timedId);
         return new Uri($"{hostUrlservice.GetBEUrl()}/api/file/{path}");
     }
 
-    public override Task<bool> Delete(string storageKey, CancellationToken cancellationToken)
+    public Task<bool> Delete(string storageKey, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         string localPath = Path.Combine(localFolder, storageKey);
@@ -27,7 +27,7 @@ public class LocalFileService(int id, DBFileServiceType fileServiceType, string 
         }
     }
 
-    public override Task<Stream> Download(string storageKey, CancellationToken cancellationToken)
+    public Task<Stream> Download(string storageKey, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -35,7 +35,7 @@ public class LocalFileService(int id, DBFileServiceType fileServiceType, string 
         return Task.FromResult<Stream>(File.OpenRead(localPath));
     }
 
-    public override async Task<string> Upload(FileUploadRequest request, CancellationToken cancellationToken)
+    public async Task<string> Upload(FileUploadRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 

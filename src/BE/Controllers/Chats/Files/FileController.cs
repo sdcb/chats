@@ -160,7 +160,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
     internal ActionResult ServeStaticFile(DB.File file)
     {
         DBFileServiceType fileServiceType = (DBFileServiceType)file.FileService.FileServiceTypeId;
-        IFileService fs = fileServiceFactory.Create(file);
+        IFileService fs = fileServiceFactory.Create(file.FileService);
         if (fileServiceType == DBFileServiceType.Local)
         {
             FileInfo fileInfo = new(Path.Combine(file.FileService.Configs, file.StorageKey));

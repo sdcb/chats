@@ -33,7 +33,7 @@ public class DBFileService(ChatsDB db, FileServiceFactory fsf, ClientInfoManager
             ClientInfoId = clientInfo.Id,
             CreatedAt = DateTime.UtcNow,
             CreateUserId = currentUser.Id,
-            FileServiceId = fs.Id,
+            FileServiceId = dbfs.Id,
             FileService = dbfs,
             FileImageInfo = fiis.GetImageInfo(def.FileName, def.ContentType, def.Bytes),
         };

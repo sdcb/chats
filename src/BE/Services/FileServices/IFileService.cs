@@ -3,14 +3,10 @@
 namespace Chats.BE.Services.FileServices;
 
 /// <summary>
-/// Abstract class for file service operations such as upload, download, and creating download URLs.
+/// Abstract for file service operations such as upload, download, and creating download URLs.
 /// </summary>
-public abstract class IFileService(int id, DBFileServiceType fileServiceType)
+public interface IFileService
 {
-    public int Id { get; } = id;
-
-    public DBFileServiceType FileServiceType { get; } = fileServiceType;
-
     /// <summary>
     /// Uploads a file to the storage. The caller must dispose the stream.
     /// </summary>
