@@ -207,7 +207,7 @@ const UserMessage = (props: Props) => {
         )}
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end my-1">
         {!isEditing && (
           <>
             <EditAction

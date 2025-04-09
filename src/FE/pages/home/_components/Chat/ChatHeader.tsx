@@ -34,7 +34,7 @@ import { cn } from '@/lib/utils';
 const ChatHeader = () => {
   const { t } = useTranslation();
   const {
-    state: { selectedChat, models, defaultPrompt },
+    state: { selectedChat, models, defaultPrompt, showChatBar },
     chatDispatch,
   } = useContext(HomeContext);
 
@@ -137,14 +137,24 @@ const ChatHeader = () => {
   return (
     <>
       <div className="absolute top-0 left-0 w-full border-transparent bg-background">
-        <div className="stretch mt-2 flex flex-row mx-4 rounded-md">
-          <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]">
+        <div
+          className={cn(
+            'stretch mt-2 flex flex-row mx-4 rounded-md',
+            !showChatBar && 'mx-2',
+          )}
+        >
+          <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] overflow-hidden">
             <div
               className={cn(
                 'flex justify-between select-none items-center custom-scrollbar overflow-x-auto px-3',
               )}
             >
-              <div className={cn('flex justify-start h-12 items-center')}>
+              <div
+                className={cn(
+                  'flex justify-start h-12 items-center',
+                  !showChatBar && 'pl-16',
+                )}
+              >
                 <div
                   className={cn(
                     'flex gap-2 items-center',

@@ -50,7 +50,7 @@ export const ChatMessage: FC<Props> = memo(
     return (
       <div
         className={cn(
-          'w-11/12 m-auto p-0 md:p-4',
+          'w-11/12 m-auto p-2 md:p-4',
           !hasMultipleSpan && 'w-full md:w-4/5',
           className,
         )}
@@ -95,7 +95,7 @@ export const ChatMessage: FC<Props> = memo(
                         }
                         key={'response-group-message-' + index}
                         className={cn(
-                          'border-[1px] border-background rounded-md flex w-full group bg-card mb-4 md:mb-0',
+                          'border-[1px] border-background rounded-md flex w-full group bg-card mb-4',
                           hasMultipleSpan &&
                             message.isActive &&
                             'border-primary/50 border-gray-300',

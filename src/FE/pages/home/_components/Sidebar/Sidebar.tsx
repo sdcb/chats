@@ -73,7 +73,7 @@ const Sidebar = <T,>({
           isOpen ? 'w-[260px]' : 'w-0 hidden'
         } fixed top-0 ${side}-0 z-40 flex h-full flex-none flex-col bg-gray-50 bg-sidebar p-2 text-[14px] sm:relative sm:top-0 shadow-sm`}
       >
-        <div className="sticky">
+        <div className="sticky mt-2">
           <div
             className={cn(
               'flex items-center pr-1.5 justify-between',
@@ -150,8 +150,8 @@ const Sidebar = <T,>({
 
       {!isOpen && showOpenButton && (
         <div
-          className={`group fixed z-20 ${
-            side === 'right' ? 'right-2' : 'left-[8px]'
+          className={`group fixed bg-card pt-2 z-20 h-12 rounded-sm ${
+            side === 'right' ? 'right-2' : 'left-2'
           }`}
           style={{ top: '8px' }}
         >
