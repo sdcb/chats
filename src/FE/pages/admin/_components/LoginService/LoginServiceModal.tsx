@@ -81,15 +81,9 @@ const LoginServiceModal = (props: IProps) => {
   ];
 
   const formSchema = z.object({
-    type: z
-      .string()
-      .min(1, `${t('This field is require')}`)
-      .optional(),
+    type: z.string().min(1, `${t('This field is require')}`),
     enabled: z.boolean().optional(),
-    configs: z
-      .string()
-      .min(1, `${t('This field is require')}`)
-      .optional(),
+    configs: z.string().min(1, `${t('This field is require')}`),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
