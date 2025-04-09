@@ -10,6 +10,8 @@ namespace Chats.BE.Services.Models.ChatServices;
 public abstract record ImageChatSegment : ChatSegmentItem
 {
     public abstract Task<DBFileDef> Download(CancellationToken cancellationToken = default);
+
+    public abstract string ToTempUrl();
 }
 
 public record Base64Image : ImageChatSegment
@@ -27,6 +29,8 @@ public record Base64Image : ImageChatSegment
         byte[] bytes = Convert.FromBase64String(Base64);
         return Task.FromResult(new DBFileDef(bytes, ContentType, null));
     }
+
+    public override string ToTempUrl() => $"data:{ContentType};base64,{Base64}";
 }
 
 public record UrlImage : ImageChatSegment
@@ -45,4 +49,6 @@ public record UrlImage : ImageChatSegment
         string? fileName = resp.Content.Headers.ContentDisposition?.FileName;
         return new DBFileDef(bytes, contentType, fileName);
     }
+
+    public override string ToTempUrl() => Url;
 }
