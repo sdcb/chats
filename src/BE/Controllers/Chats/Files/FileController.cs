@@ -7,7 +7,6 @@ using Chats.BE.Services.UrlEncryption;
 using Chats.BE.Services.ImageInfo;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Drawing;
 using Microsoft.AspNetCore.Authorization;
 using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
@@ -109,7 +108,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         await db.SaveChangesAsync(cancellationToken);
 
         FileDto fileDto = fdup.CreateFileDto(dbFile);
-        return Created(fileDto.Url, value: fileDto);
+        return Created(default(string), value: fileDto);
     }
 
     [Route("file/private/{encryptedFileId}"), HttpGet]
