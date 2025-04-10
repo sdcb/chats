@@ -345,6 +345,31 @@ const IconEdit = (props: IconProps) => {
   );
 };
 
+const IconEditCheck = (props: IconProps) => {
+  const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      onClick={onClick}
+      className={className}
+      width={size}
+      height={size}
+      strokeWidth={strokeWidth}
+      stroke={stroke || 'var(--foreground)'}
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M15 19l2 2l4 -4" />
+    </svg>
+  );
+};
+
 const IconTrash = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
 
@@ -1760,4 +1785,5 @@ export {
   IconWorld,
   IconReasoning,
   IconMessageChatbot,
+  IconEditCheck,
 };

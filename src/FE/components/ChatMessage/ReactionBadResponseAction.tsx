@@ -26,7 +26,10 @@ export const ReactionBadResponseAction = (props: Props) => {
           <Button
             disabled={disabled}
             variant="ghost"
-            className={cn('p-1 m-0 h-7 w-7', value === false && 'bg-muted')}
+            className={cn(
+              'p-1 m-0 h-7 w-7 hidden sm:block',
+              value === false && 'bg-muted',
+            )}
             onClick={(e) => {
               onReactionMessage(ReactionMessageType.Bad);
               e.stopPropagation();

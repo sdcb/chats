@@ -1,7 +1,7 @@
 export interface UserModelConfig {
   prompt: string | null;
   temperature: number | null;
-  enableSearch: boolean | null;
+  webSearchEnabled: boolean | null;
 }
 
 export enum DBModelProvider {

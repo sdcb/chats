@@ -250,11 +250,6 @@ const ChatInput = ({
     }
   }, [contentText, contentFiles]);
 
-  useEffect(() => {
-    setContentFiles([]);
-    setContentText('');
-  }, [selectedChat]);
-
   return (
     <div className="absolute bottom-0 left-0 w-full border-transparent bg-background">
       <div className="stretch flex flex-row rounded-md lg:w-11/12 mx-auto md:w-4/5 px-4">

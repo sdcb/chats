@@ -504,7 +504,7 @@ const Chat = memo(() => {
 
       if (scrollTop + clientHeight < scrollHeight - bottomTolerance) {
         setAutoScrollEnabled(false);
-        setShowScrollDownButton(true);
+        setShowScrollDownButton(true && selectedMessages.length > 0);
       } else {
         setAutoScrollEnabled(true);
         setShowScrollDownButton(false);
