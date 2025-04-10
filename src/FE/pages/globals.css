@@ -200,3 +200,9 @@ select:focus {
     width: 100vw !important;
   }
 }
+
+button,
+a,
+div {
+  -webkit-tap-highlight-color: transparent !important;
+}
