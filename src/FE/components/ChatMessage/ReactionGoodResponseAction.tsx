@@ -26,7 +26,10 @@ export const ReactionGoodResponseAction = (props: Props) => {
           <Button
             disabled={disabled}
             variant="ghost"
-            className={cn('p-1 m-0 h-7 w-7', value === true && 'bg-muted')}
+            className={cn(
+              'p-1 m-0 h-7 w-7 hidden sm:block',
+              value === true && 'bg-muted',
+            )}
             onClick={(e) => {
               onReactionMessage(ReactionMessageType.Good);
               e.stopPropagation();

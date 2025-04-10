@@ -81,7 +81,7 @@ const ChatPresetModal = (props: Props) => {
             maxOutputTokens: null,
             temperature: null,
             reasoningEffort: 0,
-            enableSearch: false,
+            webSearchEnabled: false,
           });
           return s;
         }
@@ -104,7 +104,7 @@ const ChatPresetModal = (props: Props) => {
         maxOutputTokens: span?.maxOutputTokens || null,
         temperature: span?.temperature || null,
         reasoningEffort: span.reasoningEffort,
-        webSearchEnabled: !!span.enableSearch,
+        webSearchEnabled: !!span.webSearchEnabled,
       })),
     };
     if (chatPreset) {
@@ -132,7 +132,7 @@ const ChatPresetModal = (props: Props) => {
       maxOutputTokens: null,
       temperature: null,
       reasoningEffort: 0,
-      enableSearch: false,
+      webSearchEnabled: false,
     };
     setSpans([...spans, span]);
     setSelectedSpan(span);
@@ -201,7 +201,7 @@ const ChatPresetModal = (props: Props) => {
         if (selectedSpan?.spanId === span.spanId) {
           const s = {
             ...span!,
-            enableSearch: value,
+            webSearchEnabled: value,
           };
           setSelectedSpan({
             ...s,
@@ -407,7 +407,7 @@ const ChatPresetModal = (props: Props) => {
                   {modelMap[selectedSpan.modelId]?.allowSearch && (
                     <EnableNetworkSearch
                       label={t('Internet Search')}
-                      enable={selectedSpan.enableSearch}
+                      enable={selectedSpan.webSearchEnabled}
                       onChange={(value) => {
                         onChangeEnableSearch(value);
                       }}

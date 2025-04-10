@@ -12,6 +12,7 @@ import PaginationAction from './PaginationAction';
 import ReactionBadResponseAction from './ReactionBadResponseAction';
 import ReactionGoodResponseAction from './ReactionGoodResponseAction';
 import RegenerateAction from './RegenerateAction';
+import EditStatusAction from './EditStatusAction';
 
 interface Props {
   models: AdminModelDto[];
@@ -68,6 +69,8 @@ const ResponseMessageActions = (props: Props) => {
                 .map((x) => x.c)
                 .join('')}
             />
+
+            {message.edited && <EditStatusAction />}
 
             <DeleteAction
               hidden={siblingIds.length <= 1 || chatting}

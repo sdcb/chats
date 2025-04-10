@@ -82,7 +82,7 @@ const ChatModelSettingModal = (props: Props) => {
   };
 
   const onChangeEnableSearch = (value: boolean) => {
-    setSpan({ ...span!, enableSearch: value });
+    setSpan({ ...span!, webSearchEnabled: value });
   };
 
   const onChangeReasoningEffort = (value: string) => {
@@ -109,7 +109,7 @@ const ChatModelSettingModal = (props: Props) => {
       maxOutputTokens: span?.maxOutputTokens || null,
       temperature: span?.temperature || null,
       reasoningEffort: span.reasoningEffort,
-      webSearchEnabled: !!span.enableSearch,
+      webSearchEnabled: !!span.webSearchEnabled,
     }).then(() => {
       const spans = selectedChat.spans.map((s) =>
         s.spanId === spanId ? { ...span! } : s,
@@ -162,7 +162,7 @@ const ChatModelSettingModal = (props: Props) => {
               {model?.allowSearch && (
                 <EnableNetworkSearch
                   label={t('Internet Search')}
-                  enable={span.enableSearch}
+                  enable={span.webSearchEnabled}
                   onChange={(value) => {
                     onChangeEnableSearch(value);
                   }}

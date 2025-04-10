@@ -105,7 +105,7 @@ const ChatPresetList = () => {
               <div
                 key={'chat-preset' + item.id}
                 className={cn(
-                  'rounded-sm p-4 h-32 hover:bg-muted cursor-pointer shadow-sm bg-card',
+                  'rounded-sm p-4 h-24 md:h-32 hover:bg-muted cursor-pointer shadow-sm bg-card',
                   selectedChatPresetId === item.id && 'bg-muted',
                 )}
                 onClick={() => {
@@ -158,7 +158,7 @@ const ChatPresetList = () => {
                   </span>
                 </div>
                 <div className="">
-                  <div className="flex justify-end h-16 items-end">
+                  <div className="flex justify-end h-8 md:h-16 items-end">
                     {item.spans.map((s) => (
                       <TooltipProvider
                         delayDuration={100}
@@ -185,7 +185,7 @@ const ChatPresetList = () => {
           })}
           {chatPresets.length < MAX_CREATE_PRESET_CHAT_COUNT && (
             <div
-              className="rounded-sm px-4 flex justify-center items-center h-32 cursor-pointer hover:bg-muted bg-card"
+              className="rounded-sm px-4 flex justify-center items-center h-24 md:h-32 cursor-pointer hover:bg-muted bg-card"
               onClick={handleCreateChatPreset}
             >
               <IconPlus size={20} />

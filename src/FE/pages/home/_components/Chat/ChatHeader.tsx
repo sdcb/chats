@@ -52,7 +52,7 @@ const ChatHeader = () => {
         modelName: data.modelName,
         modelProviderId: data.modelProviderId,
         temperature: data.temperature,
-        enableSearch: data.enableSearch,
+        webSearchEnabled: data.webSearchEnabled,
         reasoningEffort: data?.reasoningEffort,
         systemPrompt: defaultPrompt?.content!,
       });
@@ -81,7 +81,7 @@ const ChatHeader = () => {
               modelName: data.modelName,
               modelProviderId: data.modelProviderId,
               temperature: data.temperature,
-              enableSearch: data.enableSearch,
+              webSearchEnabled: data.webSearchEnabled,
             };
           }
           return s;
