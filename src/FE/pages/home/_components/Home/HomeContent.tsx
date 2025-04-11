@@ -59,6 +59,7 @@ import settingReducer, {
 import Chat from '../Chat/Chat';
 import Chatbar from '../Chatbar/Chatbar';
 import PromptBar from '../Promptbar/Promptbar';
+import SettingsSheet from '../Setting/SettingsSheet';
 
 import {
   getChatsByPaging,
@@ -94,7 +95,7 @@ const HomeContent = () => {
 
   const { chats, chatPaging, stopIds } = chatState;
   const { models } = modelState;
-  const { showPromptBar } = settingState;
+  const { showPromptBar, showSetting } = settingState;
   const [isPageLoading, setIsPageLoading] = useState(true);
 
   const contextValue = useCreateReducer<HomeInitialState>({
@@ -361,6 +362,7 @@ const HomeContent = () => {
           <div className="flex h-full w-full bg-background">
             <Chatbar />
             <Chat />
+            <SettingsSheet isOpen={showSetting} />
             {showPromptBar && <PromptBar />}
           </div>
         </div>

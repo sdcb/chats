@@ -53,6 +53,7 @@ export interface HomeInitialState {
 
   showChatBar: boolean;
   showPromptBar: boolean;
+  showSetting: boolean;
 }
 
 export const initialState: HomeInitialState = {
@@ -74,6 +75,7 @@ export const initialState: HomeInitialState = {
 
   showChatBar: true,
   showPromptBar: false,
+  showSetting: false,
 };
 
 export interface HomeContextProps {

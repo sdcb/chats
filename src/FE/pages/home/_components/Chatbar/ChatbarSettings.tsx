@@ -14,6 +14,7 @@ import {
   IconLogout,
   IconMoneybag,
   IconPasswordUser,
+  IconSettings,
   IconSettingsCog,
   IconUser,
 } from '@/components/Icons/index';
@@ -24,7 +25,10 @@ import {
 } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 
-import { setShowPromptBar } from '../../_actions/setting.actions';
+import {
+  setShowPromptBar,
+  setShowSetting,
+} from '../../_actions/setting.actions';
 import HomeContext from '../../_contexts/home.context';
 import ChangePasswordModal from '../Modal/ChangePasswordModal';
 import UserBalanceModal from '../Modal/UserBalanceModal';
@@ -74,7 +78,6 @@ const ChatBarSettings = () => {
           }}
         />
       )}
-
       {user?.username && (
         <Popover>
           <PopoverTrigger className="w-full hover:bg-muted rounded-md">
@@ -115,6 +118,13 @@ const ChatBarSettings = () => {
               icon={<IconPasswordUser />}
               onClick={() => {
                 setChangePwdModalOpen(true);
+              }}
+            />
+            <SidebarButton
+              text={t('Settings')}
+              icon={<IconSettings />}
+              onClick={() => {
+                settingDispatch(setShowSetting(true));
               }}
             />
             <Separator className="my-2" />
