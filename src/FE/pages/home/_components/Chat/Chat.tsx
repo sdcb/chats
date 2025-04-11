@@ -80,7 +80,6 @@ const Chat = memo(() => {
       selectedMessages,
       models,
       showChatBar,
-      showPromptBar,
     },
 
     hasModel,
@@ -763,13 +762,10 @@ const Chat = memo(() => {
           <div
             className="sm:w-full chat-container"
             style={{
-              width: `calc(100vw - ${
-                showChatBar && showPromptBar
-                  ? 520
-                  : showChatBar || showPromptBar
-                  ? 260
-                  : 0
-              }px)`,
+              width: `calc(100vw - ${showChatBar
+                ? 260
+                : 0
+                }px)`,
             }}
           >
             {selectedChat && selectedMessages.length === 0 && (

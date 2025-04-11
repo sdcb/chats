@@ -8,11 +8,6 @@ export const setShowChatBar = (showChatBar: boolean): SettingsAction => ({
   payload: showChatBar,
 });
 
-export const setShowPromptBar = (showPromptBar: boolean): SettingsAction => ({
-  type: SettingActionTypes.SHOW_PROMPT_BAR,
-  payload: showPromptBar,
-});
-
 export const setShowSetting = (showSetting: boolean): SettingsAction => ({
   type: SettingActionTypes.SHOW_SETTING,
   payload: showSetting,

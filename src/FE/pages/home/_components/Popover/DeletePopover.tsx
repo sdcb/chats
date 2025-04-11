@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { IconTrash } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -37,7 +38,7 @@ export default function DeletePopover(props: Props) {
             setIsOpen(true);
           }}
         >
-          {t('Delete')}
+          <IconTrash size={18}/>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-48 pointer-events-auto">

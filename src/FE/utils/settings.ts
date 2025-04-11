@@ -4,12 +4,10 @@ const STORAGE_KEY = 'settings';
 
 export interface Settings {
   showChatBar: boolean;
-  showPromptBar: boolean;
 }
 
 export const DEFAULT_SETTINGS = {
   showChatBar: typeof window !== 'undefined'  && isMobile() ? false : true,
-  showPromptBar: false,
 };
 
 export const getSettings = (): Settings => {

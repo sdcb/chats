@@ -10,9 +10,7 @@ import { UserRole } from '@/types/adminApis';
 
 import {
   IconBulbFilled,
-  IconKey,
   IconLogout,
-  IconMoneybag,
   IconPasswordUser,
   IconSettings,
   IconSettingsCog,
@@ -26,13 +24,9 @@ import {
 import { Separator } from '@/components/ui/separator';
 
 import {
-  setShowPromptBar,
   setShowSetting,
 } from '../../_actions/setting.actions';
 import HomeContext from '../../_contexts/home.context';
-import ChangePasswordModal from '../Modal/ChangePasswordModal';
-import UserBalanceModal from '../Modal/UserBalanceModal';
-import SettingModal from '../Settings/SettingModal';
 import SidebarButton from '../Sidebar/SidebarButton';
 
 import { getUserBalanceOnly } from '@/apis/clientApis';
@@ -41,13 +35,8 @@ import { useUserInfo } from '@/providers/UserProvider';
 const ChatBarSettings = () => {
   const router = useRouter();
   const { t } = useTranslation();
-  const [changePwdModalOpen, setChangePwdModalOpen] = useState<boolean>(false);
-  const [userBalanceModalOpen, setUserBalanceModalOpen] =
-    useState<boolean>(false);
-  const [settingSheetOpen, setSettingSheetOpen] = useState<boolean>(false);
 
   const {
-    state: { showPromptBar },
     settingDispatch,
   } = useContext(HomeContext);
   const user = useUserInfo();
@@ -69,15 +58,6 @@ const ChatBarSettings = () => {
 
   return (
     <div className="flex flex-col items-center space-y-1 border-t border-black/5 dark:border-white/10 pt-2 text-sm">
-      {user?.role === UserRole.admin && (
-        <SidebarButton
-          text={t('Admin Panel')}
-          icon={<IconSettingsCog />}
-          onClick={() => {
-            router.push('/admin');
-          }}
-        />
-      )}
       {user?.username && (
         <Popover>
           <PopoverTrigger className="w-full hover:bg-muted rounded-md">
@@ -89,37 +69,15 @@ const ChatBarSettings = () => {
             />
           </PopoverTrigger>
           <PopoverContent className="w-[244px]">
-            <SidebarButton
-              text={`${t('Account balance')}￥${(+(userBalance || 0)).toFixed(
-                2,
-              )}`}
-              icon={<IconMoneybag />}
-              onClick={() => {
-                setUserBalanceModalOpen(true);
-              }}
-            />
-            <Separator className="my-2" />
-            <SidebarButton
-              text={t('Prompt Management')}
-              icon={<IconBulbFilled />}
-              onClick={() => {
-                settingDispatch(setShowPromptBar(!showPromptBar));
-              }}
-            />
-            <SidebarButton
-              text={`${t('API Key Management')}`}
-              icon={<IconKey />}
-              onClick={() => {
-                setSettingSheetOpen(true);
-              }}
-            />
-            <SidebarButton
-              text={t('Change Password')}
-              icon={<IconPasswordUser />}
-              onClick={() => {
-                setChangePwdModalOpen(true);
-              }}
-            />
+            {user?.role === UserRole.admin && (
+              <SidebarButton
+                text={t('Admin Panel')}
+                icon={<IconSettingsCog />}
+                onClick={() => {
+                  router.push('/admin');
+                }}
+              />
+            )}
             <SidebarButton
               text={t('Settings')}
               icon={<IconSettings />}
@@ -136,31 +94,6 @@ const ChatBarSettings = () => {
           </PopoverContent>
         </Popover>
       )}
-
-      {userBalanceModalOpen && (
-        <UserBalanceModal
-          isOpen={userBalanceModalOpen}
-          onClose={() => {
-            setUserBalanceModalOpen(false);
-          }}
-        />
-      )}
-
-      {changePwdModalOpen && (
-        <ChangePasswordModal
-          isOpen={changePwdModalOpen}
-          onClose={() => {
-            setChangePwdModalOpen(false);
-          }}
-        />
-      )}
-
-      <SettingModal
-        isOpen={settingSheetOpen}
-        onClose={() => {
-          setSettingSheetOpen(false);
-        }}
-      />
     </div>
   );
 };
