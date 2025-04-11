@@ -39,6 +39,26 @@ public record RegenerateAssistantMessageRequest : ChatRequest
     }
 }
 
+public record RegenerateAllAssistantMessageRequest : ChatRequest
+{
+    [JsonPropertyName("parentUserMessageId")]
+    public required string ParentUserMessageId { get; init; }
+
+    [JsonPropertyName("modelId")]
+    public required short ModelId { get; init; }
+
+    public override DecryptedChatRequest Decrypt(IUrlEncryptionService urlEncryption)
+    {
+        return new DecryptedRegenerateAllAssistantMessageRequest
+        {
+            ChatId = urlEncryption.DecryptChatId(EncryptedChatId),
+            TimezoneOffset = TimezoneOffset,
+            ParentUserMessageId = urlEncryption.DecryptMessageId(ParentUserMessageId),
+            ModelId = ModelId
+        };
+    }
+}
+
 public record GeneralChatRequest : ChatRequest
 {
     [JsonPropertyName("userMessage")]
@@ -68,11 +88,14 @@ public abstract record DecryptedChatRequest
     public abstract long? LastMessageId { get; }
 }
 
-public record DecryptedRegenerateAssistantMessageRequest : DecryptedChatRequest
+public record DecryptedRegenerateAssistantMessageRequest : DecryptedRegenerateAllAssistantMessageRequest
+{
+    public required byte SpanId { get; init; }
+}
+
+public record DecryptedRegenerateAllAssistantMessageRequest : DecryptedChatRequest
 {
     public required long ParentUserMessageId { get; init; }
-
-    public required byte SpanId { get; init; }
 
     public required short ModelId { get; init; }
 

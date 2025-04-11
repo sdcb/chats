@@ -25,7 +25,7 @@ namespace Chats.BE.Controllers.Chats.Chats;
 public class ChatController(ChatStopService stopService) : ControllerBase
 {
     [HttpPost("regenerate-assistant-message")]
-    public async Task<IActionResult> RegenerateMessage(
+    public async Task<IActionResult> RegenerateOneMessage(
         [FromBody] RegenerateAssistantMessageRequest req,
         [FromServices] ChatsDB db,
         [FromServices] CurrentUser currentUser,
@@ -51,8 +51,35 @@ public class ChatController(ChatStopService stopService) : ControllerBase
             cancellationToken);
     }
 
+    [HttpPost("regenerate-all-assistant-message")]
+    public async Task<IActionResult> RegenerateAllMessage(
+    [FromBody] RegenerateAllAssistantMessageRequest req,
+    [FromServices] ChatsDB db,
+    [FromServices] CurrentUser currentUser,
+    [FromServices] ILogger<ChatController> logger,
+    [FromServices] IUrlEncryptionService idEncryption,
+    [FromServices] BalanceService balanceService,
+    [FromServices] ChatFactory chatFactory,
+    [FromServices] UserModelManager userModelManager,
+    [FromServices] ClientInfoManager clientInfoManager,
+    [FromServices] FileUrlProvider fup,
+    [FromServices] ChatConfigService chatConfigService,
+    [FromServices] DBFileService dBFileService,
+    CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        return await ChatPrivate(
+            req.Decrypt(idEncryption),
+            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, clientInfoManager, fup, chatConfigService, dBFileService,
+            cancellationToken);
+    }
+
     [HttpPost("general")]
-    public async Task<IActionResult> GeneralChat2(
+    public async Task<IActionResult> GeneralChat(
         [FromBody] GeneralChatRequest req,
         [FromServices] ChatsDB db,
         [FromServices] CurrentUser currentUser,
@@ -134,7 +161,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
             newSpan.ChatConfig.ModelId = rr.ModelId;
             toGenerateSpans = [newSpan];
         }
-        else if (req is DecryptedGeneralChatRequest)
+        else if (req is DecryptedGeneralChatRequest or DecryptedRegenerateAllAssistantMessageRequest)
         {
             toGenerateSpans = [.. chat.ChatSpans.Where(x => x.Enabled)];
         }
@@ -179,7 +206,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
             };
             chat.Messages.Add(newDbUserMessage);
         }
-        else if (req is DecryptedRegenerateAssistantMessageRequest regenerateRequest)
+        else if (req is DecryptedRegenerateAllAssistantMessageRequest regenerateRequest)
         {
             if (!existingMessages.TryGetValue(regenerateRequest.ParentUserMessageId, out MessageLiteDtoNoContent? parentMessage))
             {
@@ -476,7 +503,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         {
             dbAssistantMessage.Parent = dbUserMessage;
         }
-        else if (req is DecryptedRegenerateAssistantMessageRequest decryptedRegenerateAssistantMessageRequest)
+        else if (req is DecryptedRegenerateAllAssistantMessageRequest decryptedRegenerateAssistantMessageRequest)
         {
             dbAssistantMessage.ParentId = decryptedRegenerateAssistantMessageRequest.ParentUserMessageId;
         }
