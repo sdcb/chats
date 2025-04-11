@@ -10,4 +10,5 @@ public enum EncryptionPurpose
     ChatPresetId,
     ApiKeyId, 
     UserId,
+    MessageContentId, 
 }

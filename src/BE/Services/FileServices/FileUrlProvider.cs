@@ -22,8 +22,7 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
 
         DB.File file = mcFile.File;
 
-        DBFileServiceType fileServiceType = (DBFileServiceType)file.FileService.FileServiceTypeId;
-        IFileService fs = fileServiceFactory.Create(fileServiceType, file.FileService.Configs);
+        IFileService fs = fileServiceFactory.Create(file.FileService);
         if (file.FileService.FileServiceTypeId == (byte)DBFileServiceType.Local)
         {
             MemoryStream ms = new();
@@ -43,14 +42,18 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
 
     public FileDto CreateFileDto(DB.File file)
     {
-        DBFileServiceType fileServiceType = (DBFileServiceType)file.FileService.FileServiceTypeId;
-        IFileService fs = fileServiceFactory.Create(fileServiceType, file.FileService.Configs);
+        if (file.FileService == null)
+        {
+            throw new ArgumentNullException(nameof(file), "The FileService property of the provided file is null.");
+        }
+
+        IFileService fs = fileServiceFactory.Create(file.FileService);
         Uri downloadUrl = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
 
         return new FileDto
         {
             Id = urlEncryptionService.EncryptFileId(file.Id),
-            Url = downloadUrl,
+            Url = downloadUrl.ToString(),
         };
     }
 
@@ -62,6 +65,6 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
             .Include(x => x.FileService)
             .Include(x => x.FileImageInfo)
             .FirstAsync(x => x.Id == fileId, cancellationToken);
-        return MessageContent.FromFile(fileId, file);
+        return MessageContent.FromFile(file);
     }
 }

@@ -52,15 +52,9 @@ public partial class OpenAIChatService(Model model, ChatClient chatClient) : Cha
 
             yield return new ChatSegment
             {
-                Segment =  segment,
-                ReasoningSegment = reasoningSegment,
+                Items = ChatSegmentItem.FromTextAndThink(segment, reasoningSegment),
                 FinishReason = delta.FinishReason,
-                Usage = delta.Usage != null ? new Dtos.ChatTokenUsage()
-                {
-                    InputTokens = delta.Usage.InputTokenCount,
-                    OutputTokens = delta.Usage.OutputTokenCount,
-                    ReasoningTokens = delta.Usage.OutputTokenDetails?.ReasoningTokenCount ?? 0,
-                } : null,
+                Usage = delta.Usage != null ? GetUsage(delta.Usage) : null,
             };
         }
     }
@@ -70,19 +64,18 @@ public partial class OpenAIChatService(Model model, ChatClient chatClient) : Cha
         if (Model.ModelReference.IsSdkUnsupportedO1)
         {
             // must use replace system chat message into developer chat message for unsupported model
-            messages = messages.Select(m => m switch
+            messages = [.. messages.Select(m => m switch
             {
                 SystemChatMessage sys => new DeveloperChatMessage(sys.Content[0].Text),
                 _ => m
-            }).ToList();
+            })];
         }
 
         ClientResult<ChatCompletion> cc = await chatClient.CompleteChatAsync(messages, options, cancellationToken);
         ChatCompletion delta = cc.Value;
         return new ChatSegment
         {
-            Segment = delta.Content[0].Text,
-            ReasoningSegment = GetReasoningContent(delta),
+            Items = ChatSegmentItem.FromTextAndThink(delta.Content[0].Text, GetReasoningContent(delta)),
             FinishReason = delta.FinishReason,
             Usage = delta.Usage != null ? GetUsage(delta.Usage) : null,
         };

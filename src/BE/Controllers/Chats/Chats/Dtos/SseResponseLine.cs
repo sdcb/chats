@@ -1,7 +1,7 @@
 ﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.DB;
-using Chats.BE.Services.Models;
 using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.UrlEncryption;
 using System.Text.Json.Serialization;
 
@@ -131,6 +131,36 @@ public record SseResponseLine
         {
             Result = idEncryption.EncryptMessageId(leafMessageId),
             Kind = SseResponseKind.ChatLeafMessageId,
+        };
+    }
+
+    public static SseResponseLine ImageGenerating(byte spanId, FileDto fileDto)
+    {
+        return new SseResponseLine
+        {
+            SpanId = spanId,
+            Result = fileDto,
+            Kind = SseResponseKind.ImageGenerating,
+        };
+    }
+
+    public static SseResponseLine ImageGenerated(byte spanId, FileDto fileDto)
+    {
+        return new SseResponseLine
+        {
+            SpanId = spanId,
+            Result = fileDto,
+            Kind = SseResponseKind.ImageGenerated,
+        };
+    }
+
+    public static SseResponseLine ImageGeneratedTemp(byte spanId, ImageChatSegment seg)
+    {
+        return new SseResponseLine
+        {
+            SpanId = spanId,
+            Result = seg,
+            Kind = SseResponseKind.ImageGenerated,
         };
     }
 }

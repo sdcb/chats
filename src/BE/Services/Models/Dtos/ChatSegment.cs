@@ -1,4 +1,5 @@
-﻿using OpenAI.Chat;
+﻿using Chats.BE.Services.Models.ChatServices;
+using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.Dtos;
 
@@ -6,9 +7,7 @@ public record ChatSegment
 {
     public required ChatFinishReason? FinishReason { get; init; }
 
-    public required string? Segment { get; init; }
-
-    public required string? ReasoningSegment { get; init; }
+    public required ICollection<ChatSegmentItem> Items { get; init; }
 
     public required ChatTokenUsage? Usage { get; init; }
 
@@ -20,8 +19,7 @@ public record ChatSegment
             {
                 Usage = Usage,
                 FinishReason = FinishReason,
-                Segment = Segment,
-                ReasoningSegment = ReasoningSegment,
+                Items = Items,
                 IsUsageReliable = true,
                 IsFromUpstream = true, 
             };
@@ -32,8 +30,7 @@ public record ChatSegment
             {
                 Usage = Usage ?? usageCalculator(),
                 FinishReason = FinishReason,
-                Segment = Segment,
-                ReasoningSegment = ReasoningSegment,
+                Items = Items,
                 IsUsageReliable = false,
                 IsFromUpstream = true,
             };

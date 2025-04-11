@@ -10,10 +10,17 @@ import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { hasMultipleSpans } from '@/utils/chats';
 import { isMobile } from '@/utils/common';
 import { formatPrompt } from '@/utils/promptVariable';
 
-import { ChatRole, ChatStatus, Content, ImageDef, Message } from '@/types/chat';
+import {
+  ChatRole,
+  ChatStatus,
+  ImageDef,
+  Message,
+  MessageContentType,
+} from '@/types/chat';
 import { Prompt } from '@/types/prompt';
 
 import {
@@ -25,6 +32,7 @@ import {
   IconStopFilled,
 } from '@/components/Icons/index';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 import HomeContext from '../../_contexts/home.context';
 import UploadButton from '../Button/UploadButton';
@@ -34,6 +42,7 @@ import VariableModal from './VariableModal';
 
 import { defaultFileConfig } from '@/apis/adminApis';
 import { getUserPromptDetail } from '@/apis/clientApis';
+import { cn } from '@/lib/utils';
 
 interface Props {
   onSend: (message: Message) => void;
@@ -51,17 +60,15 @@ const ChatInput = ({
   const { t } = useTranslation();
 
   const {
-    state: { prompts, selectedChat, modelMap },
+    state: { prompts, selectedChat, modelMap, selectedMessages },
     handleStopChats,
   } = useContext(HomeContext);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const promptListRef = useRef<HTMLUListElement | null>(null);
+  const [contentText, setContentText] = useState('');
+  const [contentFiles, setContentFiles] = useState<ImageDef[]>([]);
 
-  const [content, setContent] = useState<Content>({
-    text: '',
-    fileIds: [],
-  });
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
   const [showPromptList, setShowPromptList] = useState(false);
@@ -69,6 +76,9 @@ const ChatInput = ({
   const [promptInputValue, setPromptInputValue] = useState('');
   const [variables, setVariables] = useState<string[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const isMultiSpan = hasMultipleSpans(selectedMessages);
+
   const filteredPrompts = prompts.filter((prompt) =>
     prompt.name.toLowerCase().includes(promptInputValue.toLowerCase()),
   );
@@ -88,7 +98,7 @@ const ChatInput = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
-    setContent({ ...content, text: value });
+    setContentText(value);
     updatePromptListVisibility(value);
   };
 
@@ -97,12 +107,24 @@ const ChatInput = ({
       return;
     }
 
-    if (!content.text) {
+    if (!contentText) {
       toast.error(t('Please enter a message'));
       return;
     }
-    onSend({ role: ChatRole.User, content });
-    setContent({ text: '', fileIds: [] });
+    const fileIds = contentFiles.map((f) => ({
+      i: '',
+      $type: MessageContentType.fileId,
+      c: f.id,
+    }));
+    onSend({
+      role: ChatRole.User,
+      content: [
+        ...fileIds,
+        { i: '', $type: MessageContentType.text, c: contentText },
+      ],
+    });
+    setContentText('');
+    setContentFiles([]);
 
     if (window.innerWidth < 640 && textareaRef && textareaRef.current) {
       textareaRef.current.blur();
@@ -162,12 +184,8 @@ const ChatInput = ({
     if (parsedVariables.length > 0) {
       setIsModalVisible(true);
     } else {
-      const text = content.text?.replace(/\/\w*$/, formatted);
-
-      setContent({
-        ...content,
-        text,
-      });
+      const text = contentText?.replace(/\/\w*$/, formatted);
+      setContentText(text);
 
       updatePromptListVisibility(formatted);
     }
@@ -177,9 +195,8 @@ const ChatInput = ({
     const selectedPrompt = filteredPrompts[activePromptIndex];
     selectedPrompt &&
       getUserPromptDetail(selectedPrompt.id).then((data) => {
-        setContent((prevContent) => {
-          const newContent = prevContent.text?.replace(/\/\w*$/, data.content);
-          return { ...prevContent, text: newContent };
+        setContentText((prevContent) => {
+          return prevContent?.replace(/\/\w*$/, data.content);
         });
         handlePromptSelect(data);
         setShowPromptList(false);
@@ -187,12 +204,12 @@ const ChatInput = ({
   };
 
   const handleSubmit = (updatedVariables: string[]) => {
-    const newContent = content.text?.replace(/{{(.*?)}}/g, (_, variable) => {
+    const newContent = contentText?.replace(/{{(.*?)}}/g, (_, variable) => {
       const index = variables.indexOf(variable);
       return updatedVariables[index];
     });
 
-    setContent({ ...content, text: newContent });
+    setContentText(newContent);
 
     if (textareaRef && textareaRef.current) {
       textareaRef.current.focus();
@@ -201,7 +218,10 @@ const ChatInput = ({
 
   const canUploadFile = () => {
     return (
-      !uploading && (content?.fileIds?.length ?? 0) <= defaultFileConfig.count && selectedChat.spans.filter(x => modelMap[x.modelId]?.allowVision).length > 0
+      !uploading &&
+      contentFiles.length <= defaultFileConfig.count &&
+      selectedChat.spans.filter((x) => modelMap[x.modelId]?.allowVision)
+        .length > 0
     );
   };
 
@@ -215,11 +235,8 @@ const ChatInput = ({
   };
 
   const handleUploadSuccessful = (def: ImageDef) => {
-    setContent((old) => {
-      return {
-        ...old,
-        fileIds: old.fileIds!.concat(def),
-      };
+    setContentFiles((prev) => {
+      return prev.concat(def);
     });
     setUploading(false);
   };
@@ -236,64 +253,61 @@ const ChatInput = ({
         textareaRef?.current?.scrollHeight > 400 ? 'auto' : 'hidden'
       }`;
     }
-  }, [content]);
-
-  useEffect(() => {
-    setContent({ ...content, fileIds: [] });
-  }, [selectedChat]);
+  }, [contentText, contentFiles]);
 
   return (
-    <div className="absolute bottom-0 left-0 w-full border-transparent bg-gradient-to-b from-transparent via-white to-white pt-6 dark:border-white/20 dark:via-[#262630] dark:to-[#262630] md:pt-2">
-      <div className="stretch mx-2 mt-4 flex flex-row gap-3 last:mb-2 md:mx-4 md:mt-[52px] md:last:mb-6 lg:mx-auto lg:max-w-5xl">
-        <div className="relative flex w-full flex-grow flex-col rounded-md bg-background shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:border-gray-900/50  dark:text-white dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]">
+    <div className="absolute bottom-0 left-0 w-full border-transparent bg-background">
+      <div
+        className={cn(
+          'stretch flex flex-row rounded-md mx-auto w-full px-2 md:px-4',
+          !isMultiSpan && 'w-full lg:w-11/12',
+        )}
+      >
+        <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] p-2">
           <div className="absolute mb-1 bottom-full mx-auto flex w-full justify-start z-10">
-            {content?.fileIds &&
-              content.fileIds.map((img, index) => (
-                <div className="relative group" key={index}>
-                  <div className="mr-1 w-[4rem] h-[4rem] rounded overflow-hidden">
-                    <img
-                      src={img.url}
-                      alt=""
-                      className="w-full h-full object-cover shadow-lg"
+            {contentFiles.map((file, index) => (
+              <div className="relative group shadow-sm" key={index}>
+                <div className="mr-1 w-[4rem] h-[4rem] rounded overflow-hidden">
+                  <img
+                    src={file.url}
+                    alt=""
+                    className="w-full h-full object-cover shadow-sm"
+                  />
+                  <button
+                    onClick={() => {
+                      setContentFiles((prev) => {
+                        return prev.filter((f) => f !== file);
+                      });
+                    }}
+                    className="absolute top-[-4px] right-[0px]"
+                  >
+                    <IconCircleX
+                      className="bg-background rounded-full text-black/50 dark:text-white/50"
+                      size={20}
                     />
-                    <button
-                      onClick={() => {
-                        setContent((pre) => {
-                          const fileIds = pre.fileIds?.filter((x) => x !== img);
-                          return {
-                            text: pre.text,
-                            fileIds,
-                          };
-                        });
-                      }}
-                      className="absolute top-[-4px] right-[0px]"
-                    >
-                      <IconCircleX
-                        className="bg-background rounded-full text-black/50 dark:text-white/50"
-                        size={20}
-                      />
-                    </button>
-                  </div>
+                  </button>
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
 
           {showScrollDownButton && (
             <Button
-              className="absolute w-auto h-auto -right-1 bottom-12 rounded-full bg-transparent hover:bg-transparent"
+              className="absolute left-1/2 -translate-x-1/2 -top-10 w-auto h-auto rounded-full bg-card hover:bg-card z-50"
               onClick={onScrollDownClick}
             >
               <IconArrowDown />
             </Button>
           )}
 
-          <textarea
+          <Textarea
             ref={textareaRef}
-            className="m-0 w-full resize-none border-none outline-none rounded-md p-0 py-2 pr-16 pl-4 bg-background md:py-3 md:pl-4"
+            className="m-0 w-full resize-none border-none outline-none rounded-md p-3 bg-card"
             style={{
               resize: 'none',
               bottom: `${textareaRef?.current?.scrollHeight}px`,
               maxHeight: '400px',
+              minHeight: '20px',
               overflow: `${
                 textareaRef.current && textareaRef.current.scrollHeight > 400
                   ? 'auto'
@@ -303,7 +317,7 @@ const ChatInput = ({
             placeholder={
               t('Type a message or type "/" to select a prompt...') || ''
             }
-            value={content?.text}
+            value={contentText}
             rows={1}
             onCompositionStart={() => setIsTyping(true)}
             onCompositionEnd={() => setIsTyping(false)}
@@ -311,38 +325,44 @@ const ChatInput = ({
             onKeyDown={handleKeyDown}
           />
 
-          <div className="flex">
-            <Button
-              className="absolute right-2 md:top-2.5 top-1 rounded-sm p-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
-              onClick={handleSend}
-            >
-              {selectedChat.status === ChatStatus.Chatting ? (
-                <IconStopFilled onClick={handleStopChats} className="h-4 w-4" />
-              ) : (
-                <IconSend />
+          <div className="flex px-3 justify-between">
+            <div className="">
+              {canUploadFile() && (
+                <UploadButton
+                  fileConfig={defaultFileConfig}
+                  onUploading={handleUploading}
+                  onFailed={handleUploadFailed}
+                  onSuccessful={handleUploadSuccessful}
+                >
+                  <IconPaperclip />
+                </UploadButton>
               )}
-            </Button>
-            {uploading && (
-              <IconLoader className="absolute right-10 md:top-3.5 top-2 animate-spin" />
-            )}
-            {canUploadFile() && (
-              <UploadButton
-                fileConfig={defaultFileConfig}
-                onUploading={handleUploading}
-                onFailed={handleUploadFailed}
-                onSuccessful={handleUploadSuccessful}
+              {canUploadFile() && (
+                <PasteUpload
+                  fileConfig={defaultFileConfig}
+                  onUploading={handleUploading}
+                  onFailed={handleUploadFailed}
+                  onSuccessful={handleUploadSuccessful}
+                />
+              )}
+
+              {uploading && <IconLoader className="animate-spin" />}
+            </div>
+            <div className="">
+              <Button
+                className="rounded-sm p-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                onClick={handleSend}
               >
-                <IconPaperclip />
-              </UploadButton>
-            )}
-            {canUploadFile() && (
-              <PasteUpload
-                fileConfig={defaultFileConfig}
-                onUploading={handleUploading}
-                onFailed={handleUploadFailed}
-                onSuccessful={handleUploadSuccessful}
-              />
-            )}
+                {selectedChat.status === ChatStatus.Chatting ? (
+                  <IconStopFilled
+                    onClick={handleStopChats}
+                    className="h-4 w-4"
+                  />
+                ) : (
+                  <IconSend />
+                )}
+              </Button>
+            </div>
           </div>
 
           {showPromptList && filteredPrompts.length > 0 && (

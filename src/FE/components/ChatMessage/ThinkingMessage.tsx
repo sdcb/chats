@@ -4,7 +4,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { preprocessLaTeX } from '@/utils/chats';
 
-import { ChatSpanStatus, Content } from '@/types/chat';
+import { ChatSpanStatus } from '@/types/chat';
 
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
@@ -15,40 +15,33 @@ import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 
-export interface ResponseMessage {
-  id: string;
-  content: Content;
-  status: ChatSpanStatus;
-  spanId: number | null;
+interface Props {
+  readonly?: boolean;
+  content: string;
+  chatStatus: ChatSpanStatus;
   reasoningDuration?: number;
 }
 
-interface Props {
-  readonly?: boolean;
-  message: ResponseMessage;
-}
-
 const ThinkingMessage = (props: Props) => {
-  const { message } = props;
+  const { content, chatStatus, reasoningDuration } = props;
   const { t } = useTranslation();
-  const { status: chatStatus } = message;
 
   const [isOpen, setIsOpen] = useState(true);
   return (
-    <div className="mb-2">
+    <div className="my-4">
       <div
         className="inline-flex items-center px-3 py-1 bg-gray-300 dark:bg-gray-700 text-xs gap-1 rounded-sm"
         onClick={() => {
           setIsOpen(!isOpen);
         }}
       >
-        {chatStatus === ChatSpanStatus.Thinking ? (
+        {chatStatus === ChatSpanStatus.Reasoning ? (
           t('Thinking...')
         ) : (
           <div className="flex items-center h-6">
             <IconThink size={16} />
             {t('Deeply thought (took {{time}} seconds)', {
-              time: Math.floor((message.reasoningDuration || 0) / 1000),
+              time: Math.floor((reasoningDuration || 0) / 1000),
             })}
           </div>
         )}
@@ -59,7 +52,7 @@ const ThinkingMessage = (props: Props) => {
         )}
       </div>
       {isOpen && (
-        <div className="border-l-2 border-gray-200 ml-2 pl-2 text-gray-500 text-sm mt-2">
+        <div className="px-2 text-gray-400 text-sm mt-2">
           <MemoizedReactMarkdown
             remarkPlugins={[remarkMath, remarkGfm]}
             rehypePlugins={[rehypeKatex as any]}
@@ -73,8 +66,6 @@ const ThinkingMessage = (props: Props) => {
                       </span>
                     );
                   }
-
-                  children[0] = (children[0] as string).replace('`▍`', '▍');
                 }
 
                 const match = /language-(\w+)/.exec(className || '');
@@ -118,8 +109,8 @@ const ThinkingMessage = (props: Props) => {
               },
             }}
           >
-            {`${preprocessLaTeX(message.content.think!)}${
-              chatStatus === ChatSpanStatus.Thinking ? '`▍`' : ''
+            {`${preprocessLaTeX(content!)}${
+              chatStatus === ChatSpanStatus.Reasoning ? '▍' : ''
             }`}
           </MemoizedReactMarkdown>
         </div>

@@ -1,4 +1,10 @@
-import { ChatRole, ChatSpanStatus, Content, Role } from './chat';
+import {
+  ChatRole,
+  ChatSpanStatus,
+  ImageDef,
+  ResponseContent,
+  Role,
+} from './chat';
 
 // Enum equivalent to SseResponseKind
 export enum SseResponseKind {
@@ -13,6 +19,8 @@ export enum SseResponseKind {
   ReasoningSegment = 8,
   StartResponse = 9,
   StartReasoning = 10,
+  ImageGenerating = 11,
+  ImageGenerated = 12,
 }
 
 // Discriminated unions for SseResponseLine
@@ -71,6 +79,12 @@ interface SseResponseLineStartReasoning {
   i: number; // SpanId is required for StartReasoning
 }
 
+interface SseResponseLineImageGenerated {
+  k: SseResponseKind.ImageGenerated; // Kind is StartReasoning
+  i: number; // SpanId is required for StartReasoning
+  r: ImageDef;
+}
+
 // Combined type for SseResponseLine
 export type SseResponseLine =
   | SseResponseLineStopId
@@ -82,7 +96,8 @@ export type SseResponseLine =
   | SseResponseLineTitleSegment
   | SseResponseLineReasoningSegment
   | SseResponseLineStartResponse
-  | SseResponseLineStartReasoning;
+  | SseResponseLineStartReasoning
+  | SseResponseLineImageGenerated;
 
 export interface IChatMessage {
   id: string;
@@ -90,20 +105,20 @@ export interface IChatMessage {
   parentId: string | null;
   siblingIds: string[];
   role: ChatRole;
-  content: Content;
+  content: ResponseContent[];
   status: ChatSpanStatus;
   isActive?: boolean;
   modelName?: string;
-  modelId?: number;
+  modelId: number;
   modelProviderId?: number;
-  inputPrice?: number;
-  outputPrice?: number;
-  inputTokens?: number;
-  outputTokens?: number;
-  reasoningTokens?: number;
-  reasoningDuration?: number;
-  duration?: number;
-  firstTokenLatency?: number;
+  inputPrice: number;
+  outputPrice: number;
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  reasoningDuration: number;
+  duration: number;
+  firstTokenLatency: number;
   reaction?: boolean | null;
   edited?: boolean;
 }
@@ -111,7 +126,7 @@ export interface IChatMessage {
 export interface MessageNode {
   id: string;
   parentId: string | null;
-  content: Content;
+  content: ResponseContent[];
   siblingIds: string[];
   modelName?: string;
   role: Role;
@@ -125,18 +140,24 @@ export interface MessageNode {
 export interface ChatMessageNode {
   id: string;
   parentId: string | null;
-  content: Content;
+  modelId: number;
+  content: ResponseContent[];
   siblingIds: string[];
   isActive?: boolean;
   status: ChatSpanStatus;
   spanId: number | null;
   role: ChatRole;
   modelName?: string;
-  inputTokens?: number;
-  outputTokens?: number;
-  reasoningTokens?: number;
-  inputPrice?: number;
-  outputPrice?: number;
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  inputPrice: number;
+  outputPrice: number;
+  reasoningDuration: number;
+  duration: number;
+  firstTokenLatency: number;
+  reaction?: boolean | null;
+  edited?: boolean;
 }
 
 export const ResponseMessageTempId = 'RESPONSE_MESSAGE_TEMP_ID';

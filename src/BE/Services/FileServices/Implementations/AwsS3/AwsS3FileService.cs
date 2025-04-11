@@ -6,8 +6,8 @@ namespace Chats.BE.Services.FileServices.Implementations.AwsS3;
 
 public class AwsS3FileService : IFileService
 {
-    private readonly string _bucketName;
-    private readonly AmazonS3Client _s3;
+    private readonly string _bucketName = null!;
+    private readonly AmazonS3Client _s3 = null!;
 
     public AwsS3FileService(AwsS3Config config)
     {

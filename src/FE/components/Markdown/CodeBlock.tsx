@@ -15,7 +15,7 @@ export const CodeBlock: FC<Props> = memo(({ language, value }) => {
   const { t } = useTranslation();
   const [isCopied, setIsCopied] = useState<Boolean>(false);
 
-  const copyToClipboard = () => {
+  const copyToClipboard = (e: React.MouseEvent) => {
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
       return;
     }
@@ -27,6 +27,7 @@ export const CodeBlock: FC<Props> = memo(({ language, value }) => {
         setIsCopied(false);
       }, 2000);
     });
+    e.stopPropagation();
   };
 
   return (

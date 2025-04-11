@@ -1,4 +1,5 @@
-﻿using Chats.BE.Services.UrlEncryption;
+﻿using Chats.BE.DB.Enums;
+using Chats.BE.Services.UrlEncryption;
 
 namespace Chats.BE.Services.FileServices.Implementations.Local;
 

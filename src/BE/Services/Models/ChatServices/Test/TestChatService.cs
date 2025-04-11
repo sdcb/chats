@@ -33,8 +33,7 @@ public class TestChatService(Model model) : ChatService(model)
             int outputTokens = Tokenizer.CountTokens(outputed.ToString());
             yield return new ChatSegment()
             {
-                ReasoningSegment = null,
-                Segment = combined.ToString(),
+                Items = ChatSegmentItem.FromTextAndThink(combined, null),
                 Usage = new Dtos.ChatTokenUsage()
                 {
                     InputTokens = inputTokens,

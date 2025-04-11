@@ -1,7 +1,9 @@
-﻿namespace Chats.BE.Services.FileServices;
+﻿using Chats.BE.DB.Enums;
+
+namespace Chats.BE.Services.FileServices;
 
 /// <summary>
-/// Interface for file service operations such as upload, download, and creating download URLs.
+/// Abstract for file service operations such as upload, download, and creating download URLs.
 /// </summary>
 public interface IFileService
 {
@@ -14,7 +16,7 @@ public interface IFileService
     /// <remarks>
     /// The <see cref="Stream"/> inside <see cref="FileUploadRequest"/> will not be disposed by the file service.
     /// </remarks>
-    Task<string> Upload(FileUploadRequest request, CancellationToken cancellationToken = default);
+    public abstract Task<string> Upload(FileUploadRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Downloads a file from the storage.
@@ -25,14 +27,14 @@ public interface IFileService
     /// A task that represents the asynchronous operation. The task result contains the file stream.
     /// The caller must dispose the stream.
     /// </returns>
-    Task<Stream> Download(string storageKey, CancellationToken cancellationToken = default);
+    public abstract Task<Stream> Download(string storageKey, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates a download URL for a file.
     /// </summary>
     /// <param name="request">The request containing details for creating the download URL.</param>
     /// <returns>The URI of the created download URL.</returns>
-    Uri CreateDownloadUrl(CreateDownloadUrlRequest request);
+    public abstract Uri CreateDownloadUrl(CreateDownloadUrlRequest request);
 
     /// <summary>
     /// Deletes a file from the storage.
@@ -40,5 +42,5 @@ public interface IFileService
     /// <param name="storageKey">The storage key of the file to delete.</param>
     /// <param name="cancellationToken">Token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a value indicating whether the file was deleted.</returns>
-    Task<bool> Delete(string storageKey, CancellationToken cancellationToken = default);
+    public abstract Task<bool> Delete(string storageKey, CancellationToken cancellationToken = default);
 }

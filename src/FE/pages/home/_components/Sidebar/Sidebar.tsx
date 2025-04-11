@@ -71,9 +71,9 @@ const Sidebar = <T,>({
       <div
         className={`${
           isOpen ? 'w-[260px]' : 'w-0 hidden'
-        } fixed top-0 ${side}-0 z-40 flex h-full flex-none flex-col bg-gray-50 dark:bg-[#202123] p-2 text-[14px] sm:relative sm:top-0`}
+        } fixed top-0 ${side}-0 z-40 flex h-full flex-none flex-col bg-gray-50 bg-sidebar p-2 text-[14px] sm:relative sm:top-0 shadow-sm`}
       >
-        <div className="sticky">
+        <div className="sticky mt-2">
           <div
             className={cn(
               'flex items-center pr-1.5 justify-between',
@@ -113,18 +113,19 @@ const Sidebar = <T,>({
               />
             )}
           </div>
-          <div
-            className={cn(
-              'pr-1.5 h-16',
-              actionComponent && 'flex items-center gap-x-1',
-            )}
-          >
+          <div className="mt-3">
             <Search
               placeholder={t('Search...') || ''}
               searchTerm={searchTerm}
               onSearch={handleSearchTerm}
             />
-            {actionComponent}
+            {!searchTerm && actionComponent && (
+              <div className="relative">
+                <div className="absolute right-1 bottom-2">
+                  {actionComponent}
+                </div>
+              </div>
+            )}
           </div>
           {actionConfirmComponent}
         </div>
@@ -140,9 +141,7 @@ const Sidebar = <T,>({
         <div className="flex-grow overflow-hidden overflow-y-scroll scroll-container">
           <div className="flex">{folderComponent}</div>
 
-          {items?.length > 0 && !isLoading && (
-            <div className="pt-2">{itemComponent}</div>
-          )}
+          {items?.length > 0 && !isLoading && <div>{itemComponent}</div>}
           {NoDataRender()}
         </div>
         {footerComponent}
@@ -150,8 +149,8 @@ const Sidebar = <T,>({
 
       {!isOpen && showOpenButton && (
         <div
-          className={`group fixed z-20 ${
-            side === 'right' ? 'right-2' : 'left-[8px]'
+          className={`group fixed bg-card pt-2 z-20 h-12 rounded-sm ${
+            side === 'right' ? 'right-2' : 'left-2'
           }`}
           style={{ top: '8px' }}
         >

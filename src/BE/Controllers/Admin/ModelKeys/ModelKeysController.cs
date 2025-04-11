@@ -5,6 +5,7 @@ using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Common;
 using Chats.BE.Services.Models;
+using Chats.BE.Services.Models.ChatServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 

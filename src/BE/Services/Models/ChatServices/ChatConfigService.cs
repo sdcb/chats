@@ -1,7 +1,7 @@
 ﻿using Chats.BE.DB;
 using Microsoft.EntityFrameworkCore;
 
-namespace Chats.BE.Services;
+namespace Chats.BE.Services.Models.ChatServices;
 
 public class ChatConfigService(ChatsDB db, ILogger<ChatConfigService> logger)
 {

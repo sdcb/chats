@@ -16,6 +16,8 @@ public partial class ModelReference
         {
             "o1-2024-12-17" => true,
             "o3-mini-2025-01-31" => true,
+            "grok-3-mini" => true,
+            "grok-3-mini-fast" => true,
             _ => false
         };
     }

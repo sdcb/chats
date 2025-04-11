@@ -13,7 +13,7 @@ import { IconChevronDown, IconChevronRight } from '@/components/Icons';
 import ModelParams from '@/components/ModelParams/ModelParams';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 
@@ -82,7 +82,7 @@ const ChatModelSettingModal = (props: Props) => {
   };
 
   const onChangeEnableSearch = (value: boolean) => {
-    setSpan({ ...span!, enableSearch: value });
+    setSpan({ ...span!, webSearchEnabled: value });
   };
 
   const onChangeReasoningEffort = (value: string) => {
@@ -109,7 +109,7 @@ const ChatModelSettingModal = (props: Props) => {
       maxOutputTokens: span?.maxOutputTokens || null,
       temperature: span?.temperature || null,
       reasoningEffort: span.reasoningEffort,
-      webSearchEnabled: !!span.enableSearch,
+      webSearchEnabled: !!span.webSearchEnabled,
     }).then(() => {
       const spans = selectedChat.spans.map((s) =>
         s.spanId === spanId ? { ...span! } : s,
@@ -120,6 +120,7 @@ const ChatModelSettingModal = (props: Props) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogTitle></DialogTitle>
       <DialogContent className="w-full sm:w-[560px] max-h-[560px] overflow-y-auto">
         {span && model && hasModel() && (
           <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] mt-5">
@@ -161,7 +162,7 @@ const ChatModelSettingModal = (props: Props) => {
               {model?.allowSearch && (
                 <EnableNetworkSearch
                   label={t('Internet Search')}
-                  enable={span.enableSearch}
+                  enable={span.webSearchEnabled}
                   onChange={(value) => {
                     onChangeEnableSearch(value);
                   }}

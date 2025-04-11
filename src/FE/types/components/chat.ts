@@ -1,9 +1,9 @@
-import { ChatRole, Content, Role } from '../chat';
+import { ChatRole, ResponseContent, Role } from '../chat';
 
 export interface PropsMessage {
   id: string;
   role: ChatRole;
-  content: Content;
+  content: ResponseContent[];
   inputTokens: number;
   outputTokens: number;
   reasoningTokens: number;

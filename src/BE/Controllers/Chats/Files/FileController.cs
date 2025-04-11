@@ -7,7 +7,6 @@ using Chats.BE.Services.UrlEncryption;
 using Chats.BE.Services.ImageInfo;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Drawing;
 using Microsoft.AspNetCore.Authorization;
 using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
@@ -23,15 +22,17 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         [FromServices] ClientInfoManager clientInfoManager,
         [FromServices] FileUrlProvider fdup,
         [FromServices] CurrentUser currentUser,
+        [FromServices] FileContentTypeService fileContentTypeService,
+        [FromServices] FileImageInfoService fileImageInfoService,
         CancellationToken cancellationToken)
     {
-        FileService? fileService = await FileService.GetDefault(db, cancellationToken);
+        DB.FileService? fileService = await DB.FileService.GetDefault(db, cancellationToken);
         if (fileService == null)
         {
             return NotFound("File service config not found.");
         }
 
-        return await UploadPrivate(db, fileServiceFactory, logger, file, clientInfoManager, fdup, currentUser, fileService, cancellationToken);
+        return await UploadPrivate(db, file, fileServiceFactory, logger, clientInfoManager, fdup, currentUser, fileService, fileContentTypeService, fileImageInfoService, cancellationToken);
     }
 
     [Route("file-service/{fileServiceId:int}/upload"), HttpPut]
@@ -39,18 +40,29 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         [FromServices] ClientInfoManager clientInfoManager,
         [FromServices] FileUrlProvider fdup,
         [FromServices] CurrentUser currentUser,
+        [FromServices] FileContentTypeService fileContentTypeService,
+        [FromServices] FileImageInfoService fileImageInfoService,
         CancellationToken cancellationToken)
     {
-        FileService? fileService = await db.FileServices.FindAsync([fileServiceId], cancellationToken);
+        DB.FileService? fileService = await db.FileServices.FindAsync([fileServiceId], cancellationToken);
         if (fileService == null)
         {
             return NotFound("File server config not found.");
         }
 
-        return await UploadPrivate(db, fileServiceFactory, logger, file, clientInfoManager, fdup, currentUser, fileService, cancellationToken);
+        return await UploadPrivate(db, file, fileServiceFactory, logger, clientInfoManager, fdup, currentUser, fileService, fileContentTypeService, fileImageInfoService, cancellationToken);
     }
 
-    private async Task<ActionResult<FileDto>> UploadPrivate(ChatsDB db, FileServiceFactory fileServiceFactory, ILogger<FileController> logger, IFormFile file, ClientInfoManager clientInfoManager, FileUrlProvider fdup, CurrentUser currentUser, FileService fileService, CancellationToken cancellationToken)
+    private async Task<ActionResult<FileDto>> UploadPrivate(ChatsDB db, IFormFile file,
+        FileServiceFactory fileServiceFactory, 
+        ILogger<FileController> logger, 
+        ClientInfoManager clientInfoManager, 
+        FileUrlProvider fdup, 
+        CurrentUser currentUser,
+        DB.FileService fileService, 
+        FileContentTypeService fileContentTypeService,
+        FileImageInfoService fileImageInfoService,
+        CancellationToken cancellationToken)
     {
         if (file.Length == 0)
         {
@@ -71,7 +83,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
             return NotFound("File service config not found.");
         }
 
-        IFileService fs = fileServiceFactory.Create((DBFileServiceType)fileService.FileServiceTypeId, fileService.Configs);
+        IFileService fs = fileServiceFactory.Create(fileService);
         using Stream baseStream = file.OpenReadStream();
         using PartialBufferedStream pbStream = new(baseStream, 4 * 1024);
         string storageKey = await fs.Upload(new FileUploadRequest
@@ -83,55 +95,20 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         DB.File dbFile = new()
         {
             FileName = file.FileName,
-            FileContentType = await GetOrCreateDBContentType(file.ContentType, cancellationToken),
+            FileContentType = await fileContentTypeService.GetOrCreate(file.ContentType, cancellationToken),
             FileServiceId = fileService.Id,
             StorageKey = storageKey,
             Size = (int)file.Length,
             ClientInfo = await clientInfoManager.GetClientInfo(cancellationToken),
             CreateUserId = currentUser.Id,
             CreatedAt = DateTime.UtcNow,
-            FileImageInfo = GetImageInfo(file.FileName, file.ContentType, pbStream.SeekedBytes)
+            FileImageInfo = fileImageInfoService.GetImageInfo(file.FileName, file.ContentType, pbStream.SeekedBytes)
         };
         db.Files.Add(dbFile);
         await db.SaveChangesAsync(cancellationToken);
 
-
         FileDto fileDto = fdup.CreateFileDto(dbFile);
-        return Created(fileDto.Url, value: fileDto);
-
-        FileImageInfo? GetImageInfo(string fileName, string contentType, byte[] imageFirst4KBytes)
-        {
-            try
-            {
-                IImageInfoService iis = ImageInfoFactory.CreateImageInfoService(contentType);
-                Size size = iis.GetImageSize(imageFirst4KBytes);
-                return new FileImageInfo
-                {
-                    Width = size.Width,
-                    Height = size.Height
-                };
-            }
-            catch (Exception e)
-            {
-                logger.LogWarning(e, "Failed to get image size for {fileName}({contentType})", fileName, contentType);
-                return null;
-            }
-        }
-
-        async Task<FileContentType> GetOrCreateDBContentType(string contentType, CancellationToken cancellationToken)
-        {
-            FileContentType? dbContentType = await db.FileContentTypes.FirstOrDefaultAsync(x => x.ContentType == contentType, cancellationToken);
-            if (dbContentType == null)
-            {
-                dbContentType = new FileContentType
-                {
-                    ContentType = contentType
-                };
-                db.FileContentTypes.Add(dbContentType);
-                await db.SaveChangesAsync(cancellationToken);
-            }
-            return dbContentType;
-        }
+        return Created(default(string), value: fileDto);
     }
 
     [Route("file/private/{encryptedFileId}"), HttpGet]
@@ -182,7 +159,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
     internal ActionResult ServeStaticFile(DB.File file)
     {
         DBFileServiceType fileServiceType = (DBFileServiceType)file.FileService.FileServiceTypeId;
-        IFileService fs = fileServiceFactory.Create(fileServiceType, file.FileService.Configs);
+        IFileService fs = fileServiceFactory.Create(file.FileService);
         if (fileServiceType == DBFileServiceType.Local)
         {
             FileInfo fileInfo = new(Path.Combine(file.FileService.Configs, file.StorageKey));

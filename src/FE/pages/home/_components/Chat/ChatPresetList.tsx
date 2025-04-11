@@ -27,7 +27,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-import { setSelectedChat } from '../../_actions/chat.actions';
+import { setChats, setSelectedChat } from '../../_actions/chat.actions';
 import HomeContext from '../../_contexts/home.context';
 import ChatPresetModal from './ChatPresetModal';
 
@@ -43,7 +43,7 @@ const ChatPresetList = () => {
   const {
     hasModel,
     chatDispatch,
-    state: { selectedChat },
+    state: { selectedChat, chats },
   } = useContext(HomeContext);
   const [chatPresets, setChatPresets] = useState<GetChatPresetResult[]>([]);
   const [chatPreset, setChatPreset] = useState<GetChatPresetResult>();
@@ -85,21 +85,22 @@ const ChatPresetList = () => {
         chatDispatch(
           setSelectedChat({
             ...selectedChat,
-            spans: item.spans.map((s) => ({
-              ...s,
-            })),
+            spans: item.spans,
           }),
         );
+        const chatList = chats.map((c) => {
+          if (c.id === selectedChat.id) {
+            c.spans = item.spans;
+          }
+          return c;
+        });
+        chatDispatch(setChats(chatList));
       });
     }
   };
 
   return (
-    <div
-      className={cn(
-        'grid place-items-center h-[calc(100vh-320px)] px-0 md:px-8 pt-6 pb-32',
-      )}
-    >
+    <div className={cn('px-0 md:px-8 pt-6')}>
       {hasModel() && (
         <div className="grid grid-cols-[repeat(auto-fit,minmax(144px,320px))] place-content-center gap-4 w-full">
           {chatPresets?.map((item) => {
@@ -107,7 +108,7 @@ const ChatPresetList = () => {
               <div
                 key={'chat-preset' + item.id}
                 className={cn(
-                  'rounded-sm p-4 border h-32 hover:bg-muted cursor-pointer',
+                  'rounded-sm p-4 h-24 md:h-32 hover:bg-muted cursor-pointer shadow-sm bg-card',
                   selectedChatPresetId === item.id && 'bg-muted',
                 )}
                 onClick={() => {
@@ -115,7 +116,9 @@ const ChatPresetList = () => {
                 }}
               >
                 <div className="flex justify-between">
-                  <span className='text-ellipsis whitespace-nowrap overflow-hidden'>{item.name}</span>
+                  <span className="text-ellipsis whitespace-nowrap overflow-hidden">
+                    {item.name}
+                  </span>
                   <span>
                     <DropdownMenu>
                       <DropdownMenuTrigger className="focus:outline-none p-[6px]">
@@ -158,7 +161,7 @@ const ChatPresetList = () => {
                   </span>
                 </div>
                 <div className="">
-                  <div className="flex justify-end h-16 items-end">
+                  <div className="flex justify-end h-8 md:h-16 items-end">
                     {item.spans.map((s) => (
                       <TooltipProvider
                         delayDuration={100}
@@ -185,7 +188,7 @@ const ChatPresetList = () => {
           })}
           {chatPresets.length < MAX_CREATE_PRESET_CHAT_COUNT && (
             <div
-              className="rounded-sm px-4 border flex justify-center items-center h-32 cursor-pointer hover:bg-muted"
+              className="rounded-sm px-4 flex justify-center items-center h-24 md:h-32 cursor-pointer hover:bg-muted bg-card"
               onClick={handleCreateChatPreset}
             >
               <IconPlus size={20} />
