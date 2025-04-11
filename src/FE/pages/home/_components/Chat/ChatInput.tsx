@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { hasMultipleSpans } from '@/utils/chats';
 import { isMobile } from '@/utils/common';
 import { formatPrompt } from '@/utils/promptVariable';
 
@@ -41,6 +42,7 @@ import VariableModal from './VariableModal';
 
 import { defaultFileConfig } from '@/apis/adminApis';
 import { getUserPromptDetail } from '@/apis/clientApis';
+import { cn } from '@/lib/utils';
 
 interface Props {
   onSend: (message: Message) => void;
@@ -58,7 +60,7 @@ const ChatInput = ({
   const { t } = useTranslation();
 
   const {
-    state: { prompts, selectedChat, modelMap },
+    state: { prompts, selectedChat, modelMap, selectedMessages },
     handleStopChats,
   } = useContext(HomeContext);
 
@@ -74,6 +76,9 @@ const ChatInput = ({
   const [promptInputValue, setPromptInputValue] = useState('');
   const [variables, setVariables] = useState<string[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const isMultiSpan = hasMultipleSpans(selectedMessages);
+
   const filteredPrompts = prompts.filter((prompt) =>
     prompt.name.toLowerCase().includes(promptInputValue.toLowerCase()),
   );
@@ -252,7 +257,12 @@ const ChatInput = ({
 
   return (
     <div className="absolute bottom-0 left-0 w-full border-transparent bg-background">
-      <div className="stretch flex flex-row rounded-md lg:w-11/12 mx-auto md:w-4/5 px-4">
+      <div
+        className={cn(
+          'stretch flex flex-row rounded-md mx-auto w-full px-2 md:px-4',
+          !isMultiSpan && 'w-full lg:w-11/12',
+        )}
+      >
         <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] p-2">
           <div className="absolute mb-1 bottom-full mx-auto flex w-full justify-start z-10">
             {contentFiles.map((file, index) => (

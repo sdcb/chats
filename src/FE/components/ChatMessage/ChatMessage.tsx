@@ -1,5 +1,7 @@
 import { FC, memo } from 'react';
 
+import { hasMultipleSpans } from '@/utils/chats';
+
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatRole, IChat, Message, ResponseContent } from '@/types/chat';
 import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
@@ -45,12 +47,12 @@ export const ChatMessage: FC<Props> = memo(
     onEditUserMessage,
     onDeleteMessage,
   }) => {
-    const hasMultipleSpan = selectedMessages.find((x) => x.length > 1);
+    const isMultiSpan = hasMultipleSpans(selectedMessages);
     return (
       <div
         className={cn(
-          'w-11/12 m-auto p-2 md:p-4',
-          !hasMultipleSpan && 'w-full lg:w-11/12 md:w-4/5',
+          'w-full m-auto p-2 md:p-4',
+          !isMultiSpan && 'w-full lg:w-11/12',
           className,
         )}
       >
@@ -88,18 +90,18 @@ export const ChatMessage: FC<Props> = memo(
                     {message.role === ChatRole.Assistant && (
                       <div
                         onClick={() =>
-                          hasMultipleSpan &&
+                          isMultiSpan &&
                           onChangeChatLeafMessageId &&
                           onChangeChatLeafMessageId(message.id)
                         }
                         key={'response-group-message-' + index}
                         className={cn(
                           'border-[1px] border-background rounded-md flex w-full bg-card mb-4',
-                          hasMultipleSpan &&
+                          isMultiSpan &&
                             message.isActive &&
                             'border-primary/50 border-gray-300',
-                          hasMultipleSpan && 'p-1 md:p-2',
-                          !hasMultipleSpan && 'border-none',
+                          isMultiSpan && 'p-1 md:p-2',
+                          !isMultiSpan && 'border-none',
                         )}
                       >
                         <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3">
