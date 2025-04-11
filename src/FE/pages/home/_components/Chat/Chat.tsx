@@ -236,6 +236,27 @@ const Chat = memo(() => {
     messageDispatch(setSelectedMessages(selectedMsgs));
   };
 
+  const changeSelectedResponseMessageInfo = (
+    selectedMsgs: IChatMessage[][],
+    message: IChatMessage
+  ) => {
+    const messageCount = selectedMsgs.length - 1;
+    let messageList = selectedMsgs[messageCount];
+    messageList.map((x) => {
+      if (x.id === message.id) {
+        x.duration = message.duration;
+        x.firstTokenLatency = message.firstTokenLatency;
+        x.inputPrice = message.inputPrice;
+        x.inputTokens = message.inputTokens;
+        x.outputPrice = message.outputPrice;
+        x.outputTokens = message.outputPrice;
+      }
+      return x;
+    });
+    selectedMsgs.splice(messageCount, 1, messageList);
+    messageDispatch(setSelectedMessages(selectedMsgs));
+  };
+
   const checkSelectChatModelIsExist = (spans: ChatSpanDto[]) => {
     const modelList = spans
       .filter((x) => !models.find((m) => m.modelId === x.modelId))
@@ -450,6 +471,7 @@ const Chat = memo(() => {
           '',
           ChatSpanStatus.None,
         );
+        changeSelectedResponseMessageInfo(selectedMessageList, msg);
         messageList.push(msg);
       } else if (value.k === SseResponseKind.StartResponse) {
         const { r: time, i: spanId } = value;
@@ -731,55 +753,60 @@ const Chat = memo(() => {
 
   return (
     <div className="relative flex-1">
-      <div
-        className="relative max-h-full overflow-x-hidden scroll-container w-full"
-        ref={chatContainerRef}
-        onScroll={handleScroll}
-      >
+      <div className='flex flex-col'>
+        <div className='relative h-16'>
+          {selectedChat && <ChatHeader />}
+        </div>
         <div
-          className={cn('sm:w-full', 'chat-container')}
-          style={{
-            width: `calc(100vw - ${
-              showChatBar && showPromptBar
+          className="relative h-[calc(100vh-192px)] overflow-x-hidden scroll-container w-full"
+          ref={chatContainerRef}
+          onScroll={handleScroll}
+        >
+          <div
+            className='sm:w-full chat-container'
+            style={{
+              width: `calc(100vw - ${showChatBar && showPromptBar
                 ? 520
                 : showChatBar || showPromptBar
-                ? 260
-                : 0
-            }px)`,
-          }}
-        >
-          {selectedChat && selectedMessages.length === 0 && <ChatPresetList />}
-        </div>
+                  ? 260
+                  : 0
+                }px)`,
+            }}
+          >
+            {selectedChat && selectedMessages.length === 0 && <ChatPresetList />}
+          </div>
 
-        <ChatMessageMemoized
-          className="mt-16"
-          selectedChat={selectedChat}
-          selectedMessages={selectedMessages}
-          models={models}
-          messagesEndRef={messagesEndRef}
-          onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
-          onEditAndSendMessage={handleEditAndSendMessage}
-          onRegenerate={handleRegenerate}
-          onReactionMessage={handleReactionMessage}
-          onEditResponseMessage={handleUpdateResponseMessage}
-          onEditUserMessage={handleUpdateUserMessage}
-          onDeleteMessage={handleDeleteMessage}
-        />
+          <ChatMessageMemoized
+            selectedChat={selectedChat}
+            selectedMessages={selectedMessages}
+            models={models}
+            messagesEndRef={messagesEndRef}
+            onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
+            onEditAndSendMessage={handleEditAndSendMessage}
+            onRegenerate={handleRegenerate}
+            onReactionMessage={handleReactionMessage}
+            onEditResponseMessage={handleUpdateResponseMessage}
+            onEditUserMessage={handleUpdateUserMessage}
+            onDeleteMessage={handleDeleteMessage}
+          />
+
+          {!hasModel() && !selectedChat?.id && <NoModel />}
+          {hasModel() && !selectedChat?.id && <NoChat />}
+        </div>
+        <div className='relative h-32'>
+          {hasModel() && selectedChat && (
+            <ChatInput
+              onSend={(message) => {
+                const lastMessage = getSelectedMessagesLastActiveMessage();
+                handleSend(message, lastMessage?.id);
+              }}
+              onScrollDownClick={handleScrollDown}
+              showScrollDownButton={showScrollDownButton}
+              onChangePrompt={handleChangePrompt}
+            />
+          )}
+        </div>
       </div>
-      {selectedChat && <ChatHeader />}
-      {hasModel() && selectedChat && (
-        <ChatInput
-          onSend={(message) => {
-            const lastMessage = getSelectedMessagesLastActiveMessage();
-            handleSend(message, lastMessage?.id);
-          }}
-          onScrollDownClick={handleScrollDown}
-          showScrollDownButton={showScrollDownButton}
-          onChangePrompt={handleChangePrompt}
-        />
-      )}
-      {!hasModel() && !selectedChat?.id && <NoModel />}
-      {hasModel() && !selectedChat?.id && <NoChat />}
     </div>
   );
 });

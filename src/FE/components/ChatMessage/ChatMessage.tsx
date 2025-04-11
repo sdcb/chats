@@ -126,7 +126,7 @@ export const ChatMessage: FC<Props> = memo(
             </div>
           );
         })}
-        <div className="h-[162px] bg-background" ref={messagesEndRef} />
+        <div ref={messagesEndRef} />
       </div>
     );
   },

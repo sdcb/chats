@@ -54,12 +54,7 @@ public partial class OpenAIChatService(Model model, ChatClient chatClient) : Cha
             {
                 Items = ChatSegmentItem.FromTextAndThink(segment, reasoningSegment),
                 FinishReason = delta.FinishReason,
-                Usage = delta.Usage != null ? new Dtos.ChatTokenUsage()
-                {
-                    InputTokens = delta.Usage.InputTokenCount,
-                    OutputTokens = delta.Usage.OutputTokenCount,
-                    ReasoningTokens = delta.Usage.OutputTokenDetails?.ReasoningTokenCount ?? 0,
-                } : null,
+                Usage = delta.Usage != null ? GetUsage(delta.Usage) : null,
             };
         }
     }
