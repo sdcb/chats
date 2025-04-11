@@ -2,7 +2,7 @@
 
 Sdcb Chats is a powerful and flexible frontend for large language models that supports various features and platforms. Whether you want to manage multiple model interfaces or need a simple deployment process, Sdcb Chats can meet your needs.
 
-![image](https://github.com/user-attachments/assets/30658e52-1537-4b79-b711-1c43d3307c40)
+[![image](https://github.com/user-attachments/assets/30658e52-1537-4b79-b711-1c43d3307c40)](https://github.com/user-attachments/assets/2d9d609e-142e-4dbf-bdba-87477d7753fb)
 
 ## Features
 
