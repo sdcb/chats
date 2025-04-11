@@ -35,7 +35,6 @@ function App({ Component, pageProps }: AppProps<{}> | any) {
   return (
     <ThemeProvider
       attribute="class"
-      defaultTheme="light"
       enableSystem
       disableTransitionOnChange
     >
