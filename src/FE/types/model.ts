@@ -72,7 +72,7 @@ export const feModelProviders: FEModelProvider[] = [
     name: 'DeepSeek',
     icon: '/logos/deepseek.svg',
   },
-  { id: DBModelProvider.X_AI, name: 'x.ai', icon: '/logos/x.svg' },
+  { id: DBModelProvider.X_AI, name: 'x.ai', icon: '/logos/xai.svg' },
   {
     id: DBModelProvider.GithubModels,
     name: 'Github Models',
