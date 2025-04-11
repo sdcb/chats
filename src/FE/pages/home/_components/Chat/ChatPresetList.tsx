@@ -95,9 +95,7 @@ const ChatPresetList = () => {
   };
 
   return (
-    <div
-      className={cn('grid h-[calc(100vh-320px)] px-0 md:px-8 pt-6 pb-32 mt-10')}
-    >
+    <div className={cn('px-0 md:px-8 pt-6')}>
       {hasModel() && (
         <div className="grid grid-cols-[repeat(auto-fit,minmax(144px,320px))] place-content-center gap-4 w-full">
           {chatPresets?.map((item) => {
