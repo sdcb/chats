@@ -27,7 +27,6 @@ import {
   PutChatSpanParams,
   PutMoveChatGroupParams,
   PutResponseMessageEditAndSaveNewParams,
-  PutResponseMessageEditAndSaveNewResult,
   PutResponseMessageEditInPlaceParams,
   SingInParams,
   SingInResult,
@@ -381,7 +380,7 @@ export const putResponseMessageEditAndSaveNew = (
   params: PutResponseMessageEditAndSaveNewParams,
 ) => {
   const fetchServer = useFetch();
-  return fetchServer.patch<PutResponseMessageEditAndSaveNewResult>(
+  return fetchServer.patch<IChatMessage>(
     `/api/messages/${params.messageId}/${params.contentId}/text-and-save-new`,
     {
       body: { c: params.c },

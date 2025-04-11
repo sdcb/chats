@@ -39,10 +39,7 @@ import {
   SseResponseKind,
   SseResponseLine,
 } from '@/types/chatMessage';
-import {
-  ChatSpanDto,
-  PutResponseMessageEditAndSaveNewResult,
-} from '@/types/clientApis';
+import { ChatSpanDto } from '@/types/clientApis';
 import { Prompt } from '@/types/prompt';
 
 import {
@@ -238,12 +235,14 @@ const Chat = memo(() => {
 
   const changeSelectedResponseMessageInfo = (
     selectedMsgs: IChatMessage[][],
-    message: IChatMessage
+    spanId: number,
+    message: IChatMessage,
   ) => {
     const messageCount = selectedMsgs.length - 1;
     let messageList = selectedMsgs[messageCount];
     messageList.map((x) => {
-      if (x.id === message.id) {
+      if (x.spanId === spanId) {
+        x.id = message.id;
         x.duration = message.duration;
         x.firstTokenLatency = message.firstTokenLatency;
         x.inputPrice = message.inputPrice;
@@ -471,7 +470,7 @@ const Chat = memo(() => {
           '',
           ChatSpanStatus.None,
         );
-        changeSelectedResponseMessageInfo(selectedMessageList, msg);
+        changeSelectedResponseMessageInfo(selectedMessageList, spanId, msg);
         messageList.push(msg);
       } else if (value.k === SseResponseKind.StartResponse) {
         const { r: time, i: spanId } = value;
@@ -618,7 +617,7 @@ const Chat = memo(() => {
     content: ResponseContent,
     isCopy: boolean = false,
   ) => {
-    let data: PutResponseMessageEditAndSaveNewResult;
+    let data: IChatMessage;
     const params = {
       messageId,
       contentId: content.i,
@@ -630,53 +629,54 @@ const Chat = memo(() => {
       await putResponseMessageEditInPlace(params);
     }
 
+    let msgs = structuredClone(messages);
+    if (!isCopy) {
+      msgs = messages.map((x) => {
+        if (x.id === messageId) {
+          const newContent = x.content.map((c) => {
+            if (c.i === content.i) return content;
+            return c;
+          });
+          return { ...x, content: newContent, edited: true };
+        }
+        return x;
+      });
+    }
+
     let copyMsg: IChatMessage;
-
-    let msgs = messages.map((x) => {
-      if (x.id === messageId && !isCopy) {
-        const newContent = x.content.map((c) => {
-          if (c.i === content.i) return content;
-          return c;
-        });
-        return { ...x, content: newContent, edited: true };
-      }
-      return x;
-    });
-
-    let msgGroupIndex = 0,
-      msgIndex = 0;
-    let selectedMsgs = selectedMessages.map((msg, groupIndex) => {
-      return msg.map((m, i) => {
+    let selectedMsgs = selectedMessages.map((msg) => {
+      return msg.map((m) => {
         if (m.id === messageId) {
-          msgGroupIndex = groupIndex;
-          msgIndex = i;
-          const content = isCopy ? data.content : m.content;
-          const msgSiblingIds = isCopy
-            ? [...m.siblingIds, data.id]
-            : m.siblingIds;
-          copyMsg = {
-            ...m,
-            id: data?.id,
-            content,
-            edited: true,
-            siblingIds: msgSiblingIds,
-          };
-
-          return {
-            ...m,
-            content,
-            edited: true,
-            siblingIds: msgSiblingIds,
-          };
+          if (isCopy) {
+            const msgSiblingIds = [...m.siblingIds, data.id];
+            copyMsg = {
+              ...data,
+              siblingIds: msgSiblingIds,
+            };
+            return copyMsg;
+          } else {
+            const newContent = m.content.map((c) => {
+              if (c.i === content.i) return content;
+              return c;
+            });
+            m.content = newContent;
+          }
         }
         return m;
       });
     });
-
     if (isCopy) {
+      msgs.map((m) => {
+        if (copyMsg.siblingIds.includes(m.id)) {
+          m.siblingIds = copyMsg.siblingIds;
+        }
+        return m;
+      });
+
       msgs.push(copyMsg!);
-      selectedMsgs[msgGroupIndex][msgIndex] = copyMsg!;
-      selectedMsgs.splice(msgGroupIndex + 1, selectedMsgs.length);
+      chatDispatch(
+        setSelectedChat({ ...selectedChat, leafMessageId: copyMsg!.id }),
+      );
     }
     messageDispatch(setMessages(msgs));
     messageDispatch(setSelectedMessages(selectedMsgs));
@@ -753,27 +753,28 @@ const Chat = memo(() => {
 
   return (
     <div className="relative flex-1">
-      <div className='flex flex-col'>
-        <div className='relative h-16'>
-          {selectedChat && <ChatHeader />}
-        </div>
+      <div className="flex flex-col">
+        <div className="relative h-16">{selectedChat && <ChatHeader />}</div>
         <div
           className="relative h-[calc(100vh-192px)] overflow-x-hidden scroll-container w-full"
           ref={chatContainerRef}
           onScroll={handleScroll}
         >
           <div
-            className='sm:w-full chat-container'
+            className="sm:w-full chat-container"
             style={{
-              width: `calc(100vw - ${showChatBar && showPromptBar
-                ? 520
-                : showChatBar || showPromptBar
+              width: `calc(100vw - ${
+                showChatBar && showPromptBar
+                  ? 520
+                  : showChatBar || showPromptBar
                   ? 260
                   : 0
-                }px)`,
+              }px)`,
             }}
           >
-            {selectedChat && selectedMessages.length === 0 && <ChatPresetList />}
+            {selectedChat && selectedMessages.length === 0 && (
+              <ChatPresetList />
+            )}
           </div>
 
           <ChatMessageMemoized
@@ -793,7 +794,7 @@ const Chat = memo(() => {
           {!hasModel() && !selectedChat?.id && <NoModel />}
           {hasModel() && !selectedChat?.id && <NoChat />}
         </div>
-        <div className='relative h-32'>
+        <div className="relative h-32">
           {hasModel() && selectedChat && (
             <ChatInput
               onSend={(message) => {

@@ -105,7 +105,7 @@ const ResponseMessage = (props: Props) => {
   };
 
   useEffect(() => {
-    setMessageContent(content);
+    setMessageContent(structuredClone(content));
   }, [content]);
 
   useEffect(() => {

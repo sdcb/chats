@@ -94,7 +94,7 @@ export const ChatMessage: FC<Props> = memo(
                         }
                         key={'response-group-message-' + index}
                         className={cn(
-                          'border-[1px] border-background rounded-md flex w-full group bg-card mb-4',
+                          'border-[1px] border-background rounded-md flex w-full bg-card mb-4',
                           hasMultipleSpan &&
                             message.isActive &&
                             'border-primary/50 border-gray-300',

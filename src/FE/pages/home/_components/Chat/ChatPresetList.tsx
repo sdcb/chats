@@ -27,7 +27,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-import { setSelectedChat } from '../../_actions/chat.actions';
+import { setChats, setSelectedChat } from '../../_actions/chat.actions';
 import HomeContext from '../../_contexts/home.context';
 import ChatPresetModal from './ChatPresetModal';
 
@@ -43,7 +43,7 @@ const ChatPresetList = () => {
   const {
     hasModel,
     chatDispatch,
-    state: { selectedChat },
+    state: { selectedChat, chats },
   } = useContext(HomeContext);
   const [chatPresets, setChatPresets] = useState<GetChatPresetResult[]>([]);
   const [chatPreset, setChatPreset] = useState<GetChatPresetResult>();
@@ -85,11 +85,16 @@ const ChatPresetList = () => {
         chatDispatch(
           setSelectedChat({
             ...selectedChat,
-            spans: item.spans.map((s) => ({
-              ...s,
-            })),
+            spans: item.spans,
           }),
         );
+        const chatList = chats.map((c) => {
+          if (c.id === selectedChat.id) {
+            c.spans = item.spans;
+          }
+          return c;
+        });
+        chatDispatch(setChats(chatList));
       });
     }
   };

@@ -2,17 +2,17 @@
   <defs>
     <style>
       .cls-1 {
-        fill: #000;
+        fill: #fff;
       }
       path {
-        fill: #fff;
+        fill: #000;
       }
       @media ( prefers-color-scheme: dark ) {
         .cls-1 {
-          fill: #fff;
+          fill: #000;
         }
         path {
-          fill: #000;
+          fill: #fff;
         }
       }
     </style>

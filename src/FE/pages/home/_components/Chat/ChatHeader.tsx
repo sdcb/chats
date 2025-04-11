@@ -91,6 +91,27 @@ const ChatHeader = () => {
     );
   };
 
+  const handleChangeChatSpan = (spanId: number, enable: boolean) => {
+    if (notSetSpanDisabled && enable === false) {
+      return;
+    }
+    if (enable) {
+      postChatEnableSpan(spanId, selectedChat.id);
+    } else {
+      postChatDisableSpan(spanId, selectedChat.id);
+    }
+    selectedChat.spans = selectedChat.spans.map((s) => {
+      if (s.spanId === spanId) {
+        return {
+          ...s,
+          enabled: enable,
+        };
+      }
+      return s;
+    });
+    chatDispatch(setSelectedChat(selectedChat));
+  };
+
   const AddBtnRender = () => (
     <div className="flex items-center">
       {selectedChat.spans.length < MAX_SELECT_MODEL_COUNT && (
@@ -112,27 +133,6 @@ const ChatHeader = () => {
       )}
     </div>
   );
-
-  const handleChangeChatSpan = (spanId: number, enable: boolean) => {
-    if (notSetSpanDisabled && enable === false) {
-      return;
-    }
-    if (enable) {
-      postChatEnableSpan(spanId, selectedChat.id);
-    } else {
-      postChatDisableSpan(spanId, selectedChat.id);
-    }
-    selectedChat.spans = selectedChat.spans.map((s) => {
-      if (s.spanId === spanId) {
-        return {
-          ...s,
-          enabled: enable,
-        };
-      }
-      return s;
-    });
-    chatDispatch(setSelectedChat(selectedChat));
-  };
 
   return (
     <>

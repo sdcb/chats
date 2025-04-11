@@ -221,13 +221,6 @@ export interface PutResponseMessageEditAndSaveNewParams {
   c: string;
 }
 
-export interface PutResponseMessageEditAndSaveNewResult {
-  id: string;
-  parentId: string;
-  edited: boolean;
-  content: ResponseContent[];
-}
-
 export interface PutResponseMessageEditInPlaceParams {
   messageId: string;
   contentId: string;

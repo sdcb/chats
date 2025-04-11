@@ -87,7 +87,7 @@ const ChatModelDropdownMenu = ({
       <DropdownMenuTrigger
         disabled={readonly}
         className={cn(
-          'focus:outline-none rounded-sm p-1 m-0 h-7 flex items-center gap-1 border-neutral-600',
+          'focus:outline-none rounded-sm p-1 m-0 h-7 flex items-center border-neutral-600',
           triggerClassName,
         )}
       >

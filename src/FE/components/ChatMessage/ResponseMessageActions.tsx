@@ -7,12 +7,12 @@ import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
 import ChangeModelAction from './ChangeModelAction';
 import CopyAction from './CopyAction';
 import DeleteAction from './DeleteAction';
+import EditStatusAction from './EditStatusAction';
 import GenerateInformationAction from './GenerateInformationAction';
 import PaginationAction from './PaginationAction';
 import ReactionBadResponseAction from './ReactionBadResponseAction';
 import ReactionGoodResponseAction from './ReactionGoodResponseAction';
 import RegenerateAction from './RegenerateAction';
-import EditStatusAction from './EditStatusAction';
 
 interface Props {
   models: AdminModelDto[];
@@ -37,86 +37,86 @@ const ResponseMessageActions = (props: Props) => {
     onDeleteMessage,
   } = props;
 
-  const { id: messageId, siblingIds, modelId, modelName, parentId } = message;
+  const {
+    id: messageId,
+    siblingIds,
+    modelId,
+    modelName,
+    parentId,
+    status: messageStatus,
+  } = message;
   const currentMessageIndex = siblingIds.findIndex((x) => x === messageId);
 
   const chatting = isChatting(chatStatus);
+  const messageReceiving = isChatting(messageStatus);
 
   const handleReactionMessage = (type: ReactionMessageType) => {
     onReactionMessage && onReactionMessage(type, messageId);
   };
 
   return (
-    <>
-      {isChatting(chatStatus) ? (
-        <div className="h-9"></div>
-      ) : (
-        <div className="flex gap-1 flex-wrap mt-1">
-          <PaginationAction
-            hidden={siblingIds.length <= 1}
-            disabledPrev={currentMessageIndex === 0 || chatting}
-            disabledNext={
-              currentMessageIndex === siblingIds.length - 1 || chatting
-            }
-            messageIds={siblingIds}
-            currentSelectIndex={currentMessageIndex}
-            onChangeMessage={onChangeMessage}
-          />
-          <div className="flex gap-0 items-center">
-            <CopyAction
-              text={message.content
-                .filter((x) => x.$type === MessageContentType.text)
-                .map((x) => x.c)
-                .join('')}
-            />
+    <div className="flex gap-1 flex-wrap mt-1">
+      <PaginationAction
+        hidden={siblingIds.length <= 1 || chatting}
+        disabledPrev={currentMessageIndex === 0}
+        disabledNext={currentMessageIndex === siblingIds.length - 1}
+        messageIds={siblingIds}
+        currentSelectIndex={currentMessageIndex}
+        onChangeMessage={onChangeMessage}
+      />
+      <div className="flex gap-0 items-center">
+        <CopyAction
+          text={message.content
+            .filter((x) => x.$type === MessageContentType.text)
+            .map((x) => x.c)
+            .join('')}
+        />
 
-            {message.edited && <EditStatusAction />}
+        {message.edited && <EditStatusAction />}
 
-            <DeleteAction
-              hidden={siblingIds.length <= 1 || chatting}
-              onDelete={() => {
-                onDeleteMessage && onDeleteMessage(messageId);
-              }}
-            />
+        <DeleteAction
+          hidden={siblingIds.length <= 1 || chatting}
+          onDelete={() => {
+            onDeleteMessage && onDeleteMessage(messageId);
+          }}
+        />
 
-            <GenerateInformationAction
-              hidden={message.edited}
-              disabled={chatting}
-              message={message}
-            />
+        <GenerateInformationAction
+          hidden={message.edited}
+          disabled={messageReceiving}
+          message={message}
+        />
 
-            <ReactionGoodResponseAction
-              disabled={chatting}
-              value={message.reaction}
-              onReactionMessage={handleReactionMessage}
-            />
-            <ReactionBadResponseAction
-              disabled={chatting}
-              value={message.reaction}
-              onReactionMessage={handleReactionMessage}
-            />
+        <ReactionGoodResponseAction
+          disabled={chatting}
+          value={message.reaction}
+          onReactionMessage={handleReactionMessage}
+        />
+        <ReactionBadResponseAction
+          disabled={chatting}
+          value={message.reaction}
+          onReactionMessage={handleReactionMessage}
+        />
 
-            <RegenerateAction
-              hidden={readonly}
-              disabled={chatting}
-              onRegenerate={() => {
-                onRegenerate && onRegenerate(parentId!, modelId);
-              }}
-            />
-            <ChangeModelAction
-              readonly={readonly || chatting}
-              models={models}
-              onChangeModel={(model) => {
-                onRegenerate && onRegenerate(parentId!, model.modelId);
-              }}
-              showRegenerate={models.length > 0}
-              modelName={modelName!}
-              modelId={modelId}
-            />
-          </div>
-        </div>
-      )}
-    </>
+        <RegenerateAction
+          hidden={readonly}
+          disabled={chatting}
+          onRegenerate={() => {
+            onRegenerate && onRegenerate(parentId!, modelId);
+          }}
+        />
+        <ChangeModelAction
+          readonly={readonly || chatting}
+          models={models}
+          onChangeModel={(model) => {
+            onRegenerate && onRegenerate(parentId!, model.modelId);
+          }}
+          showRegenerate={models.length > 0}
+          modelName={modelName!}
+          modelId={modelId}
+        />
+      </div>
+    </div>
   );
 };
 
