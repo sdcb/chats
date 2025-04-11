@@ -3,7 +3,7 @@
 
 Sdcb Chats 是一个强大且灵活的大语言模型前端，支持多种功能和平台。无论您是希望管理多种模型接口，还是需要一个简单的部署流程，Sdcb Chats 都能满足您的需求。
 
-![image](https://github.com/user-attachments/assets/30658e52-1537-4b79-b711-1c43d3307c40)
+![](https://github.com/user-attachments/assets/2d9d609e-142e-4dbf-bdba-87477d7753fb)
 
 ## 功能特性
 
