@@ -74,10 +74,7 @@ const GlobalConfigsModal = (props: IProps) => {
   ];
 
   const formSchema = z.object({
-    key: z
-      .string()
-      .min(1, `${t('This field is require')}`)
-      .optional(),
+    key: z.string().min(1, `${t('This field is require')}`),
     value: z.string(),
     description: z.string(),
   });

@@ -19,11 +19,11 @@ Directory.SetCurrentDirectory(projectFolder);
 		"--verbose",
 		$"--no-onconfiguring",
 	});
-	string cmd = $"dotnet ef dbcontext scaffold Name={connectionStringName} {provider} {options}";
-	//Util.Cmd(cmd.Dump("command text"));
-	cmd.Dump("command text");
+	Run($"dotnet ef dbcontext scaffold Name={connectionStringName} {provider} {options}".Dump());
+}
 
-	// 使用 Process.Start 执行命令并打印日志
+static void Run(string cmd)
+{
 	ProcessStartInfo processStartInfo = new()
 	{
 		FileName = cmd.Split(' ', 2)[0],
@@ -32,7 +32,7 @@ Directory.SetCurrentDirectory(projectFolder);
 		RedirectStandardError = true,
 		UseShellExecute = false,
 		CreateNoWindow = true,
-		StandardOutputEncoding = Encoding.UTF8, 
+		StandardOutputEncoding = Encoding.UTF8,
 		StandardErrorEncoding = Encoding.UTF8,
 	};
 	processStartInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";

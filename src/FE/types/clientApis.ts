@@ -1,4 +1,4 @@
-import { ChatStatus } from './chat';
+import { ChatStatus, ResponseContent } from './chat';
 import { IChatMessage } from './chatMessage';
 import { DBModelProvider } from './model';
 import { Paging } from './page';
@@ -77,7 +77,7 @@ export interface ChatSpanDto {
   systemPrompt: string;
   modelProviderId: DBModelProvider;
   temperature: number | null;
-  enableSearch: boolean;
+  webSearchEnabled: boolean;
   reasoningEffort: number;
   maxOutputTokens: number | null;
 }
@@ -127,7 +127,7 @@ export interface PostUserChatSpanParams {
   modelId?: number;
   setTemperature?: boolean;
   temperature?: number | null;
-  enableSearch?: boolean;
+  webSearchEnabled?: boolean;
 }
 
 export interface PostUserChatSpanResult {
@@ -137,7 +137,7 @@ export interface PostUserChatSpanResult {
   modelName: string;
   modelProviderId: number;
   temperature: number;
-  enableSearch: boolean;
+  webSearchEnabled: boolean;
   reasoningEffort: number;
   maxOutputTokens: number;
 }
@@ -217,18 +217,14 @@ export interface PutResponseMessageContent {
 
 export interface PutResponseMessageEditAndSaveNewParams {
   messageId: string;
-  content: PutResponseMessageContent;
-}
-
-export interface PutResponseMessageEditAndSaveNewResult {
-  id: string;
-  parentId: string;
-  edited: boolean;
+  contentId: string;
+  c: string;
 }
 
 export interface PutResponseMessageEditInPlaceParams {
   messageId: string;
-  content: PutResponseMessageContent;
+  contentId: string;
+  c: string;
 }
 
 export interface PutChatSpanParams {

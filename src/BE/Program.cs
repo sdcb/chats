@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Runtime.CompilerServices;
 using Chats.BE.Services.FileServices;
 using Microsoft.AspNetCore.StaticFiles;
+using Chats.BE.Services.Models.ChatServices;
 
 [assembly: InternalsVisibleTo("Chats.BE.Tests")]
 
@@ -39,24 +40,29 @@ public class Program
         builder.Services.AddHttpClient();
         builder.Services.AddSingleton<InitService>();
         builder.Services.AddSingleton<AppConfigService>();
-        builder.Services.AddSingleton<PasswordHasher>();
-        builder.Services.AddScoped<CurrentUser>();
-        builder.Services.AddScoped<CurrentApiKey>();
         builder.Services.AddSingleton<CsrfTokenService>();
-        builder.Services.AddScoped<GlobalDBConfig>();
-        builder.Services.AddScoped<UserManager>();
         builder.Services.AddSingleton<JwtKeyManager>();
-        builder.Services.AddScoped<SessionManager>();
-        builder.Services.AddScoped<UserModelManager>();
-        builder.Services.AddScoped<OpenAIApiKeySessionManager>();
+        builder.Services.AddSingleton<PasswordHasher>();
         builder.Services.AddSingleton<HostUrlService>();
         builder.Services.AddSingleton<ChatFactory>();
         builder.Services.AddSingleton<BalanceService>();
-        builder.Services.AddScoped<ClientInfoManager>();
-        builder.Services.AddScoped<FileUrlProvider>();
         builder.Services.AddSingleton<FileServiceFactory>();
         builder.Services.AddSingleton<ChatStopService>();
-        builder.Services.AddTransient<ChatConfigService>();
+        builder.Services.AddSingleton<FileImageInfoService>();
+
+        builder.Services.AddScoped<CurrentUser>();
+        builder.Services.AddScoped<CurrentApiKey>();
+        builder.Services.AddScoped<GlobalDBConfig>();
+        builder.Services.AddScoped<UserManager>();
+        builder.Services.AddScoped<SessionManager>();
+        builder.Services.AddScoped<UserModelManager>();
+        builder.Services.AddScoped<OpenAIApiKeySessionManager>();
+        builder.Services.AddScoped<ClientInfoManager>();
+        builder.Services.AddScoped<FileUrlProvider>();
+        builder.Services.AddScoped<ChatConfigService>();
+        builder.Services.AddScoped<FileContentTypeService>();
+        builder.Services.AddScoped<DBFileService>();
+
         builder.Services.AddUrlEncryption();
         builder.Services.AddHttpContextAccessor();
 

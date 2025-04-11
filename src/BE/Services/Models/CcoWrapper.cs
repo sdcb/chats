@@ -7,12 +7,6 @@ namespace Chats.BE.Services.Models;
 
 public class CcoWrapper(JsonObject json)
 {
-    public bool? EnableSearch
-    {
-        get => (bool?)json["enable_search"];
-        set => SetOrRemove("enable_search", value);
-    }
-
     public bool Stream
     {
         get => (bool?)json["stream"] ?? false;
@@ -34,12 +28,6 @@ public class CcoWrapper(JsonObject json)
         set => SetOrRemove("messages", value != null 
             ? new JsonArray(value.Select(x => JsonNode.Parse(ModelReaderWriter.Write(x).ToArray())).ToArray())
             : null);
-    }
-
-    public float? Temperature
-    {
-        get => (float?)json["temperature"];
-        set => SetOrRemove("temperature", value);
     }
 
     public bool SeemsValid()

@@ -105,8 +105,8 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         return Ok();
     }
 
-    [HttpPut("{encryptedMessageId}/edit-in-place")]
-    public async Task<ActionResult> EditMessageInPlace(string encryptedMessageId, [FromBody] MessageContentRequest content,
+    [HttpPut("{encryptedMessageId}/edit-in-place"), Obsolete("Use PATCH {messageId}/{contentId}/text")]
+    public async Task<ActionResult> EditMessageInPlace(string encryptedMessageId, [FromBody] ContentRequestItem[] content,
         [FromServices] FileUrlProvider fup,
         CancellationToken cancellationToken)
     {
@@ -125,7 +125,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         }
 
         message.MessageContents.Clear();
-        foreach (MessageContent c in await content.ToMessageContents(fup, cancellationToken))
+        foreach (MessageContent c in await MessageContent.FromRequest(content, fup, cancellationToken))
         {
             message.MessageContents.Add(c);
         }
@@ -135,11 +135,11 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         return Ok();
     }
 
-    [HttpPut("{encryptedMessageId}/edit-and-save-new")]
-    public async Task<ActionResult<RequestMessageDto>> EditAndSaveNew(string encryptedMessageId, [FromBody] MessageContentRequest content,
-    [FromServices] FileUrlProvider fup,
-    [FromServices] ClientInfoManager clientInfoManager,
-    CancellationToken cancellationToken)
+    [HttpPut("{encryptedMessageId}/edit-and-save-new"), Obsolete("Use PATCH {messageId}/{contentId}/text-and-save-new")]
+    public async Task<ActionResult<RequestMessageDto>> EditAndSaveNew(string encryptedMessageId, [FromBody] ContentRequestItem[] content,
+        [FromServices] FileUrlProvider fup,
+        [FromServices] ClientInfoManager clientInfoManager,
+        CancellationToken cancellationToken)
     {
         long messageId = urlEncryption.DecryptMessageId(encryptedMessageId);
         Message? message = await db.Messages
@@ -167,7 +167,123 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             ParentId = message.ParentId,
             ChatRoleId = message.ChatRoleId,
             ChatRole = message.ChatRole,
-            MessageContents = await content.ToMessageContents(fup, cancellationToken),
+            MessageContents = await MessageContent.FromRequest(content, fup, cancellationToken),
+        };
+        if (message.MessageResponse != null)
+        {
+            string textPart = content.OfType<TextContentRequestItem>().FirstOrDefault()?.Text ?? "";
+            newMessage.MessageResponse = new MessageResponse()
+            {
+                Usage = new UserModelUsage()
+                {
+                    UserModelId = message.MessageResponse.Usage.UserModelId,
+                    UserModel = message.MessageResponse.Usage.UserModel,
+                    FinishReasonId = (byte)DBFinishReason.Success,
+                    SegmentCount = 1,
+                    InputTokens = message.MessageResponse.Usage.InputTokens,
+                    OutputTokens = ChatService.DefaultTokenizer.CountTokens(textPart),
+                    ReasoningTokens = 0,
+                    IsUsageReliable = false,
+                    PreprocessDurationMs = 0,
+                    FirstResponseDurationMs = 0,
+                    PostprocessDurationMs = 0,
+                    TotalDurationMs = 0,
+                    InputCost = 0,
+                    OutputCost = 0,
+                    BalanceTransactionId = null,
+                    UsageTransactionId = null,
+                    ClientInfo = await clientInfoManager.GetClientInfo(cancellationToken),
+                    CreatedAt = DateTime.UtcNow,
+                },
+                ChatConfigId = message.MessageResponse.ChatConfigId,
+            };
+        }
+        db.Messages.Add(newMessage);
+        message.Chat.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+        ChatMessageTemp temp = ChatMessageTemp.FromDB(newMessage);
+        return Ok(temp.ToDto(urlEncryption, fup));
+    }
+
+    [HttpPatch("{messageId}/{contentId}/text")]
+    public async Task<ActionResult<ContentResponseItem>> PatchTextInPlace(string messageId, string contentId, [FromBody] TextContentRequestItem content,
+        [FromServices] FileUrlProvider fup,
+        [FromServices] IUrlEncryptionService urlEncryption,
+        CancellationToken cancellationToken)
+    {
+        MessageContent? messageContent = await db.MessageContents
+            .Include(x => x.Message).ThenInclude(x => x.Chat)
+            .Include(x => x.MessageContentText)
+            .FirstOrDefaultAsync(x => x.Id == urlEncryption.DecryptMessageContentId(contentId) && x.MessageId == urlEncryption.DecryptMessageId(messageId), cancellationToken);
+        if (messageContent == null)
+        {
+            return NotFound();
+        }
+        if (messageContent.MessageContentText == null)
+        {
+            return BadRequest("Content is not text");
+        }
+        if (messageContent.Message.Chat.UserId != currentUser.Id)
+        {
+            return Forbid();
+        }
+
+        messageContent.MessageContentText!.Content = content.Text;
+        messageContent.Message.Chat.UpdatedAt = DateTime.UtcNow;
+        messageContent.Message.Edited = true;
+        await db.SaveChangesAsync(cancellationToken);
+
+        ContentResponseItem resp = ContentResponseItem.FromContent(messageContent, fup, urlEncryption);
+        return Ok(resp);
+    }
+
+    [HttpPatch("{messageId}/{contentId}/text-and-save-new")]
+    public async Task<ActionResult<ResponseMessageDto>> PatchTextAndSaveNew(string messageId, string contentId, [FromBody] TextContentRequestItem content,
+        [FromServices] FileUrlProvider fup,
+        [FromServices] IUrlEncryptionService urlEncryption,
+        [FromServices] ClientInfoManager clientInfoManager,
+        CancellationToken cancellationToken)
+    {
+        Message? message = await db.Messages
+            .Include(x => x.Chat)
+            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentText)
+            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentBlob)
+            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentFile)
+            .Include(x => x.MessageResponse!.Usage)
+            .Include(x => x.MessageResponse!.Usage.UserModel)
+            .Include(x => x.MessageResponse!.Usage.UserModel.Model)
+            .Include(x => x.MessageResponse!.Usage.UserModel.Model.ModelKey)
+            .FirstOrDefaultAsync(x => x.Id == urlEncryption.DecryptMessageId(messageId), cancellationToken);
+        if (message == null)
+        {
+            return NotFound();
+        }
+        if (message.Chat.UserId != currentUser.Id)
+        {
+            return Forbid();
+        }
+        MessageContent? textContent = message.MessageContents.FirstOrDefault(x => x.Id == urlEncryption.DecryptMessageContentId(contentId));
+        if (textContent == null)
+        {
+            return NotFound();
+        }
+        if (textContent.MessageContentText == null)
+        {
+            return BadRequest("Content is not text");
+        }
+
+        ContentRequestItem[] newContent = [.. ContentRequestItem.FromDB(message.MessageContents, urlEncryption, textContent.Id, content)];
+
+        Message newMessage = new()
+        {
+            Edited = true,
+            CreatedAt = DateTime.UtcNow,
+            SpanId = message.SpanId,
+            ChatId = message.ChatId,
+            ParentId = message.ParentId,
+            ChatRoleId = message.ChatRoleId,
+            ChatRole = message.ChatRole,
+            MessageContents = await MessageContent.FromRequest(newContent, fup, cancellationToken),
         };
         if (message.MessageResponse != null)
         {
@@ -202,6 +318,29 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         await db.SaveChangesAsync(cancellationToken);
         ChatMessageTemp temp = ChatMessageTemp.FromDB(newMessage);
         return Ok(temp.ToDto(urlEncryption, fup));
+    }
+
+    [HttpDelete("{messageId}/{contentId}")]
+    public async Task<ActionResult> DeleteMessageContent(string messageId, string contentId, CancellationToken cancellationToken)
+    {
+        long decryptedMessageId = urlEncryption.DecryptMessageId(messageId);
+        long decryptedContentId = urlEncryption.DecryptMessageContentId(contentId);
+        MessageContent? messageContent = await db.MessageContents
+            .Include(x => x.Message)
+            .Include(x => x.Message.Chat)
+            .FirstOrDefaultAsync(x => x.Id == decryptedContentId && x.MessageId == decryptedMessageId, cancellationToken);
+        if (messageContent == null)
+        {
+            return NotFound();
+        }
+        if (messageContent.Message.Chat.UserId != currentUser.Id)
+        {
+            return Forbid();
+        }
+        db.MessageContents.Remove(messageContent);
+        messageContent.Message.Chat.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+        return Ok();
     }
 
     [HttpDelete("{encryptedMessageId}")]

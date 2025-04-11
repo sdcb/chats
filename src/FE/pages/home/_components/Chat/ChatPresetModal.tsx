@@ -18,7 +18,7 @@ import {
 import ModelParams from '@/components/ModelParams/ModelParams';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
@@ -81,7 +81,7 @@ const ChatPresetModal = (props: Props) => {
             maxOutputTokens: null,
             temperature: null,
             reasoningEffort: 0,
-            enableSearch: false,
+            webSearchEnabled: false,
           });
           return s;
         }
@@ -104,7 +104,7 @@ const ChatPresetModal = (props: Props) => {
         maxOutputTokens: span?.maxOutputTokens || null,
         temperature: span?.temperature || null,
         reasoningEffort: span.reasoningEffort,
-        webSearchEnabled: !!span.enableSearch,
+        webSearchEnabled: !!span.webSearchEnabled,
       })),
     };
     if (chatPreset) {
@@ -132,7 +132,7 @@ const ChatPresetModal = (props: Props) => {
       maxOutputTokens: null,
       temperature: null,
       reasoningEffort: 0,
-      enableSearch: false,
+      webSearchEnabled: false,
     };
     setSpans([...spans, span]);
     setSelectedSpan(span);
@@ -201,7 +201,7 @@ const ChatPresetModal = (props: Props) => {
         if (selectedSpan?.spanId === span.spanId) {
           const s = {
             ...span!,
-            enableSearch: value,
+            webSearchEnabled: value,
           };
           setSelectedSpan({
             ...s,
@@ -280,10 +280,10 @@ const ChatPresetModal = (props: Props) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogTitle></DialogTitle>
       <DialogContent className="w-full sm:w-[560px] h-[560px] gap-0 block select-none">
         <div className="mt-5">
           <Input
-            autoFocus={false}
             value={name}
             placeholder={t('Please enter a name')}
             onChange={(e) => {
@@ -407,7 +407,7 @@ const ChatPresetModal = (props: Props) => {
                   {modelMap[selectedSpan.modelId]?.allowSearch && (
                     <EnableNetworkSearch
                       label={t('Internet Search')}
-                      enable={selectedSpan.enableSearch}
+                      enable={selectedSpan.webSearchEnabled}
                       onChange={(value) => {
                         onChangeEnableSearch(value);
                       }}

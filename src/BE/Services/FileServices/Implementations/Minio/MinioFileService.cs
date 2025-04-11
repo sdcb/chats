@@ -2,6 +2,4 @@
 
 namespace Chats.BE.Services.FileServices.Implementations.Minio;
 
-public class MinioFileService(MinioConfig config) : AwsS3FileService(config.Bucket, config.CreateS3())
-{
-}
+public class MinioFileService(MinioConfig config) : AwsS3FileService(config.Bucket, config.CreateS3());

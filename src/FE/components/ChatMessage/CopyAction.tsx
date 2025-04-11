@@ -11,10 +11,11 @@ import { cn } from '@/lib/utils';
 interface Props {
   triggerClassName?: string;
   text?: string;
+  content?: string;
   hidden?: boolean;
 }
 const CopyAction = (props: Props) => {
-  const { text, triggerClassName, hidden = false } = props;
+  const { text, triggerClassName, content, hidden = false } = props;
   const { t } = useTranslation();
   const [messagedCopied, setMessageCopied] = useState(false);
 
@@ -33,7 +34,7 @@ const CopyAction = (props: Props) => {
     return (
       <>
         {messagedCopied ? (
-          <Button variant="ghost" className="p-1 m-0 h-auto">
+          <Button variant="ghost" className="p-1 m-0 h-auto w-auto">
             <IconCheck className="text-green-500 dark:text-green-400" />
           </Button>
         ) : (
@@ -48,6 +49,7 @@ const CopyAction = (props: Props) => {
                 }}
               >
                 <IconCopy />
+                {content}
               </Button>
             }
             side="bottom"

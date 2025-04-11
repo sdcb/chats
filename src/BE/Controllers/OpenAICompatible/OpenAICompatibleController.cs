@@ -12,6 +12,7 @@ using System.Text.Json.Nodes;
 using Chats.BE.Controllers.OpenAICompatible.Dtos;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
+using Chats.BE.Services.Models.ChatServices;
 
 namespace Chats.BE.Controllers.OpenAICompatible;
 
@@ -47,7 +48,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
         {
             await foreach (InternalChatSegment seg in icc.Run(userBalance.Balance, userModel, s.ChatStreamedSimulated(cco.Stream, [.. cco.Messages!], cco.ToCleanCco(), cancellationToken)))
             {
-                if (string.IsNullOrEmpty(seg.Segment) && string.IsNullOrEmpty(seg.ReasoningSegment)) continue;
+                if (seg.Items.Count == 0) continue;
 
                 if (cco.Stream)
                 {

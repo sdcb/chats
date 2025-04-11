@@ -1,6 +1,6 @@
 ﻿using Chats.BE.DB.Enums;
+using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
-using Chats.BE.Services.Models.Extensions;
 using OpenAI.Chat;
 using System.Runtime.CompilerServices;
 
@@ -20,20 +20,17 @@ public abstract partial class ChatService
                 await foreach (InternalChatSegment seg in ChatStreamedSimulated(suggestedStreaming: true, filteredMessage, options, cancellationToken))
                 {
                     current = seg;
-                    if (!string.IsNullOrEmpty(seg.Segment))
+                    string? text = seg.Items.GetText();
+                    if (text != null)
                     {
-                        yield return seg.Segment;
+                        yield return text;
                     }
                 }
             }
 
             await foreach (ThinkAndResponseSegment seg in ThinkTagParser.Parse(TokenYielder(), cancellationToken))
             {
-                yield return current with
-                {
-                    Segment = seg.Response,
-                    ReasoningSegment = seg.Think,
-                };
+                yield return current with { Items = ChatSegmentItem.FromTextAndThink(seg.Response, seg.Think) };
             }
         }
         else
@@ -56,8 +53,8 @@ public abstract partial class ChatService
         Dtos.ChatTokenUsage usageAccessor(ChatSegment seg) => new()
         {
             InputTokens = inputTokens,
-            OutputTokens = outputTokens += Tokenizer.CountTokens(seg.Segment!),
-            ReasoningTokens = reasoningTokens += Tokenizer.CountTokens(seg.ReasoningSegment!),
+            OutputTokens = outputTokens += seg.Items.GetText() switch { null => 0, var x => Tokenizer.CountTokens(x) },
+            ReasoningTokens = reasoningTokens += seg.Items.GetThink() switch { null => 0, var x => Tokenizer.CountTokens(x) },
         };
 
         if (suggestedStreaming && Model.ModelReference.AllowStreaming)
@@ -110,6 +107,14 @@ public abstract partial class ChatService
             return message switch
             {
                 UserChatMessage userChatMessage => new UserChatMessage(await userChatMessage.Content
+                    .ToAsyncEnumerable()
+                    .SelectAwait(async c => c switch
+                    {
+                        { Kind: ChatMessageContentPartKind.Image, ImageUri: not null } => await DownloadImagePart(http, c.ImageUri, cancellationToken),
+                        _ => c,
+                    })
+                    .ToArrayAsync(cancellationToken)),
+                AssistantChatMessage assistantChatMessage => new AssistantChatMessage(await assistantChatMessage.Content
                     .ToAsyncEnumerable()
                     .SelectAwait(async c => c switch
                     {

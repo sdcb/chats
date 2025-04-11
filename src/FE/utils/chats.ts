@@ -1,4 +1,5 @@
-import { IChat } from '@/types/chat';
+import { ChatSpanStatus, ChatStatus, IChat } from '@/types/chat';
+import { IChatMessage } from '@/types/chatMessage';
 
 export function preprocessLaTeX(content?: string) {
   if (!content) {
@@ -83,4 +84,13 @@ export const chatsGroupByUpdatedAt = (data: IChat[]): Map<string, IChat[]> => {
 
 export const isUnGroupChat = (id: string | null) => {
   return id === null;
+};
+
+export const isChatting = (status: ChatSpanStatus | ChatStatus) =>
+  status === ChatSpanStatus.Chatting ||
+  status === ChatSpanStatus.Reasoning ||
+  status === ChatSpanStatus.Pending;
+
+export const hasMultipleSpans = (selectedMessages: IChatMessage[][]) => {
+  return !!selectedMessages.find((x) => x.length > 1);
 };

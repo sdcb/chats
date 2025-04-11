@@ -2,7 +2,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { formatNumberAsMoney } from '@/utils/common';
 
-import { PropsMessage } from '@/types/components/chat';
+import { IChatMessage } from '@/types/chatMessage';
 
 import { IconInfo } from '@/components/Icons';
 import Tips from '@/components/Tips/Tips';
@@ -11,12 +11,13 @@ import { Label } from '@/components/ui/label';
 
 interface Props {
   hidden?: boolean;
-  message: PropsMessage;
+  disabled?: boolean;
+  message: IChatMessage;
 }
 
 export const GenerateInformationAction = (props: Props) => {
   const { t } = useTranslation();
-  const { message, hidden } = props;
+  const { message, hidden, disabled } = props;
 
   const GenerateInformation = (props: { name: string; value: string }) => {
     const { name, value } = props;
@@ -35,6 +36,7 @@ export const GenerateInformationAction = (props: Props) => {
         side="bottom"
         trigger={
           <Button
+            disabled={disabled}
             variant="ghost"
             className="p-1 m-0 h-7 w-7"
             onClick={(e) => {
@@ -57,15 +59,15 @@ export const GenerateInformationAction = (props: Props) => {
               <div className="grid grid-cols-1 items-center">
                 <GenerateInformation
                   name={'total duration'}
-                  value={message?.duration.toLocaleString() + 'ms'}
+                  value={message.duration?.toLocaleString() + 'ms'}
                 />
                 <GenerateInformation
                   name={'first token latency'}
-                  value={message?.firstTokenLatency.toLocaleString() + 'ms'}
+                  value={message.firstTokenLatency?.toLocaleString() + 'ms'}
                 />
                 <GenerateInformation
                   name={'prompt tokens'}
-                  value={`${message.inputTokens.toLocaleString()}`}
+                  value={`${message.inputTokens?.toLocaleString()}`}
                 />
                 <GenerateInformation
                   name={'response tokens'}
@@ -83,7 +85,10 @@ export const GenerateInformationAction = (props: Props) => {
                   name={'response speed'}
                   value={
                     message.duration
-                      ? ((message.outputTokens / (message.duration || 0)) * 1000).toFixed(2) + ' token/s'
+                      ? (
+                          (message.outputTokens / (message.duration || 0)) *
+                          1000
+                        ).toFixed(2) + ' token/s'
                       : '-'
                   }
                 />

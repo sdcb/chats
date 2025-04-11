@@ -7,19 +7,21 @@ import { Button } from '../ui/button';
 
 interface Props {
   hidden?: boolean;
+  disabled?: boolean;
   modelName?: string;
   onRegenerate: () => any;
 }
 
 export const RegenerateAction = (props: Props) => {
   const { t } = useTranslation();
-  const { hidden, onRegenerate } = props;
+  const { hidden, disabled, onRegenerate } = props;
 
   const Render = () => {
     return (
       <Tips
         trigger={
           <Button
+            disabled={disabled}
             variant="ghost"
             className="p-1 m-0 h-7 w-7"
             onClick={(e) => {

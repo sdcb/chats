@@ -12,7 +12,8 @@ export enum ChatSpanStatus {
   None = 1,
   Chatting = 2,
   Failed = 3,
-  Thinking = 4,
+  Reasoning = 4,
+  Pending = 5,
 }
 
 export enum ChatStatus {
@@ -23,7 +24,7 @@ export enum ChatStatus {
 
 export interface Message {
   role: ChatRole;
-  content: Content;
+  content: ResponseContent[];
 }
 
 export interface ImageDef {
@@ -31,12 +32,47 @@ export interface ImageDef {
   url: string;
 }
 
-export interface Content {
-  error?: string;
-  text?: string;
-  think?: string;
-  fileIds?: ImageDef[];
-}
+export type ResponseContent =
+  | ReasoningContent
+  | TextContent
+  | FileContent
+  | ErrorContent;
+
+export type ReasoningContent = {
+  i: string;
+  $type: MessageContentType.reasoning;
+  c: string;
+};
+
+export type TextContent = {
+  i: string;
+  $type: MessageContentType.text;
+  c: string;
+};
+
+export type FileContent = {
+  i: string;
+  $type: MessageContentType.fileId;
+  c: ImageDef | string;
+};
+
+export type ErrorContent = {
+  i: string;
+  $type: MessageContentType.error;
+  c: string;
+};
+
+export type TextRequestContent = {
+  $type: MessageContentType.text;
+  c: string;
+};
+
+export type FileRequestContent = {
+  $type: MessageContentType.fileId;
+  c: string;
+};
+
+export type RequestContent = TextRequestContent | FileRequestContent;
 
 export interface ContentRequest {
   text: string;
@@ -99,3 +135,12 @@ export enum CHATS_SELECT_TYPE {
 
 export const MAX_SELECT_MODEL_COUNT = 10;
 export const MAX_CREATE_PRESET_CHAT_COUNT = 24;
+
+export enum MessageContentType {
+  error = 0,
+  text = 1,
+  fileId = 2,
+  reasoning = 3,
+}
+
+export const EMPTY_ID = 'EMPTY_ID';

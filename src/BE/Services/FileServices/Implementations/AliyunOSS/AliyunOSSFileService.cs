@@ -1,4 +1,5 @@
 ﻿using Aliyun.OSS;
+using Chats.BE.DB.Enums;
 using System.Net;
 
 namespace Chats.BE.Services.FileServices.Implementations.AliyunOSS;

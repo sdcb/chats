@@ -1,4 +1,10 @@
-import { ChatRole, ChatSpanStatus, Content, IChat } from '@/types/chat';
+import {
+  ChatRole,
+  ChatSpanStatus,
+  IChat,
+  MessageContentType,
+  ResponseContent,
+} from '@/types/chat';
 import {
   ChatMessageNode,
   IChatMessage,
@@ -86,12 +92,15 @@ export function findSelectedMessageByLeafId(
         let selectedMessage: ChatMessageNode | null = null;
 
         siblingGroup.forEach((x) => {
+          const messageIsError = !!x.content.find(
+            (x) => x.$type === MessageContentType.error,
+          );
           if (x.id === currentMessage!.id) {
             selectedMessage = {
               ...x,
               siblingIds,
               isActive: true,
-              status: x.content?.error
+              status: messageIsError
                 ? ChatSpanStatus.Failed
                 : ChatSpanStatus.None,
             };
@@ -100,7 +109,7 @@ export function findSelectedMessageByLeafId(
               ...x,
               siblingIds,
               isActive: true,
-              status: x.content?.error
+              status: messageIsError
                 ? ChatSpanStatus.Failed
                 : ChatSpanStatus.None,
             };
@@ -109,11 +118,14 @@ export function findSelectedMessageByLeafId(
 
         if (!selectedMessage) {
           const lastMessage = siblingGroup[siblingGroup.length - 1];
+          const messageIsError = !!lastMessage.content.find(
+            (x) => x.$type === MessageContentType.error,
+          );
           selectedMessage = {
             ...lastMessage,
             siblingIds,
             isActive: false,
-            status: lastMessage.content?.error
+            status: messageIsError
               ? ChatSpanStatus.Failed
               : ChatSpanStatus.None,
           };
@@ -144,7 +156,7 @@ function groupBy<T>(array: T[], key: keyof T): T[][] {
 export function generateResponseMessages(
   selectedChat: IChat,
   parentId?: string,
-  status = ChatSpanStatus.Chatting,
+  status = ChatSpanStatus.Pending,
 ) {
   return selectedChat.spans
     .filter((x) => x.enabled)
@@ -164,7 +176,7 @@ export function generateResponseMessage(
   parentId?: string,
   modelId?: number,
   modelName?: string,
-  status = ChatSpanStatus.Chatting,
+  status = ChatSpanStatus.Pending,
 ) {
   return {
     spanId: spanId,
@@ -174,7 +186,7 @@ export function generateResponseMessage(
     status,
     siblingIds: [],
     isActive: false,
-    content: { text: '', think: '', error: undefined, fileIds: [] },
+    content: [],
     inputTokens: 0,
     outputTokens: 0,
     inputPrice: 0,
@@ -182,14 +194,19 @@ export function generateResponseMessage(
     modelName: modelName,
     modelId: modelId,
     reasoningTokens: 0,
+    reasoningDuration: 0,
     duration: 0,
     firstTokenLatency: 0,
   } as IChatMessage;
 }
 
-export function generateUserMessage(content: Content, parentId?: string) {
+export function generateUserMessage(
+  content: ResponseContent[],
+  parentId?: string,
+) {
   return {
     spanId: null,
+    modelId: 0,
     id: UserMessageTempId,
     role: ChatRole.User,
     status: ChatSpanStatus.None,
@@ -197,5 +214,13 @@ export function generateUserMessage(content: Content, parentId?: string) {
     siblingIds: [],
     isActive: false,
     content,
+    inputTokens: 0,
+    outputTokens: 0,
+    inputPrice: 0,
+    outputPrice: 0,
+    reasoningTokens: 0,
+    reasoningDuration: 0,
+    duration: 0,
+    firstTokenLatency: 0,
   } as IChatMessage;
 }

@@ -26,7 +26,7 @@ const IconX = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -50,7 +50,7 @@ const IconShare = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -77,7 +77,7 @@ const IconCheck = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -100,7 +100,7 @@ const IconCopy = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -124,7 +124,7 @@ const IconRobot = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -155,7 +155,7 @@ const IconUser = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -179,7 +179,7 @@ const IconUserCog = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -210,7 +210,7 @@ const IconUsers = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -236,7 +236,7 @@ const IconArrowDown = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -261,7 +261,7 @@ const IconCircleX = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -285,7 +285,7 @@ const IconSend = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -309,7 +309,7 @@ const IconPaperclip = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -332,7 +332,7 @@ const IconEdit = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -341,6 +341,31 @@ const IconEdit = (props: IconProps) => {
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
       <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
       <path d="M13.5 6.5l4 4" />
+    </svg>
+  );
+};
+
+const IconEditCheck = (props: IconProps) => {
+  const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      onClick={onClick}
+      className={className}
+      width={size}
+      height={size}
+      strokeWidth={strokeWidth}
+      stroke={stroke || 'var(--foreground)'}
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M15 19l2 2l4 -4" />
     </svg>
   );
 };
@@ -356,7 +381,7 @@ const IconTrash = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -382,7 +407,7 @@ const IconLogout = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -406,7 +431,7 @@ const IconMoneybag = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -429,7 +454,7 @@ const IconPasswordUser = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -461,7 +486,7 @@ const IconSettings = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -484,7 +509,7 @@ const IconMessage = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -494,6 +519,31 @@ const IconMessage = (props: IconProps) => {
       <path d="M8 9h8" />
       <path d="M8 13h6" />
       <path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z" />
+    </svg>
+  );
+};
+const IconMessageChatbot = (props: IconProps) => {
+  const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      onClick={onClick}
+      className={className}
+      width={size}
+      height={size}
+      strokeWidth={strokeWidth}
+      stroke={stroke || 'var(--foreground)'}
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z" />
+      <path d="M9.5 9h.01" />
+      <path d="M14.5 9h.01" />
+      <path d="M9.5 13a3.5 3.5 0 0 0 5 0" />
     </svg>
   );
 };
@@ -508,7 +558,7 @@ const IconMessageShare = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -534,7 +584,7 @@ const IconPencil = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -557,7 +607,7 @@ const IconClipboard = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -581,7 +631,7 @@ const IconBulbFilled = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       style={props.style}
@@ -639,7 +689,7 @@ const IconSearch = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -661,7 +711,7 @@ const IconPlus = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -684,7 +734,7 @@ const IconSquareRoundedX = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -707,7 +757,7 @@ const IconChartPie = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -730,7 +780,7 @@ const IconCreditCard = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -755,7 +805,7 @@ const IconFiles = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -779,7 +829,7 @@ const IconKey = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -802,7 +852,7 @@ const IconMessages = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -825,7 +875,7 @@ const IconNotes = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -850,7 +900,7 @@ const IconSettingsCog = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -880,7 +930,7 @@ const IconDots = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -905,7 +955,7 @@ var IconShieldLock = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -930,7 +980,7 @@ var IconRefresh = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -954,7 +1004,7 @@ var IconStopFilled = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -981,7 +1031,7 @@ var IconChevronLeft = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1004,7 +1054,7 @@ var IconChevronRight = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1027,7 +1077,7 @@ var IconChevronDown = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1050,7 +1100,7 @@ var IconError = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1075,7 +1125,7 @@ var IconSquarePlus = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1100,7 +1150,7 @@ var IconMessageCirclePlus = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1125,7 +1175,7 @@ var IconLayoutSidebar = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1149,7 +1199,7 @@ var IconLayoutSidebarRight = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1173,7 +1223,7 @@ var IconIdBadge = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1200,7 +1250,7 @@ var IconAddress = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1228,7 +1278,7 @@ var IconInfo = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1253,7 +1303,7 @@ var IconEyeOff = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1278,7 +1328,7 @@ var IconEye = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1302,7 +1352,7 @@ var IconSun = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1333,7 +1383,7 @@ var IconMoon = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1356,7 +1406,7 @@ var IconLoader = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1378,16 +1428,17 @@ var IconModelSearch = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
-      <path d="M21 21l-6 -6" />
-      <path d="M10 13v.01" />
-      <path d="M10 7v3" />
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M11.5 20h-6.5a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v5.5" />
+      <path d="M9 17h2" />
+      <path d="M18 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+      <path d="M20.2 20.2l1.8 1.8" />
     </svg>
   );
 };
@@ -1403,7 +1454,7 @@ var IconMinus = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1425,7 +1476,7 @@ var IconFolderPlus = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1450,7 +1501,7 @@ var IconPin = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1475,7 +1526,7 @@ var IconPinnedOff = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1501,7 +1552,7 @@ var IconThumbUp = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1524,7 +1575,7 @@ var IconThumbDown = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1547,7 +1598,7 @@ var IconArchive = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1572,7 +1623,7 @@ var IconThink = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1582,13 +1633,13 @@ var IconThink = (props: IconProps) => {
         d="M2.656 17.344c-1.016-1.015-1.15-2.75-.313-4.925.325-.825.73-1.617 1.205-2.365L3.582 10l-.033-.054c-.5-.799-.91-1.596-1.206-2.365-.836-2.175-.703-3.91.313-4.926.56-.56 1.364-.86 2.335-.86 1.425 0 3.168.636 4.957 1.756l.053.034.053-.034c1.79-1.12 3.532-1.757 4.957-1.757.972 0 1.776.3 2.335.86 1.014 1.015 1.148 2.752.312 4.926a13.892 13.892 0 0 1-1.206 2.365l-.034.054.034.053c.5.8.91 1.596 1.205 2.365.837 2.175.704 3.911-.311 4.926-.56.56-1.364.861-2.335.861-1.425 0-3.168-.637-4.957-1.757L10 16.415l-.053.033c-1.79 1.12-3.532 1.757-4.957 1.757-.972 0-1.776-.3-2.335-.86zm13.631-4.399c-.187-.488-.429-.988-.71-1.492l-.075-.132-.092.12a22.075 22.075 0 0 1-3.968 3.968l-.12.093.132.074c1.308.734 2.559 1.162 3.556 1.162.563 0 1.006-.138 1.298-.43.3-.3.436-.774.428-1.346-.008-.575-.159-1.264-.449-2.017zm-6.345 1.65l.058.042.058-.042a19.881 19.881 0 0 0 4.551-4.537l.043-.058-.043-.058a20.123 20.123 0 0 0-2.093-2.458 19.732 19.732 0 0 0-2.458-2.08L10 5.364l-.058.042A19.883 19.883 0 0 0 5.39 9.942L5.348 10l.042.059c.631.874 1.332 1.695 2.094 2.457a19.74 19.74 0 0 0 2.458 2.08zm6.366-10.902c-.293-.293-.736-.431-1.298-.431-.998 0-2.248.429-3.556 1.163l-.132.074.12.092a21.938 21.938 0 0 1 3.968 3.968l.092.12.074-.132c.282-.504.524-1.004.711-1.492.29-.753.442-1.442.45-2.017.007-.572-.129-1.045-.429-1.345zM3.712 7.055c.202.514.44 1.013.712 1.493l.074.13.092-.119a21.94 21.94 0 0 1 3.968-3.968l.12-.092-.132-.074C7.238 3.69 5.987 3.262 4.99 3.262c-.563 0-1.006.138-1.298.43-.3.301-.436.774-.428 1.346.007.575.159 1.264.448 2.017zm0 5.89c-.29.753-.44 1.442-.448 2.017-.008.572.127 1.045.428 1.345.293.293.736.431 1.298.431.997 0 2.247-.428 3.556-1.162l.131-.074-.12-.093a21.94 21.94 0 0 1-3.967-3.968l-.093-.12-.074.132a11.712 11.712 0 0 0-.71 1.492z"
         fill="currentColor"
         stroke="currentColor"
-        stroke-width=".1"
+        strokeWidth=".1"
       ></path>
       <path
         d="M10.706 11.704A1.843 1.843 0 0 1 8.155 10a1.845 1.845 0 1 1 2.551 1.704z"
         fill="currentColor"
         stroke="currentColor"
-        stroke-width=".2"
+        strokeWidth=".2"
       ></path>
     </svg>
   );
@@ -1605,7 +1656,7 @@ var IconWorld = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1632,7 +1683,7 @@ var IconReasoning = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1659,7 +1710,7 @@ var Icon = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'hsl(var(--foreground))'}
+      stroke={stroke || 'var(--foreground)'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
@@ -1733,4 +1784,6 @@ export {
   IconThink,
   IconWorld,
   IconReasoning,
+  IconMessageChatbot,
+  IconEditCheck,
 };

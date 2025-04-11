@@ -14,4 +14,6 @@ public enum SseResponseKind
     ReasoningSegment = 8,
     StartResponse = 9,
     StartReasoning = 10,
+    ImageGenerating = 11, 
+    ImageGenerated = 12,
 }

@@ -65,10 +65,7 @@ const EditModelModal = (props: IProps) => {
 
   const formSchema = z.object({
     modelReferenceId: z.string(),
-    name: z
-      .string()
-      .min(1, `${t('This field is require')}`)
-      .optional(),
+    name: z.string().min(1, `${t('This field is require')}`),
     modelId: z.string().optional(),
     enabled: z.boolean().optional(),
     deploymentName: z.string().optional(),

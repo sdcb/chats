@@ -20,6 +20,7 @@ internal static class MaskedKeyUtils
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         WriteIndented = true,
         IndentCharacter = ' ',
+        NewLine = "\n",
         IndentSize = 2,
     };
 

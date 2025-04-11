@@ -88,19 +88,10 @@ const FileServiceModal = (props: IProps) => {
   ];
 
   const formSchema = z.object({
-    fileServiceTypeId: z
-      .string()
-      .min(1, `${t('This field is require')}`)
-      .optional(),
-    name: z
-      .string()
-      .min(1, `${t('This field is require')}`)
-      .optional(),
+    fileServiceTypeId: z.string().min(1, `${t('This field is require')}`),
+    name: z.string().min(1, `${t('This field is require')}`),
     isDefault: z.boolean(),
-    configs: z
-      .string()
-      .min(1, `${t('This field is require')}`)
-      .optional(),
+    configs: z.string().min(1, `${t('This field is require')}`),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -180,7 +171,7 @@ const FileServiceModal = (props: IProps) => {
       if (name === 'fileServiceTypeId' && type === 'change') {
         const fileServiceTypeId = parseInt(value.fileServiceTypeId!);
         getFileServiceTypeInitialConfig(fileServiceTypeId).then((res) => {
-          form.setValue('configs', formatConfigs(res));
+          form.setValue('configs', formatConfigs(res), { shouldValidate: true });
         });
         form.setValue('name', t(feFileServiceTypes[fileServiceTypeId].name));
       }

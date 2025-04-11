@@ -21,6 +21,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.3" />
     <PackageReference Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" Version="1.0.2" />
     <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="1.0.2" />
+    <PackageReference Include="Mscc.GenerativeAI" Version="2.4.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageReference Include="OpenAI" Version="2.1.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="8.0.0" />

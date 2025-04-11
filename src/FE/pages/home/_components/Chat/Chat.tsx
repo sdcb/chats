@@ -26,8 +26,11 @@ import {
   ChatRole,
   ChatSpanStatus,
   ChatStatus,
-  Content,
+  ImageDef,
   Message,
+  MessageContentType,
+  RequestContent,
+  ResponseContent,
 } from '@/types/chat';
 import {
   IChatMessage,
@@ -36,10 +39,7 @@ import {
   SseResponseKind,
   SseResponseLine,
 } from '@/types/chatMessage';
-import {
-  ChatSpanDto,
-  PutResponseMessageEditAndSaveNewResult,
-} from '@/types/clientApis';
+import { ChatSpanDto } from '@/types/clientApis';
 import { Prompt } from '@/types/prompt';
 
 import {
@@ -56,6 +56,7 @@ import ChatHeader from './ChatHeader';
 import ChatInput from './ChatInput';
 import ChatPresetList from './ChatPresetList';
 import ChatMessageMemoized from './MemoizedChatMessage';
+import NoChat from './NoChat';
 import NoModel from './NoModel';
 
 import {
@@ -65,6 +66,7 @@ import {
   putMessageReactionUp,
   putResponseMessageEditAndSaveNew,
   putResponseMessageEditInPlace,
+  responseContentToRequest,
 } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
@@ -127,21 +129,55 @@ const Chat = memo(() => {
     selectedMsgs: IChatMessage[][],
     messageId: string,
     text: string,
-    status?: ChatSpanStatus,
+    status: ChatSpanStatus,
     finalMessageId?: string,
   ) => {
     const messageCount = selectedMsgs.length - 1;
     let messageList = selectedMsgs[messageCount];
     messageList.map((x) => {
       if (x.id === messageId) {
-        x.content.text += text;
-        if (status) {
-          x.status = status;
-          status === ChatSpanStatus.Failed && (x.content.error = text);
-          if (status === ChatSpanStatus.None) {
-            x.siblingIds.push(messageId);
-            x.id = finalMessageId!;
-          }
+        const contentCount = x.content.length - 1;
+        if (
+          contentCount >= 0 &&
+          x.content[contentCount].$type === MessageContentType.text
+        ) {
+          x.content[contentCount].c += text;
+        } else {
+          x.content.push({ i: '', $type: MessageContentType.text, c: text });
+        }
+
+        x.status = status;
+        if (status === ChatSpanStatus.Failed) {
+          x.content.push({ i: '', $type: MessageContentType.error, c: text });
+        }
+        if (status === ChatSpanStatus.None) {
+          x.siblingIds.push(messageId);
+          x.id = finalMessageId!;
+        }
+      }
+      return x;
+    });
+    selectedMsgs.splice(messageCount, 1, messageList);
+    messageDispatch(setSelectedMessages(selectedMsgs));
+  };
+
+  const changeSelectedResponseFile = (
+    selectedMsgs: IChatMessage[][],
+    messageId: string,
+    text: ImageDef,
+  ) => {
+    const messageCount = selectedMsgs.length - 1;
+    let messageList = selectedMsgs[messageCount];
+    messageList.map((x) => {
+      if (x.id === messageId) {
+        const contentCount = x.content.length - 1;
+        if (
+          contentCount >= 0 &&
+          x.content[contentCount].$type === MessageContentType.fileId
+        ) {
+          // x.content[contentCount].c = text;
+        } else {
+          x.content.push({ i: '', $type: MessageContentType.fileId, c: text });
         }
       }
       return x;
@@ -154,21 +190,24 @@ const Chat = memo(() => {
     selectedMsgs: IChatMessage[][],
     messageId: string,
     text: string,
-    status?: ChatSpanStatus,
-    finalMessageId?: string,
   ) => {
     const messageCount = selectedMsgs.length - 1;
     let messageList = selectedMsgs[messageCount];
     messageList.map((x) => {
       if (x.id === messageId) {
-        x.content.think += text;
-        if (status) {
-          x.status = status;
-          status === ChatSpanStatus.Failed && (x.content.error = text);
-          if (status === ChatSpanStatus.None) {
-            x.siblingIds.push(messageId);
-            x.id = finalMessageId!;
-          }
+        x.status = ChatSpanStatus.Reasoning;
+        const contentCount = x.content.length - 1;
+        if (
+          contentCount >= 0 &&
+          x.content[contentCount].$type === MessageContentType.reasoning
+        ) {
+          x.content[contentCount].c += text;
+        } else {
+          x.content.push({
+            i: '',
+            $type: MessageContentType.reasoning,
+            c: text,
+          });
         }
       }
       return x;
@@ -187,6 +226,29 @@ const Chat = memo(() => {
     messageList.map((x) => {
       if (x.id === messageId) {
         x.reasoningDuration = time;
+      }
+      return x;
+    });
+    selectedMsgs.splice(messageCount, 1, messageList);
+    messageDispatch(setSelectedMessages(selectedMsgs));
+  };
+
+  const changeSelectedResponseMessageInfo = (
+    selectedMsgs: IChatMessage[][],
+    spanId: number,
+    message: IChatMessage,
+  ) => {
+    const messageCount = selectedMsgs.length - 1;
+    let messageList = selectedMsgs[messageCount];
+    messageList.map((x) => {
+      if (x.spanId === spanId) {
+        x.id = message.id;
+        x.duration = message.duration;
+        x.firstTokenLatency = message.firstTokenLatency;
+        x.inputPrice = message.inputPrice;
+        x.inputTokens = message.inputTokens;
+        x.outputPrice = message.outputPrice;
+        x.outputTokens = message.outputPrice;
       }
       return x;
     });
@@ -219,18 +281,17 @@ const Chat = memo(() => {
       let responseMessages = generateResponseMessages(selectedChat, messageId);
       selectedMessageList.push(responseMessages);
       messageDispatch(setSelectedMessages(selectedMessageList));
-      const { text: contentText, fileIds } = message.content;
+      const requestContent: RequestContent[] = responseContentToRequest(
+        message.content,
+      );
       let chatBody = {
         chatId,
         timezoneOffset: new Date().getTimezoneOffset(),
         parentAssistantMessageId: messageId || null,
-        userMessage: {
-          text: contentText,
-          fileIds: fileIds?.map((x) => x.id),
-        },
+        userMessage: requestContent,
       };
 
-      const response = await fetch(`${getApiUrl()}/api/chats/general-chat`, {
+      const response = await fetch(`${getApiUrl()}/api/chats/general`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -309,20 +370,18 @@ const Chat = memo(() => {
     let responseMessages = generateResponseMessages(selectedChat, messageId);
     selectedMessageList.push(responseMessages);
     messageDispatch(setSelectedMessages(selectedMessageList));
-    const { text: contentText, fileIds } = message.content;
 
+    const requestContent: RequestContent[] = responseContentToRequest(
+      message.content,
+    );
     let chatBody = {
       chatId,
-      spanIds: chatSpans.map((x) => x.spanId),
       parentAssistantMessageId: messageId || null,
-      userMessage: {
-        text: contentText,
-        fileIds: fileIds?.map((x) => x.id),
-      },
+      userMessage: requestContent,
       timezoneOffset: new Date().getTimezoneOffset(),
     };
 
-    const response = await fetch(`${getApiUrl()}/api/chats/general-chat`, {
+    const response = await fetch(`${getApiUrl()}/api/chats/general`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -381,12 +440,7 @@ const Chat = memo(() => {
       } else if (value.k === SseResponseKind.ReasoningSegment) {
         const { r: msg, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
-        changeSelectedResponseReason(
-          selectedMessageList,
-          msgId,
-          msg,
-          ChatSpanStatus.Thinking,
-        );
+        changeSelectedResponseReason(selectedMessageList, msgId, msg);
       } else if (value.k === SseResponseKind.Segment) {
         const { r: msg, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
@@ -416,6 +470,7 @@ const Chat = memo(() => {
           '',
           ChatSpanStatus.None,
         );
+        changeSelectedResponseMessageInfo(selectedMessageList, spanId, msg);
         messageList.push(msg);
       } else if (value.k === SseResponseKind.StartResponse) {
         const { r: time, i: spanId } = value;
@@ -425,6 +480,10 @@ const Chat = memo(() => {
           msgId,
           time,
         );
+      } else if (value.k === SseResponseKind.ImageGenerated) {
+        const { r, i: spanId } = value;
+        const msgId = `${ResponseMessageTempId}-${spanId}`;
+        changeSelectedResponseFile(selectedMessageList, msgId, r);
       } else if (value.k === SseResponseKind.UpdateTitle) {
         changeChatTitle(value.r);
       } else if (value.k === SseResponseKind.TitleSegment) {
@@ -466,7 +525,7 @@ const Chat = memo(() => {
 
       if (scrollTop + clientHeight < scrollHeight - bottomTolerance) {
         setAutoScrollEnabled(false);
-        setShowScrollDownButton(true);
+        setShowScrollDownButton(true && selectedMessages.length > 0);
       } else {
         setAutoScrollEnabled(true);
         setShowScrollDownButton(false);
@@ -499,6 +558,7 @@ const Chat = memo(() => {
   const handleChangeChatLeafMessageId = (messageId: string) => {
     if (selectedChat.status === ChatStatus.Chatting) return;
     const leafId = findLastLeafId(messages, messageId);
+    if (selectedChat.leafMessageId === leafId) return;
     const selectedMsgs = findSelectedMessageByLeafId(messages, leafId);
     messageDispatch(setSelectedMessages(selectedMsgs));
     chatDispatch(
@@ -554,13 +614,14 @@ const Chat = memo(() => {
 
   const handleUpdateResponseMessage = async (
     messageId: string,
-    content: Content,
+    content: ResponseContent,
     isCopy: boolean = false,
   ) => {
-    let data: PutResponseMessageEditAndSaveNewResult;
+    let data: IChatMessage;
     const params = {
       messageId,
-      content: { ...content, fileIds: content.fileIds?.map((x) => x.id) || [] },
+      contentId: content.i,
+      c: content.c as string,
     };
     if (isCopy) {
       data = await putResponseMessageEditAndSaveNew(params);
@@ -568,48 +629,54 @@ const Chat = memo(() => {
       await putResponseMessageEditInPlace(params);
     }
 
+    let msgs = structuredClone(messages);
+    if (!isCopy) {
+      msgs = messages.map((x) => {
+        if (x.id === messageId) {
+          const newContent = x.content.map((c) => {
+            if (c.i === content.i) return content;
+            return c;
+          });
+          return { ...x, content: newContent, edited: true };
+        }
+        return x;
+      });
+    }
+
     let copyMsg: IChatMessage;
-
-    let msgs = messages.map((x) => {
-      if (x.id === messageId && !isCopy) {
-        return { ...x, content, edited: true };
-      }
-      return x;
-    });
-
-    let msgGroupIndex = 0,
-      msgIndex = 0;
-    let selectedMsgs = selectedMessages.map((msg, groupIndex) => {
-      return msg.map((m, i) => {
+    let selectedMsgs = selectedMessages.map((msg) => {
+      return msg.map((m) => {
         if (m.id === messageId) {
-          msgGroupIndex = groupIndex;
-          msgIndex = i;
-          const msgSiblingIds = isCopy
-            ? [...m.siblingIds, data.id]
-            : m.siblingIds;
-          copyMsg = {
-            ...m,
-            id: data?.id,
-            content,
-            edited: true,
-            siblingIds: msgSiblingIds,
-          };
-
-          return {
-            ...m,
-            content: isCopy ? m.content : content,
-            edited: true,
-            siblingIds: msgSiblingIds,
-          };
+          if (isCopy) {
+            const msgSiblingIds = [...m.siblingIds, data.id];
+            copyMsg = {
+              ...data,
+              siblingIds: msgSiblingIds,
+            };
+            return copyMsg;
+          } else {
+            const newContent = m.content.map((c) => {
+              if (c.i === content.i) return content;
+              return c;
+            });
+            m.content = newContent;
+          }
         }
         return m;
       });
     });
-
     if (isCopy) {
+      msgs.map((m) => {
+        if (copyMsg.siblingIds.includes(m.id)) {
+          m.siblingIds = copyMsg.siblingIds;
+        }
+        return m;
+      });
+
       msgs.push(copyMsg!);
-      selectedMsgs[msgGroupIndex][msgIndex] = copyMsg!;
-      selectedMsgs.splice(msgGroupIndex + 1, selectedMsgs.length);
+      chatDispatch(
+        setSelectedChat({ ...selectedChat, leafMessageId: copyMsg!.id }),
+      );
     }
     messageDispatch(setMessages(msgs));
     messageDispatch(setSelectedMessages(selectedMsgs));
@@ -617,17 +684,22 @@ const Chat = memo(() => {
 
   const handleUpdateUserMessage = async (
     messageId: string,
-    content: Content,
+    content: ResponseContent,
   ) => {
     const params = {
       messageId,
-      content: { ...content, fileIds: content.fileIds?.map((x) => x.id) || [] },
+      contentId: content.i,
+      c: content.c as string,
     };
     await putResponseMessageEditInPlace(params);
 
     const msgs = messages.map((x) => {
       if (x.id === messageId && x.role === ChatRole.User) {
-        return { ...x, content };
+        const newContent = x.content.map((c) => {
+          if (c.i === content.i) return content;
+          return c;
+        });
+        return { ...x, content: newContent };
       }
       return x;
     });
@@ -635,9 +707,13 @@ const Chat = memo(() => {
     const selectedMsgs = selectedMessages.map((msg) => {
       return msg.map((m) => {
         if (m.id === messageId && m.role === ChatRole.User) {
+          const newContent = m.content.map((c) => {
+            if (c.i === content.i) return content;
+            return c;
+          });
           return {
             ...m,
-            content,
+            content: newContent,
           };
         }
         return m;
@@ -677,54 +753,61 @@ const Chat = memo(() => {
 
   return (
     <div className="relative flex-1">
-      <div
-        className="relative max-h-full overflow-x-hidden scroll-container w-full"
-        ref={chatContainerRef}
-        onScroll={handleScroll}
-      >
+      <div className="flex flex-col">
+        <div className="relative h-16">{selectedChat && <ChatHeader />}</div>
         <div
-          className={cn('sm:w-full', 'chat-container')}
-          style={{
-            width: `calc(100vw - ${
-              showChatBar && showPromptBar
-                ? 520
-                : showChatBar || showPromptBar
-                ? 260
-                : 0
-            }px)`,
-          }}
+          className="relative h-[calc(100vh-192px)] overflow-x-hidden scroll-container w-full"
+          ref={chatContainerRef}
+          onScroll={handleScroll}
         >
-          {selectedChat && <ChatHeader />}
+          <div
+            className="sm:w-full chat-container"
+            style={{
+              width: `calc(100vw - ${
+                showChatBar && showPromptBar
+                  ? 520
+                  : showChatBar || showPromptBar
+                  ? 260
+                  : 0
+              }px)`,
+            }}
+          >
+            {selectedChat && selectedMessages.length === 0 && (
+              <ChatPresetList />
+            )}
+          </div>
 
-          {selectedChat && selectedMessages.length === 0 && <ChatPresetList />}
+          <ChatMessageMemoized
+            selectedChat={selectedChat}
+            selectedMessages={selectedMessages}
+            models={models}
+            messagesEndRef={messagesEndRef}
+            onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
+            onEditAndSendMessage={handleEditAndSendMessage}
+            onRegenerate={handleRegenerate}
+            onReactionMessage={handleReactionMessage}
+            onEditResponseMessage={handleUpdateResponseMessage}
+            onEditUserMessage={handleUpdateUserMessage}
+            onDeleteMessage={handleDeleteMessage}
+          />
+
+          {!hasModel() && !selectedChat?.id && <NoModel />}
+          {hasModel() && !selectedChat?.id && <NoChat />}
         </div>
-
-        <ChatMessageMemoized
-          selectedChat={selectedChat}
-          selectedMessages={selectedMessages}
-          models={models}
-          messagesEndRef={messagesEndRef}
-          onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
-          onEditAndSendMessage={handleEditAndSendMessage}
-          onRegenerate={handleRegenerate}
-          onReactionMessage={handleReactionMessage}
-          onEditResponseMessage={handleUpdateResponseMessage}
-          onEditUserMessage={handleUpdateUserMessage}
-          onDeleteMessage={handleDeleteMessage}
-        />
+        <div className="relative h-32">
+          {hasModel() && selectedChat && (
+            <ChatInput
+              onSend={(message) => {
+                const lastMessage = getSelectedMessagesLastActiveMessage();
+                handleSend(message, lastMessage?.id);
+              }}
+              onScrollDownClick={handleScrollDown}
+              showScrollDownButton={showScrollDownButton}
+              onChangePrompt={handleChangePrompt}
+            />
+          )}
+        </div>
       </div>
-      {hasModel() && selectedChat && (
-        <ChatInput
-          onSend={(message) => {
-            const lastMessage = getSelectedMessagesLastActiveMessage();
-            handleSend(message, lastMessage?.id);
-          }}
-          onScrollDownClick={handleScrollDown}
-          showScrollDownButton={showScrollDownButton}
-          onChangePrompt={handleChangePrompt}
-        />
-      )}
-      {!hasModel() && !selectedChat?.id && <NoModel />}
     </div>
   );
 });

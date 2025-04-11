@@ -5,7 +5,6 @@ using Chats.BE.DB.Jsons;
 using Chats.BE.Services.Common;
 using Chats.BE.Services.Models.Dtos;
 using System.Diagnostics;
-using System.Text;
 
 namespace Chats.BE.Services.Models;
 
@@ -15,8 +14,7 @@ public class InChatContext(long firstTick)
     private short _segmentCount;
     public UserModelBalanceCost Cost { get; private set; } = UserModelBalanceCost.Empty;
     private InternalChatSegment _lastSegment = InternalChatSegment.Empty;
-    private readonly StringBuilder _fullContent = new();
-    private readonly StringBuilder _fullReasoningContent = new();
+    private readonly List<ChatSegmentItem> _items = [];
 
     public DBFinishReason FinishReason { get; set; } = DBFinishReason.Success;
 
@@ -48,14 +46,16 @@ public class InChatContext(long firstTick)
                 if (seg.IsFromUpstream)
                 {
                     _segmentCount++;
-                    if (!string.IsNullOrEmpty(seg.ReasoningSegment))
+                    string? think = seg.Items.GetThink();
+                    if (!string.IsNullOrEmpty(think))
                     {
                         if (_firstReasoningTick == _preprocessTick) // never reasoning
                         {
                             _firstReasoningTick = Stopwatch.GetTimestamp();
                         }
                     }
-                    if (!string.IsNullOrEmpty(seg.Segment))
+                    string? text = seg.Items.GetText();
+                    if (!string.IsNullOrEmpty(text))
                     {
                         if (_firstResponseTick == _preprocessTick) // never response
                         {
@@ -64,8 +64,7 @@ public class InChatContext(long firstTick)
                     }
                 }
                 _lastSegment = seg;
-                _fullContent.Append(seg.Segment);
-                _fullReasoningContent.Append(seg.ReasoningSegment);
+                _items.AddOne(seg.Items);
 
                 UserModelBalanceCost currentCost = calculator.GetNewBalance(seg.Usage.InputTokens, seg.Usage.OutputTokens, priceConfig);
                 if (!currentCost.IsSufficient)
@@ -85,13 +84,9 @@ public class InChatContext(long firstTick)
         }
     }
 
-    public InternalChatSegment FullResponse => _lastSegment with 
-    { 
-        Segment = _fullContent.ToString(), 
-        ReasoningSegment = _fullReasoningContent.ToString() 
-    };
+    public InternalChatSegment FullResponse => _lastSegment with { Items = _items, };
 
-    public int ReasoningDurationMs => (int)Stopwatch.GetElapsedTime(_firstReasoningTick, _firstResponseTick).TotalMilliseconds;
+    public int ReasoningDurationMs => _items.OfType<ThinkChatSegment>().Any() ? (int)Stopwatch.GetElapsedTime(_firstReasoningTick, _firstResponseTick).TotalMilliseconds : 0;
 
     public UserModelUsage ToUserModelUsage(int userId, UserModel userModel, ClientInfo clientInfo, bool isApi)
     {

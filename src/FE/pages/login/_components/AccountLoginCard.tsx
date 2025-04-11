@@ -115,7 +115,7 @@ const AccountLoginCard = (props: {
     <Card>
       <CardContent className="space-y-2">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className='mt-4'>
             {formFields.map((item) => (
               <FormField
                 key={item.name}

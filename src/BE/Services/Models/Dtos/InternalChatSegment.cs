@@ -7,9 +7,7 @@ public record InternalChatSegment
 {
     public required ChatFinishReason? FinishReason { get; init; }
 
-    public required string? Segment { get; init; }
-
-    public required string? ReasoningSegment { get; init; }
+    public required ICollection<ChatSegmentItem> Items { get; init; }
 
     public required ChatTokenUsage Usage { get; init; }
 
@@ -21,8 +19,7 @@ public record InternalChatSegment
     {
         Usage = ChatTokenUsage.Zero,
         FinishReason = null,
-        Segment = null,
-        ReasoningSegment = null,
+        Items = [],
         IsUsageReliable = false, 
         IsFromUpstream = false,
     };
@@ -87,7 +84,7 @@ public record InternalChatSegment
             [
                 new DeltaChoice
                 {
-                    Delta = new Delta { Content = Segment, ReasoningContent = ReasoningSegment },
+                    Delta = Items.ToOpenAIDelta(),
                     FinishReason = GetFinishReasonText(),
                     Index = 0,
                     Logprobs = null,
@@ -110,13 +107,7 @@ public record InternalChatSegment
                     Index = 0,
                     FinishReason = GetFinishReasonText(),
                     Logprobs = null,
-                    Message = new ResponseMessage
-                    {
-                        Role = "system",
-                        Content = Segment,
-                        ReasoningContent = ReasoningSegment,
-                        Refusal = null,
-                    }
+                    Message = Items.OpenAIFullResponse("assistant", null),
                 }
             ],
             Object = "chat.completion",

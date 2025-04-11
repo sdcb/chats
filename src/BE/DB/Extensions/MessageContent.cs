@@ -1,5 +1,7 @@
-﻿using Chats.BE.DB.Enums;
+﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
+using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
 using OpenAI.Chat;
 
@@ -29,19 +31,19 @@ public partial class MessageContent
         };
     }
 
-    public static MessageContent FromContent(string text)
+    public static MessageContent FromText(string text)
     {
         return new MessageContent { MessageContentText = new() { Content = text }, ContentTypeId = (byte)DBMessageContentType.Text };
     }
 
-    public static MessageContent FromReasoningContent(string text)
+    public static MessageContent FromThink(string text)
     {
         return new MessageContent { MessageContentText = new() { Content = text }, ContentTypeId = (byte)DBMessageContentType.Reasoning };
     }
 
-    public static MessageContent FromFile(int fileId, File file)
+    public static MessageContent FromFile(File file)
     {
-        return new MessageContent { MessageContentFile = new() { FileId = fileId, File = file }, ContentTypeId = (byte)DBMessageContentType.FileId };
+        return new MessageContent { MessageContentFile = new() { FileId = file.Id, File = file }, ContentTypeId = (byte)DBMessageContentType.FileId };
     }
 
     public static MessageContent FromError(string error)
@@ -49,19 +51,33 @@ public partial class MessageContent
         return new MessageContent { MessageContentText = new() { Content = error }, ContentTypeId = (byte)DBMessageContentType.Error };
     }
 
-    public static IEnumerable<MessageContent> FromFullResponse(InternalChatSegment lastSegment, string? errorText)
+    public static async Task<MessageContent[]> FromRequest(ContentRequestItem[] items, FileUrlProvider fup, CancellationToken cancellationToken)
+    {
+        return await items
+            .ToAsyncEnumerable()
+            .SelectAwait(async item => await item.ToMessageContent(fup, cancellationToken))
+            .ToArrayAsync(cancellationToken);
+    }
+
+    public static IEnumerable<MessageContent> FromFullResponse(InternalChatSegment lastSegment, string? errorText, Dictionary<ImageChatSegment, TaskCompletionSource<File>> imageMcCache)
     {
         if (errorText is not null)
         {
             yield return FromError(errorText);
         }
-        if (!string.IsNullOrEmpty(lastSegment.ReasoningSegment))
+        // lastSegment.Items is merged now
+        foreach (MessageContent item in lastSegment.Items.Select(x =>
         {
-            yield return FromReasoningContent(lastSegment.ReasoningSegment);
-        }
-        if (lastSegment.Segment is not null)
+            return x switch
+            {
+                TextChatSegment text => FromText(text.Text),
+                ThinkChatSegment think => FromThink(think.Think),
+                ImageChatSegment image => FromFile(imageMcCache[image].Task.GetAwaiter().GetResult()),
+                _ => throw new NotSupportedException(),
+            };
+        }))
         {
-            yield return FromContent(lastSegment.Segment);
+            yield return item;
         }
     }
 }
