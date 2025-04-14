@@ -160,7 +160,7 @@
   "Contain at most {{length}} character(s)": "最多包含{{length}}个字符",
   "It must contain at least 6 characters, and 3 of the 4 must be upper case, lower case, special characters, and numbers.": "必须至少包含6个字符，大写、小写、特殊字符、数字四者必须有3种。",
   "Modified successfully": "修改成功",
-  "General": "通用设置",
+  "General": "通用",
   "Account balance": "余额",
   "Balance": "余额",
   "Date": "日期",
