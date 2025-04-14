@@ -42,6 +42,7 @@ const PromptsTab = () => {
   const [filteredPrompts, setFilteredPrompts] = useState<PromptSlim[]>([]);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [isCreateMode, setIsCreateMode] = useState(false);
 
   useEffect(() => {
     fetchPrompts();
@@ -83,13 +84,22 @@ const PromptsTab = () => {
       isSystem: false,
       temperature: null,
     };
+    
+    setSelectedPrompt(newPrompt);
+    setIsCreateMode(true);
+    setShowModal(true);
+  };
 
-    postUserPrompts(newPrompt).then((data) => {
+  const handleSaveNewPrompt = async (prompt: Prompt) => {
+    try {
+      const data = await postUserPrompts(prompt);
       const newPrompts = [...prompts, data];
       setPrompts(newPrompts);
       toast.success(t('Created successful'));
-      fetchPromptDetails(data.id);
-    });
+    } catch (error) {
+      console.error('Error creating prompt:', error);
+      toast.error(t('Failed to create prompt'));
+    }
   };
 
   const handleDeletePrompt = (id: number) => {
@@ -112,12 +122,19 @@ const PromptsTab = () => {
   const fetchPromptDetails = (id: number) => {
     getUserPromptDetail(id).then((data) => {
       setSelectedPrompt(data);
+      setIsCreateMode(false);
       setShowModal(true);
     });
   };
 
   const handlePromptClick = (prompt: PromptSlim) => {
     fetchPromptDetails(prompt.id);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedPrompt(null);
+    setIsCreateMode(false);
   };
 
   const getPromptColor = (prompt: PromptSlim) => {
@@ -234,7 +251,7 @@ const PromptsTab = () => {
                     className="cursor-pointer"
                     onClick={() => handlePromptClick(prompt)}
                   >
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium [&:has([role=checkbox])]:pr-0 py-2">
                       <div className="flex items-center gap-2">
                         <IconBulbFilled
                           size={18}
@@ -243,7 +260,7 @@ const PromptsTab = () => {
                         <span>{prompt.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className='[&:has([role=checkbox])]:pr-0 py-2'>
                       {prompt.isDefault && (
                         <div className="flex items-center gap-1 text-green-600">
                           <IconCheck size={18} />
@@ -251,7 +268,7 @@ const PromptsTab = () => {
                         </div>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className='[&:has([role=checkbox])]:pr-0 py-2'>
                       {prompt.isSystem && (
                         <div className="flex items-center gap-1 text-green-600">
                           <IconCheck size={18} />
@@ -260,7 +277,7 @@ const PromptsTab = () => {
                       )}
                     </TableCell>
                     <TableCell
-                      className="text-right"
+                      className="text-right [&:has([role=checkbox])]:pr-0 py-2"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <DeletePopover
@@ -279,7 +296,9 @@ const PromptsTab = () => {
         <PromptModal
           prompt={selectedPrompt}
           onUpdatePrompt={handleUpdatePrompt}
-          onClose={() => setShowModal(false)}
+          onCreatePrompt={handleSaveNewPrompt}
+          isCreate={isCreateMode}
+          onClose={handleCloseModal}
         />
       )}
     </div>

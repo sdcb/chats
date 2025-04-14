@@ -3,22 +3,18 @@ import { useForm } from 'react-hook-form';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { PromptVariables } from '@/utils/promptVariable';
-
 import { UserRole } from '@/types/adminApis';
 import { DEFAULT_TEMPERATURE } from '@/types/chat';
 import { Prompt } from '@/types/prompt';
 
-import { IconInfo } from '@/components/Icons';
 import TemperatureSlider from '@/components/TemperatureSlider/TemperatureSlider';
-import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog';
 import { Form, FormField } from '@/components/ui/form';
 import FormInput from '@/components/ui/form/input';
@@ -32,12 +28,20 @@ import { z } from 'zod';
 interface IProps {
   prompt: Prompt;
   onUpdatePrompt: (prompt: Prompt) => void;
+  onCreatePrompt?: (prompt: Prompt) => void;
+  isCreate?: boolean;
   onClose: () => void;
 }
 
 const PromptModal = (props: IProps) => {
   const { t } = useTranslation();
-  const { prompt, onUpdatePrompt, onClose } = props;
+  const {
+    prompt,
+    onUpdatePrompt,
+    onCreatePrompt,
+    isCreate = false,
+    onClose,
+  } = props;
   const user = useUserInfo();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -75,7 +79,13 @@ const PromptModal = (props: IProps) => {
           ? values.temperature || DEFAULT_TEMPERATURE
           : null,
       };
-      await onUpdatePrompt(updatedPrompt);
+
+      if (isCreate && onCreatePrompt) {
+        await onCreatePrompt(updatedPrompt);
+      } else {
+        await onUpdatePrompt(updatedPrompt);
+      }
+
       onClose();
     } finally {
       setIsSubmitting(false);
@@ -86,7 +96,9 @@ const PromptModal = (props: IProps) => {
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="p-4 pb-0">
-          <DialogTitle>{t('Edit Prompt')}</DialogTitle>
+          <DialogTitle>
+            {isCreate ? t('Create Prompt') : t('Edit Prompt')}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-4 pt-2">
@@ -103,11 +115,7 @@ const PromptModal = (props: IProps) => {
                 control={form.control}
                 name="content"
                 render={({ field }) => (
-                  <FormTextarea
-                    label={t('Prompt')}
-                    field={field}
-                    rows={5}
-                  />
+                  <FormTextarea label={t('Prompt')} field={field} rows={5} />
                 )}
               />
 
@@ -168,4 +176,4 @@ const PromptModal = (props: IProps) => {
     </Dialog>
   );
 };
-export default PromptModal; 
+export default PromptModal;
