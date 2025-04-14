@@ -57,7 +57,6 @@ import settingReducer, {
 } from '../../_reducers/setting.reducer';
 import Chat from '../Chat/Chat';
 import Chatbar from '../Chatbar/Chatbar';
-import SettingsSheet from '../Settings/SettingsSheet';
 
 import {
   getChatsByPaging,
