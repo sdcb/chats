@@ -93,7 +93,6 @@ const HomeContent = () => {
 
   const { chats, chatPaging, stopIds } = chatState;
   const { models } = modelState;
-  const { showSetting } = settingState;
   const [isPageLoading, setIsPageLoading] = useState(true);
 
   const contextValue = useCreateReducer<HomeInitialState>({
@@ -359,7 +358,6 @@ const HomeContent = () => {
           <div className="flex h-full w-full bg-background">
             <Chatbar />
             <Chat />
-            <SettingsSheet isOpen={showSetting} />
           </div>
         </div>
       )}

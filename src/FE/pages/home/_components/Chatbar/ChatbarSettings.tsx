@@ -9,9 +9,7 @@ import { clearUserInfo, clearUserSession, getLoginUrl } from '@/utils/user';
 import { UserRole } from '@/types/adminApis';
 
 import {
-  IconBulbFilled,
   IconLogout,
-  IconPasswordUser,
   IconSettings,
   IconSettingsCog,
   IconUser,
@@ -23,9 +21,6 @@ import {
 } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 
-import {
-  setShowSetting,
-} from '../../_actions/setting.actions';
 import HomeContext from '../../_contexts/home.context';
 import SidebarButton from '../Sidebar/SidebarButton';
 
@@ -82,7 +77,7 @@ const ChatBarSettings = () => {
               text={t('Settings')}
               icon={<IconSettings />}
               onClick={() => {
-                settingDispatch(setShowSetting(true));
+                router.push('/settings');
               }}
             />
             <Separator className="my-2" />
