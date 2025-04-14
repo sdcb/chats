@@ -26,7 +26,7 @@ const SettingsPage = () => {
   const router = useRouter();
   const { t: tabParam } = router.query;
 
-  const [activeTab, setActiveTab] = useState('prompts');
+  const [activeTab, setActiveTab] = useState('general');
 
   useEffect(() => {
     if (tabParam && typeof tabParam === 'string') {
@@ -44,7 +44,7 @@ const SettingsPage = () => {
       <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
           <IconArrowDown className="rotate-90" size={20} />
-        </Button>{' '}
+        </Button>
         {t('Settings')}
       </h1>
 
@@ -64,14 +64,14 @@ const SettingsPage = () => {
             value="prompts"
             className="flex-1 justify-center items-center sm:flex-none gap-1"
           >
-            <IconBulb /> {t('Prompt Management')}
+            <IconBulb /> {t('Prompts')}
           </TabsTrigger>
           <TabsTrigger
             value="api-keys"
             className="flex-1 items-center sm:flex-none gap-1"
           >
             <IconKey size={18} />
-            {t('API Key Management')}
+            {t('API Key')}
           </TabsTrigger>
           <TabsTrigger
             value="usage"
@@ -85,7 +85,7 @@ const SettingsPage = () => {
             className="flex-1 items-center sm:flex-none gap-1"
           >
             <IconUser />
-            {t('Account Management')}
+            {t('Account')}
           </TabsTrigger>
         </TabsList>
         <div className="flex-1 mt-4 overflow-auto">

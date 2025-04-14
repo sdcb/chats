@@ -167,8 +167,8 @@
   "Amount": "消费",
   "Recent 7 day consumption records": "最近7天消费记录",
   "Yuan": "元",
-  "Prompt Management": "提示词管理",
-  "API Key Management": "API Key管理",
+  "Prompts": "提示词",
+  "API Key": "API密钥",
   "Usage Records": "消费记录",
   "Comment": "备注",
   "Expires": "过期时间",
@@ -220,7 +220,7 @@
   "Request Logs Details": "请求日志详情",
   "Welcome back.": "欢迎回来。",
   "User Name": "用户昵称",
-  "Account Management": "账号管理",
+  "Account": "账号",
   "Model Count": "模型数量",
   "Password": "用户密码",
   "Role": "角色",
@@ -404,5 +404,7 @@
   "Add a preset model group": "添加一个预设模型组",
   "New preset model group": "新预设模型组",
   "A new version is now available. Update for the latest features and improvements.": "新版本现已发布。 更新以获得最新功能和改进。",
-  "Go to upgrade": "去升级"
+  "Go to upgrade": "去升级",
+  "Select Language": "选择语言",
+  "Select Theme": "选择主题"
 }
