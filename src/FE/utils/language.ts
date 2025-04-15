@@ -13,6 +13,8 @@ export const getLanguage = () => {
     if (userLanguage && SUPPORTED_LANGUAGES.includes(userLanguage)) {
       return userLanguage;
     }
+    
+    return DEFAULT_LANGUAGE;
   }
   
   if (typeof navigator !== 'undefined') {

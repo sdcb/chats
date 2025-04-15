@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -14,7 +15,7 @@ import DeletePopover from '@/pages/home/_components/Popover/DeletePopover';
 
 import CopyButton from '@/components/Button/CopyButton';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -35,6 +36,7 @@ import {
 let timer: NodeJS.Timeout;
 const ApiKeysTab = () => {
   const { t } = useTranslation();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [apiKeys, setApiKeys] = useState<GetUserApiKeyResult[]>([]);
   type GetUserApiKeyType = keyof GetUserApiKeyResult;
@@ -90,6 +92,10 @@ const ApiKeysTab = () => {
     });
   };
 
+  const viewApiKeyUsage = (id: number, key: string) => {
+    router.push(`/usage?apiKeyId=${key}&page=1`);
+  };
+
   const apiUrl = (getApiUrl() || location.origin) + '/v1';
   const docUrl = 'https://platform.openai.com/docs/guides/chat-completions';
   return (
@@ -137,7 +143,12 @@ const ApiKeysTab = () => {
                 <div className="flex items-center justify-between mb-2 text-xs">
                   <div className="font-medium">{t('Key')}</div>
                   <div className="flex items-center">
-                    <span className="max-w-[180px] truncate">{x.key}</span>
+                    <span
+                      className="max-w-[180px] truncate cursor-pointer text-blue-600 hover:underline"
+                      onClick={() => viewApiKeyUsage(x.id, x.key)}
+                    >
+                      {x.key}
+                    </span>
                     <CopyButton value={x.key} />
                   </div>
                 </div>
@@ -203,7 +214,10 @@ const ApiKeysTab = () => {
                   <TableRow key={x.id} className="cursor-pointer">
                     <TableCell className="py-2">
                       <div className="flex items-center">
-                        <div className="overflow-hidden text-ellipsis whitespace-nowrap">
+                        <div
+                          className="overflow-hidden text-ellipsis whitespace-nowrap text-blue-600 hover:underline cursor-pointer"
+                          onClick={() => viewApiKeyUsage(x.id, x.key)}
+                        >
                           {x.key}
                         </div>
                         <CopyButton value={x.key} />
