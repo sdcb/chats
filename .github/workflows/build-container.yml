@@ -283,7 +283,7 @@ jobs:
             -H "Authorization: Basic $(echo -n "${{ secrets.CHATS_RELEASE_WEBHOOK_CREDENTIAL }}" | openssl base64)"
 
   create-release:
-    if: needs.build-fe.outputs.is_release == 'true'
+    if: github.ref_name == 'main'
     needs: [build-binaries, build-primary-container, build-fe]
     runs-on: ubuntu-latest
     outputs:
@@ -351,10 +351,10 @@ jobs:
           https://github.com/sdcb/chats/compare/$PREVIOUS_REV...$CURRENT_REV
 
           Commits between \`$PREVIOUS_REV\` and \`$CURRENT_REV\`:
-          END
           git log ${PREVIOUS_REV}..${CURRENT_REV} --pretty=format:'* [%s](https://github.com/${{ github.repository }}/commit/%H)' >> RELEASE.md
 
           </details>
+          END
 
       - name: Publish Release
         uses: ncipollo/release-action@v1
