@@ -78,8 +78,6 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
 
         IQueryable<UsageDto> rows = usagesQuery
             .OrderByDescending(u => u.Id)
-            .Skip(query.Skip)
-            .Take(query.PageSize)
             .Select(u => new UsageDto
             {
                 UserName = u.UserModel.User.UserName,

@@ -19,7 +19,7 @@ public static class PagedResult
         return new PagedResult<TFinal>
         {
             Rows = await rows
-                .Skip((pagingRequest.Page - 1) * pagingRequest.PageSize)
+                .Skip(pagingRequest.Skip)
                 .Take(pagingRequest.PageSize)
                 .ToArrayAsync(cancellationToken),
             Count = await rows.CountAsync(cancellationToken)
@@ -29,7 +29,7 @@ public static class PagedResult
     public static async Task<PagedResult<TFinal>> FromTempQuery<TTemp, TFinal>(IQueryable<TTemp> rows, PagingRequest pagingRequest, Converter<TTemp, TFinal> tempConverter, CancellationToken cancellationToken) where TFinal : class where TTemp : class
     {
         TTemp[] tempData = await rows
-            .Skip((pagingRequest.Page - 1) * pagingRequest.PageSize)
+            .Skip(pagingRequest.Skip)
             .Take(pagingRequest.PageSize)
             .ToArrayAsync(cancellationToken);
         TFinal[] finalData = Array.ConvertAll(tempData, tempConverter);
