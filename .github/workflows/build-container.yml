@@ -172,7 +172,7 @@ jobs:
           docker push ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ needs.build-fe.outputs.full_ver }}-${{ matrix.tag }}
 
   docker-manifest:
-    needs: [build-primary-container, build-containers]
+    needs: [build-primary-container, build-containers, build-fe]
     runs-on: ubuntu-latest
     steps:
       - name: Login container
@@ -285,7 +285,7 @@ jobs:
 
   create-release:
     if: needs.build-fe.outputs.is_release == 'true'
-    needs: [build-binaries, build-primary-container]
+    needs: [build-binaries, build-primary-container, build-fe]
     runs-on: ubuntu-latest
     outputs:
       release_id: ${{ steps.create_release.outputs.release_id }}
@@ -378,7 +378,7 @@ jobs:
       
   deploy:
     runs-on: ubuntu-latest
-    needs: build-primary-container
+    needs: [build-primary-container, build-fe]
     steps:
       - uses: webfactory/ssh-agent@v0.9.0
         with:
