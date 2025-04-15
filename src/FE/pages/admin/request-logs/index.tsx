@@ -17,7 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import PaginationContainer from '../_components/Pagiation/Pagiation';
+import PaginationContainer from '../../../components/Pagiation/Pagiation';
 import RequestLogDetailsModal from '../_components/RequestLogs/RequestLogDetailsModal';
 
 import { getRequestLogs } from '@/apis/adminApis';

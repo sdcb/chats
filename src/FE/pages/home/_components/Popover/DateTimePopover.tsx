@@ -1,6 +1,8 @@
-import { IconSquareRoundedX } from '@/components/Icons';
+import { Calendar } from 'lucide-react';
+
+import { IconX } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import {
   Popover,
   PopoverContent,
@@ -8,50 +10,69 @@ import {
 } from '@/components/ui/popover';
 
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
-interface Props {
-  value?: string;
+interface DateTimePopoverProps {
+  value: string;
+  className?: string;
+  placeholder?: string;
   onSelect: (date: Date) => void;
-  onClear?: () => void;
+  onReset?: () => void;
 }
-export default function DateTimePopover(props: Props) {
-  const { value, onSelect, onClear } = props;
 
+const DateTimePopover = ({
+  value,
+  className,
+  placeholder,
+  onSelect,
+  onReset,
+}: DateTimePopoverProps) => {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          variant={'outline'}
-          className={cn('pl-3 text-left font-normal w-[128px] border-none')}
+        <div
+          className={cn(
+            'relative flex h-10 w-[240px] items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-0 focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50',
+            className,
+          )}
         >
-          {value ? (
-            value === '-' ? null : (
-              new Date(value).toLocaleDateString()
-            )
-          ) : (
-            <span></span>
-          )}
-          {onClear && (
-            <IconSquareRoundedX
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 opacity-50" />
+            <span className={cn(!value && 'text-neutral-400')}>
+              {value
+                ? format(new Date(value), 'yyyy/M/d')
+                : placeholder || 'Pick a date'}
+            </span>
+          </div>
+          {onReset && value && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-4 w-4 opacity-50 hover:opacity-100"
               onClick={(e) => {
-                onClear();
                 e.preventDefault();
+                onReset();
               }}
-              className="z-10 ml-auto h-5 w-5 opacity-50"
-            />
+            >
+              <IconX size={16} />
+            </Button>
           )}
-        </Button>
+        </div>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
+        <CalendarComponent
           mode="single"
           selected={value ? new Date(value) : undefined}
-          onSelect={(d) => {
-            onSelect && onSelect(d!);
+          onSelect={(date) => {
+            if (date) {
+              onSelect(date);
+            }
           }}
           initialFocus
         />
       </PopoverContent>
     </Popover>
   );
-}
+};
+
+export default DateTimePopover;

@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 
+import { useRouter } from 'next/router';
+
 import useTranslation from '@/hooks/useTranslation';
 
+import { UsageSource } from '@/types/chat';
 import { GetBalance7DaysUsageResult } from '@/types/clientApis';
 
+import { Card } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -12,13 +16,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Card } from '@/components/ui/card';
 
 import { getBalance7DaysUsage } from '@/apis/clientApis';
 
 const UsageRecordsTab = () => {
   const { t } = useTranslation();
-  const [balanceLogs, setBalanceLogs] = useState<GetBalance7DaysUsageResult[]>([]);
+  const router = useRouter();
+  const [balanceLogs, setBalanceLogs] = useState<GetBalance7DaysUsageResult[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,9 +35,17 @@ const UsageRecordsTab = () => {
     });
   }, []);
 
+  const viewWebUsage = (date: string) => {
+    router.push(
+      `/usage?start=${date}&end=${date}&page=1&tab=usage`,
+    );
+  };
+
   return (
     <div className="flex flex-col">
-      <h2 className="text-base font-semibold mb-2">{t('Recent 7 day consumption records')}</h2>
+      <h2 className="text-base font-semibold mb-2">
+        {t('Recent 7 day consumption records')}
+      </h2>
 
       <div className="block sm:hidden">
         {loading ? (
@@ -71,13 +85,16 @@ const UsageRecordsTab = () => {
             </TableHeader>
             <TableBody isLoading={loading}>
               {balanceLogs.map((x) => (
-                <TableRow key={x.date} className='cursor-pointer'>
+                <TableRow key={x.date} className="cursor-pointer">
                   <TableCell>
-                    {new Date(x.date).toLocaleDateString()}
+                    <span
+                      className="truncate cursor-pointer text-blue-600 hover:underline"
+                      onClick={() => viewWebUsage(x.date)}
+                    >
+                      {new Date(x.date).toLocaleDateString()}
+                    </span>
                   </TableCell>
-                  <TableCell>
-                    ￥{(+(x.costAmount || 0)).toFixed(2)}
-                  </TableCell>
+                  <TableCell>￥{(+(x.costAmount || 0)).toFixed(2)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -88,4 +105,4 @@ const UsageRecordsTab = () => {
   );
 };
 
-export default UsageRecordsTab; 
+export default UsageRecordsTab;

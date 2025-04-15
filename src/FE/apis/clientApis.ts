@@ -1,7 +1,12 @@
 import { useFetch } from '@/hooks/useFetch';
 
 import { AdminModelDto, PostPromptParams } from '@/types/adminApis';
-import { ImageDef, MessageContentType, RequestContent, ResponseContent } from '@/types/chat';
+import {
+  ImageDef,
+  MessageContentType,
+  RequestContent,
+  ResponseContent,
+} from '@/types/chat';
 import { IChatMessage } from '@/types/chatMessage';
 import {
   ChatResult,
@@ -57,7 +62,8 @@ export const getChatsByPaging = (
   const { groupId, query, page, pageSize } = params;
   const fetchService = useFetch();
   return fetchService.get(
-    `/api/user/chats?groupId=${groupId || ''
+    `/api/user/chats?groupId=${
+      groupId || ''
     }&page=${page}&pageSize=${pageSize}&query=${query || ''}`,
   );
 };
@@ -293,7 +299,8 @@ export const getUserChatGroupWithMessages = (
   const { query, page, pageSize } = params;
   const fetchServer = useFetch();
   return fetchServer.get(
-    `/api/chat/group/with-chats?page=${page}&pageSize=${pageSize}&query=${query || ''
+    `/api/chat/group/with-chats?page=${page}&pageSize=${pageSize}&query=${
+      query || ''
     }`,
   );
 };
@@ -468,14 +475,23 @@ export const postApplyChatPreset = (chatId: string, presetId: string) => {
   return fetchServer.post(`/api/chat/${chatId}/span/apply-preset/${presetId}`);
 };
 
-export const responseContentToRequest = (responseContent: ResponseContent[]) => {
+export const responseContentToRequest = (
+  responseContent: ResponseContent[],
+) => {
   const requestContent: RequestContent[] = responseContent
-    .filter((x => x.$type === MessageContentType.text || x.$type === MessageContentType.fileId))
+    .filter(
+      (x) =>
+        x.$type === MessageContentType.text ||
+        x.$type === MessageContentType.fileId,
+    )
     .map((x) => {
       if (x.$type === MessageContentType.text) {
         return { $type: MessageContentType.text, c: x.c };
       } else if (x.$type === MessageContentType.fileId) {
-        return { $type: MessageContentType.fileId, c: typeof x.c === 'string' ? x.c : (x.c as ImageDef).id };
+        return {
+          $type: MessageContentType.fileId,
+          c: typeof x.c === 'string' ? x.c : (x.c as ImageDef).id,
+        };
       } else {
         throw new Error('Invalid message content type');
       }
@@ -485,29 +501,7 @@ export const responseContentToRequest = (responseContent: ResponseContent[]) => 
 
 export const getUsage = (params: GetUsageParams) => {
   const fetchServer = useFetch();
-  let url = `/api/usage?page=${params.Page}&pageSize=${params.PageSize}`;
-  
-  if (params.ApiKeyId) {
-    url += `&apiKeyId=${params.ApiKeyId}`;
-  }
-  
-  if (params.User) {
-    url += `&user=${params.User}`;
-  }
-  
-  if (params.Provider) {
-    url += `&provider=${params.Provider}`;
-  }
-  
-  if (params.Start) {
-    url += `&start=${params.Start}`;
-  }
-  
-  if (params.End) {
-    url += `&end=${params.End}`;
-  }
-  
-  url += `&timezoneOffset=${new Date().getTimezoneOffset()}`;
-  
-  return fetchServer.get<PageResult<GetUsageResult[]>>(url);
+  return fetchServer.get<PageResult<GetUsageResult[]>>('/api/usage', {
+    params: params,
+  });
 };

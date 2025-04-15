@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import PaginationContainer from '../_components/Pagiation/Pagiation';
+import PaginationContainer from '../../../components/Pagiation/Pagiation';
 import EditUserBalanceModal from '../_components/Users/EditUserBalanceModel';
 import EditUserModelModal from '../_components/Users/EditUserModelModal';
 import UserModal from '../_components/Users/UserModal';

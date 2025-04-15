@@ -117,7 +117,22 @@ export const useFetch = () => {
 
   return {
     get: async <T>(url: string, request?: RequestModel): Promise<T> => {
-      return handleFetch(url, { ...request, method: 'get' });
+      const searchParams = new URLSearchParams();
+      let paramsStr = '';
+      if (request?.params) {
+        Object.entries(request.params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, String(value));
+          }
+        });
+        paramsStr = `?${searchParams.toString()}`;
+        delete request?.params;
+      }
+
+      return handleFetch(`${url}${paramsStr}`, {
+        ...request,
+        method: 'get',
+      });
     },
     post: async <T>(
       url: string,

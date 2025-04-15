@@ -33,6 +33,8 @@ import {
   putUserApiKey,
 } from '@/apis/clientApis';
 
+import { UsageSource } from '@/types/chat';
+
 let timer: NodeJS.Timeout;
 const ApiKeysTab = () => {
   const { t } = useTranslation();
@@ -92,8 +94,8 @@ const ApiKeysTab = () => {
     });
   };
 
-  const viewApiKeyUsage = (id: number, key: string) => {
-    router.push(`/usage?apiKeyId=${key}&page=1`);
+  const viewApiKeyUsage = (id: number) => {
+    router.push(`/usage?kid=${id}&source=${UsageSource.API}&page=1&tab=api-keys`);
   };
 
   const apiUrl = (getApiUrl() || location.origin) + '/v1';
@@ -145,7 +147,7 @@ const ApiKeysTab = () => {
                   <div className="flex items-center">
                     <span
                       className="max-w-[180px] truncate cursor-pointer text-blue-600 hover:underline"
-                      onClick={() => viewApiKeyUsage(x.id, x.key)}
+                      onClick={() => viewApiKeyUsage(x.id)}
                     >
                       {x.key}
                     </span>
@@ -201,11 +203,11 @@ const ApiKeysTab = () => {
           <Table>
             <TableHeader>
               <TableRow className="pointer-events-none">
-                <TableHead className="">{t('Key')}</TableHead>
-                <TableHead className="">{t('Comment')}</TableHead>
-                <TableHead className="text-center">{t('Expires')}</TableHead>
-                <TableHead className="">{t('LastUsedAt')}</TableHead>
-                <TableHead className="">{t('Actions')}</TableHead>
+                <TableHead>{t('Key')}</TableHead>
+                <TableHead>{t('Comment')}</TableHead>
+                <TableHead>{t('Expires')}</TableHead>
+                <TableHead>{t('LastUsedAt')}</TableHead>
+                <TableHead>{t('Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody isEmpty={apiKeys.length === 0} isLoading={loading}>
@@ -216,7 +218,7 @@ const ApiKeysTab = () => {
                       <div className="flex items-center">
                         <div
                           className="overflow-hidden text-ellipsis whitespace-nowrap text-blue-600 hover:underline cursor-pointer"
-                          onClick={() => viewApiKeyUsage(x.id, x.key)}
+                          onClick={() => viewApiKeyUsage(x.id)}
                         >
                           {x.key}
                         </div>
@@ -232,8 +234,10 @@ const ApiKeysTab = () => {
                         }}
                       />
                     </TableCell>
-                    <TableCell className="py-2 min-w-[128px] max-w-[200px]">
+                    <TableCell className="py-2">
                       <DateTimePopover
+                        className="w-[128px]"
+                        placeholder={t('Pick a date')}
                         value={x.expires}
                         onSelect={(date: Date) => {
                           changeApiKeyBy(index, 'expires', date as any);
