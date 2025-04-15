@@ -18,7 +18,7 @@ jobs:
   build-fe:
     runs-on: ubuntu-latest
     outputs:
-      is_release: ${{ github.ref_name == 'main' && 'true' || 'false' }}
+      is_release: ${{ github.ref_name == 'main' && 'true' || 'true' }}
       full_ver: ${{ steps.get_version.outputs.full_ver }}
       patch_full_ver: ${{ steps.get_version.outputs.patch_full_ver }}
       minor_full_ver: ${{ steps.get_version.outputs.minor_full_ver }}
