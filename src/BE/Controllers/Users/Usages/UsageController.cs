@@ -6,6 +6,8 @@ using Chats.BE.Services.Common;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using MiniExcelLibs;
 
 namespace Chats.BE.Controllers.Users.Usages;
 
@@ -20,6 +22,29 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
             return BadRequest(ModelState);
         }
 
+        IQueryable<UsageDto> rows = ProcessQuery(query);
+        PagedResult<UsageDto> result = await PagedResult.FromQuery(rows, query, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("excel")]
+    public ActionResult<PagedResult<UsageDto>> ExportExcel(UsageQuery query)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        IQueryable<UsageDto> rows = ProcessQuery(query);
+
+        using MemoryStream stream = new();
+        MiniExcel.SaveAs(stream, rows);
+        stream.Position = 0;
+        return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", query.ToExcelFileName());
+    }
+
+    private IQueryable<UsageDto> ProcessQuery(UsageQuery query)
+    {
         IQueryable<UserModelUsage> usagesQuery = db.UserModelUsages;
 
         if (currentUser.IsAdmin && !string.IsNullOrEmpty(query.User))
@@ -77,8 +102,6 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
                 OutputCost = u.OutputCost,
                 UsagedCreatedAt = u.CreatedAt
             });
-
-        PagedResult<UsageDto> result = await PagedResult.FromQuery(rows, query, cancellationToken);
-        return Ok(result);
+        return rows;
     }
 }
