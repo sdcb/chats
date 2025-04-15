@@ -54,7 +54,7 @@ jobs:
           ver=$(grep -oPm1 "(?<=<Version>)[^<]+" Chats.BE.csproj) # 1.0.0
           minor_ver=$(echo $ver | cut -d '.' -f 1-2) # 1.0
           major_ver=$(echo $ver | cut -d '.' -f 1) # 1
-          full_ver=${version}.${{ github.run_number }} # 1.0.0.587
+          full_ver=${ver}.${{ github.run_number }} # 1.0.0.587
 
           echo "MSBUILD_VERSION=/p:Version=${full_ver} /p:AssemblyVersion=${full_ver} /p:FileVersion=${full_ver} /p:InformationalVersion=${full_ver}" >> $GITHUB_ENV
           echo "FULL_VERSION=${full_ver}" >> $GITHUB_ENV # 1.0.0.587
