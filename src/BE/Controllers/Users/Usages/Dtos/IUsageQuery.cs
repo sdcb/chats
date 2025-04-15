@@ -8,9 +8,11 @@ public interface IUsageQuery
 
     public string? Provider { get;   }
 
-    public DateTime? Start { get; }
+    public DateOnly? Start { get; }
 
-    public DateTime? End { get; }
+    public DateOnly? End { get; }
+
+    public UsageQueryType? Source { get; }
 
     public short TimezoneOffset { get; }
 }

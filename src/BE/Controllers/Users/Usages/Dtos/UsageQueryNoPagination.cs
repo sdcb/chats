@@ -14,10 +14,13 @@ public class UsageQueryNoPagination : IUsageQuery
     public string? Provider { get; init; }
 
     [FromQuery(Name = "start")]
-    public DateTime? Start { get; init; }
+    public DateOnly? Start { get; init; }
 
     [FromQuery(Name = "end")]
-    public DateTime? End { get; init; }
+    public DateOnly? End { get; init; }
+
+    [FromQuery(Name = "source")]
+    public UsageQueryType? Source { get; init; }
 
     [FromQuery(Name = "tz")]
     public required short TimezoneOffset { get; init; }
@@ -44,6 +47,10 @@ public class UsageQueryNoPagination : IUsageQuery
         if (End.HasValue)
         {
             fileName += $"_{End:yyyy-MM-dd}";
+        }
+        if (Source.HasValue)
+        {
+            fileName += $"_{Source.ToString()!.ToLowerInvariant()}";
         }
         return $"{fileName}.xlsx";
     }

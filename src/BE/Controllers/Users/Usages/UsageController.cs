@@ -68,12 +68,27 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
 
         if (query.Start != null)
         {
-            usagesQuery = usagesQuery.Where(u => u.CreatedAt >= query.Start);
+            DateTime localStart =  query.Start.Value
+                .ToDateTime(new TimeOnly())
+                .AddMinutes(query.TimezoneOffset);
+            usagesQuery = usagesQuery.Where(u => u.CreatedAt >= localStart);
         }
-
         if (query.End != null)
         {
-            usagesQuery = usagesQuery.Where(u => u.CreatedAt <= query.End);
+            DateTime localEnd = query.End.Value
+                .AddDays(1)
+                .ToDateTime(new TimeOnly())
+                .AddMinutes(query.TimezoneOffset);
+            usagesQuery = usagesQuery.Where(u => u.CreatedAt < localEnd);
+        }
+
+        if (query.Source == UsageQueryType.Web)
+        {
+            usagesQuery = usagesQuery.Where(u => u.UserApiUsage == null);
+        }
+        if (query.Source == UsageQueryType.Api)
+        {
+            usagesQuery = usagesQuery.Where(u => u.UserApiUsage != null);
         }
 
         IQueryable<UsageDto> rows = usagesQuery
