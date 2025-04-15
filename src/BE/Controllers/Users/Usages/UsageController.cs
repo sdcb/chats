@@ -33,7 +33,7 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
 
         if (!string.IsNullOrEmpty(query.ApiKeyId))
         {
-            usagesQuery = usagesQuery.Where(u => u.UserApiUsage!.ApiKey.Id == idEncryption.DecryptChatId(query.ApiKeyId));
+            usagesQuery = usagesQuery.Where(u => u.UserApiUsage!.ApiKey.Id == idEncryption.DecryptApiKeyId(query.ApiKeyId));
         }
 
         if (!string.IsNullOrEmpty(query.Provider))
