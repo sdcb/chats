@@ -97,7 +97,7 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
             {
                 UserName = u.UserModel.User.UserName,
                 ApiKeyId = idEncryption.EncryptApiKeyId((int?)u.UserApiUsage!.ApiKey.Id),
-                ApiKey = u.UserApiUsage!.ApiKey.Key.ToMasked(),
+                ApiKey = u.UserApiUsage!.ApiKey.Key.ToMaskedNull(),
                 ModelProviderName = u.UserModel.Model.ModelReference.Provider.Name,
                 ModelReferenceName = u.UserModel.Model.ModelReference.Name,
                 ModelName = u.UserModel.Model.Name,
