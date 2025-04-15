@@ -370,10 +370,10 @@ jobs:
 
       - name: deploy dev/stg or feature
         run: |
-          ssh -o StrictHostKeyChecking=no -p 22 ${{ secrets.SSH_TARGET }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -p 22 ${{ secrets.SSH_TARGET }} "bash -s" << 'EOF'
             docker pull ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-linux-x64
             cd chats
-      
+            
             if [[ "${{ github.ref_name }}" == feature/* ]]; then
               echo "Deploying feature branch: ${{ github.ref_name }}"
               sed -i "s/^TAG=.*/TAG=r${{ github.run_number }}-linux-x64/" ~/chats/feature.env
