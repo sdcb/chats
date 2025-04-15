@@ -258,3 +258,36 @@ export interface PutChatPresetSpanParams {
   maxOutputTokens: number | null;
   reasoningEffort?: number | null;
 }
+
+export interface GetUsageParams {
+  User?: string;
+  ApiKeyId?: string;
+  Provider?: string;
+  Start?: string;
+  End?: string;
+  Page: number;
+  PageSize: number;
+  Skip?: number;
+}
+
+export interface GetUsageResult {
+  userName: string;
+  apiKeyId: string;
+  apiKey: string;
+  modelProviderName: string;
+  modelReferenceName: string;
+  modelName: string;
+  preprocessDurationMs: number;
+  firstResponseDurationMs: number;
+  postprocessDurationMs: number;
+  totalDurationMs: number;
+  finishReason: string;
+  userAgent: string;
+  ip: string;
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  inputCost: number;
+  outputCost: number;
+  usagedCreatedAt: string;
+}

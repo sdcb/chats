@@ -10,6 +10,8 @@ import {
   GetChatShareResult,
   GetChatsParams,
   GetLoginProvidersResult,
+  GetUsageParams,
+  GetUsageResult,
   GetUserApiKeyResult,
   GetUserBalanceResult,
   GetUserChatGroupWithMessagesResult as GetUserChatGroupWithChatsResult,
@@ -479,4 +481,33 @@ export const responseContentToRequest = (responseContent: ResponseContent[]) => 
       }
     });
   return requestContent;
+};
+
+export const getUsage = (params: GetUsageParams) => {
+  const fetchServer = useFetch();
+  let url = `/api/usage?page=${params.Page}&pageSize=${params.PageSize}`;
+  
+  if (params.ApiKeyId) {
+    url += `&apiKeyId=${params.ApiKeyId}`;
+  }
+  
+  if (params.User) {
+    url += `&user=${params.User}`;
+  }
+  
+  if (params.Provider) {
+    url += `&provider=${params.Provider}`;
+  }
+  
+  if (params.Start) {
+    url += `&start=${params.Start}`;
+  }
+  
+  if (params.End) {
+    url += `&end=${params.End}`;
+  }
+  
+  url += `&timezoneOffset=${new Date().getTimezoneOffset()}`;
+  
+  return fetchServer.get<PageResult<GetUsageResult[]>>(url);
 };
