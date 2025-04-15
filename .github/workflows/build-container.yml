@@ -186,7 +186,7 @@ jobs:
                 "latest")
 
           for TAG in "${TAGS[@]}"; do
-            echo "==> Creating manifest for tag: $TAG"
+            echo "::group::Creating manifest for tag: $TAG""
             
             docker manifest create --amend ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:"$TAG" \
               ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ needs.build-fe.outputs.full_ver }}-linux-x64 \
@@ -211,7 +211,7 @@ jobs:
             
             docker manifest push ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:"$TAG"
 
-            echo "==> Manifest for tag: $TAG pushed successfully."
+            echo "::endgroup::"
           done
 
   build-binaries:
