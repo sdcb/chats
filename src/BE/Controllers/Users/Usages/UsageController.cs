@@ -28,7 +28,7 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
     }
 
     [HttpGet("excel")]
-    public ActionResult<PagedResult<UsageDto>> ExportExcel(UsageQuery query)
+    public ActionResult<PagedResult<UsageDto>> ExportExcel(UsageQueryNoPagination query)
     {
         if (!ModelState.IsValid)
         {
@@ -43,7 +43,7 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", query.ToExcelFileName());
     }
 
-    private IQueryable<UsageDto> ProcessQuery(UsageQuery query)
+    private IQueryable<UsageDto> ProcessQuery(IUsageQuery query)
     {
         IQueryable<UserModelUsage> usagesQuery = db.UserModelUsages;
 
