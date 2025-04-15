@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 public record ListApiKeyDto
 {
     [JsonPropertyName("id")]
-    public required int Id { get; init; }
+    public required string Id { get; init; }
 
     [JsonPropertyName("key")]
     public required string Key { get; init; }
