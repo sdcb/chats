@@ -27,40 +27,8 @@ public class GitHubReleaseChecker
         response.EnsureSuccessStatusCode(); // 如果请求失败，抛出异常
 
         using Stream responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        var jsonDocument = await JsonDocument.ParseAsync(responseStream, cancellationToken: cancellationToken);
+        using JsonDocument jsonDocument = await JsonDocument.ParseAsync(responseStream, cancellationToken: cancellationToken);
 
         return jsonDocument.RootElement.GetProperty("tag_name").GetString()!;
-    }
-
-    public static bool IsNewVersionAvailableAsync(string latestTagName, int currentVersion)
-    {
-        try
-        {
-            if (latestTagName.StartsWith("r-"))
-            {
-                int latestVersion = int.Parse(latestTagName.Substring(2));
-                return latestVersion > currentVersion;
-            }
-            else
-            {
-                Console.WriteLine($"Warning: Latest tag name '{latestTagName}' does not follow the expected format 'r-XXX'.");
-                return false;
-            }
-        }
-        catch (HttpRequestException ex)
-        {
-            Console.WriteLine($"Error checking for updates: {ex.Message}");
-            return false;
-        }
-        catch (JsonException ex)
-        {
-            Console.WriteLine($"Error parsing JSON response: {ex.Message}");
-            return false;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"An unexpected error occurred: {ex.Message}");
-            return false;
-        }
     }
 }
