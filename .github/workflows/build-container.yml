@@ -48,11 +48,19 @@ jobs:
         working-directory: ./src/FE
         run: npm run build
 
-      - name: sed version
+      - name: Get Version
         run: |
-          # file: ./src/BE/Controllers/Admin/GlobalConfigs/VersionController.cs
-          # const int buildVersion = 0; -> const int buildVersion = github.run_number;
-          sed -i "s/const int buildVersion = 0;/const int buildVersion = ${{ github.run_number }};/" ./src/BE/Controllers/Admin/GlobalConfigs/VersionController.cs
+          cd ./src/BE
+          ver=$(grep -oPm1 "(?<=<Version>)[^<]+" Chats.BE.csproj) # 1.0.0
+          minor_ver=$(echo $ver | cut -d '.' -f 1-2) # 1.0
+          major_ver=$(echo $ver | cut -d '.' -f 1) # 1
+          full_ver=${version}.${{ github.run_number }} # 1.0.0.587
+
+          echo "MSBUILD_VERSION=/p:Version=${full_ver} /p:AssemblyVersion=${full_ver} /p:FileVersion=${full_ver} /p:InformationalVersion=${full_ver}" >> $GITHUB_ENV
+          echo "FULL_VERSION=${full_ver}" >> $GITHUB_ENV # 1.0.0.587
+          echo "PATCH_FULL_VERSION=${ver}" >> $GITHUB_ENV # 1.0.0
+          echo "MINOR_FULL_VERSION=${minor_ver}" >> $GITHUB_ENV # 1.0
+          echo "MAJOR_VERSION=${major_ver}" >> $GITHUB_ENV # 1
 
       - name: Copy FE build artifacts
         run: |
@@ -98,15 +106,15 @@ jobs:
 
       - name: Build container
         run: |
-          dotnet publish ./be-src/Chats.BE.csproj -c Release --os linux --arch x64 /t:PublishContainer /p:ContainerRepository=chats
+          dotnet publish ./be-src/Chats.BE.csproj -c Release --os linux --arch x64 /t:PublishContainer /p:ContainerRepository=chats ${{ env.MSBUILD_VERSION }}
 
       - name: Tag container with run number
         run: |
-          docker tag chats ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-linux-x64
+          docker tag chats ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ env.FULL_VERSION }}-linux-x64
           
       - name: Push container
         run: |
-          docker push ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-linux-x64
+          docker push ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ env.FULL_VERSION }}-linux-x64
 
   build-containers:
     if: needs.build-fe.outputs.is_release == 'true'
@@ -114,22 +122,22 @@ jobs:
     strategy:
       matrix:
         include:
-          - tag: r${{ github.run_number }}-nanoserver-1809
+          - tag: nanoserver-1809
             runs-on: windows-latest
             os: win
             arch: x64
             args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:8.0-nanoserver-1809
-          - tag: r${{ github.run_number }}-nanoserver-ltsc2022
+          - tag: nanoserver-ltsc2022
             runs-on: windows-latest
             os: win
             arch: x64
             args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:8.0-nanoserver-ltsc2022
-          - tag: r${{ github.run_number }}-nanoserver-ltsc2025
+          - tag: nanoserver-ltsc2025
             runs-on: windows-latest
             os: win
             arch: x64
             args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:8.0-nanoserver-ltsc2025
-          - tag: r${{ github.run_number }}-linux-arm64
+          - tag: linux-arm64
             runs-on: ubuntu-latest
             os: linux
             arch: arm64
@@ -146,15 +154,15 @@ jobs:
 
       - name: Build container
         run: |
-          dotnet publish ./be-src/Chats.BE.csproj -c Release --os ${{ matrix.os }} --arch ${{ matrix.arch }} /t:PublishContainer /p:ContainerRepository=chats ${{ matrix.args }}
+          dotnet publish ./be-src/Chats.BE.csproj -c Release --os ${{ matrix.os }} --arch ${{ matrix.arch }} /t:PublishContainer /p:ContainerRepository=chats ${{ env.MSBUILD_VERSION }} ${{ matrix.args }}
 
       - name: Tag container with run number
         run: |
-          docker tag chats ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ matrix.tag }}
+          docker tag chats ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ env.FULL_VERSION }}-${{ matrix.tag }}
           
       - name: Push container
         run: |
-          docker push ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ matrix.tag }}
+          docker push ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ env.FULL_VERSION }}-${{ matrix.tag }}
 
   docker-manifest:
     needs: [build-primary-container, build-containers]
@@ -163,41 +171,42 @@ jobs:
       - name: Login container
         run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ vars.DOCKER_USERNAME }} ${{ vars.DOCKER_REGISTRY }} --password-stdin
         
-      - name: Create manifest
+      - name: Create and push multiple manifests
         run: |
-          docker manifest create --amend ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }} \
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-linux-x64 \
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-linux-arm64 \
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-nanoserver-1809 \
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-nanoserver-ltsc2022 \
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-nanoserver-ltsc2025
+          TAGS=("${{ env.FULL_VERSION }}"
+                "${{ env.PATCH_FULL_VERSION }}"
+                "${{ env.MINOR_FULL_VERSION }}"
+                "${{ env.MAJOR_VERSION }}"
+                "latest")
 
-      - name: Annotation
-        run: |
-          docker manifest annotate ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }} ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-nanoserver-1809 --os-version 10.0.17763.6532
-          docker manifest annotate ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }} ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-nanoserver-ltsc2022 --os-version 10.0.20348.2849
-          docker manifest annotate ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }} ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-nanoserver-ltsc2025 --os-version 10.0.26100.3194
-          docker manifest inspect ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}
+          for TAG in "${TAGS[@]}"; do
+            echo "==> Creating manifest for tag: $TAG"
+            
+            docker manifest create --amend ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:"$TAG" \
+              ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ env.FULL_VERSION }}-linux-x64 \
+              ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ env.FULL_VERSION }}-linux-arm64 \
+              ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ env.FULL_VERSION }}-nanoserver-1809 \
+              ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ env.FULL_VERSION }}-nanoserver-ltsc2022 \
+              ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ env.FULL_VERSION }}-nanoserver-ltsc2025
+              
+            docker manifest annotate ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:"$TAG" \
+              ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ env.FULL_VERSION }}-nanoserver-1809 \
+              --os-version 10.0.17763.6532
 
-      - name: Create latest manifest
-        run: |
-          docker manifest create --amend ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:latest \
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-linux-x64 \
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-linux-arm64 \
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-nanoserver-1809 \
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-nanoserver-ltsc2022 \
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-nanoserver-ltsc2025
+            docker manifest annotate ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:"$TAG" \
+              ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ env.FULL_VERSION }}-nanoserver-ltsc2022 \
+              --os-version 10.0.20348.2849
 
-      - name: Annotate latest manifest
-        run: |
-          docker manifest annotate ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:latest ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-nanoserver-1809 --os-version 10.0.17763.6532
-          docker manifest annotate ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:latest ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-nanoserver-ltsc2022 --os-version 10.0.20348.2849
-          docker manifest annotate ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:latest ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-nanoserver-ltsc2025 --os-version 10.0.26100.3194
+            docker manifest annotate ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:"$TAG" \
+              ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ env.FULL_VERSION }}-nanoserver-ltsc2025 \
+              --os-version 10.0.26100.3194
+              
+            docker manifest inspect ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:"$TAG"
+            
+            docker manifest push ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:"$TAG"
 
-      - name: Push manifest
-        run: |
-          docker manifest push ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}
-          docker manifest push ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:latest
+            echo "==> Manifest for tag: $TAG pushed successfully."
+          done
 
   build-binaries:
     needs: build-fe
@@ -229,7 +238,7 @@ jobs:
           path: ./be-src
       - name: build binary
         run: |
-          dotnet publish ./be-src/Chats.BE.csproj -c Release -o ./Publish ${{ matrix.args }} /p:DeleteExistingFiles=True  
+          dotnet publish ./be-src/Chats.BE.csproj -c Release -o ./Publish ${{ matrix.args }} ${{ env.MSBUILD_VERSION }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -256,7 +265,7 @@ jobs:
           path: ./be-src
       - name: build binary
         run: |
-          dotnet publish ./be-src/Chats.BE.csproj -c Release -o ./Publish ${{ matrix.args }} /p:DeleteExistingFiles=True  
+          dotnet publish ./be-src/Chats.BE.csproj -c Release -o ./Publish ${{ matrix.args }} /p:DeleteExistingFiles=True ${{ env.MSBUILD_VERSION }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -307,12 +316,12 @@ jobs:
           ### Docker
           | Description                   | Docker Image                                                                                                 |
           | ----------------------------- | ------------------------------------------------------------------------------------------------------------ |
-          | r${{ github.run_number }}     | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}                     |
-          | Linux x64                     | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-linux-x64           |
-          | Linux ARM64                   | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-linux-arm64         |
-          | Windows Nano Server 1809      | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-nanoserver-1809     |
-          | Windows Nano Server LTSC 2022 | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-nanoserver-ltsc2022 |
-          | Windows Nano Server LTSC 2025 | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-nanoserver-ltsc2025 |
+          | r${{ github.run_number }}     | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:{{ env.FULL_VERSION }}                     |
+          | Linux x64                     | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:{{ env.FULL_VERSION }}-linux-x64           |
+          | Linux ARM64                   | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:{{ env.FULL_VERSION }}-linux-arm64         |
+          | Windows Nano Server 1809      | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:{{ env.FULL_VERSION }}-nanoserver-1809     |
+          | Windows Nano Server LTSC 2022 | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:{{ env.FULL_VERSION }}-nanoserver-ltsc2022 |
+          | Windows Nano Server LTSC 2025 | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:{{ env.FULL_VERSION }}-nanoserver-ltsc2025 |
           | Latest                        | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:latest                                        |
     
           ### Alternative binaries download links that may faster than GitHub(for China users)
@@ -332,8 +341,6 @@ jobs:
           **NOTE**: 
           Replace \`r${{ github.run_number }}\` with \`latest\` in the download link to get the latest version, for example: \`${{ vars.MINIO_URL }}/chats/latest/chats-win-x64.zip\`
 
-          </details>
-
           ### Full Changelogs
           https://github.com/sdcb/chats/compare/$PREVIOUS_REV...$CURRENT_REV
 
@@ -341,13 +348,15 @@ jobs:
           END
           git log ${PREVIOUS_REV}..${CURRENT_REV} --pretty=format:'* [%s](https://github.com/${{ github.repository }}/commit/%H)' >> RELEASE.md
 
+          </details>
+
       - name: Publish Release
         uses: ncipollo/release-action@v1
         with:
           bodyFile: RELEASE.md
           token: ${{ secrets.GITHUB_TOKEN }}
-          name: r-${{ github.run_number }}
-          tag: r-${{ github.run_number }}
+          name: ${{ env.PATCH_FULL_VERSION }}
+          tag: ${{ env.FULL_VERSION }}
           artifacts: "*.zip, sha256sum.txt"
 
   upload-minio-latest:
@@ -371,17 +380,17 @@ jobs:
       - name: deploy dev/stg or feature
         run: |
           ssh -o StrictHostKeyChecking=no -p 22 ${{ secrets.SSH_TARGET }} "bash -s" << 'EOF'
-            docker pull ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:r${{ github.run_number }}-linux-x64
+            docker pull ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ env.FULL_VERSION }}-linux-x64
             cd chats
             
             if [[ "${{ github.ref_name }}" == feature/* ]]; then
               echo "Deploying feature branch: ${{ github.ref_name }}"
-              sed -i "s/^TAG=.*/TAG=r${{ github.run_number }}-linux-x64/" ~/chats/feature.env
+              sed -i "s/^TAG=.*/TAG=${{ env.FULL_VERSION }}-linux-x64/" ~/chats/feature.env
               docker compose --env-file=./feature.env --project-name chats-feature up -d --remove-orphans
             else
               echo "Deploying non-feature branch: ${{ github.ref_name }}"
-              sed -i "s/^TAG=.*/TAG=r${{ github.run_number }}-linux-x64/" ~/chats/dev.env
-              sed -i "s/^TAG=.*/TAG=r${{ github.run_number }}-linux-x64/" ~/chats/stg.env
+              sed -i "s/^TAG=.*/TAG=${{ env.FULL_VERSION }}-linux-x64/" ~/chats/dev.env
+              sed -i "s/^TAG=.*/TAG=${{ env.FULL_VERSION }}-linux-x64/" ~/chats/stg.env
               docker compose --env-file=./dev.env --project-name chats-dev up -d --remove-orphans
               docker compose --env-file=./stg.env --project-name chats-stg up -d --remove-orphans
             fi
