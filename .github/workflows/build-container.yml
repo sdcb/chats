@@ -58,7 +58,7 @@ jobs:
         run: |
           cd ./src/BE
           ver=$(grep -oPm1 "(?<=<Version>)[^<]+" Chats.BE.csproj) # 1.0.0
-          minor_ver= # 1.0
+          minor_ver=$(echo $ver | cut -d '.' -f 1-2) # 1.0
           major_ver=$(echo $ver | cut -d '.' -f 1) # 1
           full_ver=${ver}.${{ github.run_number }} # 1.0.0.587
           
