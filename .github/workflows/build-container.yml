@@ -186,7 +186,7 @@ jobs:
                 "latest")
 
           for TAG in "${TAGS[@]}"; do
-            echo "::group::Creating manifest for tag: $TAG""
+            echo "::group::Creating manifest for tag: $TAG"
             
             docker manifest create --amend ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:"$TAG" \
               ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ needs.build-fe.outputs.full_ver }}-linux-x64 \
