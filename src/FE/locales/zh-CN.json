@@ -34,7 +34,6 @@
   "New chat": "新建聊天",
   "Add another model": "添加另一个模型",
   "Remove": "移除",
-  "Loading ...": "加载中 ...",
   "Type a message or type \"/\" to select a prompt...": "输入一条消息或键入 \"/\" 以选择提示...",
   "Enter a prompt or type \"/\" to select a prompt...": "输入一条提示或键入 \"/\" 以选择提示...",
   "The Model does not exist or access is denied.": "模型不存在或没有访问权限。",
@@ -424,5 +423,7 @@
   "Start date": "开始日期",
   "End date": "结束日期",
   "Select Provider": "选择提供商",
-  "Select API Key": "选择API密钥"
+  "Select API Key": "选择API密钥",
+  "Export to Excel": "导出到Excel",
+  "Export": "导出"
 }

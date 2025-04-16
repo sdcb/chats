@@ -34,7 +34,6 @@
   "New chat": "New chat",
   "Add another model": "Add another model",
   "Remove": "Remove",
-  "Loading ...": "Loading ...",
   "Type a message or type \"/\" to select a prompt...": "Type a message or type \"/\" to select a prompt...",
   "Enter a prompt or type \"/\" to select a prompt...": "Enter a prompt or type \"/\" to select a prompt...",
   "The Model does not exist or access is denied.": "The Model does not exist or access is denied.",
@@ -180,5 +179,7 @@
   "Start date": "Start date",
   "End date": "End date",
   "Select Provider": "Select Provider",
-  "Select API Key": "Select API Key"
+  "Select API Key": "Select API Key",
+  "Export to Excel": "Export to Excel",
+  "Export": "Export"
 } 

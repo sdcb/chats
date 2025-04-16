@@ -7,7 +7,9 @@ import { useRouter } from 'next/router';
 import useTranslation from '@/hooks/useTranslation';
 
 import { getApiUrl } from '@/utils/common';
+import { formatDate } from '@/utils/date';
 
+import { UsageSource } from '@/types/chat';
 import { GetUserApiKeyResult } from '@/types/clientApis';
 
 import DateTimePopover from '@/pages/home/_components/Popover/DateTimePopover';
@@ -32,8 +34,6 @@ import {
   postUserApiKey,
   putUserApiKey,
 } from '@/apis/clientApis';
-
-import { UsageSource } from '@/types/chat';
 
 let timer: NodeJS.Timeout;
 const ApiKeysTab = () => {
@@ -95,7 +95,9 @@ const ApiKeysTab = () => {
   };
 
   const viewApiKeyUsage = (id: number) => {
-    router.push(`/usage?kid=${id}&source=${UsageSource.API}&page=1&tab=api-keys`);
+    router.push(
+      `/usage?kid=${id}&source=${UsageSource.API}&page=1&tab=api-keys`,
+    );
   };
 
   const apiUrl = (getApiUrl() || location.origin) + '/v1';
@@ -180,9 +182,7 @@ const ApiKeysTab = () => {
                 <div className="flex items-center justify-between mb-2 text-xs">
                   <div className="font-medium">{t('LastUsedAt')}</div>
                   <div className="h-9 flex items-center">
-                    {x.lastUsedAt
-                      ? new Date(x.lastUsedAt).toLocaleDateString()
-                      : '-'}
+                    {x.lastUsedAt ? formatDate(x.lastUsedAt) : '-'}
                   </div>
                 </div>
                 <div className="flex justify-end mt-1">
@@ -245,9 +245,7 @@ const ApiKeysTab = () => {
                       />
                     </TableCell>
                     <TableCell className="py-2 min-w-[128px] max-w-[150px]">
-                      {x.lastUsedAt
-                        ? new Date(x.lastUsedAt).toLocaleDateString()
-                        : '-'}
+                      {x.lastUsedAt ? formatDate(x.lastUsedAt) : '-'}
                     </TableCell>
                     <TableCell className="py-2 max-w-[64px]">
                       <DeletePopover

@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { formatDateTime } from '@/utils/date';
+
 import { AdminChatsDto } from '@/types/adminApis';
 import { PageResult, Paging } from '@/types/page';
 
+import PaginationContainer from '../../../components/Pagiation/Pagiation';
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -17,8 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-
-import PaginationContainer from '../../../components/Pagiation/Pagiation';
 
 import { getMessages } from '@/apis/adminApis';
 
@@ -93,9 +94,7 @@ export default function Messages() {
                   ))}
                 </TableCell>
                 <TableCell>{item.username}</TableCell>
-                <TableCell>
-                  {new Date(item.createdAt).toLocaleString()}
-                </TableCell>
+                <TableCell>{formatDateTime(item.createdAt)}</TableCell>
                 <TableCell>
                   {item.isDeleted && (
                     <Badge variant="destructive">{t('Deleted')}</Badge>

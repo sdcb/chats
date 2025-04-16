@@ -4,6 +4,9 @@ import { useRouter } from 'next/router';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { formatDate, formatDateTime } from '@/utils/date';
+import { getUserSession } from '@/utils/user';
+
 import { UsageSource } from '@/types/chat';
 import { GetUsageParams, GetUsageResult } from '@/types/clientApis';
 import { GetUserApiKeyResult } from '@/types/clientApis';
@@ -12,6 +15,7 @@ import { PageResult } from '@/types/page';
 
 import DateTimePopover from '@/pages/home/_components/Popover/DateTimePopover';
 
+import ExportButton from '@/components/Button/ExportButtom';
 import { IconArrowDown } from '@/components/Icons';
 import PaginationContainer from '@/components/Pagiation/Pagiation';
 import { Button } from '@/components/ui/button';
@@ -107,8 +111,7 @@ const UsagePage = () => {
     router.query.provider,
   ]);
 
-  const fetchUsageData = () => {
-    setLoading(true);
+  function getUsageParams(exportExcel: boolean = false) {
     const params: GetUsageParams = {
       kid: selectedApiKey || undefined,
       user: user?.username,
@@ -117,6 +120,11 @@ const UsagePage = () => {
       tz: new Date().getTimezoneOffset(),
       source: source as any,
     };
+
+    if (exportExcel) {
+      delete params.page;
+      delete params.pageSize;
+    }
 
     if (router.query.start) {
       params.start = router.query.start as string;
@@ -129,6 +137,12 @@ const UsagePage = () => {
     if (router.query.provider) {
       params.provider = router.query.provider as string;
     }
+    return params;
+  }
+
+  const fetchUsageData = () => {
+    setLoading(true);
+    const params: GetUsageParams = getUsageParams();
 
     getUsage(params)
       .then((data: PageResult<GetUsageResult[]>) => {
@@ -153,11 +167,6 @@ const UsagePage = () => {
       undefined,
       { shallow: true },
     );
-  };
-
-  const formatDateTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleString();
   };
 
   return (
@@ -274,10 +283,10 @@ const UsagePage = () => {
                 placeholder={t('Start date')}
                 value={startDate}
                 onSelect={(date: Date) => {
-                  setStartDate(date.toLocaleDateString());
+                  setStartDate(formatDate(date.toLocaleDateString()));
                   const query = {
                     ...router.query,
-                    start: date.toLocaleDateString(),
+                    start: formatDate(date.toLocaleDateString()),
                   };
                   router.push(
                     {
@@ -309,10 +318,10 @@ const UsagePage = () => {
                 placeholder={t('End date')}
                 value={endDate}
                 onSelect={(date: Date) => {
-                  setEndDate(date.toLocaleDateString());
+                  setEndDate(formatDate(date.toLocaleDateString()));
                   const query = {
                     ...router.query,
-                    end: date.toLocaleDateString(),
+                    end: formatDate(date.toLocaleDateString()),
                   };
                   router.push(
                     {
@@ -336,6 +345,13 @@ const UsagePage = () => {
                     { shallow: true },
                   );
                 }}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <ExportButton
+                buttonText={t('Export to Excel')}
+                exportUrl="/api/usage/export"
+                params={{ ...getUsageParams(true), token: getUserSession() }}
               />
             </div>
           </div>

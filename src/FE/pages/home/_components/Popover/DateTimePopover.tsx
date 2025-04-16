@@ -40,7 +40,7 @@ const DateTimePopover = ({
             <Calendar className="h-4 w-4 opacity-50" />
             <span className={cn(!value && 'text-neutral-400')}>
               {value
-                ? format(new Date(value), 'yyyy/M/d')
+                ? format(new Date(value), 'yyyy-M-d')
                 : placeholder || 'Pick a date'}
             </span>
           </div>

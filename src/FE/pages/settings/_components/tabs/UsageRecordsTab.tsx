@@ -4,7 +4,8 @@ import { useRouter } from 'next/router';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { UsageSource } from '@/types/chat';
+import { formatDate } from '@/utils/date';
+
 import { GetBalance7DaysUsageResult } from '@/types/clientApis';
 
 import { Card } from '@/components/ui/card';
@@ -36,9 +37,7 @@ const UsageRecordsTab = () => {
   }, []);
 
   const viewWebUsage = (date: string) => {
-    router.push(
-      `/usage?start=${date}&end=${date}&page=1&tab=usage`,
-    );
+    router.push(`/usage?start=${date}&end=${date}&page=1&tab=usage`);
   };
 
   return (
@@ -62,7 +61,7 @@ const UsageRecordsTab = () => {
               <Card key={x.date} className="p-2 px-4 border-none shadow-sm">
                 <div className="flex items-center justify-between text-xs">
                   <div className="font-medium">{t('Date')}</div>
-                  <div>{new Date(x.date).toLocaleDateString()}</div>
+                  <div>{formatDate(x.date)}</div>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
                   <div className="font-medium">{t('Amount')}</div>
@@ -91,7 +90,7 @@ const UsageRecordsTab = () => {
                       className="truncate cursor-pointer text-blue-600 hover:underline"
                       onClick={() => viewWebUsage(x.date)}
                     >
-                      {new Date(x.date).toLocaleDateString()}
+                      {formatDate(x.date)}
                     </span>
                   </TableCell>
                   <TableCell>￥{(+(x.costAmount || 0)).toFixed(2)}</TableCell>

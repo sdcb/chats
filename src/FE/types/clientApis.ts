@@ -265,8 +265,8 @@ export interface GetUsageParams {
   provider?: string;
   start?: string;
   end?: string;
-  page: number;
-  pageSize: number;
+  page?: number;
+  pageSize?: number;
   skip?: number;
   tz: number;
   source?: UsageSource;

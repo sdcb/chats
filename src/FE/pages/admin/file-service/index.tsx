@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { formatDateTime } from '@/utils/date';
+
 import { GetFileServicesResult } from '@/types/adminApis';
+import { feFileServiceTypes } from '@/types/file';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -18,7 +21,6 @@ import {
 import FileServiceModal from '../_components/Files/FileServiceModal';
 
 import { getFileServices } from '@/apis/adminApis';
-import { feFileServiceTypes } from '@/types/file';
 
 export default function FileService() {
   const { t } = useTranslation();
@@ -90,11 +92,11 @@ export default function FileService() {
                   ></div>
                   {item.name}
                 </TableCell>
-                <TableCell>{t(feFileServiceTypes[item.fileServiceTypeId].name)}</TableCell>
-                <TableCell>{item.fileCount}</TableCell>
                 <TableCell>
-                  {new Date(item.updatedAt).toLocaleString()}
+                  {t(feFileServiceTypes[item.fileServiceTypeId].name)}
                 </TableCell>
+                <TableCell>{item.fileCount}</TableCell>
+                <TableCell>{formatDateTime(item.updatedAt)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

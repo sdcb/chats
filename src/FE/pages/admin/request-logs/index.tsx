@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { formatDateTime } from '@/utils/date';
+
 import { GetRequestLogsListResult } from '@/types/adminApis';
 import { PageResult, Paging } from '@/types/page';
 import { StatusCodeColor } from '@/types/statusCode';
 
+import PaginationContainer from '../../../components/Pagiation/Pagiation';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -17,7 +20,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import PaginationContainer from '../../../components/Pagiation/Pagiation';
 import RequestLogDetailsModal from '../_components/RequestLogs/RequestLogDetailsModal';
 
 import { getRequestLogs } from '@/apis/adminApis';
@@ -98,9 +100,7 @@ export default function RequestLogs() {
                     {item.statusCode}
                   </div>
                 </TableCell>
-                <TableCell>
-                  {new Date(item.createdAt).toLocaleString()}
-                </TableCell>
+                <TableCell>{formatDateTime(item.createdAt)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

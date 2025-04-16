@@ -763,7 +763,7 @@ const Chat = memo(() => {
             className="sm:w-full chat-container"
             style={{
               width: `calc(100vw - ${showChatBar
-                ? 260
+                ? 280
                 : 0
                 }px)`,
             }}

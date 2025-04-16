@@ -35,6 +35,7 @@ import {
 
 import { getModelsByUserId, putUserModel } from '@/apis/adminApis';
 import { cn } from '@/lib/utils';
+import { formatDate } from '@/utils/date';
 
 interface IProps {
   userId: string;
@@ -137,7 +138,7 @@ const EditUserModelModal = (props: IProps) => {
                           variant={'outline'}
                           className={cn('pl-3 text-left font-normal w-[150px]')}
                         >
-                          {new Date(model.expires).toLocaleDateString()}
+                          {formatDate(model.expires)}
                           <IconSquareRoundedX
                             onClick={(e) => {
                               onChangeModel(index, 'expires', termDateString());
