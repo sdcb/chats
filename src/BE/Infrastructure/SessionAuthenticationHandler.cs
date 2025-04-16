@@ -17,19 +17,34 @@ public class SessionAuthenticationHandler(
 {
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        if (!Request.Headers.TryGetValue("Authorization", out StringValues authorizationHeader))
+        string? jwt = null;
+
+        if (Request.Headers.TryGetValue("Authorization", out StringValues authHeader))
+        {
+            string authHeaderString = authHeader.ToString();
+            if (authHeaderString.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                jwt = authHeaderString["Bearer ".Length..].Trim();
+            }
+            else
+            {
+                return AuthenticateResult.Fail("Invalid authorization header format");
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(jwt))
+        {
+            if (Request.Query.TryGetValue("token", out StringValues tokenQuery))
+            {
+                jwt = tokenQuery.ToString();
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(jwt))
         {
             return AuthenticateResult.NoResult();
         }
 
-        string authorizationHeaderString = authorizationHeader.ToString();
-        string[] segments = authorizationHeaderString.Split(' ');
-        if (segments.Length != 2 || segments[0] != "Bearer")
-        {
-            return AuthenticateResult.Fail("Invalid authorization header");
-        }
-
-        string jwt = segments[1];
         try
         {
             SessionEntry userInfo = await sessionManager.GetCachedUserInfoBySession(jwt);
