@@ -58,7 +58,7 @@ const UsagePage = () => {
       provider: string;
       tab: string;
     };
-
+debugger
   const [usageLogs, setUsageLogs] = useState<GetUsageResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
@@ -109,6 +109,7 @@ const UsagePage = () => {
     router.query.start,
     router.query.end,
     router.query.provider,
+    router.query.source,
   ]);
 
   function getUsageParams(exportExcel: boolean = false) {
@@ -143,6 +144,7 @@ const UsagePage = () => {
   const fetchUsageData = () => {
     setLoading(true);
     const params: GetUsageParams = getUsageParams();
+    debugger
 
     getUsage(params)
       .then((data: PageResult<GetUsageResult[]>) => {

@@ -128,7 +128,7 @@ const ChatModelSettingModal = (props: Props) => {
       <DialogContent className="w-full sm:w-[560px] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogTitle></DialogTitle>
         {span && model && hasModel() && (
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4 mt-5">
             <div className="space-y-4 rounded-lg">
               <div className="flex flex-col gap-1">
                 <ChatModelDropdownMenu
