@@ -22,7 +22,7 @@ const ExportButton: React.FC<ExportProps> = ({
 
   const handleExport = () => {
     const form = document.createElement('form');
-    form.method = 'POST';
+    form.method = 'GET';
     form.action = exportUrl;
     form.target = '_blank';
 
