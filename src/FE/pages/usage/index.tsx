@@ -58,7 +58,7 @@ const UsagePage = () => {
       provider: string;
       tab: string;
     };
-debugger
+
   const [usageLogs, setUsageLogs] = useState<GetUsageResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
@@ -98,11 +98,13 @@ debugger
   }, []);
 
   useEffect(() => {
-    setStartDate((start as string) || '');
-    setEndDate((end as string) || '');
-    setSelectedProvider((provider as string) || '');
-    setSelectedApiKey((kid as string) || '');
-    fetchUsageData();
+    if (router.isReady) {
+      setStartDate((start as string) || '');
+      setEndDate((end as string) || '');
+      setSelectedProvider((provider as string) || '');
+      setSelectedApiKey((kid as string) || '');
+      fetchUsageData();
+    }
   }, [
     router.query.kid,
     router.query.page,
@@ -144,7 +146,6 @@ debugger
   const fetchUsageData = () => {
     setLoading(true);
     const params: GetUsageParams = getUsageParams();
-    debugger
 
     getUsage(params)
       .then((data: PageResult<GetUsageResult[]>) => {
