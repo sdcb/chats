@@ -37,7 +37,7 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
 
         IQueryable<UsageDto> rows = ProcessQuery(query);
 
-        using MemoryStream stream = new();
+        MemoryStream stream = new();
         MiniExcel.SaveAs(stream, rows);
         stream.Position = 0;
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", query.ToExcelFileName());
