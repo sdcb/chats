@@ -179,7 +179,8 @@ jobs:
         
       - name: Create and push multiple manifests
         run: |
-          TAGS=("${{ needs.build-fe.outputs.full_ver }}"
+          TAGS=("r-${{ github.run_number }}"
+                "${{ needs.build-fe.outputs.full_ver }}"
                 "${{ needs.build-fe.outputs.patch_full_ver }}"
                 "${{ needs.build-fe.outputs.minor_full_ver }}"
                 "${{ needs.build-fe.outputs.major_ver }}"
