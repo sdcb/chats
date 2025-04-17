@@ -51,6 +51,11 @@ public class VersionController(ILogger<VersionController> logger) : ControllerBa
             return false;
         }
 
+        if (latestTagName.StartsWith("r-"))
+        {
+            return false;
+        }
+
         try
         {
             Version latestVersion = Version.Parse(latestTagName);
