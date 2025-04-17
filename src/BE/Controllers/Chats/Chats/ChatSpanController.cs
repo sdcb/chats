@@ -208,10 +208,11 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
             return NotFound();
         }
 
-        Dictionary<short, UserModel> userModels = await userModelManager.GetUserModels(currentUser.Id, [.. preset.ChatPresetSpans.Select(x => x.ChatConfig.ModelId)], cancellationToken);
-        if (userModels.Count == 0)
+        HashSet<short> requiredModelIds = [.. preset.ChatPresetSpans.Select(x => x.ChatConfig.ModelId)];
+        Dictionary<short, UserModel> userModels = await userModelManager.GetUserModels(currentUser.Id, requiredModelIds, cancellationToken);
+        if (userModels.Count != requiredModelIds.Count)
         {
-            return BadRequest("No models available");
+            return BadRequest("Not all models available");
         }
 
         Dictionary<byte, ChatSpan> dbSpans = chat.ChatSpans.ToDictionary(x => x.SpanId, v => v);
