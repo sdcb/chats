@@ -4,11 +4,27 @@ import { useRouter } from 'next/router';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { formatDate } from '@/utils/date';
+import { formatDate, formatDateTime } from '@/utils/date';
+import { getUserSession } from '@/utils/user';
 
-import { GetBalance7DaysUsageResult } from '@/types/clientApis';
+import { UsageSource } from '@/types/chat';
+import { GetUsageParams, GetUsageResult } from '@/types/clientApis';
+import { GetUserApiKeyResult } from '@/types/clientApis';
+import { feModelProviders } from '@/types/model';
+import { PageResult } from '@/types/page';
 
+import DateTimePopover from '@/pages/home/_components/Popover/DateTimePopover';
+
+import ExportButton from '@/components/Button/ExportButtom';
+import PaginationContainer from '@/components/Pagiation/Pagiation';
 import { Card } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -18,54 +34,475 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import { getBalance7DaysUsage } from '@/apis/clientApis';
+import { getUsage, getUserApiKey, getUserModels } from '@/apis/clientApis';
+import { useUserInfo } from '@/providers/UserProvider';
+
+interface Provider {
+  modelProviderId: number;
+  name: string;
+}
+
+interface QueryParams {
+  [key: string]: string | string[] | undefined;
+  tab?: string;
+  source?: string;
+  kid?: string;
+  page?: string;
+  start?: string;
+  end?: string;
+  provider?: string;
+}
 
 const UsageRecordsTab = () => {
   const { t } = useTranslation();
   const router = useRouter();
-  const [balanceLogs, setBalanceLogs] = useState<GetBalance7DaysUsageResult[]>(
-    [],
-  );
+  const user = useUserInfo();
+
+  const { source, kid, page, start, end, provider } = router.query;
+
+  const [usageLogs, setUsageLogs] = useState<GetUsageResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [apiKeys, setApiKeys] = useState<GetUserApiKeyResult[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<string>(
+    (provider as string) || '',
+  );
+  const [selectedApiKey, setSelectedApiKey] = useState<string>(
+    (kid as string) || '',
+  );
+  const [pagination, setPagination] = useState({
+    page: parseInt((page as string) || '1'),
+    pageSize: 10,
+  });
+
+  const [startDate, setStartDate] = useState<string>((start as string) || '');
+  const [endDate, setEndDate] = useState<string>((end as string) || '');
+  const [selectedSource, setSelectedSource] = useState<string>(
+    (source as string) || '',
+  );
 
   useEffect(() => {
-    setLoading(true);
-    getBalance7DaysUsage().then((data) => {
-      setBalanceLogs(data);
-      setLoading(false);
+    getUserModels().then((data) => {
+      const uniqueProviders = Array.from(
+        new Set(data.map((model) => model.modelProviderId)),
+      ).map((providerId) => {
+        const provider = feModelProviders.find((p) => p.id === providerId);
+        return {
+          modelProviderId: providerId,
+          name: provider?.name || `Provider ${providerId}`,
+        };
+      });
+      setProviders(uniqueProviders);
+    });
+
+    getUserApiKey().then((data) => {
+      setApiKeys(data);
     });
   }, []);
 
-  const viewWebUsage = (date: string) => {
-    router.push(`/usage?start=${date}&end=${date}&page=1&tab=usage`);
+  useEffect(() => {
+    if (router.isReady) {
+      setStartDate((start as string) || '');
+      setEndDate((end as string) || '');
+      setSelectedProvider((provider as string) || '');
+      setSelectedApiKey((kid as string) || '');
+      setSelectedSource((source as string) || '');
+      fetchUsageData();
+    }
+  }, [
+    router.query.kid,
+    router.query.page,
+    router.query.start,
+    router.query.end,
+    router.query.provider,
+    router.query.source,
+    router.isReady,
+  ]);
+
+  function getUsageParams(exportExcel: boolean = false) {
+    const params: GetUsageParams = {
+      kid: selectedApiKey || undefined,
+      user: user?.username,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      tz: new Date().getTimezoneOffset(),
+    };
+
+    if (selectedSource) {
+      params.source = Number(selectedSource) as UsageSource;
+    }
+
+    if (exportExcel) {
+      delete params.page;
+      delete params.pageSize;
+    }
+
+    if (startDate) {
+      params.start = startDate;
+    }
+
+    if (endDate) {
+      params.end = endDate;
+    }
+
+    if (selectedProvider) {
+      params.provider = selectedProvider;
+    }
+
+    return params;
+  }
+
+  const fetchUsageData = () => {
+    setLoading(true);
+    const params: GetUsageParams = getUsageParams();
+
+    getUsage(params)
+      .then((data: PageResult<GetUsageResult[]>) => {
+        setUsageLogs(data.rows);
+        setTotalCount(data.count);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
+  const handlePageChange = (page: number) => {
+    setPagination({ ...pagination, page });
+
+    const query: Record<string, string> = {
+      tab: 'usage',
+      page: page.toString(),
+    };
+
+    if (selectedSource) query.source = selectedSource;
+    if (selectedApiKey) query.kid = selectedApiKey;
+    if (startDate) query.start = startDate;
+    if (endDate) query.end = endDate;
+    if (selectedProvider) query.provider = selectedProvider;
+
+    router.push(
+      {
+        pathname: router.pathname,
+        query,
+      },
+      undefined,
+      { shallow: true },
+    );
   };
 
   return (
     <div className="flex flex-col">
-      <h2 className="text-base font-semibold mb-2">
-        {t('Recent 7 day consumption records')}
-      </h2>
+      <h2 className="text-base font-semibold mb-2">{t('Usage Records')}</h2>
+
+      <Card className="p-4 mb-4 border-none">
+        <div className="flex flex-col sm:flex-row gap-4 items-end">
+          <div className="w-full flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Select
+                value={selectedSource}
+                onValueChange={(value) => {
+                  setSelectedSource(value);
+                  const query: Record<string, string> = {
+                    ...(router.query as Record<string, string>),
+                    source: value,
+                    tab: 'usage',
+                  };
+                  router.push(
+                    {
+                      pathname: router.pathname,
+                      query,
+                    },
+                    undefined,
+                    { shallow: true },
+                  );
+                }}
+              >
+                <SelectTrigger
+                  className="w-48"
+                  value={selectedSource}
+                  onReset={() => {
+                    setSelectedSource('');
+                    const query: Record<string, string> = {
+                      ...(router.query as Record<string, string>),
+                      tab: 'usage',
+                    };
+                    delete query.source;
+                    router.push(
+                      {
+                        pathname: router.pathname,
+                        query,
+                      },
+                      undefined,
+                      { shallow: true },
+                    );
+                  }}
+                >
+                  <SelectValue placeholder={t('Select Source')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={String(UsageSource.Web)}>
+                    {t('Web')}
+                  </SelectItem>
+                  <SelectItem value={String(UsageSource.API)}>
+                    {t('API')}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Select
+                value={selectedApiKey}
+                onValueChange={(value) => {
+                  setSelectedApiKey(value);
+                  const query: Record<string, string> = {
+                    ...(router.query as Record<string, string>),
+                    kid: value,
+                    tab: 'usage',
+                  };
+                  router.push(
+                    {
+                      pathname: router.pathname,
+                      query,
+                    },
+                    undefined,
+                    { shallow: true },
+                  );
+                }}
+              >
+                <SelectTrigger
+                  className="w-48"
+                  value={selectedApiKey}
+                  onReset={() => {
+                    setSelectedApiKey('');
+                    const query: Record<string, string> = {
+                      ...(router.query as Record<string, string>),
+                      tab: 'usage',
+                    };
+                    delete query.kid;
+                    router.push(
+                      {
+                        pathname: router.pathname,
+                        query,
+                      },
+                      undefined,
+                      { shallow: true },
+                    );
+                  }}
+                >
+                  <SelectValue placeholder={t('Select API Key')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {apiKeys.map((apiKey) => (
+                    <SelectItem
+                      key={apiKey.id.toString()}
+                      value={apiKey.id.toString()}
+                    >
+                      {apiKey.key}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Select
+                value={selectedProvider}
+                onValueChange={(value) => {
+                  setSelectedProvider(value);
+                  const query: Record<string, string> = {
+                    ...(router.query as Record<string, string>),
+                    provider: value,
+                    tab: 'usage',
+                  };
+                  router.push(
+                    {
+                      pathname: router.pathname,
+                      query,
+                    },
+                    undefined,
+                    { shallow: true },
+                  );
+                }}
+              >
+                <SelectTrigger
+                  className="w-48"
+                  value={selectedProvider}
+                  onReset={() => {
+                    setSelectedProvider('');
+                    const query: Record<string, string> = {
+                      ...(router.query as Record<string, string>),
+                      tab: 'usage',
+                    };
+                    delete query.provider;
+                    router.push(
+                      {
+                        pathname: router.pathname,
+                        query,
+                      },
+                      undefined,
+                      { shallow: true },
+                    );
+                  }}
+                >
+                  <SelectValue placeholder={t('Select Provider')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {providers.map((provider) => (
+                    <SelectItem key={provider.name} value={provider.name}>
+                      {provider.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <DateTimePopover
+                className="w-48"
+                placeholder={t('Start date')}
+                value={startDate}
+                onSelect={(date: Date) => {
+                  const formattedDate = formatDate(date.toLocaleDateString());
+                  setStartDate(formattedDate);
+                  const query: Record<string, string> = {
+                    ...(router.query as Record<string, string>),
+                    start: formattedDate,
+                    tab: 'usage',
+                  };
+                  router.push(
+                    {
+                      pathname: router.pathname,
+                      query,
+                    },
+                    undefined,
+                    { shallow: true },
+                  );
+                }}
+                onReset={() => {
+                  setStartDate('');
+                  const query: Record<string, string> = {
+                    ...(router.query as Record<string, string>),
+                    tab: 'usage',
+                  };
+                  delete query.start;
+                  router.push(
+                    {
+                      pathname: router.pathname,
+                      query,
+                    },
+                    undefined,
+                    { shallow: true },
+                  );
+                }}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <DateTimePopover
+                className="w-48"
+                placeholder={t('End date')}
+                value={endDate}
+                onSelect={(date: Date) => {
+                  const formattedDate = formatDate(date.toLocaleDateString());
+                  setEndDate(formattedDate);
+                  const query: Record<string, string> = {
+                    ...(router.query as Record<string, string>),
+                    end: formattedDate,
+                    tab: 'usage',
+                  };
+                  router.push(
+                    {
+                      pathname: router.pathname,
+                      query,
+                    },
+                    undefined,
+                    { shallow: true },
+                  );
+                }}
+                onReset={() => {
+                  setEndDate('');
+                  const query: Record<string, string> = {
+                    ...(router.query as Record<string, string>),
+                    tab: 'usage',
+                  };
+                  delete query.end;
+                  router.push(
+                    {
+                      pathname: router.pathname,
+                      query,
+                    },
+                    undefined,
+                    { shallow: true },
+                  );
+                }}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <ExportButton
+                buttonText={t('Export to Excel')}
+                exportUrl="/api/usage/excel"
+                params={{ ...getUsageParams(true), token: getUserSession() }}
+              />
+            </div>
+          </div>
+        </div>
+      </Card>
 
       <div className="block sm:hidden">
         {loading ? (
           <div className="flex justify-center py-4">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-white"></div>
           </div>
-        ) : balanceLogs.length === 0 ? (
+        ) : usageLogs.length === 0 ? (
           <div className="text-center py-4 text-sm text-gray-500">
             {t('No data')}
           </div>
         ) : (
           <div className="space-y-2">
-            {balanceLogs.map((x) => (
-              <Card key={x.date} className="p-2 px-4 border-none shadow-sm">
+            {usageLogs.map((log, index) => (
+              <Card key={index} className="p-2 px-4 border-none shadow-sm">
                 <div className="flex items-center justify-between text-xs">
                   <div className="font-medium">{t('Date')}</div>
-                  <div>{formatDate(x.date)}</div>
+                  <div>{formatDateTime(log.usagedCreatedAt)}</div>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
-                  <div className="font-medium">{t('Amount')}</div>
-                  <div>￥{(+(x.costAmount || 0)).toFixed(2)}</div>
+                  <div className="font-medium">{t('Provider/Model')}</div>
+                  <div className="overflow-hidden text-ellipsis whitespace-nowrap">
+                    {log.modelProviderName}/{log.modelName}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs mt-1">
+                  <div className="font-medium">{t('Input/Output Tokens')}</div>
+                  <div>
+                    {log.inputTokens}/{log.outputTokens}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs mt-1">
+                  <div className="font-medium">
+                    {t('Input/Output Cost(￥)')}
+                  </div>
+                  <div>
+                    ￥{log.inputCost.toFixed(4)}/{log.outputCost.toFixed(4)}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs mt-1">
+                  <div className="font-medium">{t('Total Cost')}</div>
+                  <div>￥{(log.inputCost + log.outputCost).toFixed(4)}</div>
+                </div>
+                <div className="flex items-center justify-between text-xs mt-1">
+                  <div className="font-medium">{t('IP')}</div>
+                  <div>{log.ip}</div>
+                </div>
+                <div className="flex items-center justify-between text-xs mt-1">
+                  <div className="font-medium">{t('Finish Reason')}</div>
+                  <div>{log.finishReason}</div>
+                </div>
+                <div className="flex items-center justify-between text-xs mt-1">
+                  <div className="font-medium">{t('Total Duration(ms)')}</div>
+                  <div>{(log.totalDurationMs / 1000).toLocaleString()}</div>
                 </div>
               </Card>
             ))}
@@ -79,27 +516,57 @@ const UsageRecordsTab = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>{t('Date')}</TableHead>
-                <TableHead>{t('Amount')}</TableHead>
+                <TableHead>{t('Provider/Model')}</TableHead>
+                <TableHead>{t('Input/Output Tokens')}</TableHead>
+                <TableHead>{t('Input/Output Cost(￥)')}</TableHead>
+                <TableHead>{t('Total Cost(￥)')}</TableHead>
+                <TableHead>{t('IP')}</TableHead>
+                <TableHead>{t('Finish Reason')}</TableHead>
+                <TableHead>{t('Total Duration(ms)')}</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody isLoading={loading}>
-              {balanceLogs.map((x) => (
-                <TableRow key={x.date} className="cursor-pointer">
+            <TableBody isEmpty={usageLogs.length === 0} isLoading={loading}>
+              {usageLogs.map((log, index) => (
+                <TableRow key={index} className="cursor-pointer">
+                  <TableCell>{formatDateTime(log.usagedCreatedAt)}</TableCell>
                   <TableCell>
-                    <span
-                      className="truncate cursor-pointer text-blue-600 hover:underline"
-                      onClick={() => viewWebUsage(x.date)}
-                    >
-                      {formatDate(x.date)}
-                    </span>
+                    {log.modelProviderName}/{log.modelName}
                   </TableCell>
-                  <TableCell>￥{(+(x.costAmount || 0)).toFixed(2)}</TableCell>
+                  <TableCell>
+                    {log.inputTokens}/{log.outputTokens}
+                  </TableCell>
+                  <TableCell>
+                    {log.inputCost.toFixed(4)}/{log.outputCost.toFixed(4)}
+                  </TableCell>
+                  <TableCell>
+                    {(log.inputCost + log.outputCost).toFixed(4)}
+                  </TableCell>
+                  <TableCell>{log.ip}</TableCell>
+                  <TableCell>{log.finishReason}</TableCell>
+                  <TableCell>
+                    {(log.totalDurationMs / 1000).toLocaleString()}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </Card>
       </div>
+
+      {totalCount > 0 && (
+        <div className="mt-4 flex flex-col items-center">
+          <PaginationContainer
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            currentCount={usageLogs.length}
+            totalCount={totalCount}
+            onPagingChange={(page: number, pageSize: number) => {
+              setPagination({ page, pageSize });
+              handlePageChange(page);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
