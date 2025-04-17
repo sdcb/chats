@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react';
-
 import {
   SUPPORTED_LANGUAGES,
   getLanguage,
@@ -15,25 +13,12 @@ const TRANSLATIONS = {
 };
 
 let globalLanguage = getLanguage();
-const listeners = new Set<(lang: string) => void>();
+
+let globalForceUpdate: (() => void) | null = null;
 
 const useTranslation = () => {
-  const [language, setLanguage_] = useState(globalLanguage);
-
-  useEffect(() => {
-    const handleLanguageChange = (newLang: string) => {
-      setLanguage_(newLang);
-    };
-
-    listeners.add(handleLanguageChange);
-
-    return () => {
-      listeners.delete(handleLanguageChange);
-    };
-  }, []);
-
   function t(message: string, params = {}) {
-    const translations = TRANSLATIONS[language as keyof typeof TRANSLATIONS];
+    const translations = TRANSLATIONS[globalLanguage as keyof typeof TRANSLATIONS];
     let msg = (translations as any)[message] || message;
 
     Object.keys(params).forEach((k) => {
@@ -43,18 +28,26 @@ const useTranslation = () => {
     return msg;
   }
 
+  const setForceUpdate = (forceUpdate: () => void) => {
+    globalForceUpdate = forceUpdate;
+  };
+
   const changeLanguage = (newLang: string) => {
     if (SUPPORTED_LANGUAGES.includes(newLang)) {
       globalLanguage = newLang;
       setLanguage(newLang);
-      listeners.forEach((listener) => listener(newLang));
+      if (globalForceUpdate) {
+        globalForceUpdate();
+      }
+      window.location.reload();
     }
   };
 
   return {
     t,
-    language,
+    language: globalLanguage,
     changeLanguage,
+    setForceUpdate,
     supportedLanguages: SUPPORTED_LANGUAGES,
   };
 };
