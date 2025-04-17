@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { formatDate } from '@/utils/date';
+
 import { AdminModelDto, GetUserInitialConfigResult } from '@/types/adminApis';
 
 import { Button } from '@/components/ui/button';
@@ -169,7 +171,7 @@ export default function UserInitialConfig() {
                       )}
                       {ModelCell(model.tokens)}
                       {ModelCell(model.counts)}
-                      {ModelCell(model.expires)}
+                      {ModelCell(formatDate(model.expires))}
                     </TableRow>
                   );
                 })

@@ -8,7 +8,14 @@ public partial class ModelReference
         return (float)Math.Clamp(temperature.Value, (float)MinTemperature, (float)MaxTemperature);
     }
 
-    public bool IsSdkUnsupportedO1 => SupportReasoningEffort(Name);
+    public static bool IsSdkUnsupportedO1(string modelReferenceName) => modelReferenceName switch
+    {
+        "o1-2024-12-17" => true,
+        "o3-mini-2025-01-31" => true,
+        "o3" => true,
+        "o4-mini" => true,
+        _ => false
+    };
 
     public static bool SupportReasoningEffort(string modelReferenceName)
     {
@@ -18,6 +25,8 @@ public partial class ModelReference
             "o3-mini-2025-01-31" => true,
             "grok-3-mini" => true,
             "grok-3-mini-fast" => true,
+            "o3" => true,
+            "o4-mini" => true,
             _ => false
         };
     }

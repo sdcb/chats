@@ -3,6 +3,8 @@ import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { formatDateTime } from '@/utils/date';
+
 import { GetModelKeysResult } from '@/types/adminApis';
 import { feModelProviders } from '@/types/model';
 
@@ -196,9 +198,7 @@ export default function ModelKeys() {
                     ? `${item.totalModelCount}`
                     : `${item.enabledModelCount}/${item.totalModelCount}`}
                 </TableCell>
-                <TableCell>
-                  {new Date(item.createdAt).toLocaleString()}
-                </TableCell>
+                <TableCell>{formatDateTime(item.createdAt)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

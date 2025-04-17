@@ -8,8 +8,8 @@ public record CheckUpdateResponse
     public required bool HasNewVersion { get; init; }
 
     [JsonPropertyName("tagName")]
-    public required string TagName { get; init; }
+    public required string? LatestVersion { get; init; }
 
     [JsonPropertyName("currentVersion")]
-    public required int CurrentVersion { get; init; }
+    public required string? CurrentVersion { get; init; }
 }

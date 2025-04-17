@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>d4aa34e2-6c5f-41b9-b61b-c1a48b1d1b44</UserSecretsId>
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,6 +22,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.3" />
     <PackageReference Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" Version="1.0.2" />
     <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="1.0.2" />
+    <PackageReference Include="MiniExcel" Version="1.40.0" />
     <PackageReference Include="Mscc.GenerativeAI" Version="2.4.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageReference Include="OpenAI" Version="2.1.0" />

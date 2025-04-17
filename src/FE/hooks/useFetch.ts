@@ -52,9 +52,10 @@ const handleErrorResponse = async (err: Response) => {
       message = 'Internal server error, Please try again later';
       break;
     case 401:
-      message = 'Session has expired';
-      redirectToLoginPage();
-      break;
+      {
+        redirectToLoginPage();
+        break;
+      }
     case 403:
       message = 'Resource denial of authorized access';
       redirectToHomePage(1000);
@@ -79,9 +80,8 @@ export const useFetch = () => {
     signal?: AbortSignal,
   ) => {
     const apiPrefix = getApiUrl();
-    const requestUrl = `${apiPrefix}${url}${
-      request?.params ? request.params : ''
-    }`;
+    const requestUrl = `${apiPrefix}${url}${request?.params ? request.params : ''
+      }`;
 
     const body = request?.body
       ? request.body instanceof FormData
@@ -117,7 +117,22 @@ export const useFetch = () => {
 
   return {
     get: async <T>(url: string, request?: RequestModel): Promise<T> => {
-      return handleFetch(url, { ...request, method: 'get' });
+      const searchParams = new URLSearchParams();
+      let paramsStr = '';
+      if (request?.params) {
+        Object.entries(request.params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, String(value));
+          }
+        });
+        paramsStr = `?${searchParams.toString()}`;
+        delete request?.params;
+      }
+
+      return handleFetch(`${url}${paramsStr}`, {
+        ...request,
+        method: 'get',
+      });
     },
     post: async <T>(
       url: string,

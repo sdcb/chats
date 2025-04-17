@@ -7,6 +7,7 @@ import { formatNumberAsMoney } from '@/utils/common';
 import { ModelUsageDto } from '@/types/clientApis';
 
 import { getModelUsage } from '@/apis/clientApis';
+import { formatDate } from '@/utils/date';
 
 const ChatModelInfo = (props: { modelId: number }) => {
   const { t } = useTranslation();
@@ -54,8 +55,7 @@ const ChatModelInfo = (props: { modelId: number }) => {
                 <></>
               ) : (
                 <>
-                  {new Date(modelUsage.expires).toLocaleDateString()}{' '}
-                  {` ${t('become due')}`}
+                  {formatDate(modelUsage.expires)} {` ${t('become due')}`}
                 </>
               )}
             </div>

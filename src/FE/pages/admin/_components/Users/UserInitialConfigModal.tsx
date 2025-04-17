@@ -52,6 +52,7 @@ import {
 import { cn } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { formatDate } from '@/utils/date';
 
 interface IProps {
   models: AdminModelDto[];
@@ -298,9 +299,7 @@ const UserInitialConfigModal = (props: IProps) => {
                                   >
                                     {model.expires ? (
                                       model.expires === '-' ? null : (
-                                        new Date(
-                                          model.expires,
-                                        ).toLocaleDateString()
+                                        formatDate(model.expires)
                                       )
                                     ) : (
                                       <span></span>

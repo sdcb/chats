@@ -1,4 +1,4 @@
-import { ChatStatus, ResponseContent } from './chat';
+import { ChatStatus, ResponseContent, UsageSource } from './chat';
 import { IChatMessage } from './chatMessage';
 import { DBModelProvider } from './model';
 import { Paging } from './page';
@@ -257,4 +257,39 @@ export interface PutChatPresetSpanParams {
   webSearchEnabled?: boolean;
   maxOutputTokens: number | null;
   reasoningEffort?: number | null;
+}
+
+export interface GetUsageParams {
+  user?: string;
+  kid?: string;
+  provider?: string;
+  start?: string;
+  end?: string;
+  page?: number;
+  pageSize?: number;
+  skip?: number;
+  tz: number;
+  source?: UsageSource;
+}
+
+export interface GetUsageResult {
+  userName: string;
+  apiKeyId: string;
+  apiKey: string;
+  modelProviderName: string;
+  modelReferenceName: string;
+  modelName: string;
+  preprocessDurationMs: number;
+  firstResponseDurationMs: number;
+  postprocessDurationMs: number;
+  totalDurationMs: number;
+  finishReason: string;
+  userAgent: string;
+  ip: string;
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  inputCost: number;
+  outputCost: number;
+  usagedCreatedAt: string;
 }

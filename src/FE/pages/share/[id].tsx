@@ -40,10 +40,17 @@ export default function ShareMessage() {
     getChatShare(chatShareId).then((data) => {
       setSelectedChat({ ...data, status: ChatStatus.None });
       setMessages(data.messages);
-      const selectedMsgs = findSelectedMessageByLeafId(
+      let selectedMsgs = findSelectedMessageByLeafId(
         data.messages,
         data.leafMessageId!,
       );
+      if (selectedMsgs.length === 0 && data.messages.length > 0) {
+        const messageCount = data.messages.length - 1;
+        selectedMsgs = findSelectedMessageByLeafId(
+          data.messages,
+          data.messages[messageCount].id,
+        );
+      }
       setSelectedMessages(selectedMsgs);
       setLoading(false);
     });

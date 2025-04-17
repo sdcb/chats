@@ -10,11 +10,10 @@ import DeletePopover from '@/pages/home/_components/Popover/DeletePopover';
 import {
   IconBulbFilled,
   IconCheck,
-  IconPlus,
   IconSearch,
 } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -43,8 +42,10 @@ const PromptsTab = () => {
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [isCreateMode, setIsCreateMode] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     fetchPrompts();
   }, []);
 
@@ -60,9 +61,8 @@ const PromptsTab = () => {
     try {
       const data = await getUserPrompts();
       setPrompts(data);
-    } catch (error) {
-      console.error('Error fetching prompts:', error);
-      toast.error(t('Failed to load prompts'));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -84,7 +84,7 @@ const PromptsTab = () => {
       isSystem: false,
       temperature: null,
     };
-    
+
     setSelectedPrompt(newPrompt);
     setIsCreateMode(true);
     setShowModal(true);
@@ -229,67 +229,63 @@ const PromptsTab = () => {
       </div>
 
       <div className="flex-1 overflow-auto hidden sm:block">
-        {filteredPrompts.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <Card className="border-none">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[300px]">{t('Name')}</TableHead>
-                  <TableHead className="w-[120px]">{t('Default')}</TableHead>
-                  <TableHead className="w-[120px]">{t('System')}</TableHead>
-                  <TableHead className="w-[80px] text-right">
-                    {t('Actions')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedPrompts.map((prompt) => (
-                  <TableRow
-                    key={prompt.id}
-                    className="cursor-pointer"
-                    onClick={() => handlePromptClick(prompt)}
-                  >
-                    <TableCell className="font-medium [&:has([role=checkbox])]:pr-0 py-2">
-                      <div className="flex items-center gap-2">
-                        <IconBulbFilled
-                          size={18}
-                          className={getPromptColor(prompt)}
-                        />
-                        <span>{prompt.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className='[&:has([role=checkbox])]:pr-0 py-2'>
-                      {prompt.isDefault && (
-                        <div className="flex items-center gap-1 text-green-600">
-                          <IconCheck size={18} />
-                          <span>{t('Default')}</span>
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className='[&:has([role=checkbox])]:pr-0 py-2'>
-                      {prompt.isSystem && (
-                        <div className="flex items-center gap-1 text-green-600">
-                          <IconCheck size={18} />
-                          <span>{t('System')}</span>
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell
-                      className="text-right [&:has([role=checkbox])]:pr-0 py-2"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <DeletePopover
-                        onDelete={() => handleDeletePrompt(prompt.id)}
+        <Card className="border-none">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[300px]">{t('Name')}</TableHead>
+                <TableHead className="w-[120px]">{t('Default')}</TableHead>
+                <TableHead className="w-[120px]">{t('System')}</TableHead>
+                <TableHead className="w-[80px] text-right">
+                  {t('Actions')}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody isEmpty={filteredPrompts.length === 0} isLoading={loading}>
+              {sortedPrompts.map((prompt) => (
+                <TableRow
+                  key={prompt.id}
+                  className="cursor-pointer"
+                  onClick={() => handlePromptClick(prompt)}
+                >
+                  <TableCell className="font-medium [&:has([role=checkbox])]:pr-0 py-2">
+                    <div className="flex items-center gap-2">
+                      <IconBulbFilled
+                        size={18}
+                        className={getPromptColor(prompt)}
                       />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        )}
+                      <span>{prompt.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className='[&:has([role=checkbox])]:pr-0 py-2'>
+                    {prompt.isDefault && (
+                      <div className="flex items-center gap-1 text-green-600">
+                        <IconCheck size={18} />
+                        <span>{t('Default')}</span>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className='[&:has([role=checkbox])]:pr-0 py-2'>
+                    {prompt.isSystem && (
+                      <div className="flex items-center gap-1 text-green-600">
+                        <IconCheck size={18} />
+                        <span>{t('System')}</span>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell
+                    className="text-right [&:has([role=checkbox])]:pr-0 py-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <DeletePopover
+                      onDelete={() => handleDeletePrompt(prompt.id)}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       </div>
 
       {showModal && selectedPrompt && (

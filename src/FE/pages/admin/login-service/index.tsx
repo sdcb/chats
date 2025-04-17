@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { formatDateTime } from '@/utils/date';
+
 import { GetLoginServicesResult } from '@/types/adminApis';
 
 import { Button } from '@/components/ui/button';
@@ -87,9 +89,7 @@ export default function LoginService() {
                   ></div>
                   {item.type}
                 </TableCell>
-                <TableCell>
-                  {new Date(item.createdAt).toLocaleString()}
-                </TableCell>
+                <TableCell>{formatDateTime(item.createdAt)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

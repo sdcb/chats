@@ -24,15 +24,17 @@ import UsageRecordsTab from './_components/tabs/UsageRecordsTab';
 const SettingsPage = () => {
   const { t } = useTranslation();
   const router = useRouter();
-  const { t: tabParam } = router.query;
+  const { t: tabParam, tab } = router.query;
 
   const [activeTab, setActiveTab] = useState('general');
 
   useEffect(() => {
     if (tabParam && typeof tabParam === 'string') {
       setActiveTab(tabParam);
+    } else if (tab && typeof tab === 'string') {
+      setActiveTab(tab);
     }
-  }, [tabParam]);
+  }, [tabParam, tab]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);

@@ -2,11 +2,14 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 
 import useTranslation from '@/hooks/useTranslation';
 
 import { getApiUrl } from '@/utils/common';
+import { formatDate } from '@/utils/date';
 
+import { UsageSource } from '@/types/chat';
 import { GetUserApiKeyResult } from '@/types/clientApis';
 
 import DateTimePopover from '@/pages/home/_components/Popover/DateTimePopover';
@@ -14,7 +17,7 @@ import DeletePopover from '@/pages/home/_components/Popover/DeletePopover';
 
 import CopyButton from '@/components/Button/CopyButton';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -35,6 +38,7 @@ import {
 let timer: NodeJS.Timeout;
 const ApiKeysTab = () => {
   const { t } = useTranslation();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [apiKeys, setApiKeys] = useState<GetUserApiKeyResult[]>([]);
   type GetUserApiKeyType = keyof GetUserApiKeyResult;
@@ -90,6 +94,12 @@ const ApiKeysTab = () => {
     });
   };
 
+  const viewApiKeyUsage = (id: number) => {
+    router.push(
+      `/usage?kid=${id}&source=${UsageSource.API}&page=1&tab=api-keys`,
+    );
+  };
+
   const apiUrl = (getApiUrl() || location.origin) + '/v1';
   const docUrl = 'https://platform.openai.com/docs/guides/chat-completions';
   return (
@@ -137,7 +147,12 @@ const ApiKeysTab = () => {
                 <div className="flex items-center justify-between mb-2 text-xs">
                   <div className="font-medium">{t('Key')}</div>
                   <div className="flex items-center">
-                    <span className="max-w-[180px] truncate">{x.key}</span>
+                    <span
+                      className="max-w-[180px] truncate cursor-pointer text-blue-600 hover:underline"
+                      onClick={() => viewApiKeyUsage(x.id)}
+                    >
+                      {x.key}
+                    </span>
                     <CopyButton value={x.key} />
                   </div>
                 </div>
@@ -167,9 +182,7 @@ const ApiKeysTab = () => {
                 <div className="flex items-center justify-between mb-2 text-xs">
                   <div className="font-medium">{t('LastUsedAt')}</div>
                   <div className="h-9 flex items-center">
-                    {x.lastUsedAt
-                      ? new Date(x.lastUsedAt).toLocaleDateString()
-                      : '-'}
+                    {x.lastUsedAt ? formatDate(x.lastUsedAt) : '-'}
                   </div>
                 </div>
                 <div className="flex justify-end mt-1">
@@ -190,11 +203,11 @@ const ApiKeysTab = () => {
           <Table>
             <TableHeader>
               <TableRow className="pointer-events-none">
-                <TableHead className="">{t('Key')}</TableHead>
-                <TableHead className="">{t('Comment')}</TableHead>
-                <TableHead className="text-center">{t('Expires')}</TableHead>
-                <TableHead className="">{t('LastUsedAt')}</TableHead>
-                <TableHead className="">{t('Actions')}</TableHead>
+                <TableHead>{t('Key')}</TableHead>
+                <TableHead>{t('Comment')}</TableHead>
+                <TableHead>{t('Expires')}</TableHead>
+                <TableHead>{t('LastUsedAt')}</TableHead>
+                <TableHead>{t('Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody isEmpty={apiKeys.length === 0} isLoading={loading}>
@@ -203,7 +216,10 @@ const ApiKeysTab = () => {
                   <TableRow key={x.id} className="cursor-pointer">
                     <TableCell className="py-2">
                       <div className="flex items-center">
-                        <div className="overflow-hidden text-ellipsis whitespace-nowrap">
+                        <div
+                          className="overflow-hidden text-ellipsis whitespace-nowrap text-blue-600 hover:underline cursor-pointer"
+                          onClick={() => viewApiKeyUsage(x.id)}
+                        >
                           {x.key}
                         </div>
                         <CopyButton value={x.key} />
@@ -218,8 +234,10 @@ const ApiKeysTab = () => {
                         }}
                       />
                     </TableCell>
-                    <TableCell className="py-2 min-w-[128px] max-w-[200px]">
+                    <TableCell className="py-2">
                       <DateTimePopover
+                        className="w-[128px]"
+                        placeholder={t('Pick a date')}
                         value={x.expires}
                         onSelect={(date: Date) => {
                           changeApiKeyBy(index, 'expires', date as any);
@@ -227,9 +245,7 @@ const ApiKeysTab = () => {
                       />
                     </TableCell>
                     <TableCell className="py-2 min-w-[128px] max-w-[150px]">
-                      {x.lastUsedAt
-                        ? new Date(x.lastUsedAt).toLocaleDateString()
-                        : '-'}
+                      {x.lastUsedAt ? formatDate(x.lastUsedAt) : '-'}
                     </TableCell>
                     <TableCell className="py-2 max-w-[64px]">
                       <DeletePopover
