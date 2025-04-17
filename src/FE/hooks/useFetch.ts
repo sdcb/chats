@@ -68,9 +68,6 @@ const handleErrorResponse = async (err: Response) => {
           ? message
           : 'Operation failed, Please try again later, or contact technical personnel';
   }
-  if (err.status === 401) {
-    return;
-  }
   const tMsg = t(message);
   tMsg && toast.error(tMsg);
   throw error;
