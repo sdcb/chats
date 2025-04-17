@@ -69,7 +69,7 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
         if (query.Start != null)
         {
             DateTime localStart =  query.Start.Value
-                .ToDateTime(new TimeOnly())
+                .ToDateTime(new TimeOnly(), DateTimeKind.Utc)
                 .AddMinutes(query.TimezoneOffset);
             usagesQuery = usagesQuery.Where(u => u.CreatedAt >= localStart);
         }
@@ -77,7 +77,7 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
         {
             DateTime localEnd = query.End.Value
                 .AddDays(1)
-                .ToDateTime(new TimeOnly())
+                .ToDateTime(new TimeOnly(), DateTimeKind.Utc)
                 .AddMinutes(query.TimezoneOffset);
             usagesQuery = usagesQuery.Where(u => u.CreatedAt < localEnd);
         }

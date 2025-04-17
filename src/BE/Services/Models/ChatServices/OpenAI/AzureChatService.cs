@@ -15,7 +15,7 @@ public class AzureChatService(Model model) : OpenAIChatService(model, CreateChat
         ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Secret, nameof(model.ModelKey.Secret));
 
         AzureOpenAIClientOptions options = new();
-        if (model.ModelReference.IsSdkUnsupportedO1)
+        if (ModelReference.IsSdkUnsupportedO1(model.ModelReference.Name))
         {
             // o1 only supports api version: 2024-12-01-preview
             options
