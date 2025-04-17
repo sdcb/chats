@@ -425,5 +425,6 @@
   "Select Provider": "选择提供商",
   "Select API Key": "选择API密钥",
   "Export to Excel": "导出到Excel",
-  "Export": "导出"
+  "Export": "导出",
+  "Select Source": "选择来源"
 }
