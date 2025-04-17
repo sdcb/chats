@@ -52,9 +52,10 @@ const handleErrorResponse = async (err: Response) => {
       message = 'Internal server error, Please try again later';
       break;
     case 401:
-      message = 'Session has expired';
-      redirectToLoginPage();
-      break;
+      {
+        redirectToLoginPage();
+        break;
+      }
     case 403:
       message = 'Resource denial of authorized access';
       redirectToHomePage(1000);
@@ -66,6 +67,9 @@ const handleErrorResponse = async (err: Response) => {
         typeof message === 'string' && message !== ''
           ? message
           : 'Operation failed, Please try again later, or contact technical personnel';
+  }
+  if (err.status === 401) {
+    return;
   }
   const tMsg = t(message);
   tMsg && toast.error(tMsg);
@@ -79,9 +83,8 @@ export const useFetch = () => {
     signal?: AbortSignal,
   ) => {
     const apiPrefix = getApiUrl();
-    const requestUrl = `${apiPrefix}${url}${
-      request?.params ? request.params : ''
-    }`;
+    const requestUrl = `${apiPrefix}${url}${request?.params ? request.params : ''
+      }`;
 
     const body = request?.body
       ? request.body instanceof FormData
