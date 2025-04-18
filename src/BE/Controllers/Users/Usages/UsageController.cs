@@ -43,6 +43,19 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", query.ToExcelFileName());
     }
 
+    [HttpGet("stat")]
+    public async Task<ActionResult<UsageStatistics>> GetStatistics(UsageQueryNoPagination query, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        IQueryable<UsageDto> rows = ProcessQuery(query);
+        UsageStatistics stat = await UsageStatistics.FromQuery(rows, cancellationToken);
+        return Ok(stat);
+    }
+
     private IQueryable<UsageDto> ProcessQuery(IUsageQuery query)
     {
         IQueryable<UserModelUsage> usagesQuery = db.UserModelUsages;
@@ -68,7 +81,7 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
 
         if (query.Start != null)
         {
-            DateTime localStart =  query.Start.Value
+            DateTime localStart = query.Start.Value
                 .ToDateTime(new TimeOnly(), DateTimeKind.Utc)
                 .AddMinutes(query.TimezoneOffset);
             usagesQuery = usagesQuery.Where(u => u.CreatedAt >= localStart);
