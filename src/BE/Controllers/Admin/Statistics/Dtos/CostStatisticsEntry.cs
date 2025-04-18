@@ -2,6 +2,6 @@
 
 public record CostStatisticsEntry
 {
-    public required decimal InputCost { get; init; }
-    public required decimal OutputCost { get; init; }
+    public decimal InputCost { get; init; }
+    public decimal OutputCost { get; init; }
 }

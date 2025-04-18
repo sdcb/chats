@@ -42,111 +42,117 @@ public class StatisticsController(ChatsDB db) : ControllerBase
     }
 
     [HttpGet("model-provider-statistics")]
-    public async Task<ActionResult<Dictionary<string, int>>> GetModelProviderStatistics([FromQuery] StartEndDate query, CancellationToken cancellationToken)
+    public async Task<ActionResult<KeyValuePair<string, int>[]>> GetModelProviderStatistics([FromQuery] StartEndDate query, CancellationToken cancellationToken)
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
-        return Ok(await q
+        Dictionary<string, int> r = await q
             .GroupBy(x => x.UserModel.Model.ModelReference.Provider.Name)
             .ToDictionaryAsync(
                 x => x.Key,
-                x => x.Count(), cancellationToken));
+                x => x.Count(), cancellationToken);
+        return Ok(r);
     }
 
     [HttpGet("model-statistics")]
-    public async Task<ActionResult<Dictionary<string, int>>> GetModelStatistics([FromQuery] StartEndDate query, CancellationToken cancellationToken)
+    public async Task<ActionResult<SingleValueStatisticsEntry[]>> GetModelStatistics([FromQuery] StartEndDate query, CancellationToken cancellationToken)
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
-        return Ok(await q
+        SingleValueStatisticsEntry[] r = await q
             .GroupBy(x => x.UserModel.Model.ModelReference.Name)
-            .ToDictionaryAsync(
-                x => x.Key,
-                x => x.Count(), cancellationToken));
+            .Select(x => new SingleValueStatisticsEntry(x.Key, x.Count()))
+            .ToArrayAsync(cancellationToken);
+        return Ok(r);
     }
 
     [HttpGet("model-key-statistics")]
-    public async Task<ActionResult<Dictionary<string, int>>> GetModelKeyStatistics([FromQuery] StartEndDate query, CancellationToken cancellationToken)
+    public async Task<ActionResult<SingleValueStatisticsEntry[]>> GetModelKeyStatistics([FromQuery] StartEndDate query, CancellationToken cancellationToken)
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
-        return Ok(await q
+        SingleValueStatisticsEntry[] r = await q
             .GroupBy(x => x.UserModel.Model.ModelKey.Name)
-            .ToDictionaryAsync(
-                x => x.Key,
-                x => x.Count(), cancellationToken));
+            .Select(x => new SingleValueStatisticsEntry(x.Key, x.Count()))
+            .ToArrayAsync(cancellationToken);
+        return Ok(r);
     }
 
     [HttpGet("source-statistics")]
-    public async Task<ActionResult<Dictionary<string, int>>> GetSourceStatistics([FromQuery] StartEndDate query, CancellationToken cancellationToken)
+    public async Task<ActionResult<SingleValueStatisticsEntry[]>> GetSourceStatistics([FromQuery] StartEndDate query, CancellationToken cancellationToken)
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
-        return Ok(await q
+        SingleValueStatisticsEntry[] r = await q
             .GroupBy(x => x.UserApiUsage != null ? UsageQueryType.Api : UsageQueryType.Web)
-            .ToDictionaryAsync(
-                x => x.Key,
-                x => x.Count(), cancellationToken));
+            .Select(x => new SingleValueStatisticsEntry(x.Key.ToString(), x.Count()))
+            .ToArrayAsync(cancellationToken);
+        return Ok(r);
     }
 
     [HttpGet("token-statistics-by-date")]
-    public async Task<ActionResult<Dictionary<DateOnly, TokenStatisticsEntry>>> GetTokenStatisticsByDate([FromQuery] StartEndDate query, CancellationToken cancellationToken)
+    public async Task<ActionResult<List<DateStatisticsEntry<TokenStatisticsEntry>>>> GetTokenStatisticsByDate([FromQuery] StartEndDate query, CancellationToken cancellationToken)
     {
-        IQueryable<UserModelUsage> q = GetUserModelQuery(query);
-        Dictionary<DateOnly, TokenStatisticsEntry> r = await q
-            .GroupBy(x => DateOnly.FromDateTime(x.CreatedAt.AddMinutes(query.TimezoneOffset)))
-            .ToDictionaryAsync(
-                x => x.Key,
-                x => new TokenStatisticsEntry
-                {
-                    InputTokens = x.Sum(y => y.InputTokens),
-                    OutputTokens = x.Sum(y => y.OutputTokens),
-                    ReasoningTokens = x.Sum(y => y.ReasoningTokens)
-                }, cancellationToken);
+        IOrderedQueryable<IGrouping<DateOnly, UserModelUsage>> q = GetUserModelQueryGrouped(query);
+        DateStatisticsEntry<TokenStatisticsEntry>[] r = await q
+            .Select(x => new DateStatisticsEntry<TokenStatisticsEntry>(x.Key, new TokenStatisticsEntry
+            {
+                InputTokens = x.Sum(y => y.InputTokens),
+                OutputTokens = x.Sum(y => y.OutputTokens),
+                ReasoningTokens = x.Sum(y => y.ReasoningTokens)
+            }))
+            .ToArrayAsync(cancellationToken);
         return Ok(FillMissing(r));
     }
 
     [HttpGet("cost-statistics-by-date")]
-    public async Task<ActionResult<Dictionary<DateOnly, CostStatisticsEntry>>> GetCostStatisticsByDate([FromQuery] StartEndDate query, CancellationToken cancellationToken)
+    public async Task<ActionResult<List<DateStatisticsEntry<CostStatisticsEntry>>>> GetCostStatisticsByDate([FromQuery] StartEndDate query, CancellationToken cancellationToken)
     {
-        IQueryable<UserModelUsage> q = GetUserModelQuery(query);
-        Dictionary<DateOnly, CostStatisticsEntry> r = await q
-            .GroupBy(x => DateOnly.FromDateTime(x.CreatedAt.AddMinutes(query.TimezoneOffset)))
-            .ToDictionaryAsync(
-                x => x.Key,
-                x => new CostStatisticsEntry
-                {
-                    InputCost = x.Sum(y => y.InputCost),
-                    OutputCost = x.Sum(y => y.OutputCost),
-                }, cancellationToken);
+        IOrderedQueryable<IGrouping<DateOnly, UserModelUsage>> q = GetUserModelQueryGrouped(query);
+        DateStatisticsEntry<CostStatisticsEntry>[] r = await q
+            .Select(x => new DateStatisticsEntry<CostStatisticsEntry>(x.Key, new CostStatisticsEntry
+            {
+                InputCost = x.Sum(y => y.InputCost),
+                OutputCost = x.Sum(y => y.OutputCost),
+            }))
+            .ToArrayAsync(cancellationToken);
         return Ok(FillMissing(r));
     }
 
     [HttpGet("chat-count-by-date")]
-    public async Task<ActionResult<Dictionary<DateOnly, int>>> GetChatCountByDate([FromQuery] StartEndDate query, CancellationToken cancellationToken)
+    public async Task<ActionResult<List<DateStatisticsEntry<int>>>> GetChatCountByDate([FromQuery] StartEndDate query, CancellationToken cancellationToken)
     {
-        IQueryable<UserModelUsage> q = GetUserModelQuery(query);
-        Dictionary<DateOnly, int> r = await q
-            .GroupBy(x => DateOnly.FromDateTime(x.CreatedAt.AddMinutes(query.TimezoneOffset)))
-            .ToDictionaryAsync(
-                x => x.Key,
-                x => x.Count(), cancellationToken);
+        IOrderedQueryable<IGrouping<DateOnly, UserModelUsage>> q = GetUserModelQueryGrouped(query);
+        DateStatisticsEntry<int>[] r = await q
+            .Select(x => new DateStatisticsEntry<int>(x.Key, x.Count()))
+            .ToArrayAsync(cancellationToken);
         return Ok(FillMissing(r));
     }
 
-    static Dictionary<DateOnly, T> FillMissing<T>(Dictionary<DateOnly, T> dict)
+    static List<DateStatisticsEntry<T>> FillMissing<T>(DateStatisticsEntry<T>[] dict) where T : new()
     {
-        DateOnly min = dict.Keys.Min();
-        DateOnly max = dict.Keys.Max();
-        Dictionary<DateOnly, T> r = [];
-        for (DateOnly i = min; i <= max; i = i.AddDays(1))
+        List<DateStatisticsEntry<T>> result = [];
+
+        if (dict == null || dict.Length == 0)
         {
-            if (!dict.TryGetValue(i, out T? value))
-            {
-                r[i] = default!;
-            }
-            else
-            {
-                r[i] = value;
-            }
+            return result;
         }
-        return r;
+
+        result.Add(dict[0]);
+
+        for (int i = 1; i < dict.Length; i++)
+        {
+            DateStatisticsEntry<T> prev = dict[i - 1];
+            DateStatisticsEntry<T> current = dict[i];
+
+            DateOnly expectedNextDate = prev.Date.AddDays(1);
+
+            while (expectedNextDate < current.Date)
+            {
+                result.Add(new DateStatisticsEntry<T>(expectedNextDate, new T()));
+                expectedNextDate = expectedNextDate.AddDays(1);
+            }
+
+            result.Add(current);
+        }
+
+        return result;
     }
 
     private IQueryable<UserModelUsage> GetUserModelQuery(StartEndDate query)
@@ -162,5 +168,14 @@ public class StatisticsController(ChatsDB db) : ControllerBase
         }
 
         return q;
+    }
+
+    private IOrderedQueryable<IGrouping<DateOnly, UserModelUsage>> GetUserModelQueryGrouped(StartEndDate query)
+    {
+        IQueryable<UserModelUsage> q = GetUserModelQuery(query);
+        IOrderedQueryable<IGrouping<DateOnly, UserModelUsage>> group = q
+            .GroupBy(x => DateOnly.FromDateTime(x.CreatedAt.Add(TimeSpan.FromMinutes(query.TimezoneOffset))))
+            .OrderBy(x => x.Key);
+        return group;
     }
 }
