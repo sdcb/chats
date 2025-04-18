@@ -16,7 +16,7 @@ public partial class OpenAIChatService(Model model, ChatClient chatClient) : Cha
     {
     }
 
-    protected static TimeSpan NetworkTimeout { get; } = TimeSpan.FromHours(1);
+    protected static TimeSpan NetworkTimeout { get; } = TimeSpan.FromHours(24);
 
     private static ChatClient CreateChatClient(Model model, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
     {

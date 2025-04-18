@@ -126,6 +126,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         CancellationToken cancellationToken)
     {
         long firstTick = Stopwatch.GetTimestamp();
+        cancellationToken = default; // disallow cancellation token for now for better user experience
 
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig)
