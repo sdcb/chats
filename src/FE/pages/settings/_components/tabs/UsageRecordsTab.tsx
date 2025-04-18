@@ -29,6 +29,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -193,8 +194,6 @@ const UsageRecordsTab = () => {
 
   return (
     <div className="flex flex-col">
-      <h2 className="text-base font-semibold mb-2">{t('Usage Records')}</h2>
-
       <Card className="p-4 mb-4 border-none">
         <div className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="w-full flex items-center gap-2 flex-wrap">
@@ -549,6 +548,18 @@ const UsageRecordsTab = () => {
                 </TableRow>
               ))}
             </TableBody>
+            {usageLogs.length > 0 && (
+              <TableFooter className="bg-card">
+                <TableRow>
+                  <TableCell colSpan={2}>{t('Total')}</TableCell>
+                  <TableCell>222/333</TableCell>
+                  <TableCell>12321/123213</TableCell>
+                  <TableCell>123213</TableCell>
+                  <TableCell colSpan={2}></TableCell>
+                  <TableCell>$2,500.00</TableCell>
+                </TableRow>
+              </TableFooter>
+            )}
           </Table>
         </Card>
       </div>
@@ -556,6 +567,7 @@ const UsageRecordsTab = () => {
       {totalCount > 0 && (
         <div className="mt-4 flex flex-col items-center">
           <PaginationContainer
+            showPageNumbers={true}
             page={pagination.page}
             pageSize={pagination.pageSize}
             currentCount={usageLogs.length}

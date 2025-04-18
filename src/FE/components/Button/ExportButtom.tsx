@@ -2,6 +2,8 @@ import React from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { getApiUrl } from '@/utils/common';
+
 import { Button } from '@/components/ui/button';
 
 interface ExportProps {
@@ -23,7 +25,7 @@ const ExportButton: React.FC<ExportProps> = ({
   const handleExport = () => {
     const form = document.createElement('form');
     form.method = 'GET';
-    form.action = exportUrl;
+    form.action = getApiUrl() + exportUrl;
     form.target = '_blank';
 
     Object.entries(params).forEach(([key, value]) => {
