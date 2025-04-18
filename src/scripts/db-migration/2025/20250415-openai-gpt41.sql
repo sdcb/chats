@@ -61,3 +61,7 @@ WHEN NOT MATCHED THEN
         source.[ContextWindow], source.[MaxResponseTokens], source.[TokenizerId], source.[InputTokenPrice1M], 
         source.[OutputTokenPrice1M], source.[CurrencyCode]
     );
+
+UPDATE [ModelReference]
+SET [DisplayName] = 'grok-3'
+WHERE [Id] IN (1104, 1105, 1106, 1107);

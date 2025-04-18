@@ -11,7 +11,7 @@ public record UsageStatistics
     public decimal SumInputCost { get; init; }
     public decimal SumOutputCost { get; init; }
     public decimal SumTotalCost => SumInputCost + SumOutputCost;
-    public decimal AvgTotalCost => SumTotalCost / TotalRequests;
+    public decimal? AvgTotalCost => TotalRequests == 0 ? null : SumTotalCost / TotalRequests;
 
     public double AvgPreprocessDurationMs { get; init; }
     public double AvgFirstResponseDurationMs { get; init; }
