@@ -293,3 +293,18 @@ export interface GetUsageResult {
   outputCost: number;
   usagedCreatedAt: string;
 }
+
+export interface GetUsageStatResult {
+  totalRequests: number;
+  sumInputTokens: number;
+  sumOutputTokens: number;
+  sumReasoningTokens: number;
+  sumInputCost: number;
+  sumOutputCost: number;
+  sumTotalCost: number;
+  avgTotalCost: number;
+  avgPreprocessDurationMs: number;
+  avgFirstResponseDurationMs: number;
+  avgPostprocessDurationMs: number;
+  avgTotalDurationMs: number;
+}

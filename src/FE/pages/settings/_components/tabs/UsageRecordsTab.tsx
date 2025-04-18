@@ -8,7 +8,11 @@ import { formatDate, formatDateTime } from '@/utils/date';
 import { getUserSession } from '@/utils/user';
 
 import { UsageSource } from '@/types/chat';
-import { GetUsageParams, GetUsageResult } from '@/types/clientApis';
+import {
+  GetUsageParams,
+  GetUsageResult,
+  GetUsageStatResult,
+} from '@/types/clientApis';
 import { GetUserApiKeyResult } from '@/types/clientApis';
 import { feModelProviders } from '@/types/model';
 import { PageResult } from '@/types/page';
@@ -35,7 +39,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import { getUsage, getUserApiKey, getUserModels } from '@/apis/clientApis';
+import {
+  getUsage,
+  getUsageStat,
+  getUserApiKey,
+  getUserModels,
+} from '@/apis/clientApis';
 import { useUserInfo } from '@/providers/UserProvider';
 
 interface Provider {
@@ -62,6 +71,9 @@ const UsageRecordsTab = () => {
   const { source, kid, page, start, end, provider } = router.query;
 
   const [usageLogs, setUsageLogs] = useState<GetUsageResult[]>([]);
+  const [usageStat, setUsageStat] = useState<GetUsageStatResult>(
+    {} as GetUsageStatResult,
+  );
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -110,6 +122,7 @@ const UsageRecordsTab = () => {
       setSelectedApiKey((kid as string) || '');
       setSelectedSource((source as string) || '');
       fetchUsageData();
+      fetchUsageStat();
     }
   }, [
     router.query.kid,
@@ -166,6 +179,13 @@ const UsageRecordsTab = () => {
       .finally(() => {
         setLoading(false);
       });
+  };
+
+  const fetchUsageStat = () => {
+    const params: GetUsageParams = getUsageParams();
+    getUsageStat(params).then((data: GetUsageStatResult) => {
+      setUsageStat(data);
+    });
   };
 
   const handlePageChange = (page: number) => {
@@ -548,15 +568,22 @@ const UsageRecordsTab = () => {
                 </TableRow>
               ))}
             </TableBody>
-            {usageLogs.length > 0 && (
+            {totalCount > 0 && (
               <TableFooter className="bg-card">
                 <TableRow>
                   <TableCell colSpan={2}>{t('Total')}</TableCell>
-                  <TableCell>222/333</TableCell>
-                  <TableCell>12321/123213</TableCell>
-                  <TableCell>123213</TableCell>
+                  <TableCell>
+                    {usageStat?.sumInputTokens}/{usageStat?.sumOutputTokens}
+                  </TableCell>
+                  <TableCell>
+                    {usageStat?.sumInputCost.toFixed(2)}/
+                    {usageStat?.sumOutputCost.toFixed(2)}
+                  </TableCell>
+                  <TableCell>{usageStat?.sumTotalCost.toFixed(2)}</TableCell>
                   <TableCell colSpan={2}></TableCell>
-                  <TableCell>$2,500.00</TableCell>
+                  <TableCell>
+                    {usageStat?.avgTotalDurationMs.toFixed(2)}
+                  </TableCell>
                 </TableRow>
               </TableFooter>
             )}

@@ -17,6 +17,7 @@ import {
   GetLoginProvidersResult,
   GetUsageParams,
   GetUsageResult,
+  GetUsageStatResult,
   GetUserApiKeyResult,
   GetUserBalanceResult,
   GetUserChatGroupWithMessagesResult as GetUserChatGroupWithChatsResult,
@@ -506,3 +507,9 @@ export const getUsage = (params: GetUsageParams) => {
   });
 };
 
+export const getUsageStat = (params: GetUsageParams) => {
+  const fetchServer = useFetch();
+  return fetchServer.get<GetUsageStatResult>('/api/usage/stat', {
+    params: params,
+  });
+};
