@@ -174,7 +174,7 @@ public class StatisticsController(ChatsDB db) : ControllerBase
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
         IOrderedQueryable<IGrouping<DateOnly, UserModelUsage>> group = q
-            .GroupBy(x => DateOnly.FromDateTime(x.CreatedAt.Add(TimeSpan.FromMinutes(query.TimezoneOffset))))
+            .GroupBy(x => DateOnly.FromDateTime(x.CreatedAt.AddMinutes(query.TimezoneOffset)))
             .OrderBy(x => x.Key);
         return group;
     }
