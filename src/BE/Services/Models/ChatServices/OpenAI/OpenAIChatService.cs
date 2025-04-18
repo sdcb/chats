@@ -16,13 +16,15 @@ public partial class OpenAIChatService(Model model, ChatClient chatClient) : Cha
     {
     }
 
+    protected static TimeSpan NetworkTimeout { get; } = TimeSpan.FromHours(1);
+
     private static ChatClient CreateChatClient(Model model, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Secret, nameof(model.ModelKey.Secret));
         OpenAIClientOptions oaic = new()
         {
             Endpoint = !string.IsNullOrWhiteSpace(model.ModelKey.Host) ? new Uri(model.ModelKey.Host) : suggestedApiUrl,
-            NetworkTimeout = TimeSpan.FromHours(1),
+            NetworkTimeout = NetworkTimeout,
         };
         foreach (PipelinePolicy policy in perCallPolicies)
         {
