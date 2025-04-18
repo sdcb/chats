@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { useRouter } from 'next/router';
 
+import useDebounce from '@/hooks/useDebounce';
 import useTranslation from '@/hooks/useTranslation';
 
 import { formatDate, formatDateTime } from '@/utils/date';
@@ -13,7 +14,6 @@ import {
   GetUsageResult,
   GetUsageStatResult,
 } from '@/types/clientApis';
-import { GetUserApiKeyResult } from '@/types/clientApis';
 import { feModelProviders } from '@/types/model';
 import { PageResult } from '@/types/page';
 
@@ -22,6 +22,7 @@ import DateTimePopover from '@/pages/home/_components/Popover/DateTimePopover';
 import ExportButton from '@/components/Button/ExportButtom';
 import PaginationContainer from '@/components/Pagiation/Pagiation';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -39,13 +40,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import {
-  getUsage,
-  getUsageStat,
-  getUserApiKey,
-  getUserModels,
-} from '@/apis/clientApis';
-import { useUserInfo } from '@/providers/UserProvider';
+import { getUsage, getUsageStat, getUserModels } from '@/apis/clientApis';
 
 interface Provider {
   modelProviderId: number;
@@ -54,21 +49,19 @@ interface Provider {
 
 interface QueryParams {
   [key: string]: string | string[] | undefined;
-  tab?: string;
   source?: string;
-  kid?: string;
   page?: string;
   start?: string;
   end?: string;
   provider?: string;
+  user?: string;
 }
 
-const UsageRecordsTab = () => {
+const UsageRecords = () => {
   const { t } = useTranslation();
   const router = useRouter();
-  const user = useUserInfo();
 
-  const { source, kid, page, start, end, provider } = router.query;
+  const { source, page, start, end, provider, user } = router.query;
 
   const [usageLogs, setUsageLogs] = useState<GetUsageResult[]>([]);
   const [usageStat, setUsageStat] = useState<GetUsageStatResult>(
@@ -77,12 +70,8 @@ const UsageRecordsTab = () => {
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [providers, setProviders] = useState<Provider[]>([]);
-  const [apiKeys, setApiKeys] = useState<GetUserApiKeyResult[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<string>(
     (provider as string) || '',
-  );
-  const [selectedApiKey, setSelectedApiKey] = useState<string>(
-    (kid as string) || '',
   );
   const [pagination, setPagination] = useState({
     page: parseInt((page as string) || '1'),
@@ -94,6 +83,28 @@ const UsageRecordsTab = () => {
   const [selectedSource, setSelectedSource] = useState<string>(
     (source as string) || '',
   );
+  const [userFilter, setUserFilter] = useState<string>((user as string) || '');
+
+  const updateQueryWithDebounce = useDebounce((user: string) => {
+    const query: Record<string, string> = {
+      ...(router.query as Record<string, string>),
+    };
+
+    if (user) {
+      query.user = user;
+    } else {
+      delete query.user;
+    }
+
+    router.push(
+      {
+        pathname: router.pathname,
+        query,
+      },
+      undefined,
+      { shallow: true },
+    );
+  }, 500);
 
   useEffect(() => {
     getUserModels().then((data) => {
@@ -108,10 +119,6 @@ const UsageRecordsTab = () => {
       });
       setProviders(uniqueProviders);
     });
-
-    getUserApiKey().then((data) => {
-      setApiKeys(data);
-    });
   }, []);
 
   useEffect(() => {
@@ -119,37 +126,23 @@ const UsageRecordsTab = () => {
       setStartDate((start as string) || '');
       setEndDate((end as string) || '');
       setSelectedProvider((provider as string) || '');
-      setSelectedApiKey((kid as string) || '');
       setSelectedSource((source as string) || '');
+      setUserFilter((user as string) || '');
       fetchUsageData();
+      fetchUsageStat();
     }
   }, [
-    router.query.kid,
     router.query.page,
     router.query.start,
     router.query.end,
     router.query.provider,
     router.query.source,
-    router.isReady,
-  ]);
-
-  useEffect(() => {
-    if (router.isReady) {
-      fetchUsageStat();
-    }
-  }, [
-    router.query.kid,
-    router.query.start,
-    router.query.end,
-    router.query.provider,
-    router.query.source,
+    router.query.user,
     router.isReady,
   ]);
 
   function getUsageParams(exportExcel: boolean = false) {
     const params: GetUsageParams = {
-      kid: selectedApiKey || undefined,
-      user: user?.username,
       page: pagination.page,
       pageSize: pagination.pageSize,
       tz: new Date().getTimezoneOffset(),
@@ -174,6 +167,10 @@ const UsageRecordsTab = () => {
 
     if (selectedProvider) {
       params.provider = selectedProvider;
+    }
+
+    if (userFilter) {
+      params.user = userFilter;
     }
 
     return params;
@@ -204,15 +201,14 @@ const UsageRecordsTab = () => {
     setPagination({ ...pagination, page });
 
     const query: Record<string, string> = {
-      tab: 'usage',
       page: page.toString(),
     };
 
     if (selectedSource) query.source = selectedSource;
-    if (selectedApiKey) query.kid = selectedApiKey;
     if (startDate) query.start = startDate;
     if (endDate) query.end = endDate;
     if (selectedProvider) query.provider = selectedProvider;
+    if (userFilter) query.user = userFilter;
 
     router.push(
       {
@@ -237,7 +233,6 @@ const UsageRecordsTab = () => {
                   const query: Record<string, string> = {
                     ...(router.query as Record<string, string>),
                     source: value,
-                    tab: 'usage',
                   };
                   router.push(
                     {
@@ -256,7 +251,6 @@ const UsageRecordsTab = () => {
                     setSelectedSource('');
                     const query: Record<string, string> = {
                       ...(router.query as Record<string, string>),
-                      tab: 'usage',
                     };
                     delete query.source;
                     router.push(
@@ -284,68 +278,12 @@ const UsageRecordsTab = () => {
 
             <div className="flex items-center gap-2">
               <Select
-                value={selectedApiKey}
-                onValueChange={(value) => {
-                  setSelectedApiKey(value);
-                  const query: Record<string, string> = {
-                    ...(router.query as Record<string, string>),
-                    kid: value,
-                    tab: 'usage',
-                  };
-                  router.push(
-                    {
-                      pathname: router.pathname,
-                      query,
-                    },
-                    undefined,
-                    { shallow: true },
-                  );
-                }}
-              >
-                <SelectTrigger
-                  className="w-48"
-                  value={selectedApiKey}
-                  onReset={() => {
-                    setSelectedApiKey('');
-                    const query: Record<string, string> = {
-                      ...(router.query as Record<string, string>),
-                      tab: 'usage',
-                    };
-                    delete query.kid;
-                    router.push(
-                      {
-                        pathname: router.pathname,
-                        query,
-                      },
-                      undefined,
-                      { shallow: true },
-                    );
-                  }}
-                >
-                  <SelectValue placeholder={t('Select API Key')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {apiKeys.map((apiKey) => (
-                    <SelectItem
-                      key={apiKey.id.toString()}
-                      value={apiKey.id.toString()}
-                    >
-                      {apiKey.key}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Select
                 value={selectedProvider}
                 onValueChange={(value) => {
                   setSelectedProvider(value);
                   const query: Record<string, string> = {
                     ...(router.query as Record<string, string>),
                     provider: value,
-                    tab: 'usage',
                   };
                   router.push(
                     {
@@ -364,7 +302,6 @@ const UsageRecordsTab = () => {
                     setSelectedProvider('');
                     const query: Record<string, string> = {
                       ...(router.query as Record<string, string>),
-                      tab: 'usage',
                     };
                     delete query.provider;
                     router.push(
@@ -390,6 +327,19 @@ const UsageRecordsTab = () => {
             </div>
 
             <div className="flex items-center gap-2">
+              <Input
+                className="w-48"
+                placeholder={t('User Name')}
+                value={userFilter}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setUserFilter(value);
+                  updateQueryWithDebounce(value);
+                }}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
               <DateTimePopover
                 className="w-48"
                 placeholder={t('Start date')}
@@ -400,7 +350,6 @@ const UsageRecordsTab = () => {
                   const query: Record<string, string> = {
                     ...(router.query as Record<string, string>),
                     start: formattedDate,
-                    tab: 'usage',
                   };
                   router.push(
                     {
@@ -415,7 +364,6 @@ const UsageRecordsTab = () => {
                   setStartDate('');
                   const query: Record<string, string> = {
                     ...(router.query as Record<string, string>),
-                    tab: 'usage',
                   };
                   delete query.start;
                   router.push(
@@ -441,7 +389,6 @@ const UsageRecordsTab = () => {
                   const query: Record<string, string> = {
                     ...(router.query as Record<string, string>),
                     end: formattedDate,
-                    tab: 'usage',
                   };
                   router.push(
                     {
@@ -456,7 +403,6 @@ const UsageRecordsTab = () => {
                   setEndDate('');
                   const query: Record<string, string> = {
                     ...(router.query as Record<string, string>),
-                    tab: 'usage',
                   };
                   delete query.end;
                   router.push(
@@ -493,30 +439,15 @@ const UsageRecordsTab = () => {
           </div>
         ) : (
           <div className="space-y-2">
-            <Card className="p-2 px-4 border-none shadow-sm">
-              <div className="flex items-center justify-between text-xs">
-                <div className="font-medium">{t('Input/Output Tokens')}</div>
-                <div>
-                  {usageStat?.sumInputTokens}/{usageStat?.sumOutputTokens}
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <div className="font-medium">{t('Input/Output Cost(￥)')}</div>
-                <div>
-                  ￥{usageStat?.sumInputCost.toFixed(2)}/
-                  {usageStat?.sumOutputCost.toFixed(2)}
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <div className="font-medium">{t('Total Cost')}</div>
-                <div>￥{usageStat?.sumTotalCost.toFixed(2)}</div>
-              </div>
-            </Card>
             {usageLogs.map((log, index) => (
               <Card key={index} className="p-2 px-4 border-none shadow-sm">
                 <div className="flex items-center justify-between text-xs">
                   <div className="font-medium">{t('Date')}</div>
                   <div>{formatDateTime(log.usagedCreatedAt)}</div>
+                </div>
+                <div className="flex items-center justify-between text-xs mt-1">
+                  <div className="font-medium">{t('User Name')}</div>
+                  <div>{log.userName}</div>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
                   <div className="font-medium">{t('Provider/Model')}</div>
@@ -566,6 +497,7 @@ const UsageRecordsTab = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>{t('Date')}</TableHead>
+                <TableHead>{t('User Name')}</TableHead>
                 <TableHead>{t('Provider/Model')}</TableHead>
                 <TableHead>{t('Input/Output Tokens')}</TableHead>
                 <TableHead>{t('Input/Output Cost(￥)')}</TableHead>
@@ -579,6 +511,7 @@ const UsageRecordsTab = () => {
               {usageLogs.map((log, index) => (
                 <TableRow key={index} className="cursor-pointer">
                   <TableCell>{formatDateTime(log.usagedCreatedAt)}</TableCell>
+                  <TableCell>{log.userName}</TableCell>
                   <TableCell>
                     {log.modelProviderName}/{log.modelName}
                   </TableCell>
@@ -599,22 +532,6 @@ const UsageRecordsTab = () => {
                 </TableRow>
               ))}
             </TableBody>
-            {totalCount > 0 && (
-              <TableFooter className="bg-card">
-                <TableRow>
-                  <TableCell colSpan={2}>{t('Total')}</TableCell>
-                  <TableCell>
-                    {usageStat?.sumInputTokens}/{usageStat?.sumOutputTokens}
-                  </TableCell>
-                  <TableCell>
-                    {usageStat?.sumInputCost.toFixed(2)}/
-                    {usageStat?.sumOutputCost.toFixed(2)}
-                  </TableCell>
-                  <TableCell>{usageStat?.sumTotalCost.toFixed(2)}</TableCell>
-                  <TableCell colSpan={3}></TableCell>
-                </TableRow>
-              </TableFooter>
-            )}
           </Table>
         </Card>
       </div>
@@ -638,4 +555,4 @@ const UsageRecordsTab = () => {
   );
 };
 
-export default UsageRecordsTab;
+export default UsageRecords;

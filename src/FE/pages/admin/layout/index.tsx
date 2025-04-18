@@ -10,10 +10,12 @@ import useTranslation from '@/hooks/useTranslation';
 import { GetChatVersionResult } from '@/types/clientApis';
 
 import {
+  IconChartPie,
   IconFiles,
   IconIdBadge,
   IconKey,
   IconMessages,
+  IconMoneybag,
   IconNotes,
   IconSettings,
   IconSettingsCog,
@@ -41,13 +43,15 @@ const AdminLayout = ({
   const [version, setVersion] = useState<GetChatVersionResult>();
 
   const menus = [
-    // {
-    //   url: '/admin/dashboard',
-    //   icon: (stroke?: string) => {
-    //     return <IconChartPie stroke={stroke} />;
-    //   },
-    //   title: t('Dashboard'),
-    // },
+    /**
+    {
+      url: '/admin/dashboard',
+      icon: (stroke?: string) => {
+        return <IconChartPie stroke={stroke} />;
+      },
+      title: t('Dashboard'),
+    },
+     */
     {
       url: '/admin/model-keys',
       icon: (stroke?: string) => {
@@ -89,6 +93,13 @@ const AdminLayout = ({
         return <IconShieldLock stroke={stroke} />;
       },
       title: t('Login Service'),
+    },
+    {
+      url: '/admin/usage',
+      icon: (stroke?: string) => {
+        return <IconMoneybag stroke={stroke} />;
+      },
+      title: t('Usage Records'),
     },
     {
       url: '/admin/request-logs',

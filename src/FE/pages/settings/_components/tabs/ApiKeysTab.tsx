@@ -138,7 +138,7 @@ const ApiKeysTab = () => {
           </div>
         ) : apiKeys.length === 0 ? (
           <div className="text-center py-4 text-sm text-gray-500">
-            {t('No API keys found')}
+            {t('No data')}
           </div>
         ) : (
           <div className="space-y-2">

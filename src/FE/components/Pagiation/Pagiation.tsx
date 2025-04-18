@@ -79,7 +79,7 @@ const PaginationContainer = ({
   const paginationItems = generatePagination();
 
   return (
-    <div className="flex w-full p-4 items-center justify-between text-gray-500 text-sm">
+    <div className="flex w-full p-4 items-center justify-between text-gray-500 text-sm flex-wrap">
       <div>
         {t(
           'Showing {{currentCount}} - {{currentTotalCount}} total {{totalCount}}',
@@ -93,7 +93,7 @@ const PaginationContainer = ({
       </div>
       <div>
         <Pagination className="justify-normal">
-          <PaginationContent>
+          <PaginationContent className="flex-wrap">
             <PaginationItem
               className={page === 1 ? 'pointer-events-none' : ''}
               onClick={previous}
