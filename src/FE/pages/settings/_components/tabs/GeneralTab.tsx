@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { useTheme } from 'next-themes';
 
@@ -13,16 +13,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { getUserBalanceOnly } from '@/apis/clientApis';
 
 const GeneralTab = () => {
   const { t, language, changeLanguage } = useTranslation();
   const { theme, setTheme } = useTheme();
 
+  const [userBalance, setUserBalance] = useState(0);
+
+  useEffect(() => {
+    getUserBalanceOnly().then((data) => setUserBalance(data));
+  }, []);
+
   return (
     <div className="w-full">
       <Card className="border-none">
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <CardContent className="pt-6 gap-4 flex flex-col h-full">
+          <div className="flex min-h-10 flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="font-medium min-w-[80px]">{t('Account balance')}</div>
+            <div className="max-w-xs w-full">
+              ￥{(+(userBalance || 0)).toFixed(
+                2,
+              )}
+            </div>
+          </div>
+
+          <div className="flex min-h-10 flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="font-medium min-w-[80px]">{t('Theme')}</div>
             <div className="max-w-xs w-full">
               <Select value={theme} onValueChange={(value) => setTheme(value)}>
@@ -53,7 +69,7 @@ const GeneralTab = () => {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-4">
+          <div className="flex min-h-10 flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="font-medium min-w-[80px]">{t('Language')}</div>
             <div className="max-w-xs w-full">
               <Select

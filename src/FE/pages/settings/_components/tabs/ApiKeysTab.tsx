@@ -96,7 +96,7 @@ const ApiKeysTab = () => {
 
   const viewApiKeyUsage = (id: number) => {
     router.push(
-      `/usage?kid=${id}&source=${UsageSource.API}&page=1&tab=api-keys`,
+      `/settings?t=usage&kid=${id}&source=${UsageSource.API}&page=1`,
     );
   };
 
