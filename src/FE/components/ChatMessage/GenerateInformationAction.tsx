@@ -1,6 +1,6 @@
 import useTranslation from '@/hooks/useTranslation';
 
-import { formatNumberAsMoney } from '@/utils/common';
+import { formatNumberAsMoney, toFixed } from '@/utils/common';
 
 import { IChatMessage } from '@/types/chatMessage';
 
@@ -85,10 +85,10 @@ export const GenerateInformationAction = (props: Props) => {
                   name={'response speed'}
                   value={
                     message.duration
-                      ? (
+                      ? toFixed(
                           (message.outputTokens / (message.duration || 0)) *
-                          1000
-                        ).toFixed(2) + ' token/s'
+                            1000,
+                        ) + ' token/s'
                       : '-'
                   }
                 />

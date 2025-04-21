@@ -58,3 +58,7 @@ export function getNextName(existingNames: string[], baseName: string): string {
   }
   return `${baseName} ${maxIndex + 1}`;
 }
+
+export function toFixed(value: number, precision: number = 2) {
+  return value ? value.toFixed(precision) : '0';
+}

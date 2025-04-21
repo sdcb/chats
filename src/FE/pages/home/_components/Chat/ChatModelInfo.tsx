@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { formatNumberAsMoney } from '@/utils/common';
+import { formatNumberAsMoney, toFixed } from '@/utils/common';
+import { formatDate } from '@/utils/date';
 
 import { ModelUsageDto } from '@/types/clientApis';
 
 import { getModelUsage } from '@/apis/clientApis';
-import { formatDate } from '@/utils/date';
 
 const ChatModelInfo = (props: { modelId: number }) => {
   const { t } = useTranslation();
@@ -33,8 +33,8 @@ const ChatModelInfo = (props: { modelId: number }) => {
       <div className="flex items-center">
         {modelUsage.tokens === 0 && modelUsage.counts === 0 ? (
           <span>
-            ￥{modelUsage.inputTokenPrice1M.toFixed(4)}/
-            {modelUsage.outputTokenPrice1M.toFixed(4)} (1M tokens)
+            ￥{toFixed(modelUsage.inputTokenPrice1M)}/
+            {toFixed(modelUsage.outputTokenPrice1M)} (1M tokens)
           </span>
         ) : (
           <div className="flex justify-between text-muted-foreground">
@@ -45,8 +45,8 @@ const ChatModelInfo = (props: { modelId: number }) => {
                 <span>{formatNumberAsMoney(+modelUsage.tokens)}</span>
               ) : (
                 <span>
-                  ￥{modelUsage.inputTokenPrice1M.toFixed(4)}/
-                  {modelUsage.outputTokenPrice1M.toFixed(4)} (1M tokens)
+                  ￥{toFixed(modelUsage.inputTokenPrice1M)}/
+                  {toFixed(modelUsage.outputTokenPrice1M)} (1M tokens)
                 </span>
               )}
             </div>
