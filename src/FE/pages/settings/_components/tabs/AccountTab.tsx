@@ -1,36 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-
 import { useRouter } from 'next/router';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 import useTranslation from '@/hooks/useTranslation';
-
 import { clearUserInfo, clearUserSession, getLoginUrl } from '@/utils/user';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormField } from '@/components/ui/form';
 import FormInput from '@/components/ui/form/input';
 import { FormFieldType, IFormFieldOption } from '@/components/ui/form/type';
 
 import { changeUserPassword } from '@/apis/clientApis';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 
-interface Props {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-const ChangePasswordModal = (props: Props) => {
-  const { isOpen, onClose } = props;
+const AccountTab = () => {
   const { t } = useTranslation();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -125,38 +111,32 @@ const ChangePasswordModal = (props: Props) => {
       });
   };
 
-  useEffect(() => {
-    form.formState.isValid;
-    form.setValue('oldPassword', '');
-    form.setValue('newPassword', '');
-    form.setValue('confirmPassword', '');
-  }, []);
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full w- max-w-2xl">
-        <DialogHeader className="mb-[16px]">
-          <DialogTitle>{t('Change Password')}</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            {formFields.map((item) => (
-              <FormField
-                key={item.name}
-                control={form.control}
-                name={item.name as never}
-                render={({ field }) => item.render(item, field)}
-              />
-            ))}
-            <DialogFooter className="pt-4">
-              <Button disabled={loading} type="submit">
-                {t('Confirm')}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+    <div className="w-full">
+      <h2 className="text-base font-semibold mb-2">{t('Change Password')}</h2>
+      <Card className="border-none">
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-1">
+              {formFields.map((item) => (
+                <FormField
+                  key={item.name}
+                  control={form.control}
+                  name={item.name as never}
+                  render={({ field }) => item.render(item, field)}
+                />
+              ))}
+              <div className="pt-4">
+                <Button disabled={loading} type="submit" className="w-full sm:w-auto">
+                  {t('Confirm')}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
-export default ChangePasswordModal;
+
+export default AccountTab; 

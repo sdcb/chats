@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { formatDate } from '@/utils/date';
+
 import { AdminModelDto, GetUserInitialConfigResult } from '@/types/adminApis';
 
 import { Button } from '@/components/ui/button';
@@ -18,6 +20,7 @@ import {
 import UserInitialConfigModal from '../_components/Users/UserInitialConfigModal';
 
 import { getModels, getUserInitialConfig } from '@/apis/adminApis';
+import { toFixed } from '@/utils/common';
 
 export default function UserInitialConfig() {
   const { t } = useTranslation();
@@ -67,7 +70,7 @@ export default function UserInitialConfig() {
     return (
       <TableCell rowSpan={rowSpan}>
         <div className="flex items-center gap-2">
-          <div>{(+config.price).toFixed(2)}</div>
+          <div>{toFixed(+config.price)}</div>
         </div>
       </TableCell>
     );
@@ -169,7 +172,7 @@ export default function UserInitialConfig() {
                       )}
                       {ModelCell(model.tokens)}
                       {ModelCell(model.counts)}
-                      {ModelCell(model.expires)}
+                      {ModelCell(formatDate(model.expires))}
                     </TableRow>
                   );
                 })

@@ -6,6 +6,8 @@ using Chats.BE.Services.Common;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using MiniExcelLibs;
 
 namespace Chats.BE.Controllers.Users.Usages;
 
@@ -20,11 +22,50 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
             return BadRequest(ModelState);
         }
 
+        IQueryable<UsageDto> rows = ProcessQuery(query);
+        PagedResult<UsageDto> result = await PagedResult.FromQuery(rows, query, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("excel")]
+    public ActionResult<PagedResult<UsageDto>> ExportExcel(UsageQueryNoPagination query)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        IQueryable<UsageDto> rows = ProcessQuery(query);
+
+        MemoryStream stream = new();
+        MiniExcel.SaveAs(stream, rows);
+        stream.Position = 0;
+        return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", query.ToExcelFileName());
+    }
+
+    [HttpGet("stat")]
+    public async Task<ActionResult<UsageStatistics>> GetStatistics(UsageQueryNoPagination query, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        IQueryable<UsageDto> rows = ProcessQuery(query);
+        UsageStatistics stat = await UsageStatistics.FromQuery(rows, cancellationToken);
+        return Ok(stat);
+    }
+
+    private IQueryable<UsageDto> ProcessQuery(IUsageQuery query)
+    {
         IQueryable<UserModelUsage> usagesQuery = db.UserModelUsages;
 
-        if (currentUser.IsAdmin && !string.IsNullOrEmpty(query.User))
+        if (currentUser.IsAdmin)
         {
-            usagesQuery = usagesQuery.Where(u => u.UserModel.User.UserName == query.User);
+            if (!string.IsNullOrEmpty(query.User))
+            {
+                usagesQuery = usagesQuery.Where(u => u.UserModel.User.UserName == query.User);
+            }
         }
         else
         {
@@ -33,7 +74,7 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
 
         if (!string.IsNullOrEmpty(query.ApiKeyId))
         {
-            usagesQuery = usagesQuery.Where(u => u.UserApiUsage!.ApiKey.Id == idEncryption.DecryptChatId(query.ApiKeyId));
+            usagesQuery = usagesQuery.Where(u => u.UserApiUsage!.ApiKey.Id == idEncryption.DecryptApiKeyId(query.ApiKeyId));
         }
 
         if (!string.IsNullOrEmpty(query.Provider))
@@ -43,23 +84,36 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
 
         if (query.Start != null)
         {
-            usagesQuery = usagesQuery.Where(u => u.CreatedAt >= query.Start);
+            DateTime localStart = query.Start.Value
+                .ToDateTime(new TimeOnly(), DateTimeKind.Utc)
+                .AddMinutes(query.TimezoneOffset);
+            usagesQuery = usagesQuery.Where(u => u.CreatedAt >= localStart);
         }
-
         if (query.End != null)
         {
-            usagesQuery = usagesQuery.Where(u => u.CreatedAt <= query.End);
+            DateTime localEnd = query.End.Value
+                .AddDays(1)
+                .ToDateTime(new TimeOnly(), DateTimeKind.Utc)
+                .AddMinutes(query.TimezoneOffset);
+            usagesQuery = usagesQuery.Where(u => u.CreatedAt < localEnd);
+        }
+
+        if (query.Source == UsageQueryType.Web)
+        {
+            usagesQuery = usagesQuery.Where(u => u.UserApiUsage == null);
+        }
+        if (query.Source == UsageQueryType.Api)
+        {
+            usagesQuery = usagesQuery.Where(u => u.UserApiUsage != null);
         }
 
         IQueryable<UsageDto> rows = usagesQuery
             .OrderByDescending(u => u.Id)
-            .Skip(query.Skip)
-            .Take(query.PageSize)
             .Select(u => new UsageDto
             {
                 UserName = u.UserModel.User.UserName,
                 ApiKeyId = idEncryption.EncryptApiKeyId((int?)u.UserApiUsage!.ApiKey.Id),
-                ApiKey = u.UserApiUsage!.ApiKey.Key.ToMasked(),
+                ApiKey = u.UserApiUsage!.ApiKey.Key.ToMaskedNull(),
                 ModelProviderName = u.UserModel.Model.ModelReference.Provider.Name,
                 ModelReferenceName = u.UserModel.Model.ModelReference.Name,
                 ModelName = u.UserModel.Model.Name,
@@ -77,8 +131,6 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
                 OutputCost = u.OutputCost,
                 UsagedCreatedAt = u.CreatedAt
             });
-
-        PagedResult<UsageDto> result = await PagedResult.FromQuery(rows, query, cancellationToken);
-        return Ok(result);
+        return rows;
     }
 }

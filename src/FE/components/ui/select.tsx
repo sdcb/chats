@@ -1,5 +1,11 @@
 import * as SelectPrimitive from '@radix-ui/react-select';
-import { Check, ChevronDown, ChevronUp, CircleXIcon } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  CircleXIcon,
+  XIcon,
+} from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
@@ -44,7 +50,7 @@ const SelectTrigger = React.forwardRef<
         )}
       >
         {props.value ? (
-          <CircleXIcon className="h-4 w-4 opacity-50" onClick={onReset} />
+          <XIcon className="h-4 w-4 opacity-50 hover:opacity-100" onClick={onReset} />
         ) : (
           <ChevronDown className="h-4 w-4 opacity-50 " />
         )}

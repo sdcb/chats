@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { formatNumberAsMoney } from '@/utils/common';
+import { formatNumberAsMoney, toFixed } from '@/utils/common';
+import { formatDate } from '@/utils/date';
 
 import { ModelUsageDto } from '@/types/clientApis';
 
@@ -32,8 +33,8 @@ const ChatModelInfo = (props: { modelId: number }) => {
       <div className="flex items-center">
         {modelUsage.tokens === 0 && modelUsage.counts === 0 ? (
           <span>
-            ￥{modelUsage.inputTokenPrice1M.toFixed(4)}/
-            {modelUsage.outputTokenPrice1M.toFixed(4)} (1M tokens)
+            ￥{toFixed(modelUsage.inputTokenPrice1M)}/
+            {toFixed(modelUsage.outputTokenPrice1M)} (1M tokens)
           </span>
         ) : (
           <div className="flex justify-between text-muted-foreground">
@@ -44,8 +45,8 @@ const ChatModelInfo = (props: { modelId: number }) => {
                 <span>{formatNumberAsMoney(+modelUsage.tokens)}</span>
               ) : (
                 <span>
-                  ￥{modelUsage.inputTokenPrice1M.toFixed(4)}/
-                  {modelUsage.outputTokenPrice1M.toFixed(4)} (1M tokens)
+                  ￥{toFixed(modelUsage.inputTokenPrice1M)}/
+                  {toFixed(modelUsage.outputTokenPrice1M)} (1M tokens)
                 </span>
               )}
             </div>
@@ -54,8 +55,7 @@ const ChatModelInfo = (props: { modelId: number }) => {
                 <></>
               ) : (
                 <>
-                  {new Date(modelUsage.expires).toLocaleDateString()}{' '}
-                  {` ${t('become due')}`}
+                  {formatDate(modelUsage.expires)} {` ${t('become due')}`}
                 </>
               )}
             </div>

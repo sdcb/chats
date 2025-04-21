@@ -1,19 +1,21 @@
 ﻿using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Admin.GlobalConfigs.Dtos;
 using Microsoft.AspNetCore.Mvc;
+using System.Reflection;
 
 namespace Chats.BE.Controllers.Admin.GlobalConfigs;
 
 [AuthorizeAdmin, Route("api/version")]
-public class VersionController : ControllerBase
+public class VersionController(ILogger<VersionController> logger) : ControllerBase
 {
-    // it will be replaced by CI/CD pipeline
-    const int buildVersion = 0;
+    static string? CurrentVersion => typeof(VersionController).Assembly
+        .GetCustomAttribute<AssemblyFileVersionAttribute>()?
+        .Version;
 
     [HttpGet]
-    public ActionResult<int> GetCurrentVersion()
+    public ActionResult<string> GetCurrentVersion()
     {
-        return Ok(buildVersion);
+        return Ok(CurrentVersion);
     }
 
     [HttpPost("check-update")]
@@ -21,7 +23,7 @@ public class VersionController : ControllerBase
         [FromServices] ILogger<VersionController> logger,
         CancellationToken cancellationToken)
     {
-        string tagName = "r-" + buildVersion;
+        string? tagName = null;
         try
         {
             tagName = await GitHubReleaseChecker.SdcbChats.GetLatestReleaseTagNameAsync(cancellationToken);
@@ -31,12 +33,39 @@ public class VersionController : ControllerBase
             logger.LogWarning(e, "Failed to get latest release tag name from GitHub.");
         }
 
-        bool hasNewVersion = GitHubReleaseChecker.IsNewVersionAvailableAsync(tagName, buildVersion);
+        bool hasNewVersion = IsNewVersionAvailableAsync(tagName, CurrentVersion);
         return Ok(new CheckUpdateResponse
         {
-            CurrentVersion = buildVersion,
+            CurrentVersion = CurrentVersion,
+            LatestVersion = tagName,
             HasNewVersion = hasNewVersion,
-            TagName = tagName,
         });
+    }
+
+    bool IsNewVersionAvailableAsync(string? latestTagName, string? currentVersion)
+    {
+        // latestTagName format: 1.0.0.587
+        // currentVersion format: 1.0.0.586
+        if (string.IsNullOrEmpty(latestTagName) || string.IsNullOrEmpty(currentVersion))
+        {
+            return false;
+        }
+
+        if (latestTagName.StartsWith("r-"))
+        {
+            return false;
+        }
+
+        try
+        {
+            Version latestVersion = Version.Parse(latestTagName);
+            Version currentVersionParsed = Version.Parse(currentVersion);
+            return latestVersion > currentVersionParsed;
+        }
+        catch (Exception)
+        {
+            logger.LogWarning("Failed to parse version strings: {LatestTagName}, {CurrentVersion}", latestTagName, currentVersion);
+            return false;
+        }
     }
 }

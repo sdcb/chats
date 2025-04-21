@@ -18,6 +18,7 @@ using System.Threading.Channels;
 using OpenAIChatMessage = OpenAI.Chat.ChatMessage;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.DB.Enums;
 
 namespace Chats.BE.Controllers.Chats.Chats;
 
@@ -126,6 +127,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         CancellationToken cancellationToken)
     {
         long firstTick = Stopwatch.GetTimestamp();
+        cancellationToken = default; // disallow cancellation token for now for better user experience
 
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig)
@@ -393,6 +395,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         {
             TimezoneOffset = req.TimezoneOffset,
             WebSearchEnabled = chatSpan.ChatConfig.WebSearchEnabled,
+            ReasoningEffort = (DBReasoningEffort)chatSpan.ChatConfig.ReasoningEffort
         };
 
         InChatContext icc = new(firstTick);

@@ -19,12 +19,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import PaginationContainer from '../_components/Pagiation/Pagiation';
+import PaginationContainer from '../../../components/Pagiation/Pagiation';
 import EditUserBalanceModal from '../_components/Users/EditUserBalanceModel';
 import EditUserModelModal from '../_components/Users/EditUserModelModal';
 import UserModal from '../_components/Users/UserModal';
 
 import { getUsers } from '@/apis/adminApis';
+import { toFixed } from '@/utils/common';
 
 export default function Users() {
   const { t } = useTranslation();
@@ -175,7 +176,7 @@ export default function Users() {
                     e.stopPropagation();
                   }}
                 >
-                  {(+item.balance).toFixed(2)}
+                  {toFixed(+item.balance)}
                 </TableCell>
                 <TableCell>
                   <Button

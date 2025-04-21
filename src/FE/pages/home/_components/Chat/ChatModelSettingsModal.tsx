@@ -13,7 +13,12 @@ import { IconChevronDown, IconChevronRight } from '@/components/Icons';
 import ModelParams from '@/components/ModelParams/ModelParams';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 
@@ -120,10 +125,10 @@ const ChatModelSettingModal = (props: Props) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogTitle></DialogTitle>
-      <DialogContent className="w-full sm:w-[560px] max-h-[560px] overflow-y-auto">
+      <DialogContent className="w-full sm:w-[560px] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogTitle></DialogTitle>
         {span && model && hasModel() && (
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] mt-5">
+          <div className="flex-1 overflow-y-auto p-4 mt-5">
             <div className="space-y-4 rounded-lg">
               <div className="flex flex-col gap-1">
                 <ChatModelDropdownMenu
@@ -250,32 +255,34 @@ const ChatModelSettingModal = (props: Props) => {
                 </div>
               </div>
             </div>
-            <div className="flex gap-4 justify-end mt-5 items-center">
-              <Switch
-                onCheckedChange={onChangeSpanEnable}
-                checked={span.enabled}
-              />
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  onRemove(spanId);
-                  onClose();
-                }}
-              >
-                {t('Remove')}
-              </Button>
-              <Button
-                variant="default"
-                onClick={() => {
-                  handleSave();
-                  onClose();
-                }}
-              >
-                {t('Save')}
-              </Button>
-            </div>
           </div>
         )}
+        <DialogFooter className="px-4 py-3 border-t">
+          <div className="flex gap-4 justify-end items-center">
+            <Switch
+              onCheckedChange={onChangeSpanEnable}
+              checked={span?.enabled}
+            />
+            <Button
+              variant="destructive"
+              onClick={() => {
+                onRemove(spanId);
+                onClose();
+              }}
+            >
+              {t('Remove')}
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => {
+                handleSave();
+                onClose();
+              }}
+            >
+              {t('Save')}
+            </Button>
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -1,3 +1,5 @@
+import { formatDate } from '@/utils/date';
+
 import { IconSquareRoundedX } from '@/components/Icons/index';
 
 import { Button } from '../button';
@@ -30,7 +32,7 @@ const FormCalendar = ({
             >
               {field.value ? (
                 field.value === '-' ? null : (
-                  new Date(field.value).toLocaleDateString()
+                  formatDate(field.value)
                 )
               ) : (
                 <span></span>

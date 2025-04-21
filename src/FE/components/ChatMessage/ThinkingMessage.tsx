@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -26,11 +26,20 @@ const ThinkingMessage = (props: Props) => {
   const { content, chatStatus, reasoningDuration } = props;
   const { t } = useTranslation();
 
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (chatStatus === ChatSpanStatus.Reasoning) {
+      setIsOpen(true);
+    } else if (chatStatus === ChatSpanStatus.Chatting) {
+      setIsOpen(false);
+    }
+  }, [chatStatus]);
+
   return (
     <div className="my-4">
       <div
-        className="inline-flex items-center px-3 py-1 bg-gray-300 dark:bg-gray-700 text-xs gap-1 rounded-sm"
+        className="inline-flex items-center px-3 py-1 bg-muted dark:bg-gray-700 text-xs gap-1 rounded-sm"
         onClick={() => {
           setIsOpen(!isOpen);
         }}

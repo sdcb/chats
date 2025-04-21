@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { formatDate, formatDateTime } from '@/utils/date';
+
 import { GetRequestLogsDetailsResult } from '@/types/adminApis';
 
 import {
@@ -83,7 +85,7 @@ const RequestLogDetailsModal = (props: IProps) => {
                   <dt className="text-muted-foreground min-w-[80px]">
                     {t('Created Time')}：
                   </dt>
-                  <dd>{log?.createdAt.toLocaleString()}</dd>
+                  <dd>{formatDateTime(log?.createdAt || '')}</dd>
                 </div>
                 <div className="flex items-center">
                   <dt className="text-muted-foreground min-w-[80px]">

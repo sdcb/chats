@@ -133,6 +133,7 @@ const ResponseMessage = (props: Props) => {
         } else if (c.$type === MessageContentType.fileId) {
           return (
             <img
+              alt={t('Loading...')}
               key={'file-' + index}
               className="w-full md:w-1/2 rounded-md"
               src={(c.c as ImageDef).url}

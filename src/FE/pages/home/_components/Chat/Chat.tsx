@@ -80,7 +80,6 @@ const Chat = memo(() => {
       selectedMessages,
       models,
       showChatBar,
-      showPromptBar,
     },
 
     hasModel,
@@ -246,9 +245,9 @@ const Chat = memo(() => {
         x.duration = message.duration;
         x.firstTokenLatency = message.firstTokenLatency;
         x.inputPrice = message.inputPrice;
-        x.inputTokens = message.inputTokens;
         x.outputPrice = message.outputPrice;
-        x.outputTokens = message.outputPrice;
+        x.inputTokens = message.inputTokens;
+        x.outputTokens = message.outputTokens;
       }
       return x;
     });
@@ -763,13 +762,7 @@ const Chat = memo(() => {
           <div
             className="sm:w-full chat-container"
             style={{
-              width: `calc(100vw - ${
-                showChatBar && showPromptBar
-                  ? 520
-                  : showChatBar || showPromptBar
-                  ? 260
-                  : 0
-              }px)`,
+              width: `calc(100vw - ${showChatBar ? 280 : 0}px)`,
             }}
           >
             {selectedChat && selectedMessages.length === 0 && (

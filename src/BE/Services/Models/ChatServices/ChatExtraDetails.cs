@@ -1,10 +1,14 @@
-﻿namespace Chats.BE.Services.Models.ChatServices;
+﻿using Chats.BE.DB.Enums;
+
+namespace Chats.BE.Services.Models.ChatServices;
 
 public record ChatExtraDetails
 {
     public short TimezoneOffset { get; init; }
 
     public bool WebSearchEnabled { get; init; }
+
+    public DBReasoningEffort ReasoningEffort { get; init; }
 
     public DateTime Now => DateTime.UtcNow.AddMinutes(TimezoneOffset);
 

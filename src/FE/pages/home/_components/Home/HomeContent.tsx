@@ -38,7 +38,6 @@ import { setModelMap, setModels } from '../../_actions/model.actions';
 import { setDefaultPrompt, setPrompts } from '../../_actions/prompt.actions';
 import {
   setShowChatBar,
-  setShowPromptBar,
 } from '../../_actions/setting.actions';
 import HomeContext, {
   HandleUpdateChatParams,
@@ -58,7 +57,6 @@ import settingReducer, {
 } from '../../_reducers/setting.reducer';
 import Chat from '../Chat/Chat';
 import Chatbar from '../Chatbar/Chatbar';
-import PromptBar from '../Promptbar/Promptbar';
 
 import {
   getChatsByPaging,
@@ -94,7 +92,6 @@ const HomeContent = () => {
 
   const { chats, chatPaging, stopIds } = chatState;
   const { models } = modelState;
-  const { showPromptBar } = settingState;
   const [isPageLoading, setIsPageLoading] = useState(true);
 
   const contextValue = useCreateReducer<HomeInitialState>({
@@ -270,9 +267,8 @@ const HomeContent = () => {
 
   useEffect(() => {
     setIsPageLoading(true);
-    const { showChatBar, showPromptBar } = getSettings();
+    const { showChatBar } = getSettings();
     settingDispatch(setShowChatBar(showChatBar));
-    settingDispatch(setShowPromptBar(showPromptBar));
   }, []);
 
   useEffect(() => {
@@ -361,7 +357,6 @@ const HomeContent = () => {
           <div className="flex h-full w-full bg-background">
             <Chatbar />
             <Chat />
-            {showPromptBar && <PromptBar />}
           </div>
         </div>
       )}

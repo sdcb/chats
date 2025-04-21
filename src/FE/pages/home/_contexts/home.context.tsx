@@ -52,7 +52,7 @@ export interface HomeInitialState {
   prompts: SetPromptsType;
 
   showChatBar: boolean;
-  showPromptBar: boolean;
+  showSetting: boolean;
 }
 
 export const initialState: HomeInitialState = {
@@ -73,7 +73,7 @@ export const initialState: HomeInitialState = {
   prompts: [],
 
   showChatBar: true,
-  showPromptBar: false,
+  showSetting: false,
 };
 
 export interface HomeContextProps {
