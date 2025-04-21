@@ -7,6 +7,8 @@ using Chats.BE.DB;
 using System.ClientModel.Primitives;
 using System.Text.Json;
 using Chats.BE.Services.Models.ChatServices.OpenAI.ReasoningContents;
+using Chats.BE.DB.Enums;
+using Chats.BE.Services.Models.Extensions;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
@@ -91,6 +93,18 @@ public partial class OpenAIChatService(Model model, ChatClient chatClient) : Cha
             OutputTokens = usage.OutputTokenCount,
             ReasoningTokens = usage.OutputTokenDetails?.ReasoningTokenCount ?? 0,
         };
+    }
+
+    protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
+    {
+        options.GetOrCreateSerializedAdditionalRawData()["reasoning_effort"] = BinaryData.FromObjectAsJson(reasoningEffort switch
+        {
+            //DBReasoningEffort.Default => "medium",
+            DBReasoningEffort.Low => "low",
+            DBReasoningEffort.Medium => "medium",
+            DBReasoningEffort.High => "high",
+            _ => throw new ArgumentOutOfRangeException(nameof(reasoningEffort), reasoningEffort, null),
+        });
     }
 
     private class DeveloperChatMessage(string content) : SystemChatMessage(content), IJsonModel<DeveloperChatMessage>

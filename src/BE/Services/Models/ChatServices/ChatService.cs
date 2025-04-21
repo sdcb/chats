@@ -2,10 +2,10 @@
 using Chats.BE.Services.Models.Dtos;
 using Tokenizer = Microsoft.ML.Tokenizers.Tokenizer;
 using OpenAI.Chat;
-using System.Text;
 using Microsoft.ML.Tokenizers;
 using Chats.BE.Services.Models.Extensions;
 using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.DB.Enums;
 
 namespace Chats.BE.Services.Models;
 
@@ -66,6 +66,11 @@ public abstract partial class ChatService : IDisposable
             SetWebSearchEnabled(options, feOptions.WebSearchEnabled);
         }
 
+        if (ModelReference.SupportReasoningEffort(Model.ModelReference.Name))
+        {
+            SetReasoningEffort(options, feOptions.ReasoningEffort);
+        }
+
         if (!Model.ModelReference.AllowSystemPrompt)
         {
             // Remove system prompt
@@ -99,6 +104,12 @@ public abstract partial class ChatService : IDisposable
     {
         // chat service not enable search by default, prompt a warning
         Console.WriteLine($"{Model.ModelReference.Name} chat service not support web search.");
+    }
+
+    protected virtual void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
+    {
+        // chat service not enable reasoning effort by default, prompt a warning
+        Console.WriteLine($"{Model.ModelReference.Name} chat service not support reasoning effort.");
     }
 
     public void Dispose()

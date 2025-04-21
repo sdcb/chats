@@ -18,7 +18,8 @@
 --(1610, 16, 'doubao-1.5-thinking-pro-vision-250415', 'Doubao-1.5', '2025-04-15', 1, 1, 0, 1, 1, 1, 1, 131072, 16384, NULL, 4,   16,  'RMB'),
 --(1612, 16, 'doubao-1.5-vision-pro-250328',          'Doubao-1.5', '2025-03-28', 0, 2, 0, 1, 1, 1, 0, 131072, 16384, NULL, 3,   9,   'RMB'),
 --(1613, 16, 'doubao-1.5-vision-lite-250315',         'Doubao-1.5', '2025-03-15', 0, 2, 0, 1, 1, 1, 0, 131072, 16384, NULL, 1.5, 4.5, 'RMB'),
---(1614, 16, 'doubao-1.5-ui-tars-250328',             'Doubao-1.5', '2025-03-28', 0, 2, 0, 1, 1, 1, 0, 32768,  4096,  NULL, 3.5, 12,  'RMB');
+--(1614, 16, 'doubao-1.5-ui-tars-250328',             'Doubao-1.5', '2025-03-28', 0, 2, 0, 1, 1, 1, 0, 32768,  4096,  NULL, 3.5, 12,  'RMB'),
+--(1305, 13, 'gemini-2.5-flash-preview-04-17',        'gemini',     '2025-04-17', 0, 2, 1, 1, 1, 1, 1, 1048576,65536, NULL, 0.15,3.5, 'USD');
 
 MERGE INTO [ModelReference] AS target
 USING (
@@ -41,7 +42,8 @@ USING (
         (1610, 16, 'doubao-1.5-thinking-pro-vision-250415', 'Doubao-1.5', '2025-04-15', 1, 1, 0, 1, 1, 1, 1, 131072, 16384, NULL, 4,   16,  'RMB'),
         (1612, 16, 'doubao-1.5-vision-pro-250328',          'Doubao-1.5', '2025-03-28', 0, 2, 0, 1, 1, 1, 0, 131072, 16384, NULL, 3,   9,   'RMB'),
         (1613, 16, 'doubao-1.5-vision-lite-250315',         'Doubao-1.5', '2025-03-15', 0, 2, 0, 1, 1, 1, 0, 131072, 16384, NULL, 1.5, 4.5, 'RMB'),
-        (1614, 16, 'doubao-1.5-ui-tars-250328',             'Doubao-1.5', '2025-03-28', 0, 2, 0, 1, 1, 1, 0, 32768,  4096,  NULL, 3.5, 12,  'RMB')
+        (1614, 16, 'doubao-1.5-ui-tars-250328',             'Doubao-1.5', '2025-03-28', 0, 2, 0, 1, 1, 1, 0, 32768,  4096,  NULL, 3.5, 12,  'RMB'),
+        (1305, 13, 'gemini-2.5-flash-preview-04-17',        'gemini',     '2025-04-17', 0, 2, 1, 1, 1, 1, 1, 1048576,65536, NULL, 0.15,3.5, 'USD')
 ) AS source (
     [Id], [ProviderId], [Name], [DisplayName], [PublishDate], [MinTemperature], [MaxTemperature], 
     [AllowSearch], [AllowVision], [AllowSystemPrompt], [AllowStreaming], [ReasoningResponseKindId], 
@@ -65,3 +67,11 @@ WHEN NOT MATCHED THEN
 UPDATE [ModelReference]
 SET [DisplayName] = 'grok-3'
 WHERE [Id] IN (1104, 1105, 1106, 1107);
+
+UPDATE [ModelReference]
+SET [ContextWindow]=1048576, [MaxResponseTokens]=65536, [InputTokenPrice1M]=1.25, [OutputTokenPrice1M]=10
+WHERE [Id]=1302;
+
+UPDATE [CurrencyRate]
+SET [ExchangeRate] = 7.29
+WHERE [Code] = 'USD';
