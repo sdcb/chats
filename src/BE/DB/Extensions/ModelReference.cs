@@ -27,6 +27,8 @@ public partial class ModelReference
             "grok-3-mini-fast" => true,
             "o3" => true,
             "o4-mini" => true,
+            "gemini-2.5-pro-exp-03-25" => true,
+            "gemini-2.5-flash-preview-04-17" => true, 
             _ => false
         };
     }

@@ -1,4 +1,5 @@
-﻿using Chats.BE.Services.Models.Dtos;
+﻿using Chats.BE.DB.Enums;
+using Chats.BE.Services.Models.Dtos;
 using Mscc.GenerativeAI;
 using OpenAI.Chat;
 using System.Runtime.CompilerServices;
@@ -20,6 +21,7 @@ public class GoogleAI2ChatService : ChatService
         new SafetySetting { Category = HarmCategory.HarmCategoryHarassment, Threshold = HarmBlockThreshold.BlockNone },
         new SafetySetting { Category = HarmCategory.HarmCategoryCivicIntegrity, Threshold = HarmBlockThreshold.BlockNone },
     ];
+    private DBReasoningEffort _reasoningEffort = default;
 
     protected override bool SupportsVisionLink => false;
 
@@ -44,7 +46,15 @@ public class GoogleAI2ChatService : ChatService
             GenerationConfig = new GenerationConfig
             {
                 Temperature = options.Temperature,
-                ResponseModalities = AllowImageGeneration ? [ResponseModality.Text, ResponseModality.Image] : [ResponseModality.Text]
+                ResponseModalities = AllowImageGeneration ? [ResponseModality.Text, ResponseModality.Image] : [ResponseModality.Text],
+                ThinkingConfig = new ThinkingConfig
+                {
+                    ThinkingBudget = _reasoningEffort switch
+                    {
+                        DBReasoningEffort.Low => 0, 
+                        _ => null,
+                    }
+                },
             },
             SafetySettings = _safetySettings,
         }, null, cancellationToken))
@@ -85,6 +95,11 @@ public class GoogleAI2ChatService : ChatService
             ReasoningTokens = usageMetadata.ThoughtsTokenCount,
         };
         return usage;
+    }
+
+    protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
+    {
+        _reasoningEffort = reasoningEffort;
     }
 
     static ChatFinishReason? ToChatFinishReason(FinishReason? finishReason)
