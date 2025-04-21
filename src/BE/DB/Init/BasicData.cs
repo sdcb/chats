@@ -43,11 +43,11 @@ internal static class BasicData
 
     private static void InsertCurrencyRates(ChatsDB db)
     {
-        // Generated from data, hash: bc4028c01aefd32ef1bf1533fc9e181ab4f0f673b85a9a282cab92a90cf4116c
+        // Generated from data, hash: 116e9fb5f54be97f90189b3c121272433ab7f3ad4e39b611cfa0af0455af53e3
         db.CurrencyRates.AddRange(
         [
             new(){ Code="RMB", ExchangeRate=1.000000M, },
-            new(){ Code="USD", ExchangeRate=7.120300M, }
+            new(){ Code="USD", ExchangeRate=7.290000M, }
         ]);
     }
 
@@ -147,7 +147,7 @@ internal static class BasicData
 
     private static void InsertModelReferences(ChatsDB db)
     {
-        // Generated from data, hash: 350773d845b846150d4901f0ef848f52043a429e82f73348d990d3ec0fc297bb
+        // Generated from data, hash: 852a05a6c23337fa3522b93eeb09f6d045a9a89d3238047ef8cd288ac69b427e
         db.ModelReferences.AddRange(
         [
             new(){ Id=0,    ProviderId=0,  Name="Test",                                      DisplayName=null,                    PublishDate=null,                       MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=true,  AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=0, ContextWindow=2048,     MaxResponseTokens=2048,   TokenizerId=1,    InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="RMB", },
@@ -336,9 +336,10 @@ internal static class BasicData
             new(){ Id=1226, ProviderId=12, Name="o4-mini",                                   DisplayName=null,                    PublishDate=new DateOnly(2025,  4, 16), MinTemperature=1.00M, MaxTemperature=1.00M, AllowSearch=false, AllowVision=true,  AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=0, ContextWindow=200000,   MaxResponseTokens=100000, TokenizerId=2,    InputTokenPrice1M=1.10000M,   OutputTokenPrice1M=4.40000M,   CurrencyCode="USD", },
             new(){ Id=1300, ProviderId=13, Name="gemini-2.0-flash-thinking-exp",             DisplayName="gemini",                PublishDate=null,                       MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=true,  AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=0, ContextWindow=1048576,  MaxResponseTokens=8000,   TokenizerId=null, InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="USD", },
             new(){ Id=1301, ProviderId=13, Name="gemini-2.0-flash",                          DisplayName="gemini",                PublishDate=new DateOnly(2025,  2,  6), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=true,  AllowVision=true,  AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=0, ContextWindow=1048576,  MaxResponseTokens=8192,   TokenizerId=null, InputTokenPrice1M=0.10000M,   OutputTokenPrice1M=0.40000M,   CurrencyCode="USD", },
-            new(){ Id=1302, ProviderId=13, Name="gemini-2.5-pro-exp-03-25",                  DisplayName="gemini",                PublishDate=new DateOnly(2025,  3, 25), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=true,  AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=0, ContextWindow=1000000,  MaxResponseTokens=64000,  TokenizerId=null, InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="USD", },
+            new(){ Id=1302, ProviderId=13, Name="gemini-2.5-pro-exp-03-25",                  DisplayName="gemini",                PublishDate=new DateOnly(2025,  3, 25), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=true,  AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=0, ContextWindow=1048576,  MaxResponseTokens=65536,  TokenizerId=null, InputTokenPrice1M=1.25000M,   OutputTokenPrice1M=10.00000M,  CurrencyCode="USD", },
             new(){ Id=1303, ProviderId=13, Name="gemini-2.0-flash-lite",                     DisplayName="gemini",                PublishDate=new DateOnly(2025,  2, 26), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=true,  AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=0, ContextWindow=1048576,  MaxResponseTokens=8000,   TokenizerId=null, InputTokenPrice1M=0.07500M,   OutputTokenPrice1M=0.30000M,   CurrencyCode="USD", },
             new(){ Id=1304, ProviderId=13, Name="gemini-2.0-flash-exp",                      DisplayName="gemini",                PublishDate=new DateOnly(2025,  3, 25), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=true,  AllowSystemPrompt=false, AllowStreaming=true,  ReasoningResponseKindId=0, ContextWindow=32768,    MaxResponseTokens=8000,   TokenizerId=null, InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="USD", },
+            new(){ Id=1305, ProviderId=13, Name="gemini-2.5-flash-preview-04-17",            DisplayName="gemini",                PublishDate=new DateOnly(2025,  4, 17), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=true,  AllowVision=true,  AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=1048576,  MaxResponseTokens=65536,  TokenizerId=null, InputTokenPrice1M=0.15000M,   OutputTokenPrice1M=3.50000M,   CurrencyCode="USD", },
             new(){ Id=1400, ProviderId=14, Name="general",                                   DisplayName=null,                    PublishDate=null,                       MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=0, ContextWindow=128000,   MaxResponseTokens=8000,   TokenizerId=null, InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="RMB", },
             new(){ Id=1401, ProviderId=14, Name="general-vision",                            DisplayName=null,                    PublishDate=null,                       MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=true,  AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=0, ContextWindow=128000,   MaxResponseTokens=8000,   TokenizerId=null, InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="RMB", },
             new(){ Id=1402, ProviderId=14, Name="deepseek-r1-think-tag",                     DisplayName=null,                    PublishDate=null,                       MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=2, ContextWindow=128000,   MaxResponseTokens=8000,   TokenizerId=null, InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="RMB", },
