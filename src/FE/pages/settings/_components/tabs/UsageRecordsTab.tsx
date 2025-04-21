@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { toFixed } from '@/utils/common';
 import { formatDate, formatDateTime } from '@/utils/date';
 import { getUserSession } from '@/utils/user';
 
@@ -503,13 +504,13 @@ const UsageRecordsTab = () => {
               <div className="flex items-center justify-between text-xs">
                 <div className="font-medium">{t('Input/Output Cost(￥)')}</div>
                 <div>
-                  ￥{usageStat?.sumInputCost.toFixed(2)}/
-                  {usageStat?.sumOutputCost.toFixed(2)}
+                  ￥{toFixed(usageStat?.sumInputCost)}/
+                  {toFixed(usageStat?.sumOutputCost)}
                 </div>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <div className="font-medium">{t('Total Cost')}</div>
-                <div>￥{usageStat?.sumTotalCost.toFixed(2)}</div>
+                <div>￥{toFixed(usageStat?.sumTotalCost)}</div>
               </div>
             </Card>
             {usageLogs.map((log, index) => (
@@ -535,12 +536,12 @@ const UsageRecordsTab = () => {
                     {t('Input/Output Cost(￥)')}
                   </div>
                   <div>
-                    ￥{log.inputCost.toFixed(4)}/{log.outputCost.toFixed(4)}
+                    ￥{toFixed(log.inputCost)}/{toFixed(log.outputCost)}
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
                   <div className="font-medium">{t('Total Cost')}</div>
-                  <div>￥{(log.inputCost + log.outputCost).toFixed(4)}</div>
+                  <div>￥{toFixed(log.inputCost + log.outputCost)}</div>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
                   <div className="font-medium">{t('IP')}</div>
@@ -586,10 +587,10 @@ const UsageRecordsTab = () => {
                     {log.inputTokens}/{log.outputTokens}
                   </TableCell>
                   <TableCell>
-                    {log.inputCost.toFixed(4)}/{log.outputCost.toFixed(4)}
+                    ￥{toFixed(log.inputCost)}/￥{toFixed(log.outputCost)}
                   </TableCell>
                   <TableCell>
-                    {(log.inputCost + log.outputCost).toFixed(4)}
+                    ￥{toFixed(log.inputCost + log.outputCost)}
                   </TableCell>
                   <TableCell>{log.ip}</TableCell>
                   <TableCell>{log.finishReason}</TableCell>
@@ -607,10 +608,10 @@ const UsageRecordsTab = () => {
                     {usageStat?.sumInputTokens}/{usageStat?.sumOutputTokens}
                   </TableCell>
                   <TableCell>
-                    {usageStat?.sumInputCost.toFixed(2)}/
-                    {usageStat?.sumOutputCost.toFixed(2)}
+                    ￥{toFixed(usageStat?.sumInputCost)}/ ￥
+                    {toFixed(usageStat?.sumOutputCost)}
                   </TableCell>
-                  <TableCell>{usageStat?.sumTotalCost.toFixed(2)}</TableCell>
+                  <TableCell>￥{toFixed(usageStat?.sumTotalCost)}</TableCell>
                   <TableCell colSpan={3}></TableCell>
                 </TableRow>
               </TableFooter>

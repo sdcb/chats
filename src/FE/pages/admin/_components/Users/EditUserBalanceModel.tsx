@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { toFixed } from '@/utils/common';
+
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -92,7 +94,7 @@ const EditUserBalanceModal = (props: IProps) => {
             <DialogTitle>{t('User recharge')}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            {t('Current Balance')}: {(+userBalance!).toFixed(2)} {t('Yuan')}
+            {t('Current Balance')}: {toFixed(+userBalance!)} {t('Yuan')}
           </p>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>

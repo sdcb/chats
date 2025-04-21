@@ -4,6 +4,8 @@ import { useTheme } from 'next-themes';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { toFixed } from '@/utils/common';
+
 import { IconDesktop, IconMoon, IconSun } from '@/components/Icons';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -13,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+
 import { getUserBalanceOnly } from '@/apis/clientApis';
 
 const GeneralTab = () => {
@@ -30,11 +33,11 @@ const GeneralTab = () => {
       <Card className="border-none">
         <CardContent className="pt-6 gap-4 flex flex-col h-full">
           <div className="flex min-h-10 flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div className="font-medium min-w-[80px]">{t('Account balance')}</div>
+            <div className="font-medium min-w-[80px]">
+              {t('Account balance')}
+            </div>
             <div className="max-w-xs w-full">
-              ￥{(+(userBalance || 0)).toFixed(
-                2,
-              )}
+              ￥{toFixed(+(userBalance || 0))}
             </div>
           </div>
 

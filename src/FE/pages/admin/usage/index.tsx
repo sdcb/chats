@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/table';
 
 import { getUsage, getUsageStat, getUserModels } from '@/apis/clientApis';
+import { toFixed } from '@/utils/common';
 
 interface Provider {
   modelProviderId: number;
@@ -466,12 +467,12 @@ const UsageRecords = () => {
                     {t('Input/Output Cost(￥)')}
                   </div>
                   <div>
-                    ￥{log.inputCost.toFixed(4)}/{log.outputCost.toFixed(4)}
+                    ￥{toFixed(log.inputCost)}/{toFixed(log.outputCost)}
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
                   <div className="font-medium">{t('Total Cost')}</div>
-                  <div>￥{(log.inputCost + log.outputCost).toFixed(4)}</div>
+                  <div>￥{toFixed(log.inputCost + log.outputCost)}</div>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
                   <div className="font-medium">{t('IP')}</div>
@@ -519,10 +520,10 @@ const UsageRecords = () => {
                     {log.inputTokens}/{log.outputTokens}
                   </TableCell>
                   <TableCell>
-                    {log.inputCost.toFixed(4)}/{log.outputCost.toFixed(4)}
+                    ￥{toFixed(log.inputCost)}/￥{toFixed(log.outputCost)}
                   </TableCell>
                   <TableCell>
-                    {(log.inputCost + log.outputCost).toFixed(4)}
+                    ￥{toFixed(log.inputCost + log.outputCost)}
                   </TableCell>
                   <TableCell>{log.ip}</TableCell>
                   <TableCell>{log.finishReason}</TableCell>

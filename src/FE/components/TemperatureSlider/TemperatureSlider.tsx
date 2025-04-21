@@ -9,6 +9,7 @@ import Tips from '../Tips/Tips';
 import { Button } from '../ui/button';
 
 import { cn } from '@/lib/utils';
+import { toFixed } from '@/utils/common';
 
 interface Props {
   label: string;
@@ -61,7 +62,7 @@ const TemperatureSlider: FC<Props> = ({
         />
       </label>
       <span className="text-center text-neutral-900 dark:text-neutral-100">
-        {temperature.toFixed(2)}
+        {toFixed(temperature)}
       </span>
       <Slider
         className="cursor-pointer"
