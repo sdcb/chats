@@ -60,9 +60,12 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
     {
         IQueryable<UserModelUsage> usagesQuery = db.UserModelUsages;
 
-        if (currentUser.IsAdmin && !string.IsNullOrEmpty(query.User))
+        if (currentUser.IsAdmin)
         {
-            usagesQuery = usagesQuery.Where(u => u.UserModel.User.UserName == query.User);
+            if (!string.IsNullOrEmpty(query.User))
+            {
+                usagesQuery = usagesQuery.Where(u => u.UserModel.User.UserName == query.User);
+            }
         }
         else
         {
