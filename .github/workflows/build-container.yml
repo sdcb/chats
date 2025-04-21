@@ -352,8 +352,11 @@ jobs:
           https://github.com/sdcb/chats/compare/$PREVIOUS_REV...$CURRENT_REV
 
           Commits between \`$PREVIOUS_REV\` and \`$CURRENT_REV\`:
+          END
+          
           git log ${PREVIOUS_REV}..${CURRENT_REV} --pretty=format:'* [%s](https://github.com/${{ github.repository }}/commit/%H)' >> RELEASE.md
-
+          
+          cat <<END >> RELEASE.md
           </details>
           END
 
