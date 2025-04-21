@@ -19,6 +19,8 @@ public abstract partial class ChatService : IDisposable
 
     internal static Tokenizer DefaultTokenizer { get; } = TiktokenTokenizer.CreateForEncoding("cl100k_base");
 
+    protected static TimeSpan NetworkTimeout { get; } = TimeSpan.FromHours(24);
+
     public ChatService(Model model)
     {
         Model = model;

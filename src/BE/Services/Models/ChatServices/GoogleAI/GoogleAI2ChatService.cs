@@ -31,6 +31,7 @@ public class GoogleAI2ChatService : ChatService
         {
             ApiKey = model.ModelKey.Secret,
             Model = model.ApiModelId,
+            Timeout = NetworkTimeout
         };
     }
 
