@@ -1,4 +1,5 @@
-﻿using Chats.BE.DB.Enums;
+﻿using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
 using Mscc.GenerativeAI;
 using OpenAI.Chat;
@@ -31,8 +32,11 @@ public class GoogleAI2ChatService : ChatService
         {
             ApiKey = model.ModelKey.Secret,
             Model = model.ApiModelId,
-            Timeout = NetworkTimeout
         };
+        if (_generativeModel.Timeout != NetworkTimeout)
+        {
+            _generativeModel.Timeout = NetworkTimeout;
+        }
     }
 
     public bool AllowImageGeneration => Model.ModelReference.Name == "gemini-2.0-flash-exp" ||
@@ -40,23 +44,28 @@ public class GoogleAI2ChatService : ChatService
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        GenerationConfig gc = new()
+        {
+            Temperature = options.Temperature,
+            ResponseModalities = AllowImageGeneration ? [ResponseModality.Text, ResponseModality.Image] : [ResponseModality.Text],
+        };
+        if (ModelReference.SupportReasoningEffort(Model.ModelReference.Name))
+        {
+            gc.ThinkingConfig = new ThinkingConfig
+            {
+                ThinkingBudget = _reasoningEffort switch
+                {
+                    DBReasoningEffort.Low => 0,
+                    _ => null,
+                }
+            };
+        }
+
         await foreach (GenerateContentResponse response in _generativeModel.GenerateContentStream(new GenerateContentRequest()
         {
             Contents = OpenAIChatMessageToGoogleContent(messages.Where(x => x is not SystemChatMessage)),
             SystemInstruction = OpenAIChatMessageToGoogleContent(messages.Where(x => x is SystemChatMessage)) switch { [] => null, var x => x[0] },
-            GenerationConfig = new GenerationConfig
-            {
-                Temperature = options.Temperature,
-                ResponseModalities = AllowImageGeneration ? [ResponseModality.Text, ResponseModality.Image] : [ResponseModality.Text],
-                ThinkingConfig = new ThinkingConfig
-                {
-                    ThinkingBudget = _reasoningEffort switch
-                    {
-                        DBReasoningEffort.Low => 0, 
-                        _ => null,
-                    }
-                },
-            },
+            GenerationConfig = gc,
             SafetySettings = _safetySettings,
         }, null, cancellationToken))
         {
