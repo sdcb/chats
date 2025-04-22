@@ -95,9 +95,10 @@ public partial class OpenAIChatService(Model model, ChatClient chatClient) : Cha
 
     protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
     {
+        if (reasoningEffort == DBReasoningEffort.Default) return;
+
         options.GetOrCreateSerializedAdditionalRawData()["reasoning_effort"] = BinaryData.FromObjectAsJson(reasoningEffort switch
         {
-            //DBReasoningEffort.Default => "medium",
             DBReasoningEffort.Low => "low",
             DBReasoningEffort.Medium => "medium",
             DBReasoningEffort.High => "high",
