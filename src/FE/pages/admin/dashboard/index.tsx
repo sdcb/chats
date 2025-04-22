@@ -8,14 +8,12 @@ import { getTz } from '@/utils/date';
 
 import { StatisticsTimeParams } from '@/types/adminApis';
 
-import {
-  ChatCountChart,
-  CostConsumptionChart,
-  DateSelector,
-  PieChartCard,
-  StatsCards,
-  TokenConsumptionChart,
-} from './charts';
+import ChatCountChart from './charts/ChatCountChart';
+import CostConsumptionChart from './charts/CostConsumptionChart';
+import DateSelector from './charts/DateSelector';
+import PieChartCard from './charts/PieChartCard';
+import StatsCards from './charts/StatsCards';
+import TokenConsumptionChart from './charts/TokenConsumptionChart';
 
 import {
   getModelKeyStatistics,
