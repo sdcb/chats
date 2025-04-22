@@ -4,7 +4,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { StatisticsTimeParams } from '@/types/adminApis';
 
-import { IconAlert, IconChartHistogram } from '@/components/Icons';
+import { IconChartHistogram } from '@/components/Icons';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ChartConfig,
