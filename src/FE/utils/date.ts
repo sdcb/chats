@@ -13,3 +13,5 @@ export const formatDate = (value: string) =>
 
 export const formatDateTime = (value: string) =>
   value ? format(new Date(value), 'yyyy-M-d HH:mm:ss') : value;
+
+export const getTz = () => new Date().getTimezoneOffset();

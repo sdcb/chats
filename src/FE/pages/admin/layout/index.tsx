@@ -43,7 +43,6 @@ const AdminLayout = ({
   const [version, setVersion] = useState<GetChatVersionResult>();
 
   const menus = [
-    /**
     {
       url: '/admin/dashboard',
       icon: (stroke?: string) => {
@@ -51,7 +50,6 @@ const AdminLayout = ({
       },
       title: t('Dashboard'),
     },
-     */
     {
       url: '/admin/model-keys',
       icon: (stroke?: string) => {

@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import useTranslation from '@/hooks/useTranslation';
 
 import { getApiUrl } from '@/utils/common';
-import { currentISODateString } from '@/utils/date';
+import { currentISODateString, getTz } from '@/utils/date';
 import {
   findLastLeafId,
   findSelectedMessageByLeafId,
@@ -285,7 +285,7 @@ const Chat = memo(() => {
       );
       let chatBody = {
         chatId,
-        timezoneOffset: new Date().getTimezoneOffset(),
+        timezoneOffset: getTz(),
         parentAssistantMessageId: messageId || null,
         userMessage: requestContent,
       };
@@ -334,7 +334,7 @@ const Chat = memo(() => {
       spanId,
       modelId,
       parentUserMessageId: messageId || null,
-      timezoneOffset: new Date().getTimezoneOffset(),
+      timezoneOffset: getTz(),
     };
 
     const response = await fetch(
@@ -377,7 +377,7 @@ const Chat = memo(() => {
       chatId,
       parentAssistantMessageId: messageId || null,
       userMessage: requestContent,
-      timezoneOffset: new Date().getTimezoneOffset(),
+      timezoneOffset: getTz(),
     };
 
     const response = await fetch(`${getApiUrl()}/api/chats/general`, {

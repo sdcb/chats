@@ -27,7 +27,7 @@ const NoModel = () => {
           <Button
             variant="link"
             onClick={() => {
-              user?.role === UserRole.admin && router.push('/admin');
+              user?.role === UserRole.admin && router.push('/admin/dashboard');
             }}
             className="text-center text-sm font-normal leading-snug"
           >

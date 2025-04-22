@@ -69,7 +69,7 @@ const ChatBarSettings = () => {
                 text={t('Admin Panel')}
                 icon={<IconSettingsCog />}
                 onClick={() => {
-                  router.push('/admin');
+                  router.push('/admin/dashboard');
                 }}
               />
             )}

@@ -427,5 +427,13 @@
   "Export to Excel": "导出到Excel",
   "Export": "导出",
   "Select Source": "选择来源",
-  "Total": "总计"
+  "Total": "总计",
+  "Other": "其他",
+  "User Count": "用户数量",
+  "Consumption Tokens": "消费Tokens",
+  "Consumption Cost": "消费金额",
+  "Model Provider Usage Counts": "模型提供商使用次数",
+  "Model Usage Counts": "模型使用次数",
+  "Model Key Usage Counts": "模型密钥使用次数",
+  "Source Usage Counts": "来源使用次数"
 }

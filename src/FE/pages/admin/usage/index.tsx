@@ -5,7 +5,8 @@ import { useRouter } from 'next/router';
 import useDebounce from '@/hooks/useDebounce';
 import useTranslation from '@/hooks/useTranslation';
 
-import { formatDate, formatDateTime } from '@/utils/date';
+import { toFixed } from '@/utils/common';
+import { formatDate, formatDateTime, getTz } from '@/utils/date';
 import { getUserSession } from '@/utils/user';
 
 import { UsageSource } from '@/types/chat';
@@ -41,7 +42,6 @@ import {
 } from '@/components/ui/table';
 
 import { getUsage, getUsageStat, getUserModels } from '@/apis/clientApis';
-import { toFixed } from '@/utils/common';
 
 interface Provider {
   modelProviderId: number;
@@ -146,7 +146,7 @@ const UsageRecords = () => {
     const params: GetUsageParams = {
       page: pagination.page,
       pageSize: pagination.pageSize,
-      tz: new Date().getTimezoneOffset(),
+      tz: getTz(),
     };
 
     if (selectedSource) {
