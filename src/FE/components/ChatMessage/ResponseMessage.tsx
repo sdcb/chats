@@ -13,7 +13,11 @@ import {
   MessageContentType,
   ResponseContent,
 } from '@/types/chat';
-import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
+import {
+  IChatMessage,
+  MessageDisplayType,
+  ReactionMessageType,
+} from '@/types/chatMessage';
 
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
@@ -198,64 +202,73 @@ const ResponseMessage = (props: Props) => {
             </div>
           ) : (
             <div key={'text-' + index} className="relative group/item">
-              <MemoizedReactMarkdown
-                remarkPlugins={[remarkMath, remarkGfm]}
-                rehypePlugins={[rehypeKatex as any]}
-                components={{
-                  code({ node, className, inline, children, ...props }) {
-                    if (children.length) {
-                      if (children[0] == '▍') {
-                        return (
-                          <span className="animate-pulse cursor-default mt-1">
-                            ▍
-                          </span>
-                        );
+              {message.displayType === MessageDisplayType.Text ? (
+                <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3 group/item">
+                  <div
+                    className=" whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: c.c }}
+                  ></div>
+                </div>
+              ) : (
+                <MemoizedReactMarkdown
+                  remarkPlugins={[remarkMath, remarkGfm]}
+                  rehypePlugins={[rehypeKatex as any]}
+                  components={{
+                    code({ node, className, inline, children, ...props }) {
+                      if (children.length) {
+                        if (children[0] == '▍') {
+                          return (
+                            <span className="animate-pulse cursor-default mt-1">
+                              ▍
+                            </span>
+                          );
+                        }
                       }
-                    }
 
-                    const match = /language-(\w+)/.exec(className || '');
+                      const match = /language-(\w+)/.exec(className || '');
 
-                    return !inline ? (
-                      <CodeBlock
-                        key={Math.random()}
-                        language={(match && match[1]) || ''}
-                        value={String(children).replace(/\n$/, '')}
-                        {...props}
-                      />
-                    ) : (
-                      <code className={className} {...props}>
-                        {children}
-                      </code>
-                    );
-                  },
-                  p({ children }) {
-                    return <p className="md-p">{children}</p>;
-                  },
-                  table({ children }) {
-                    return (
-                      <table className="border-collapse border border-black px-3 py-1 dark:border-white">
-                        {children}
-                      </table>
-                    );
-                  },
-                  th({ children }) {
-                    return (
-                      <th className="break-words border border-black bg-gray-500 px-3 py-1 text-white dark:border-white">
-                        {children}
-                      </th>
-                    );
-                  },
-                  td({ children }) {
-                    return (
-                      <td className="break-words border border-black px-3 py-1 dark:border-white">
-                        {children}
-                      </td>
-                    );
-                  },
-                }}
-              >
-                {`${preprocessLaTeX(c.c!)}`}
-              </MemoizedReactMarkdown>
+                      return !inline ? (
+                        <CodeBlock
+                          key={Math.random()}
+                          language={(match && match[1]) || ''}
+                          value={String(children).replace(/\n$/, '')}
+                          {...props}
+                        />
+                      ) : (
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      );
+                    },
+                    p({ children }) {
+                      return <p className="md-p">{children}</p>;
+                    },
+                    table({ children }) {
+                      return (
+                        <table className="border-collapse border border-black px-3 py-1 dark:border-white">
+                          {children}
+                        </table>
+                      );
+                    },
+                    th({ children }) {
+                      return (
+                        <th className="break-words border border-black bg-gray-500 px-3 py-1 text-white dark:border-white">
+                          {children}
+                        </th>
+                      );
+                    },
+                    td({ children }) {
+                      return (
+                        <td className="break-words border border-black px-3 py-1 dark:border-white">
+                          {children}
+                        </td>
+                      );
+                    },
+                  }}
+                >
+                  {`${preprocessLaTeX(c.c!)}`}
+                </MemoizedReactMarkdown>
+              )}
               <div className="absolute -bottom-0.5 right-0 z-10">
                 {!isChatting(chatStatus) && (
                   <DropdownMenu>

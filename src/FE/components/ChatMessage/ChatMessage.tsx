@@ -4,7 +4,11 @@ import { hasMultipleSpans } from '@/utils/chats';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatRole, IChat, Message, ResponseContent } from '@/types/chat';
-import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
+import {
+  IChatMessage,
+  MessageDisplayType,
+  ReactionMessageType,
+} from '@/types/chatMessage';
 
 import ResponseMessage from './ResponseMessage';
 import UserMessage from './UserMessage';
@@ -29,6 +33,7 @@ export interface Props {
   ) => void;
   onEditUserMessage?: (messageId: string, content: ResponseContent) => void;
   onDeleteMessage?: (messageId: string) => void;
+  onChangeDisplayType?: (messageId: string) => void;
 }
 
 export const ChatMessage: FC<Props> = memo(
@@ -46,6 +51,7 @@ export const ChatMessage: FC<Props> = memo(
     onEditResponseMessage,
     onEditUserMessage,
     onDeleteMessage,
+    onChangeDisplayType,
   }) => {
     const isMultiSpan = hasMultipleSpans(selectedMessages);
     return (
@@ -104,7 +110,21 @@ export const ChatMessage: FC<Props> = memo(
                           !isMultiSpan && 'border-none',
                         )}
                       >
-                        <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3">
+                        <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3 group/item">
+                          <div className="flex justify-end invisible group-hover/item:visible text-xs tracking-wide font-bold text-gray-500">
+                            <span
+                              className="cursor-pointer"
+                              onClick={(e) => {
+                                onChangeDisplayType &&
+                                  onChangeDisplayType(message.id);
+                                e.stopPropagation();
+                              }}
+                            >
+                              {message?.displayType === MessageDisplayType.Text
+                                ? MessageDisplayType.Markdown
+                                : MessageDisplayType.Text}
+                            </span>
+                          </div>
                           <ResponseMessage
                             key={'response-message-' + index}
                             chatStatus={selectedChat.status}

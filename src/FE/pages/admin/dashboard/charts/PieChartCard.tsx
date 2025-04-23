@@ -1,27 +1,34 @@
 import React, { useEffect, useState } from 'react';
+
 import useTranslation from '@/hooks/useTranslation';
+
+import { StatisticsTimeParams } from '@/types/adminApis';
 import { IKeyValue } from '@/types/common';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { IconChartPie } from '@/components/Icons';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { Cell, LabelList, Pie, PieChart } from 'recharts';
 import { ChartConfig } from '@/components/ui/chart';
-import { StatisticsTimeParams } from '@/types/adminApis';
+
+import { Cell, LabelList, Pie, PieChart } from 'recharts';
 
 interface PieChartCardProps {
   title: string;
   timeParams: StatisticsTimeParams;
   dataFetcher: (params: StatisticsTimeParams) => Promise<any>;
-  formatData?: (data: any, t: (key: string) => string) => { config: ChartConfig; data: IKeyValue[] };
+  formatData?: (
+    data: any,
+    t: (key: string) => string,
+  ) => { config: ChartConfig; data: IKeyValue[] };
 }
 
-export default function PieChartCard({ 
-  title, 
-  timeParams, 
+export default function PieChartCard({
+  title,
+  timeParams,
   dataFetcher,
   formatData = defaultFormatData,
 }: PieChartCardProps) {
@@ -66,15 +73,11 @@ export default function PieChartCard({
                 content={<ChartTooltipContent hideLabel />}
               />
               <Pie data={chartData.data} dataKey="value" nameKey="key">
-                <LabelList
-                  dataKey="key"
-                  className="fill-background"
-                  stroke="none"
-                  fontSize={12}
-                  formatter={(key: keyof typeof chartData.config) => chartData.config[key]?.label}
-                />
                 {chartData.data.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
+                  />
                 ))}
               </Pie>
             </PieChart>
@@ -93,7 +96,7 @@ export default function PieChartCard({
 function defaultFormatData(data: any, t: (key: string) => string) {
   const result: IKeyValue[] = [];
   const config: ChartConfig = {};
-  
+
   if (Array.isArray(data)) {
     // 处理数组类型的数据
     data.forEach((item) => {
@@ -115,7 +118,7 @@ function defaultFormatData(data: any, t: (key: string) => string) {
     acc[curr.key] = { label: curr.key };
     return acc;
   }, {} as ChartConfig);
-  
+
   if (otherData.length > 0) {
     topFiveConfig[t('Other')] = { label: t('Other') };
   }
@@ -124,12 +127,14 @@ function defaultFormatData(data: any, t: (key: string) => string) {
     config: topFiveConfig,
     data: [
       ...topFourData,
-      ...(otherData.length > 0 
-        ? [{ 
-            key: t('Other'), 
-            value: otherData.reduce((acc, curr) => acc + curr.value, 0) 
-          }] 
+      ...(otherData.length > 0
+        ? [
+            {
+              key: t('Other'),
+              value: otherData.reduce((acc, curr) => acc + curr.value, 0),
+            },
+          ]
         : []),
     ],
   };
-} 
+}

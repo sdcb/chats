@@ -293,7 +293,7 @@ const ChatInput = ({
 
           {showScrollDownButton && (
             <Button
-              className="absolute left-1/2 -translate-x-1/2 -top-10 w-auto h-auto rounded-full bg-card hover:bg-card z-50"
+              className="absolute left-1/2 -translate-x-1/2 -top-10 w-auto h-auto rounded-full bg-card hover:bg-card z-10"
               onClick={onScrollDownClick}
             >
               <IconArrowDown />

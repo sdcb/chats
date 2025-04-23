@@ -43,7 +43,7 @@ const ChatPresetList = () => {
   const {
     hasModel,
     chatDispatch,
-    state: { selectedChat, chats },
+    state: { selectedChat, chats, modelMap },
   } = useContext(HomeContext);
   const [chatPresets, setChatPresets] = useState<GetChatPresetResult[]>([]);
   const [chatPreset, setChatPreset] = useState<GetChatPresetResult>();
@@ -171,7 +171,10 @@ const ChatPresetList = () => {
                           <TooltipTrigger asChild>
                             <Button className="bg-transparent p-0 m-0 h-auto hover:bg-transparent">
                               <ChatIcon
-                                className="cursor-pointer border border-1 border-muted-foreground bg-white"
+                                className={cn(
+                                  'cursor-pointer border border-1 border-muted-foreground bg-white',
+                                  !modelMap[s.modelId] && 'grayscale',
+                                )}
                                 key={'chat-icon-' + s.spanId}
                                 providerId={s.modelProviderId}
                               />
