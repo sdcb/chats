@@ -74,7 +74,7 @@ public class ReasoningContentFactory
 
                 // 获取字典 SerializedAdditionalRawData
                 object? rawDataValue = rawDataProp.GetValue(deltaObj);
-                if (rawDataValue is not Dictionary<string, BinaryData> dict) continue;
+                if (rawDataValue is not IDictionary<string, BinaryData> dict) continue;
 
                 // 从字典里查找 "reasoning_content"
                 if (dict.TryGetValue(reasoningContentProp, out BinaryData? binaryData))
