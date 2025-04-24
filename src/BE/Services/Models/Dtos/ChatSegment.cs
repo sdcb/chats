@@ -11,6 +11,39 @@ public record ChatSegment
 
     public required ChatTokenUsage? Usage { get; init; }
 
+    public static ChatSegment FromTextOnly(string text)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(text, nameof(text));
+        return new ChatSegment
+        {
+            FinishReason = null,
+            Items = [ChatSegmentItem.FromText(text)],
+            Usage = null,
+        };
+    }
+
+    public static ChatSegment FromThinkOnly(string text)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(text, nameof(text));
+        return new ChatSegment
+        {
+            FinishReason = null,
+            Items = [ChatSegmentItem.FromThink(text)],
+            Usage = null,
+        };
+    }
+
+    public static ChatSegment Completed(ChatTokenUsage usage, ChatFinishReason? finishReason)
+    {
+        ArgumentNullException.ThrowIfNull(usage, nameof(usage));
+        return new ChatSegment
+        {
+            FinishReason = finishReason,
+            Items = [],
+            Usage = usage,
+        };
+    }
+
     public InternalChatSegment ToInternal(Func<ChatTokenUsage> usageCalculator)
     {
         if (Usage is not null)
@@ -21,7 +54,7 @@ public record ChatSegment
                 FinishReason = FinishReason,
                 Items = Items,
                 IsUsageReliable = true,
-                IsFromUpstream = true, 
+                IsFromUpstream = true,
             };
         }
         else

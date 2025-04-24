@@ -63,7 +63,7 @@ public partial class OpenAIChatService(Model model, ChatClient chatClient) : Cha
 
     public override async Task<ChatSegment> Chat(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, CancellationToken cancellationToken)
     {
-        if (ModelReference.IsSdkUnsupportedO1(Model.ModelReference.Name))
+        if (ModelReference.SupportsDeveloperMessage(Model.ModelReference.Name))
         {
             // must use replace system chat message into developer chat message for unsupported model
             messages = [.. messages.Select(m => m switch

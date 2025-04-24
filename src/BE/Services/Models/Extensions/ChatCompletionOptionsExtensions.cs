@@ -1,5 +1,4 @@
 ﻿using OpenAI.Chat;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace Chats.BE.Services.Models.Extensions;

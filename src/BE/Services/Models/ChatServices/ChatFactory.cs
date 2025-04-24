@@ -18,7 +18,11 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
         {
             DBModelProvider.Test => new TestChatService(model),
             DBModelProvider.OpenAI => new OpenAIChatService(model),
-            DBModelProvider.AzureOpenAI => new AzureChatService(model),
+            DBModelProvider.AzureOpenAI => ModelReference.SupportsResponseAPI(model.ModelReference.Name) switch
+            {
+                true => new AzureResponseApiService(model),
+                false => new AzureChatService(model)
+            },
             DBModelProvider.WenXinQianFan => new QianFanChatService(model),
             DBModelProvider.AliyunDashscope => new QwenChatService(model),
             DBModelProvider.ZhiPuAI => new GLMChatService(model),
