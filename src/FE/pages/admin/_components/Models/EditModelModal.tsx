@@ -228,7 +228,7 @@ const EditModelModal = (props: IProps) => {
                 >
                   <Popover>
                     <PopoverTrigger>
-                      <span className="text-primary">
+                      <span className="text-primary invisible sm:visible">
                         {t('Click View Configs')}
                       </span>
                     </PopoverTrigger>

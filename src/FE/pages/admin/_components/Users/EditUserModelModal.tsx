@@ -106,6 +106,7 @@ const EditUserModelModal = (props: IProps) => {
         </DialogHeader>
         <div>
           <Input
+            className="max-w-[238px] w-full"
             value={query}
             placeholder={t('Search...')}
             onChange={(e) => {

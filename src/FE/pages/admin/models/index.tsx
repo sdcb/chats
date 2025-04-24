@@ -121,8 +121,8 @@ export default function Models() {
 
   return (
     <>
-      <div className="flex gap-4 mb-4 justify-between">
-        <div className="flex gap-3">
+      <div className="flex gap-4 mb-4 flex-warp">
+        <div className="flex flex-wrap gap-3">
           <Select
             value={query.modelProviderId}
             onValueChange={(value) => {

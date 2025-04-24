@@ -37,8 +37,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (router.isReady) {
-      const start = router.query.start as string || formatDate(subMonths(endOfToday(), 3));
-      const end = router.query.end as string || formatDate(endOfToday());
+      const start =
+        (router.query.start as string) ||
+        formatDate(subMonths(endOfToday(), 3));
+      const end = (router.query.end as string) || formatDate(endOfToday());
       setStartDate(start);
       setEndDate(end);
 
@@ -97,9 +99,11 @@ export default function Dashboard() {
         onDateChange={handleDateChange}
       />
 
-      <StatsCards timeParams={timeParams} updateTrigger={triggerUpdate} />
+      <div className='pm-2'>
+        <StatsCards timeParams={timeParams} updateTrigger={triggerUpdate} />
+      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 py-2">
         <PieChartCard
           title={t('Model Provider Usage Counts')}
           timeParams={timeParams}
@@ -126,7 +130,7 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 py-2">
         <TokenConsumptionChart
           timeParams={timeParams}
           updateTrigger={triggerUpdate}
@@ -137,7 +141,7 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 p-4">
+      <div className="grid grid-cols-1 gap-4 py-2">
         <ChatCountChart timeParams={timeParams} updateTrigger={triggerUpdate} />
       </div>
     </>

@@ -223,7 +223,7 @@ const UsageRecords = () => {
 
   return (
     <div className="flex flex-col">
-      <Card className="p-4 mb-4 border-none">
+      <div className="mb-4 border-none">
         <div className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="w-full flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-2">
@@ -427,7 +427,7 @@ const UsageRecords = () => {
             </div>
           </div>
         </div>
-      </Card>
+      </div>
 
       <div className="block sm:hidden">
         {loading ? (

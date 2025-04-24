@@ -117,21 +117,19 @@ export default function Users() {
 
   return (
     <>
-      <div className="flex flex-col gap-4 mb-4">
-        <div className="flex justify-between gap-3 items-center">
-          <Input
-            className="w-full"
-            placeholder={t('Search...')!}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              updateQueryWithDebounce(e.target.value);
-            }}
-          />
-          <Button onClick={() => handleShowAddModal()} color="primary">
-            {t('Add User')}
-          </Button>
-        </div>
+      <div className="flex flex-warp gap-4 mb-4">
+        <Input
+          className="max-w-[238px] w-full"
+          placeholder={t('Search...')!}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            updateQueryWithDebounce(e.target.value);
+          }}
+        />
+        <Button onClick={() => handleShowAddModal()} color="primary">
+          {t('Add User')}
+        </Button>
       </div>
       <Card>
         <Table>

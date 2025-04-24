@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
+import useDebounce from '@/hooks/useDebounce';
 import useTranslation from '@/hooks/useTranslation';
 
 import { formatDateTime } from '@/utils/date';
@@ -22,7 +23,6 @@ import {
 } from '@/components/ui/table';
 
 import { getMessages } from '@/apis/adminApis';
-import useDebounce from '@/hooks/useDebounce';
 
 export default function Messages() {
   const { t } = useTranslation();
@@ -54,18 +54,16 @@ export default function Messages() {
 
   return (
     <>
-      <div className="flex flex-col gap-4 mb-4">
-        <div className="flex justify-between gap-3 items-center">
-          <Input
-            className="w-full"
-            placeholder={t('Search...')!}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              updateQueryWithDebounce(e.target.value);
-            }}
-          />
-        </div>
+      <div className="flex flex-warp gap-4 mb-4">
+        <Input
+          className="max-w-[238px] w-full"
+          placeholder={t('Search...')!}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            updateQueryWithDebounce(e.target.value);
+          }}
+        />
       </div>
       <Card>
         <Table>

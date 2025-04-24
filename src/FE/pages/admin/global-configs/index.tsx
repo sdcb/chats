@@ -50,17 +50,15 @@ export default function Configs() {
 
   return (
     <>
-      <div className="flex flex-col gap-4 mb-4">
-        <div className="flex justify-end gap-3 items-center">
-          <Button
-            onClick={() => {
-              setIsOpen(true);
-            }}
-            color="primary"
-          >
-            {t('Add Configs')}
-          </Button>
-        </div>
+      <div className="flex gap-4 mb-4">
+        <Button
+          onClick={() => {
+            setIsOpen(true);
+          }}
+          color="primary"
+        >
+          {t('Add Configs')}
+        </Button>
       </div>
       <Card>
         <Table>
