@@ -102,7 +102,7 @@ export const ChatMessage: FC<Props> = memo(
                         }
                         key={'response-group-message-' + index}
                         className={cn(
-                          'border-[1px] border-background rounded-md flex w-full bg-card mb-4',
+                          'border-[1px] border-background rounded-md flex w-full bg-card mb-4 relative group/item',
                           isMultiSpan &&
                             message.isActive &&
                             'border-primary/50 border-gray-300',
@@ -110,21 +110,21 @@ export const ChatMessage: FC<Props> = memo(
                           !isMultiSpan && 'border-none',
                         )}
                       >
-                        <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3 group/item">
-                          <div className="flex justify-end invisible group-hover/item:visible text-xs tracking-wide font-bold text-gray-500">
-                            <span
-                              className="cursor-pointer"
-                              onClick={(e) => {
-                                onChangeDisplayType &&
-                                  onChangeDisplayType(message.id);
-                                e.stopPropagation();
-                              }}
-                            >
-                              {message?.displayType === MessageDisplayType.Text
-                                ? MessageDisplayType.Markdown
-                                : MessageDisplayType.Text}
-                            </span>
-                          </div>
+                        <div className=" absolute right-4 -top-2 invisible group-hover/item:visible text-xs tracking-wide font-bold text-gray-500">
+                          <span
+                            className="cursor-pointer bg-background opacity-80"
+                            onClick={(e) => {
+                              onChangeDisplayType &&
+                                onChangeDisplayType(message.id);
+                              e.stopPropagation();
+                            }}
+                          >
+                            {message?.displayType === MessageDisplayType.Text
+                              ? MessageDisplayType.Markdown
+                              : MessageDisplayType.Text}
+                          </span>
+                        </div>
+                        <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3">
                           <ResponseMessage
                             key={'response-message-' + index}
                             chatStatus={selectedChat.status}
