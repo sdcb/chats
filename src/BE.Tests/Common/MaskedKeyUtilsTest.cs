@@ -36,7 +36,7 @@ public class MaskedKeyUtilsTest
               "key2": "short",
               "key3": "value****90"
             }
-            """;
+            """.Replace("\r\n", "\n");
 
         string? actual = MaskedKeyUtils.JsonToMaskedNull(input);
 
@@ -52,7 +52,7 @@ public class MaskedKeyUtilsTest
               "key1": "short",
               "key2": "1234567"
             }
-            """;
+            """.Replace("\r\n", "\n");
 
         string? actual = MaskedKeyUtils.JsonToMaskedNull(input);
 
@@ -68,7 +68,7 @@ public class MaskedKeyUtilsTest
               "key1": "longv****23",
               "key2": "anoth****ue"
             }
-            """;
+            """.Replace("\r\n", "\n");
 
         string? actual = MaskedKeyUtils.JsonToMaskedNull(input);
 
@@ -125,7 +125,7 @@ public class MaskedKeyUtilsTest
               "key1": null,
               "key2": "value****45"
             }
-            """;
+            """.Replace("\r\n", "\n");
 
         string? actual = MaskedKeyUtils.JsonToMaskedNull(input);
 
