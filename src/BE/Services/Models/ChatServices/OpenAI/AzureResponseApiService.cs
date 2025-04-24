@@ -137,6 +137,13 @@ public class AzureResponseApiService : ChatService
             List<ResponseContentPart> responseParts = [];
             foreach (ChatMessageContentPart part in parts)
             {
+                if (!input && part.Kind == ChatMessageContentPartKind.Image)
+                {
+                    // Response API does not support image content part in assistant message
+                    responseParts.Add(ResponseContentPart.CreateOutputTextPart(part.ImageUri?.ToString() ?? "", []));
+                    continue;
+                }
+
                 responseParts.Add(part.Kind switch
                 {
                     ChatMessageContentPartKind.Text => input ? ResponseContentPart.CreateInputTextPart(part.Text) : ResponseContentPart.CreateOutputTextPart(part.Text, []),
