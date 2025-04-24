@@ -92,9 +92,9 @@ jobs:
     steps:
       - name: Trigger Sync chats-fe & be-src
         run: |
-          curl -s -X POST "https://chats-release-webhook.starworks.cc:88/sync/${{ github.run_id }}/chats-fe" -N \
+          curl -s -X POST "https://chats-release-webhook.starworks.cc:88/sync/${{ github.run_id }}/chats-fe/async" -N \
             -H "Authorization: Basic $(echo -n "${{ secrets.CHATS_RELEASE_WEBHOOK_CREDENTIAL }}" | openssl base64)"
-          curl -s -X POST "https://chats-release-webhook.starworks.cc:88/sync/${{ github.run_id }}/be-src" -N \
+          curl -s -X POST "https://chats-release-webhook.starworks.cc:88/sync/${{ github.run_id }}/be-src/async" -N \
             -H "Authorization: Basic $(echo -n "${{ secrets.CHATS_RELEASE_WEBHOOK_CREDENTIAL }}" | openssl base64)"
 
   build-primary-container:
@@ -253,7 +253,7 @@ jobs:
           path: ./Publish
       - name: Upload to Minio
         run: |
-          curl -s -i -X POST "https://chats-release-webhook.starworks.cc:88/sync/${{ github.run_id }}/${{ matrix.id }}/async" -N \
+          curl -s -i -X POST "https://chats-release-webhook.starworks.cc:88/sync/${{ github.run_id }}/${{ matrix.id }}" -N \
             -H "Authorization: Basic $(echo -n "${{ secrets.CHATS_RELEASE_WEBHOOK_CREDENTIAL }}" | openssl base64)"
 
   build-binaries-non-release:
@@ -280,7 +280,7 @@ jobs:
           path: ./Publish
       - name: Upload to Minio
         run: |
-          curl -s -i -X POST "https://chats-release-webhook.starworks.cc:88/sync/${{ github.run_id }}/${{ matrix.id }}/async" -N \
+          curl -s -i -X POST "https://chats-release-webhook.starworks.cc:88/sync/${{ github.run_id }}/${{ matrix.id }}" -N \
             -H "Authorization: Basic $(echo -n "${{ secrets.CHATS_RELEASE_WEBHOOK_CREDENTIAL }}" | openssl base64)"
 
   create-release:
