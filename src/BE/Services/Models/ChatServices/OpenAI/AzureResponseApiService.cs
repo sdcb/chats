@@ -85,7 +85,7 @@ public class AzureResponseApiService : ChatService
                 }
                 else if (type == "response.reasoning_summary_text.done")
                 {
-                    yield return ChatSegment.FromThinkOnly("\n");
+                    yield return ChatSegment.FromThinkOnly("\n\n");
                 }
             }
         }
