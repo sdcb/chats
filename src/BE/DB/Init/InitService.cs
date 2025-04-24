@@ -1,13 +1,14 @@
 ﻿using Chats.BE.DB.Enums;
 using Chats.BE.Services;
 using Chats.BE.Services.Configs;
-using Chats.BE.Services.Sessions;
 using System.Text.Json;
 
 namespace Chats.BE.DB.Init;
 
 public class InitService(IServiceScopeFactory scopeFactory)
 {
+    public const string DefaultPrompt = "You are an AI assistant named Sdcb Chats. Please follow user instructions carefully and respond accordingly. Current date: {{CURRENT_DATE}}";
+
     public async Task Init(CancellationToken cancellationToken = default)
     {
         using IServiceScope scope = scopeFactory.CreateScope();
@@ -85,7 +86,7 @@ public class InitService(IServiceScopeFactory scopeFactory)
             CreateUser = adminUser,
             UpdatedAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,
-            Content = "You're an AI intelligent assistant, Sdcb Chats. Please follow user instructions carefully and respond. Current date: {{CURRENT_DATE}}",
+            Content = DefaultPrompt,
             IsDefault = true,
             IsSystem = true,
             Name = "Default Prompt",
