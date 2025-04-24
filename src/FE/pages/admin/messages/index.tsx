@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table';
 
 import { getMessages } from '@/apis/adminApis';
+import useDebounce from '@/hooks/useDebounce';
 
 export default function Messages() {
   const { t } = useTranslation();
@@ -36,12 +37,20 @@ export default function Messages() {
   });
   const [query, setQuery] = useState('');
 
-  useEffect(() => {
+  const updateQueryWithDebounce = useDebounce((query: string) => {
+    init(query);
+  }, 1000);
+
+  const init = (query: string = '') => {
     getMessages({ ...pagination, query }).then((data) => {
       setMessages(data);
       setLoading(false);
     });
-  }, [pagination, query]);
+  };
+
+  useEffect(() => {
+    init();
+  }, [pagination]);
 
   return (
     <>
@@ -53,6 +62,7 @@ export default function Messages() {
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
+              updateQueryWithDebounce(e.target.value);
             }}
           />
         </div>

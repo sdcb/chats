@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
 
+import useDebounce from '@/hooks/useDebounce';
 import { useThrottle } from '@/hooks/useThrottle';
 import useTranslation from '@/hooks/useTranslation';
+
+import { toFixed } from '@/utils/common';
 
 import { GetUsersResult } from '@/types/adminApis';
 import { PageResult, Paging } from '@/types/page';
 
+import PaginationContainer from '../../../components/Pagiation/Pagiation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -19,13 +23,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import PaginationContainer from '../../../components/Pagiation/Pagiation';
 import EditUserBalanceModal from '../_components/Users/EditUserBalanceModel';
 import EditUserModelModal from '../_components/Users/EditUserModelModal';
 import UserModal from '../_components/Users/UserModal';
 
 import { getUsers } from '@/apis/adminApis';
-import { toFixed } from '@/utils/common';
 
 export default function Users() {
   const { t } = useTranslation();
@@ -47,13 +49,16 @@ export default function Users() {
 
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState<string>('');
-  const throttledValue = useThrottle(query, 1000);
 
   useEffect(() => {
     init();
-  }, [pagination, throttledValue]);
+  }, [pagination]);
 
-  const init = () => {
+  const updateQueryWithDebounce = useDebounce((query: string) => {
+    init(query);
+  }, 1000);
+
+  const init = (query: string = '') => {
     getUsers({ query, ...pagination }).then((data) => {
       setUsers(data);
       handleClose();
@@ -120,6 +125,7 @@ export default function Users() {
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
+              updateQueryWithDebounce(e.target.value);
             }}
           />
           <Button onClick={() => handleShowAddModal()} color="primary">

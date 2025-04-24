@@ -23,6 +23,7 @@ import {
 import RequestLogDetailsModal from '../_components/RequestLogs/RequestLogDetailsModal';
 
 import { getRequestLogs } from '@/apis/adminApis';
+import useDebounce from '@/hooks/useDebounce';
 
 export default function RequestLogs() {
   const { t } = useTranslation();
@@ -42,12 +43,20 @@ export default function RequestLogs() {
   });
   const [query, setQuery] = useState('');
 
-  useEffect(() => {
+  const updateQueryWithDebounce = useDebounce((query: string) => {
+    init(query);
+  }, 1000);
+
+  const init = (query: string = '') => {
     getRequestLogs({ ...pagination, query }).then((data) => {
       setRequestLogs(data);
       setLoading(false);
     });
-  }, [pagination, query]);
+  };
+
+  useEffect(() => {
+    init();
+  }, [pagination]);
 
   return (
     <>
@@ -59,6 +68,7 @@ export default function RequestLogs() {
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
+              updateQueryWithDebounce(e.target.value);
             }}
           />
         </div>

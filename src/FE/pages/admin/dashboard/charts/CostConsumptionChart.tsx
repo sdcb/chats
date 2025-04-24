@@ -27,32 +27,47 @@ type CostStatisticsByDate = {
 
 interface CostConsumptionChartProps {
   timeParams: StatisticsTimeParams;
+  updateTrigger?: number;
 }
 
 export default function CostConsumptionChart({
   timeParams,
+  updateTrigger = 0,
 }: CostConsumptionChartProps) {
   const { t } = useTranslation();
+  const [isLoading, setIsLoading] = useState(false);
   const [chartData, setChartData] = useState<{
     config: ChartConfig;
     data: CostStatisticsByDate[];
   }>({ config: {}, data: [] });
 
+  const loadData = () => {
+    setIsLoading(true);
+    getCostStatisticsByDate(timeParams)
+      .then((res) => {
+        const data: CostStatisticsByDate[] = [];
+        const config: ChartConfig = {};
+        res.forEach((item) => {
+          data.push({ date: item.date, ...item.value });
+        });
+        config['inputCost'] = { label: t('Input Cost') };
+        config['outputCost'] = { label: t('Output Cost') };
+        setChartData({
+          config: config,
+          data: data,
+        });
+      })
+      .catch((err) => {
+        console.error('Failed to fetch cost data:', err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
+
   useEffect(() => {
-    getCostStatisticsByDate(timeParams).then((res) => {
-      const data: CostStatisticsByDate[] = [];
-      const config: ChartConfig = {};
-      res.forEach((item) => {
-        data.push({ date: item.date, ...item.value });
-      });
-      config['inputCost'] = { label: 'inputCost' };
-      config['outputCost'] = { label: 'outputCost' };
-      setChartData({
-        config: config,
-        data: data,
-      });
-    });
-  }, [timeParams]);
+    loadData();
+  }, [updateTrigger]);
 
   return (
     <Card className="border-none">
@@ -62,7 +77,11 @@ export default function CostConsumptionChart({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {chartData.data.length > 0 ? (
+        {isLoading && chartData.data.length === 0 ? (
+          <div className="flex justify-center items-center h-[250px] text-gray-500 text-sm">
+            {t('Loading...')}
+          </div>
+        ) : chartData.data.length > 0 ? (
           <ChartContainer
             config={chartData.config as any}
             className="aspect-auto h-[250px] w-full"

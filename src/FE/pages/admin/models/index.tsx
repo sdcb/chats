@@ -68,13 +68,15 @@ export default function Models() {
   }, []);
 
   const init = () => {
-    getModels().then((data) => {
-      setModels(data);
-      setFilteredModels(data);
-      setIsOpen({ add: false, edit: false });
-      setSelectedModel(undefined);
-      setLoading(false);
-    });
+    getModels()
+      .then((data) => {
+        setModels(data);
+        setFilteredModels(data);
+        setIsOpen({ add: false, edit: false });
+        setSelectedModel(undefined);
+        setLoading(false);
+        handleQuery(query, data);
+      })
     getModelKeys().then((data) => {
       setModelKeys(data);
     });
@@ -97,9 +99,9 @@ export default function Models() {
     setSelectedModel(undefined);
   };
 
-  const handleQuery = (params: IQuery) => {
+  const handleQuery = (params: IQuery, modelData?: AdminModelDto[]) => {
     const { modelProviderId, modelKeyId, enabled } = params;
-    let modelList = [...models];
+    let modelList = [...(modelData || models)];
     if (modelProviderId) {
       modelList = modelList.filter(
         (x) => x.modelProviderId.toString() === modelProviderId,

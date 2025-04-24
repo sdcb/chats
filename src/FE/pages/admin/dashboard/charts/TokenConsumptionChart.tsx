@@ -28,34 +28,49 @@ type TokenStatisticsByDate = {
 
 interface TokenConsumptionChartProps {
   timeParams: StatisticsTimeParams;
+  updateTrigger?: number;
 }
 
 export default function TokenConsumptionChart({
   timeParams,
+  updateTrigger = 0,
 }: TokenConsumptionChartProps) {
   const { t } = useTranslation();
+  const [isLoading, setIsLoading] = useState(false);
   const [chartData, setChartData] = useState<{
     config: ChartConfig;
     data: TokenStatisticsByDate[];
   }>({ config: {}, data: [] });
 
+  const loadData = () => {
+    setIsLoading(true);
+    getTokenStatisticsByDate(timeParams)
+      .then((res) => {
+        const data: TokenStatisticsByDate[] = [];
+        const config: ChartConfig = {};
+        res.forEach((item) => {
+          data.push({ date: item.date, ...item.value });
+        });
+        config['inputTokens'] = { label: t('Input Tokens') };
+        config['outputTokens'] = { label: t('Output Tokens') };
+        config['reasoningTokens'] = { label: t('Reasoning Tokens') };
+        config['totalTokens'] = { label: t('Total Tokens') };
+        setChartData({
+          config: config,
+          data: data,
+        });
+      })
+      .catch((err) => {
+        console.error('Failed to fetch token data:', err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
+
   useEffect(() => {
-    getTokenStatisticsByDate(timeParams).then((res) => {
-      const data: TokenStatisticsByDate[] = [];
-      const config: ChartConfig = {};
-      res.forEach((item) => {
-        data.push({ date: item.date, ...item.value });
-      });
-      config['inputTokens'] = { label: 'inputTokens' };
-      config['outputTokens'] = { label: 'outputTokens' };
-      config['reasoningTokens'] = { label: 'reasoningTokens' };
-      config['totalTokens'] = { label: 'totalTokens' };
-      setChartData({
-        config: config,
-        data: data,
-      });
-    });
-  }, [timeParams]);
+    loadData();
+  }, [updateTrigger]);
 
   return (
     <Card className="border-none">
@@ -66,7 +81,11 @@ export default function TokenConsumptionChart({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {chartData.data.length > 0 ? (
+        {isLoading && chartData.data.length === 0 ? (
+          <div className="flex justify-center items-center h-[250px] text-gray-500 text-sm">
+            {t('Loading...')}
+          </div>
+        ) : chartData.data.length > 0 ? (
           <ChartContainer
             config={chartData.config as any}
             className="aspect-auto h-[250px] w-full"

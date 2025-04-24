@@ -1,21 +1,20 @@
 import React, { useEffect, useState } from 'react';
+
 import useTranslation from '@/hooks/useTranslation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+import { StatisticsTimeParams } from '@/types/adminApis';
+
 import { IconChartHistogram } from '@/components/Icons';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+  ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartConfig,
 } from '@/components/ui/chart';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  XAxis,
-} from 'recharts';
-import { StatisticsTimeParams } from '@/types/adminApis';
+
 import { getChatCountStatisticsByDate } from '@/apis/adminApis';
+import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
 
 type ChatCountStatisticsByDate = {
   date: string;
@@ -24,31 +23,46 @@ type ChatCountStatisticsByDate = {
 
 interface ChatCountChartProps {
   timeParams: StatisticsTimeParams;
+  updateTrigger?: number;
 }
 
 export default function ChatCountChart({
   timeParams,
+  updateTrigger = 0,
 }: ChatCountChartProps) {
   const { t } = useTranslation();
+  const [isLoading, setIsLoading] = useState(false);
   const [chartData, setChartData] = useState<{
     config: ChartConfig;
     data: ChatCountStatisticsByDate[];
   }>({ config: {}, data: [] });
 
+  const loadData = () => {
+    setIsLoading(true);
+    getChatCountStatisticsByDate(timeParams)
+      .then((res) => {
+        const data: ChatCountStatisticsByDate[] = [];
+        const config: ChartConfig = {};
+        res.forEach((item) => {
+          data.push({ date: item.date, count: item.value });
+        });
+        config['views'] = { label: t('Chat Counts') };
+        setChartData({
+          config: config,
+          data: data,
+        });
+      })
+      .catch((err) => {
+        console.error('Failed to fetch chat count data:', err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
+
   useEffect(() => {
-    getChatCountStatisticsByDate(timeParams).then((res) => {
-      const data: ChatCountStatisticsByDate[] = [];
-      const config: ChartConfig = {};
-      res.forEach((item) => {
-        data.push({ date: item.date, count: item.value });
-      });
-      config['count'] = { label: 'count' };
-      setChartData({
-        config: config,
-        data: data,
-      });
-    });
-  }, [timeParams]);
+    loadData();
+  }, [updateTrigger]);
 
   return (
     <Card className="border-none">
@@ -58,7 +72,11 @@ export default function ChatCountChart({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {chartData.data.length > 0 ? (
+        {isLoading && chartData.data.length === 0 ? (
+          <div className="flex justify-center items-center h-[250px] text-gray-500 text-sm">
+            {t('Loading...')}
+          </div>
+        ) : chartData.data.length > 0 ? (
           <ChartContainer
             config={chartData.config as any}
             className="aspect-auto h-[250px] w-full"
@@ -78,27 +96,10 @@ export default function ChatCountChart({
                 axisLine={false}
                 tickMargin={8}
                 minTickGap={32}
-                tickFormatter={(value) => {
-                  const date = new Date(value);
-                  return date.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                  });
-                }}
               />
               <ChartTooltip
                 content={
-                  <ChartTooltipContent
-                    className="w-[150px]"
-                    nameKey="views"
-                    labelFormatter={(value) => {
-                      return new Date(value).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      });
-                    }}
-                  />
+                  <ChartTooltipContent className="w-[150px]" nameKey="views" />
                 }
               />
               <Bar dataKey="count" fill={'hsl(var(--chart-1))'} />
@@ -112,4 +113,4 @@ export default function ChatCountChart({
       </CardContent>
     </Card>
   );
-} 
+}

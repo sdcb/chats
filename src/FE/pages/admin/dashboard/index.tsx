@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { useRouter } from 'next/router';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { getTz } from '@/utils/date';
+import { formatDate, getTz } from '@/utils/date';
 
 import { StatisticsTimeParams } from '@/types/adminApis';
 
@@ -21,6 +21,7 @@ import {
   getModelStatistics,
   getSourceStatistics,
 } from '@/apis/adminApis';
+import { endOfToday, subMonths } from 'date-fns';
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -28,20 +29,63 @@ export default function Dashboard() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [timeParams, setTimeParams] = useState<StatisticsTimeParams>({
+    start: formatDate(subMonths(endOfToday(), 3)),
+    end: formatDate(endOfToday()),
     tz: getTz(),
   });
+  const [triggerUpdate, setTriggerUpdate] = useState(0);
 
   useEffect(() => {
-    setStartDate(router.query.start as string);
-    setEndDate(router.query.end as string);
     if (router.isReady) {
+      const start = router.query.start as string || formatDate(subMonths(endOfToday(), 3));
+      const end = router.query.end as string || formatDate(endOfToday());
+      setStartDate(start);
+      setEndDate(end);
+
       setTimeParams({
-        start: router.query.start as string,
-        end: router.query.end as string,
+        start,
+        end,
         tz: getTz(),
       });
     }
-  }, [router.isReady, router.query]);
+  }, [router.isReady]);
+
+  const handleDateChange = useCallback(
+    (newStartDate: string, newEndDate: string) => {
+      const query: Record<string, string> = {
+        ...(router.query as Record<string, string>),
+      };
+      if (newStartDate) {
+        query.start = newStartDate;
+      } else {
+        delete query.start;
+      }
+
+      if (newEndDate) {
+        query.end = newEndDate;
+      } else {
+        delete query.end;
+      }
+
+      router.push(
+        {
+          pathname: router.pathname,
+          query,
+        },
+        undefined,
+        { shallow: true },
+      );
+
+      setTimeParams({
+        start: newStartDate,
+        end: newEndDate,
+        tz: getTz(),
+      });
+
+      setTriggerUpdate((prev) => prev + 1);
+    },
+    [router],
+  );
 
   return (
     <>
@@ -50,40 +94,51 @@ export default function Dashboard() {
         endDate={endDate}
         setStartDate={setStartDate}
         setEndDate={setEndDate}
+        onDateChange={handleDateChange}
       />
 
-      <StatsCards timeParams={timeParams} />
+      <StatsCards timeParams={timeParams} updateTrigger={triggerUpdate} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
         <PieChartCard
           title={t('Model Provider Usage Counts')}
           timeParams={timeParams}
           dataFetcher={getModelProviderStatistics}
+          updateTrigger={triggerUpdate}
         />
         <PieChartCard
           title={t('Model Usage Counts')}
           timeParams={timeParams}
           dataFetcher={getModelStatistics}
+          updateTrigger={triggerUpdate}
         />
         <PieChartCard
           title={t('Model Key Usage Counts')}
           timeParams={timeParams}
           dataFetcher={getModelKeyStatistics}
+          updateTrigger={triggerUpdate}
         />
         <PieChartCard
           title={t('Source Usage Counts')}
           timeParams={timeParams}
           dataFetcher={getSourceStatistics}
+          updateTrigger={triggerUpdate}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
-        <TokenConsumptionChart timeParams={timeParams} />
-        <CostConsumptionChart timeParams={timeParams} />
+        <TokenConsumptionChart
+          timeParams={timeParams}
+          updateTrigger={triggerUpdate}
+        />
+        <CostConsumptionChart
+          timeParams={timeParams}
+          updateTrigger={triggerUpdate}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 p-4">
-        <ChatCountChart timeParams={timeParams} />
+        <ChatCountChart timeParams={timeParams} updateTrigger={triggerUpdate} />
       </div>
     </>
   );

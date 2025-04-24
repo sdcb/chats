@@ -8,10 +8,10 @@ Date.prototype.addYear = function (years: number, date?: Date | string): Date {
   return newDate;
 };
 
-export const formatDate = (value: string) =>
+export const formatDate = (value: string | Date) =>
   value ? format(new Date(value), 'yyyy-M-d') : value;
 
-export const formatDateTime = (value: string) =>
+export const formatDateTime = (value: string | Date) =>
   value ? format(new Date(value), 'yyyy-M-d HH:mm:ss') : value;
 
 export const getTz = () => new Date().getTimezoneOffset();

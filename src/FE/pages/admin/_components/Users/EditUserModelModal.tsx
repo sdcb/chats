@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
+import useDebounce from '@/hooks/useDebounce';
 import useTranslation from '@/hooks/useTranslation';
 
 import { termDateString } from '@/utils/common';
+import { formatDate } from '@/utils/date';
 
 import { UserModelDisplay } from '@/types/adminApis';
 
@@ -35,7 +37,6 @@ import {
 
 import { getModelsByUserId, putUserModel } from '@/apis/adminApis';
 import { cn } from '@/lib/utils';
-import { formatDate } from '@/utils/date';
 
 interface IProps {
   userId: string;
@@ -48,11 +49,25 @@ const EditUserModelModal = (props: IProps) => {
   const { isOpen, onClose, onSuccessful } = props;
   const [submit, setSubmit] = useState(false);
   const [models, setModels] = useState<UserModelDisplay[]>([]);
+  const [filteredModels, setFilteredModels] = useState<UserModelDisplay[]>([]);
+  const [query, setQuery] = useState('');
+
+  const updateQueryWithDebounce = useDebounce((q: string) => {
+    let queryData = JSON.parse(JSON.stringify(models));
+
+    if (q) {
+      queryData = models.filter((x) =>
+        x.displayName.toLowerCase().includes(q.toLowerCase()),
+      );
+    }
+    setFilteredModels(queryData);
+  }, 1000);
 
   useEffect(() => {
     if (isOpen) {
       getModelsByUserId(props.userId).then((data) => {
         setModels(data);
+        setFilteredModels(data);
       });
     }
   }, [isOpen]);
@@ -80,6 +95,7 @@ const EditUserModelModal = (props: IProps) => {
     const _models = models as any;
     _models[index][type] = value;
     setModels([..._models]);
+    setFilteredModels([..._models]);
   };
 
   return (
@@ -88,6 +104,16 @@ const EditUserModelModal = (props: IProps) => {
         <DialogHeader>
           <DialogTitle>{t('Edit User Model')}</DialogTitle>
         </DialogHeader>
+        <div>
+          <Input
+            value={query}
+            placeholder={t('Search...')}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              updateQueryWithDebounce(e.target.value);
+            }}
+          />
+        </div>
         <div className="h-96 overflow-scroll flex justify-start gap-2 flex-wrap">
           <Table>
             <TableHeader>
@@ -101,8 +127,8 @@ const EditUserModelModal = (props: IProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {models.map((model, index) => (
-                <TableRow key={model.id}>
+              {filteredModels.map((model, index) => (
+                <TableRow key={`user-model-${model.id}-${index}`}>
                   <TableCell>{model.displayName}</TableCell>
                   <TableCell>{model.modelKeyName}</TableCell>
                   <TableCell>

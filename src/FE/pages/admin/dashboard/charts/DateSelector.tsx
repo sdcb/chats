@@ -1,5 +1,4 @@
 import React from 'react';
-import { useRouter } from 'next/router';
 import useTranslation from '@/hooks/useTranslation';
 import { formatDate } from '@/utils/date';
 import { Card } from '@/components/ui/card';
@@ -10,6 +9,7 @@ interface DateSelectorProps {
   endDate: string;
   setStartDate: (date: string) => void;
   setEndDate: (date: string) => void;
+  onDateChange?: (startDate: string, endDate: string) => void;
 }
 
 export default function DateSelector({
@@ -17,9 +17,27 @@ export default function DateSelector({
   endDate,
   setStartDate,
   setEndDate,
+  onDateChange,
 }: DateSelectorProps) {
   const { t } = useTranslation();
-  const router = useRouter();
+
+  const handleStartDateChange = (date: Date | null) => {
+    const formattedDate = date ? formatDate(date.toLocaleDateString()) : '';
+    setStartDate(formattedDate);
+    
+    if (onDateChange) {
+      onDateChange(formattedDate, endDate);
+    }
+  };
+
+  const handleEndDateChange = (date: Date | null) => {
+    const formattedDate = date ? formatDate(date.toLocaleDateString()) : '';
+    setEndDate(formattedDate);
+    
+    if (onDateChange) {
+      onDateChange(startDate, formattedDate);
+    }
+  };
 
   return (
     <Card className="p-4 mb-4 border-none">
@@ -29,37 +47,8 @@ export default function DateSelector({
             className="w-48"
             placeholder={t('Start date')}
             value={startDate}
-            onSelect={(date: Date) => {
-              const formattedDate = formatDate(date.toLocaleDateString());
-              setStartDate(formattedDate);
-              const query: Record<string, string> = {
-                ...(router.query as Record<string, string>),
-                start: formattedDate,
-              };
-              router.push(
-                {
-                  pathname: router.pathname,
-                  query,
-                },
-                undefined,
-                { shallow: true },
-              );
-            }}
-            onReset={() => {
-              setStartDate('');
-              const query: Record<string, string> = {
-                ...(router.query as Record<string, string>),
-              };
-              delete query.start;
-              router.push(
-                {
-                  pathname: router.pathname,
-                  query,
-                },
-                undefined,
-                { shallow: true },
-              );
-            }}
+            onSelect={(date: Date) => handleStartDateChange(date)}
+            onReset={() => handleStartDateChange(null)}
           />
         </div>
 
@@ -68,37 +57,8 @@ export default function DateSelector({
             className="w-48"
             placeholder={t('End date')}
             value={endDate}
-            onSelect={(date: Date) => {
-              const formattedDate = formatDate(date.toLocaleDateString());
-              setEndDate(formattedDate);
-              const query: Record<string, string> = {
-                ...(router.query as Record<string, string>),
-                end: formattedDate,
-              };
-              router.push(
-                {
-                  pathname: router.pathname,
-                  query,
-                },
-                undefined,
-                { shallow: true },
-              );
-            }}
-            onReset={() => {
-              setEndDate('');
-              const query: Record<string, string> = {
-                ...(router.query as Record<string, string>),
-              };
-              delete query.end;
-              router.push(
-                {
-                  pathname: router.pathname,
-                  query,
-                },
-                undefined,
-                { shallow: true },
-              );
-            }}
+            onSelect={(date: Date) => handleEndDateChange(date)}
+            onReset={() => handleEndDateChange(null)}
           />
         </div>
       </div>

@@ -99,13 +99,13 @@ const AdminLayout = ({
       },
       title: t('Usage Records'),
     },
-    {
+    /**{
       url: '/admin/request-logs',
       icon: (stroke?: string) => {
         return <IconNotes stroke={stroke} />;
       },
       title: t('Request Logs'),
-    },
+    },**/
     {
       url: '/admin/user-config',
       icon: (stroke?: string) => {

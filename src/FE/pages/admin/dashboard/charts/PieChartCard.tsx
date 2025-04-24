@@ -9,12 +9,14 @@ import { IconChartPie } from '@/components/Icons';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { ChartConfig } from '@/components/ui/chart';
 
-import { Cell, LabelList, Pie, PieChart } from 'recharts';
+import { Cell, Pie, PieChart } from 'recharts';
 
 interface PieChartCardProps {
   title: string;
@@ -24,6 +26,7 @@ interface PieChartCardProps {
     data: any,
     t: (key: string) => string,
   ) => { config: ChartConfig; data: IKeyValue[] };
+  updateTrigger?: number;
 }
 
 export default function PieChartCard({
@@ -31,19 +34,33 @@ export default function PieChartCard({
   timeParams,
   dataFetcher,
   formatData = defaultFormatData,
+  updateTrigger = 0,
 }: PieChartCardProps) {
   const { t } = useTranslation();
+  const [isLoading, setIsLoading] = useState(false);
   const [chartData, setChartData] = useState<{
     config: ChartConfig;
     data: IKeyValue[];
   }>({ config: {}, data: [] });
 
+  const loadData = () => {
+    setIsLoading(true);
+    dataFetcher(timeParams)
+      .then((res) => {
+        const formattedData = formatData(res, t);
+        setChartData(formattedData);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch data:', err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
+
   useEffect(() => {
-    dataFetcher(timeParams).then((res) => {
-      const formattedData = formatData(res, t);
-      setChartData(formattedData);
-    });
-  }, [timeParams, dataFetcher, formatData, t]);
+    loadData();
+  }, [updateTrigger]);
 
   const COLORS = [
     'hsl(var(--chart-1))',
@@ -62,10 +79,14 @@ export default function PieChartCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {chartData.data.length > 0 ? (
+        {isLoading && chartData.data.length === 0 ? (
+          <div className="flex justify-center items-center h-[250px] text-gray-500 text-sm">
+            {t('Loading...')}
+          </div>
+        ) : chartData.data.length > 0 ? (
           <ChartContainer
             config={chartData.config as any}
-            className="mx-auto aspect-square max-h-[320px] [&_.recharts-text]:fill-background"
+            className="mx-auto aspect-square max-h-[320px] [&_.recharts-text]:fill-background w-full"
           >
             <PieChart>
               <ChartTooltip
@@ -80,6 +101,10 @@ export default function PieChartCard({
                   />
                 ))}
               </Pie>
+              <ChartLegend
+                content={<ChartLegendContent nameKey="key" itemClassName="text-nowrap overflow-hidden text-ellipsis whitespace-nowrap" />}
+                className="gap-1 w-full hidden 2xl:flex"
+              />
             </PieChart>
           </ChartContainer>
         ) : (
@@ -92,19 +117,16 @@ export default function PieChartCard({
   );
 }
 
-// 默认数据格式化函数
 function defaultFormatData(data: any, t: (key: string) => string) {
   const result: IKeyValue[] = [];
   const config: ChartConfig = {};
 
   if (Array.isArray(data)) {
-    // 处理数组类型的数据
     data.forEach((item) => {
       result.push({ key: item.key, value: item.count });
       config[item.key] = { label: item.key };
     });
   } else {
-    // 处理对象类型的数据
     Object.entries(data).forEach(([key, value]) => {
       result.push({ key, value: value as number });
       config[key] = { label: key };

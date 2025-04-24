@@ -105,7 +105,7 @@ const UsageRecords = () => {
       undefined,
       { shallow: true },
     );
-  }, 500);
+  }, 1000);
 
   useEffect(() => {
     getUserModels().then((data) => {
@@ -329,7 +329,7 @@ const UsageRecords = () => {
 
             <div className="flex items-center gap-2">
               <Input
-                className="w-48"
+                className="w-48 placeholder:text-neutral-400"
                 placeholder={t('User Name')}
                 value={userFilter}
                 onChange={(e) => {
