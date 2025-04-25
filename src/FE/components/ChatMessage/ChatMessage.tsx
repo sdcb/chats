@@ -108,7 +108,7 @@ export const ChatMessage: FC<Props> = memo(
                             'border-[1px] border-background rounded-md flex w-full bg-card mb-2',
                             isMultiSpan &&
                               message.isActive &&
-                              'border-primary/50 border-gray-300',
+                              'border-primary/50 border-gray-300 dark:border-gray-600',
                             isMultiSpan && 'p-1 md:p-2',
                             !isMultiSpan && 'border-none',
                           )}

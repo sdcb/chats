@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { toFixed } from '@/utils/common';
+import { formatNumberAsMoney, toFixed } from '@/utils/common';
 import { formatDate, formatDateTime, getTz } from '@/utils/date';
 import { getUserSession } from '@/utils/user';
 
@@ -605,7 +605,8 @@ const UsageRecordsTab = () => {
                 <TableRow>
                   <TableCell colSpan={2}>{t('Total')}</TableCell>
                   <TableCell>
-                    {usageStat?.sumInputTokens}/{usageStat?.sumOutputTokens}
+                    {formatNumberAsMoney(usageStat?.sumInputTokens)}/
+                    {formatNumberAsMoney(usageStat?.sumOutputTokens)}
                   </TableCell>
                   <TableCell>
                     ￥{toFixed(usageStat?.sumInputCost)}/ ￥

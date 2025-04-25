@@ -81,7 +81,6 @@
   "total cost": "总消费",
   "prompt cost": "请求消费",
   "response cost": "响应消费",
-  "Large language models may generate misleading error messages, please validate key information.": "大语言模型可能会生成误导性错误信息，请对关键信息加以验证。",
   "Dark": "深色模式",
   "Light": "浅色模式",
   "System": "跟随系统",

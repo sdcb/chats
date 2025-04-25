@@ -81,7 +81,6 @@
   "total cost": "total cost",
   "prompt cost": "prompt cost",
   "response cost": "response cost",
-  "Large language models may generate misleading error messages, please validate key information.": "Large language models may generate misleading error messages, please validate key information.",
   "Dark": "Dark",
   "Light": "Light",
   "System": "System",

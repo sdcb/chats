@@ -256,7 +256,7 @@ const ChatInput = ({
   }, [contentText, contentFiles]);
 
   return (
-    <div className="absolute bottom-0 left-0 w-full border-transparent bg-background">
+    <div className="absolute bottom-4 left-0 w-full border-transparent bg-background">
       <div
         className={cn(
           'stretch flex flex-row rounded-md mx-auto w-full px-2 md:px-4',
@@ -386,11 +386,6 @@ const ChatInput = ({
             />
           )}
         </div>
-      </div>
-      <div className="px-3 pt-1 pb-2 text-center text-[11px] text-black/50 dark:text-white/50 md:px-4 md:pt-2 md:pb-2">
-        {t(
-          'Large language models may generate misleading error messages, please validate key information.',
-        )}
       </div>
     </div>
   );

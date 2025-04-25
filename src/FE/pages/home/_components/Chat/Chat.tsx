@@ -69,7 +69,6 @@ import {
   putResponseMessageEditInPlace,
   responseContentToRequest,
 } from '@/apis/clientApis';
-import { cn } from '@/lib/utils';
 
 const Chat = memo(() => {
   const { t } = useTranslation();
@@ -80,6 +79,7 @@ const Chat = memo(() => {
       messages,
       selectedMessages,
       models,
+      modelMap,
       showChatBar,
     },
 
@@ -314,7 +314,12 @@ const Chat = memo(() => {
     startChat();
     let { id: chatId } = selectedChat;
     let selectedMessageList = [...selectedMessages];
-    const responseMessages = generateResponseMessage(spanId, messageId);
+    const responseMessages = generateResponseMessage(
+      spanId,
+      messageId,
+      modelId,
+      modelMap[modelId]?.name,
+    );
     const index = selectedMessages.findIndex(
       (x) => x.findIndex((m) => m.parentId === messageId) !== -1,
     );
