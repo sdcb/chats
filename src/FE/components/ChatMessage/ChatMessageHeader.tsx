@@ -19,7 +19,7 @@ const ChatMessageHeader = ({
   const { t } = useTranslation();
 
   return (
-    <div className="flex justify-between items-center h-8 px-1">
+    <div className="flex justify-between items-center h-8">
       <div className="flex gap-1 items-center">
         <ChatIcon
           providerId={message.modelProviderId}
