@@ -82,6 +82,7 @@ export const ChatMessage: FC<Props> = memo(
                         )}
                       >
                         <UserMessage
+                          readonly={readonly}
                           selectedChat={selectedChat}
                           message={message}
                           onChangeMessage={onChangeChatLeafMessageId}
@@ -94,6 +95,7 @@ export const ChatMessage: FC<Props> = memo(
                     {message.role === ChatRole.Assistant && (
                       <div className="group/item">
                         <ChatMessageHeader
+                          readonly={readonly}
                           onChangeDisplayType={onChangeDisplayType}
                           message={message}
                         />
@@ -105,7 +107,7 @@ export const ChatMessage: FC<Props> = memo(
                           }
                           key={'response-group-message-' + index}
                           className={cn(
-                            'border-[1px] border-background rounded-md flex w-full bg-card mb-2',
+                            'border-[1px] border-background rounded-md flex w-full bg-card mb-1',
                             isMultiSpan &&
                               message.isActive &&
                               'border-primary/50 border-gray-300 dark:border-gray-600',
@@ -113,11 +115,12 @@ export const ChatMessage: FC<Props> = memo(
                             !isMultiSpan && 'border-none',
                           )}
                         >
-                          <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3">
+                          <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-1 px-2">
                             <ResponseMessage
                               key={'response-message-' + index}
                               chatStatus={selectedChat.status}
                               message={message}
+                              readonly={readonly}
                               onEditResponseMessage={onEditResponseMessage}
                             />
                           </div>

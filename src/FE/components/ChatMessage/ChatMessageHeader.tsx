@@ -12,14 +12,16 @@ import { cn } from '@/lib/utils';
 const ChatMessageHeader = ({
   onChangeDisplayType,
   message,
+  readonly,
 }: {
   onChangeDisplayType?: (messageId: string) => void;
   message: IChatMessage;
+  readonly?: boolean;
 }) => {
   const { t } = useTranslation();
 
   return (
-    <div className="flex justify-between items-center h-8">
+    <div className="flex justify-between items-center h-8 mb-1">
       <div className="flex gap-1 items-center">
         <ChatIcon
           providerId={message.modelProviderId}
@@ -30,7 +32,12 @@ const ChatMessageHeader = ({
           {message.createdAt && formatRelativeTime(message.createdAt)}
         </span>
       </div>
-      <div className="flex gap-1 invisible group-hover/item:visible">
+      <div
+        className={cn(
+          'flex gap-1 invisible group-hover/item:visible',
+          readonly && 'hidden',
+        )}
+      >
         <Button
           variant="ghost"
           size="sm"

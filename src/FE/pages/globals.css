@@ -184,11 +184,11 @@ select:focus {
 
 .md-p {
   white-space: pre-wrap;
-  margin     : 1em 0 !important;
+  margin     : .5em 0 !important;
 }
 
 .prose img {
-  margin: 1em 0 !important;
+  margin: .5em 0 !important;
 }
 
 /* hidden input type is number spin button */

@@ -12,11 +12,7 @@ import {
   MessageContentType,
   ResponseContent,
 } from '@/types/chat';
-import {
-  IChatMessage,
-  MessageDisplayType,
-  ReactionMessageType,
-} from '@/types/chatMessage';
+import { IChatMessage, MessageDisplayType } from '@/types/chatMessage';
 
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
@@ -33,6 +29,7 @@ import {
 import { Textarea } from '../ui/textarea';
 import ThinkingMessage from './ThinkingMessage';
 
+import { cn } from '@/lib/utils';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -40,6 +37,7 @@ import remarkMath from 'remark-math';
 interface Props {
   message: IChatMessage;
   chatStatus: ChatStatus;
+  readonly?: boolean;
   onEditResponseMessage?: (
     messageId: string,
     content: ResponseContent,
@@ -48,7 +46,7 @@ interface Props {
 }
 
 const ResponseMessage = (props: Props) => {
-  const { message, chatStatus, onEditResponseMessage } = props;
+  const { message, chatStatus, readonly, onEditResponseMessage } = props;
   const { t } = useTranslation();
 
   const { id: messageId, status: messageStatus, content } = message;
@@ -253,7 +251,10 @@ const ResponseMessage = (props: Props) => {
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       disabled={isChatting(messageStatus)}
-                      className="focus:outline-none invisible group-hover/item:visible bg-card rounded-full p-1"
+                      className={cn(
+                        'focus:outline-none invisible group-hover/item:visible bg-card rounded-full p-1',
+                        readonly && 'hidden',
+                      )}
                     >
                       <IconDots
                         className="rotate-90 hover:opacity-50"
@@ -298,21 +299,6 @@ const ResponseMessage = (props: Props) => {
           return <></>;
         }
       })}
-      {/**
-       * <ResponseMessageActions
-       *   key={'response-actions-' + message.id}
-       *   readonly={readonly}
-       *   models={models}
-       *   chatStatus={chatStatus}
-       *   message={message}
-       *   onChangeMessage={onChangeChatLeafMessageId}
-        onReactionMessage={onReactionMessage}
-        onRegenerate={(messageId: string, modelId: number) => {
-          onRegenerate && onRegenerate(message.spanId!, messageId, modelId);
-          setEditId(EMPTY_ID);
-        }}
-        onDeleteMessage={onDeleteMessage}
-      /> */}
     </>
   );
 };

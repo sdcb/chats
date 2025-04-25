@@ -107,6 +107,7 @@ const ResponseMessageActions = (props: Props) => {
         />
         <ChangeModelAction
           readonly={readonly || chatting}
+          hidden={readonly}
           models={models}
           onChangeModel={(model) => {
             onRegenerate && onRegenerate(parentId!, model.modelId);
