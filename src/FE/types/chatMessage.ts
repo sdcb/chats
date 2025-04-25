@@ -122,6 +122,7 @@ export interface IChatMessage {
   reaction?: boolean | null;
   edited?: boolean;
   displayType?: MessageDisplayType;
+  createdAt?: string;
 }
 
 export interface MessageNode {
@@ -170,6 +171,6 @@ export enum ReactionMessageType {
 }
 
 export enum MessageDisplayType {
-  Text = 'TEXT',
-  Markdown = 'MARKDOWN',
+  Code = 'CODE',
+  Preview = 'PREVIEW',
 }

@@ -4,7 +4,6 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { isChatting, preprocessLaTeX } from '@/utils/chats';
 
-import { AdminModelDto } from '@/types/adminApis';
 import {
   ChatSpanStatus,
   ChatStatus,
@@ -32,7 +31,6 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Textarea } from '../ui/textarea';
-import ResponseMessageActions from './ResponseMessageActions';
 import ThinkingMessage from './ThinkingMessage';
 
 import rehypeKatex from 'rehype-katex';
@@ -40,33 +38,17 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 
 interface Props {
-  readonly?: boolean;
   message: IChatMessage;
-  models: AdminModelDto[];
   chatStatus: ChatStatus;
-  onChangeChatLeafMessageId?: (messageId: string) => void;
-  onRegenerate?: (spanId: number, messageId: string, modelId: number) => void;
-  onReactionMessage?: (type: ReactionMessageType, messageId: string) => void;
   onEditResponseMessage?: (
     messageId: string,
     content: ResponseContent,
     isCopy?: boolean,
   ) => void;
-  onDeleteMessage?: (messageId: string) => void;
 }
 
 const ResponseMessage = (props: Props) => {
-  const {
-    message,
-    readonly,
-    models,
-    chatStatus,
-    onChangeChatLeafMessageId,
-    onRegenerate,
-    onReactionMessage,
-    onEditResponseMessage,
-    onDeleteMessage,
-  } = props;
+  const { message, chatStatus, onEditResponseMessage } = props;
   const { t } = useTranslation();
 
   const { id: messageId, status: messageStatus, content } = message;
@@ -202,11 +184,9 @@ const ResponseMessage = (props: Props) => {
             </div>
           ) : (
             <div key={'text-' + index} className="relative group/item">
-              {message.displayType === MessageDisplayType.Text ? (
+              {message.displayType === MessageDisplayType.Code ? (
                 <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3 group/item">
-                  <div className="whitespace-pre-wrap">
-                    {c.c}
-                  </div>
+                  <div className="whitespace-pre-wrap">{c.c}</div>
                 </div>
               ) : (
                 <MemoizedReactMarkdown
@@ -318,20 +298,21 @@ const ResponseMessage = (props: Props) => {
           return <></>;
         }
       })}
-      <ResponseMessageActions
-        key={'response-actions-' + message.id}
-        readonly={readonly}
-        models={models}
-        chatStatus={chatStatus}
-        message={message}
-        onChangeMessage={onChangeChatLeafMessageId}
+      {/**
+       * <ResponseMessageActions
+       *   key={'response-actions-' + message.id}
+       *   readonly={readonly}
+       *   models={models}
+       *   chatStatus={chatStatus}
+       *   message={message}
+       *   onChangeMessage={onChangeChatLeafMessageId}
         onReactionMessage={onReactionMessage}
         onRegenerate={(messageId: string, modelId: number) => {
           onRegenerate && onRegenerate(message.spanId!, messageId, modelId);
           setEditId(EMPTY_ID);
         }}
         onDeleteMessage={onDeleteMessage}
-      />
+      /> */}
     </>
   );
 };

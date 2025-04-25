@@ -4,13 +4,11 @@ import { hasMultipleSpans } from '@/utils/chats';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatRole, IChat, Message, ResponseContent } from '@/types/chat';
-import {
-  IChatMessage,
-  MessageDisplayType,
-  ReactionMessageType,
-} from '@/types/chatMessage';
+import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
 
+import ChatMessageHeader from './ChatMessageHeader';
 import ResponseMessage from './ResponseMessage';
+import ResponseMessageActions from './ResponseMessageActions';
 import UserMessage from './UserMessage';
 
 import { cn } from '@/lib/utils';
@@ -94,52 +92,53 @@ export const ChatMessage: FC<Props> = memo(
                       </div>
                     )}
                     {message.role === ChatRole.Assistant && (
-                      <div
-                        onClick={() =>
-                          isMultiSpan &&
-                          onChangeChatLeafMessageId &&
-                          onChangeChatLeafMessageId(message.id)
-                        }
-                        key={'response-group-message-' + index}
-                        className={cn(
-                          'border-[1px] border-background rounded-md flex w-full bg-card mb-4 relative group/item',
-                          isMultiSpan &&
-                            message.isActive &&
-                            'border-primary/50 border-gray-300',
-                          isMultiSpan && 'p-1 md:p-2',
-                          !isMultiSpan && 'border-none',
-                        )}
-                      >
-                        <div className=" absolute right-4 -top-2 invisible group-hover/item:visible text-xs tracking-wide font-bold text-gray-500">
-                          <span
-                            className="cursor-pointer bg-background opacity-80"
-                            onClick={(e) => {
-                              onChangeDisplayType &&
-                                onChangeDisplayType(message.id);
-                              e.stopPropagation();
-                            }}
-                          >
-                            {message?.displayType === MessageDisplayType.Text
-                              ? MessageDisplayType.Markdown
-                              : MessageDisplayType.Text}
-                          </span>
+                      <div className="group/item">
+                        <ChatMessageHeader
+                          onChangeDisplayType={onChangeDisplayType}
+                          message={message}
+                        />
+                        <div
+                          onClick={() =>
+                            isMultiSpan &&
+                            onChangeChatLeafMessageId &&
+                            onChangeChatLeafMessageId(message.id)
+                          }
+                          key={'response-group-message-' + index}
+                          className={cn(
+                            'border-[1px] border-background rounded-md flex w-full bg-card mb-2',
+                            isMultiSpan &&
+                              message.isActive &&
+                              'border-primary/50 border-gray-300',
+                            isMultiSpan && 'p-1 md:p-2',
+                            !isMultiSpan && 'border-none',
+                          )}
+                        >
+                          <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3">
+                            <ResponseMessage
+                              key={'response-message-' + index}
+                              chatStatus={selectedChat.status}
+                              message={message}
+                              onEditResponseMessage={onEditResponseMessage}
+                            />
+                          </div>
                         </div>
-                        <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3">
-                          <ResponseMessage
-                            key={'response-message-' + index}
-                            chatStatus={selectedChat.status}
-                            message={message}
-                            readonly={readonly}
-                            models={models}
-                            onRegenerate={onRegenerate}
-                            onReactionMessage={onReactionMessage}
-                            onEditResponseMessage={onEditResponseMessage}
-                            onChangeChatLeafMessageId={
-                              onChangeChatLeafMessageId
-                            }
-                            onDeleteMessage={onDeleteMessage}
-                          />
-                        </div>
+                        <ResponseMessageActions
+                          key={'response-actions-' + message.id}
+                          readonly={readonly}
+                          models={models}
+                          chatStatus={selectedChat.status}
+                          message={message}
+                          onChangeMessage={onChangeChatLeafMessageId}
+                          onReactionMessage={onReactionMessage}
+                          onRegenerate={(
+                            messageId: string,
+                            modelId: number,
+                          ) => {
+                            onRegenerate &&
+                              onRegenerate(message.spanId!, messageId, modelId);
+                          }}
+                          onDeleteMessage={onDeleteMessage}
+                        />
                       </div>
                     )}
                   </>

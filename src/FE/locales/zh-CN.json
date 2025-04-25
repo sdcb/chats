@@ -443,5 +443,7 @@
   "Model Key Usage Counts": "模型密钥使用次数",
   "Source Usage Counts": "来源使用次数",
   "Not all models available": "并非所有模型都可用",
-  "Model not available": "模型不可用"
+  "Model not available": "模型不可用",
+  "preview": "预览",
+  "code": "代码"
 }

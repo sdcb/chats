@@ -756,9 +756,9 @@ const Chat = memo(() => {
     const msgs = messages.map((x) => {
       if (x.id === messageId) {
         x.displayType =
-          x?.displayType === MessageDisplayType.Text
-            ? MessageDisplayType.Markdown
-            : MessageDisplayType.Text;
+          x?.displayType === MessageDisplayType.Code
+            ? MessageDisplayType.Preview
+            : MessageDisplayType.Code;
       }
       return x;
     });
@@ -767,9 +767,9 @@ const Chat = memo(() => {
       return msg.map((m) => {
         if (m.id === messageId) {
           m.displayType =
-            m?.displayType === MessageDisplayType.Text
-              ? MessageDisplayType.Markdown
-              : MessageDisplayType.Text;
+            m?.displayType === MessageDisplayType.Code
+              ? MessageDisplayType.Preview
+              : MessageDisplayType.Code;
         }
         return m;
       });

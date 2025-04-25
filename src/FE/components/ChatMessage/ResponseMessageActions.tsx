@@ -55,7 +55,7 @@ const ResponseMessageActions = (props: Props) => {
   };
 
   return (
-    <div className="flex gap-1 flex-wrap mt-1">
+    <div className="flex gap-1 flex-wrap">
       <PaginationAction
         hidden={siblingIds.length <= 1 || chatting}
         disabledPrev={currentMessageIndex === 0}
