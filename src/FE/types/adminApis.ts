@@ -388,3 +388,32 @@ export interface ErrorResult {
   isSuccess: boolean;
   errorMessage: string;
 }
+
+export interface StatisticsTimeParams {
+  start?: string;
+  end?: string;
+  tz?: number;
+}
+
+export interface TokenStatisticsByDateResult {
+  date: string;
+  value: {
+    inputTokens: number;
+    outputTokens: number;
+    reasoningTokens: number;
+    totalTokens: number;
+  };
+}
+
+export interface CostStatisticsByDateResult {
+  date: string;
+  value: {
+    inputCost: number;
+    outputCost: number;
+  };
+}
+
+export interface ChatCountStatisticsByDateResult {
+  date: string;
+  value: number;
+}

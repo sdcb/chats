@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 import useTranslation from '@/hooks/useTranslation';
 
 import { toFixed } from '@/utils/common';
-import { formatDate, formatDateTime } from '@/utils/date';
+import { formatDate, formatDateTime, getTz } from '@/utils/date';
 import { getUserSession } from '@/utils/user';
 
 import { UsageSource } from '@/types/chat';
@@ -153,7 +153,7 @@ const UsageRecordsTab = () => {
       user: user?.username,
       page: pagination.page,
       pageSize: pagination.pageSize,
-      tz: new Date().getTimezoneOffset(),
+      tz: getTz(),
     };
 
     if (selectedSource) {

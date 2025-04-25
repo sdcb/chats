@@ -5,7 +5,8 @@ import { useRouter } from 'next/router';
 import useDebounce from '@/hooks/useDebounce';
 import useTranslation from '@/hooks/useTranslation';
 
-import { formatDate, formatDateTime } from '@/utils/date';
+import { toFixed } from '@/utils/common';
+import { formatDate, formatDateTime, getTz } from '@/utils/date';
 import { getUserSession } from '@/utils/user';
 
 import { UsageSource } from '@/types/chat';
@@ -41,7 +42,6 @@ import {
 } from '@/components/ui/table';
 
 import { getUsage, getUsageStat, getUserModels } from '@/apis/clientApis';
-import { toFixed } from '@/utils/common';
 
 interface Provider {
   modelProviderId: number;
@@ -105,7 +105,7 @@ const UsageRecords = () => {
       undefined,
       { shallow: true },
     );
-  }, 500);
+  }, 1000);
 
   useEffect(() => {
     getUserModels().then((data) => {
@@ -146,7 +146,7 @@ const UsageRecords = () => {
     const params: GetUsageParams = {
       page: pagination.page,
       pageSize: pagination.pageSize,
-      tz: new Date().getTimezoneOffset(),
+      tz: getTz(),
     };
 
     if (selectedSource) {
@@ -223,7 +223,7 @@ const UsageRecords = () => {
 
   return (
     <div className="flex flex-col">
-      <Card className="p-4 mb-4 border-none">
+      <div className="mb-4 border-none">
         <div className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="w-full flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-2">
@@ -329,7 +329,7 @@ const UsageRecords = () => {
 
             <div className="flex items-center gap-2">
               <Input
-                className="w-48"
+                className="w-48 placeholder:text-neutral-400"
                 placeholder={t('User Name')}
                 value={userFilter}
                 onChange={(e) => {
@@ -427,7 +427,7 @@ const UsageRecords = () => {
             </div>
           </div>
         </div>
-      </Card>
+      </div>
 
       <div className="block sm:hidden">
         {loading ? (

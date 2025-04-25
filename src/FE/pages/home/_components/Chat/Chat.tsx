@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import useTranslation from '@/hooks/useTranslation';
 
 import { getApiUrl } from '@/utils/common';
-import { currentISODateString } from '@/utils/date';
+import { currentISODateString, getTz } from '@/utils/date';
 import {
   findLastLeafId,
   findSelectedMessageByLeafId,
@@ -34,6 +34,7 @@ import {
 } from '@/types/chat';
 import {
   IChatMessage,
+  MessageDisplayType,
   ReactionMessageType,
   ResponseMessageTempId,
   SseResponseKind,
@@ -285,7 +286,7 @@ const Chat = memo(() => {
       );
       let chatBody = {
         chatId,
-        timezoneOffset: new Date().getTimezoneOffset(),
+        timezoneOffset: getTz(),
         parentAssistantMessageId: messageId || null,
         userMessage: requestContent,
       };
@@ -334,7 +335,7 @@ const Chat = memo(() => {
       spanId,
       modelId,
       parentUserMessageId: messageId || null,
-      timezoneOffset: new Date().getTimezoneOffset(),
+      timezoneOffset: getTz(),
     };
 
     const response = await fetch(
@@ -377,7 +378,7 @@ const Chat = memo(() => {
       chatId,
       parentAssistantMessageId: messageId || null,
       userMessage: requestContent,
-      timezoneOffset: new Date().getTimezoneOffset(),
+      timezoneOffset: getTz(),
     };
 
     const response = await fetch(`${getApiUrl()}/api/chats/general`, {
@@ -548,7 +549,7 @@ const Chat = memo(() => {
 
   useEffect(() => {
     throttledScrollDown();
-  }, [selectedMessages, throttledScrollDown]);
+  }, [selectedMessages, throttledScrollDown, selectedChat]);
 
   const handleChangePrompt = (prompt: Prompt) => {
     // to do
@@ -750,6 +751,33 @@ const Chat = memo(() => {
     messageDispatch(setMessages(msgs));
   };
 
+  const handleChangeDisplayType = (messageId: string) => {
+    const msgs = messages.map((x) => {
+      if (x.id === messageId) {
+        x.displayType =
+          x?.displayType === MessageDisplayType.Text
+            ? MessageDisplayType.Markdown
+            : MessageDisplayType.Text;
+      }
+      return x;
+    });
+
+    const selectedMsgs = selectedMessages.map((msg) => {
+      return msg.map((m) => {
+        if (m.id === messageId) {
+          m.displayType =
+            m?.displayType === MessageDisplayType.Text
+              ? MessageDisplayType.Markdown
+              : MessageDisplayType.Text;
+        }
+        return m;
+      });
+    });
+
+    messageDispatch(setMessages(msgs));
+    messageDispatch(setSelectedMessages(selectedMsgs));
+  };
+
   return (
     <div className="relative flex-1">
       <div className="flex flex-col">
@@ -782,6 +810,7 @@ const Chat = memo(() => {
             onEditResponseMessage={handleUpdateResponseMessage}
             onEditUserMessage={handleUpdateUserMessage}
             onDeleteMessage={handleDeleteMessage}
+            onChangeDisplayType={handleChangeDisplayType}
           />
 
           {!hasModel() && !selectedChat?.id && <NoModel />}

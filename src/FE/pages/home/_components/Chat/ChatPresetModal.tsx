@@ -323,6 +323,7 @@ const ChatPresetModal = (props: Props) => {
                     className={cn(
                       'flex flex-shrink-0 flex-nowrap items-center gap-2 rounded-sm px-2 h-10 cursor-pointer bg-transparent border',
                       selectedSpan?.spanId === span.spanId ? 'bg-muted' : '',
+                      !modelMap[span.modelId] && 'grayscale',
                     )}
                     onClick={() => {
                       setSelectedSpan(span);
@@ -449,16 +450,16 @@ const ChatPresetModal = (props: Props) => {
                           isExpand={selectedSpan.temperature !== null}
                           hidden={
                             !(
-                              modelMap[selectedSpan.modelId].minTemperature !==
-                              modelMap[selectedSpan.modelId].maxTemperature
+                              modelMap[selectedSpan.modelId]?.minTemperature !==
+                              modelMap[selectedSpan.modelId]?.maxTemperature
                             )
                           }
                           value={selectedSpan.temperature || DEFAULT_TEMPERATURE}
                           tool={
                             <Slider
                               className="cursor-pointer"
-                              min={modelMap[selectedSpan.modelId].minTemperature}
-                              max={modelMap[selectedSpan.modelId].maxTemperature}
+                              min={modelMap[selectedSpan.modelId]?.minTemperature}
+                              max={modelMap[selectedSpan.modelId]?.maxTemperature}
                               step={0.01}
                               value={[
                                 selectedSpan.temperature || DEFAULT_TEMPERATURE,
@@ -480,20 +481,20 @@ const ChatPresetModal = (props: Props) => {
                           isExpand={selectedSpan.maxOutputTokens !== null}
                           value={
                             selectedSpan.maxOutputTokens ||
-                            modelMap[selectedSpan.modelId].maxResponseTokens
+                            modelMap[selectedSpan.modelId]?.maxResponseTokens
                           }
                           tool={
                             <Slider
                               className="cursor-pointer"
                               min={0}
                               max={
-                                modelMap[selectedSpan.modelId].maxResponseTokens
+                                modelMap[selectedSpan.modelId]?.maxResponseTokens
                               }
                               step={1}
                               value={[
                                 selectedSpan.maxOutputTokens ||
                                   modelMap[selectedSpan.modelId]
-                                    .maxResponseTokens,
+                                    ?.maxResponseTokens,
                               ]}
                               onValueChange={(values) => {
                                 onChangeMaxOutputTokens(values[0]);

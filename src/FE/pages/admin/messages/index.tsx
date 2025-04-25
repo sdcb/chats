@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
+import useDebounce from '@/hooks/useDebounce';
 import useTranslation from '@/hooks/useTranslation';
 
 import { formatDateTime } from '@/utils/date';
@@ -36,26 +37,33 @@ export default function Messages() {
   });
   const [query, setQuery] = useState('');
 
-  useEffect(() => {
+  const updateQueryWithDebounce = useDebounce((query: string) => {
+    init(query);
+  }, 1000);
+
+  const init = (query: string = '') => {
     getMessages({ ...pagination, query }).then((data) => {
       setMessages(data);
       setLoading(false);
     });
-  }, [pagination, query]);
+  };
+
+  useEffect(() => {
+    init();
+  }, [pagination]);
 
   return (
     <>
-      <div className="flex flex-col gap-4 mb-4">
-        <div className="flex justify-between gap-3 items-center">
-          <Input
-            className="w-full"
-            placeholder={t('Search...')!}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-            }}
-          />
-        </div>
+      <div className="flex flex-warp gap-4 mb-4">
+        <Input
+          className="max-w-[238px] w-full"
+          placeholder={t('Search...')!}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            updateQueryWithDebounce(e.target.value);
+          }}
+        />
       </div>
       <Card>
         <Table>
