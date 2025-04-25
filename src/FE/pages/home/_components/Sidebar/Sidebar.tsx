@@ -76,7 +76,7 @@ const Sidebar = <T,>({
         <div className="sticky mt-2">
           <div
             className={cn(
-              'flex items-center pr-1.5 justify-between',
+              'flex items-center pr-1 justify-between',
               side === 'right' && 'flex-row-reverse',
             )}
           >
