@@ -94,7 +94,7 @@ const UserMessage = (props: Props) => {
   };
 
   const handlePressEnter = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !isTyping && !e.shiftKey) {
+    if (e.key === 'Enter' && !isTyping && e.ctrlKey) {
       e.preventDefault();
       handleEditMessage();
     }
