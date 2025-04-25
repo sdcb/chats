@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Microsoft.Net.Http.Headers;
+using Chats.BE.Controllers.Common.Dtos;
 
 namespace Chats.BE.Controllers.Chats.Files;
 
@@ -54,12 +55,12 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
     }
 
     private async Task<ActionResult<FileDto>> UploadPrivate(ChatsDB db, IFormFile file,
-        FileServiceFactory fileServiceFactory, 
-        ILogger<FileController> logger, 
-        ClientInfoManager clientInfoManager, 
-        FileUrlProvider fdup, 
+        FileServiceFactory fileServiceFactory,
+        ILogger<FileController> logger,
+        ClientInfoManager clientInfoManager,
+        FileUrlProvider fdup,
         CurrentUser currentUser,
-        DB.FileService fileService, 
+        DB.FileService fileService,
         FileContentTypeService fileContentTypeService,
         FileImageInfoService fileImageInfoService,
         CancellationToken cancellationToken)
@@ -177,5 +178,55 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
             Uri downloadUrl = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
             return Redirect(downloadUrl.ToString());
         }
+    }
+
+    [HttpGet("file")]
+    public async Task<ActionResult<PagedResult<FileDto>>> QueryFiles(PagingRequest query,
+        [FromServices] CurrentUser currentUser,
+        [FromServices] FileUrlProvider fdup,
+        CancellationToken cancellationToken)
+    {
+        IQueryable<DB.File> queryable = db.Files
+            .Where(x => x.CreateUserId == currentUser.Id)
+            .OrderByDescending(x => x.Id);
+        PagedResult<FileDto> pagedResult = await PagedResult.FromTempQuery(queryable, query, fdup.CreateFileDto, cancellationToken);
+        return Ok(pagedResult);
+    }
+
+    [HttpDelete("file/{encryptedFileId}")]
+    public async Task<ActionResult> DeleteFile(string encryptedFileId,
+        [FromServices] CurrentUser currentUser,
+        CancellationToken cancellationToken)
+    {
+        int fileId = urlEncryption.DecryptFileId(encryptedFileId);
+        DB.File? file = await db.Files
+            .Include(x => x.FileService)
+            .Include(x => x.MessageContentFiles)
+            .FirstOrDefaultAsync(x => x.Id == fileId, cancellationToken);
+        if (file == null)
+        {
+            return NotFound("File not found.");
+        }
+        if (file.CreateUserId != currentUser.Id && !currentUser.IsAdmin)
+        {
+            // only the creator or admin can delete the file
+            return NotFound("File not found.");
+        }
+
+        if (file.MessageContentFiles.Count != 0)
+        {
+            return BadRequest("File is used in messages, cannot delete.");
+        }
+
+        IFileService fs = fileServiceFactory.Create(file.FileService);
+        bool deleted = await fs.Delete(file.StorageKey, cancellationToken);
+        if (!deleted)
+        {
+            logger.LogWarning("Failed to delete file {FileId} from file service {FileServiceId}", file.Id, file.FileServiceId);
+        }
+        db.Files.Remove(file);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return NoContent();
     }
 }
