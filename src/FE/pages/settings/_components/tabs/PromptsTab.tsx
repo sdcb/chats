@@ -168,7 +168,7 @@ const PromptsTab = () => {
 
   return (
     <div className="flex flex-col h-full gap-4">
-      <div className="flex justify-between items-center gap-4 px-2 bg-card rounded-md h-14">
+      <div className="flex justify-between items-center gap-4 p-3 bg-card rounded-md">
         <div className="relative w-full">
           <Input
             placeholder={t('Search prompts...')}

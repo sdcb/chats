@@ -549,7 +549,8 @@ const Chat = memo(() => {
 
   useEffect(() => {
     throttledScrollDown();
-  }, [selectedMessages, throttledScrollDown, selectedChat]);
+    handleScroll();
+  }, [selectedMessages, throttledScrollDown]);
 
   const handleChangePrompt = (prompt: Prompt) => {
     // to do
