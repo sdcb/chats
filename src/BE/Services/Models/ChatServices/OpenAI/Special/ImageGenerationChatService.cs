@@ -43,7 +43,7 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
         {
             cr = await ic.GenerateImagesAsync(
                 prompt,
-                options.MaxOutputTokenCount ?? 4,
+                options.MaxOutputTokenCount ?? 3,
                 new ImageGenerationOptions()
                 {
                     EndUserId = options.EndUserId,
@@ -61,9 +61,9 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
         {
             using HttpClient http = new();
             cr = await ic.GenerateImageEditsAsync(
-                await http.GetStreamAsync(image.ImageUri, cancellationToken), "input-image",
+                await http.GetStreamAsync(image.ImageUri, cancellationToken), Path.GetFileName(image.ImageUri.LocalPath),
                 prompt,
-                options.MaxOutputTokenCount ?? 4,
+                options.MaxOutputTokenCount ?? 3,
                 new ImageEditOptions()
                 {
                     EndUserId = options.EndUserId,
