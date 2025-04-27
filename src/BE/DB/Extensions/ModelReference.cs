@@ -17,13 +17,6 @@ public partial class ModelReference
         _ => false
     };
 
-    public static bool SupportsResponseAPI(string modelReferenceName) => modelReferenceName switch
-    {
-        "o3" => true,
-        "o4-mini" => true,
-        _ => false
-    };
-
     public static bool SupportReasoningEffort(string modelReferenceName)
     {
         return modelReferenceName switch
@@ -36,6 +29,7 @@ public partial class ModelReference
             "o4-mini" => true,
             "gemini-2.5-pro-exp-03-25" => true,
             "gemini-2.5-flash-preview-04-17" => true, 
+            "gpt-image-1" => true, 
             _ => false
         };
     }

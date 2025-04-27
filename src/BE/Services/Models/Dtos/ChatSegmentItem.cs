@@ -26,6 +26,15 @@ public abstract record ChatSegmentItem
         };
     }
 
+    public static ImageChatSegment FromBinaryData(BinaryData binaryData, string contentType)
+    {
+        return new Base64Image
+        {
+            Base64 = Convert.ToBase64String(binaryData.ToArray()),
+            ContentType = contentType
+        };
+    }
+
     public static ImageChatSegment FromUrlImage(string url)
     {
         return new UrlImage
@@ -78,7 +87,7 @@ public static class ChatSegmentItemExtensions
             if (items.Count == 0)
             {
                 items.Add(item);
-                return;
+                continue;
             }
 
             // 否则尝试合并

@@ -3,6 +3,7 @@ using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.ChatServices.GoogleAI;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
+using Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 using Chats.BE.Services.Models.ChatServices.Test;
 using Chats.BE.Services.Models.ModelLoaders;
 using OpenAI.Chat;
@@ -17,11 +18,16 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
         ChatService cs = modelProvider switch
         {
             DBModelProvider.Test => new TestChatService(model),
-            DBModelProvider.OpenAI => new OpenAIChatService(model),
-            DBModelProvider.AzureOpenAI => ModelReference.SupportsResponseAPI(model.ModelReference.Name) switch
+            DBModelProvider.OpenAI => model.ModelReference.Name switch
             {
-                true => new AzureResponseApiService(model),
-                false => new AzureChatService(model)
+                "gpt-image-1" => new AzureImageGenerationChatService(model),
+                _ => new AzureChatService(model),
+            },
+            DBModelProvider.AzureOpenAI => model.ModelReference.Name switch
+            {
+                "o3" or "o4-mini" => new AzureResponseApiService(model), 
+                "gpt-image-1" => new AzureImageGenerationChatService(model), 
+                _ => new AzureChatService(model),
             },
             DBModelProvider.WenXinQianFan => new QianFanChatService(model),
             DBModelProvider.AliyunDashscope => new QwenChatService(model),
@@ -82,7 +88,13 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
         });
         try
         {
-            await foreach (var seg in cs.ChatStreamedFEProcessed([new UserChatMessage("1+1=?")], new ChatCompletionOptions(), ChatExtraDetails.Default, cancellationToken))
+            ChatCompletionOptions cco = new();
+            if (ModelReference.SupportReasoningEffort(modelReference.Name))
+            {
+                cco.ReasoningEffortLevel = ChatReasoningEffortLevel.Low;
+            }
+
+            await foreach (var seg in cs.ChatStreamedFEProcessed([new UserChatMessage("1+1=?")], cco, ChatExtraDetails.Default, cancellationToken))
             {
                 if (seg.IsFromUpstream)
                 {

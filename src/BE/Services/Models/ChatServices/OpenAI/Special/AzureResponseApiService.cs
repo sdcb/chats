@@ -9,9 +9,8 @@ using System.ClientModel.Primitives;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using System.Threading.Tasks;
 
-namespace Chats.BE.Services.Models.ChatServices.OpenAI;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
 public class AzureResponseApiService : ChatService
 {
@@ -108,7 +107,7 @@ public class AzureResponseApiService : ChatService
             throw new InvalidOperationException($"The field type is not string: {field.FieldType}");
         }
 
-        return (StreamingResponseUpdate delta) =>
+        return (delta) =>
         {
             object prop = deltaTypeProperty.GetValue(delta) ?? throw new InvalidOperationException("The Type property is null.");
             string type = field.GetValue(prop) as string ?? throw new InvalidOperationException("The _value field is null.");
