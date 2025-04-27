@@ -4,5 +4,5 @@ INSERT INTO [ModelReference]
      [AllowSearch], [AllowVision], [AllowSystemPrompt], [AllowStreaming], [ReasoningResponseKindId], 
      [ContextWindow], [MaxResponseTokens], [TokenizerId], [InputTokenPrice1M], [OutputTokenPrice1M], [CurrencyCode])
 VALUES
-    (126, 1, N'gpt-image-1', NULL, '2025-04-16', 1, 1, 0, 1, 0, 0, 0, 65536, 32768, 2, 5, 40, 'USD'),
-    (526, 5, N'gpt-image-1', NULL, '2025-04-16', 1, 1, 0, 1, 0, 0, 0, 65536, 32768, 2, 5, 40, 'USD');
+    (126, 1, N'gpt-image-1', NULL, '2025-04-16', 1, 1, 0, 1, 0, 0, 0, 65536, 10, 2, 5, 40, 'USD'),
+    (526, 5, N'gpt-image-1', NULL, '2025-04-16', 1, 1, 0, 1, 0, 0, 0, 65536, 10, 2, 5, 40, 'USD');
