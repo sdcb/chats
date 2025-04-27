@@ -44,6 +44,7 @@ import { IChatGroup } from '@/types/group';
 import { PageResult } from '@/types/page';
 import { Prompt, PromptSlim } from '@/types/prompt';
 import { SmsType } from '@/types/user';
+import { getTz } from '@/utils/date';
 
 export const changeUserPassword = (params: PostUserPassword) => {
   const fetchService = useFetch();
@@ -122,7 +123,7 @@ export const getUserBalanceOnly = () => {
 export const getBalance7DaysUsage = () => {
   const fetchServer = useFetch();
   return fetchServer.get<GetBalance7DaysUsageResult[]>(
-    `/api/user/7-days-usage?timezoneOffset=${new Date().getTimezoneOffset()}`,
+    `/api/user/7-days-usage?timezoneOffset=${getTz()}`,
   );
 };
 

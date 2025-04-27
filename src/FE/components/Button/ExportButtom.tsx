@@ -44,7 +44,7 @@ const ExportButton: React.FC<ExportProps> = ({
   };
 
   return (
-    <Button variant="outline" onClick={handleExport} className={className}>
+    <Button variant="default" onClick={handleExport} className={className}>
       {buttonText || t('Export')}
     </Button>
   );

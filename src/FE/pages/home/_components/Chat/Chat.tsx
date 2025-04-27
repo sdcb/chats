@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import useTranslation from '@/hooks/useTranslation';
 
 import { getApiUrl } from '@/utils/common';
-import { currentISODateString } from '@/utils/date';
+import { currentISODateString, getTz } from '@/utils/date';
 import {
   findLastLeafId,
   findSelectedMessageByLeafId,
@@ -34,6 +34,7 @@ import {
 } from '@/types/chat';
 import {
   IChatMessage,
+  MessageDisplayType,
   ReactionMessageType,
   ResponseMessageTempId,
   SseResponseKind,
@@ -68,7 +69,6 @@ import {
   putResponseMessageEditInPlace,
   responseContentToRequest,
 } from '@/apis/clientApis';
-import { cn } from '@/lib/utils';
 
 const Chat = memo(() => {
   const { t } = useTranslation();
@@ -79,6 +79,7 @@ const Chat = memo(() => {
       messages,
       selectedMessages,
       models,
+      modelMap,
       showChatBar,
     },
 
@@ -285,7 +286,7 @@ const Chat = memo(() => {
       );
       let chatBody = {
         chatId,
-        timezoneOffset: new Date().getTimezoneOffset(),
+        timezoneOffset: getTz(),
         parentAssistantMessageId: messageId || null,
         userMessage: requestContent,
       };
@@ -313,7 +314,12 @@ const Chat = memo(() => {
     startChat();
     let { id: chatId } = selectedChat;
     let selectedMessageList = [...selectedMessages];
-    const responseMessages = generateResponseMessage(spanId, messageId);
+    const responseMessages = generateResponseMessage(
+      spanId,
+      messageId,
+      modelId,
+      modelMap[modelId]?.name,
+    );
     const index = selectedMessages.findIndex(
       (x) => x.findIndex((m) => m.parentId === messageId) !== -1,
     );
@@ -334,7 +340,7 @@ const Chat = memo(() => {
       spanId,
       modelId,
       parentUserMessageId: messageId || null,
-      timezoneOffset: new Date().getTimezoneOffset(),
+      timezoneOffset: getTz(),
     };
 
     const response = await fetch(
@@ -377,7 +383,7 @@ const Chat = memo(() => {
       chatId,
       parentAssistantMessageId: messageId || null,
       userMessage: requestContent,
-      timezoneOffset: new Date().getTimezoneOffset(),
+      timezoneOffset: getTz(),
     };
 
     const response = await fetch(`${getApiUrl()}/api/chats/general`, {
@@ -548,6 +554,7 @@ const Chat = memo(() => {
 
   useEffect(() => {
     throttledScrollDown();
+    handleScroll();
   }, [selectedMessages, throttledScrollDown]);
 
   const handleChangePrompt = (prompt: Prompt) => {
@@ -750,6 +757,33 @@ const Chat = memo(() => {
     messageDispatch(setMessages(msgs));
   };
 
+  const handleChangeDisplayType = (messageId: string) => {
+    const msgs = messages.map((x) => {
+      if (x.id === messageId) {
+        x.displayType =
+          x?.displayType === MessageDisplayType.Code
+            ? MessageDisplayType.Preview
+            : MessageDisplayType.Code;
+      }
+      return x;
+    });
+
+    const selectedMsgs = selectedMessages.map((msg) => {
+      return msg.map((m) => {
+        if (m.id === messageId) {
+          m.displayType =
+            m?.displayType === MessageDisplayType.Code
+              ? MessageDisplayType.Preview
+              : MessageDisplayType.Code;
+        }
+        return m;
+      });
+    });
+
+    messageDispatch(setMessages(msgs));
+    messageDispatch(setSelectedMessages(selectedMsgs));
+  };
+
   return (
     <div className="relative flex-1">
       <div className="flex flex-col">
@@ -782,6 +816,7 @@ const Chat = memo(() => {
             onEditResponseMessage={handleUpdateResponseMessage}
             onEditUserMessage={handleUpdateUserMessage}
             onDeleteMessage={handleDeleteMessage}
+            onChangeDisplayType={handleChangeDisplayType}
           />
 
           {!hasModel() && !selectedChat?.id && <NoModel />}

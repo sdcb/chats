@@ -121,6 +121,8 @@ export interface IChatMessage {
   firstTokenLatency: number;
   reaction?: boolean | null;
   edited?: boolean;
+  displayType?: MessageDisplayType;
+  createdAt?: string;
 }
 
 export interface MessageNode {
@@ -166,4 +168,9 @@ export const UserMessageTempId = 'USER_MESSAGE_TEMP_ID';
 export enum ReactionMessageType {
   Good = 1,
   Bad = 2,
+}
+
+export enum MessageDisplayType {
+  Code = 'CODE',
+  Preview = 'PREVIEW',
 }

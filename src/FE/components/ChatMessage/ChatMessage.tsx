@@ -6,7 +6,9 @@ import { AdminModelDto } from '@/types/adminApis';
 import { ChatRole, IChat, Message, ResponseContent } from '@/types/chat';
 import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
 
+import ChatMessageHeader from './ChatMessageHeader';
 import ResponseMessage from './ResponseMessage';
+import ResponseMessageActions from './ResponseMessageActions';
 import UserMessage from './UserMessage';
 
 import { cn } from '@/lib/utils';
@@ -29,6 +31,7 @@ export interface Props {
   ) => void;
   onEditUserMessage?: (messageId: string, content: ResponseContent) => void;
   onDeleteMessage?: (messageId: string) => void;
+  onChangeDisplayType?: (messageId: string) => void;
 }
 
 export const ChatMessage: FC<Props> = memo(
@@ -46,6 +49,7 @@ export const ChatMessage: FC<Props> = memo(
     onEditResponseMessage,
     onEditUserMessage,
     onDeleteMessage,
+    onChangeDisplayType,
   }) => {
     const isMultiSpan = hasMultipleSpans(selectedMessages);
     return (
@@ -78,6 +82,7 @@ export const ChatMessage: FC<Props> = memo(
                         )}
                       >
                         <UserMessage
+                          readonly={readonly}
                           selectedChat={selectedChat}
                           message={message}
                           onChangeMessage={onChangeChatLeafMessageId}
@@ -88,38 +93,55 @@ export const ChatMessage: FC<Props> = memo(
                       </div>
                     )}
                     {message.role === ChatRole.Assistant && (
-                      <div
-                        onClick={() =>
-                          isMultiSpan &&
-                          onChangeChatLeafMessageId &&
-                          onChangeChatLeafMessageId(message.id)
-                        }
-                        key={'response-group-message-' + index}
-                        className={cn(
-                          'border-[1px] border-background rounded-md flex w-full bg-card mb-4',
-                          isMultiSpan &&
-                            message.isActive &&
-                            'border-primary/50 border-gray-300',
-                          isMultiSpan && 'p-1 md:p-2',
-                          !isMultiSpan && 'border-none',
-                        )}
-                      >
-                        <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3">
-                          <ResponseMessage
-                            key={'response-message-' + index}
-                            chatStatus={selectedChat.status}
-                            message={message}
-                            readonly={readonly}
-                            models={models}
-                            onRegenerate={onRegenerate}
-                            onReactionMessage={onReactionMessage}
-                            onEditResponseMessage={onEditResponseMessage}
-                            onChangeChatLeafMessageId={
-                              onChangeChatLeafMessageId
-                            }
-                            onDeleteMessage={onDeleteMessage}
-                          />
+                      <div className="group/item">
+                        <ChatMessageHeader
+                          readonly={readonly}
+                          onChangeDisplayType={onChangeDisplayType}
+                          message={message}
+                        />
+                        <div
+                          onClick={() =>
+                            isMultiSpan &&
+                            onChangeChatLeafMessageId &&
+                            onChangeChatLeafMessageId(message.id)
+                          }
+                          key={'response-group-message-' + index}
+                          className={cn(
+                            'border-[1px] border-background rounded-md flex w-full bg-card mb-1',
+                            isMultiSpan &&
+                              message.isActive &&
+                              'border-primary/50 border-gray-300 dark:border-gray-600',
+                            isMultiSpan && 'p-1 md:p-2',
+                            !isMultiSpan && 'border-none',
+                          )}
+                        >
+                          <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-1 px-2">
+                            <ResponseMessage
+                              key={'response-message-' + index}
+                              chatStatus={selectedChat.status}
+                              message={message}
+                              readonly={readonly}
+                              onEditResponseMessage={onEditResponseMessage}
+                            />
+                          </div>
                         </div>
+                        <ResponseMessageActions
+                          key={'response-actions-' + message.id}
+                          readonly={readonly}
+                          models={models}
+                          chatStatus={selectedChat.status}
+                          message={message}
+                          onChangeMessage={onChangeChatLeafMessageId}
+                          onReactionMessage={onReactionMessage}
+                          onRegenerate={(
+                            messageId: string,
+                            modelId: number,
+                          ) => {
+                            onRegenerate &&
+                              onRegenerate(message.spanId!, messageId, modelId);
+                          }}
+                          onDeleteMessage={onDeleteMessage}
+                        />
                       </div>
                     )}
                   </>

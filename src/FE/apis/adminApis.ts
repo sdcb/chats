@@ -3,6 +3,8 @@ import { useFetch } from '@/hooks/useFetch';
 import {
   AdminChatsDto,
   AdminModelDto,
+  ChatCountStatisticsByDateResult,
+  CostStatisticsByDateResult,
   ErrorResult,
   GetConfigsResult,
   GetFileServicesResult,
@@ -37,12 +39,15 @@ import {
   PutUserModelParams,
   PutUserParams,
   SimpleModelReferenceDto,
+  StatisticsTimeParams,
+  TokenStatisticsByDateResult,
   UpdateModelDto,
   UserModelDisplay,
   UserModelDisplayDto,
   ValidateModelParams,
 } from '@/types/adminApis';
 import { GetChatShareResult, GetChatVersionResult } from '@/types/clientApis';
+import { IKeyCount } from '@/types/common';
 import { ChatModelFileConfig, DBModelProvider } from '@/types/model';
 import { PageResult } from '@/types/page';
 
@@ -389,4 +394,88 @@ export const postChatsVersion = () => {
 export const defaultFileConfig: ChatModelFileConfig = {
   count: 5,
   maxSize: 10240,
+};
+
+export const getEnabledUserCount = () => {
+  const fetchServer = useFetch();
+  return fetchServer.get<number>('/api/admin/statistics/enabled-user-count');
+};
+
+export const getEnabledModelCount = () => {
+  const fetchServer = useFetch();
+  return fetchServer.get<number>('/api/admin/statistics/enabled-model-count');
+};
+
+export const getTokensDuring = (params: StatisticsTimeParams) => {
+  const fetchServer = useFetch();
+  return fetchServer.get<number>('/api/admin/statistics/tokens-during', {
+    params: params,
+  });
+};
+
+export const getCostDuring = (params: StatisticsTimeParams) => {
+  const fetchServer = useFetch();
+  return fetchServer.get<number>('/api/admin/statistics/cost-during', {
+    params: params,
+  });
+};
+
+export const getModelProviderStatistics = (params: StatisticsTimeParams) => {
+  const fetchServer = useFetch();
+  return fetchServer.get<object>(
+    '/api/admin/statistics/model-provider-statistics',
+    {
+      params: params,
+    },
+  );
+};
+
+export const getModelStatistics = (params: StatisticsTimeParams) => {
+  const fetchServer = useFetch();
+  return fetchServer.get<IKeyCount[]>(
+    '/api/admin/statistics/model-statistics',
+    {
+      params: params,
+    },
+  );
+};
+
+export const getModelKeyStatistics = (params: StatisticsTimeParams) => {
+  const fetchServer = useFetch();
+  return fetchServer.get<IKeyCount[]>(
+    '/api/admin/statistics/model-key-statistics',
+    { params: params },
+  );
+};
+
+export const getSourceStatistics = (params: StatisticsTimeParams) => {
+  const fetchServer = useFetch();
+  return fetchServer.get<IKeyCount[]>(
+    '/api/admin/statistics/source-statistics',
+    { params: params },
+  );
+};
+
+export const getTokenStatisticsByDate = (params: StatisticsTimeParams) => {
+  const fetchServer = useFetch();
+  return fetchServer.get<TokenStatisticsByDateResult[]>(
+    '/api/admin/statistics/token-statistics-by-date',
+    { params: params },
+  );
+};
+
+export const getCostStatisticsByDate = (params: StatisticsTimeParams) => {
+  const fetchServer = useFetch();
+  return fetchServer.get<CostStatisticsByDateResult[]>(
+    '/api/admin/statistics/cost-statistics-by-date',
+    { params: params },
+  );
+};
+
+export const getChatCountStatisticsByDate = (params: StatisticsTimeParams) => {
+  const fetchServer = useFetch();
+  return fetchServer.get<ChatCountStatisticsByDateResult[]>(
+    '/api/admin/statistics/chat-count-by-date',
+    { params: params },
+  );
 };

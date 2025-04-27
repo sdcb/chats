@@ -4,7 +4,6 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { isChatting, preprocessLaTeX } from '@/utils/chats';
 
-import { AdminModelDto } from '@/types/adminApis';
 import {
   ChatSpanStatus,
   ChatStatus,
@@ -13,7 +12,7 @@ import {
   MessageContentType,
   ResponseContent,
 } from '@/types/chat';
-import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
+import { IChatMessage, MessageDisplayType } from '@/types/chatMessage';
 
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
@@ -28,41 +27,26 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Textarea } from '../ui/textarea';
-import ResponseMessageActions from './ResponseMessageActions';
 import ThinkingMessage from './ThinkingMessage';
 
+import { cn } from '@/lib/utils';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 
 interface Props {
-  readonly?: boolean;
   message: IChatMessage;
-  models: AdminModelDto[];
   chatStatus: ChatStatus;
-  onChangeChatLeafMessageId?: (messageId: string) => void;
-  onRegenerate?: (spanId: number, messageId: string, modelId: number) => void;
-  onReactionMessage?: (type: ReactionMessageType, messageId: string) => void;
+  readonly?: boolean;
   onEditResponseMessage?: (
     messageId: string,
     content: ResponseContent,
     isCopy?: boolean,
   ) => void;
-  onDeleteMessage?: (messageId: string) => void;
 }
 
 const ResponseMessage = (props: Props) => {
-  const {
-    message,
-    readonly,
-    models,
-    chatStatus,
-    onChangeChatLeafMessageId,
-    onRegenerate,
-    onReactionMessage,
-    onEditResponseMessage,
-    onDeleteMessage,
-  } = props;
+  const { message, chatStatus, readonly, onEditResponseMessage } = props;
   const { t } = useTranslation();
 
   const { id: messageId, status: messageStatus, content } = message;
@@ -89,7 +73,7 @@ const ResponseMessage = (props: Props) => {
   };
 
   const handlePressEnter = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !isTyping && !e.shiftKey) {
+    if (e.key === 'Enter' && !isTyping && e.ctrlKey) {
       e.preventDefault();
       handleEditMessage();
     }
@@ -198,70 +182,79 @@ const ResponseMessage = (props: Props) => {
             </div>
           ) : (
             <div key={'text-' + index} className="relative group/item">
-              <MemoizedReactMarkdown
-                remarkPlugins={[remarkMath, remarkGfm]}
-                rehypePlugins={[rehypeKatex as any]}
-                components={{
-                  code({ node, className, inline, children, ...props }) {
-                    if (children.length) {
-                      if (children[0] == '▍') {
-                        return (
-                          <span className="animate-pulse cursor-default mt-1">
-                            ▍
-                          </span>
-                        );
+              {message.displayType === MessageDisplayType.Code ? (
+                <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3 group/item">
+                  <div className="whitespace-pre-wrap">{c.c}</div>
+                </div>
+              ) : (
+                <MemoizedReactMarkdown
+                  remarkPlugins={[remarkMath, remarkGfm]}
+                  rehypePlugins={[rehypeKatex as any]}
+                  components={{
+                    code({ node, className, inline, children, ...props }) {
+                      if (children.length) {
+                        if (children[0] == '▍') {
+                          return (
+                            <span className="animate-pulse cursor-default mt-1">
+                              ▍
+                            </span>
+                          );
+                        }
                       }
-                    }
 
-                    const match = /language-(\w+)/.exec(className || '');
+                      const match = /language-(\w+)/.exec(className || '');
 
-                    return !inline ? (
-                      <CodeBlock
-                        key={Math.random()}
-                        language={(match && match[1]) || ''}
-                        value={String(children).replace(/\n$/, '')}
-                        {...props}
-                      />
-                    ) : (
-                      <code className={className} {...props}>
-                        {children}
-                      </code>
-                    );
-                  },
-                  p({ children }) {
-                    return <p className="md-p">{children}</p>;
-                  },
-                  table({ children }) {
-                    return (
-                      <table className="border-collapse border border-black px-3 py-1 dark:border-white">
-                        {children}
-                      </table>
-                    );
-                  },
-                  th({ children }) {
-                    return (
-                      <th className="break-words border border-black bg-gray-500 px-3 py-1 text-white dark:border-white">
-                        {children}
-                      </th>
-                    );
-                  },
-                  td({ children }) {
-                    return (
-                      <td className="break-words border border-black px-3 py-1 dark:border-white">
-                        {children}
-                      </td>
-                    );
-                  },
-                }}
-              >
-                {`${preprocessLaTeX(c.c!)}`}
-              </MemoizedReactMarkdown>
+                      return !inline ? (
+                        <CodeBlock
+                          key={Math.random()}
+                          language={(match && match[1]) || ''}
+                          value={String(children).replace(/\n$/, '')}
+                          {...props}
+                        />
+                      ) : (
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      );
+                    },
+                    p({ children }) {
+                      return <p className="md-p">{children}</p>;
+                    },
+                    table({ children }) {
+                      return (
+                        <table className="border-collapse border border-black px-3 py-1 dark:border-white">
+                          {children}
+                        </table>
+                      );
+                    },
+                    th({ children }) {
+                      return (
+                        <th className="break-words border border-black bg-gray-500 px-3 py-1 text-white dark:border-white">
+                          {children}
+                        </th>
+                      );
+                    },
+                    td({ children }) {
+                      return (
+                        <td className="break-words border border-black px-3 py-1 dark:border-white">
+                          {children}
+                        </td>
+                      );
+                    },
+                  }}
+                >
+                  {`${preprocessLaTeX(c.c!)}`}
+                </MemoizedReactMarkdown>
+              )}
               <div className="absolute -bottom-0.5 right-0 z-10">
                 {!isChatting(chatStatus) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       disabled={isChatting(messageStatus)}
-                      className="focus:outline-none invisible group-hover/item:visible bg-card rounded-full p-1"
+                      className={cn(
+                        'focus:outline-none invisible group-hover/item:visible bg-card rounded-full p-1',
+                        readonly && 'hidden',
+                      )}
                     >
                       <IconDots
                         className="rotate-90 hover:opacity-50"
@@ -306,20 +299,6 @@ const ResponseMessage = (props: Props) => {
           return <></>;
         }
       })}
-      <ResponseMessageActions
-        key={'response-actions-' + message.id}
-        readonly={readonly}
-        models={models}
-        chatStatus={chatStatus}
-        message={message}
-        onChangeMessage={onChangeChatLeafMessageId}
-        onReactionMessage={onReactionMessage}
-        onRegenerate={(messageId: string, modelId: number) => {
-          onRegenerate && onRegenerate(message.spanId!, messageId, modelId);
-          setEditId(EMPTY_ID);
-        }}
-        onDeleteMessage={onDeleteMessage}
-      />
     </>
   );
 };

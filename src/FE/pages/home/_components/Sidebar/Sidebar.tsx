@@ -71,12 +71,12 @@ const Sidebar = <T,>({
       <div
         className={`${
           isOpen ? 'w-full sm:w-[280px]' : 'w-0 hidden'
-        } fixed top-0 ${side}-0 z-40 flex h-full flex-none flex-col bg-gray-50 bg-sidebar p-2 text-[14px] sm:relative sm:top-0 shadow-sm`}
+        } fixed top-0 ${side}-0 z-40 flex h-full flex-none flex-col bg-card p-2 text-[14px] sm:relative sm:top-0 shadow-md`}
       >
         <div className="sticky mt-2">
           <div
             className={cn(
-              'flex items-center pr-1.5 justify-between',
+              'flex items-center pr-1 justify-between',
               side === 'right' && 'flex-row-reverse',
             )}
           >

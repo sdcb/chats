@@ -55,7 +55,7 @@ const ResponseMessageActions = (props: Props) => {
   };
 
   return (
-    <div className="flex gap-1 flex-wrap mt-1">
+    <div className="flex gap-1 flex-wrap">
       <PaginationAction
         hidden={siblingIds.length <= 1 || chatting}
         disabledPrev={currentMessageIndex === 0}
@@ -107,6 +107,7 @@ const ResponseMessageActions = (props: Props) => {
         />
         <ChangeModelAction
           readonly={readonly || chatting}
+          hidden={readonly}
           models={models}
           onChangeModel={(model) => {
             onRegenerate && onRegenerate(parentId!, model.modelId);

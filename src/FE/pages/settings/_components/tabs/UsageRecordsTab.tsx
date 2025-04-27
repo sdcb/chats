@@ -4,8 +4,8 @@ import { useRouter } from 'next/router';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { toFixed } from '@/utils/common';
-import { formatDate, formatDateTime } from '@/utils/date';
+import { formatNumberAsMoney, toFixed } from '@/utils/common';
+import { formatDate, formatDateTime, getTz } from '@/utils/date';
 import { getUserSession } from '@/utils/user';
 
 import { UsageSource } from '@/types/chat';
@@ -153,7 +153,7 @@ const UsageRecordsTab = () => {
       user: user?.username,
       page: pagination.page,
       pageSize: pagination.pageSize,
-      tz: new Date().getTimezoneOffset(),
+      tz: getTz(),
     };
 
     if (selectedSource) {
@@ -227,7 +227,7 @@ const UsageRecordsTab = () => {
 
   return (
     <div className="flex flex-col">
-      <Card className="p-4 mb-4 border-none">
+      <Card className="p-3 mb-4 border-none">
         <div className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="w-full flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-2">
@@ -605,7 +605,8 @@ const UsageRecordsTab = () => {
                 <TableRow>
                   <TableCell colSpan={2}>{t('Total')}</TableCell>
                   <TableCell>
-                    {usageStat?.sumInputTokens}/{usageStat?.sumOutputTokens}
+                    {formatNumberAsMoney(usageStat?.sumInputTokens)}/
+                    {formatNumberAsMoney(usageStat?.sumOutputTokens)}
                   </TableCell>
                   <TableCell>
                     ￥{toFixed(usageStat?.sumInputCost)}/ ￥

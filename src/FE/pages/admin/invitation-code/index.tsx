@@ -51,18 +51,16 @@ export default function InvitationCode() {
 
   return (
     <>
-      <div className="flex flex-col gap-4 mb-4">
-        <div className="flex justify-end gap-3 items-center">
-          <Button
-            onClick={() => {
-              setSelected(null);
-              setIsOpen(true);
-            }}
-            color="primary"
-          >
-            {t('Add Invitation Code')}
-          </Button>
-        </div>
+      <div className="flex gap-4 mb-4">
+        <Button
+          onClick={() => {
+            setSelected(null);
+            setIsOpen(true);
+          }}
+          color="primary"
+        >
+          {t('Add Invitation Code')}
+        </Button>
       </div>
       <Card>
         <Table>

@@ -52,17 +52,15 @@ export default function LoginService() {
 
   return (
     <>
-      <div className="flex flex-col gap-4 mb-4">
-        <div className="flex justify-end gap-3 items-center">
-          <Button
-            onClick={() => {
-              setIsOpen(true);
-            }}
-            color="primary"
-          >
-            {t('Add Login Service')}
-          </Button>
-        </div>
+      <div className="flex gap-4 mb-4">
+        <Button
+          onClick={() => {
+            setIsOpen(true);
+          }}
+          color="primary"
+        >
+          {t('Add Login Service')}
+        </Button>
       </div>
       <Card>
         <Table>

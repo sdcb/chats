@@ -8,6 +8,7 @@ import Tips from '@/components/Tips/Tips';
 interface Props {
   models: AdminModelDto[];
   readonly?: boolean;
+  hidden?: boolean;
   showRegenerate?: boolean;
   onChangeModel: (model: AdminModelDto) => void;
   modelId: number;
@@ -21,27 +22,32 @@ export const ChangeModelAction = (props: Props) => {
     modelId,
     modelName,
     readonly,
+    hidden,
     showRegenerate,
     onChangeModel,
   } = props;
 
   return (
-    <Tips
-      trigger={
-        <ChatModelDropdownMenu
-          models={models}
-          readonly={readonly}
-          onChangeModel={(model) => {
-            onChangeModel && onChangeModel(model);
-          }}
-          modelId={modelId}
-          modelName={modelName}
-          showRegenerate={showRegenerate}
-          content={modelName}
+    <>
+      {!hidden && (
+        <Tips
+          trigger={
+            <ChatModelDropdownMenu
+              models={models}
+              readonly={readonly}
+              onChangeModel={(model) => {
+                onChangeModel && onChangeModel(model);
+              }}
+              modelId={modelId}
+              modelName={modelName}
+              showRegenerate={showRegenerate}
+              content={modelName}
+            />
+          }
+          content={t('Change Model')!}
         />
-      }
-      content={t('Change Model')!}
-    />
+      )}
+    </>
   );
 };
 

@@ -256,7 +256,7 @@ const ChatInput = ({
   }, [contentText, contentFiles]);
 
   return (
-    <div className="absolute bottom-0 left-0 w-full border-transparent bg-background">
+    <div className="absolute bottom-4 left-0 w-full border-transparent bg-background">
       <div
         className={cn(
           'stretch flex flex-row rounded-md mx-auto w-full px-2 md:px-4',
@@ -293,7 +293,7 @@ const ChatInput = ({
 
           {showScrollDownButton && (
             <Button
-              className="absolute left-1/2 -translate-x-1/2 -top-10 w-auto h-auto rounded-full bg-card hover:bg-card z-50"
+              className="absolute left-1/2 -translate-x-1/2 -top-10 w-auto h-auto rounded-full bg-card hover:bg-card z-10"
               onClick={onScrollDownClick}
             >
               <IconArrowDown />
@@ -386,11 +386,6 @@ const ChatInput = ({
             />
           )}
         </div>
-      </div>
-      <div className="px-3 pt-1 pb-2 text-center text-[11px] text-black/50 dark:text-white/50 md:px-4 md:pt-2 md:pb-2">
-        {t(
-          'Large language models may generate misleading error messages, please validate key information.',
-        )}
       </div>
     </div>
   );

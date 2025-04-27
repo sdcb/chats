@@ -33,6 +33,7 @@ export interface UserMessage {
 interface Props {
   message: UserMessage;
   selectedChat: IChat;
+  readonly?: boolean;
   onChangeMessage?: (messageId: string) => void;
   onEditAndSendMessage?: (editedMessage: Message, parentId?: string) => void;
   onEditUserMessage?: (messageId: string, content: ResponseContent) => void;
@@ -45,6 +46,7 @@ const UserMessage = (props: Props) => {
   const {
     message,
     selectedChat,
+    readonly,
     onChangeMessage,
     onEditAndSendMessage,
     onEditUserMessage,
@@ -67,12 +69,14 @@ const UserMessage = (props: Props) => {
       onEditUserMessage && onEditUserMessage(message.id, msgContent);
     } else {
       if (selectedChat.id && onEditAndSendMessage) {
-        const messageContent = structuredClone(message.content).map((x: any) => {
-          if (x.$type === MessageContentType.text) {
-            x.c = contentText;
-          }
-          return x;
-        });
+        const messageContent = structuredClone(message.content).map(
+          (x: any) => {
+            if (x.$type === MessageContentType.text) {
+              x.c = contentText;
+            }
+            return x;
+          },
+        );
         onEditAndSendMessage(
           { ...message, content: messageContent },
           parentId || undefined,
@@ -90,7 +94,7 @@ const UserMessage = (props: Props) => {
   };
 
   const handlePressEnter = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !isTyping && !e.shiftKey) {
+    if (e.key === 'Enter' && !isTyping && e.ctrlKey) {
       e.preventDefault();
       handleEditMessage();
     }
@@ -205,26 +209,30 @@ const UserMessage = (props: Props) => {
       <div className="flex justify-end my-1">
         {!isEditing && (
           <>
-            <EditAction
-              isHoverVisible
-              disabled={isChatting(chatStatus)}
-              onToggleEditing={handleToggleEditing}
-            />
+            {!readonly && (
+              <EditAction
+                isHoverVisible
+                disabled={isChatting(chatStatus)}
+                onToggleEditing={handleToggleEditing}
+              />
+            )}
             <CopyAction
               triggerClassName="invisible group-hover:visible focus:visible"
               text={contentText}
             />
-            <DeleteAction
-              hidden={
-                !(
-                  message.parentId !== null || message?.siblingIds?.length > 1
-                ) || isChatting(chatStatus)
-              }
-              isHoverVisible
-              onDelete={() => {
-                onDeleteMessage && onDeleteMessage(messageId);
-              }}
-            />
+            {!readonly && (
+              <DeleteAction
+                hidden={
+                  !(
+                    message.parentId !== null || message?.siblingIds?.length > 1
+                  ) || isChatting(chatStatus)
+                }
+                isHoverVisible
+                onDelete={() => {
+                  onDeleteMessage && onDeleteMessage(messageId);
+                }}
+              />
+            )}
             <PaginationAction
               hidden={siblingIds.length <= 1}
               disabledPrev={currentMessageIndex === 0 || isChatting(chatStatus)}

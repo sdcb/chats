@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { toFixed } from '@/utils/common';
 import { formatDate } from '@/utils/date';
 
 import { AdminModelDto, GetUserInitialConfigResult } from '@/types/adminApis';
@@ -20,7 +21,6 @@ import {
 import UserInitialConfigModal from '../_components/Users/UserInitialConfigModal';
 
 import { getModels, getUserInitialConfig } from '@/apis/adminApis';
-import { toFixed } from '@/utils/common';
 
 export default function UserInitialConfig() {
   const { t } = useTranslation();
@@ -97,17 +97,15 @@ export default function UserInitialConfig() {
 
   return (
     <>
-      <div className="flex flex-col gap-4 mb-4">
-        <div className="flex justify-end gap-3 items-center">
-          <Button
-            onClick={() => {
-              handleShowAddModal();
-            }}
-            color="primary"
-          >
-            {t('Add Account Initial Config')}
-          </Button>
-        </div>
+      <div className="flex gap-4 mb-4">
+        <Button
+          onClick={() => {
+            handleShowAddModal();
+          }}
+          color="primary"
+        >
+          {t('Add Account Initial Config')}
+        </Button>
       </div>
       <Card>
         <Table>

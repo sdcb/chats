@@ -5,12 +5,12 @@ import { DBModelProvider, feModelProviders } from '@/types/model';
 import { cn } from '@/lib/utils';
 
 interface Props {
-  providerId: DBModelProvider;
+  providerId?: DBModelProvider;
   className?: string;
 }
 
 const ChatIcon = (props: Props) => {
-  const { providerId, className } = props;
+  const { providerId = DBModelProvider.Test, className } = props;
   const { t } = useTranslation();
 
   if (providerId === undefined) return null;

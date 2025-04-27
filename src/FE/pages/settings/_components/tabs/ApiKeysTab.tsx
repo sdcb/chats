@@ -104,9 +104,9 @@ const ApiKeysTab = () => {
   const docUrl = 'https://platform.openai.com/docs/guides/chat-completions';
   return (
     <div className="w-full">
-      <div className="flex justify-between items-center gap-4 px-2 bg-card rounded-md h-14 mb-4">
+      <div className="flex justify-between items-center gap-4 px-2 bg-card rounded-md mb-4">
         <div className="relative w-[70%]">
-          <div className="p-2 sm:p-4 text-xs sm:text-[12.5px]">
+          <div className="p-3 text-xs sm:text-[12.5px]">
             <div className="flex items-center overflow-hidden text-ellipsis whitespace-nowrap">
               API URL: {apiUrl}
               <CopyButton value={apiUrl} />
