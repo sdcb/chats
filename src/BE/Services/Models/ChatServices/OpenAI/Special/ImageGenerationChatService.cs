@@ -70,8 +70,12 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
             //        EndUserId = options.EndUserId,
             //    }, cancellationToken);
             MultiPartFormDataBinaryContent form = new();
-            Dictionary<Uri, HttpResponseMessage> files = new(images.Length);
-            await Task.WhenAll(images.Select(image => http.GetAsync(image.ImageUri, cancellationToken)));
+            (Uri url, HttpResponseMessage resp)[] downloadedImages = await Task.WhenAll(images.GroupBy(x => x.ImageUri).Select(async image =>
+            {
+                HttpResponseMessage resp = await http.GetAsync(image.Key, cancellationToken);
+                return (url: image.Key, resp);
+            }));
+            Dictionary<Uri, HttpResponseMessage> files = downloadedImages.ToDictionary(k => k.url, v => v.resp);
 
             foreach (ChatMessageContentPart image in images)
             {
