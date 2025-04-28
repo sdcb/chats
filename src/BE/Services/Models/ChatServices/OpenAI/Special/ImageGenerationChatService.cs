@@ -70,11 +70,14 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
             //        EndUserId = options.EndUserId,
             //    }, cancellationToken);
             MultiPartFormDataBinaryContent form = new();
+            Dictionary<Uri, HttpResponseMessage> files = new(images.Length);
+            await Task.WhenAll(images.Select(image => http.GetAsync(image.ImageUri, cancellationToken)));
+
             foreach (ChatMessageContentPart image in images)
             {
-                HttpResponseMessage file = await http.GetAsync(image.ImageUri, cancellationToken);
+                HttpResponseMessage file = files[image.ImageUri];
                 string fileName = Path.GetFileName(image.ImageUri.LocalPath);
-                if (fileName.Contains("mask"))
+                if (fileName.Contains("mask.png"))
                 {
                     form.Add(await file.Content.ReadAsStreamAsync(cancellationToken), "mask", fileName, file.Content.Headers.ContentType?.ToString());
                 }
