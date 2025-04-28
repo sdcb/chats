@@ -18,7 +18,7 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
         ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Host, nameof(model.ModelKey.Host));
         ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Secret, nameof(model.ModelKey.Secret));
 
-        OpenAIClient api = new OpenAIClient(
+        OpenAIClient api = new(
             new ApiKeyCredential(model.ModelKey.Secret), new()
             {
                 NetworkTimeout = NetworkTimeout,
@@ -43,7 +43,7 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
         {
             cr = await ic.GenerateImagesAsync(
                 prompt,
-                options.MaxOutputTokenCount ?? 3,
+                options.MaxOutputTokenCount ?? 1,
                 new ImageGenerationOptions()
                 {
                     EndUserId = options.EndUserId,

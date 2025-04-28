@@ -20,7 +20,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
             DBModelProvider.Test => new TestChatService(model),
             DBModelProvider.OpenAI => model.ModelReference.Name switch
             {
-                "gpt-image-1" => new AzureImageGenerationChatService(model),
+                "gpt-image-1" => new ImageGenerationChatService(model),
                 _ => new AzureChatService(model),
             },
             DBModelProvider.AzureOpenAI => model.ModelReference.Name switch
