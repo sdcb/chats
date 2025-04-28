@@ -6,6 +6,7 @@ using Chats.BE.Services.Models.Dtos;
 using OpenAI.Chat;
 using Chats.BE.DB.Enums;
 using System.Text.Json.Nodes;
+using System.ClientModel.Primitives;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
@@ -36,10 +37,10 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
     public override async Task<ChatSegment> Chat(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, CancellationToken cancellationToken)
     {
         string prompt = GetPrompt(messages);
-        ChatMessageContentPart? image = GetImage(messages);
+        ChatMessageContentPart[] images = GetImages(messages);
         ImageClient ic = CreateImageGenerationAPI(Model);
         ClientResult<GeneratedImageCollection> cr = null!;
-        if (image == null)
+        if (images.Length == 0)
         {
             cr = await ic.GenerateImagesAsync(
                 prompt,
@@ -60,14 +61,48 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
         else
         {
             using HttpClient http = new();
-            cr = await ic.GenerateImageEditsAsync(
-                await http.GetStreamAsync(image.ImageUri, cancellationToken), Path.GetFileName(image.ImageUri.LocalPath),
-                prompt,
-                options.MaxOutputTokenCount ?? 1,
-                new ImageEditOptions()
+            //cr = await ic.GenerateImageEditsAsync(
+            //    await http.GetStreamAsync(image.ImageUri, cancellationToken), Path.GetFileName(image.ImageUri.LocalPath),
+            //    prompt,
+            //    options.MaxOutputTokenCount ?? 1,
+            //    new ImageEditOptions()
+            //    {
+            //        EndUserId = options.EndUserId,
+            //    }, cancellationToken);
+            MultiPartFormDataBinaryContent form = new();
+            foreach (ChatMessageContentPart image in images)
+            {
+                HttpResponseMessage file = await http.GetAsync(image.ImageUri, cancellationToken);
+                string fileName = Path.GetFileName(image.ImageUri.LocalPath);
+                if (fileName.Contains("mask"))
                 {
-                    EndUserId = options.EndUserId,
-                }, cancellationToken);
+                    form.Add(await file.Content.ReadAsStreamAsync(cancellationToken), "mask", fileName, file.Content.Headers.ContentType?.ToString());
+                }
+                else
+                {
+                    form.Add(await file.Content.ReadAsStreamAsync(cancellationToken), "image[]", fileName, file.Content.Headers.ContentType?.ToString());
+                }
+            }
+            form.Add(prompt, "prompt");
+            form.Add(options.MaxOutputTokenCount ?? 1, "n");
+            form.Add(options.EndUserId, "user");
+            if (_reasoningEffort != DBReasoningEffort.Default)
+            {
+                form.Add(_reasoningEffort switch
+                {
+                    DBReasoningEffort.Low => "low",
+                    DBReasoningEffort.Medium => "medium",
+                    DBReasoningEffort.High => "high",
+                    _ => throw new ArgumentOutOfRangeException(nameof(_reasoningEffort), _reasoningEffort, null)
+                }, "quality");
+            }
+            //multiPartFormDataBinaryContent.Add("1024x1024", "size");
+
+            ClientResult clientResult = await ic.GenerateImageEditsAsync(form, form.ContentType, new RequestOptions()
+            {
+                CancellationToken = cancellationToken
+            });
+            cr = ClientResult.FromValue((GeneratedImageCollection)clientResult, clientResult.GetRawResponse());
         }
 
         JsonObject rawJson = cr.GetRawResponse().Content
@@ -103,11 +138,24 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
             throw new InvalidOperationException($"Unable to find a text part in the user message.");
         }
 
-        static ChatMessageContentPart? GetImage(IReadOnlyList<ChatMessage> messages)
+        static ChatMessageContentPart[] GetImages(IReadOnlyList<ChatMessage> messages)
         {
-            return messages.SelectMany(x => x.Content)
+            // if user message contains image, we need to use all images in the message as input
+            UserChatMessage? userChatMessage = messages.OfType<UserChatMessage>().LastOrDefault();
+            if (userChatMessage != null)
+            {
+                ChatMessageContentPart[] userMessageImages = [.. userChatMessage.Content.Where(x => x.Kind == ChatMessageContentPartKind.Image)];
+                if (userMessageImages.Length > 0)
+                {
+                    return userMessageImages;
+                }
+            }
+
+            // otherwise, we need to use the last image in the message as input
+            return [.. messages.SelectMany(x => x.Content)
                 .Where(x => x.Kind == ChatMessageContentPartKind.Image)
-                .LastOrDefault();
+                .Reverse()
+                .Take(1)];
         }
     }
 
