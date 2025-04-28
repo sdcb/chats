@@ -63,7 +63,7 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
             cr = await ic.GenerateImageEditsAsync(
                 await http.GetStreamAsync(image.ImageUri, cancellationToken), Path.GetFileName(image.ImageUri.LocalPath),
                 prompt,
-                options.MaxOutputTokenCount ?? 3,
+                options.MaxOutputTokenCount ?? 1,
                 new ImageEditOptions()
                 {
                     EndUserId = options.EndUserId,
