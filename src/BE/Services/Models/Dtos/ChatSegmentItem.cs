@@ -1,5 +1,6 @@
 ﻿using Chats.BE.Controllers.OpenAICompatible.Dtos;
 using Chats.BE.Services.Models.ChatServices;
+using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.Dtos;
 
@@ -56,6 +57,39 @@ public abstract record ChatSegmentItem
         }
         return segments;
     }
+
+    public static List<ChatSegmentItem> FromTextThinkToolCall(string? text, string? think, IReadOnlyList<StreamingChatToolCallUpdate>? toolCalls)
+    {
+        List<ChatSegmentItem> segments = new(capacity: 2);
+        if (!string.IsNullOrEmpty(text))
+        {
+            segments.Add(FromText(text));
+        }
+        if (!string.IsNullOrEmpty(think))
+        {
+            segments.Add(FromThink(think));
+        }
+        if (toolCalls != null && toolCalls.Count != 0)
+        {
+            foreach (StreamingChatToolCallUpdate toolCall in toolCalls)
+            {
+                segments.Add(FromToolCall(toolCall));
+            }
+        }
+        return segments;
+    }
+
+    public static ChatSegmentItem FromToolCall(StreamingChatToolCallUpdate toolCall)
+    {
+        return new ToolCallSegment
+        {
+            Index = toolCall.Index,
+            Id = toolCall.ToolCallId,
+            Type = toolCall.Kind.ToString(),
+            Name = toolCall.FunctionName,
+            Arguments = toolCall.FunctionArgumentsUpdate.ToString(),
+        };
+    }
 }
 
 public record TextChatSegment : ChatSegmentItem
@@ -77,6 +111,17 @@ public static class ChatSegmentItemExtensions
             Content = GetText(items),
             ReasoningContent = GetThink(items),
             Image = items.OfType<ImageChatSegment>().FirstOrDefault(),
+            ToolCalls = items.OfType<ToolCallSegment>().Select(x => new OpenAIToolCallSegment
+            {
+                Id = x.Id,
+                Type = x.Type,
+                Function = new OpenAIToolCallSegmentFunction()
+                {
+                    Arguments = x.Arguments,
+                    Name = x.Name,
+                },
+                Index = x.Index,
+            }).ToArray() switch { { Length: 0 } => null, var x => x }
         };
     }
 

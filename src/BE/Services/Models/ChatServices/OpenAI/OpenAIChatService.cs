@@ -47,14 +47,14 @@ public partial class OpenAIChatService(Model model, ChatClient chatClient) : Cha
             string? segment = delta.ContentUpdate.FirstOrDefault()?.Text;
             string? reasoningSegment = GetReasoningContent(delta);
 
-            if (segment == null && reasoningSegment == null && delta.Usage == null)
+            if (segment == null && reasoningSegment == null && delta.Usage == null && delta.ToolCallUpdates != null && delta.ToolCallUpdates.Count != 0)
             {
                 continue;
             }
 
             yield return new ChatSegment
             {
-                Items = ChatSegmentItem.FromTextAndThink(segment, reasoningSegment),
+                Items = ChatSegmentItem.FromTextThinkToolCall(segment, reasoningSegment, delta.ToolCallUpdates),
                 FinishReason = delta.FinishReason,
                 Usage = delta.Usage != null ? GetUsage(delta.Usage) : null,
             };
