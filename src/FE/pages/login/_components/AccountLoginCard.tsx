@@ -7,19 +7,15 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { saveUserInfo, setUserSession } from '@/utils/user';
 
-import { IconEye, IconEyeOff } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Form,
-  FormControl,
   FormField,
-  FormItem,
-  FormLabel,
 } from '@/components/ui/form';
 import FormInput from '@/components/ui/form/input';
+import FormPasswordInput from '@/components/ui/form/passwordInput';
 import { FormFieldType, IFormFieldOption } from '@/components/ui/form/type';
-import { Input } from '@/components/ui/input';
 
 import { singIn } from '@/apis/clientApis';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -33,7 +29,6 @@ const AccountLoginCard = (props: {
   const { loginLoading, openLoading, closeLoading } = props;
   const { t } = useTranslation();
   const router = useRouter();
-  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     form.formState.isValid;
@@ -45,7 +40,7 @@ const AccountLoginCard = (props: {
       label: t('Your username'),
       defaultValue: '',
       render: (options: IFormFieldOption, field: FormFieldType) => (
-        <FormInput autocomplete="on" options={options} field={field} />
+        <FormInput autocomplete="username" options={options} field={field} />
       ),
     },
     {
@@ -53,29 +48,11 @@ const AccountLoginCard = (props: {
       label: t('Your password'),
       defaultValue: '',
       render: (options: IFormFieldOption, field: FormFieldType) => (
-        <FormItem className="pb-4 pt-2">
-          <FormLabel>{options.label}</FormLabel>
-          <FormControl>
-            <div className="flex">
-              <Input
-                autoComplete="on"
-                type={showPassword ? 'text' : 'password'}
-                placeholder={options?.placeholder}
-                {...field}
-              />
-              <Button
-                type="button"
-                variant="link"
-                className="absolute right-10 text-center px-2 pt-2.5"
-                onClick={() => {
-                  setShowPassword(!showPassword);
-                }}
-              >
-                {showPassword ? <IconEye /> : <IconEyeOff />}{' '}
-              </Button>
-            </div>
-          </FormControl>
-        </FormItem>
+        <FormPasswordInput 
+          autocomplete="current-password" 
+          label={options.label} 
+          field={field}
+        />
       ),
     },
   ];
