@@ -157,6 +157,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
                 ChatConfigs = x.ChatConfigs.Any(),
                 UserModels = x.UserModels.Any(),
                 ApiKeys = x.ApiKeys.Any(),
+                UserApiCache = x.UserApiCaches.Any(),
             })
             .SingleAsync(cancellationToken);
 
@@ -166,6 +167,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
             if (refInfo.ChatConfigs) message += "ChatConfigs, ";
             if (refInfo.UserModels) message += "UserModels, ";
             if (refInfo.ApiKeys) message += "ApiKeys, ";
+            if (refInfo.UserApiCache) message += "UserApiCache, ";
             return this.BadRequestMessage(message);
         }
         else

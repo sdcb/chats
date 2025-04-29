@@ -32,5 +32,11 @@ public partial class ClientInfo
     public virtual ICollection<SmsAttempt> SmsAttempts { get; set; } = new List<SmsAttempt>();
 
     [InverseProperty("ClientInfo")]
+    public virtual ICollection<UserApiCacheUsage> UserApiCacheUsages { get; set; } = new List<UserApiCacheUsage>();
+
+    [InverseProperty("ClientInfo")]
+    public virtual ICollection<UserApiCache> UserApiCaches { get; set; } = new List<UserApiCache>();
+
+    [InverseProperty("ClientInfo")]
     public virtual ICollection<UserModelUsage> UserModelUsages { get; set; } = new List<UserModelUsage>();
 }

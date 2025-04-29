@@ -99,6 +99,12 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
+    public virtual DbSet<UserApiCache> UserApiCaches { get; set; }
+
+    public virtual DbSet<UserApiCacheBody> UserApiCacheBodies { get; set; }
+
+    public virtual DbSet<UserApiCacheUsage> UserApiCacheUsages { get; set; }
+
     public virtual DbSet<UserApiKey> UserApiKeys { get; set; }
 
     public virtual DbSet<UserApiUsage> UserApiUsages { get; set; }
@@ -459,6 +465,33 @@ public partial class ChatsDB : DbContext
                         j.HasKey("UserId", "InvitationCodeId").HasName("PK_UserInvitation_1");
                         j.ToTable("UserInvitation");
                     });
+        });
+
+        modelBuilder.Entity<UserApiCache>(entity =>
+        {
+            entity.HasOne(d => d.ClientInfo).WithMany(p => p.UserApiCaches)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserApiCache_ClientInfoId");
+
+            entity.HasOne(d => d.Model).WithMany(p => p.UserApiCaches)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserApiCache_ModelId");
+
+            entity.HasOne(d => d.UserApiKey).WithMany(p => p.UserApiCaches).HasConstraintName("FK_UserApiCache_UserApiKeyId");
+        });
+
+        modelBuilder.Entity<UserApiCacheBody>(entity =>
+        {
+            entity.Property(e => e.UserApiCacheId).ValueGeneratedNever();
+
+            entity.HasOne(d => d.UserApiCache).WithOne(p => p.UserApiCacheBody).HasConstraintName("FK_UserApiCacheBody_Id");
+        });
+
+        modelBuilder.Entity<UserApiCacheUsage>(entity =>
+        {
+            entity.HasOne(d => d.ClientInfo).WithMany(p => p.UserApiCacheUsages).HasConstraintName("FK_UserApiCacheUsage_ClientInfoId");
+
+            entity.HasOne(d => d.UserApiCache).WithMany(p => p.UserApiCacheUsages).HasConstraintName("FK_UserApiCacheUsage_UserApiCacheId");
         });
 
         modelBuilder.Entity<UserApiKey>(entity =>

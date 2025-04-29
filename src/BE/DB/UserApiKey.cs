@@ -41,6 +41,9 @@ public partial class UserApiKey
     [InverseProperty("UserApiKeys")]
     public virtual User User { get; set; } = null!;
 
+    [InverseProperty("UserApiKey")]
+    public virtual ICollection<UserApiCache> UserApiCaches { get; set; } = new List<UserApiCache>();
+
     [InverseProperty("ApiKey")]
     public virtual ICollection<UserApiUsage> UserApiUsages { get; set; } = new List<UserApiUsage>();
 

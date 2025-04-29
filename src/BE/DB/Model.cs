@@ -52,6 +52,9 @@ public partial class Model
     public virtual ModelReference ModelReference { get; set; } = null!;
 
     [InverseProperty("Model")]
+    public virtual ICollection<UserApiCache> UserApiCaches { get; set; } = new List<UserApiCache>();
+
+    [InverseProperty("Model")]
     public virtual ICollection<UserModel> UserModels { get; set; } = new List<UserModel>();
 
     [ForeignKey("ModelId")]
