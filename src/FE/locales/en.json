@@ -154,6 +154,7 @@
   "Confirm Password": "Confirm Password",
   "The two password inputs are inconsistent": "The two password inputs are inconsistent",
   "Old password incorrect": "Old password incorrect",
+  "New password should be different from the old one": "New password should be different from the old one",
   "Must contain at least {{length}} character(s)": "Must contain at least {{length}} character(s)",
   "Contain at most {{length}} character(s)": "Contain at most {{length}} character(s)",
   "It must contain at least 6 characters, and 3 of the 4 must be upper case, lower case, special characters, and numbers.": "It must contain at least 6 characters, and 3 of the 4 must be upper case, lower case, special characters, and numbers.",
