@@ -77,7 +77,6 @@ public record InternalChatSegment
         return new()
         {
             Id = traceId,
-            Object = "chat.completion.chunk",
             Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             Model = modelName,
             Choices =

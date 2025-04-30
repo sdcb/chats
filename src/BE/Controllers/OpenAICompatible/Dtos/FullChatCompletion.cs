@@ -1,5 +1,4 @@
-﻿using Chats.BE.Services.Models.ChatServices;
-using Chats.BE.Services.Models.Dtos;
+﻿using Chats.BE.Services.Models.Dtos;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.OpenAICompatible.Dtos;
@@ -26,6 +25,19 @@ public record FullChatCompletion
 
     [JsonPropertyName("system_fingerprint")]
     public string? SystemFingerprint { get; init; }
+
+    public ChatCompletionChunk ToFinalChunk()
+    {
+        return new ChatCompletionChunk
+        {
+            Id = Id,
+            Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            Model = Model,
+            Choices = [],
+            Usage = Usage,
+            SystemFingerprint = SystemFingerprint,
+        };
+    }
 }
 
 public record MessageChoice
@@ -41,6 +53,28 @@ public record MessageChoice
 
     [JsonPropertyName("finish_reason")]
     public required string? FinishReason { get; init; }
+
+    public ChatCompletionChunk ToFinalChunk(string modelName, string traceId, string? systemFingerprint)
+    {
+        return new ChatCompletionChunk
+        {
+            Id = traceId,
+            Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            Model = modelName,
+            Choices =
+            [
+                new DeltaChoice()
+                {
+                    Index = Index,
+                    Delta = new OpenAIDelta(){},
+                    Logprobs = Logprobs,
+                    FinishReason = FinishReason,
+                }
+            ],
+            Usage = null,
+            SystemFingerprint = systemFingerprint,
+        };
+    }
 }
 
 public record OpenAIFullResponse

@@ -90,6 +90,28 @@ public abstract record ChatSegmentItem
             Arguments = toolCall.FunctionArgumentsUpdate.ToString(),
         };
     }
+
+    public ChatCompletionChunk ToOpenAIChatCompletionChunk(string modelName, string traceId, string? systemFingerprint)
+    {
+        return new ChatCompletionChunk()
+        {
+            Id = traceId,
+            Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            Model = modelName,
+            Choices =
+            [
+                new DeltaChoice
+                {
+                    Index = 0,
+                    Delta = new ChatSegmentItem[]{ this }.ToOpenAIDelta(),
+                    FinishReason = null,
+                    Logprobs = null,
+                }
+            ],
+            SystemFingerprint = systemFingerprint,
+            Usage = null,
+        };
+    }
 }
 
 public record TextChatSegment : ChatSegmentItem

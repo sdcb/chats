@@ -6,16 +6,16 @@ namespace Chats.BE.Controllers.OpenAICompatible.Dtos;
 public record OpenAIDelta
 {
     [JsonPropertyName("content")]
-    public required string? Content { get; init; }
+    public string? Content { get; init; }
 
     [JsonPropertyName("reasoning_content"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public required string? ReasoningContent { get; init; }
+    public string? ReasoningContent { get; init; }
 
     [JsonPropertyName("image"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public required ImageChatSegment? Image { get; init; }
+    public ImageChatSegment? Image { get; init; }
 
     [JsonPropertyName("tool_calls"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public required OpenAIToolCallSegment[]? ToolCalls { get; init; }
+    public OpenAIToolCallSegment[]? ToolCalls { get; init; }
 }
 
 /// <summary>tool_calls[*].function</summary>
@@ -71,7 +71,7 @@ public record ChatCompletionChunk
     public required string Id { get; init; }
 
     [JsonPropertyName("object")]
-    public required string Object { get; init; }
+    public string Object { get; } = "chat.completion.chunk";
 
     [JsonPropertyName("created")]
     public required long Created { get; init; }

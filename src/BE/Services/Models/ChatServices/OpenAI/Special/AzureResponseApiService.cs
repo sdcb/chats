@@ -12,12 +12,8 @@ using System.Text.Json;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
-public class AzureResponseApiService : ChatService
+public class AzureResponseApiService(Model model) : ChatService(model)
 {
-    public AzureResponseApiService(Model model) : base(model)
-    {
-    }
-
     static OpenAIResponseClient CreateResponseAPI(Model model)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Host, nameof(model.ModelKey.Host));
@@ -115,7 +111,7 @@ public class AzureResponseApiService : ChatService
         };
     }
 
-    static IReadOnlyList<ResponseItem> ToResponse(IReadOnlyList<ChatMessage> messages)
+    static List<ResponseItem> ToResponse(IReadOnlyList<ChatMessage> messages)
     {
         List<ResponseItem> responseItems = [];
         foreach (ChatMessage message in messages)

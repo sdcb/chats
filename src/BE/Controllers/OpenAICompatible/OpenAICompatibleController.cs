@@ -13,6 +13,9 @@ using Chats.BE.Controllers.OpenAICompatible.Dtos;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using Chats.BE.Services.Models.ChatServices;
+using System.Buffers.Binary;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Chats.BE.Controllers.OpenAICompatible;
 
@@ -36,9 +39,91 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
         UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
         if (userModel == null) return InvalidModel(cco.Model);
 
+        CcoCacheControl? ccoCacheControl = cco.CacheControl;
+        if (ccoCacheControl != null)
+        {
+            cco.CacheControl = null;
+            return await ChatCompletionUseCache(ccoCacheControl, json, clientInfoManager, cancellationToken);
+        }
+
+        return await ChatCompletionNoCache(cco, userModel, icc, clientInfoManager, cancellationToken);
+    }
+
+
+    private async Task<ActionResult> ChatCompletionUseCache(CcoCacheControl cacheControl, JsonObject json, ClientInfoManager clientInfoManager, CancellationToken cancellationToken)
+    {
+        InChatContext icc = new(Stopwatch.GetTimestamp());
+        CcoWrapper cco = new(json);
+        if (!cco.SeemsValid())
+        {
+            return ErrorMessage(icc.FinishReason, "bad parameter.");
+        }
+        if (string.IsNullOrWhiteSpace(cco.Model))
+        {
+            return InvalidModel(cco.Model);
+        }
+
+        UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
+        if (userModel == null) return InvalidModel(cco.Model);
+
+        string requestBody = JsonSerializer.Serialize(cco.ToCleanCco(), JSON.JsonSerializerOptions);
+        long requestHashCode = BinaryPrimitives.ReadInt64LittleEndian(SHA256.HashData(Encoding.UTF8.GetBytes(requestBody)));
+        UserApiCache? cache = await db.UserApiCaches
+            .Include(x => x.UserApiCacheBody)
+            .Include(x => x.UserApiCacheUsages)
+            .Where(x => x.UserApiKeyId == currentApiKey.ApiKeyId && x.RequestHashCode == requestHashCode && x.Expires > DateTime.UtcNow && x.UserApiCacheBody!.Request == requestBody)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (cache != null && !cacheControl.CreateOnly)
+        {
+            cache.UserApiCacheUsages.Add(new UserApiCacheUsage()
+            {
+                ClientInfo = await clientInfoManager.GetClientInfo(cancellationToken),
+                UsedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync(cancellationToken);
+
+            try
+            {
+                FullChatCompletion fullResponse = JsonSerializer.Deserialize<FullChatCompletion>(cache.UserApiCacheBody!.Response)!;
+
+                if (cco.Stream)
+                {
+                    if (fullResponse.Choices != null && fullResponse.Choices.Count > 0)
+                    {
+                        foreach (ChatSegmentItem seg in fullResponse.Choices[0].Message.Segments)
+                        {
+                            await YieldResponse(seg.ToOpenAIChatCompletionChunk(fullResponse.Model, fullResponse.Id, fullResponse.SystemFingerprint), cancellationToken);
+                        }
+                        await YieldResponse(fullResponse.Choices[0].ToFinalChunk(fullResponse.Model, fullResponse.Id, fullResponse.SystemFingerprint), cancellationToken);
+                    }
+                    await YieldResponse(fullResponse.ToFinalChunk(), cancellationToken);
+                    return Ok();
+                }
+                else
+                {
+                    return Ok(fullResponse);
+                }
+            }
+            catch (JsonException e)
+            {
+                logger.LogError(e, "Invalid JSON in cache");
+            }
+        }
+
+        ActionResult result = await ChatCompletionNoCache(cco, userModel, icc, clientInfoManager, cancellationToken);
+        if (icc.FinishReason == DBFinishReason.Success || icc.FinishReason == DBFinishReason.Stop)
+        {
+            FullChatCompletion toBeCached = icc.FullResponse.ToOpenAIFullChat(cco.Model, HttpContext.TraceIdentifier);
+            // todo
+        }
+        return result;
+    }
+
+    private async Task<ActionResult> ChatCompletionNoCache(CcoWrapper cco, UserModel userModel, InChatContext icc, ClientInfoManager clientInfoManager, CancellationToken cancellationToken)
+    {
         Model cm = userModel.Model;
         using ChatService s = cf.CreateChatService(cm);
-
         UserBalance userBalance = await db.UserBalances
             .Where(x => x.UserId == currentApiKey.User.Id)
             .FirstOrDefaultAsync(cancellationToken) ?? throw new InvalidOperationException("User balance not found.");
@@ -193,13 +278,13 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
         return Ok(new ModelListDto
         {
             Object = "list",
-            Data = models.Select(x => new ModelListItemDto
+            Data = [.. models.Select(x => new ModelListItemDto
             {
                 Id = x.Model.Name,
                 Created = new DateTimeOffset(x.CreatedAt, TimeSpan.Zero).ToUnixTimeSeconds(),
                 Object = "model",
                 OwnedBy = x.Model.ModelKey.Name
-            }).ToArray()
+            })]
         });
     }
 }
