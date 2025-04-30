@@ -4,6 +4,7 @@ using Chats.BE.Services.Models.Dtos;
 using Mscc.GenerativeAI;
 using OpenAI.Chat;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Nodes;
 using ChatMessage = OpenAI.Chat.ChatMessage;
 using FinishReason = Mscc.GenerativeAI.FinishReason;
 using Model = Chats.BE.DB.Model;
@@ -157,6 +158,47 @@ public class GoogleAI2ChatService : ChatService
             ChatMessageContentPartKind.Image => new InlineData() { Data = Convert.ToBase64String(part.ImageBytes.ToArray()), MimeType = part.ImageBytesMediaType },
             _ => throw new NotSupportedException($"Unsupported part kind: {part.Kind}"),
         };
+    }
+
+    static Tool[]? ToGoogleAITool(ChatCompletionOptions cco)
+    {
+        if (cco.Tools == null || cco.Tools.Count == 0)
+        {
+            return null;
+        }
+
+        return [new Tool()
+        {
+            FunctionDeclarations = [.. cco.Tools
+                .Select(tool => new FunctionDeclaration()
+                {
+                    Name = tool.FunctionName,
+                    Description = tool.FunctionDescription,
+                    Parameters = ToGoogleAIParameters(tool.FunctionParameters),
+                })],
+        }];
+
+        static Schema ToGoogleAIParameters(BinaryData binaryData)
+        {
+            JsonObject jsonObject = binaryData.ToObjectFromJson<JsonObject>()!;
+            return new Schema()
+            {
+                Type = ParameterType.Object,
+                Properties = jsonObject["properties"]?.AsObject().ToDictionary(x => x.Key, x => new Schema()
+                {
+                    Type = x.Value?["type"]?.ToString() switch
+                    {
+                        "string" => ParameterType.String,
+                        "number" => ParameterType.Number,
+                        "boolean" => ParameterType.Boolean,
+                        "array" => ParameterType.Array,
+                        _ => throw new NotSupportedException($"Unsupported parameter type: {x.Value?["type"]}")
+                    },
+                    Description = x.Value["description"]?.ToString()!,
+                }),
+                Required = jsonObject["required"]?.AsArray().Select(x => (string)x!).ToList(),
+            };
+        }
     }
 
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
