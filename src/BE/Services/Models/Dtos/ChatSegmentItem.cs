@@ -125,31 +125,46 @@ public static class ChatSegmentItemExtensions
         };
     }
 
-    public static void AddOne(this List<ChatSegmentItem> items, ICollection<ChatSegmentItem> toAddItems)
+    public static void AddOne(this List<ChatSegmentItem> items,
+                              ICollection<ChatSegmentItem> toAddItems)
     {
         foreach (ChatSegmentItem item in toAddItems)
         {
+            // 列表为空，直接放进去
             if (items.Count == 0)
             {
                 items.Add(item);
                 continue;
             }
 
-            // 否则尝试合并
             ChatSegmentItem last = items[^1];
-            if (last is TextChatSegment lastText && item is TextChatSegment currentText)
+
+            // ───── 文本片段合并 ──────────────────────────────────
+            if (last is TextChatSegment lastText && item is TextChatSegment curText)
             {
-                // 两个连续 Text，合并文本
-                items[^1] = lastText with { Text = lastText.Text + currentText.Text };
+                items[^1] = lastText with { Text = lastText.Text + curText.Text };
             }
-            else if (last is ThinkChatSegment lastThink && item is ThinkChatSegment currentThink)
+            // ───── 思考片段合并 ─────────────────────────────────
+            else if (last is ThinkChatSegment lastThink && item is ThinkChatSegment curThink)
             {
-                // 两个连续 Think，合并文本
-                items[^1] = lastThink with { Think = lastThink.Think + currentThink.Think };
+                items[^1] = lastThink with { Think = lastThink.Think + curThink.Think };
             }
+            // ───── Tool‑Call 片段合并 ───────────────────────────
+            else if (last is ToolCallSegment lastTool && item is ToolCallSegment curTool
+                     && lastTool.Index == curTool.Index)          // 只合并同 Index
+            {
+                items[^1] = lastTool with
+                {
+                    Arguments = lastTool.Arguments + curTool.Arguments,
+                    // 如果前一段缺字段，用当前段补全
+                    Id = lastTool.Id ?? curTool.Id,
+                    Type = lastTool.Type ?? curTool.Type,
+                    Name = lastTool.Name ?? curTool.Name
+                };
+            }
+            // ───── 其它情况：直接追加 ───────────────────────────
             else
             {
-                // 其他情况都不合并，直接添加
                 items.Add(item);
             }
         }
@@ -163,6 +178,7 @@ public static class ChatSegmentItemExtensions
             Role = role,
             Content = GetText(items),
             ReasoningContent = GetThink(items),
+            ToolCalls = GetToolCalls(items),
             Segments = items,
             Refusal = refusal,
         };
@@ -176,6 +192,11 @@ public static class ChatSegmentItemExtensions
     public static string? GetThink(this ICollection<ChatSegmentItem> items)
     {
         return string.Concat(items.OfType<ThinkChatSegment>().Select(x => x.Think)) switch { "" => null, var x => x };
+    }
+
+    public static FullToolCall[]? GetToolCalls(this ICollection<ChatSegmentItem> items)
+    {
+        return ToolCall.From(items.OfType<ToolCallSegment>()).Select(x => x.ToOpenAI()).ToArray() switch { { Length: 0 } => null, var x => x };
     }
 
     public static ImageChatSegment[] GetImages(this ICollection<ChatSegmentItem> items)

@@ -54,6 +54,9 @@ public record OpenAIFullResponse
     [JsonPropertyName("reasoning_content"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public required string? ReasoningContent { get; init; }
 
+    [JsonPropertyName("tool_calls"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public required FullToolCall[]? ToolCalls { get; init; }
+
     [JsonPropertyName("segments"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public required ICollection<ChatSegmentItem> Segments { get; init; }
 
@@ -72,12 +75,54 @@ public record Usage
     [JsonPropertyName("total_tokens")]
     public required int TotalTokens { get; init; }
 
+    [JsonPropertyName("prompt_tokens_details")]
+    public PromptTokensDetails? PromptTokensDetails { get; init; }
+
     [JsonPropertyName("completion_tokens_details")]
     public CompletionTokensDetails? CompletionTokensDetails { get; init; }
+}
+
+public record PromptTokensDetails
+{
+    [JsonPropertyName("cached_tokens")]
+    public required int CachedTokens { get; init; }
+
+    [JsonPropertyName("audio_tokens")]
+    public required int AudioTokens { get; init; }
 }
 
 public record CompletionTokensDetails
 {
     [JsonPropertyName("reasoning_tokens")]
     public required int ReasoningTokens { get; init; }
+
+    [JsonPropertyName("audio_tokens")]
+    public int AudioTokens { get; init; }
+
+    [JsonPropertyName("accepted_prediction_tokens")]
+    public int AcceptedPredictionTokens { get; init; }
+
+    [JsonPropertyName("rejected_prediction_tokens")]
+    public int RejectedPredictionTokens { get; init; }
+}
+
+public record FullToolCallFunction
+{
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
+
+    [JsonPropertyName("arguments")]
+    public required string Arguments { get; init; }
+}
+
+public record FullToolCall
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("type")]
+    public required string Type { get; init; }   // OpenAI 目前恒为 "function"
+
+    [JsonPropertyName("function")]
+    public required FullToolCallFunction Function { get; init; }
 }

@@ -1,4 +1,5 @@
-﻿using Chats.BE.Services.Models.Dtos;
+﻿using Chats.BE.Controllers.OpenAICompatible.Dtos;
+using Chats.BE.Services.Models.Dtos;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -102,4 +103,28 @@ public sealed record ToolCall
             }
         }
     }
+
+    /// <summary>
+    /// 把连续的 FunctionCallSegment 按 Index 聚合为 FunctionCall。
+    /// 默认认为同一 Index 的各片段在流中是连续出现的。
+    /// </summary>
+    public static IEnumerable<ToolCall> From(IEnumerable<ToolCallSegment> segments)
+    {
+        return From(segments.ToAsyncEnumerable())
+            .ToBlockingEnumerable();
+    }
+
+    public FullToolCall ToOpenAI()
+    {
+        return new FullToolCall
+        {
+            Id = Id,
+            Type = Type,
+            Function = new FullToolCallFunction()
+            {
+                Name = Name,
+                Arguments = Arguments
+            }
+        };
+    } 
 }
