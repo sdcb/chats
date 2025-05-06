@@ -1,6 +1,7 @@
 ﻿using Chats.BE.Controllers.OpenAICompatible.Dtos;
 using Chats.BE.Services.Models.ChatServices;
 using OpenAI.Chat;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Services.Models.Dtos;
@@ -94,9 +95,12 @@ public abstract record ChatSegmentItem
             Id = toolCall.ToolCallId,
             Type = toolCall.Kind.ToString(),
             Name = toolCall.FunctionName,
-            Arguments = toolCall.FunctionArgumentsUpdate.ToString(),
+            Arguments = GetBinaryData(toolCall.FunctionArgumentsUpdate).Length == 0 ? "" : toolCall.FunctionArgumentsUpdate.ToString(),
         };
     }
+
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_bytes")]
+    static extern ref ReadOnlyMemory<byte> GetBinaryData(BinaryData binaryData);
 
     public ChatCompletionChunk ToOpenAIChatCompletionChunk(string modelName, string traceId, string? systemFingerprint)
     {

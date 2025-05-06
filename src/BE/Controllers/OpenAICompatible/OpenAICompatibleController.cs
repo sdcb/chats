@@ -87,7 +87,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
         UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
         if (userModel == null) return InvalidModel(cco.Model);
 
-        string requestBody = JsonSerializer.Serialize(cco.ToCleanCco(), JSON.JsonSerializerOptions);
+        string requestBody = JsonSerializer.Serialize(json, JSON.JsonSerializerOptions);
         long requestHashCode = BinaryPrimitives.ReadInt64LittleEndian(SHA256.HashData(Encoding.UTF8.GetBytes(requestBody)));
 
         if (!cacheControl.CreateOnly)
@@ -156,7 +156,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
         }
         finally
         {
-            if (icc.FinishReason == DBFinishReason.Success || icc.FinishReason == DBFinishReason.Stop)
+            if (icc.FinishReason == DBFinishReason.Success || icc.FinishReason == DBFinishReason.Stop || icc.FinishReason == DBFinishReason.ToolCalls)
             {
                 FullChatCompletion toBeCached = icc.FullResponse.ToOpenAIFullChat(cco.Model, HttpContext.TraceIdentifier);
                 UserApiCache cache = new()
