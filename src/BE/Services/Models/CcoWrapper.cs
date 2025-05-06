@@ -82,6 +82,21 @@ public record CcoCacheControl
     public required bool CreateOnly { get; init; }
     public required int Ttl { get; init; }   // 0 表示用默认 TTL
 
+    public DateTime ExpiresAt
+    {
+        get
+        {
+            if (Ttl == 0) return DateTime.UtcNow.AddDays(30); // 默认 TTL: 30 天
+            return DateTime.UtcNow.AddSeconds(Ttl);
+        }
+    }
+
+    public static CcoCacheControl StaticCached { get; } = new CcoCacheControl
+    {
+        CreateOnly = false,
+        Ttl = 0
+    };
+
     public static CcoCacheControl? Parse(JsonNode? node)
     {
         // 1) null (或 JSON null) → 无配置
