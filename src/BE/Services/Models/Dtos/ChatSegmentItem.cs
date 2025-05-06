@@ -1,9 +1,16 @@
 ﻿using Chats.BE.Controllers.OpenAICompatible.Dtos;
 using Chats.BE.Services.Models.ChatServices;
 using OpenAI.Chat;
+using System.Text.Json.Serialization;
 
 namespace Chats.BE.Services.Models.Dtos;
 
+[JsonPolymorphic]
+[JsonDerivedType(typeof(Base64Image), typeDiscriminator: "base64")]
+[JsonDerivedType(typeof(UrlImage), typeDiscriminator: "url")]
+[JsonDerivedType(typeof(ToolCallSegment), typeDiscriminator: "toolcall")]
+[JsonDerivedType(typeof(TextChatSegment), typeDiscriminator: "text")]
+[JsonDerivedType(typeof(ThinkChatSegment), typeDiscriminator: "think")]
 public abstract record ChatSegmentItem
 {
     public static ChatSegmentItem FromText(string text)

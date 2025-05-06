@@ -108,6 +108,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
 
                     if (cco.Stream)
                     {
+                        Response.StatusCode = 200;
                         Response.Headers.ContentType = "text/event-stream";
                         Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
                         Response.Headers.Connection = "keep-alive";
@@ -121,7 +122,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
                         }
                         await YieldResponse(fullResponse.ToFinalChunk(), cancellationToken);
                         isSuccess = true;
-                        return Ok();
+                        return Empty;
                     }
                     else
                     {
@@ -173,6 +174,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
                     ModelId = userModel.ModelId,
                 };
                 db.UserApiCaches.Add(cache);
+                await db.SaveChangesAsync(cancellationToken);
             }
         }
     }

@@ -86,10 +86,10 @@ public record OpenAIFullResponse
     public required string? Content { get; init; }
 
     [JsonPropertyName("reasoning_content"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public required string? ReasoningContent { get; init; }
+    public string? ReasoningContent { get; init; }
 
     [JsonPropertyName("tool_calls"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public required FullToolCall[]? ToolCalls { get; init; }
+    public FullToolCall[]? ToolCalls { get; init; }
 
     [JsonPropertyName("segments"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public required ICollection<ChatSegmentItem> Segments { get; init; }
