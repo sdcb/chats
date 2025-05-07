@@ -160,7 +160,7 @@ public class ReasoningContentFactory
 
                 // Get SerializedAdditionalRawData
                 object? rawDataValue = rawDataProp.GetValue(messageObj);
-                if (rawDataValue is not Dictionary<string, BinaryData> dict) continue;
+                if (rawDataValue is not IDictionary<string, BinaryData> dict) continue;
 
                 // Check if "reasoning_content" exists
                 if (dict.TryGetValue(reasoningContentProp, out BinaryData? binaryData))
