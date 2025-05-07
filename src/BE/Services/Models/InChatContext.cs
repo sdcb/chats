@@ -140,4 +140,6 @@ public class InChatContext(long firstTick)
 
         return usage;
     }
+
+    public TimeSpan ElapsedTime => Stopwatch.GetElapsedTime(firstTick, Stopwatch.GetTimestamp());
 }

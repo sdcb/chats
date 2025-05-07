@@ -56,32 +56,42 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
     public async Task<ActionResult> ChatCompletionCached([FromBody] JsonObject json, [FromServices] AsyncClientInfoManager clientInfoManager, CancellationToken cancellationToken)
     {
         InChatContext icc = new(Stopwatch.GetTimestamp());
-        CcoWrapper cco = new(json);
-        if (!cco.SeemsValid())
+        try
         {
-            return ErrorMessage(DBFinishReason.BadParameter, "bad parameter.");
-        }
-        if (string.IsNullOrWhiteSpace(cco.Model))
-        {
-            return InvalidModel(cco.Model);
-        }
+            logger.LogInformation("{RequestId} [{Elapsed}], Started", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
+            CcoWrapper cco = new(json);
+            if (!cco.SeemsValid())
+            {
+                return ErrorMessage(DBFinishReason.BadParameter, "bad parameter.");
+            }
+            if (string.IsNullOrWhiteSpace(cco.Model))
+            {
+                return InvalidModel(cco.Model);
+            }
 
-        Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
-        UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
-        if (userModel == null) return InvalidModel(cco.Model);
+            Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
+            UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
+            logger.LogInformation("{RequestId} [{Elapsed}], GetUserModel", icc.ElapsedTime.TotalMilliseconds, HttpContext.TraceIdentifier);
+            if (userModel == null) return InvalidModel(cco.Model);
 
-        CcoCacheControl ccoCacheControl = cco.CacheControl ?? CcoCacheControl.StaticCached with
+            CcoCacheControl ccoCacheControl = cco.CacheControl ?? CcoCacheControl.StaticCached with
+            {
+                CreateOnly = Request.GetDisplayUrl().Contains("v1-cached-createOnly", StringComparison.OrdinalIgnoreCase),
+            };
+            cco.CacheControl = null;
+            return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, icc, clientInfoIdTask, cancellationToken);
+        }
+        finally
         {
-            CreateOnly = Request.GetDisplayUrl().Contains("v1-cached-createOnly", StringComparison.OrdinalIgnoreCase),
-        };
-        cco.CacheControl = null;
-        return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, icc, clientInfoIdTask, cancellationToken);
+            logger.LogInformation("{RequestId} [{Elapsed}], Finish Reason: {FinishReason}", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds, icc.FinishReason.ToString());
+        }
     }
 
     private async Task<ActionResult> ChatCompletionUseCache(CcoCacheControl cacheControl, CcoWrapper cco, UserModel userModel, InChatContext icc, Task<int> clientInfoIdTask, CancellationToken cancellationToken)
     {
         string requestBody = cco.Serialize();
         long requestHashCode = BinaryPrimitives.ReadInt64LittleEndian(SHA256.HashData(Encoding.UTF8.GetBytes(requestBody)));
+        logger.LogInformation("{RequestId} [{Elapsed}], Check Cache", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
 
         if (!cacheControl.CreateOnly)
         {
@@ -91,6 +101,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
                 .Where(x => x.UserApiKeyId == currentApiKey.ApiKeyId && x.RequestHashCode == requestHashCode && x.Expires > DateTime.UtcNow && x.UserApiCacheBody!.Request == requestBody)
                 .OrderByDescending(x => x.Id)
                 .FirstOrDefaultAsync(cancellationToken);
+            logger.LogInformation("{RequestId} [{Elapsed}], Cache Found: {CacheFound}", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds, cache != null);
 
             if (cache != null)
             {
@@ -98,6 +109,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
                 try
                 {
                     FullChatCompletion fullResponse = JsonSerializer.Deserialize<FullChatCompletion>(cache.UserApiCacheBody!.Response)!;
+                    logger.LogInformation("{RequestId} [{Elapsed}], Cache Deserialized", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
 
                     if (cco.Stream)
                     {
@@ -129,6 +141,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
                 }
                 finally
                 {
+                    logger.LogInformation("{RequestId} [{Elapsed}], Response completed", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
                     if (isSuccess)
                     {
                         cache.UserApiCacheUsages.Add(new UserApiCacheUsage()
@@ -137,6 +150,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
                             UsedAt = DateTime.UtcNow,
                         });
                         await db.SaveChangesAsync(cancellationToken);
+                        logger.LogInformation("{RequestId} [{Elapsed}], Cache Usage Saved", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
                     }
                 }
             }
