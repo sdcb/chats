@@ -59,3 +59,14 @@ public class ClientInfoManager(IHttpContextAccessor httpContextAccessor, ChatsDB
         return clientInfo;
     }
 }
+
+public class AsyncClientInfoManager(IServiceScopeFactory serviceScopeFactory, IHttpContextAccessor httpContextAccessor)
+{
+    public async Task<int> GetClientInfoId(CancellationToken cancellationToken)
+    {
+        using IServiceScope scope = serviceScopeFactory.CreateScope();
+        ClientInfoManager clientInfoManager = new(httpContextAccessor, scope.ServiceProvider.GetRequiredService<ChatsDB>());
+        ClientInfo clientInfo = await clientInfoManager.GetClientInfo(cancellationToken);
+        return clientInfo.Id;
+    }
+}

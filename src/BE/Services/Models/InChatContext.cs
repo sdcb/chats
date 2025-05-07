@@ -88,7 +88,7 @@ public class InChatContext(long firstTick)
 
     public int ReasoningDurationMs => _items.OfType<ThinkChatSegment>().Any() ? (int)Stopwatch.GetElapsedTime(_firstReasoningTick, _firstResponseTick).TotalMilliseconds : 0;
 
-    public UserModelUsage ToUserModelUsage(int userId, UserModel userModel, ClientInfo clientInfo, bool isApi)
+    public UserModelUsage ToUserModelUsage(int userId, UserModel userModel, int clientInfoId, bool isApi)
     {
         if (_finishTick == _preprocessTick) _finishTick = Stopwatch.GetTimestamp();
 
@@ -110,7 +110,7 @@ public class InChatContext(long firstTick)
             IsUsageReliable = _lastSegment.IsUsageReliable,
             InputCost = Cost.InputTokenPrice,
             OutputCost = Cost.OutputTokenPrice,
-            ClientInfo = clientInfo,
+            ClientInfoId = clientInfoId,
         };
 
         byte transactionTypeId = (byte)(isApi ? DBTransactionType.ApiCost : DBTransactionType.Cost);

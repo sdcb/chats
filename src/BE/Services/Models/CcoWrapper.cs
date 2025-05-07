@@ -1,9 +1,6 @@
-﻿using Json.More;
-using OpenAI.Chat;
-using System.Buffers.Binary;
+﻿using OpenAI.Chat;
 using System.ClientModel.Primitives;
 using System.Globalization;
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 

@@ -23,7 +23,7 @@ using Chats.BE.DB.Enums;
 namespace Chats.BE.Controllers.Chats.Chats;
 
 [Route("api/chats"), Authorize]
-public class ChatController(ChatStopService stopService) : ControllerBase
+public class ChatController(ChatStopService stopService, AsyncClientInfoManager clientInfoManager) : ControllerBase
 {
     [HttpPost("regenerate-assistant-message")]
     public async Task<IActionResult> RegenerateOneMessage(
@@ -35,7 +35,6 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         [FromServices] BalanceService balanceService,
         [FromServices] ChatFactory chatFactory,
         [FromServices] UserModelManager userModelManager,
-        [FromServices] ClientInfoManager clientInfoManager,
         [FromServices] FileUrlProvider fup,
         [FromServices] ChatConfigService chatConfigService,
         [FromServices] DBFileService dBFileService,
@@ -48,7 +47,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
 
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, clientInfoManager, fup, chatConfigService, dBFileService,
+            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService,
             cancellationToken);
     }
 
@@ -62,7 +61,6 @@ public class ChatController(ChatStopService stopService) : ControllerBase
     [FromServices] BalanceService balanceService,
     [FromServices] ChatFactory chatFactory,
     [FromServices] UserModelManager userModelManager,
-    [FromServices] ClientInfoManager clientInfoManager,
     [FromServices] FileUrlProvider fup,
     [FromServices] ChatConfigService chatConfigService,
     [FromServices] DBFileService dBFileService,
@@ -75,7 +73,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
 
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, clientInfoManager, fup, chatConfigService, dBFileService,
+            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService,
             cancellationToken);
     }
 
@@ -89,7 +87,6 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         [FromServices] BalanceService balanceService,
         [FromServices] ChatFactory chatFactory,
         [FromServices] UserModelManager userModelManager,
-        [FromServices] ClientInfoManager clientInfoManager,
         [FromServices] FileUrlProvider fup,
         [FromServices] ChatConfigService chatConfigService,
         [FromServices] DBFileService dBFileService,
@@ -107,7 +104,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
 
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, clientInfoManager, fup, chatConfigService, dBFileService,
+            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService,
             cancellationToken);
     }
 
@@ -120,7 +117,6 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         BalanceService balanceService,
         ChatFactory chatFactory,
         UserModelManager userModelManager,
-        ClientInfoManager clientInfoManager,
         FileUrlProvider fup,
         ChatConfigService chatConfigService,
         DBFileService dbFileService, 
@@ -129,6 +125,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         long firstTick = Stopwatch.GetTimestamp();
         cancellationToken = default; // disallow cancellation token for now for better user experience
 
+        Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig)
             .Include(x => x.Messages.Where(x => x.ChatRoleId == (byte)DBChatRole.User || x.ChatRoleId == (byte)DBChatRole.Assistant))
@@ -231,8 +228,6 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         await YieldResponse(SseResponseLine.StopId(stopId));
 
         UserBalance userBalance = await db.UserBalances.Where(x => x.UserId == currentUser.Id).SingleAsync(cancellationToken);
-        Task<ClientInfo> clientInfoTask = clientInfoManager.GetClientInfo(cancellationToken);
-        Task<FileService?> fsTask = clientInfoTask.ContinueWith(x => FileService.GetDefault(db, cancellationToken)).Unwrap();
 
         Channel<SseResponseLine>[] channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
         Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache = [];
@@ -250,7 +245,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
                 messageTree,
                 newDbUserMessage,
                 userBalance,
-                clientInfoTask,
+                clientInfoIdTask,
                 imageFileCache,
                 channels[index].Writer,
                 cancellationToken))];
@@ -265,6 +260,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         }
 
         bool dbUserMessageYield = false;
+        FileService fs = null!;
         await foreach (SseResponseLine line in MergeChannels(channels).Reader.ReadAllAsync(CancellationToken.None))
         {
             if (line.Kind == SseResponseKind.End)
@@ -307,8 +303,8 @@ public class ChatController(ChatStopService stopService) : ControllerBase
                 }));
                 try
                 {
-                    FileService fs = await fsTask ?? throw new InvalidOperationException("Default file service config not found.");
-                    DB.File file = await dbFileService.StoreImage(image, await clientInfoTask, fs, cancellationToken: default);
+                    fs ??= await FileService.GetDefault(db, cancellationToken) ?? throw new InvalidOperationException("Default file service config not found.");
+                    DB.File file = await dbFileService.StoreImage(image, await clientInfoIdTask, fs, cancellationToken: default);
                     tcs.SetResult(file);
                 }
                 catch (Exception e)
@@ -372,7 +368,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         IEnumerable<MessageLiteDto> messageTree,
         Message? dbUserMessage,
         UserBalance userBalance,
-        Task<ClientInfo> clientInfoTask,
+        Task<int> clientInfoIdTask,
         Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache,
         ChannelWriter<SseResponseLine> writer,
         CancellationToken cancellationToken)
@@ -519,8 +515,7 @@ public class ChatController(ChatStopService stopService) : ControllerBase
         {
             await writer.WriteAsync(SseResponseLine.Error(chatSpan.SpanId, errorText), cancellationToken);
         }
-        ClientInfo clientInfo = await clientInfoTask;
-        UserModelUsage usage = icc.ToUserModelUsage(currentUser.Id, userModel, clientInfo, isApi: false);
+        UserModelUsage usage = icc.ToUserModelUsage(currentUser.Id, userModel, await clientInfoIdTask, isApi: false);
         dbAssistantMessage.MessageResponse = new MessageResponse()
         {
             Usage = usage,

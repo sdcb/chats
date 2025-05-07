@@ -5,9 +5,9 @@ using File = Chats.BE.DB.File;
 
 namespace Chats.BE.Services.FileServices;
 
-public class DBFileService(ChatsDB db, FileServiceFactory fsf, ClientInfoManager clientInfoManager, CurrentUser currentUser, FileImageInfoService fiis)
+public class DBFileService(ChatsDB db, FileServiceFactory fsf, CurrentUser currentUser, FileImageInfoService fiis)
 {
-    public async Task<File> StoreImage(ImageChatSegment image, ClientInfo clientInfo, FileService dbfs, CancellationToken cancellationToken = default)
+    public async Task<File> StoreImage(ImageChatSegment image, int clientInfoId, FileService dbfs, CancellationToken cancellationToken = default)
     {
         DBFileDef def = await image.Download(cancellationToken);
         IFileService fs = fsf.Create(dbfs);
@@ -21,7 +21,6 @@ public class DBFileService(ChatsDB db, FileServiceFactory fsf, ClientInfoManager
         }, cancellationToken);
 
         FileContentType fileContentType = await fstService.GetOrCreate(def.ContentType, cancellationToken);
-        clientInfo ??= await clientInfoManager.GetClientInfo(cancellationToken);
         File file = new()
         {
             FileName = def.FileName,
@@ -29,8 +28,7 @@ public class DBFileService(ChatsDB db, FileServiceFactory fsf, ClientInfoManager
             FileContentType = fileContentType,
             StorageKey = storageKey,
             Size = def.Bytes.Length,
-            ClientInfo = clientInfo,
-            ClientInfoId = clientInfo.Id,
+            ClientInfoId = clientInfoId,
             CreatedAt = DateTime.UtcNow,
             CreateUserId = currentUser.Id,
             FileServiceId = dbfs.Id,
