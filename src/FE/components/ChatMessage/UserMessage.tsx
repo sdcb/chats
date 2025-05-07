@@ -19,6 +19,7 @@ import { Textarea } from '../ui/textarea';
 import CopyAction from './CopyAction';
 import DeleteAction from './DeleteAction';
 import EditAction from './EditAction';
+import EditUserMessageModal from './EditUserMessageModal';
 import PaginationAction from './PaginationAction';
 
 export interface UserMessage {
@@ -56,9 +57,11 @@ const UserMessage = (props: Props) => {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [contentText, setContentText] = useState('');
+  const [contentImage, setContentImage] = useState<string[]>([]);
   const { id: messageId, siblingIds, parentId, content } = message;
   const { status: chatStatus } = selectedChat;
   const currentMessageIndex = siblingIds.findIndex((x) => x === messageId);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
 
   const handleEditMessage = (isOnlySave: boolean = false) => {
     if (isOnlySave) {
@@ -101,7 +104,13 @@ const UserMessage = (props: Props) => {
   };
 
   const handleToggleEditing = () => {
-    setIsEditing(!isEditing);
+    if (
+      content.filter((x) => x.$type === MessageContentType.fileId).length > 0
+    ) {
+      setIsOpen(true);
+    } else {
+      setIsEditing(!isEditing);
+    }
   };
 
   const init = () => {
@@ -247,6 +256,14 @@ const UserMessage = (props: Props) => {
           </>
         )}
       </div>
+
+      <EditUserMessageModal
+        content={content}
+        isOpen={isOpen}
+        onClose={() => {
+          setIsOpen(false);
+        }}
+      ></EditUserMessageModal>
     </>
   );
 };
