@@ -21,7 +21,14 @@ using Microsoft.AspNetCore.Http.Extensions;
 namespace Chats.BE.Controllers.OpenAICompatible;
 
 [Authorize(AuthenticationSchemes = "OpenAIApiKey")]
-public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey currentApiKey, ChatFactory cf, UserModelManager userModelManager, ILogger<OpenAICompatibleController> logger, BalanceService balanceService) : ControllerBase
+public partial class OpenAICompatibleController(
+    ChatsDB db, 
+    CurrentApiKey currentApiKey, 
+    ChatFactory cf, 
+    UserModelManager userModelManager, 
+    ILogger<OpenAICompatibleController> logger, 
+    BalanceService balanceService, 
+    AsyncCacheUsageManager asyncCacheUsageService) : ControllerBase
 {
     [HttpPost("v1/chat/completions")]
     public async Task<ActionResult> ChatCompletion([FromBody] JsonObject json, [FromServices] AsyncClientInfoManager clientInfoManager, CancellationToken cancellationToken)
@@ -87,7 +94,13 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
         }
     }
 
-    private async Task<ActionResult> ChatCompletionUseCache(CcoCacheControl cacheControl, CcoWrapper cco, UserModel userModel, InChatContext icc, Task<int> clientInfoIdTask, CancellationToken cancellationToken)
+    private async Task<ActionResult> ChatCompletionUseCache(
+        CcoCacheControl cacheControl, 
+        CcoWrapper cco, 
+        UserModel userModel, 
+        InChatContext icc, 
+        Task<int> clientInfoIdTask, 
+        CancellationToken cancellationToken)
     {
         string requestBody = cco.Serialize();
         long requestHashCode = BinaryPrimitives.ReadInt64LittleEndian(SHA256.HashData(Encoding.UTF8.GetBytes(requestBody)));
@@ -144,13 +157,12 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
                     logger.LogInformation("{RequestId} [{Elapsed}], Response completed", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
                     if (isSuccess)
                     {
-                        cache.UserApiCacheUsages.Add(new UserApiCacheUsage()
+                        _ = asyncCacheUsageService.SaveCacheUsage(new UserApiCacheUsage()
                         {
                             ClientInfoId = await clientInfoIdTask,
                             UsedAt = DateTime.UtcNow,
-                        });
-                        await db.SaveChangesAsync(cancellationToken);
-                        logger.LogInformation("{RequestId} [{Elapsed}], Cache Usage Saved", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
+                            UserApiCacheId = cache.Id,
+                        }, default);
                     }
                 }
             }

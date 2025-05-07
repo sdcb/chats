@@ -50,6 +50,7 @@ public class Program
         builder.Services.AddSingleton<ChatStopService>();
         builder.Services.AddSingleton<FileImageInfoService>();
         builder.Services.AddSingleton<AsyncClientInfoManager>();
+        builder.Services.AddSingleton<AsyncCacheUsageManager>();
 
         builder.Services.AddScoped<CurrentUser>();
         builder.Services.AddScoped<CurrentApiKey>();
