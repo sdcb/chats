@@ -43,6 +43,7 @@ public class AzureResponseApiService(Model model) : ChatService(model)
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         OpenAIResponseClient api = CreateResponseAPI(Model);
+        bool hasTools = false;
         await foreach (StreamingResponseUpdate delta in api.CreateResponseStreamingAsync(ToResponse(messages), ToResponse(options), cancellationToken))
         {
             if (delta is StreamingResponseOutputTextDeltaUpdate textDelta)
@@ -60,10 +61,23 @@ public class AzureResponseApiService(Model model) : ChatService(model)
                 {
                     null => null,
                     ResponseStatus.Failed => ChatFinishReason.ContentFilter,
-                    ResponseStatus.Completed => ChatFinishReason.Stop,
+                    ResponseStatus.Completed => hasTools switch
+                    {
+                        true => ChatFinishReason.ToolCalls,
+                        false => ChatFinishReason.Stop,
+                    },
                     ResponseStatus.Incomplete => ChatFinishReason.Length,
                     _ => throw new NotSupportedException($"Unsupported response status: {completedDelta.Response.Status}"),
                 });
+            }
+            else if (delta is StreamingResponseOutputItemAddedUpdate addedDelta && addedDelta.Item is FunctionCallResponseItem fc)
+            {
+                hasTools = true;
+                yield return ChatSegment.FromStartToolCall(addedDelta, fc);
+            }
+            else if (delta is StreamingResponseFunctionCallArgumentsDeltaUpdate fcDelta)
+            {
+                yield return ChatSegment.FromToolCallDelta(fcDelta);
             }
             else
             {
@@ -183,7 +197,7 @@ public class AzureResponseApiService(Model model) : ChatService(model)
 
     static ResponseCreationOptions ToResponse(ChatCompletionOptions options)
     {
-        return new ResponseCreationOptions()
+        ResponseCreationOptions responseCreationOptions = new()
         {
             Temperature = options.Temperature,
             TopP = options.TopP,
@@ -205,7 +219,19 @@ public class AzureResponseApiService(Model model) : ChatService(model)
             {
                 TextFormat = ToResponse(options.ResponseFormat),
             },
+            ParallelToolCallsEnabled = options.AllowParallelToolCalls,
         };
+
+        foreach (ChatTool tool in options.Tools)
+        {
+            responseCreationOptions.Tools.Add(ResponseTool.CreateFunctionTool(
+                tool.FunctionName,
+                tool.FunctionDescription,
+                tool.FunctionParameters,
+                tool.FunctionSchemaIsStrict ?? false));
+        }
+
+        return responseCreationOptions;
 
         static ResponseTextFormat ToResponse(ChatResponseFormat? format)
         {

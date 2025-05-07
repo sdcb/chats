@@ -1,5 +1,5 @@
-﻿using Chats.BE.Services.Models.ChatServices;
-using OpenAI.Chat;
+﻿using OpenAI.Chat;
+using OpenAI.Responses;
 
 namespace Chats.BE.Services.Models.Dtos;
 
@@ -29,6 +29,26 @@ public record ChatSegment
         {
             FinishReason = null,
             Items = [ChatSegmentItem.FromThink(text)],
+            Usage = null,
+        };
+    }
+
+    public static ChatSegment FromStartToolCall(StreamingResponseOutputItemAddedUpdate delta, FunctionCallResponseItem fc)
+    {
+        return new ChatSegment
+        {
+            FinishReason = null,
+            Items = [ChatSegmentItem.FromToolCall(delta, fc)],
+            Usage = null,
+        };
+    }
+
+    public static ChatSegment FromToolCallDelta(StreamingResponseFunctionCallArgumentsDeltaUpdate delta)
+    {
+        return new ChatSegment
+        {
+            FinishReason = null,
+            Items = [ChatSegmentItem.FromToolCallDelta(delta)],
             Usage = null,
         };
     }

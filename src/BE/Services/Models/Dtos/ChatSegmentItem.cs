@@ -1,6 +1,7 @@
 ﻿using Chats.BE.Controllers.OpenAICompatible.Dtos;
 using Chats.BE.Services.Models.ChatServices;
 using OpenAI.Chat;
+using OpenAI.Responses;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
@@ -105,7 +106,31 @@ public abstract record ChatSegmentItem
         return segments;
     }
 
-    static ChatSegmentItem FromToolCall(StreamingChatToolCallUpdate toolCall)
+    public static ToolCallSegment FromToolCall(StreamingResponseOutputItemAddedUpdate delta, FunctionCallResponseItem toolCall)
+    {
+        return new ToolCallSegment
+        {
+            Index = delta.OutputIndex,
+            Id = toolCall.Id,
+            Type = ChatToolCallKind.Function.ToString(),
+            Name = toolCall.FunctionName,
+            Arguments = GetBinaryData(toolCall.FunctionArguments).Length == 0 ? "" : toolCall.FunctionArguments.ToString(),
+        };
+    }
+
+    public static ToolCallSegment FromToolCallDelta(StreamingResponseFunctionCallArgumentsDeltaUpdate delta)
+    {
+        return new ToolCallSegment
+        {
+            Index = delta.OutputIndex,
+            Id = delta.ItemId,
+            Type = ChatToolCallKind.Function.ToString(),
+            Name = null,
+            Arguments = delta.Delta,
+        };
+    }
+
+    static ToolCallSegment FromToolCall(StreamingChatToolCallUpdate toolCall)
     {
         return new ToolCallSegment
         {
