@@ -1,5 +1,6 @@
 ﻿using Chats.BE.Controllers.OpenAICompatible.Dtos;
 using Chats.BE.Services.Models.ChatServices;
+using Mscc.GenerativeAI;
 using OpenAI.Chat;
 using OpenAI.Responses;
 using System.Runtime.CompilerServices;
@@ -115,6 +116,18 @@ public abstract record ChatSegmentItem
             Type = ChatToolCallKind.Function.ToString(),
             Name = toolCall.FunctionName,
             Arguments = GetBinaryData(toolCall.FunctionArguments).Length == 0 ? "" : toolCall.FunctionArguments.ToString(),
+        };
+    }
+
+    public static ToolCallSegment FromToolCall(int fcIndex, FunctionCall toolCall)
+    {
+        return new ToolCallSegment
+        {
+            Index = fcIndex,
+            Id = toolCall.Id ?? fcIndex.ToString(),
+            Type = ChatToolCallKind.Function.ToString(),
+            Name = toolCall.Name,
+            Arguments = JSON.Serialize(toolCall.Args)
         };
     }
 

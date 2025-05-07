@@ -62,19 +62,23 @@ public class GoogleAI2ChatService : ChatService
             };
         }
 
-        await foreach (GenerateContentResponse response in _generativeModel.GenerateContentStream(new GenerateContentRequest()
+        int fcIndex = 0;
+        GenerateContentRequest gcr = new ()
         {
             Contents = OpenAIChatMessageToGoogleContent(messages.Where(x => x is not SystemChatMessage)),
             SystemInstruction = OpenAIChatMessageToGoogleContent(messages.Where(x => x is SystemChatMessage)) switch { [] => null, var x => x[0] },
             GenerationConfig = gc,
             SafetySettings = _safetySettings,
-        }, null, cancellationToken))
+            Tools = ToGoogleAITool(options),
+        };
+        await foreach (GenerateContentResponse response in _generativeModel.GenerateContentStream(gcr, new RequestOptions(null, NetworkTimeout), cancellationToken))
         {
             if (response.Candidates != null && response.Candidates.Count > 0)
             {
                 string? text = response.Candidates[0].Content?.Text;
                 InlineData? image = response.Candidates[0].Content?.Parts[0].InlineData;
                 FinishReason? finishReason = response.Candidates[0].FinishReason;
+                FunctionCall? functionCall = response.Candidates[0].Content?.Parts[0].FunctionCall;
                 Dtos.ChatTokenUsage? usage = GetUsage(response.UsageMetadata);
 
                 List<ChatSegmentItem> items = [];
@@ -85,6 +89,10 @@ public class GoogleAI2ChatService : ChatService
                 if (image != null)
                 {
                     items.Add(ChatSegmentItem.FromBase64Image(image.Data, image.MimeType));
+                }
+                if (functionCall != null)
+                {
+                    items.Add(ChatSegmentItem.FromToolCall(fcIndex++, functionCall));
                 }
                 yield return new ChatSegment()
                 {
@@ -160,7 +168,7 @@ public class GoogleAI2ChatService : ChatService
         };
     }
 
-    static Tool[]? ToGoogleAITool(ChatCompletionOptions cco)
+    static List<Tool>? ToGoogleAITool(ChatCompletionOptions cco)
     {
         if (cco.Tools == null || cco.Tools.Count == 0)
         {
@@ -192,6 +200,7 @@ public class GoogleAI2ChatService : ChatService
                         "number" => ParameterType.Number,
                         "boolean" => ParameterType.Boolean,
                         "array" => ParameterType.Array,
+                        "object" => ParameterType.Object,
                         _ => throw new NotSupportedException($"Unsupported parameter type: {x.Value?["type"]}")
                     },
                     Description = x.Value["description"]?.ToString()!,
