@@ -14,7 +14,7 @@ public class SessionManager(JwtKeyManager jwtKeyManager, IConfiguration configur
     private const string ValidAudience = "chats";
     public TimeSpan TokenValidPeriod => configuration.GetValue("JwtValidPeriod", TimeSpan.FromHours(8));
 
-    public Task<SessionEntry> GetCachedUserInfoBySession(string jwt, CancellationToken _ = default)
+    public Task<SessionEntry> GetUserInfoByJwt(string jwt, CancellationToken _ = default)
     {
         ClaimsPrincipal claims = ValidateJwt(jwt, GetSecurityKey());
         return Task.FromResult(SessionEntry.FromClaims(claims, idEncryption));

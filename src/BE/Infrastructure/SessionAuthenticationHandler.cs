@@ -45,9 +45,14 @@ public class SessionAuthenticationHandler(
             return AuthenticateResult.NoResult();
         }
 
+        if (CountJwtTokenPart(jwt, 3) != 3)
+        {
+            return AuthenticateResult.NoResult();
+        }
+
         try
         {
-            SessionEntry userInfo = await sessionManager.GetCachedUserInfoBySession(jwt);
+            SessionEntry userInfo = await sessionManager.GetUserInfoByJwt(jwt);
             ClaimsIdentity identity = new(userInfo.ToClaims(idEncryption), Scheme.Name, JwtPropertyKeys.UserId, JwtPropertyKeys.Role);
             ClaimsPrincipal principal = new(identity);
             AuthenticationTicket ticket = new(principal, Scheme.Name);
@@ -58,5 +63,26 @@ public class SessionAuthenticationHandler(
         {
             return AuthenticateResult.Fail(ex);
         }
+    }
+
+    internal static int CountJwtTokenPart(string token, int maxCount)
+    {
+        var count = 1;
+        var index = 0;
+        while (index < token.Length)
+        {
+            var dotIndex = token.IndexOf('.', index);
+            if (dotIndex < 0)
+            {
+                break;
+            }
+            count++;
+            index = dotIndex + 1;
+            if (count == maxCount)
+            {
+                break;
+            }
+        }
+        return count;
     }
 }

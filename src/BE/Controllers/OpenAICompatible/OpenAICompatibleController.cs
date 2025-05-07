@@ -71,7 +71,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
 
             Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
             UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
-            logger.LogInformation("{RequestId} [{Elapsed}], GetUserModel", icc.ElapsedTime.TotalMilliseconds, HttpContext.TraceIdentifier);
+            logger.LogInformation("{RequestId} [{Elapsed}], GetUserModel", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
             if (userModel == null) return InvalidModel(cco.Model);
 
             CcoCacheControl ccoCacheControl = cco.CacheControl ?? CcoCacheControl.StaticCached with

@@ -25,7 +25,7 @@ public class OpenAIApiKeyAuthenticationHandler(
         string authorizationHeaderString = authorizationHeader.ToString();
         string apiKey = authorizationHeaderString.Split(' ').Last();
 
-        ApiKeyEntry? apiKeyInfo = await sessionManager.GetUserInfoByOpenAIApiKey(apiKey);
+        ApiKeyEntry? apiKeyInfo = await sessionManager.GetCachedUserInfoByOpenAIApiKey(apiKey);
 
         if (apiKeyInfo == null)
         {
