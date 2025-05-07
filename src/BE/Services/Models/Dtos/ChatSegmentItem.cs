@@ -87,7 +87,25 @@ public abstract record ChatSegmentItem
         return segments;
     }
 
-    public static ChatSegmentItem FromToolCall(StreamingChatToolCallUpdate toolCall)
+    public static List<ChatSegmentItem> FromTextThinkToolCall(string? text, string? think, IReadOnlyList<ChatToolCall>? toolCalls)
+    {
+        List<ChatSegmentItem> segments = new(capacity: 2);
+        if (!string.IsNullOrEmpty(text))
+        {
+            segments.Add(FromText(text));
+        }
+        if (!string.IsNullOrEmpty(think))
+        {
+            segments.Add(FromThink(think));
+        }
+        if (toolCalls != null && toolCalls.Count != 0)
+        {
+            segments.AddRange(FromToolCalls(toolCalls));
+        }
+        return segments;
+    }
+
+    static ChatSegmentItem FromToolCall(StreamingChatToolCallUpdate toolCall)
     {
         return new ToolCallSegment
         {
@@ -97,6 +115,18 @@ public abstract record ChatSegmentItem
             Name = toolCall.FunctionName,
             Arguments = GetBinaryData(toolCall.FunctionArgumentsUpdate).Length == 0 ? "" : toolCall.FunctionArgumentsUpdate.ToString(),
         };
+    }
+
+    static IEnumerable<ChatSegmentItem> FromToolCalls(IReadOnlyList<ChatToolCall> toolCall)
+    {
+        return toolCall.Select((x, i) => new ToolCallSegment()
+        {
+            Index = i,
+            Id = x.Id,
+            Type = x.Kind.ToString(),
+            Name = x.FunctionName,
+            Arguments = GetBinaryData(x.FunctionArguments).Length == 0 ? "" : x.FunctionArguments.ToString(),
+        });
     }
 
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_bytes")]

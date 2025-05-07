@@ -77,7 +77,7 @@ public partial class OpenAIChatService(Model model, ChatClient chatClient) : Cha
         ChatCompletion delta = cc.Value;
         return new ChatSegment
         {
-            Items = ChatSegmentItem.FromTextAndThink(delta.Content[0].Text, GetReasoningContent(delta)),
+            Items = ChatSegmentItem.FromTextThinkToolCall(delta.Content[0].Text, GetReasoningContent(delta), delta.ToolCalls),
             FinishReason = delta.FinishReason,
             Usage = delta.Usage != null ? GetUsage(delta.Usage) : null,
         };

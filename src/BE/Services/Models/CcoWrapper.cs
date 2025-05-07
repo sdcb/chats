@@ -75,6 +75,11 @@ public class CcoWrapper(JsonObject json)
             json[key] = value;
         }
     }
+
+    public string Serialize()
+    {
+        return json.ToJsonString(JSON.JsonSerializerOptions);
+    }
 }
 
 public record CcoCacheControl

@@ -16,6 +16,7 @@ using Chats.BE.Services.Models.ChatServices;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.AspNetCore.Http.Extensions;
 
 namespace Chats.BE.Controllers.OpenAICompatible;
 
@@ -29,7 +30,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
         CcoWrapper cco = new(json);
         if (!cco.SeemsValid())
         {
-            return ErrorMessage(icc.FinishReason, "bad parameter.");
+            return ErrorMessage(DBFinishReason.BadParameter, "bad parameter.");
         }
         if (string.IsNullOrWhiteSpace(cco.Model))
         {
@@ -43,20 +44,21 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
         if (ccoCacheControl != null)
         {
             cco.CacheControl = null;
-            return await ChatCompletionUseCache(ccoCacheControl, json, clientInfoManager, cancellationToken);
+            return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, icc, clientInfoManager, cancellationToken);
         }
 
         return await ChatCompletionNoCache(cco, userModel, icc, clientInfoManager, cancellationToken);
     }
 
     [HttpPost("v1-cached/chat/completions")]
+    [HttpPost("v1-cached-createOnly/chat/completions")]
     public async Task<ActionResult> ChatCompletionCached([FromBody] JsonObject json, [FromServices] ClientInfoManager clientInfoManager, CancellationToken cancellationToken)
     {
         InChatContext icc = new(Stopwatch.GetTimestamp());
         CcoWrapper cco = new(json);
         if (!cco.SeemsValid())
         {
-            return ErrorMessage(icc.FinishReason, "bad parameter.");
+            return ErrorMessage(DBFinishReason.BadParameter, "bad parameter.");
         }
         if (string.IsNullOrWhiteSpace(cco.Model))
         {
@@ -66,28 +68,17 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
         UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
         if (userModel == null) return InvalidModel(cco.Model);
 
-        CcoCacheControl ccoCacheControl = cco.CacheControl ?? CcoCacheControl.StaticCached;
+        CcoCacheControl ccoCacheControl = cco.CacheControl ?? CcoCacheControl.StaticCached with
+        {
+            CreateOnly = Request.GetDisplayUrl().Contains("v1-cached-createOnly", StringComparison.OrdinalIgnoreCase),
+        };
         cco.CacheControl = null;
-        return await ChatCompletionUseCache(ccoCacheControl, json, clientInfoManager, cancellationToken);
+        return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, icc, clientInfoManager, cancellationToken);
     }
 
-    private async Task<ActionResult> ChatCompletionUseCache(CcoCacheControl cacheControl, JsonObject json, ClientInfoManager clientInfoManager, CancellationToken cancellationToken)
+    private async Task<ActionResult> ChatCompletionUseCache(CcoCacheControl cacheControl, CcoWrapper cco, UserModel userModel, InChatContext icc, ClientInfoManager clientInfoManager, CancellationToken cancellationToken)
     {
-        InChatContext icc = new(Stopwatch.GetTimestamp());
-        CcoWrapper cco = new(json);
-        if (!cco.SeemsValid())
-        {
-            return ErrorMessage(icc.FinishReason, "bad parameter.");
-        }
-        if (string.IsNullOrWhiteSpace(cco.Model))
-        {
-            return InvalidModel(cco.Model);
-        }
-
-        UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
-        if (userModel == null) return InvalidModel(cco.Model);
-
-        string requestBody = JsonSerializer.Serialize(json, JSON.JsonSerializerOptions);
+        string requestBody = cco.Serialize();
         long requestHashCode = BinaryPrimitives.ReadInt64LittleEndian(SHA256.HashData(Encoding.UTF8.GetBytes(requestBody)));
 
         if (!cacheControl.CreateOnly)
@@ -167,7 +158,7 @@ public partial class OpenAICompatibleController(ChatsDB db, CurrentApiKey curren
                     UserApiCacheBody = new UserApiCacheBody()
                     {
                         Request = requestBody,
-                        Response = JsonSerializer.Serialize(toBeCached, JSON.JsonSerializerOptions),
+                        Response = toBeCached.Serialize(),
                     },
                     CreatedAt = DateTime.UtcNow,
                     ClientInfo = await clientInfoManager.GetClientInfo(cancellationToken),

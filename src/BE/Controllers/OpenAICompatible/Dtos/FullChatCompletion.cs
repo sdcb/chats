@@ -1,4 +1,6 @@
-﻿using Chats.BE.Services.Models.Dtos;
+﻿using Chats.BE.Services;
+using Chats.BE.Services.Models.Dtos;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.OpenAICompatible.Dtos;
@@ -37,6 +39,11 @@ public record FullChatCompletion
             Usage = Usage,
             SystemFingerprint = SystemFingerprint,
         };
+    }
+
+    public string Serialize()
+    {
+        return JsonSerializer.Serialize(this, JSON.JsonSerializerOptions);
     }
 }
 
