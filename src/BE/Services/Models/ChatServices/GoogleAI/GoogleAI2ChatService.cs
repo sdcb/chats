@@ -15,7 +15,7 @@ public class GoogleAI2ChatService : ChatService
 {
     private readonly GenerativeModel _generativeModel;
 
-    private readonly List<SafetySetting> _safetySettings = 
+    private readonly List<SafetySetting> _safetySettings =
     [
         new SafetySetting { Category = HarmCategory.HarmCategoryHateSpeech, Threshold = HarmBlockThreshold.BlockNone },
         new SafetySetting { Category = HarmCategory.HarmCategorySexuallyExplicit, Threshold = HarmBlockThreshold.BlockNone },
@@ -43,6 +43,11 @@ public class GoogleAI2ChatService : ChatService
     public bool AllowImageGeneration => Model.ModelReference.Name == "gemini-2.0-flash-exp" ||
                                         Model.ModelReference.Name == "gemini-2.0-flash-exp-image-generation";
 
+    public bool SupportsCodeExecution =>
+        Model.ModelReference.Name != "gemini-2.0-flash-lite" &&
+        Model.ModelReference.Name != "gemini-2.0-flash-exp" &&
+        Model.ModelReference.Name != "gemini-2.0-flash-exp-image-generation";
+
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         GenerationConfig gc = new()
@@ -62,14 +67,20 @@ public class GoogleAI2ChatService : ChatService
             };
         }
 
+        Tool tool = ToGoogleAITool(options) ?? new Tool();
+        if (SupportsCodeExecution)
+        {
+            tool.CodeExecution = new();
+        }
+
         int fcIndex = 0;
-        GenerateContentRequest gcr = new ()
+        GenerateContentRequest gcr = new()
         {
             Contents = OpenAIChatMessageToGoogleContent(messages.Where(x => x is not SystemChatMessage)),
             SystemInstruction = OpenAIChatMessageToGoogleContent(messages.Where(x => x is SystemChatMessage)) switch { [] => null, var x => x[0] },
             GenerationConfig = gc,
             SafetySettings = _safetySettings,
-            Tools = ToGoogleAITool(options),
+            Tools = [tool],
         };
         await foreach (GenerateContentResponse response in _generativeModel.GenerateContentStream(gcr, new RequestOptions(null, NetworkTimeout), cancellationToken))
         {
@@ -80,9 +91,29 @@ public class GoogleAI2ChatService : ChatService
                 FinishReason? finishReason = response.Candidates[0].FinishReason;
                 FunctionCall? functionCall = response.Candidates[0].Content?.Parts[0].FunctionCall;
                 Dtos.ChatTokenUsage? usage = GetUsage(response.UsageMetadata);
+                ExecutableCode? code = response.Candidates[0].Content?.Parts[0].ExecutableCode;
+                CodeExecutionResult? result = response.Candidates[0].Content?.Parts[0].CodeExecutionResult;
 
                 List<ChatSegmentItem> items = [];
-                if (text != null)
+                if (code != null)
+                {
+                    items.Add(ChatSegmentItem.FromText($"""
+                        ```{code.Language}
+                        {code.Code}
+                        ```
+
+                        """));
+                }
+                else if (result != null)
+                {
+                    items.Add(ChatSegmentItem.FromText($"""
+                        ```
+                        {result.Output}
+                        ```
+
+                        """));
+                }
+                else if (text != null)
                 {
                     items.Add(ChatSegmentItem.FromText(text));
                 }
@@ -110,7 +141,7 @@ public class GoogleAI2ChatService : ChatService
         Dtos.ChatTokenUsage? usage = new()
         {
             InputTokens = usageMetadata.PromptTokenCount,
-            OutputTokens = usageMetadata.CandidatesTokenCount,
+            OutputTokens = usageMetadata.TotalTokenCount - usageMetadata.PromptTokenCount,
             ReasoningTokens = usageMetadata.ThoughtsTokenCount,
         };
         return usage;
@@ -168,14 +199,14 @@ public class GoogleAI2ChatService : ChatService
         };
     }
 
-    static List<Tool>? ToGoogleAITool(ChatCompletionOptions cco)
+    static Tool? ToGoogleAITool(ChatCompletionOptions cco)
     {
         if (cco.Tools == null || cco.Tools.Count == 0)
         {
             return null;
         }
 
-        return [new Tool()
+        return new Tool()
         {
             FunctionDeclarations = [.. cco.Tools
                 .Select(tool => new FunctionDeclaration()
@@ -184,7 +215,7 @@ public class GoogleAI2ChatService : ChatService
                     Description = tool.FunctionDescription,
                     Parameters = ToGoogleAIParameters(tool.FunctionParameters),
                 })],
-        }];
+        };
 
         static Schema ToGoogleAIParameters(BinaryData binaryData)
         {
