@@ -47,7 +47,7 @@ public partial class OpenAIChatService(Model model, ChatClient chatClient) : Cha
             string? segment = delta.ContentUpdate.FirstOrDefault()?.Text;
             string? reasoningSegment = GetReasoningContent(delta);
 
-            if (segment == null && reasoningSegment == null && delta.Usage == null && delta.ToolCallUpdates != null && delta.ToolCallUpdates.Count != 0)
+            if (segment == null && reasoningSegment == null && delta.Usage == null && (delta.ToolCallUpdates == null || delta.ToolCallUpdates.Count == 0))
             {
                 continue;
             }
