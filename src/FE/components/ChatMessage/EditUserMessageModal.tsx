@@ -24,7 +24,7 @@ const EditUserMessageModal = (props: Props) => {
   const { t } = useTransition();
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-screen h-screen">
+      <DialogContent className="w-[800px] h-[700px]">
         <DialogHeader>
           <DialogTitle></DialogTitle>
         </DialogHeader>
