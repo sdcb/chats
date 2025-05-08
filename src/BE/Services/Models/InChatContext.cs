@@ -3,6 +3,7 @@ using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.DB.Jsons;
 using Chats.BE.Services.Common;
+using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
 using System.Diagnostics;
 
@@ -54,8 +55,7 @@ public class InChatContext(long firstTick)
                             _firstReasoningTick = Stopwatch.GetTimestamp();
                         }
                     }
-                    string? text = seg.Items.GetText();
-                    if (!string.IsNullOrEmpty(text))
+                    if (seg.Items.OfType<TextChatSegment>().Any() || seg.Items.OfType<ImageChatSegment>().Any() || seg.Items.OfType<ToolCallSegment>().Any())
                     {
                         if (_firstResponseTick == _preprocessTick) // never response
                         {
