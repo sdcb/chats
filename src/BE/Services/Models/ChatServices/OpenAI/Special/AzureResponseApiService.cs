@@ -130,16 +130,32 @@ public class AzureResponseApiService(Model model) : ChatService(model)
         List<ResponseItem> responseItems = [];
         foreach (ChatMessage message in messages)
         {
-            responseItems.Add(message switch
+            responseItems.AddRange(message switch
             {
-                SystemChatMessage sys => ResponseItem.CreateSystemMessageItem(MessageContentPartToResponse(sys.Content, input: true)),
-                UserChatMessage user => ResponseItem.CreateUserMessageItem(MessageContentPartToResponse(user.Content, input: true)),
-                AssistantChatMessage assistant => ResponseItem.CreateAssistantMessageItem(MessageContentPartToResponse(assistant.Content, input: false)),
-                DeveloperChatMessage developer => ResponseItem.CreateDeveloperMessageItem(MessageContentPartToResponse(developer.Content, input: true)),
+                SystemChatMessage sys => [ResponseItem.CreateSystemMessageItem(MessageContentPartToResponse(sys.Content, input: true))],
+                UserChatMessage user => [ResponseItem.CreateUserMessageItem(MessageContentPartToResponse(user.Content, input: true))],
+                AssistantChatMessage assistant => AssistantChatMessageToResponse(assistant),
+                DeveloperChatMessage developer => [ResponseItem.CreateDeveloperMessageItem(MessageContentPartToResponse(developer.Content, input: true))],
+                ToolChatMessage tool => [ResponseItem.CreateFunctionCallOutputItem(tool.ToolCallId, string.Join("\r\n", tool.Content.Select(x => x.Text)))],
                 _ => throw new NotSupportedException($"Unsupported message type: {message.GetType()}"),
             });
         }
         return responseItems;
+
+        static IEnumerable<ResponseItem> AssistantChatMessageToResponse(AssistantChatMessage assistantChatMessage)
+        {
+            if (assistantChatMessage.ToolCalls != null && assistantChatMessage.ToolCalls.Count > 0)
+            {
+                foreach (var toolCall in assistantChatMessage.ToolCalls)
+                {
+                    yield return ResponseItem.CreateFunctionCallItem(toolCall.Id, toolCall.FunctionName, toolCall.FunctionArguments);
+                }
+            }
+            if (assistantChatMessage.Content != null && assistantChatMessage.Content.Count > 0)
+            {
+                yield return ResponseItem.CreateAssistantMessageItem(MessageContentPartToResponse(assistantChatMessage.Content, input: false));
+            }
+        }
 
         static IReadOnlyList<ResponseContentPart> MessageContentPartToResponse(IReadOnlyList<ChatMessageContentPart> parts, bool input)
         {

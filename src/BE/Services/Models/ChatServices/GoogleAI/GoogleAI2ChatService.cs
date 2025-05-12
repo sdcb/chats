@@ -67,10 +67,13 @@ public class GoogleAI2ChatService : ChatService
             };
         }
 
-        Tool tool = ToGoogleAITool(options) ?? new Tool();
-        if (SupportsCodeExecution)
+        Tool? tool = ToGoogleAIToolCallTool(options);
+        if (tool == null && SupportsCodeExecution)
         {
-            tool.CodeExecution = new();
+            tool = new Tool()
+            {
+                CodeExecution = new()
+            };
         }
 
         int fcIndex = 0;
@@ -80,51 +83,50 @@ public class GoogleAI2ChatService : ChatService
             SystemInstruction = OpenAIChatMessageToGoogleContent(messages.Where(x => x is SystemChatMessage)) switch { [] => null, var x => x[0] },
             GenerationConfig = gc,
             SafetySettings = _safetySettings,
-            Tools = [tool],
+            Tools = tool == null ? null : [tool],
         };
         await foreach (GenerateContentResponse response in _generativeModel.GenerateContentStream(gcr, new RequestOptions(null, NetworkTimeout), cancellationToken))
         {
             if (response.Candidates != null && response.Candidates.Count > 0)
             {
-                string? text = response.Candidates[0].Content?.Text;
-                InlineData? image = response.Candidates[0].Content?.Parts[0].InlineData;
-                FinishReason? finishReason = response.Candidates[0].FinishReason;
-                FunctionCall? functionCall = response.Candidates[0].Content?.Parts[0].FunctionCall;
-                Dtos.ChatTokenUsage? usage = GetUsage(response.UsageMetadata);
-                ExecutableCode? code = response.Candidates[0].Content?.Parts[0].ExecutableCode;
-                CodeExecutionResult? result = response.Candidates[0].Content?.Parts[0].CodeExecutionResult;
-
                 List<ChatSegmentItem> items = [];
-                if (code != null)
+                foreach (Part part in response.Candidates[0].Content?.Parts ?? [])
                 {
-                    items.Add(ChatSegmentItem.FromText($"""
-                        ```{code.Language}
-                        {code.Code}
+                    if (part.ExecutableCode != null)
+                    {
+                        items.Add(ChatSegmentItem.FromText($"""
+                        ```{part.ExecutableCode.Language}
+                        {part.ExecutableCode.Code}
                         ```
 
                         """));
-                }
-                else if (result != null)
-                {
-                    items.Add(ChatSegmentItem.FromText($"""
+                    }
+                    else if (part.CodeExecutionResult != null)
+                    {
+                        items.Add(ChatSegmentItem.FromText($"""
                         ```
-                        {result.Output}
+                        {part.CodeExecutionResult.Output}
                         ```
 
                         """));
+                    }
+                    else if (part.Text != null)
+                    {
+                        items.Add(ChatSegmentItem.FromText(part.Text));
+                    }
+                    if (part.InlineData != null)
+                    {
+                        items.Add(ChatSegmentItem.FromBase64Image(part.InlineData.Data, part.InlineData.MimeType));
+                    }
+                    if (part.FunctionCall != null)
+                    {
+                        items.Add(ChatSegmentItem.FromToolCall(fcIndex++, part.FunctionCall));
+                    }
                 }
-                else if (text != null)
-                {
-                    items.Add(ChatSegmentItem.FromText(text));
-                }
-                if (image != null)
-                {
-                    items.Add(ChatSegmentItem.FromBase64Image(image.Data, image.MimeType));
-                }
-                if (functionCall != null)
-                {
-                    items.Add(ChatSegmentItem.FromToolCall(fcIndex++, functionCall));
-                }
+
+                FinishReason? finishReason = response.Candidates[0].FinishReason;
+                Dtos.ChatTokenUsage? usage = GetUsage(response.UsageMetadata);
+
                 yield return new ChatSegment()
                 {
                     FinishReason = ToChatFinishReason(finishReason),
@@ -182,24 +184,53 @@ public class GoogleAI2ChatService : ChatService
         return [.. chatMessages
             .Select(msg => msg switch
             {
-                SystemChatMessage s => new Content("") { Role = "system", Parts = [.. msg.Content.Select(OpenAIPartToGooglePart)] },
-                UserChatMessage u => new Content("") { Role = "user", Parts = [.. msg.Content.Select(OpenAIPartToGooglePart)] },
-                AssistantChatMessage a => new Content("") { Role = "model", Parts = [.. msg.Content.Select(OpenAIPartToGooglePart)] },
+                SystemChatMessage s => new Content("") { Role = Role.System, Parts = [.. msg.Content.Select(x => OpenAIPartToGooglePart(x))] },
+                UserChatMessage u => new Content("") { Role = Role.User, Parts = [.. msg.Content.Select(x => OpenAIPartToGooglePart(x))] },
+                AssistantChatMessage a => new Content("") { Role = Role.Model, Parts = AssistantMessageToParts(a) },
+                ToolChatMessage t => new Content("") { Role = Role.Function, Parts = [ToolCallMessageToPart(t)] },
                 _ => throw new NotSupportedException($"Unsupported message type: {msg.GetType()} in {nameof(GoogleAI2ChatService)}"),
             })];
-    }
 
-    static IPart OpenAIPartToGooglePart(ChatMessageContentPart part)
-    {
-        return part.Kind switch
+        static IPart ToolCallMessageToPart(ToolChatMessage message)
         {
-            ChatMessageContentPartKind.Text => new TextData() { Text = part.Text },
-            ChatMessageContentPartKind.Image => new InlineData() { Data = Convert.ToBase64String(part.ImageBytes.ToArray()), MimeType = part.ImageBytesMediaType },
-            _ => throw new NotSupportedException($"Unsupported part kind: {part.Kind}"),
-        };
+            return Part.FromFunctionResponse(message.ToolCallId, new 
+            { 
+                result = string.Join("\r\n", message.Content.Select(x => x.Text)) 
+            });
+        }
+
+        static List<IPart> AssistantMessageToParts(AssistantChatMessage assistantChatMessage)
+        {
+            List<IPart> results = [];
+            if (assistantChatMessage.ToolCalls != null && assistantChatMessage.ToolCalls.Count > 0)
+            {
+                foreach (ChatToolCall toolCall in assistantChatMessage.ToolCalls)
+                {
+                    results.Add(new FunctionCall()
+                    {
+                        Id = toolCall.Id,
+                        Name = toolCall.FunctionName,
+                        Args = toolCall.FunctionArguments.ToObjectFromJson<JsonObject>(),
+                    });
+                }
+            }
+
+            results.AddRange(assistantChatMessage.Content.Select(OpenAIPartToGooglePart));
+            return results;
+        }
+
+        static IPart OpenAIPartToGooglePart(ChatMessageContentPart part)
+        {
+            return part.Kind switch
+            {
+                ChatMessageContentPartKind.Text => new TextData() { Text = part.Text },
+                ChatMessageContentPartKind.Image => new InlineData() { Data = Convert.ToBase64String(part.ImageBytes.ToArray()), MimeType = part.ImageBytesMediaType },
+                _ => throw new NotSupportedException($"Unsupported part kind: {part.Kind}"),
+            };
+        }
     }
 
-    static Tool? ToGoogleAITool(ChatCompletionOptions cco)
+    static Tool? ToGoogleAIToolCallTool(ChatCompletionOptions cco)
     {
         if (cco.Tools == null || cco.Tools.Count == 0)
         {
