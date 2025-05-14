@@ -30,6 +30,19 @@ public partial class ModelReference
             "gemini-2.5-pro-exp-03-25" => true,
             "gemini-2.5-flash-preview-04-17" => true, 
             "gpt-image-1" => true, 
+            "Qwen/Qwen3-235B-A22B" => true,
+            "Qwen/Qwen3-30B-A3B" => true,
+            "Qwen/Qwen3-32B" => true,
+            "Qwen/Qwen3-14B" => true,
+            "Qwen/Qwen3-8B" => true,
+            "qwen3-235b-a22b" => true,
+            "qwen3-30b-a3b" => true,
+            "qwen3-32b" => true,
+            "qwen3-14b" => true,
+            "qwen3-8b" => true,
+            "qwen3-4b" => true,
+            "qwen3-1.7b" => true,
+            "qwen3-0.6b" => true,
             _ => false
         };
     }

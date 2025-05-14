@@ -1,4 +1,5 @@
 ﻿using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Extensions;
 using OpenAI.Chat;
 
@@ -9,5 +10,13 @@ public class QwenChatService(Model model) : OpenAIChatService(model, new Uri("ht
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {
         options.GetOrCreateSerializedAdditionalRawData()["enable_search"] = BinaryData.FromObjectAsJson(enabled);
+    }
+
+    protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
+    {
+        if (reasoningEffort == DBReasoningEffort.Low)
+        {
+            options.GetOrCreateSerializedAdditionalRawData()["enable_thinking"] = BinaryData.FromObjectAsJson(false);
+        }
     }
 }
