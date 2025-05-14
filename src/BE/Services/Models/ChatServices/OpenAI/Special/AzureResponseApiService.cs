@@ -1,5 +1,6 @@
 ﻿using Azure.AI.OpenAI;
 using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
 using OpenAI;
 using OpenAI.Chat;
@@ -209,6 +210,11 @@ public class AzureResponseApiService(Model model) : ChatService(model)
                 throw new NotSupportedException($"Unsupported image detail level: {level}");
             }
         }
+    }
+
+    protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
+    {
+        // override in ToResponse
     }
 
     static ResponseCreationOptions ToResponse(ChatCompletionOptions options)
