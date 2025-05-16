@@ -27,7 +27,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
         }
 
         return await PagedResult.FromQuery(chats
-            .OrderByDescending(x => x.UpdatedAt)
+            .OrderByDescending(x => x.Id)
             .Select(x => new AdminChatsDto
             {
                 Id = x.Id.ToString(),
