@@ -1,5 +1,4 @@
-﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
-using Chats.BE.DB;
+﻿using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.EntityFrameworkCore;
@@ -38,23 +37,6 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
             Uri url = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
             return ChatMessageContentPart.CreateImagePart(url);
         }
-    }
-
-    public FileDto CreateFileDto(DB.File file)
-    {
-        if (file.FileService == null)
-        {
-            throw new ArgumentNullException(nameof(file), "The FileService property of the provided file is null.");
-        }
-
-        IFileService fs = fileServiceFactory.Create(file.FileService);
-        Uri downloadUrl = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
-
-        return new FileDto
-        {
-            Id = urlEncryptionService.EncryptFileId(file.Id),
-            Url = downloadUrl.ToString(),
-        };
     }
 
     public async Task<MessageContent> CreateFileContent(string encryptedFileId, CancellationToken cancellationToken)

@@ -8,7 +8,8 @@ import {
   ChatSpanStatus,
   ChatStatus,
   EMPTY_ID,
-  ImageDef,
+  FileDef,
+  getFileUrl,
   MessageContentType,
   ResponseContent,
 } from '@/types/chat';
@@ -120,7 +121,7 @@ const ResponseMessage = (props: Props) => {
               alt={t('Loading...')}
               key={'file-' + index}
               className="w-full md:w-1/2 rounded-md"
-              src={(c.c as ImageDef).url}
+              src={getFileUrl(c.c as FileDef)}
             />
           );
         } else if (c.$type === MessageContentType.text) {

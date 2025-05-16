@@ -2,13 +2,13 @@ import React, { useEffect, useRef } from 'react';
 
 import { checkFileSizeCanUpload, uploadFile } from '@/utils/uploadFile';
 
-import { ImageDef } from '@/types/chat';
+import { FileDef } from '@/types/chat';
 import { ChatModelFileConfig } from '@/types/model';
 
 interface IPasteUploadProps {
   fileConfig: ChatModelFileConfig;
   onUploading?: () => void;
-  onSuccessful?: (def: ImageDef) => void;
+  onSuccessful?: (def: FileDef) => void;
   onFailed?: (reason: string | null) => void;
 }
 

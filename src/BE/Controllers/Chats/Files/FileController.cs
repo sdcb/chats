@@ -12,6 +12,7 @@ using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Microsoft.Net.Http.Headers;
 using Chats.BE.Controllers.Common.Dtos;
+using System.Runtime.Caching;
 
 namespace Chats.BE.Controllers.Chats.Files;
 
@@ -108,7 +109,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         db.Files.Add(dbFile);
         await db.SaveChangesAsync(cancellationToken);
 
-        FileDto fileDto = fdup.CreateFileDto(dbFile);
+        FileDto fileDto = dbFile.ToFileDto(urlEncryption);
         return Created(default(string), value: fileDto);
     }
 
@@ -157,6 +158,8 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         return ServeStaticFile(file);
     }
 
+    private static readonly MemoryCache _fileUrlCache = new("file-url-cache");
+
     internal ActionResult ServeStaticFile(DB.File file)
     {
         DBFileServiceType fileServiceType = (DBFileServiceType)file.FileService.FileServiceTypeId;
@@ -175,8 +178,17 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         }
         else
         {
-            Uri downloadUrl = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
-            return Redirect(downloadUrl.ToString());
+            if (_fileUrlCache.Get(file.Id.ToString()) is string cachedUrl)
+            {
+                return Redirect(cachedUrl);
+            }
+            else
+            {
+                CreateDownloadUrlRequest request = CreateDownloadUrlRequest.FromFile(file);
+                Uri downloadUrl = fs.CreateDownloadUrl(request);
+                _fileUrlCache.Set(file.Id.ToString(), downloadUrl.ToString(), new CacheItemPolicy { AbsoluteExpiration = request.ValidEnd });
+                return Redirect(downloadUrl.ToString());
+            }
         }
     }
 
@@ -187,9 +199,10 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         CancellationToken cancellationToken)
     {
         IQueryable<DB.File> queryable = db.Files
+            .Include(x => x.FileContentType)
             .Where(x => x.CreateUserId == currentUser.Id)
             .OrderByDescending(x => x.Id);
-        PagedResult<FileDto> pagedResult = await PagedResult.FromTempQuery(queryable, query, fdup.CreateFileDto, cancellationToken);
+        PagedResult<FileDto> pagedResult = await PagedResult.FromTempQuery(queryable, query, x => x.ToFileDto(urlEncryption), cancellationToken);
         return Ok(pagedResult);
     }
 

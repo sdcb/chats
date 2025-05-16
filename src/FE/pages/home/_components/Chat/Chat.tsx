@@ -26,7 +26,7 @@ import {
   ChatRole,
   ChatSpanStatus,
   ChatStatus,
-  ImageDef,
+  FileDef,
   Message,
   MessageContentType,
   RequestContent,
@@ -164,7 +164,7 @@ const Chat = memo(() => {
   const changeSelectedResponseFile = (
     selectedMsgs: IChatMessage[][],
     messageId: string,
-    text: ImageDef,
+    text: FileDef,
   ) => {
     const messageCount = selectedMsgs.length - 1;
     let messageList = selectedMsgs[messageCount];

@@ -2,7 +2,7 @@ import { useFetch } from '@/hooks/useFetch';
 
 import { AdminModelDto, PostPromptParams } from '@/types/adminApis';
 import {
-  ImageDef,
+  FileDef,
   MessageContentType,
   RequestContent,
   ResponseContent,
@@ -492,7 +492,7 @@ export const responseContentToRequest = (
       } else if (x.$type === MessageContentType.fileId) {
         return {
           $type: MessageContentType.fileId,
-          c: typeof x.c === 'string' ? x.c : (x.c as ImageDef).id,
+          c: typeof x.c === 'string' ? x.c : (x.c as FileDef).id,
         };
       } else {
         throw new Error('Invalid message content type');

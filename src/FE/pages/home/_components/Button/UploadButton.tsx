@@ -2,13 +2,13 @@ import { useEffect, useRef } from 'react';
 
 import { checkFileSizeCanUpload, uploadFile } from '@/utils/uploadFile';
 
-import { ImageDef } from '@/types/chat';
+import { FileDef } from '@/types/chat';
 import { ChatModelFileConfig } from '@/types/model';
 
 import { Button } from '@/components/ui/button';
 
 interface Props {
-  onSuccessful?: (def: ImageDef) => void;
+  onSuccessful?: (def: FileDef) => void;
   onUploading?: () => void;
   onFailed?: (reason: string | null) => void;
   children?: React.ReactNode;

@@ -1,7 +1,7 @@
 import {
   ChatRole,
   ChatSpanStatus,
-  ImageDef,
+  FileDef,
   ResponseContent,
   Role,
 } from './chat';
@@ -82,7 +82,7 @@ interface SseResponseLineStartReasoning {
 interface SseResponseLineImageGenerated {
   k: SseResponseKind.ImageGenerated; // Kind is StartReasoning
   i: number; // SpanId is required for StartReasoning
-  r: ImageDef;
+  r: FileDef;
 }
 
 // Combined type for SseResponseLine

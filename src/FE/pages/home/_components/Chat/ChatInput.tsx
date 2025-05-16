@@ -17,7 +17,8 @@ import { formatPrompt } from '@/utils/promptVariable';
 import {
   ChatRole,
   ChatStatus,
-  ImageDef,
+  FileDef,
+  getFileUrl,
   Message,
   MessageContentType,
 } from '@/types/chat';
@@ -67,7 +68,7 @@ const ChatInput = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const promptListRef = useRef<HTMLUListElement | null>(null);
   const [contentText, setContentText] = useState('');
-  const [contentFiles, setContentFiles] = useState<ImageDef[]>([]);
+  const [contentFiles, setContentFiles] = useState<FileDef[]>([]);
 
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
@@ -234,7 +235,7 @@ const ChatInput = ({
     }
   };
 
-  const handleUploadSuccessful = (def: ImageDef) => {
+  const handleUploadSuccessful = (def: FileDef) => {
     setContentFiles((prev) => {
       return prev.concat(def);
     });
@@ -269,7 +270,7 @@ const ChatInput = ({
               <div className="relative group shadow-sm" key={index}>
                 <div className="mr-1 w-[4rem] h-[4rem] rounded overflow-hidden">
                   <img
-                    src={file.url}
+                    src={getFileUrl(file)}
                     alt=""
                     className="w-full h-full object-cover shadow-sm"
                   />

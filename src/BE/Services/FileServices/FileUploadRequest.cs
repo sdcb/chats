@@ -33,8 +33,10 @@ public record CreateDownloadUrlRequest
 {
     public required int FileId { get; init; }
     public required string StorageKey { get; init; }
-    public TimeSpan ValidPeriod { get; init; } = TimeSpan.FromHours(2);
+    public TimeSpan ValidPeriod { get; init; } = DefaultValidPeriod;
     public DateTimeOffset ValidEnd => DateTimeOffset.UtcNow + ValidPeriod;
+
+    public static TimeSpan DefaultValidPeriod { get; } = TimeSpan.FromHours(2);
 
     public static CreateDownloadUrlRequest FromFile(DB.File file)
     {

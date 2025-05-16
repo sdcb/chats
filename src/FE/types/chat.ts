@@ -1,4 +1,6 @@
+import { getApiUrl } from '@/utils/common';
 import { ChatSpanDto } from './clientApis';
+import { getUserSession } from '@/utils/user';
 
 export type Role = 'assistant' | 'user' | 'system';
 export enum ChatRole {
@@ -27,9 +29,15 @@ export interface Message {
   content: ResponseContent[];
 }
 
-export interface ImageDef {
+export interface FileDef {
   id: string;
-  url: string;
+  contentType: string;
+  fileName: string;
+}
+
+export function getFileUrl(file: FileDef | string): string {
+  const fileId = typeof file === 'string' ? file : file.id;
+  return `${getApiUrl()}/api/file/private/${fileId}?token=${getUserSession()}`;
 }
 
 export type ResponseContent =
@@ -53,7 +61,7 @@ export type TextContent = {
 export type FileContent = {
   i: string;
   $type: MessageContentType.fileId;
-  c: ImageDef | string;
+  c: FileDef | string;
 };
 
 export type ErrorContent = {

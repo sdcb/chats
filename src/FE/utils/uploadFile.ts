@@ -1,4 +1,4 @@
-import { ImageDef } from '@/types/chat';
+import { FileDef } from '@/types/chat';
 
 import { getApiUrl } from './common';
 import { getUserSession } from './user';
@@ -6,7 +6,7 @@ import { getUserSession } from './user';
 export async function uploadFile(
   file: File,
   onUploading?: () => void,
-  onSuccessful?: (def: ImageDef) => void,
+  onSuccessful?: (def: FileDef) => void,
   onFailed?: (reason: string | null) => void,
 ) {
   onUploading && onUploading();

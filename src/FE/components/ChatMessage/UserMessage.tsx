@@ -7,6 +7,7 @@ import { isChatting } from '@/utils/chats';
 import {
   ChatRole,
   ChatSpanStatus,
+  getFileUrl,
   IChat,
   Message,
   MessageContentType,
@@ -187,7 +188,7 @@ const UserMessage = (props: Props) => {
                     className="rounded-md not-prose"
                     key={'user-img-' + index}
                     style={{ maxWidth: 268, maxHeight: 168 }}
-                    src={img.c.url}
+                    src={getFileUrl(img.c)}
                     alt=""
                   />
                 ))}

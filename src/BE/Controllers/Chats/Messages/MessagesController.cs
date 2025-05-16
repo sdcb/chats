@@ -21,7 +21,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
     {
         MessageDto[] messages = await db.Messages
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentBlob)
-            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
+            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileContentType)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentText)
             .Where(m => m.ChatId == urlEncryption.DecryptChatId(chatId) && m.Chat.UserId == currentUser.Id)
             .Select(x => new ChatMessageTemp()
