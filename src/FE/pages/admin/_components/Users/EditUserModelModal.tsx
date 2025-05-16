@@ -115,7 +115,7 @@ const EditUserModelModal = (props: IProps) => {
             }}
           />
         </div>
-        <div className="h-96 overflow-scroll flex justify-start gap-2 flex-wrap">
+        <div className="h-[48em] overflow-scroll flex justify-start gap-2 flex-wrap">
           <Table>
             <TableHeader>
               <TableRow className="pointer-events-none">
@@ -134,7 +134,7 @@ const EditUserModelModal = (props: IProps) => {
                   <TableCell>{model.modelKeyName}</TableCell>
                   <TableCell>
                     <Input
-                      className="w-30"
+                      className="w-16"
                       value={model.tokens?.toString()}
                       onChange={(e) => {
                         onChangeModel(
@@ -147,7 +147,7 @@ const EditUserModelModal = (props: IProps) => {
                   </TableCell>
                   <TableCell>
                     <Input
-                      className="w-30"
+                      className="w-16"
                       value={model.counts?.toString()}
                       onChange={(e) => {
                         onChangeModel(
