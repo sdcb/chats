@@ -296,13 +296,18 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     throw new InvalidOperationException("Image file cache not found.");
                 }
 
+                await YieldResponse(SseResponseLine.ImageGenerated(line.SpanId!.Value, new FileDto()
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    ContentType = image.ToContentType(),
+                    Url = image.ToTempUrl(),
+                }));
+
                 try
                 {
                     fs ??= await FileService.GetDefault(db, cancellationToken) ?? throw new InvalidOperationException("Default file service config not found.");
                     DB.File file = await dbFileService.StoreImage(image, await clientInfoIdTask, fs, cancellationToken: default);
                     tcs.SetResult(file);
-
-                    await YieldResponse(SseResponseLine.ImageGenerated(line.SpanId!.Value, file.ToFileDto(idEncryption)));
                 }
                 catch (Exception e)
                 {

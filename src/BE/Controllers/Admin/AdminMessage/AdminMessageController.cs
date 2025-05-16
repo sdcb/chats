@@ -89,6 +89,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                 LeafMessageId = urlEncryption.EncryptMessageId(x.LeafMessageId),
                 UpdatedAt = x.UpdatedAt,
             })
+            .AsSplitQuery()
             .FirstOrDefaultAsync(cancellationToken);
 
         if (chats == null) return null;
@@ -96,6 +97,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
         return chats.WithMessages(await db.Messages
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentBlob)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileContentType)
+            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentText)
             .Where(m => m.ChatId == chatId)
             .Select(x => new ChatMessageTemp()

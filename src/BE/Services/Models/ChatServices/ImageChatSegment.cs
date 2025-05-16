@@ -12,6 +12,8 @@ public abstract record ImageChatSegment : ChatSegmentItem
     public abstract Task<DBFileDef> Download(CancellationToken cancellationToken = default);
 
     public abstract string ToTempUrl();
+
+    public abstract string ToContentType();
 }
 
 public record Base64Image : ImageChatSegment
@@ -31,6 +33,8 @@ public record Base64Image : ImageChatSegment
     }
 
     public override string ToTempUrl() => $"data:{ContentType};base64,{Base64}";
+
+    public override string ToContentType() => ContentType;
 }
 
 public record UrlImage : ImageChatSegment
@@ -51,4 +55,20 @@ public record UrlImage : ImageChatSegment
     }
 
     public override string ToTempUrl() => Url;
+
+    public override string ToContentType() => Url switch
+    {
+        var x when x.Contains(".png", StringComparison.OrdinalIgnoreCase) => "image/png",
+        var x when x.Contains(".jpg", StringComparison.OrdinalIgnoreCase) => "image/jpeg",
+        var x when x.Contains(".jpeg", StringComparison.OrdinalIgnoreCase) => "image/jpeg",
+        var x when x.Contains(".gif", StringComparison.OrdinalIgnoreCase) => "image/gif",
+        var x when x.Contains(".webp", StringComparison.OrdinalIgnoreCase) => "image/webp",
+        var x when x.Contains(".bmp", StringComparison.OrdinalIgnoreCase) => "image/bmp",
+        var x when x.Contains(".tiff", StringComparison.OrdinalIgnoreCase) => "image/tiff",
+        var x when x.Contains(".svg", StringComparison.OrdinalIgnoreCase) => "image/svg+xml",
+        var x when x.Contains(".ico", StringComparison.OrdinalIgnoreCase) => "image/vnd.microsoft.icon",
+        var x when x.Contains(".heic", StringComparison.OrdinalIgnoreCase) => "image/heic",
+        var x when x.Contains(".avif", StringComparison.OrdinalIgnoreCase) => "image/avif",
+        _ => "application/octet-stream"
+    };
 }

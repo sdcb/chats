@@ -95,10 +95,13 @@ public record FileDto
     public required string Id { get; init; }
 
     [JsonPropertyName("fileName")]
-    public required string FileName { get; init; }
+    public string? FileName { get; init; }
 
     [JsonPropertyName("contentType")]
     public required string ContentType { get; init; }
+
+    [JsonPropertyName("url")]
+    public string? Url { get; init; }
 }
 
 public record ChatMessageTempUsage
