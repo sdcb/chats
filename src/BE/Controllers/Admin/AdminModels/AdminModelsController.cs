@@ -260,59 +260,60 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
                 .Select(x => $"{x.Key}: " + string.Join(",", x.Value!.Errors.Select(x => x.ErrorMessage)))));
         }
 
-        HashSet<int> userModelIds = updateReq.Models
+        HashSet<int> incomingModelIds = updateReq.Models
             .Where(x => x.Id != -1)
             .Select(x => x.Id)
             .ToHashSet();
         Dictionary<short, UserModel> userModels = await db.UserModels
             .Include(x => x.Model.UsageTransactions)
-            .Where(x => x.UserId == updateReq.UserId && userModelIds.Contains(x.Id))
+            .Where(x => x.UserId == updateReq.UserId)
             .ToDictionaryAsync(k => k.ModelId, v => v, cancellationToken);
 
         // apply changes
         HashSet<UserModel> effectedUserModels = [];
         foreach (JsonTokenBalance req in updateReq.Models)
         {
-            if (req.Enabled)
+            if (userModels.TryGetValue(req.ModelId, out UserModel? existingItem))
             {
-                if (userModels.TryGetValue(req.ModelId, out UserModel? existingItem))
+                // update existing item
+                bool hasDifference = req.ApplyTo(existingItem, adminUser.Id, out UsageTransaction? usageTransaction);
+                if (usageTransaction != null)
                 {
-                    // update existing item
-                    bool hasDifference = req.ApplyTo(existingItem, adminUser.Id, out UsageTransaction? usageTransaction);
-                    if (usageTransaction != null)
-                    {
-                        db.UsageTransactions.Add(usageTransaction);
-                    }
-                    if (hasDifference)
-                    {
-                        effectedUserModels.Add(existingItem);
-                    }
+                    db.UsageTransactions.Add(usageTransaction);
                 }
-                else
+                if (hasDifference)
                 {
-                    // create new, not exists in database but enabled in frontend request
-                    UserModel newItem = new()
-                    {
-                        UserId = updateReq.UserId,
-                        ModelId = req.ModelId,
-                        CreatedAt = DateTime.UtcNow,
-                    };
-                    req.ApplyTo(newItem, adminUser.Id, out UsageTransaction? usageTransaction);
-                    if (usageTransaction != null)
-                    {
-                        db.UsageTransactions.Add(usageTransaction);
-                    }
-                    userModels[req.ModelId] = newItem;
-                    db.UserModels.Add(newItem);
-                    effectedUserModels.Add(newItem);
+                    effectedUserModels.Add(existingItem);
                 }
             }
             else
             {
-                // delete existing
-                if (userModels.TryGetValue(req.ModelId, out UserModel? existingItem))
+                // create new, not exists in database but enabled in frontend request
+                UserModel newItem = new()
                 {
-                    db.UserModels.Remove(existingItem);
+                    UserId = updateReq.UserId,
+                    ModelId = req.ModelId,
+                    CreatedAt = DateTime.UtcNow,
+                };
+                req.ApplyTo(newItem, adminUser.Id, out UsageTransaction? usageTransaction);
+                if (usageTransaction != null)
+                {
+                    db.UsageTransactions.Add(usageTransaction);
+                }
+                userModels[req.ModelId] = newItem;
+                db.UserModels.Add(newItem);
+                effectedUserModels.Add(newItem);
+            }
+        }
+
+        // remove items that are not in the request
+        foreach (UserModel existingItem in userModels.Values)
+        {
+            if (!updateReq.Models.Any(x => x.ModelId == existingItem.ModelId))
+            {
+                db.UserModels.Remove(existingItem);
+                if (existingItem.TokenBalance != 0 || existingItem.CountBalance != 0)
+                {
                     existingItem.Model.UsageTransactions.Add(new UsageTransaction()
                     {
                         CreditUserId = existingItem.UserId,
@@ -322,8 +323,8 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
                         TokenAmount = -existingItem.TokenBalance,
                         TransactionTypeId = (byte)DBTransactionType.Charge,
                     });
-                    userModels.Remove(req.ModelId);
                 }
+                effectedUserModels.Add(existingItem);
             }
         }
 
