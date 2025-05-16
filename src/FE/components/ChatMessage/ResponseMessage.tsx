@@ -182,9 +182,9 @@ const ResponseMessage = (props: Props) => {
             </div>
           ) : (
             <div key={'text-' + index} className="relative group/item">
-              {message.displayType === MessageDisplayType.Code ? (
+              {message.displayType === 'Raw' ? (
                 <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3 group/item">
-                  <div className="whitespace-pre-wrap">{c.c}</div>
+                  <div className="whitespace-pre-wrap font-mono">{c.c}</div>
                 </div>
               ) : (
                 <MemoizedReactMarkdown

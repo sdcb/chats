@@ -757,13 +757,10 @@ const Chat = memo(() => {
     messageDispatch(setMessages(msgs));
   };
 
-  const handleChangeDisplayType = (messageId: string) => {
+  const handleChangeDisplayType = (messageId: string, type: MessageDisplayType) => {
     const msgs = messages.map((x) => {
       if (x.id === messageId) {
-        x.displayType =
-          x?.displayType === MessageDisplayType.Code
-            ? MessageDisplayType.Preview
-            : MessageDisplayType.Code;
+        x.displayType = type;
       }
       return x;
     });
@@ -771,10 +768,7 @@ const Chat = memo(() => {
     const selectedMsgs = selectedMessages.map((msg) => {
       return msg.map((m) => {
         if (m.id === messageId) {
-          m.displayType =
-            m?.displayType === MessageDisplayType.Code
-              ? MessageDisplayType.Preview
-              : MessageDisplayType.Code;
+          m.displayType = type;
         }
         return m;
       });

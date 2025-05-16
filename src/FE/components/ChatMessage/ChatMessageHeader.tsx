@@ -14,7 +14,7 @@ const ChatMessageHeader = ({
   message,
   readonly,
 }: {
-  onChangeDisplayType?: (messageId: string) => void;
+  onChangeDisplayType?: (messageId: string, type: MessageDisplayType) => void;
   message: IChatMessage;
   readonly?: boolean;
 }) => {
@@ -43,11 +43,9 @@ const ChatMessageHeader = ({
           size="sm"
           className={cn(
             'p-2 h-6',
-            (message.displayType === MessageDisplayType.Preview ||
-              message.displayType === undefined) &&
-              'bg-muted text-foreground',
+            (message.displayType === 'Preview' || message.displayType === undefined) && 'bg-muted text-foreground',
           )}
-          onClick={() => onChangeDisplayType && onChangeDisplayType(message.id)}
+          onClick={() => onChangeDisplayType && onChangeDisplayType(message.id, 'Preview')}
         >
           {t('preview')}
         </Button>
@@ -56,12 +54,11 @@ const ChatMessageHeader = ({
           size="sm"
           className={cn(
             'p-2 h-6',
-            message.displayType === MessageDisplayType.Code &&
-              'bg-muted text-foreground',
+            message.displayType === 'Raw' && 'bg-muted text-foreground',
           )}
-          onClick={() => onChangeDisplayType && onChangeDisplayType(message.id)}
+          onClick={() => onChangeDisplayType && onChangeDisplayType(message.id, 'Raw')}
         >
-          {t('code')}
+          {t('raw')}
         </Button>
       </div>
     </div>

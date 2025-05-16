@@ -170,7 +170,4 @@ export enum ReactionMessageType {
   Bad = 2,
 }
 
-export enum MessageDisplayType {
-  Code = 'CODE',
-  Preview = 'PREVIEW',
-}
+export type MessageDisplayType = 'Preview' | 'Raw';

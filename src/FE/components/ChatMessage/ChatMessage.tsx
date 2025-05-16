@@ -4,7 +4,7 @@ import { hasMultipleSpans } from '@/utils/chats';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatRole, IChat, Message, ResponseContent } from '@/types/chat';
-import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
+import { IChatMessage, MessageDisplayType, ReactionMessageType } from '@/types/chatMessage';
 
 import ChatMessageHeader from './ChatMessageHeader';
 import ResponseMessage from './ResponseMessage';
@@ -31,7 +31,7 @@ export interface Props {
   ) => void;
   onEditUserMessage?: (messageId: string, content: ResponseContent) => void;
   onDeleteMessage?: (messageId: string) => void;
-  onChangeDisplayType?: (messageId: string) => void;
+  onChangeDisplayType?: (messageId: string, type: MessageDisplayType) => void;
 }
 
 export const ChatMessage: FC<Props> = memo(
