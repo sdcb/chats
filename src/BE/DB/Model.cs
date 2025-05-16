@@ -52,7 +52,13 @@ public partial class Model
     public virtual ModelReference ModelReference { get; set; } = null!;
 
     [InverseProperty("Model")]
+    public virtual ICollection<UsageTransaction> UsageTransactions { get; set; } = new List<UsageTransaction>();
+
+    [InverseProperty("Model")]
     public virtual ICollection<UserApiCache> UserApiCaches { get; set; } = new List<UserApiCache>();
+
+    [InverseProperty("Model")]
+    public virtual ICollection<UserModelUsage> UserModelUsages { get; set; } = new List<UserModelUsage>();
 
     [InverseProperty("Model")]
     public virtual ICollection<UserModel> UserModels { get; set; } = new List<UserModel>();

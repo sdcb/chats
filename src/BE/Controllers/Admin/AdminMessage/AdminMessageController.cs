@@ -121,9 +121,9 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     Duration = x.MessageResponse.Usage.TotalDurationMs - x.MessageResponse.Usage.PreprocessDurationMs,
                     ReasoningDuration = x.MessageResponse.Usage.ReasoningDurationMs,
                     FirstTokenLatency = x.MessageResponse.Usage.FirstResponseDurationMs,
-                    ModelId = x.MessageResponse.Usage.UserModel.ModelId,
-                    ModelName = x.MessageResponse.Usage.UserModel.Model.Name,
-                    ModelProviderId = x.MessageResponse.Usage.UserModel.Model.ModelKey.ModelProviderId,
+                    ModelId = x.MessageResponse.Usage.ModelId,
+                    ModelName = x.MessageResponse.Usage.Model.Name,
+                    ModelProviderId = x.MessageResponse.Usage.Model.ModelKey.ModelProviderId,
                     Reaction = x.MessageResponse.ReactionId,
                 },
             })

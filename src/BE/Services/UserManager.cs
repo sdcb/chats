@@ -77,7 +77,11 @@ public class UserManager(ChatsDB db)
                         CreatedAt = DateTime.UtcNow,
                         User = newUser,
                     };
-                    m.ApplyTo(toReturn, creditUserId);
+                    m.ApplyTo(toReturn, creditUserId, out UsageTransaction? usageTransaction);
+                    if (usageTransaction != null)
+                    {
+                        db.UsageTransactions.Add(usageTransaction);
+                    }
                     return toReturn;
                 })
                 .ToArray();

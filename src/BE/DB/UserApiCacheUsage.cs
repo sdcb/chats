@@ -7,8 +7,6 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.BE.DB;
 
 [Table("UserApiCacheUsage")]
-[Index("ClientInfoId", Name = "IX_UserApiCacheUsage_ClientInfoId")]
-[Index("UserApiCacheId", Name = "IX_UserApiCacheUsage_UserApiCacheId")]
 public partial class UserApiCacheUsage
 {
     [Key]

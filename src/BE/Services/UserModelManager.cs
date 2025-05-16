@@ -14,7 +14,7 @@ public class UserModelManager(ChatsDB db)
             .Include(x => x.Model.ModelKey)
             .Include(x => x.Model.ModelKey.ModelProvider)
             .Include(x => x.Model.ModelReference.CurrencyCodeNavigation)
-            .Where(x => x.UserId == userId && !x.IsDeleted && !x.Model.IsDeleted && x.ModelId == modelId)
+            .Where(x => x.UserId == userId && !x.Model.IsDeleted && x.ModelId == modelId)
             .FirstOrDefaultAsync(cancellationToken);
 
         return balances;
@@ -29,7 +29,7 @@ public class UserModelManager(ChatsDB db)
             .Include(x => x.Model.ModelKey)
             .Include(x => x.Model.ModelKey.ModelProvider)
             .Include(x => x.Model.ModelReference.CurrencyCodeNavigation)
-            .Where(x => x.UserId == userId && !x.IsDeleted && !x.Model.IsDeleted && modelIds.Contains(x.ModelId))
+            .Where(x => x.UserId == userId && !x.Model.IsDeleted && modelIds.Contains(x.ModelId))
             .ToDictionaryAsync(k => k.ModelId, v => v, cancellationToken);
 
         return balances;
@@ -44,7 +44,7 @@ public class UserModelManager(ChatsDB db)
             .Include(x => x.Model.ModelKey)
             .Include(x => x.Model.ModelKey.ModelProvider)
             .Include(x => x.Model.ModelReference.CurrencyCodeNavigation)
-            .Where(x => x.UserId == userId && !x.IsDeleted && !x.Model.IsDeleted && x.Model.Name == modelName)
+            .Where(x => x.UserId == userId && !x.Model.IsDeleted && x.Model.Name == modelName)
             .FirstOrDefaultAsync(cancellationToken);
 
         return balances;
@@ -78,7 +78,7 @@ public class UserModelManager(ChatsDB db)
             .Include(x => x.Model.ModelKey)
             .Include(x => x.Model.ModelKey.ModelProvider)
             .Include(x => x.Model.ModelReference.CurrencyCodeNavigation)
-            .Where(x => x.UserId == userId && !x.IsDeleted && !x.Model.IsDeleted)
+            .Where(x => x.UserId == userId && !x.Model.IsDeleted)
             .OrderBy(x => x.Model.Order);
     }
 

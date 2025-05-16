@@ -94,8 +94,8 @@ public class InChatContext(long firstTick)
 
         UserModelUsage usage = new()
         {
-            UserModelId = userModel.Id,
-            UserModel = userModel,
+            ModelId = userModel.ModelId,
+            Model = userModel.Model,
             CreatedAt = DateTime.UtcNow,
             FinishReasonId = (byte)FinishReason,
             SegmentCount = _segmentCount,
@@ -129,7 +129,7 @@ public class InChatContext(long firstTick)
         {
             usage.UsageTransaction = new()
             {
-                UserModelId = userModel.Id,
+                ModelId = userModel.ModelId,
                 CreditUserId = userId,
                 CreatedAt = usage.CreatedAt,
                 CountAmount = -Cost.CostCount,
