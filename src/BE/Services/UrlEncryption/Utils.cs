@@ -37,7 +37,7 @@ internal class Utils
 
         if (encryptedIdBytes.Length != 16)
         {
-            throw new InvalidOperationException("Invalid encrypted ID length.");
+            throw new InvalidOperationException($"Invalid encrypted ID: {encrypted}");
         }
 
         using Aes aes = Aes.Create();
