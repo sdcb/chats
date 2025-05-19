@@ -67,6 +67,10 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<MessageContentText> MessageContentTexts { get; set; }
 
+    public virtual DbSet<MessageContentToolCall> MessageContentToolCalls { get; set; }
+
+    public virtual DbSet<MessageContentToolCallResponse> MessageContentToolCallResponses { get; set; }
+
     public virtual DbSet<MessageContentType> MessageContentTypes { get; set; }
 
     public virtual DbSet<MessageResponse> MessageResponses { get; set; }
@@ -316,6 +320,20 @@ public partial class ChatsDB : DbContext
             entity.Property(e => e.Id).ValueGeneratedNever();
 
             entity.HasOne(d => d.IdNavigation).WithOne(p => p.MessageContentText).HasConstraintName("FK_MessageContentUTF16_MessageContent");
+        });
+
+        modelBuilder.Entity<MessageContentToolCall>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.HasOne(d => d.IdNavigation).WithOne(p => p.MessageContentToolCall).HasConstraintName("FK_MessageContentToolCall_MessageContent");
+        });
+
+        modelBuilder.Entity<MessageContentToolCallResponse>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.HasOne(d => d.IdNavigation).WithOne(p => p.MessageContentToolCallResponse).HasConstraintName("FK_MessageContentToolCallResponse_MessageContent");
         });
 
         modelBuilder.Entity<MessageContentType>(entity =>

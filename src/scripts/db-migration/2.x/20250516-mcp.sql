@@ -119,3 +119,56 @@ GO
 -- 3. 删除 IsDeleted 字段
 ALTER TABLE [dbo].[UserModel] DROP COLUMN [IsDeleted]
 GO
+
+
+
+
+-- Tool Call table structure
+INSERT INTO [dbo].[ChatRole] ([Id], [Name]) VALUES (4, N'tool');
+GO
+
+INSERT INTO [dbo].[MessageContentType] ([Id], [ContentType]) VALUES
+(4, 'toolCall'),
+(5, 'toolCallResponse');
+GO
+
+
+CREATE TABLE [dbo].[MessageContentToolCall](
+    [Id] [bigint] NOT NULL,
+    [ToolCallId] [varchar](100) NULL,
+    [Name] [nvarchar](200) NOT NULL,
+    [Parameters] [nvarchar](max) NOT NULL,
+ CONSTRAINT [PK_MessageContentToolCall] PRIMARY KEY CLUSTERED 
+(
+    [Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+
+ALTER TABLE [dbo].[MessageContentToolCall]  WITH CHECK ADD  CONSTRAINT [FK_MessageContentToolCall_MessageContent] FOREIGN KEY([Id])
+REFERENCES [dbo].[MessageContent] ([Id])
+ON DELETE CASCADE
+GO
+
+ALTER TABLE [dbo].[MessageContentToolCall] CHECK CONSTRAINT [FK_MessageContentToolCall_MessageContent]
+GO
+
+
+CREATE TABLE [dbo].[MessageContentToolCallResponse](
+    [Id] [bigint] NOT NULL,
+    [ToolCallId] [varchar](100) NULL,
+    [Response] [nvarchar](max) NOT NULL,
+ CONSTRAINT [PK_MessageContentToolCallResponse] PRIMARY KEY CLUSTERED 
+(
+    [Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+
+ALTER TABLE [dbo].[MessageContentToolCallResponse]  WITH CHECK ADD  CONSTRAINT [FK_MessageContentToolCallResponse_MessageContent] FOREIGN KEY([Id])
+REFERENCES [dbo].[MessageContent] ([Id])
+ON DELETE CASCADE
+GO
+
+ALTER TABLE [dbo].[MessageContentToolCallResponse] CHECK CONSTRAINT [FK_MessageContentToolCallResponse_MessageContent]
+GO

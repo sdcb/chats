@@ -33,4 +33,10 @@ public partial class MessageContent
 
     [InverseProperty("IdNavigation")]
     public virtual MessageContentText? MessageContentText { get; set; }
+
+    [InverseProperty("IdNavigation")]
+    public virtual MessageContentToolCall? MessageContentToolCall { get; set; }
+
+    [InverseProperty("IdNavigation")]
+    public virtual MessageContentToolCallResponse? MessageContentToolCallResponse { get; set; }
 }
