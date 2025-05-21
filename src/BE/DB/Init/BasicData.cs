@@ -33,11 +33,12 @@ internal static class BasicData
 
     private static void InsertChatRoles(ChatsDB db)
     {
-        // Generated from data, hash: 88c3bc8417abed479ab20a5da2d3bf139cd21c046354d830571a60d040410616
+        // Generated from data, hash: 4450a3cbc75fbdf25b4af7ed5c400a0f1bc10b873b19b5db6c19f1fbdd7c635e
         db.ChatRoles.AddRange(
         [
             new(){ Id=2, Name="user",      },
-            new(){ Id=3, Name="assistant", }
+            new(){ Id=3, Name="assistant", },
+            new(){ Id=4, Name="tool",      }
         ]);
     }
 
@@ -75,13 +76,15 @@ internal static class BasicData
 
     private static void InsertMessageContentTypes(ChatsDB db)
     {
-        // Generated from data, hash: d61ced8657ac8b57fcab075196ea33138bbc93162b3f5747b73f986fa867f455
+        // Generated from data, hash: 766981cc3e16b456244e4580942ca36c81696dcc2e5463594cb29cf96fc83a4a
         db.MessageContentTypes.AddRange(
         [
-            new(){ Id=0, ContentType="error",     },
-            new(){ Id=1, ContentType="text",      },
-            new(){ Id=2, ContentType="fileId",    },
-            new(){ Id=3, ContentType="reasoning", }
+            new(){ Id=0, ContentType="error",            },
+            new(){ Id=1, ContentType="text",             },
+            new(){ Id=2, ContentType="fileId",           },
+            new(){ Id=3, ContentType="reasoning",        },
+            new(){ Id=4, ContentType="toolCall",         },
+            new(){ Id=5, ContentType="toolCallResponse", }
         ]);
     }
 
@@ -147,7 +150,7 @@ internal static class BasicData
 
     private static void InsertModelReferences(ChatsDB db)
     {
-        // Generated from data, hash: fc5b203158588f23b547a68bd825e839910cc2ee4fd3bfb718e38ef3acd77cdf
+        // Generated from data, hash: 2f9f2297a888738965522cd764689686df55747f21b5cf402bc67c7b6a12915f
         db.ModelReferences.AddRange(
         [
             new(){ Id=0,    ProviderId=0,  Name="Test",                                      DisplayName=null,                    PublishDate=null,                       MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=true,  AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=0, ContextWindow=2048,     MaxResponseTokens=2048,   TokenizerId=1,    InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="RMB", },
@@ -383,8 +386,8 @@ internal static class BasicData
             new(){ Id=1708, ProviderId=17, Name="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",   DisplayName="DeepSeek-R1",           PublishDate=new DateOnly(2025,  1, 20), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=32000,    MaxResponseTokens=16000,  TokenizerId=null, InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="RMB", },
             new(){ Id=1709, ProviderId=17, Name="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", DisplayName="DeepSeek-R1",           PublishDate=new DateOnly(2025,  1, 20), MinTemperature=0.00M, MaxTemperature=0.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=32000,    MaxResponseTokens=16000,  TokenizerId=null, InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="RMB", },
             new(){ Id=1710, ProviderId=17, Name="Qwen/QwQ-32B",                              DisplayName=null,                    PublishDate=new DateOnly(2025,  3,  7), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=32768,    MaxResponseTokens=8192,   TokenizerId=null, InputTokenPrice1M=1.00000M,   OutputTokenPrice1M=4.00000M,   CurrencyCode="RMB", },
-            new(){ Id=1711, ProviderId=17, Name="Qwen/Qwen3-235B-A22B",                      DisplayName="qwen3",                 PublishDate=new DateOnly(2025,  4, 28), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=131072,   MaxResponseTokens=16384,  TokenizerId=null, InputTokenPrice1M=2.50000M,   OutputTokenPrice1M=10.00000M,  CurrencyCode="RMB", },
-            new(){ Id=1712, ProviderId=17, Name="Qwen/Qwen3-32B",                            DisplayName="qwen3",                 PublishDate=new DateOnly(2025,  4, 28), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=131072,   MaxResponseTokens=16384,  TokenizerId=null, InputTokenPrice1M=1.00000M,   OutputTokenPrice1M=4.00000M,   CurrencyCode="RMB", },
+            new(){ Id=1711, ProviderId=17, Name="Qwen/Qwen3-235B-A22B",                      DisplayName="qwen3",                 PublishDate=new DateOnly(2025,  4, 28), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=131072,   MaxResponseTokens=8192,   TokenizerId=null, InputTokenPrice1M=2.50000M,   OutputTokenPrice1M=10.00000M,  CurrencyCode="RMB", },
+            new(){ Id=1712, ProviderId=17, Name="Qwen/Qwen3-32B",                            DisplayName="qwen3",                 PublishDate=new DateOnly(2025,  4, 28), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=131072,   MaxResponseTokens=8192,   TokenizerId=null, InputTokenPrice1M=1.00000M,   OutputTokenPrice1M=4.00000M,   CurrencyCode="RMB", },
             new(){ Id=1713, ProviderId=17, Name="Qwen/Qwen3-30B-A3B",                        DisplayName="qwen3",                 PublishDate=new DateOnly(2025,  4, 28), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=131072,   MaxResponseTokens=8192,   TokenizerId=null, InputTokenPrice1M=0.70000M,   OutputTokenPrice1M=2.80000M,   CurrencyCode="RMB", },
             new(){ Id=1714, ProviderId=17, Name="Qwen/Qwen3-14B",                            DisplayName="qwen3",                 PublishDate=new DateOnly(2025,  4, 28), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=131072,   MaxResponseTokens=8192,   TokenizerId=null, InputTokenPrice1M=0.50000M,   OutputTokenPrice1M=2.00000M,   CurrencyCode="RMB", },
             new(){ Id=1715, ProviderId=17, Name="Qwen/Qwen3-8B",                             DisplayName="qwen3",                 PublishDate=new DateOnly(2025,  4, 28), MinTemperature=0.00M, MaxTemperature=2.00M, AllowSearch=false, AllowVision=false, AllowSystemPrompt=true,  AllowStreaming=true,  ReasoningResponseKindId=1, ContextWindow=131072,   MaxResponseTokens=8192,   TokenizerId=null, InputTokenPrice1M=0.00000M,   OutputTokenPrice1M=0.00000M,   CurrencyCode="RMB", },
