@@ -205,11 +205,13 @@ public partial class OpenAICompatibleController(
         UserBalance userBalance = await db.UserBalances
             .Where(x => x.UserId == currentApiKey.User.Id)
             .FirstOrDefaultAsync(cancellationToken) ?? throw new InvalidOperationException("User balance not found.");
+        UserModelBalanceCalculator calc = new(BalanceInitialInfo.FromDB([userModel], userBalance.Balance), []);
+        ScopedBalanceCalculator scopedCalc = calc.WithSpan(0);
         BadRequestObjectResult? errorToReturn = null;
         bool hasSuccessYield = false;
         try
         {
-            await foreach (InternalChatSegment seg in icc.Run(userBalance.Balance, userModel, s.ChatStreamedSimulated(cco.Stream, [.. cco.Messages!], cco.ToCleanCco(), cancellationToken)))
+            await foreach (InternalChatSegment seg in icc.Run(scopedCalc, userModel, s.ChatStreamedSimulated(cco.Stream, [.. cco.Messages!], cco.ToCleanCco(), cancellationToken)))
             {
                 if (seg.Items.Count == 0) continue;
 
@@ -268,15 +270,15 @@ public partial class OpenAICompatibleController(
         UserApiUsage usage = new()
         {
             ApiKeyId = currentApiKey.ApiKeyId,
-            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, userModel, await clientInfoIdTask, isApi: true),
+            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, scopedCalc, userModel, await clientInfoIdTask, isApi: true),
         };
         db.UserApiUsages.Add(usage);
         await db.SaveChangesAsync(cancellationToken);
-        if (icc.Cost.CostBalance > 0)
+        if (calc.BalanceCost > 0)
         {
             _ = balanceService.AsyncUpdateBalance(currentApiKey.User.Id, CancellationToken.None);
         }
-        if (icc.Cost.CostUsage)
+        if (calc.UsageCosts.Any())
         {
             _ = balanceService.AsyncUpdateUsage([userModel!.Id], CancellationToken.None);
         }

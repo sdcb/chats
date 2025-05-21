@@ -228,6 +228,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         await YieldResponse(SseResponseLine.StopId(stopId));
 
         UserBalance userBalance = await db.UserBalances.Where(x => x.UserId == currentUser.Id).SingleAsync(cancellationToken);
+        UserModelBalanceCalculator cost = new UserModelBalanceCalculator(BalanceInitialInfo.FromDB(userModels.Values, userBalance.Balance), []);
 
         Channel<SseResponseLine>[] channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
         Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache = [];
@@ -244,7 +245,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 userModels[span.ChatConfig.ModelId],
                 messageTree,
                 newDbUserMessage,
-                userBalance,
+                cost.WithSpan(span.SpanId),
                 clientInfoIdTask,
                 imageFileCache,
                 channels[index].Writer,
@@ -326,15 +327,22 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         ChatSpanResponse[] resps = await Task.WhenAll(streamTasks);
 
         // finish costs
-        if (resps.Any(x => x.Cost.CostBalance > 0))
+        if (cost.BalanceCost > 0)
         {
             await balanceService.UpdateBalance(db, currentUser.Id, cancellationToken);
         }
-        if (resps.Any(x => x.Cost.CostUsage))
+        if (cost.UsageCosts.Any())
         {
-            foreach (UserModel um in userModels.Values)
+            foreach (BalanceInitialUsageInfo um in cost.UsageCosts)
             {
-                await balanceService.UpdateUsage(db, um.Id, cancellationToken);
+                if (userModels.TryGetValue(um.ModelId, out UserModel? userModel))
+                {
+                    await balanceService.UpdateUsage(db, userModel.Id, cancellationToken);
+                }
+                else
+                {
+                    logger.LogError("UserModel not found for model id: {modelId}", um.ModelId);
+                }
             }
         }
 
@@ -369,7 +377,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         UserModel userModel,
         IEnumerable<MessageLiteDto> messageTree,
         Message? dbUserMessage,
-        UserBalance userBalance,
+        ScopedBalanceCalculator calc,
         Task<int> clientInfoIdTask,
         Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache,
         ChannelWriter<SseResponseLine> writer,
@@ -404,7 +412,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             using ChatService s = chatFactory.CreateChatService(userModel.Model);
 
             bool responseStated = false, reasoningStarted = false;
-            await foreach (InternalChatSegment seg in icc.Run(userBalance.Balance, userModel, s.ChatStreamedFEProcessed(messageToSend, cco, ced, cancellationToken)))
+            await foreach (InternalChatSegment seg in icc.Run(calc, userModel, s.ChatStreamedFEProcessed(messageToSend, cco, ced, cancellationToken)))
             {
                 foreach (ChatSegmentItem item in seg.Items)
                 {
@@ -517,7 +525,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         {
             await writer.WriteAsync(SseResponseLine.Error(chatSpan.SpanId, errorText), cancellationToken);
         }
-        UserModelUsage usage = icc.ToUserModelUsage(currentUser.Id, userModel, await clientInfoIdTask, isApi: false);
+        UserModelUsage usage = icc.ToUserModelUsage(currentUser.Id, calc, userModel, await clientInfoIdTask, isApi: false);
         dbAssistantMessage.MessageResponse = new MessageResponse()
         {
             Usage = usage,
@@ -527,7 +535,6 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         return new ChatSpanResponse()
         {
             AssistantMessage = dbAssistantMessage,
-            Cost = icc.Cost,
             SpanId = chatSpan.SpanId,
         };
     }
