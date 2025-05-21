@@ -7,160 +7,207 @@ using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 
-public record SseResponseLine
+/// <summary>
+/// SSE 一行的抽象基类，实际序列化时由 k 字段区分不同派生类型。
+/// </summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "k")]
+[JsonDerivedType(typeof(SegmentLine          ), (int)SseResponseKind.Segment          )]
+[JsonDerivedType(typeof(ReasoningSegmentLine ), (int)SseResponseKind.ReasoningSegment )]
+[JsonDerivedType(typeof(StartResponseLine    ), (int)SseResponseKind.StartResponse    )]
+[JsonDerivedType(typeof(StartReasoningLine   ), (int)SseResponseKind.StartReasoning   )]
+[JsonDerivedType(typeof(ErrorLine            ), (int)SseResponseKind.Error            )]
+[JsonDerivedType(typeof(ResponseMessageLine  ), (int)SseResponseKind.ResponseMessage  )]
+[JsonDerivedType(typeof(UserMessageLine      ), (int)SseResponseKind.UserMessage      )]
+[JsonDerivedType(typeof(StopIdLine           ), (int)SseResponseKind.StopId           )]
+[JsonDerivedType(typeof(UpdateTitleLine      ), (int)SseResponseKind.UpdateTitle      )]
+[JsonDerivedType(typeof(TitleSegmentLine     ), (int)SseResponseKind.TitleSegment     )]
+[JsonDerivedType(typeof(ChatLeafMessageIdLine), (int)SseResponseKind.ChatLeafMessageId)]
+[JsonDerivedType(typeof(ImageGeneratingLine  ), (int)SseResponseKind.ImageGenerating  )]
+[JsonDerivedType(typeof(ImageGeneratedLine   ), (int)SseResponseKind.ImageGenerated   )]
+[JsonDerivedType(typeof(EndLine              ), (int)SseResponseKind.End              )]
+public abstract record SseResponseLine
 {
-    [JsonPropertyName("k")]
-    public required SseResponseKind Kind { get; init; }
+    #region 工厂方法
 
-    [JsonPropertyName("i"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public byte? SpanId { get; init; }
+    public static SegmentLine CreateSegment(byte spanId, string segment) =>
+        new() { SpanId = spanId, Segment = segment };
 
-    [JsonPropertyName("r")]
-    public required object Result { get; init; }
+    public static ReasoningSegmentLine ReasoningSegment(byte spanId, string segment) =>
+        new() { SpanId = spanId, Segment = segment };
 
-    public static SseResponseLine Segment(byte spanId, string segment)
-    {
-        return new SseResponseLine
-        {
-            SpanId = spanId,
-            Result = segment,
-            Kind = SseResponseKind.Segment,
-        };
-    }
+    public static StartResponseLine StartResponse(byte spanId, int reasoningTimeMs) =>
+        new() { SpanId = spanId, ReasoningTimeMs = reasoningTimeMs };
 
-    public static SseResponseLine ReasoningSegment(byte spanId, string segment)
-    {
-        return new SseResponseLine
-        {
-            SpanId = spanId,
-            Result = segment,
-            Kind = SseResponseKind.ReasoningSegment,
-        };
-    }
+    public static StartReasoningLine StartReasoning(byte spanId) =>
+        new() { SpanId = spanId };
 
-    public static SseResponseLine StartResponse(byte spanId, int reasoningTimeMs)
-    {
-        return new SseResponseLine
-        {
-            SpanId = spanId,
-            Result = reasoningTimeMs,
-            Kind = SseResponseKind.StartResponse,
-        };
-    }
+    public static ErrorLine CreateError(byte spanId, string error) =>
+        new() { SpanId = spanId, Error = error };
 
-    public static SseResponseLine StartReasoning(byte spanId)
-    {
-        return new SseResponseLine
-        {
-            SpanId = spanId,
-            Result = null!,
-            Kind = SseResponseKind.StartReasoning,
-        };
-    }
-
-    public static SseResponseLine Error(byte spanId, string error)
-    {
-        return new SseResponseLine
-        {
-            Result = error,
-            SpanId = spanId,
-            Kind = SseResponseKind.Error,
-        };
-    }
-
-    public static SseResponseLine ResponseMessage(
+    public static ResponseMessageLine ResponseMessage(
         byte spanId,
         Message assistantMessage,
         IUrlEncryptionService urlEncryptionService,
         FileUrlProvider fup)
     {
-        ChatMessageTemp assistantMessageTemp = ChatMessageTemp.FromDB(assistantMessage);
-        MessageDto assistantMessageDto = assistantMessageTemp.ToDto(urlEncryptionService, fup);
-        return new SseResponseLine
-        {
-            SpanId = spanId,
-            Result = assistantMessageDto,
-            Kind = SseResponseKind.ResponseMessage,
-        };
+        ChatMessageTemp assistantTemp = ChatMessageTemp.FromDB(assistantMessage);
+        MessageDto dto = assistantTemp.ToDto(urlEncryptionService, fup);
+        return new() { SpanId = spanId, Message = dto };
     }
 
-    public static SseResponseLine UserMessage(
+    public static UserMessageLine UserMessage(
         Message userMessage,
         IUrlEncryptionService urlEncryptionService,
         FileUrlProvider fup)
     {
-        ChatMessageTemp userMessageTemp = ChatMessageTemp.FromDB(userMessage);
-        MessageDto userMessageDto = userMessageTemp.ToDto(urlEncryptionService, fup);
-        return new SseResponseLine
-        {
-            Result = userMessageDto,
-            Kind = SseResponseKind.UserMessage,
-        };
+        ChatMessageTemp userTemp = ChatMessageTemp.FromDB(userMessage);
+        MessageDto dto = userTemp.ToDto(urlEncryptionService, fup);
+        return new() { Message = dto };
     }
 
-    public static SseResponseLine StopId(string stopId)
-    {
-        return new SseResponseLine
-        {
-            Result = stopId,
-            Kind = SseResponseKind.StopId,
-        };
-    }
+    public static StopIdLine CreateStopId(string stopId) =>
+        new() { StopId = stopId };
 
-    public static SseResponseLine UpdateTitle(string title)
-    {
-        return new SseResponseLine
-        {
-            Result = title,
-            Kind = SseResponseKind.UpdateTitle,
-        };
-    }
+    public static UpdateTitleLine UpdateTitle(string title) =>
+        new() { Title = title };
 
-    public static SseResponseLine TitleSegment(string titleSegment)
-    {
-        return new SseResponseLine
-        {
-            Result = titleSegment,
-            Kind = SseResponseKind.TitleSegment,
-        };
-    }
+    public static TitleSegmentLine CreateTitleSegment(string titleSegment) =>
+        new() { TitleSegment = titleSegment };
 
-    public static SseResponseLine ChatLeafMessageId(long leafMessageId, IUrlEncryptionService idEncryption)
-    {
-        return new SseResponseLine
-        {
-            Result = idEncryption.EncryptMessageId(leafMessageId),
-            Kind = SseResponseKind.ChatLeafMessageId,
-        };
-    }
+    public static ChatLeafMessageIdLine ChatLeafMessageId(
+        long leafMessageId,
+        IUrlEncryptionService idEncryption) =>
+        new() { EncryptedLeafMessageId = idEncryption.EncryptMessageId(leafMessageId) };
 
-    public static SseResponseLine ImageGenerating(byte spanId, FileDto fileDto)
-    {
-        return new SseResponseLine
-        {
-            SpanId = spanId,
-            Result = fileDto,
-            Kind = SseResponseKind.ImageGenerating,
-        };
-    }
+    public static ImageGeneratingLine ImageGenerating(byte spanId, FileDto fileDto) =>
+        new() { SpanId = spanId, File = fileDto };
 
-    public static SseResponseLine ImageGenerated(byte spanId, FileDto fileDto)
-    {
-        return new SseResponseLine
-        {
-            SpanId = spanId,
-            Result = fileDto,
-            Kind = SseResponseKind.ImageGenerated,
-        };
-    }
+    public static ImageGeneratedLine ImageGenerated(byte spanId, FileDto payload) =>
+        new() { SpanId = spanId, File = payload };
 
-    public static SseResponseLine ImageGeneratedTemp(byte spanId, ImageChatSegment seg)
-    {
-        return new SseResponseLine
-        {
-            SpanId = spanId,
-            Result = seg,
-            Kind = SseResponseKind.ImageGenerated,
-        };
-    }
+    public static TempImageGeneratedLine TempImageGenerated(byte spanId, ImageChatSegment payload) =>
+        new() { SpanId = spanId, Image = payload };
+
+    public static EndLine End(byte spanId, Message message) => new() { SpanId = spanId, Message = message };
+
+    #endregion
 }
+
+#region 派生 record
+
+public sealed record SegmentLine : SseResponseLine
+{
+    [JsonPropertyName("i")]
+    public required byte SpanId { get; init; }
+
+    [JsonPropertyName("r")]
+    public required string Segment { get; init; }
+}
+
+public sealed record ReasoningSegmentLine : SseResponseLine
+{
+    [JsonPropertyName("i")]
+    public required byte SpanId { get; init; }
+
+    [JsonPropertyName("r")]
+    public required string Segment { get; init; }
+}
+
+public sealed record StartResponseLine : SseResponseLine
+{
+    [JsonPropertyName("i")]
+    public required byte SpanId { get; init; }
+
+    [JsonPropertyName("r")]
+    public required int ReasoningTimeMs { get; init; }
+}
+
+public sealed record StartReasoningLine : SseResponseLine
+{
+    [JsonPropertyName("i")]
+    public required byte SpanId { get; init; }
+}
+
+public sealed record ErrorLine : SseResponseLine
+{
+    [JsonPropertyName("i")]
+    public required byte SpanId { get; init; }
+
+    [JsonPropertyName("r")]
+    public required string Error { get; init; }
+}
+
+public sealed record ResponseMessageLine : SseResponseLine
+{
+    [JsonPropertyName("i")]
+    public required byte SpanId { get; init; }
+
+    [JsonPropertyName("r")]
+    public required MessageDto Message { get; init; }
+}
+
+public sealed record UserMessageLine : SseResponseLine
+{
+    [JsonPropertyName("r")]
+    public required MessageDto Message { get; init; }
+}
+
+public sealed record StopIdLine : SseResponseLine
+{
+    [JsonPropertyName("r")]
+    public required string StopId { get; init; }
+}
+
+public sealed record UpdateTitleLine : SseResponseLine
+{
+    [JsonPropertyName("r")]
+    public required string Title { get; init; }
+}
+
+public sealed record TitleSegmentLine : SseResponseLine
+{
+    [JsonPropertyName("r")]
+    public required string TitleSegment { get; init; }
+}
+
+public sealed record ChatLeafMessageIdLine : SseResponseLine
+{
+    [JsonPropertyName("r")]
+    public required string EncryptedLeafMessageId { get; init; }
+}
+
+public sealed record ImageGeneratingLine : SseResponseLine
+{
+    [JsonPropertyName("i")]
+    public required byte SpanId { get; init; }
+
+    [JsonPropertyName("r")]
+    public required FileDto File { get; init; }
+}
+
+public sealed record TempImageGeneratedLine : SseResponseLine
+{
+    public required byte SpanId { get; init; }
+
+    public required ImageChatSegment Image { get; init; }
+}
+
+public sealed record ImageGeneratedLine : SseResponseLine
+{
+    [JsonPropertyName("i")]
+    public required byte SpanId { get; init; }
+
+    [JsonPropertyName("r")]
+    public required FileDto File { get; init; }
+}
+
+public sealed record EndLine : SseResponseLine
+{
+    [JsonPropertyName("i")]
+    public required byte SpanId { get; init; }
+
+    [JsonPropertyName("r")]
+    public required Message Message { get; init; }
+}
+
+#endregion
