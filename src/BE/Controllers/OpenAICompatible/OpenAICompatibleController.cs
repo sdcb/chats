@@ -206,7 +206,7 @@ public partial class OpenAICompatibleController(
             .Where(x => x.UserId == currentApiKey.User.Id)
             .FirstOrDefaultAsync(cancellationToken) ?? throw new InvalidOperationException("User balance not found.");
         UserModelBalanceCalculator calc = new(BalanceInitialInfo.FromDB([userModel], userBalance.Balance), []);
-        ScopedBalanceCalculator scopedCalc = calc.WithSpan(0);
+        ScopedBalanceCalculator scopedCalc = calc.WithScoped("0");
         BadRequestObjectResult? errorToReturn = null;
         bool hasSuccessYield = false;
         try

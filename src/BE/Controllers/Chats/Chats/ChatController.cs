@@ -245,7 +245,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 userModels[span.ChatConfig.ModelId],
                 messageTree,
                 newDbUserMessage,
-                cost.WithSpan(span.SpanId),
+                cost.WithScoped(span.SpanId.ToString()),
                 clientInfoIdTask,
                 imageFileCache,
                 channels[index].Writer,
