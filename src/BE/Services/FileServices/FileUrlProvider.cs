@@ -40,7 +40,7 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
         }
     }
 
-    public FileDto CreateFileDto(DB.File file)
+    public FileDto CreateFileDto(DB.File file, bool tryWithUrl = true)
     {
         if (file.FileContentType == null)
         {
@@ -48,7 +48,7 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
         }
 
         string? downloadUrl = null;
-        if (file.FileService != null)
+        if (tryWithUrl && file.FileService != null)
         {
             IFileService fs = fileServiceFactory.Create(file.FileService);
             downloadUrl = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file)).ToString();

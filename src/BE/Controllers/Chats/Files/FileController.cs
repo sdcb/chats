@@ -202,7 +202,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
             .Include(x => x.FileContentType)
             .Where(x => x.CreateUserId == currentUser.Id)
             .OrderByDescending(x => x.Id);
-        PagedResult<FileDto> pagedResult = await PagedResult.FromTempQuery(queryable, query, fdup.CreateFileDto, cancellationToken);
+        PagedResult<FileDto> pagedResult = await PagedResult.FromTempQuery(queryable, query, f => fdup.CreateFileDto(f), cancellationToken);
         return Ok(pagedResult);
     }
 
