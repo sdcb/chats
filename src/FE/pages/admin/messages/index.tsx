@@ -49,7 +49,7 @@ export default function Messages() {
   };
 
   useEffect(() => {
-    init();
+    init(query);
   }, [pagination]);
 
   return (

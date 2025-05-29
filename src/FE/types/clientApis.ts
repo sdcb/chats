@@ -308,3 +308,14 @@ export interface GetUsageStatResult {
   avgPostprocessDurationMs: number;
   avgTotalDurationMs: number;
 }
+
+export interface GetUserFilesParams extends Paging {
+  skip?: number;
+}
+
+export interface GetUserFilesResult {
+  id: string;
+  fileName: string;
+  contentType: string;
+  url: string;
+}

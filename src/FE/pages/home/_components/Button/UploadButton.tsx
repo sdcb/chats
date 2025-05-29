@@ -56,7 +56,7 @@ const UploadButton: React.FunctionComponent<Props> = ({
         onClick={() => {
           uploadRef.current?.click();
         }}
-        className="rounded-sm p-0 m-0 h-auto w-auto bg-transparent hover:bg-muted"
+        className="rounded-sm p-1 m-1 h-auto w-auto bg-transparent hover:bg-muted"
       >
         {children}
       </Button>

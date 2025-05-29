@@ -15,6 +15,7 @@
   "AI": "AI",
   "You": "You",
   "Send": "Send",
+  "Line break": "Line break",
   "click if using a .env.local file": "click if using a .env.local file",
   "Message limit is {{maxLength}} characters. You have entered {{valueLength}} characters.": "Message limit is {{maxLength}} characters. You have entered {{valueLength}} characters.",
   "Please enter a message": "Please enter a message",
@@ -202,5 +203,6 @@
   "Chats Admin Panel": "Chats Admin Panel",
   "Go to upgrade": "Go to upgrade",
   "preview": "Preview",
-  "code": "Code"
+  "code": "Code",
+  "The number of attachments sent has reached the maximum limit": "The number of attachments sent has reached the maximum limit"
 }

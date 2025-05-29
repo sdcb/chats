@@ -15,6 +15,7 @@
   "AI": "AI",
   "You": "你",
   "Send": "发送",
+  "Line break": "换行",
   "click if using a .env.local file": "click if using a .env.local file",
   "Message limit is {{maxLength}} characters. You have entered {{valueLength}} characters.": "消息字数限制为 {{maxLength}} 个字符。您已输入 {{valueLength}} 个字符。",
   "Please enter a message": "请输入一条消息",
@@ -445,5 +446,6 @@
   "Not all models available": "并非所有模型都可用",
   "Model not available": "模型不可用",
   "preview": "预览",
-  "raw": "原始"
+  "raw": "原始",
+   "The number of attachments sent has reached the maximum limit": "发送的附件数量已达到最大限制"
 }

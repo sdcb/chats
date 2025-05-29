@@ -17,6 +17,7 @@ const PaginationContainer = ({
   totalCount,
   onPagingChange,
   showPageNumbers = true,
+  showTotalCount = true,
 }: {
   page: number;
   pageSize: number;
@@ -24,6 +25,7 @@ const PaginationContainer = ({
   totalCount: number;
   onPagingChange: (page: number, pageSize: number) => void;
   showPageNumbers?: boolean;
+  showTotalCount?: boolean;
 }) => {
   const { t } = useTranslation();
   
@@ -80,17 +82,19 @@ const PaginationContainer = ({
 
   return (
     <div className="flex w-full p-4 items-center justify-between text-gray-500 text-sm flex-wrap">
-      <div>
-        {t(
-          'Showing {{currentCount}} - {{currentTotalCount}} total {{totalCount}}',
-          {
+      {showTotalCount && (
+        <div>
+          {t(
+            'Showing {{currentCount}} - {{currentTotalCount}} total {{totalCount}}',
+            {
             currentCount: page === 1 ? 1 : (page - 1) * pageSize,
             currentTotalCount:
               currentCount < pageSize ? totalCount : page * pageSize,
             totalCount: totalCount,
           },
         )}
-      </div>
+        </div>
+      )}
       <div>
         <Pagination className="justify-normal">
           <PaginationContent className="flex-wrap">

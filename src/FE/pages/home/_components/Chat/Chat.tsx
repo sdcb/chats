@@ -69,6 +69,7 @@ import {
   putResponseMessageEditInPlace,
   responseContentToRequest,
 } from '@/apis/clientApis';
+import { cn } from '@/lib/utils';
 
 const Chat = memo(() => {
   const { t } = useTranslation();
@@ -81,6 +82,7 @@ const Chat = memo(() => {
       models,
       modelMap,
       showChatBar,
+      showChatInput,
     },
 
     hasModel,
@@ -757,7 +759,10 @@ const Chat = memo(() => {
     messageDispatch(setMessages(msgs));
   };
 
-  const handleChangeDisplayType = (messageId: string, type: MessageDisplayType) => {
+  const handleChangeDisplayType = (
+    messageId: string,
+    type: MessageDisplayType,
+  ) => {
     const msgs = messages.map((x) => {
       if (x.id === messageId) {
         x.displayType = type;
@@ -783,7 +788,7 @@ const Chat = memo(() => {
       <div className="flex flex-col">
         <div className="relative h-16">{selectedChat && <ChatHeader />}</div>
         <div
-          className="relative h-[calc(100vh-192px)] overflow-x-hidden scroll-container w-full"
+          className="relative h-[calc(100vh-64px)] overflow-x-hidden scroll-container w-full"
           ref={chatContainerRef}
           onScroll={handleScroll}
         >
@@ -815,20 +820,20 @@ const Chat = memo(() => {
 
           {!hasModel() && !selectedChat?.id && <NoModel />}
           {hasModel() && !selectedChat?.id && <NoChat />}
+          <div className={cn(showChatInput ? 'h-40' : 'h-2')}></div>
         </div>
-        <div className="relative h-32">
-          {hasModel() && selectedChat && (
-            <ChatInput
-              onSend={(message) => {
-                const lastMessage = getSelectedMessagesLastActiveMessage();
-                handleSend(message, lastMessage?.id);
-              }}
-              onScrollDownClick={handleScrollDown}
-              showScrollDownButton={showScrollDownButton}
-              onChangePrompt={handleChangePrompt}
-            />
-          )}
-        </div>
+
+        {hasModel() && selectedChat && (
+          <ChatInput
+            onSend={(message) => {
+              const lastMessage = getSelectedMessagesLastActiveMessage();
+              handleSend(message, lastMessage?.id);
+            }}
+            onScrollDownClick={handleScrollDown}
+            showScrollDownButton={showScrollDownButton}
+            onChangePrompt={handleChangePrompt}
+          />
+        )}
       </div>
     </div>
   );

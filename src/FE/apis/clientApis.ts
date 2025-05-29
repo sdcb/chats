@@ -21,6 +21,8 @@ import {
   GetUserApiKeyResult,
   GetUserBalanceResult,
   GetUserChatGroupWithMessagesResult as GetUserChatGroupWithChatsResult,
+  GetUserFilesResult,
+  GetUserFilesParams,
   LoginConfigsResult,
   ModelUsageDto,
   PostChatGroupParams,
@@ -63,10 +65,9 @@ export const getChatsByPaging = (
 ): Promise<PageResult<ChatResult[]>> => {
   const { groupId, query, page, pageSize } = params;
   const fetchService = useFetch();
+  const groupIdQuery = groupId ? `groupId=${groupId}` : '';
   return fetchService.get(
-    `/api/user/chats?groupId=${
-      groupId || ''
-    }&page=${page}&pageSize=${pageSize}&query=${query || ''}`,
+    `/api/user/chats?${groupIdQuery}&page=${page}&pageSize=${pageSize}&query=${query || ''}`,
   );
 };
 
@@ -514,3 +515,11 @@ export const getUsageStat = (params: GetUsageParams) => {
     params: params,
   });
 };
+
+export const getUserFiles = (params: GetUserFilesParams) => {
+  const fetchServer = useFetch();
+  return fetchServer.get<PageResult<GetUserFilesResult[]>>('/api/file', {
+    params: params,
+  });
+};
+
