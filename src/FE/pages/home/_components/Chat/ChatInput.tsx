@@ -348,7 +348,7 @@ const ChatInput = ({
                   ))}
               </div>
 
-              {showScrollDownButton && (
+              {showScrollDownButton && !isFullWriting && (
                 <Button
                   className="absolute left-1/2 -translate-x-1/2 -top-16 w-auto h-auto rounded-full bg-card hover:bg-card z-10"
                   onClick={onScrollDownClick}
