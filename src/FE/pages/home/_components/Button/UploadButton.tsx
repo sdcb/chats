@@ -67,6 +67,7 @@ const UploadButton: React.FunctionComponent<Props> = ({
         id="upload"
         type="file"
         accept="image/*"
+        capture="environment"
       />
     </div>
   );
