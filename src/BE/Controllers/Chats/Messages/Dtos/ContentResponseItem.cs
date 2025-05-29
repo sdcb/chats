@@ -39,7 +39,7 @@ public abstract record ContentResponseItem
             DBMessageContentType.FileId => new FileResponseItem()
             {
                 Id = encryptedMessageContentId,
-                Content = content.MessageContentFile!.File.ToFileDto(urlEncryption)
+                Content = fup.CreateFileDto(content.MessageContentFile!.File)
             },
             _ => throw new NotSupportedException(),
         };

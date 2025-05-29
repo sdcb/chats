@@ -301,8 +301,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     fs ??= await FileService.GetDefault(db, cancellationToken) ?? throw new InvalidOperationException("Default file service config not found.");
                     DB.File file = await dbFileService.StoreImage(image, await clientInfoIdTask, fs, cancellationToken: default);
                     tcs.SetResult(file);
-
-                    await YieldResponse(SseResponseLine.ImageGenerated(line.SpanId!.Value, file.ToFileDto(idEncryption)));
+                    await YieldResponse(SseResponseLine.ImageGenerated(line.SpanId!.Value, fup.CreateFileDto(file, tryWithUrl: false)));
                 }
                 catch (Exception e)
                 {
@@ -344,8 +343,9 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         Dictionary<long, MessageContent[]> contents = await db.MessageContents
             .Where(x => messageIds.Contains(x.MessageId))
             .Include(x => x.MessageContentBlob)
-            .Include(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
-            .Include(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileImageInfo)
+            .Include(x => x.MessageContentFile).ThenInclude(x => x!.File.FileService)
+            .Include(x => x.MessageContentFile).ThenInclude(x => x!.File.FileImageInfo)
+            .Include(x => x.MessageContentFile).ThenInclude(x => x!.File.FileContentType)
             .Include(x => x.MessageContentText)
             .GroupBy(x => x.MessageId)
             .ToDictionaryAsync(k => k.Key, v => v.ToArray(), cancellationToken);

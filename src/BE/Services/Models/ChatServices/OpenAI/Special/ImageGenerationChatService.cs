@@ -7,6 +7,7 @@ using OpenAI.Chat;
 using Chats.BE.DB.Enums;
 using System.Text.Json.Nodes;
 using System.ClientModel.Primitives;
+using Chats.BE.Services.FileServices;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
@@ -70,24 +71,33 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
             //        EndUserId = options.EndUserId,
             //    }, cancellationToken);
             MultiPartFormDataBinaryContent form = new();
-            (Uri url, HttpResponseMessage resp)[] downloadedImages = await Task.WhenAll(images.GroupBy(x => x.ImageUri).Select(async image =>
+            Dictionary<Uri, HttpResponseMessage> downloadedFiles = (await Task.WhenAll(images
+                .Where(x => x.ImageUri != null)
+                .GroupBy(x => x.ImageUri).Select(async image =>
             {
                 HttpResponseMessage resp = await http.GetAsync(image.Key, cancellationToken);
                 return (url: image.Key, resp);
-            }));
-            Dictionary<Uri, HttpResponseMessage> files = downloadedImages.ToDictionary(k => k.url, v => v.resp);
+            })))
+            .ToDictionary(k => k.url, v => v.resp);
 
             foreach (ChatMessageContentPart image in images)
             {
-                HttpResponseMessage file = files[image.ImageUri];
-                string fileName = Path.GetFileName(image.ImageUri.LocalPath);
-                if (fileName.Contains("mask.png"))
+                if (image.ImageUri != null)
                 {
-                    form.Add(await file.Content.ReadAsStreamAsync(cancellationToken), "mask", fileName, file.Content.Headers.ContentType?.ToString());
+                    HttpResponseMessage file = downloadedFiles[image.ImageUri];
+                    string fileName = Path.GetFileName(image.ImageUri.LocalPath);
+                    if (fileName.Contains("mask.png"))
+                    {
+                        form.Add(await file.Content.ReadAsStreamAsync(cancellationToken), "mask", fileName, file.Content.Headers.ContentType?.ToString());
+                    }
+                    else
+                    {
+                        form.Add(await file.Content.ReadAsStreamAsync(cancellationToken), "image[]", fileName, file.Content.Headers.ContentType?.ToString());
+                    }
                 }
                 else
                 {
-                    form.Add(await file.Content.ReadAsStreamAsync(cancellationToken), "image[]", fileName, file.Content.Headers.ContentType?.ToString());
+                    form.Add(image.ImageBytes, "image[]", image.Filename ?? DBFileDef.MakeFileNameByContentType(image.ImageBytesMediaType), image.ImageBytesMediaType);
                 }
             }
             form.Add(prompt, "prompt");

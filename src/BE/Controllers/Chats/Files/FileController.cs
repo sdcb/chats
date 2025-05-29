@@ -109,7 +109,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         db.Files.Add(dbFile);
         await db.SaveChangesAsync(cancellationToken);
 
-        FileDto fileDto = dbFile.ToFileDto(urlEncryption);
+        FileDto fileDto = fdup.CreateFileDto(dbFile);
         return Created(default(string), value: fileDto);
     }
 
@@ -202,7 +202,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
             .Include(x => x.FileContentType)
             .Where(x => x.CreateUserId == currentUser.Id)
             .OrderByDescending(x => x.Id);
-        PagedResult<FileDto> pagedResult = await PagedResult.FromTempQuery(queryable, query, x => x.ToFileDto(urlEncryption), cancellationToken);
+        PagedResult<FileDto> pagedResult = await PagedResult.FromTempQuery(queryable, query, f => fdup.CreateFileDto(f), cancellationToken);
         return Ok(pagedResult);
     }
 

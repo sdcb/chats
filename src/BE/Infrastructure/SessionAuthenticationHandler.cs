@@ -28,7 +28,7 @@ public class SessionAuthenticationHandler(
             }
             else
             {
-                return AuthenticateResult.Fail("Invalid authorization header format");
+                return AuthenticateResult.NoResult();
             }
         }
 

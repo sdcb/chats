@@ -32,10 +32,16 @@ export interface Message {
 export interface FileDef {
   id: string;
   contentType: string;
-  fileName: string;
+  fileName: string | null;
+  url: string | null;
 }
 
 export function getFileUrl(file: FileDef | string): string {
+  const url = typeof file === 'string' ? null : file.url;
+  if (url) {
+    return url;
+  }
+
   const fileId = typeof file === 'string' ? file : file.id;
   return `${getApiUrl()}/api/file/private/${fileId}?token=${getUserSession()}`;
 }

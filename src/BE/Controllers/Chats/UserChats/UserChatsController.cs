@@ -56,9 +56,9 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
     }
 
     [HttpGet]
-    public async Task<ActionResult<PagedResult<ChatsResponse>>> GetChatsForGroup([FromQuery] ChatsQuery request, CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<ChatsResponse>>> GetChatsForGroup([FromQuery] ChatsQueryDto request, CancellationToken cancellationToken)
     {
-        PagedResult<ChatsResponse> result = await GetChatsForGroupAsync(db, currentUser, idEncryption, request, cancellationToken);
+        PagedResult<ChatsResponse> result = await GetChatsForGroupAsync(db, currentUser, idEncryption, request.ToChatsQuery(), cancellationToken);
         return Ok(result);
     }
 

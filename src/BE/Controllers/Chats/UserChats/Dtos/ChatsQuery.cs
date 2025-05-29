@@ -12,3 +12,8 @@ public record ChatsQuery(string? GroupId, string? Query) : QueryPagingRequest(Qu
         this.PageSize = PageSize;
     }
 }
+
+public record ChatsQueryDto(string? GroupId, int Page, int PageSize, string? Query)
+{
+    public ChatsQuery ToChatsQuery() => new(GroupId, Page, PageSize, Query);
+}
