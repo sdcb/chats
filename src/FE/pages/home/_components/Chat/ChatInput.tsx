@@ -350,7 +350,7 @@ const ChatInput = ({
 
               {showScrollDownButton && (
                 <Button
-                  className="absolute left-1/2 -translate-x-1/2 -top-14 w-auto h-auto rounded-full bg-card hover:bg-card z-10"
+                  className="absolute left-1/2 -translate-x-1/2 -top-16 w-auto h-auto rounded-full bg-card hover:bg-card z-10"
                   onClick={onScrollDownClick}
                 >
                   <IconArrowDown />
@@ -530,14 +530,14 @@ const ChatInput = ({
         <div className="absolute bottom-0 left-0 w-full border-transparent bg-background">
           {showScrollDownButton && (
             <Button
-              className="absolute left-1/2 -translate-x-1/2 -top-14 w-auto h-auto rounded-full bg-card hover:bg-card z-10"
+              className="absolute left-1/2 -translate-x-1/2 -top-20 w-auto h-auto rounded-full bg-card hover:bg-card z-10"
               onClick={onScrollDownClick}
             >
               <IconArrowDown />
             </Button>
           )}
           <Button
-            className="absolute left-1/2 -translate-x-1/2 -top-4 w-auto h-5 bg-card hover:bg-card z-10"
+            className="absolute left-1/2 -translate-x-1/2 -top-8 w-auto h-5 bg-card hover:bg-card z-10"
             onClick={handleToggleVisibility}
           >
             <IconArrowCompactDown className={'rotate-180'} />
