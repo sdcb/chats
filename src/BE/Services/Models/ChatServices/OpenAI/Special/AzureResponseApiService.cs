@@ -176,7 +176,7 @@ public class AzureResponseApiService(Model model) : ChatService(model)
                     ChatMessageContentPartKind.Image => part switch
                     {
                         { FileId: not null } => ResponseContentPart.CreateInputImagePart(part.FileId, ImageDetailLevelToResponse(part.ImageDetailLevel)),
-                        { ImageUri: not null } => ResponseContentPart.CreateInputImagePart(part.ImageUri.ToString(), ImageDetailLevelToResponse(part.ImageDetailLevel)),
+                        { ImageUri: not null } => ResponseContentPart.CreateInputImagePart(part.ImageUri, ImageDetailLevelToResponse(part.ImageDetailLevel)),
                         { ImageBytes: not null } => ResponseContentPart.CreateInputImagePart(part.ImageBytes, part.ImageBytesMediaType, ImageDetailLevelToResponse(part.ImageDetailLevel)),
                         _ => throw new NotSupportedException($"Unsupported image content part: {part}"),
                     },
