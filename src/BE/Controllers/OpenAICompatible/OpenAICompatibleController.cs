@@ -127,7 +127,7 @@ public partial class OpenAICompatibleController(
                     if (cco.Stream)
                     {
                         Response.StatusCode = 200;
-                        Response.Headers.ContentType = "text/event-stream";
+                        Response.Headers.ContentType = "text/event-stream; charset=utf-8";
                         Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
                         Response.Headers.Connection = "keep-alive";
                         if (fullResponse.Choices != null && fullResponse.Choices.Count > 0)
@@ -215,6 +215,14 @@ public partial class OpenAICompatibleController(
 
                 if (cco.Stream)
                 {
+                    if (!hasSuccessYield)
+                    {
+                        Response.StatusCode = 200;
+                        Response.Headers.ContentType = "text/event-stream; charset=utf-8";
+                        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
+                        Response.Headers.Connection = "keep-alive";
+                    }
+
                     ChatCompletionChunk chunk = seg.ToOpenAIChunk(cco.Model, HttpContext.TraceIdentifier);
                     await YieldResponse(chunk, cancellationToken);
                     hasSuccessYield = true;
