@@ -88,14 +88,25 @@ const EditUserModelModal = (props: IProps) => {
   };
 
   const onChangeModel = (
-    index: number,
+    modelId: string | number,
     type: 'tokens' | 'counts' | 'expires' | 'enabled',
     value: any,
   ) => {
-    const _models = models as any;
-    _models[index][type] = value;
-    setModels([..._models]);
-    setFilteredModels([..._models]);
+    const _models = [...models];
+    const _filteredModels = [...filteredModels];
+    
+    const modelIndex = _models.findIndex(m => m.modelId === modelId);
+    if (modelIndex !== -1) {
+      (_models[modelIndex] as any)[type] = value;
+    }
+    
+    const filteredModelIndex = _filteredModels.findIndex(m => m.modelId === modelId);
+    if (filteredModelIndex !== -1) {
+      (_filteredModels[filteredModelIndex] as any)[type] = value;
+    }
+    
+    setModels(_models);
+    setFilteredModels(_filteredModels);
   };
 
   return (
@@ -138,7 +149,7 @@ const EditUserModelModal = (props: IProps) => {
                       value={model.tokens?.toString()}
                       onChange={(e) => {
                         onChangeModel(
-                          index,
+                          model.modelId,
                           'tokens',
                           parseInt(e.target.value) || 0,
                         );
@@ -151,7 +162,7 @@ const EditUserModelModal = (props: IProps) => {
                       value={model.counts?.toString()}
                       onChange={(e) => {
                         onChangeModel(
-                          index,
+                          model.modelId,
                           'counts',
                           parseInt(e.target.value) || 0,
                         );
@@ -168,7 +179,7 @@ const EditUserModelModal = (props: IProps) => {
                           {formatDate(model.expires)}
                           <IconSquareRoundedX
                             onClick={(e) => {
-                              onChangeModel(index, 'expires', termDateString());
+                              onChangeModel(model.modelId, 'expires', termDateString());
                               e.preventDefault();
                             }}
                             className="z-10 ml-auto h-5 w-5 opacity-50"
@@ -180,7 +191,7 @@ const EditUserModelModal = (props: IProps) => {
                           mode="single"
                           selected={new Date(model.expires)}
                           onSelect={(d) => {
-                            onChangeModel(index, 'expires', d?.toISOString());
+                            onChangeModel(model.modelId, 'expires', d?.toISOString());
                           }}
                           initialFocus
                         />
@@ -191,9 +202,9 @@ const EditUserModelModal = (props: IProps) => {
                     <Switch
                       checked={model.enabled}
                       onCheckedChange={(checked) => {
-                        onChangeModel(index, 'enabled', checked);
+                        onChangeModel(model.modelId, 'enabled', checked);
                         if (checked) {
-                          onChangeModel(index, 'expires', termDateString());
+                          onChangeModel(model.modelId, 'expires', termDateString());
                         }
                       }}
                     />
