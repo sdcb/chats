@@ -138,9 +138,10 @@ const ChatInput = ({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'F') {
+    if (e.ctrlKey && (e.key === 'F' || e.key === 'f' || e.code === 'KeyF')) {
       handleFullWriting(!isFullWriting);
       e.preventDefault();
+      e.stopPropagation();
       return;
     }
 
