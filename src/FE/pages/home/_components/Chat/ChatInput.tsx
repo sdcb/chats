@@ -138,6 +138,13 @@ const ChatInput = ({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.ctrlKey && (e.key === 'F' || e.key === 'f' || e.code === 'KeyF')) {
+      handleFullWriting(!isFullWriting);
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
     if (showPromptList) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -174,7 +181,7 @@ const ChatInput = ({
     if (textareaRef.current?.style?.minHeight) {
       textareaRef.current.style.maxHeight = value
         ? 'calc(100vh - 178px)'
-        : '96px';
+        : '196px';
       textareaRef.current.style.height = value ? 'calc(100vh - 178px)' : '48px';
       textareaRef.current.style.overflow = `${
         textareaRef?.current?.scrollHeight > 48 ? 'auto' : 'hidden'
@@ -439,7 +446,7 @@ const ChatInput = ({
                 className="m-0 w-full resize-none border-none outline-none rounded-md bg-transparent"
                 style={{
                   bottom: `${textareaRef?.current?.scrollHeight}px`,
-                  maxHeight: '96px',
+                  maxHeight: '196px',
                   minHeight: '48px',
                 }}
                 placeholder={
