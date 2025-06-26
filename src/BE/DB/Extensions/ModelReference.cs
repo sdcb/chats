@@ -28,6 +28,7 @@ public partial class ModelReference
             "o3" => true,
             "o3-pro" => true,
             "o4-mini" => true,
+            "codex-mini" => true,
             "gemini-2.5-pro" => true,
             "gemini-2.5-flash" => true, 
             "gpt-image-1" => true, 
