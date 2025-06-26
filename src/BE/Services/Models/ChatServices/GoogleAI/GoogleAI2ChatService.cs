@@ -61,9 +61,10 @@ public class GoogleAI2ChatService : ChatService
             {
                 ThinkingBudget = _reasoningEffort switch
                 {
-                    DBReasoningEffort.Low => 0,
+                    DBReasoningEffort.Low => Model.ModelReference.Name.Contains("pro") ? 0 : 128,
                     _ => null,
-                }
+                },
+                IncludeThoughts = true, 
             };
         }
 
@@ -112,7 +113,14 @@ public class GoogleAI2ChatService : ChatService
                     }
                     else if (part.Text != null)
                     {
-                        items.Add(ChatSegmentItem.FromText(part.Text));
+                        if (part.Thought == true)
+                        {
+                            items.Add(ChatSegmentItem.FromThink(part.Text));
+                        }
+                        else
+                        {
+                            items.Add(ChatSegmentItem.FromText(part.Text));
+                        }
                     }
                     if (part.InlineData != null)
                     {

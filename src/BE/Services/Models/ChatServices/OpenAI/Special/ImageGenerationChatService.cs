@@ -102,7 +102,10 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
             }
             form.Add(prompt, "prompt");
             form.Add(options.MaxOutputTokenCount ?? 1, "n");
-            form.Add(options.EndUserId, "user");
+            if (options.EndUserId != null)
+            {
+                form.Add(options.EndUserId, "user");
+            }
             //form.Add("low", "moderation");
             if (_reasoningEffort != DBReasoningEffort.Default)
             {

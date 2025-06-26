@@ -13,8 +13,6 @@ import {
 } from '../_reducers/chat.reducer';
 import {
   MessageAction,
-  SetMessagesType,
-  SetSelectedMessagesType,
 } from '../_reducers/message.reducer';
 import {
   ModelAction,
@@ -27,6 +25,7 @@ import {
   SetPromptsType,
 } from '../_reducers/prompt.reducer';
 import { SettingsAction } from '../_reducers/setting.reducer';
+import { IChatMessage } from '@/types/chatMessage';
 
 export interface HandleUpdateChatParams {
   isShared?: boolean;
@@ -35,8 +34,8 @@ export interface HandleUpdateChatParams {
 }
 
 export interface HomeInitialState {
-  messages: SetMessagesType;
-  selectedMessages: SetSelectedMessagesType;
+  messages: IChatMessage[];
+  selectedMessages: IChatMessage[][];
 
   chats: SetChatsType;
   chatGroups: SetChatGroupType;

@@ -565,8 +565,14 @@ const Chat = memo(() => {
 
   const handleChangeChatLeafMessageId = (messageId: string) => {
     if (selectedChat.status === ChatStatus.Chatting) return;
+    for (const levelMessages of selectedMessages) {
+      for (const message of levelMessages) {
+        if (message.id === messageId && message.isActive) {
+          return; // Already selected
+        }
+      }
+    }
     const leafId = findLastLeafId(messages, messageId);
-    if (selectedChat.leafMessageId === leafId) return;
     const selectedMsgs = findSelectedMessageByLeafId(messages, leafId);
     messageDispatch(setSelectedMessages(selectedMsgs));
     chatDispatch(

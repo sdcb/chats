@@ -1,11 +1,8 @@
 import { IChatMessage } from '@/types/chatMessage';
 
-export type SetMessagesType = IChatMessage[];
-export type SetSelectedMessagesType = IChatMessage[][];
-
 interface MessageInitialState {
-  messages: SetMessagesType;
-  selectedMessages: SetSelectedMessagesType;
+  messages: IChatMessage[];
+  selectedMessages: IChatMessage[][];
 }
 
 export const messageInitialState: MessageInitialState = {
@@ -21,11 +18,11 @@ export enum MessageActionTypes {
 export type MessageAction =
   | {
       type: MessageActionTypes.SET_MESSAGES;
-      payload: SetMessagesType;
+      payload: IChatMessage[];
     }
   | {
       type: MessageActionTypes.SET_SELECTED_MESSAGES;
-      payload: SetSelectedMessagesType;
+      payload: IChatMessage[][];
     };
 
 export default function messageReducer(
