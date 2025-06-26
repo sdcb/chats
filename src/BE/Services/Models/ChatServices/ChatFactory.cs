@@ -25,7 +25,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
             },
             DBModelProvider.AzureOpenAI => model.ModelReference.Name switch
             {
-                "o3" or "o4-mini" => new AzureResponseApiService(model), 
+                "o3" or "o3-pro" or "o4-mini" => new AzureResponseApiService(model), 
                 "gpt-image-1" => new AzureImageGenerationChatService(model), 
                 _ => new AzureChatService(model),
             },
