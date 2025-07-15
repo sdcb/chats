@@ -392,13 +392,13 @@ jobs:
               echo "Deploying feature environment: ${{ github.ref_name }}"
               sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ./feature.env
               docker compose --env-file=./feature.env --project-name chats-feature up -d --remove-orphans
-          else if [[ "${{ github.ref_name }}" == "dev" ]]; then
+          elif [[ "${{ github.ref_name }}" == "dev" ]]; then
               echo "Deploying dev/stg environment: ${{ github.ref_name }}"
               sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ./dev.env
               sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ./stg.env
               docker compose --env-file=./dev.env --project-name chats-dev up -d --remove-orphans
               docker compose --env-file=./stg.env --project-name chats-stg up -d --remove-orphans
-          else if [[ "${{ github.ref_name }}" == "main" ]]; then
+          elif [[ "${{ github.ref_name }}" == "main" ]]; then
               echo "Deploying production environment: ${{ github.ref_name }}"
               sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ./prod.env
               docker compose --env-file=./prod.env --project-name chats-prod up -d --remove-orphans
