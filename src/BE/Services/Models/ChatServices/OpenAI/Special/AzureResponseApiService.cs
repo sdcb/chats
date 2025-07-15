@@ -6,10 +6,8 @@ using OpenAI;
 using OpenAI.Chat;
 using OpenAI.Responses;
 using System.ClientModel;
-using System.ClientModel.Primitives;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
@@ -29,18 +27,10 @@ public class AzureResponseApiService(Model model) : ChatService(model)
             new Uri(model.ModelKey.Host),
             new ApiKeyCredential(model.ModelKey.Secret), options);
         OpenAIResponseClient cc = api.GetOpenAIResponseClient(model.ApiModelId);
-        SetApiVersion(cc, "2025-04-01-preview");
         return cc;
-
-        static void SetApiVersion(OpenAIResponseClient api, string version)
-        {
-            FieldInfo? versionField = api.GetType().GetField("_apiVersion", BindingFlags.NonPublic | BindingFlags.Instance) 
-                ?? throw new InvalidOperationException("Unable to access the API version field.");
-            versionField.SetValue(api, version);
-        }
     }
 
-    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, 
+    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         OpenAIResponseClient api = CreateResponseAPI(Model);
@@ -85,13 +75,10 @@ public class AzureResponseApiService(Model model) : ChatService(model)
                 string type = DeltaTypeAccessor(delta);
                 IDictionary<string, BinaryData>? said = GetSerializedAdditionalRawData(delta);
 
-                if (type == "response.reasoning_summary_text.delta" && said != null && said.TryGetValue("delta", out BinaryData? deltaBinary))
+                if (type == "response.reasoning_summary_text.delta")
                 {
-                    string? think = deltaBinary.ToObjectFromJson<string>();
-                    if (!string.IsNullOrEmpty(think))
-                    {
-                        yield return ChatSegment.FromThinkOnly(think);
-                    }
+                    string think = DeltaAccessor(delta);
+                    yield return ChatSegment.FromThinkOnly(think);
                 }
                 else if (type == "response.reasoning_summary_text.done")
                 {
@@ -105,11 +92,22 @@ public class AzureResponseApiService(Model model) : ChatService(model)
     private extern static ref IDictionary<string, BinaryData>? GetSerializedAdditionalRawData(StreamingResponseUpdate @this);
 
     private readonly static Func<StreamingResponseUpdate, string> DeltaTypeAccessor = CreateDeltaTypeAccessor();
+    private readonly static Func<StreamingResponseUpdate, string> DeltaAccessor = CreateDeltaAccessor();
+
+    static Func<StreamingResponseUpdate, string> CreateDeltaAccessor()
+    {
+        Type type = typeof(StreamingResponseUpdate).Assembly.GetType("OpenAI.Responses.InternalResponseReasoningSummaryTextDeltaEvent") ??
+            throw new InvalidOperationException("Unable to find the InternalResponseReasoningSummaryTextDeltaEvent type.");
+        PropertyInfo prop = type.GetProperty("Delta", BindingFlags.Public | BindingFlags.Instance)
+            ?? throw new InvalidOperationException("Unable to access the Delta property.");
+        return (delta) => (string)prop.GetValue(delta)!;
+    }
+
 
     static Func<StreamingResponseUpdate, string> CreateDeltaTypeAccessor()
     {
         Type type = typeof(StreamingResponseUpdate);
-        PropertyInfo? deltaTypeProperty = type.GetProperty("Type", BindingFlags.NonPublic | BindingFlags.Instance)
+        PropertyInfo? deltaTypeProperty = type.GetProperty("Kind", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException("Unable to access the Type property.");
         FieldInfo field = deltaTypeProperty.PropertyType.GetField("_value", BindingFlags.Instance | BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("Unable to access the _value field.");
@@ -224,7 +222,7 @@ public class AzureResponseApiService(Model model) : ChatService(model)
             Temperature = options.Temperature,
             TopP = options.TopP,
             MaxOutputTokenCount = options.MaxOutputTokenCount,
-            ReasoningOptions = new MyResponseReasoningOptions()
+            ReasoningOptions = new ResponseReasoningOptions()
             {
                 ReasoningEffortLevel = options.ReasoningEffortLevel switch
                 {
@@ -279,53 +277,6 @@ public class AzureResponseApiService(Model model) : ChatService(model)
                 bool? strict = (bool?)jsonSchemaType.GetProperty("Strict")!.GetValue(jsonSchema);
 
                 return ResponseTextFormat.CreateJsonSchemaFormat(name, binaryData, description, strict);
-            }
-        }
-    }
-
-    private class MyResponseReasoningOptions : ResponseReasoningOptions
-    {
-        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_additionalBinaryDataProperties")]
-        public static extern ref IDictionary<string, BinaryData>? GetSerializedAdditionalRawData(ResponseReasoningOptions instance);
-
-        protected override void JsonModelWriteCore(Utf8JsonWriter writer, ModelReaderWriterOptions options)
-        {
-            string format = options.Format == "W" ? ((IPersistableModel<ResponseReasoningOptions>)this).GetFormatFromOptions(options) : options.Format;
-            if (format != "J")
-            {
-                throw new FormatException($"The model {nameof(ResponseReasoningOptions)} does not support writing '{format}' format.");
-            }
-            ref IDictionary<string, BinaryData>? _additionalBinaryDataProperties = ref GetSerializedAdditionalRawData(this);
-            //_additionalBinaryDataProperties ??= new Dictionary<string, BinaryData>();
-
-            if (_additionalBinaryDataProperties?.ContainsKey("effort") != true)
-            {
-                if (ReasoningEffortLevel != null)
-                {
-                    writer.WritePropertyName("effort"u8);
-                    writer.WriteStringValue(ReasoningEffortLevel.Value.ToString());
-                }
-                else
-                {
-                    writer.WriteNull("effort"u8);
-                }
-            }
-            if (ReasoningSummaryVerbosity != null && _additionalBinaryDataProperties?.ContainsKey("summary") != true)
-            {
-                writer.WritePropertyName("summary"u8);
-                writer.WriteStringValue(ReasoningSummaryVerbosity.Value.ToString());
-            }
-            if (_additionalBinaryDataProperties != null)
-            {
-                foreach (var item in _additionalBinaryDataProperties)
-                {
-                    if ("\"__EMPTY__\""u8.SequenceEqual(item.Value.ToMemory().Span))
-                    {
-                        continue;
-                    }
-                    writer.WritePropertyName(item.Key);
-                    writer.WriteRawValue(item.Value);
-                }
             }
         }
     }

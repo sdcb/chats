@@ -8,6 +8,7 @@ using Chats.BE.DB.Enums;
 using System.Text.Json.Nodes;
 using System.ClientModel.Primitives;
 using Chats.BE.Services.FileServices;
+using System.Runtime.CompilerServices;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
@@ -74,10 +75,10 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
             Dictionary<Uri, HttpResponseMessage> downloadedFiles = (await Task.WhenAll(images
                 .Where(x => x.ImageUri != null)
                 .GroupBy(x => x.ImageUri).Select(async image =>
-            {
-                HttpResponseMessage resp = await http.GetAsync(image.Key, cancellationToken);
-                return (url: image.Key, resp);
-            })))
+                {
+                    HttpResponseMessage resp = await http.GetAsync(image.Key, cancellationToken);
+                    return (url: image.Key, resp);
+                })))
             .ToDictionary(k => k.url, v => v.resp);
 
             foreach (ChatMessageContentPart image in images)
@@ -123,7 +124,7 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
             {
                 CancellationToken = cancellationToken
             });
-            cr = ClientResult.FromValue((GeneratedImageCollection)clientResult, clientResult.GetRawResponse());
+            cr = ClientResult.FromValue(FromClientResult(null!, clientResult), clientResult.GetRawResponse());
         }
 
         JsonObject rawJson = cr.GetRawResponse().Content
@@ -179,6 +180,9 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
                 .Take(1)];
         }
     }
+
+    [UnsafeAccessor(UnsafeAccessorKind.StaticMethod, Name = "FromClientResult")]
+    static extern GeneratedImageCollection FromClientResult(GeneratedImageCollection _, ClientResult result);
 
     protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
     {
