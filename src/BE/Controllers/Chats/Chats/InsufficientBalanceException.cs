@@ -9,6 +9,11 @@ public abstract class ChatServiceException(DBFinishReason errorCode) : Exception
     public override string Message => $"code: {ErrorCode}";
 }
 
+public class CustomChatServiceException(DBFinishReason errorCode, string message) : ChatServiceException(errorCode)
+{
+    public override string Message => message;
+}
+
 public class InsufficientBalanceException() : ChatServiceException(DBFinishReason.InsufficientBalance)
 {
     public override string Message => "Insufficient balance";

@@ -1,4 +1,5 @@
 ﻿using Azure.AI.OpenAI;
+using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
@@ -6,6 +7,7 @@ using OpenAI;
 using OpenAI.Chat;
 using OpenAI.Responses;
 using System.ClientModel;
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -35,54 +37,176 @@ public class AzureResponseApiService(Model model) : ChatService(model)
     {
         OpenAIResponseClient api = CreateResponseAPI(Model);
         bool hasTools = false;
-        await foreach (StreamingResponseUpdate delta in api.CreateResponseStreamingAsync(ToResponse(messages), ToResponse(options), cancellationToken))
+        if (Model.ModelReference.Name == "o3-pro")
         {
-            if (delta is StreamingResponseOutputTextDeltaUpdate textDelta)
+            Stopwatch sw = Stopwatch.StartNew();
+            OpenAIResponse response = await api.CreateResponseAsync(ToResponse(messages), ToResponse(options, background: true), cancellationToken);
+
+            cancellationToken.Register(async () =>
             {
-                yield return ChatSegment.FromTextOnly(textDelta.Delta);
+                if (response.Status == ResponseStatus.InProgress || response.Status == ResponseStatus.Queued)
+                {
+                    try
+                    {
+                        await api.CancelResponseAsync(response.Id, default(CancellationToken));
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error cancelling response {response.Id}: {ex.Message}");
+                    }
+                }
+            });
+
+            bool cancelled = false;
+            try
+            {
+                while (response.Status == ResponseStatus.InProgress || response.Status == ResponseStatus.Queued)
+                {
+                    Console.WriteLine($"Waiting for response {response.Id} to complete. Current status: {response.Status}");
+                    await Task.Delay(2000, cancellationToken);
+                    response = await api.GetResponseAsync(response.Id, cancellationToken);
+                }
             }
-            else if (delta is StreamingResponseCompletedUpdate completedDelta)
+            catch (TaskCanceledException)
+            {
+                cancelled = true;
+            }
+
+            Console.WriteLine($"Response {response.Id} completed with status: {response.Status}, elapsed={sw.ElapsedMilliseconds:N0}ms");
+
+            if (response.Status == ResponseStatus.Incomplete)
             {
                 yield return ChatSegment.Completed(new Dtos.ChatTokenUsage()
                 {
-                    InputTokens = completedDelta.Response.Usage.InputTokenCount,
-                    OutputTokens = completedDelta.Response.Usage.OutputTokenCount,
-                    ReasoningTokens = completedDelta.Response.Usage.OutputTokenDetails.ReasoningTokenCount,
-                }, completedDelta.Response.Status switch
+                    InputTokens = response.Usage.InputTokenCount,
+                    OutputTokens = response.Usage.OutputTokenCount,
+                    ReasoningTokens = response.Usage.OutputTokenDetails.ReasoningTokenCount,
+                }, ChatFinishReason.Length);
+            }
+            else if (response.Status == ResponseStatus.Failed)
+            {
+                yield return ChatSegment.Completed(new Dtos.ChatTokenUsage()
                 {
-                    null => null,
-                    ResponseStatus.Failed => ChatFinishReason.ContentFilter,
-                    ResponseStatus.Completed => hasTools switch
+                    InputTokens = response.Usage.InputTokenCount,
+                    OutputTokens = response.Usage.OutputTokenCount,
+                    ReasoningTokens = response.Usage.OutputTokenDetails.ReasoningTokenCount,
+                }, ChatFinishReason.Length);
+                throw new CustomChatServiceException(DBFinishReason.ContentFilter, response.Error.Message ?? "Response failed");
+            }
+            else if (response.Status == ResponseStatus.Cancelled || cancelled)
+            {
+                yield return new ChatSegment()
+                {
+                    Usage = new Dtos.ChatTokenUsage()
                     {
-                        true => ChatFinishReason.ToolCalls,
-                        false => ChatFinishReason.Stop,
+                        InputTokens = response.Usage.InputTokenCount,
+                        OutputTokens = response.Usage.OutputTokenCount,
+                        ReasoningTokens = response.Usage.OutputTokenDetails.ReasoningTokenCount,
                     },
-                    ResponseStatus.Incomplete => ChatFinishReason.Length,
-                    _ => throw new NotSupportedException($"Unsupported response status: {completedDelta.Response.Status}"),
-                });
+                    FinishReason = null, Items = [],
+                };
+                throw new TaskCanceledException();
             }
-            else if (delta is StreamingResponseOutputItemAddedUpdate addedDelta && addedDelta.Item is FunctionCallResponseItem fc)
+            else if (response.Status != ResponseStatus.Completed)
             {
-                hasTools = true;
-                yield return ChatSegment.FromStartToolCall(addedDelta, fc);
-            }
-            else if (delta is StreamingResponseFunctionCallArgumentsDeltaUpdate fcDelta)
-            {
-                yield return ChatSegment.FromToolCallDelta(fcDelta);
+                throw new NotSupportedException($"Unsupported response status: {response.Status}");
             }
             else
             {
-                string type = DeltaTypeAccessor(delta);
-                IDictionary<string, BinaryData>? said = GetSerializedAdditionalRawData(delta);
-
-                if (type == "response.reasoning_summary_text.delta")
+                // Completed
+                int fcIndex = 0;
+                foreach (ResponseItem item in response.OutputItems)
                 {
-                    string think = DeltaAccessor(delta);
-                    yield return ChatSegment.FromThinkOnly(think);
+                    if (item is ReasoningResponseItem thinkItem)
+                    {
+                        if (thinkItem.SummaryParts.Count > 0)
+                        {
+                            yield return ChatSegment.FromThinkOnly(thinkItem.GetSummaryText());
+                        }
+                    }
+                    else if (item is FunctionCallResponseItem fc)
+                    {
+                        hasTools = true;
+                        yield return ChatSegment.FromToolCall(fcIndex++, fc);
+                    }
+                    else if (item is MessageResponseItem msg)
+                    {
+                        foreach (ResponseContentPart part in msg.Content)
+                        {
+                            if (part.Kind == ResponseContentPartKind.OutputText)
+                            {
+                                yield return ChatSegment.FromTextOnly(part.Text);
+                            }
+                            else if (part.Kind == ResponseContentPartKind.Refusal)
+                            {
+                                throw new CustomChatServiceException(DBFinishReason.ContentFilter, part.Refusal);
+                            }
+                            else
+                            {
+                                throw new Exception($"Unsupported content part kind: {part.Kind}");
+                            }
+                        }
+                    }
                 }
-                else if (type == "response.reasoning_summary_text.done")
+                yield return ChatSegment.Completed(new Dtos.ChatTokenUsage()
                 {
-                    yield return ChatSegment.FromThinkOnly("\n\n");
+                    InputTokens = response.Usage.InputTokenCount,
+                    OutputTokens = response.Usage.OutputTokenCount,
+                    ReasoningTokens = response.Usage.OutputTokenDetails.ReasoningTokenCount,
+                }, hasTools ? ChatFinishReason.ToolCalls : ChatFinishReason.Stop);
+            }
+        }
+        else
+        {
+            await foreach (StreamingResponseUpdate delta in api.CreateResponseStreamingAsync(ToResponse(messages), ToResponse(options), cancellationToken))
+            {
+                if (delta is StreamingResponseOutputTextDeltaUpdate textDelta)
+                {
+                    yield return ChatSegment.FromTextOnly(textDelta.Delta);
+                }
+                else if (delta is StreamingResponseCompletedUpdate completedDelta)
+                {
+                    yield return ChatSegment.Completed(new Dtos.ChatTokenUsage()
+                    {
+                        InputTokens = completedDelta.Response.Usage.InputTokenCount,
+                        OutputTokens = completedDelta.Response.Usage.OutputTokenCount,
+                        ReasoningTokens = completedDelta.Response.Usage.OutputTokenDetails.ReasoningTokenCount,
+                    }, completedDelta.Response.Status switch
+                    {
+                        null => null,
+                        ResponseStatus.Failed => ChatFinishReason.ContentFilter,
+                        ResponseStatus.Completed => hasTools switch
+                        {
+                            true => ChatFinishReason.ToolCalls,
+                            false => ChatFinishReason.Stop,
+                        },
+                        ResponseStatus.Incomplete => ChatFinishReason.Length,
+                        _ => throw new NotSupportedException($"Unsupported response status: {completedDelta.Response.Status}"),
+                    });
+                }
+                else if (delta is StreamingResponseOutputItemAddedUpdate addedDelta && addedDelta.Item is FunctionCallResponseItem fc)
+                {
+                    hasTools = true;
+                    yield return ChatSegment.FromStartToolCall(addedDelta, fc);
+                }
+                else if (delta is StreamingResponseFunctionCallArgumentsDeltaUpdate fcDelta)
+                {
+                    yield return ChatSegment.FromToolCallDelta(fcDelta);
+                }
+                else
+                {
+                    string type = DeltaTypeAccessor(delta);
+                    IDictionary<string, BinaryData>? said = GetSerializedAdditionalRawData(delta);
+
+                    if (type == "response.reasoning_summary_text.delta")
+                    {
+                        string think = DeltaAccessor(delta);
+                        yield return ChatSegment.FromThinkOnly(think);
+                    }
+                    else if (type == "response.reasoning_summary_text.done")
+                    {
+                        yield return ChatSegment.FromThinkOnly("\n\n");
+                    }
                 }
             }
         }
@@ -215,7 +339,7 @@ public class AzureResponseApiService(Model model) : ChatService(model)
         // override in ToResponse
     }
 
-    static ResponseCreationOptions ToResponse(ChatCompletionOptions options)
+    static ResponseCreationOptions ToResponse(ChatCompletionOptions options, bool background = false)
     {
         ResponseCreationOptions responseCreationOptions = new()
         {
@@ -241,6 +365,11 @@ public class AzureResponseApiService(Model model) : ChatService(model)
             },
             ParallelToolCallsEnabled = options.AllowParallelToolCalls,
         };
+
+        if (background)
+        {
+            responseCreationOptions.Background = background;
+        }
 
         foreach (ChatTool tool in options.Tools)
         {
