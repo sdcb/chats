@@ -8,7 +8,7 @@ on:
     paths:
       - 'src/BE/**'
       - 'src/FE/**'
-      - '.github/workflows/build-container.yml'
+      - .github/workflows/build.yml
   workflow_dispatch:
 
 permissions:
@@ -383,8 +383,7 @@ jobs:
     runs-on: host7-runner
     needs: [build-primary-container, build-fe]
     steps:
-      - name: deploy dev/stg or feature
-        run: |
+      - run: |
           docker pull ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ needs.build-fe.outputs.full_ver }}-linux-x64
           cd /home/zhoujie/chats
               
