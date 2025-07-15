@@ -62,7 +62,7 @@ public class AzureResponseApiService(Model model) : ChatService(model)
             {
                 while (response.Status == ResponseStatus.InProgress || response.Status == ResponseStatus.Queued)
                 {
-                    Console.WriteLine($"Waiting for response {response.Id} to complete. Current status: {response.Status}");
+                    Console.WriteLine($"{response.Id} status: {response.Status}, elapsed: {sw.ElapsedMilliseconds:N0}ms");
                     await Task.Delay(2000, cancellationToken);
                     response = await api.GetResponseAsync(response.Id, cancellationToken);
                 }
@@ -121,7 +121,9 @@ public class AzureResponseApiService(Model model) : ChatService(model)
                     {
                         if (thinkItem.SummaryParts.Count > 0)
                         {
-                            yield return ChatSegment.FromThinkOnly(thinkItem.GetSummaryText());
+                            yield return ChatSegment.FromThinkOnly(string.Join(
+                                separator: "\n\n",
+                                thinkItem.SummaryParts.Select(part => (part as ReasoningSummaryTextPart)?.Text ?? string.Empty)));
                         }
                     }
                     else if (item is FunctionCallResponseItem fc)
