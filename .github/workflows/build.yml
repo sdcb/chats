@@ -1,4 +1,4 @@
-﻿name: Build Container
+﻿name: Build
 on:
   push:
     branches:
@@ -329,7 +329,7 @@ jobs:
           | Windows Nano Server 1809      | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ needs.build-fe.outputs.full_ver }}-nanoserver-1809           |
           | Windows Nano Server LTSC 2022 | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ needs.build-fe.outputs.full_ver }}-nanoserver-ltsc2022       |
           | Windows Nano Server LTSC 2025 | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ needs.build-fe.outputs.full_ver }}-nanoserver-ltsc2025       |
-          | Latest                        | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:latest                                           |
+          | Latest                        | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:latest                                                           |
     
           ### Alternative binaries download links that may faster than GitHub(for China users)
           | Artifact                  | Download Link                                                                   |
@@ -380,28 +380,26 @@ jobs:
             -H "Authorization: Basic $(echo -n "${{ secrets.CHATS_RELEASE_WEBHOOK_CREDENTIAL }}" | openssl base64)"
       
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: host7-runner
     needs: [build-primary-container, build-fe]
     steps:
-      - uses: webfactory/ssh-agent@v0.9.0
-        with:
-            ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
       - name: deploy dev/stg or feature
         run: |
-          ssh -o StrictHostKeyChecking=no -p 22 ${{ secrets.SSH_TARGET }} "bash -s" << 'EOF'
-            docker pull ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ needs.build-fe.outputs.full_ver }}-linux-x64
-            cd chats
-            
-            if [[ "${{ github.ref_name }}" == feature/* ]]; then
-              echo "Deploying feature branch: ${{ github.ref_name }}"
-              sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ~/chats/feature.env
+          docker pull ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ needs.build-fe.outputs.full_ver }}-linux-x64
+          cd /home/zhoujie/chats
+              
+          if [[ "${{ github.ref_name }}" == feature/* ]]; then
+              echo "Deploying feature environment: ${{ github.ref_name }}"
+              sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ./feature.env
               docker compose --env-file=./feature.env --project-name chats-feature up -d --remove-orphans
-            else
-              echo "Deploying non-feature branch: ${{ github.ref_name }}"
-              sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ~/chats/dev.env
-              sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ~/chats/stg.env
+          else if [[ "${{ github.ref_name }}" == "dev" ]]; then
+              echo "Deploying dev/stg environment: ${{ github.ref_name }}"
+              sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ./dev.env
+              sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ./stg.env
               docker compose --env-file=./dev.env --project-name chats-dev up -d --remove-orphans
               docker compose --env-file=./stg.env --project-name chats-stg up -d --remove-orphans
-            fi
-          EOF
+          else if [[ "${{ github.ref_name }}" == "main" ]]; then
+              echo "Deploying production environment: ${{ github.ref_name }}"
+              sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ./prod.env
+              docker compose --env-file=./prod.env --project-name chats-prod up -d --remove-orphans
+          fi
