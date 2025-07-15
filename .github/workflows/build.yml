@@ -1,4 +1,4 @@
-﻿name: Build Container
+﻿name: Build
 on:
   push:
     branches:
@@ -8,7 +8,7 @@ on:
     paths:
       - 'src/BE/**'
       - 'src/FE/**'
-      - '.github/workflows/build-container.yml'
+      - .github/workflows/build.yml
   workflow_dispatch:
 
 permissions:
@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build-fe:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       is_release: ${{ github.ref_name == 'main' && 'true' || 'false' }}
       full_ver: ${{ steps.get_version.outputs.full_ver }}
@@ -88,7 +88,7 @@ jobs:
 
   upload-fe-to-minio:
     needs: build-fe
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Trigger Sync chats-fe & be-src
         run: |
@@ -99,7 +99,7 @@ jobs:
 
   build-primary-container:
     needs: build-fe
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Login container
         run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ vars.DOCKER_USERNAME }} ${{ vars.DOCKER_REGISTRY }} --password-stdin
@@ -144,7 +144,7 @@ jobs:
             arch: x64
             args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:8.0-nanoserver-ltsc2025
           - tag: linux-arm64
-            runs-on: ubuntu-latest
+            runs-on: ubuntu-22.04
             os: linux
             arch: arm64
     runs-on: ${{ matrix.runs-on }}
@@ -172,7 +172,7 @@ jobs:
 
   docker-manifest:
     needs: [build-primary-container, build-containers, build-fe]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Login container
         run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ vars.DOCKER_USERNAME }} ${{ vars.DOCKER_REGISTRY }} --password-stdin
@@ -236,7 +236,7 @@ jobs:
           - id: chats-osx-x64
             args: -r osx-x64 --self-contained true /p:PublishReadyToRun=false /p:PublishSingleFile=false
     if: needs.build-fe.outputs.is_release == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Download BE src folder
         uses: actions/download-artifact@v4
@@ -263,7 +263,7 @@ jobs:
         include:
           - id: chats
     if: needs.build-fe.outputs.is_release == 'false'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Download BE src folder
         uses: actions/download-artifact@v4
@@ -286,7 +286,7 @@ jobs:
   create-release:
     if: github.ref_name == 'main'
     needs: [build-binaries, build-primary-container, build-fe]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       release_id: ${{ steps.create_release.outputs.release_id }}
     steps:
@@ -329,7 +329,7 @@ jobs:
           | Windows Nano Server 1809      | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ needs.build-fe.outputs.full_ver }}-nanoserver-1809           |
           | Windows Nano Server LTSC 2022 | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ needs.build-fe.outputs.full_ver }}-nanoserver-ltsc2022       |
           | Windows Nano Server LTSC 2025 | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ needs.build-fe.outputs.full_ver }}-nanoserver-ltsc2025       |
-          | Latest                        | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:latest                                           |
+          | Latest                        | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:latest                                                           |
     
           ### Alternative binaries download links that may faster than GitHub(for China users)
           | Artifact                  | Download Link                                                                   |
@@ -372,7 +372,7 @@ jobs:
   upload-minio-latest:
     if: needs.build-fe.outputs.is_release == 'true'
     needs: [build-binaries, upload-fe-to-minio]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Update latest files
         run: |
@@ -380,28 +380,25 @@ jobs:
             -H "Authorization: Basic $(echo -n "${{ secrets.CHATS_RELEASE_WEBHOOK_CREDENTIAL }}" | openssl base64)"
       
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: host7-runner
     needs: [build-primary-container, build-fe]
     steps:
-      - uses: webfactory/ssh-agent@v0.9.0
-        with:
-            ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: deploy dev/stg or feature
-        run: |
-          ssh -o StrictHostKeyChecking=no -p 22 ${{ secrets.SSH_TARGET }} "bash -s" << 'EOF'
-            docker pull ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ needs.build-fe.outputs.full_ver }}-linux-x64
-            cd chats
-            
-            if [[ "${{ github.ref_name }}" == feature/* ]]; then
-              echo "Deploying feature branch: ${{ github.ref_name }}"
-              sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ~/chats/feature.env
+      - run: |
+          docker pull ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:${{ needs.build-fe.outputs.full_ver }}-linux-x64
+          cd /home/zhoujie/chats
+              
+          if [[ "${{ github.ref_name }}" == feature/* ]]; then
+              echo "Deploying feature environment: ${{ github.ref_name }}"
+              sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ./feature.env
               docker compose --env-file=./feature.env --project-name chats-feature up -d --remove-orphans
-            else
-              echo "Deploying non-feature branch: ${{ github.ref_name }}"
-              sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ~/chats/dev.env
-              sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ~/chats/stg.env
+          elif [[ "${{ github.ref_name }}" == "dev" ]]; then
+              echo "Deploying dev/stg environment: ${{ github.ref_name }}"
+              sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ./dev.env
+              sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ./stg.env
               docker compose --env-file=./dev.env --project-name chats-dev up -d --remove-orphans
               docker compose --env-file=./stg.env --project-name chats-stg up -d --remove-orphans
-            fi
-          EOF
+          elif [[ "${{ github.ref_name }}" == "main" ]]; then
+              echo "Deploying production environment: ${{ github.ref_name }}"
+              sed -i "s/^TAG=.*/TAG=${{ needs.build-fe.outputs.full_ver }}-linux-x64/" ./prod.env
+              docker compose --env-file=./prod.env --project-name chats-prod up -d --remove-orphans
+          fi

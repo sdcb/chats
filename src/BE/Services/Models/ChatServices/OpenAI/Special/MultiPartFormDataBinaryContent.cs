@@ -51,7 +51,6 @@ internal partial class MultiPartFormDataBinaryContent : BinaryContent
 
     public void Add(int content, string name, string? filename = default, string? contentType = default)
     {
-        ArgumentNullException.ThrowIfNull(content, nameof(content));
         ArgumentException.ThrowIfNullOrEmpty(name, nameof(name));
 
         string value = content.ToString("G", CultureInfo.InvariantCulture);
@@ -60,7 +59,6 @@ internal partial class MultiPartFormDataBinaryContent : BinaryContent
 
     public void Add(long content, string name, string? filename = default, string? contentType = default)
     {
-        ArgumentNullException.ThrowIfNull(content, nameof(content));
         ArgumentException.ThrowIfNullOrEmpty(name, nameof(name));
 
         string value = content.ToString("G", CultureInfo.InvariantCulture);
@@ -69,7 +67,6 @@ internal partial class MultiPartFormDataBinaryContent : BinaryContent
 
     public void Add(float content, string name, string? filename = default, string? contentType = default)
     {
-        ArgumentNullException.ThrowIfNull(content, nameof(content));
         ArgumentException.ThrowIfNullOrEmpty(name, nameof(name));
 
         string value = content.ToString("G", CultureInfo.InvariantCulture);
@@ -78,7 +75,6 @@ internal partial class MultiPartFormDataBinaryContent : BinaryContent
 
     public void Add(double content, string name, string? filename = default, string? contentType = default)
     {
-        ArgumentNullException.ThrowIfNull(content, nameof(content));
         ArgumentException.ThrowIfNullOrEmpty(name, nameof(name));
 
         string value = content.ToString("G", CultureInfo.InvariantCulture);
@@ -87,7 +83,6 @@ internal partial class MultiPartFormDataBinaryContent : BinaryContent
 
     public void Add(decimal content, string name, string? filename = default, string? contentType = default)
     {
-        ArgumentNullException.ThrowIfNull(content, nameof(content));
         ArgumentException.ThrowIfNullOrEmpty(name, nameof(name));
 
         string value = content.ToString("G", CultureInfo.InvariantCulture);
@@ -96,7 +91,6 @@ internal partial class MultiPartFormDataBinaryContent : BinaryContent
 
     public void Add(bool content, string name, string? filename = default, string? contentType = default)
     {
-        ArgumentNullException.ThrowIfNull(content, nameof(content));
         ArgumentException.ThrowIfNullOrEmpty(name, nameof(name));
 
         string value = content ? "true" : "false";

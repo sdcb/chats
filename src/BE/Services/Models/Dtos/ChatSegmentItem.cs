@@ -119,6 +119,18 @@ public abstract record ChatSegmentItem
         };
     }
 
+    public static ToolCallSegment FromToolCall(int fcIndex, FunctionCallResponseItem toolCall)
+    {
+        return new ToolCallSegment
+        {
+            Index = fcIndex,
+            Id = toolCall.Id,
+            Type = ChatToolCallKind.Function.ToString(),
+            Name = toolCall.FunctionName,
+            Arguments = GetBinaryData(toolCall.FunctionArguments).Length == 0 ? "" : toolCall.FunctionArguments.ToString(),
+        };
+    }
+
     public static ToolCallSegment FromToolCall(int fcIndex, FunctionCall toolCall)
     {
         return new ToolCallSegment

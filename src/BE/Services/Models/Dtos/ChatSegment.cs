@@ -43,6 +43,16 @@ public record ChatSegment
         };
     }
 
+    public static ChatSegment FromToolCall(int fcIndex, FunctionCallResponseItem fc)
+    {
+        return new ChatSegment
+        {
+            FinishReason = null,
+            Items = [ChatSegmentItem.FromToolCall(fcIndex, fc)],
+            Usage = null,
+        };
+    }
+
     public static ChatSegment FromToolCallDelta(StreamingResponseFunctionCallArgumentsDeltaUpdate delta)
     {
         return new ChatSegment
