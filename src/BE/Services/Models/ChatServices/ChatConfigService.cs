@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chats.BE.Services.Models.ChatServices;
 
-public class ChatConfigService(ChatsDB db, ILogger<ChatConfigService> logger)
+public class ChatConfigService(ChatsDB db)
 {
     public async Task<ChatConfig> GetOrCreateChatConfig(ChatConfig raw, CancellationToken cancellationToken)
     {
@@ -24,7 +24,6 @@ public class ChatConfigService(ChatsDB db, ILogger<ChatConfigService> logger)
         }
         else
         {
-            logger.LogInformation("Creating new ChatConfig with hash code {HashCode}, model id {ModelId}", hashCode, raw.ModelId);
             ChatConfig newConfig = raw.Clone();
             newConfig.Id = 0;
             newConfig.HashCode = hashCode;
