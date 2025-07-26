@@ -33,6 +33,12 @@ Chats使用`C#`/`TypeScript`开发，有关如何编译Chats，请查看 [开发
 mkdir ./AppData && chmod 777 ./AppData && docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
 ```
 
+如果以上命令遇到目录挂载的问题，可以尝试下面的命令
+
+```sh
+docker run -d --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v $(pwd)/AppData:/app/AppData -p 13001:8080 sdcb/chats:latest
+```
+
 #### 说明：
 
 - **数据库存储位置**：默认情况下，Chats 的 SQLite 数据库会在 `./AppData` 目录下创建。为了避免每次重新启动 Docker 容器时数据库被意外清空，我们首先创建一个 `AppData` 文件夹并将其权限设置为可写（`chmod 777`）。
