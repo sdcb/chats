@@ -363,7 +363,7 @@ public class AzureResponseApiService(Model model) : ChatService(model)
             EndUserId = options.EndUserId,
             TextOptions = new ResponseTextOptions()
             {
-                TextFormat = ToResponse(options.ResponseFormat),
+                TextFormat = ToResponse(options.ResponseFormat)
             },
             ParallelToolCallsEnabled = options.AllowParallelToolCalls,
         };
@@ -391,15 +391,15 @@ public class AzureResponseApiService(Model model) : ChatService(model)
             return format.GetType().Name switch
             {
                 "InternalChatResponseFormatText" => ResponseTextFormat.CreateTextFormat(),
-                "InternalChatResponseFormatJsonObject" => ResponseTextFormat.CreateJsonObjectFormat(),
-                "InternalChatResponseFormatJsonSchema" => InternalChatResponseFormatJsonSchemaToResponse(format),
+                "InternalDotNetChatResponseFormatJsonObject" => ResponseTextFormat.CreateJsonObjectFormat(),
+                "InternalDotNetChatResponseFormatJsonSchema" => InternalChatResponseFormatJsonSchemaToResponse(format),
                 _ => throw new NotSupportedException($"Unsupported response format: {format.GetType().Name}"),
             };
 
             static ResponseTextFormat InternalChatResponseFormatJsonSchemaToResponse(ChatResponseFormat format)
             {
                 Type type = format.GetType();
-                object? jsonSchema = (type.GetProperty("JsonSchema")?.GetValue(format)) ?? throw new InvalidOperationException("JsonSchema property is null.");
+                object? jsonSchema = (type.GetProperty("JsonSchema", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(format)) ?? throw new InvalidOperationException("JsonSchema property is null.");
 
                 Type jsonSchemaType = jsonSchema.GetType();
                 BinaryData binaryData = (BinaryData)jsonSchemaType.GetProperty("Schema")!.GetValue(jsonSchema)!;
