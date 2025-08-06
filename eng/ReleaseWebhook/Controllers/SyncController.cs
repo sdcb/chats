@@ -70,6 +70,7 @@ public class SyncController(
         using HttpClient httpClient = httpClientFactory.CreateClient();
         httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Sdcb-Chats-Sync/1.0");
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ghSettings.Token);
+        httpClient.Timeout = TimeSpan.FromHours(2);
 
         Artifact? artifact = artifactsResp.Artifacts.FirstOrDefault(a => a.Name == artifactName);
         if (artifact == null)
@@ -150,6 +151,7 @@ public class SyncController(
             using HttpClient httpClient = httpClientFactory.CreateClient();
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Sdcb-Chats-Sync/1.0");
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ghSettings.Token);
+            httpClient.Timeout = TimeSpan.FromHours(2);
 
             string artifactDownloadUrl = artifact.ArchiveDownloadUrl;
             string s3Key = $"r{runNumber}/{artifact.Name}.zip";

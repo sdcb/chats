@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.S3" Version="3.7.414.4" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.6.3" />
     <PackageReference Include="Octokit" Version="14.0.0" />
   </ItemGroup>
 
