@@ -5,7 +5,7 @@ using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class SiliconFlowChatService(Model model) : OpenAIChatService(model, new Uri("https://api.siliconflow.cn/v1"))
+public class SiliconFlowChatService(Model model) : ChatCompletionService(model, new Uri("https://api.siliconflow.cn/v1"))
 {
     protected override Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, CancellationToken cancellationToken)
     {

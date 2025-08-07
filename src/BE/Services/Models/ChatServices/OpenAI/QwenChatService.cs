@@ -5,7 +5,7 @@ using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class QwenChatService(Model model) : OpenAIChatService(model, new Uri("https://dashscope.aliyuncs.com/compatible-mode/v1"))
+public class QwenChatService(Model model) : ChatCompletionService(model, new Uri("https://dashscope.aliyuncs.com/compatible-mode/v1"))
 {
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {

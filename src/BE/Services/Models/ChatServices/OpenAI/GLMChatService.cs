@@ -5,7 +5,7 @@ using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class GLMChatService(Model model) : OpenAIChatService(model, new Uri("https://open.bigmodel.cn/api/paas/v4/"))
+public class GLMChatService(Model model) : ChatCompletionService(model, new Uri("https://open.bigmodel.cn/api/paas/v4/"))
 {
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {

@@ -12,21 +12,17 @@ using System.Runtime.CompilerServices;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
-public class ImageGenerationChatService(Model model) : ChatService(model)
+public class ImageGenerationService(Model model, ImageClient imageClient) : ChatService(model)
 {
     private DBReasoningEffort _reasoningEffort;
 
-    protected virtual ImageClient CreateImageGenerationAPI(Model model)
+    public ImageGenerationService(Model model, Uri? suggestedUri = null, params PipelinePolicy[] perCallPolicies) : this(model, CreateImageGenerationAPI(model, suggestedUri, perCallPolicies))
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Host, nameof(model.ModelKey.Host));
-        ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Secret, nameof(model.ModelKey.Secret));
+    }
 
-        OpenAIClient api = new(
-            new ApiKeyCredential(model.ModelKey.Secret), new()
-            {
-                NetworkTimeout = NetworkTimeout,
-                Endpoint = model.ModelKey.Host != null ? new Uri(model.ModelKey.Host) : null,
-            });
+    private static ImageClient CreateImageGenerationAPI(Model model, Uri? suggestedUrl, PipelinePolicy[] perCallPolicies)
+    {
+        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model, suggestedUrl, perCallPolicies);
         ImageClient cc = api.GetImageClient(model.ApiModelId);
         return cc;
     }
@@ -40,11 +36,10 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
     {
         string prompt = GetPrompt(messages);
         ChatMessageContentPart[] images = GetImages(messages);
-        ImageClient ic = CreateImageGenerationAPI(Model);
         ClientResult<GeneratedImageCollection> cr = null!;
         if (images.Length == 0)
         {
-            cr = await ic.GenerateImagesAsync(
+            cr = await imageClient.GenerateImagesAsync(
                 prompt,
                 options.MaxOutputTokenCount ?? 1,
                 new ImageGenerationOptions()
@@ -120,7 +115,7 @@ public class ImageGenerationChatService(Model model) : ChatService(model)
             }
             //multiPartFormDataBinaryContent.Add("1024x1024", "size");
 
-            ClientResult clientResult = await ic.GenerateImageEditsAsync(form, form.ContentType, new RequestOptions()
+            ClientResult clientResult = await imageClient.GenerateImageEditsAsync(form, form.ContentType, new RequestOptions()
             {
                 CancellationToken = cancellationToken
             });

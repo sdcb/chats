@@ -4,7 +4,7 @@ using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class XAIChatService(Model model) : OpenAIChatService(model, new Uri("https://api.x.ai/v1"))
+public class XAIChatService(Model model) : ChatCompletionService(model, new Uri("https://api.x.ai/v1"))
 {
     protected override Dtos.ChatTokenUsage GetUsage(ChatTokenUsage usage)
     {

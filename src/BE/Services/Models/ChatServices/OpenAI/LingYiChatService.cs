@@ -5,7 +5,7 @@ using Chats.BE.Services.Models.ChatServices.OpenAI.PipelinePolicies;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class LingYiChatService(Model model) : OpenAIChatService(model, new Uri("https://api.lingyiwanwu.com/v1"), 
+public class LingYiChatService(Model model) : ChatCompletionService(model, new Uri("https://api.lingyiwanwu.com/v1"), 
     new ReplaceSseContentPolicy("\"finish_reason\":\"\"", "\"finish_reason\":null"))
 {
     protected override Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, CancellationToken cancellationToken)

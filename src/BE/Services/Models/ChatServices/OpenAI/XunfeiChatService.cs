@@ -4,7 +4,7 @@ using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class XunfeiChatService(Model model) : OpenAIChatService(model, new Uri("https://spark-api-open.xf-yun.com/v1"))
+public class XunfeiChatService(Model model) : ChatCompletionService(model, new Uri("https://spark-api-open.xf-yun.com/v1"))
 {
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {

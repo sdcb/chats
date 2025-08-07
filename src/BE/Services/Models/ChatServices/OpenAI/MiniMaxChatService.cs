@@ -2,4 +2,4 @@
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class MiniMaxChatService(Model model) : OpenAIChatService(model, new Uri("https://api.minimax.chat/v1"));
+public class MiniMaxChatService(Model model) : ChatCompletionService(model, new Uri("https://api.minimax.chat/v1"));

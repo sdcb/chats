@@ -4,7 +4,7 @@ using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class DoubaoChatService(Model model) : OpenAIChatService(model, new Uri("https://ark.cn-beijing.volces.com/api/v3/"))
+public class DoubaoChatService(Model model) : ChatCompletionService(model, new Uri("https://ark.cn-beijing.volces.com/api/v3/"))
 {
     protected override Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, CancellationToken cancellationToken)
     {

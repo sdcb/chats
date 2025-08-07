@@ -9,7 +9,7 @@ using Chats.BE.Services.Models.Extensions;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 
-public class QianFanChatService(Model model) : OpenAIChatService(model, CreateChatClient(model, new Uri("https://qianfan.baidubce.com/v2")))
+public class QianFanChatService(Model model) : ChatCompletionService(model, CreateChatClient(model, new Uri("https://qianfan.baidubce.com/v2")))
 {
     private static ChatClient CreateChatClient(Model model, Uri? suggestedApiUrl)
     {

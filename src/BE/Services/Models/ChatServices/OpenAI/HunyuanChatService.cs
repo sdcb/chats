@@ -4,7 +4,7 @@ using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class HunyuanChatService(Model model) : OpenAIChatService(model, new Uri("https://api.hunyuan.cloud.tencent.com/v1"))
+public class HunyuanChatService(Model model) : ChatCompletionService(model, new Uri("https://api.hunyuan.cloud.tencent.com/v1"))
 {
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {

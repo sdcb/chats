@@ -2,4 +2,4 @@
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class KimiChatService(Model model) : OpenAIChatService(model, new Uri("https://api.moonshot.cn/v1"));
+public class KimiChatService(Model model) : ChatCompletionService(model, new Uri("https://api.moonshot.cn/v1"));

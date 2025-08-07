@@ -12,13 +12,19 @@ using Chats.BE.Services.Models.Extensions;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public partial class OpenAIChatService(Model model, ChatClient chatClient) : ChatService(model)
+public partial class ChatCompletionService(Model model, ChatClient chatClient) : ChatService(model)
 {
-    public OpenAIChatService(Model model, Uri? suggestedApiUrl = null, params PipelinePolicy[] perCallPolicies) : this(model, CreateChatClient(model, suggestedApiUrl, perCallPolicies))
+    public ChatCompletionService(Model model, Uri? suggestedApiUrl = null, params PipelinePolicy[] perCallPolicies) : this(model, CreateChatClient(model, suggestedApiUrl, perCallPolicies))
     {
     }
 
     private static ChatClient CreateChatClient(Model model, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
+    {
+        OpenAIClient api = CreateOpenAIClient(model, suggestedApiUrl, perCallPolicies);
+        return api.GetChatClient(model.ApiModelId);
+    }
+
+    internal static OpenAIClient CreateOpenAIClient(Model model, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Secret, nameof(model.ModelKey.Secret));
         OpenAIClientOptions oaic = new()
@@ -31,7 +37,7 @@ public partial class OpenAIChatService(Model model, ChatClient chatClient) : Cha
             oaic.AddPolicy(policy, PipelinePosition.PerCall);
         }
         OpenAIClient api = new(new ApiKeyCredential(model.ModelKey.Secret!), oaic);
-        return api.GetChatClient(model.ApiModelId);
+        return api;
     }
 
     static Func<StreamingChatCompletionUpdate, string?> StreamingReasoningContentAccessor { get; } = ReasoningContentFactory.CreateStreamingReasoningContentAccessor();
