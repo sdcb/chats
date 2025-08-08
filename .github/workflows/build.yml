@@ -358,16 +358,16 @@ jobs:
           ### Alternative binaries download links that may faster than GitHub(for China users)
           | Artifact                  | Download Link                                                      |
           | ------------------------- | ------------------------------------------------------------------ |
-          | chats-win-x64.zip         | ${{ vars.R2_URL }}/chats/release/latest/chats-win-x64.zip          |
-          | chats-linux-x64.zip       | ${{ vars.R2_URL }}/chats/release/latest/chats-linux-x64.zip        |
-          | chats-linux-arm64.zip     | ${{ vars.R2_URL }}/chats/release/latest/chats-linux-arm64.zip      |
-          | chats-linux-musl-x64.zip  | ${{ vars.R2_URL }}/chats/release/latest/chats-linux-musl-x64.zip   |
-          | chats-linux-musl-arm64.zip| ${{ vars.R2_URL }}/chats/release/latest/chats-linux-musl-arm64.zip |
-          | chats-osx-arm64.zip       | ${{ vars.R2_URL }}/chats/release/latest/chats-osx-arm64.zip        |
-          | chats-osx-x64.zip         | ${{ vars.R2_URL }}/chats/release/latest/chats-osx-x64.zip          |
-          | chats-fe.zip              | ${{ vars.R2_URL }}/chats/release/latest/chats-fe.zip               |
-          | chats.zip                 | ${{ vars.R2_URL }}/chats/release/latest/chats.zip                  |
-          | be-src.zip                | ${{ vars.R2_URL }}/chats/release/latest/be-src.zip                 |
+          | chats-win-x64.zip         | ${{ vars.R2_URL }}/release/latest/chats-win-x64.zip          |
+          | chats-linux-x64.zip       | ${{ vars.R2_URL }}/release/latest/chats-linux-x64.zip        |
+          | chats-linux-arm64.zip     | ${{ vars.R2_URL }}/release/latest/chats-linux-arm64.zip      |
+          | chats-linux-musl-x64.zip  | ${{ vars.R2_URL }}/release/latest/chats-linux-musl-x64.zip   |
+          | chats-linux-musl-arm64.zip| ${{ vars.R2_URL }}/release/latest/chats-linux-musl-arm64.zip |
+          | chats-osx-arm64.zip       | ${{ vars.R2_URL }}/release/latest/chats-osx-arm64.zip        |
+          | chats-osx-x64.zip         | ${{ vars.R2_URL }}/release/latest/chats-osx-x64.zip          |
+          | chats-fe.zip              | ${{ vars.R2_URL }}/release/latest/chats-fe.zip               |
+          | chats.zip                 | ${{ vars.R2_URL }}/release/latest/chats.zip                  |
+          | be-src.zip                | ${{ vars.R2_URL }}/release/latest/be-src.zip                 |
     
           **NOTE**: 
           Replace \`r${{ github.run_number }}\` with \`latest\` in the download link to get the latest version, for example: \`${{ vars.R2_URL }}/release/latest/chats-win-x64.zip\`

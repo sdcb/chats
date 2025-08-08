@@ -61,7 +61,7 @@ public class GoogleAI2ChatService : ChatService
             {
                 ThinkingBudget = _reasoningEffort switch
                 {
-                    DBReasoningEffort.Low => Model.ModelReference.Name.Contains("pro") ? 0 : 128,
+                    DBReasoningEffort.Low => 128,
                     _ => null,
                 },
                 IncludeThoughts = true, 
