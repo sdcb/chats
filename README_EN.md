@@ -1,4 +1,4 @@
-**English** | **[简体中文](README.md)** [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS)
+﻿**English** | **[简体中文](README.md)** [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS)
 
 Sdcb Chats is a powerful and flexible frontend for large language models that supports various features and platforms. Whether you want to manage multiple model interfaces or need a simple deployment process, Sdcb Chats can meet your needs.
 
@@ -80,32 +80,25 @@ For environments where using Docker is inconvenient, Chats provides direct deplo
 
 | Platform              | GitHub Download Link                                                                                              | Alternative Download Link                                                                                   |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Windows 64-bit        | [chats-win-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-win-x64.zip)                     | [chats-win-x64.zip](https://io.starworks.cc:88/chats/latest/chats-win-x64.zip)                               |
-| Linux 64-bit          | [chats-linux-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-x64.zip)                 | [chats-linux-x64.zip](https://io.starworks.cc:88/chats/latest/chats-linux-x64.zip)                           |
-| Linux ARM64           | [chats-linux-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-arm64.zip)             | [chats-linux-arm64.zip](https://io.starworks.cc:88/chats/latest/chats-linux-arm64.zip)                       |
-| Linux musl x64        | [chats-linux-musl-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-x64.zip)       | [chats-linux-musl-x64.zip](https://io.starworks.cc:88/chats/latest/chats-linux-musl-x64.zip)                 |
-| Linux musl ARM64      | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip)   | [chats-linux-musl-arm64.zip](https://io.starworks.cc:88/chats/latest/chats-linux-musl-arm64.zip)             |
-| macOS ARM64           | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)                 | [chats-osx-arm64.zip](https://io.starworks.cc:88/chats/latest/chats-osx-arm64.zip)                           |
-| macOS x64             | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)                     | [chats-osx-x64.zip](https://io.starworks.cc:88/chats/latest/chats-osx-x64.zip)                               |
-| Generic package dependent on .NET | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                                      | [chats.zip](https://io.starworks.cc:88/chats/latest/chats.zip)                                  |
-| Pure front-end files  | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                               | [chats-fe.zip](https://io.starworks.cc:88/chats/latest/chats-fe.zip)                                         |
+| Windows 64-bit        | [chats-win-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-win-x64.zip)                     | [chats-win-x64.zip](https://chats.sdcb.pub/release/latest/chats-win-x64.zip)                               |
+| Linux 64-bit          | [chats-linux-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-x64.zip)                 | [chats-linux-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-x64.zip)                           |
+| Linux ARM64           | [chats-linux-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-arm64.zip)             | [chats-linux-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-arm64.zip)                       |
+| Linux musl x64        | [chats-linux-musl-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-x64.zip)       | [chats-linux-musl-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-x64.zip)                 |
+| Linux musl ARM64      | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip)   | [chats-linux-musl-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-arm64.zip)             |
+| macOS ARM64           | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)                 | [chats-osx-arm64.zip](https://chats.sdcb.pub/release/latest/chats-osx-arm64.zip)                           |
+| macOS x64             | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)                     | [chats-osx-x64.zip](https://chats.sdcb.pub/release/latest/chats-osx-x64.zip)                               |
+| Generic package dependent on .NET | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                                      | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                                  |
+| Pure front-end files  | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                               | [chats-fe.zip](https://chats.sdcb.pub/release/latest/chats-fe.zip)                                         |
 
 ### Version and Download Instructions
 
-1. **Specific Version Download Address**:
-   - To download a specific version of Chats, replace `release/latest/download` in the link with `releases/download/r-{version}`. For example, the Linux ARM64 file link for version `141` is:
+   - In case of access issues, you can use the alternative download address:
      ```
-     https://github.com/sdcb/chats/releases/download/r-141/chats-linux-arm64.zip
-     ```
-
-2. **Alternative Download Base Address**:
-   - In case of access issues, you can use the alternative download address, adjust {version} to the specific version number or use `latest`:
-     ```
-     https://io.starworks.cc:88/chats/r{version}/{artifact-id}.zip
+     https://chats.sdcb.pub/release/r{version}/{artifact-id}.zip
      ```
    - For example, to directly download the latest Windows 64-bit version via the alternative download:
      ```
-     https://io.starworks.cc:88/chats/latest/chats-win-x64.zip
+     https://chats.sdcb.pub/release/latest/chats-win-x64.zip
      ```
 
 ### Executable Directory Structure and Running Instructions
@@ -167,5 +160,5 @@ C:\Users\ZhouJie\Downloads\chats-win-x64>dir
 注意：
 Note:
 - Any other model providers not listed above can also be accessed through Chats as long as they comply with the OpenAI Chat Completion API protocol.
-- Azure OpenAI's o3/o4-mini models use the Response API protocol instead of the Chat Completion API protocol, and support features such as thought summary and thought process.
+- Azure OpenAI's o3/o4-mini/gpt-5 series models use the Response API protocol instead of the Chat Completion API protocol, and support features such as thought summary and thought process.
 - Google AI's Gemini model uses the native Google Gemini API protocol.
