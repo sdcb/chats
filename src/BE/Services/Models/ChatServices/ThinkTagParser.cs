@@ -18,7 +18,7 @@ public static class ThinkTagParser
         const string startThinkTag = "<think>\n";
         // 注意：你的原代码是以 "\n</think>\n\n" 作为结束标记，这里保持一致
         // 假设非严格情况下只要匹配到 \n</think> 就行，但先沿用你给的 endThinkTag。
-        const string endThinkTag = "\n</think>\n\n";
+        const string endThinkTag = "\n</think>\n";
 
         // 获取枚举器，用于逐个读取 token
         var enumerator = tokenYielder.GetAsyncEnumerator(cancellationToken);

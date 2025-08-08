@@ -45,6 +45,7 @@ public partial class ModelReference
             "qwen3-4b" => true,
             "qwen3-1.7b" => true,
             "qwen3-0.6b" => true,
+            "gpt-5" or "gpt-5-mini" or "gpt-5-nano" => true,
             _ => false
         };
     }
