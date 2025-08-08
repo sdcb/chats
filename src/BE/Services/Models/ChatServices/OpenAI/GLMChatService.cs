@@ -1,6 +1,5 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.Services.Models.Extensions;
-using Microsoft.OpenApi.Services;
 using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
