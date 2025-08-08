@@ -86,7 +86,7 @@ jobs:
           path: |
             ./src/BE
 
-  upload-fe-to-minio:
+  upload-fe-to-r2:
     needs: build-fe
     runs-on: ubuntu-22.04
     steps:
@@ -106,7 +106,8 @@ jobs:
 
       - name: Upload to Cloudflare R2
         run: |
-          aws s3 sync ./*.zip s3://chats/latest --endpoint-url ${{ secrets.R2_HOST }}
+          aws s3 cp . s3://chats/latest --recursive --exclude "*" --include "*.zip" --endpoint-url ${{ secrets.R2_HOST }}
+
     env:
         AWS_ACCESS_KEY_ID: ${{ secrets.R2_KEY }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET }}
