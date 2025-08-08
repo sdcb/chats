@@ -267,7 +267,7 @@ jobs:
         with:
           name: ${{ matrix.id }}
           path: ./Publish
-      - name: Upload to Minio
+      - name: Upload to R2
         run: |
           zip -r ${{ matrix.id }}.zip ./Publish
           aws s3 cp ${{ matrix.id }}.zip s3://chats/release/latest/${{ matrix.id }}.zip --endpoint-url ${{ secrets.R2_HOST }}
@@ -298,10 +298,10 @@ jobs:
         with:
           name: ${{ matrix.id }}
           path: ./Publish
-      - name: Upload to Minio
+      - name: Upload to R2
         run: |
-          curl -s -i -X POST "https://chats-release-webhook.starworks.cc:88/sync/${{ github.run_id }}/${{ matrix.id }}" -N \
-            -H "Authorization: Basic $(echo -n "${{ secrets.CHATS_RELEASE_WEBHOOK_CREDENTIAL }}" | openssl base64)"
+          zip -r ${{ matrix.id }}.zip ./Publish
+          aws s3 cp ${{ matrix.id }}.zip s3://chats/latest/${{ matrix.id }}.zip --endpoint-url ${{ secrets.R2_HOST }}
 
   create-release:
     if: github.ref_name == 'main'
@@ -352,21 +352,21 @@ jobs:
           | Latest                        | ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/chats:latest                                                           |
     
           ### Alternative binaries download links that may faster than GitHub(for China users)
-          | Artifact                  | Download Link                                                                   |
-          | ------------------------- | ------------------------------------------------------------------------------- |
-          | chats-win-x64.zip         | ${{ vars.MINIO_URL }}/chats/r${{ github.run_number }}/chats-win-x64.zip         |
-          | chats-linux-x64.zip       | ${{ vars.MINIO_URL }}/chats/r${{ github.run_number }}/chats-linux-x64.zip       |
-          | chats-linux-arm64.zip     | ${{ vars.MINIO_URL }}/chats/r${{ github.run_number }}/chats-linux-arm64.zip     |
-          | chats-linux-musl-x64.zip  | ${{ vars.MINIO_URL }}/chats/r${{ github.run_number }}/chats-linux-musl-x64.zip  |
-          | chats-linux-musl-arm64.zip| ${{ vars.MINIO_URL }}/chats/r${{ github.run_number }}/chats-linux-musl-arm64.zip|
-          | chats-osx-arm64.zip       | ${{ vars.MINIO_URL }}/chats/r${{ github.run_number }}/chats-osx-arm64.zip       |
-          | chats-osx-x64.zip         | ${{ vars.MINIO_URL }}/chats/r${{ github.run_number }}/chats-osx-x64.zip         |
-          | chats-fe.zip              | ${{ vars.MINIO_URL }}/chats/r${{ github.run_number }}/chats-fe.zip              |
-          | chats.zip                 | ${{ vars.MINIO_URL }}/chats/r${{ github.run_number }}/chats.zip                 |
-          | be-src.zip                | ${{ vars.MINIO_URL }}/chats/r${{ github.run_number }}/be-src.zip                |
+          | Artifact                  | Download Link                                                      |
+          | ------------------------- | ------------------------------------------------------------------ |
+          | chats-win-x64.zip         | ${{ vars.R2_URL }}/chats/release/latest/chats-win-x64.zip          |
+          | chats-linux-x64.zip       | ${{ vars.R2_URL }}/chats/release/latest/chats-linux-x64.zip        |
+          | chats-linux-arm64.zip     | ${{ vars.R2_URL }}/chats/release/latest/chats-linux-arm64.zip      |
+          | chats-linux-musl-x64.zip  | ${{ vars.R2_URL }}/chats/release/latest/chats-linux-musl-x64.zip   |
+          | chats-linux-musl-arm64.zip| ${{ vars.R2_URL }}/chats/release/latest/chats-linux-musl-arm64.zip |
+          | chats-osx-arm64.zip       | ${{ vars.R2_URL }}/chats/release/latest/chats-osx-arm64.zip        |
+          | chats-osx-x64.zip         | ${{ vars.R2_URL }}/chats/release/latest/chats-osx-x64.zip          |
+          | chats-fe.zip              | ${{ vars.R2_URL }}/chats/release/latest/chats-fe.zip               |
+          | chats.zip                 | ${{ vars.R2_URL }}/chats/release/latest/chats.zip                  |
+          | be-src.zip                | ${{ vars.R2_URL }}/chats/release/latest/be-src.zip                 |
     
           **NOTE**: 
-          Replace \`r${{ github.run_number }}\` with \`latest\` in the download link to get the latest version, for example: \`${{ vars.MINIO_URL }}/chats/latest/chats-win-x64.zip\`
+          Replace \`r${{ github.run_number }}\` with \`latest\` in the download link to get the latest version, for example: \`${{ vars.R2_URL }}/release/latest/chats-win-x64.zip\`
 
           ### Full Changelogs
           https://github.com/sdcb/chats/compare/$PREVIOUS_REV...$CURRENT_REV
@@ -388,16 +388,6 @@ jobs:
           name: ${{ needs.build-fe.outputs.patch_full_ver }}
           tag: ${{ needs.build-fe.outputs.full_ver }}
           artifacts: "*.zip, sha256sum.txt"
-
-  upload-r2-latest:
-    if: needs.build-fe.outputs.is_release == 'true'
-    needs: [build-binaries, upload-fe-to-r2]
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Update latest files
-        run: |
-          curl -X POST "https://chats-release-webhook.starworks.cc:88/sync/latest/${{ github.run_number }}" -N \
-            -H "Authorization: Basic $(echo -n "${{ secrets.CHATS_RELEASE_WEBHOOK_CREDENTIAL }}" | openssl base64)"
       
   deploy:
     runs-on: host7-runner
