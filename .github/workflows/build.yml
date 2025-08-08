@@ -302,6 +302,10 @@ jobs:
         run: |
           zip -r ${{ matrix.id }}.zip ./Publish
           aws s3 cp ${{ matrix.id }}.zip s3://chats/latest/${{ matrix.id }}.zip --endpoint-url ${{ secrets.R2_HOST }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET }}
+          AWS_DEFAULT_REGION: "auto"
 
   create-release:
     if: github.ref_name == 'main'
