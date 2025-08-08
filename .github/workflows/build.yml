@@ -90,12 +90,27 @@ jobs:
     needs: build-fe
     runs-on: ubuntu-22.04
     steps:
-      - name: Trigger Sync chats-fe & be-src
+      - name: Download all artifacts as zip
+        run: |   
+          API_URL="https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts"
+          echo "Fetching artifacts from: ${API_URL}"
+          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "${API_URL}" | \
+            jq -c '.artifacts[]' | while read artifact; do
+              ID=$(echo "$artifact" | jq -r '.id')
+              NAME=$(echo "$artifact" | jq -r '.name')
+              echo "Downloading artifact '${NAME}' (ID: ${ID})"
+              curl -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                -o "${NAME}.zip" "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ID}/zip?archive_format=zip"
+            done
+          ls -lh *.zip
+
+      - name: Upload to Cloudflare R2
         run: |
-          curl -s -X POST "https://chats-release-webhook.starworks.cc:88/sync/${{ github.run_id }}/chats-fe/async" -N \
-            -H "Authorization: Basic $(echo -n "${{ secrets.CHATS_RELEASE_WEBHOOK_CREDENTIAL }}" | openssl base64)"
-          curl -s -X POST "https://chats-release-webhook.starworks.cc:88/sync/${{ github.run_id }}/be-src/async" -N \
-            -H "Authorization: Basic $(echo -n "${{ secrets.CHATS_RELEASE_WEBHOOK_CREDENTIAL }}" | openssl base64)"
+          aws s3 sync ./*.zip s3://chats/latest --endpoint-url ${{ secrets.R2_HOST }}
+    env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.R2_KEY }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET }}
+        AWS_DEFAULT_REGION: "auto"
 
   build-primary-container:
     needs: build-fe
