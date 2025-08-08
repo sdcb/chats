@@ -269,8 +269,12 @@ jobs:
           path: ./Publish
       - name: Upload to Minio
         run: |
-          curl -s -i -X POST "https://chats-release-webhook.starworks.cc:88/sync/${{ github.run_id }}/${{ matrix.id }}" -N \
-            -H "Authorization: Basic $(echo -n "${{ secrets.CHATS_RELEASE_WEBHOOK_CREDENTIAL }}" | openssl base64)"
+          zip -r ${{ matrix.id }}.zip ./Publish
+          aws s3 cp ${{ matrix.id }}.zip s3://chats/release/latest/${{ matrix.id }}.zip --endpoint-url ${{ secrets.R2_HOST }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET }}
+          AWS_DEFAULT_REGION: "auto"
 
   build-binaries-non-release:
     needs: build-fe
@@ -385,9 +389,9 @@ jobs:
           tag: ${{ needs.build-fe.outputs.full_ver }}
           artifacts: "*.zip, sha256sum.txt"
 
-  upload-minio-latest:
+  upload-r2-latest:
     if: needs.build-fe.outputs.is_release == 'true'
-    needs: [build-binaries, upload-fe-to-minio]
+    needs: [build-binaries, upload-fe-to-r2]
     runs-on: ubuntu-22.04
     steps:
       - name: Update latest files
