@@ -53,6 +53,8 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                         DBReasoningEffort.High => "high",
                         _ => throw new ArgumentOutOfRangeException(nameof(_reasoningEffort), _reasoningEffort, null)
                     },
+                    Size = prompt.Contains("3:2") ? GeneratedImageSize.W1536xH1024 : prompt.Contains("2:3") ? GeneratedImageSize.W1024xH1536 : null,
+                    ModerationLevel = GeneratedImageModerationLevel.Low,
                 }, cancellationToken);
         }
         else
@@ -143,11 +145,19 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
             form.Add(prompt, "prompt");
             form.Add(options.MaxOutputTokenCount ?? 1, "n");
             form.Add(Model.ApiModelId, "model");
+            if (prompt.Contains("3:2"))
+            {
+                form.Add("1536x1024", "size");
+            }
+            else if (prompt.Contains("2:3"))
+            {
+                form.Add("1024x1536", "size");
+            }
             if (options.EndUserId != null)
             {
                 form.Add(options.EndUserId, "user");
             }
-            //form.Add("low", "moderation");
+            form.Add("low", "moderation");
             if (_reasoningEffort != DBReasoningEffort.Default)
             {
                 form.Add(_reasoningEffort switch
@@ -158,7 +168,6 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                     _ => throw new ArgumentOutOfRangeException(nameof(_reasoningEffort), _reasoningEffort, null)
                 }, "quality");
             }
-            //multiPartFormDataBinaryContent.Add("1024x1024", "size");
 
             ClientResult clientResult = await imageClient.GenerateImageEditsAsync(form, form.ContentType, new RequestOptions()
             {
