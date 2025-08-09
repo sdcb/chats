@@ -58,14 +58,58 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
         else
         {
             using HttpClient http = new();
-            //cr = await ic.GenerateImageEditsAsync(
-            //    await http.GetStreamAsync(image.ImageUri, cancellationToken), Path.GetFileName(image.ImageUri.LocalPath),
-            //    prompt,
-            //    options.MaxOutputTokenCount ?? 1,
-            //    new ImageEditOptions()
+            //Dictionary<Uri, HttpResponseMessage> downloadedFiles = (await Task.WhenAll(images
+            //    .Where(x => x.ImageUri != null)
+            //    .Take(2)
+            //    .GroupBy(x => x.ImageUri)
+            //    .Select(async image =>
             //    {
-            //        EndUserId = options.EndUserId,
-            //    }, cancellationToken);
+            //        HttpResponseMessage resp = await http.GetAsync(image.Key, cancellationToken);
+            //        return (url: image.Key, resp);
+            //    })))
+            //.ToDictionary(k => k.url, v => v.resp);
+
+            //// mask edit
+            //Stream? imageStream = null, maskStream = null;
+            //string? imageFile = null, maskFile = null;
+            //foreach (KeyValuePair<Uri, HttpResponseMessage> kv in downloadedFiles)
+            //{
+            //    if (kv.Key.ToString().Contains("mask.png") && maskFile == null)
+            //    {
+            //        maskFile = kv.Key.ToString();
+            //        maskStream = await kv.Value.Content.ReadAsStreamAsync(cancellationToken);
+            //    }
+            //    else if (imageFile == null)
+            //    {
+            //        imageFile = kv.Key.ToString();
+            //        imageStream = await kv.Value.Content.ReadAsStreamAsync(cancellationToken);
+            //    }
+            //}
+            //if (maskStream != null)
+            //{
+            //    cr = await imageClient.GenerateImageEditsAsync(
+            //        imageStream, imageFile,
+            //        prompt,
+            //        maskStream, maskFile,
+            //        options.MaxOutputTokenCount ?? 1,
+            //        new ImageEditOptions()
+            //        {
+            //            EndUserId = options.EndUserId,
+            //        }, cancellationToken);
+            //}
+            //else
+            //{
+            //    cr = await imageClient.GenerateImageEditsAsync(
+            //        imageStream, imageFile,
+            //        prompt,
+            //        options.MaxOutputTokenCount ?? 1,
+            //        new ImageEditOptions()
+            //        {
+            //            EndUserId = options.EndUserId,
+            //        }, cancellationToken);
+            //}
+
+
             MultiPartFormDataBinaryContent form = new();
             Dictionary<Uri, HttpResponseMessage> downloadedFiles = (await Task.WhenAll(images
                 .Where(x => x.ImageUri != null)
@@ -98,6 +142,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
             }
             form.Add(prompt, "prompt");
             form.Add(options.MaxOutputTokenCount ?? 1, "n");
+            form.Add(Model.ApiModelId, "model");
             if (options.EndUserId != null)
             {
                 form.Add(options.EndUserId, "user");
