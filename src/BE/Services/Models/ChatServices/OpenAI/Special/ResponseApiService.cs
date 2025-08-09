@@ -155,6 +155,12 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
         {
             await foreach (StreamingResponseUpdate delta in responseClient.CreateResponseStreamingAsync(ToResponse(messages), ToResponse(options), cancellationToken))
             {
+                if (delta is StreamingResponseErrorUpdate error)
+                {
+                    IDictionary<string, BinaryData>? dict = GetSerializedAdditionalRawData(error);
+                    string? errorMessage = dict?["error"].ToString() ?? error.Message ?? "Unknown error";
+                    throw new CustomChatServiceException(DBFinishReason.UpstreamError, errorMessage);
+                }
                 if (delta is StreamingResponseOutputTextDeltaUpdate textDelta)
                 {
                     yield return ChatSegment.FromTextOnly(textDelta.Delta);
