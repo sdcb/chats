@@ -55,17 +55,13 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<FinishReason> FinishReasons { get; set; }
 
-    public virtual DbSet<GeneratedImageSize> GeneratedImageSizes { get; set; }
-
     public virtual DbSet<InvitationCode> InvitationCodes { get; set; }
+
+    public virtual DbSet<KnownImageSize> KnownImageSizes { get; set; }
 
     public virtual DbSet<LoginService> LoginServices { get; set; }
 
-    public virtual DbSet<Mcp> Mcps { get; set; }
-
-    public virtual DbSet<McpHeader> McpHeaders { get; set; }
-
-    public virtual DbSet<McpUser> McpUsers { get; set; }
+    public virtual DbSet<McpServer> McpServers { get; set; }
 
     public virtual DbSet<Message> Messages { get; set; }
 
@@ -127,6 +123,8 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<UserInitialConfig> UserInitialConfigs { get; set; }
 
+    public virtual DbSet<UserMcp> UserMcps { get; set; }
+
     public virtual DbSet<UserModel> UserModels { get; set; }
 
     public virtual DbSet<UserModelUsage> UserModelUsages { get; set; }
@@ -181,7 +179,9 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<ChatConfig>(entity =>
         {
-            entity.HasOne(d => d.ImageSize).WithMany(p => p.ChatConfigs).HasConstraintName("FK_ChatConfig_ImageSize");
+            entity.HasOne(d => d.ImageSize).WithMany(p => p.ChatConfigs)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ChatConfig_ImageSize");
 
             entity.HasOne(d => d.Model).WithMany(p => p.ChatConfigs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -190,9 +190,9 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<ChatConfigMcp>(entity =>
         {
-            entity.Property(e => e.ChatConfigId).ValueGeneratedNever();
+            entity.HasOne(d => d.ChatConfig).WithMany(p => p.ChatConfigMcps).HasConstraintName("FK_ChatConfigMcp_ChatConfig");
 
-            entity.HasOne(d => d.Mcp).WithMany(p => p.ChatConfigMcps).HasConstraintName("FK_ChatConfigMcp_Mcp");
+            entity.HasOne(d => d.McpServer).WithMany(p => p.ChatConfigMcps).HasConstraintName("FK_ChatConfigMcp_McpServer");
         });
 
         modelBuilder.Entity<ChatGroup>(entity =>
@@ -286,33 +286,19 @@ public partial class ChatsDB : DbContext
                 .HasConstraintName("FK_FileService_FileServiceType");
         });
 
-        modelBuilder.Entity<GeneratedImageSize>(entity =>
-        {
-            entity.Property(e => e.Id).ValueGeneratedNever();
-        });
-
         modelBuilder.Entity<InvitationCode>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("InvitationCode2_pkey");
         });
 
+        modelBuilder.Entity<KnownImageSize>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedNever();
+        });
+
         modelBuilder.Entity<LoginService>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_LoginServices2");
-        });
-
-        modelBuilder.Entity<McpHeader>(entity =>
-        {
-            entity.HasOne(d => d.Mcp).WithMany(p => p.McpHeaders).HasConstraintName("FK_McpHeader_Mcp");
-        });
-
-        modelBuilder.Entity<McpUser>(entity =>
-        {
-            entity.HasOne(d => d.Mcp).WithMany(p => p.McpUsers).HasConstraintName("FK_McpUser_Mcp");
-
-            entity.HasOne(d => d.User).WithMany(p => p.McpUsers)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_McpUser_User");
         });
 
         modelBuilder.Entity<Message>(entity =>
@@ -598,6 +584,15 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.InvitationCode).WithMany(p => p.UserInitialConfigs)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_UserInitialConfig_InvitationCode");
+        });
+
+        modelBuilder.Entity<UserMcp>(entity =>
+        {
+            entity.HasOne(d => d.McpServer).WithMany(p => p.UserMcps).HasConstraintName("FK_UserMcp_McpServer");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserMcps)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserMcp_User");
         });
 
         modelBuilder.Entity<UserModel>(entity =>

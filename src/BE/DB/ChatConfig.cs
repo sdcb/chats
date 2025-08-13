@@ -31,6 +31,9 @@ public partial class ChatConfig
     public short ImageSizeId { get; set; }
 
     [InverseProperty("ChatConfig")]
+    public virtual ICollection<ChatConfigMcp> ChatConfigMcps { get; set; } = new List<ChatConfigMcp>();
+
+    [InverseProperty("ChatConfig")]
     public virtual ICollection<ChatPresetSpan> ChatPresetSpans { get; set; } = new List<ChatPresetSpan>();
 
     [InverseProperty("ChatConfig")]
@@ -38,7 +41,7 @@ public partial class ChatConfig
 
     [ForeignKey("ImageSizeId")]
     [InverseProperty("ChatConfigs")]
-    public virtual GeneratedImageSize ImageSize { get; set; } = null!;
+    public virtual KnownImageSize ImageSize { get; set; } = null!;
 
     [InverseProperty("ChatConfig")]
     public virtual ICollection<MessageResponse> MessageResponses { get; set; } = new List<MessageResponse>();

@@ -6,23 +6,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chats.BE.DB;
 
-[Table("McpUser")]
-[Index("McpId", Name = "IX_McpUser_McpId")]
-[Index("UserId", Name = "IX_McpUser_UserId")]
-public partial class McpUser
+[Table("UserMcp")]
+[Index("McpServerId", Name = "IX_UserMcp_McpServerId")]
+[Index("UserId", Name = "IX_UserMcp_UserId")]
+public partial class UserMcp
 {
     [Key]
     public int Id { get; set; }
 
-    public int McpId { get; set; }
+    public int McpServerId { get; set; }
 
     public int UserId { get; set; }
 
-    [ForeignKey("McpId")]
-    [InverseProperty("McpUsers")]
-    public virtual Mcp Mcp { get; set; } = null!;
+    [ForeignKey("McpServerId")]
+    [InverseProperty("UserMcps")]
+    public virtual McpServer McpServer { get; set; } = null!;
 
     [ForeignKey("UserId")]
-    [InverseProperty("McpUsers")]
+    [InverseProperty("UserMcps")]
     public virtual User User { get; set; } = null!;
 }

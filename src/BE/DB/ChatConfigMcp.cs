@@ -7,14 +7,24 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.BE.DB;
 
 [Table("ChatConfigMcp")]
+[Index("ChatConfigId", Name = "IX_ChatConfigMcp_ChatConfigId")]
+[Index("McpServerId", Name = "IX_ChatConfigMcp_McpServerId")]
 public partial class ChatConfigMcp
 {
     [Key]
+    public int Id { get; set; }
+
     public int ChatConfigId { get; set; }
 
-    public int McpId { get; set; }
+    public int McpServerId { get; set; }
 
-    [ForeignKey("McpId")]
+    public string? Headers { get; set; }
+
+    [ForeignKey("ChatConfigId")]
     [InverseProperty("ChatConfigMcps")]
-    public virtual Mcp Mcp { get; set; } = null!;
+    public virtual ChatConfig ChatConfig { get; set; } = null!;
+
+    [ForeignKey("McpServerId")]
+    [InverseProperty("ChatConfigMcps")]
+    public virtual McpServer McpServer { get; set; } = null!;
 }
