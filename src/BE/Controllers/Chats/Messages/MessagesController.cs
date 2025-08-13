@@ -45,9 +45,9 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                     Duration = x.MessageResponse.Usage.TotalDurationMs - x.MessageResponse.Usage.PreprocessDurationMs,
                     ReasoningDuration = x.MessageResponse.Usage.ReasoningDurationMs,
                     FirstTokenLatency = x.MessageResponse.Usage.FirstResponseDurationMs,
-                    ModelId = x.MessageResponse.Usage.UserModel.ModelId,
-                    ModelName = x.MessageResponse.Usage.UserModel.Model.Name,
-                    ModelProviderId = x.MessageResponse.Usage.UserModel.Model.ModelKey.ModelProviderId,
+                    ModelId = x.MessageResponse.Usage.ModelId,
+                    ModelName = x.MessageResponse.Usage.Model.Name,
+                    ModelProviderId = x.MessageResponse.Usage.Model.ModelKey.ModelProviderId,
                     Reaction = x.MessageResponse.ReactionId,
                 },
             })
@@ -135,76 +135,6 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         return Ok();
     }
 
-    [HttpPut("{encryptedMessageId}/edit-and-save-new"), Obsolete("Use PATCH {messageId}/{contentId}/text-and-save-new")]
-    public async Task<ActionResult<RequestMessageDto>> EditAndSaveNew(string encryptedMessageId, [FromBody] ContentRequestItem[] content,
-        [FromServices] FileUrlProvider fup,
-        [FromServices] ClientInfoManager clientInfoManager,
-        CancellationToken cancellationToken)
-    {
-        long messageId = urlEncryption.DecryptMessageId(encryptedMessageId);
-        Message? message = await db.Messages
-            .Include(x => x.Chat)
-            .Include(x => x.MessageResponse!.Usage)
-            .Include(x => x.MessageResponse!.Usage.UserModel)
-            .Include(x => x.MessageResponse!.Usage.UserModel.Model)
-            .Include(x => x.MessageResponse!.Usage.UserModel.Model.ModelKey)
-            .FirstOrDefaultAsync(x => x.Id == messageId, cancellationToken);
-        if (message == null)
-        {
-            return NotFound();
-        }
-        if (message.Chat.UserId != currentUser.Id)
-        {
-            return Forbid();
-        }
-
-        Message newMessage = new()
-        {
-            Edited = true,
-            CreatedAt = DateTime.UtcNow,
-            SpanId = message.SpanId,
-            ChatId = message.ChatId,
-            ParentId = message.ParentId,
-            ChatRoleId = message.ChatRoleId,
-            ChatRole = message.ChatRole,
-            MessageContents = await MessageContent.FromRequest(content, fup, cancellationToken),
-        };
-        if (message.MessageResponse != null)
-        {
-            string textPart = content.OfType<TextContentRequestItem>().FirstOrDefault()?.Text ?? "";
-            newMessage.MessageResponse = new MessageResponse()
-            {
-                Usage = new UserModelUsage()
-                {
-                    UserModelId = message.MessageResponse.Usage.UserModelId,
-                    UserModel = message.MessageResponse.Usage.UserModel,
-                    FinishReasonId = (byte)DBFinishReason.Success,
-                    SegmentCount = 1,
-                    InputTokens = message.MessageResponse.Usage.InputTokens,
-                    OutputTokens = ChatService.DefaultTokenizer.CountTokens(textPart),
-                    ReasoningTokens = 0,
-                    IsUsageReliable = false,
-                    PreprocessDurationMs = 0,
-                    FirstResponseDurationMs = 0,
-                    PostprocessDurationMs = 0,
-                    TotalDurationMs = 0,
-                    InputCost = 0,
-                    OutputCost = 0,
-                    BalanceTransactionId = null,
-                    UsageTransactionId = null,
-                    ClientInfo = await clientInfoManager.GetClientInfo(cancellationToken),
-                    CreatedAt = DateTime.UtcNow,
-                },
-                ChatConfigId = message.MessageResponse.ChatConfigId,
-            };
-        }
-        db.Messages.Add(newMessage);
-        message.Chat.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(cancellationToken);
-        ChatMessageTemp temp = ChatMessageTemp.FromDB(newMessage);
-        return Ok(temp.ToDto(urlEncryption, fup));
-    }
-
     [HttpPatch("{messageId}/{contentId}/text")]
     public async Task<ActionResult<ContentResponseItem>> PatchTextInPlace(string messageId, string contentId, [FromBody] TextContentRequestItem content,
         [FromServices] FileUrlProvider fup,
@@ -249,10 +179,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentText)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentBlob)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentFile)
-            .Include(x => x.MessageResponse!.Usage)
-            .Include(x => x.MessageResponse!.Usage.UserModel)
-            .Include(x => x.MessageResponse!.Usage.UserModel.Model)
-            .Include(x => x.MessageResponse!.Usage.UserModel.Model.ModelKey)
+            .Include(x => x.MessageResponse!.Usage.Model.ModelKey)
             .FirstOrDefaultAsync(x => x.Id == urlEncryption.DecryptMessageId(messageId), cancellationToken);
         if (message == null)
         {
@@ -291,8 +218,9 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             {
                 Usage = new UserModelUsage()
                 {
-                    UserModelId = message.MessageResponse.Usage.UserModelId,
-                    UserModel = message.MessageResponse.Usage.UserModel,
+                    ModelId = message.MessageResponse.Usage.ModelId,
+                    Model = message.MessageResponse.Usage.Model,
+                    UserId = currentUser.Id,
                     FinishReasonId = (byte)DBFinishReason.Success,
                     SegmentCount = 1,
                     InputTokens = message.MessageResponse.Usage.InputTokens,

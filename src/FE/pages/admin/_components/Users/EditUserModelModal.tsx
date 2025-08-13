@@ -76,7 +76,9 @@ const EditUserModelModal = (props: IProps) => {
     setSubmit(true);
     putUserModel({
       userId: props.userId,
-      models: models.map((x) => x.toUpdateDto()),
+      models: models
+        .filter(x => x.enabled)
+        .map((x) => x.toUpdateDto()),
     })
       .then(() => {
         toast.success(t('Save successful'));

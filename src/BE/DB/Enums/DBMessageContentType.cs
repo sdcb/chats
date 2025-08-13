@@ -22,5 +22,16 @@ public enum DBMessageContentType : byte
 
     /// <summary>
     /// Reasoning content type, stored in MessageContentText table
+    /// </summary>
     Reasoning = 3,
+
+    /// <summary>
+    /// Tool call content type, stored in MessageContentToolCall table
+    /// </summary>
+    ToolCall = 4, 
+
+    /// <summary>
+    /// Tool call response content type, stored in MessageContentToolCallResponse table
+    /// </summary>
+    ToolCallResponse = 5, 
 }

@@ -81,6 +81,9 @@ public partial class User
     public virtual UserBalance? UserBalance { get; set; }
 
     [InverseProperty("User")]
+    public virtual ICollection<UserModelUsage> UserModelUsages { get; set; } = new List<UserModelUsage>();
+
+    [InverseProperty("User")]
     public virtual ICollection<UserModel> UserModels { get; set; } = new List<UserModel>();
 
     [ForeignKey("UserId")]

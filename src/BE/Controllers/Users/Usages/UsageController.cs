@@ -64,12 +64,12 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
         {
             if (!string.IsNullOrEmpty(query.User))
             {
-                usagesQuery = usagesQuery.Where(u => u.UserModel.User.UserName == query.User);
+                usagesQuery = usagesQuery.Where(u => u.User.UserName == query.User);
             }
         }
         else
         {
-            usagesQuery = usagesQuery.Where(u => u.UserModel.UserId == currentUser.Id);
+            usagesQuery = usagesQuery.Where(u => u.UserId == currentUser.Id);
         }
 
         if (!string.IsNullOrEmpty(query.ApiKeyId))
@@ -79,7 +79,7 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
 
         if (!string.IsNullOrEmpty(query.Provider))
         {
-            usagesQuery = usagesQuery.Where(u => u.UserModel.Model.ModelKey.ModelProvider.Name == query.Provider);
+            usagesQuery = usagesQuery.Where(u => u.Model.ModelKey.ModelProvider.Name == query.Provider);
         }
 
         if (query.Start != null)
@@ -111,12 +111,12 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
             .OrderByDescending(u => u.Id)
             .Select(u => new UsageDto
             {
-                UserName = u.UserModel.User.UserName,
+                UserName = u.User.UserName,
                 ApiKeyId = idEncryption.EncryptApiKeyId((int?)u.UserApiUsage!.ApiKey.Id),
                 ApiKey = u.UserApiUsage!.ApiKey.Key.ToMaskedNull(),
-                ModelProviderName = u.UserModel.Model.ModelReference.Provider.Name,
-                ModelReferenceName = u.UserModel.Model.ModelReference.Name,
-                ModelName = u.UserModel.Model.Name,
+                ModelProviderName = u.Model.ModelReference.Provider.Name,
+                ModelReferenceName = u.Model.ModelReference.Name,
+                ModelName = u.Model.Name,
                 PreprocessDurationMs = u.PreprocessDurationMs,
                 FirstResponseDurationMs = u.FirstResponseDurationMs,
                 PostprocessDurationMs = u.PostprocessDurationMs,

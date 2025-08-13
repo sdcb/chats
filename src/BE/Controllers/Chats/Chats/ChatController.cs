@@ -225,9 +225,10 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
         Response.Headers.Connection = "keep-alive";
         string stopId = stopService.CreateAndCombineCancellationToken(ref cancellationToken);
-        await YieldResponse(SseResponseLine.StopId(stopId));
+        await YieldResponse(SseResponseLine.CreateStopId(stopId));
 
         UserBalance userBalance = await db.UserBalances.Where(x => x.UserId == currentUser.Id).SingleAsync(cancellationToken);
+        UserModelBalanceCalculator cost = new UserModelBalanceCalculator(BalanceInitialInfo.FromDB(userModels.Values, userBalance.Balance), []);
 
         Channel<SseResponseLine>[] channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
         Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache = [];
@@ -244,7 +245,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 userModels[span.ChatConfig.ModelId],
                 messageTree,
                 newDbUserMessage,
-                userBalance,
+                cost.WithScoped(span.SpanId.ToString()),
                 clientInfoIdTask,
                 imageFileCache,
                 channels[index].Writer,
@@ -263,13 +264,13 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         FileService fs = null!;
         await foreach (SseResponseLine line in MergeChannels(channels).Reader.ReadAllAsync(CancellationToken.None))
         {
-            if (line.Kind == SseResponseKind.End)
+            if (line is EndLine endLine)
             {
-                Message dbAssistantMessage = (Message)line.Result;
+                Message dbAssistantMessage = endLine.Message;
                 ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == dbAssistantMessage.SpanId);
                 dbAssistantMessage.MessageResponse!.ChatConfig = await chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, default);
                 chat.Messages.Add(dbAssistantMessage);
-                bool isLast = line.SpanId == toGenerateSpans.Last().SpanId;
+                bool isLast = endLine.SpanId == toGenerateSpans.Last().SpanId;
                 if (isLast)
                 {
                     chat.LeafMessage = dbAssistantMessage;
@@ -282,26 +283,33 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     await YieldResponse(SseResponseLine.UserMessage(newDbUserMessage, idEncryption, fup));
                     dbUserMessageYield = true;
                 }
-                await YieldResponse(SseResponseLine.ResponseMessage(line.SpanId!.Value, dbAssistantMessage, idEncryption, fup));
+                await YieldResponse(SseResponseLine.ResponseMessage(endLine.SpanId, dbAssistantMessage, idEncryption, fup));
                 if (isLast)
                 {
                     await YieldResponse(SseResponseLine.ChatLeafMessageId(chat.LeafMessageId!.Value, idEncryption));
                 }
             }
-            else if (line.Kind == SseResponseKind.ImageGenerated)
+            else if (line is TempImageGeneratedLine tempImageGeneratedLine)
             {
-                ImageChatSegment image = (ImageChatSegment)line.Result;
+                ImageChatSegment image = tempImageGeneratedLine.Image;
                 if (!imageFileCache.TryGetValue(image, out TaskCompletionSource<DB.File>? tcs))
                 {
                     throw new InvalidOperationException("Image file cache not found.");
                 }
+
+                await YieldResponse(SseResponseLine.ImageGenerated(tempImageGeneratedLine.SpanId, new FileDto()
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    ContentType = image.ToContentType(),
+                    Url = image.ToTempUrl(),
+                }));
 
                 try
                 {
                     fs ??= await FileService.GetDefault(db, cancellationToken) ?? throw new InvalidOperationException("Default file service config not found.");
                     DB.File file = await dbFileService.StoreImage(image, await clientInfoIdTask, fs, cancellationToken: default);
                     tcs.SetResult(file);
-                    await YieldResponse(SseResponseLine.ImageGenerated(line.SpanId!.Value, fup.CreateFileDto(file, tryWithUrl: false)));
+                    await YieldResponse(SseResponseLine.ImageGenerated(tempImageGeneratedLine.SpanId, fup.CreateFileDto(file, tryWithUrl: false)));
                 }
                 catch (Exception e)
                 {
@@ -320,15 +328,22 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         ChatSpanResponse[] resps = await Task.WhenAll(streamTasks);
 
         // finish costs
-        if (resps.Any(x => x.Cost.CostBalance > 0))
+        if (cost.BalanceCost > 0)
         {
             await balanceService.UpdateBalance(db, currentUser.Id, cancellationToken);
         }
-        if (resps.Any(x => x.Cost.CostUsage))
+        if (cost.UsageCosts.Any())
         {
-            foreach (UserModel um in userModels.Values)
+            foreach (BalanceInitialUsageInfo um in cost.UsageCosts)
             {
-                await balanceService.UpdateUsage(db, um.Id, cancellationToken);
+                if (userModels.TryGetValue(um.ModelId, out UserModel? userModel))
+                {
+                    await balanceService.UpdateUsage(db, userModel.Id, cancellationToken);
+                }
+                else
+                {
+                    logger.LogError("UserModel not found for model id: {modelId}", um.ModelId);
+                }
             }
         }
 
@@ -364,7 +379,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         UserModel userModel,
         IEnumerable<MessageLiteDto> messageTree,
         Message? dbUserMessage,
-        UserBalance userBalance,
+        ScopedBalanceCalculator calc,
         Task<int> clientInfoIdTask,
         Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache,
         ChannelWriter<SseResponseLine> writer,
@@ -399,7 +414,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             using ChatService s = chatFactory.CreateChatService(userModel.Model);
 
             bool responseStated = false, reasoningStarted = false;
-            await foreach (InternalChatSegment seg in icc.Run(userBalance.Balance, userModel, s.ChatStreamedFEProcessed(messageToSend, cco, ced, cancellationToken)))
+            await foreach (InternalChatSegment seg in icc.Run(calc, userModel, s.ChatStreamedFEProcessed(messageToSend, cco, ced, cancellationToken)))
             {
                 foreach (ChatSegmentItem item in seg.Items)
                 {
@@ -419,12 +434,12 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                             await writer.WriteAsync(SseResponseLine.StartResponse(chatSpan.SpanId, icc.ReasoningDurationMs), cancellationToken);
                             responseStated = true;
                         }
-                        await writer.WriteAsync(SseResponseLine.Segment(chatSpan.SpanId, textSeg.Text), cancellationToken);
+                        await writer.WriteAsync(SseResponseLine.CreateSegment(chatSpan.SpanId, textSeg.Text), cancellationToken);
                     }
                     else if (item is ImageChatSegment imgSeg)
                     {
                         imageFileCache[imgSeg] = new TaskCompletionSource<DB.File>();
-                        await writer.WriteAsync(SseResponseLine.ImageGeneratedTemp(chatSpan.SpanId, imgSeg), cancellationToken);
+                        await writer.WriteAsync(SseResponseLine.TempImageGenerated(chatSpan.SpanId, imgSeg), cancellationToken);
                     }
                 }
 
@@ -510,19 +525,18 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
         if (errorText != null)
         {
-            await writer.WriteAsync(SseResponseLine.Error(chatSpan.SpanId, errorText), cancellationToken);
+            await writer.WriteAsync(SseResponseLine.CreateError(chatSpan.SpanId, errorText), cancellationToken);
         }
-        UserModelUsage usage = icc.ToUserModelUsage(currentUser.Id, userModel, await clientInfoIdTask, isApi: false);
+        UserModelUsage usage = icc.ToUserModelUsage(currentUser.Id, calc, userModel, await clientInfoIdTask, isApi: false);
         dbAssistantMessage.MessageResponse = new MessageResponse()
         {
             Usage = usage,
         };
-        await writer.WriteAsync(new SseResponseLine { Kind = SseResponseKind.End, Result = dbAssistantMessage, SpanId = chatSpan.SpanId }, cancellationToken);
+        await writer.WriteAsync(SseResponseLine.End(chatSpan.SpanId, dbAssistantMessage), cancellationToken);
         writer.Complete();
         return new ChatSpanResponse()
         {
             AssistantMessage = dbAssistantMessage,
-            Cost = icc.Cost,
             SpanId = chatSpan.SpanId,
         };
     }
@@ -561,7 +575,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         await YieldResponse(SseResponseLine.UpdateTitle(""));
         foreach (string segment in TestChatService.UnicodeCharacterSplit(title))
         {
-            await YieldResponse(SseResponseLine.TitleSegment(segment));
+            await YieldResponse(SseResponseLine.CreateTitleSegment(segment));
             await Task.Delay(10);
         }
     }
