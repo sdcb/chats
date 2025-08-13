@@ -65,6 +65,9 @@ public partial class User
     [InverseProperty("CreateUser")]
     public virtual ICollection<File> Files { get; set; } = new List<File>();
 
+    [InverseProperty("User")]
+    public virtual ICollection<McpUser> McpUsers { get; set; } = new List<McpUser>();
+
     [InverseProperty("CreateUser")]
     public virtual ICollection<Prompt> Prompts { get; set; } = new List<Prompt>();
 

@@ -28,11 +28,17 @@ public partial class ChatConfig
 
     public byte ReasoningEffort { get; set; }
 
+    public short ImageSizeId { get; set; }
+
     [InverseProperty("ChatConfig")]
     public virtual ICollection<ChatPresetSpan> ChatPresetSpans { get; set; } = new List<ChatPresetSpan>();
 
     [InverseProperty("ChatConfig")]
     public virtual ICollection<ChatSpan> ChatSpans { get; set; } = new List<ChatSpan>();
+
+    [ForeignKey("ImageSizeId")]
+    [InverseProperty("ChatConfigs")]
+    public virtual GeneratedImageSize ImageSize { get; set; } = null!;
 
     [InverseProperty("ChatConfig")]
     public virtual ICollection<MessageResponse> MessageResponses { get; set; } = new List<MessageResponse>();

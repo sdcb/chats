@@ -9,6 +9,7 @@ using System.Text.Json.Nodes;
 using System.ClientModel.Primitives;
 using Chats.BE.Services.FileServices;
 using System.Runtime.CompilerServices;
+using GeneratedImageSize = OpenAI.Images.GeneratedImageSize;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 

@@ -18,8 +18,6 @@ public partial class MessageContentToolCallResponse
 
     public string Response { get; set; } = null!;
 
-    public DateTime ResponseAt { get; set; }
-
     [ForeignKey("Id")]
     [InverseProperty("MessageContentToolCallResponse")]
     public virtual MessageContent IdNavigation { get; set; } = null!;

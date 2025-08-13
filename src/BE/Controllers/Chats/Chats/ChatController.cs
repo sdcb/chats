@@ -119,7 +119,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         UserModelManager userModelManager,
         FileUrlProvider fup,
         ChatConfigService chatConfigService,
-        DBFileService dbFileService, 
+        DBFileService dbFileService,
         CancellationToken cancellationToken)
     {
         long firstTick = Stopwatch.GetTimestamp();
@@ -228,7 +228,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         await YieldResponse(SseResponseLine.CreateStopId(stopId));
 
         UserBalance userBalance = await db.UserBalances.Where(x => x.UserId == currentUser.Id).SingleAsync(cancellationToken);
-        UserModelBalanceCalculator cost = new UserModelBalanceCalculator(BalanceInitialInfo.FromDB(userModels.Values, userBalance.Balance), []);
+        UserModelBalanceCalculator cost = new(BalanceInitialInfo.FromDB(userModels.Values, userBalance.Balance), []);
 
         Channel<SseResponseLine>[] channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
         Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache = [];

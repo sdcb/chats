@@ -172,3 +172,69 @@ GO
 
 ALTER TABLE [dbo].[MessageContentToolCallResponse] CHECK CONSTRAINT [FK_MessageContentToolCallResponse_MessageContent]
 GO
+
+
+
+
+
+DROP TABLE IF EXISTS [McpHeader];
+DROP TABLE IF EXISTS [McpUser];
+DROP TABLE IF EXISTS [ChatConfigMcp];
+DROP TABLE IF EXISTS [Mcp];
+DROP TABLE IF EXISTS [GeneratedImageSize];
+ALTER TABLE [ChatConfig] DROP COLUMN IF EXISTS [ImageSizeId];
+
+CREATE TABLE [Mcp] (
+    [Id]              INT            IDENTITY (1, 1) NOT NULL,
+    [ServerLabel]     NVARCHAR (50)  NOT NULL,
+    [ServerUrl]       NVARCHAR (300) NOT NULL,
+    [RequireApproval] TINYINT        CONSTRAINT [DEFAULT_Mcp_RequireApproval] DEFAULT 0 NOT NULL,
+    [CreatedAt]       DATETIME2 (7)  CONSTRAINT [DEFAULT_Mcp_CreatedAt] DEFAULT SYSUTCDATETIME() NOT NULL,
+    [IsPublic]        TINYINT        CONSTRAINT [DEFAULT_Mcp_Public] DEFAULT 0 NOT NULL,
+    CONSTRAINT [PK_Mcp] PRIMARY KEY CLUSTERED ([Id] ASC)
+);
+
+CREATE TABLE [McpHeader] (
+    [Id]              INT            IDENTITY (1, 1) NOT NULL,
+    [McpId]           INT            NOT NULL,
+    [HeaderName]      NVARCHAR (100) NOT NULL,
+    [HeaderValue]     NVARCHAR (MAX) NOT NULL,
+    CONSTRAINT [PK_McpHeader] PRIMARY KEY CLUSTERED ([Id] ASC),
+    CONSTRAINT [FK_McpHeader_Mcp] FOREIGN KEY ([McpId]) REFERENCES [Mcp] ([Id]) ON DELETE CASCADE,
+    CONSTRAINT [UQ_McpHeader] UNIQUE ([McpId], [HeaderName]),
+    INDEX [IX_McpHeader_McpId] ([McpId]),
+    INDEX [IX_McpHeader_HeaderName] ([HeaderName])
+);
+
+CREATE TABLE [McpUser] (
+    [Id]              INT            IDENTITY (1, 1) NOT NULL,
+    [McpId]           INT            NOT NULL,
+    [UserId]          INT            NOT NULL,
+    CONSTRAINT [PK_McpUser] PRIMARY KEY CLUSTERED ([Id] ASC),
+    CONSTRAINT [FK_McpUser_Mcp] FOREIGN KEY ([McpId]) REFERENCES [Mcp] ([Id]) ON DELETE CASCADE,
+    CONSTRAINT [FK_McpUser_User] FOREIGN KEY ([UserId]) REFERENCES [User] ([Id]),
+    INDEX [IX_McpUser_McpId] ([McpId]),
+    INDEX [IX_McpUser_UserId] ([UserId])
+);
+
+CREATE TABLE [ChatConfigMcp] (
+    [ChatConfigId]    INT            NOT NULL,
+    [McpId]           INT            NOT NULL,
+    CONSTRAINT [PK_ChatConfigMcp] PRIMARY KEY CLUSTERED ([ChatConfigId] ASC),
+    CONSTRAINT [FK_ChatConfigMcp_Mcp] FOREIGN KEY ([McpId]) REFERENCES [Mcp] ([Id]) ON DELETE CASCADE
+);
+
+CREATE TABLE [GeneratedImageSize] (
+    [Id]              SMALLINT       NOT NULL,
+    [Width]           SMALLINT       NOT NULL,
+    [Height]          SMALLINT       NOT NULL,
+    CONSTRAINT [PK_GeneratedImageSize] PRIMARY KEY CLUSTERED ([Id] ASC),
+);
+INSERT INTO [GeneratedImageSize] VALUES
+(0, 0,    0),
+(1, 1024, 1024),
+(2, 1536, 1024),
+(3, 1024, 1536);
+
+ALTER TABLE [ChatConfig] ADD [ImageSizeId] SMALLINT NOT NULL CONSTRAINT [DF_ChatConfig_ImageSizeId] DEFAULT 0;
+ALTER TABLE [ChatConfig] ADD CONSTRAINT [FK_ChatConfig_ImageSize] FOREIGN KEY ([ImageSizeId]) REFERENCES [GeneratedImageSize] ([Id]) ON DELETE CASCADE;

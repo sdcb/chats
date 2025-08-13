@@ -17,6 +17,8 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<ChatConfig> ChatConfigs { get; set; }
 
+    public virtual DbSet<ChatConfigMcp> ChatConfigMcps { get; set; }
+
     public virtual DbSet<ChatGroup> ChatGroups { get; set; }
 
     public virtual DbSet<ChatPreset> ChatPresets { get; set; }
@@ -53,9 +55,17 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<FinishReason> FinishReasons { get; set; }
 
+    public virtual DbSet<GeneratedImageSize> GeneratedImageSizes { get; set; }
+
     public virtual DbSet<InvitationCode> InvitationCodes { get; set; }
 
     public virtual DbSet<LoginService> LoginServices { get; set; }
+
+    public virtual DbSet<Mcp> Mcps { get; set; }
+
+    public virtual DbSet<McpHeader> McpHeaders { get; set; }
+
+    public virtual DbSet<McpUser> McpUsers { get; set; }
 
     public virtual DbSet<Message> Messages { get; set; }
 
@@ -171,9 +181,18 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<ChatConfig>(entity =>
         {
+            entity.HasOne(d => d.ImageSize).WithMany(p => p.ChatConfigs).HasConstraintName("FK_ChatConfig_ImageSize");
+
             entity.HasOne(d => d.Model).WithMany(p => p.ChatConfigs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ChatConfig_Model");
+        });
+
+        modelBuilder.Entity<ChatConfigMcp>(entity =>
+        {
+            entity.Property(e => e.ChatConfigId).ValueGeneratedNever();
+
+            entity.HasOne(d => d.Mcp).WithMany(p => p.ChatConfigMcps).HasConstraintName("FK_ChatConfigMcp_Mcp");
         });
 
         modelBuilder.Entity<ChatGroup>(entity =>
@@ -267,6 +286,11 @@ public partial class ChatsDB : DbContext
                 .HasConstraintName("FK_FileService_FileServiceType");
         });
 
+        modelBuilder.Entity<GeneratedImageSize>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedNever();
+        });
+
         modelBuilder.Entity<InvitationCode>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("InvitationCode2_pkey");
@@ -275,6 +299,20 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<LoginService>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_LoginServices2");
+        });
+
+        modelBuilder.Entity<McpHeader>(entity =>
+        {
+            entity.HasOne(d => d.Mcp).WithMany(p => p.McpHeaders).HasConstraintName("FK_McpHeader_Mcp");
+        });
+
+        modelBuilder.Entity<McpUser>(entity =>
+        {
+            entity.HasOne(d => d.Mcp).WithMany(p => p.McpUsers).HasConstraintName("FK_McpUser_Mcp");
+
+            entity.HasOne(d => d.User).WithMany(p => p.McpUsers)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_McpUser_User");
         });
 
         modelBuilder.Entity<Message>(entity =>
