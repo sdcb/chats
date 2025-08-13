@@ -16,4 +16,7 @@ public enum SseResponseKind
     StartReasoning = 10,
     ImageGenerating = 11, 
     ImageGenerated = 12,
+    CallingTool = 13,
+    ToolProgress = 14,
+    ToolCompleted = 15,
 }

@@ -24,6 +24,9 @@ namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 [JsonDerivedType(typeof(ChatLeafMessageIdLine), (int)SseResponseKind.ChatLeafMessageId)]
 [JsonDerivedType(typeof(ImageGeneratingLine  ), (int)SseResponseKind.ImageGenerating  )]
 [JsonDerivedType(typeof(ImageGeneratedLine   ), (int)SseResponseKind.ImageGenerated   )]
+[JsonDerivedType(typeof(CallingToolLine      ), (int)SseResponseKind.CallingTool      )]
+[JsonDerivedType(typeof(ToolProgressLine     ), (int)SseResponseKind.ToolProgress   )]
+[JsonDerivedType(typeof(ToolCompletedLine    ), (int)SseResponseKind.ToolCompleted    )]
 [JsonDerivedType(typeof(EndLine              ), (int)SseResponseKind.End              )]
 public abstract record SseResponseLine
 {
@@ -87,6 +90,15 @@ public abstract record SseResponseLine
 
     public static TempImageGeneratedLine TempImageGenerated(byte spanId, ImageChatSegment payload) =>
         new() { SpanId = spanId, Image = payload };
+
+    public static CallingToolLine CallingTool(byte spanId, string toolCallId, string toolName, string parameters) =>
+        new() { SpanId = spanId, ToolCallId = toolCallId, ToolName = toolName, Parameters = parameters };
+
+    public static ToolProgressLine ToolProgress(byte spanId, string toolCallId, string progress) =>
+        new() { SpanId = spanId, ToolCallId = toolCallId, Progress = progress };
+
+    public static ToolCompletedLine ToolEnd(byte spanId, string toolCallId, string result) =>
+        new() { SpanId = spanId, ToolCallId = toolCallId, Result = result };
 
     public static EndLine End(byte spanId, Message message) => new() { SpanId = spanId, Message = message };
 
@@ -199,6 +211,38 @@ public sealed record ImageGeneratedLine : SseResponseLine
 
     [JsonPropertyName("r")]
     public required FileDto File { get; init; }
+}
+
+public sealed record CallingToolLine : SseResponseLine
+{
+    [JsonPropertyName("i")]
+    public required byte SpanId { get; init; }
+    [JsonPropertyName("u")]
+    public required string ToolCallId { get; init; }
+    [JsonPropertyName("r")]
+    public required string ToolName { get; init; }
+    [JsonPropertyName("p")]
+    public required string Parameters { get; init; }
+}
+
+public sealed record ToolProgressLine : SseResponseLine
+{
+    [JsonPropertyName("i")]
+    public required byte SpanId { get; init; }
+    [JsonPropertyName("u")]
+    public required string ToolCallId { get; init; }
+    [JsonPropertyName("r")]
+    public required string Progress { get; init; }
+}
+
+public sealed record ToolCompletedLine : SseResponseLine
+{
+    [JsonPropertyName("i")]
+    public required byte SpanId { get; init; }
+    [JsonPropertyName("u")]
+    public required string ToolCallId { get; init; }
+    [JsonPropertyName("r")]
+    public required string Result { get; init; }
 }
 
 public sealed record EndLine : SseResponseLine
