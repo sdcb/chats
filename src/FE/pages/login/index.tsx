@@ -61,22 +61,29 @@ export default function LoginPage() {
   useEffect(() => {
     setIsClient(true);
     setLoading(true);
-    getLoginProviders().then((data) => {
-      let hasPhoneType = false;
-      setLoginConfigs(
-        data.map((x) => {
-          if (x.key === LoginType.Phone) {
-            hasPhoneType = true;
-          }
-          return {
-            type: x.key,
-            configs: x.config,
-          };
-        }),
-      );
-      setCurrentTab(hasPhoneType ? TabKeys.PHONE : TabKeys.ACCOUNT);
-      setLoading(false);
-    });
+    getLoginProviders()
+      .then((data) => {
+        let hasPhoneType = false;
+        setLoginConfigs(
+          (data || []).map((x) => {  // 添加空值检查
+            if (x.key === LoginType.Phone) {
+              hasPhoneType = true;
+            }
+            return {
+              type: x.key,
+              configs: x.config,
+            };
+          }),
+        );
+        setCurrentTab(hasPhoneType ? TabKeys.PHONE : TabKeys.ACCOUNT);
+        setLoading(false);
+      })
+      .catch((error) => {  // 添加错误处理
+        console.error('Failed to load login providers:', error);
+        setLoginConfigs([]);
+        setCurrentTab(TabKeys.ACCOUNT);
+        setLoading(false);
+      });
     getSiteInfo().then((data) => {
       setWebSiteInfo(data);
     });
