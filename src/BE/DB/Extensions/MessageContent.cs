@@ -27,6 +27,8 @@ public partial class MessageContent
             DBMessageContentType.Error => MessageContentText!.Content,
             DBMessageContentType.Reasoning => MessageContentText!.Content,
             //DBMessageContentType.FileId => MessageContentUtil.ReadFileId(Content).ToString(), // not supported
+            DBMessageContentType.ToolCall => $"ToolCall: {MessageContentToolCall!.Name}({MessageContentToolCall.Parameters})",
+            DBMessageContentType.ToolCallResponse => $"ToolCallResponse: {MessageContentToolCallResponse!.Response}",
             _ => throw new NotSupportedException(),
         };
     }
@@ -44,6 +46,11 @@ public partial class MessageContent
     public static MessageContent FromFile(File file)
     {
         return new MessageContent { MessageContentFile = new() { FileId = file.Id, File = file }, ContentTypeId = (byte)DBMessageContentType.FileId };
+    }
+
+    public static MessageContent FromTool(string toolCallId, string name, string parameters)
+    {
+        return new MessageContent { MessageContentToolCall = new() { Name = name, ToolCallId = toolCallId, Parameters = parameters }, ContentTypeId = (byte)DBMessageContentType.ToolCall };
     }
 
     public static MessageContent FromError(string error)
@@ -73,6 +80,7 @@ public partial class MessageContent
                 TextChatSegment text => FromText(text.Text),
                 ThinkChatSegment think => FromThink(think.Think),
                 ImageChatSegment image => FromFile(imageMcCache[image].Task.GetAwaiter().GetResult()),
+                ToolCallSegment tool => FromTool(tool.Id, tool.Name, tool.Arguments),
                 _ => throw new NotSupportedException(),
             };
         }))

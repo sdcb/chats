@@ -254,4 +254,11 @@ public sealed record EndLine : SseResponseLine
     public required Message Message { get; init; }
 }
 
+public sealed record AllEnd : SseResponseLine
+{
+    public required byte SpanId { get; init; }
+
+    public required List<Message> Messages { get; init; }
+}
+
 #endregion

@@ -11,6 +11,8 @@ namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 [JsonDerivedType(typeof(TextContentResponseItem), typeDiscriminator: (int)DBMessageContentType.Text)]
 [JsonDerivedType(typeof(FileResponseItem), typeDiscriminator: (int)DBMessageContentType.FileId)]
 [JsonDerivedType(typeof(ReasoningResponseItem), typeDiscriminator: (int)DBMessageContentType.Reasoning)]
+[JsonDerivedType(typeof(ToolCallingResponseItem), typeDiscriminator: (int)DBMessageContentType.ToolCall)]
+[JsonDerivedType(typeof(ToolCallResponseItem), typeDiscriminator: (int)DBMessageContentType.ToolCallResponse)]
 public abstract record ContentResponseItem
 {
     [JsonPropertyName("i")]
@@ -40,6 +42,19 @@ public abstract record ContentResponseItem
             {
                 Id = encryptedMessageContentId,
                 Content = fup.CreateFileDto(content.MessageContentFile!.File)
+            },
+            DBMessageContentType.ToolCall => new ToolCallingResponseItem()
+            {
+                Id = encryptedMessageContentId,
+                Name = content.MessageContentToolCall!.Name,
+                ToolCallId = content.MessageContentToolCall!.ToolCallId!,
+                Parameters = content.MessageContentToolCall!.Parameters,
+            },
+            DBMessageContentType.ToolCallResponse => new ToolCallResponseItem()
+            {
+                Id = encryptedMessageContentId,
+                ToolCallId = content.MessageContentToolCallResponse!.ToolCallId!,
+                Response = content.MessageContentToolCallResponse!.Response,
             },
             _ => throw new NotSupportedException(),
         };
@@ -73,4 +88,25 @@ public record FileResponseItem : ContentResponseItem
 {
     [JsonPropertyName("c")]
     public required FileDto Content { get; init; }
+}
+
+public record ToolCallingResponseItem : ContentResponseItem
+{
+    [JsonPropertyName("u")]
+    public required string ToolCallId { get; init; }
+
+    [JsonPropertyName("n")]
+    public required string Name { get; init; }
+
+    [JsonPropertyName("p")]
+    public required string Parameters { get; init; }
+}
+
+public record ToolCallResponseItem : ContentResponseItem
+{
+    [JsonPropertyName("u")]
+    public required string ToolCallId { get; init; }
+
+    [JsonPropertyName("r")]
+    public required string Response { get; init; }
 }

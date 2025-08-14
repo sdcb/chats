@@ -30,7 +30,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 {
     [HttpPost("regenerate-assistant-message")]
     public async Task<IActionResult> RegenerateOneMessage(
-        [FromBody] RegenerateAssistantMessageRequest req,
+        [FromBody] EncryptedRegenerateAssistantMessageRequest req,
         [FromServices] ChatsDB db,
         [FromServices] CurrentUser currentUser,
         [FromServices] ILogger<ChatController> logger,
@@ -56,7 +56,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
     [HttpPost("regenerate-all-assistant-message")]
     public async Task<IActionResult> RegenerateAllMessage(
-    [FromBody] RegenerateAllAssistantMessageRequest req,
+    [FromBody] EncryptedRegenerateAllAssistantMessageRequest req,
     [FromServices] ChatsDB db,
     [FromServices] CurrentUser currentUser,
     [FromServices] ILogger<ChatController> logger,
@@ -82,7 +82,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
     [HttpPost("general")]
     public async Task<IActionResult> GeneralChat(
-        [FromBody] GeneralChatRequest req,
+        [FromBody] EncryptedGeneralChatRequest req,
         [FromServices] ChatsDB db,
         [FromServices] CurrentUser currentUser,
         [FromServices] ILogger<ChatController> logger,
@@ -112,7 +112,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
     }
 
     private async Task<IActionResult> ChatPrivate(
-        DecryptedChatRequest req,
+        ChatRequest req,
         ChatsDB db,
         CurrentUser currentUser,
         ILogger<ChatController> logger,
@@ -151,7 +151,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
         // ensure chat.ChatSpan contains all span ids that in request, otherwise return error
         ChatSpan[] toGenerateSpans = null!;
-        if (req is DecryptedRegenerateAssistantMessageRequest rr)
+        if (req is RegenerateAssistantMessageRequest rr)
         {
             ChatSpan? span = chat.ChatSpans.FirstOrDefault(y => y.SpanId == rr.SpanId);
             if (span == null)
@@ -163,7 +163,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             newSpan.ChatConfig.ModelId = rr.ModelId;
             toGenerateSpans = [newSpan];
         }
-        else if (req is DecryptedGeneralChatRequest or DecryptedRegenerateAllAssistantMessageRequest)
+        else if (req is GeneralChatRequest or RegenerateAllAssistantMessageRequest)
         {
             toGenerateSpans = [.. chat.ChatSpans.Where(x => x.Enabled)];
         }
@@ -184,7 +184,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         }
 
         Message? newDbUserMessage = null;
-        if (req is DecryptedGeneralChatRequest generalRequest)
+        if (req is GeneralChatRequest generalRequest)
         {
             if (generalRequest.ParentAssistantMessageId != null)
             {
@@ -208,7 +208,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             };
             chat.Messages.Add(newDbUserMessage);
         }
-        else if (req is DecryptedRegenerateAllAssistantMessageRequest regenerateRequest)
+        else if (req is RegenerateAllAssistantMessageRequest regenerateRequest)
         {
             if (!existingMessages.TryGetValue(regenerateRequest.ParentUserMessageId, out MessageLiteDtoNoContent? parentMessage))
             {
@@ -235,7 +235,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
         Channel<SseResponseLine>[] channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
         Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache = [];
-        Task<ChatSpanResponse>[] streamTasks = [.. toGenerateSpans
+        Task[] streamTasks = [.. toGenerateSpans
             .Select((span, index) => ProcessChatSpan(
                 currentUser,
                 logger,
@@ -254,7 +254,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 channels[index].Writer,
                 cancellationToken))];
 
-        if (isEmptyChat && req is DecryptedGeneralChatRequest generalChatRequest)
+        if (isEmptyChat && req is GeneralChatRequest generalChatRequest)
         {
             string text = generalChatRequest.UserMessage
                 .OfType<TextContentRequestItem>()
@@ -267,30 +267,35 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         FileService fs = null!;
         await foreach (SseResponseLine line in MergeChannels(channels).Reader.ReadAllAsync(CancellationToken.None))
         {
-            if (line is EndLine endLine)
+            if (line is AllEnd allEnd)
             {
-                Message dbAssistantMessage = endLine.Message;
-                ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == dbAssistantMessage.SpanId);
-                dbAssistantMessage.MessageResponse!.ChatConfig = await chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, default);
-                chat.Messages.Add(dbAssistantMessage);
-                bool isLast = endLine.SpanId == toGenerateSpans.Last().SpanId;
+                bool isLast = allEnd.SpanId == toGenerateSpans.Last().SpanId;
                 if (isLast)
                 {
-                    chat.LeafMessage = dbAssistantMessage;
+                    chat.LeafMessage = allEnd.Messages.Last();
+                    await db.SaveChangesAsync(CancellationToken.None);
                 }
-                chat.UpdatedAt = DateTime.UtcNow;
-                await db.SaveChangesAsync(CancellationToken.None);
 
                 if (newDbUserMessage != null && !dbUserMessageYield)
                 {
                     await YieldResponse(SseResponseLine.UserMessage(newDbUserMessage, idEncryption, fup));
                     dbUserMessageYield = true;
                 }
-                await YieldResponse(SseResponseLine.ResponseMessage(endLine.SpanId, dbAssistantMessage, idEncryption, fup));
+                Message mergedMessage = Message.MergeAll(allEnd.Messages);
+                await YieldResponse(SseResponseLine.ResponseMessage(allEnd.SpanId, mergedMessage, idEncryption, fup));
                 if (isLast)
                 {
                     await YieldResponse(SseResponseLine.ChatLeafMessageId(chat.LeafMessageId!.Value, idEncryption));
                 }
+            }
+            else if (line is EndLine endLine)
+            {
+                Message message = endLine.Message;
+                ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == message.SpanId);
+                message.MessageResponse!.ChatConfig = await chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, default);
+                chat.Messages.Add(message);
+                chat.UpdatedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync(CancellationToken.None);
             }
             else if (line is TempImageGeneratedLine tempImageGeneratedLine)
             {
@@ -324,11 +329,12 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 await YieldResponse(line);
             }
         }
+
         cancellationToken = CancellationToken.None;
         stopService.Remove(stopId);
 
         // not cancellable from here
-        ChatSpanResponse[] resps = await Task.WhenAll(streamTasks);
+        await Task.WhenAll(streamTasks);
 
         // finish costs
         if (cost.BalanceCost > 0)
@@ -370,14 +376,14 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         return [.. noContent.Select(x => x.WithContent(contents[x.Id]))];
     }
 
-    private static async Task<ChatSpanResponse> ProcessChatSpan(
+    private static async Task ProcessChatSpan(
         CurrentUser currentUser,
         ILogger<ChatController> logger,
         ChatFactory chatFactory,
         FileUrlProvider fup,
         ChatSpan chatSpan,
         long firstTick,
-        DecryptedChatRequest req,
+        ChatRequest req,
         Chat chat,
         UserModel userModel,
         IEnumerable<MessageLiteDto> messageTree,
@@ -405,17 +411,17 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         IMcpClient mcpClient = await McpClientFactory.CreateAsync(new SseClientTransport(new SseClientTransportOptions
         {
             Endpoint = new Uri("https://csharp.starworks.cc/mcp"),
-        }));
-        await foreach (McpClientTool tool in mcpClient.EnumerateToolsAsync())
+        }), cancellationToken: cancellationToken);
+        await foreach (McpClientTool tool in mcpClient.EnumerateToolsAsync(cancellationToken: cancellationToken))
         {
             cco.Tools.Add(ChatTool.CreateFunctionTool(tool.Name, tool.Description, BinaryData.FromString(tool.JsonSchema.GetRawText())));
         }
 
-        ChatSpanResponse resp = new() { NewMessages = [], SpanId = chatSpan.SpanId };
+        List<Message> newMessages = [];
         while (true)
         {
-            (Message message, DBFinishReason finishReason) = await RunOne();
-            resp.NewMessages.Add(message);
+            (Message message, DBFinishReason finishReason) = await RunOne(newMessages.LastOrDefault());
+            await WriteMessage(message);
 
             if (finishReason == DBFinishReason.ToolCalls)
             {
@@ -424,7 +430,35 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     .Select(x => x.MessageContentToolCall!))
                 {
                     logger.LogInformation("Calling tool: {call.Name}, parameters: {call.Parameters}", call.Name, call.Parameters);
-                    CallToolResult result = await mcpClient.CallToolAsync(call.Name, JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Parameters)!, cancellationToken: cancellationToken);
+                    CallToolResult result = await mcpClient.CallToolAsync(call.Name, JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Parameters)!, new ProgressReporter(pnv =>
+                    {
+                        logger.LogInformation("Tool {call.Name} progress: {pnv.Message}", call.Name, pnv.Message);
+                        writer.TryWrite(SseResponseLine.ToolProgress(chatSpan.SpanId, call.ToolCallId!, pnv.Message!));
+                    }), cancellationToken: cancellationToken);
+                    logger.LogInformation("Tool {call.Name} completed with result: {result}", call.Name, result.Content);
+                    string toolCallResponseText = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(x => x.Text));
+                    writer.TryWrite(SseResponseLine.ToolEnd(chatSpan.SpanId, call.ToolCallId!, toolCallResponseText));
+                    await WriteMessage(new Message()
+                    {
+                        ChatId = chat.Id,
+                        ChatRoleId = (byte)DBChatRole.ToolCall,
+                        CreatedAt = DateTime.UtcNow,
+                        Edited = false,
+                        ParentId = message.Id,
+                        SpanId = chatSpan.SpanId,
+                        MessageContents =
+                        [
+                            new MessageContent()
+                            {
+                                MessageContentToolCallResponse = new()
+                                {
+                                    ToolCallId = call.ToolCallId,
+                                    Response = toolCallResponseText,
+                                },
+                                ContentTypeId = (byte)DBMessageContentType.ToolCallResponse,
+                            }
+                        ]
+                    });
                 }
             }
             else
@@ -432,9 +466,17 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 break;
             }
         }
+        writer.TryWrite(new AllEnd() { Messages = newMessages, SpanId = chatSpan.SpanId });
         writer.Complete();
 
-        async Task<(Message, DBFinishReason)> RunOne()
+        async Task WriteMessage(Message message)
+        {
+            messageToSend.Add(await MessageLiteDto.FromDB(message).ToOpenAI(fup, cancellationToken));
+            newMessages.Add(message);
+            writer.TryWrite(SseResponseLine.End(chatSpan.SpanId, message));
+        }
+
+        async Task<(Message, DBFinishReason)> RunOne(Message? forceParentMessage)
         {
             ChatExtraDetails ced = new()
             {
@@ -459,32 +501,32 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                         {
                             if (!reasoningStarted)
                             {
-                                await writer.WriteAsync(SseResponseLine.StartReasoning(chatSpan.SpanId), cancellationToken);
+                                writer.TryWrite(SseResponseLine.StartReasoning(chatSpan.SpanId));
                                 reasoningStarted = true;
                             }
-                            await writer.WriteAsync(SseResponseLine.ReasoningSegment(chatSpan.SpanId, thinkSeg.Think), cancellationToken);
+                            writer.TryWrite(SseResponseLine.ReasoningSegment(chatSpan.SpanId, thinkSeg.Think));
                         }
                         else if (item is TextChatSegment textSeg)
                         {
                             if (!responseStated)
                             {
-                                await writer.WriteAsync(SseResponseLine.StartResponse(chatSpan.SpanId, icc.ReasoningDurationMs), cancellationToken);
+                                writer.TryWrite(SseResponseLine.StartResponse(chatSpan.SpanId, icc.ReasoningDurationMs));
                                 responseStated = true;
                             }
-                            await writer.WriteAsync(SseResponseLine.CreateSegment(chatSpan.SpanId, textSeg.Text), cancellationToken);
+                            writer.TryWrite(SseResponseLine.CreateSegment(chatSpan.SpanId, textSeg.Text));
                         }
                         else if (item is ToolCallSegment toolCall)
                         {
                             if (!responseStated)
                             {
-                                await writer.WriteAsync(SseResponseLine.CallingTool(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolCall.Arguments));
+                                writer.TryWrite(SseResponseLine.CallingTool(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolCall.Arguments));
                                 responseStated = true;
                             }
                         }
                         else if (item is ImageChatSegment imgSeg)
                         {
                             imageFileCache[imgSeg] = new TaskCompletionSource<DB.File>();
-                            await writer.WriteAsync(SseResponseLine.TempImageGenerated(chatSpan.SpanId, imgSeg), cancellationToken);
+                            writer.TryWrite(SseResponseLine.TempImageGenerated(chatSpan.SpanId, imgSeg));
                         }
                     }
 
@@ -555,13 +597,17 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 SpanId = chatSpan.SpanId,
                 CreatedAt = DateTime.UtcNow,
             };
-            if (req is DecryptedGeneralChatRequest && dbUserMessage != null)
+            if (forceParentMessage != null)
+            {
+                dbAssistantMessage.Parent = forceParentMessage;
+            }
+            else if (req is GeneralChatRequest && dbUserMessage != null)
             {
                 dbAssistantMessage.Parent = dbUserMessage;
             }
-            else if (req is DecryptedRegenerateAllAssistantMessageRequest decryptedRegenerateAssistantMessageRequest)
+            else if (req is RegenerateAllAssistantMessageRequest regenerateAssistantMessageRequest)
             {
-                dbAssistantMessage.ParentId = decryptedRegenerateAssistantMessageRequest.ParentUserMessageId;
+                dbAssistantMessage.ParentId = regenerateAssistantMessageRequest.ParentUserMessageId;
             }
             foreach (MessageContent mc in MessageContent.FromFullResponse(icc.FullResponse, errorText, imageFileCache))
             {
@@ -570,14 +616,14 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
             if (errorText != null)
             {
-                await writer.WriteAsync(SseResponseLine.CreateError(chatSpan.SpanId, errorText), cancellationToken);
+                writer.TryWrite(SseResponseLine.CreateError(chatSpan.SpanId, errorText));
             }
             UserModelUsage usage = icc.ToUserModelUsage(currentUser.Id, calc, userModel, await clientInfoIdTask, isApi: false);
             dbAssistantMessage.MessageResponse = new MessageResponse()
             {
                 Usage = usage,
             };
-            await writer.WriteAsync(SseResponseLine.End(chatSpan.SpanId, dbAssistantMessage), cancellationToken);
+            writer.TryWrite(SseResponseLine.End(chatSpan.SpanId, dbAssistantMessage));
             return (dbAssistantMessage, icc.FinishReason);
         }
     }

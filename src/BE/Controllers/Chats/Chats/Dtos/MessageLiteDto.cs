@@ -54,17 +54,28 @@ public record MessageLiteDto
                 .ToAsyncEnumerable()
                 .SelectAwait(async c => await c.ToOpenAI(fup, cancellationToken))
                 .ToArrayAsync(cancellationToken)),
-            DBChatRole.Assistant => new AssistantChatMessage(
-                await Content
-                .Where(x => x.ContentTypeId != (byte)DBMessageContentType.Error && x.ContentTypeId != (byte)DBMessageContentType.Reasoning)
+            DBChatRole.Assistant => AddToolCalls(new AssistantChatMessage(await Content
+                .Where(x => (DBMessageContentType)x.ContentTypeId is DBMessageContentType.FileId or DBMessageContentType.Text)
                 .ToAsyncEnumerable()
-                .SelectAwait(async x => await x.ToOpenAI(fup, cancellationToken))
-                .ToArrayAsync(cancellationToken) switch
-                {
-                    [] => [ChatMessageContentPart.CreateTextPart(string.Empty)],
-                    var x => x,
-                }),
+                .SelectAwait(async c => await c.ToOpenAI(fup, cancellationToken))
+                .ToArrayAsync(cancellationToken))),
+            DBChatRole.ToolCall => new ToolChatMessage(Content[0].MessageContentToolCallResponse!.ToolCallId, Content[0].MessageContentToolCallResponse!.Response),
             _ => throw new NotImplementedException()
         };
+    }
+
+    private AssistantChatMessage AddToolCalls(AssistantChatMessage assistantChatMessage)
+    {
+        foreach (var content in Content)
+        {
+            if (content.ContentTypeId == (byte)DBMessageContentType.ToolCall && content.MessageContentToolCall != null)
+            {
+                assistantChatMessage.ToolCalls.Add(ChatToolCall.CreateFunctionToolCall(
+                    content.MessageContentToolCall.ToolCallId,
+                    content.MessageContentToolCall.Name,
+                    BinaryData.FromString(content.MessageContentToolCall.Parameters)));
+            }
+        }
+        return assistantChatMessage;
     }
 }
