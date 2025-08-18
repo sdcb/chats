@@ -131,18 +131,18 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig)
-            .Include(x => x.Messages.Where(x => x.ChatRoleId == (byte)DBChatRole.User || x.ChatRoleId == (byte)DBChatRole.Assistant))
+            .Include(x => x.ChatTurns)
             .FirstOrDefaultAsync(x => x.Id == req.ChatId && x.UserId == currentUser.Id, cancellationToken);
         if (chat == null)
         {
             return NotFound();
         }
 
-        Dictionary<long, MessageLiteDtoNoContent> existingMessages = chat.Messages
-            .Select(x => new MessageLiteDtoNoContent()
+        Dictionary<long, ChatTurnLiteDto> existingMessages = chat.ChatTurns
+            .Select(x => new ChatTurnLiteDto()
             {
                 Id = x.Id,
-                Role = (DBChatRole)x.ChatRoleId,
+                IsUser = x.IsUser,
                 ParentId = x.ParentId,
                 SpanId = x.SpanId,
             })
@@ -188,12 +188,12 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         {
             if (generalRequest.ParentAssistantMessageId != null)
             {
-                if (!existingMessages.TryGetValue(generalRequest.ParentAssistantMessageId.Value, out MessageLiteDtoNoContent? parentMessage))
+                if (!existingMessages.TryGetValue(generalRequest.ParentAssistantMessageId.Value, out ChatTurnLiteDto? parentMessage))
                 {
                     return BadRequest("Invalid message id");
                 }
 
-                if (parentMessage.Role != DBChatRole.Assistant)
+                if (!parentMessage.IsUser)
                 {
                     return BadRequest("Parent message is not assistant message");
                 }
@@ -201,27 +201,35 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
             newDbUserMessage = new()
             {
-                ChatRoleId = (byte)DBChatRole.User,
-                MessageContents = await MessageContent.FromRequest(generalRequest.UserMessage, fup, cancellationToken),
-                CreatedAt = DateTime.UtcNow,
+                IsUser = true,
+                Steps =
+                [
+                    new Step()
+                    {
+                        StepContents = await StepContent.FromRequest(generalRequest.UserMessage, fup, cancellationToken),
+                        ChatRoleId = (byte)DBChatRole.User,
+                        CreatedAt = DateTime.UtcNow,
+                        Edited = false,
+                    }
+                ],
                 ParentId = generalRequest.ParentAssistantMessageId,
             };
-            chat.Messages.Add(newDbUserMessage);
+            chat.ChatTurns.Add(newDbUserMessage);
         }
         else if (req is RegenerateAllAssistantMessageRequest regenerateRequest)
         {
-            if (!existingMessages.TryGetValue(regenerateRequest.ParentUserMessageId, out MessageLiteDtoNoContent? parentMessage))
+            if (!existingMessages.TryGetValue(regenerateRequest.ParentUserMessageId, out ChatTurnLiteDto? parentMessage))
             {
                 return BadRequest("Invalid message id");
             }
 
-            if (parentMessage.Role != DBChatRole.User)
+            if (!parentMessage.IsUser)
             {
                 return BadRequest("ParentUserMessageId is not user message");
             }
         }
 
-        LinkedList<MessageLiteDtoNoContent> messageTreeNoContent = GetMessageTree(existingMessages, req.LastMessageId);
+        LinkedList<ChatTurnLiteDto> messageTreeNoContent = GetMessageTree(existingMessages, req.LastMessageId);
         MessageLiteDto[] messageTree = await FillContents(messageTreeNoContent, db, cancellationToken);
 
         Response.Headers.ContentType = "text/event-stream";
@@ -272,7 +280,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 bool isLast = allEnd.SpanId == toGenerateSpans.Last().SpanId;
                 if (isLast)
                 {
-                    chat.LeafMessage = allEnd.Messages.Last();
+                    chat.LeafMessage = allEnd.Turn.Last();
                     await db.SaveChangesAsync(CancellationToken.None);
                 }
 
@@ -281,7 +289,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     await YieldResponse(SseResponseLine.UserMessage(newDbUserMessage, idEncryption, fup));
                     dbUserMessageYield = true;
                 }
-                ChatTurn mergedMessage = ChatTurn.MergeAll(allEnd.Messages);
+                ChatTurn mergedMessage = ChatTurn.MergeAll(allEnd.Turn);
                 await YieldResponse(SseResponseLine.ResponseMessage(allEnd.SpanId, mergedMessage, idEncryption, fup));
                 if (isLast)
                 {
@@ -290,7 +298,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             }
             else if (line is EndLine endLine)
             {
-                ChatTurn message = endLine.Message;
+                ChatTurn message = endLine.Step;
                 ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == message.SpanId);
                 if (message.ChatRoleId != (byte)DBChatRole.ToolCall)
                 {
@@ -364,17 +372,17 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         return new EmptyResult();
     }
 
-    private static async Task<MessageLiteDto[]> FillContents(LinkedList<MessageLiteDtoNoContent> noContent, ChatsDB db, CancellationToken cancellationToken)
+    private static async Task<MessageLiteDto[]> FillContents(LinkedList<ChatTurnLiteDto> noContent, ChatsDB db, CancellationToken cancellationToken)
     {
-        HashSet<long> messageIds = [.. noContent.Select(x => x.Id)];
-        Dictionary<long, MessageContent[]> contents = await db.MessageContents
-            .Where(x => messageIds.Contains(x.MessageId))
-            .Include(x => x.MessageContentBlob)
-            .Include(x => x.MessageContentFile).ThenInclude(x => x!.File.FileService)
-            .Include(x => x.MessageContentFile).ThenInclude(x => x!.File.FileImageInfo)
-            .Include(x => x.MessageContentFile).ThenInclude(x => x!.File.FileContentType)
-            .Include(x => x.MessageContentText)
-            .GroupBy(x => x.MessageId)
+        HashSet<long> turnIds = [.. noContent.Select(x => x.Id)];
+        Dictionary<long, StepContent[]> contents = await db.StepContents
+            .Where(x => turnIds.Contains(x.Step.TurnId))
+            .Include(x => x.StepContentBlob)
+            .Include(x => x.StepContentFile).ThenInclude(x => x!.File.FileService)
+            .Include(x => x.StepContentFile).ThenInclude(x => x!.File.FileImageInfo)
+            .Include(x => x.StepContentFile).ThenInclude(x => x!.File.FileContentType)
+            .Include(x => x.StepContentText)
+            .GroupBy(x => x.StepId)
             .ToDictionaryAsync(k => k.Key, v => v.ToArray(), cancellationToken);
         return [.. noContent.Select(x => x.WithContent(contents[x.Id]))];
     }
@@ -428,7 +436,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
             if (finishReason == DBFinishReason.ToolCalls)
             {
-                foreach (MessageContentToolCall call in message.MessageContents!
+                foreach (StepContentToolCall call in message.StepContents!
                     .Where(x => x.MessageContentToolCall != null)
                     .Select(x => x.MessageContentToolCall!))
                 {
@@ -469,7 +477,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 break;
             }
         }
-        writer.TryWrite(new AllEnd() { Messages = newMessages, SpanId = chatSpan.SpanId });
+        writer.TryWrite(new AllEnd() { Turn = newMessages, SpanId = chatSpan.SpanId });
         writer.Complete();
 
         async Task WriteMessage(ChatTurn message)
@@ -479,7 +487,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             writer.TryWrite(SseResponseLine.End(chatSpan.SpanId, message));
         }
 
-        async Task<(ChatTurn, DBFinishReason)> RunOne(ChatTurn? forceParentMessage)
+        async Task<(Step, DBFinishReason)> RunOne(ChatTurn? forceParentMessage)
         {
             ChatExtraDetails ced = new()
             {
@@ -593,11 +601,9 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
             // success
             // insert new assistant message
-            ChatTurn dbAssistantMessage = new()
+            Step dbAssistantMessage = new()
             {
-                ChatId = chat.Id,
                 ChatRoleId = (byte)DBChatRole.Assistant,
-                SpanId = chatSpan.SpanId,
                 CreatedAt = DateTime.UtcNow,
             };
             if (forceParentMessage != null)
@@ -681,9 +687,9 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         await Response.Body.FlushAsync();
     }
 
-    static LinkedList<MessageLiteDtoNoContent> GetMessageTree(Dictionary<long, MessageLiteDtoNoContent> existingMessages, long? fromParentId)
+    static LinkedList<ChatTurnLiteDto> GetMessageTree(Dictionary<long, ChatTurnLiteDto> existingMessages, long? fromParentId)
     {
-        LinkedList<MessageLiteDtoNoContent> line = [];
+        LinkedList<ChatTurnLiteDto> line = [];
         long? currentParentId = fromParentId;
         while (currentParentId != null)
         {

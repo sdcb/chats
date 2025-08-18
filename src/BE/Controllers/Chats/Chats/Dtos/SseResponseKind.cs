@@ -2,7 +2,8 @@
 
 public enum SseResponseKind
 {
-    End = -1,
+    AllEnd = -2,
+    EndLine = -1,
     StopId = 0,
     Segment = 1,
     Error = 2,

@@ -6,11 +6,11 @@ using OpenAI.Chat;
 
 namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 
-public record MessageLiteDtoNoContent
+public record ChatTurnLiteDto
 {
     public required long Id { get; init; }
     public required long? ParentId { get; init; }
-    public required DBChatRole Role { get; init; }
+    public required bool IsUser { get; init; }
     public required byte? SpanId { get; init; }
 
     public MessageLiteDto WithContent(StepContent[] content)

@@ -25,9 +25,10 @@ namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 [JsonDerivedType(typeof(ImageGeneratingLine  ), (int)SseResponseKind.ImageGenerating  )]
 [JsonDerivedType(typeof(ImageGeneratedLine   ), (int)SseResponseKind.ImageGenerated   )]
 [JsonDerivedType(typeof(CallingToolLine      ), (int)SseResponseKind.CallingTool      )]
-[JsonDerivedType(typeof(ToolProgressLine     ), (int)SseResponseKind.ToolProgress   )]
+[JsonDerivedType(typeof(ToolProgressLine     ), (int)SseResponseKind.ToolProgress     )]
 [JsonDerivedType(typeof(ToolCompletedLine    ), (int)SseResponseKind.ToolCompleted    )]
-[JsonDerivedType(typeof(EndLine              ), (int)SseResponseKind.End              )]
+[JsonDerivedType(typeof(EndLine              ), (int)SseResponseKind.EndLine          )]
+[JsonDerivedType(typeof(AllEnd               ), (int)SseResponseKind.AllEnd           )]
 public abstract record SseResponseLine
 {
     #region 工厂方法
@@ -100,7 +101,7 @@ public abstract record SseResponseLine
     public static ToolCompletedLine ToolEnd(byte spanId, string toolCallId, string result) =>
         new() { SpanId = spanId, ToolCallId = toolCallId, Result = result };
 
-    public static EndLine End(byte spanId, ChatTurn message) => new() { SpanId = spanId, Message = message };
+    public static EndLine End(byte spanId, ChatTurn message) => new() { SpanId = spanId, Step = message };
 
     #endregion
 }
@@ -251,14 +252,16 @@ public sealed record EndLine : SseResponseLine
     public required byte SpanId { get; init; }
 
     [JsonPropertyName("r")]
-    public required ChatTurn Message { get; init; }
+    public required Step Step { get; init; }
 }
 
 public sealed record AllEnd : SseResponseLine
 {
+    [JsonPropertyName("i")]
     public required byte SpanId { get; init; }
 
-    public required List<ChatTurn> Messages { get; init; }
+    [JsonPropertyName("r")]
+    public required ChatTurn Turn { get; init; }
 }
 
 #endregion
