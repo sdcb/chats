@@ -99,6 +99,8 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileContentType)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentText)
+            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentToolCall)
+            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentToolCallResponse)
             .Where(m => m.ChatId == chatId)
             .Select(x => new ChatMessageTemp()
             {

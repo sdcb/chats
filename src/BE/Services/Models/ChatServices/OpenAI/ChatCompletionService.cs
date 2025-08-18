@@ -54,12 +54,11 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
             string? segment = delta.ContentUpdate.FirstOrDefault()?.Text;
             string? reasoningSegment = GetReasoningContent(delta);
 
-            if (segment == null && reasoningSegment == null && delta.Usage == null && (delta.ToolCallUpdates == null || delta.ToolCallUpdates.Count == 0))
+            if (segment == null && reasoningSegment == null && delta.Usage == null && (delta.ToolCallUpdates == null || delta.ToolCallUpdates.Count == 0) && delta.FinishReason == null)
             {
                 continue;
             }
 
-            Console.WriteLine(delta.FinishReason == null ? "(null)" : delta.FinishReason + ":" + segment);
             yield return new ChatSegment
             {
                 Items = ChatSegmentItem.FromTextThinkToolCall(segment, reasoningSegment, delta.ToolCallUpdates),

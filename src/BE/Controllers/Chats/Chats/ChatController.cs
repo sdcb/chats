@@ -292,7 +292,10 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             {
                 Message message = endLine.Message;
                 ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == message.SpanId);
-                message.MessageResponse!.ChatConfig = await chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, default);
+                if (message.ChatRoleId != (byte)DBChatRole.ToolCall)
+                {
+                    message.MessageResponse!.ChatConfig = await chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, default);
+                }
                 chat.Messages.Add(message);
                 chat.UpdatedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync(CancellationToken.None);
@@ -444,7 +447,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                         ChatRoleId = (byte)DBChatRole.ToolCall,
                         CreatedAt = DateTime.UtcNow,
                         Edited = false,
-                        ParentId = message.Id,
+                        Parent = message,
                         SpanId = chatSpan.SpanId,
                         MessageContents =
                         [
@@ -457,7 +460,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                                 },
                                 ContentTypeId = (byte)DBMessageContentType.ToolCallResponse,
                             }
-                        ]
+                        ],
                     });
                 }
             }

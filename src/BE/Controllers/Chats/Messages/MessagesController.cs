@@ -23,6 +23,8 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentBlob)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileContentType)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentText)
+            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentToolCall)
+            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentToolCallResponse)
             .Where(m => m.ChatId == urlEncryption.DecryptChatId(chatId) && m.Chat.UserId == currentUser.Id)
             .Select(x => new ChatMessageTemp()
             {
@@ -179,6 +181,8 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentText)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentBlob)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentFile)
+            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentToolCall)
+            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentToolCallResponse)
             .Include(x => x.MessageResponse!.Usage.Model.ModelKey)
             .FirstOrDefaultAsync(x => x.Id == urlEncryption.DecryptMessageId(messageId), cancellationToken);
         if (message == null)
