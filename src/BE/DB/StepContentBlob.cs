@@ -6,15 +6,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chats.BE.DB;
 
-[Table("MessageContentText")]
-public partial class MessageContentText
+[Table("StepContentBlob")]
+public partial class StepContentBlob
 {
     [Key]
     public long Id { get; set; }
 
-    public string Content { get; set; } = null!;
+    public byte[] Content { get; set; } = null!;
 
     [ForeignKey("Id")]
-    [InverseProperty("MessageContentText")]
-    public virtual MessageContent IdNavigation { get; set; } = null!;
+    [InverseProperty("StepContentBlob")]
+    public virtual StepContent IdNavigation { get; set; } = null!;
 }

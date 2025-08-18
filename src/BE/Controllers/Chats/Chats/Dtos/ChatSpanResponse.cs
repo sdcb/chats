@@ -6,5 +6,5 @@ public record ChatSpanResponse
 {
     public required byte SpanId { get; init; }
 
-    public required List<Message> NewMessages { get; init; }
+    public required List<ChatTurn> NewMessages { get; init; }
 }

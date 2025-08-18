@@ -7,14 +7,14 @@ using OpenAI.Chat;
 
 namespace Chats.BE.DB;
 
-public partial class MessageContent
+public partial class StepContent
 {
     public async Task<ChatMessageContentPart> ToOpenAI(FileUrlProvider fup, CancellationToken cancellationToken)
     {
         return (DBMessageContentType)ContentTypeId switch
         {
-            DBMessageContentType.Text => ChatMessageContentPart.CreateTextPart(MessageContentText!.Content),
-            DBMessageContentType.FileId => await fup.CreateOpenAIPart(MessageContentFile, cancellationToken),
+            DBMessageContentType.Text => ChatMessageContentPart.CreateTextPart(StepContentText!.Content),
+            DBMessageContentType.FileId => await fup.CreateOpenAIPart(StepContentFile, cancellationToken),
             _ => throw new NotImplementedException()
         };
     }
@@ -23,42 +23,42 @@ public partial class MessageContent
     {
         return (DBMessageContentType)ContentTypeId switch
         {
-            DBMessageContentType.Text => MessageContentText!.Content,
-            DBMessageContentType.Error => MessageContentText!.Content,
-            DBMessageContentType.Reasoning => MessageContentText!.Content,
+            DBMessageContentType.Text => StepContentText!.Content,
+            DBMessageContentType.Error => StepContentText!.Content,
+            DBMessageContentType.Reasoning => StepContentText!.Content,
             //DBMessageContentType.FileId => MessageContentUtil.ReadFileId(Content).ToString(), // not supported
-            DBMessageContentType.ToolCall => $"ToolCall: {MessageContentToolCall!.Name}({MessageContentToolCall.Parameters})",
-            DBMessageContentType.ToolCallResponse => $"ToolCallResponse: {MessageContentToolCallResponse!.Response}",
+            DBMessageContentType.ToolCall => $"ToolCall: {StepContentToolCall!.Name}({StepContentToolCall.Parameters})",
+            DBMessageContentType.ToolCallResponse => $"ToolCallResponse: {StepContentToolCallResponse!.Response}",
             _ => throw new NotSupportedException(),
         };
     }
 
-    public static MessageContent FromText(string text)
+    public static StepContent FromText(string text)
     {
-        return new MessageContent { MessageContentText = new() { Content = text }, ContentTypeId = (byte)DBMessageContentType.Text };
+        return new StepContent { StepContentText = new() { Content = text }, ContentTypeId = (byte)DBMessageContentType.Text };
     }
 
-    public static MessageContent FromThink(string text)
+    public static StepContent FromThink(string text)
     {
-        return new MessageContent { MessageContentText = new() { Content = text }, ContentTypeId = (byte)DBMessageContentType.Reasoning };
+        return new StepContent { StepContentText = new() { Content = text }, ContentTypeId = (byte)DBMessageContentType.Reasoning };
     }
 
-    public static MessageContent FromFile(File file)
+    public static StepContent FromFile(File file)
     {
-        return new MessageContent { MessageContentFile = new() { FileId = file.Id, File = file }, ContentTypeId = (byte)DBMessageContentType.FileId };
+        return new StepContent { StepContentFile = new() { FileId = file.Id, File = file }, ContentTypeId = (byte)DBMessageContentType.FileId };
     }
 
-    public static MessageContent FromTool(string toolCallId, string name, string parameters)
+    public static StepContent FromTool(string toolCallId, string name, string parameters)
     {
-        return new MessageContent { MessageContentToolCall = new() { Name = name, ToolCallId = toolCallId, Parameters = parameters }, ContentTypeId = (byte)DBMessageContentType.ToolCall };
+        return new StepContent { StepContentToolCall = new() { Name = name, ToolCallId = toolCallId, Parameters = parameters }, ContentTypeId = (byte)DBMessageContentType.ToolCall };
     }
 
-    public static MessageContent FromError(string error)
+    public static StepContent FromError(string error)
     {
-        return new MessageContent { MessageContentText = new() { Content = error }, ContentTypeId = (byte)DBMessageContentType.Error };
+        return new StepContent { StepContentText = new() { Content = error }, ContentTypeId = (byte)DBMessageContentType.Error };
     }
 
-    public static async Task<MessageContent[]> FromRequest(ContentRequestItem[] items, FileUrlProvider fup, CancellationToken cancellationToken)
+    public static async Task<StepContent[]> FromRequest(ContentRequestItem[] items, FileUrlProvider fup, CancellationToken cancellationToken)
     {
         return await items
             .ToAsyncEnumerable()
@@ -66,14 +66,14 @@ public partial class MessageContent
             .ToArrayAsync(cancellationToken);
     }
 
-    public static IEnumerable<MessageContent> FromFullResponse(InternalChatSegment lastSegment, string? errorText, Dictionary<ImageChatSegment, TaskCompletionSource<File>> imageMcCache)
+    public static IEnumerable<StepContent> FromFullResponse(InternalChatSegment lastSegment, string? errorText, Dictionary<ImageChatSegment, TaskCompletionSource<File>> imageMcCache)
     {
         if (errorText is not null)
         {
             yield return FromError(errorText);
         }
         // lastSegment.Items is merged now
-        foreach (MessageContent item in lastSegment.Items.Select(x =>
+        foreach (StepContent item in lastSegment.Items.Select(x =>
         {
             return x switch
             {

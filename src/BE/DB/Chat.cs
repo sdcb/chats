@@ -42,12 +42,12 @@ public partial class Chat
     [InverseProperty("Chat")]
     public virtual ICollection<ChatSpan> ChatSpans { get; set; } = new List<ChatSpan>();
 
+    [InverseProperty("Chat")]
+    public virtual ICollection<ChatTurn> ChatTurns { get; set; } = new List<ChatTurn>();
+
     [ForeignKey("LeafMessageId")]
     [InverseProperty("Chats")]
-    public virtual Message? LeafMessage { get; set; }
-
-    [InverseProperty("Chat")]
-    public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
+    public virtual ChatTurn? LeafMessage { get; set; }
 
     [ForeignKey("UserId")]
     [InverseProperty("Chats")]

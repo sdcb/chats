@@ -6,9 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chats.BE.DB;
 
-[Table("MessageContentFile")]
+[Table("StepContentFile")]
 [Index("FileId", Name = "IX_MessageContentFile_FileId")]
-public partial class MessageContentFile
+public partial class StepContentFile
 {
     [Key]
     public long Id { get; set; }
@@ -16,10 +16,10 @@ public partial class MessageContentFile
     public int FileId { get; set; }
 
     [ForeignKey("FileId")]
-    [InverseProperty("MessageContentFiles")]
+    [InverseProperty("StepContentFiles")]
     public virtual File File { get; set; } = null!;
 
     [ForeignKey("Id")]
-    [InverseProperty("MessageContentFile")]
-    public virtual MessageContent IdNavigation { get; set; } = null!;
+    [InverseProperty("StepContentFile")]
+    public virtual StepContent IdNavigation { get; set; } = null!;
 }

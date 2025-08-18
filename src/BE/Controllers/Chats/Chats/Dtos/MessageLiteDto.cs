@@ -13,7 +13,7 @@ public record MessageLiteDtoNoContent
     public required DBChatRole Role { get; init; }
     public required byte? SpanId { get; init; }
 
-    public MessageLiteDto WithContent(MessageContent[] content)
+    public MessageLiteDto WithContent(StepContent[] content)
     {
         return new MessageLiteDto
         {
@@ -32,17 +32,17 @@ public record MessageLiteDto
     public required long? ParentId { get; init; }
     public required DBChatRole Role { get; init; }
     public required byte? SpanId { get; init; }
-    public required MessageContent[] Content { get; init; }
+    public required StepContent[] Content { get; init; }
 
-    public static MessageLiteDto FromDB(Message message)
+    public static MessageLiteDto FromDB(ChatTurn message)
     {
         return new MessageLiteDto
         {
             Id = message.Id,
             ParentId = message.ParentId,
-            Role = (DBChatRole)message.ChatRoleId,
+            Role = message.IsUser ? DBChatRole.User : DBChatRole.Assistant,
             SpanId = message.SpanId,
-            Content = [.. message.MessageContents]
+            Content = [.. message.Steps.SelectMany(x => x.StepContents)]
         };
     }
 
@@ -59,7 +59,7 @@ public record MessageLiteDto
                 .ToAsyncEnumerable()
                 .SelectAwait(async c => await c.ToOpenAI(fup, cancellationToken))
                 .ToArrayAsync(cancellationToken))),
-            DBChatRole.ToolCall => new ToolChatMessage(Content[0].MessageContentToolCallResponse!.ToolCallId, Content[0].MessageContentToolCallResponse!.Response),
+            DBChatRole.ToolCall => new ToolChatMessage(Content[0].StepContentToolCallResponse!.ToolCallId, Content[0].StepContentToolCallResponse!.Response),
             _ => throw new NotImplementedException()
         };
     }
@@ -68,12 +68,12 @@ public record MessageLiteDto
     {
         foreach (var content in Content)
         {
-            if (content.ContentTypeId == (byte)DBMessageContentType.ToolCall && content.MessageContentToolCall != null)
+            if (content.ContentTypeId == (byte)DBMessageContentType.ToolCall && content.StepContentToolCall != null)
             {
                 assistantChatMessage.ToolCalls.Add(ChatToolCall.CreateFunctionToolCall(
-                    content.MessageContentToolCall.ToolCallId,
-                    content.MessageContentToolCall.Name,
-                    BinaryData.FromString(content.MessageContentToolCall.Parameters)));
+                    content.StepContentToolCall.ToolCallId,
+                    content.StepContentToolCall.Name,
+                    BinaryData.FromString(content.StepContentToolCall.Parameters)));
             }
         }
         return assistantChatMessage;

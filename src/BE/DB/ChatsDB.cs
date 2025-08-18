@@ -33,6 +33,8 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<ChatTag> ChatTags { get; set; }
 
+    public virtual DbSet<ChatTurn> ChatTurns { get; set; }
+
     public virtual DbSet<ClientInfo> ClientInfos { get; set; }
 
     public virtual DbSet<ClientIp> ClientIps { get; set; }
@@ -63,24 +65,6 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<McpServer> McpServers { get; set; }
 
-    public virtual DbSet<Message> Messages { get; set; }
-
-    public virtual DbSet<MessageContent> MessageContents { get; set; }
-
-    public virtual DbSet<MessageContentBlob> MessageContentBlobs { get; set; }
-
-    public virtual DbSet<MessageContentFile> MessageContentFiles { get; set; }
-
-    public virtual DbSet<MessageContentText> MessageContentTexts { get; set; }
-
-    public virtual DbSet<MessageContentToolCall> MessageContentToolCalls { get; set; }
-
-    public virtual DbSet<MessageContentToolCallResponse> MessageContentToolCallResponses { get; set; }
-
-    public virtual DbSet<MessageContentType> MessageContentTypes { get; set; }
-
-    public virtual DbSet<MessageResponse> MessageResponses { get; set; }
-
     public virtual DbSet<Model> Models { get; set; }
 
     public virtual DbSet<ModelKey> ModelKeys { get; set; }
@@ -100,6 +84,22 @@ public partial class ChatsDB : DbContext
     public virtual DbSet<SmsStatus> SmsStatuses { get; set; }
 
     public virtual DbSet<SmsType> SmsTypes { get; set; }
+
+    public virtual DbSet<Step> Steps { get; set; }
+
+    public virtual DbSet<StepContent> StepContents { get; set; }
+
+    public virtual DbSet<StepContentBlob> StepContentBlobs { get; set; }
+
+    public virtual DbSet<StepContentFile> StepContentFiles { get; set; }
+
+    public virtual DbSet<StepContentText> StepContentTexts { get; set; }
+
+    public virtual DbSet<StepContentToolCall> StepContentToolCalls { get; set; }
+
+    public virtual DbSet<StepContentToolCallResponse> StepContentToolCallResponses { get; set; }
+
+    public virtual DbSet<StepContentType> StepContentTypes { get; set; }
 
     public virtual DbSet<Tokenizer> Tokenizers { get; set; }
 
@@ -230,6 +230,17 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.Chat).WithMany(p => p.ChatSpans).HasConstraintName("FK_ChatSpan_Chat");
         });
 
+        modelBuilder.Entity<ChatTurn>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_Message");
+
+            entity.HasOne(d => d.ChatConfig).WithMany(p => p.ChatTurns).HasConstraintName("FK_ChatTurn_ChatConfig");
+
+            entity.HasOne(d => d.Chat).WithMany(p => p.ChatTurns).HasConstraintName("FK_Message_Chat");
+
+            entity.HasOne(d => d.Parent).WithMany(p => p.InverseParent).HasConstraintName("FK_Message_ParentMessage");
+        });
+
         modelBuilder.Entity<ClientInfo>(entity =>
         {
             entity.HasOne(d => d.ClientIp).WithMany(p => p.ClientInfos)
@@ -299,85 +310,6 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<LoginService>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_LoginServices2");
-        });
-
-        modelBuilder.Entity<Message>(entity =>
-        {
-            entity.HasOne(d => d.Chat).WithMany(p => p.Messages).HasConstraintName("FK_Message_Chat");
-
-            entity.HasOne(d => d.ChatRole).WithMany(p => p.Messages)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Message_ChatRole");
-
-            entity.HasOne(d => d.Parent).WithMany(p => p.InverseParent).HasConstraintName("FK_Message_ParentMessage");
-        });
-
-        modelBuilder.Entity<MessageContent>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK_MessageContent2");
-
-            entity.HasOne(d => d.ContentType).WithMany(p => p.MessageContents)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_MessageContent2_MessageContentType");
-
-            entity.HasOne(d => d.Message).WithMany(p => p.MessageContents).HasConstraintName("FK_MessageContent_Message");
-        });
-
-        modelBuilder.Entity<MessageContentBlob>(entity =>
-        {
-            entity.Property(e => e.Id).ValueGeneratedNever();
-
-            entity.HasOne(d => d.IdNavigation).WithOne(p => p.MessageContentBlob).HasConstraintName("FK_MessageContentBlob_MessageContent");
-        });
-
-        modelBuilder.Entity<MessageContentFile>(entity =>
-        {
-            entity.Property(e => e.Id).ValueGeneratedNever();
-
-            entity.HasOne(d => d.File).WithMany(p => p.MessageContentFiles).HasConstraintName("FK_MessageContentFile_File");
-
-            entity.HasOne(d => d.IdNavigation).WithOne(p => p.MessageContentFile).HasConstraintName("FK_MessageContentFile_MessageContent");
-        });
-
-        modelBuilder.Entity<MessageContentText>(entity =>
-        {
-            entity.Property(e => e.Id).ValueGeneratedNever();
-
-            entity.HasOne(d => d.IdNavigation).WithOne(p => p.MessageContentText).HasConstraintName("FK_MessageContentUTF16_MessageContent");
-        });
-
-        modelBuilder.Entity<MessageContentToolCall>(entity =>
-        {
-            entity.Property(e => e.Id).ValueGeneratedNever();
-
-            entity.HasOne(d => d.IdNavigation).WithOne(p => p.MessageContentToolCall).HasConstraintName("FK_MessageContentToolCall_MessageContent");
-        });
-
-        modelBuilder.Entity<MessageContentToolCallResponse>(entity =>
-        {
-            entity.Property(e => e.Id).ValueGeneratedNever();
-
-            entity.HasOne(d => d.IdNavigation).WithOne(p => p.MessageContentToolCallResponse).HasConstraintName("FK_MessageContentToolCallResponse_MessageContent");
-        });
-
-        modelBuilder.Entity<MessageContentType>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__MessageC__3214EC07D7BA864A");
-        });
-
-        modelBuilder.Entity<MessageResponse>(entity =>
-        {
-            entity.Property(e => e.MessageId).ValueGeneratedNever();
-
-            entity.HasOne(d => d.ChatConfig).WithMany(p => p.MessageResponses)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_MessageResponse_ChatConfig");
-
-            entity.HasOne(d => d.Message).WithOne(p => p.MessageResponse).HasConstraintName("FK_MessageResponse_Message");
-
-            entity.HasOne(d => d.Usage).WithMany(p => p.MessageResponses)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_MessageResponse_UserModelUsage");
         });
 
         modelBuilder.Entity<Model>(entity =>
@@ -460,6 +392,80 @@ public partial class ChatsDB : DbContext
                 .HasConstraintName("FK_SmsHistory_SmsType");
 
             entity.HasOne(d => d.User).WithMany(p => p.SmsRecords).HasConstraintName("FK_SmsRecord_UserId");
+        });
+
+        modelBuilder.Entity<Step>(entity =>
+        {
+            entity.HasOne(d => d.ChatRole).WithMany(p => p.Steps)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Step_ChatRole");
+
+            entity.HasOne(d => d.Turn).WithMany(p => p.Steps).HasConstraintName("FK_Step_Turn");
+
+            entity.HasOne(d => d.Usage).WithMany(p => p.Steps).HasConstraintName("FK_Step_Usage");
+        });
+
+        modelBuilder.Entity<StepContent>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_MessageContent2");
+
+            entity.HasOne(d => d.ContentType).WithMany(p => p.StepContents)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_MessageContent2_MessageContentType");
+
+            entity.HasOne(d => d.Step).WithMany(p => p.StepContents).HasConstraintName("FK_StepContent_Step");
+        });
+
+        modelBuilder.Entity<StepContentBlob>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_MessageContentBlob");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentBlob).HasConstraintName("FK_MessageContentBlob_MessageContent");
+        });
+
+        modelBuilder.Entity<StepContentFile>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_MessageContentFile");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.HasOne(d => d.File).WithMany(p => p.StepContentFiles).HasConstraintName("FK_MessageContentFile_File");
+
+            entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentFile).HasConstraintName("FK_MessageContentFile_MessageContent");
+        });
+
+        modelBuilder.Entity<StepContentText>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_MessageContentText");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentText).HasConstraintName("FK_MessageContentUTF16_MessageContent");
+        });
+
+        modelBuilder.Entity<StepContentToolCall>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_MessageContentToolCall");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentToolCall).HasConstraintName("FK_MessageContentToolCall_MessageContent");
+        });
+
+        modelBuilder.Entity<StepContentToolCallResponse>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_MessageContentToolCallResponse");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentToolCallResponse).HasConstraintName("FK_MessageContentToolCallResponse_MessageContent");
+        });
+
+        modelBuilder.Entity<StepContentType>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__MessageC__3214EC07D7BA864A");
         });
 
         modelBuilder.Entity<Tokenizer>(entity =>

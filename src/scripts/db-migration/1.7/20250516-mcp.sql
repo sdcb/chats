@@ -233,3 +233,167 @@ INSERT INTO [KnownImageSize] VALUES
 
 ALTER TABLE [ChatConfig] ADD [ImageSizeId] SMALLINT NOT NULL CONSTRAINT [DF_ChatConfig_ImageSizeId] DEFAULT 0;
 ALTER TABLE [ChatConfig] ADD CONSTRAINT [FK_ChatConfig_ImageSize] FOREIGN KEY ([ImageSizeId]) REFERENCES [KnownImageSize] ([Id]);
+
+
+
+
+
+
+
+PRINT N'1) 重命名 Message -> ChatTurn 以及 MessageContent* -> Step* ...';
+-- 表重命名（外键仍然有效，名称不改不影响引用）
+EXEC sp_rename 'dbo.Message',                         'ChatTurn';
+EXEC sp_rename 'dbo.MessageContent',                  'StepContent';
+EXEC sp_rename 'dbo.MessageContentBlob',              'StepContentBlob';
+EXEC sp_rename 'dbo.MessageContentFile',              'StepContentFile';
+EXEC sp_rename 'dbo.MessageContentText',              'StepContentText';
+EXEC sp_rename 'dbo.MessageContentToolCall',          'StepContentToolCall';
+EXEC sp_rename 'dbo.MessageContentToolCallResponse',  'StepContentToolCallResponse';
+EXEC sp_rename 'dbo.MessageContentType',              'StepContentType';
+
+PRINT N'2) ChatTurn 增加列 IsUser、ReactionId、ChatConfigId，并填充 IsUser 与 Reaction/Config';
+-- 新列（IsUser 默认0，非空；其他可空）
+ALTER TABLE dbo.ChatTurn ADD
+    IsUser       bit      NOT NULL CONSTRAINT DF_ChatTurn_IsUser DEFAULT(0),
+    ReactionId   bit      NULL,
+    ChatConfigId int      NULL;
+
+-- 2=user，其余均视为非用户
+UPDATE dbo.ChatTurn
+    SET IsUser = CASE WHEN ChatRoleId = 2 THEN 1 ELSE 0 END;
+
+-- ReactionId/ChatConfigId 迁移到 ChatTurn
+UPDATE ct
+    SET ct.ReactionId   = mr.ReactionId,
+        ct.ChatConfigId = mr.ChatConfigId
+    FROM dbo.ChatTurn ct
+    LEFT JOIN dbo.MessageResponse mr
+    ON mr.MessageId = ct.Id;
+
+-- ChatTurn.ChatConfigId 外键（若不存在则创建）
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_ChatTurn_ChatConfig')
+BEGIN
+    ALTER TABLE dbo.ChatTurn
+    WITH CHECK ADD CONSTRAINT FK_ChatTurn_ChatConfig
+    FOREIGN KEY (ChatConfigId) REFERENCES dbo.ChatConfig(Id);
+    ALTER TABLE dbo.ChatTurn CHECK CONSTRAINT FK_ChatTurn_ChatConfig;
+END
+
+PRINT N'3) 创建 Step 表（承载 ChatRoleId/Edited/CreatedAt/UsageId）并迁移数据';
+-- 新建 Step（含默认与必要外键）
+IF OBJECT_ID('dbo.Step','U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Step
+    (
+        Id          bigint IDENTITY(1,1) NOT NULL,
+        TurnId      bigint NOT NULL,
+        ChatRoleId  tinyint NOT NULL,
+        Edited      bit NOT NULL CONSTRAINT DF_Step_Edited DEFAULT(0),
+        CreatedAt   datetime2(7) NOT NULL,
+        UsageId     bigint NULL,
+        CONSTRAINT PK_Step PRIMARY KEY CLUSTERED (Id ASC),
+        CONSTRAINT FK_Step_Turn   FOREIGN KEY (TurnId)     REFERENCES dbo.ChatTurn(Id)      ON DELETE CASCADE,
+        CONSTRAINT FK_Step_Usage  FOREIGN KEY (UsageId)    REFERENCES dbo.UserModelUsage(Id),
+        CONSTRAINT FK_Step_ChatRole FOREIGN KEY (ChatRoleId) REFERENCES dbo.ChatRole(Id)
+    );
+END
+
+-- 为每个 Turn 插入“初始 Step”，UsageId 来自 MessageResponse
+INSERT INTO dbo.Step (TurnId, ChatRoleId, Edited, CreatedAt, UsageId)
+SELECT
+    ct.Id,
+    ct.ChatRoleId,
+    ct.Edited,
+    ct.CreatedAt,
+    mr.UsageId
+FROM dbo.ChatTurn ct
+LEFT JOIN dbo.MessageResponse mr
+    ON mr.MessageId = ct.Id
+ORDER BY ct.Id;
+
+PRINT N'4) StepContent 挂载到 Step：新增 StepId、回填、建FK并删除旧列 MessageId';
+-- 删除 StepContent -> ChatTurn 的旧FK（重命名后名字仍为 FK_MessageContent_Message）
+IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_MessageContent_Message')
+BEGIN
+    ALTER TABLE dbo.StepContent DROP CONSTRAINT FK_MessageContent_Message;
+END
+
+-- 新增 StepId（临时可空）
+IF COL_LENGTH('dbo.StepContent', 'StepId') IS NULL
+BEGIN
+    ALTER TABLE dbo.StepContent ADD StepId bigint NULL;
+END
+
+-- 回填 StepId：以 Step.TurnId == StepContent.MessageId 关联
+;WITH S AS
+(
+    SELECT s.Id AS StepId, s.TurnId
+        FROM dbo.Step s
+)
+UPDATE sc
+    SET sc.StepId = s.StepId
+    FROM dbo.StepContent sc
+    JOIN S
+    ON s.TurnId = sc.MessageId;
+
+-- 校验：不应存在未回填成功的数据
+IF EXISTS (SELECT 1 FROM dbo.StepContent WHERE StepId IS NULL)
+BEGIN
+    RAISERROR(N'存在无法回填 StepId 的 StepContent 记录', 16, 1);
+END
+
+-- StepId 设为 NOT NULL，并建立新外键
+ALTER TABLE dbo.StepContent ALTER COLUMN StepId bigint NOT NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_StepContent_Step')
+BEGIN
+    ALTER TABLE dbo.StepContent
+    WITH CHECK ADD CONSTRAINT FK_StepContent_Step
+    FOREIGN KEY (StepId) REFERENCES dbo.Step(Id)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE;
+    ALTER TABLE dbo.StepContent CHECK CONSTRAINT FK_StepContent_Step;
+END
+
+-- 删除旧列 MessageId
+IF COL_LENGTH('dbo.StepContent', 'MessageId') IS NOT NULL
+BEGIN
+    DROP INDEX [IX_MessageContent2_Message] ON [dbo].[StepContent];
+    ALTER TABLE dbo.StepContent DROP COLUMN MessageId;
+END
+
+-- 性能：为 StepContent.StepId 建索引
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_StepContent_StepId' AND object_id = OBJECT_ID('dbo.StepContent'))
+BEGIN
+    CREATE INDEX IX_StepContent_StepId ON dbo.StepContent(StepId);
+END
+
+PRINT N'5) 从 ChatTurn 移除已下沉到 Step 的列（ChatRoleId/Edited/CreatedAt）';
+-- 删除 ChatTurn 上可能残留的外键（原 FK_Message_ChatRole）
+IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Message_ChatRole')
+BEGIN
+    ALTER TABLE dbo.ChatTurn DROP CONSTRAINT FK_Message_ChatRole;
+END
+
+-- 删除 Edited 的默认约束
+ALTER TABLE dbo.ChatTurn DROP CONSTRAINT DF_Message_Edited;
+
+-- 正式移除三列
+IF COL_LENGTH('dbo.ChatTurn', 'ChatRoleId') IS NOT NULL
+    ALTER TABLE dbo.ChatTurn DROP COLUMN ChatRoleId;
+IF COL_LENGTH('dbo.ChatTurn', 'Edited') IS NOT NULL
+    ALTER TABLE dbo.ChatTurn DROP COLUMN Edited;
+IF COL_LENGTH('dbo.ChatTurn', 'CreatedAt') IS NOT NULL
+    ALTER TABLE dbo.ChatTurn DROP COLUMN CreatedAt;
+
+PRINT N'6) 删除 MessageResponse 表（Reaction/Config/Usage 已迁移）';
+IF OBJECT_ID('dbo.MessageResponse','U') IS NOT NULL
+BEGIN
+    DROP TABLE dbo.MessageResponse;
+END
+
+PRINT N'7) 辅助索引：为 Step(TurnId, Id) 建索引';
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Step_TurnId' AND object_id = OBJECT_ID('dbo.Step'))
+BEGIN
+    CREATE INDEX IX_Step_TurnId ON dbo.Step(TurnId, Id);
+END

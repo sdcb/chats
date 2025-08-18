@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chats.BE.DB;
 
-[Table("MessageContentToolCallResponse")]
-public partial class MessageContentToolCallResponse
+[Table("StepContentToolCallResponse")]
+public partial class StepContentToolCallResponse
 {
     [Key]
     public long Id { get; set; }
@@ -19,6 +19,6 @@ public partial class MessageContentToolCallResponse
     public string Response { get; set; } = null!;
 
     [ForeignKey("Id")]
-    [InverseProperty("MessageContentToolCallResponse")]
-    public virtual MessageContent IdNavigation { get; set; } = null!;
+    [InverseProperty("StepContentToolCallResponse")]
+    public virtual StepContent IdNavigation { get; set; } = null!;
 }

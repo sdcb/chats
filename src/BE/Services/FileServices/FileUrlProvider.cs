@@ -9,7 +9,7 @@ namespace Chats.BE.Services.FileServices;
 
 public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, IUrlEncryptionService urlEncryptionService)
 {
-    public async Task<ChatMessageContentPart> CreateOpenAIPart(MessageContentFile? mcFile, CancellationToken cancellationToken)
+    public async Task<ChatMessageContentPart> CreateOpenAIPart(StepContentFile? mcFile, CancellationToken cancellationToken)
     {
         if (mcFile == null)
         {

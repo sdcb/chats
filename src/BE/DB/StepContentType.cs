@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chats.BE.DB;
 
-[Table("MessageContentType")]
-public partial class MessageContentType
+[Table("StepContentType")]
+public partial class StepContentType
 {
     [Key]
     public byte Id { get; set; }
@@ -17,5 +17,5 @@ public partial class MessageContentType
     public string ContentType { get; set; } = null!;
 
     [InverseProperty("ContentType")]
-    public virtual ICollection<MessageContent> MessageContents { get; set; } = new List<MessageContent>();
+    public virtual ICollection<StepContent> StepContents { get; set; } = new List<StepContent>();
 }

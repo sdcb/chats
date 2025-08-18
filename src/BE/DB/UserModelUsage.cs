@@ -69,12 +69,12 @@ public partial class UserModelUsage
     [InverseProperty("UserModelUsages")]
     public virtual FinishReason FinishReason { get; set; } = null!;
 
-    [InverseProperty("Usage")]
-    public virtual ICollection<MessageResponse> MessageResponses { get; set; } = new List<MessageResponse>();
-
     [ForeignKey("ModelId")]
     [InverseProperty("UserModelUsages")]
     public virtual Model Model { get; set; } = null!;
+
+    [InverseProperty("Usage")]
+    public virtual ICollection<Step> Steps { get; set; } = new List<Step>();
 
     [ForeignKey("UsageTransactionId")]
     [InverseProperty("UserModelUsage")]

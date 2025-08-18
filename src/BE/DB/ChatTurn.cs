@@ -6,9 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chats.BE.DB;
 
-[Table("Message")]
+[Table("ChatTurn")]
 [Index("ChatId", "SpanId", Name = "IX_Message_ChatSpan")]
-public partial class Message
+public partial class ChatTurn
 {
     [Key]
     public long Id { get; set; }
@@ -19,33 +19,30 @@ public partial class Message
 
     public long? ParentId { get; set; }
 
-    public byte ChatRoleId { get; set; }
+    public bool IsUser { get; set; }
 
-    public bool Edited { get; set; }
+    public bool? ReactionId { get; set; }
 
-    public DateTime CreatedAt { get; set; }
+    public int? ChatConfigId { get; set; }
 
     [ForeignKey("ChatId")]
-    [InverseProperty("Messages")]
+    [InverseProperty("ChatTurns")]
     public virtual Chat Chat { get; set; } = null!;
 
-    [ForeignKey("ChatRoleId")]
-    [InverseProperty("Messages")]
-    public virtual ChatRole ChatRole { get; set; } = null!;
+    [ForeignKey("ChatConfigId")]
+    [InverseProperty("ChatTurns")]
+    public virtual ChatConfig? ChatConfig { get; set; }
 
     [InverseProperty("LeafMessage")]
     public virtual ICollection<Chat> Chats { get; set; } = new List<Chat>();
 
     [InverseProperty("Parent")]
-    public virtual ICollection<Message> InverseParent { get; set; } = new List<Message>();
-
-    [InverseProperty("Message")]
-    public virtual ICollection<MessageContent> MessageContents { get; set; } = new List<MessageContent>();
-
-    [InverseProperty("Message")]
-    public virtual MessageResponse? MessageResponse { get; set; }
+    public virtual ICollection<ChatTurn> InverseParent { get; set; } = new List<ChatTurn>();
 
     [ForeignKey("ParentId")]
     [InverseProperty("InverseParent")]
-    public virtual Message? Parent { get; set; }
+    public virtual ChatTurn? Parent { get; set; }
+
+    [InverseProperty("Turn")]
+    public virtual ICollection<Step> Steps { get; set; } = new List<Step>();
 }

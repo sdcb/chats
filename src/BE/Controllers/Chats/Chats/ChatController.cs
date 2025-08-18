@@ -183,7 +183,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             }
         }
 
-        Message? newDbUserMessage = null;
+        ChatTurn? newDbUserMessage = null;
         if (req is GeneralChatRequest generalRequest)
         {
             if (generalRequest.ParentAssistantMessageId != null)
@@ -281,7 +281,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     await YieldResponse(SseResponseLine.UserMessage(newDbUserMessage, idEncryption, fup));
                     dbUserMessageYield = true;
                 }
-                Message mergedMessage = Message.MergeAll(allEnd.Messages);
+                ChatTurn mergedMessage = ChatTurn.MergeAll(allEnd.Messages);
                 await YieldResponse(SseResponseLine.ResponseMessage(allEnd.SpanId, mergedMessage, idEncryption, fup));
                 if (isLast)
                 {
@@ -290,7 +290,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             }
             else if (line is EndLine endLine)
             {
-                Message message = endLine.Message;
+                ChatTurn message = endLine.Message;
                 ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == message.SpanId);
                 if (message.ChatRoleId != (byte)DBChatRole.ToolCall)
                 {
@@ -390,7 +390,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         Chat chat,
         UserModel userModel,
         IEnumerable<MessageLiteDto> messageTree,
-        Message? dbUserMessage,
+        ChatTurn? dbUserMessage,
         ScopedBalanceCalculator calc,
         Task<int> clientInfoIdTask,
         Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache,
@@ -420,10 +420,10 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             cco.Tools.Add(ChatTool.CreateFunctionTool(tool.Name, tool.Description, BinaryData.FromString(tool.JsonSchema.GetRawText())));
         }
 
-        List<Message> newMessages = [];
+        List<ChatTurn> newMessages = [];
         while (true)
         {
-            (Message message, DBFinishReason finishReason) = await RunOne(newMessages.LastOrDefault());
+            (ChatTurn message, DBFinishReason finishReason) = await RunOne(newMessages.LastOrDefault());
             await WriteMessage(message);
 
             if (finishReason == DBFinishReason.ToolCalls)
@@ -441,7 +441,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     logger.LogInformation("Tool {call.Name} completed with result: {result}", call.Name, result.Content);
                     string toolCallResponseText = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(x => x.Text));
                     writer.TryWrite(SseResponseLine.ToolEnd(chatSpan.SpanId, call.ToolCallId!, toolCallResponseText));
-                    await WriteMessage(new Message()
+                    await WriteMessage(new ChatTurn()
                     {
                         ChatId = chat.Id,
                         ChatRoleId = (byte)DBChatRole.ToolCall,
@@ -472,14 +472,14 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         writer.TryWrite(new AllEnd() { Messages = newMessages, SpanId = chatSpan.SpanId });
         writer.Complete();
 
-        async Task WriteMessage(Message message)
+        async Task WriteMessage(ChatTurn message)
         {
             messageToSend.Add(await MessageLiteDto.FromDB(message).ToOpenAI(fup, cancellationToken));
             newMessages.Add(message);
             writer.TryWrite(SseResponseLine.End(chatSpan.SpanId, message));
         }
 
-        async Task<(Message, DBFinishReason)> RunOne(Message? forceParentMessage)
+        async Task<(ChatTurn, DBFinishReason)> RunOne(ChatTurn? forceParentMessage)
         {
             ChatExtraDetails ced = new()
             {
@@ -593,7 +593,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
             // success
             // insert new assistant message
-            Message dbAssistantMessage = new()
+            ChatTurn dbAssistantMessage = new()
             {
                 ChatId = chat.Id,
                 ChatRoleId = (byte)DBChatRole.Assistant,

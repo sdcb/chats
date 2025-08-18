@@ -49,7 +49,7 @@ public abstract record SseResponseLine
 
     public static ResponseMessageLine ResponseMessage(
         byte spanId,
-        Message assistantMessage,
+        ChatTurn assistantMessage,
         IUrlEncryptionService urlEncryptionService,
         FileUrlProvider fup)
     {
@@ -59,7 +59,7 @@ public abstract record SseResponseLine
     }
 
     public static UserMessageLine UserMessage(
-        Message userMessage,
+        ChatTurn userMessage,
         IUrlEncryptionService urlEncryptionService,
         FileUrlProvider fup)
     {
@@ -100,7 +100,7 @@ public abstract record SseResponseLine
     public static ToolCompletedLine ToolEnd(byte spanId, string toolCallId, string result) =>
         new() { SpanId = spanId, ToolCallId = toolCallId, Result = result };
 
-    public static EndLine End(byte spanId, Message message) => new() { SpanId = spanId, Message = message };
+    public static EndLine End(byte spanId, ChatTurn message) => new() { SpanId = spanId, Message = message };
 
     #endregion
 }
@@ -251,14 +251,14 @@ public sealed record EndLine : SseResponseLine
     public required byte SpanId { get; init; }
 
     [JsonPropertyName("r")]
-    public required Message Message { get; init; }
+    public required ChatTurn Message { get; init; }
 }
 
 public sealed record AllEnd : SseResponseLine
 {
     public required byte SpanId { get; init; }
 
-    public required List<Message> Messages { get; init; }
+    public required List<ChatTurn> Messages { get; init; }
 }
 
 #endregion

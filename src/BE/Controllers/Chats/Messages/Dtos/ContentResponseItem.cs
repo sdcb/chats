@@ -18,7 +18,7 @@ public abstract record ContentResponseItem
     [JsonPropertyName("i")]
     public required string Id { get; init; }
 
-    public static ContentResponseItem FromContent(MessageContent content, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
+    public static ContentResponseItem FromContent(StepContent content, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
     {
         string encryptedMessageContentId = urlEncryption.EncryptMessageContentId(content.Id);
         return (DBMessageContentType)content.ContentTypeId switch
@@ -26,41 +26,41 @@ public abstract record ContentResponseItem
             DBMessageContentType.Text => new TextContentResponseItem()
             {
                 Id = encryptedMessageContentId, 
-                Content = content.MessageContentText!.Content
+                Content = content.StepContentText!.Content
             },
             DBMessageContentType.Error => new ErrorContentResponseItem()
             {
                 Id = encryptedMessageContentId,
-                Content = content.MessageContentText!.Content
+                Content = content.StepContentText!.Content
             },
             DBMessageContentType.Reasoning => new ReasoningResponseItem()
             {
                 Id = encryptedMessageContentId,
-                Content = content.MessageContentText!.Content
+                Content = content.StepContentText!.Content
             },
             DBMessageContentType.FileId => new FileResponseItem()
             {
                 Id = encryptedMessageContentId,
-                Content = fup.CreateFileDto(content.MessageContentFile!.File)
+                Content = fup.CreateFileDto(content.StepContentFile!.File)
             },
             DBMessageContentType.ToolCall => new ToolCallingResponseItem()
             {
                 Id = encryptedMessageContentId,
-                Name = content.MessageContentToolCall!.Name,
-                ToolCallId = content.MessageContentToolCall!.ToolCallId!,
-                Parameters = content.MessageContentToolCall!.Parameters,
+                Name = content.StepContentToolCall!.Name,
+                ToolCallId = content.StepContentToolCall!.ToolCallId!,
+                Parameters = content.StepContentToolCall!.Parameters,
             },
             DBMessageContentType.ToolCallResponse => new ToolCallResponseItem()
             {
                 Id = encryptedMessageContentId,
-                ToolCallId = content.MessageContentToolCallResponse!.ToolCallId!,
-                Response = content.MessageContentToolCallResponse!.Response,
+                ToolCallId = content.StepContentToolCallResponse!.ToolCallId!,
+                Response = content.StepContentToolCallResponse!.Response,
             },
             _ => throw new NotSupportedException(),
         };
     }
 
-    public static ContentResponseItem[] FromContent(MessageContent[] contents, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
+    public static ContentResponseItem[] FromContent(StepContent[] contents, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
     {
         return [.. contents.Select(x => FromContent(x, fup, urlEncryption))];
     }

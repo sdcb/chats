@@ -35,17 +35,17 @@ public abstract record MessageDto
 
 public record RequestMessageDto : MessageDto
 {
-    public static RequestMessageDto FromDB(Message message, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
+    public static RequestMessageDto FromDB(ChatTurn message, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
     {
         return new RequestMessageDto()
         {
             Id = urlEncryption.EncryptMessageId(message.Id),
             ParentId = urlEncryption.EncryptMessageId(message.ParentId),
-            Role = (DBChatRole)message.ChatRoleId,
-            Content = ContentResponseItem.FromContent([.. message.MessageContents], fup, urlEncryption),
-            CreatedAt = message.CreatedAt,
+            Role = message.IsUser ? DBChatRole.User : DBChatRole.Assistant,
+            Content = ContentResponseItem.FromContent([.. message.Steps.SelectMany(x => x.StepContents)], fup, urlEncryption),
+            CreatedAt = message.Steps.First().CreatedAt,
             SpanId = message.SpanId,
-            Edited = message.Edited,
+            Edited = message.Steps.Any(x => x.Edited),
         };
     }
 }
@@ -126,7 +126,7 @@ public record ChatMessageTemp
     public required long Id { get; init; }
     public required long? ParentId { get; init; }
     public required DBChatRole Role { get; init; }
-    public required MessageContent[] Content { get; init; }
+    public required StepContent[] Content { get; init; }
     public required DateTime CreatedAt { get; init; }
     public required byte? SpanId { get; init; }
     public required bool Edited { get; init; }
@@ -175,51 +175,51 @@ public record ChatMessageTemp
         }
     }
 
-    public static ChatMessageTemp FromDB(Message assistantMessage)
+    public static ChatMessageTemp FromDB(ChatTurn assistantMessage)
     {
-        if (assistantMessage.ChatRoleId == (byte)DBChatRole.Assistant)
-        {
-            if (assistantMessage.MessageResponse?.Usage == null) throw new InvalidOperationException("Assistant message must have usage data");
-
-            return new()
-            {
-                Content = [.. assistantMessage.MessageContents],
-                CreatedAt = assistantMessage.CreatedAt,
-                Id = assistantMessage.Id,
-                ParentId = assistantMessage.ParentId,
-                Role = (DBChatRole)assistantMessage.ChatRoleId,
-                SpanId = assistantMessage.SpanId,
-                Edited = assistantMessage.Edited,
-                Usage = new ChatMessageTempUsage()
-                {
-                    Duration = assistantMessage.MessageResponse.Usage.TotalDurationMs - assistantMessage.MessageResponse.Usage.PreprocessDurationMs,
-                    ReasoningDuration = assistantMessage.MessageResponse.Usage.ReasoningDurationMs,
-                    FirstTokenLatency = assistantMessage.MessageResponse.Usage.FirstResponseDurationMs,
-                    InputPrice = assistantMessage.MessageResponse.Usage.InputCost,
-                    InputTokens = assistantMessage.MessageResponse.Usage.InputTokens,
-                    ModelId = assistantMessage.MessageResponse.Usage.ModelId,
-                    ModelName = assistantMessage.MessageResponse.Usage.Model.Name,
-                    OutputPrice = assistantMessage.MessageResponse.Usage.OutputCost,
-                    OutputTokens = assistantMessage.MessageResponse.Usage.OutputTokens,
-                    ReasoningTokens = assistantMessage.MessageResponse.Usage.ReasoningTokens,
-                    ModelProviderId = assistantMessage.MessageResponse.Usage.Model.ModelKey.ModelProviderId,
-                    Reaction = assistantMessage.MessageResponse.ReactionId,
-                },
-            };
-        }
-        else
+        if (assistantMessage.IsUser)
         {
             // user/system message
             return new()
             {
-                Content = [.. assistantMessage.MessageContents],
-                CreatedAt = assistantMessage.CreatedAt,
+                Content = [.. assistantMessage.Steps.SelectMany(x => x.StepContents)],
+                CreatedAt = assistantMessage.Steps.First().CreatedAt,
                 Id = assistantMessage.Id,
                 ParentId = assistantMessage.ParentId,
-                Role = (DBChatRole)assistantMessage.ChatRoleId,
+                Role = DBChatRole.User,
                 SpanId = assistantMessage.SpanId,
-                Edited = assistantMessage.Edited,
+                Edited = false,
                 Usage = null,
+            };
+        }
+        else
+        {
+            if (assistantMessage.Steps.All(x => x.Usage == null)) throw new InvalidOperationException("Assistant message must have usage data");
+
+            return new()
+            {
+                Content = [.. assistantMessage.Steps.SelectMany(x => x.StepContents)],
+                CreatedAt = assistantMessage.Steps.First().CreatedAt,
+                Id = assistantMessage.Id,
+                ParentId = assistantMessage.ParentId,
+                Role = DBChatRole.Assistant,
+                SpanId = assistantMessage.SpanId,
+                Edited = assistantMessage.Steps.Any(x => x.Edited),
+                Usage = new ChatMessageTempUsage()
+                {
+                    InputTokens = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.InputTokens),
+                    OutputTokens = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.OutputTokens),
+                    InputPrice = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.InputCost),
+                    OutputPrice = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.OutputCost),
+                    ReasoningTokens = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.ReasoningTokens),
+                    Duration = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.TotalDurationMs),
+                    ReasoningDuration = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.ReasoningDurationMs),
+                    FirstTokenLatency = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.FirstResponseDurationMs),
+                    ModelId = assistantMessage.Steps.First().Usage!.ModelId,
+                    ModelName = assistantMessage.Steps.First().Usage!.Model.Name,
+                    ModelProviderId = assistantMessage.Steps.First().Usage!.Model.ModelKey.ModelProviderId,
+                    Reaction = assistantMessage.ReactionId,
+                },
             };
         }
     }

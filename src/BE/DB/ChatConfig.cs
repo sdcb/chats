@@ -39,12 +39,12 @@ public partial class ChatConfig
     [InverseProperty("ChatConfig")]
     public virtual ICollection<ChatSpan> ChatSpans { get; set; } = new List<ChatSpan>();
 
+    [InverseProperty("ChatConfig")]
+    public virtual ICollection<ChatTurn> ChatTurns { get; set; } = new List<ChatTurn>();
+
     [ForeignKey("ImageSizeId")]
     [InverseProperty("ChatConfigs")]
     public virtual KnownImageSize ImageSize { get; set; } = null!;
-
-    [InverseProperty("ChatConfig")]
-    public virtual ICollection<MessageResponse> MessageResponses { get; set; } = new List<MessageResponse>();
 
     [ForeignKey("ModelId")]
     [InverseProperty("ChatConfigs")]

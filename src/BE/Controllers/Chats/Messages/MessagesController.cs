@@ -19,38 +19,40 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
     [HttpGet("{chatId}")]
     public async Task<ActionResult<MessageDto[]>> GetMessages(string chatId, [FromServices] FileUrlProvider fup, CancellationToken cancellationToken)
     {
-        MessageDto[] messages = await db.Messages
-            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentBlob)
-            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileContentType)
-            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentText)
-            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentToolCall)
-            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentToolCallResponse)
+        MessageDto[] messages = await db.ChatTurns
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentBlob)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileContentType)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentText)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCallResponse)
             .Where(m => m.ChatId == urlEncryption.DecryptChatId(chatId) && m.Chat.UserId == currentUser.Id)
             .Select(x => new ChatMessageTemp()
             {
                 Id = x.Id,
                 ParentId = x.ParentId,
-                Role = (DBChatRole)x.ChatRoleId,
-                Content = x.MessageContents
+                Role = x.IsUser ? DBChatRole.User : DBChatRole.Assistant,
+                Content = x.Steps
+                    .SelectMany(x => x.StepContents)
                     .OrderBy(x => x.Id)
                     .ToArray(),
-                CreatedAt = x.CreatedAt,
+                CreatedAt = x.Steps.First().CreatedAt,
                 SpanId = x.SpanId,
-                Edited = x.Edited,
-                Usage = x.MessageResponse!.Usage == null ? null : new ChatMessageTempUsage()
+                Edited = x.Steps.Any(x => x.Edited),
+                Usage = x.IsUser ? null : new ChatMessageTempUsage()
                 {
-                    InputTokens = x.MessageResponse.Usage.InputTokens,
-                    OutputTokens = x.MessageResponse.Usage.OutputTokens,
-                    InputPrice = x.MessageResponse.Usage.InputCost,
-                    OutputPrice = x.MessageResponse.Usage.OutputCost,
-                    ReasoningTokens = x.MessageResponse.Usage.ReasoningTokens,
-                    Duration = x.MessageResponse.Usage.TotalDurationMs - x.MessageResponse.Usage.PreprocessDurationMs,
-                    ReasoningDuration = x.MessageResponse.Usage.ReasoningDurationMs,
-                    FirstTokenLatency = x.MessageResponse.Usage.FirstResponseDurationMs,
-                    ModelId = x.MessageResponse.Usage.ModelId,
-                    ModelName = x.MessageResponse.Usage.Model.Name,
-                    ModelProviderId = x.MessageResponse.Usage.Model.ModelKey.ModelProviderId,
-                    Reaction = x.MessageResponse.ReactionId,
+                    InputTokens = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.InputTokens),
+                    OutputTokens = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.OutputTokens),
+                    InputPrice = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.InputCost),
+                    OutputPrice = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.OutputCost),
+                    ReasoningTokens = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.ReasoningTokens),
+                    Duration = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.TotalDurationMs),
+                    ReasoningDuration = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.ReasoningDurationMs),
+                    FirstTokenLatency = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.FirstResponseDurationMs),
+                    ModelId = x.Steps.First().Usage!.ModelId,
+                    ModelName = x.Steps.First().Usage!.Model.Name,
+                    ModelProviderId = x.Steps.First().Usage!.Model.ModelKey.ModelProviderId,
+                    Reaction = x.ReactionId,
                 },
             })
             .OrderBy(x => x.CreatedAt)
@@ -81,9 +83,8 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
     private async Task<ActionResult> ReactionPrivate(string encryptedMessageId, bool? reactionId, CancellationToken cancellationToken)
     {
         long messageId = urlEncryption.DecryptMessageId(encryptedMessageId);
-        Message? message = await db.Messages
+        ChatTurn? message = await db.ChatTurns
             .Include(x => x.Chat)
-            .Include(x => x.MessageResponse)
             .FirstOrDefaultAsync(x => x.Id == messageId, cancellationToken);
 
         if (message == null)
@@ -96,43 +97,8 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             return Forbid();
         }
 
-        if (message.MessageResponse == null)
-        {
-            return BadRequest("Message has no response");
-        }
-
-        message.MessageResponse!.ReactionId = reactionId;
+        message.ReactionId = reactionId;
         message.Chat.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(cancellationToken);
-        return Ok();
-    }
-
-    [HttpPut("{encryptedMessageId}/edit-in-place"), Obsolete("Use PATCH {messageId}/{contentId}/text")]
-    public async Task<ActionResult> EditMessageInPlace(string encryptedMessageId, [FromBody] ContentRequestItem[] content,
-        [FromServices] FileUrlProvider fup,
-        CancellationToken cancellationToken)
-    {
-        long messageId = urlEncryption.DecryptMessageId(encryptedMessageId);
-        Message? message = await db.Messages
-            .Include(x => x.MessageContents)
-            .Include(x => x.Chat)
-            .FirstOrDefaultAsync(x => x.Id == messageId, cancellationToken);
-        if (message == null)
-        {
-            return NotFound();
-        }
-        if (message.Chat.UserId != currentUser.Id)
-        {
-            return Forbid();
-        }
-
-        message.MessageContents.Clear();
-        foreach (MessageContent c in await MessageContent.FromRequest(content, fup, cancellationToken))
-        {
-            message.MessageContents.Add(c);
-        }
-        message.Chat.UpdatedAt = DateTime.UtcNow;
-        message.Edited = true;
         await db.SaveChangesAsync(cancellationToken);
         return Ok();
     }
@@ -143,26 +109,26 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         [FromServices] IUrlEncryptionService urlEncryption,
         CancellationToken cancellationToken)
     {
-        MessageContent? messageContent = await db.MessageContents
-            .Include(x => x.Message).ThenInclude(x => x.Chat)
-            .Include(x => x.MessageContentText)
-            .FirstOrDefaultAsync(x => x.Id == urlEncryption.DecryptMessageContentId(contentId) && x.MessageId == urlEncryption.DecryptMessageId(messageId), cancellationToken);
+        StepContent? messageContent = await db.StepContents
+            .Include(x => x.Step).ThenInclude(x => x.Turn).ThenInclude(x => x.Chat)
+            .Include(x => x.StepContentText)
+            .FirstOrDefaultAsync(x => x.Id == urlEncryption.DecryptMessageContentId(contentId) && x.StepId == urlEncryption.DecryptMessageId(messageId), cancellationToken);
         if (messageContent == null)
         {
             return NotFound();
         }
-        if (messageContent.MessageContentText == null)
+        if (messageContent.StepContentText == null)
         {
             return BadRequest("Content is not text");
         }
-        if (messageContent.Message.Chat.UserId != currentUser.Id)
+        if (messageContent.Step.Turn.Chat.UserId != currentUser.Id)
         {
             return Forbid();
         }
 
-        messageContent.MessageContentText!.Content = content.Text;
-        messageContent.Message.Chat.UpdatedAt = DateTime.UtcNow;
-        messageContent.Message.Edited = true;
+        messageContent.StepContentText!.Content = content.Text;
+        messageContent.Step.Turn.Chat.UpdatedAt = DateTime.UtcNow;
+        messageContent.Step.Edited = true;
         await db.SaveChangesAsync(cancellationToken);
 
         ContentResponseItem resp = ContentResponseItem.FromContent(messageContent, fup, urlEncryption);
@@ -176,7 +142,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         [FromServices] ClientInfoManager clientInfoManager,
         CancellationToken cancellationToken)
     {
-        Message? message = await db.Messages
+        ChatTurn? message = await db.Messages
             .Include(x => x.Chat)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentText)
             .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentBlob)
@@ -205,7 +171,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
 
         ContentRequestItem[] newContent = [.. ContentRequestItem.FromDB(message.MessageContents, urlEncryption, textContent.Id, content)];
 
-        Message newMessage = new()
+        ChatTurn newMessage = new()
         {
             Edited = true,
             CreatedAt = DateTime.UtcNow,
@@ -280,7 +246,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
     {
         long messageId = urlEncryption.DecryptMessageId(encryptedMessageId);
         long? leafMessageId = urlEncryption.DecryptMessageIdOrNull(encryptedLeafMessageId);
-        Message? message = await db.Messages
+        ChatTurn? message = await db.Messages
             .Include(x => x.Chat)
             .Include(x => x.Chat.Messages)
             .FirstOrDefaultAsync(x => x.Id == messageId, cancellationToken);
@@ -293,7 +259,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             return Forbid();
         }
 
-        Message? leafMessage = leafMessageId == null ? null : message.Chat.Messages.FirstOrDefault(x => x.Id == leafMessageId);
+        ChatTurn? leafMessage = leafMessageId == null ? null : message.Chat.Messages.FirstOrDefault(x => x.Id == leafMessageId);
         if (leafMessageId != null)
         {
             if (leafMessage == null)
@@ -306,8 +272,8 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             }
         }
 
-        List<Message> messagesQueue = [message];
-        List<Message> toDeleteMessages = [];
+        List<ChatTurn> messagesQueue = [message];
+        List<ChatTurn> toDeleteMessages = [];
         while (messagesQueue.Count > 0)
         {
             toDeleteMessages.AddRange(messagesQueue);
@@ -315,7 +281,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                 .Where(x => x.ParentId != null && messagesQueue.Any(toDelete => toDelete.Id == x.ParentId.Value))
                 .ToList();
         }
-        foreach (Message toDeleteMessage in toDeleteMessages)
+        foreach (ChatTurn toDeleteMessage in toDeleteMessages)
         {
             message.Chat.Messages.Remove(toDeleteMessage);
         }
