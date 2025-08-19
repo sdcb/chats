@@ -36,8 +36,8 @@ public class UpdateChatsRequest
             Title = Title,
             IsArchived = IsArchived,
             IsTopMost = IsTopMost,
-            SetsLeafMessageId = SetsLeafMessageId,
-            LeafMessageId = urlEncryptionService.DecryptMessageIdOrNull(LeafMessageId),
+            SetsLeafTurnId = SetsLeafMessageId,
+            LeafTurnId = urlEncryptionService.DecryptTurnIdOrNull(LeafMessageId),
             SetsGroupId = SetsGroupId,
             GroupId = urlEncryptionService.DecryptChatGroupIdOrNull(GroupId),
         };
@@ -53,9 +53,9 @@ public class DecryptedUpdateChatsRequest
 
     public bool? IsTopMost { get; set; }
 
-    public bool SetsLeafMessageId { get; set; }
+    public bool SetsLeafTurnId { get; set; }
 
-    public long? LeafMessageId { get; set; }
+    public long? LeafTurnId { get; set; }
 
     public bool SetsGroupId { get; set; }
 
@@ -68,9 +68,9 @@ public class DecryptedUpdateChatsRequest
             return "Title is too long";
         }
 
-        if (SetsLeafMessageId && LeafMessageId != null)
+        if (SetsLeafTurnId && LeafTurnId != null)
         {
-            if (!await db.Messages.AnyAsync(x => x.Id == LeafMessageId && x.ChatId == chatId))
+            if (!await db.ChatTurns.AnyAsync(x => x.Id == LeafTurnId && x.ChatId == chatId))
             {
                 return "Leaf message not found";
             }
@@ -97,9 +97,9 @@ public class DecryptedUpdateChatsRequest
         {
             chat.IsArchived = IsArchived.Value;
         }
-        if (SetsLeafMessageId)
+        if (SetsLeafTurnId)
         {
-            chat.LeafMessageId = LeafMessageId;
+            chat.LeafMessageId = LeafTurnId;
         }
         if (IsTopMost != null)
         {

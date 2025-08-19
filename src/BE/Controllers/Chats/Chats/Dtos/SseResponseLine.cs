@@ -27,8 +27,8 @@ namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 [JsonDerivedType(typeof(CallingToolLine      ), (int)SseResponseKind.CallingTool      )]
 [JsonDerivedType(typeof(ToolProgressLine     ), (int)SseResponseKind.ToolProgress     )]
 [JsonDerivedType(typeof(ToolCompletedLine    ), (int)SseResponseKind.ToolCompleted    )]
-[JsonDerivedType(typeof(EndLine              ), (int)SseResponseKind.EndLine          )]
-[JsonDerivedType(typeof(AllEnd               ), (int)SseResponseKind.AllEnd           )]
+[JsonDerivedType(typeof(EndStep              ), (int)SseResponseKind.EndStep          )]
+[JsonDerivedType(typeof(EndTurn              ), (int)SseResponseKind.EndTurn          )]
 public abstract record SseResponseLine
 {
     #region 工厂方法
@@ -81,7 +81,7 @@ public abstract record SseResponseLine
     public static ChatLeafMessageIdLine ChatLeafMessageId(
         long leafMessageId,
         IUrlEncryptionService idEncryption) =>
-        new() { EncryptedLeafMessageId = idEncryption.EncryptMessageId(leafMessageId) };
+        new() { EncryptedLeafMessageId = idEncryption.EncryptTurnId(leafMessageId) };
 
     public static ImageGeneratingLine ImageGenerating(byte spanId, FileDto fileDto) =>
         new() { SpanId = spanId, File = fileDto };
@@ -101,7 +101,9 @@ public abstract record SseResponseLine
     public static ToolCompletedLine ToolEnd(byte spanId, string toolCallId, string result) =>
         new() { SpanId = spanId, ToolCallId = toolCallId, Result = result };
 
-    public static EndLine End(byte spanId, ChatTurn message) => new() { SpanId = spanId, Step = message };
+    public static EndStep EndStep(byte spanId, Step step) => new() { SpanId = spanId, Step = step };
+
+    public static EndTurn EndTurn(byte spanId, ChatTurn turn) => new() { SpanId = spanId, Turn = turn };
 
     #endregion
 }
@@ -246,7 +248,7 @@ public sealed record ToolCompletedLine : SseResponseLine
     public required string Result { get; init; }
 }
 
-public sealed record EndLine : SseResponseLine
+public sealed record EndStep : SseResponseLine
 {
     [JsonPropertyName("i")]
     public required byte SpanId { get; init; }
@@ -255,7 +257,7 @@ public sealed record EndLine : SseResponseLine
     public required Step Step { get; init; }
 }
 
-public sealed record AllEnd : SseResponseLine
+public sealed record EndTurn : SseResponseLine
 {
     [JsonPropertyName("i")]
     public required byte SpanId { get; init; }

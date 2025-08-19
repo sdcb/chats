@@ -1,8 +1,10 @@
 ﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
+using Mscc.GenerativeAI;
 using OpenAI.Chat;
 
 namespace Chats.BE.DB;
@@ -18,6 +20,18 @@ public partial class StepContent
             _ => throw new NotImplementedException()
         };
     }
+
+    //public static MessageLiteDto FromDB(ChatTurn message)
+    //{
+    //    return new MessageLiteDto
+    //    {
+    //        Id = message.Id,
+    //        ParentId = message.ParentId,
+    //        Role = message.IsUser ? DBChatRole.User : DBChatRole.Assistant,
+    //        SpanId = message.SpanId,
+    //        Content = [.. message.Steps.SelectMany(x => x.StepContents)]
+    //    };
+    //}
 
     public override string ToString()
     {

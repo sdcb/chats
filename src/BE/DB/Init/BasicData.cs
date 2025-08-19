@@ -76,7 +76,7 @@ internal static class BasicData
     private static void InsertMessageContentTypes(ChatsDB db)
     {
         // Generated from data, hash: d61ced8657ac8b57fcab075196ea33138bbc93162b3f5747b73f986fa867f455
-        db.MessageContentTypes.AddRange(
+        db.StepContentTypes.AddRange(
         [
             new(){ Id=0, ContentType="error",     },
             new(){ Id=1, ContentType="text",      },

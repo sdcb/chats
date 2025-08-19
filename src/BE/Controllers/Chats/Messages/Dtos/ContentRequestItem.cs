@@ -2,6 +2,7 @@
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.UrlEncryption;
+using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Messages.Dtos;
@@ -31,17 +32,23 @@ public abstract record ContentRequestItem
         };
     }
 
+    private readonly static DBMessageContentType[] AllowedContentTypes = 
+    [
+        DBMessageContentType.Text,
+        DBMessageContentType.FileId,
+    ];
+
     public static ContentRequestItem[] FromDB(ICollection<StepContent> mcs, IUrlEncryptionService idEncryption)
     {
         return [.. mcs
-            .Where(x => x.ContentTypeId == (byte)DBMessageContentType.Text || x.ContentTypeId == (byte)DBMessageContentType.FileId)
+            .Where(x => AllowedContentTypes.Contains((DBMessageContentType)x.ContentTypeId))
             .Select(mc => FromDB(mc, idEncryption))];
     }
 
     public static ContentRequestItem[] FromDB(ICollection<StepContent> mcs, IUrlEncryptionService idEncryption, long patchContentId, TextContentRequestItem patchText)
     {
         return [.. mcs
-            .Where(x => x.ContentTypeId == (byte)DBMessageContentType.Text || x.ContentTypeId == (byte)DBMessageContentType.FileId)
+            .Where(x => AllowedContentTypes.Contains((DBMessageContentType)x.ContentTypeId))
             .Select(mc => mc.Id switch 
             {
                 var x when x == patchContentId => patchText,

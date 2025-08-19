@@ -32,7 +32,7 @@ public record EncryptedRegenerateAssistantMessageRequest : EncryptedChatRequest
         {
             ChatId = urlEncryption.DecryptChatId(EncryptedChatId),
             TimezoneOffset = TimezoneOffset,
-            ParentUserMessageId = urlEncryption.DecryptMessageId(ParentUserMessageId),
+            ParentUserMessageId = urlEncryption.DecryptTurnId(ParentUserMessageId),
             SpanId = SpanId,
             ModelId = ModelId
         };
@@ -53,7 +53,7 @@ public record EncryptedRegenerateAllAssistantMessageRequest : EncryptedChatReque
         {
             ChatId = urlEncryption.DecryptChatId(EncryptedChatId),
             TimezoneOffset = TimezoneOffset,
-            ParentUserMessageId = urlEncryption.DecryptMessageId(ParentUserMessageId),
+            ParentUserMessageId = urlEncryption.DecryptTurnId(ParentUserMessageId),
             ModelId = ModelId
         };
     }
@@ -74,7 +74,7 @@ public record EncryptedGeneralChatRequest : EncryptedChatRequest
             ChatId = urlEncryption.DecryptChatId(EncryptedChatId),
             TimezoneOffset = TimezoneOffset,
             UserMessage = UserMessage,
-            ParentAssistantMessageId = urlEncryption.DecryptMessageIdOrNull(ParentAssistantMessageId)
+            ParentAssistantMessageId = urlEncryption.DecryptTurnIdOrNull(ParentAssistantMessageId)
         };
     }
 }

@@ -39,8 +39,8 @@ public record RequestMessageDto : MessageDto
     {
         return new RequestMessageDto()
         {
-            Id = urlEncryption.EncryptMessageId(message.Id),
-            ParentId = urlEncryption.EncryptMessageId(message.ParentId),
+            Id = urlEncryption.EncryptTurnId(message.Id),
+            ParentId = urlEncryption.EncryptTurnId(message.ParentId),
             Role = message.IsUser ? DBChatRole.User : DBChatRole.Assistant,
             Content = ContentResponseItem.FromContent([.. message.Steps.SelectMany(x => x.StepContents)], fup, urlEncryption),
             CreatedAt = message.Steps.First().CreatedAt,
@@ -113,7 +113,6 @@ public record ChatMessageTempUsage
     public required int InputTokens { get; init; }
     public required short ModelId { get; init; }
     public required string ModelName { get; init; }
-    public required bool? Reaction { get; init; }
 
     public required short ModelProviderId { get; init; }
     public required decimal OutputPrice { get; init; }
@@ -131,6 +130,7 @@ public record ChatMessageTemp
     public required byte? SpanId { get; init; }
     public required bool Edited { get; init; }
     public required ChatMessageTempUsage? Usage { get; init; }
+    public required bool? Reaction { get; init; }
 
     public MessageDto ToDto(IUrlEncryptionService urlEncryption, FileUrlProvider fup)
     {
@@ -138,8 +138,8 @@ public record ChatMessageTemp
         {
             return new RequestMessageDto()
             {
-                Id = urlEncryption.EncryptMessageId(Id),
-                ParentId = ParentId != null ? urlEncryption.EncryptMessageId(ParentId.Value) : null, 
+                Id = urlEncryption.EncryptTurnId(Id),
+                ParentId = ParentId != null ? urlEncryption.EncryptTurnId(ParentId.Value) : null, 
                 Role = Role,
                 Content = ContentResponseItem.FromContent(Content, fup, urlEncryption),
                 CreatedAt = CreatedAt,
@@ -151,8 +151,8 @@ public record ChatMessageTemp
         {
             return new ResponseMessageDto()
             {
-                Id = urlEncryption.EncryptMessageId(Id),
-                ParentId = ParentId != null ? urlEncryption.EncryptMessageId(ParentId.Value) : null, 
+                Id = urlEncryption.EncryptTurnId(Id),
+                ParentId = ParentId != null ? urlEncryption.EncryptTurnId(ParentId.Value) : null, 
                 Role = Role,
                 Content = ContentResponseItem.FromContent(Content, fup, urlEncryption),
                 CreatedAt = CreatedAt,
@@ -170,7 +170,7 @@ public record ChatMessageTemp
                 ModelId = Usage.ModelId,
                 ModelName = Usage.ModelName,
                 ModelProviderId = Usage.ModelProviderId,
-                Reaction = Usage.Reaction,
+                Reaction = Reaction,
             };
         }
     }
@@ -190,11 +190,15 @@ public record ChatMessageTemp
                 SpanId = assistantMessage.SpanId,
                 Edited = false,
                 Usage = null,
+                Reaction = null,
             };
         }
         else
         {
-            if (assistantMessage.Steps.All(x => x.Usage == null)) throw new InvalidOperationException("Assistant message must have usage data");
+            UserModelUsage[] usages = [.. assistantMessage.Steps
+                .Where(x => x.Usage != null)
+                .Select(x => x.Usage!)];
+            if (usages.Length == 0) throw new InvalidOperationException("Assistant message must have usage data");
 
             return new()
             {
@@ -207,19 +211,19 @@ public record ChatMessageTemp
                 Edited = assistantMessage.Steps.Any(x => x.Edited),
                 Usage = new ChatMessageTempUsage()
                 {
-                    InputTokens = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.InputTokens),
-                    OutputTokens = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.OutputTokens),
-                    InputPrice = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.InputCost),
-                    OutputPrice = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.OutputCost),
-                    ReasoningTokens = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.ReasoningTokens),
-                    Duration = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.TotalDurationMs),
-                    ReasoningDuration = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.ReasoningDurationMs),
-                    FirstTokenLatency = assistantMessage.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.FirstResponseDurationMs),
+                    InputTokens = usages.Sum(x => x.InputTokens),
+                    OutputTokens = usages.Sum(x => x.OutputTokens),
+                    InputPrice = usages.Sum(x => x.InputCost),
+                    OutputPrice = usages.Sum(x => x.OutputCost),
+                    ReasoningTokens = usages.Sum(x => x.ReasoningTokens),
+                    Duration = usages.Sum(x => x.TotalDurationMs),
+                    ReasoningDuration = usages.Sum(x => x.ReasoningDurationMs),
+                    FirstTokenLatency = usages.Sum(x => x.FirstResponseDurationMs),
                     ModelId = assistantMessage.Steps.First().Usage!.ModelId,
                     ModelName = assistantMessage.Steps.First().Usage!.Model.Name,
                     ModelProviderId = assistantMessage.Steps.First().Usage!.Model.ModelKey.ModelProviderId,
-                    Reaction = assistantMessage.ReactionId,
                 },
+                Reaction = assistantMessage.ReactionId,
             };
         }
     }

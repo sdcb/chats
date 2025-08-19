@@ -138,15 +138,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             return NotFound();
         }
 
-        Dictionary<long, ChatTurnLiteDto> existingMessages = chat.ChatTurns
-            .Select(x => new ChatTurnLiteDto()
-            {
-                Id = x.Id,
-                IsUser = x.IsUser,
-                ParentId = x.ParentId,
-                SpanId = x.SpanId,
-            })
-            .ToDictionary(x => x.Id, x => x);
+        Dictionary<long, ChatTurn> existingMessages = chat.ChatTurns.ToDictionary(x => x.Id, x => x);
         bool isEmptyChat = existingMessages.Count == 0;
 
         // ensure chat.ChatSpan contains all span ids that in request, otherwise return error
@@ -188,7 +180,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         {
             if (generalRequest.ParentAssistantMessageId != null)
             {
-                if (!existingMessages.TryGetValue(generalRequest.ParentAssistantMessageId.Value, out ChatTurnLiteDto? parentMessage))
+                if (!existingMessages.TryGetValue(generalRequest.ParentAssistantMessageId.Value, out ChatTurn? parentMessage))
                 {
                     return BadRequest("Invalid message id");
                 }
@@ -218,7 +210,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         }
         else if (req is RegenerateAllAssistantMessageRequest regenerateRequest)
         {
-            if (!existingMessages.TryGetValue(regenerateRequest.ParentUserMessageId, out ChatTurnLiteDto? parentMessage))
+            if (!existingMessages.TryGetValue(regenerateRequest.ParentUserMessageId, out ChatTurn? parentMessage))
             {
                 return BadRequest("Invalid message id");
             }
@@ -229,8 +221,8 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             }
         }
 
-        LinkedList<ChatTurnLiteDto> messageTreeNoContent = GetMessageTree(existingMessages, req.LastMessageId);
-        MessageLiteDto[] messageTree = await FillContents(messageTreeNoContent, db, cancellationToken);
+        LinkedList<ChatTurn> messageTreeNoContent = GetMessageTree(existingMessages, req.LastMessageId);
+        Step[] messageTree = await FillContents(messageTreeNoContent, db, cancellationToken);
 
         Response.Headers.ContentType = "text/event-stream";
         Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
@@ -243,24 +235,23 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
         Channel<SseResponseLine>[] channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
         Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache = [];
-        Task[] streamTasks = [.. toGenerateSpans
-            .Select((span, index) => ProcessChatSpan(
-                currentUser,
-                logger,
-                chatFactory,
-                fup,
-                span,
-                firstTick,
-                req,
-                chat,
-                userModels[span.ChatConfig.ModelId],
-                messageTree,
-                newDbUserMessage,
-                cost.WithScoped(span.SpanId.ToString()),
-                clientInfoIdTask,
-                imageFileCache,
-                channels[index].Writer,
-                cancellationToken))];
+        Task[] streamTasks = [.. toGenerateSpans.Select((span, index) => ProcessChatSpan(
+            currentUser,
+            logger,
+            chatFactory,
+            fup,
+            span,
+            firstTick,
+            req,
+            chat,
+            userModels[span.ChatConfig.ModelId],
+            messageTree,
+            newDbUserMessage,
+            cost.WithScoped(span.SpanId.ToString()),
+            clientInfoIdTask,
+            imageFileCache,
+            channels[index].Writer,
+            cancellationToken))];
 
         if (isEmptyChat && req is GeneralChatRequest generalChatRequest)
         {
@@ -275,36 +266,33 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         FileService fs = null!;
         await foreach (SseResponseLine line in MergeChannels(channels).Reader.ReadAllAsync(CancellationToken.None))
         {
-            if (line is AllEnd allEnd)
+            if (line is EndTurn allEnd)
             {
                 bool isLast = allEnd.SpanId == toGenerateSpans.Last().SpanId;
                 if (isLast)
                 {
-                    chat.LeafMessage = allEnd.Turn.Last();
-                    await db.SaveChangesAsync(CancellationToken.None);
+                    chat.LeafMessage = allEnd.Turn;
                 }
+                await db.SaveChangesAsync(CancellationToken.None);
 
                 if (newDbUserMessage != null && !dbUserMessageYield)
                 {
                     await YieldResponse(SseResponseLine.UserMessage(newDbUserMessage, idEncryption, fup));
                     dbUserMessageYield = true;
                 }
-                ChatTurn mergedMessage = ChatTurn.MergeAll(allEnd.Turn);
-                await YieldResponse(SseResponseLine.ResponseMessage(allEnd.SpanId, mergedMessage, idEncryption, fup));
+                await YieldResponse(SseResponseLine.ResponseMessage(allEnd.SpanId, allEnd.Turn, idEncryption, fup));
                 if (isLast)
                 {
                     await YieldResponse(SseResponseLine.ChatLeafMessageId(chat.LeafMessageId!.Value, idEncryption));
                 }
             }
-            else if (line is EndLine endLine)
+            else if (line is EndStep endLine)
             {
-                ChatTurn message = endLine.Step;
-                ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == message.SpanId);
-                if (message.ChatRoleId != (byte)DBChatRole.ToolCall)
+                if (endLine.Step.Turn.ChatConfig == null)
                 {
-                    message.MessageResponse!.ChatConfig = await chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, default);
+                    ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == endLine.SpanId);
+                    endLine.Step.Turn.ChatConfig = await chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, default);
                 }
-                chat.Messages.Add(message);
                 chat.UpdatedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync(CancellationToken.None);
             }
@@ -372,19 +360,25 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         return new EmptyResult();
     }
 
-    private static async Task<MessageLiteDto[]> FillContents(LinkedList<ChatTurnLiteDto> noContent, ChatsDB db, CancellationToken cancellationToken)
+    private static async Task<Step[]> FillContents(LinkedList<ChatTurn> noContent, ChatsDB db, CancellationToken cancellationToken)
     {
-        HashSet<long> turnIds = [.. noContent.Select(x => x.Id)];
-        Dictionary<long, StepContent[]> contents = await db.StepContents
-            .Where(x => turnIds.Contains(x.Step.TurnId))
-            .Include(x => x.StepContentBlob)
-            .Include(x => x.StepContentFile).ThenInclude(x => x!.File.FileService)
-            .Include(x => x.StepContentFile).ThenInclude(x => x!.File.FileImageInfo)
-            .Include(x => x.StepContentFile).ThenInclude(x => x!.File.FileContentType)
-            .Include(x => x.StepContentText)
-            .GroupBy(x => x.StepId)
+        Dictionary<long, ChatTurn> turnMap = noContent.ToDictionary(x => x.Id, x => x);
+        Dictionary<long, Step[]> contents = await db.Steps
+            .Where(x => turnMap.Keys.Contains(x.TurnId))
+            .Include(x => x.StepContents).ThenInclude(x => x.StepContentBlob)
+            .Include(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File.FileService)
+            .Include(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File.FileImageInfo)
+            .Include(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File.FileContentType)
+            .Include(x => x.StepContents).ThenInclude(x => x.StepContentText)
+            .OrderBy(x => x.Id)
+            .GroupBy(x => x.TurnId)
             .ToDictionaryAsync(k => k.Key, v => v.ToArray(), cancellationToken);
-        return [.. noContent.Select(x => x.WithContent(contents[x.Id]))];
+        foreach (ChatTurn turn in noContent)
+        {
+            turn.Steps = contents.TryGetValue(turn.Id, out Step[]? steps) ? steps : [];
+        }
+
+        return [.. noContent.SelectMany(x => x.Steps)];
     }
 
     private static async Task ProcessChatSpan(
@@ -397,7 +391,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         ChatRequest req,
         Chat chat,
         UserModel userModel,
-        IEnumerable<MessageLiteDto> messageTree,
+        IEnumerable<Step> messageTree,
         ChatTurn? dbUserMessage,
         ScopedBalanceCalculator calc,
         Task<int> clientInfoIdTask,
@@ -405,10 +399,10 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         ChannelWriter<SseResponseLine> writer,
         CancellationToken cancellationToken)
     {
-        List<OpenAIChatMessage> messageToSend = await ((IEnumerable<MessageLiteDto>)
+        List<OpenAIChatMessage> messageToSend = await ((IEnumerable<Step>)
         [
             ..messageTree,
-            ..dbUserMessage != null ? [MessageLiteDto.FromDB(dbUserMessage)] : Array.Empty<MessageLiteDto>(),
+            ..dbUserMessage != null ? dbUserMessage.Steps : Array.Empty<Step>(),
         ])
         .ToAsyncEnumerable()
         .SelectAwait(async x => await x.ToOpenAI(fup, cancellationToken))
@@ -428,17 +422,31 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             cco.Tools.Add(ChatTool.CreateFunctionTool(tool.Name, tool.Description, BinaryData.FromString(tool.JsonSchema.GetRawText())));
         }
 
-        List<ChatTurn> newMessages = [];
+        ChatTurn turn = new()
+        {
+            SpanId = chatSpan.SpanId,
+            IsUser = false,
+        };
+        if (req is GeneralChatRequest && dbUserMessage != null)
+        {
+            turn.Parent = dbUserMessage;
+        }
+        else if (req is RegenerateAllAssistantMessageRequest regenerateAssistantMessageRequest)
+        {
+            turn.ParentId = regenerateAssistantMessageRequest.ParentUserMessageId;
+        }
+        chat.ChatTurns.Add(turn);
+
         while (true)
         {
-            (ChatTurn message, DBFinishReason finishReason) = await RunOne(newMessages.LastOrDefault());
-            await WriteMessage(message);
+            (Step step, DBFinishReason finishReason) = await RunOne();
+            await WriteStep(step);
 
             if (finishReason == DBFinishReason.ToolCalls)
             {
-                foreach (StepContentToolCall call in message.StepContents!
-                    .Where(x => x.MessageContentToolCall != null)
-                    .Select(x => x.MessageContentToolCall!))
+                foreach (StepContentToolCall call in step.StepContents!
+                    .Where(x => x.StepContentToolCall != null)
+                    .Select(x => x.StepContentToolCall!))
                 {
                     logger.LogInformation("Calling tool: {call.Name}, parameters: {call.Parameters}", call.Name, call.Parameters);
                     CallToolResult result = await mcpClient.CallToolAsync(call.Name, JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Parameters)!, new ProgressReporter(pnv =>
@@ -449,19 +457,17 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     logger.LogInformation("Tool {call.Name} completed with result: {result}", call.Name, result.Content);
                     string toolCallResponseText = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(x => x.Text));
                     writer.TryWrite(SseResponseLine.ToolEnd(chatSpan.SpanId, call.ToolCallId!, toolCallResponseText));
-                    await WriteMessage(new ChatTurn()
+                    await WriteStep(new Step()
                     {
-                        ChatId = chat.Id,
+                        Turn = turn,
                         ChatRoleId = (byte)DBChatRole.ToolCall,
                         CreatedAt = DateTime.UtcNow,
                         Edited = false,
-                        Parent = message,
-                        SpanId = chatSpan.SpanId,
-                        MessageContents =
+                        StepContents =
                         [
-                            new MessageContent()
+                            new StepContent()
                             {
-                                MessageContentToolCallResponse = new()
+                                StepContentToolCallResponse = new()
                                 {
                                     ToolCallId = call.ToolCallId,
                                     Response = toolCallResponseText,
@@ -477,17 +483,18 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 break;
             }
         }
-        writer.TryWrite(new AllEnd() { Turn = newMessages, SpanId = chatSpan.SpanId });
+
+        writer.TryWrite(new EndTurn() { Turn = turn, SpanId = chatSpan.SpanId });
         writer.Complete();
 
-        async Task WriteMessage(ChatTurn message)
+        async Task WriteStep(Step step)
         {
-            messageToSend.Add(await MessageLiteDto.FromDB(message).ToOpenAI(fup, cancellationToken));
-            newMessages.Add(message);
-            writer.TryWrite(SseResponseLine.End(chatSpan.SpanId, message));
+            messageToSend.Add(await step.ToOpenAI(fup, cancellationToken));
+            turn.Steps.Add(step);
+            writer.TryWrite(SseResponseLine.EndStep(chatSpan.SpanId, step));
         }
 
-        async Task<(Step, DBFinishReason)> RunOne(ChatTurn? forceParentMessage)
+        async Task<(Step, DBFinishReason)> RunOne()
         {
             ChatExtraDetails ced = new()
             {
@@ -601,39 +608,21 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
             // success
             // insert new assistant message
-            Step dbAssistantMessage = new()
+            Step step = new()
             {
                 ChatRoleId = (byte)DBChatRole.Assistant,
                 CreatedAt = DateTime.UtcNow,
+                Usage = icc.ToUserModelUsage(currentUser.Id, calc, userModel, await clientInfoIdTask, isApi: false),
+                StepContents = [..StepContent.FromFullResponse(icc.FullResponse, errorText, imageFileCache)],
+                Turn = turn,
             };
-            if (forceParentMessage != null)
-            {
-                dbAssistantMessage.Parent = forceParentMessage;
-            }
-            else if (req is GeneralChatRequest && dbUserMessage != null)
-            {
-                dbAssistantMessage.Parent = dbUserMessage;
-            }
-            else if (req is RegenerateAllAssistantMessageRequest regenerateAssistantMessageRequest)
-            {
-                dbAssistantMessage.ParentId = regenerateAssistantMessageRequest.ParentUserMessageId;
-            }
-            foreach (MessageContent mc in MessageContent.FromFullResponse(icc.FullResponse, errorText, imageFileCache))
-            {
-                dbAssistantMessage.MessageContents.Add(mc);
-            }
 
             if (errorText != null)
             {
                 writer.TryWrite(SseResponseLine.CreateError(chatSpan.SpanId, errorText));
             }
-            UserModelUsage usage = icc.ToUserModelUsage(currentUser.Id, calc, userModel, await clientInfoIdTask, isApi: false);
-            dbAssistantMessage.MessageResponse = new MessageResponse()
-            {
-                Usage = usage,
-            };
-            writer.TryWrite(SseResponseLine.End(chatSpan.SpanId, dbAssistantMessage));
-            return (dbAssistantMessage, icc.FinishReason);
+            writer.TryWrite(SseResponseLine.EndStep(chatSpan.SpanId, step));
+            return (step, icc.FinishReason);
         }
     }
 
@@ -687,9 +676,9 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         await Response.Body.FlushAsync();
     }
 
-    static LinkedList<ChatTurnLiteDto> GetMessageTree(Dictionary<long, ChatTurnLiteDto> existingMessages, long? fromParentId)
+    static LinkedList<ChatTurn> GetMessageTree(Dictionary<long, ChatTurn> existingMessages, long? fromParentId)
     {
-        LinkedList<ChatTurnLiteDto> line = [];
+        LinkedList<ChatTurn> line = [];
         long? currentParentId = fromParentId;
         while (currentParentId != null)
         {

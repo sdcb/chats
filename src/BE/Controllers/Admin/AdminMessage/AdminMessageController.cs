@@ -86,7 +86,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                 }).ToArray(),
-                LeafMessageId = urlEncryption.EncryptMessageId(x.LeafMessageId),
+                LeafMessageId = urlEncryption.EncryptTurnId(x.LeafMessageId),
                 UpdatedAt = x.UpdatedAt,
             })
             .AsSplitQuery()
@@ -127,8 +127,8 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     ModelId = x.Steps.First().Usage!.ModelId,
                     ModelName = x.Steps.First().Usage!.Model.Name,
                     ModelProviderId = x.Steps.First().Usage!.Model.ModelKey.ModelProviderId,
-                    Reaction = x.ReactionId,
                 },
+                Reaction = x.ReactionId,
             })
             .OrderBy(x => x.CreatedAt)
             .Select(x => x.ToDto(urlEncryption, fup))

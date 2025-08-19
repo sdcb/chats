@@ -42,7 +42,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                 }).ToArray(),
-                LeafMessageId = idEncryption.EncryptMessageId(x.LeafMessageId),
+                LeafMessageId = idEncryption.EncryptTurnId(x.LeafMessageId),
                 UpdatedAt = x.UpdatedAt,
             })
             .FirstOrDefaultAsync(cancellationToken);
@@ -88,7 +88,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                 }).ToArray(),
-                LeafMessageId = idEncryption.EncryptMessageId(x.LeafMessageId),
+                LeafMessageId = idEncryption.EncryptTurnId(x.LeafMessageId),
                 UpdatedAt = x.UpdatedAt,
             })
             .OrderByDescending(x => x.Id), request, cancellationToken);
@@ -129,7 +129,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                 }).ToArray(),
-                LeafMessageId = idEncryption.EncryptMessageId(x.LeafMessageId),
+                LeafMessageId = idEncryption.EncryptTurnId(x.LeafMessageId),
                 UpdatedAt = x.UpdatedAt,
             }),
             request,
@@ -225,7 +225,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             GroupId = idEncryption.EncryptChatGroupId(chat.ChatGroupId),
             Tags = [],
             Spans = [.. chat.ChatSpans.Select(ChatSpanDto.FromDB)],
-            LeafMessageId = idEncryption.EncryptMessageId(chat.LeafMessageId),
+            LeafMessageId = idEncryption.EncryptTurnId(chat.LeafMessageId),
             UpdatedAt = chat.UpdatedAt,
         });
     }
