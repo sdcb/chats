@@ -185,7 +185,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     return BadRequest("Invalid message id");
                 }
 
-                if (!parentMessage.IsUser)
+                if (parentMessage.IsUser)
                 {
                     return BadRequest("Parent message is not assistant message");
                 }
@@ -370,6 +370,8 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             .Include(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File.FileImageInfo)
             .Include(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File.FileContentType)
             .Include(x => x.StepContents).ThenInclude(x => x.StepContentText)
+            .Include(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
+            .Include(x => x.StepContents).ThenInclude(x => x.StepContentToolCallResponse)
             .OrderBy(x => x.Id)
             .GroupBy(x => x.TurnId)
             .ToDictionaryAsync(k => k.Key, v => v.ToArray(), cancellationToken);
@@ -621,7 +623,6 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             {
                 writer.TryWrite(SseResponseLine.CreateError(chatSpan.SpanId, errorText));
             }
-            writer.TryWrite(SseResponseLine.EndStep(chatSpan.SpanId, step));
             return (step, icc.FinishReason);
         }
     }

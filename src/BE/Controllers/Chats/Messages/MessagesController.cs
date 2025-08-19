@@ -112,7 +112,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         StepContent? messageContent = await db.StepContents
             .Include(x => x.Step).ThenInclude(x => x.Turn).ThenInclude(x => x.Chat)
             .Include(x => x.StepContentText)
-            .FirstOrDefaultAsync(x => x.Id == urlEncryption.DecryptMessageContentId(contentId) && x.StepId == urlEncryption.DecryptTurnId(turnId), cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == urlEncryption.DecryptMessageContentId(contentId) && x.Step.TurnId == urlEncryption.DecryptTurnId(turnId), cancellationToken);
         if (messageContent == null)
         {
             return NotFound();
@@ -172,6 +172,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         ContentRequestItem[] newContent = [.. ContentRequestItem.FromDB([.. message.Steps.SelectMany(x => x.StepContents)], urlEncryption, textContent.Id, content)];
 
         StepContent[] stepContents = await StepContent.FromRequest(newContent, fup, cancellationToken);
+        ClientInfo clientInfo = await clientInfoManager.GetClientInfo(cancellationToken);
         ChatTurn turn = new()
         {
             SpanId = message.SpanId,
@@ -193,6 +194,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                     SegmentCount = 1,
                     InputTokens = message.Steps.First().Usage!.InputTokens,
                     OutputTokens = ChatService.DefaultTokenizer.CountTokens(content.Text),
+                    ClientInfo = clientInfo,
                     ReasoningTokens = 0,
                     IsUsageReliable = false,
                     PreprocessDurationMs = 0,

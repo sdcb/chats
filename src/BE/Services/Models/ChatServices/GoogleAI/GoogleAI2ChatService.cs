@@ -266,6 +266,8 @@ public class GoogleAI2ChatService : ChatService
                 {
                     Type = x.Value?["type"]?.ToString() switch
                     {
+                        "integer" => ParameterType.Integer,
+                        "null" => ParameterType.Null,
                         "string" => ParameterType.String,
                         "number" => ParameterType.Number,
                         "boolean" => ParameterType.Boolean,
