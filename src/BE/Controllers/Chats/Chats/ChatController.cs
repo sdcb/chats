@@ -441,10 +441,10 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
         while (true)
         {
-            (Step step, DBFinishReason finishReason) = await RunOne();
+            Step step = await RunOne(messageToSend);
             await WriteStep(step);
 
-            if (finishReason == DBFinishReason.ToolCalls)
+            if (step.StepContents.Any(x => x.ContentTypeId == (byte)DBMessageContentType.ToolCall))
             {
                 foreach (StepContentToolCall call in step.StepContents!
                     .Where(x => x.StepContentToolCall != null)
@@ -496,7 +496,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             writer.TryWrite(SseResponseLine.EndStep(chatSpan.SpanId, step));
         }
 
-        async Task<(Step, DBFinishReason)> RunOne()
+        async Task<Step> RunOne(List<OpenAIChatMessage> messageToSend)
         {
             ChatExtraDetails ced = new()
             {
@@ -623,7 +623,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             {
                 writer.TryWrite(SseResponseLine.CreateError(chatSpan.SpanId, errorText));
             }
-            return (step, icc.FinishReason);
+            return step;
         }
     }
 

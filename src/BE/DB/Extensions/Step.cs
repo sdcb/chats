@@ -22,34 +22,52 @@ public partial class Step
 
         static async Task<AssistantChatMessage> ToAssistantMessage(ICollection<StepContent> stepContents, FileUrlProvider fup, CancellationToken cancellationToken)
         {
-            AssistantChatMessage msg = null!;
-
-            bool hasStuff = stepContents.Any(x => (DBMessageContentType)x.ContentTypeId is DBMessageContentType.FileId or DBMessageContentType.Text);
-
-            if (hasStuff)
+            bool hasContent = false, hasToolCall = false;
+            foreach (StepContent stepContent in stepContents)
             {
-                msg = new(await stepContents
+                if (stepContent.ContentTypeId == (byte)DBMessageContentType.FileId || stepContent.ContentTypeId == (byte)DBMessageContentType.Text)
+                {
+                    hasContent = true;
+                }
+                if (stepContent.ContentTypeId == (byte)DBMessageContentType.ToolCall && stepContent.StepContentToolCall != null)
+                {
+                    hasToolCall = true;
+                }
+                if (hasContent && hasToolCall)
+                {
+                    break; // No need to check further if both are found
+                }
+            }
+
+            if (hasContent)
+            {
+                AssistantChatMessage msg = new(await stepContents
                     .Where(x => (DBMessageContentType)x.ContentTypeId is DBMessageContentType.FileId or DBMessageContentType.Text)
                     .ToAsyncEnumerable()
                     .SelectAwait(async c => await c.ToOpenAI(fup, cancellationToken))
                     .ToArrayAsync(cancellationToken));
+                foreach (ChatToolCall toolCall in stepContents.Where(x => (DBMessageContentType)x.ContentTypeId is DBMessageContentType.ToolCall && x.StepContentToolCall != null)
+                    .Select(content => ChatToolCall.CreateFunctionToolCall(
+                        content.StepContentToolCall!.ToolCallId,
+                        content.StepContentToolCall!.Name,
+                        BinaryData.FromString(content.StepContentToolCall.Parameters))))
+                {
+                    msg.ToolCalls.Add(toolCall);
+                }
+                return msg;
+            }
+            else if (hasToolCall) // onlyToolCall
+            {
+                return new(stepContents.Where(x => (DBMessageContentType)x.ContentTypeId is DBMessageContentType.ToolCall && x.StepContentToolCall != null)
+                    .Select(content => ChatToolCall.CreateFunctionToolCall(
+                        content.StepContentToolCall!.ToolCallId,
+                        content.StepContentToolCall!.Name,
+                        BinaryData.FromString(content.StepContentToolCall.Parameters))));
             }
             else
             {
-                msg = new AssistantChatMessage("");
+                throw new Exception("Assistant chat message must either have at least one content or tool call");
             }
-
-            foreach (StepContent content in stepContents)
-            {
-                if (content.ContentTypeId == (byte)DBMessageContentType.ToolCall && content.StepContentToolCall != null)
-                {
-                    msg.ToolCalls.Add(ChatToolCall.CreateFunctionToolCall(
-                        content.StepContentToolCall.ToolCallId,
-                        content.StepContentToolCall.Name,
-                        BinaryData.FromString(content.StepContentToolCall.Parameters)));
-                }
-            }
-            return msg;
         }
     }
 }

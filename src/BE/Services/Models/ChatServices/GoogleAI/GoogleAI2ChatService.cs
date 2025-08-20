@@ -21,7 +21,6 @@ public class GoogleAI2ChatService : ChatService
         new SafetySetting { Category = HarmCategory.HarmCategorySexuallyExplicit, Threshold = HarmBlockThreshold.BlockNone },
         new SafetySetting { Category = HarmCategory.HarmCategoryDangerousContent, Threshold = HarmBlockThreshold.BlockNone },
         new SafetySetting { Category = HarmCategory.HarmCategoryHarassment, Threshold = HarmBlockThreshold.BlockNone },
-        new SafetySetting { Category = HarmCategory.HarmCategoryCivicIntegrity, Threshold = HarmBlockThreshold.BlockNone },
     ];
     private DBReasoningEffort _reasoningEffort = default;
 
@@ -54,6 +53,7 @@ public class GoogleAI2ChatService : ChatService
         {
             Temperature = options.Temperature,
             ResponseModalities = AllowImageGeneration ? [ResponseModality.Text, ResponseModality.Image] : [ResponseModality.Text],
+            EnableEnhancedCivicAnswers = true,
         };
         if (ModelReference.SupportReasoningEffort(Model.ModelReference.Name))
         {
@@ -64,7 +64,7 @@ public class GoogleAI2ChatService : ChatService
                     DBReasoningEffort.Low => 1024,
                     _ => null,
                 },
-                IncludeThoughts = true, 
+                IncludeThoughts = true,
             };
         }
 
@@ -75,6 +75,10 @@ public class GoogleAI2ChatService : ChatService
             {
                 CodeExecution = new()
             };
+        }
+        if (tool != null && _generativeModel.UseGoogleSearch)
+        {
+            _generativeModel.UseGoogleSearch = false;
         }
 
         int fcIndex = 0;
@@ -201,9 +205,9 @@ public class GoogleAI2ChatService : ChatService
 
         static IPart ToolCallMessageToPart(ToolChatMessage message)
         {
-            return Part.FromFunctionResponse(message.ToolCallId, new 
-            { 
-                result = string.Join("\r\n", message.Content.Select(x => x.Text)) 
+            return Part.FromFunctionResponse(message.ToolCallId, new
+            {
+                result = string.Join("\r\n", message.Content.Select(x => x.Text))
             });
         }
 
