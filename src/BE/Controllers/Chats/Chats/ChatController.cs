@@ -539,9 +539,9 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                         {
                             if (!responseStated)
                             {
-                                writer.TryWrite(SseResponseLine.CallingTool(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolCall.Arguments));
                                 responseStated = true;
                             }
+                            writer.TryWrite(SseResponseLine.CallingTool(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolCall.Arguments));
                         }
                         else if (item is ImageChatSegment imgSeg)
                         {
