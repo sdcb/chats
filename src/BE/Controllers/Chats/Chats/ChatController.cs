@@ -228,7 +228,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
         Response.Headers.Connection = "keep-alive";
         string stopId = stopService.CreateAndCombineCancellationToken(ref cancellationToken);
-        await YieldResponse(SseResponseLine.CreateStopId(stopId));
+        await YieldResponse(new StopIdLine(stopId));
 
         UserBalance userBalance = await db.UserBalances.Where(x => x.UserId == currentUser.Id).SingleAsync(cancellationToken);
         UserModelBalanceCalculator cost = new(BalanceInitialInfo.FromDB(userModels.Values, userBalance.Balance), []);
@@ -277,13 +277,13 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
                 if (newDbUserTurn != null && !dbUserMessageYield)
                 {
-                    await YieldResponse(SseResponseLine.UserMessage(newDbUserTurn, idEncryption, fup));
+                    await YieldResponse(SseResponseLine.UserTurn(newDbUserTurn, idEncryption, fup));
                     dbUserMessageYield = true;
                 }
                 await YieldResponse(SseResponseLine.ResponseMessage(allEnd.SpanId, allEnd.Turn, idEncryption, fup));
                 if (isLast)
                 {
-                    await YieldResponse(SseResponseLine.ChatLeafMessageId(chat.LeafTurnId!.Value, idEncryption));
+                    await YieldResponse(SseResponseLine.ChatLeafTurnId(chat.LeafTurnId!.Value, idEncryption));
                 }
             }
             else if (line is EndStep endLine)
@@ -304,7 +304,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     throw new InvalidOperationException("Image file cache not found.");
                 }
 
-                await YieldResponse(SseResponseLine.ImageGenerated(tempImageGeneratedLine.SpanId, new FileDto()
+                await YieldResponse(new ImageGeneratedLine(tempImageGeneratedLine.SpanId, new FileDto()
                 {
                     Id = Guid.NewGuid().ToString(),
                     ContentType = image.ToContentType(),
@@ -316,7 +316,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     fs ??= await FileService.GetDefault(db, cancellationToken) ?? throw new InvalidOperationException("Default file service config not found.");
                     DB.File file = await dbFileService.StoreImage(image, await clientInfoIdTask, fs, cancellationToken: default);
                     tcs.SetResult(file);
-                    await YieldResponse(SseResponseLine.ImageGenerated(tempImageGeneratedLine.SpanId, fup.CreateFileDto(file, tryWithUrl: false)));
+                    await YieldResponse(new ImageGeneratedLine(tempImageGeneratedLine.SpanId, fup.CreateFileDto(file, tryWithUrl: false)));
                 }
                 catch (Exception e)
                 {
@@ -454,11 +454,11 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     CallToolResult result = await mcpClient.CallToolAsync(call.Name, JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Parameters)!, new ProgressReporter(pnv =>
                     {
                         logger.LogInformation("Tool {call.Name} progress: {pnv.Message}", call.Name, pnv.Message);
-                        writer.TryWrite(SseResponseLine.ToolProgress(chatSpan.SpanId, call.ToolCallId!, pnv.Message!));
+                        writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId!, pnv.Message!));
                     }), cancellationToken: cancellationToken);
                     logger.LogInformation("Tool {call.Name} completed with result: {result}", call.Name, result.Content);
                     string toolCallResponseText = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(x => x.Text));
-                    writer.TryWrite(SseResponseLine.ToolEnd(chatSpan.SpanId, call.ToolCallId!, toolCallResponseText));
+                    writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, call.ToolCallId!, toolCallResponseText));
                     await WriteStep(new Step()
                     {
                         Turn = turn,
@@ -486,14 +486,14 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             }
         }
 
-        writer.TryWrite(new EndTurn() { Turn = turn, SpanId = chatSpan.SpanId });
+        writer.TryWrite(new EndTurn(chatSpan.SpanId, turn));
         writer.Complete();
 
         async Task WriteStep(Step step)
         {
             messageToSend.Add(await step.ToOpenAI(fup, cancellationToken));
             turn.Steps.Add(step);
-            writer.TryWrite(SseResponseLine.EndStep(chatSpan.SpanId, step));
+            writer.TryWrite(new EndStep(chatSpan.SpanId, step));
         }
 
         async Task<Step> RunOne(List<OpenAIChatMessage> messageToSend)
@@ -521,19 +521,19 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                         {
                             if (!reasoningStarted)
                             {
-                                writer.TryWrite(SseResponseLine.StartReasoning(chatSpan.SpanId));
+                                writer.TryWrite(new StartReasoningLine(chatSpan.SpanId));
                                 reasoningStarted = true;
                             }
-                            writer.TryWrite(SseResponseLine.ReasoningSegment(chatSpan.SpanId, thinkSeg.Think));
+                            writer.TryWrite(new ReasoningSegmentLine(chatSpan.SpanId, thinkSeg.Think));
                         }
                         else if (item is TextChatSegment textSeg)
                         {
                             if (!responseStated)
                             {
-                                writer.TryWrite(SseResponseLine.StartResponse(chatSpan.SpanId, icc.ReasoningDurationMs));
+                                writer.TryWrite(new StartResponseLine(chatSpan.SpanId, icc.ReasoningDurationMs));
                                 responseStated = true;
                             }
-                            writer.TryWrite(SseResponseLine.CreateSegment(chatSpan.SpanId, textSeg.Text));
+                            writer.TryWrite(new SegmentLine(chatSpan.SpanId, textSeg.Text));
                         }
                         else if (item is ToolCallSegment toolCall)
                         {
@@ -541,12 +541,12 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                             {
                                 responseStated = true;
                             }
-                            writer.TryWrite(SseResponseLine.CallingTool(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolCall.Arguments));
+                            writer.TryWrite(new CallingToolLine(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolCall.Arguments));
                         }
                         else if (item is ImageChatSegment imgSeg)
                         {
                             imageFileCache[imgSeg] = new TaskCompletionSource<DB.File>();
-                            writer.TryWrite(SseResponseLine.TempImageGenerated(chatSpan.SpanId, imgSeg));
+                            writer.TryWrite(new TempImageGeneratedLine(chatSpan.SpanId, imgSeg));
                         }
                     }
 
@@ -621,7 +621,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
             if (errorText != null)
             {
-                writer.TryWrite(SseResponseLine.CreateError(chatSpan.SpanId, errorText));
+                writer.TryWrite(new ErrorLine(chatSpan.SpanId, errorText));
             }
             return step;
         }
@@ -658,10 +658,10 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
     private async Task YieldTitle(string title)
     {
-        await YieldResponse(SseResponseLine.UpdateTitle(""));
+        await YieldResponse(new UpdateTitleLine(""));
         foreach (string segment in TestChatService.UnicodeCharacterSplit(title))
         {
-            await YieldResponse(SseResponseLine.CreateTitleSegment(segment));
+            await YieldResponse(new TitleSegmentLine(segment));
             await Task.Delay(10);
         }
     }

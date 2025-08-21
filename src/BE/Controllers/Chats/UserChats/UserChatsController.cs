@@ -42,7 +42,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                 }).ToArray(),
-                LeafTurnId = idEncryption.EncryptTurnId(x.LeafMessageId),
+                LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
             })
             .FirstOrDefaultAsync(cancellationToken);
@@ -88,7 +88,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                 }).ToArray(),
-                LeafTurnId = idEncryption.EncryptTurnId(x.LeafMessageId),
+                LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
             })
             .OrderByDescending(x => x.Id), request, cancellationToken);
@@ -113,7 +113,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                 Id = idEncryption.EncryptChatId(x.Id),
                 Title = x.Title,
                 IsTopMost = x.IsTopMost,
-                IsShared = x.ChatShares.Any(),
+                IsShared = x.ChatShares.Count != 0,
                 GroupId = idEncryption.EncryptChatGroupId(x.ChatGroupId),
                 Tags = x.ChatTags.Select(x => x.Name).ToArray(),
                 Spans = x.ChatSpans.Select(span => new ChatSpanDto
@@ -129,7 +129,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                 }).ToArray(),
-                LeafTurnId = idEncryption.EncryptTurnId(x.LeafMessageId),
+                LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
             }),
             request,
@@ -225,7 +225,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             GroupId = idEncryption.EncryptChatGroupId(chat.ChatGroupId),
             Tags = [],
             Spans = [.. chat.ChatSpans.Select(ChatSpanDto.FromDB)],
-            LeafTurnId = idEncryption.EncryptTurnId(chat.LeafMessageId),
+            LeafTurnId = idEncryption.EncryptTurnId(chat.LeafTurnId),
             UpdatedAt = chat.UpdatedAt,
         });
     }
@@ -302,9 +302,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             return NotFound();
         }
 
-        ChatShareDto[] result = chat.ChatShares
-            .Select(x => ChatShareDto.FromDB(x, idEncryption))
-            .ToArray();
+        ChatShareDto[] result = [.. chat.ChatShares.Select(x => ChatShareDto.FromDB(x, idEncryption))];
         return Ok(result);
     }
 
