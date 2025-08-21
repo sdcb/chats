@@ -94,7 +94,7 @@ public partial class StepContent
                 TextChatSegment text => FromText(text.Text),
                 ThinkChatSegment think => FromThink(think.Think),
                 ImageChatSegment image => FromFile(imageMcCache[image].Task.GetAwaiter().GetResult()),
-                ToolCallSegment tool => FromTool(tool.Id, tool.Name, tool.Arguments),
+                ToolCallSegment tool => FromTool(tool.Id ?? tool.Index.ToString(), tool.Name!, tool.Arguments),
                 _ => throw new NotSupportedException(),
             };
         }))

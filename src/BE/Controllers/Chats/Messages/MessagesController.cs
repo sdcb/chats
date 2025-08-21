@@ -8,7 +8,6 @@ using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.ML.Tokenizers;
 using Chats.BE.Services;
 
 namespace Chats.BE.Controllers.Chats.Messages;
@@ -17,9 +16,9 @@ namespace Chats.BE.Controllers.Chats.Messages;
 public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncryptionService urlEncryption) : ControllerBase
 {
     [HttpGet("{chatId}")]
-    public async Task<ActionResult<MessageDto[]>> GetMessages(string chatId, [FromServices] FileUrlProvider fup, CancellationToken cancellationToken)
+    public async Task<ActionResult<TurnDto[]>> GetTurns(string chatId, [FromServices] FileUrlProvider fup, CancellationToken cancellationToken)
     {
-        MessageDto[] messages = await db.ChatTurns
+        TurnDto[] messages = await db.ChatTurns
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentBlob)
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileContentType)
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
@@ -217,7 +216,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
     }
 
     [HttpDelete("{encryptedTurnId}/{contentId}")]
-    public async Task<ActionResult> DeleteMessageContent(string encryptedTurnId, string contentId, CancellationToken cancellationToken)
+    public async Task<ActionResult> DeleteTurnContent(string encryptedTurnId, string contentId, CancellationToken cancellationToken)
     {
         long turnId = urlEncryption.DecryptTurnId(encryptedTurnId);
         long decryptedContentId = urlEncryption.DecryptMessageContentId(contentId);
@@ -239,49 +238,47 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
     }
 
     [HttpDelete("{encryptedTurnId}")]
-    public async Task<ActionResult<string[]>> DeleteMessage(string encryptedTurnId, string? encryptedLeafMessageId, CancellationToken cancellationToken)
+    public async Task<ActionResult<string[]>> DeleteTurn(string encryptedTurnId, string? encryptedLeafMessageId, CancellationToken cancellationToken)
     {
-        long messageId = urlEncryption.DecryptTurnId(encryptedTurnId);
-        long? leafMessageId = urlEncryption.DecryptTurnIdOrNull(encryptedLeafMessageId);
-        ChatTurn? message = await db.ChatTurns
+        long turnId = urlEncryption.DecryptTurnId(encryptedTurnId);
+        long? leafTurnId = urlEncryption.DecryptTurnIdOrNull(encryptedLeafMessageId);
+        ChatTurn? turn = await db.ChatTurns
             .Include(x => x.Chat.ChatTurns)
-            .FirstOrDefaultAsync(x => x.Id == messageId, cancellationToken);
-        if (message == null)
+            .FirstOrDefaultAsync(x => x.Id == turnId, cancellationToken);
+        if (turn == null)
         {
             return NotFound();
         }
-        if (message.Chat.UserId != currentUser.Id)
+        if (turn.Chat.UserId != currentUser.Id)
         {
             return Forbid();
         }
 
-        ChatTurn? leafMessage = leafMessageId == null ? null : message.Chat.ChatTurns.FirstOrDefault(x => x.Id == leafMessageId);
-        if (leafMessageId != null)
+        ChatTurn? leafMessage = leafTurnId == null ? null : turn.Chat.ChatTurns.FirstOrDefault(x => x.Id == leafTurnId);
+        if (leafTurnId != null)
         {
             if (leafMessage == null)
             {
                 return BadRequest("Leaf message not found");
             }
-            else if (leafMessage.ChatId != message.ChatId)
+            else if (leafMessage.ChatId != turn.ChatId)
             {
                 return BadRequest("Leaf message does not belong to the same chat");
             }
         }
 
-        List<ChatTurn> turnsQueue = [message];
+        List<ChatTurn> turnsQueue = [turn];
         List<ChatTurn> toDeleteTurns = [];
         while (turnsQueue.Count > 0)
         {
             toDeleteTurns.AddRange(turnsQueue);
-            turnsQueue = message.Chat.ChatTurns
-                .Where(x => x.ParentId != null && turnsQueue.Any(toDelete => toDelete.Id == x.ParentId.Value))
-                .ToList();
+            turnsQueue = [.. turn.Chat.ChatTurns.Where(x => x.ParentId != null && turnsQueue.Any(toDelete => toDelete.Id == x.ParentId.Value))];
         }
         foreach (ChatTurn toDeleteTurn in toDeleteTurns)
         {
-            message.Chat.ChatTurns.Remove(toDeleteTurn);
+            turn.Chat.ChatTurns.Remove(toDeleteTurn);
         }
-        message.Chat.LeafMessageId = leafMessageId;
+        turn.Chat.LeafTurnId = leafTurnId;
         await db.SaveChangesAsync(cancellationToken);
         return Ok(toDeleteTurns.Select(x => urlEncryption.EncryptTurnId(x.Id)).ToArray());
     }

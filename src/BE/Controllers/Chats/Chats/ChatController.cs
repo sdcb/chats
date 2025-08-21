@@ -175,7 +175,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             }
         }
 
-        ChatTurn? newDbUserMessage = null;
+        ChatTurn? newDbUserTurn = null;
         if (req is GeneralChatRequest generalRequest)
         {
             if (generalRequest.ParentAssistantMessageId != null)
@@ -191,7 +191,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 }
             }
 
-            newDbUserMessage = new()
+            newDbUserTurn = new()
             {
                 IsUser = true,
                 Steps =
@@ -206,7 +206,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 ],
                 ParentId = generalRequest.ParentAssistantMessageId,
             };
-            chat.ChatTurns.Add(newDbUserMessage);
+            chat.ChatTurns.Add(newDbUserTurn);
         }
         else if (req is RegenerateAllAssistantMessageRequest regenerateRequest)
         {
@@ -246,7 +246,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             chat,
             userModels[span.ChatConfig.ModelId],
             messageTree,
-            newDbUserMessage,
+            newDbUserTurn,
             cost.WithScoped(span.SpanId.ToString()),
             clientInfoIdTask,
             imageFileCache,
@@ -271,19 +271,19 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 bool isLast = allEnd.SpanId == toGenerateSpans.Last().SpanId;
                 if (isLast)
                 {
-                    chat.LeafMessage = allEnd.Turn;
+                    chat.LeafTurn = allEnd.Turn;
                 }
                 await db.SaveChangesAsync(CancellationToken.None);
 
-                if (newDbUserMessage != null && !dbUserMessageYield)
+                if (newDbUserTurn != null && !dbUserMessageYield)
                 {
-                    await YieldResponse(SseResponseLine.UserMessage(newDbUserMessage, idEncryption, fup));
+                    await YieldResponse(SseResponseLine.UserMessage(newDbUserTurn, idEncryption, fup));
                     dbUserMessageYield = true;
                 }
                 await YieldResponse(SseResponseLine.ResponseMessage(allEnd.SpanId, allEnd.Turn, idEncryption, fup));
                 if (isLast)
                 {
-                    await YieldResponse(SseResponseLine.ChatLeafMessageId(chat.LeafMessageId!.Value, idEncryption));
+                    await YieldResponse(SseResponseLine.ChatLeafMessageId(chat.LeafTurnId!.Value, idEncryption));
                 }
             }
             else if (line is EndStep endLine)

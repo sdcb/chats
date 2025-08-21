@@ -65,6 +65,8 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<McpServer> McpServers { get; set; }
 
+    public virtual DbSet<McpTool> McpTools { get; set; }
+
     public virtual DbSet<Model> Models { get; set; }
 
     public virtual DbSet<ModelKey> ModelKeys { get; set; }
@@ -154,7 +156,7 @@ public partial class ChatsDB : DbContext
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_Chat_ChatGroup");
 
-            entity.HasOne(d => d.LeafMessage).WithMany(p => p.Chats).HasConstraintName("FK_Chat_Message");
+            entity.HasOne(d => d.LeafTurn).WithMany(p => p.Chats).HasConstraintName("FK_Chat_Message");
 
             entity.HasOne(d => d.User).WithMany(p => p.Chats)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -310,6 +312,16 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<LoginService>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_LoginServices2");
+        });
+
+        modelBuilder.Entity<McpServer>(entity =>
+        {
+            entity.HasOne(d => d.OwnerUser).WithMany(p => p.McpServers).HasConstraintName("FK_McpServer_User");
+        });
+
+        modelBuilder.Entity<McpTool>(entity =>
+        {
+            entity.HasOne(d => d.McpServer).WithMany(p => p.McpTools).HasConstraintName("FK_McpTool_McpServer");
         });
 
         modelBuilder.Entity<Model>(entity =>

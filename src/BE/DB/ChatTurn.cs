@@ -33,7 +33,7 @@ public partial class ChatTurn
     [InverseProperty("ChatTurns")]
     public virtual ChatConfig? ChatConfig { get; set; }
 
-    [InverseProperty("LeafMessage")]
+    [InverseProperty("LeafTurn")]
     public virtual ICollection<Chat> Chats { get; set; } = new List<Chat>();
 
     [InverseProperty("Parent")]

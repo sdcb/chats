@@ -28,12 +28,12 @@ public record ChatsResponse
     public required string[] Tags { get; init; }
 
     [JsonPropertyName("leafMessageId")]
-    public required string? LeafMessageId { get; init; }
+    public required string? LeafTurnId { get; init; }
 
     [JsonPropertyName("updatedAt")]
     public required DateTime UpdatedAt { get; init; }
 
-    public ChatsResponseWithMessage WithMessages(MessageDto[] messages)
+    public ChatsResponseWithMessage WithMessages(TurnDto[] messages)
     {
         return new ChatsResponseWithMessage
         {
@@ -44,7 +44,7 @@ public record ChatsResponse
             Spans = Spans,
             GroupId = GroupId,
             Tags = Tags,
-            LeafMessageId = LeafMessageId,
+            LeafTurnId = LeafTurnId,
             UpdatedAt = UpdatedAt,
             Messages = messages,
         };
@@ -54,7 +54,7 @@ public record ChatsResponse
 public record ChatsResponseWithMessage : ChatsResponse
 {
     [JsonPropertyName("messages")]
-    public required MessageDto[] Messages { get; set; }
+    public required TurnDto[] Messages { get; set; }
 }
 
 public record ChatSpanDto

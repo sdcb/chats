@@ -192,8 +192,24 @@ CREATE TABLE [McpServer] (
     [RequireApproval] BIT            CONSTRAINT [DEFAULT_Mcp_RequireApproval] DEFAULT 0 NOT NULL,
     [Headers]         NVARCHAR (MAX) NULL,
     [CreatedAt]       DATETIME2 (7)  CONSTRAINT [DEFAULT_Mcp_CreatedAt] DEFAULT SYSUTCDATETIME() NOT NULL,
-    [IsPublic]        BIT        CONSTRAINT [DEFAULT_Mcp_Public] DEFAULT 0 NOT NULL,
-    CONSTRAINT [PK_McpServer] PRIMARY KEY CLUSTERED ([Id] ASC)
+    [OwnerUserId]     INT            NULL,
+    [IsPublic]        BIT            CONSTRAINT [DEFAULT_Mcp_Public] DEFAULT 0 NOT NULL,
+    [LastFetchAt]     DATETIME2 (7)  NULL,
+    CONSTRAINT [PK_McpServer] PRIMARY KEY CLUSTERED ([Id] ASC),
+    CONSTRAINT [FK_McpServer_User] FOREIGN KEY ([OwnerUserId]) REFERENCES [User] ([Id]),
+    INDEX [IX_McpServer_OwnerUserId] ([OwnerUserId]) WHERE [OwnerUserId] IS NOT NULL
+);
+
+CREATE TABLE [dbo].[McpTool] (
+    [Id]           INT            IDENTITY (1, 1) NOT NULL,
+    [McpServerId]  INT            NOT NULL,
+    [ToolName]     NVARCHAR (100) NOT NULL,
+    [Description]  NVARCHAR (MAX) NULL,
+    [Parameters]   NVARCHAR (MAX) NULL, -- 存储参数的 JSON Schema
+
+    CONSTRAINT [PK_McpTool] PRIMARY KEY CLUSTERED ([Id] ASC),
+    CONSTRAINT [FK_McpTool_McpServer] FOREIGN KEY ([McpServerId]) REFERENCES [dbo].[McpServer] ([Id]) ON DELETE CASCADE, -- 级联删除
+    CONSTRAINT [UX_McpTool_Server_Name] UNIQUE ([McpServerId], [ToolName]) -- 同一个 Server 内工具名唯一
 );
 
 CREATE TABLE [UserMcp] (
@@ -396,4 +412,10 @@ PRINT N'7) 辅助索引：为 Step(TurnId, Id) 建索引';
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Step_TurnId' AND object_id = OBJECT_ID('dbo.Step'))
 BEGIN
     CREATE INDEX IX_Step_TurnId ON dbo.Step(TurnId, Id);
+END
+
+PRINT N'8) 将Chat表的LeafMessageId改名为LeafTurnId';
+IF COL_LENGTH('dbo.Chat', 'LeafMessageId') IS NOT NULL
+BEGIN
+    EXEC sp_rename 'dbo.Chat.LeafMessageId', 'LeafTurnId', 'COLUMN';
 END

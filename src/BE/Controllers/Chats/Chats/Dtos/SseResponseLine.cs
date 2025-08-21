@@ -16,12 +16,12 @@ namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 [JsonDerivedType(typeof(StartResponseLine    ), (int)SseResponseKind.StartResponse    )]
 [JsonDerivedType(typeof(StartReasoningLine   ), (int)SseResponseKind.StartReasoning   )]
 [JsonDerivedType(typeof(ErrorLine            ), (int)SseResponseKind.Error            )]
-[JsonDerivedType(typeof(ResponseMessageLine  ), (int)SseResponseKind.ResponseMessage  )]
-[JsonDerivedType(typeof(UserMessageLine      ), (int)SseResponseKind.UserMessage      )]
+[JsonDerivedType(typeof(ResponseTurnLine     ), (int)SseResponseKind.ResponseTurn     )]
+[JsonDerivedType(typeof(UserTurnLine         ), (int)SseResponseKind.UserTurn         )]
 [JsonDerivedType(typeof(StopIdLine           ), (int)SseResponseKind.StopId           )]
 [JsonDerivedType(typeof(UpdateTitleLine      ), (int)SseResponseKind.UpdateTitle      )]
 [JsonDerivedType(typeof(TitleSegmentLine     ), (int)SseResponseKind.TitleSegment     )]
-[JsonDerivedType(typeof(ChatLeafMessageIdLine), (int)SseResponseKind.ChatLeafMessageId)]
+[JsonDerivedType(typeof(ChatLeafTurnIdLine   ), (int)SseResponseKind.ChatLeafTurnId   )]
 [JsonDerivedType(typeof(ImageGeneratingLine  ), (int)SseResponseKind.ImageGenerating  )]
 [JsonDerivedType(typeof(ImageGeneratedLine   ), (int)SseResponseKind.ImageGenerated   )]
 [JsonDerivedType(typeof(CallingToolLine      ), (int)SseResponseKind.CallingTool      )]
@@ -48,24 +48,24 @@ public abstract record SseResponseLine
     public static ErrorLine CreateError(byte spanId, string error) =>
         new() { SpanId = spanId, Error = error };
 
-    public static ResponseMessageLine ResponseMessage(
+    public static ResponseTurnLine ResponseMessage(
         byte spanId,
         ChatTurn assistantMessage,
         IUrlEncryptionService urlEncryptionService,
         FileUrlProvider fup)
     {
         ChatMessageTemp assistantTemp = ChatMessageTemp.FromDB(assistantMessage);
-        MessageDto dto = assistantTemp.ToDto(urlEncryptionService, fup);
+        TurnDto dto = assistantTemp.ToDto(urlEncryptionService, fup);
         return new() { SpanId = spanId, Message = dto };
     }
 
-    public static UserMessageLine UserMessage(
+    public static UserTurnLine UserMessage(
         ChatTurn userMessage,
         IUrlEncryptionService urlEncryptionService,
         FileUrlProvider fup)
     {
         ChatMessageTemp userTemp = ChatMessageTemp.FromDB(userMessage);
-        MessageDto dto = userTemp.ToDto(urlEncryptionService, fup);
+        TurnDto dto = userTemp.ToDto(urlEncryptionService, fup);
         return new() { Message = dto };
     }
 
@@ -78,7 +78,7 @@ public abstract record SseResponseLine
     public static TitleSegmentLine CreateTitleSegment(string titleSegment) =>
         new() { TitleSegment = titleSegment };
 
-    public static ChatLeafMessageIdLine ChatLeafMessageId(
+    public static ChatLeafTurnIdLine ChatLeafMessageId(
         long leafMessageId,
         IUrlEncryptionService idEncryption) =>
         new() { EncryptedLeafMessageId = idEncryption.EncryptTurnId(leafMessageId) };
@@ -152,19 +152,19 @@ public sealed record ErrorLine : SseResponseLine
     public required string Error { get; init; }
 }
 
-public sealed record ResponseMessageLine : SseResponseLine
+public sealed record ResponseTurnLine : SseResponseLine
 {
     [JsonPropertyName("i")]
     public required byte SpanId { get; init; }
 
     [JsonPropertyName("r")]
-    public required MessageDto Message { get; init; }
+    public required TurnDto Message { get; init; }
 }
 
-public sealed record UserMessageLine : SseResponseLine
+public sealed record UserTurnLine : SseResponseLine
 {
     [JsonPropertyName("r")]
-    public required MessageDto Message { get; init; }
+    public required TurnDto Message { get; init; }
 }
 
 public sealed record StopIdLine : SseResponseLine
@@ -185,7 +185,7 @@ public sealed record TitleSegmentLine : SseResponseLine
     public required string TitleSegment { get; init; }
 }
 
-public sealed record ChatLeafMessageIdLine : SseResponseLine
+public sealed record ChatLeafTurnIdLine : SseResponseLine
 {
     [JsonPropertyName("r")]
     public required string EncryptedLeafMessageId { get; init; }

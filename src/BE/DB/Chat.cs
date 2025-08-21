@@ -26,7 +26,7 @@ public partial class Chat
 
     public bool IsTopMost { get; set; }
 
-    public long? LeafMessageId { get; set; }
+    public long? LeafTurnId { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
@@ -45,9 +45,9 @@ public partial class Chat
     [InverseProperty("Chat")]
     public virtual ICollection<ChatTurn> ChatTurns { get; set; } = new List<ChatTurn>();
 
-    [ForeignKey("LeafMessageId")]
+    [ForeignKey("LeafTurnId")]
     [InverseProperty("Chats")]
-    public virtual ChatTurn? LeafMessage { get; set; }
+    public virtual ChatTurn? LeafTurn { get; set; }
 
     [ForeignKey("UserId")]
     [InverseProperty("Chats")]

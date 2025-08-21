@@ -9,7 +9,7 @@ namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 [JsonPolymorphic]
 [JsonDerivedType(typeof(RequestMessageDto))]
 [JsonDerivedType(typeof(ResponseMessageDto))]
-public abstract record MessageDto
+public abstract record TurnDto
 {
     [JsonPropertyName("id")]
     public required string Id { get; init; }
@@ -33,7 +33,7 @@ public abstract record MessageDto
     public required bool Edited { get; init; }
 }
 
-public record RequestMessageDto : MessageDto
+public record RequestMessageDto : TurnDto
 {
     public static RequestMessageDto FromDB(ChatTurn message, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
     {
@@ -50,7 +50,7 @@ public record RequestMessageDto : MessageDto
     }
 }
 
-public record ResponseMessageDto : MessageDto
+public record ResponseMessageDto : TurnDto
 {
     [JsonPropertyName("inputTokens")]
     public required int InputTokens { get; init; }
@@ -132,7 +132,7 @@ public record ChatMessageTemp
     public required ChatMessageTempUsage? Usage { get; init; }
     public required bool? Reaction { get; init; }
 
-    public MessageDto ToDto(IUrlEncryptionService urlEncryption, FileUrlProvider fup)
+    public TurnDto ToDto(IUrlEncryptionService urlEncryption, FileUrlProvider fup)
     {
         if (Usage == null)
         {

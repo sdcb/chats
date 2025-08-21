@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.BE.DB;
 
 [Table("McpServer")]
+[Index("OwnerUserId", Name = "IX_McpServer_OwnerUserId")]
 public partial class McpServer
 {
     [Key]
@@ -24,10 +25,21 @@ public partial class McpServer
 
     public DateTime CreatedAt { get; set; }
 
+    public int? OwnerUserId { get; set; }
+
     public bool IsPublic { get; set; }
+
+    public DateTime? LastFetchAt { get; set; }
 
     [InverseProperty("McpServer")]
     public virtual ICollection<ChatConfigMcp> ChatConfigMcps { get; set; } = new List<ChatConfigMcp>();
+
+    [InverseProperty("McpServer")]
+    public virtual ICollection<McpTool> McpTools { get; set; } = new List<McpTool>();
+
+    [ForeignKey("OwnerUserId")]
+    [InverseProperty("McpServers")]
+    public virtual User? OwnerUser { get; set; }
 
     [InverseProperty("McpServer")]
     public virtual ICollection<UserMcp> UserMcps { get; set; } = new List<UserMcp>();

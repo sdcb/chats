@@ -86,7 +86,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                 }).ToArray(),
-                LeafMessageId = urlEncryption.EncryptTurnId(x.LeafMessageId),
+                LeafTurnId = urlEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
             })
             .AsSplitQuery()

@@ -99,7 +99,7 @@ public class DecryptedUpdateChatsRequest
         }
         if (SetsLeafTurnId)
         {
-            chat.LeafMessageId = LeafTurnId;
+            chat.LeafTurnId = LeafTurnId;
         }
         if (IsTopMost != null)
         {
