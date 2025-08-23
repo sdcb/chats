@@ -10,7 +10,7 @@ internal static class BasicData
         InsertChatRoles(db);
         InsertCurrencyRates(db);
         InsertFinishReasons(db);
-        InsertMessageContentTypes(db);
+        InsertStepContentTypes(db);
         InsertTokenizers(db);
         InsertTransactionTypes(db);
         InsertReasoningResponseKinds(db);
@@ -33,11 +33,12 @@ internal static class BasicData
 
     private static void InsertChatRoles(ChatsDB db)
     {
-        // Generated from data, hash: 88c3bc8417abed479ab20a5da2d3bf139cd21c046354d830571a60d040410616
+        // Generated from data, hash: 4450a3cbc75fbdf25b4af7ed5c400a0f1bc10b873b19b5db6c19f1fbdd7c635e
         db.ChatRoles.AddRange(
         [
             new(){ Id=2, Name="user",      },
-            new(){ Id=3, Name="assistant", }
+            new(){ Id=3, Name="assistant", },
+            new(){ Id=4, Name="tool",      }
         ]);
     }
 
@@ -73,15 +74,17 @@ internal static class BasicData
         ]);
     }
 
-    private static void InsertMessageContentTypes(ChatsDB db)
+    private static void InsertStepContentTypes(ChatsDB db)
     {
-        // Generated from data, hash: d61ced8657ac8b57fcab075196ea33138bbc93162b3f5747b73f986fa867f455
+        // Generated from data, hash: 766981cc3e16b456244e4580942ca36c81696dcc2e5463594cb29cf96fc83a4a
         db.StepContentTypes.AddRange(
         [
-            new(){ Id=0, ContentType="error",     },
-            new(){ Id=1, ContentType="text",      },
-            new(){ Id=2, ContentType="fileId",    },
-            new(){ Id=3, ContentType="reasoning", }
+            new(){ Id=0, ContentType="error",            },
+            new(){ Id=1, ContentType="text",             },
+            new(){ Id=2, ContentType="fileId",           },
+            new(){ Id=3, ContentType="reasoning",        },
+            new(){ Id=4, ContentType="toolCall",         },
+            new(){ Id=5, ContentType="toolCallResponse", }
         ]);
     }
 

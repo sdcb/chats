@@ -19,7 +19,7 @@ void Main()
 		"ChatRole",
 		"CurrencyRate",
 		"FinishReason",
-		"MessageContentType",
+		"StepContentType",
 		"Tokenizer",
 		"TransactionType",
 		"ReasoningResponseKind",
