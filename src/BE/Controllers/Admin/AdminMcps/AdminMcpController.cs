@@ -1,22 +1,27 @@
 ﻿using Chats.BE.Controllers.Admin.AdminMcps.Dtos;
-using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Common;
 using Chats.BE.DB;
+using Chats.BE.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Client;
-using System.Linq;
 using System.Text.Json;
 
 namespace Chats.BE.Controllers.Admin.AdminMcps;
 
-[Route("api/admin/mcp"), AuthorizeAdmin]
-public class AdminMcpController(ChatsDB db) : ControllerBase
+[Route("api/mcp")]
+public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<McpServerListItemDto[]>> ListAllMcpServers(CancellationToken cancellationToken)
     {
-        McpServerListItemDto[] data = await db.McpServers
+        IQueryable<McpServer> query = db.McpServers;
+        if (!currentUser.IsAdmin)
+        {
+            query = query.Where(x => x.IsPublic || x.UserMcps.Any(um => um.UserId == currentUser.Id));
+        }
+
+        McpServerListItemDto[] data = await query
             .OrderByDescending(x => x.Id)
             .Select(x => new McpServerListItemDto
             {
@@ -37,8 +42,13 @@ public class AdminMcpController(ChatsDB db) : ControllerBase
     [HttpGet("{mcpId:int}")]
     public async Task<ActionResult<McpServerDetailsDto>> GetMcpServerDetails(int mcpId, CancellationToken cancellationToken)
     {
-        McpServerDetailsDto? dto = await db.McpServers
-            .Where(x => x.Id == mcpId)
+        IQueryable<McpServer> query = db.McpServers.Where(x => x.Id == mcpId);
+        if (!currentUser.IsAdmin)
+        {
+            query = query.Where(x => x.IsPublic || x.UserMcps.Any(um => um.UserId == currentUser.Id));
+        }
+
+        McpServerDetailsDto? dto = await query
             .Select(x => new McpServerDetailsDto
             {
                 Id = x.Id,
@@ -83,7 +93,7 @@ public class AdminMcpController(ChatsDB db) : ControllerBase
             RequireApproval = request.RequireApproval,
             Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers,
             IsPublic = request.IsPublic,
-            OwnerUserId = null,
+            OwnerUserId = currentUser.IsAdmin ? null : currentUser.Id,
             CreatedAt = DateTime.UtcNow,
             LastFetchAt = null,
         };
@@ -97,7 +107,13 @@ public class AdminMcpController(ChatsDB db) : ControllerBase
     [HttpPut("{mcpId:int}")]
     public async Task<ActionResult<McpServerDetailsDto>> UpdateMcpServer(int mcpId, [FromBody] UpdateMcpServerRequest request, CancellationToken cancellationToken)
     {
-        McpServer? server = await db.McpServers.FirstOrDefaultAsync(x => x.Id == mcpId, cancellationToken);
+        IQueryable<McpServer> finder = db.McpServers.Where(x => x.Id == mcpId);
+        if (!currentUser.IsAdmin)
+        {
+            finder = finder.Where(x => x.OwnerUserId == currentUser.Id); // user can manage own only
+        }
+
+        McpServer? server = await finder.FirstOrDefaultAsync(cancellationToken);
         if (server == null)
         {
             return NotFound();
@@ -113,7 +129,7 @@ public class AdminMcpController(ChatsDB db) : ControllerBase
         server.RequireApproval = request.RequireApproval;
         server.Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers;
         server.IsPublic = request.IsPublic;
-        server.OwnerUserId = null;
+        // Do not change OwnerUserId on update
         if (db.ChangeTracker.HasChanges())
         {
             await db.SaveChangesAsync(cancellationToken);
@@ -125,7 +141,13 @@ public class AdminMcpController(ChatsDB db) : ControllerBase
     [HttpDelete("{mcpId:int}")]
     public async Task<ActionResult> DeleteMcpServer(int mcpId, CancellationToken cancellationToken)
     {
-        McpServer? server = await db.McpServers.Include(x => x.McpTools).FirstOrDefaultAsync(x => x.Id == mcpId, cancellationToken);
+        IQueryable<McpServer> finder = db.McpServers.Where(x => x.Id == mcpId);
+        if (!currentUser.IsAdmin)
+        {
+            finder = finder.Where(x => x.OwnerUserId == currentUser.Id); // user can delete own only
+        }
+
+        McpServer? server = await finder.Include(x => x.McpTools).FirstOrDefaultAsync(cancellationToken);
         if (server == null)
         {
             return NotFound();
@@ -139,6 +161,55 @@ public class AdminMcpController(ChatsDB db) : ControllerBase
         }
 
         db.McpServers.Remove(server);
+        await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("assign-user-mcps")]
+    public async Task<ActionResult> AssignMcpToolsToUser([FromBody] AssignUserMcpRequest req, CancellationToken cancellationToken)
+    {
+        if (!currentUser.IsAdmin)
+        {
+            return Forbid();
+        }
+
+        User? user = await db.Users.FirstOrDefaultAsync(x => x.Id == req.UserId, cancellationToken);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        if (req.HasDuplicateMcpServerIds())
+        {
+            return this.BadRequestMessage("Duplicate MCP server IDs in request");
+        }
+
+        Dictionary<int, McpServer> desiredServers = await db.McpServers
+            .Where(x => req.McpServerIds.Contains(x.Id))
+            .ToDictionaryAsync(k => k.Id, v => v, cancellationToken);
+        if (desiredServers.Count != req.McpServerIds.Length)
+        {
+            return this.BadRequestMessage("Some MCP servers not found");
+        }
+
+        List<UserMcp> existing = await db.UserMcps.Where(x => x.UserId == req.UserId).ToListAsync(cancellationToken);
+        HashSet<int> existingIds = [.. existing.Select(x => x.McpServerId)];
+        HashSet<int> desiredIds = [.. req.McpServerIds.Where(id => desiredServers.ContainsKey(id))];
+
+        foreach (int toAdd in desiredIds.Except(existingIds))
+        {
+            db.UserMcps.Add(new UserMcp
+            {
+                UserId = req.UserId,
+                McpServerId = toAdd,
+            });
+        }
+
+        foreach (UserMcp toRemove in existing.Where(x => !desiredIds.Contains(x.McpServerId)))
+        {
+            db.UserMcps.Remove(toRemove);
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
@@ -185,54 +256,5 @@ public class AdminMcpController(ChatsDB db) : ControllerBase
             });
         }
         return Ok(tools);
-    }
-
-    [HttpPost("assign-user-mcps")]
-    public async Task<ActionResult> AssignMcpToolsToUser([FromBody] AssignUserMcpRequest req, CancellationToken cancellationToken)
-    {
-        User? user = await db.Users.FirstOrDefaultAsync(x => x.Id == req.UserId, cancellationToken);
-        if (user == null)
-        {
-            return NotFound();
-        }
-
-        if (req.HasDuplicateMcpServerIds())
-        {
-            return this.BadRequestMessage("Duplicate MCP server IDs in request");
-        }
-
-        // validate servers exist and fetch their approval requirements
-        Dictionary<int, McpServer> desiredServers = await db.McpServers
-            .Where(x => req.McpServerIds.Contains(x.Id))
-            .ToDictionaryAsync(k => k.Id, v => v, cancellationToken);
-        if (desiredServers.Count != req.McpServerIds.Length)
-        {
-            return this.BadRequestMessage("Some MCP servers not found");
-        }
-
-        // load existing assignments
-        List<UserMcp> existing = await db.UserMcps.Where(x => x.UserId == req.UserId).ToListAsync(cancellationToken);
-        HashSet<int> existingIds = [.. existing.Select(x => x.McpServerId)];
-
-        // desired set (filtered by assignableIds)
-        HashSet<int> desiredIds = [.. req.McpServerIds.Where(id => desiredServers.ContainsKey(id))];
-        // create new assignments
-        foreach (int toAdd in desiredIds.Except(existingIds))
-        {
-            db.UserMcps.Add(new UserMcp
-            {
-                UserId = req.UserId,
-                McpServerId = toAdd,
-            });
-        }
-
-        // remove assignments not desired anymore
-        foreach (UserMcp toRemove in existing.Where(x => !desiredIds.Contains(x.McpServerId)))
-        {
-            db.UserMcps.Remove(toRemove);
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
-        return NoContent();
     }
 }
