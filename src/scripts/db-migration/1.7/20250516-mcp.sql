@@ -189,7 +189,6 @@ CREATE TABLE [McpServer] (
     [Id]              INT            IDENTITY (1, 1) NOT NULL,
     [Label]           NVARCHAR (50)  NOT NULL,
     [Url]             NVARCHAR (300) NOT NULL,
-    [RequireApproval] BIT            CONSTRAINT [DEFAULT_Mcp_RequireApproval] DEFAULT 0 NOT NULL,
     [Headers]         NVARCHAR (MAX) NULL,
     [CreatedAt]       DATETIME2 (7)  CONSTRAINT [DEFAULT_Mcp_CreatedAt] DEFAULT SYSUTCDATETIME() NOT NULL,
     [OwnerUserId]     INT            NULL,
@@ -201,11 +200,12 @@ CREATE TABLE [McpServer] (
 );
 
 CREATE TABLE [dbo].[McpTool] (
-    [Id]           INT            IDENTITY (1, 1) NOT NULL,
-    [McpServerId]  INT            NOT NULL,
-    [ToolName]     NVARCHAR (100) NOT NULL,
-    [Description]  NVARCHAR (MAX) NULL,
-    [Parameters]   NVARCHAR (MAX) NULL, -- 存储参数的 JSON Schema
+    [Id]              INT            IDENTITY (1, 1) NOT NULL,
+    [McpServerId]     INT            NOT NULL,
+    [ToolName]        NVARCHAR (100) NOT NULL,
+    [Description]     NVARCHAR (MAX) NULL,
+    [Parameters]      NVARCHAR (MAX) NULL, -- 存储参数的 JSON Schema
+    [RequireApproval] BIT            CONSTRAINT [DEFAULT_Mcp_RequireApproval] DEFAULT 0 NOT NULL,
 
     CONSTRAINT [PK_McpTool] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_McpTool_McpServer] FOREIGN KEY ([McpServerId]) REFERENCES [dbo].[McpServer] ([Id]) ON DELETE CASCADE, -- 级联删除

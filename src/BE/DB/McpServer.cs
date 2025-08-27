@@ -19,8 +19,6 @@ public partial class McpServer
     [StringLength(300)]
     public string Url { get; set; } = null!;
 
-    public bool RequireApproval { get; set; }
-
     public string? Headers { get; set; }
 
     public DateTime CreatedAt { get; set; }

@@ -7,7 +7,6 @@ public record McpServerListItemDto
     [JsonPropertyName("id")] public required int Id { get; init; }
     [JsonPropertyName("label")] public required string Label { get; init; }
     [JsonPropertyName("url")] public required string Url { get; init; }
-    [JsonPropertyName("requireApproval")] public required bool RequireApproval { get; init; }
     [JsonPropertyName("isPublic")] public required bool IsPublic { get; init; }
     [JsonPropertyName("owner")] public string? Owner { get; init; }
     [JsonPropertyName("createdAt")] public required DateTime CreatedAt { get; init; }

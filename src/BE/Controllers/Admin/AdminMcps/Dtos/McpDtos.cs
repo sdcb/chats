@@ -2,7 +2,7 @@
 
 namespace Chats.BE.Controllers.Admin.AdminMcps.Dtos;
 
-public record McpToolDto
+public record McpToolBasicInfo
 {
     [JsonPropertyName("name")] public required string Name { get; init; }
     [JsonPropertyName("description")] public string? Description { get; init; }

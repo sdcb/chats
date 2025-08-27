@@ -22,6 +22,8 @@ public partial class McpTool
 
     public string? Parameters { get; set; }
 
+    public bool RequireApproval { get; set; }
+
     [ForeignKey("McpServerId")]
     [InverseProperty("McpTools")]
     public virtual McpServer McpServer { get; set; } = null!;
