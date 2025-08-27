@@ -21,7 +21,7 @@ public static class ThinkTagParser
         const string endThinkTag = "\n</think>\n";
 
         // 获取枚举器，用于逐个读取 token
-        var enumerator = tokenYielder.GetAsyncEnumerator(cancellationToken);
+        IAsyncEnumerator<string> enumerator = tokenYielder.GetAsyncEnumerator(cancellationToken);
 
         // 用于在开始时做预读，决定是否开头就是 think 模式
         string? preBuffer = "";

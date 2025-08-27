@@ -67,11 +67,11 @@ public class SessionAuthenticationHandler(
 
     internal static int CountJwtTokenPart(string token, int maxCount)
     {
-        var count = 1;
-        var index = 0;
+        int count = 1;
+        int index = 0;
         while (index < token.Length)
         {
-            var dotIndex = token.IndexOf('.', index);
+            int dotIndex = token.IndexOf('.', index);
             if (dotIndex < 0)
             {
                 break;

@@ -62,6 +62,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
                 MaxOutputTokens = null,
                 ReasoningEffort = 0,
                 SystemPrompt = defaultPrompt.Content,
+                ImageSizeId = 0, // Default to 0 (DBKnownImageSize.Default)
             }
         };
 
@@ -144,6 +145,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         int chatId = idEncryption.DecryptChatId(encryptedChatId);
         ChatSpan? span = await db.ChatSpans
             .Include(x => x.ChatConfig)
+                .ThenInclude(x => x.ChatConfigMcps)
             .FirstOrDefaultAsync(x => x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id && !x.Chat.IsArchived, cancellationToken);
         if (span == null)
         {

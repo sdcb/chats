@@ -65,7 +65,7 @@ internal static class MaskedKeyUtils
                 string? valueString = value.GetString();
 
                 // 对值进行处理
-                var maskedValue = ToMaskedNull(valueString);
+                string? maskedValue = ToMaskedNull(valueString);
 
                 modifiedDict[property.Name] = maskedValue;
             }

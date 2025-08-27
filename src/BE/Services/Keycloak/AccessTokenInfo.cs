@@ -45,7 +45,7 @@ public record AccessTokenInfo
             case 3: output += "="; break;
             default: throw new FormatException("Invalid Base64 URL string.");
         }
-        var base64EncodedBytes = Convert.FromBase64String(output);
+        byte[] base64EncodedBytes = Convert.FromBase64String(output);
         return Encoding.UTF8.GetString(base64EncodedBytes);
     }
 }

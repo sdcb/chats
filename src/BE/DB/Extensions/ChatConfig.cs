@@ -18,6 +18,7 @@ public partial class ChatConfig
             WebSearchEnabled = WebSearchEnabled,
             MaxOutputTokens = MaxOutputTokens,
             ReasoningEffort = ReasoningEffort,
+            ImageSizeId = ImageSizeId,
         };
     }
 
@@ -28,7 +29,14 @@ public partial class ChatConfig
             && Temperature == other.Temperature
             && WebSearchEnabled == other.WebSearchEnabled
             && MaxOutputTokens == other.MaxOutputTokens
-            && ReasoningEffort == other.ReasoningEffort;
+            && ReasoningEffort == other.ReasoningEffort
+            && ImageSizeId == other.ImageSizeId
+            && GetMcpServerIds().SetEquals(other.GetMcpServerIds());
+    }
+
+    private HashSet<int> GetMcpServerIds()
+    {
+        return [.. ChatConfigMcps.Select(x => x.McpServerId)];
     }
 
     /// <summary>
@@ -95,6 +103,29 @@ public partial class ChatConfig
         // 6. ReasoningEffort (byte): 用 1 字节表示
         flagBuffer[0] = ReasoningEffort;
         AppendField(flagBuffer);
+
+        // 7. ImageSizeId (short): 仅当非默认值(0)时才包含以保持向后兼容
+        if (ImageSizeId != 0)
+        {
+            BitConverter.TryWriteBytes(shortBuffer, ImageSizeId);
+            AppendField(shortBuffer);
+        }
+
+        // 8. McpServerIds: 仅当存在关联时才包含以保持向后兼容
+        int[] mcpServerIds = ChatConfigMcps.Select(x => x.McpServerId).OrderBy(x => x).ToArray();
+        if (mcpServerIds.Length > 0)
+        {
+            // 先写入MCP服务器数量
+            BitConverter.TryWriteBytes(intBuffer, mcpServerIds.Length);
+            AppendField(intBuffer);
+            
+            // 然后写入每个MCP服务器ID（已排序确保一致性）
+            foreach (int mcpId in mcpServerIds)
+            {
+                BitConverter.TryWriteBytes(intBuffer, mcpId);
+                AppendField(intBuffer);
+            }
+        }
 
         // 计算 SHA256 哈希，取前 8 字节转换为 long 类型
         byte[] fullHash = incrementalHash.GetHashAndReset();

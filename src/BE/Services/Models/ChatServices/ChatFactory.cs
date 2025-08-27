@@ -95,7 +95,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
                 cco.ReasoningEffortLevel = ChatReasoningEffortLevel.Low;
             }
 
-            await foreach (var seg in cs.ChatStreamedFEProcessed([new UserChatMessage("1+1=?")], cco, ChatExtraDetails.Default, cancellationToken))
+            await foreach (Dtos.InternalChatSegment seg in cs.ChatStreamedFEProcessed([new UserChatMessage("1+1=?")], cco, ChatExtraDetails.Default, cancellationToken))
             {
                 if (seg.IsFromUpstream)
                 {

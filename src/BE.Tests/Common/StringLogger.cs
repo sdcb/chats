@@ -26,7 +26,7 @@ internal class StringLogger<T>(LogLevel logLevel = LogLevel.Trace) : ILogger<T> 
 
         if (formatter == null) throw new ArgumentNullException(nameof(formatter));
 
-        var message = formatter(state, exception);
+        string message = formatter(state, exception);
         _logBuilder.AppendLine($"[{logLevel}] {message}");
 
         if (exception != null)

@@ -270,7 +270,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
         {
             if (assistantChatMessage.ToolCalls != null && assistantChatMessage.ToolCalls.Count > 0)
             {
-                foreach (var toolCall in assistantChatMessage.ToolCalls)
+                foreach (ChatToolCall? toolCall in assistantChatMessage.ToolCalls)
                 {
                     yield return ResponseItem.CreateFunctionCallItem(toolCall.Id, toolCall.FunctionName, toolCall.FunctionArguments);
                 }

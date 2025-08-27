@@ -12,7 +12,7 @@ public class PartialBufferedStreamTest
         byte[] data = Encoding.UTF8.GetBytes("This is a test stream.");
         using MemoryStream baseStream = new(data);
         int seekBytes = 10;
-        var partialStream = new PartialBufferedStream(baseStream, seekBytes);
+        PartialBufferedStream partialStream = new PartialBufferedStream(baseStream, seekBytes);
 
         // Act
         byte[] seekedBytes = partialStream.SeekedBytes;
@@ -29,7 +29,7 @@ public class PartialBufferedStreamTest
         byte[] data = Encoding.UTF8.GetBytes("This is a test stream.");
         using MemoryStream baseStream = new(data);
         int seekBytes = 10;
-        var partialStream = new PartialBufferedStream(baseStream, seekBytes);
+        PartialBufferedStream partialStream = new PartialBufferedStream(baseStream, seekBytes);
 
         // Act
         byte[] buffer = new byte[data.Length];
@@ -47,7 +47,7 @@ public class PartialBufferedStreamTest
         byte[] data = Encoding.UTF8.GetBytes("Short");
         using MemoryStream baseStream = new(data);
         int seekBytes = 10; // More than stream length
-        var partialStream = new PartialBufferedStream(baseStream, seekBytes);
+        PartialBufferedStream partialStream = new PartialBufferedStream(baseStream, seekBytes);
 
         // Act
         byte[] seekedBytes = partialStream.SeekedBytes;
@@ -70,7 +70,7 @@ public class PartialBufferedStreamTest
         byte[] data = Encoding.UTF8.GetBytes("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
         using MemoryStream baseStream = new(data);
         int seekBytes = 5;
-        var partialStream = new PartialBufferedStream(baseStream, seekBytes);
+        PartialBufferedStream partialStream = new PartialBufferedStream(baseStream, seekBytes);
 
         // Act
         byte[] buffer = new byte[10];
@@ -88,7 +88,7 @@ public class PartialBufferedStreamTest
         byte[] data = Encoding.UTF8.GetBytes("Hello World");
         using MemoryStream baseStream = new(data);
         int seekBytes = 5;
-        var partialStream = new PartialBufferedStream(baseStream, seekBytes);
+        PartialBufferedStream partialStream = new PartialBufferedStream(baseStream, seekBytes);
 
         // Act
         byte[] buffer = new byte[100];
@@ -105,7 +105,7 @@ public class PartialBufferedStreamTest
         // Arrange
         byte[] data = Encoding.UTF8.GetBytes("Test data");
         using MemoryStream baseStream = new(data);
-        var partialStream = new PartialBufferedStream(baseStream, 4);
+        PartialBufferedStream partialStream = new PartialBufferedStream(baseStream, 4);
 
         // Act & Assert
         Assert.Throws<NotSupportedException>(() => partialStream.SetLength(100));

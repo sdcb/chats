@@ -7,7 +7,7 @@ internal class DictionaryConfiguration(Dictionary<string, string> data) : IConfi
 {
     public string? this[string key]
     {
-        get => data.TryGetValue(key, out var value) ? value : null;
+        get => data.TryGetValue(key, out string? value) ? value : null;
         set => data[key] = value ?? throw new ArgumentNullException(nameof(value));
     }
 

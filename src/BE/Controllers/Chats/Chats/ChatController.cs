@@ -638,7 +638,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             {
                 try
                 {
-                    await foreach (var item in channel.Reader.ReadAllAsync())
+                    await foreach (T? item in channel.Reader.ReadAllAsync())
                     {
                         await outputChannel.Writer.WriteAsync(item);
                     }

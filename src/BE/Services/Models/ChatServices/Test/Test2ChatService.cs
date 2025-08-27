@@ -166,7 +166,7 @@ public class Test2ChatService(Model model) : ChatService(model)
 
     internal static IEnumerable<string> UnicodeCharacterSplit(string input)
     {
-        for (var i = 0; i < input.Length; ++i)
+        for (int i = 0; i < input.Length; ++i)
         {
             if (char.IsHighSurrogate(input[i]))
             {
