@@ -1,0 +1,254 @@
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+
+import useTranslation from '@/hooks/useTranslation';
+
+import { McpServerListItemDto, McpServerDetailsDto } from '@/types/clientApis';
+
+import DeletePopover from '@/pages/home/_components/Popover/DeletePopover';
+
+import {
+  IconPlus,
+  IconSearch,
+  IconEdit,
+  IconEye,
+  IconRefresh,
+} from '@/components/Icons';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+
+import McpModal from './McpTab/McpModal';
+
+import {
+  getMcpServers,
+  getMcpServerDetails,
+  createMcpServer,
+  updateMcpServer,
+  deleteMcpServer,
+} from '@/apis/clientApis';
+
+const McpTab = () => {
+  const { t } = useTranslation();
+  const [mcpServers, setMcpServers] = useState<McpServerListItemDto[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredServers, setFilteredServers] = useState<McpServerListItemDto[]>([]);
+  const [selectedServer, setSelectedServer] = useState<McpServerDetailsDto | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [isCreateMode, setIsCreateMode] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchMcpServers();
+  }, []);
+
+  useEffect(() => {
+    const filtered = mcpServers.filter(
+      (server) =>
+        server.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        server.url.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredServers(filtered);
+  }, [mcpServers, searchTerm]);
+
+  const fetchMcpServers = async () => {
+    try {
+      const data = await getMcpServers();
+      setMcpServers(data);
+    } catch (error) {
+      console.error('Failed to fetch MCP servers:', error);
+      toast.error(t('Failed to fetch MCP servers'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateServer = () => {
+    setSelectedServer(null);
+    setIsCreateMode(true);
+    setShowModal(true);
+  };
+
+  const handleEditServer = async (serverId: number) => {
+    try {
+      const serverDetails = await getMcpServerDetails(serverId);
+      setSelectedServer(serverDetails);
+      setIsCreateMode(false);
+      setShowModal(true);
+    } catch (error) {
+      console.error('Failed to fetch server details:', error);
+      toast.error(t('Failed to fetch server details'));
+    }
+  };
+
+  const handleViewServer = async (serverId: number) => {
+    try {
+      const serverDetails = await getMcpServerDetails(serverId);
+      setSelectedServer(serverDetails);
+      setIsCreateMode(false);
+      setShowModal(true);
+    } catch (error) {
+      console.error('Failed to fetch server details:', error);
+      toast.error(t('Failed to fetch server details'));
+    }
+  };
+
+  const handleDeleteServer = async (serverId: number) => {
+    try {
+      await deleteMcpServer(serverId);
+      toast.success(t('MCP server deleted successfully'));
+      fetchMcpServers();
+    } catch (error) {
+      console.error('Failed to delete MCP server:', error);
+      toast.error(t('Failed to delete MCP server'));
+    }
+  };
+
+  const handleSaveServer = async (serverData: any) => {
+    try {
+      if (isCreateMode) {
+        await createMcpServer(serverData);
+        toast.success(t('MCP server created successfully'));
+      } else if (selectedServer) {
+        await updateMcpServer(selectedServer.id, serverData);
+        toast.success(t('MCP server updated successfully'));
+      }
+      setShowModal(false);
+      fetchMcpServers();
+    } catch (error) {
+      console.error('Failed to save MCP server:', error);
+      toast.error(t('Failed to save MCP server'));
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">{t('MCP Management')}</h2>
+        <div className="flex items-center gap-2">
+          <Button onClick={fetchMcpServers} variant="outline" size="sm">
+            <IconRefresh size={16} className="mr-2" />
+            {t('Refresh')}
+          </Button>
+          <Button onClick={handleCreateServer}>
+            <IconPlus size={16} className="mr-2" />
+            {t('Add MCP Server')}
+          </Button>
+        </div>
+      </div>
+
+      <Card className="p-4">
+        <div className="flex items-center space-x-2 mb-4">
+          <IconSearch size={16} />
+          <Input
+            placeholder={t('Search MCP servers...')}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1"
+          />
+        </div>
+
+        {loading ? (
+          <div className="text-center py-8">
+            <p>{t('Loading...')}</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('MCP Label')}</TableHead>
+                  <TableHead>{t('MCP URL')}</TableHead>
+                  <TableHead>{t('MCP Status')}</TableHead>
+                  <TableHead>{t('MCP Tools')}</TableHead>
+                  <TableHead>{t('MCP Owner')}</TableHead>
+                  <TableHead>{t('MCP Created')}</TableHead>
+                  <TableHead>{t('Last Fetch')}</TableHead>
+                  <TableHead>{t('MCP Actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredServers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8">
+                      {searchTerm ? t('No MCP servers found') : t('No MCP servers yet')}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredServers.map((server) => (
+                    <TableRow key={server.id}>
+                      <TableCell className="font-medium">{server.label}</TableCell>
+                      <TableCell className="max-w-xs truncate" title={server.url}>
+                        {server.url}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={server.isPublic ? 'default' : 'secondary'}>
+                          {server.isPublic ? t('Public') : t('Private')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{server.toolsCount}</Badge>
+                      </TableCell>
+                      <TableCell>{server.owner || t('MCP System')}</TableCell>
+                      <TableCell>{formatDate(server.createdAt)}</TableCell>
+                      <TableCell>
+                        {server.lastFetchAt ? formatDate(server.lastFetchAt) : t('Never')}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewServer(server.id)}
+                          >
+                            <IconEye size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditServer(server.id)}
+                          >
+                            <IconEdit size={16} />
+                          </Button>
+                          <DeletePopover
+                            onDelete={() => handleDeleteServer(server.id)}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </Card>
+
+      {showModal && (
+        <McpModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          onSave={handleSaveServer}
+          server={selectedServer}
+          isCreateMode={isCreateMode}
+        />
+      )}
+    </div>
+  );
+};
+
+export default McpTab;

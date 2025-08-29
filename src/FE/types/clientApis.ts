@@ -319,3 +319,43 @@ export interface GetUserFilesResult {
   contentType: string;
   url: string;
 }
+
+// MCP related types
+export interface McpToolBasicInfo {
+  name: string;
+  description?: string;
+  parameters?: string;
+}
+
+export interface McpToolDto extends McpToolBasicInfo {
+  requireApproval: boolean;
+}
+
+export interface McpServerListItemDto {
+  id: number;
+  label: string;
+  url: string;
+  isPublic: boolean;
+  owner?: string;
+  createdAt: string;
+  lastFetchAt?: string;
+  toolsCount: number;
+}
+
+export interface McpServerDetailsDto extends McpServerListItemDto {
+  headers?: string;
+  tools: McpToolDto[];
+}
+
+export interface UpdateMcpServerRequest {
+  label: string;
+  url: string;
+  headers?: string;
+  isPublic: boolean;
+  tools: McpToolDto[];
+}
+
+export interface FetchToolsRequest {
+  serverUrl: string;
+  headers?: string;
+}

@@ -11,6 +11,7 @@ import {
   IconMoneybag,
   IconSettings,
   IconUser,
+  IconRobot,
 } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,6 +20,7 @@ import AccountTab from './_components/tabs/AccountTab';
 import ApiKeysTab from './_components/tabs/ApiKeysTab';
 import GeneralTab from './_components/tabs/GeneralTab';
 import PromptsTab from './_components/tabs/PromptsTab';
+import McpTab from './_components/tabs/McpTab';
 import UsageRecordsTab from './_components/tabs/UsageRecordsTab';
 
 const SettingsPage = () => {
@@ -69,6 +71,12 @@ const SettingsPage = () => {
             <IconBulb /> {t('Prompts')}
           </TabsTrigger>
           <TabsTrigger
+            value="mcp"
+            className="flex-1 justify-center items-center sm:flex-none gap-1"
+          >
+            <IconRobot /> {t('MCP')}
+          </TabsTrigger>
+          <TabsTrigger
             value="api-keys"
             className="flex-1 items-center sm:flex-none gap-1"
           >
@@ -96,6 +104,9 @@ const SettingsPage = () => {
           </TabsContent>
           <TabsContent value="prompts" className="m-0 h-full">
             <PromptsTab />
+          </TabsContent>
+          <TabsContent value="mcp" className="m-0 h-full">
+            <McpTab />
           </TabsContent>
           <TabsContent value="api-keys" className="m-0 h-full">
             <ApiKeysTab />

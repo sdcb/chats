@@ -40,6 +40,11 @@ import {
   PutResponseMessageEditInPlaceParams,
   SingInParams,
   SingInResult,
+  McpServerListItemDto,
+  McpServerDetailsDto,
+  UpdateMcpServerRequest,
+  FetchToolsRequest,
+  McpToolBasicInfo,
 } from '@/types/clientApis';
 import { SiteInfoConfig } from '@/types/config';
 import { IChatGroup } from '@/types/group';
@@ -521,5 +526,36 @@ export const getUserFiles = (params: GetUserFilesParams) => {
   return fetchServer.get<PageResult<GetUserFilesResult[]>>('/api/file', {
     params: params,
   });
+};
+
+// MCP APIs
+export const getMcpServers = (): Promise<McpServerListItemDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get('/api/mcp');
+};
+
+export const getMcpServerDetails = (mcpId: number): Promise<McpServerDetailsDto> => {
+  const fetchService = useFetch();
+  return fetchService.get(`/api/mcp/${mcpId}`);
+};
+
+export const createMcpServer = (params: UpdateMcpServerRequest): Promise<McpServerDetailsDto> => {
+  const fetchService = useFetch();
+  return fetchService.post('/api/mcp', { body: params });
+};
+
+export const updateMcpServer = (mcpId: number, params: UpdateMcpServerRequest): Promise<McpServerDetailsDto> => {
+  const fetchService = useFetch();
+  return fetchService.put(`/api/mcp/${mcpId}`, { body: params });
+};
+
+export const deleteMcpServer = (mcpId: number) => {
+  const fetchService = useFetch();
+  return fetchService.delete(`/api/mcp/${mcpId}`);
+};
+
+export const fetchMcpTools = (params: FetchToolsRequest): Promise<McpToolBasicInfo[]> => {
+  const fetchService = useFetch();
+  return fetchService.post('/api/mcp/fetch-tools', { body: params });
 };
 
