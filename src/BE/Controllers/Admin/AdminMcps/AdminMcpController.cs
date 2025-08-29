@@ -2,6 +2,7 @@
 using Chats.BE.Controllers.Common;
 using Chats.BE.DB;
 using Chats.BE.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Client;
@@ -9,7 +10,7 @@ using System.Text.Json;
 
 namespace Chats.BE.Controllers.Admin.AdminMcps;
 
-[Route("api/mcp")]
+[Route("api/mcp"), Authorize]
 public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
 {
     [HttpGet]
@@ -22,7 +23,9 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
         }
 
         McpServerListItemDto[] data = await query
-            .OrderByDescending(x => x.Id)
+            .OrderByDescending(x => x.UserMcps.Any(um => um.UserId == currentUser.Id)) // user's own first
+            .ThenByDescending(x => x.UserMcps.Where(um => um.UserId == currentUser.Id).Select(um => um.Id).FirstOrDefault()) // then by assignment time
+            .ThenByDescending(x => x.Id)
             .Select(x => new McpServerListItemDto
             {
                 Id = x.Id,
