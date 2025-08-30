@@ -16,6 +16,7 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 public class ImageGenerationService(Model model, ImageClient imageClient) : ChatService(model)
 {
     private DBReasoningEffort _reasoningEffort;
+    private DBKnownImageSize _imageSize;
 
     public ImageGenerationService(Model model, Uri? suggestedUri = null, params PipelinePolicy[] perCallPolicies) : this(model, CreateImageGenerationAPI(model, suggestedUri, perCallPolicies))
     {
@@ -112,7 +113,6 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
             //        }, cancellationToken);
             //}
 
-
             MultiPartFormDataBinaryContent form = new();
             Dictionary<Uri, HttpResponseMessage> downloadedFiles = (await Task.WhenAll(images
                 .Where(x => x.ImageUri != null)
@@ -146,14 +146,28 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
             form.Add(prompt, "prompt");
             form.Add(options.MaxOutputTokenCount ?? 1, "n");
             form.Add(Model.ApiModelId, "model");
-            if (prompt.Contains("3:2"))
+            if (_imageSize != DBKnownImageSize.Default)
             {
-                form.Add("1536x1024", "size");
+                form.Add(_imageSize switch
+                {
+                    DBKnownImageSize.W1024xH1024 => "1024x1024",
+                    DBKnownImageSize.W1536xH1024 => "1536x1024",
+                    DBKnownImageSize.W1024xH1536 => "1024x1536",
+                    _ => throw new ArgumentOutOfRangeException(nameof(_imageSize), _imageSize, null)
+                }, "size");
             }
-            else if (prompt.Contains("2:3"))
+            else
             {
-                form.Add("1024x1536", "size");
+                if (prompt.Contains("3:2"))
+                {
+                    form.Add("1536x1024", "size");
+                }
+                else if (prompt.Contains("2:3"))
+                {
+                    form.Add("1024x1536", "size");
+                }
             }
+            
             if (options.EndUserId != null)
             {
                 form.Add(options.EndUserId, "user");
@@ -237,5 +251,10 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
     protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
     {
         _reasoningEffort = reasoningEffort;
+    }
+
+    protected override void SetImageSize(ChatCompletionOptions options, DBKnownImageSize imageSize)
+    {
+        _imageSize = imageSize;
     }
 }

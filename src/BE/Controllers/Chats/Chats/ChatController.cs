@@ -415,13 +415,10 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         }
 
         ChatCompletionOptions cco = chatSpan.ToChatCompletionOptions(currentUser.Id, chatSpan, userModel);
-        IMcpClient mcpClient = await McpClientFactory.CreateAsync(new SseClientTransport(new SseClientTransportOptions
+        foreach (McpTool tool in chatSpan.ChatConfig.ChatConfigMcps.SelectMany(x => x.McpServer.McpTools))
         {
-            Endpoint = new Uri("https://csharp.starworks.cc/mcp"),
-        }), cancellationToken: cancellationToken);
-        await foreach (McpClientTool tool in mcpClient.EnumerateToolsAsync(cancellationToken: cancellationToken))
-        {
-            cco.Tools.Add(ChatTool.CreateFunctionTool(tool.Name, tool.Description, BinaryData.FromString(tool.JsonSchema.GetRawText())));
+            string toolNameWithServerIdPrefix = $"{tool.McpServerId}_{tool.ToolName}";
+            cco.Tools.Add(ChatTool.CreateFunctionTool(toolNameWithServerIdPrefix, tool.Description, tool.Parameters == null ? null : BinaryData.FromString(tool.Parameters)));
         }
 
         ChatTurn turn = new()
@@ -450,6 +447,22 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     .Where(x => x.StepContentToolCall != null)
                     .Select(x => x.StepContentToolCall!))
                 {
+                    int serverId = int.Parse(call.Name!.Split('_', 2)[0]);
+                    McpServer mcpServer = chatSpan.ChatConfig.ChatConfigMcps
+                        .Where(x => x.McpServerId == serverId)
+                        .Select(x => x.McpServer)
+                        .FirstOrDefault() ?? throw new InvalidOperationException($"MCP Server not found for id: {serverId}");
+                    string? headers = chatSpan.ChatConfig.ChatConfigMcps
+                        .FirstOrDefault(x => x.McpServerId == serverId)
+                        ?.Headers ?? mcpServer.Headers;
+                    logger.LogInformation("Using MCP Server {mcpServer.Label} ({mcpServer.Url}) for tool call {call.Name} with headers: {headers}",
+                        mcpServer.Label, mcpServer.Url, call.Name, headers);
+                    IMcpClient mcpClient = await McpClientFactory.CreateAsync(new SseClientTransport(new SseClientTransportOptions
+                    {
+                        Endpoint = new Uri(mcpServer.Url),
+                        AdditionalHeaders = headers == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(headers),
+                    }), cancellationToken: cancellationToken);
+
                     logger.LogInformation("Calling tool: {call.Name}, parameters: {call.Parameters}", call.Name, call.Parameters);
                     CallToolResult result = await mcpClient.CallToolAsync(call.Name, JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Parameters)!, new ProgressReporter(pnv =>
                     {
@@ -502,7 +515,8 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             {
                 TimezoneOffset = req.TimezoneOffset,
                 WebSearchEnabled = chatSpan.ChatConfig.WebSearchEnabled,
-                ReasoningEffort = (DBReasoningEffort)chatSpan.ChatConfig.ReasoningEffort
+                ReasoningEffort = (DBReasoningEffort)chatSpan.ChatConfig.ReasoningEffort,
+                ImageSize = (DBKnownImageSize)chatSpan.ChatConfig.ImageSizeId,
             };
 
             InChatContext icc = new(firstTick);

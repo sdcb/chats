@@ -10,6 +10,8 @@ public record ChatExtraDetails
 
     public DBReasoningEffort ReasoningEffort { get; init; }
 
+    public DBKnownImageSize ImageSize { get; init; }
+
     public DateTime Now => DateTime.UtcNow.AddMinutes(TimezoneOffset);
 
     public static ChatExtraDetails Default => new();

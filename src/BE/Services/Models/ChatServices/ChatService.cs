@@ -70,6 +70,11 @@ public abstract partial class ChatService : IDisposable
             SetReasoningEffort(options, feOptions.ReasoningEffort);
         }
 
+        if (feOptions.ImageSize != DBKnownImageSize.Default)
+        {
+            SetImageSize(options, feOptions.ImageSize);
+        }
+
         if (!Model.ModelReference.AllowSystemPrompt)
         {
             // Remove system prompt
@@ -97,6 +102,12 @@ public abstract partial class ChatService : IDisposable
         options.Temperature = Model.ModelReference.UnnormalizeTemperature(options.Temperature);
 
         return filteredMessage;
+    }
+
+    protected virtual void SetImageSize(ChatCompletionOptions options, DBKnownImageSize imageSize)
+    {
+        // chat service not enable image size by default, prompt a warning
+        Console.WriteLine($"{Model.ModelReference.Name} chat service not support image generation.");
     }
 
     protected virtual void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
