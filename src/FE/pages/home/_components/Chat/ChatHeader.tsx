@@ -56,6 +56,7 @@ const ChatHeader = () => {
         reasoningEffort: data?.reasoningEffort,
         systemPrompt: defaultPrompt?.content!,
         imageSize: data?.imageSize || 0,
+        mcps: data?.mcps || [],
       });
       chatDispatch(setSelectedChat(selectedChat));
     });

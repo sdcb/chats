@@ -1,16 +1,18 @@
 import { useContext, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { DEFAULT_TEMPERATURE } from '@/types/chat';
-import { ChatSpanDto } from '@/types/clientApis';
+import { ChatSpanDto, ChatSpanMcp } from '@/types/clientApis';
 import { Prompt } from '@/types/prompt';
 
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
 import { IconChevronDown, IconChevronRight } from '@/components/Icons';
 import ImageSizeRadio from '@/components/ImageSizeRadio/ImageSizeRadio';
+import McpSelector from '@/components/McpSelector/McpSelector';
 import ModelParams from '@/components/ModelParams/ModelParams';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 import { Button } from '@/components/ui/button';
@@ -29,7 +31,7 @@ import ChatModelInfo from './ChatModelInfo';
 import EnableNetworkSearch from './EnableNetworkSearch';
 import SystemPrompt from './SystemPrompt';
 
-import { putChatSpan } from '@/apis/clientApis';
+import { putChatSpan, getMcpServers } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -49,12 +51,32 @@ const ChatModelSettingModal = (props: Props) => {
   const [span, setSpan] = useState<ChatSpanDto>();
   const [model, setModel] = useState<AdminModelDto>();
   const [isShowAdvParams, setIsShowAdvParams] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [mcpServersLoaded, setMcpServersLoaded] = useState(false);
+
+  // JSON 验证函数
+  const validateJSON = (jsonString: string): boolean => {
+    if (!jsonString.trim()) return true; // 空字符串认为是有效的
+    try {
+      JSON.parse(jsonString);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   useEffect(() => {
     const sp = selectedChat.spans.find((x) => x.spanId === spanId)!;
     setSpan(sp);
     setModel(modelMap[sp?.modelId]);
     setIsShowAdvParams(false);
+    setMcpServersLoaded(false);
+    // 加载MCP服务器数据
+    if (isOpen) {
+      getMcpServers().then(() => {
+        setMcpServersLoaded(true);
+      }).catch(console.error);
+    }
   }, [isOpen]);
 
   const { t } = useTranslation();
@@ -99,6 +121,10 @@ const ChatModelSettingModal = (props: Props) => {
     setSpan({ ...span!, imageSize: Number(value) });
   };
 
+  const onChangeMcps = (mcps: ChatSpanMcp[]) => {
+    setSpan({ ...span!, mcps });
+  };
+
   const onChangeMaxOutputTokens = (value: number | null) => {
     setSpan({ ...span!, maxOutputTokens: value });
   };
@@ -110,23 +136,51 @@ const ChatModelSettingModal = (props: Props) => {
     setSpan({ ...span!, enabled: value });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!span) return;
-    putChatSpan(span!.spanId, selectedChat.id, {
-      enabled: span.enabled,
-      modelId: span.modelId,
-      systemPrompt: span.systemPrompt,
-      maxOutputTokens: span?.maxOutputTokens || null,
-      temperature: span?.temperature || null,
-      reasoningEffort: span.reasoningEffort,
-      webSearchEnabled: !!span.webSearchEnabled,
-      imageSize: span.imageSize,
-    }).then(() => {
+
+    // 验证MCP工具设置
+    if (span.mcps && span.mcps.length > 0) {
+      for (const mcp of span.mcps) {
+        // 验证工具名是否为空
+        if (!mcp.id || mcp.id === 0) {
+          toast.error(t('All MCP tools must have a valid tool name'));
+          return;
+        }
+        
+        // 验证自定义headers是否为有效的JSON
+        if (mcp.customHeaders && !validateJSON(mcp.customHeaders)) {
+          toast.error(t('Invalid JSON format in MCP custom headers'));
+          return;
+        }
+      }
+    }
+
+    setIsLoading(true);
+    try {
+      await putChatSpan(span!.spanId, selectedChat.id, {
+        enabled: span.enabled,
+        modelId: span.modelId,
+        systemPrompt: span.systemPrompt,
+        maxOutputTokens: span?.maxOutputTokens || null,
+        temperature: span?.temperature || null,
+        reasoningEffort: span.reasoningEffort,
+        webSearchEnabled: !!span.webSearchEnabled,
+        imageSize: span.imageSize,
+        mcps: span.mcps,
+      });
+      
       const spans = selectedChat.spans.map((s) =>
         s.spanId === spanId ? { ...span! } : s,
       );
       chatDispatch(setSelectedChat({ ...selectedChat, spans }));
-    });
+      onClose();
+    } catch (error) {
+      console.error('Failed to save chat span:', error);
+      toast.error(t('Failed to save settings'));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -192,6 +246,14 @@ const ChatModelSettingModal = (props: Props) => {
                   value={`${span?.imageSize}`}
                   onValueChange={(value) => {
                     onChangeImageSize(value);
+                  }}
+                />
+              )}
+              {model?.modelReferenceName !== 'gpt-image-1' && mcpServersLoaded && (
+                <McpSelector
+                  value={span?.mcps || []}
+                  onValueChange={(mcps) => {
+                    onChangeMcps(mcps);
                   }}
                 />
               )}
@@ -288,12 +350,12 @@ const ChatModelSettingModal = (props: Props) => {
             </Button>
             <Button
               variant="default"
+              disabled={isLoading}
               onClick={() => {
                 handleSave();
-                onClose();
               }}
             >
-              {t('Save')}
+              {isLoading ? t('Saving...') : t('Save')}
             </Button>
           </div>
         </DialogFooter>

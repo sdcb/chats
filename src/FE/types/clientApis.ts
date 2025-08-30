@@ -69,6 +69,11 @@ export interface ChatResult {
   tags: string[];
 }
 
+export interface ChatSpanMcp {
+  id: number;
+  customHeaders?: string;
+}
+
 export interface ChatSpanDto {
   spanId: number;
   enabled: boolean;
@@ -81,6 +86,7 @@ export interface ChatSpanDto {
   reasoningEffort: number;
   maxOutputTokens: number | null;
   imageSize: number;
+  mcps: ChatSpanMcp[];
 }
 
 export interface PostChatParams {
@@ -142,6 +148,7 @@ export interface PostUserChatSpanResult {
   reasoningEffort: number;
   maxOutputTokens: number;
   imageSize: number;
+  mcps: ChatSpanMcp[];
 }
 
 interface GetUserChatResult {
@@ -238,6 +245,7 @@ export interface PutChatSpanParams {
   maxOutputTokens: number | null;
   reasoningEffort?: number | null;
   imageSize?: number;
+  mcps?: ChatSpanMcp[];
 }
 
 export interface GetChatPresetResult {
@@ -261,6 +269,7 @@ export interface PutChatPresetSpanParams {
   maxOutputTokens: number | null;
   reasoningEffort?: number | null;
   imageSize?: number;
+  mcps?: ChatSpanMcp[];
 }
 
 export interface GetUsageParams {

@@ -27,6 +27,10 @@
   "Creative": "随性",
   "Reasoning Effort": "推理努力",
   "Image Size": "图片尺寸",
+  "MCP Tools": "MCP工具",
+  "Tool Name": "工具名",
+  "Custom Headers (JSON)": "自定义请求头(JSON)",
+  "Select Tool": "选择工具",
   "Low": "低",
   "Medium": "中",
   "High": "高",
@@ -495,5 +499,9 @@
   "Refresh": "刷新",
   "Label": "标签",
   "Tools": "工具列表",
-  "Deleting...": "删除中..."
+  "Deleting...": "删除中...",
+  "All MCP tools must have a valid tool name": "所有MCP工具必须有有效的工具名",
+  "Invalid JSON format in MCP custom headers": "MCP自定义请求头的JSON格式无效",
+  "Failed to save settings": "保存设置失败",
+  "Failed to save preset": "保存预设失败"
 }

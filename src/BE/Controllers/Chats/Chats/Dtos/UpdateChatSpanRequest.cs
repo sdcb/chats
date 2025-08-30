@@ -139,7 +139,7 @@ public record UpdateChatSpanRequest
             {
                 ChatConfig = config,
                 McpServerId = mcpServerId,
-                Headers = Mcps[mcpServerId].CustomHeaders,
+                Headers = Mcps.First(x => x.Id == mcpServerId).CustomHeaders,
             });
         }
         

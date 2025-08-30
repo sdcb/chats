@@ -5,7 +5,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { DEFAULT_TEMPERATURE, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
-import { ChatSpanDto, GetChatPresetResult } from '@/types/clientApis';
+import { ChatSpanDto, ChatSpanMcp, GetChatPresetResult } from '@/types/clientApis';
 import { Prompt } from '@/types/prompt';
 
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
@@ -16,6 +16,7 @@ import {
   IconPlus,
 } from '@/components/Icons';
 import ImageSizeRadio from '@/components/ImageSizeRadio/ImageSizeRadio';
+import McpSelector from '@/components/McpSelector/McpSelector';
 import ModelParams from '@/components/ModelParams/ModelParams';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,7 @@ import ChatModelInfo from './ChatModelInfo';
 import EnableNetworkSearch from './EnableNetworkSearch';
 import SystemPrompt from './SystemPrompt';
 
-import { postChatPreset, putChatPreset } from '@/apis/clientApis';
+import { postChatPreset, putChatPreset, getMcpServers } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -48,6 +49,19 @@ const ChatPresetModal = (props: Props) => {
   const [name, setName] = useState(chatPreset?.name);
   const [isShowAdvParams, setIsShowAdvParams] = useState(false);
   const [presetSpanCount, setPresetSpanCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [mcpServersLoaded, setMcpServersLoaded] = useState(false);
+
+  // JSON 验证函数
+  const validateJSON = (jsonString: string): boolean => {
+    if (!jsonString.trim()) return true; // 空字符串认为是有效的
+    try {
+      JSON.parse(jsonString);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   useEffect(() => {
     if (chatPreset) {
@@ -63,6 +77,13 @@ const ChatPresetModal = (props: Props) => {
     }
     setPresetSpanCount(chatPreset?.spans.length || 0);
     setIsShowAdvParams(false);
+    setMcpServersLoaded(false);
+    // 加载MCP服务器数据
+    if (isOpen) {
+      getMcpServers().then(() => {
+        setMcpServersLoaded(true);
+      }).catch(console.error);
+    }
   }, [isOpen]);
 
   const { t } = useTranslation();
@@ -84,6 +105,7 @@ const ChatPresetModal = (props: Props) => {
             reasoningEffort: 0,
             webSearchEnabled: false,
             imageSize: 0,
+            mcps: [],
           });
           return s;
         }
@@ -92,11 +114,31 @@ const ChatPresetModal = (props: Props) => {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name?.trim()) {
       toast.error(t('Please enter a name'));
       return;
     }
+
+    // 验证所有spans的MCP工具设置
+    for (const span of spans) {
+      if (span.mcps && span.mcps.length > 0) {
+        for (const mcp of span.mcps) {
+          // 验证工具名是否为空
+          if (!mcp.id || mcp.id === 0) {
+            toast.error(t('All MCP tools must have a valid tool name'));
+            return;
+          }
+          
+          // 验证自定义headers是否为有效的JSON
+          if (mcp.customHeaders && !validateJSON(mcp.customHeaders)) {
+            toast.error(t('Invalid JSON format in MCP custom headers'));
+            return;
+          }
+        }
+      }
+    }
+
     const params = {
       name: name!,
       spans: spans.map((span) => ({
@@ -108,16 +150,23 @@ const ChatPresetModal = (props: Props) => {
         reasoningEffort: span.reasoningEffort,
         webSearchEnabled: !!span.webSearchEnabled,
         imageSize: span.imageSize,
+        mcps: span.mcps,
       })),
     };
-    if (chatPreset) {
-      putChatPreset(chatPreset.id, params).then(() => {
-        onClose();
-      });
-    } else {
-      postChatPreset(params).then(() => {
-        onClose();
-      });
+
+    setIsLoading(true);
+    try {
+      if (chatPreset) {
+        await putChatPreset(chatPreset.id, params);
+      } else {
+        await postChatPreset(params);
+      }
+      onClose();
+    } catch (error) {
+      console.error('Failed to save chat preset:', error);
+      toast.error(t('Failed to save preset'));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -137,6 +186,7 @@ const ChatPresetModal = (props: Props) => {
       reasoningEffort: 0,
       webSearchEnabled: false,
       imageSize: 0,
+      mcps: [],
     };
     setSpans([...spans, span]);
     setSelectedSpan(span);
@@ -242,6 +292,24 @@ const ChatPresetModal = (props: Props) => {
           const s = {
             ...span!,
             imageSize: Number(value),
+          };
+          setSelectedSpan({
+            ...s,
+          });
+          return s;
+        }
+        return span;
+      });
+    });
+  };
+
+  const onChangeMcps = (mcps: ChatSpanMcp[]) => {
+    setSpans((prev) => {
+      return prev.map((span) => {
+        if (selectedSpan?.spanId === span.spanId) {
+          const s = {
+            ...span!,
+            mcps,
           };
           setSelectedSpan({
             ...s,
@@ -453,6 +521,14 @@ const ChatPresetModal = (props: Props) => {
                         }}
                       />
                     )}
+                    {modelMap[selectedSpan.modelId]?.modelReferenceName !== 'gpt-image-1' && mcpServersLoaded && (
+                      <McpSelector
+                        value={selectedSpan?.mcps || []}
+                        onValueChange={(mcps) => {
+                          onChangeMcps(mcps);
+                        }}
+                      />
+                    )}
                     <div className="flex flex-col gap-4">
                       <div
                         className="flex justify-between"
@@ -552,12 +628,12 @@ const ChatPresetModal = (props: Props) => {
           <div className="flex gap-4 justify-end items-center">
             <Button
               variant="default"
-              disabled={presetSpanCount === 0}
+              disabled={presetSpanCount === 0 || isLoading}
               onClick={() => {
                 handleSave();
               }}
             >
-              {t('Save')}
+              {isLoading ? t('Saving...') : t('Save')}
             </Button>
           </div>
         </DialogFooter>
