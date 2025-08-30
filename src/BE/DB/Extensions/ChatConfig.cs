@@ -111,19 +111,25 @@ public partial class ChatConfig
             AppendField(shortBuffer);
         }
 
-        // 8. McpServerIds: 仅当存在关联时才包含以保持向后兼容
-        int[] mcpServerIds = ChatConfigMcps.Select(x => x.McpServerId).OrderBy(x => x).ToArray();
-        if (mcpServerIds.Length > 0)
+        // 8. McpServers: 仅当存在关联时才包含以保持向后兼容
+        if (ChatConfigMcps.Count > 0)
         {
             // 先写入MCP服务器数量
-            BitConverter.TryWriteBytes(intBuffer, mcpServerIds.Length);
+            BitConverter.TryWriteBytes(intBuffer, ChatConfigMcps.Count);
             AppendField(intBuffer);
-            
-            // 然后写入每个MCP服务器ID（已排序确保一致性）
-            foreach (int mcpId in mcpServerIds)
+
+            // 然后写入每个MCP服务器（已排序确保一致性）
+            foreach (ChatConfigMcp mcp in ChatConfigMcps.OrderBy(x => x.McpServerId))
             {
-                BitConverter.TryWriteBytes(intBuffer, mcpId);
+                BitConverter.TryWriteBytes(intBuffer, mcp.McpServerId);
                 AppendField(intBuffer);
+
+                if (mcp.Headers != null)
+                {
+                    ReadOnlySpan<char> charSpan = mcp.Headers.AsSpan();
+                    ReadOnlySpan<byte> charBytes = MemoryMarshal.AsBytes(charSpan);
+                    AppendField(charBytes);
+                }
             }
         }
 
