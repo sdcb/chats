@@ -91,7 +91,6 @@ public abstract partial class ChatService : IDisposable
                     .Replace("{{CURRENT_DATE}}", now.ToString("yyyy/MM/dd"))
                     .Replace("{{MODEL_NAME}}", Model.ModelReference.DisplayName ?? Model.ModelReference.Name)
                     .Replace("{{CURRENT_TIME}}", now.ToString("HH:mm:ss"));
-                ;
             }
         }
 
