@@ -197,13 +197,58 @@ const HomeContent = () => {
   };
 
   const handleDeleteChat = (ids: string[]) => {
+    // 获取被删除聊天的信息
+    const deletedChats = chats.filter((x) => ids.includes(x.id));
     const chatList = chats.filter((x) => {
       return !ids.includes(x.id);
     });
     chatDispatch(setChats(chatList));
 
     if (chatList.length > 0) {
-      selectChat(chatList, chatList[0].id);
+      let chatIdToSelect: string | undefined;
+
+      // 如果有被删除的聊天，尝试在同一分组中找到下一个或上一个聊天
+      if (deletedChats.length > 0) {
+        const deletedChat = deletedChats[0]; // 使用第一个被删除的聊天作为参考
+        const deletedChatGroupId = deletedChat.groupId;
+        
+        // 获取被删除聊天在原始列表中的索引
+        const originalIndex = chats.findIndex((chat) => chat.id === deletedChat.id);
+        
+        // 在同一分组中寻找下一个聊天（原始索引之后的聊天）
+        for (let i = originalIndex + 1; i < chats.length; i++) {
+          const chat = chats[i];
+          if (chat.groupId === deletedChatGroupId && !ids.includes(chat.id)) {
+            chatIdToSelect = chat.id;
+            break;
+          }
+        }
+        
+        // 如果没有找到下一个，寻找上一个聊天（原始索引之前的聊天）
+        if (!chatIdToSelect) {
+          for (let i = originalIndex - 1; i >= 0; i--) {
+            const chat = chats[i];
+            if (chat.groupId === deletedChatGroupId && !ids.includes(chat.id)) {
+              chatIdToSelect = chat.id;
+              break;
+            }
+          }
+        }
+      }
+
+      // 如果在同一分组中没有找到聊天，则按优先级选择
+      if (!chatIdToSelect) {
+        // 1. 优先选择未分组的第一个聊天
+        const ungroupedChat = chatList.find((chat) => chat.groupId === null);
+        if (ungroupedChat) {
+          chatIdToSelect = ungroupedChat.id;
+        } else {
+          // 2. 选择第一个有聊天的分组的第一个聊天
+          chatIdToSelect = chatList[0].id;
+        }
+      }
+
+      selectChat(chatList, chatIdToSelect);
     } else {
       chatDispatch(setSelectedChat(undefined));
       messageDispatch(setSelectedMessages([]));
