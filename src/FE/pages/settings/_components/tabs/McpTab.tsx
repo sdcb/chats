@@ -15,6 +15,7 @@ import {
   IconSearch,
   IconEdit,
   IconRefresh,
+  IconEye,
 } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -48,7 +49,9 @@ const McpTab = () => {
   const [selectedServer, setSelectedServer] = useState<McpServerDetailsDto | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [isCreateMode, setIsCreateMode] = useState(false);
+  const [isReadOnly, setIsReadOnly] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingServerDetails, setLoadingServerDetails] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -79,18 +82,45 @@ const McpTab = () => {
   const handleCreateServer = () => {
     setSelectedServer(null);
     setIsCreateMode(true);
+    setIsReadOnly(false);
     setShowModal(true);
   };
 
   const handleEditServer = async (serverId: number) => {
+    setSelectedServer(null); // 先清空数据
+    setIsCreateMode(false);
+    setIsReadOnly(false);
+    setShowModal(true); // 立即显示Modal
+    
+    setLoadingServerDetails(true);
     try {
       const serverDetails = await getMcpServerDetails(serverId);
       setSelectedServer(serverDetails);
-      setIsCreateMode(false);
-      setShowModal(true);
     } catch (error) {
       console.error('Failed to fetch server details:', error);
       toast.error(t('Failed to fetch server details'));
+      setShowModal(false); // 加载失败时关闭Modal
+    } finally {
+      setLoadingServerDetails(false);
+    }
+  };
+
+  const handleViewServer = async (serverId: number) => {
+    setSelectedServer(null); // 先清空数据
+    setIsCreateMode(false);
+    setIsReadOnly(true);
+    setShowModal(true); // 立即显示Modal
+    
+    setLoadingServerDetails(true);
+    try {
+      const serverDetails = await getMcpServerDetails(serverId);
+      setSelectedServer(serverDetails);
+    } catch (error) {
+      console.error('Failed to fetch server details:', error);
+      toast.error(t('Failed to fetch server details'));
+      setShowModal(false); // 加载失败时关闭Modal
+    } finally {
+      setLoadingServerDetails(false);
     }
   };
 
@@ -102,6 +132,7 @@ const McpTab = () => {
     } catch (error) {
       console.error('Failed to delete MCP server:', error);
       toast.error(t('Failed to delete MCP server'));
+      throw error; // 重新抛出错误，让 DeletePopover 知道删除失败
     }
   };
 
@@ -205,16 +236,30 @@ const McpTab = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditServer(server.id)}
-                          >
-                            <IconEdit size={16} />
-                          </Button>
-                          <DeletePopover
-                            onDelete={() => handleDeleteServer(server.id)}
-                          />
+                          {server.editable ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditServer(server.id)}
+                              title={t('Edit')}
+                            >
+                              <IconEdit size={16} />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewServer(server.id)}
+                              title={t('View')}
+                            >
+                              <IconEye size={16} />
+                            </Button>
+                          )}
+                          {server.editable && (
+                            <DeletePopover
+                              onDelete={() => handleDeleteServer(server.id)}
+                            />
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -233,6 +278,8 @@ const McpTab = () => {
           onSave={handleSaveServer}
           server={selectedServer}
           isCreateMode={isCreateMode}
+          isReadOnly={isReadOnly}
+          isLoadingData={loadingServerDetails}
         />
       )}
     </div>

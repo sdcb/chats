@@ -64,5 +64,5 @@ export function toFixed(value: number, precision: number = 2) {
 }
 
 export function getIconStroke(theme?: string) {
-  return theme === 'dark' ? 'rgb(156 163 175)' : 'rgb(243 244 246)';
+  return theme === 'dark' ? 'rgb(54 67 75)' : 'rgb(243 244 246)';
 }

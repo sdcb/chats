@@ -36,6 +36,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
                 CreatedAt = x.CreatedAt,
                 LastFetchAt = x.LastFetchAt,
                 ToolsCount = x.McpTools.Count,
+                Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id,
             })
             .ToArrayAsync(cancellationToken);
         return Ok(data);
@@ -62,6 +63,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
                 CreatedAt = x.CreatedAt,
                 LastFetchAt = x.LastFetchAt,
                 ToolsCount = x.McpTools.Count,
+                Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id,
                 Tools = x.McpTools
                     .OrderBy(t => t.Id)
                     .Select(t => new McpToolDto

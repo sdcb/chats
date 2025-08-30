@@ -340,6 +340,7 @@ export interface McpServerListItemDto {
   createdAt: string;
   lastFetchAt?: string;
   toolsCount: number;
+  editable: boolean;
 }
 
 export interface McpServerDetailsDto extends McpServerListItemDto {

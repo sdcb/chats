@@ -44,9 +44,11 @@ interface McpModalProps {
   onSave: (serverData: UpdateMcpServerRequest) => Promise<void>;
   server?: McpServerDetailsDto | null;
   isCreateMode: boolean;
+  isReadOnly?: boolean;
+  isLoadingData?: boolean;
 }
 
-const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalProps) => {
+const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = false, isLoadingData = false }: McpModalProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const [formData, setFormData] = useState({
@@ -207,11 +209,19 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
       <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isCreateMode ? t('Add MCP Server') : t('Edit MCP Server')}
+            {isCreateMode ? t('Add MCP Server') : isReadOnly ? t('View MCP Server') : t('Edit MCP Server')}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        {isLoadingData ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="flex items-center space-x-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <p className="text-lg">{t('Loading server details...')}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
           {/* Basic Information */}
           <Card className="p-4">
             <h3 className="text-lg font-medium mb-4">{t('Basic Information')}</h3>
@@ -223,6 +233,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
                   value={formData.label}
                   onChange={(e) => handleInputChange('label', e.target.value)}
                   placeholder={t('Enter server label')}
+                  disabled={isReadOnly}
                 />
               </div>
 
@@ -233,6 +244,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
                   value={formData.url}
                   onChange={(e) => handleInputChange('url', e.target.value)}
                   placeholder="wss://example.com/mcp"
+                  disabled={isReadOnly}
                 />
               </div>
 
@@ -244,6 +256,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
                   onChange={(e) => handleInputChange('headers', e.target.value)}
                   placeholder='{"Authorization": "Bearer token"}'
                   rows={3}
+                  disabled={isReadOnly}
                   className={`${
                     formData.headers && !validateJSON(formData.headers) 
                       ? 'border-red-500 focus:border-red-500' 
@@ -260,6 +273,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
                   id="isPublic"
                   checked={formData.isPublic}
                   onCheckedChange={(checked) => handleInputChange('isPublic', checked)}
+                  disabled={isReadOnly}
                 />
                 <Label htmlFor="isPublic">{t('Public Server')}</Label>
               </div>
@@ -270,21 +284,23 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
           <Card className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium">{t('Tools')}</h3>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleFetchTools}
-                  disabled={fetchingTools}
-                >
-                  <IconRefresh size={16} className="mr-2" />
-                  {fetchingTools ? t('Fetching...') : t('Fetch Tools')}
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleAddTool}>
-                  <IconPlus size={16} className="mr-2" />
-                  {t('Add Tool')}
-                </Button>
-              </div>
+              {!isReadOnly && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleFetchTools}
+                    disabled={fetchingTools}
+                  >
+                    <IconRefresh size={16} className="mr-2" />
+                    {fetchingTools ? t('Fetching...') : t('Fetch Tools')}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleAddTool}>
+                    <IconPlus size={16} className="mr-2" />
+                    {t('Add Tool')}
+                  </Button>
+                </div>
+              )}
             </div>
 
             {tools.length === 0 ? (
@@ -311,6 +327,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
                             onChange={(e) => handleToolChange(index, 'name', e.target.value)}
                             placeholder={t('Tool name')}
                             className="font-mono w-32"
+                            disabled={isReadOnly}
                           />
                         </TableCell>
                         <TableCell className="px-2">
@@ -320,6 +337,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
                             placeholder={t('Tool description')}
                             rows={3}
                             className="min-w-[200px]"
+                            disabled={isReadOnly}
                           />
                         </TableCell>
                         <TableCell className="px-2">
@@ -333,19 +351,22 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
                                 ? 'border-red-500 focus:border-red-500' 
                                 : ''
                             }`}
+                            disabled={isReadOnly}
                           />
                           {tool.parameters && !validateJSON(tool.parameters) && (
                             <p className="text-xs text-red-500 mt-1">{t('Invalid JSON format')}</p>
                           )}
                         </TableCell>
                         <TableCell className="px-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveTool(index)}
-                          >
-                            <IconTrash size={16} />
-                          </Button>
+                          {!isReadOnly && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveTool(index)}
+                            >
+                              <IconTrash size={16} />
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -355,16 +376,19 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
             )}
           </Card>
         </div>
+        )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={isLoadingData}>
             <IconX size={16} className="mr-2" />
-            {t('Cancel')}
+            {isReadOnly ? t('Close') : t('Cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
-            <IconCheck size={16} className="mr-2" stroke={getIconStroke(theme)}/>
-            {loading ? t('Saving...') : t('Save')}
-          </Button>
+          {!isReadOnly && (
+            <Button onClick={handleSubmit} disabled={loading || isLoadingData}>
+              <IconCheck size={16} className="mr-2" stroke={getIconStroke(theme)}/>
+              {loading ? t('Saving...') : t('Save')}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

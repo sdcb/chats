@@ -61,7 +61,8 @@ const handleErrorResponse = async (err: Response) => {
       redirectToHomePage(1000);
       break;
     case 404:
-      return;
+      message = 'Resource not found';
+      break;
     default:
       message =
         typeof message === 'string' && message !== ''

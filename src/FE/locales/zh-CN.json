@@ -452,6 +452,7 @@
   "MCP Management": "MCP管理",
   "Add MCP Server": "添加MCP服务器",
   "Edit MCP Server": "编辑MCP服务器",
+  "View MCP Server": "查看MCP服务器",
   "Search MCP servers...": "搜索MCP服务器...",
   "Tool Count": "工具数量",
   "Owner": "所有者",
@@ -492,5 +493,6 @@
   "Failed to fetch tools": "获取工具失败",
   "Refresh": "刷新",
   "Label": "标签",
-  "Tools": "工具列表"
+  "Tools": "工具列表",
+  "Deleting...": "删除中..."
 }

@@ -12,4 +12,5 @@ public record McpServerListItemDto
     [JsonPropertyName("createdAt")] public required DateTime CreatedAt { get; init; }
     [JsonPropertyName("lastFetchAt")] public DateTime? LastFetchAt { get; init; }
     [JsonPropertyName("toolsCount")] public required int ToolsCount { get; init; }
+    [JsonPropertyName("editable")] public required bool Editable { get; init; }
 }
