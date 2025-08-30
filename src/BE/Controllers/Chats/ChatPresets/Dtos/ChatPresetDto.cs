@@ -1,5 +1,6 @@
 ﻿using Chats.BE.Controllers.Chats.UserChats.Dtos;
 using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Chats.BE.Services.UrlEncryption;
 
 namespace Chats.BE.Controllers.Chats.ChatPresets.Dtos;
@@ -38,6 +39,13 @@ public record ChatPresetDto
                 WebSearchEnabled = x.ChatConfig.WebSearchEnabled,
                 MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
                 ReasoningEffort = x.ChatConfig.ReasoningEffort,
+                ImageSize =  (DBKnownImageSize)x.ChatConfig.ImageSizeId,
+                Mcps = x.ChatConfig.ChatConfigMcps.ToDictionary(
+                    mcp => mcp.McpServerId,
+                    mcp => new ChatSpanMcp
+                    {
+                        CustomHeaders = mcp.Headers
+                    })
             })]
         };
     }

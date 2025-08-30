@@ -1,4 +1,5 @@
-﻿using Chats.BE.DB;
+﻿using Chats.BE.Controllers.Chats.UserChats.Dtos;
+using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using System.Text.Json.Serialization;
 
@@ -30,8 +31,8 @@ public record UpdateChatSpanRequest
     [JsonPropertyName("imageSizeId")]
     public DBKnownImageSize ImageSize { get; init; }
 
-    [JsonPropertyName("mcpIds")]
-    public List<int> McpIds { get; init; } = [];
+    [JsonPropertyName("mcps")]
+    public required Dictionary<int, ChatSpanMcp> Mcps { get; init; }
 
     public void ApplyTo(ChatSpan span)
     {
@@ -99,12 +100,13 @@ public record UpdateChatSpanRequest
         };
 
         // Add ChatConfigMcp associations
-        foreach (int mcpId in McpIds)
+        foreach (KeyValuePair<int, ChatSpanMcp> mcp in Mcps)
         {
             chatConfig.ChatConfigMcps.Add(new ChatConfigMcp
             {
                 ChatConfig = chatConfig,
-                McpServerId = mcpId
+                McpServerId = mcp.Key,
+                Headers = mcp.Value.CustomHeaders,
             });
         }
 
@@ -113,25 +115,42 @@ public record UpdateChatSpanRequest
 
     private void UpdateMcpAssociations(ChatConfig config)
     {
-        // Get existing MCP IDs
-        HashSet<int> existingMcpIds = config.ChatConfigMcps.Select(x => x.McpServerId).ToHashSet();
-        HashSet<int> newMcpIds = McpIds.ToHashSet();
-
-        // Remove associations that are no longer needed
-        List<ChatConfigMcp> toRemove = config.ChatConfigMcps.Where(x => !newMcpIds.Contains(x.McpServerId)).ToList();
-        foreach (ChatConfigMcp? item in toRemove)
+        HashSet<int> currentMcpIds = [.. config.ChatConfigMcps.Select(x => x.McpServerId)];
+        HashSet<int> requestMcpIds = [.. Mcps.Keys];
+        HashSet<int> toRemove = [.. currentMcpIds.Except(requestMcpIds)];
+        HashSet<int> toAdd = [.. requestMcpIds.Except(currentMcpIds)];
+        HashSet<int> toUpdate = [.. currentMcpIds.Intersect(requestMcpIds)];
+        
+        // 删除不再需要的关联
+        if (toRemove.Count > 0)
         {
-            config.ChatConfigMcps.Remove(item);
+            List<ChatConfigMcp> itemsToRemove = [.. config.ChatConfigMcps.Where(x => toRemove.Contains(x.McpServerId))];
+            
+            foreach (ChatConfigMcp item in itemsToRemove)
+            {
+                config.ChatConfigMcps.Remove(item);
+            }
         }
-
-        // Add new associations
-        foreach (int mcpId in newMcpIds.Where(id => !existingMcpIds.Contains(id)))
+        
+        // 添加新的关联
+        foreach (int mcpServerId in toAdd)
         {
             config.ChatConfigMcps.Add(new ChatConfigMcp
             {
                 ChatConfig = config,
-                McpServerId = mcpId
+                McpServerId = mcpServerId,
+                Headers = Mcps[mcpServerId].CustomHeaders,
             });
+        }
+        
+        // 更新现有关联的 Headers（如果有变化）
+        foreach (ChatConfigMcp existing in config.ChatConfigMcps.Where(x => toUpdate.Contains(x.McpServerId)))
+        {
+            string? newHeaders = Mcps[existing.McpServerId].CustomHeaders;
+            if (existing.Headers != newHeaders)
+            {
+                existing.Headers = newHeaders;
+            }
         }
     }
 }

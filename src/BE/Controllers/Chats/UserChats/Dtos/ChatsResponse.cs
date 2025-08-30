@@ -1,5 +1,6 @@
 ﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.UserChats.Dtos;
@@ -89,6 +90,12 @@ public record ChatSpanDto
     [JsonPropertyName("reasoningEffort")]
     public required int? ReasoningEffort { get; init; }
 
+    [JsonPropertyName("imageSize")]
+    public required DBKnownImageSize ImageSize { get; init; }
+
+    [JsonPropertyName("mcps")]
+    public required Dictionary<int, ChatSpanMcp> Mcps { get; init; }
+
     public static ChatSpanDto FromDB(ChatSpan span) => new()
     {
         SpanId = span.SpanId,
@@ -101,6 +108,13 @@ public record ChatSpanDto
         WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
         MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
         ReasoningEffort = span.ChatConfig.ReasoningEffort,
+        ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+        Mcps = span.ChatConfig.ChatConfigMcps.ToDictionary(
+            x => x.McpServerId,
+            x => new ChatSpanMcp
+            {
+                CustomHeaders = x.Headers
+            }),
     };
 
     public static ChatSpanDto FromDB(ChatPresetSpan span) => new()
@@ -115,5 +129,18 @@ public record ChatSpanDto
         WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
         MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
         ReasoningEffort = span.ChatConfig.ReasoningEffort,
+        ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+        Mcps = span.ChatConfig.ChatConfigMcps.ToDictionary(
+            x => x.McpServerId,
+            x => new ChatSpanMcp
+            {
+                CustomHeaders = x.Headers
+            }),
     };
+}
+
+public record ChatSpanMcp
+{
+    [JsonPropertyName("customHeaders")]
+    public string? CustomHeaders { get; init; }
 }

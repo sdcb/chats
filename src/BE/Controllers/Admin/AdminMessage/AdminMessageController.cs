@@ -10,6 +10,7 @@ using Chats.BE.Services.FileServices;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Chats.BE.DB.Enums;
 
 namespace Chats.BE.Controllers.Admin.AdminMessage;
 
@@ -48,6 +49,13 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
+                    ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+                    Mcps = span.ChatConfig.ChatConfigMcps.ToDictionary(
+                        mcp => mcp.McpServerId,
+                        mcp => new ChatSpanMcp
+                        {
+                            CustomHeaders = mcp.Headers
+                        })
                 }).ToArray(),
             }), req, cancellationToken);
     }
@@ -85,6 +93,13 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
+                    ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+                    Mcps = span.ChatConfig.ChatConfigMcps.ToDictionary(
+                        mcp => mcp.McpServerId,
+                        mcp => new ChatSpanMcp
+                        {
+                            CustomHeaders = mcp.Headers
+                        })
                 }).ToArray(),
                 LeafTurnId = urlEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,

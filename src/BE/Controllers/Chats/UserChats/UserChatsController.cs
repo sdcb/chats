@@ -10,6 +10,7 @@ using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Chats.BE.DB.Enums;
 
 namespace Chats.BE.Controllers.Chats.UserChats;
 
@@ -41,6 +42,13 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
+                    ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+                    Mcps = span.ChatConfig.ChatConfigMcps.ToDictionary(
+                        mcp => mcp.McpServerId,
+                        mcp => new ChatSpanMcp
+                        {
+                            CustomHeaders = mcp.Headers
+                        })
                 }).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
@@ -87,6 +95,13 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
+                    ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+                    Mcps = span.ChatConfig.ChatConfigMcps.ToDictionary(
+                        mcp => mcp.McpServerId,
+                        mcp => new ChatSpanMcp
+                        {
+                            CustomHeaders = mcp.Headers
+                        })
                 }).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
@@ -128,6 +143,13 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
+                    ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+                    Mcps = span.ChatConfig.ChatConfigMcps.ToDictionary(
+                        mcp => mcp.McpServerId,
+                        mcp => new ChatSpanMcp
+                        {
+                            CustomHeaders = mcp.Headers
+                        })
                 }).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,

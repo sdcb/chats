@@ -10,6 +10,7 @@ using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using Chats.BE.DB.Enums;
 
 namespace Chats.BE.Controllers.Chats.ChatPresets;
 
@@ -39,6 +40,13 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     WebSearchEnabled = x.ChatConfig.WebSearchEnabled,
                     MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = x.ChatConfig.ReasoningEffort,
+                    ImageSize = (DBKnownImageSize)x.ChatConfig.ImageSizeId,
+                    Mcps = x.ChatConfig.ChatConfigMcps.ToDictionary(
+                        mcp => mcp.McpServerId,
+                        mcp => new ChatSpanMcp
+                        {
+                            CustomHeaders = mcp.Headers
+                        })
                 }).ToArray()
             })
             .ToArrayAsync(cancellationToken);
@@ -211,6 +219,12 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     WebSearchEnabled = x.ChatConfig.WebSearchEnabled,
                     MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = x.ChatConfig.ReasoningEffort,
+                    ImageSizeId = x.ChatConfig.ImageSizeId,
+                    ChatConfigMcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatConfigMcp
+                    {
+                        McpServerId = mcp.McpServerId,
+                        Headers = mcp.Headers,
+                    })],
                 }
             })]
         };
@@ -258,6 +272,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                 MaxOutputTokens = null,
                 ReasoningEffort = 0,
                 SystemPrompt = defaultPrompt.Content,
+                ImageSizeId = (short)DBKnownImageSize.Default,
             }
         };
         preset.ChatPresetSpans.Add(span);
@@ -325,7 +340,11 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                 .ThenInclude(x => x.ChatConfig)
                 .ThenInclude(x => x.Model)
                 .ThenInclude(x => x.ModelReference)
+            .Include(x => x.ChatPresetSpans)
+                .ThenInclude(x => x.ChatConfig)
+                .ThenInclude(x => x.ChatConfigMcps)
             .Where(x => x.Id == idEncryption.DecryptChatPresetId(presetId) && x.UserId == currentUser.Id)
+            .AsSingleQuery()
             .FirstOrDefaultAsync(cancellationToken);
     }
 }
