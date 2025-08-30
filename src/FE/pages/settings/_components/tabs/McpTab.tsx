@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useTheme } from 'next-themes';
 
 import useTranslation from '@/hooks/useTranslation';
+
+import { getIconStroke } from '@/utils/common';
 
 import { McpServerListItemDto, McpServerDetailsDto } from '@/types/clientApis';
 
@@ -39,6 +42,7 @@ import {
 
 const McpTab = () => {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const [mcpServers, setMcpServers] = useState<McpServerListItemDto[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredServers, setFilteredServers] = useState<McpServerListItemDto[]>([]);
@@ -145,7 +149,11 @@ const McpTab = () => {
             {t('Refresh')}
           </Button>
           <Button onClick={handleCreateServer}>
-            <IconPlus size={16} className="mr-2" />
+            <IconPlus 
+              size={16} 
+              className="mr-2" 
+              stroke={getIconStroke(theme)}
+            />
             {t('Add MCP Server')}
           </Button>
         </div>

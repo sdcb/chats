@@ -62,3 +62,7 @@ export function getNextName(existingNames: string[], baseName: string): string {
 export function toFixed(value: number, precision: number = 2) {
   return value ? value.toFixed(precision) : '0';
 }
+
+export function getIconStroke(theme?: string) {
+  return theme === 'dark' ? 'rgb(156 163 175)' : 'rgb(75 85 99)';
+}

@@ -279,7 +279,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
     }
 
     [HttpPost("fetch-tools")]
-    public async Task<ActionResult<List<McpToolBasicInfo>>> FetchMcpTools([FromBody] FetchToolsRequest req, CancellationToken cancellationToken)
+    public async Task<ActionResult<List<McpToolBasicInfo>>> FetchMcpTools([FromBody] FetchToolsRequest req, [FromServices] ILogger<AdminMcpController> logger, CancellationToken cancellationToken)
     {
         if (!Uri.TryCreate(req.ServerUrl, UriKind.Absolute, out Uri? serverUri))
         {
@@ -308,17 +308,25 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             options.AdditionalHeaders = headerDict;
         }
 
-        IMcpClient client = await McpClientFactory.CreateAsync(new SseClientTransport(options), cancellationToken: cancellationToken);
-        List<McpToolBasicInfo> tools = [];
-        await foreach (McpClientTool tool in client.EnumerateToolsAsync(cancellationToken: cancellationToken))
+        try
         {
-            tools.Add(new McpToolBasicInfo
+            IMcpClient client = await McpClientFactory.CreateAsync(new SseClientTransport(options), cancellationToken: cancellationToken);
+            List<McpToolBasicInfo> tools = [];
+            await foreach (McpClientTool tool in client.EnumerateToolsAsync(cancellationToken: cancellationToken))
             {
-                Name = tool.Name,
-                Description = tool.Description,
-                Parameters = tool.JsonSchema.GetRawText(),
-            });
+                tools.Add(new McpToolBasicInfo
+                {
+                    Name = tool.Name,
+                    Description = tool.Description,
+                    Parameters = tool.JsonSchema.GetRawText(),
+                });
+            }
+            return Ok(tools);
         }
-        return Ok(tools);
+        catch (HttpRequestException ex)
+        {
+            logger.LogWarning(ex, "Failed to fetch MCP tools from {Url}", req.ServerUrl);
+            return this.BadRequestMessage(ex.Message);
+        }
     }
 }
