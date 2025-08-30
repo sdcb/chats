@@ -83,6 +83,11 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
     [HttpPost]
     public async Task<ActionResult<McpServerDetailsDto>> CreateMcpServer([FromBody] UpdateMcpServerRequest request, CancellationToken cancellationToken)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         if (!Uri.IsWellFormedUriString(request.Url, UriKind.Absolute))
         {
             return this.BadRequestMessage("Invalid URL");
@@ -116,6 +121,10 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
                 RequireApproval = toolRequest.RequireApproval,
             });
         }
+        if (server.McpTools.Count != 0)
+        {
+            server.LastFetchAt = DateTime.UtcNow;
+        }
 
         db.McpServers.Add(server);
         await db.SaveChangesAsync(cancellationToken);
@@ -126,6 +135,11 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
     [HttpPut("{mcpId:int}")]
     public async Task<ActionResult<McpServerDetailsDto>> UpdateMcpServer(int mcpId, [FromBody] UpdateMcpServerRequest request, CancellationToken cancellationToken)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         IQueryable<McpServer> finder = db.McpServers.Where(x => x.Id == mcpId);
         if (!currentUser.IsAdmin)
         {
@@ -154,9 +168,10 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
         server.IsPublic = request.IsPublic;
         
         // Update tools if provided
-        if (request.Tools != null)
+        if (request.Tools.Any())
         {
             UpdateMcpToolsInMemory(server, request.Tools);
+            server.LastFetchAt = DateTime.UtcNow;
         }
 
         await db.SaveChangesAsync(cancellationToken);

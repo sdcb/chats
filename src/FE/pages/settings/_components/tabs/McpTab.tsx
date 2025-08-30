@@ -14,7 +14,6 @@ import {
   IconPlus,
   IconSearch,
   IconEdit,
-  IconEye,
   IconRefresh,
 } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
@@ -84,18 +83,6 @@ const McpTab = () => {
   };
 
   const handleEditServer = async (serverId: number) => {
-    try {
-      const serverDetails = await getMcpServerDetails(serverId);
-      setSelectedServer(serverDetails);
-      setIsCreateMode(false);
-      setShowModal(true);
-    } catch (error) {
-      console.error('Failed to fetch server details:', error);
-      toast.error(t('Failed to fetch server details'));
-    }
-  };
-
-  const handleViewServer = async (serverId: number) => {
     try {
       const serverDetails = await getMcpServerDetails(serverId);
       setSelectedServer(serverDetails);
@@ -179,14 +166,14 @@ const McpTab = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('MCP Label')}</TableHead>
-                  <TableHead>{t('MCP URL')}</TableHead>
-                  <TableHead>{t('MCP Status')}</TableHead>
-                  <TableHead>{t('MCP Tools')}</TableHead>
-                  <TableHead>{t('MCP Owner')}</TableHead>
-                  <TableHead>{t('MCP Created')}</TableHead>
+                  <TableHead>{t('Label')}</TableHead>
+                  <TableHead>{t('URL')}</TableHead>
+                  <TableHead>{t('Status')}</TableHead>
+                  <TableHead>{t('Tool Count')}</TableHead>
+                  <TableHead>{t('Owner')}</TableHead>
+                  <TableHead>{t('Created')}</TableHead>
                   <TableHead>{t('Last Fetch')}</TableHead>
-                  <TableHead>{t('MCP Actions')}</TableHead>
+                  <TableHead>{t('Actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -211,20 +198,13 @@ const McpTab = () => {
                       <TableCell>
                         <Badge variant="outline">{server.toolsCount}</Badge>
                       </TableCell>
-                      <TableCell>{server.owner || t('MCP System')}</TableCell>
+                      <TableCell>{server.owner || t('System')}</TableCell>
                       <TableCell>{formatDate(server.createdAt)}</TableCell>
                       <TableCell>
                         {server.lastFetchAt ? formatDate(server.lastFetchAt) : t('Never')}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewServer(server.id)}
-                          >
-                            <IconEye size={16} />
-                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"

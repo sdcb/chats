@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { useTheme } from 'next-themes';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -35,6 +36,7 @@ import {
 import { Card } from '@/components/ui/card';
 
 import { fetchMcpTools } from '@/apis/clientApis';
+import { getIconStroke } from '@/utils/common';
 
 interface McpModalProps {
   isOpen: boolean;
@@ -46,6 +48,7 @@ interface McpModalProps {
 
 const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalProps) => {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const [formData, setFormData] = useState({
     label: '',
     url: '',
@@ -55,6 +58,17 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
   const [tools, setTools] = useState<McpToolDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchingTools, setFetchingTools] = useState(false);
+  
+  // JSON 验证函数
+  const validateJSON = (jsonString: string): boolean => {
+    if (!jsonString.trim()) return true; // 空字符串认为是有效的
+    try {
+      JSON.parse(jsonString);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   useEffect(() => {
     if (server && !isCreateMode) {
@@ -144,10 +158,22 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
       return;
     }
 
+    // 验证 headers 是否为有效的 JSON
+    if (formData.headers && !validateJSON(formData.headers)) {
+      toast.error(t('Invalid JSON format in headers'));
+      return;
+    }
+
     // Validate tools
     for (const tool of tools) {
       if (!tool.name.trim()) {
         toast.error(t('All tools must have a name'));
+        return;
+      }
+      
+      // 验证参数是否为有效的 JSON
+      if (tool.parameters && !validateJSON(tool.parameters)) {
+        toast.error(t('Invalid JSON format in tool parameters'));
         return;
       }
     }
@@ -178,7 +204,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isCreateMode ? t('Add MCP Server') : t('Edit MCP Server')}
@@ -218,7 +244,15 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
                   onChange={(e) => handleInputChange('headers', e.target.value)}
                   placeholder='{"Authorization": "Bearer token"}'
                   rows={3}
+                  className={`${
+                    formData.headers && !validateJSON(formData.headers) 
+                      ? 'border-red-500 focus:border-red-500' 
+                      : ''
+                  }`}
                 />
+                {formData.headers && !validateJSON(formData.headers) && (
+                  <p className="text-xs text-red-500 mt-1">{t('Invalid JSON format')}</p>
+                )}
               </div>
 
               <div className="flex items-center space-x-2">
@@ -259,39 +293,52 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="table-compact">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('Name')}</TableHead>
-                      <TableHead>{t('Description')}</TableHead>
-                      <TableHead>{t('Require Approval')}</TableHead>
-                      <TableHead>{t('Actions')}</TableHead>
+                      <TableHead className="px-2">{t('Name')}</TableHead>
+                      <TableHead className="px-2">{t('Description')}</TableHead>
+                      <TableHead className="px-2">{t('Parameters (JSON)')}</TableHead>
+                      <TableHead className="px-2">{t('Actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {tools.map((tool, index) => (
                       <TableRow key={index}>
-                        <TableCell>
+                        <TableCell className="px-2">
                           <Input
                             value={tool.name}
                             onChange={(e) => handleToolChange(index, 'name', e.target.value)}
                             placeholder={t('Tool name')}
+                            className="font-mono w-32"
                           />
                         </TableCell>
-                        <TableCell>
-                          <Input
+                        <TableCell className="px-2">
+                          <Textarea
                             value={tool.description || ''}
                             onChange={(e) => handleToolChange(index, 'description', e.target.value)}
                             placeholder={t('Tool description')}
+                            rows={3}
+                            className="min-w-[200px]"
                           />
                         </TableCell>
-                        <TableCell>
-                          <Switch
-                            checked={tool.requireApproval}
-                            onCheckedChange={(checked) => handleToolChange(index, 'requireApproval', checked)}
+                        <TableCell className="px-2">
+                          <Textarea
+                            value={tool.parameters || ''}
+                            onChange={(e) => handleToolChange(index, 'parameters', e.target.value)}
+                            placeholder='{"type": "object", "properties": {...}}'
+                            rows={3}
+                            className={`min-w-[400px] font-mono text-xs ${
+                              tool.parameters && !validateJSON(tool.parameters) 
+                                ? 'border-red-500 focus:border-red-500' 
+                                : ''
+                            }`}
                           />
+                          {tool.parameters && !validateJSON(tool.parameters) && (
+                            <p className="text-xs text-red-500 mt-1">{t('Invalid JSON format')}</p>
+                          )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="px-2">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -315,7 +362,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode }: McpModalPro
             {t('Cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={loading}>
-            <IconCheck size={16} className="mr-2" />
+            <IconCheck size={16} className="mr-2" stroke={getIconStroke(theme)}/>
             {loading ? t('Saving...') : t('Save')}
           </Button>
         </DialogFooter>
