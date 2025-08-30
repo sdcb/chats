@@ -28,11 +28,11 @@ public record UpdateChatSpanRequest
     [JsonPropertyName("reasoningEffort")]
     public DBReasoningEffort ReasoningEffort { get; init; }
 
-    [JsonPropertyName("imageSizeId")]
+    [JsonPropertyName("imageSize")]
     public DBKnownImageSize ImageSize { get; init; }
 
     [JsonPropertyName("mcps")]
-    public required Dictionary<int, ChatSpanMcp> Mcps { get; init; }
+    public ChatSpanMcp[] Mcps { get; init; } = [];
 
     public void ApplyTo(ChatSpan span)
     {
@@ -100,13 +100,13 @@ public record UpdateChatSpanRequest
         };
 
         // Add ChatConfigMcp associations
-        foreach (KeyValuePair<int, ChatSpanMcp> mcp in Mcps)
+        foreach (ChatSpanMcp mcp in Mcps)
         {
             chatConfig.ChatConfigMcps.Add(new ChatConfigMcp
             {
                 ChatConfig = chatConfig,
-                McpServerId = mcp.Key,
-                Headers = mcp.Value.CustomHeaders,
+                McpServerId = mcp.Id,
+                Headers = mcp.CustomHeaders,
             });
         }
 
@@ -116,7 +116,7 @@ public record UpdateChatSpanRequest
     private void UpdateMcpAssociations(ChatConfig config)
     {
         HashSet<int> currentMcpIds = [.. config.ChatConfigMcps.Select(x => x.McpServerId)];
-        HashSet<int> requestMcpIds = [.. Mcps.Keys];
+        HashSet<int> requestMcpIds = [.. Mcps.Select(x => x.Id)];
         HashSet<int> toRemove = [.. currentMcpIds.Except(requestMcpIds)];
         HashSet<int> toAdd = [.. requestMcpIds.Except(currentMcpIds)];
         HashSet<int> toUpdate = [.. currentMcpIds.Intersect(requestMcpIds)];

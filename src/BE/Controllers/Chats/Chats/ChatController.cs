@@ -415,6 +415,14 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         }
 
         ChatCompletionOptions cco = chatSpan.ToChatCompletionOptions(currentUser.Id, chatSpan, userModel);
+        ChatExtraDetails ced = new()
+        {
+            TimezoneOffset = req.TimezoneOffset,
+            WebSearchEnabled = chatSpan.ChatConfig.WebSearchEnabled,
+            ReasoningEffort = (DBReasoningEffort)chatSpan.ChatConfig.ReasoningEffort,
+            ImageSize = (DBKnownImageSize)chatSpan.ChatConfig.ImageSizeId,
+        };
+
         foreach (McpTool tool in chatSpan.ChatConfig.ChatConfigMcps.SelectMany(x => x.McpServer.McpTools))
         {
             string toolNameWithServerIdPrefix = $"{tool.McpServerId}_{tool.ToolName}";
@@ -511,14 +519,6 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
         async Task<Step> RunOne(List<OpenAIChatMessage> messageToSend)
         {
-            ChatExtraDetails ced = new()
-            {
-                TimezoneOffset = req.TimezoneOffset,
-                WebSearchEnabled = chatSpan.ChatConfig.WebSearchEnabled,
-                ReasoningEffort = (DBReasoningEffort)chatSpan.ChatConfig.ReasoningEffort,
-                ImageSize = (DBKnownImageSize)chatSpan.ChatConfig.ImageSizeId,
-            };
-
             InChatContext icc = new(firstTick);
 
             string? errorText = null;

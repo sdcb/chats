@@ -72,7 +72,7 @@ export const ChatMessage: FC<Props> = memo(
             >
               {messages.map((message, index) => {
                 return (
-                  <>
+                  <div key={`message-${message.id}`}>
                     {message.role === ChatRole.User && (
                       <div
                         key={'user-message-' + index}
@@ -144,7 +144,7 @@ export const ChatMessage: FC<Props> = memo(
                         />
                       </div>
                     )}
-                  </>
+                  </div>
                 );
               })}
             </div>

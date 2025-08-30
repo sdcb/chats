@@ -15,6 +15,7 @@ import {
   IconChevronRight,
   IconPlus,
 } from '@/components/Icons';
+import ImageSizeRadio from '@/components/ImageSizeRadio/ImageSizeRadio';
 import ModelParams from '@/components/ModelParams/ModelParams';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 import { Button } from '@/components/ui/button';
@@ -82,6 +83,7 @@ const ChatPresetModal = (props: Props) => {
             temperature: null,
             reasoningEffort: 0,
             webSearchEnabled: false,
+            imageSize: 0,
           });
           return s;
         }
@@ -105,6 +107,7 @@ const ChatPresetModal = (props: Props) => {
         temperature: span?.temperature || null,
         reasoningEffort: span.reasoningEffort,
         webSearchEnabled: !!span.webSearchEnabled,
+        imageSize: span.imageSize,
       })),
     };
     if (chatPreset) {
@@ -133,6 +136,7 @@ const ChatPresetModal = (props: Props) => {
       temperature: null,
       reasoningEffort: 0,
       webSearchEnabled: false,
+      imageSize: 0,
     };
     setSpans([...spans, span]);
     setSelectedSpan(span);
@@ -220,6 +224,24 @@ const ChatPresetModal = (props: Props) => {
           const s = {
             ...span!,
             reasoningEffort: Number(value),
+          };
+          setSelectedSpan({
+            ...s,
+          });
+          return s;
+        }
+        return span;
+      });
+    });
+  };
+
+  const onChangeImageSize = (value: string) => {
+    setSpans((prev) => {
+      return prev.map((span) => {
+        if (selectedSpan?.spanId === span.spanId) {
+          const s = {
+            ...span!,
+            imageSize: Number(value),
           };
           setSelectedSpan({
             ...s,
@@ -420,6 +442,14 @@ const ChatPresetModal = (props: Props) => {
                         value={`${selectedSpan?.reasoningEffort}`}
                         onValueChange={(value) => {
                           onChangeReasoningEffort(value);
+                        }}
+                      />
+                    )}
+                    {modelMap[selectedSpan.modelId]?.modelReferenceName === 'gpt-image-1' && (
+                      <ImageSizeRadio
+                        value={`${selectedSpan?.imageSize}`}
+                        onValueChange={(value) => {
+                          onChangeImageSize(value);
                         }}
                       />
                     )}

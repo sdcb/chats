@@ -50,12 +50,11 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                     ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
-                    Mcps = span.ChatConfig.ChatConfigMcps.ToDictionary(
-                        mcp => mcp.McpServerId,
-                        mcp => new ChatSpanMcp
-                        {
-                            CustomHeaders = mcp.Headers
-                        })
+                    Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
+                    {
+                        Id = mcp.McpServerId,
+                        CustomHeaders = mcp.Headers
+                    }).ToArray()
                 }).ToArray(),
             }), req, cancellationToken);
     }
@@ -94,12 +93,11 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                     ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
-                    Mcps = span.ChatConfig.ChatConfigMcps.ToDictionary(
-                        mcp => mcp.McpServerId,
-                        mcp => new ChatSpanMcp
-                        {
-                            CustomHeaders = mcp.Headers
-                        })
+                    Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
+                    {
+                        Id = mcp.McpServerId,
+                        CustomHeaders = mcp.Headers
+                    }).ToArray()
                 }).ToArray(),
                 LeafTurnId = urlEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,

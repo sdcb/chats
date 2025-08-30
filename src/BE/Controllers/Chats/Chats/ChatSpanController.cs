@@ -142,6 +142,11 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
             return BadRequest(ModelState);
         }
 
+        if (request.Mcps.Select(x => x.Id).Distinct().Count() != request.Mcps.Length)
+        {
+            return BadRequest("Duplicate MCP servers are not allowed");
+        }
+
         int chatId = idEncryption.DecryptChatId(encryptedChatId);
         ChatSpan? span = await db.ChatSpans
             .Include(x => x.ChatConfig)

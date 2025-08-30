@@ -43,12 +43,9 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                     ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
-                    Mcps = span.ChatConfig.ChatConfigMcps.ToDictionary(
-                        mcp => mcp.McpServerId,
-                        mcp => new ChatSpanMcp
-                        {
-                            CustomHeaders = mcp.Headers
-                        })
+                    Mcps = span.ChatConfig.ChatConfigMcps
+                        .Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.Headers })
+                        .ToArray()
                 }).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
@@ -96,12 +93,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                     ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
-                    Mcps = span.ChatConfig.ChatConfigMcps.ToDictionary(
-                        mcp => mcp.McpServerId,
-                        mcp => new ChatSpanMcp
-                        {
-                            CustomHeaders = mcp.Headers
-                        })
+                    Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.Headers }).ToArray(),
                 }).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
@@ -144,12 +136,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                     ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
-                    Mcps = span.ChatConfig.ChatConfigMcps.ToDictionary(
-                        mcp => mcp.McpServerId,
-                        mcp => new ChatSpanMcp
-                        {
-                            CustomHeaders = mcp.Headers
-                        })
+                    Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.Headers }).ToArray()
                 }).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,

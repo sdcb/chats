@@ -10,6 +10,13 @@ export enum ChatRole {
 }
 export const DEFAULT_TEMPERATURE = 0.5;
 
+export enum ImageSize {
+  Default = 0,
+  W1024xH1024 = 1,
+  W1536xH1024 = 2,
+  W1024xH1536 = 3,
+}
+
 export enum ChatSpanStatus {
   None = 1,
   Chatting = 2,

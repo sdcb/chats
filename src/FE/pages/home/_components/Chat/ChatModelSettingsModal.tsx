@@ -10,6 +10,7 @@ import { Prompt } from '@/types/prompt';
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
 import { IconChevronDown, IconChevronRight } from '@/components/Icons';
+import ImageSizeRadio from '@/components/ImageSizeRadio/ImageSizeRadio';
 import ModelParams from '@/components/ModelParams/ModelParams';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 import { Button } from '@/components/ui/button';
@@ -94,6 +95,10 @@ const ChatModelSettingModal = (props: Props) => {
     setSpan({ ...span!, reasoningEffort: Number(value) });
   };
 
+  const onChangeImageSize = (value: string) => {
+    setSpan({ ...span!, imageSize: Number(value) });
+  };
+
   const onChangeMaxOutputTokens = (value: number | null) => {
     setSpan({ ...span!, maxOutputTokens: value });
   };
@@ -115,6 +120,7 @@ const ChatModelSettingModal = (props: Props) => {
       temperature: span?.temperature || null,
       reasoningEffort: span.reasoningEffort,
       webSearchEnabled: !!span.webSearchEnabled,
+      imageSize: span.imageSize,
     }).then(() => {
       const spans = selectedChat.spans.map((s) =>
         s.spanId === spanId ? { ...span! } : s,
@@ -178,6 +184,14 @@ const ChatModelSettingModal = (props: Props) => {
                   value={`${span?.reasoningEffort}`}
                   onValueChange={(value) => {
                     onChangeReasoningEffort(value);
+                  }}
+                />
+              )}
+              {model?.modelReferenceName === 'gpt-image-1' && (
+                <ImageSizeRadio
+                  value={`${span?.imageSize}`}
+                  onValueChange={(value) => {
+                    onChangeImageSize(value);
                   }}
                 />
               )}

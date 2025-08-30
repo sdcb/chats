@@ -55,6 +55,7 @@ const ChatHeader = () => {
         webSearchEnabled: data.webSearchEnabled,
         reasoningEffort: data?.reasoningEffort,
         systemPrompt: defaultPrompt?.content!,
+        imageSize: data?.imageSize || 0,
       });
       chatDispatch(setSelectedChat(selectedChat));
     });
@@ -117,13 +118,13 @@ const ChatHeader = () => {
       {selectedChat.spans.length < MAX_SELECT_MODEL_COUNT && (
         <ChatModelDropdownMenu
           className="p-0"
-          triggerClassName={'hover:bg-transparent p-0'}
+          triggerClassName={'hover:bg-transparent p-0 bg-button'}
           models={models}
           content={
-            <Button variant="ghost" className="bg-button">
+            <div className="flex items-center gap-2 px-4 py-2">
               <IconPlus />
               {t('Add Model')}
-            </Button>
+            </div>
           }
           hideIcon={true}
           onChangeModel={(model) => {
@@ -224,12 +225,9 @@ const ChatHeader = () => {
                                     setSelectedSpanId(span.spanId);
                                   }}
                                 >
-                                  <Button
-                                    variant="ghost"
-                                    className="w-6 h-6 p-0 m-0 hidden sm:block"
-                                  >
+                                  <div className="w-6 h-6 p-0 m-0 hidden sm:flex items-center justify-center cursor-pointer hover:bg-accent rounded-sm -ml-1">
                                     <IconDots className="rotate-90" size={16} />
-                                  </Button>
+                                  </div>
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent

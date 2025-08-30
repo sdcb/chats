@@ -40,12 +40,11 @@ public record ChatPresetDto
                 MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
                 ReasoningEffort = x.ChatConfig.ReasoningEffort,
                 ImageSize =  (DBKnownImageSize)x.ChatConfig.ImageSizeId,
-                Mcps = x.ChatConfig.ChatConfigMcps.ToDictionary(
-                    mcp => mcp.McpServerId,
-                    mcp => new ChatSpanMcp
-                    {
-                        CustomHeaders = mcp.Headers
-                    })
+                Mcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
+                {
+                    Id = mcp.McpServerId,
+                    CustomHeaders = mcp.Headers
+                })]
             })]
         };
     }

@@ -55,7 +55,14 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                         DBReasoningEffort.High => "high",
                         _ => throw new ArgumentOutOfRangeException(nameof(_reasoningEffort), _reasoningEffort, null)
                     },
-                    Size = prompt.Contains("3:2") ? GeneratedImageSize.W1536xH1024 : prompt.Contains("2:3") ? GeneratedImageSize.W1024xH1536 : null,
+                    Size = _imageSize switch
+                    {
+                        DBKnownImageSize.Default => prompt.Contains("3:2") ? GeneratedImageSize.W1536xH1024 : prompt.Contains("2:3") ? GeneratedImageSize.W1024xH1536 : null,
+                        DBKnownImageSize.W1024xH1024 => GeneratedImageSize.W1024xH1024,
+                        DBKnownImageSize.W1536xH1024 => GeneratedImageSize.W1536xH1024,
+                        DBKnownImageSize.W1024xH1536 => GeneratedImageSize.W1024xH1536,
+                        _ => throw new ArgumentOutOfRangeException(nameof(_imageSize), _imageSize, null)
+                    },
                     ModerationLevel = GeneratedImageModerationLevel.Low,
                 }, cancellationToken);
         }

@@ -80,6 +80,7 @@ export interface ChatSpanDto {
   webSearchEnabled: boolean;
   reasoningEffort: number;
   maxOutputTokens: number | null;
+  imageSize: number;
 }
 
 export interface PostChatParams {
@@ -140,6 +141,7 @@ export interface PostUserChatSpanResult {
   webSearchEnabled: boolean;
   reasoningEffort: number;
   maxOutputTokens: number;
+  imageSize: number;
 }
 
 interface GetUserChatResult {
@@ -235,6 +237,7 @@ export interface PutChatSpanParams {
   webSearchEnabled?: boolean;
   maxOutputTokens: number | null;
   reasoningEffort?: number | null;
+  imageSize?: number;
 }
 
 export interface GetChatPresetResult {
@@ -257,6 +260,7 @@ export interface PutChatPresetSpanParams {
   webSearchEnabled?: boolean;
   maxOutputTokens: number | null;
   reasoningEffort?: number | null;
+  imageSize?: number;
 }
 
 export interface GetUsageParams {

@@ -94,7 +94,7 @@ public record ChatSpanDto
     public required DBKnownImageSize ImageSize { get; init; }
 
     [JsonPropertyName("mcps")]
-    public required Dictionary<int, ChatSpanMcp> Mcps { get; init; }
+    public required ChatSpanMcp[] Mcps { get; init; }
 
     public static ChatSpanDto FromDB(ChatSpan span) => new()
     {
@@ -109,12 +109,12 @@ public record ChatSpanDto
         MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
         ReasoningEffort = span.ChatConfig.ReasoningEffort,
         ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
-        Mcps = span.ChatConfig.ChatConfigMcps.ToDictionary(
-            x => x.McpServerId,
+        Mcps = [.. span.ChatConfig.ChatConfigMcps.Select(
             x => new ChatSpanMcp
             {
+                Id = x.McpServerId,
                 CustomHeaders = x.Headers
-            }),
+            })],
     };
 
     public static ChatSpanDto FromDB(ChatPresetSpan span) => new()
@@ -130,17 +130,20 @@ public record ChatSpanDto
         MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
         ReasoningEffort = span.ChatConfig.ReasoningEffort,
         ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
-        Mcps = span.ChatConfig.ChatConfigMcps.ToDictionary(
-            x => x.McpServerId,
+        Mcps = [.. span.ChatConfig.ChatConfigMcps.Select(
             x => new ChatSpanMcp
             {
+                Id = x.McpServerId,
                 CustomHeaders = x.Headers
-            }),
+            })],
     };
 }
 
 public record ChatSpanMcp
 {
+    [JsonPropertyName("id")]
+    public required int Id { get; init; }
+
     [JsonPropertyName("customHeaders")]
     public string? CustomHeaders { get; init; }
 }
