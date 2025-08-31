@@ -19,24 +19,8 @@ public partial class ChatConfig
             MaxOutputTokens = MaxOutputTokens,
             ReasoningEffort = ReasoningEffort,
             ImageSizeId = ImageSizeId,
+            ChatConfigMcps = ChatConfigMcps,
         };
-    }
-
-    public bool ContentEquals(ChatConfig other)
-    {
-        return ModelId == other.ModelId
-            && (SystemPrompt ?? "") == (other.SystemPrompt ?? "")
-            && Temperature == other.Temperature
-            && WebSearchEnabled == other.WebSearchEnabled
-            && MaxOutputTokens == other.MaxOutputTokens
-            && ReasoningEffort == other.ReasoningEffort
-            && ImageSizeId == other.ImageSizeId
-            && GetMcpServerIds().SetEquals(other.GetMcpServerIds());
-    }
-
-    private HashSet<int> GetMcpServerIds()
-    {
-        return [.. ChatConfigMcps.Select(x => x.McpServerId)];
     }
 
     /// <summary>

@@ -131,7 +131,9 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig)
+                .ThenInclude(x => x.ChatConfigMcps).ThenInclude(x => x.McpServer.McpTools)
             .Include(x => x.ChatTurns)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == req.ChatId && x.UserId == currentUser.Id, cancellationToken);
         if (chat == null)
         {
@@ -460,9 +462,8 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                         .Where(x => x.McpServerId == serverId)
                         .Select(x => x.McpServer)
                         .FirstOrDefault() ?? throw new InvalidOperationException($"MCP Server not found for id: {serverId}");
-                    string? headers = chatSpan.ChatConfig.ChatConfigMcps
-                        .FirstOrDefault(x => x.McpServerId == serverId)
-                        ?.Headers ?? mcpServer.Headers;
+                    string? headers = chatSpan.ChatConfig.ChatConfigMcps.FirstOrDefault(x => x.McpServerId == serverId)?.Headers
+                        ?? mcpServer.Headers;
                     logger.LogInformation("Using MCP Server {mcpServer.Label} ({mcpServer.Url}) for tool call {call.Name} with headers: {headers}",
                         mcpServer.Label, mcpServer.Url, call.Name, headers);
                     IMcpClient mcpClient = await McpClientFactory.CreateAsync(new SseClientTransport(new SseClientTransportOptions
