@@ -57,7 +57,9 @@ export type ResponseContent =
   | ReasoningContent
   | TextContent
   | FileContent
-  | ErrorContent;
+  | ErrorContent
+  | ToolCallContent
+  | ToolResponseContent;
 
 export type ReasoningContent = {
   i: string;
@@ -81,6 +83,21 @@ export type ErrorContent = {
   i: string;
   $type: MessageContentType.error;
   c: string;
+};
+
+export type ToolCallContent = {
+  i: string;
+  $type: MessageContentType.toolCall;
+  u: string; // ToolCallId
+  n: string; // Name
+  p: string; // Parameters
+};
+
+export type ToolResponseContent = {
+  i: string;
+  $type: MessageContentType.toolResponse;
+  u: string; // ToolCallId
+  r: string; // Response
 };
 
 export type TextRequestContent = {
@@ -162,6 +179,8 @@ export enum MessageContentType {
   text = 1,
   fileId = 2,
   reasoning = 3,
+  toolCall = 4,
+  toolResponse = 5,
 }
 
 export const EMPTY_ID = 'EMPTY_ID';

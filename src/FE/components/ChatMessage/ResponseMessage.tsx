@@ -12,6 +12,8 @@ import {
   getFileUrl,
   MessageContentType,
   ResponseContent,
+  ToolCallContent,
+  ToolResponseContent,
 } from '@/types/chat';
 import { IChatMessage, MessageDisplayType } from '@/types/chatMessage';
 
@@ -19,6 +21,7 @@ import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
 
 import ChatError from '../ChatError/ChatError';
+import CopyButton from '../Button/CopyButton';
 import { IconCopy, IconDots, IconEdit } from '../Icons';
 import { Button } from '../ui/button';
 import {
@@ -59,7 +62,12 @@ const ResponseMessage = (props: Props) => {
 
   const handleEditMessage = (isCopyAndSave: boolean = false) => {
     const newContent = messageContent.find((c) => c.i === editId)!;
-    newContent.c = contentText;
+    // Only text content can be edited
+    if (newContent.$type === MessageContentType.text || 
+        newContent.$type === MessageContentType.reasoning || 
+        newContent.$type === MessageContentType.error) {
+      (newContent as any).c = contentText;
+    }
     onEditResponseMessage &&
       onEditResponseMessage(messageId, newContent, isCopyAndSave);
     setEditId(EMPTY_ID);
@@ -89,6 +97,68 @@ const ResponseMessage = (props: Props) => {
     navigator.clipboard.writeText(text || '');
   };
 
+  // Group tool calls and responses by toolCallId
+  const groupToolCallsAndResponses = (content: ResponseContent[]) => {
+    const toolGroups: { [toolCallId: string]: { call?: ToolCallContent; response?: ToolResponseContent } } = {};
+    const otherContent: ResponseContent[] = [];
+
+    content.forEach((c) => {
+      if (c.$type === MessageContentType.toolCall) {
+        const toolCall = c as ToolCallContent;
+        if (!toolGroups[toolCall.u]) {
+          toolGroups[toolCall.u] = {};
+        }
+        toolGroups[toolCall.u].call = toolCall;
+      } else if (c.$type === MessageContentType.toolResponse) {
+        const toolResponse = c as ToolResponseContent;
+        if (!toolGroups[toolResponse.u]) {
+          toolGroups[toolResponse.u] = {};
+        }
+        toolGroups[toolResponse.u].response = toolResponse;
+      } else {
+        otherContent.push(c);
+      }
+    });
+
+    return { toolGroups, otherContent };
+  };
+
+  const renderToolCallGroup = (toolCallId: string, group: { call?: ToolCallContent; response?: ToolResponseContent }) => {
+    const { call, response } = group;
+    if (!call) return null;
+
+    return (
+      <div key={`tool-${toolCallId}`} className="my-4 border rounded-lg overflow-hidden bg-muted/50">
+        {/* Tool header */}
+        <div className="bg-muted px-4 py-2 border-b flex items-center gap-2">
+          <span className="text-blue-600">🔧</span>
+          <span className="font-semibold text-sm">{call.n}</span>
+        </div>
+        
+        {/* Tool call parameters */}
+        <div className="px-4 py-2 relative">
+          <div className="absolute top-2 right-2 z-10">
+            <CopyButton value={call.p} />
+          </div>
+          <div className="whitespace-pre-wrap break-words font-mono text-sm pr-8 not-prose">{call.p}</div>
+        </div>
+        
+        {/* Separator */}
+        {response && <div className="border-t border-muted-foreground/20" />}
+        
+        {/* Tool response */}
+        {response && (
+          <div className="px-4 py-2 relative">
+            <div className="absolute top-2 right-2 z-10">
+              <CopyButton value={response.r} />
+            </div>
+            <div className="whitespace-pre-wrap break-words text-sm pr-8">{response.r}</div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   useEffect(() => {
     setMessageContent(structuredClone(content));
   }, [content]);
@@ -100,12 +170,21 @@ const ResponseMessage = (props: Props) => {
     }
   }, [editId]);
 
+  const { toolGroups, otherContent } = groupToolCallsAndResponses(messageContent);
+
   return (
     <>
       {messageStatus === ChatSpanStatus.Pending && (
         <span className="animate-pulse">▍</span>
       )}
-      {message.content.map((c, index) => {
+      
+      {/* Render tool call groups first */}
+      {Object.entries(toolGroups).map(([toolCallId, group]) => 
+        renderToolCallGroup(toolCallId, group)
+      )}
+      
+      {/* Render other content types */}
+      {otherContent.map((c, index) => {
         if (c.$type === MessageContentType.reasoning) {
           return (
             <ThinkingMessage
