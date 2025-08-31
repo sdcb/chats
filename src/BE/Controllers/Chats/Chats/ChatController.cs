@@ -457,7 +457,10 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     .Where(x => x.StepContentToolCall != null)
                     .Select(x => x.StepContentToolCall!))
                 {
-                    int serverId = int.Parse(call.Name!.Split('_', 2)[0]);
+                    string[] segments = call.Name!.Split('_', 2);
+                    int serverId = int.Parse(segments[0]);
+                    string toolName = segments[1];
+
                     McpServer mcpServer = chatSpan.ChatConfig.ChatConfigMcps
                         .Where(x => x.McpServerId == serverId)
                         .Select(x => x.McpServer)
@@ -472,8 +475,8 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                         AdditionalHeaders = headers == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(headers),
                     }), cancellationToken: cancellationToken);
 
-                    logger.LogInformation("Calling tool: {call.Name}, parameters: {call.Parameters}", call.Name, call.Parameters);
-                    CallToolResult result = await mcpClient.CallToolAsync(call.Name, JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Parameters)!, new ProgressReporter(pnv =>
+                    logger.LogInformation("Calling tool: {toolName}, parameters: {call.Parameters}", toolName, call.Parameters);
+                    CallToolResult result = await mcpClient.CallToolAsync(toolName, JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Parameters)!, new ProgressReporter(pnv =>
                     {
                         logger.LogInformation("Tool {call.Name} progress: {pnv.Message}", call.Name, pnv.Message);
                         writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId!, pnv.Message!));

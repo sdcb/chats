@@ -146,4 +146,6 @@ public record ChatSpanMcp
 
     [JsonPropertyName("customHeaders")]
     public string? CustomHeaders { get; init; }
+
+    public string? GetNormalizedCustomHeaders() => string.IsNullOrWhiteSpace(CustomHeaders) ? null : CustomHeaders.Trim();
 }

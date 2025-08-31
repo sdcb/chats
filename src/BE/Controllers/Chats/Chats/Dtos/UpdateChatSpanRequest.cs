@@ -131,7 +131,7 @@ public record UpdateChatSpanRequest
                 config.ChatConfigMcps.Remove(item);
             }
         }
-        
+
         // 添加新的关联
         foreach (int mcpServerId in toAdd)
         {
@@ -139,14 +139,14 @@ public record UpdateChatSpanRequest
             {
                 ChatConfig = config,
                 McpServerId = mcpServerId,
-                Headers = Mcps.First(x => x.Id == mcpServerId).CustomHeaders,
+                Headers = Mcps.First(x => x.Id == mcpServerId).GetNormalizedCustomHeaders(),
             });
         }
         
         // 更新现有关联的 Headers（如果有变化）
         foreach (ChatConfigMcp existing in config.ChatConfigMcps.Where(x => toUpdate.Contains(x.McpServerId)))
         {
-            string? newHeaders = Mcps[existing.McpServerId].CustomHeaders;
+            string? newHeaders = Mcps.First(x => x.Id == existing.McpServerId).GetNormalizedCustomHeaders();
             if (existing.Headers != newHeaders)
             {
                 existing.Headers = newHeaders;
