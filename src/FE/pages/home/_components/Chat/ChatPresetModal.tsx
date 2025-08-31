@@ -12,12 +12,8 @@ import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
 import {
   IconPlus,
-  IconMessage2,
   IconTemperature,
-  IconTokens,
-  IconPhoto,
-  IconTools,
-  IconReasoning
+  IconTokens
 } from '@/components/Icons';
 import ImageSizeRadio from '@/components/ImageSizeRadio/ImageSizeRadio';
 import McpSelector from '@/components/McpSelector/McpSelector';
