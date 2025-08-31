@@ -10,7 +10,7 @@ import { Prompt } from '@/types/prompt';
 
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
-import { IconMessage2, IconTemperature, IconTokens, IconPhoto, IconTools, IconReasoning } from '@/components/Icons';
+import { IconTemperature, IconTokens } from '@/components/Icons';
 import ImageSizeRadio from '@/components/ImageSizeRadio/ImageSizeRadio';
 import McpSelector from '@/components/McpSelector/McpSelector';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
