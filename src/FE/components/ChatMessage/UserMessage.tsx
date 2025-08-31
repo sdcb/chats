@@ -12,6 +12,7 @@ import {
   Message,
   MessageContentType,
   ResponseContent,
+  TextContent,
 } from '@/types/chat';
 
 import { Button } from '@/components/ui/button';
@@ -65,7 +66,7 @@ const UserMessage = (props: Props) => {
     if (isOnlySave) {
       let msgContent = message.content.find(
         (x) => x.$type === MessageContentType.text,
-      )!;
+      )! as TextContent;
       msgContent.c = contentText;
       onEditUserMessage && onEditUserMessage(message.id, msgContent);
     } else {
@@ -106,8 +107,8 @@ const UserMessage = (props: Props) => {
   };
 
   const init = () => {
-    const text =
-      content.find((x) => x.$type === MessageContentType.text)?.c || '';
+    const textContent = content.find((x) => x.$type === MessageContentType.text) as TextContent | undefined;
+    const text = textContent?.c || '';
     setContentText(text as string);
   };
 

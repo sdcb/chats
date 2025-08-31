@@ -29,8 +29,10 @@ import {
   FileDef,
   Message,
   MessageContentType,
+  ReasoningContent,
   RequestContent,
   ResponseContent,
+  TextContent,
 } from '@/types/chat';
 import {
   IChatMessage,
@@ -143,7 +145,7 @@ const Chat = memo(() => {
           contentCount >= 0 &&
           x.content[contentCount].$type === MessageContentType.text
         ) {
-          x.content[contentCount].c += text;
+          (x.content[contentCount] as TextContent).c += text;
         } else {
           x.content.push({ i: '', $type: MessageContentType.text, c: text });
         }
@@ -203,7 +205,7 @@ const Chat = memo(() => {
           contentCount >= 0 &&
           x.content[contentCount].$type === MessageContentType.reasoning
         ) {
-          x.content[contentCount].c += text;
+          (x.content[contentCount] as ReasoningContent).c += text;
         } else {
           x.content.push({
             i: '',
@@ -635,7 +637,7 @@ const Chat = memo(() => {
     const params = {
       messageId,
       contentId: content.i,
-      c: content.c as string,
+      c: ('c' in content ? content.c : '') as string,
     };
     if (isCopy) {
       data = await putResponseMessageEditAndSaveNew(params);
@@ -703,7 +705,7 @@ const Chat = memo(() => {
     const params = {
       messageId,
       contentId: content.i,
-      c: content.c as string,
+      c: ('c' in content ? content.c : '') as string,
     };
     await putResponseMessageEditInPlace(params);
 
