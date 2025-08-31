@@ -543,15 +543,15 @@ const ChatPresetModal = (props: Props) => {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              if (selectedSpan.temperature !== null) {
-                                onChangeTemperature(null);
-                              } else {
+                              if (selectedSpan.temperature === null) {
                                 onChangeTemperature(DEFAULT_TEMPERATURE);
+                              } else {
+                                onChangeTemperature(null);
                               }
                             }}
                             className="h-6 px-2 text-xs"
                           >
-                            {selectedSpan.temperature !== null ? t('Default') : t('Custom')}
+                            {selectedSpan.temperature === null ? t('Default') : t('Custom')}
                           </Button>
                         </div>
                         {selectedSpan.temperature !== null && (
