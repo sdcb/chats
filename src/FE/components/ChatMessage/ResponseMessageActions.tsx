@@ -1,7 +1,7 @@
 import { isChatting } from '@/utils/chats';
 
 import { AdminModelDto } from '@/types/adminApis';
-import { ChatStatus, MessageContentType } from '@/types/chat';
+import { ChatStatus, MessageContentType, TextContent } from '@/types/chat';
 import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
 
 import ChangeModelAction from './ChangeModelAction';
@@ -68,7 +68,7 @@ const ResponseMessageActions = (props: Props) => {
         <CopyAction
           text={message.content
             .filter((x) => x.$type === MessageContentType.text)
-            .map((x) => x.c)
+            .map((x) => (x as TextContent).c)
             .join('')}
         />
 
