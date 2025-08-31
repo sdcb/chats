@@ -14,6 +14,7 @@ import { formatPrompt } from '@/utils/promptVariable';
 import { AdminModelDto } from '@/types/adminApis';
 import { Prompt, PromptSlim } from '@/types/prompt';
 
+import { IconMessage } from '@/components/Icons';
 import PromptList from './PromptList';
 import VariableModal from './VariableModal';
 
@@ -185,7 +186,8 @@ const SystemPrompt: FC<Props> = ({
 
   return (
     <div className="flex flex-col">
-      <label className="mb-2 text-left text-neutral-700 dark:text-neutral-400">
+      <label className="mb-2 text-left text-neutral-700 dark:text-neutral-400 flex gap-1 items-center">
+        <IconMessage size={16} />
         {t('System Prompt')}
       </label>
       <textarea

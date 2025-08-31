@@ -405,7 +405,6 @@
   "Deeply thought (took {{time}} seconds)": "已深度思考（用时 {{time}} 秒）",
   "Default": "默认",
   "Custom": "自定义",
-  "Max Tokens": "最多 Tokens",
   "Advanced Params": "高级参数",
   "Add a preset model group": "添加一个预设模型组",
   "New preset model group": "新预设模型组",
@@ -503,5 +502,6 @@
   "All MCP tools must have a valid tool name": "所有MCP工具必须有有效的工具名",
   "Invalid JSON format in MCP custom headers": "MCP自定义请求头的JSON格式无效",
   "Failed to save settings": "保存设置失败",
-  "Failed to save preset": "保存预设失败"
+  "Failed to save preset": "保存预设失败",
+  "Max Output Tokens": "最多输出Token数"
 }

@@ -11,13 +11,16 @@ import { Prompt } from '@/types/prompt';
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
 import {
-  IconChevronDown,
-  IconChevronRight,
   IconPlus,
+  IconMessage2,
+  IconTemperature,
+  IconTokens,
+  IconPhoto,
+  IconTools,
+  IconReasoning
 } from '@/components/Icons';
 import ImageSizeRadio from '@/components/ImageSizeRadio/ImageSizeRadio';
 import McpSelector from '@/components/McpSelector/McpSelector';
-import ModelParams from '@/components/ModelParams/ModelParams';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -47,7 +50,6 @@ const ChatPresetModal = (props: Props) => {
   const [spans, setSpans] = useState<ChatSpanDto[]>([]);
   const [selectedSpan, setSelectedSpan] = useState<ChatSpanDto>();
   const [name, setName] = useState(chatPreset?.name);
-  const [isShowAdvParams, setIsShowAdvParams] = useState(false);
   const [presetSpanCount, setPresetSpanCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [mcpServersLoaded, setMcpServersLoaded] = useState(false);
@@ -76,7 +78,6 @@ const ChatPresetModal = (props: Props) => {
       setSelectedSpan(undefined);
     }
     setPresetSpanCount(chatPreset?.spans.length || 0);
-    setIsShowAdvParams(false);
     setMcpServersLoaded(false);
     // 加载MCP服务器数据
     if (isOpen) {
@@ -529,94 +530,89 @@ const ChatPresetModal = (props: Props) => {
                         }}
                       />
                     )}
-                    <div className="flex flex-col gap-4">
-                      <div
-                        className="flex justify-between"
-                        onClick={() => {
-                          setIsShowAdvParams(!isShowAdvParams);
-                        }}
-                      >
-                        <div>{t('Advanced Params')}</div>
-                        <div>
-                          {isShowAdvParams ? (
-                            <IconChevronDown />
-                          ) : (
-                            <IconChevronRight />
-                          )}
+                    
+                    {/* Temperature */}
+                    {modelMap[selectedSpan.modelId]?.minTemperature !== modelMap[selectedSpan.modelId]?.maxTemperature && (
+                      <div className="flex flex-col gap-4">
+                        <div className="flex justify-between">
+                          <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
+                            <IconTemperature size={16} />
+                            {t('Temperature')}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (selectedSpan.temperature !== null) {
+                                onChangeTemperature(null);
+                              } else {
+                                onChangeTemperature(DEFAULT_TEMPERATURE);
+                              }
+                            }}
+                            className="h-6 px-2 text-xs"
+                          >
+                            {selectedSpan.temperature !== null ? t('Default') : t('Custom')}
+                          </Button>
                         </div>
-                      </div>
-                      <div
-                        className={cn(
-                          'hidden',
-                          isShowAdvParams && 'flex flex-col gap-2',
-                        )}
-                      >
-                        <ModelParams
-                          label={t('Temperature')}
-                          isExpand={selectedSpan.temperature !== null}
-                          hidden={
-                            !(
-                              modelMap[selectedSpan.modelId]?.minTemperature !==
-                              modelMap[selectedSpan.modelId]?.maxTemperature
-                            )
-                          }
-                          value={selectedSpan.temperature || DEFAULT_TEMPERATURE}
-                          tool={
+                        {selectedSpan.temperature !== null && (
+                          <div className="px-2">
                             <Slider
                               className="cursor-pointer"
                               min={modelMap[selectedSpan.modelId]?.minTemperature}
                               max={modelMap[selectedSpan.modelId]?.maxTemperature}
                               step={0.01}
-                              value={[
-                                selectedSpan.temperature || DEFAULT_TEMPERATURE,
-                              ]}
+                              value={[selectedSpan.temperature || DEFAULT_TEMPERATURE]}
                               onValueChange={(values) => {
                                 onChangeTemperature(values[0]);
                               }}
                             />
-                          }
-                          onChangeToDefault={() => {
-                            onChangeTemperature(null);
-                          }}
-                          onChangeToCustom={() => {
-                            onChangeTemperature(DEFAULT_TEMPERATURE);
-                          }}
-                        />
-                        <ModelParams
-                          label={t('Max Tokens')}
-                          isExpand={selectedSpan.maxOutputTokens !== null}
-                          value={
-                            selectedSpan.maxOutputTokens ||
-                            modelMap[selectedSpan.modelId]?.maxResponseTokens
-                          }
-                          tool={
-                            <Slider
-                              className="cursor-pointer"
-                              min={0}
-                              max={
-                                modelMap[selectedSpan.modelId]?.maxResponseTokens
-                              }
-                              step={1}
-                              value={[
-                                selectedSpan.maxOutputTokens ||
-                                  modelMap[selectedSpan.modelId]
-                                    ?.maxResponseTokens,
-                              ]}
-                              onValueChange={(values) => {
-                                onChangeMaxOutputTokens(values[0]);
-                              }}
-                            />
-                          }
-                          onChangeToDefault={() => {
-                            onChangeMaxOutputTokens(null);
-                          }}
-                          onChangeToCustom={() => {
-                            onChangeMaxOutputTokens(
-                              modelMap[selectedSpan.modelId].maxResponseTokens,
-                            );
-                          }}
-                        />
+                            <div className="text-xs text-gray-500 mt-1">
+                              {selectedSpan.temperature || DEFAULT_TEMPERATURE}
+                            </div>
+                          </div>
+                        )}
                       </div>
+                    )}
+
+                    {/* Max Tokens */}
+                    <div className="flex flex-col gap-4">
+                      <div className="flex justify-between">
+                        <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
+                          <IconTokens size={16} />
+                          {t('Max Output Tokens')}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (selectedSpan.maxOutputTokens === null) {
+                              onChangeMaxOutputTokens(modelMap[selectedSpan.modelId].maxResponseTokens);
+                            } else {
+                              onChangeMaxOutputTokens(null);
+                            }
+                          }}
+                          className="h-6 px-2 text-xs"
+                        >
+                          {selectedSpan.maxOutputTokens === null ? t('Default') : t('Custom')}
+                        </Button>
+                      </div>
+                      {selectedSpan.maxOutputTokens !== null && (
+                        <div className="px-2">
+                          <Slider
+                            className="cursor-pointer"
+                            min={0}
+                            max={modelMap[selectedSpan.modelId]?.maxResponseTokens}
+                            step={1}
+                            value={[selectedSpan.maxOutputTokens || modelMap[selectedSpan.modelId]?.maxResponseTokens]}
+                            onValueChange={(values) => {
+                              onChangeMaxOutputTokens(values[0]);
+                            }}
+                          />
+                          <div className="text-xs text-gray-500 mt-1">
+                            {selectedSpan.maxOutputTokens || modelMap[selectedSpan.modelId]?.maxResponseTokens}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

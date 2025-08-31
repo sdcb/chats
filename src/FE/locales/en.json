@@ -2,9 +2,5 @@
   "Note & Important, For Github Copilot": "You don't need to translate English to English(which explained why this file seems very simple)",
   "zh": "Chinese",
   "en": "English",
-  "Chinese": "简体中文",
-  "All MCP tools must have a valid tool name": "All MCP tools must have a valid tool name",
-  "Invalid JSON format in MCP custom headers": "Invalid JSON format in MCP custom headers",
-  "Failed to save settings": "Failed to save settings",
-  "Failed to save preset": "Failed to save preset"
+  "Chinese": "简体中文"
 }

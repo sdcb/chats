@@ -22,8 +22,8 @@ const EnableNetworkSearch = (props: {
     <div className="flex flex-col">
       <label className="mb-2 text-left text-neutral-700 dark:text-neutral-400"></label>
       <div className="flex items-center justify-between gap-1">
-        <span className='flex gap-1 items-center'>
-          <IconWorld />
+        <span className='flex gap-1 items-center text-neutral-700 dark:text-neutral-400'>
+          <IconWorld size={16} />
           {label}
         </span>
         <div className="flex gap-1 items-center">

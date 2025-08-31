@@ -4,7 +4,7 @@ import useTranslation from '@/hooks/useTranslation';
 import { getMcpServers } from '@/apis/clientApis';
 import { McpServerListItemDto, ChatSpanMcp } from '@/types/clientApis';
 
-import { IconPlus, IconTrash } from '../Icons';
+import { IconPlus, IconTrash, IconTools } from '../Icons';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -100,8 +100,9 @@ const McpSelector: FC<Props> = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-between text-sm">
-        <div className="flex gap-1 items-center">
+      <div className="flex justify-between">
+        <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
+          <IconTools size={16} />
           {t('MCP Tools')}
         </div>
         <Button

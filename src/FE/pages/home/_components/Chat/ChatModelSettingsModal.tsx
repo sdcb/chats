@@ -10,10 +10,9 @@ import { Prompt } from '@/types/prompt';
 
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
-import { IconChevronDown, IconChevronRight } from '@/components/Icons';
+import { IconMessage2, IconTemperature, IconTokens, IconPhoto, IconTools, IconReasoning } from '@/components/Icons';
 import ImageSizeRadio from '@/components/ImageSizeRadio/ImageSizeRadio';
 import McpSelector from '@/components/McpSelector/McpSelector';
-import ModelParams from '@/components/ModelParams/ModelParams';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,7 +31,6 @@ import EnableNetworkSearch from './EnableNetworkSearch';
 import SystemPrompt from './SystemPrompt';
 
 import { putChatSpan, getMcpServers } from '@/apis/clientApis';
-import { cn } from '@/lib/utils';
 
 interface Props {
   spanId: number;
@@ -50,7 +48,6 @@ const ChatModelSettingModal = (props: Props) => {
   } = useContext(HomeContext);
   const [span, setSpan] = useState<ChatSpanDto>();
   const [model, setModel] = useState<AdminModelDto>();
-  const [isShowAdvParams, setIsShowAdvParams] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [mcpServersLoaded, setMcpServersLoaded] = useState(false);
 
@@ -69,7 +66,6 @@ const ChatModelSettingModal = (props: Props) => {
     const sp = selectedChat.spans.find((x) => x.spanId === spanId)!;
     setSpan(sp);
     setModel(modelMap[sp?.modelId]);
-    setIsShowAdvParams(false);
     setMcpServersLoaded(false);
     // 加载MCP服务器数据
     if (isOpen) {
@@ -257,34 +253,32 @@ const ChatModelSettingModal = (props: Props) => {
                   }}
                 />
               )}
-              <div className="flex flex-col gap-4">
-                <div
-                  className="flex justify-between"
-                  onClick={() => {
-                    setIsShowAdvParams(!isShowAdvParams);
-                  }}
-                >
-                  <div>{t('Advanced Params')}</div>
-                  <div>
-                    {isShowAdvParams ? (
-                      <IconChevronDown />
-                    ) : (
-                      <IconChevronRight />
-                    )}
+              
+              {/* Temperature */}
+              {model.minTemperature !== model.maxTemperature && (
+                <div className="flex flex-col gap-4">
+                  <div className="flex justify-between">
+                    <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
+                      <IconTemperature size={16} />
+                      {t('Temperature')}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (span.temperature !== null) {
+                          onChangeTemperature(null);
+                        } else {
+                          onChangeTemperature(DEFAULT_TEMPERATURE);
+                        }
+                      }}
+                      className="h-6 px-2 text-xs"
+                    >
+                      {span.temperature !== null ? t('Default') : t('Custom')}
+                    </Button>
                   </div>
-                </div>
-                <div
-                  className={cn(
-                    'hidden',
-                    isShowAdvParams && 'flex flex-col gap-2',
-                  )}
-                >
-                  <ModelParams
-                    label={t('Temperature')}
-                    isExpand={span.temperature !== null}
-                    hidden={!(model.minTemperature !== model.maxTemperature)}
-                    value={span.temperature || DEFAULT_TEMPERATURE}
-                    tool={
+                  {span.temperature !== null && (
+                    <div className="px-2">
                       <Slider
                         className="cursor-pointer"
                         min={model.minTemperature}
@@ -295,40 +289,53 @@ const ChatModelSettingModal = (props: Props) => {
                           onChangeTemperature(values[0]);
                         }}
                       />
-                    }
-                    onChangeToDefault={() => {
-                      onChangeTemperature(null);
-                    }}
-                    onChangeToCustom={() => {
-                      onChangeTemperature(DEFAULT_TEMPERATURE);
-                    }}
-                  />
-                  <ModelParams
-                    label={t('Max Tokens')}
-                    isExpand={span.maxOutputTokens !== null}
-                    value={span.maxOutputTokens || model.maxResponseTokens}
-                    tool={
-                      <Slider
-                        className="cursor-pointer"
-                        min={0}
-                        max={model.maxResponseTokens}
-                        step={1}
-                        value={[
-                          span.maxOutputTokens || model.maxResponseTokens,
-                        ]}
-                        onValueChange={(values) => {
-                          onChangeMaxOutputTokens(values[0]);
-                        }}
-                      />
-                    }
-                    onChangeToDefault={() => {
-                      onChangeMaxOutputTokens(null);
-                    }}
-                    onChangeToCustom={() => {
-                      onChangeMaxOutputTokens(model.maxResponseTokens);
-                    }}
-                  />
+                      <div className="text-xs text-gray-500 mt-1">
+                        {span.temperature || DEFAULT_TEMPERATURE}
+                      </div>
+                    </div>
+                  )}
                 </div>
+              )}
+
+              {/* Max Tokens */}
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between">
+                  <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
+                    <IconTokens size={16} />
+                    {t('Max Output Tokens')}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (span.maxOutputTokens === null) {
+                        onChangeMaxOutputTokens(model.maxResponseTokens);
+                      } else {
+                        onChangeMaxOutputTokens(null);
+                      }
+                    }}
+                    className="h-6 px-2 text-xs"
+                  >
+                    {span.maxOutputTokens === null ? t('Default') : t('Custom')}
+                  </Button>
+                </div>
+                {span.maxOutputTokens !== null && (
+                  <div className="px-2">
+                    <Slider
+                      className="cursor-pointer"
+                      min={0}
+                      max={model.maxResponseTokens}
+                      step={1}
+                      value={[span.maxOutputTokens || model.maxResponseTokens]}
+                      onValueChange={(values) => {
+                        onChangeMaxOutputTokens(values[0]);
+                      }}
+                    />
+                    <div className="text-xs text-gray-500 mt-1">
+                      {span.maxOutputTokens || model.maxResponseTokens}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

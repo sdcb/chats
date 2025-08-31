@@ -2,7 +2,8 @@ import { FC, useState, useEffect } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { IconSettings } from '../Icons';
+import { IconPhoto } from '../Icons';
+import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { cn } from '@/lib/utils';
@@ -54,14 +55,19 @@ const ImageSizeRadio: FC<Props> = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-between text-sm">
-        <div className="flex gap-1 items-center">
-          <IconSettings />
+      <div className="flex justify-between">
+        <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
+          <IconPhoto size={16} />
           {t('Image Size')}
         </div>
-        <div className="text-gray-600 cursor-pointer" onClick={handleToggleMode}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleToggleMode}
+          className="h-6 px-2 text-xs"
+        >
           {isExpanded ? t('Custom') : t('Default')}
-        </div>
+        </Button>
       </div>
       <div className={cn('hidden', isExpanded && 'flex justify-between gap-2')}>
         <RadioGroup

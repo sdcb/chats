@@ -1774,6 +1774,84 @@ var IconDesktop = (props: IconProps) => {
   );
 };
 
+const IconTemperature = (props: IconProps) => {
+  const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      onClick={onClick}
+      className={className}
+      width={size}
+      height={size}
+      strokeWidth={strokeWidth}
+      stroke={stroke || 'var(--foreground)'}
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 13.5a4 4 0 1 0 4 0v-8.5a2 2 0 0 0 -4 0v8.5" />
+      <path d="M10 9l4 0" />
+    </svg>
+  );
+};
+
+const IconPhoto = (props: IconProps) => {
+  const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      onClick={onClick}
+      className={className}
+      width={size}
+      height={size}
+      strokeWidth={strokeWidth}
+      stroke={stroke || 'var(--foreground)'}
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M15 8h.01" />
+      <path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12z" />
+      <path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" />
+      <path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" />
+    </svg>
+  );
+};
+
+const IconTools = (props: IconProps) => {
+  const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      onClick={onClick}
+      className={className}
+      width={size}
+      height={size}
+      strokeWidth={strokeWidth}
+      stroke={stroke || 'var(--foreground)'}
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M3 21h4l13 -13a1.5 1.5 0 0 0 -4 -4l-13 13v4" />
+      <path d="M14.5 5.5l4 4" />
+      <path d="M12 8l-5 -5l-4 4l5 5" />
+      <path d="M7 8l-1.5 1.5" />
+      <path d="M16 12l5 5l-4 4l-5 -5" />
+      <path d="M16 17l-1.5 1.5" />
+    </svg>
+  );
+};
+
 var IconTokens = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
 
@@ -2017,6 +2095,9 @@ export {
   IconEditCheck,
   IconDesktop,
   IconTokens,
+  IconTemperature,
+  IconPhoto,
+  IconTools,
   IconChartHistogram,
   IconArrowsDiagonal,
   IconArrowsDiagonalMinimize,
