@@ -94,62 +94,78 @@ const ResponseMessage = (props: Props) => {
     navigator.clipboard.writeText(text || '');
   };
 
-  // Group tool calls and responses by toolCallId
-  const groupToolCallsAndResponses = (content: ResponseContent[]) => {
-    const toolGroups: { [toolCallId: string]: { call?: ToolCallContent; response?: ToolResponseContent } } = {};
-    const otherContent: ResponseContent[] = [];
+  // UI层的DTO，用于组合工具调用和响应
+  interface ToolGroupContent {
+    $type: 'toolGroup';
+    toolCall: ToolCallContent;
+    toolResponse?: ToolResponseContent;
+    originalIndex: number;
+  }
 
+  type ProcessedContent = ResponseContent | ToolGroupContent;
+
+  // 按原始顺序处理内容，将工具调用和响应组合
+  const processContentInOrder = (content: ResponseContent[]): ProcessedContent[] => {
+    const toolResponseMap: { [toolCallId: string]: ToolResponseContent } = {};
+    const processedContent: ProcessedContent[] = [];
+    
+    // 首先收集所有工具响应
     content.forEach((c) => {
-      if (c.$type === MessageContentType.toolCall) {
-        const toolCall = c as ToolCallContent;
-        if (!toolGroups[toolCall.u]) {
-          toolGroups[toolCall.u] = {};
-        }
-        toolGroups[toolCall.u].call = toolCall;
-      } else if (c.$type === MessageContentType.toolResponse) {
+      if (c.$type === MessageContentType.toolResponse) {
         const toolResponse = c as ToolResponseContent;
-        if (!toolGroups[toolResponse.u]) {
-          toolGroups[toolResponse.u] = {};
-        }
-        toolGroups[toolResponse.u].response = toolResponse;
-      } else {
-        otherContent.push(c);
+        toolResponseMap[toolResponse.u] = toolResponse;
       }
     });
 
-    return { toolGroups, otherContent };
+    // 按原始顺序处理内容
+    content.forEach((c, index) => {
+      if (c.$type === MessageContentType.toolCall) {
+        const toolCall = c as ToolCallContent;
+        const toolResponse = toolResponseMap[toolCall.u];
+        processedContent.push({
+          $type: 'toolGroup',
+          toolCall,
+          toolResponse,
+          originalIndex: index
+        });
+      } else if (c.$type !== MessageContentType.toolResponse) {
+        // 跳过工具响应，因为它们已经被组合到工具调用中了
+        processedContent.push(c);
+      }
+    });
+
+    return processedContent;
   };
 
-  const renderToolCallGroup = (toolCallId: string, group: { call?: ToolCallContent; response?: ToolResponseContent }) => {
-    const { call, response } = group;
-    if (!call) return null;
+  const renderToolGroup = (toolGroup: ToolGroupContent, index: number) => {
+    const { toolCall, toolResponse } = toolGroup;
 
     return (
-      <div key={`tool-${toolCallId}`} className="my-4 border rounded-lg overflow-hidden bg-muted/50">
+      <div key={`tool-group-${index}`} className="my-4 border rounded-lg overflow-hidden bg-muted/50">
         {/* Tool header */}
         <div className="bg-muted px-4 py-2 border-b flex items-center gap-2">
           <span className="text-blue-600">🔧</span>
-          <span className="font-semibold text-sm">{call.n}</span>
+          <span className="font-semibold text-sm">{toolCall.n}</span>
         </div>
         
         {/* Tool call parameters */}
         <div className="px-4 py-2 relative">
           <div className="absolute top-2 right-2 z-10">
-            <CopyButton value={call.p} />
+            <CopyButton value={toolCall.p} />
           </div>
-          <div className="whitespace-pre-wrap break-words font-mono text-sm pr-8 not-prose">{call.p}</div>
+          <div className="whitespace-pre-wrap break-words font-mono text-sm pr-8 not-prose">{toolCall.p}</div>
         </div>
         
         {/* Separator */}
-        {response && <div className="border-t border-muted-foreground/20" />}
+        {toolResponse && <div className="border-t border-muted-foreground/20" />}
         
         {/* Tool response */}
-        {response && (
+        {toolResponse && (
           <div className="px-4 py-2 relative">
             <div className="absolute top-2 right-2 z-10">
-              <CopyButton value={response.r} />
+              <CopyButton value={toolResponse.r} />
             </div>
-            <div className="whitespace-pre-wrap break-words text-sm pr-8">{response.r}</div>
+            <div className="whitespace-pre-wrap break-words text-sm pr-8">{toolResponse.r}</div>
           </div>
         )}
       </div>
@@ -167,7 +183,7 @@ const ResponseMessage = (props: Props) => {
     }
   }, [editId]);
 
-  const { toolGroups, otherContent } = groupToolCallsAndResponses(messageContent);
+  const processedContent = processContentInOrder(messageContent);
 
   return (
     <>
@@ -175,14 +191,11 @@ const ResponseMessage = (props: Props) => {
         <span className="animate-pulse">▍</span>
       )}
       
-      {/* Render tool call groups first */}
-      {Object.entries(toolGroups).map(([toolCallId, group]) => 
-        renderToolCallGroup(toolCallId, group)
-      )}
-      
-      {/* Render other content types */}
-      {otherContent.map((c, index) => {
-        if (c.$type === MessageContentType.reasoning) {
+      {/* Render content in original order */}
+      {processedContent.map((c, index) => {
+        if (c.$type === 'toolGroup') {
+          return renderToolGroup(c, index);
+        } else if (c.$type === MessageContentType.reasoning) {
           return (
             <ThinkingMessage
               key={'reasoning-' + index}
