@@ -63,13 +63,10 @@ const ResponseMessage = (props: Props) => {
   const handleEditMessage = (isCopyAndSave: boolean = false) => {
     const newContent = messageContent.find((c) => c.i === editId)!;
     // Only text content can be edited
-    if (newContent.$type === MessageContentType.text || 
-        newContent.$type === MessageContentType.reasoning || 
-        newContent.$type === MessageContentType.error) {
-      (newContent as any).c = contentText;
+    if (newContent.$type === MessageContentType.text) {
+      newContent.c = contentText;
+      onEditResponseMessage && onEditResponseMessage(messageId, newContent, isCopyAndSave);
     }
-    onEditResponseMessage &&
-      onEditResponseMessage(messageId, newContent, isCopyAndSave);
     setEditId(EMPTY_ID);
   };
 
@@ -251,7 +248,7 @@ const ResponseMessage = (props: Props) => {
                     className="rounded-md border border-neutral-300 px-4 py-1 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
                     onClick={(e) => {
                       setContentText('');
-                      setEditId('');
+                      setEditId(EMPTY_ID);
                       e.stopPropagation();
                     }}
                   >
