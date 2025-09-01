@@ -118,14 +118,14 @@ const ChatInput = ({
     }
     const fileIds = contentFiles.map((f) => ({
       i: '',
-      $type: MessageContentType.fileId,
+      $type: MessageContentType.fileId as const,
       c: f.id,
     }));
     onSend({
       role: ChatRole.User,
       content: [
         ...fileIds,
-        { i: '', $type: MessageContentType.text, c: contentText },
+        { i: '', $type: MessageContentType.text as const, c: contentText },
       ],
     });
     setContentText('');
