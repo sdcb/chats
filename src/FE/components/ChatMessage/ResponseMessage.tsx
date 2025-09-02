@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -187,10 +187,6 @@ const ResponseMessage = (props: Props) => {
 
   return (
     <>
-      {messageStatus === ChatSpanStatus.Pending && (
-        <span className="animate-pulse">▍</span>
-      )}
-      
       {/* Render content in original order */}
       {processedContent.map((c, index) => {
         if (c.$type === 'toolGroup') {
@@ -333,7 +329,11 @@ const ResponseMessage = (props: Props) => {
                     },
                   }}
                 >
-                  {`${preprocessLaTeX(c.c!)}`}
+                  {`${preprocessLaTeX(c.c!)}${
+                    (messageStatus === ChatSpanStatus.Pending || messageStatus === ChatSpanStatus.Chatting) && 
+                    index === processedContent.length - 1 && 
+                    c.$type === MessageContentType.text ? '▍' : ''
+                  }`}
                 </MemoizedReactMarkdown>
               )}
               <div className="absolute -bottom-0.5 right-0 z-10">

@@ -1,4 +1,4 @@
-import {
+﻿import {
   memo,
   useCallback,
   useContext,
@@ -135,129 +135,186 @@ const Chat = memo(() => {
     text: string,
     status: ChatSpanStatus,
     finalMessageId?: string,
-  ) => {
+  ): IChatMessage[][] => {
     const messageCount = selectedMsgs.length - 1;
-    let messageList = selectedMsgs[messageCount];
-    messageList.map((x) => {
+    const messageList = selectedMsgs[messageCount];
+    const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
         const contentCount = x.content.length - 1;
+        let newContent = [...x.content];
+        
         if (
           contentCount >= 0 &&
-          x.content[contentCount].$type === MessageContentType.text
+          newContent[contentCount].$type === MessageContentType.text
         ) {
-          (x.content[contentCount] as TextContent).c += text;
+          const oldText = (newContent[contentCount] as TextContent).c;
+          const newText = oldText + text;
+          newContent[contentCount] = {
+            ...newContent[contentCount],
+            c: newText
+          };
         } else {
-          x.content.push({ i: '', $type: MessageContentType.text, c: text });
+          newContent.push({ i: '', $type: MessageContentType.text, c: text });
         }
 
-        x.status = status;
         if (status === ChatSpanStatus.Failed) {
-          x.content.push({ i: '', $type: MessageContentType.error, c: text });
+          newContent.push({ i: '', $type: MessageContentType.error, c: text });
         }
+
+        const updatedMessage = {
+          ...x,
+          content: newContent,
+          status: status,
+        };
+
         if (status === ChatSpanStatus.None) {
-          x.siblingIds.push(messageId);
-          x.id = finalMessageId!;
+          updatedMessage.siblingIds = [...x.siblingIds, messageId];
+          updatedMessage.id = finalMessageId!;
         }
+
+        return updatedMessage;
       }
       return x;
     });
-    selectedMsgs.splice(messageCount, 1, messageList);
-    messageDispatch(setSelectedMessages(selectedMsgs));
+    
+    const newSelectedMsgs = [...selectedMsgs];
+    newSelectedMsgs[messageCount] = updatedMessageList;
+    messageDispatch(setSelectedMessages(newSelectedMsgs));
+    return newSelectedMsgs;
   };
 
   const changeSelectedResponseFile = (
     selectedMsgs: IChatMessage[][],
     messageId: string,
     text: FileDef,
-  ) => {
+  ): IChatMessage[][] => {
     const messageCount = selectedMsgs.length - 1;
-    let messageList = selectedMsgs[messageCount];
-    messageList.map((x) => {
+    const messageList = selectedMsgs[messageCount];
+    const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
         const contentCount = x.content.length - 1;
+        let newContent = [...x.content];
+        
         if (
           contentCount >= 0 &&
-          x.content[contentCount].$type === MessageContentType.fileId
+          newContent[contentCount].$type === MessageContentType.fileId
         ) {
-          // x.content[contentCount].c = text;
+          // Update existing file content
+          newContent[contentCount] = {
+            ...newContent[contentCount],
+            c: text
+          };
         } else {
-          x.content.push({ i: '', $type: MessageContentType.fileId, c: text });
+          newContent.push({ i: '', $type: MessageContentType.fileId, c: text });
         }
+
+        return {
+          ...x,
+          content: newContent,
+        };
       }
       return x;
     });
-    selectedMsgs.splice(messageCount, 1, messageList);
-    messageDispatch(setSelectedMessages(selectedMsgs));
+    
+    const newSelectedMsgs = [...selectedMsgs];
+    newSelectedMsgs[messageCount] = updatedMessageList;
+    messageDispatch(setSelectedMessages(newSelectedMsgs));
+    return newSelectedMsgs;
   };
 
   const changeSelectedResponseReason = (
     selectedMsgs: IChatMessage[][],
     messageId: string,
     text: string,
-  ) => {
+  ): IChatMessage[][] => {
     const messageCount = selectedMsgs.length - 1;
-    let messageList = selectedMsgs[messageCount];
-    messageList.map((x) => {
+    const messageList = selectedMsgs[messageCount];
+    const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        x.status = ChatSpanStatus.Reasoning;
         const contentCount = x.content.length - 1;
+        let newContent = [...x.content];
+        
         if (
           contentCount >= 0 &&
-          x.content[contentCount].$type === MessageContentType.reasoning
+          newContent[contentCount].$type === MessageContentType.reasoning
         ) {
-          (x.content[contentCount] as ReasoningContent).c += text;
+          newContent[contentCount] = {
+            ...newContent[contentCount],
+            c: (newContent[contentCount] as ReasoningContent).c + text
+          };
         } else {
-          x.content.push({
+          newContent.push({
             i: '',
             $type: MessageContentType.reasoning,
             c: text,
           });
         }
+
+        return {
+          ...x,
+          status: ChatSpanStatus.Reasoning,
+          content: newContent,
+        };
       }
       return x;
     });
-    selectedMsgs.splice(messageCount, 1, messageList);
-    messageDispatch(setSelectedMessages(selectedMsgs));
+    
+    const newSelectedMsgs = [...selectedMsgs];
+    newSelectedMsgs[messageCount] = updatedMessageList;
+    messageDispatch(setSelectedMessages(newSelectedMsgs));
+    return newSelectedMsgs;
   };
 
   const changeSelectedResponseReasoningDuration = (
     selectedMsgs: IChatMessage[][],
     messageId: string,
     time: number,
-  ) => {
+  ): IChatMessage[][] => {
     const messageCount = selectedMsgs.length - 1;
-    let messageList = selectedMsgs[messageCount];
-    messageList.map((x) => {
+    const messageList = selectedMsgs[messageCount];
+    const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        x.reasoningDuration = time;
+        return {
+          ...x,
+          reasoningDuration: time,
+        };
       }
       return x;
     });
-    selectedMsgs.splice(messageCount, 1, messageList);
-    messageDispatch(setSelectedMessages(selectedMsgs));
+    
+    const newSelectedMsgs = [...selectedMsgs];
+    newSelectedMsgs[messageCount] = updatedMessageList;
+    messageDispatch(setSelectedMessages(newSelectedMsgs));
+    return newSelectedMsgs;
   };
 
   const changeSelectedResponseMessageInfo = (
     selectedMsgs: IChatMessage[][],
     spanId: number,
     message: IChatMessage,
-  ) => {
+  ): IChatMessage[][] => {
     const messageCount = selectedMsgs.length - 1;
-    let messageList = selectedMsgs[messageCount];
-    messageList.map((x) => {
+    const messageList = selectedMsgs[messageCount];
+    const updatedMessageList = messageList.map((x) => {
       if (x.spanId === spanId) {
-        x.id = message.id;
-        x.duration = message.duration;
-        x.firstTokenLatency = message.firstTokenLatency;
-        x.inputPrice = message.inputPrice;
-        x.outputPrice = message.outputPrice;
-        x.inputTokens = message.inputTokens;
-        x.outputTokens = message.outputTokens;
+        return {
+          ...x,
+          id: message.id,
+          duration: message.duration,
+          firstTokenLatency: message.firstTokenLatency,
+          inputPrice: message.inputPrice,
+          outputPrice: message.outputPrice,
+          inputTokens: message.inputTokens,
+          outputTokens: message.outputTokens,
+        };
       }
       return x;
     });
-    selectedMsgs.splice(messageCount, 1, messageList);
-    messageDispatch(setSelectedMessages(selectedMsgs));
+    
+    const newSelectedMsgs = [...selectedMsgs];
+    newSelectedMsgs[messageCount] = updatedMessageList;
+    messageDispatch(setSelectedMessages(newSelectedMsgs));
+    return newSelectedMsgs;
   };
 
   const checkSelectChatModelIsExist = (spans: ChatSpanDto[]) => {
@@ -431,8 +488,8 @@ const Chat = memo(() => {
         buffer += decoder.decode(value, { stream: true });
         let newlineIndex;
         while ((newlineIndex = buffer.indexOf('\r\n\r\n')) >= 0) {
-          const line = buffer.slice(0, newlineIndex + 1).trim();
-          buffer = buffer.slice(newlineIndex + 1);
+          const line = buffer.slice(0, newlineIndex).trim();
+          buffer = buffer.slice(newlineIndex + 4); // Skip '\r\n\r\n'
           if (line.startsWith('data: ')) {
             yield line.slice(6);
           }
@@ -449,11 +506,11 @@ const Chat = memo(() => {
       } else if (value.k === SseResponseKind.ReasoningSegment) {
         const { r: msg, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
-        changeSelectedResponseReason(selectedMessageList, msgId, msg);
+        selectedMessageList = changeSelectedResponseReason(selectedMessageList, msgId, msg);
       } else if (value.k === SseResponseKind.Segment) {
         const { r: msg, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
-        changeSelectedResponseMessage(
+        selectedMessageList = changeSelectedResponseMessage(
           selectedMessageList,
           msgId,
           msg,
@@ -462,7 +519,7 @@ const Chat = memo(() => {
       } else if (value.k === SseResponseKind.Error) {
         const { r: msg, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
-        changeSelectedResponseMessage(
+        selectedMessageList = changeSelectedResponseMessage(
           selectedMessageList,
           msgId,
           msg,
@@ -473,18 +530,18 @@ const Chat = memo(() => {
       } else if (value.k === SseResponseKind.ResponseMessage) {
         const { r: msg, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
-        changeSelectedResponseMessage(
+        selectedMessageList = changeSelectedResponseMessage(
           selectedMessageList,
           msgId,
           '',
           ChatSpanStatus.None,
         );
-        changeSelectedResponseMessageInfo(selectedMessageList, spanId, msg);
+        selectedMessageList = changeSelectedResponseMessageInfo(selectedMessageList, spanId, msg);
         messageList.push(msg);
       } else if (value.k === SseResponseKind.StartResponse) {
         const { r: time, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
-        changeSelectedResponseReasoningDuration(
+        selectedMessageList = changeSelectedResponseReasoningDuration(
           selectedMessageList,
           msgId,
           time,
@@ -492,7 +549,7 @@ const Chat = memo(() => {
       } else if (value.k === SseResponseKind.ImageGenerated) {
         const { r, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
-        changeSelectedResponseFile(selectedMessageList, msgId, r);
+        selectedMessageList = changeSelectedResponseFile(selectedMessageList, msgId, r);
       } else if (value.k === SseResponseKind.UpdateTitle) {
         changeChatTitle(value.r);
       } else if (value.k === SseResponseKind.TitleSegment) {

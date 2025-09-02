@@ -117,7 +117,7 @@ export const ChatMessage: FC<Props> = memo(
                         >
                           <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-1 px-2">
                             <ResponseMessage
-                              key={'response-message-' + index}
+                              key={'response-message-' + message.id + '-' + message.spanId}
                               chatStatus={selectedChat.status}
                               message={message}
                               readonly={readonly}
