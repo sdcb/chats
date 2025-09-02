@@ -160,7 +160,11 @@ public abstract record ChatSegmentItem
         return new ToolCallSegment
         {
             Index = toolCall.Index,
-            Id = toolCall.ToolCallId,
+            Id = toolCall.ToolCallId switch
+            {
+                null or "" => null,
+                _ => toolCall.ToolCallId
+            },
             Type = toolCall.Kind.ToString(),
             Name = toolCall.FunctionName,
             Arguments = GetBinaryData(toolCall.FunctionArgumentsUpdate).Length == 0 ? "" : toolCall.FunctionArgumentsUpdate.ToString(),

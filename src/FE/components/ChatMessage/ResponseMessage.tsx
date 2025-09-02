@@ -156,7 +156,7 @@ const ResponseMessage = (props: Props) => {
           <div className="whitespace-pre-wrap break-words font-mono text-sm pr-8 not-prose">{toolCall.p}</div>
         </div>
         
-        {/* Separator */}
+        {/* Separator - only show if there's a response */}
         {toolResponse && <div className="border-t border-muted-foreground/20" />}
         
         {/* Tool response */}
@@ -183,7 +183,9 @@ const ResponseMessage = (props: Props) => {
     }
   }, [editId]);
 
-  const processedContent = processContentInOrder(messageContent);
+  // 使用最新的内容进行处理，但在编辑模式时使用本地状态
+  const contentToProcess = editId !== EMPTY_ID ? messageContent : content;
+  const processedContent = processContentInOrder(contentToProcess);
 
   return (
     <>

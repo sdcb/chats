@@ -34,6 +34,8 @@ import {
   RequestContent,
   ResponseContent,
   TextContent,
+  ToolCallContent,
+  ToolResponseContent,
 } from '@/types/chat';
 import {
   IChatMessage,
@@ -289,6 +291,121 @@ const Chat = memo(() => {
     return newSelectedMsgs;
   };
 
+  const changeSelectedResponseToolCall = (
+    selectedMsgs: IChatMessage[][],
+    messageId: string,
+    toolCallId: string,
+    toolName: string,
+    parameters: string,
+  ): IChatMessage[][] => {
+    const messageCount = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[messageCount];
+    const updatedMessageList = messageList.map((x) => {
+      if (x.id === messageId) {
+        let newContent = [...x.content];
+
+        // 查找是否已存在该工具调用/响应
+        const callIndex = newContent.findIndex(
+          (c) => c.$type === MessageContentType.toolCall && (c as ToolCallContent).u === toolCallId,
+        );
+        const respIndex = newContent.findIndex(
+          (c) => c.$type === MessageContentType.toolResponse && (c as ToolResponseContent).u === toolCallId,
+        );
+
+        if (callIndex >= 0) {
+          // 更新已有的工具调用参数（流式追加）
+          const existingToolCall = newContent[callIndex] as ToolCallContent;
+          newContent[callIndex] = {
+            ...existingToolCall,
+            n: toolName || existingToolCall.n,
+            p: (existingToolCall.p || '') + parameters,
+          };
+        } else {
+          // 插入新的工具调用；如果结果已先到，则把调用插到结果前面，确保参数在上方
+          const toolCallContent: ToolCallContent = {
+            i: `tool-call-${toolCallId}`,
+            $type: MessageContentType.toolCall,
+            u: toolCallId,
+            n: toolName,
+            p: parameters,
+          };
+          if (respIndex >= 0) {
+            newContent.splice(respIndex, 0, toolCallContent);
+          } else {
+            newContent.push(toolCallContent);
+          }
+        }
+
+        return {
+          ...x,
+          content: newContent,
+        };
+      }
+      return x;
+    });
+    
+    const newSelectedMsgs = [...selectedMsgs];
+    newSelectedMsgs[messageCount] = updatedMessageList;
+    messageDispatch(setSelectedMessages(newSelectedMsgs));
+    return newSelectedMsgs;
+  };
+
+  const changeSelectedResponseToolResult = (
+    selectedMsgs: IChatMessage[][],
+    messageId: string,
+    toolCallId: string,
+    result: string,
+  ): IChatMessage[][] => {
+    const messageCount = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[messageCount];
+    const updatedMessageList = messageList.map((x) => {
+      if (x.id === messageId) {
+        let newContent = [...x.content];
+
+        // 查找是否已存在该工具调用/响应
+        const callIndex = newContent.findIndex(
+          (c) => c.$type === MessageContentType.toolCall && (c as ToolCallContent).u === toolCallId,
+        );
+        const respIndex = newContent.findIndex(
+          (c) => c.$type === MessageContentType.toolResponse && (c as ToolResponseContent).u === toolCallId,
+        );
+
+        if (respIndex >= 0) {
+          // 更新现有工具响应
+          const existingToolResponse = newContent[respIndex] as ToolResponseContent;
+          newContent[respIndex] = {
+            ...existingToolResponse,
+            r: result,
+          };
+        } else {
+          // 新的工具响应；如果工具调用已存在，则把响应插入到它的后面，保持“参数在上、结果在下”
+          const toolResponseContent: ToolResponseContent = {
+            i: `tool-response-${toolCallId}`,
+            $type: MessageContentType.toolResponse,
+            u: toolCallId,
+            r: result,
+          };
+          if (callIndex >= 0) {
+            newContent.splice(callIndex + 1, 0, toolResponseContent);
+          } else {
+            newContent.push(toolResponseContent);
+          }
+        }
+
+        return {
+          ...x,
+          content: newContent,
+        };
+      }
+      return x;
+    });
+    
+    const newSelectedMsgs = [...selectedMsgs];
+    newSelectedMsgs[messageCount] = updatedMessageList;
+    messageDispatch(setSelectedMessages(newSelectedMsgs));
+    return newSelectedMsgs;
+  };
+
   const changeSelectedResponseMessageInfo = (
     selectedMsgs: IChatMessage[][],
     spanId: number,
@@ -464,7 +581,9 @@ const Chat = memo(() => {
     response: Response,
     selectedMessageList: IChatMessage[][],
   ) => {
-    let messageList = [...messages];
+  let messageList = [...messages];
+  // 用于跟踪每个 span 最近一次非空的工具调用 ID，便于将 u 为 null 的参数片段归并
+  const currentToolCallIdBySpan = new Map<number, string>();
     const data = response.body;
     if (!response.ok) {
       handleChatError();
@@ -551,6 +670,38 @@ const Chat = memo(() => {
         const { r, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
         selectedMessageList = changeSelectedResponseFile(selectedMessageList, msgId, r);
+      } else if (value.k === SseResponseKind.CallingTool) {
+        // 13 事件：u 仅在首个片段非空，后续片段 u/r 可能为 null，只携带 p（参数增量）
+        const { u, r: toolName, p: parameters, i: spanId } = value;
+        if (u) {
+          currentToolCallIdBySpan.set(spanId, u);
+        }
+        const toolCallId = (u ?? currentToolCallIdBySpan.get(spanId)) as string | undefined;
+        if (!toolCallId) {
+          // 尚未获取到工具调用 ID，无法归并，跳过本片段
+          continue;
+        }
+        const msgId = `${ResponseMessageTempId}-${spanId}`;
+        selectedMessageList = changeSelectedResponseToolCall(
+          selectedMessageList,
+          msgId,
+          toolCallId,
+          toolName ?? '',
+          parameters ?? '',
+        );
+      } else if (value.k === SseResponseKind.ToolCompleted) {
+        const { u: toolCallId, r: result, i: spanId } = value as any;
+        const msgId = `${ResponseMessageTempId}-${spanId}`;
+        selectedMessageList = changeSelectedResponseToolResult(
+          selectedMessageList,
+          msgId,
+          toolCallId,
+          result,
+        );
+        // 若该 span 的活动调用已完成，清除追踪
+        if (currentToolCallIdBySpan.get(spanId) === toolCallId) {
+          currentToolCallIdBySpan.delete(spanId);
+        }
       } else if (value.k === SseResponseKind.UpdateTitle) {
         changeChatTitle(value.r);
       } else if (value.k === SseResponseKind.TitleSegment) {
