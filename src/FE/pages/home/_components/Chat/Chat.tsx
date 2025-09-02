@@ -26,6 +26,7 @@ import {
   ChatRole,
   ChatSpanStatus,
   ChatStatus,
+  FileContent,
   FileDef,
   Message,
   MessageContentType,
@@ -152,7 +153,7 @@ const Chat = memo(() => {
           newContent[contentCount] = {
             ...newContent[contentCount],
             c: newText
-          };
+          } as TextContent;
         } else {
           newContent.push({ i: '', $type: MessageContentType.text, c: text });
         }
@@ -203,7 +204,7 @@ const Chat = memo(() => {
           newContent[contentCount] = {
             ...newContent[contentCount],
             c: text
-          };
+          } as FileContent;
         } else {
           newContent.push({ i: '', $type: MessageContentType.fileId, c: text });
         }
@@ -241,7 +242,7 @@ const Chat = memo(() => {
           newContent[contentCount] = {
             ...newContent[contentCount],
             c: (newContent[contentCount] as ReasoningContent).c + text
-          };
+          } as ReasoningContent;
         } else {
           newContent.push({
             i: '',
