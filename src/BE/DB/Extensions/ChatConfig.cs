@@ -19,7 +19,11 @@ public partial class ChatConfig
             MaxOutputTokens = MaxOutputTokens,
             ReasoningEffort = ReasoningEffort,
             ImageSizeId = ImageSizeId,
-            ChatConfigMcps = ChatConfigMcps,
+            ChatConfigMcps = [..ChatConfigMcps.Select(x => new ChatConfigMcp
+            {
+                McpServerId = x.McpServerId,
+                CustomHeaders = x.CustomHeaders,
+            })],
         };
     }
 
