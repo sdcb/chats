@@ -135,7 +135,8 @@ GO
 
 CREATE TABLE [dbo].[MessageContentToolCall](
     [Id] [bigint] NOT NULL,
-    [ToolCallId] [varchar](100) NULL,
+    [ToolCallId] [varchar](100) NOT NULL,
+    [ServerLabel] [nvarchar](50) NOT NULL,
     [Name] [nvarchar](200) NOT NULL,
     [Parameters] [nvarchar](max) NOT NULL,
  CONSTRAINT [PK_MessageContentToolCall] PRIMARY KEY CLUSTERED 
@@ -156,8 +157,10 @@ GO
 
 CREATE TABLE [dbo].[MessageContentToolCallResponse](
     [Id] [bigint] NOT NULL,
-    [ToolCallId] [varchar](100) NULL,
+    [ToolCallId] [varchar](100) NOT NULL,
+    [IsSuccess] [bit] NOT NULL,
     [Response] [nvarchar](max) NOT NULL,
+    [DurationMs] [int] NOT NULL,
  CONSTRAINT [PK_MessageContentToolCallResponse] PRIMARY KEY CLUSTERED 
 (
     [Id] ASC
@@ -215,6 +218,7 @@ CREATE TABLE [dbo].[McpTool] (
 CREATE TABLE [UserMcp] (
     [Id]              INT            IDENTITY (1, 1) NOT NULL,
     [McpServerId]     INT            NOT NULL,
+    [CustomHeaders]   NVARCHAR (MAX) NULL,
     [UserId]          INT            NOT NULL,
     CONSTRAINT [PK_UserMcp] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_UserMcp_McpServer] FOREIGN KEY ([McpServerId]) REFERENCES [McpServer] ([Id]) ON DELETE CASCADE,
@@ -227,7 +231,7 @@ CREATE TABLE [ChatConfigMcp] (
     [Id]              INT            IDENTITY (1, 1) NOT NULL,
     [ChatConfigId]    INT            NOT NULL,
     [McpServerId]     INT            NOT NULL,
-    [Headers]         NVARCHAR (MAX) NULL,
+    [CustomHeaders]   NVARCHAR (MAX) NULL,
     CONSTRAINT [PK_ChatConfigMcp] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_ChatConfigMcp_ChatConfig] FOREIGN KEY ([ChatConfigId]) REFERENCES [ChatConfig] ([Id]) ON DELETE CASCADE,
     CONSTRAINT [FK_ChatConfigMcp_McpServer] FOREIGN KEY ([McpServerId]) REFERENCES [McpServer] ([Id]) ON DELETE CASCADE,

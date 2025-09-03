@@ -139,6 +139,7 @@ public sealed record ToolProgressLine(
 
 public sealed record ToolCompletedLine(
     [property: JsonPropertyName("i")] byte SpanId,
+    [property: JsonPropertyName("s")] bool Success,
     [property: JsonPropertyName("u")] string ToolCallId,
     [property: JsonPropertyName("r")] string Result
 ) : SseResponseLine;

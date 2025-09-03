@@ -106,7 +106,7 @@ public record UpdateChatSpanRequest
             {
                 ChatConfig = chatConfig,
                 McpServerId = mcp.Id,
-                Headers = mcp.CustomHeaders,
+                CustomHeaders = mcp.CustomHeaders,
             });
         }
 
@@ -139,7 +139,7 @@ public record UpdateChatSpanRequest
             {
                 ChatConfig = config,
                 McpServerId = mcpServerId,
-                Headers = Mcps.First(x => x.Id == mcpServerId).GetNormalizedCustomHeaders(),
+                CustomHeaders = Mcps.First(x => x.Id == mcpServerId).GetNormalizedCustomHeaders(),
             });
         }
         
@@ -147,9 +147,9 @@ public record UpdateChatSpanRequest
         foreach (ChatConfigMcp existing in config.ChatConfigMcps.Where(x => toUpdate.Contains(x.McpServerId)))
         {
             string? newHeaders = Mcps.First(x => x.Id == existing.McpServerId).GetNormalizedCustomHeaders();
-            if (existing.Headers != newHeaders)
+            if (existing.CustomHeaders != newHeaders)
             {
-                existing.Headers = newHeaders;
+                existing.CustomHeaders = newHeaders;
             }
         }
     }

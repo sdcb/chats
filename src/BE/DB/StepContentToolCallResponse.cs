@@ -14,9 +14,13 @@ public partial class StepContentToolCallResponse
 
     [StringLength(100)]
     [Unicode(false)]
-    public string? ToolCallId { get; set; }
+    public string ToolCallId { get; set; } = null!;
+
+    public bool IsSuccess { get; set; }
 
     public string Response { get; set; } = null!;
+
+    public int DurationMs { get; set; }
 
     [ForeignKey("Id")]
     [InverseProperty("StepContentToolCallResponse")]

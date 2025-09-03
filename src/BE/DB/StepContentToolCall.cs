@@ -14,7 +14,10 @@ public partial class StepContentToolCall
 
     [StringLength(100)]
     [Unicode(false)]
-    public string? ToolCallId { get; set; }
+    public string ToolCallId { get; set; } = null!;
+
+    [StringLength(50)]
+    public string ServerLabel { get; set; } = null!;
 
     [StringLength(200)]
     public string Name { get; set; } = null!;

@@ -113,7 +113,7 @@ public record ChatSpanDto
             x => new ChatSpanMcp
             {
                 Id = x.McpServerId,
-                CustomHeaders = x.Headers
+                CustomHeaders = x.CustomHeaders
             })],
     };
 
@@ -134,7 +134,7 @@ public record ChatSpanDto
             x => new ChatSpanMcp
             {
                 Id = x.McpServerId,
-                CustomHeaders = x.Headers
+                CustomHeaders = x.CustomHeaders
             })],
     };
 }

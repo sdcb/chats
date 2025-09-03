@@ -108,9 +108,9 @@ public partial class ChatConfig
                 BitConverter.TryWriteBytes(intBuffer, mcp.McpServerId);
                 AppendField(intBuffer);
 
-                if (mcp.Headers != null)
+                if (mcp.CustomHeaders != null)
                 {
-                    ReadOnlySpan<char> charSpan = mcp.Headers.AsSpan();
+                    ReadOnlySpan<char> charSpan = mcp.CustomHeaders.AsSpan();
                     ReadOnlySpan<byte> charBytes = MemoryMarshal.AsBytes(charSpan);
                     AppendField(charBytes);
                 }

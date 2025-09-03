@@ -53,7 +53,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                     {
                         Id = mcp.McpServerId,
-                        CustomHeaders = mcp.Headers
+                        CustomHeaders = mcp.CustomHeaders
                     }).ToArray()
                 }).ToArray(),
             }), req, cancellationToken);
@@ -96,7 +96,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                     {
                         Id = mcp.McpServerId,
-                        CustomHeaders = mcp.Headers
+                        CustomHeaders = mcp.CustomHeaders
                     }).ToArray()
                 }).ToArray(),
                 LeafTurnId = urlEncryption.EncryptTurnId(x.LeafTurnId),

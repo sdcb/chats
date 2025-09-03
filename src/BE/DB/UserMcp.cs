@@ -16,6 +16,8 @@ public partial class UserMcp
 
     public int McpServerId { get; set; }
 
+    public string? CustomHeaders { get; set; }
+
     public int UserId { get; set; }
 
     [ForeignKey("McpServerId")]

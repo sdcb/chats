@@ -18,7 +18,7 @@ public partial class ChatConfigMcp
 
     public int McpServerId { get; set; }
 
-    public string? Headers { get; set; }
+    public string? CustomHeaders { get; set; }
 
     [ForeignKey("ChatConfigId")]
     [InverseProperty("ChatConfigMcps")]

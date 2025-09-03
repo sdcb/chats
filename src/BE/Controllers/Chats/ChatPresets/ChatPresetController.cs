@@ -44,7 +44,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     Mcps = x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                     {
                         Id = mcp.McpServerId,
-                        CustomHeaders = mcp.Headers
+                        CustomHeaders = mcp.CustomHeaders
                     }).ToArray()
                 }).ToArray()
             })
@@ -222,7 +222,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     ChatConfigMcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatConfigMcp
                     {
                         McpServerId = mcp.McpServerId,
-                        Headers = mcp.Headers,
+                        CustomHeaders = mcp.CustomHeaders,
                     })],
                 }
             })]

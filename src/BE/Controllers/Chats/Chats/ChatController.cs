@@ -3,6 +3,7 @@ using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Infrastructure;
+using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Services;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models;
@@ -13,6 +14,7 @@ using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using OpenAI.Chat;
@@ -465,25 +467,23 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                         .Where(x => x.McpServerId == serverId)
                         .Select(x => x.McpServer)
                         .FirstOrDefault() ?? throw new InvalidOperationException($"MCP Server not found for id: {serverId}");
-                    string? headers = chatSpan.ChatConfig.ChatConfigMcps.FirstOrDefault(x => x.McpServerId == serverId)?.Headers
+                    string? headers = chatSpan.ChatConfig.ChatConfigMcps.FirstOrDefault(x => x.McpServerId == serverId)?.CustomHeaders
                         ?? mcpServer.Headers;
                     logger.LogInformation("Using MCP Server {mcpServer.Label} ({mcpServer.Url}) for tool call {call.Name} with headers: {headers}",
                         mcpServer.Label, mcpServer.Url, call.Name, headers);
+                    Stopwatch sw = Stopwatch.StartNew();
                     IMcpClient mcpClient = await McpClientFactory.CreateAsync(new SseClientTransport(new SseClientTransportOptions
                     {
                         Endpoint = new Uri(mcpServer.Url),
                         AdditionalHeaders = headers == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(headers),
                     }), cancellationToken: cancellationToken);
 
-                    logger.LogInformation("Calling tool: {toolName}, parameters: {call.Parameters}", toolName, call.Parameters);
-                    CallToolResult result = await mcpClient.CallToolAsync(toolName, JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Parameters)!, new ProgressReporter(pnv =>
-                    {
-                        logger.LogInformation("Tool {call.Name} progress: {pnv.Message}", call.Name, pnv.Message);
-                        writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId!, pnv.Message!));
-                    }), cancellationToken: cancellationToken);
-                    logger.LogInformation("Tool {call.Name} completed with result: {result}", call.Name, result.Content);
-                    string toolCallResponseText = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(x => x.Text));
-                    writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, call.ToolCallId!, toolCallResponseText));
+                    logger.LogInformation("{mcpServer.Label} connected, elapsed={elapsed}ms, Calling tool: {toolName}, parameters: {call.Parameters}", 
+                        mcpServer.Label, sw.ElapsedMilliseconds, toolName, call.Parameters);
+
+                    (bool isSuccess, string toolResult) = await CallMcp();
+                    logger.LogInformation("Tool {call.Name} completed, success: {success}, result: {result}", call.Name, isSuccess, toolResult);
+                    writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, true, call.ToolCallId!, toolResult));
                     await WriteStep(new Step()
                     {
                         Turn = turn,
@@ -497,12 +497,35 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                                 StepContentToolCallResponse = new()
                                 {
                                     ToolCallId = call.ToolCallId,
-                                    Response = toolCallResponseText,
+                                    Response = toolResult,
+                                    DurationMs = (int)sw.ElapsedMilliseconds,
+                                    IsSuccess = isSuccess,
                                 },
                                 ContentTypeId = (byte)DBMessageContentType.ToolCallResponse,
                             }
                         ],
                     });
+
+                    async Task<(bool success, string result)> CallMcp()
+                    {
+                        try
+                        {
+                            CallToolResult result = await mcpClient.CallToolAsync(toolName, JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Parameters)!, new ProgressReporter(pnv =>
+                            {
+                                logger.LogInformation("Tool {call.Name} progress: {pnv.Message}", call.Name, pnv.Message);
+                                writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId!, pnv.Message!));
+                            }), cancellationToken: cancellationToken);
+                            return (result.IsError switch
+                            {
+                                null => true,
+                                _ => !result.IsError.Value
+                            }, string.Join("\n", result.Content.OfType<TextContentBlock>().Select(x => x.Text)));
+                        }
+                        catch (McpException e)
+                        {
+                            return (false, e.Message);
+                        }
+                    }
                 }
             }
             else

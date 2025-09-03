@@ -43,7 +43,7 @@ public record ChatPresetDto
                 Mcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                 {
                     Id = mcp.McpServerId,
-                    CustomHeaders = mcp.Headers
+                    CustomHeaders = mcp.CustomHeaders
                 })]
             })]
         };

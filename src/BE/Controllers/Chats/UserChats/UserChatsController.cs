@@ -44,7 +44,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                     ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
                     Mcps = span.ChatConfig.ChatConfigMcps
-                        .Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.Headers })
+                        .Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders })
                         .ToArray()
                 }).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
@@ -93,7 +93,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                     ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
-                    Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.Headers }).ToArray(),
+                    Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders }).ToArray(),
                 }).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
@@ -136,7 +136,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                     ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
-                    Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.Headers }).ToArray()
+                    Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders }).ToArray()
                 }).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
