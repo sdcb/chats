@@ -136,7 +136,6 @@ GO
 CREATE TABLE [dbo].[MessageContentToolCall](
     [Id] [bigint] NOT NULL,
     [ToolCallId] [varchar](100) NOT NULL,
-    [ServerLabel] [nvarchar](50) NOT NULL,
     [Name] [nvarchar](200) NOT NULL,
     [Parameters] [nvarchar](max) NOT NULL,
  CONSTRAINT [PK_MessageContentToolCall] PRIMARY KEY CLUSTERED 
