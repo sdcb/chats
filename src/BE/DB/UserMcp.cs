@@ -8,7 +8,7 @@ namespace Chats.BE.DB;
 
 [Table("UserMcp")]
 [Index("McpServerId", Name = "IX_UserMcp_McpServerId")]
-[Index("UserId", Name = "IX_UserMcp_UserId")]
+[Index("UserId", "McpServerId", Name = "UX_UserMcp_User_Server", IsUnique = true)]
 public partial class UserMcp
 {
     [Key]

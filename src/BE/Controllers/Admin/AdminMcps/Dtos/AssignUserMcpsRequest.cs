@@ -2,7 +2,7 @@
 
 namespace Chats.BE.Controllers.Admin.AdminMcps.Dtos;
 
-public record AssignUserMcpRequest
+public record AssignUserMcpsRequest
 {
     [JsonPropertyName("userId")] public required int UserId { get; init; }
     [JsonPropertyName("mcpServerIds")] public required int[] McpServerIds { get; init; }

@@ -348,15 +348,18 @@ export interface McpServerListItemDto {
   id: number;
   label: string;
   url: string;
-  isPublic: boolean;
-  owner?: string;
   createdAt: string;
   lastFetchAt?: string;
   toolsCount: number;
+}
+
+export interface McpServerListManagementItemDto extends McpServerListItemDto {
+  isSystem: boolean;
+  owner: string;
   editable: boolean;
 }
 
-export interface McpServerDetailsDto extends McpServerListItemDto {
+export interface McpServerDetailsDto extends McpServerListManagementItemDto {
   headers?: string;
   tools: McpToolDto[];
 }
@@ -365,7 +368,7 @@ export interface UpdateMcpServerRequest {
   label: string;
   url: string;
   headers?: string;
-  isPublic: boolean;
+  isSystem: boolean;
   tools: McpToolDto[];
 }
 

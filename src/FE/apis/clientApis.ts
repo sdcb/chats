@@ -45,6 +45,7 @@ import {
   UpdateMcpServerRequest,
   FetchToolsRequest,
   McpToolBasicInfo,
+  McpServerListManagementItemDto,
 } from '@/types/clientApis';
 import { SiteInfoConfig } from '@/types/config';
 import { IChatGroup } from '@/types/group';
@@ -532,6 +533,11 @@ export const getUserFiles = (params: GetUserFilesParams) => {
 export const getMcpServers = (): Promise<McpServerListItemDto[]> => {
   const fetchService = useFetch();
   return fetchService.get('/api/mcp');
+};
+
+export const getMcpServersForManagement = (): Promise<McpServerListManagementItemDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get('/api/mcp/management');
 };
 
 export const getMcpServerDetails = (mcpId: number): Promise<McpServerDetailsDto> => {

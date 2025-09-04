@@ -55,7 +55,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
     label: '',
     url: '',
     headers: '',
-    isPublic: false,
+    isSystem: false,
   });
   const [tools, setTools] = useState<McpToolDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -78,7 +78,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
         label: server.label,
         url: server.url,
         headers: server.headers || '',
-        isPublic: server.isPublic,
+        isSystem: server.isSystem,
       });
       setTools(server.tools);
     } else {
@@ -86,7 +86,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
         label: '',
         url: '',
         headers: '',
-        isPublic: false,
+        isSystem: false,
       });
       setTools([]);
     }
@@ -194,7 +194,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
         label: formData.label.trim(),
         url: formData.url.trim(),
         headers: formData.headers.trim() || undefined,
-        isPublic: formData.isPublic,
+        isSystem: formData.isSystem,
         tools,
       });
     } catch (error) {
@@ -271,7 +271,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
               <div className="flex items-center space-x-2">
                 <Switch
                   id="isPublic"
-                  checked={formData.isPublic}
+                  checked={formData.isSystem}
                   onCheckedChange={(checked) => handleInputChange('isPublic', checked)}
                   disabled={isReadOnly}
                 />

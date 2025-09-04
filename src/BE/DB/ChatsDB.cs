@@ -316,7 +316,9 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<McpServer>(entity =>
         {
-            entity.HasOne(d => d.OwnerUser).WithMany(p => p.McpServers).HasConstraintName("FK_McpServer_User");
+            entity.HasOne(d => d.OwnerUser).WithMany(p => p.McpServers)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_McpServer_User");
         });
 
         modelBuilder.Entity<McpTool>(entity =>

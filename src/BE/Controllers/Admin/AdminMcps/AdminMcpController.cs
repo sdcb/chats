@@ -17,39 +17,67 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
     public async Task<ActionResult<McpServerListItemDto[]>> ListAllMcpServers(CancellationToken cancellationToken)
     {
         IQueryable<McpServer> query = db.McpServers;
-        if (!currentUser.IsAdmin)
-        {
-            query = query.Where(x => x.IsPublic || x.UserMcps.Any(um => um.UserId == currentUser.Id));
-        }
+        query = query.Where(x => x.UserMcps.Any(um => um.UserId == currentUser.Id));
 
         McpServerListItemDto[] data = await query
-            .OrderByDescending(x => x.UserMcps.Any(um => um.UserId == currentUser.Id)) // user's own first
-            .ThenByDescending(x => x.UserMcps.Where(um => um.UserId == currentUser.Id).Select(um => um.Id).FirstOrDefault()) // then by assignment time
-            .ThenByDescending(x => x.Id)
+            .OrderByDescending(x => x.Id)
             .Select(x => new McpServerListItemDto
             {
                 Id = x.Id,
                 Label = x.Label,
                 Url = x.Url,
-                IsPublic = x.IsPublic,
-                Owner = x.OwnerUser != null ? x.OwnerUser.DisplayName : null,
                 CreatedAt = x.CreatedAt,
                 LastFetchAt = x.LastFetchAt,
                 ToolsCount = x.McpTools.Count,
-                Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id,
             })
             .ToArrayAsync(cancellationToken);
         return Ok(data);
+    }
+
+    [HttpGet("management")]
+    public async Task<ActionResult<ManagementMcpServerDto[]>> ListAllMcpServersForManagement(CancellationToken cancellationToken)
+    {
+        IQueryable<McpServer> query = db.McpServers;
+        query = ApplyAdminFilter(query);
+
+        ManagementMcpServerDto[] data = await query
+                .OrderBy(x => x.IsSystem) // non-system first
+                .ThenByDescending(x => x.Id)
+                .Select(x => new ManagementMcpServerDto
+                {
+                    Id = x.Id,
+                    Label = x.Label,
+                    Url = x.Url,
+                    CreatedAt = x.CreatedAt,
+                    LastFetchAt = x.LastFetchAt,
+                    ToolsCount = x.McpTools.Count,
+                    Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id,
+                    IsSystem = x.IsSystem,
+                    Owner = x.OwnerUser.DisplayName,
+                })
+                .ToArrayAsync(cancellationToken);
+        return Ok(data);
+    }
+
+    IQueryable<McpServer> ApplyAdminFilter(IQueryable<McpServer> query)
+    {
+        if (!currentUser.IsAdmin)
+        {
+            query = query.Where(x => x.OwnerUserId == currentUser.Id);
+        }
+        else
+        {
+            query = query.Where(x => x.IsSystem || x.OwnerUserId == currentUser.Id);
+        }
+
+        return query;
     }
 
     [HttpGet("{mcpId:int}")]
     public async Task<ActionResult<McpServerDetailsDto>> GetMcpServerDetails(int mcpId, CancellationToken cancellationToken)
     {
         IQueryable<McpServer> query = db.McpServers.Where(x => x.Id == mcpId);
-        if (!currentUser.IsAdmin)
-        {
-            query = query.Where(x => x.IsPublic || x.UserMcps.Any(um => um.UserId == currentUser.Id));
-        }
+        query = ApplyAdminFilter(query);
 
         McpServerDetailsDto? dto = await query
             .Select(x => new McpServerDetailsDto
@@ -58,8 +86,8 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
                 Label = x.Label,
                 Url = x.Url,
                 Headers = x.Headers,
-                IsPublic = x.IsPublic,
-                Owner = x.OwnerUser != null ? x.OwnerUser.DisplayName : null,
+                IsSystem = x.IsSystem,
+                Owner = x.OwnerUser.DisplayName,
                 CreatedAt = x.CreatedAt,
                 LastFetchAt = x.LastFetchAt,
                 ToolsCount = x.McpTools.Count,
@@ -95,6 +123,11 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             return this.BadRequestMessage("Invalid URL");
         }
 
+        if (request.IsSystem && !currentUser.IsAdmin)
+        {
+            return Forbid();
+        }
+
         if (!request.ValidateToolNameUnique())
         {
             return this.BadRequestMessage("Tool names must be unique within the server");
@@ -105,10 +138,17 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             Label = request.Label,
             Url = request.Url,
             Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers,
-            IsPublic = request.IsPublic,
-            OwnerUserId = currentUser.IsAdmin ? null : currentUser.Id,
+            IsSystem = request.IsSystem,
+            OwnerUserId = currentUser.Id,
             CreatedAt = DateTime.UtcNow,
             LastFetchAt = null,
+            UserMcps =
+            [
+                new UserMcp
+                {
+                    UserId = currentUser.Id, // auto-assign to creator
+                }
+            ]
         };
 
         // Add tools
@@ -142,6 +182,11 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             return BadRequest(ModelState);
         }
 
+        if (request.IsSystem && !currentUser.IsAdmin)
+        {
+            return Forbid();
+        }
+
         IQueryable<McpServer> finder = db.McpServers.Where(x => x.Id == mcpId);
         if (!currentUser.IsAdmin)
         {
@@ -167,10 +212,10 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
         server.Label = request.Label;
         server.Url = request.Url;
         server.Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers;
-        server.IsPublic = request.IsPublic;
-        
+        server.IsSystem = request.IsSystem;
+
         // Update tools if provided
-        if (request.Tools.Any())
+        if (request.Tools.Count != 0)
         {
             UpdateMcpToolsInMemory(server, request.Tools);
             server.LastFetchAt = DateTime.UtcNow;
@@ -247,7 +292,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
     }
 
     [HttpPost("assign-user-mcps")]
-    public async Task<ActionResult> AssignMcpToolsToUser([FromBody] AssignUserMcpRequest req, CancellationToken cancellationToken)
+    public async Task<ActionResult> AssignMcpsToUser([FromBody] AssignUserMcpsRequest req, CancellationToken cancellationToken)
     {
         if (!currentUser.IsAdmin)
         {

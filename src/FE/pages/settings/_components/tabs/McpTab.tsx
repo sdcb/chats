@@ -6,7 +6,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { getIconStroke } from '@/utils/common';
 
-import { McpServerListItemDto, McpServerDetailsDto } from '@/types/clientApis';
+import { McpServerListItemDto, McpServerDetailsDto, McpServerListManagementItemDto } from '@/types/clientApis';
 
 import DeletePopover from '@/pages/home/_components/Popover/DeletePopover';
 
@@ -33,7 +33,7 @@ import { Badge } from '@/components/ui/badge';
 import McpModal from './McpTab/McpModal';
 
 import {
-  getMcpServers,
+  getMcpServersForManagement,
   getMcpServerDetails,
   createMcpServer,
   updateMcpServer,
@@ -43,9 +43,9 @@ import {
 const McpTab = () => {
   const { t } = useTranslation();
   const { theme } = useTheme();
-  const [mcpServers, setMcpServers] = useState<McpServerListItemDto[]>([]);
+  const [mcpServers, setMcpServers] = useState<McpServerListManagementItemDto[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredServers, setFilteredServers] = useState<McpServerListItemDto[]>([]);
+  const [filteredServers, setFilteredServers] = useState<McpServerListManagementItemDto[]>([]);
   const [selectedServer, setSelectedServer] = useState<McpServerDetailsDto | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [isCreateMode, setIsCreateMode] = useState(false);
@@ -69,7 +69,7 @@ const McpTab = () => {
 
   const fetchMcpServers = async () => {
     try {
-      const data = await getMcpServers();
+      const data = await getMcpServersForManagement();
       setMcpServers(data);
     } catch (error) {
       console.error('Failed to fetch MCP servers:', error);
@@ -222,8 +222,8 @@ const McpTab = () => {
                         {server.url}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={server.isPublic ? 'default' : 'secondary'}>
-                          {server.isPublic ? t('Public') : t('Private')}
+                        <Badge variant={server.isSystem ? 'default' : 'secondary'}>
+                          {server.isSystem ? t('System') : t('User')}
                         </Badge>
                       </TableCell>
                       <TableCell>

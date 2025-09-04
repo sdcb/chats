@@ -23,9 +23,9 @@ public partial class McpServer
 
     public DateTime CreatedAt { get; set; }
 
-    public int? OwnerUserId { get; set; }
+    public int OwnerUserId { get; set; }
 
-    public bool IsPublic { get; set; }
+    public bool IsSystem { get; set; }
 
     public DateTime? LastFetchAt { get; set; }
 
@@ -37,7 +37,7 @@ public partial class McpServer
 
     [ForeignKey("OwnerUserId")]
     [InverseProperty("McpServers")]
-    public virtual User? OwnerUser { get; set; }
+    public virtual User OwnerUser { get; set; } = null!;
 
     [InverseProperty("McpServer")]
     public virtual ICollection<UserMcp> UserMcps { get; set; } = new List<UserMcp>();

@@ -193,8 +193,8 @@ CREATE TABLE [McpServer] (
     [Url]             NVARCHAR (300) NOT NULL,
     [Headers]         NVARCHAR (MAX) NULL,
     [CreatedAt]       DATETIME2 (7)  CONSTRAINT [DEFAULT_Mcp_CreatedAt] DEFAULT SYSUTCDATETIME() NOT NULL,
-    [OwnerUserId]     INT            NULL,
-    [IsPublic]        BIT            CONSTRAINT [DEFAULT_Mcp_Public] DEFAULT 0 NOT NULL,
+    [OwnerUserId]     INT            NOT NULL,
+    [IsSystem]        BIT            CONSTRAINT [DEFAULT_Mcp_IsSystem] DEFAULT 0 NOT NULL,
     [LastFetchAt]     DATETIME2 (7)  NULL,
     CONSTRAINT [PK_McpServer] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_McpServer_User] FOREIGN KEY ([OwnerUserId]) REFERENCES [User] ([Id]),
@@ -222,8 +222,8 @@ CREATE TABLE [UserMcp] (
     CONSTRAINT [PK_UserMcp] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_UserMcp_McpServer] FOREIGN KEY ([McpServerId]) REFERENCES [McpServer] ([Id]) ON DELETE CASCADE,
     CONSTRAINT [FK_UserMcp_User] FOREIGN KEY ([UserId]) REFERENCES [User] ([Id]),
-    INDEX [IX_UserMcp_McpServerId] ([McpServerId]),
-    INDEX [IX_UserMcp_UserId] ([UserId])
+    CONSTRAINT [UX_UserMcp_User_Server] UNIQUE NONCLUSTERED ([UserId], [McpServerId]),
+    INDEX [IX_UserMcp_McpServerId] ([McpServerId])
 );
 
 CREATE TABLE [ChatConfigMcp] (
