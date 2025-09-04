@@ -187,7 +187,9 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             return Forbid();
         }
 
-        IQueryable<McpServer> finder = db.McpServers.Where(x => x.Id == mcpId);
+        IQueryable<McpServer> finder = db.McpServers
+            .Include(x => x.UserMcps)
+            .Where(x => x.Id == mcpId);
         if (!currentUser.IsAdmin)
         {
             finder = finder.Where(x => x.OwnerUserId == currentUser.Id); // user can manage own only
@@ -213,6 +215,13 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
         server.Url = request.Url;
         server.Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers;
         server.IsSystem = request.IsSystem;
+        if (!server.UserMcps.Any(um => um.UserId == currentUser.Id))
+        {
+            server.UserMcps.Add(new UserMcp
+            {
+                UserId = currentUser.Id,
+            });
+        }
 
         // Update tools if provided
         if (request.Tools.Count != 0)
