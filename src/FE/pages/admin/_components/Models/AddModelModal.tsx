@@ -43,6 +43,8 @@ interface IProps {
   onClose: () => void;
   onSuccessful: () => void;
   saveLoading?: boolean;
+  // Optional: preselect model key when creating a model
+  defaultModelKeyId?: number;
 }
 
 const AddModelModal = (props: IProps) => {
@@ -50,7 +52,7 @@ const AddModelModal = (props: IProps) => {
   const [modelVersions, setModelVersions] = useState<SimpleModelReferenceDto[]>(
     [],
   );
-  const { isOpen, onClose, onSuccessful, modelKeys } = props;
+  const { isOpen, onClose, onSuccessful, modelKeys, defaultModelKeyId } = props;
 
   const formSchema = z.object({
     modelReferenceId: z.string().default('0'),
@@ -100,6 +102,13 @@ const AddModelModal = (props: IProps) => {
     if (isOpen) {
       form.reset();
       form.formState.isValid;
+      if (defaultModelKeyId !== undefined) {
+        form.setValue('modelKeyId', defaultModelKeyId.toString());
+        const mk = modelKeys.find((x) => x.id === defaultModelKeyId);
+        if (mk) {
+          getModelProviderModels(mk.modelProviderId).then(setModelVersions);
+        }
+      }
     }
   }, [isOpen]);
 

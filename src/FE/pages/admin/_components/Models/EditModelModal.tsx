@@ -59,7 +59,7 @@ const EditModelModal = (props: IProps) => {
     modelVersionList,
   } = props;
 
-  const [modelVersions, setModelVersions] = useState<SimpleModelReferenceDto[]>(
+  const [modelProviders, setModelProviders] = useState<SimpleModelReferenceDto[]>(
     modelVersionList || [],
   );
 
@@ -151,8 +151,16 @@ const EditModelModal = (props: IProps) => {
       form.setValue('outputPrice1M', outputTokenPrice1M);
       form.setValue('modelReferenceId', modelReferenceId.toString());
       form.setValue('rank', rank);
+
+      // 自动加载对应的模型提供商
+      const modelProviderId = modelKeys.find((x) => x.id === modelKeyId)?.modelProviderId;
+      if (modelProviderId) {
+        getModelProviderModels(modelProviderId).then((possibleModels) => {
+          setModelProviders(possibleModels);
+        });
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, modelKeys]);
 
   const onModelReferenceChanged = async (modelReferenceId: number) => {
     getModelReference(modelReferenceId).then((data) => {
@@ -168,7 +176,7 @@ const EditModelModal = (props: IProps) => {
         const modelProviderId = modelKeys.find((x) => x.id === +modelKeyId!)
           ?.modelProviderId!;
         const possibleModels = await getModelProviderModels(modelProviderId);
-        setModelVersions(possibleModels);
+        setModelProviders(possibleModels);
       }
 
       if (name === 'modelReferenceId' && type === 'change') {
@@ -257,8 +265,8 @@ const EditModelModal = (props: IProps) => {
                   return (
                     <FormSelect
                       field={field}
-                      label={t('Model Version')!}
-                      items={modelVersions.map((key) => ({
+                      label={t('Model Provider')!}
+                      items={modelProviders.map((key) => ({
                         name: key.name,
                         value: key.id.toString(),
                       }))}

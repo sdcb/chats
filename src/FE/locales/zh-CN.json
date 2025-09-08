@@ -125,7 +125,7 @@
   "Edit Prompt": "编辑提示词",
   "Create Prompt": "新建提示词",
   "Search...": "搜索...",
-  "No data": "没有找到数据",
+  "No data": "无数据",
   "New Prompt": "新建提示",
   "New Key": "新建 Key",
   "No prompts.": "无提示词",
@@ -503,5 +503,8 @@
   "Invalid JSON format in MCP custom headers": "MCP自定义请求头的JSON格式无效",
   "Failed to save settings": "保存设置失败",
   "Failed to save preset": "保存预设失败",
-  "Max Output Tokens": "最多输出Token数"
+  "Max Output Tokens": "最多输出Token数",
+  "Fast Add Models": "快速添加模型",
+  "Show all providers": "显示所有提供商",
+  "No Model Keys": "无模型密钥"
 }

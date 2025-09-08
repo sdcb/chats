@@ -38,10 +38,12 @@ interface IProps {
   selected: GetModelKeysResult | null;
   isOpen: boolean;
   onClose: () => void;
-  onConfigModel: (id: number) => void;
+  onConfigModel?: (id: number) => void;
   onSaveSuccessful: () => void;
   onDeleteSuccessful: () => void;
   saveLoading?: boolean;
+  // Optional: preselect model provider when creating a new key
+  defaultModelProviderId?: number;
 }
 
 const ModelKeysModal = (props: IProps) => {
@@ -53,6 +55,7 @@ const ModelKeysModal = (props: IProps) => {
     onConfigModel,
     onSaveSuccessful,
     onDeleteSuccessful,
+    defaultModelProviderId,
   } = props;
   const [initialConfig, setInitialConfig] =
     React.useState<ModelProviderInitialConfig>();
@@ -92,7 +95,15 @@ const ModelKeysModal = (props: IProps) => {
 
     try {
       const id = await handleModelKeyRequest();
-      selected ? onSaveSuccessful() : onConfigModel(id);
+      
+      // If onConfigModel is provided and we're creating a new key, call it
+      if (!selected && onConfigModel) {
+        onConfigModel(id);
+      } else {
+        // Otherwise just call onSaveSuccessful
+        onSaveSuccessful();
+        toast.success(t('Saved successful'));
+      }
     } catch {
       toast.error(
         t(
@@ -159,8 +170,11 @@ const ModelKeysModal = (props: IProps) => {
         form.setValue('modelProviderId', modelProviderId.toString());
         form.setValue('host', host || undefined);
         form.setValue('secret', secret || undefined);
+      } else if (defaultModelProviderId !== undefined) {
+        // Preselect provider when creating a new key
+        form.setValue('modelProviderId', defaultModelProviderId.toString());
       }
-      reloadInitialConfig(selected?.modelProviderId || 0);
+      reloadInitialConfig(selected?.modelProviderId || defaultModelProviderId || 0);
     }
   }, [isOpen]);
 
@@ -218,17 +232,8 @@ const ModelKeysModal = (props: IProps) => {
               />
             )}
             <DialogFooter className="pt-4">
-              {selected ? (
-                <div className="flex gap-4">
-                  <Button
-                    variant="secondary"
-                    type="submit"
-                    onClick={() => {
-                      onConfigModel(selected.id);
-                    }}
-                  >
-                    {t('Save and add the model')}
-                  </Button>
+              <div className="flex gap-4">
+                {selected && (
                   <Button
                     type="button"
                     variant="destructive"
@@ -239,14 +244,13 @@ const ModelKeysModal = (props: IProps) => {
                   >
                     {t('Delete')}
                   </Button>
-
-                  <Button type="submit">{t('Save')}</Button>
-                </div>
-              ) : (
-                <>
+                )}
+                {!selected && onConfigModel ? (
                   <Button type="submit">{t('Save and add the model')}</Button>
-                </>
-              )}
+                ) : (
+                  <Button type="submit">{t('Save')}</Button>
+                )}
+              </div>
             </DialogFooter>
           </form>
         </Form>
