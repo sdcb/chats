@@ -21,7 +21,7 @@ import {
   getModelStatistics,
   getSourceStatistics,
 } from '@/apis/adminApis';
-import { endOfToday, subMonths } from 'date-fns';
+import { endOfToday, subDays, subMonths } from 'date-fns';
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -29,7 +29,7 @@ export default function Dashboard() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [timeParams, setTimeParams] = useState<StatisticsTimeParams>({
-    start: formatDate(subMonths(endOfToday(), 3)),
+    start: formatDate(subDays(endOfToday(), 7)),
     end: formatDate(endOfToday()),
     tz: getTz(),
   });
@@ -39,7 +39,7 @@ export default function Dashboard() {
     if (router.isReady) {
       const start =
         (router.query.start as string) ||
-        formatDate(subMonths(endOfToday(), 3));
+        formatDate(subDays(endOfToday(), 7));
       const end = (router.query.end as string) || formatDate(endOfToday());
       setStartDate(start);
       setEndDate(end);
