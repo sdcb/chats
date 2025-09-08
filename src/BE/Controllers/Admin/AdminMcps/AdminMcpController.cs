@@ -288,13 +288,6 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             return NotFound();
         }
 
-        bool anyReferences = await db.ChatConfigMcps.AnyAsync(x => x.McpServerId == mcpId, cancellationToken) ||
-                             await db.UserMcps.AnyAsync(x => x.McpServerId == mcpId, cancellationToken);
-        if (anyReferences)
-        {
-            return this.BadRequestMessage("MCP server is referenced by other entities");
-        }
-
         db.McpServers.Remove(server);
         await db.SaveChangesAsync(cancellationToken);
         return NoContent();

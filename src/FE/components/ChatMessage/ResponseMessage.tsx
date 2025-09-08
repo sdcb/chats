@@ -149,8 +149,8 @@ const ResponseMessage = (props: Props) => {
         </div>
         
         {/* Tool call parameters */}
-        <div className="px-4 py-2 relative">
-          <div className="absolute top-2 right-2 z-10">
+        <div className="px-4 py-2 relative group/param" tabIndex={0}>
+          <div className="absolute top-2 right-2 z-10 invisible group-hover/param:visible group-focus-within/param:visible">
             <CopyButton value={toolCall.p} />
           </div>
           <div className="whitespace-pre-wrap break-words font-mono text-sm pr-8 not-prose">{toolCall.p}</div>
@@ -161,8 +161,8 @@ const ResponseMessage = (props: Props) => {
         
         {/* Tool response */}
         {toolResponse && (
-          <div className="px-4 py-2 relative">
-            <div className="absolute top-2 right-2 z-10">
+          <div className="px-4 py-2 relative group/resp" tabIndex={0}>
+            <div className="absolute top-2 right-2 z-10 invisible group-hover/resp:visible group-focus-within/resp:visible">
               <CopyButton value={toolResponse.r} />
             </div>
             <div className="whitespace-pre-wrap break-words text-sm pr-8">{toolResponse.r}</div>

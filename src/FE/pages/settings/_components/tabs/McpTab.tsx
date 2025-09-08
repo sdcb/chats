@@ -6,7 +6,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { getIconStroke } from '@/utils/common';
 
-import { McpServerListItemDto, McpServerDetailsDto, McpServerListManagementItemDto } from '@/types/clientApis';
+import { McpServerDetailsDto, McpServerListManagementItemDto } from '@/types/clientApis';
 
 import DeletePopover from '@/pages/home/_components/Popover/DeletePopover';
 
@@ -39,6 +39,7 @@ import {
   updateMcpServer,
   deleteMcpServer,
 } from '@/apis/clientApis';
+import { useUserInfo } from '@/providers/UserProvider';
 
 const McpTab = () => {
   const { t } = useTranslation();
@@ -52,6 +53,8 @@ const McpTab = () => {
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingServerDetails, setLoadingServerDetails] = useState(false);
+  const user = useUserInfo();
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     setLoading(true);
@@ -91,7 +94,7 @@ const McpTab = () => {
     setIsCreateMode(false);
     setIsReadOnly(false);
     setShowModal(true); // 立即显示Modal
-    
+
     setLoadingServerDetails(true);
     try {
       const serverDetails = await getMcpServerDetails(serverId);
@@ -110,7 +113,7 @@ const McpTab = () => {
     setIsCreateMode(false);
     setIsReadOnly(true);
     setShowModal(true); // 立即显示Modal
-    
+
     setLoadingServerDetails(true);
     try {
       const serverDetails = await getMcpServerDetails(serverId);
@@ -167,9 +170,9 @@ const McpTab = () => {
             {t('Refresh')}
           </Button>
           <Button onClick={handleCreateServer}>
-            <IconPlus 
-              size={16} 
-              className="mr-2" 
+            <IconPlus
+              size={16}
+              className="mr-2"
               stroke={getIconStroke(theme)}
             />
             {t('Add MCP Server')}
@@ -199,9 +202,9 @@ const McpTab = () => {
                 <TableRow>
                   <TableHead>{t('Label')}</TableHead>
                   <TableHead>{t('URL')}</TableHead>
-                  <TableHead>{t('Status')}</TableHead>
+                  {isAdmin && <TableHead>{t('Status')}</TableHead>}
                   <TableHead>{t('Tool Count')}</TableHead>
-                  <TableHead>{t('Owner')}</TableHead>
+                  {isAdmin && <TableHead>{t('Owner')}</TableHead>}
                   <TableHead>{t('Created')}</TableHead>
                   <TableHead>{t('Last Fetch')}</TableHead>
                   <TableHead>{t('Actions')}</TableHead>
@@ -221,15 +224,17 @@ const McpTab = () => {
                       <TableCell className="max-w-xs truncate" title={server.url}>
                         {server.url}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={server.isSystem ? 'default' : 'secondary'}>
-                          {server.isSystem ? t('System') : t('User')}
-                        </Badge>
-                      </TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <Badge variant={server.isSystem ? 'default' : 'secondary'}>
+                            {server.isSystem ? t('System') : t('User')}
+                          </Badge>
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Badge variant="outline">{server.toolsCount}</Badge>
                       </TableCell>
-                      <TableCell>{server.owner || t('System')}</TableCell>
+                      {isAdmin && <TableCell>{server.owner || t('System')}</TableCell>}
                       <TableCell>{formatDate(server.createdAt)}</TableCell>
                       <TableCell>
                         {server.lastFetchAt ? formatDate(server.lastFetchAt) : t('Never')}
