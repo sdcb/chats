@@ -338,6 +338,19 @@ const UsageRecords = () => {
             </div>
 
             <div className="flex items-center gap-2">
+              <Input
+                className="w-48 placeholder:text-neutral-400"
+                placeholder={t('Account')}
+                value={userFilter}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setUserFilter(value);
+                  updateQueryWithDebounce(value);
+                }}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
               <Select
                 value={selectedProvider}
                 onValueChange={(value) => {
@@ -385,19 +398,6 @@ const UsageRecords = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Input
-                className="w-48 placeholder:text-neutral-400"
-                placeholder={t('User Name')}
-                value={userFilter}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setUserFilter(value);
-                  updateQueryWithDebounce(value);
-                }}
-              />
             </div>
 
             <div className="flex items-center gap-2">
@@ -584,7 +584,7 @@ const UsageRecords = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>{t('Date')}</TableHead>
-                <TableHead>{t('User Name')}</TableHead>
+                <TableHead>{t('Account')}</TableHead>
                 <TableHead>{t('Provider/Model')}</TableHead>
                 <TableHead>{t('Input/Output Tokens')}</TableHead>
                 <TableHead>{t('Input/Output Cost(￥)')}</TableHead>
