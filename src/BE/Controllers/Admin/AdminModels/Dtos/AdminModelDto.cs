@@ -23,7 +23,7 @@ public record AdminModelDto
     public required string Name { get; init; }
 
     [JsonPropertyName("rank")]
-    public required short? Rank { get; init; }
+    public required short Rank { get; init; }
 
     [JsonPropertyName("enabled")]
     public required bool Enabled { get; init; }

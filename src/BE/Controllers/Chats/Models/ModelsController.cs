@@ -18,7 +18,7 @@ public class ModelsController : ControllerBase
         int? fileServiceId = await FileService.GetDefaultId(db, cancellationToken);
         AdminModelDto[] data = await db.UserModels
             .Where(x => x.UserId == currentUser.Id && !x.Model.IsDeleted)
-            .OrderBy(x => x.Model.Order)
+            .OrderBy(x => x.Model.ModelKey.Order).ThenBy(x => x.Model.Order)
             .Select(x => x.Model)
             .Select(x => new AdminModelDto
             {
