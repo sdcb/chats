@@ -209,7 +209,35 @@ export default function ModelManager() {
                 <div className="rounded-xl border bg-card">
                   <div
                     className="flex items-center justify-between p-3 cursor-pointer select-none"
-                    onClick={() => setExpandProviders((s) => ({ ...s, [g.providerId]: !s[g.providerId] }))}
+                    onClick={() => {
+                      const isCurrentlyExpanded = expandProviders[g.providerId];
+                      // 收缩所有提供商
+                      const newExpandProviders: Record<number, boolean> = {};
+                      for (const provider of feModelProviders) {
+                        newExpandProviders[provider.id] = false;
+                      }
+                      // 如果当前没有展开，则展开当前提供商
+                      if (!isCurrentlyExpanded) {
+                        newExpandProviders[g.providerId] = true;
+                        // 同时展开第一个密钥（如果存在）
+                        const newExpandKeys: Record<number, boolean> = {};
+                        for (const k of modelKeys) {
+                          newExpandKeys[k.id] = false;
+                        }
+                        if (g.keys.length > 0) {
+                          newExpandKeys[g.keys[0].id] = true;
+                        }
+                        setExpandKeys(newExpandKeys);
+                      } else {
+                        // 如果当前已展开，则收缩所有密钥
+                        const newExpandKeys: Record<number, boolean> = {};
+                        for (const k of modelKeys) {
+                          newExpandKeys[k.id] = false;
+                        }
+                        setExpandKeys(newExpandKeys);
+                      }
+                      setExpandProviders(newExpandProviders);
+                    }}
                   >
                     <div className="flex items-center gap-2">
                       <ChatIcon className="h-6 w-6" providerId={g.providerId} />
@@ -242,7 +270,14 @@ export default function ModelManager() {
                               className="flex items-center justify-between p-3 cursor-pointer select-none"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setExpandKeys((s) => ({ ...s, [k.id]: !s[k.id] }));
+                                // 收缩当前提供商下的所有其他密钥
+                                const newExpandKeys: Record<number, boolean> = {};
+                                for (const key of modelKeys) {
+                                  newExpandKeys[key.id] = false;
+                                }
+                                // 切换当前密钥的展开状态
+                                newExpandKeys[k.id] = !expandKeys[k.id];
+                                setExpandKeys(newExpandKeys);
                               }}
                             >
                               <div className="flex items-center gap-2">
