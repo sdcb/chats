@@ -14,6 +14,12 @@ public record UsageQuery : PagingRequest, IUsageQuery
     [FromQuery(Name = "provider")]
     public string? Provider { get; init; }
 
+    [FromQuery(Name = "model-key")]
+    public string? ModelKey { get; init; }
+
+    [FromQuery(Name = "model")]
+    public string? Model { get; init; }
+
     [FromQuery(Name = "start")]
     public DateOnly? Start { get; init; }
 

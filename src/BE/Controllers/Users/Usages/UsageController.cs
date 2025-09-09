@@ -82,6 +82,16 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
             usagesQuery = usagesQuery.Where(u => u.Model.ModelKey.ModelProvider.Name == query.Provider);
         }
 
+        if (!string.IsNullOrEmpty(query.ModelKey))
+        {
+            usagesQuery = usagesQuery.Where(u => u.Model.ModelKey.Name == query.ModelKey);
+        }
+
+        if (!string.IsNullOrEmpty(query.Model))
+        {
+            usagesQuery = usagesQuery.Where(u => u.Model.Name == query.Model);
+        }
+
         if (query.Start != null)
         {
             DateTime localStart = query.Start.Value

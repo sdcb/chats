@@ -56,13 +56,15 @@ interface QueryParams {
   end?: string;
   provider?: string;
   user?: string;
+  'model-key'?: string;
+  model?: string;
 }
 
 const UsageRecords = () => {
   const { t } = useTranslation();
   const router = useRouter();
 
-  const { source, page, start, end, provider, user } = router.query;
+  const { source, page, start, end, provider, user, 'model-key': modelKey, model } = router.query;
 
   const [usageLogs, setUsageLogs] = useState<GetUsageResult[]>([]);
   const [usageStat, setUsageStat] = useState<GetUsageStatResult>(
@@ -85,6 +87,8 @@ const UsageRecords = () => {
     (source as string) || '',
   );
   const [userFilter, setUserFilter] = useState<string>((user as string) || '');
+  const [modelKeyFilter, setModelKeyFilter] = useState<string>((modelKey as string) || '');
+  const [modelFilter, setModelFilter] = useState<string>((model as string) || '');
 
   const updateQueryWithDebounce = useDebounce((user: string) => {
     const query: Record<string, string> = {
@@ -95,6 +99,48 @@ const UsageRecords = () => {
       query.user = user;
     } else {
       delete query.user;
+    }
+
+    router.push(
+      {
+        pathname: router.pathname,
+        query,
+      },
+      undefined,
+      { shallow: true },
+    );
+  }, 1000);
+
+  const updateModelKeyQueryWithDebounce = useDebounce((modelKey: string) => {
+    const query: Record<string, string> = {
+      ...(router.query as Record<string, string>),
+    };
+
+    if (modelKey) {
+      query['model-key'] = modelKey;
+    } else {
+      delete query['model-key'];
+    }
+
+    router.push(
+      {
+        pathname: router.pathname,
+        query,
+      },
+      undefined,
+      { shallow: true },
+    );
+  }, 1000);
+
+  const updateModelQueryWithDebounce = useDebounce((model: string) => {
+    const query: Record<string, string> = {
+      ...(router.query as Record<string, string>),
+    };
+
+    if (model) {
+      query.model = model;
+    } else {
+      delete query.model;
     }
 
     router.push(
@@ -129,6 +175,8 @@ const UsageRecords = () => {
       setSelectedProvider((provider as string) || '');
       setSelectedSource((source as string) || '');
       setUserFilter((user as string) || '');
+      setModelKeyFilter((modelKey as string) || '');
+      setModelFilter((model as string) || '');
       fetchUsageData();
       fetchUsageStat();
     }
@@ -139,11 +187,13 @@ const UsageRecords = () => {
     router.query.provider,
     router.query.source,
     router.query.user,
+    router.query['model-key'],
+    router.query.model,
     router.isReady,
   ]);
 
   function getUsageParams(exportExcel: boolean = false) {
-    const params: GetUsageParams = {
+    const params: any = {
       page: pagination.page,
       pageSize: pagination.pageSize,
       tz: getTz(),
@@ -174,12 +224,20 @@ const UsageRecords = () => {
       params.user = userFilter;
     }
 
+    if (modelKeyFilter) {
+      params['model-key'] = modelKeyFilter;
+    }
+
+    if (modelFilter) {
+      params.model = modelFilter;
+    }
+
     return params;
   }
 
   const fetchUsageData = () => {
     setLoading(true);
-    const params: GetUsageParams = getUsageParams();
+    const params = getUsageParams();
 
     getUsage(params)
       .then((data: PageResult<GetUsageResult[]>) => {
@@ -192,7 +250,7 @@ const UsageRecords = () => {
   };
 
   const fetchUsageStat = () => {
-    const params: GetUsageParams = getUsageParams();
+    const params = getUsageParams();
     getUsageStat(params).then((data: GetUsageStatResult) => {
       setUsageStat(data);
     });
@@ -210,6 +268,8 @@ const UsageRecords = () => {
     if (endDate) query.end = endDate;
     if (selectedProvider) query.provider = selectedProvider;
     if (userFilter) query.user = userFilter;
+    if (modelKeyFilter) query['model-key'] = modelKeyFilter;
+    if (modelFilter) query.model = modelFilter;
 
     router.push(
       {
@@ -336,6 +396,32 @@ const UsageRecords = () => {
                   const value = e.target.value;
                   setUserFilter(value);
                   updateQueryWithDebounce(value);
+                }}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Input
+                className="w-48 placeholder:text-neutral-400"
+                placeholder={t('Model Key')}
+                value={modelKeyFilter}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setModelKeyFilter(value);
+                  updateModelKeyQueryWithDebounce(value);
+                }}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Input
+                className="w-48 placeholder:text-neutral-400"
+                placeholder={t('Model')}
+                value={modelFilter}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setModelFilter(value);
+                  updateModelQueryWithDebounce(value);
                 }}
               />
             </div>
