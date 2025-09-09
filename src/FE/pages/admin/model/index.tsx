@@ -1,48 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import useTranslation from '@/hooks/useTranslation';
-import { formatNumberAsMoney } from '@/utils/common';
 import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
 import { feModelProviders } from '@/types/model';
 import { Button } from '@/components/ui/button';
 import { LabelSwitch } from '@/components/ui/label-switch';
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
-import DeletePopover from '@/pages/home/_components/Popover/DeletePopover';
-import { IconPlus, IconPencil, IconBolt } from '@/components/Icons';
+import { IconPlus } from '@/components/Icons';
 import { getModelKeys, getModels, deleteModelKeys, deleteModels } from '@/apis/adminApis';
 import ModelKeysModal from '../_components/ModelKeys/ModelKeysModal';
 import ConfigModelModal from '../_components/ModelKeys/ConfigModelModal';
 import AddModelModal from '../_components/Models/AddModelModal';
 import EditModelModal from '../_components/Models/EditModelModal';
-import { cn } from '@/lib/utils';
-
-type ProviderGroup = {
-  providerId: number;
-  providerName: string;
-  keys: GetModelKeysResult[];
-};
-
-function CollapsiblePanel({
-  open,
-  children,
-  className,
-}: {
-  open: boolean;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        'grid transition-[grid-template-rows] duration-300 ease-in-out',
-        open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-        className
-      )}
-    >
-      <div className="min-h-0 overflow-hidden">{children}</div>
-    </div>
-  );
-}
+import ModelProvider, { ProviderGroup } from './components/ModelProvider';
 
 export default function ModelManager() {
   const { t } = useTranslation();
@@ -146,6 +115,43 @@ export default function ModelManager() {
     setIsOpenEditModel(true);
   };
 
+  const handleToggleProvider = (providerId: number) => {
+    const isCurrentlyExpanded = expandProviders[providerId];
+    const newExpandProviders: Record<number, boolean> = {};
+    for (const provider of feModelProviders) newExpandProviders[provider.id] = false;
+    if (!isCurrentlyExpanded) {
+      newExpandProviders[providerId] = true;
+      const newExpandKeys: Record<number, boolean> = {};
+      for (const k of modelKeys) newExpandKeys[k.id] = false;
+      const providerGroup = grouped.find(g => g.providerId === providerId);
+      if (providerGroup && providerGroup.keys.length > 0) {
+        newExpandKeys[providerGroup.keys[0].id] = true;
+      }
+      setExpandKeys(newExpandKeys);
+    } else {
+      const newExpandKeys: Record<number, boolean> = {};
+      for (const k of modelKeys) newExpandKeys[k.id] = false;
+      setExpandKeys(newExpandKeys);
+    }
+    setExpandProviders(newExpandProviders);
+  };
+
+  const handleToggleKey = (keyId: number) => {
+    const newExpandKeys: Record<number, boolean> = {};
+    for (const key of modelKeys) newExpandKeys[key.id] = false;
+    newExpandKeys[keyId] = !expandKeys[keyId];
+    setExpandKeys(newExpandKeys);
+  };
+
+  const handleEditKey = (key: GetModelKeysResult) => {
+    const provider = feModelProviders.find(p => p.id === key.modelProviderId);
+    if (provider) {
+      setCurrentProviderId(provider.id);
+      setSelectedKey(key);
+      setIsOpenKeyModal(true);
+    }
+  };
+
   const handleDeleteKey = async (keyId: number) => {
     const count = (modelsByKey[keyId] || []).length;
     if (count > 0) {
@@ -206,156 +212,24 @@ export default function ModelManager() {
             </div>
           </div>
         ) : (
-          filteredProviders.map((g) => (
-            <div key={g.providerId} className="mb-3">
-              <div className="rounded-xl border bg-card">
-                <div
-                  className="flex items-center justify-between p-3 cursor-pointer select-none"
-                  onClick={() => {
-                    const isCurrentlyExpanded = expandProviders[g.providerId];
-                    const newExpandProviders: Record<number, boolean> = {};
-                    for (const provider of feModelProviders) newExpandProviders[provider.id] = false;
-                    if (!isCurrentlyExpanded) {
-                      newExpandProviders[g.providerId] = true;
-                      const newExpandKeys: Record<number, boolean> = {};
-                      for (const k of modelKeys) newExpandKeys[k.id] = false;
-                      if (g.keys.length > 0) newExpandKeys[g.keys[0].id] = true;
-                      setExpandKeys(newExpandKeys);
-                    } else {
-                      const newExpandKeys: Record<number, boolean> = {};
-                      for (const k of modelKeys) newExpandKeys[k.id] = false;
-                      setExpandKeys(newExpandKeys);
-                    }
-                    setExpandProviders(newExpandProviders);
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <ChatIcon className="h-6 w-6" providerId={g.providerId} />
-                    <span className="font-semibold">{t(g.providerName)}</span>
-                    <span className="text-muted-foreground text-sm">
-                      {t('Model Keys')}: {g.keys.length} {t('Models')}: {modelCountByProvider[g.providerId] || 0}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openAddKey(g.providerId);
-                      }}
-                      title={t('Add Model Key')}
-                    >
-                      <IconPlus size={16} />
-                    </Button>
-                  </div>
-                </div>
-                <CollapsiblePanel open={!!expandProviders[g.providerId]} className="mt-1">
-                  {g.keys.length === 0 ? (
-                    <div className="text-sm text-muted-foreground px-3 pb-3">{t('No Model Keys')}</div>
-                  ) : (
-                    <div className="pl-6 space-y-2 pb-3">
-                      {g.keys.map((k) => (
-                        <div key={k.id} className="rounded-md border bg-background/30">
-                          <div
-                            className="flex items-center justify-between p-3 cursor-pointer select-none"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const newExpandKeys: Record<number, boolean> = {};
-                              for (const key of modelKeys) newExpandKeys[key.id] = false;
-                              newExpandKeys[k.id] = !expandKeys[k.id];
-                              setExpandKeys(newExpandKeys);
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{k.name}</span>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openConfigModels(k.id, g.providerId);
-                                }}
-                                title={t('Fast Add Models')}
-                              >
-                                <IconBolt size={16} />
-                              </Button>
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openAddModel(k.id);
-                                }}
-                                title={t('Add Model')}
-                              >
-                                <IconPlus size={16} />
-                              </Button>
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setCurrentProviderId(g.providerId);
-                                  const selected = modelKeys.find((mk) => mk.id === k.id);
-                                  if (selected) {
-                                    setSelectedKey(selected);
-                                    setIsOpenKeyModal(true);
-                                  }
-                                }}
-                                title={t('Edit')}
-                              >
-                                <IconPencil size={16} />
-                              </Button>
-                              {(modelsByKey[k.id] || []).length === 0 && (
-                                <div onClick={(e) => e.stopPropagation()} title={t('Delete')}>
-                                  <DeletePopover onDelete={() => handleDeleteKey(k.id)} />
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <CollapsiblePanel open={!!expandKeys[k.id]}>
-                            <div className="pr-3 pb-3 pl-4 space-y-1">
-                              {(modelsByKey[k.id] || []).map((m) => (
-                                <div
-                                  key={m.modelId}
-                                  className="flex items-center justify-between px-2 py-1 rounded hover:bg-muted/40"
-                                >
-                                  <div
-                                    className="flex-1 min-w-0 cursor-pointer"
-                                    onClick={() => openEditModel(m)}
-                                  >
-                                    <div className="truncate">{m.name}</div>
-                                    <div className="text-xs text-blue-600 truncate">
-                                      {'￥' + formatNumberAsMoney(m.inputTokenPrice1M) + '/' + formatNumberAsMoney(m.outputTokenPrice1M)}
-                                    </div>
-                                  </div>
-                                  <div className="flex gap-2 ml-3">
-                                    <Button
-                                      variant="secondary"
-                                      size="sm"
-                                      onClick={() => openEditModel(m)}
-                                      title={t('Edit Model')}
-                                    >
-                                      <IconPencil size={16} />
-                                    </Button>
-                                    <div title={t('Delete Model')}>
-                                      <DeletePopover onDelete={() => handleDeleteModel(m.modelId)} />
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </CollapsiblePanel>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CollapsiblePanel>
-              </div>
-            </div>
+          filteredProviders.map((provider) => (
+            <ModelProvider
+              key={provider.providerId}
+              provider={provider}
+              modelsByKey={modelsByKey}
+              modelCount={modelCountByProvider[provider.providerId] || 0}
+              expanded={!!expandProviders[provider.providerId]}
+              expandedKeys={expandKeys}
+              onToggleExpand={() => handleToggleProvider(provider.providerId)}
+              onToggleKeyExpand={handleToggleKey}
+              onAddKey={openAddKey}
+              onEditKey={handleEditKey}
+              onDeleteKey={handleDeleteKey}
+              onConfigModels={(keyId) => openConfigModels(keyId, provider.providerId)}
+              onAddModel={openAddModel}
+              onEditModel={openEditModel}
+              onDeleteModel={handleDeleteModel}
+            />
           ))
         )}
       </div>
