@@ -30,6 +30,8 @@ public partial class ModelKey
 
     public DateTime UpdatedAt { get; set; }
 
+    public short Order { get; set; }
+
     [ForeignKey("ModelProviderId")]
     [InverseProperty("ModelKeys")]
     public virtual ModelProvider ModelProvider { get; set; } = null!;

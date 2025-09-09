@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.BE.DB;
 
 [Table("ChatConfig")]
-[Index("HashCode", Name = "IX_ChatConfig_HashCode")]
 [Index("ModelId", Name = "IX_ChatConfig_ModelId")]
 public partial class ChatConfig
 {

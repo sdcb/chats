@@ -422,3 +422,11 @@ IF COL_LENGTH('dbo.Chat', 'LeafMessageId') IS NOT NULL
 BEGIN
     EXEC sp_rename 'dbo.Chat.LeafMessageId', 'LeafTurnId', 'COLUMN';
 END
+
+-- 给ModelKey表增加一个非空INT16 Order字段，将Model表的Order字段做成非空
+ALTER TABLE [dbo].[ModelKey] ADD [Order] SMALLINT NOT NULL CONSTRAINT [DF_ModelKey_Order] DEFAULT 0;
+ALTER TABLE [dbo].[ModelKey] DROP CONSTRAINT [DF_ModelKey_Order];
+-- 移除IX_Model_Order索引
+UPDATE [dbo].[Model] SET [Order] = 0 WHERE [Order] IS NULL;
+DROP INDEX [IX_Model_Order] ON [dbo].[Model];
+ALTER TABLE [dbo].[Model] ALTER COLUMN [Order] SMALLINT NOT NULL;
