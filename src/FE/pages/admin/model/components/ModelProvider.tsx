@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { IconPlus } from '@/components/Icons';
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import useTranslation from '@/hooks/useTranslation';
+import { cn } from '@/lib/utils';
 import ModelKey from './ModelKey';
 import CollapsiblePanel from './CollapsiblePanel';
 
@@ -28,6 +29,8 @@ interface ModelProviderProps {
   onAddModel: (keyId: number) => void;
   onEditModel: (model: AdminModelDto) => void;
   onDeleteModel: (modelId: number) => void;
+  isDragging?: boolean;
+  onDragStart?: (e: React.DragEvent<HTMLDivElement>) => void;
 }
 
 export default function ModelProvider({
@@ -45,15 +48,54 @@ export default function ModelProvider({
   onAddModel,
   onEditModel,
   onDeleteModel,
+  isDragging = false,
+  onDragStart,
 }: ModelProviderProps) {
   const { t } = useTranslation();
 
+  const handleHeaderClick = (e: React.MouseEvent) => {
+    // 如果正在拖拽，不触发展开/收起
+    if (isDragging) {
+      e.preventDefault();
+      return;
+    }
+    
+    // 如果点击的是按钮区域，不触发展开/收起
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) {
+      return;
+    }
+    
+    onToggleExpand();
+  };
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    // 如果拖拽开始于按钮区域，阻止拖拽
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) {
+      e.preventDefault();
+      return;
+    }
+    
+    if (onDragStart) {
+      onDragStart(e);
+    }
+  };
+
   return (
     <div className="mb-3">
-      <div className="rounded-xl border bg-card">
+      <div 
+        className={cn(
+          "rounded-xl border bg-card transition-all duration-200",
+          isDragging && "opacity-50 transform scale-95",
+          provider.keys.length > 0 && "cursor-move"
+        )}
+        draggable={provider.keys.length > 0}
+        onDragStart={handleDragStart}
+      >
         <div
           className="flex items-center justify-between p-3 cursor-pointer select-none"
-          onClick={onToggleExpand}
+          onClick={handleHeaderClick}
         >
           <div className="flex items-center gap-2">
             <ChatIcon className="h-6 w-6" providerId={provider.providerId} />

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { DragEvent, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import useTranslation from '@/hooks/useTranslation';
 import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
@@ -6,7 +6,7 @@ import { feModelProviders } from '@/types/model';
 import { Button } from '@/components/ui/button';
 import { LabelSwitch } from '@/components/ui/label-switch';
 import { IconPlus } from '@/components/Icons';
-import { getModelKeys, getModels, deleteModelKeys, deleteModels } from '@/apis/adminApis';
+import { getModelKeys, getModels, deleteModelKeys, deleteModels, reorderModelProviders } from '@/apis/adminApis';
 import ModelKeysModal from '../_components/ModelKeys/ModelKeysModal';
 import ConfigModelModal from '../_components/ModelKeys/ConfigModelModal';
 import AddModelModal from '../_components/Models/AddModelModal';
@@ -25,6 +25,10 @@ export default function ModelManager() {
   const [expandProviders, setExpandProviders] = useState<Record<number, boolean>>({});
   const [expandKeys, setExpandKeys] = useState<Record<number, boolean>>({});
   const [showAllProviders, setShowAllProviders] = useState(false);
+
+  // drag state
+  const [currentDragProvider, setCurrentDragProvider] = useState<ProviderGroup | null>(null);
+  const providerRefs = useRef<Record<number, HTMLElement | null>>({});
 
   // dialogs
   const [isOpenKeyModal, setIsOpenKeyModal] = useState(false);
@@ -60,16 +64,56 @@ export default function ModelManager() {
   };
 
   const grouped: ProviderGroup[] = useMemo(() => {
-    const groups: ProviderGroup[] = feModelProviders.map((p) => ({
-      providerId: p.id,
-      providerName: p.name,
-      keys: [],
-    }));
-    for (const k of modelKeys) {
-      const g = groups.find((x) => x.providerId === k.modelProviderId);
-      if (g) g.keys.push(k);
+    // 创建一个 Map 来存储每个 provider 的 group
+    const groupsMap = new Map<number, ProviderGroup>();
+    
+    // 初始化所有 provider 的 group
+    for (const p of feModelProviders) {
+      groupsMap.set(p.id, {
+        providerId: p.id,
+        providerName: p.name,
+        keys: [],
+      });
     }
-    return groups;
+    
+    // 按照 modelKeys 中 modelProviderId 第一次出现的顺序收集 provider
+    const orderedProviderIds: number[] = [];
+    const seenProviderIds = new Set<number>();
+    
+    for (const k of modelKeys) {
+      if (!seenProviderIds.has(k.modelProviderId)) {
+        orderedProviderIds.push(k.modelProviderId);
+        seenProviderIds.add(k.modelProviderId);
+      }
+      
+      const group = groupsMap.get(k.modelProviderId);
+      if (group) {
+        group.keys.push(k);
+      }
+    }
+    
+    // 按顺序构建最终的 groups 数组
+    const orderedGroups: ProviderGroup[] = [];
+    
+    // 首先添加有 keys 的 provider（按 modelKeys 中出现的顺序）
+    for (const providerId of orderedProviderIds) {
+      const group = groupsMap.get(providerId);
+      if (group) {
+        orderedGroups.push(group);
+      }
+    }
+    
+    // 然后添加没有 keys 的 provider（保持原有顺序）
+    for (const p of feModelProviders) {
+      if (!seenProviderIds.has(p.id)) {
+        const group = groupsMap.get(p.id);
+        if (group) {
+          orderedGroups.push(group);
+        }
+      }
+    }
+    
+    return orderedGroups;
   }, [modelKeys]);
 
   const modelsByKey = useMemo(() => {
@@ -169,6 +213,114 @@ export default function ModelManager() {
     init(true);
   };
 
+  // 拖拽处理函数
+  const handleRemoveDragStyles = () => {
+    Object.keys(providerRefs.current).forEach((key: string) => {
+      const element = providerRefs.current[Number(key)];
+      if (element) {
+        element.style.background = 'none';
+        element.style.borderTop = 'none';
+        element.style.borderBottom = 'none';
+      }
+    });
+  };
+
+  const handleProviderDragStart = (e: DragEvent<HTMLDivElement>, provider: ProviderGroup) => {
+    // 如果没有 keys，不允许拖拽
+    if (provider.keys.length === 0) {
+      e.preventDefault();
+      return;
+    }
+
+    setCurrentDragProvider(provider);
+    // 收起所有展开的 provider
+    const newExpandProviders: Record<number, boolean> = {};
+    for (const p of feModelProviders) newExpandProviders[p.id] = false;
+    setExpandProviders(newExpandProviders);
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  const handleDragEnter = (index: number, providerId: number) => {
+    if (currentDragProvider && currentDragProvider.providerId !== providerId) {
+      // 视觉反馈：在目标位置显示插入线
+      Object.keys(providerRefs.current).forEach((key: string) => {
+        const element = providerRefs.current[Number(key)];
+        if (element) {
+          if (Number(key) === providerId) {
+            // 根据拖拽方向显示不同的边框
+            const sourceIndex = filteredProviders.findIndex(p => p.providerId === currentDragProvider.providerId);
+            if (sourceIndex < index) {
+              // 向下拖拽，在下方显示边框
+              element.style.borderBottom = '2px solid hsl(var(--primary))';
+              element.style.borderTop = 'none';
+            } else {
+              // 向上拖拽，在上方显示边框
+              element.style.borderTop = '2px solid hsl(var(--primary))';
+              element.style.borderBottom = 'none';
+            }
+            element.style.background = 'hsl(var(--muted) / 0.5)';
+          } else {
+            element.style.background = 'none';
+            element.style.borderTop = 'none';
+            element.style.borderBottom = 'none';
+          }
+        }
+      });
+    }
+  };
+
+  const handleDrop = async (e: DragEvent<HTMLDivElement>, targetProvider: ProviderGroup, targetIndex: number) => {
+    e.preventDefault();
+    
+    if (!currentDragProvider || currentDragProvider.providerId === targetProvider.providerId) {
+      handleRemoveDragStyles();
+      setCurrentDragProvider(null);
+      return;
+    }
+
+    try {
+      // 计算拖拽的方向和位置
+      const sourceIndex = filteredProviders.findIndex(p => p.providerId === currentDragProvider.providerId);
+      
+      let previousId: number | null = null;
+      let nextId: number | null = null;
+
+      if (sourceIndex < targetIndex) {
+        // 向下拖拽：source 移动到 target 之后
+        // previousId 是 target，nextId 是 target 之后的元素
+        previousId = targetProvider.providerId;
+        if (targetIndex < filteredProviders.length - 1) {
+          nextId = filteredProviders[targetIndex + 1].providerId;
+        }
+      } else {
+        // 向上拖拽：source 移动到 target 之前
+        // previousId 是 target 之前的元素，nextId 是 target
+        if (targetIndex > 0) {
+          previousId = filteredProviders[targetIndex - 1].providerId;
+        }
+        nextId = targetProvider.providerId;
+      }
+
+      await reorderModelProviders({
+        sourceId: currentDragProvider.providerId,
+        previousId,
+        nextId,
+      });
+
+      toast.success(t('Reorder successful'));
+      init(true);
+    } catch (error) {
+      toast.error(t('Reorder failed'));
+      console.error('Reorder error:', error);
+    }
+
+    handleRemoveDragStyles();
+    setCurrentDragProvider(null);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -212,24 +364,35 @@ export default function ModelManager() {
             </div>
           </div>
         ) : (
-          filteredProviders.map((provider) => (
-            <ModelProvider
+          filteredProviders.map((provider, index) => (
+            <div
               key={provider.providerId}
-              provider={provider}
-              modelsByKey={modelsByKey}
-              modelCount={modelCountByProvider[provider.providerId] || 0}
-              expanded={!!expandProviders[provider.providerId]}
-              expandedKeys={expandKeys}
-              onToggleExpand={() => handleToggleProvider(provider.providerId)}
-              onToggleKeyExpand={handleToggleKey}
-              onAddKey={openAddKey}
-              onEditKey={handleEditKey}
-              onDeleteKey={handleDeleteKey}
-              onConfigModels={(keyId) => openConfigModels(keyId, provider.providerId)}
-              onAddModel={openAddModel}
-              onEditModel={openEditModel}
-              onDeleteModel={handleDeleteModel}
-            />
+              ref={(el) => (providerRefs.current[provider.providerId] = el)}
+              onDragOver={handleDragOver}
+              onDragEnter={() => handleDragEnter(index, provider.providerId)}
+              onDrop={(e) => handleDrop(e, provider, index)}
+              onDragEnd={handleRemoveDragStyles}
+              className="rounded-md"
+            >
+              <ModelProvider
+                provider={provider}
+                modelsByKey={modelsByKey}
+                modelCount={modelCountByProvider[provider.providerId] || 0}
+                expanded={!!expandProviders[provider.providerId]}
+                expandedKeys={expandKeys}
+                onToggleExpand={() => handleToggleProvider(provider.providerId)}
+                onToggleKeyExpand={handleToggleKey}
+                onAddKey={openAddKey}
+                onEditKey={handleEditKey}
+                onDeleteKey={handleDeleteKey}
+                onConfigModels={(keyId) => openConfigModels(keyId, provider.providerId)}
+                onAddModel={openAddModel}
+                onEditModel={openEditModel}
+                onDeleteModel={handleDeleteModel}
+                isDragging={currentDragProvider?.providerId === provider.providerId}
+                onDragStart={(e) => handleProviderDragStart(e, provider)}
+              />
+            </div>
           ))
         )}
       </div>

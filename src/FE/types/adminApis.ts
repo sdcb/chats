@@ -417,3 +417,9 @@ export interface ChatCountStatisticsByDateResult {
   date: string;
   value: number;
 }
+
+export interface ReorderRequest {
+  sourceId: number;
+  previousId: number | null; // 新位置的前一个元素
+  nextId: number | null;     // 新位置的后一个元素
+}

@@ -248,44 +248,44 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             return NotFound("Source model key not found");
         }
 
-        // 验证 before 和 after 的 ModelKey 是否存在（如果提供的话）
-        ModelKey? beforeModelKey = null;
-        ModelKey? afterModelKey = null;
+        // 验证 previous 和 next 的 ModelKey 是否存在（如果提供的话）
+        ModelKey? previousModelKey = null;
+        ModelKey? nextModelKey = null;
 
-        if (request.BeforeId != null)
+        if (request.PreviousId != null)
         {
-            beforeModelKey = await db.ModelKeys
-                .FirstOrDefaultAsync(x => x.Id == request.BeforeId, cancellationToken);
-            if (beforeModelKey == null)
+            previousModelKey = await db.ModelKeys
+                .FirstOrDefaultAsync(x => x.Id == request.PreviousId, cancellationToken);
+            if (previousModelKey == null)
             {
-                return NotFound("Before model key not found");
+                return NotFound("Previous model key not found");
             }
         }
 
-        if (request.AfterId != null)
+        if (request.NextId != null)
         {
-            afterModelKey = await db.ModelKeys
-                .FirstOrDefaultAsync(x => x.Id == request.AfterId, cancellationToken);
-            if (afterModelKey == null)
+            nextModelKey = await db.ModelKeys
+                .FirstOrDefaultAsync(x => x.Id == request.NextId, cancellationToken);
+            if (nextModelKey == null)
             {
-                return NotFound("After model key not found");
+                return NotFound("Next model key not found");
             }
         }
 
-        // 验证 before 和 after 不能同时为空
-        if (beforeModelKey == null && afterModelKey == null)
+        // 验证 previous 和 next 不能同时为空
+        if (previousModelKey == null && nextModelKey == null)
         {
-            return BadRequest("Both before and after model keys cannot be null");
+            return BadRequest("Both previous and next model keys cannot be null");
         }
 
-        // 验证 before 和 after 的顺序（Order 是从小到大排列的）
-        if (beforeModelKey != null && afterModelKey != null && beforeModelKey.Order >= afterModelKey.Order)
+        // 验证 previous 和 next 的顺序（Order 是从小到大排列的）
+        if (previousModelKey != null && nextModelKey != null && previousModelKey.Order >= nextModelKey.Order)
         {
-            return BadRequest("Invalid order: before model key should have smaller order than after model key");
+            return BadRequest("Invalid order: previous model key should have smaller order than next model key");
         }
 
         // 尝试应用移动
-        bool needReorder = !TryApplyMove(sourceModelKey, beforeModelKey, afterModelKey);
+        bool needReorder = !TryApplyMove(sourceModelKey, previousModelKey, nextModelKey);
         
         if (needReorder)
         {
@@ -298,10 +298,10 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             
             // 重新加载并应用移动
             sourceModelKey = allModelKeys.First(x => x.Id == request.SourceId);
-            beforeModelKey = request.BeforeId != null ? allModelKeys.First(x => x.Id == request.BeforeId) : null;
-            afterModelKey = request.AfterId != null ? allModelKeys.First(x => x.Id == request.AfterId) : null;
+            previousModelKey = request.PreviousId != null ? allModelKeys.First(x => x.Id == request.PreviousId) : null;
+            nextModelKey = request.NextId != null ? allModelKeys.First(x => x.Id == request.NextId) : null;
             
-            TryApplyMove(sourceModelKey, beforeModelKey, afterModelKey);
+            TryApplyMove(sourceModelKey, previousModelKey, nextModelKey);
         }
 
         if (db.ChangeTracker.HasChanges())
@@ -313,28 +313,28 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
         return NoContent();
     }
 
-    private static bool TryApplyMove(ModelKey sourceModelKey, ModelKey? beforeModelKey, ModelKey? afterModelKey)
+    private static bool TryApplyMove(ModelKey sourceModelKey, ModelKey? previousModelKey, ModelKey? nextModelKey)
     {
         // 计算新的 Order 值
         int newOrder = 0;
-        if (beforeModelKey != null && afterModelKey != null)
+        if (previousModelKey != null && nextModelKey != null)
         {
             // 在两个 ModelKey 之间插入
-            if (beforeModelKey.Order + 1 >= afterModelKey.Order)
+            if (previousModelKey.Order + 1 >= nextModelKey.Order)
             {
                 return false; // 没有足够的空间，需要重新排序
             }
-            newOrder = (beforeModelKey.Order + afterModelKey.Order) / 2;
+            newOrder = (previousModelKey.Order + nextModelKey.Order) / 2;
         }
-        else if (beforeModelKey != null)
+        else if (previousModelKey != null)
         {
-            // 插入到 before 之后
-            newOrder = beforeModelKey.Order + RankStep;
+            // 插入到 previous 之后
+            newOrder = previousModelKey.Order + RankStep;
         }
-        else if (afterModelKey != null)
+        else if (nextModelKey != null)
         {
-            // 插入到 after 之前
-            newOrder = afterModelKey.Order - RankStep;
+            // 插入到 next 之前
+            newOrder = nextModelKey.Order - RankStep;
         }
 
         // 检查新的 Order 值是否在有效范围内
@@ -366,34 +366,34 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             return NotFound("Source model provider not found");
         }
 
-        // 验证 before 和 after 的 ModelProvider 是否存在（如果提供的话）
-        ModelProvider? beforeProvider = null;
-        ModelProvider? afterProvider = null;
+        // 验证 previous 和 next 的 ModelProvider 是否存在（如果提供的话）
+        ModelProvider? previousProvider = null;
+        ModelProvider? nextProvider = null;
 
-        if (request.BeforeId != null)
+        if (request.PreviousId != null)
         {
-            beforeProvider = await db.ModelProviders
-                .FirstOrDefaultAsync(x => x.Id == request.BeforeId, cancellationToken);
-            if (beforeProvider == null)
+            previousProvider = await db.ModelProviders
+                .FirstOrDefaultAsync(x => x.Id == request.PreviousId, cancellationToken);
+            if (previousProvider == null)
             {
-                return NotFound("Before model provider not found");
+                return NotFound("Previous model provider not found");
             }
         }
 
-        if (request.AfterId != null)
+        if (request.NextId != null)
         {
-            afterProvider = await db.ModelProviders
-                .FirstOrDefaultAsync(x => x.Id == request.AfterId, cancellationToken);
-            if (afterProvider == null)
+            nextProvider = await db.ModelProviders
+                .FirstOrDefaultAsync(x => x.Id == request.NextId, cancellationToken);
+            if (nextProvider == null)
             {
-                return NotFound("After model provider not found");
+                return NotFound("Next model provider not found");
             }
         }
 
-        // 验证 before 和 after 不能同时为空
-        if (beforeProvider == null && afterProvider == null)
+        // 验证 previous 和 next 不能同时为空
+        if (previousProvider == null && nextProvider == null)
         {
-            return BadRequest("Both before and after model providers cannot be null");
+            return BadRequest("Both previous and next model providers cannot be null");
         }
 
         // 获取所有 ModelKey 并按当前顺序排列
@@ -411,64 +411,77 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             .OrderBy(x => x.Order)
             .Select(x => x.ModelProviderId)];
 
-        // 验证 before 和 after 的顺序
-        if (beforeProvider != null && afterProvider != null)
+        // 验证 previous 和 next 的顺序
+        if (previousProvider != null && nextProvider != null)
         {
-            int beforeIndex = currentProviderOrder.IndexOf(beforeProvider.Id);
-            int afterIndex = currentProviderOrder.IndexOf(afterProvider.Id);
-            if (beforeIndex >= afterIndex)
+            int previousIndex = currentProviderOrder.IndexOf(previousProvider.Id);
+            int nextIndex = currentProviderOrder.IndexOf(nextProvider.Id);
+            if (previousIndex + 1 != nextIndex)
             {
-                return BadRequest("Invalid order: before model provider should appear before after model provider");
+                return BadRequest("Previous and next model providers must be adjacent");
             }
         }
 
-        // 计算目标位置
-        int targetIndex = 0;
-        if (beforeProvider != null && afterProvider != null)
-        {
-            int beforeIndex = currentProviderOrder.IndexOf(beforeProvider.Id);
-            int afterIndex = currentProviderOrder.IndexOf(afterProvider.Id);
-            targetIndex = beforeIndex + 1;
-        }
-        else if (beforeProvider != null)
-        {
-            int beforeIndex = currentProviderOrder.IndexOf(beforeProvider.Id);
-            targetIndex = beforeIndex + 1;
-        }
-        else if (afterProvider != null)
-        {
-            int afterIndex = currentProviderOrder.IndexOf(afterProvider.Id);
-            targetIndex = afterIndex;
-        }
-
-        // 重新排列 ModelProvider 顺序
+        // 从当前列表中移除 source
         List<short> newProviderOrder = [.. currentProviderOrder];
         newProviderOrder.Remove(request.SourceId);
-        newProviderOrder.Insert(targetIndex, request.SourceId);
+
+        // 计算插入位置
+        int insertIndex = 0;
+        if (previousProvider != null && nextProvider != null)
+        {
+            // 插入到 previous 和 next 之间
+            int previousIndex = newProviderOrder.IndexOf(previousProvider.Id);
+            insertIndex = previousIndex + 1;
+        }
+        else if (previousProvider != null)
+        {
+            // 插入到 previous 之后（末尾）
+            int previousIndex = newProviderOrder.IndexOf(previousProvider.Id);
+            insertIndex = previousIndex + 1;
+        }
+        else if (nextProvider != null)
+        {
+            // 插入到 next 之前（开头）
+            int nextIndex = newProviderOrder.IndexOf(nextProvider.Id);
+            insertIndex = nextIndex;
+        }
+
+        // 插入到新位置
+        newProviderOrder.Insert(insertIndex, request.SourceId);
 
         // 计算每个 ModelProvider 组应该的 Order 范围
         Dictionary<short, (short minOrder, short maxOrder)> providerOrderRanges = [];
+        int providerSpacing = 1000; // 每个 Provider 之间的间距
+        
         for (int i = 0; i < newProviderOrder.Count; i++)
         {
             short providerId = newProviderOrder[i];
-            short minOrder = (short)(RankStart + i * RankStep * 100); // 给每个 Provider 预留 100 个 RankStep 的空间
-            short maxOrder = (short)(minOrder + RankStep * 100 - 1);
+            short baseOrder = (short)(RankStart + i * providerSpacing);
+            short minOrder = baseOrder;
+            short maxOrder = (short)(baseOrder + providerSpacing - 1);
+            
+            // 确保不超出 short 的范围
+            if (maxOrder > short.MaxValue)
+            {
+                // 重新计算，压缩间距
+                providerSpacing = Math.Max(100, (short.MaxValue - RankStart) / newProviderOrder.Count);
+                break;
+            }
+            
             providerOrderRanges[providerId] = (minOrder, maxOrder);
         }
 
-        // 检查是否需要重新排序（如果范围超出 short 的最大值）
-        bool needGlobalReorder = providerOrderRanges.Values.Any(range => range.maxOrder > short.MaxValue);
-
-        if (needGlobalReorder)
+        // 如果需要重新计算间距
+        if (providerOrderRanges.Count != newProviderOrder.Count)
         {
-            // 全局重新排序，压缩范围
             providerOrderRanges.Clear();
-            int stepPerProvider = Math.Max(1, (short.MaxValue - RankStart) / (newProviderOrder.Count * 100));
             for (int i = 0; i < newProviderOrder.Count; i++)
             {
                 short providerId = newProviderOrder[i];
-                short minOrder = (short)(RankStart + i * stepPerProvider * 100);
-                short maxOrder = (short)(minOrder + stepPerProvider * 100 - 1);
+                short baseOrder = (short)(RankStart + i * providerSpacing);
+                short minOrder = baseOrder;
+                short maxOrder = (short)(baseOrder + providerSpacing - 1);
                 providerOrderRanges[providerId] = (minOrder, maxOrder);
             }
         }
@@ -486,8 +499,13 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             for (int i = 0; i < providerModelKeys.Length; i++)
             {
                 // 在 Provider 的范围内均匀分布 ModelKey
-                int stepSize = Math.Max(1, (range.maxOrder - range.minOrder + 1) / Math.Max(1, providerModelKeys.Length));
+                int availableSpace = range.maxOrder - range.minOrder + 1;
+                int stepSize = Math.Max(1, availableSpace / Math.Max(1, providerModelKeys.Length));
                 short newOrder = (short)(range.minOrder + i * stepSize);
+                
+                // 确保不超出范围
+                newOrder = (short)Math.Min(newOrder, range.maxOrder);
+                
                 providerModelKeys[i].Order = newOrder;
                 providerModelKeys[i].UpdatedAt = DateTime.UtcNow;
             }

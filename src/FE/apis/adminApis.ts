@@ -38,6 +38,7 @@ import {
   PutUserInitialConfigParams,
   PutUserModelParams,
   PutUserParams,
+  ReorderRequest,
   SimpleModelReferenceDto,
   StatisticsTimeParams,
   TokenStatisticsByDateResult,
@@ -264,6 +265,13 @@ export const putModelKeys = (id: number, params: PostModelKeysParams) => {
 export const deleteModelKeys = (id: number) => {
   const fetchService = useFetch();
   return fetchService.delete(`/api/admin/model-keys/${id}`);
+};
+
+export const reorderModelProviders = (params: ReorderRequest) => {
+  const fetchService = useFetch();
+  return fetchService.put('/api/admin/model-keys/reorder-model-providers', {
+    body: params,
+  });
 };
 
 export const getUserInitialConfig = () => {
