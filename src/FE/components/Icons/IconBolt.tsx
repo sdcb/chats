@@ -18,7 +18,7 @@ const IconBolt = (props: IconProps) => {
       strokeLinejoin="round"
     >
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-      <path d="M13 3l-9 9h6v8l9 -9h-6z" />
+      <path d="M13 3l-4 7h4l-6 8l4-7h-4l6-8z" />
     </svg>
   );
 };
