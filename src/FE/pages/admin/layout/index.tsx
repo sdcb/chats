@@ -18,11 +18,9 @@ import {
   IconLayoutSidebar,
   IconMessages,
   IconMoneybag,
-  IconNotes,
   IconSettings,
   IconSettingsCog,
   IconShieldLock,
-  IconUser,
   IconUserCog,
   IconUsers,
 } from '@/components/Icons/index';
@@ -108,18 +106,6 @@ const AdminLayout = ({
         <IconChartPie strokeWidth={1.2} stroke={stroke} />
       ),
       title: t('Dashboard'),
-    },
-    {
-      url: '/admin/model-keys',
-      icon: (stroke?: string) => <IconKey strokeWidth={1.2} stroke={stroke} />,
-      title: t('Model Keys'),
-    },
-    {
-      url: '/admin/models',
-      icon: (stroke?: string) => (
-        <IconSettingsCog strokeWidth={1.2} stroke={stroke} />
-      ),
-      title: t('Model Configs'),
     },
     {
       url: '/admin/model',
