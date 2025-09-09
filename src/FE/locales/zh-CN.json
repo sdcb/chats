@@ -507,5 +507,7 @@
   "Max Output Tokens": "最多输出Token数",
   "Fast Add Models": "快速添加模型",
   "Show all providers": "显示所有提供商",
-  "No Model Keys": "无模型密钥"
+  "No Model Keys": "无模型密钥",
+  "No providers or model keys yet": "暂无提供商或模型密钥",
+  "You have no model keys under any provider. Add a model key first or show all providers to start.": "你在任何提供商下都没有模型密钥。先添加一个模型密钥或显示所有提供商以开始。"
 }
