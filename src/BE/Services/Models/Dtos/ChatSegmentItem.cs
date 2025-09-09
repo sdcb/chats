@@ -151,7 +151,11 @@ public abstract record ChatSegmentItem
             Id = delta.ItemId,
             Type = ChatToolCallKind.Function.ToString(),
             Name = null,
-            Arguments = delta.Delta,
+            Arguments = delta.Delta switch
+            {
+                { IsEmpty: true } => "",
+                _ => delta.Delta.ToString()
+            }
         };
     }
 

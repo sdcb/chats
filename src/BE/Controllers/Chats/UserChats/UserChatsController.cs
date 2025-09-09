@@ -205,7 +205,6 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             [
                 new()
                 {
-                    ChatId = chat.Id,
                     SpanId = 0,
                     Enabled = true,
                     ChatConfig = new ChatConfig

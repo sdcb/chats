@@ -369,16 +369,16 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
 
         if (background)
         {
-            responseCreationOptions.Background = background;
+            responseCreationOptions.BackgroundModeEnabled = background;
         }
 
         foreach (ChatTool tool in options.Tools)
         {
             responseCreationOptions.Tools.Add(ResponseTool.CreateFunctionTool(
                 tool.FunctionName,
-                tool.FunctionDescription,
                 tool.FunctionParameters,
-                tool.FunctionSchemaIsStrict ?? false));
+                tool.FunctionSchemaIsStrict ?? false,
+                tool.FunctionDescription));
         }
 
         return responseCreationOptions;

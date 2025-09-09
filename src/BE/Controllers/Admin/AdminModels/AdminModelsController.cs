@@ -260,10 +260,9 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
                 .Select(x => $"{x.Key}: " + string.Join(",", x.Value!.Errors.Select(x => x.ErrorMessage)))));
         }
 
-        HashSet<int> incomingModelIds = updateReq.Models
+        HashSet<int> incomingModelIds = [.. updateReq.Models
             .Where(x => x.Id != -1)
-            .Select(x => x.Id)
-            .ToHashSet();
+            .Select(x => x.Id)];
         Dictionary<short, UserModel> userModels = await db.UserModels
             .Include(x => x.Model.UsageTransactions)
             .Where(x => x.UserId == updateReq.UserId)
