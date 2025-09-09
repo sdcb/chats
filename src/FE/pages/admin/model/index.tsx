@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import DeletePopover from '@/pages/home/_components/Popover/DeletePopover';
-import { IconPlus, IconPencil, IconRefresh } from '@/components/Icons';
+import { IconPlus, IconPencil, IconBolt } from '@/components/Icons';
 
 import {
   getModelKeys,
@@ -192,6 +192,7 @@ export default function ModelManager() {
               setCurrentProviderId(undefined);
               setIsOpenKeyModal(true);
             }}
+            title={t('Add Model Key')}
           >
             <IconPlus size={16} />
           </Button>
@@ -223,6 +224,7 @@ export default function ModelManager() {
                           e.stopPropagation();
                           openAddKey(g.providerId);
                         }}
+                        title={t('Add Model Key')}
                       >
                         <IconPlus size={16} />
                       </Button>
@@ -254,8 +256,9 @@ export default function ModelManager() {
                                     e.stopPropagation();
                                     openConfigModels(k.id, g.providerId);
                                   }}
+                                  title={t('Fast Add Models')}
                                 >
-                                  <IconRefresh size={16} />
+                                  <IconBolt size={16} />
                                 </Button>
                                 <Button variant="secondary"
                                   size="sm"
@@ -263,6 +266,7 @@ export default function ModelManager() {
                                     e.stopPropagation();
                                     openAddModel(k.id);
                                   }}
+                                  title={t('Add Model')}
                                 >
                                   <IconPlus size={16} />
                                 </Button>
@@ -279,11 +283,12 @@ export default function ModelManager() {
                                       setIsOpenKeyModal(true);
                                     }
                                   }}
+                                  title={t('Edit')}
                                 >
                                   <IconPencil size={16} />
                                 </Button>
                                 {(modelsByKey[k.id] || []).length === 0 && (
-                                  <div onClick={(e) => e.stopPropagation()}>
+                                  <div onClick={(e) => e.stopPropagation()} title={t('Delete')}>
                                     <DeletePopover 
                                       onDelete={() => handleDeleteKey(k.id)}
                                     />
@@ -303,12 +308,14 @@ export default function ModelManager() {
                                       </div>
                                     </div>
                                     <div className="flex gap-2 ml-3">
-                                      <Button variant="secondary" size="sm" onClick={() => openEditModel(m)}>
+                                      <Button variant="secondary" size="sm" onClick={() => openEditModel(m)} title={t('Edit Model')}>
                                         <IconPencil size={16} />
                                       </Button>
-                                      <DeletePopover 
-                                        onDelete={() => handleDeleteModel(m.modelId)}
-                                      />
+                                      <div title={t('Delete Model')}>
+                                        <DeletePopover 
+                                          onDelete={() => handleDeleteModel(m.modelId)}
+                                        />
+                                      </div>
                                     </div>
                                   </div>
                                 ))}
