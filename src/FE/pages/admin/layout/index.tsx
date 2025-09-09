@@ -112,7 +112,7 @@ const AdminLayout = ({
       icon: (stroke?: string) => (
         <IconSettingsCog strokeWidth={1.2} stroke={stroke} />
       ),
-      title: t('Model Manager'),
+      title: t('Model Configs'),
     },
     {
       url: '/admin/users',
