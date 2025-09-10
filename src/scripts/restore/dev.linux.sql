@@ -11,3 +11,7 @@ FROM URL = N'https://richsgp.blob.core.windows.net/backup/chats3/latest.bak' WIT
 	STATS = 5;
 
 ALTER DATABASE [Chats3] SET MULTI_USER;
+
+use [Chats3];
+GO
+ALTER USER [chats] WITH LOGIN = [chats];
