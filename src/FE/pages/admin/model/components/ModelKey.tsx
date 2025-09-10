@@ -7,6 +7,9 @@ import useTranslation from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import ModelItem from './ModelItem';
 import CollapsiblePanel from './CollapsiblePanel';
+// dnd-kit
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface ModelKeyProps {
   modelKey: GetModelKeysResult;
@@ -19,14 +22,6 @@ interface ModelKeyProps {
   onAddModel: (keyId: number) => void;
   onEditModel: (model: AdminModelDto) => void;
   onDeleteModel: (modelId: number) => void;
-  // Drag state
-  isDragging?: boolean;
-  onDragStart?: (e: React.DragEvent<HTMLDivElement>) => void;
-  onDragEnd?: (e: React.DragEvent<HTMLDivElement>) => void;
-  // Droppable handlers (optional, when used as drop target)
-  onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
-  onDragEnter?: (e: React.DragEvent<HTMLDivElement>) => void;
-  onDrop?: (e: React.DragEvent<HTMLDivElement>) => void;
 }
 
 export default function ModelKey({
@@ -40,14 +35,14 @@ export default function ModelKey({
   onAddModel,
   onEditModel,
   onDeleteModel,
-  isDragging = false,
-  onDragStart,
-  onDragEnd,
-  onDragOver,
-  onDragEnter,
-  onDrop,
 }: ModelKeyProps) {
   const { t } = useTranslation();
+  const sortable = useSortable({ id: `key-${modelKey.id}` });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     // 如果正在拖拽，不处理点击事件
@@ -65,50 +60,21 @@ export default function ModelKey({
     onToggleExpand();
   };
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-    // 如果拖拽开始于按钮区域，阻止拖拽
-    const target = e.target as HTMLElement;
-    if (target.closest('button')) {
-      e.preventDefault();
-      return;
-    }
-    
-    // 确保浏览器识别为“可拖拽移动”操作
-    try {
-      e.dataTransfer.effectAllowed = 'move';
-      // 一些浏览器（如 Firefox）要求必须设置数据才会触发 drop
-      e.dataTransfer.setData('text/plain', String(modelKey.id));
-    } catch {}
-
-    if (onDragStart) {
-      onDragStart(e);
-    }
-
-  // 防止冒泡到 Provider 导致 Provider 级拖拽被触发
-  e.stopPropagation();
-  };
-
-  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
-    // 结束拖拽时确保状态被清理
-    onDragEnd?.(e as any);
-  };
+  // dnd-kit 管理拖拽，无需本地 dragStart/dragEnd
 
   return (
     <div 
       className={cn(
-        "rounded-md border bg-background/30 transition-all duration-200 cursor-move",
-        isDragging && "opacity-50 transform scale-95"
+        "rounded-md border bg-background/30 transition-all duration-200 cursor-move"
       )}
-      draggable={true}
-  onDragStart={handleDragStart}
-  onDragEnd={handleDragEnd}
-  onDragOver={onDragOver}
-  onDragEnter={onDragEnter}
-  onDrop={onDrop}
+      ref={setNodeRef}
+      style={style}
     >
       <div
         className="flex items-center justify-between p-3 cursor-pointer select-none"
         onClick={handleClick}
+        {...attributes}
+        {...listeners}
       >
         <div className="flex items-center gap-2">
           <span className="font-medium">{modelKey.name}</span>

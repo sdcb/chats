@@ -1,4 +1,6 @@
 import React from 'react';
+import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
 import { Button } from '@/components/ui/button';
 import { IconPlus } from '@/components/Icons';
@@ -29,15 +31,6 @@ interface ModelProviderProps {
   onAddModel: (keyId: number) => void;
   onEditModel: (model: AdminModelDto) => void;
   onDeleteModel: (modelId: number) => void;
-  isDragging?: boolean;
-  onDragStart?: (e: React.DragEvent<HTMLDivElement>) => void;
-  // 模型密钥拖拽相关
-  currentDragKey?: GetModelKeysResult | null;
-  keyRefs?: React.MutableRefObject<Record<number, HTMLElement | null>>;
-  onKeyDragStart?: (e: React.DragEvent<HTMLDivElement>, key: GetModelKeysResult) => void;
-  onKeyDragEnter?: (index: number, keyId: number, providerId: number) => void;
-  onKeyDrop?: (e: React.DragEvent<HTMLDivElement>, key: GetModelKeysResult, index: number) => void;
-  onKeyDragEnd?: () => void;
 }
 
 export default function ModelProvider({
@@ -55,16 +48,14 @@ export default function ModelProvider({
   onAddModel,
   onEditModel,
   onDeleteModel,
-  isDragging = false,
-  onDragStart,
-  currentDragKey,
-  keyRefs,
-  onKeyDragStart,
-  onKeyDragEnter,
-  onKeyDrop,
-  onKeyDragEnd,
 }: ModelProviderProps) {
   const { t } = useTranslation();
+  const sortable = useSortable({ id: `provider-${provider.providerId}`, disabled: provider.keys.length === 0 });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
   const handleHeaderClick = (e: React.MouseEvent) => {
     // 如果正在拖拽，不触发展开/收起
@@ -82,34 +73,17 @@ export default function ModelProvider({
     onToggleExpand();
   };
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-    // 如果拖拽开始于按钮区域或 ModelKey 区域，阻止拖拽
-    const target = e.target as HTMLElement;
-    if (target.closest('button')) {
-      e.preventDefault();
-      return;
-    }
-    if (target.closest('.model-key-container')) {
-      // 不要取消默认行为，避免影响子元素（ModelKey）的拖拽
-      e.stopPropagation();
-      return;
-    }
-    
-    if (onDragStart) {
-      onDragStart(e);
-    }
-  };
+  // Provider 的拖拽由上层 dnd-kit 管理
 
   return (
-    <div className="mb-3">
+    <div className="mb-3" ref={setNodeRef} style={style}>
       <div 
         className={cn(
           "rounded-xl border bg-card transition-all duration-200",
-          isDragging && "opacity-50 transform scale-95",
           provider.keys.length > 0 && "cursor-move"
         )}
-        draggable={provider.keys.length > 0}
-        onDragStart={handleDragStart}
+        {...attributes}
+        {...listeners}
       >
         <div
           className="flex items-center justify-between p-3 cursor-pointer select-none"
@@ -141,17 +115,10 @@ export default function ModelProvider({
             <div className="text-sm text-muted-foreground px-3 pb-3">{t('No Model Keys')}</div>
           ) : (
             <div className="pl-6 space-y-2 pb-3">
-              {provider.keys.map((key, index) => (
-                <div
-                  key={key.id}
-                  ref={(el) => {
-                    if (keyRefs) {
-                      keyRefs.current[key.id] = el;
-                    }
-                  }}
-                  className="model-key-container"
-                >
+              <SortableContext items={provider.keys.map(k => `key-${k.id}`)} strategy={verticalListSortingStrategy}>
+                {provider.keys.map((key) => (
                   <ModelKey
+                    key={key.id}
                     modelKey={key}
                     models={modelsByKey[key.id] || []}
                     expanded={!!expandedKeys[key.id]}
@@ -162,35 +129,9 @@ export default function ModelProvider({
                     onAddModel={onAddModel}
                     onEditModel={onEditModel}
                     onDeleteModel={onDeleteModel}
-                    isDragging={currentDragKey?.id === key.id}
-                    onDragStart={(e) => onKeyDragStart?.(e, key)}
-                    onDragEnd={(e) => onKeyDragEnd?.()}
-                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); try { e.dataTransfer.dropEffect = 'move'; } catch {} }}
-                    onDragEnter={(e) => { e.stopPropagation(); onKeyDragEnter?.(index, key.id, provider.providerId); }}
-                    onDrop={(e) => { e.stopPropagation(); onKeyDrop?.(e, key, index); }}
                   />
-                </div>
-              ))}
-              {provider.keys.length > 0 && (
-                <div
-                  className="h-3"
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    try { e.dataTransfer.dropEffect = 'move'; } catch {}
-                  }}
-                  onDragEnter={(e) => {
-                    e.stopPropagation();
-                    const last = provider.keys[provider.keys.length - 1];
-                    onKeyDragEnter?.(provider.keys.length - 1, last.id, provider.providerId);
-                  }}
-                  onDrop={(e) => {
-                    e.stopPropagation();
-                    const last = provider.keys[provider.keys.length - 1];
-                    onKeyDrop?.(e, last, provider.keys.length - 1);
-                  }}
-                />
-              )}
+                ))}
+              </SortableContext>
             </div>
           )}
         </CollapsiblePanel>
