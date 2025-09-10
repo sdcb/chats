@@ -80,13 +80,13 @@ export default function ModelProvider({
       <div 
         className={cn(
           "rounded-xl border bg-card transition-all duration-200",
-          provider.keys.length > 0 && "cursor-move"
+          provider.keys.length > 0 && (isDragging ? "opacity-60 cursor-grabbing" : "cursor-grab")
         )}
         {...attributes}
         {...listeners}
       >
         <div
-          className="flex items-center justify-between p-3 cursor-pointer select-none"
+          className="flex items-center justify-between p-3 select-none"
           onClick={handleHeaderClick}
         >
           <div className="flex items-center gap-2">
