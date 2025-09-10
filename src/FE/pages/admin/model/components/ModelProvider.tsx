@@ -31,6 +31,13 @@ interface ModelProviderProps {
   onDeleteModel: (modelId: number) => void;
   isDragging?: boolean;
   onDragStart?: (e: React.DragEvent<HTMLDivElement>) => void;
+  // 模型密钥拖拽相关
+  currentDragKey?: GetModelKeysResult | null;
+  keyRefs?: React.MutableRefObject<Record<number, HTMLElement | null>>;
+  onKeyDragStart?: (e: React.DragEvent<HTMLDivElement>, key: GetModelKeysResult) => void;
+  onKeyDragEnter?: (index: number, keyId: number, providerId: number) => void;
+  onKeyDrop?: (e: React.DragEvent<HTMLDivElement>, key: GetModelKeysResult, index: number) => void;
+  onKeyDragEnd?: () => void;
 }
 
 export default function ModelProvider({
@@ -50,6 +57,12 @@ export default function ModelProvider({
   onDeleteModel,
   isDragging = false,
   onDragStart,
+  currentDragKey,
+  keyRefs,
+  onKeyDragStart,
+  onKeyDragEnter,
+  onKeyDrop,
+  onKeyDragEnd,
 }: ModelProviderProps) {
   const { t } = useTranslation();
 
@@ -70,10 +83,15 @@ export default function ModelProvider({
   };
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-    // 如果拖拽开始于按钮区域，阻止拖拽
+    // 如果拖拽开始于按钮区域或 ModelKey 区域，阻止拖拽
     const target = e.target as HTMLElement;
     if (target.closest('button')) {
       e.preventDefault();
+      return;
+    }
+    if (target.closest('.model-key-container')) {
+      // 不要取消默认行为，避免影响子元素（ModelKey）的拖拽
+      e.stopPropagation();
       return;
     }
     
@@ -123,21 +141,56 @@ export default function ModelProvider({
             <div className="text-sm text-muted-foreground px-3 pb-3">{t('No Model Keys')}</div>
           ) : (
             <div className="pl-6 space-y-2 pb-3">
-              {provider.keys.map((key) => (
-                <ModelKey
+              {provider.keys.map((key, index) => (
+                <div
                   key={key.id}
-                  modelKey={key}
-                  models={modelsByKey[key.id] || []}
-                  expanded={!!expandedKeys[key.id]}
-                  onToggleExpand={() => onToggleKeyExpand(key.id)}
-                  onEdit={onEditKey}
-                  onDelete={onDeleteKey}
-                  onConfigModels={onConfigModels}
-                  onAddModel={onAddModel}
-                  onEditModel={onEditModel}
-                  onDeleteModel={onDeleteModel}
-                />
+                  ref={(el) => {
+                    if (keyRefs) {
+                      keyRefs.current[key.id] = el;
+                    }
+                  }}
+                  className="model-key-container"
+                >
+                  <ModelKey
+                    modelKey={key}
+                    models={modelsByKey[key.id] || []}
+                    expanded={!!expandedKeys[key.id]}
+                    onToggleExpand={() => onToggleKeyExpand(key.id)}
+                    onEdit={onEditKey}
+                    onDelete={onDeleteKey}
+                    onConfigModels={onConfigModels}
+                    onAddModel={onAddModel}
+                    onEditModel={onEditModel}
+                    onDeleteModel={onDeleteModel}
+                    isDragging={currentDragKey?.id === key.id}
+                    onDragStart={(e) => onKeyDragStart?.(e, key)}
+                    onDragEnd={(e) => onKeyDragEnd?.()}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); try { e.dataTransfer.dropEffect = 'move'; } catch {} }}
+                    onDragEnter={(e) => { e.stopPropagation(); onKeyDragEnter?.(index, key.id, provider.providerId); }}
+                    onDrop={(e) => { e.stopPropagation(); onKeyDrop?.(e, key, index); }}
+                  />
+                </div>
               ))}
+              {provider.keys.length > 0 && (
+                <div
+                  className="h-3"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try { e.dataTransfer.dropEffect = 'move'; } catch {}
+                  }}
+                  onDragEnter={(e) => {
+                    e.stopPropagation();
+                    const last = provider.keys[provider.keys.length - 1];
+                    onKeyDragEnter?.(provider.keys.length - 1, last.id, provider.providerId);
+                  }}
+                  onDrop={(e) => {
+                    e.stopPropagation();
+                    const last = provider.keys[provider.keys.length - 1];
+                    onKeyDrop?.(e, last, provider.keys.length - 1);
+                  }}
+                />
+              )}
             </div>
           )}
         </CollapsiblePanel>

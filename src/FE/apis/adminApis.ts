@@ -274,6 +274,13 @@ export const reorderModelProviders = (params: ReorderRequest) => {
   });
 };
 
+export const reorderModelKeys = (params: ReorderRequest) => {
+  const fetchService = useFetch();
+  return fetchService.put('/api/admin/model-keys/reorder', {
+    body: params,
+  });
+};
+
 export const getUserInitialConfig = () => {
   const fetchServer = useFetch();
   return fetchServer.get<GetUserInitialConfigResult[]>(
