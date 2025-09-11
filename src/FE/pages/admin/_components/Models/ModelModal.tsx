@@ -142,6 +142,8 @@ const ModelModal = (props: IProps) => {
 
   useEffect(() => {
     if (isOpen) {
+      // Clear model versions first
+      setModelVersions([]);
       form.reset();
       form.formState.isValid;
       
@@ -166,14 +168,6 @@ const ModelModal = (props: IProps) => {
         form.setValue('inputPrice1M', inputTokenPrice1M);
         form.setValue('outputPrice1M', outputTokenPrice1M);
         form.setValue('modelReferenceId', modelReferenceId.toString());
-
-        // Load corresponding model provider models
-        const modelProviderId = modelKeys.find((x) => x.id === modelKeyId)?.modelProviderId;
-        if (modelProviderId) {
-          getModelProviderModels(modelProviderId).then((possibleModels) => {
-            setModelVersions(possibleModels);
-          });
-        }
       } else {
         // Add mode: set default values
         if (defaultModelKeyId !== undefined) {
@@ -184,8 +178,24 @@ const ModelModal = (props: IProps) => {
           }
         }
       }
+    } else {
+      // Clear model versions when modal is closed
+      setModelVersions([]);
     }
   }, [isOpen, selected, defaultModelKeyId, modelKeys, isEditMode]);
+
+  // Separate useEffect for loading model versions in edit mode
+  useEffect(() => {
+    if (isOpen && isEditMode && selected && modelKeys.length > 0) {
+      const { modelKeyId } = selected;
+      const modelProviderId = modelKeys.find((x) => x.id === modelKeyId)?.modelProviderId;
+      if (modelProviderId !== undefined) {
+        getModelProviderModels(modelProviderId).then((possibleModels) => {
+          setModelVersions(possibleModels);
+        });
+      }
+    }
+  }, [isOpen, isEditMode, selected, modelKeys]);
 
   const onModelReferenceChanged = async (modelReferenceId: number) => {
     getModelReference(modelReferenceId).then((data) => {
@@ -198,10 +208,11 @@ const ModelModal = (props: IProps) => {
     const subscription = form.watch(async (value, { name, type }) => {
       if (name === 'modelKeyId' && type === 'change') {
         const modelKeyId = value.modelKeyId;
-        const modelProviderId = modelKeys.find((x) => x.id === +modelKeyId!)
-          ?.modelProviderId!;
-        const possibleModels = await getModelProviderModels(modelProviderId);
-        setModelVersions(possibleModels);
+        const modelProvider = modelKeys.find((x) => x.id === +modelKeyId!);
+        if (modelProvider !== undefined) {
+          const possibleModels = await getModelProviderModels(modelProvider.modelProviderId);
+          setModelVersions(possibleModels);
+        }
       }
       if (name === 'modelReferenceId' && type === 'change') {
         const modelReferenceId = +value.modelReferenceId!;
