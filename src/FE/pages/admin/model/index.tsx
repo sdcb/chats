@@ -6,10 +6,11 @@ import toast from 'react-hot-toast';
 import useTranslation from '@/hooks/useTranslation';
 import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
 import { feModelProviders } from '@/types/model';
+import { formatNumberAsMoney } from '@/utils/common';
 import { Button } from '@/components/ui/button';
 import { LabelSwitch } from '@/components/ui/label-switch';
 import { IconPlus } from '@/components/Icons';
-import { getModelKeys, getModels, deleteModelKeys, deleteModels, reorderModelProviders, reorderModelKeys } from '@/apis/adminApis';
+import { getModelKeys, getModels, deleteModelKeys, deleteModels, reorderModelProviders, reorderModelKeys, reorderModels } from '@/apis/adminApis';
 import ModelKeysModal from '../_components/ModelKeys/ModelKeysModal';
 import ConfigModelModal from '../_components/ModelKeys/ConfigModelModal';
 import AddModelModal from '../_components/Models/AddModelModal';
@@ -271,7 +272,7 @@ export default function ModelManager() {
     }
   };
 
-  // 使用 dnd-kit 统一处理拖拽结束：识别是 Provider 还是 Key 的排序
+  // 使用 dnd-kit 统一处理拖拽结束：识别是 Provider 还是 Key 还是 Model 的排序
   const onDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over) return;
@@ -312,9 +313,9 @@ export default function ModelManager() {
         // 无论成功失败都刷新一次，确保与后端一致；失败时可考虑提示并回滚
         init(true);
       }
-  setActiveId(null);
-  setCurrentDragProvider(null);
-  return;
+      setActiveId(null);
+      setCurrentDragProvider(null);
+      return;
     }
 
     // Key 排序：id 形如 key-<id>
@@ -359,6 +360,49 @@ export default function ModelManager() {
       }
       setActiveId(null);
       setCurrentDragKey(null);
+      return;
+    }
+
+    // Model 排序：id 形如 model-<id>
+    if (activeId.startsWith('model-') && overId.startsWith('model-')) {
+      const mid = (s: string) => Number(s.replace('model-', ''));
+      const activeMid = mid(activeId);
+      const overMid = mid(overId);
+      if (activeMid === overMid) return;
+
+      // 限制在同一 key 内
+      const activeModel = models.find(m => m.modelId === activeMid);
+      const overModel = models.find(m => m.modelId === overMid);
+      if (!activeModel || !overModel || activeModel.modelKeyId !== overModel.modelKeyId) return;
+
+      const keyModels = modelsByKey[activeModel.modelKeyId] || [];
+      const ids = keyModels.map(m => m.modelId);
+      const sourceIndex = ids.indexOf(activeMid);
+      const targetIndex = ids.indexOf(overMid);
+      const { previousId, nextId } = computePrevNext(ids, sourceIndex, targetIndex);
+
+      // 先本地顺序调整（乐观更新）
+      const moved = arrayMove(ids, sourceIndex, targetIndex);
+      setModels(prev => {
+        const idToModel = new Map(prev.map(m => [m.modelId, m] as const));
+        const result: AdminModelDto[] = [];
+        for (const m of prev) {
+          if (m.modelKeyId !== activeModel.modelKeyId) {
+            result.push(m);
+          } else {
+            // 依照 moved 的顺序输出该 key 的 models
+            const nextId = moved.shift()!;
+            result.push(idToModel.get(nextId)!);
+          }
+        }
+        return result;
+      });
+      try {
+        await reorderModels({ sourceId: activeMid, previousId, nextId });
+      } finally {
+        init(true);
+      }
+      setActiveId(null);
       return;
     }
     setActiveId(null);
@@ -469,6 +513,23 @@ export default function ModelManager() {
               <div className="flex items-center justify-between p-3">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{k.name}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+        {activeId?.startsWith('model-') && (() => {
+          const mid = Number(activeId.replace('model-', ''));
+          const m = models.find(x => x.modelId === mid);
+          if (!m) return null;
+          return (
+            <div className="rounded border bg-background/90 shadow-md px-2 py-1">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="truncate font-medium">{m.name}</div>
+                  <div className="text-xs text-blue-600 truncate">
+                    {'￥' + formatNumberAsMoney(m.inputTokenPrice1M) + '/' + formatNumberAsMoney(m.outputTokenPrice1M)}
+                  </div>
                 </div>
               </div>
             </div>

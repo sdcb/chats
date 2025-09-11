@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import ModelItem from './ModelItem';
 import CollapsiblePanel from './CollapsiblePanel';
 // dnd-kit
-import { useSortable } from '@dnd-kit/sortable';
+import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 interface ModelKeyProps {
@@ -122,14 +122,16 @@ export default function ModelKey({
       </div>
       <CollapsiblePanel open={expanded}>
         <div className="pr-3 pb-3 pl-4 space-y-1">
-          {models.map((model) => (
-            <ModelItem
-              key={model.modelId}
-              model={model}
-              onEdit={onEditModel}
-              onDelete={onDeleteModel}
-            />
-          ))}
+          <SortableContext items={models.map(m => `model-${m.modelId}`)} strategy={verticalListSortingStrategy}>
+            {models.map((model) => (
+              <ModelItem
+                key={model.modelId}
+                model={model}
+                onEdit={onEditModel}
+                onDelete={onDeleteModel}
+              />
+            ))}
+          </SortableContext>
         </div>
       </CollapsiblePanel>
     </div>
