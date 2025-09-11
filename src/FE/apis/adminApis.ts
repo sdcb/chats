@@ -64,6 +64,15 @@ export const getModelsByUserId = async (
   return data.map((x) => new UserModelDisplay(x));
 };
 
+export const getUserUnassignedModels = async (
+  userId: string,
+): Promise<AdminModelDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get<AdminModelDto[]>(
+    `/api/admin/user-unassigned-models/${userId}`,
+  );
+};
+
 export const putUserModel = (params: PutUserModelParams): Promise<any> => {
   const fetchService = useFetch();
   return fetchService.put('/api/admin/user-models', {

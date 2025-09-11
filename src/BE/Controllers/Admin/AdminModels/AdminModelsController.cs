@@ -211,40 +211,69 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
     [HttpGet("user-models/{userId:int}")]
     public async Task<ActionResult<UserModelDto[]>> GetUserModels(int userId, CancellationToken cancellationToken)
     {
-        UserModelDto[] userModels = await db.Models
-            .Where(x => !x.IsDeleted)
-            .OrderBy(x => x.Order)
-            .ThenByDescending(x => x.Id)
-            .Select(x => new
+        UserModelDto[] userModels = await db.UserModels
+            .Where(x => x.UserId == userId)
+            .Include(x => x.Model)
+            .Include(x => x.Model.ModelKey)
+            .OrderByDescending(x => x.Id)
+            .Select(x => new UserModelDto()
             {
-                Model = x,
-                UserModel = x.UserModels.Where(x => x.UserId == userId).FirstOrDefault()
+                Id = x.Id,
+                ModelId = x.Model.Id,
+                DisplayName = x.Model.Name,
+                ModelKeyName = x.Model.ModelKey.Name,
+                Counts = x.CountBalance,
+                Expires = x.ExpiresAt,
+                Tokens = x.TokenBalance,
             })
-            .Select(x => x.UserModel == null ?
-                new UserModelDto()
-                {
-                    Id = -1,
-                    ModelId = x.Model.Id,
-                    DisplayName = x.Model.Name,
-                    ModelKeyName = x.Model.ModelKey.Name,
-                    Enabled = false,
-                    Expires = DateTime.UtcNow,
-                    Counts = 0,
-                    Tokens = 0,
-                } : new UserModelDto()
-                {
-                    Id = x.UserModel.Id,
-                    ModelId = x.Model.Id,
-                    DisplayName = x.Model.Name,
-                    ModelKeyName = x.Model.ModelKey.Name,
-                    Counts = x.UserModel.CountBalance,
-                    Expires = x.UserModel.ExpiresAt,
-                    Enabled = true,
-                    Tokens = x.UserModel.TokenBalance,
-                })
             .ToArrayAsync(cancellationToken);
 
         return Ok(userModels);
+    }
+
+    [HttpGet("user-unassigned-models/{userId:int}")]
+    public async Task<ActionResult<AdminModelDto[]>> GetUserUnassignedModels(int userId, CancellationToken cancellationToken)
+    {
+        // 获取用户已分配的模型ID列表
+        var assignedModelIds = await db.UserModels
+            .Where(x => x.UserId == userId)
+            .Select(x => x.ModelId)
+            .ToListAsync(cancellationToken);
+
+        // 获取未分配给用户的模型
+        int? fileServiceId = await FileService.GetDefaultId(db, cancellationToken);
+        var unassignedModels = await db.Models
+            .Where(x => !x.IsDeleted && !assignedModelIds.Contains(x.Id))
+            .Include(x => x.ModelKey)
+            .Include(x => x.ModelReference)
+            .OrderBy(x => x.ModelKey.Order).ThenBy(x => x.Order)
+            .Select(x => new AdminModelDto
+            {
+                ModelId = x.Id,
+                Name = x.Name,
+                Enabled = !x.IsDeleted,
+                FileServiceId = fileServiceId,
+                ModelKeyId = x.ModelKeyId,
+                ModelProviderId = x.ModelKey.ModelProviderId,
+                ModelReferenceId = x.ModelReferenceId,
+                ModelReferenceName = x.ModelReference.Name,
+                ModelReferenceShortName = x.ModelReference.DisplayName,
+                InputTokenPrice1M = x.InputTokenPrice1M,
+                OutputTokenPrice1M = x.OutputTokenPrice1M,
+                DeploymentName = x.DeploymentName,
+                AllowSearch = x.ModelReference.AllowSearch,
+                AllowVision = x.ModelReference.AllowVision,
+                AllowStreaming = x.ModelReference.AllowStreaming,
+                AllowSystemPrompt = x.ModelReference.AllowSystemPrompt,
+                AllowReasoningEffort = ModelReference.SupportReasoningEffort(x.ModelReference.Name),
+                MinTemperature = x.ModelReference.MinTemperature,
+                MaxTemperature = x.ModelReference.MaxTemperature,
+                ContextWindow = x.ModelReference.ContextWindow,
+                MaxResponseTokens = x.ModelReference.MaxResponseTokens,
+            })
+            .ToArrayAsync(cancellationToken);
+
+        return Ok(unassignedModels);
     }
 
     [HttpPut("user-models")]

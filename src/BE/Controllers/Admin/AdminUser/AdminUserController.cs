@@ -35,7 +35,7 @@ public class AdminUserController(ChatsDB db, CurrentUser adminUser) : Controller
             Provider = x.Provider,
             Enabled = x.Enabled,
             CreatedAt = x.CreatedAt,
-            UserModelCount = x.UserModels.Count(x => !x.Model.IsDeleted),
+            UserModelCount = x.UserModels.Count(),
         }), pagingRequest, x => x.ToDto(), cancellationToken);
     }
 

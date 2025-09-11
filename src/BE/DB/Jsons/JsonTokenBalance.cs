@@ -18,14 +18,10 @@ public record JsonTokenBalance
     [JsonPropertyName("expires")]
     public required DateTime Expires { get; init; }
 
-    [JsonPropertyName("enabled")]
-    public required bool Enabled { get; init; }
-
     public bool ApplyTo(UserModel existingItem, int? creditUserId, out UsageTransaction? usageTransaction)
     {
         bool needsTransaction = existingItem.CountBalance != Counts || existingItem.TokenBalance != Tokens;
-        bool hasDifference = needsTransaction ||
-            (Enabled && existingItem.ExpiresAt != Expires);
+        bool hasDifference = needsTransaction || existingItem.ExpiresAt != Expires;
 
         if (needsTransaction)
         {

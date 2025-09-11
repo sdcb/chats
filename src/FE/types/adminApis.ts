@@ -299,7 +299,6 @@ export interface UserInitialModel {
   tokens: number;
   counts: number;
   expires: string;
-  enabled: boolean;
 }
 
 export interface UserModelUpdateDto extends UserInitialModel {
@@ -317,7 +316,6 @@ export class UserModelDisplay implements UserModelDisplayDto {
   tokens: number;
   counts: number;
   expires: string;
-  enabled: boolean;
   displayName: string;
   modelKeyName: string;
 
@@ -327,7 +325,6 @@ export class UserModelDisplay implements UserModelDisplayDto {
     this.tokens = dto.tokens;
     this.counts = dto.counts;
     this.expires = dto.expires;
-    this.enabled = dto.enabled;
     this.displayName = dto.displayName;
     this.modelKeyName = dto.modelKeyName;
   }
@@ -339,7 +336,6 @@ export class UserModelDisplay implements UserModelDisplayDto {
       tokens: this.tokens,
       counts: this.counts,
       expires: this.expires,
-      enabled: this.enabled,
     };
   }
 }

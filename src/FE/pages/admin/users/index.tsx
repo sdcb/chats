@@ -27,7 +27,7 @@ import { IconPlus, IconChevronDown, IconChevronRight } from '@/components/Icons'
 import EditUserBalanceModal from '../_components/Users/EditUserBalanceModel';
 import UserModal from '../_components/Users/UserModal';
 import UserModelRow from '../_components/Users/UserModelRow';
-import AddUserModelRow from '../_components/Users/AddUserModelRow';
+import AddUserModelButton from '../_components/Users/AddUserModelButton';
 
 import { getUsers, getModelsByUserId } from '@/apis/adminApis';
 
@@ -171,7 +171,6 @@ export default function Users() {
                 {t('Balance')}({t('Yuan')})
               </TableHead>
               <TableHead>{t('Model Count')}</TableHead>
-              <TableHead>{t('Actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody isLoading={loading} isEmpty={users.rows.length === 0}>
@@ -218,6 +217,7 @@ export default function Users() {
                         type="button"
                         variant="link"
                         className="px-0"
+                        title={t('Click to manage models')}
                         onClick={(e) => {
                           handleToggleExpand(item.id);
                           e.stopPropagation();
@@ -232,70 +232,68 @@ export default function Users() {
                       </Button>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={(e) => {
-                          handleToggleExpand(item.id);
-                          e.stopPropagation();
-                        }}
-                      >
-                        {t('Manage Models')}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          handleToggleExpand(item.id);
-                          e.stopPropagation();
-                        }}
-                      >
-                        <IconPlus size={16} />
-                      </Button>
-                    </div>
-                  </TableCell>
                 </TableRow>
-                {expandedUserIds.has(item.id) && (
-                  <TableRow>
-                    <TableCell colSpan={8} className="p-0">
+                <TableRow>
+                  <TableCell colSpan={7} className="p-0">
+                    <div 
+                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                        expandedUserIds.has(item.id) 
+                          ? 'max-h-screen opacity-100' 
+                          : 'max-h-0 opacity-0'
+                      }`}
+                    >
                       <div className="bg-muted/30 p-4">
                         {loadingModels.has(item.id) ? (
-                          <div className="text-center py-4">
-                            {t('Loading...')}
-                          </div>
-                        ) : userModels[item.id] && userModels[item.id].length > 0 ? (
-                          <div className="space-y-2">
-                            {userModels[item.id].map((userModel) => (
-                              <UserModelRow
-                                key={userModel.id}
-                                userModel={userModel}
-                                userId={item.id}
-                                onUpdate={() => handleUserModelsUpdate(item.id)}
-                              />
-                            ))}
-                            <AddUserModelRow
-                              userId={item.id}
-                              onUpdate={() => handleUserModelsUpdate(item.id)}
-                            />
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <div className="text-center py-4 text-muted-foreground">
-                              {t('No models assigned')}
+                            <div className="text-center py-4">
+                              {t('Loading...')}
                             </div>
-                            <AddUserModelRow
-                              userId={item.id}
-                              onUpdate={() => handleUserModelsUpdate(item.id)}
-                            />
-                          </div>
-                        )}
+                          ) : userModels[item.id] && userModels[item.id].length > 0 ? (
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>{t('Model Name')}</TableHead>
+                                  <TableHead>{t('Model Key')}</TableHead>
+                                  <TableHead>{t('Tokens')}</TableHead>
+                                  <TableHead>{t('Counts')}</TableHead>
+                                  <TableHead>{t('Expires')}</TableHead>
+                                  <TableHead>
+                                    <div className="flex items-center justify-end">
+                                      <AddUserModelButton
+                                        userId={item.id}
+                                        onUpdate={() => handleUserModelsUpdate(item.id)}
+                                      />
+                                    </div>
+                                  </TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {userModels[item.id].map((userModel) => (
+                                  <UserModelRow
+                                    key={userModel.id}
+                                    userModel={userModel}
+                                    userId={item.id}
+                                    onUpdate={() => handleUserModelsUpdate(item.id)}
+                                  />
+                                ))}
+                              </TableBody>
+                            </Table>
+                          ) : (
+                            <div>
+                              <div className="text-center py-4 text-muted-foreground">
+                                {t('No models assigned')}
+                              </div>
+                              <div className="flex justify-center">
+                                <AddUserModelButton
+                                  userId={item.id}
+                                  onUpdate={() => handleUserModelsUpdate(item.id)}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                   </TableRow>
-                )}
               </React.Fragment>
             ))}
           </TableBody>
