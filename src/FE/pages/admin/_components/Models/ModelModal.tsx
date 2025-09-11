@@ -5,8 +5,8 @@ import toast from 'react-hot-toast';
 import useTranslation from '@/hooks/useTranslation';
 
 import {
+  AdminModelDto,
   GetModelKeysResult,
-  ModelReferenceDto,
   SimpleModelReferenceDto,
   UpdateModelDto,
 } from '@/types/adminApis';
@@ -30,9 +30,11 @@ import {
 } from '@/components/ui/popover';
 
 import {
+  deleteModels,
   getModelProviderModels,
   getModelReference,
   postModels,
+  putModels,
 } from '@/apis/adminApis';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -43,16 +45,28 @@ interface IProps {
   onClose: () => void;
   onSuccessful: () => void;
   saveLoading?: boolean;
-  // Optional: preselect model key when creating a model
+  // For edit mode
+  selected?: AdminModelDto;
+  // For add mode: preselect model key when creating a model
   defaultModelKeyId?: number;
 }
 
-const AddModelModal = (props: IProps) => {
+const ModelModal = (props: IProps) => {
   const { t } = useTranslation();
   const [modelVersions, setModelVersions] = useState<SimpleModelReferenceDto[]>(
     [],
   );
-  const { isOpen, onClose, onSuccessful, modelKeys, defaultModelKeyId } = props;
+  const { 
+    isOpen, 
+    onClose, 
+    onSuccessful, 
+    modelKeys, 
+    defaultModelKeyId, 
+    selected 
+  } = props;
+
+  // Determine if this is edit mode
+  const isEditMode = !!selected;
 
   const formSchema = z.object({
     modelReferenceId: z.string().default('0'),
@@ -65,6 +79,7 @@ const AddModelModal = (props: IProps) => {
       .default('0'),
     inputPrice1M: z.coerce.number(),
     outputPrice1M: z.coerce.number(),
+    modelId: z.string().optional(),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -77,11 +92,13 @@ const AddModelModal = (props: IProps) => {
       modelKeyId: '',
       inputPrice1M: 0,
       outputPrice1M: 0,
+      modelId: '',
     },
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!form.formState.isValid) return;
+    
     const dto: UpdateModelDto = {
       deploymentName: values.deploymentName || null,
       enabled: values.enabled!,
@@ -90,27 +107,85 @@ const AddModelModal = (props: IProps) => {
       modelKeyId: parseInt(values.modelKeyId!),
       name: values.name!,
       modelReferenceId: +values.modelReferenceId!,
-      rank: null,
     };
-    postModels(dto).then(() => {
+
+    const apiCall = isEditMode 
+      ? putModels(values.modelId!, dto)
+      : postModels(dto);
+
+    apiCall.then(() => {
       onSuccessful();
       toast.success(t('Save successful'));
     });
+  };
+
+  const onDelete = async () => {
+    if (!selected) return;
+    
+    try {
+      await deleteModels(selected.modelId);
+      onSuccessful();
+      toast.success(t('Deleted successful'));
+    } catch (err: any) {
+      try {
+        const resp = await err.json();
+        toast.error(t(resp.message));
+      } catch {
+        toast.error(
+          t(
+            'Operation failed, Please try again later, or contact technical personnel',
+          ),
+        );
+      }
+    }
   };
 
   useEffect(() => {
     if (isOpen) {
       form.reset();
       form.formState.isValid;
-      if (defaultModelKeyId !== undefined) {
-        form.setValue('modelKeyId', defaultModelKeyId.toString());
-        const mk = modelKeys.find((x) => x.id === defaultModelKeyId);
-        if (mk) {
-          getModelProviderModels(mk.modelProviderId).then(setModelVersions);
+      
+      if (isEditMode && selected) {
+        // Edit mode: populate form with existing data
+        const {
+          name,
+          modelId,
+          modelReferenceId,
+          enabled,
+          modelKeyId,
+          deploymentName,
+          inputTokenPrice1M,
+          outputTokenPrice1M,
+        } = selected;
+        
+        form.setValue('name', name);
+        form.setValue('modelId', modelId.toString());
+        form.setValue('enabled', enabled);
+        form.setValue('modelKeyId', modelKeyId.toString());
+        form.setValue('deploymentName', deploymentName || '');
+        form.setValue('inputPrice1M', inputTokenPrice1M);
+        form.setValue('outputPrice1M', outputTokenPrice1M);
+        form.setValue('modelReferenceId', modelReferenceId.toString());
+
+        // Load corresponding model provider models
+        const modelProviderId = modelKeys.find((x) => x.id === modelKeyId)?.modelProviderId;
+        if (modelProviderId) {
+          getModelProviderModels(modelProviderId).then((possibleModels) => {
+            setModelVersions(possibleModels);
+          });
+        }
+      } else {
+        // Add mode: set default values
+        if (defaultModelKeyId !== undefined) {
+          form.setValue('modelKeyId', defaultModelKeyId.toString());
+          const mk = modelKeys.find((x) => x.id === defaultModelKeyId);
+          if (mk) {
+            getModelProviderModels(mk.modelProviderId).then(setModelVersions);
+          }
         }
       }
     }
-  }, [isOpen]);
+  }, [isOpen, selected, defaultModelKeyId, modelKeys, isEditMode]);
 
   const onModelReferenceChanged = async (modelReferenceId: number) => {
     getModelReference(modelReferenceId).then((data) => {
@@ -136,11 +211,25 @@ const AddModelModal = (props: IProps) => {
     return () => subscription?.unsubscribe();
   }, [form.watch]);
 
+  const getAvailableModelKeys = () => {
+    if (isEditMode && selected) {
+      // In edit mode, only show keys for the same provider
+      return modelKeys.filter(
+        (x) => x.modelProviderId === selected.modelProviderId,
+      );
+    } else {
+      // In add mode, show all keys
+      return modelKeys;
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-3/4">
         <DialogHeader>
-          <DialogTitle>{t('Add Model')}</DialogTitle>
+          <DialogTitle>
+            {isEditMode ? t('Edit Model') : t('Add Model')}
+          </DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -166,7 +255,7 @@ const AddModelModal = (props: IProps) => {
                         className="w-full"
                         field={field}
                         label={t('Model Keys')!}
-                        items={modelKeys.map((keys) => ({
+                        items={getAvailableModelKeys().map((keys) => ({
                           name: keys.name,
                           value: keys.id.toString(),
                         }))}
@@ -274,6 +363,18 @@ const AddModelModal = (props: IProps) => {
               </div>
             </div>
             <DialogFooter className="pt-4">
+              {isEditMode && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={(e) => {
+                    onDelete();
+                    e.preventDefault();
+                  }}
+                >
+                  {t('Delete')}
+                </Button>
+              )}
               <Button type="submit">{t('Save')}</Button>
             </DialogFooter>
           </form>
@@ -282,4 +383,5 @@ const AddModelModal = (props: IProps) => {
     </Dialog>
   );
 };
-export default AddModelModal;
+
+export default ModelModal;

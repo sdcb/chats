@@ -26,7 +26,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
 
         int? fileServiceId = await FileService.GetDefaultId(db, cancellationToken);
         AdminModelDto[] data = await query
-            .OrderBy(x => x.Order)
+            .OrderBy(x => x.ModelKey.Order).ThenBy(x => x.Order)
             .Select(x => new AdminModelDto
             {
                 ModelId = x.Id,
@@ -362,6 +362,12 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
             {
                 return NotFound("Previous model not found");
             }
+            
+            // 验证 previous 与 source 属于同一个 ModelKey
+            if (previousModel.ModelKeyId != sourceModel.ModelKeyId)
+            {
+                return BadRequest("Previous model must belong to the same ModelKey");
+            }
         }
 
         if (request.NextId != null)
@@ -371,6 +377,12 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
             if (nextModel == null)
             {
                 return NotFound("Next model not found");
+            }
+            
+            // 验证 next 与 source 属于同一个 ModelKey
+            if (nextModel.ModelKeyId != sourceModel.ModelKeyId)
+            {
+                return BadRequest("Next model must belong to the same ModelKey");
             }
         }
 
@@ -391,17 +403,18 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
         
         if (needReorder)
         {
-            // 需要重新排序所有 Model
-            Model[] allModels = await db.Models
+            // 需要重新排序，但只重排序同一个 ModelKey 下的 Models
+            Model[] modelsInSameKey = await db.Models
+                .Where(x => x.ModelKeyId == sourceModel.ModelKeyId)
                 .OrderBy(x => x.Order).ThenByDescending(x => x.Id)
                 .ToArrayAsync(cancellationToken);
             
-            ReorderModels(allModels);
+            ReorderModels(modelsInSameKey);
             
             // 重新加载并应用移动
-            sourceModel = allModels.First(x => x.Id == request.SourceId);
-            previousModel = request.PreviousId != null ? allModels.First(x => x.Id == request.PreviousId) : null;
-            nextModel = request.NextId != null ? allModels.First(x => x.Id == request.NextId) : null;
+            sourceModel = modelsInSameKey.First(x => x.Id == request.SourceId);
+            previousModel = request.PreviousId != null ? modelsInSameKey.First(x => x.Id == request.PreviousId) : null;
+            nextModel = request.NextId != null ? modelsInSameKey.First(x => x.Id == request.NextId) : null;
             
             TryApplyMove(sourceModel, previousModel, nextModel);
         }

@@ -122,16 +122,23 @@ export default function ModelKey({
       </div>
       <CollapsiblePanel open={expanded}>
         <div className="pr-3 pb-3 pl-4 space-y-1">
-          <SortableContext items={models.map(m => `model-${m.modelId}`)} strategy={verticalListSortingStrategy}>
-            {models.map((model) => (
-              <ModelItem
-                key={model.modelId}
-                model={model}
-                onEdit={onEditModel}
-                onDelete={onDeleteModel}
-              />
-            ))}
-          </SortableContext>
+          {models.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <div className="text-sm text-muted-foreground">{t('No models under this key')}</div>
+              <div className="text-xs text-muted-foreground mt-1">{t('Add models to start using this key')}</div>
+            </div>
+          ) : (
+            <SortableContext items={models.map(m => `model-${m.modelId}`)} strategy={verticalListSortingStrategy}>
+              {models.map((model) => (
+                <ModelItem
+                  key={model.modelId}
+                  model={model}
+                  onEdit={onEditModel}
+                  onDelete={onDeleteModel}
+                />
+              ))}
+            </SortableContext>
+          )}
         </div>
       </CollapsiblePanel>
     </div>

@@ -231,6 +231,8 @@
   "Password": "用户密码",
   "Role": "角色",
   "Models": "模型",
+  "No models under this key": "此密钥下暂无模型",
+  "Add models to start using this key": "添加模型以开始使用此密钥",
   "Rank": "#",
   "ID": "模型",
   "Model Display Name": "模型显示名称",

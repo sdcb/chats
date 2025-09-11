@@ -13,8 +13,7 @@ import { IconPlus } from '@/components/Icons';
 import { getModelKeys, getModels, deleteModelKeys, deleteModels, reorderModelProviders, reorderModelKeys, reorderModels } from '@/apis/adminApis';
 import ModelKeysModal from '../_components/ModelKeys/ModelKeysModal';
 import ConfigModelModal from '../_components/ModelKeys/ConfigModelModal';
-import AddModelModal from '../_components/Models/AddModelModal';
-import EditModelModal from '../_components/Models/EditModelModal';
+import ModelModal from '../_components/Models/ModelModal';
 import ModelProvider, { ProviderGroup } from './components/ModelProvider';
 
 export default function ModelManager() {
@@ -574,7 +573,7 @@ export default function ModelManager() {
       )}
 
       {isOpenAddModel && (
-        <AddModelModal
+        <ModelModal
           isOpen={isOpenAddModel}
           onClose={() => setIsOpenAddModel(false)}
           onSuccessful={() => {
@@ -587,7 +586,7 @@ export default function ModelManager() {
       )}
 
       {isOpenEditModel && selectedModel && (
-        <EditModelModal
+        <ModelModal
           isOpen={isOpenEditModel}
           onClose={() => setIsOpenEditModel(false)}
           onSuccessful={() => {
