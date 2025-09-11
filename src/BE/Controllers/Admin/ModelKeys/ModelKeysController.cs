@@ -1,8 +1,10 @@
 ﻿using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Admin.ModelKeys.Dtos;
 using Chats.BE.Controllers.Common;
+using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
+using Chats.BE.Infrastructure;
 using Chats.BE.Services.Common;
 using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
@@ -14,9 +16,6 @@ namespace Chats.BE.Controllers.Admin.ModelKeys;
 [Route("api/admin/model-keys"), AuthorizeAdmin]
 public class ModelKeysController(ChatsDB db) : ControllerBase
 {
-    private const short RankStep = 1000;
-    private const short RankStart = -30000;
-
     [HttpGet]
     public async Task<ActionResult<ModelKeyDto[]>> GetAllModelKeys(CancellationToken cancellationToken)
     {
@@ -89,7 +88,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             .FirstOrDefaultAsync(cancellationToken);
 
         // 计算新的 Order 值
-        int newOrder = maxOrder + RankStep;
+        int newOrder = maxOrder + ReorderHelper.Default.MoveStep;
         
         // 如果新的 Order 值超出了 short 的范围，需要重新排序所有 ModelKey
         if (newOrder > short.MaxValue)
@@ -101,8 +100,15 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             ReorderModelKeys(allModelKeys);
             await db.SaveChangesAsync(cancellationToken);
             
-            // 重新计算新的 Order 值
-            newOrder = RankStart + allModelKeys.Length * RankStep;
+            // 重新获取最大值并计算新的 Order 值
+            maxOrder = allModelKeys.Length > 0 ? allModelKeys[^1].Order : ReorderHelper.Default.ReorderStart;
+            newOrder = maxOrder + ReorderHelper.Default.MoveStep;
+            
+            // 如果还是超出范围，使用最大可能值
+            if (newOrder > short.MaxValue)
+            {
+                newOrder = short.MaxValue;
+            }
         }
 
         ModelKey newModelKey = new()
@@ -315,44 +321,12 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
 
     private static bool TryApplyMove(ModelKey sourceModelKey, ModelKey? previousModelKey, ModelKey? nextModelKey)
     {
-        // 计算新的 Order 值
-        int newOrder = 0;
-        if (previousModelKey != null && nextModelKey != null)
-        {
-            // 在两个 ModelKey 之间插入
-            if (previousModelKey.Order + 1 >= nextModelKey.Order)
-            {
-                return false; // 没有足够的空间，需要重新排序
-            }
-            newOrder = (previousModelKey.Order + nextModelKey.Order) / 2;
-        }
-        else if (previousModelKey != null)
-        {
-            // 插入到 previous 之后
-            newOrder = previousModelKey.Order + RankStep;
-        }
-        else if (nextModelKey != null)
-        {
-            // 插入到 next 之前
-            newOrder = nextModelKey.Order - RankStep;
-        }
-
-        // 检查新的 Order 值是否在有效范围内
-        if (newOrder > short.MaxValue || newOrder < short.MinValue)
-        {
-            return false;
-        }
-
-        sourceModelKey.Order = (short)newOrder;
-        return true;
+        return ReorderHelper.Default.TryApplyMove(sourceModelKey, previousModelKey, nextModelKey);
     }
 
     private static void ReorderModelKeys(ModelKey[] existingModelKeys)
     {
-        for (int i = 0; i < existingModelKeys.Length; i++)
-        {
-            existingModelKeys[i].Order = (short)(RankStart + i * RankStep);
-        }
+        ReorderHelper.Default.ReorderEntities(existingModelKeys);
     }
 
     [HttpPut("reorder-model-providers")]
@@ -457,7 +431,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
         for (int i = 0; i < newProviderOrder.Count; i++)
         {
             short providerId = newProviderOrder[i];
-            short baseOrder = (short)(RankStart + i * providerSpacing);
+            short baseOrder = (short)(ReorderHelper.Default.ReorderStart + i * providerSpacing);
             short minOrder = baseOrder;
             short maxOrder = (short)(baseOrder + providerSpacing - 1);
             
@@ -465,7 +439,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             if (maxOrder > short.MaxValue)
             {
                 // 重新计算，压缩间距
-                providerSpacing = Math.Max(100, (short.MaxValue - RankStart) / newProviderOrder.Count);
+                providerSpacing = Math.Max(100, (short.MaxValue - ReorderHelper.Default.ReorderStart) / newProviderOrder.Count);
                 break;
             }
             
@@ -479,7 +453,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             for (int i = 0; i < newProviderOrder.Count; i++)
             {
                 short providerId = newProviderOrder[i];
-                short baseOrder = (short)(RankStart + i * providerSpacing);
+                short baseOrder = (short)(ReorderHelper.Default.ReorderStart + i * providerSpacing);
                 short minOrder = baseOrder;
                 short maxOrder = (short)(baseOrder + providerSpacing - 1);
                 providerOrderRanges[providerId] = (minOrder, maxOrder);
@@ -495,20 +469,12 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
                 continue; // 跳过不存在的 Provider
             }
 
-            ModelKey[] providerModelKeys = providerGroup.OrderBy(x => x.Order).ThenByDescending(x => x.Id).ToArray();
-            for (int i = 0; i < providerModelKeys.Length; i++)
-            {
-                // 在 Provider 的范围内均匀分布 ModelKey
-                int availableSpace = range.maxOrder - range.minOrder + 1;
-                int stepSize = Math.Max(1, availableSpace / Math.Max(1, providerModelKeys.Length));
-                short newOrder = (short)(range.minOrder + i * stepSize);
-                
-                // 确保不超出范围
-                newOrder = (short)Math.Min(newOrder, range.maxOrder);
-                
-                providerModelKeys[i].Order = newOrder;
-                providerModelKeys[i].UpdatedAt = DateTime.UtcNow;
-            }
+            ModelKey[] providerModelKeys = [.. providerGroup.OrderBy(x => x.Order).ThenByDescending(x => x.Id)];
+            
+            if (providerModelKeys.Length == 0) continue;
+            
+            // 使用重排序工具类在指定范围内重新分布
+            ReorderHelper.Default.RedistributeInRange(providerModelKeys, range.minOrder, range.maxOrder);
         }
 
         if (db.ChangeTracker.HasChanges())

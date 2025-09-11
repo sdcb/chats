@@ -1,6 +1,7 @@
 ﻿using Chats.BE.Controllers.Admin.AdminModels.Dtos;
 using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Common;
+using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.DB.Jsons;
@@ -39,7 +40,6 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
                 ModelReferenceShortName = x.ModelReference.DisplayName,
                 InputTokenPrice1M = x.InputTokenPrice1M,
                 OutputTokenPrice1M = x.OutputTokenPrice1M,
-                Rank = x.Order,
                 DeploymentName = x.DeploymentName,
                 AllowSearch = x.ModelReference.AllowSearch,
                 AllowVision = x.ModelReference.AllowVision,
@@ -337,5 +337,91 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
         }
 
         return NoContent();
+    }
+
+    [HttpPut("models/reorder")]
+    public async Task<ActionResult> ReorderModels([FromBody] ReorderRequest<short> request, CancellationToken cancellationToken)
+    {
+        // 验证被移动的 Model 是否存在
+        Model? sourceModel = await db.Models
+            .FirstOrDefaultAsync(x => x.Id == request.SourceId, cancellationToken);
+        if (sourceModel == null)
+        {
+            return NotFound("Source model not found");
+        }
+
+        // 验证 previous 和 next 的 Model 是否存在（如果提供的话）
+        Model? previousModel = null;
+        Model? nextModel = null;
+
+        if (request.PreviousId != null)
+        {
+            previousModel = await db.Models
+                .FirstOrDefaultAsync(x => x.Id == request.PreviousId, cancellationToken);
+            if (previousModel == null)
+            {
+                return NotFound("Previous model not found");
+            }
+        }
+
+        if (request.NextId != null)
+        {
+            nextModel = await db.Models
+                .FirstOrDefaultAsync(x => x.Id == request.NextId, cancellationToken);
+            if (nextModel == null)
+            {
+                return NotFound("Next model not found");
+            }
+        }
+
+        // 验证 previous 和 next 不能同时为空
+        if (previousModel == null && nextModel == null)
+        {
+            return BadRequest("Both previous and next models cannot be null");
+        }
+
+        // 验证 previous 和 next 的顺序（Order 是从小到大排列的）
+        if (previousModel != null && nextModel != null && previousModel.Order >= nextModel.Order)
+        {
+            return BadRequest("Invalid order: previous model should have smaller order than next model");
+        }
+
+        // 尝试应用移动
+        bool needReorder = !TryApplyMove(sourceModel, previousModel, nextModel);
+        
+        if (needReorder)
+        {
+            // 需要重新排序所有 Model
+            Model[] allModels = await db.Models
+                .OrderBy(x => x.Order).ThenByDescending(x => x.Id)
+                .ToArrayAsync(cancellationToken);
+            
+            ReorderModels(allModels);
+            
+            // 重新加载并应用移动
+            sourceModel = allModels.First(x => x.Id == request.SourceId);
+            previousModel = request.PreviousId != null ? allModels.First(x => x.Id == request.PreviousId) : null;
+            nextModel = request.NextId != null ? allModels.First(x => x.Id == request.NextId) : null;
+            
+            TryApplyMove(sourceModel, previousModel, nextModel);
+        }
+
+        if (db.ChangeTracker.HasChanges())
+        {
+            sourceModel.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return NoContent();
+    }
+
+    private static bool TryApplyMove(Model sourceModel, Model? previousModel, Model? nextModel)
+    {
+        return ReorderHelper.Default.TryApplyMove(sourceModel, previousModel, nextModel);
+    }
+
+    private static void ReorderModels(Model[] existingModels)
+    {
+        ReorderHelper.Default.ReorderEntities(existingModels);
     }
 }

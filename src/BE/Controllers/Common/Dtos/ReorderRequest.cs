@@ -1,4 +1,6 @@
-﻿namespace Chats.BE.Controllers.Admin.ModelKeys.Dtos;
+using System.Text.Json.Serialization;
+
+namespace Chats.BE.Controllers.Common.Dtos;
 
 public record ReorderRequest<T> where T : struct
 {
