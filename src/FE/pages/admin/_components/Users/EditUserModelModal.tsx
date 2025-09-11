@@ -76,9 +76,7 @@ const EditUserModelModal = (props: IProps) => {
     setSubmit(true);
     putUserModel({
       userId: props.userId,
-      models: models
-        .filter(x => x.enabled)
-        .map((x) => x.toUpdateDto()),
+      models: models.map((x) => x.toUpdateDto()),
     })
       .then(() => {
         toast.success(t('Save successful'));
@@ -91,7 +89,7 @@ const EditUserModelModal = (props: IProps) => {
 
   const onChangeModel = (
     modelId: string | number,
-    type: 'tokens' | 'counts' | 'expires' | 'enabled',
+    type: 'tokens' | 'counts' | 'expires',
     value: any,
   ) => {
     const _models = [...models];
@@ -137,7 +135,6 @@ const EditUserModelModal = (props: IProps) => {
                 <TableHead>{t('Tokens')}</TableHead>
                 <TableHead>{t('Chat Counts')}</TableHead>
                 <TableHead>{t('Expiration Time')}</TableHead>
-                <TableHead>{t('Is Enabled')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -199,17 +196,6 @@ const EditUserModelModal = (props: IProps) => {
                         />
                       </PopoverContent>
                     </Popover>
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={model.enabled}
-                      onCheckedChange={(checked) => {
-                        onChangeModel(model.modelId, 'enabled', checked);
-                        if (checked) {
-                          onChangeModel(model.modelId, 'expires', termDateString());
-                        }
-                      }}
-                    />
                   </TableCell>
                 </TableRow>
               ))}

@@ -67,6 +67,8 @@ const UserInitialConfigModal = (props: IProps) => {
   const { models, isOpen, select, onClose, onSuccessful } = props;
   const [submit, setSubmit] = useState(false);
   const [editModels, setEditModels] = useState<UserInitialModel[]>([]);
+  const [allModels, setAllModels] = useState<AdminModelDto[]>([]);
+  const [selectedModelIds, setSelectedModelIds] = useState<Set<number>>(new Set());
   const [invitationCodes, setInvitationCodes] = useState<
     GetInvitationCodeResult[]
   >([]);
@@ -109,23 +111,19 @@ const UserInitialConfigModal = (props: IProps) => {
         form.setValue('loginType', select.loginType);
         form.setValue('invitationCodeId', select.invitationCodeId);
       }
-      setEditModels([]);
-
-      const model = models.map((x) => {
-        ModelKeyMap[x.modelId] = x.name;
-        const model = select?.models.find(
-          (model) => model.modelId === x.modelId,
-        );
-        if (model) return model;
-        return {
-          modelId: x.modelId,
-          tokens: 0,
-          counts: 0,
-          expires: termDateString(),
-          enabled: false,
-        };
-      });
-      setEditModels(model);
+      
+      // 设置所有可用模型
+      setAllModels(models);
+      
+      // 初始化选中的模型
+      if (select) {
+        const selectedIds = new Set(select.models.map(m => m.modelId));
+        setSelectedModelIds(selectedIds);
+        setEditModels(select.models);
+      } else {
+        setSelectedModelIds(new Set());
+        setEditModels([]);
+      }
     }
   }, [isOpen]);
 
@@ -139,7 +137,7 @@ const UserInitialConfigModal = (props: IProps) => {
         name: name!,
         loginType: loginType!,
         price: Number(price || 0),
-        models: editModels.filter((x) => x.enabled),
+        models: editModels,
         invitationCodeId: invitationCodeId === '-' ? null : invitationCodeId!,
       });
     } else {
@@ -147,7 +145,7 @@ const UserInitialConfigModal = (props: IProps) => {
         name: name!,
         loginType: loginType!,
         price: Number(price || 0),
-        models: editModels.filter((x) => x.enabled),
+        models: editModels,
         invitationCodeId: invitationCodeId === '-' ? null : invitationCodeId!,
       });
     }
@@ -160,13 +158,39 @@ const UserInitialConfigModal = (props: IProps) => {
   };
 
   const onChangeModel = (
-    index: number,
-    type: 'tokens' | 'counts' | 'expires' | 'enabled',
+    modelId: number,
+    type: 'tokens' | 'counts' | 'expires',
     value: any,
   ) => {
-    const _models = editModels as any;
-    _models[index][type] = value;
-    setEditModels([..._models]);
+    const _models = [...editModels];
+    const modelIndex = _models.findIndex(m => m.modelId === modelId);
+    if (modelIndex !== -1) {
+      (_models[modelIndex] as any)[type] = value;
+      setEditModels(_models);
+    }
+  };
+
+  const toggleModelSelection = (modelId: number, enabled: boolean) => {
+    const newSelectedIds = new Set(selectedModelIds);
+    if (enabled) {
+      newSelectedIds.add(modelId);
+      // 添加到 editModels
+      const existingModel = editModels.find(m => m.modelId === modelId);
+      if (!existingModel) {
+        const newModel: UserInitialModel = {
+          modelId,
+          tokens: 0,
+          counts: 0,
+          expires: termDateString(),
+        };
+        setEditModels([...editModels, newModel]);
+      }
+    } else {
+      newSelectedIds.delete(modelId);
+      // 从 editModels 中移除
+      setEditModels(editModels.filter(m => m.modelId !== modelId));
+    }
+    setSelectedModelIds(newSelectedIds);
   };
 
   const onDeleteConfig = () => {
@@ -266,83 +290,91 @@ const UserInitialConfigModal = (props: IProps) => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {editModels.map((model, index) => (
-                        <TableRow key={model.modelId}>
-                          <TableCell>{ModelKeyMap[model.modelId]}</TableCell>
-                          <TableCell>
-                            <Input
-                              className="w-24"
-                              value={model.tokens}
-                              onChange={(e) => {
-                                onChangeModel(index, 'tokens', e.target.value);
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              className="w-24"
-                              value={model.counts}
-                              onChange={(e) => {
-                                onChangeModel(index, 'counts', e.target.value);
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl className="flex">
-                                  <Button
-                                    variant={'outline'}
-                                    className={cn(
-                                      'pl-3 text-left font-normal w-[132px]',
-                                    )}
-                                  >
-                                    {model.expires ? (
-                                      model.expires === '-' ? null : (
-                                        formatDate(model.expires)
-                                      )
-                                    ) : (
-                                      <span></span>
-                                    )}
-                                    <IconSquareRoundedX
-                                      onClick={(e) => {
-                                        onChangeModel(index, 'expires', '-');
-                                        e.preventDefault();
-                                      }}
-                                      className="z-10 ml-auto h-5 w-5 opacity-50"
-                                    />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent
-                                className="w-auto p-0"
-                                align="start"
-                              >
-                                <Calendar
-                                  mode="single"
-                                  selected={new Date(model.expires)}
-                                  onSelect={(d) => {
-                                    onChangeModel(
-                                      index,
-                                      'expires',
-                                      d?.toISOString(),
-                                    );
-                                  }}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                          </TableCell>
-                          <TableCell>
-                            <Switch
-                              checked={model.enabled}
-                              onCheckedChange={(checked) => {
-                                onChangeModel(index, 'enabled', checked);
-                              }}
-                            />
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {allModels.map((availableModel) => {
+                        const isSelected = selectedModelIds.has(availableModel.modelId);
+                        const editModel = editModels.find(m => m.modelId === availableModel.modelId);
+                        
+                        return (
+                          <TableRow key={availableModel.modelId}>
+                            <TableCell>{ModelKeyMap[availableModel.modelId]}</TableCell>
+                            <TableCell>
+                              <Input
+                                className="w-24"
+                                value={editModel?.tokens || 0}
+                                disabled={!isSelected}
+                                onChange={(e) => {
+                                  onChangeModel(availableModel.modelId, 'tokens', e.target.value);
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                className="w-24"
+                                value={editModel?.counts || 0}
+                                disabled={!isSelected}
+                                onChange={(e) => {
+                                  onChangeModel(availableModel.modelId, 'counts', e.target.value);
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <FormControl className="flex">
+                                    <Button
+                                      variant={'outline'}
+                                      disabled={!isSelected}
+                                      className={cn(
+                                        'pl-3 text-left font-normal w-[132px]',
+                                      )}
+                                    >
+                                      {editModel?.expires ? (
+                                        editModel.expires === '-' ? null : (
+                                          formatDate(editModel.expires)
+                                        )
+                                      ) : (
+                                        <span></span>
+                                      )}
+                                      <IconSquareRoundedX
+                                        onClick={(e) => {
+                                          onChangeModel(availableModel.modelId, 'expires', '-');
+                                          e.preventDefault();
+                                        }}
+                                        className="z-10 ml-auto h-5 w-5 opacity-50"
+                                      />
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  className="w-auto p-0"
+                                  align="start"
+                                >
+                                  <Calendar
+                                    mode="single"
+                                    selected={editModel ? new Date(editModel.expires) : new Date()}
+                                    onSelect={(d) => {
+                                      onChangeModel(
+                                        availableModel.modelId,
+                                        'expires',
+                                        d?.toISOString(),
+                                      );
+                                    }}
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </TableCell>
+                            <TableCell>
+                              <Switch
+                                checked={isSelected}
+                                onCheckedChange={(checked) => {
+                                  toggleModelSelection(availableModel.modelId, checked);
+                                }}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
