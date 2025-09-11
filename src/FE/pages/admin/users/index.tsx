@@ -6,7 +6,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { toFixed } from '@/utils/common';
 
-import { GetUsersResult } from '@/types/adminApis';
+import { GetUsersResult, UserModelDisplay } from '@/types/adminApis';
 import { PageResult, Paging } from '@/types/page';
 
 import PaginationContainer from '../../../components/Pagiation/Pagiation';
@@ -22,12 +22,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { IconPlus, IconChevronDown, IconChevronRight } from '@/components/Icons';
 
 import EditUserBalanceModal from '../_components/Users/EditUserBalanceModel';
-import EditUserModelModal from '../_components/Users/EditUserModelModal';
 import UserModal from '../_components/Users/UserModal';
+import UserModelRow from '../_components/Users/UserModelRow';
+import AddUserModelRow from '../_components/Users/AddUserModelRow';
 
-import { getUsers } from '@/apis/adminApis';
+import { getUsers, getModelsByUserId } from '@/apis/adminApis';
 
 export default function Users() {
   const { t } = useTranslation();
@@ -35,7 +37,6 @@ export default function Users() {
     edit: false,
     create: false,
     recharge: false,
-    changeModel: false,
   });
   const [pagination, setPagination] = useState<Paging>({
     page: 1,
@@ -49,6 +50,11 @@ export default function Users() {
 
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState<string>('');
+  
+  // 展开状态管理
+  const [expandedUserIds, setExpandedUserIds] = useState<Set<string>>(new Set());
+  const [userModels, setUserModels] = useState<Record<string, UserModelDisplay[]>>({});
+  const [loadingModels, setLoadingModels] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     init();
@@ -66,12 +72,46 @@ export default function Users() {
     });
   };
 
+  const loadUserModels = async (userId: string) => {
+    if (userModels[userId]) return; // 已经加载过了
+    
+    setLoadingModels(prev => new Set(prev).add(userId));
+    try {
+      const models = await getModelsByUserId(userId);
+      setUserModels(prev => ({ ...prev, [userId]: models }));
+    } catch (error) {
+      console.error('Failed to load user models:', error);
+    } finally {
+      setLoadingModels(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleToggleExpand = async (userId: string) => {
+    const newExpanded = new Set(expandedUserIds);
+    if (newExpanded.has(userId)) {
+      newExpanded.delete(userId);
+    } else {
+      newExpanded.add(userId);
+      await loadUserModels(userId);
+    }
+    setExpandedUserIds(newExpanded);
+  };
+
+  const handleUserModelsUpdate = (userId: string) => {
+    // 重新加载该用户的模型数据
+    delete userModels[userId];
+    loadUserModels(userId);
+  };
+
   const handleShowAddModal = () => {
     setIsOpenModal({
       edit: false,
       create: true,
       recharge: false,
-      changeModel: false,
     });
   };
 
@@ -81,7 +121,6 @@ export default function Users() {
       edit: true,
       create: false,
       recharge: false,
-      changeModel: false,
     });
   };
 
@@ -91,17 +130,6 @@ export default function Users() {
       edit: false,
       create: false,
       recharge: true,
-      changeModel: false,
-    });
-  };
-
-  const handleShowChangeModal = (user: GetUsersResult) => {
-    setSelectedUser(user);
-    setIsOpenModal({
-      edit: false,
-      create: false,
-      recharge: false,
-      changeModel: true,
     });
   };
 
@@ -110,7 +138,6 @@ export default function Users() {
       edit: false,
       create: false,
       recharge: false,
-      changeModel: false,
     });
     setSelectedUser(null);
   };
@@ -149,64 +176,127 @@ export default function Users() {
           </TableHeader>
           <TableBody isLoading={loading} isEmpty={users.rows.length === 0}>
             {users.rows.map((item) => (
-              <TableRow
-                className="cursor-pointer"
-                key={item.id}
-                onClick={() => {
-                  handleShowEditModal(item);
-                }}
-              >
-                <TableCell>
-                  <div className="flex gap-1 items-center">
-                    <div
-                      className={`w-2 h-2 rounded-full ${
-                        item.enabled ? 'bg-green-400' : 'bg-gray-400'
-                      }`}
-                    ></div>
-                    {item.username}
-                    {item.provider && (
-                      <Badge className="capitalize">{item.provider}</Badge>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>{item.account}</TableCell>
-                <TableCell>{item.role}</TableCell>
-                <TableCell>{item.phone}</TableCell>
-                <TableCell>{item.email}</TableCell>
-                <TableCell
-                  className="hover:underline"
-                  onClick={(e) => {
-                    handleShowReChargeModal(item);
-                    e.stopPropagation();
-                  }}
-                >
-                  {toFixed(+item.balance)}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    type="button"
-                    variant="link"
+              <React.Fragment key={item.id}>
+                <TableRow className="cursor-pointer">
+                  <TableCell>
+                    <div className="flex gap-1 items-center">
+                      <div
+                        className={`w-2 h-2 rounded-full ${
+                          item.enabled ? 'bg-green-400' : 'bg-gray-400'
+                        }`}
+                      ></div>
+                      {item.username}
+                      {item.provider && (
+                        <Badge className="capitalize">{item.provider}</Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>{item.account}</TableCell>
+                  <TableCell>{item.role}</TableCell>
+                  <TableCell>{item.phone}</TableCell>
+                  <TableCell
+                    className="hover:underline cursor-pointer"
                     onClick={(e) => {
-                      handleShowChangeModal(item);
+                      handleShowEditModal(item);
                       e.stopPropagation();
                     }}
                   >
-                    {item.userModelCount}
-                  </Button>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    type="button"
-                    size="sm"
+                    {item.email}
+                  </TableCell>
+                  <TableCell
+                    className="hover:underline cursor-pointer"
                     onClick={(e) => {
-                      handleShowChangeModal(item);
+                      handleShowReChargeModal(item);
                       e.stopPropagation();
                     }}
                   >
-                    {t('Add User Model')}
-                  </Button>
-                </TableCell>
-              </TableRow>
+                    {toFixed(+item.balance)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="px-0"
+                        onClick={(e) => {
+                          handleToggleExpand(item.id);
+                          e.stopPropagation();
+                        }}
+                      >
+                        {expandedUserIds.has(item.id) ? (
+                          <IconChevronDown size={16} />
+                        ) : (
+                          <IconChevronRight size={16} />
+                        )}
+                        {item.userModelCount}
+                      </Button>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={(e) => {
+                          handleToggleExpand(item.id);
+                          e.stopPropagation();
+                        }}
+                      >
+                        {t('Manage Models')}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          handleToggleExpand(item.id);
+                          e.stopPropagation();
+                        }}
+                      >
+                        <IconPlus size={16} />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+                {expandedUserIds.has(item.id) && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="p-0">
+                      <div className="bg-muted/30 p-4">
+                        {loadingModels.has(item.id) ? (
+                          <div className="text-center py-4">
+                            {t('Loading...')}
+                          </div>
+                        ) : userModels[item.id] && userModels[item.id].length > 0 ? (
+                          <div className="space-y-2">
+                            {userModels[item.id].map((userModel) => (
+                              <UserModelRow
+                                key={userModel.id}
+                                userModel={userModel}
+                                userId={item.id}
+                                onUpdate={() => handleUserModelsUpdate(item.id)}
+                              />
+                            ))}
+                            <AddUserModelRow
+                              userId={item.id}
+                              onUpdate={() => handleUserModelsUpdate(item.id)}
+                            />
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="text-center py-4 text-muted-foreground">
+                              {t('No models assigned')}
+                            </div>
+                            <AddUserModelRow
+                              userId={item.id}
+                              onUpdate={() => handleUserModelsUpdate(item.id)}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </React.Fragment>
             ))}
           </TableBody>
         </Table>
@@ -235,14 +325,6 @@ export default function Users() {
         userBalance={selectedUser?.balance}
         isOpen={isOpenModal.recharge}
       />
-      {selectedUser && (
-        <EditUserModelModal
-          onSuccessful={init}
-          onClose={handleClose}
-          isOpen={isOpenModal.changeModel}
-          userId={selectedUser.id}
-        />
-      )}
     </>
   );
 }

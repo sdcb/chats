@@ -3,8 +3,10 @@ import { useFetch } from '@/hooks/useFetch';
 import {
   AdminChatsDto,
   AdminModelDto,
+  AddUserModelParams,
   ChatCountStatisticsByDateResult,
   CostStatisticsByDateResult,
+  EditUserModelParams,
   ErrorResult,
   GetConfigsResult,
   GetFileServicesResult,
@@ -67,6 +69,25 @@ export const putUserModel = (params: PutUserModelParams): Promise<any> => {
   return fetchService.put('/api/admin/user-models', {
     body: params,
   });
+};
+
+export const addUserModel = (params: AddUserModelParams): Promise<any> => {
+  const fetchService = useFetch();
+  return fetchService.post('/api/admin/user-models', {
+    body: params,
+  });
+};
+
+export const editUserModel = (userModelId: number, params: EditUserModelParams): Promise<any> => {
+  const fetchService = useFetch();
+  return fetchService.put(`/api/admin/user-models/${userModelId}`, {
+    body: params,
+  });
+};
+
+export const deleteUserModel = (userModelId: number): Promise<any> => {
+  const fetchService = useFetch();
+  return fetchService.delete(`/api/admin/user-models/${userModelId}`);
 };
 
 export const getModels = (all: boolean = true): Promise<AdminModelDto[]> => {

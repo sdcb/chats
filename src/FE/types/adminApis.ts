@@ -16,6 +16,20 @@ export interface PutUserModelParams {
   models: UserModelUpdateDto[];
 }
 
+export interface AddUserModelParams {
+  userId: number;
+  modelId: number;
+  tokens: number;
+  counts: number;
+  expires: string;
+}
+
+export interface EditUserModelParams {
+  tokens: number;
+  counts: number;
+  expires: string;
+}
+
 export interface AdminModelDto {
   modelId: number;
   modelProviderId: number;
