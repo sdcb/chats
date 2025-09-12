@@ -25,7 +25,7 @@ import {
   SiteInfoFormData, 
   useConfigManager, 
   compareSiteInfoData 
-} from './shared';
+} from '@/utils/globalConfigsShared';
 
 interface SiteInfoConfigProps {
   configs: GetConfigsResult[];

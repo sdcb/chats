@@ -25,7 +25,7 @@ import {
   TencentSmsFormData, 
   useConfigManager, 
   compareTencentSmsData 
-} from './shared';
+} from '@/utils/globalConfigsShared';
 
 interface TencentSmsConfigProps {
   configs: GetConfigsResult[];
