@@ -50,9 +50,9 @@ public static class UrlEncryptionServiceExtensions
         return that.DecryptAsInt64(encryptedTurnId, EncryptionPurpose.TurnId);
     }
 
-    public static long? DecryptTurnIdOrNull(this IUrlEncryptionService that, string? encryptedTurnId)
+    public static long? DecryptTurnIdOrEmpty(this IUrlEncryptionService that, string? encryptedTurnId)
     {
-        return encryptedTurnId == null ? null : that.DecryptAsInt64(encryptedTurnId, EncryptionPurpose.TurnId);
+        return string.IsNullOrEmpty(encryptedTurnId) ? null : that.DecryptAsInt64(encryptedTurnId, EncryptionPurpose.TurnId);
     }
 
     public static string EncryptChatGroupId(this IUrlEncryptionService that, int chatGroupId)

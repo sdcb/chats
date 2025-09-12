@@ -37,7 +37,7 @@ public class UpdateChatsRequest
             IsArchived = IsArchived,
             IsTopMost = IsTopMost,
             SetsLeafTurnId = SetsLeafMessageId,
-            LeafTurnId = urlEncryptionService.DecryptTurnIdOrNull(LeafMessageId),
+            LeafTurnId = urlEncryptionService.DecryptTurnIdOrEmpty(LeafMessageId),
             SetsGroupId = SetsGroupId,
             GroupId = urlEncryptionService.DecryptChatGroupIdOrNull(GroupId),
         };

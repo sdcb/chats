@@ -75,7 +75,7 @@ const ResponseMessageActions = (props: Props) => {
         {message.edited && <EditStatusAction />}
 
         <DeleteAction
-          hidden={siblingIds.length <= 1 || chatting}
+          hidden={chatting}
           onDelete={() => {
             onDeleteMessage && onDeleteMessage(messageId);
           }}

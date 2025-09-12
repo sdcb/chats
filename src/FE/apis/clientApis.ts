@@ -417,10 +417,11 @@ export const putResponseMessageEditInPlace = (
   );
 };
 
-export const deleteMessage = (messageId: string, leafId: string) => {
+export const deleteMessage = (messageId: string, leafId: string | null) => {
   const fetchServer = useFetch();
+  const encryptedLeafMessageId = leafId || '';
   return fetchServer.delete(
-    `/api/messages/${messageId}?encryptedLeafMessageId=${leafId}&recursive=true`,
+    `/api/messages/${messageId}?encryptedLeafMessageId=${encryptedLeafMessageId}&recursive=true`,
   );
 };
 

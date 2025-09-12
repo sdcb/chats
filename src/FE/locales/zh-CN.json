@@ -47,6 +47,7 @@
   "Not enough tokens available to send the message": "没有足够的Tokens可用于发送消息",
   "Not enough counts available to send the message": "没有足够的聊天次数可用于发送消息",
   "Insufficient balance": "账号余额不足，请先充值。",
+  "Cannot send message: No valid conversation context. Please start a new chat.": "无法发送消息：没有有效的对话上下文。请开始新的对话。",
   "Conversation cancelled": "聊天请求已被取消。",
   "Unknown Error": "未知错误",
   "Subscription has expired": "订阅已过期",

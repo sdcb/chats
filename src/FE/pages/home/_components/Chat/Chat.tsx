@@ -452,6 +452,18 @@ const Chat = memo(() => {
   const handleSend = useCallback(
     async (message: Message, messageId?: string) => {
       if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
+      
+      // 检查是否存在任何助手回复
+      const hasAssistantResponse = selectedMessages.some(messageGroup => 
+        messageGroup.some(msg => msg.role === ChatRole.Assistant)
+      );
+      
+      // 如果有用户消息但没有助手回复，提示错误
+      if (selectedMessages.length > 0 && !hasAssistantResponse) {
+        toast.error(t('Cannot send message: No valid conversation context. Please start a new chat.'));
+        return;
+      }
+      
       startChat();
       let { id: chatId } = selectedChat;
       let selectedMessageList = [...selectedMessages];
@@ -998,26 +1010,67 @@ const Chat = memo(() => {
   const handleDeleteMessage = async (messageId: string) => {
     let nextMsgId = '';
     let msgs = messages.filter((x) => x.id !== messageId);
+    let deletedMessage: IChatMessage | undefined;
+    
+    // 找到被删除的消息
     selectedMessages.forEach((msg) => {
       msg.forEach((m) => {
         if (m.id === messageId) {
-          if (m?.siblingIds?.length > 1) {
-            const siblingIds = m.siblingIds.filter((id) => id !== m.id);
-            nextMsgId = siblingIds[siblingIds.length - 1];
-          } else if (m.parentId !== null) {
-            if (m.role === ChatRole.Assistant) {
-              const userMsg = messages.find((x) => x.id === m.parentId);
-              nextMsgId = userMsg?.parentId!;
-              msgs = messages.filter((x) => x.id !== userMsg?.id);
-            } else if (m.role === ChatRole.User) nextMsgId = m.parentId;
-          }
+          deletedMessage = m;
         }
       });
     });
 
-    const leafId = findLastLeafId(msgs, nextMsgId);
+    if (!deletedMessage) return;
+
+    // 删除逻辑按照新的要求
+    if (deletedMessage.siblingIds.length > 1) {
+      // 如果有同级消息，选择其他同级消息
+      const siblingIds = deletedMessage.siblingIds.filter((id) => id !== deletedMessage!.id);
+      nextMsgId = siblingIds[siblingIds.length - 1];
+    } else {
+      // 如果是最后一个同级消息，需要找替代方案
+      if (deletedMessage.role === ChatRole.Assistant) {
+        // 删除的是助手消息
+        // 1. 寻找其他助手响应消息（同一父级下的其他助手消息）
+        const otherAssistantMessages = msgs.filter(m => 
+          m.role === ChatRole.Assistant && 
+          m.parentId === deletedMessage!.parentId &&
+          m.id !== deletedMessage!.id
+        );
+        
+        if (otherAssistantMessages.length > 0) {
+          // 使用另一侧响应的当前显示的消息
+          const activeAssistant = otherAssistantMessages.find(m => m.isActive);
+          nextMsgId = activeAssistant ? activeAssistant.id : otherAssistantMessages[0].id;
+        } else {
+          // 2. 没有任何响应消息了，则选择父级用户消息
+          if (deletedMessage.parentId) {
+            nextMsgId = deletedMessage.parentId;
+          } else {
+            // 3. 父级也没有，使用空字符串表示null
+            nextMsgId = '';
+          }
+        }
+      } else if (deletedMessage.role === ChatRole.User) {
+        // 删除的是用户消息，同时删除所有子消息
+        const childMessages = messages.filter(m => m.parentId === deletedMessage!.id);
+        childMessages.forEach(child => {
+          msgs = msgs.filter(x => x.id !== child.id);
+        });
+        
+        // 选择父级消息
+        if (deletedMessage.parentId) {
+          nextMsgId = deletedMessage.parentId;
+        } else {
+          nextMsgId = '';
+        }
+      }
+    }
+
+    const leafId = nextMsgId ? findLastLeafId(msgs, nextMsgId) : null;
     await deleteMessage(messageId, leafId);
-    const selectedMsgs = findSelectedMessageByLeafId(msgs, leafId);
+    const selectedMsgs = leafId ? findSelectedMessageByLeafId(msgs, leafId) : [];
     messageDispatch(setSelectedMessages(selectedMsgs));
     messageDispatch(setMessages(msgs));
   };

@@ -74,7 +74,7 @@ public record EncryptedGeneralChatRequest : EncryptedChatRequest
             ChatId = urlEncryption.DecryptChatId(EncryptedChatId),
             TimezoneOffset = TimezoneOffset,
             UserMessage = UserMessage,
-            ParentAssistantMessageId = urlEncryption.DecryptTurnIdOrNull(ParentAssistantMessageId)
+            ParentAssistantMessageId = urlEncryption.DecryptTurnIdOrEmpty(ParentAssistantMessageId)
         };
     }
 }

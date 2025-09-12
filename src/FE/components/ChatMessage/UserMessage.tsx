@@ -241,11 +241,7 @@ const UserMessage = (props: Props) => {
             )}
             {!readonly && (
               <DeleteAction
-                hidden={
-                  !(
-                    message.parentId !== null || message?.siblingIds?.length > 1
-                  ) || isChatting(chatStatus)
-                }
+                hidden={isChatting(chatStatus)}
                 isHoverVisible
                 onDelete={() => {
                   onDeleteMessage && onDeleteMessage(messageId);

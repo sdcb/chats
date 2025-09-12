@@ -241,7 +241,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
     public async Task<ActionResult<string[]>> DeleteTurn(string encryptedTurnId, string? encryptedLeafMessageId, CancellationToken cancellationToken)
     {
         long turnId = urlEncryption.DecryptTurnId(encryptedTurnId);
-        long? leafTurnId = urlEncryption.DecryptTurnIdOrNull(encryptedLeafMessageId);
+        long? leafTurnId = urlEncryption.DecryptTurnIdOrEmpty(encryptedLeafMessageId);
         ChatTurn? turn = await db.ChatTurns
             .Include(x => x.Chat.ChatTurns)
             .FirstOrDefaultAsync(x => x.Id == turnId, cancellationToken);
