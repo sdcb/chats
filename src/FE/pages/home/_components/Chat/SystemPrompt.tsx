@@ -37,12 +37,18 @@ const SystemPrompt: FC<Props> = ({
 }) => {
   const { t } = useTranslation();
 
-  const [value, setValue] = useState<string>('');
+  const [rawValue, setRawValue] = useState<string>(''); // 原始内容（未格式化）
+  const [isEditing, setIsEditing] = useState(false); // 编辑模式状态
   const [activePromptIndex, setActivePromptIndex] = useState(0);
   const [showPromptList, setShowPromptList] = useState(false);
   const [promptInputValue, setPromptInputValue] = useState('');
   const [variables, setVariables] = useState<string[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  // 获取渲染文本的函数
+  const getRenderedText = () => {
+    return formatPrompt(rawValue, { model });
+  };
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const promptListRef = useRef<HTMLUListElement | null>(null);
@@ -52,19 +58,19 @@ const SystemPrompt: FC<Props> = ({
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
+    const inputValue = e.target.value;
 
-    setValue(value);
-    updatePromptListVisibility(value);
+    setRawValue(inputValue);
+    updatePromptListVisibility(inputValue);
 
-    onChangePromptText(value);
+    onChangePromptText(inputValue);
   };
 
   const handleInitModal = () => {
     const selectedPrompt = filteredPrompts[activePromptIndex];
     selectedPrompt &&
       getUserPromptDetail(selectedPrompt.id).then((data) => {
-        setValue((prevContent) => {
+        setRawValue((prevContent: string) => {
           return prevContent?.replace(/\/\w*$/, data.content);
         });
         handlePromptSelect(data);
@@ -97,34 +103,32 @@ const SystemPrompt: FC<Props> = ({
   }, []);
 
   const handlePromptSelect = (prompt: Prompt) => {
-    const formattedContent = formatPrompt(prompt.content, { model });
-    const parsedVariables = parseVariables(formattedContent);
+    const parsedVariables = parseVariables(prompt.content);
     setVariables(parsedVariables);
 
     if (parsedVariables.length > 0) {
       setIsModalVisible(true);
     } else {
-      const updatedContent = value?.replace(/\/\w*$/, formattedContent);
+      const updatedContent = rawValue?.replace(/\/\w*$/, prompt.content);
 
       onChangePromptText(updatedContent);
-      setValue(updatedContent);
+      setRawValue(updatedContent);
 
-      updatePromptListVisibility(formattedContent);
+      updatePromptListVisibility(prompt.content);
     }
   };
 
   const handleSubmit = (updatedVariables: string[]) => {
-    const newContent = value?.replace(/{{(.*?)}}/g, (_, variable) => {
+    const newContent = rawValue?.replace(/{{(.*?)}}/g, (_: string, variable: string) => {
       const index = variables.indexOf(variable);
       return updatedVariables[index];
     });
 
-    setValue(newContent);
+    setRawValue(newContent);
     onChangePromptText(newContent);
 
-    if (textareaRef && textareaRef.current) {
-      textareaRef.current.focus();
-    }
+    // 进入编辑模式以便用户继续编辑
+    setIsEditing(true);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -157,15 +161,18 @@ const SystemPrompt: FC<Props> = ({
   };
 
   useEffect(() => {
-    if (textareaRef && textareaRef.current) {
+    if (isEditing && textareaRef && textareaRef.current) {
       textareaRef.current.style.height = 'inherit';
       textareaRef.current.style.height = `${textareaRef.current?.scrollHeight}px`;
     }
-  }, [value]);
+  }, [rawValue, isEditing]);
 
   useEffect(() => {
-    setValue(formatPrompt(currentPrompt || '', { model }));
+    const rawContent = currentPrompt || '';
+    setRawValue(rawContent);
   }, [currentPrompt, model]);
+
+  // 移除了模式切换的useEffect，因为displayValue现在是计算值
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -190,29 +197,54 @@ const SystemPrompt: FC<Props> = ({
         <IconMessage size={16} />
         {t('System Prompt')}
       </label>
-      <textarea
-        ref={textareaRef}
-        className="w-full rounded-lg border border-neutral-200 bg-transparent px-4 py-3 text-neutral-900 dark:border-neutral-600 dark:text-neutral-100"
-        style={{
-          resize: 'none',
-          bottom: `${textareaRef?.current?.scrollHeight}px`,
-          maxHeight: '300px',
-          overflow: `${
-            textareaRef.current && textareaRef.current.scrollHeight > 400
-              ? 'auto'
-              : 'hidden'
-          }`,
-        }}
-        placeholder={
-          t(`Enter a prompt or type "/" to select a prompt...`) || ''
-        }
-        value={value || ''}
-        rows={1}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-      />
+      {isEditing ? (
+        <textarea
+          ref={textareaRef}
+          className="w-full rounded-lg border border-neutral-200 bg-transparent px-4 py-3 text-neutral-900 dark:border-neutral-600 dark:text-neutral-100"
+          style={{
+            resize: 'none',
+            bottom: `${textareaRef?.current?.scrollHeight}px`,
+            maxHeight: '300px',
+            overflow: `${
+              textareaRef.current && textareaRef.current.scrollHeight > 400
+                ? 'auto'
+                : 'hidden'
+            }`,
+            fontFamily: 'Consolas, "Courier New", monospace',
+          }}
+          placeholder={
+            t(`Enter a prompt or type "/" to select a prompt...`) || ''
+          }
+          value={rawValue || ''}
+          rows={1}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onBlur={() => {
+            setIsEditing(false);
+            setShowPromptList(false);
+          }}
+          autoFocus
+        />
+      ) : (
+        <div
+          className="w-full rounded-lg border border-neutral-200 bg-transparent px-4 py-3 text-neutral-900 dark:border-neutral-600 dark:text-neutral-100 cursor-text min-h-[2.75rem]"
+          style={{
+            maxHeight: '300px',
+            overflow: 'auto',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+          }}
+          onClick={() => setIsEditing(true)}
+        >
+          {getRenderedText() || (
+            <span className="text-neutral-400">
+              {t(`Enter a prompt or type "/" to select a prompt...`) || ''}
+            </span>
+          )}
+        </div>
+      )}
 
-      {showPromptList && filteredPrompts.length > 0 && (
+      {isEditing && showPromptList && filteredPrompts.length > 0 && (
         <div>
           <PromptList
             activePromptIndex={activePromptIndex}
