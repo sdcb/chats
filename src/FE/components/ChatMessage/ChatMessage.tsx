@@ -32,6 +32,7 @@ export interface Props {
   onEditUserMessage?: (messageId: string, content: ResponseContent) => void;
   onDeleteMessage?: (messageId: string) => void;
   onChangeDisplayType?: (messageId: string, type: MessageDisplayType) => void;
+  onRegenerateAllAssistant?: (messageId: string, modelId: number) => void;
 }
 
 export const ChatMessage: FC<Props> = memo(
@@ -50,6 +51,7 @@ export const ChatMessage: FC<Props> = memo(
     onEditUserMessage,
     onDeleteMessage,
     onChangeDisplayType,
+    onRegenerateAllAssistant,
   }) => {
     const isMultiSpan = hasMultipleSpans(selectedMessages);
     return (
@@ -89,6 +91,7 @@ export const ChatMessage: FC<Props> = memo(
                           onEditAndSendMessage={onEditAndSendMessage}
                           onEditUserMessage={onEditUserMessage}
                           onDeleteMessage={onDeleteMessage}
+                          onRegenerateAllAssistant={onRegenerateAllAssistant}
                         />
                       </div>
                     )}

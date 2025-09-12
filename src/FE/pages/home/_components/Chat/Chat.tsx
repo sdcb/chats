@@ -537,6 +537,52 @@ const Chat = memo(() => {
     await handleChatMessage(response, selectedMessageList);
   };
 
+  const handleRegenerateAllAssistant = async (
+    messageId: string,
+    modelId: number,
+  ) => {
+    if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
+    startChat();
+    let { id: chatId } = selectedChat;
+    
+    // 找到用户消息在 selectedMessages 中的位置
+    const userMessageIndex = selectedMessages.findIndex(
+      (x) => x.findIndex((m) => m.id === messageId) !== -1,
+    );
+    
+    if (userMessageIndex === -1) return;
+    
+    // 保留用户消息及之前的消息，重新生成所有助手消息
+    let selectedMessageList = selectedMessages.slice(0, userMessageIndex + 1);
+    
+    // 为所有启用的 span 生成新的响应消息
+    let responseMessages = generateResponseMessages(selectedChat, messageId);
+    selectedMessageList.push(responseMessages);
+    
+    messageDispatch(setSelectedMessages(selectedMessageList));
+
+    let chatBody = {
+      chatId,
+      modelId,
+      parentUserMessageId: messageId,
+      timezoneOffset: getTz(),
+    };
+
+    const response = await fetch(
+      `${getApiUrl()}/api/chats/regenerate-all-assistant-message`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getUserSession()}`,
+        },
+        body: JSON.stringify(chatBody),
+      },
+    );
+
+    await handleChatMessage(response, selectedMessageList);
+  };
+
   const handleEditAndSendMessage = async (
     message: Message,
     messageId?: string,
@@ -1033,6 +1079,7 @@ const Chat = memo(() => {
             onEditUserMessage={handleUpdateUserMessage}
             onDeleteMessage={handleDeleteMessage}
             onChangeDisplayType={handleChangeDisplayType}
+            onRegenerateAllAssistant={handleRegenerateAllAssistant}
           />
 
           {!hasModel() && !selectedChat?.id && <NoModel />}
