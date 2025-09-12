@@ -2,7 +2,7 @@ import React from 'react';
 import { AdminModelDto } from '@/types/adminApis';
 import { formatNumberAsMoney } from '@/utils/common';
 import { Button } from '@/components/ui/button';
-import { IconPencil } from '@/components/Icons';
+import { IconPencil, IconChartHistogram } from '@/components/Icons';
 import DeletePopover from '@/pages/home/_components/Popover/DeletePopover';
 import useTranslation from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
@@ -14,9 +14,14 @@ interface ModelItemProps {
   model: AdminModelDto;
   onEdit: (model: AdminModelDto) => void;
   onDelete: (modelId: number) => void;
+  onGoToUsage: (params: {
+    provider?: string;
+    modelKey?: string;
+    model?: string;
+  }) => void;
 }
 
-export default function ModelItem({ model, onEdit, onDelete }: ModelItemProps) {
+export default function ModelItem({ model, onEdit, onDelete, onGoToUsage }: ModelItemProps) {
   const { t } = useTranslation();
   const sortable = useSortable({ id: `model-${model.modelId}` });
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
@@ -62,6 +67,17 @@ export default function ModelItem({ model, onEdit, onDelete }: ModelItemProps) {
         </div>
       </div>
       <div className="flex gap-2 ml-3">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onGoToUsage({ model: model.name });
+          }}
+          title={t('View Usage Records')}
+        >
+          <IconChartHistogram size={16} />
+        </Button>
         <Button
           variant="secondary"
           size="sm"

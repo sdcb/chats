@@ -3,12 +3,14 @@ import { DndContext, DragEndEvent, DragOverlay, PointerSensor, useSensor, useSen
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/router';
 import useTranslation from '@/hooks/useTranslation';
 import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
 import { feModelProviders } from '@/types/model';
 import { formatNumberAsMoney } from '@/utils/common';
 import { Button } from '@/components/ui/button';
 import { LabelSwitch } from '@/components/ui/label-switch';
+import { Skeleton } from '@/components/ui/skeleton';
 import { IconPlus } from '@/components/Icons';
 import { getModelKeys, getModels, deleteModelKeys, deleteModels, reorderModelProviders, reorderModelKeys, reorderModels } from '@/apis/adminApis';
 import ModelKeysModal from '../_components/ModelKeys/ModelKeysModal';
@@ -18,11 +20,13 @@ import ModelProvider, { ProviderGroup } from './components/ModelProvider';
 
 export default function ModelManager() {
   const { t } = useTranslation();
+  const router = useRouter();
 
   // data state
   const [modelKeys, setModelKeys] = useState<GetModelKeysResult[]>([]);
   const [models, setModels] = useState<AdminModelDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true); // 区分初始加载和后续更新
 
   // UI state
   const [expandProviders, setExpandProviders] = useState<Record<number, boolean>>({});
@@ -64,7 +68,10 @@ export default function ModelManager() {
   }, []);
 
   const init = async (preserveExpandState = false) => {
-    setLoading(true);
+    // 只有在非保持展开状态的情况下才设置loading为true（即初始加载）
+    if (!preserveExpandState) {
+      setLoading(true);
+    }
     const [keys, ms] = await Promise.all([getModelKeys(), getModels(true)]);
     setModelKeys(keys);
     setModels(ms);
@@ -77,6 +84,7 @@ export default function ModelManager() {
       setExpandKeys(keyExpand);
     }
     setLoading(false);
+    setInitialLoading(false); // 初始加载完成后设置为false
   };
 
   const grouped: ProviderGroup[] = useMemo(() => {
@@ -241,6 +249,22 @@ export default function ModelManager() {
     await deleteModels(modelId);
     toast.success(t('Deleted successful'));
     init(true);
+  };
+
+  const handleGoToUsage = (params: {
+    provider?: string;
+    modelKey?: string;
+    model?: string;
+  }) => {
+    const query: Record<string, string> = {};
+    if (params.provider) query.provider = params.provider;
+    if (params.modelKey) query['model-key'] = params.modelKey;
+    if (params.model) query.model = params.model;
+    
+    router.push({
+      pathname: '/admin/usage',
+      query,
+    });
   };
 
   // 旧的原生拖拽处理已移除，统一用 dnd-kit
@@ -444,7 +468,26 @@ export default function ModelManager() {
         strategy={verticalListSortingStrategy}
       >
       <div className="space-y-2">
-        {filteredProviders.length === 0 ? (
+        {initialLoading ? (
+          <div className="space-y-3">
+            {/* 模拟3个Provider卡片的骨架屏 */}
+            {[1, 2, 3].map((index) => (
+              <div key={index} className="rounded-xl border bg-card p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-6 w-6 rounded" />
+                    <Skeleton className="h-5 w-20" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-8 w-16" />
+                    <Skeleton className="h-4 w-4" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredProviders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 border rounded-xl bg-muted/30 text-center gap-4">
             <div className="text-lg font-medium">{t('No providers or model keys yet')}</div>
             <div className="text-sm text-muted-foreground max-w-md">
@@ -479,6 +522,7 @@ export default function ModelManager() {
               onAddModel={openAddModel}
               onEditModel={openEditModel}
               onDeleteModel={handleDeleteModel}
+              onGoToUsage={handleGoToUsage}
             />
           ))
         )}

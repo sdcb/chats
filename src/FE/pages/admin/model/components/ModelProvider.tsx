@@ -3,10 +3,11 @@ import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
 import { Button } from '@/components/ui/button';
-import { IconPlus } from '@/components/Icons';
+import { IconPlus, IconChartHistogram } from '@/components/Icons';
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import useTranslation from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
+import { feModelProviders } from '@/types/model';
 import ModelKey from './ModelKey';
 import CollapsiblePanel from './CollapsiblePanel';
 
@@ -31,6 +32,11 @@ interface ModelProviderProps {
   onAddModel: (keyId: number) => void;
   onEditModel: (model: AdminModelDto) => void;
   onDeleteModel: (modelId: number) => void;
+  onGoToUsage: (params: {
+    provider?: string;
+    modelKey?: string;
+    model?: string;
+  }) => void;
 }
 
 export default function ModelProvider({
@@ -48,6 +54,7 @@ export default function ModelProvider({
   onAddModel,
   onEditModel,
   onDeleteModel,
+  onGoToUsage,
 }: ModelProviderProps) {
   const { t } = useTranslation();
   const sortable = useSortable({ id: `provider-${provider.providerId}`, disabled: provider.keys.length === 0 });
@@ -102,6 +109,20 @@ export default function ModelProvider({
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
+                const providerData = feModelProviders.find(p => p.id === provider.providerId);
+                if (providerData) {
+                  onGoToUsage({ provider: providerData.name });
+                }
+              }}
+              title={t('View Usage Records')}
+            >
+              <IconChartHistogram size={16} />
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
                 onAddKey(provider.providerId);
               }}
               title={t('Add Model Key')}
@@ -129,6 +150,7 @@ export default function ModelProvider({
                     onAddModel={onAddModel}
                     onEditModel={onEditModel}
                     onDeleteModel={onDeleteModel}
+                    onGoToUsage={onGoToUsage}
                   />
                 ))}
               </SortableContext>

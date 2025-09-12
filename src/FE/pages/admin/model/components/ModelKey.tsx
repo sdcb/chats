@@ -1,7 +1,7 @@
 import React from 'react';
 import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
 import { Button } from '@/components/ui/button';
-import { IconPlus, IconPencil, IconBolt } from '@/components/Icons';
+import { IconPlus, IconPencil, IconBolt, IconChartHistogram } from '@/components/Icons';
 import DeletePopover from '@/pages/home/_components/Popover/DeletePopover';
 import useTranslation from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,11 @@ interface ModelKeyProps {
   onAddModel: (keyId: number) => void;
   onEditModel: (model: AdminModelDto) => void;
   onDeleteModel: (modelId: number) => void;
+  onGoToUsage: (params: {
+    provider?: string;
+    modelKey?: string;
+    model?: string;
+  }) => void;
 }
 
 export default function ModelKey({
@@ -35,6 +40,7 @@ export default function ModelKey({
   onAddModel,
   onEditModel,
   onDeleteModel,
+  onGoToUsage,
 }: ModelKeyProps) {
   const { t } = useTranslation();
   const sortable = useSortable({ id: `key-${modelKey.id}` });
@@ -80,6 +86,17 @@ export default function ModelKey({
           <span className="font-medium">{modelKey.name}</span>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onGoToUsage({ modelKey: modelKey.name });
+            }}
+            title={t('View Usage Records')}
+          >
+            <IconChartHistogram size={16} />
+          </Button>
           <Button
             variant="secondary"
             size="sm"
@@ -135,6 +152,7 @@ export default function ModelKey({
                   model={model}
                   onEdit={onEditModel}
                   onDelete={onDeleteModel}
+                  onGoToUsage={onGoToUsage}
                 />
               ))}
             </SortableContext>
