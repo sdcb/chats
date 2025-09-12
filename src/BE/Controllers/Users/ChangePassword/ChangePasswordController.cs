@@ -1,4 +1,3 @@
-﻿using Chats.BE.Controllers.Common;
 using Chats.BE.Controllers.Users.ChangePassword.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Infrastructure;
@@ -17,12 +16,12 @@ public class ChangePasswordController(ChatsDB db, CurrentUser currentUser, Passw
     {
         if (req.NewPassword != req.ConfirmPassword)
         {
-            return this.BadRequestMessage("New password and confirm password do not match");
+            return BadRequest("New password and confirm password do not match");
         }
 
         if (!IsStrongEnoughPassword(req.NewPassword))
         {
-            return this.BadRequestMessage(NotMeetPasswordRule);
+            return BadRequest(NotMeetPasswordRule);
         }
 
         User? user = await db.Users
@@ -38,12 +37,12 @@ public class ChangePasswordController(ChatsDB db, CurrentUser currentUser, Passw
         {
             if (!passwordHasher.VerifyPassword(req.OldPassword, user.PasswordHash))
             {
-                return this.BadRequestMessage("Old password incorrect");
+                return BadRequest("Old password incorrect");
             }
 
             if (passwordHasher.VerifyPassword(req.NewPassword, user.PasswordHash))
             {
-                return this.BadRequestMessage("New password should be different from the old one");
+                return BadRequest("New password should be different from the old one");
             }
         }
 

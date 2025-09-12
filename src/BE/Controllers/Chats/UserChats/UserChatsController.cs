@@ -1,7 +1,6 @@
-﻿using Chats.BE.Controllers.Chats.Prompts.Dtos;
+using Chats.BE.Controllers.Chats.Prompts.Dtos;
 using Chats.BE.Controllers.Chats.Prompts;
 using Chats.BE.Controllers.Chats.UserChats.Dtos;
-using Chats.BE.Controllers.Common;
 using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Infrastructure;
@@ -154,7 +153,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             .ToDictionaryAsync(k => k.ModelId, v => v, cancellationToken);
         if (validModels.Count == 0)
         {
-            return this.BadRequestMessage("No model available.");
+            return BadRequest("No model available.");
         }
 
         if (request.GroupId != null)

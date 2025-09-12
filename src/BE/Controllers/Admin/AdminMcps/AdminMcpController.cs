@@ -1,5 +1,4 @@
-﻿using Chats.BE.Controllers.Admin.AdminMcps.Dtos;
-using Chats.BE.Controllers.Common;
+using Chats.BE.Controllers.Admin.AdminMcps.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
@@ -120,7 +119,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
 
         if (!Uri.IsWellFormedUriString(request.Url, UriKind.Absolute))
         {
-            return this.BadRequestMessage("Invalid URL");
+            return BadRequest("Invalid URL");
         }
 
         if (request.IsSystem && !currentUser.IsAdmin)
@@ -130,7 +129,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
 
         if (!request.ValidateToolNameUnique())
         {
-            return this.BadRequestMessage("Tool names must be unique within the server");
+            return BadRequest("Tool names must be unique within the server");
         }
 
         McpServer server = new()
@@ -203,12 +202,12 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
 
         if (!Uri.IsWellFormedUriString(request.Url, UriKind.Absolute))
         {
-            return this.BadRequestMessage("Invalid URL");
+            return BadRequest("Invalid URL");
         }
 
         if (!request.ValidateToolNameUnique())
         {
-            return this.BadRequestMessage("Tool names must be unique within the server");
+            return BadRequest("Tool names must be unique within the server");
         }
 
         server.Label = request.Label;
@@ -309,7 +308,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
 
         if (req.HasDuplicateMcpServerIds())
         {
-            return this.BadRequestMessage("Duplicate MCP server IDs in request");
+            return BadRequest("Duplicate MCP server IDs in request");
         }
 
         Dictionary<int, McpServer> desiredServers = await db.McpServers
@@ -317,7 +316,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             .ToDictionaryAsync(k => k.Id, v => v, cancellationToken);
         if (desiredServers.Count != req.McpServerIds.Length)
         {
-            return this.BadRequestMessage("Some MCP servers not found");
+            return BadRequest("Some MCP servers not found");
         }
 
         List<UserMcp> existing = await db.UserMcps.Where(x => x.UserId == req.UserId).ToListAsync(cancellationToken);
@@ -347,7 +346,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
     {
         if (!Uri.TryCreate(req.ServerUrl, UriKind.Absolute, out Uri? serverUri))
         {
-            return this.BadRequestMessage("Invalid serverUrl");
+            return BadRequest("Invalid serverUrl");
         }
 
         Dictionary<string, string>? headerDict = null;
@@ -359,7 +358,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             }
             catch (JsonException)
             {
-                return this.BadRequestMessage("headers must be a JSON object");
+                return BadRequest("headers must be a JSON object");
             }
         }
 
@@ -390,7 +389,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
         catch (HttpRequestException ex)
         {
             logger.LogWarning(ex, "Failed to fetch MCP tools from {Url}", req.ServerUrl);
-            return this.BadRequestMessage(ex.Message);
+            return BadRequest(ex.Message);
         }
     }
 }

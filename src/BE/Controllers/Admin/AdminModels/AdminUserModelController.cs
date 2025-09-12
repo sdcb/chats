@@ -1,6 +1,5 @@
-﻿using Chats.BE.Controllers.Admin.AdminModels.Dtos;
+using Chats.BE.Controllers.Admin.AdminModels.Dtos;
 using Chats.BE.Controllers.Admin.Common;
-using Chats.BE.Controllers.Common;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services;
@@ -96,14 +95,14 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         bool userExists = await db.Users.AnyAsync(u => u.Id == request.UserId, cancellationToken);
         if (!userExists)
         {
-            return this.BadRequestMessage($"User with ID {request.UserId} not found");
+            return BadRequest($"User with ID {request.UserId} not found");
         }
 
         // 检查模型是否存在
         bool modelExists = await db.Models.AnyAsync(m => m.Id == request.ModelId, cancellationToken);
         if (!modelExists)
         {
-            return this.BadRequestMessage($"Model with ID {request.ModelId} not found");
+            return BadRequest($"Model with ID {request.ModelId} not found");
         }
 
         // 检查是否已经存在该用户模型
@@ -111,7 +110,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             .AnyAsync(um => um.UserId == request.UserId && um.ModelId == request.ModelId, cancellationToken);
         if (userModelExists)
         {
-            return this.BadRequestMessage("User model already exists");
+            return BadRequest("User model already exists");
         }
 
         UserModel newUserModel = new()

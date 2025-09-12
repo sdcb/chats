@@ -1,6 +1,5 @@
-﻿using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Admin.ModelKeys.Dtos;
-using Chats.BE.Controllers.Common;
 using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
@@ -55,7 +54,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
 
         if (!await db.ModelProviders.AnyAsync(x => x.Id == request.ModelProviderId, cancellationToken))
         {
-            return this.BadRequestMessage("Invalid model provider");
+            return BadRequest("Invalid model provider");
         }
         modelKey.ModelProviderId = request.ModelProviderId;
         modelKey.Name = request.Name;
@@ -78,7 +77,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
     {
         if (!await db.ModelProviders.AnyAsync(x => x.Id == request.ModelProviderId, cancellationToken))
         {
-            return this.BadRequestMessage("Invalid model provider");
+            return BadRequest("Invalid model provider");
         }
 
         // 获取当前最大的 Order 值，以便将新的 ModelKey 放置在最后
@@ -132,7 +131,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
     {
         if (await db.Models.AnyAsync(m => m.ModelKeyId == modelKeyId, cancellationToken))
         {
-            return this.BadRequestMessage("Model key is in use");
+            return BadRequest("Model key is in use");
         }
 
         ModelKey? modelKey = await db.ModelKeys

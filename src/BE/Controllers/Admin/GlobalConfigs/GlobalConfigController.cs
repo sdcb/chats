@@ -1,6 +1,5 @@
-﻿using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Admin.GlobalConfigs.Dtos;
-using Chats.BE.Controllers.Common;
 using Chats.BE.DB;
 using Chats.BE.Services.Configs;
 using Microsoft.AspNetCore.Mvc;
@@ -42,7 +41,7 @@ public class GlobalConfigController(ChatsDB db) : ControllerBase
         }
         catch (JsonException)
         {
-            return this.BadRequestMessage("Invalid JSON");
+            return BadRequest("Invalid JSON");
         }
 
         config.Value = req.Value;
@@ -60,7 +59,7 @@ public class GlobalConfigController(ChatsDB db) : ControllerBase
         Config? config = await db.Configs.FindAsync([req.Key], cancellationToken);
         if (config != null)
         {
-            return this.BadRequestMessage("Key already exists");
+            return BadRequest("Key already exists");
         }
         // ensure value is valid json
         try
@@ -69,7 +68,7 @@ public class GlobalConfigController(ChatsDB db) : ControllerBase
         }
         catch (JsonException)
         {
-            return this.BadRequestMessage("Invalid JSON");
+            return BadRequest("Invalid JSON");
         }
         await db.Configs.AddAsync(new Config()
         {

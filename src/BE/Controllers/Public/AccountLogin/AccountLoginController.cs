@@ -1,4 +1,4 @@
-﻿using Chats.BE.Controllers.Common;
+using Chats.BE.Controllers.Common;
 using Chats.BE.Controllers.Common.Results;
 using Chats.BE.Controllers.Public.AccountLogin.Dtos;
 using Chats.BE.Controllers.Public.SMSs;
@@ -90,15 +90,15 @@ public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> 
     {
         if (!ModelState.IsValid)
         {
-            return this.BadRequestMessage("Invalid phone.");
+            return BadRequest("Invalid phone.");
         }
         if (req.SmsCode.Length != SmsController.CodeLength)
         {
-            return this.BadRequestMessage("Invalid code.");
+            return BadRequest("Invalid code.");
         }
         if (!db.LoginServices.Any(x => x.Enabled && x.Type == KnownLoginProviders.Phone))
         {
-            return this.BadRequestMessage("Phone login not enabled.");
+            return BadRequest("Phone login not enabled.");
         }
 
         SmsRecord? existingSms = await db.SmsRecords
@@ -108,7 +108,7 @@ public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> 
         if (existingSms == null)
         {
             logger.LogWarning("Sms not sent: {Phone}, code: {Code}", req.Phone, req.SmsCode);
-            return this.BadRequestMessage("Invalid code.");
+            return BadRequest("Invalid code.");
         }
 
         BadRequestObjectResult? commonCheckError = await PushAttemptCheck(req.Phone, req.SmsCode, existingSms, cancellationToken);
@@ -120,7 +120,7 @@ public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> 
         User? user = await db.Users.FirstOrDefaultAsync(x => x.Phone == req.Phone && x.Enabled, cancellationToken);
         if (user == null)
         {
-            return this.BadRequestMessage("Phone number not registered.");
+            return BadRequest("Phone number not registered.");
         }
 
         return Ok(await sessionManager.GenerateSessionForUser(user, cancellationToken));
@@ -132,7 +132,7 @@ public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> 
         if (attemps >= SmsController.MaxAttempts)
         {
             logger.LogWarning("Too many attempts: {Phone}, attemp: {attemp}, code: {code}", phoneNumber, attemps, requestSmsCode);
-            return this.BadRequestMessage("Too many attempts.");
+            return BadRequest("Too many attempts.");
         }
 
         existingSms.SmsAttempts.Add(new SmsAttempt()
@@ -146,12 +146,12 @@ public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> 
 
         if (existingSms.ExpectedCode != requestSmsCode)
         {
-            return this.BadRequestMessage("Invalid code.");
+            return BadRequest("Invalid code.");
         }
 
         if (existingSms.CreatedAt + TimeSpan.FromSeconds(SmsController.SmsExpirationSeconds) < DateTime.UtcNow)
         {
-            return this.BadRequestMessage("Sms expired.");
+            return BadRequest("Sms expired.");
         }
 
         return null;
@@ -162,19 +162,19 @@ public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> 
     {
         if (!ModelState.IsValid)
         {
-            return this.BadRequestMessage("Invalid phone.");
+            return BadRequest("Invalid phone.");
         }
 
         InvitationCode? code = await db.InvitationCodes.FirstOrDefaultAsync(x => x.Value == req.InvitationCode && !x.IsDeleted, cancellationToken);
         if (code == null)
         {
-            return this.BadRequestMessage("Invalid invitation code.");
+            return BadRequest("Invalid invitation code.");
         }
 
         User? existingUser = await db.Users.FirstOrDefaultAsync(x => x.Phone == req.Phone, cancellationToken);
         if (existingUser != null)
         {
-            return this.BadRequestMessage("Phone number already registered.");
+            return BadRequest("Phone number already registered.");
         }
 
         SmsRecord? existingSms = await db.SmsRecords
@@ -183,7 +183,7 @@ public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> 
             .FirstOrDefaultAsync(cancellationToken);
         if (existingSms == null)
         {
-            return this.BadRequestMessage("Sms not sent.");
+            return BadRequest("Sms not sent.");
         }
 
         BadRequestObjectResult? commonCheckError = await PushAttemptCheck(req.Phone, req.SmsCode, existingSms, cancellationToken);

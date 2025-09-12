@@ -1,6 +1,5 @@
-﻿using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Admin.FileServices.Dtos;
-using Chats.BE.Controllers.Common;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Microsoft.AspNetCore.Mvc;
@@ -106,7 +105,7 @@ public class FileServiceController(ChatsDB db) : ControllerBase
 
         if (await db.Files.AnyAsync(x => x.FileServiceId == fileServiceId, cancellationToken))
         {
-            return this.BadRequestMessage("Cannot delete file service with existing files");
+            return BadRequest("Cannot delete file service with existing files");
         }
 
         db.FileServices.Remove(existingData);

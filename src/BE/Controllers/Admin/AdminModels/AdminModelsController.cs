@@ -1,6 +1,5 @@
-﻿using Chats.BE.Controllers.Admin.AdminModels.Dtos;
+using Chats.BE.Controllers.Admin.AdminModels.Dtos;
 using Chats.BE.Controllers.Admin.Common;
-using Chats.BE.Controllers.Common;
 using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Infrastructure;
@@ -61,7 +60,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
 
         if (!await db.ModelReferences.AnyAsync(r => r.Id == req.ModelReferenceId, cancellationToken))
         {
-            return this.BadRequestMessage($"Invalid ModelReferenceId: {req.ModelReferenceId}");
+            return BadRequest($"Invalid ModelReferenceId: {req.ModelReferenceId}");
         }
 
         Model? cm = await db.Models.FindAsync([modelId], cancellationToken);
@@ -87,7 +86,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
 
         if (!await db.ModelReferences.AnyAsync(r => r.Id == req.ModelReferenceId, cancellationToken))
         {
-            return this.BadRequestMessage($"Invalid ModelReferenceId: {req.ModelReferenceId}");
+            return BadRequest($"Invalid ModelReferenceId: {req.ModelReferenceId}");
         }
 
         Model toCreate = new()
@@ -165,7 +164,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
             if (refInfo.UserModels) message += "UserModels, ";
             if (refInfo.ApiKeys) message += "ApiKeys, ";
             if (refInfo.UserApiCache) message += "UserApiCache, ";
-            return this.BadRequestMessage(message);
+            return BadRequest(message);
         }
         else
         {
@@ -187,7 +186,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
             .SingleOrDefaultAsync(cancellationToken);
         if (modelKey == null)
         {
-            return this.BadRequestMessage($"Model key id: {req.ModelKeyId} not found");
+            return BadRequest($"Model key id: {req.ModelKeyId} not found");
         }
 
         ModelReference? modelReference = await db.ModelReferences
@@ -197,7 +196,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
             .SingleOrDefaultAsync(cancellationToken);
         if (modelReference == null)
         {
-            return this.BadRequestMessage($"Model reference id: {req.ModelReferenceId} not found");
+            return BadRequest($"Model reference id: {req.ModelReferenceId} not found");
         }
 
         ModelValidateResult result = await chatFactory.ValidateModel(modelKey, modelReference, req.DeploymentName, cancellationToken);
