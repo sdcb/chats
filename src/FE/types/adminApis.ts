@@ -308,6 +308,7 @@ export interface UserModelUpdateDto extends UserInitialModel {
 export interface UserModelDisplayDto extends UserModelUpdateDto {
   displayName: string;
   modelKeyName: string;
+  modelProviderId: number;
 }
 
 export class UserModelDisplay implements UserModelDisplayDto {
@@ -318,6 +319,7 @@ export class UserModelDisplay implements UserModelDisplayDto {
   expires: string;
   displayName: string;
   modelKeyName: string;
+  modelProviderId: number;
 
   constructor(dto: UserModelDisplayDto) {
     this.id = dto.id;
@@ -327,6 +329,7 @@ export class UserModelDisplay implements UserModelDisplayDto {
     this.expires = dto.expires;
     this.displayName = dto.displayName;
     this.modelKeyName = dto.modelKeyName;
+    this.modelProviderId = dto.modelProviderId;
   }
 
   toUpdateDto(): UserModelUpdateDto {

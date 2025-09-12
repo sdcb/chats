@@ -34,21 +34,21 @@ export default function AddUserModelButton({ userId, onUpdate }: IProps) {
   const [loading, setLoading] = useState(false);
 
   const loadUnassignedModels = async () => {
-    if (models.length === 0) {
-      try {
-        const unassignedModels = await getUserUnassignedModels(userId);
-        setModels(unassignedModels);
-      } catch (error) {
-        console.error('Failed to load unassigned models:', error);
-        toast.error(t('Failed to load models'));
-      }
+    // 每次都重新加载，不使用缓存
+    try {
+      const unassignedModels = await getUserUnassignedModels(userId);
+      setModels(unassignedModels);
+    } catch (error) {
+      console.error('Failed to load unassigned models:', error);
+      toast.error(t('Failed to load models'));
+      setModels([]);
     }
   };
 
   const handleAddModel = async (model: AdminModelDto) => {
     setLoading(true);
     try {
-      const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 默认30天后过期
+      const expires = new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000); // 默认2年后过期
       await addUserModel({
         userId: parseInt(userId),
         modelId: model.modelId,
@@ -58,7 +58,7 @@ export default function AddUserModelButton({ userId, onUpdate }: IProps) {
       });
       toast.success(t('Model added successfully'));
       onUpdate();
-      // 重新加载未分配模型列表
+      // 清空模型列表，下次打开时会重新加载
       setModels([]);
     } catch (error) {
       toast.error(t('Failed to add model'));

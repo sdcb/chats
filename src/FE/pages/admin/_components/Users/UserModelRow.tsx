@@ -25,6 +25,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import DeletePopover from '@/pages/home/_components/Popover/DeletePopover';
+import ChatIcon from '@/components/ChatIcon/ChatIcon';
 
 import { editUserModel, deleteUserModel } from '@/apis/adminApis';
 import { cn } from '@/lib/utils';
@@ -91,7 +92,10 @@ export default function UserModelRow({ userModel, userId, onUpdate }: IProps) {
   return (
     <TableRow>
       <TableCell className="font-medium">
-        {userModel.displayName}
+        <div className="flex items-center gap-2">
+          <ChatIcon providerId={userModel.modelProviderId} />
+          {userModel.displayName}
+        </div>
       </TableCell>
       <TableCell className="text-muted-foreground">
         {userModel.modelKeyName}
@@ -102,7 +106,7 @@ export default function UserModelRow({ userModel, userId, onUpdate }: IProps) {
             type="number"
             value={editData.tokens}
             onChange={(e) => setEditData(prev => ({ ...prev, tokens: Number(e.target.value) }))}
-            className="w-20 h-8"
+            className="w-32 h-8"
             min="0"
           />
         ) : (
@@ -115,7 +119,7 @@ export default function UserModelRow({ userModel, userId, onUpdate }: IProps) {
             type="number"
             value={editData.counts}
             onChange={(e) => setEditData(prev => ({ ...prev, counts: Number(e.target.value) }))}
-            className="w-20 h-8"
+            className="w-32 h-8"
             min="0"
           />
         ) : (

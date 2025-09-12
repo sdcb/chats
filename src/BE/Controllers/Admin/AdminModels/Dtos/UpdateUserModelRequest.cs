@@ -25,4 +25,7 @@ public record UserModelDto : UserModelUpdateDto
 
     [JsonPropertyName("modelKeyName")]
     public required string ModelKeyName { get; init; }
+
+    [JsonPropertyName("modelProviderId")]
+    public required short ModelProviderId { get; init; }
 }

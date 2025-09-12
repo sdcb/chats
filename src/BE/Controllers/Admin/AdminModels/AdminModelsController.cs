@@ -215,6 +215,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
             .Where(x => x.UserId == userId)
             .Include(x => x.Model)
             .Include(x => x.Model.ModelKey)
+            .Include(x => x.Model.ModelKey.ModelProvider)
             .OrderByDescending(x => x.Id)
             .Select(x => new UserModelDto()
             {
@@ -222,6 +223,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
                 ModelId = x.Model.Id,
                 DisplayName = x.Model.Name,
                 ModelKeyName = x.Model.ModelKey.Name,
+                ModelProviderId = x.Model.ModelKey.ModelProviderId,
                 Counts = x.CountBalance,
                 Expires = x.ExpiresAt,
                 Tokens = x.TokenBalance,
