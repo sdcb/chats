@@ -1,7 +1,6 @@
 using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Admin.GlobalConfigs.Dtos;
 using Chats.BE.DB;
-using Chats.BE.Services.Configs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -31,7 +30,11 @@ public class GlobalConfigController(ChatsDB db) : ControllerBase
         Config? config = await db.Configs.FindAsync([req.Key], cancellationToken);
         if (config == null)
         {
-            return NotFound();
+            config = new Config()
+            {
+                Key = req.Key,
+            };
+            db.Configs.Add(config);
         }
 
         // ensure value is valid json
@@ -53,29 +56,15 @@ public class GlobalConfigController(ChatsDB db) : ControllerBase
         return NoContent();
     }
 
-    [HttpPost]
-    public async Task<ActionResult> CreateGlobalConfig([FromBody] GlobalConfigDto req, CancellationToken cancellationToken)
+    [HttpDelete]
+    public async Task<ActionResult> DeleteGlobalConfig([FromQuery] string id, CancellationToken cancellationToken)
     {
-        Config? config = await db.Configs.FindAsync([req.Key], cancellationToken);
-        if (config != null)
+        Config? config = await db.Configs.FindAsync([id], cancellationToken);
+        if (config == null)
         {
-            return BadRequest("Key already exists");
+            return NotFound();
         }
-        // ensure value is valid json
-        try
-        {
-            JsonDocument.Parse(req.Value);
-        }
-        catch (JsonException)
-        {
-            return BadRequest("Invalid JSON");
-        }
-        await db.Configs.AddAsync(new Config()
-        {
-            Key = req.Key,
-            Value = req.Value,
-            Description = req.Description,
-        }, cancellationToken);
+        db.Configs.Remove(config);
         await db.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
