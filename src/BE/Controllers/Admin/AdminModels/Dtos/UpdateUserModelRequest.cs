@@ -3,15 +3,6 @@ using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Admin.AdminModels.Dtos;
 
-public record UpdateUserModelRequest
-{
-    [JsonPropertyName("userId")]
-    public required int UserId { get; init; }
-
-    [JsonPropertyName("models")]
-    public required UserModelUpdateDto[] Models { get; init; }
-}
-
 public record UserModelUpdateDto : JsonTokenBalance
 {
     [JsonPropertyName("id")]

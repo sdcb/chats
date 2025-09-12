@@ -11,11 +11,6 @@ export const enum UserRole {
   'admin' = 'admin',
 }
 
-export interface PutUserModelParams {
-  userId: string;
-  models: UserModelUpdateDto[];
-}
-
 export interface AddUserModelParams {
   userId: number;
   modelId: number;
@@ -301,11 +296,12 @@ export interface UserInitialModel {
   expires: string;
 }
 
-export interface UserModelUpdateDto extends UserInitialModel {
+export interface UserModelDisplayDto {
   id: number;
-}
-
-export interface UserModelDisplayDto extends UserModelUpdateDto {
+  modelId: number;
+  tokens: number;
+  counts: number;
+  expires: string;
   displayName: string;
   modelKeyName: string;
   modelProviderId: number;
@@ -330,16 +326,6 @@ export class UserModelDisplay implements UserModelDisplayDto {
     this.displayName = dto.displayName;
     this.modelKeyName = dto.modelKeyName;
     this.modelProviderId = dto.modelProviderId;
-  }
-
-  toUpdateDto(): UserModelUpdateDto {
-    return {
-      id: this.id,
-      modelId: this.modelId,
-      tokens: this.tokens,
-      counts: this.counts,
-      expires: this.expires,
-    };
   }
 }
 

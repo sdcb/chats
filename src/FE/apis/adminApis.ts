@@ -38,7 +38,6 @@ import {
   PutPayServicesParams,
   PutUserBalanceParams,
   PutUserInitialConfigParams,
-  PutUserModelParams,
   PutUserParams,
   ReorderRequest,
   SimpleModelReferenceDto,
@@ -59,7 +58,7 @@ export const getModelsByUserId = async (
 ): Promise<UserModelDisplay[]> => {
   const fetchService = useFetch();
   const data = await fetchService.get<UserModelDisplayDto[]>(
-    `/api/admin/user-models/${userId}`,
+    `/api/admin/user-models/user/${userId}`,
   );
   return data.map((x) => new UserModelDisplay(x));
 };
@@ -69,15 +68,8 @@ export const getUserUnassignedModels = async (
 ): Promise<AdminModelDto[]> => {
   const fetchService = useFetch();
   return fetchService.get<AdminModelDto[]>(
-    `/api/admin/user-unassigned-models/${userId}`,
+    `/api/admin/user-models/user/${userId}/unassigned`,
   );
-};
-
-export const putUserModel = (params: PutUserModelParams): Promise<any> => {
-  const fetchService = useFetch();
-  return fetchService.put('/api/admin/user-models', {
-    body: params,
-  });
 };
 
 export const addUserModel = (params: AddUserModelParams): Promise<any> => {
