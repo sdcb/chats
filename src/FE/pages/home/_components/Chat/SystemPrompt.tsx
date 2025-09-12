@@ -9,7 +9,7 @@ import {
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { formatPrompt } from '@/utils/promptVariable';
+import { formatPrompt, PromptVariables } from '@/utils/promptVariable';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { Prompt, PromptSlim } from '@/types/prompt';
@@ -44,6 +44,7 @@ const SystemPrompt: FC<Props> = ({
   const [promptInputValue, setPromptInputValue] = useState('');
   const [variables, setVariables] = useState<string[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null); // 当前选中的prompt
 
   // 获取渲染文本的函数
   const getRenderedText = () => {
@@ -66,8 +67,9 @@ const SystemPrompt: FC<Props> = ({
     onChangePromptText(inputValue);
   };
 
-  const handleInitModal = () => {
-    const selectedPrompt = filteredPrompts[activePromptIndex];
+  const handleInitModal = (index?: number) => {
+    const promptIndex = index !== undefined ? index : activePromptIndex;
+    const selectedPrompt = filteredPrompts[promptIndex];
     selectedPrompt &&
       getUserPromptDetail(selectedPrompt.id).then((data) => {
         setRawValue((prevContent: string) => {
@@ -88,7 +90,14 @@ const SystemPrompt: FC<Props> = ({
       foundVariables.push(match[1]);
     }
 
-    return foundVariables;
+    // 过滤掉预定义的变量，只返回用户需要输入的变量
+    const predefinedVariableNames = Object.keys(PromptVariables).map(key => 
+      key.replace(/{{|}}/g, '')
+    );
+    
+    return foundVariables.filter(variable => 
+      !predefinedVariableNames.includes(variable)
+    );
   };
 
   const updatePromptListVisibility = useCallback((text: string) => {
@@ -103,12 +112,17 @@ const SystemPrompt: FC<Props> = ({
   }, []);
 
   const handlePromptSelect = (prompt: Prompt) => {
+    // 保存当前选中的prompt
+    setSelectedPrompt(prompt);
+    
+    // 解析变量时只考虑非预定义的变量
     const parsedVariables = parseVariables(prompt.content);
     setVariables(parsedVariables);
 
     if (parsedVariables.length > 0) {
       setIsModalVisible(true);
     } else {
+      // 如果没有需要用户输入的变量，直接应用原始内容（保留预定义变量的占位符）
       const updatedContent = rawValue?.replace(/\/\w*$/, prompt.content);
 
       onChangePromptText(updatedContent);
@@ -121,7 +135,13 @@ const SystemPrompt: FC<Props> = ({
   const handleSubmit = (updatedVariables: string[]) => {
     const newContent = rawValue?.replace(/{{(.*?)}}/g, (_: string, variable: string) => {
       const index = variables.indexOf(variable);
-      return updatedVariables[index];
+      // 只替换用户自定义的变量，保持预定义变量的占位符不变
+      if (index !== -1) {
+        return updatedVariables[index];
+      } else {
+        // 保持预定义变量的占位符不变
+        return `{{${variable}}}`;
+      }
     });
 
     setRawValue(newContent);
@@ -256,9 +276,9 @@ const SystemPrompt: FC<Props> = ({
         </div>
       )}
 
-      {isModalVisible && (
+      {isModalVisible && selectedPrompt && (
         <VariableModal
-          prompt={prompts[activePromptIndex]}
+          prompt={selectedPrompt}
           variables={variables}
           onSubmit={handleSubmit}
           onClose={() => setIsModalVisible(false)}

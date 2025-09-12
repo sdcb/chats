@@ -5,7 +5,7 @@ import { PromptSlim } from '@/types/prompt';
 interface Props {
   prompts: PromptSlim[];
   activePromptIndex: number;
-  onSelect: () => void;
+  onSelect: (index: number) => void;
   onMouseOver: (index: number) => void;
   promptListRef: MutableRefObject<HTMLUListElement | null>;
 }
@@ -30,10 +30,10 @@ const PromptList = ({
               ? 'bg-gray-200 dark:bg-black dark:text-black'
               : ''
           } cursor-pointer px-3 py-2 text-sm text-black dark:text-white`}
-          onClick={(e) => {
+          onMouseDown={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            onSelect();
+            onSelect(index);
           }}
           onMouseEnter={() => onMouseOver(index)}
         >
