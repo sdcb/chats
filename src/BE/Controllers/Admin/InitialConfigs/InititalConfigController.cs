@@ -48,8 +48,8 @@ public class InititalConfigController(ChatsDB db) : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete]
-    public async Task<ActionResult> DeleteInitialConfig(Guid id, CancellationToken cancellationToken)
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult> DeleteInitialConfig(int id, CancellationToken cancellationToken)
     {
         UserInitialConfig? existingConfig = await db.UserInitialConfigs.FindAsync([id], cancellationToken);
         if (existingConfig == null)
