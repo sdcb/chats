@@ -95,7 +95,7 @@ const SettingsPage = () => {
             className="flex-1 items-center sm:flex-none gap-1"
           >
             <IconUser />
-            {t('Account')}
+            {t('Password')}
           </TabsTrigger>
         </TabsList>
         <div className="flex-1 mt-4 overflow-auto">
