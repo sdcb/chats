@@ -8,6 +8,6 @@ FROM URL = N'https://richsgp.blob.core.windows.net/backup/chats3/latest.bak' WIT
 	FILE = 1,
 	MOVE N'Chats3' TO N'D:\mssql-data\Chats3.mdf',
 	MOVE N'Chats3_log' TO N'D:\mssql-data\Chats3.ldf',  NOUNLOAD,
-	STATS = 5;
+	STATS = 1;
 
-ALTER DATABASE [ChatsDEV] SET MULTI_USER;
+ALTER DATABASE [Chats3] SET MULTI_USER;
