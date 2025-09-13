@@ -21,7 +21,7 @@ export function LabelSwitch({
   labelClassName,
   switchClassName,
 }: LabelSwitchProps) {
-  const handleToggle = () => {
+  const handleLabelClick = () => {
     if (!disabled) {
       onCheckedChange(!checked);
     }
@@ -30,11 +30,10 @@ export function LabelSwitch({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 cursor-pointer select-none',
-        disabled && 'cursor-not-allowed opacity-50',
+        'flex items-center gap-2 select-none',
+        disabled && 'opacity-50',
         className
       )}
-      onClick={handleToggle}
     >
       <Switch
         checked={checked}
@@ -44,10 +43,11 @@ export function LabelSwitch({
       />
       <span
         className={cn(
-          'text-sm',
-          disabled && 'text-muted-foreground',
+          'text-sm cursor-pointer',
+          disabled && 'text-muted-foreground cursor-not-allowed',
           labelClassName
         )}
+        onClick={handleLabelClick}
       >
         {label}
       </span>

@@ -6,9 +6,11 @@ import useTranslation from '@/hooks/useTranslation';
 
 import {
   AdminModelDto,
+  ErrorResult,
   GetModelKeysResult,
   SimpleModelReferenceDto,
   UpdateModelDto,
+  ValidateModelParams,
 } from '@/types/adminApis';
 
 import { Button } from '@/components/ui/button';
@@ -22,7 +24,7 @@ import {
 import { Form, FormField } from '@/components/ui/form';
 import FormInput from '@/components/ui/form/input';
 import FormSelect from '@/components/ui/form/select';
-import FormSwitch from '@/components/ui/form/switch';
+import { LabelSwitch } from '@/components/ui/label-switch';
 import {
   Popover,
   PopoverContent,
@@ -30,10 +32,10 @@ import {
 } from '@/components/ui/popover';
 
 import {
-  deleteModels,
   getModelProviderModels,
   getModelReference,
   postModels,
+  postModelValidate,
   putModels,
 } from '@/apis/adminApis';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -56,6 +58,7 @@ const ModelModal = (props: IProps) => {
   const [modelVersions, setModelVersions] = useState<SimpleModelReferenceDto[]>(
     [],
   );
+  const [validating, setValidating] = useState(false);
   const { 
     isOpen, 
     onClose, 
@@ -119,24 +122,41 @@ const ModelModal = (props: IProps) => {
     });
   };
 
-  const onDelete = async () => {
-    if (!selected) return;
+  const onValidate = async () => {
+    const values = form.getValues();
+    
+    // 检查必要字段是否已填写
+    if (!values.modelKeyId || values.modelKeyId === '0' || !values.modelReferenceId || values.modelReferenceId === '0') {
+      toast.error(t('Please select model key and model version first'));
+      return;
+    }
+
+    setValidating(true);
     
     try {
-      await deleteModels(selected.modelId);
-      onSuccessful();
-      toast.success(t('Deleted successful'));
-    } catch (err: any) {
-      try {
-        const resp = await err.json();
-        toast.error(t(resp.message));
-      } catch {
-        toast.error(
-          t(
-            'Operation failed, Please try again later, or contact technical personnel',
-          ),
-        );
+      const params: ValidateModelParams = {
+        modelKeyId: parseInt(values.modelKeyId),
+        modelReferenceId: parseInt(values.modelReferenceId),
+        deploymentName: values.deploymentName || null,
+      };
+
+      const result: ErrorResult = await postModelValidate(params);
+      
+      if (result.isSuccess) {
+        toast.success(t('Verified Successfully'));
+      } else {
+        toast.error(result.errorMessage || t('Model validation failed'));
       }
+    } catch (error: any) {
+      console.error('Validation error:', error);
+      try {
+        const errorResponse = await error.json();
+        toast.error(errorResponse.message || t('Validation request failed'));
+      } catch {
+        toast.error(t('Validation request failed, please try again later'));
+      }
+    } finally {
+      setValidating(false);
     }
   };
 
@@ -359,34 +379,31 @@ const ModelModal = (props: IProps) => {
                 }}
               ></FormField>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex gap-4">
-                <FormField
-                  key={'enabled'}
-                  control={form.control}
-                  name={'enabled'}
-                  render={({ field }) => {
-                    return (
-                      <FormSwitch label={t('Is it enabled')!} field={field} />
-                    );
-                  }}
-                ></FormField>
-              </div>
-            </div>
             <DialogFooter className="pt-4">
-              {isEditMode && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={(e) => {
-                    onDelete();
-                    e.preventDefault();
-                  }}
-                >
-                  {t('Delete')}
-                </Button>
-              )}
-              <Button type="submit">{t('Save')}</Button>
+              <div className="flex items-center justify-between w-full">
+                <FormField
+                  control={form.control}
+                  name="enabled"
+                  render={({ field }) => (
+                    <LabelSwitch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      label={t('Is it enabled')!}
+                    />
+                  )}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onValidate}
+                    disabled={validating}
+                  >
+                    {validating ? t('Validating...') : t('Validate')}
+                  </Button>
+                  <Button type="submit">{t('Save')}</Button>
+                </div>
+              </div>
             </DialogFooter>
           </form>
         </Form>

@@ -268,6 +268,7 @@
   "Existed": "已添加",
   "Legacy": "过时",
   "Validate": "验证",
+  "Validating...": "验证中...",
   "Validate Model": "验证模型",
   "Validated": "验证成功",
   "Edit Model": "编辑模型",
