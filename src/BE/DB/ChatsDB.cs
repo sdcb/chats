@@ -135,8 +135,6 @@ public partial class ChatsDB : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.UseCollation("SQL_Latin1_General_CP1_CI_AS");
-
         modelBuilder.Entity<BalanceTransaction>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_BalanceLog2");
@@ -224,8 +222,6 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<ChatPresetSpan>(entity =>
         {
-            entity.Property(e => e.Enabled).HasDefaultValue(true);
-
             entity.HasOne(d => d.ChatConfig).WithMany(p => p.ChatPresetSpans)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ChatPresetSpan_Config");
@@ -240,8 +236,6 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<ChatSpan>(entity =>
         {
-            entity.Property(e => e.Enabled).HasDefaultValue(true);
-
             entity.HasOne(d => d.ChatConfig).WithMany(p => p.ChatSpans)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ChatSpan_ChatConfig");
@@ -311,9 +305,6 @@ public partial class ChatsDB : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK_FileServices2");
 
-            entity.Property(e => e.Configs).HasDefaultValue("{}");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
-
             entity.HasOne(d => d.FileServiceType).WithMany(p => p.FileServices)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_FileService_FileServiceType");
@@ -322,8 +313,6 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<InvitationCode>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("InvitationCode2_pkey");
-
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
         });
 
         modelBuilder.Entity<KnownImageSize>(entity =>
@@ -334,18 +323,10 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<LoginService>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_LoginServices2");
-
-            entity.Property(e => e.Configs).HasDefaultValue("{}");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
-            entity.Property(e => e.Enabled).HasDefaultValue(true);
         });
 
         modelBuilder.Entity<McpServer>(entity =>
         {
-            entity.HasIndex(e => e.OwnerUserId, "IX_McpServer_OwnerUserId").HasFilter("([OwnerUserId] IS NOT NULL)");
-
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
-
             entity.HasOne(d => d.OwnerUser).WithMany(p => p.McpServers)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_McpServer_User");
@@ -388,14 +369,7 @@ public partial class ChatsDB : DbContext
             entity.HasKey(e => e.Id).HasName("PK_ModelSetting");
 
             entity.Property(e => e.Id).ValueGeneratedNever();
-            entity.Property(e => e.AllowStreaming).HasDefaultValue(true);
-            entity.Property(e => e.AllowSystemPrompt).HasDefaultValue(true);
-            entity.Property(e => e.ContextWindow).HasDefaultValue(4096);
-            entity.Property(e => e.CurrencyCode)
-                .HasDefaultValue("RMB")
-                .IsFixedLength();
-            entity.Property(e => e.MaxResponseTokens).HasDefaultValue(4096);
-            entity.Property(e => e.ProviderId).HasDefaultValue((short)1);
+            entity.Property(e => e.CurrencyCode).IsFixedLength();
 
             entity.HasOne(d => d.CurrencyCodeNavigation).WithMany(p => p.ModelReferences)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -548,10 +522,6 @@ public partial class ChatsDB : DbContext
         {
             entity.HasKey(e => e.Id).HasName("Users2_pkey");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
-            entity.Property(e => e.Enabled).HasDefaultValue(true);
-            entity.Property(e => e.Role).HasDefaultValue("-");
-
             entity.HasMany(d => d.InvitationCodes).WithMany(p => p.Users)
                 .UsingEntity<Dictionary<string, object>>(
                     "UserInvitation",
@@ -642,9 +612,6 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<UserInitialConfig>(entity =>
         {
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
-            entity.Property(e => e.Models).HasDefaultValue("[]");
-
             entity.HasOne(d => d.InvitationCode).WithMany(p => p.UserInitialConfigs)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_UserInitialConfig_InvitationCode");
@@ -675,14 +642,6 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<UserModelUsage>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_ModelUsage");
-
-            entity.HasIndex(e => e.BalanceTransactionId, "IX_ModelUsage_BalanceTransaction")
-                .IsUnique()
-                .HasFilter("([BalanceTransactionId] IS NOT NULL)");
-
-            entity.HasIndex(e => e.UsageTransactionId, "IX_ModelUsage_UsageTransaction")
-                .IsUnique()
-                .HasFilter("([UsageTransactionId] IS NOT NULL)");
 
             entity.HasOne(d => d.BalanceTransaction).WithOne(p => p.UserModelUsage).HasConstraintName("FK_ModelUsage_TransactionLog");
 

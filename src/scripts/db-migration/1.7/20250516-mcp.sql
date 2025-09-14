@@ -458,3 +458,74 @@ ALTER TABLE ChatConfig DROP COLUMN HashCode;
 -- 给ChatPreset表增加一个非空INT16 Order字段
 ALTER TABLE [dbo].[ChatPreset] ADD [Order] SMALLINT NOT NULL CONSTRAINT [DF_ChatPreset_Order] DEFAULT 0;
 ALTER TABLE [dbo].[ChatPreset] DROP CONSTRAINT [DF_ChatPreset_Order];
+
+
+-- 删除所有默认值约束
+-- 请在执行前仔细审核，确保这是您想要的操作
+
+-- Chat表
+ALTER TABLE [Chat] DROP CONSTRAINT [DF_Chat_IsTopMost];
+
+-- ChatConfig表
+ALTER TABLE [ChatConfig] DROP CONSTRAINT [DF_ChatConfig_ImageSizeId];
+
+-- ChatPresetSpan表
+ALTER TABLE [ChatPresetSpan] DROP CONSTRAINT [DF_ChatPresetSpan_Enabled];
+
+-- ChatSpan表
+ALTER TABLE [ChatSpan] DROP CONSTRAINT [DF_ChatSpan_Enabled];
+
+-- ChatTurn表
+ALTER TABLE [ChatTurn] DROP CONSTRAINT [DF_ChatTurn_IsUser];
+
+-- FileService表
+ALTER TABLE [FileService] DROP CONSTRAINT [DF_FileServices_configs];
+ALTER TABLE [FileService] DROP CONSTRAINT [DF_FileServices_createdAt];
+
+-- InvitationCode表
+ALTER TABLE [InvitationCode] DROP CONSTRAINT [DF_InvitationCode_CreatedAt];
+ALTER TABLE [InvitationCode] DROP CONSTRAINT [DF_InvitationCode_isDeleted];
+
+-- LoginService表
+ALTER TABLE [LoginService] DROP CONSTRAINT [DF_LoginServices_configs];
+ALTER TABLE [LoginService] DROP CONSTRAINT [DF_LoginServices_createdAt];
+ALTER TABLE [LoginService] DROP CONSTRAINT [DF_LoginServices_enabled];
+
+-- McpServer表
+ALTER TABLE [McpServer] DROP CONSTRAINT [DEFAULT_Mcp_CreatedAt];
+ALTER TABLE [McpServer] DROP CONSTRAINT [DEFAULT_Mcp_IsSystem];
+
+-- McpTool表
+ALTER TABLE [McpTool] DROP CONSTRAINT [DEFAULT_Mcp_RequireApproval];
+
+-- Model表
+ALTER TABLE [Model] DROP CONSTRAINT [DF_Model_IsDeleted];
+
+-- ModelProvider表
+ALTER TABLE [ModelProvider] DROP CONSTRAINT [DF_ModelProvider_RequireDeploymentName];
+
+-- ModelReference表
+ALTER TABLE [ModelReference] DROP CONSTRAINT [DF_ModelReference_AllowStreaming];
+ALTER TABLE [ModelReference] DROP CONSTRAINT [DF_ModelReference_AllowSystemPrompt];
+ALTER TABLE [ModelReference] DROP CONSTRAINT [DF_DefaultModelSetting_AllowVision];
+ALTER TABLE [ModelReference] DROP CONSTRAINT [DF_ModelDefaults_ContextWindow];
+ALTER TABLE [ModelReference] DROP CONSTRAINT [DF_ModelReference_CurrencyCode];
+ALTER TABLE [ModelReference] DROP CONSTRAINT [DF_ModelDefaults_MaxResponseTokens];
+ALTER TABLE [ModelReference] DROP CONSTRAINT [DF_ModelSetting_ProviderId];
+ALTER TABLE [ModelReference] DROP CONSTRAINT [DF_ModelReference_ReasoningResponseKindId];
+
+-- Step表
+ALTER TABLE [Step] DROP CONSTRAINT [DF_Step_Edited];
+
+-- User表
+ALTER TABLE [User] DROP CONSTRAINT [Users2_createdAt_df];
+ALTER TABLE [User] DROP CONSTRAINT [Users2_enabled_df];
+ALTER TABLE [User] DROP CONSTRAINT [Users2_role_df];
+
+-- UserInitialConfig表
+ALTER TABLE [UserInitialConfig] DROP CONSTRAINT [DF_UserInitialConfig_createdAt];
+ALTER TABLE [UserInitialConfig] DROP CONSTRAINT [DF_UserInitialConfig_models];
+ALTER TABLE [UserInitialConfig] DROP CONSTRAINT [DF_UserInitialConfig_price];
+
+-- UserModelUsage表
+ALTER TABLE [UserModelUsage] DROP CONSTRAINT [DF_UserModelUsage_ReasoningDurationMs];

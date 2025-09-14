@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.BE.DB;
 
 [Table("McpServer")]
+[Index("OwnerUserId", Name = "IX_McpServer_OwnerUserId")]
 public partial class McpServer
 {
     [Key]
