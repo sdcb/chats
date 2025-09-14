@@ -15,7 +15,6 @@ import {
   IconPencil,
   IconPlus,
   IconTrash,
-  IconGripVertical,
 } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
 import {
@@ -83,8 +82,10 @@ const SortableChatPresetItem = ({
     <div
       ref={setNodeRef}
       style={style}
+      {...attributes}
+      {...listeners}
       className={cn(
-        'rounded-sm p-4 h-24 md:h-32 hover:bg-muted cursor-pointer shadow-sm bg-card',
+        'rounded-sm p-4 h-24 md:h-32 hover:bg-muted cursor-grab active:cursor-grabbing shadow-sm bg-card',
         selectedChatPresetId === item.id && 'bg-muted',
         isDragging && 'opacity-50'
       )}
@@ -92,22 +93,17 @@ const SortableChatPresetItem = ({
     >
       <div className="flex justify-between">
         <div className="flex items-center gap-2">
-          {/* 拖拽句柄放在标题左边 */}
-          <div
-            {...attributes}
-            {...listeners}
-            className="flex items-center justify-center cursor-grab active:cursor-grabbing"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <IconGripVertical size={14} className="text-muted-foreground hover:text-foreground" />
-          </div>
           <span className="text-ellipsis whitespace-nowrap overflow-hidden">
             {item.name}
           </span>
         </div>
         <span>
           <DropdownMenu>
-            <DropdownMenuTrigger className="focus:outline-none p-[6px]">
+            <DropdownMenuTrigger 
+              className="focus:outline-none p-[6px]"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
               <IconDots className="hover:opacity-50" size={16} />
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-42 border-none">
