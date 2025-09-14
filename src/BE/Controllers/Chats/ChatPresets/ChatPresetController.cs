@@ -3,6 +3,7 @@ using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Controllers.Chats.Prompts.Dtos;
 using Chats.BE.Controllers.Chats.Prompts;
 using Chats.BE.Controllers.Chats.UserChats.Dtos;
+using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Infrastructure;
 using Chats.BE.Services;
@@ -329,6 +330,95 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         span.ChatPreset.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
         return Ok();
+    }
+
+    [HttpPut("reorder")]
+    public async Task<ActionResult> ReorderChatPresets([FromBody] EncryptedReorderRequest request, CancellationToken cancellationToken)
+    {
+        ReorderRequest<int> decryptedRequest = request.DecryptAsChatPreset(idEncryption);
+        
+        // 验证被移动的 ChatPreset 是否存在
+        ChatPreset? sourcePreset = await db.ChatPresets
+            .FirstOrDefaultAsync(x => x.Id == decryptedRequest.SourceId && x.UserId == currentUser.Id, cancellationToken);
+        if (sourcePreset == null)
+        {
+            return NotFound("Source preset not found");
+        }
+
+        // 验证 previous 和 next 的 ChatPreset 是否存在（如果提供的话）
+        ChatPreset? previousPreset = null;
+        ChatPreset? nextPreset = null;
+
+        if (decryptedRequest.PreviousId != null)
+        {
+            previousPreset = await db.ChatPresets
+                .FirstOrDefaultAsync(x => x.Id == decryptedRequest.PreviousId && x.UserId == currentUser.Id, cancellationToken);
+            if (previousPreset == null)
+            {
+                return NotFound("Previous preset not found");
+            }
+        }
+
+        if (decryptedRequest.NextId != null)
+        {
+            nextPreset = await db.ChatPresets
+                .FirstOrDefaultAsync(x => x.Id == decryptedRequest.NextId && x.UserId == currentUser.Id, cancellationToken);
+            if (nextPreset == null)
+            {
+                return NotFound("Next preset not found");
+            }
+        }
+
+        // 验证 previous 和 next 不能同时为空
+        if (previousPreset == null && nextPreset == null)
+        {
+            return BadRequest("Both previous and next presets cannot be null");
+        }
+
+        // 验证 previous 和 next 的顺序（Order 是从小到大排列的）
+        if (previousPreset != null && nextPreset != null && previousPreset.Order >= nextPreset.Order)
+        {
+            return BadRequest("Invalid order: previous preset should have smaller order than next preset");
+        }
+
+        // 尝试应用移动
+        bool needReorder = !TryApplyMove(sourcePreset, previousPreset, nextPreset);
+        
+        if (needReorder)
+        {
+            // 需要重新排序，重排序当前用户的所有 ChatPresets
+            ChatPreset[] allUserPresets = await db.ChatPresets
+                .Where(x => x.UserId == currentUser.Id)
+                .OrderBy(x => x.Order).ThenByDescending(x => x.Id)
+                .ToArrayAsync(cancellationToken);
+            
+            ReorderChatPresets(allUserPresets);
+            
+            // 重新加载并应用移动
+            sourcePreset = allUserPresets.First(x => x.Id == decryptedRequest.SourceId);
+            previousPreset = decryptedRequest.PreviousId != null ? allUserPresets.First(x => x.Id == decryptedRequest.PreviousId) : null;
+            nextPreset = decryptedRequest.NextId != null ? allUserPresets.First(x => x.Id == decryptedRequest.NextId) : null;
+            
+            TryApplyMove(sourcePreset, previousPreset, nextPreset);
+        }
+
+        if (db.ChangeTracker.HasChanges())
+        {
+            sourcePreset.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return NoContent();
+    }
+
+    private static bool TryApplyMove(ChatPreset sourcePreset, ChatPreset? previousPreset, ChatPreset? nextPreset)
+    {
+        return ReorderHelper.Default.TryApplyMove(sourcePreset, previousPreset, nextPreset);
+    }
+
+    private static void ReorderChatPresets(ChatPreset[] existingPresets)
+    {
+        ReorderHelper.Default.ReorderEntities(existingPresets);
     }
 
     async Task<ChatPreset?> LoadOneChatPreset(string presetId, CancellationToken cancellationToken)
