@@ -376,7 +376,11 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         }
 
         // 验证 previous 和 next 的顺序（Order 是从小到大排列的）
-        if (previousPreset != null && nextPreset != null && previousPreset.Order >= nextPreset.Order)
+        // 只有当两个 preset 的 Order 值不同且顺序错误时才报错
+        // 如果 Order 值相同（如都为 0），说明需要重新排序，应该允许继续
+        if (previousPreset != null && nextPreset != null && 
+            previousPreset.Order != nextPreset.Order && 
+            previousPreset.Order >= nextPreset.Order)
         {
             return BadRequest("Invalid order: previous preset should have smaller order than next preset");
         }

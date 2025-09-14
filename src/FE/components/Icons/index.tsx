@@ -29,6 +29,7 @@ export { default as IconEyeOff } from './IconEyeOff';
 export { default as IconFiles } from './IconFiles';
 export { default as IconFolder } from './IconFolder';
 export { default as IconFolderPlus } from './IconFolderPlus';
+export { default as IconGripVertical } from './IconGripVertical';
 export { default as IconIdBadge } from './IconIdBadge';
 export { default as IconInfo } from './IconInfo';
 export { default as IconKey } from './IconKey';

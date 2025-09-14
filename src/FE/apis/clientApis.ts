@@ -10,6 +10,7 @@ import {
 import { IChatMessage } from '@/types/chatMessage';
 import {
   ChatResult,
+  ChatPresetReorderRequest,
   GetBalance7DaysUsageResult,
   GetChatPresetResult,
   GetChatShareResult,
@@ -483,6 +484,13 @@ export const postCloneChatPreset = (id: string) => {
 export const postApplyChatPreset = (chatId: string, presetId: string) => {
   const fetchServer = useFetch();
   return fetchServer.post(`/api/chat/${chatId}/span/apply-preset/${presetId}`);
+};
+
+export const reorderChatPresets = (params: ChatPresetReorderRequest) => {
+  const fetchServer = useFetch();
+  return fetchServer.put('/api/chat-preset/reorder', {
+    body: params,
+  });
 };
 
 export const responseContentToRequest = (

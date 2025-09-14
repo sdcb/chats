@@ -272,6 +272,12 @@ export interface PutChatPresetSpanParams {
   mcps?: ChatSpanMcp[];
 }
 
+export interface ChatPresetReorderRequest {
+  sourceId: string;
+  previousId: string | null; // 新位置的前一个元素
+  nextId: string | null;     // 新位置的后一个元素
+}
+
 export interface GetUsageParams {
   user?: string;
   kid?: string;
