@@ -13,8 +13,6 @@ public partial class ChatConfig
     [Key]
     public int Id { get; set; }
 
-    public long HashCode { get; set; }
-
     public short ModelId { get; set; }
 
     public string? SystemPrompt { get; set; }
@@ -28,6 +26,9 @@ public partial class ChatConfig
     public byte ReasoningEffort { get; set; }
 
     public short ImageSizeId { get; set; }
+
+    [InverseProperty("ChatConfig")]
+    public virtual ChatConfigArchived? ChatConfigArchived { get; set; }
 
     [InverseProperty("ChatConfig")]
     public virtual ICollection<ChatConfigMcp> ChatConfigMcps { get; set; } = new List<ChatConfigMcp>();

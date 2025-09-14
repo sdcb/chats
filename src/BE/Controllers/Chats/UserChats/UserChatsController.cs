@@ -189,7 +189,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                 ChatSpan newCs = new()
                 {
                     Enabled = cs.Enabled,
-                    ChatConfig = cs.ChatConfig.Clone(),
+                    ChatConfig = cs.ChatConfig.SimpleClone(),
                     SpanId = (byte)i,
                 };
                 newCs.ChatConfig.Id = 0;
@@ -212,7 +212,6 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                         Model = validModels.First().Value.Model,
                         Temperature = null,
                         WebSearchEnabled = false,
-                        HashCode = 0,
                         MaxOutputTokens = null,
                         ReasoningEffort = 0,
                         SystemPrompt = defaultPrompt.Content,

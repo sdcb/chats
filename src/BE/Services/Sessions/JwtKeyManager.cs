@@ -1,9 +1,9 @@
-﻿using System.Configuration;
-
-namespace Chats.BE.Services.Sessions;
+﻿namespace Chats.BE.Services.Sessions;
 
 public class JwtKeyManager(IConfiguration configuration)
 {
+    string _generated = Guid.NewGuid().ToString();
+
     public string GetOrCreateSecretKey()
     {
         string? secretKey = configuration["JwtSecretKey"];
@@ -13,9 +13,7 @@ public class JwtKeyManager(IConfiguration configuration)
         }
         else
         {
-            string generated = Guid.NewGuid().ToString();
-            configuration["JwtSecretKey"] = generated;
-            return generated;
+            return _generated;
         }
     }
 }

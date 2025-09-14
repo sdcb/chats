@@ -430,3 +430,26 @@ ALTER TABLE [dbo].[ModelKey] DROP CONSTRAINT [DF_ModelKey_Order];
 UPDATE [dbo].[Model] SET [Order] = 0 WHERE [Order] IS NULL;
 DROP INDEX [IX_Model_Order] ON [dbo].[Model];
 ALTER TABLE [dbo].[Model] ALTER COLUMN [Order] SMALLINT NOT NULL;
+
+
+
+
+-- 1. 创建新的归档表
+CREATE TABLE ChatConfigArchived (
+    ChatConfigId int NOT NULL,
+    HashCode bigint NOT NULL,
+    CONSTRAINT PK_ChatConfigArchived PRIMARY KEY (ChatConfigId),
+    CONSTRAINT FK_ChatConfigArchived_ChatConfig FOREIGN KEY (ChatConfigId) REFERENCES ChatConfig(Id),
+    INDEX IX_ChatConfigArchived_HashCode (HashCode)
+);
+
+-- 2. 迁移现有非零HashCode的记录
+INSERT INTO ChatConfigArchived (ChatConfigId, HashCode)
+SELECT Id, HashCode 
+FROM ChatConfig 
+WHERE HashCode != 0;
+
+-- 3. 删除ChatConfig表的HashCode列
+ALTER TABLE ChatConfig DROP CONSTRAINT DF__ChatConfi__HashC__4EC8A2F6;
+DROP INDEX IX_ChatConfig_HashCode ON ChatConfig;
+ALTER TABLE ChatConfig DROP COLUMN HashCode;

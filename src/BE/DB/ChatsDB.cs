@@ -17,6 +17,8 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<ChatConfig> ChatConfigs { get; set; }
 
+    public virtual DbSet<ChatConfigArchived> ChatConfigArchiveds { get; set; }
+
     public virtual DbSet<ChatConfigMcp> ChatConfigMcps { get; set; }
 
     public virtual DbSet<ChatGroup> ChatGroups { get; set; }
@@ -183,8 +185,6 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<ChatConfig>(entity =>
         {
-            entity.HasIndex(e => e.HashCode, "IX_ChatConfig_HashCode").HasFilter("([HashCode]<>(0))");
-
             entity.HasOne(d => d.ImageSize).WithMany(p => p.ChatConfigs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ChatConfig_ImageSize");
@@ -192,6 +192,15 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.Model).WithMany(p => p.ChatConfigs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ChatConfig_Model");
+        });
+
+        modelBuilder.Entity<ChatConfigArchived>(entity =>
+        {
+            entity.Property(e => e.ChatConfigId).ValueGeneratedNever();
+
+            entity.HasOne(d => d.ChatConfig).WithOne(p => p.ChatConfigArchived)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ChatConfigArchived_ChatConfig");
         });
 
         modelBuilder.Entity<ChatConfigMcp>(entity =>

@@ -6,12 +6,11 @@ namespace Chats.BE.DB;
 
 public partial class ChatConfig
 {
-    public ChatConfig Clone()
+    public ChatConfig SimpleClone()
     {
         return new ChatConfig
         {
             Id = Id,
-            HashCode = HashCode,
             ModelId = ModelId,
             SystemPrompt = SystemPrompt,
             Temperature = Temperature,

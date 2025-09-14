@@ -267,7 +267,6 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                 Model = um.Model,
                 Temperature = null,
                 WebSearchEnabled = false,
-                HashCode = 0,
                 MaxOutputTokens = null,
                 ReasoningEffort = 0,
                 SystemPrompt = defaultPrompt.Content,

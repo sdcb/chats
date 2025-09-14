@@ -35,7 +35,7 @@ public partial class ChatSpan
             SpanId = SpanId,
             Enabled = Enabled,
             ChatConfigId = ChatConfigId,
-            ChatConfig = ChatConfig.Clone(),
+            ChatConfig = ChatConfig.SimpleClone(),
         };
     }
 }

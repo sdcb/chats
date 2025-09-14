@@ -11,7 +11,7 @@ public class ChatConfigService(ChatsDB db)
         ChatConfig? matchingConfig = await db.ChatConfigs
             .Include(x => x.ChatConfigMcps)
             .Where(c => 
-                c.HashCode == hashCode && 
+                c.ChatConfigArchived!.HashCode == hashCode &&
                 c.ModelId == raw.ModelId && 
                 c.SystemPrompt == raw.SystemPrompt && 
                 c.WebSearchEnabled == raw.WebSearchEnabled && 
@@ -26,9 +26,12 @@ public class ChatConfigService(ChatsDB db)
         }
         else
         {
-            ChatConfig newConfig = raw.Clone();
+            ChatConfig newConfig = raw.SimpleClone();
             newConfig.Id = 0;
-            newConfig.HashCode = hashCode;
+            newConfig.ChatConfigArchived = new()
+            {
+                HashCode = hashCode,
+            };
             db.ChatConfigs.Add(newConfig);
             await db.SaveChangesAsync(cancellationToken);
             return newConfig;
