@@ -1,9 +1,23 @@
 param(
-    [string]$Dir = "src/BE/DB"
+    [string]$Dir
 )
+
+# 如果没有指定目录，则从脚本位置计算到 BE/DB 的路径
+if (-not $Dir) {
+    $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $Dir = Join-Path (Split-Path (Split-Path $scriptPath -Parent) -Parent) "BE\DB"
+}
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# 验证目录是否存在
+if (-not (Test-Path $Dir)) {
+    Write-Error "目录不存在: $Dir"
+    exit 1
+}
+
+Write-Host "目标目录: $Dir" -ForegroundColor Green
 
 function Get-EolMode {
     param([byte[]]$Bytes)

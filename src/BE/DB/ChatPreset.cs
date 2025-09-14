@@ -21,6 +21,8 @@ public partial class ChatPreset
 
     public DateTime UpdatedAt { get; set; }
 
+    public short Order { get; set; }
+
     [InverseProperty("ChatPreset")]
     public virtual ICollection<ChatPresetSpan> ChatPresetSpans { get; set; } = new List<ChatPresetSpan>();
 

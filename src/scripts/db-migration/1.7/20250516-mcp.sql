@@ -453,3 +453,8 @@ WHERE HashCode != 0;
 ALTER TABLE ChatConfig DROP CONSTRAINT DF__ChatConfi__HashC__4EC8A2F6;
 DROP INDEX IX_ChatConfig_HashCode ON ChatConfig;
 ALTER TABLE ChatConfig DROP COLUMN HashCode;
+
+
+-- 给ChatPreset表增加一个非空INT16 Order字段
+ALTER TABLE [dbo].[ChatPreset] ADD [Order] SMALLINT NOT NULL CONSTRAINT [DF_ChatPreset_Order] DEFAULT 0;
+ALTER TABLE [dbo].[ChatPreset] DROP CONSTRAINT [DF_ChatPreset_Order];

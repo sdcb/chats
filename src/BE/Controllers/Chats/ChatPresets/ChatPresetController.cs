@@ -22,7 +22,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
     {
         ChatPresetDto[] result = await db.ChatPresets
             .Where(x => x.UserId == currentUser.Id)
-            .OrderBy(x => x.Id)
+            .OrderBy(x => x.Order).ThenByDescending(x => x.Id)
             .Select(x => new ChatPresetDto
             {
                 Id = idEncryption.EncryptChatPresetId(x.Id),
