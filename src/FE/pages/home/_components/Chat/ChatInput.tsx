@@ -72,6 +72,7 @@ const ChatInput = ({
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const promptListRef = useRef<HTMLUListElement | null>(null);
+  const prevChatStatusRef = useRef<ChatStatus>(selectedChat.status);
   const [contentText, setContentText] = useState('');
   const [contentFiles, setContentFiles] = useState<FileDef[]>([]);
 
@@ -83,6 +84,7 @@ const ChatInput = ({
   const [variables, setVariables] = useState<string[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isFullWriting, setIsFullWriting] = useState(false);
+  const [isCollapsedByChat, setIsCollapsedByChat] = useState(false);
 
   const filteredPrompts = prompts.filter((prompt) =>
     prompt.name.toLowerCase().includes(promptInputValue.toLowerCase()),
@@ -299,6 +301,8 @@ const ChatInput = ({
   };
 
   const handleToggleVisibility = () => {
+    // 用户手动切换时，重置因聊天而收起的标记
+    setIsCollapsedByChat(false);
     settingDispatch(setShowChatInput(!showChatInput));
   };
 
@@ -312,6 +316,32 @@ const ChatInput = ({
       }`;
     }
   }, [contentText, contentFiles]);
+
+  // 监听聊天状态变化，实现自动收起/展开抽屉
+  useEffect(() => {
+    const prevStatus = prevChatStatusRef.current;
+    const currentStatus = selectedChat.status;
+    
+    // 只在聊天状态从非Chatting变为Chatting时触发一次关闭
+    if (prevStatus !== ChatStatus.Chatting && currentStatus === ChatStatus.Chatting) {
+      // 如果抽屉是展开的，自动收起
+      if (showChatInput) {
+        setIsCollapsedByChat(true);
+        settingDispatch(setShowChatInput(false));
+      }
+    } 
+    // 如果聊天结束且之前是因为聊天而收起的，自动展开
+    else if (prevStatus === ChatStatus.Chatting && currentStatus !== ChatStatus.Chatting) {
+      // 只要之前是因为聊天而收起的，就自动展开（不管当前抽屉状态如何）
+      if (isCollapsedByChat) {
+        setIsCollapsedByChat(false);
+        settingDispatch(setShowChatInput(true));
+      }
+    }
+    
+    // 更新前一个状态
+    prevChatStatusRef.current = currentStatus;
+  }, [selectedChat.status, showChatInput, isCollapsedByChat, settingDispatch]);
 
   return (
     <div>
