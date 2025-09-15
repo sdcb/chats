@@ -112,10 +112,10 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
   };
 
   // internal fetch tools with optional silent mode (no toast)
-  const fetchToolsInternal = async (silent: boolean) => {
+  const fetchToolsInternal = async (silent: boolean): Promise<McpToolDto[] | null> => {
     if (!formData.url) {
       if (!silent) toast.error(t('Please enter server URL first'));
-      return false;
+      return null;
     }
 
     setFetchingTools(true);
@@ -132,11 +132,11 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
 
       setTools(newTools);
       if (!silent) toast.success(t('Tools fetched successfully'));
-      return true;
+      return newTools;
     } catch (error) {
       console.error('Failed to fetch tools:', error);
       if (!silent) toast.error(t('Failed to fetch tools'));
-      return false;
+      return null;
     } finally {
       setFetchingTools(false);
     }
@@ -192,15 +192,19 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
     }
 
     // If in create mode and tools are empty, auto-fetch tools first, then proceed to save regardless of result
+    let toolsToSave = tools;
     let skipToolValidation = false;
     if (isCreateMode && tools.length === 0) {
-      await fetchToolsInternal(true); // silent fetch, shows fetching state on button
+      const fetchedTools = await fetchToolsInternal(true); // silent fetch, shows fetching state on button
+      if (fetchedTools) {
+        toolsToSave = fetchedTools;
+      }
       skipToolValidation = true;
     }
 
     if (!skipToolValidation) {
       // Validate tools
-      for (const tool of tools) {
+      for (const tool of toolsToSave) {
         if (!tool.name.trim()) {
           toast.error(t('All tools must have a name'));
           return;
@@ -214,7 +218,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
       }
 
       // Check for duplicate tool names
-      const toolNames = tools.map(t => t.name);
+      const toolNames = toolsToSave.map(t => t.name);
       const uniqueNames = new Set(toolNames);
       if (toolNames.length !== uniqueNames.size) {
         toast.error(t('Tool names must be unique'));
@@ -229,7 +233,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
         url: formData.url.trim(),
         headers: formData.headers.trim() || undefined,
         isSystem: formData.isSystem,
-        tools,
+        tools: toolsToSave,
       });
     } catch (error) {
       console.error('Failed to save server:', error);

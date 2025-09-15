@@ -8,6 +8,7 @@ namespace Chats.BE.DB;
 
 [Table("McpServer")]
 [Index("OwnerUserId", Name = "IX_McpServer_OwnerUserId")]
+[Index("Label", Name = "UX_McpServer_Label", IsUnique = true)]
 public partial class McpServer
 {
     [Key]
@@ -27,7 +28,7 @@ public partial class McpServer
 
     public bool IsSystem { get; set; }
 
-    public DateTime? LastFetchAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 
     [InverseProperty("McpServer")]
     public virtual ICollection<ChatConfigMcp> ChatConfigMcps { get; set; } = new List<ChatConfigMcp>();

@@ -355,7 +355,7 @@ export interface McpServerListItemDto {
   label: string;
   url: string;
   createdAt: string;
-  lastFetchAt?: string;
+  updatedAt: string;
   toolsCount: number;
 }
 

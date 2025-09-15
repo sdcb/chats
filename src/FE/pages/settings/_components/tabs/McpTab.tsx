@@ -206,7 +206,7 @@ const McpTab = () => {
                   <TableHead>{t('Tool Count')}</TableHead>
                   {isAdmin && <TableHead>{t('Owner')}</TableHead>}
                   <TableHead>{t('Created')}</TableHead>
-                  <TableHead>{t('Last Fetch')}</TableHead>
+                  <TableHead>{t('Updated')}</TableHead>
                   <TableHead>{t('Actions')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -237,7 +237,7 @@ const McpTab = () => {
                       {isAdmin && <TableCell>{server.owner || t('System')}</TableCell>}
                       <TableCell>{formatDate(server.createdAt)}</TableCell>
                       <TableCell>
-                        {server.lastFetchAt ? formatDate(server.lastFetchAt) : t('Never')}
+                        {formatDate(server.updatedAt)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">

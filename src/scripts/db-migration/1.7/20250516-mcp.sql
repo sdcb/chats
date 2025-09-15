@@ -195,9 +195,10 @@ CREATE TABLE [McpServer] (
     [CreatedAt]       DATETIME2 (7)  CONSTRAINT [DEFAULT_Mcp_CreatedAt] DEFAULT SYSUTCDATETIME() NOT NULL,
     [OwnerUserId]     INT            NOT NULL,
     [IsSystem]        BIT            CONSTRAINT [DEFAULT_Mcp_IsSystem] DEFAULT 0 NOT NULL,
-    [LastFetchAt]     DATETIME2 (7)  NULL,
+    [UpdatedAt]       DATETIME2 (7)  NOT NULL,
     CONSTRAINT [PK_McpServer] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_McpServer_User] FOREIGN KEY ([OwnerUserId]) REFERENCES [User] ([Id]),
+    CONSTRAINT [UX_McpServer_Label] UNIQUE ([Label]),
     INDEX [IX_McpServer_OwnerUserId] ([OwnerUserId]) WHERE [OwnerUserId] IS NOT NULL
 );
 

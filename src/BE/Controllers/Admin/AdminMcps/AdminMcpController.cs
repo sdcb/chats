@@ -26,7 +26,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
                 Label = x.Label,
                 Url = x.Url,
                 CreatedAt = x.CreatedAt,
-                LastFetchAt = x.LastFetchAt,
+                UpdatedAt = x.UpdatedAt,
                 ToolsCount = x.McpTools.Count,
             })
             .ToArrayAsync(cancellationToken);
@@ -48,7 +48,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
                     Label = x.Label,
                     Url = x.Url,
                     CreatedAt = x.CreatedAt,
-                    LastFetchAt = x.LastFetchAt,
+                    UpdatedAt = x.UpdatedAt,
                     ToolsCount = x.McpTools.Count,
                     Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id,
                     IsSystem = x.IsSystem,
@@ -88,7 +88,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
                 IsSystem = x.IsSystem,
                 Owner = x.OwnerUser.DisplayName,
                 CreatedAt = x.CreatedAt,
-                LastFetchAt = x.LastFetchAt,
+                UpdatedAt = x.UpdatedAt,
                 ToolsCount = x.McpTools.Count,
                 Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id,
                 Tools = x.McpTools
@@ -153,7 +153,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             IsSystem = request.IsSystem,
             OwnerUserId = currentUser.Id,
             CreatedAt = DateTime.UtcNow,
-            LastFetchAt = null,
+            UpdatedAt = DateTime.UtcNow,
             UserMcps =
             [
                 new UserMcp
@@ -177,7 +177,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
         }
         if (server.McpTools.Count != 0)
         {
-            server.LastFetchAt = DateTime.UtcNow;
+            server.UpdatedAt = DateTime.UtcNow;
         }
 
         db.McpServers.Add(server);
@@ -250,7 +250,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
 
         // Always overwrite tools according to request (even when empty)
         UpdateMcpToolsInMemory(server, request.Tools);
-        server.LastFetchAt = DateTime.UtcNow;
+        server.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken);
 
