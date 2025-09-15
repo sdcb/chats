@@ -171,7 +171,7 @@ public abstract record ChatSegmentItem
             },
             Type = toolCall.Kind.ToString(),
             Name = toolCall.FunctionName,
-            Arguments = GetBinaryData(toolCall.FunctionArgumentsUpdate).Length == 0 ? "" : toolCall.FunctionArgumentsUpdate.ToString(),
+            Arguments = (toolCall.FunctionArgumentsUpdate == null || GetBinaryData(toolCall.FunctionArgumentsUpdate).Length == 0) ? "" : toolCall.FunctionArgumentsUpdate.ToString(),
         };
     }
 
