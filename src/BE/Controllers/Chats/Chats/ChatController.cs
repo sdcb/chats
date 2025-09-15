@@ -170,6 +170,17 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             return BadRequest("No enabled spans");
         }
 
+        // validate user has access to all ChatSpan's MCP tool
+        HashSet<int> mcpServerIds = [.. toGenerateSpans.SelectMany(x => x.ChatConfig.ChatConfigMcps.Select(y => y.McpServerId))];
+        UserMcp[] userMcps = mcpServerIds.Count == 0 ? [] : await db.UserMcps
+            .Where(x => x.UserId == currentUser.Id && mcpServerIds.Contains(x.McpServerId))
+            .Include(x => x.McpServer)
+            .ToArrayAsync(cancellationToken);
+        if (userMcps.Length != mcpServerIds.Count)
+        {
+            return BadRequest("Invalid MCP server permission");
+        }
+
         Dictionary<short, UserModel> userModels = await userModelManager.GetUserModels(currentUser.Id, [.. toGenerateSpans.Select(x => x.ChatConfig.ModelId)], cancellationToken);
         {
             // ensure userModels contains all models that in toGenerateSpans
@@ -251,6 +262,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             req,
             chat,
             userModels[span.ChatConfig.ModelId],
+            userMcps,
             messageTree,
             newDbUserTurn,
             cost.WithScoped(span.SpanId.ToString()),
@@ -399,6 +411,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         ChatRequest req,
         Chat chat,
         UserModel userModel,
+        UserMcp[] userMcps,
         IEnumerable<Step> messageTree,
         ChatTurn? dbUserMessage,
         ScopedBalanceCalculator calc,
@@ -469,15 +482,20 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                         .Where(x => x.McpServerId == serverId)
                         .Select(x => x.McpServer)
                         .FirstOrDefault() ?? throw new InvalidOperationException($"MCP Server not found for id: {serverId}");
-                    string? headers = chatSpan.ChatConfig.ChatConfigMcps.FirstOrDefault(x => x.McpServerId == serverId)?.CustomHeaders
-                        ?? mcpServer.Headers;
+                    UserMcp userMcp = userMcps.FirstOrDefault(x => x.McpServerId == mcpServer.Id)
+                        ?? throw new InvalidOperationException($"UserMcp not found for server id: {mcpServer.Id}");
+                    Dictionary<string, string> headers = MergeHeaders(
+                        mcpServer.Headers, 
+                        userMcp.CustomHeaders, 
+                        chatSpan.ChatConfig.ChatConfigMcps.FirstOrDefault(x => x.McpServerId == mcpServer.Id)?.CustomHeaders);
+
                     logger.LogInformation("Using MCP Server {mcpServer.Label} ({mcpServer.Url}) for tool call {call.Name} with headers: {headers}",
                         mcpServer.Label, mcpServer.Url, call.Name, headers);
                     Stopwatch sw = Stopwatch.StartNew();
                     IMcpClient mcpClient = await McpClientFactory.CreateAsync(new SseClientTransport(new SseClientTransportOptions
                     {
                         Endpoint = new Uri(mcpServer.Url),
-                        AdditionalHeaders = headers == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(headers),
+                        AdditionalHeaders = headers,
                     }), cancellationToken: cancellationToken);
 
                     logger.LogInformation("{mcpServer.Label} connected, elapsed={elapsed}ms, Calling tool: {toolName}, parameters: {call.Parameters}",
@@ -527,6 +545,33 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                         {
                             return (false, e.Message);
                         }
+                    }
+
+                    Dictionary<string, string> MergeHeaders(params string?[] headers)
+                    {
+                        Dictionary<string, string> result = [];
+
+                        foreach (string? header in headers)
+                        {
+                            if (string.IsNullOrWhiteSpace(header)) continue;
+                            try
+                            {
+                                Dictionary<string, string>? dict = JsonSerializer.Deserialize<Dictionary<string, string>>(header);
+                                if (dict != null)
+                                {
+                                    foreach (KeyValuePair<string, string> kv in dict)
+                                    {
+                                        result[kv.Key] = kv.Value;
+                                    }
+                                }
+                            }
+                            catch (JsonException)
+                            {
+                                logger.LogWarning("Invalid MCP header JSON: {header}", header);
+                            }
+                        }
+
+                        return result;
                     }
                 }
             }
