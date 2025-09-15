@@ -4,7 +4,6 @@ import { AdminModelDto } from '@/types/adminApis';
 import { ChatStatus, MessageContentType, TextContent } from '@/types/chat';
 import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
 
-import ChangeModelAction from './ChangeModelAction';
 import CopyAction from './CopyAction';
 import DeleteAction from './DeleteAction';
 import EditStatusAction from './EditStatusAction';
@@ -12,7 +11,7 @@ import GenerateInformationAction from './GenerateInformationAction';
 import PaginationAction from './PaginationAction';
 import ReactionBadResponseAction from './ReactionBadResponseAction';
 import ReactionGoodResponseAction from './ReactionGoodResponseAction';
-import RegenerateAction from './RegenerateAction';
+import RegenerateWithModelAction from './RegenerateWithModelAction';
 
 interface Props {
   models: AdminModelDto[];
@@ -98,23 +97,16 @@ const ResponseMessageActions = (props: Props) => {
           onReactionMessage={handleReactionMessage}
         />
 
-        <RegenerateAction
+        <RegenerateWithModelAction
           hidden={readonly}
           disabled={chatting}
+          models={models}
           onRegenerate={() => {
             onRegenerate && onRegenerate(parentId!, modelId);
           }}
-        />
-        <ChangeModelAction
-          readonly={readonly || chatting}
-          hidden={readonly}
-          models={models}
           onChangeModel={(model) => {
             onRegenerate && onRegenerate(parentId!, model.modelId);
           }}
-          showRegenerate={models.length > 0}
-          modelName={modelName!}
-          modelId={modelId}
         />
       </div>
     </div>
