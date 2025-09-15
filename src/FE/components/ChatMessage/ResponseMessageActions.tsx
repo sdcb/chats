@@ -9,8 +9,7 @@ import DeleteAction from './DeleteAction';
 import EditStatusAction from './EditStatusAction';
 import GenerateInformationAction from './GenerateInformationAction';
 import PaginationAction from './PaginationAction';
-import ReactionBadResponseAction from './ReactionBadResponseAction';
-import ReactionGoodResponseAction from './ReactionGoodResponseAction';
+import ReactionAction from './ReactionAction';
 import RegenerateWithModelAction from './RegenerateWithModelAction';
 
 interface Props {
@@ -86,12 +85,7 @@ const ResponseMessageActions = (props: Props) => {
           message={message}
         />
 
-        <ReactionGoodResponseAction
-          disabled={chatting}
-          value={message.reaction}
-          onReactionMessage={handleReactionMessage}
-        />
-        <ReactionBadResponseAction
+        <ReactionAction
           disabled={chatting}
           value={message.reaction}
           onReactionMessage={handleReactionMessage}
