@@ -1,6 +1,9 @@
 # Entity Framework Scaffold Script
 # 等效于 ef-scaffolds.linq 的 PowerShell 版本
 # 用法: .\ef-scaffolds.ps1
+# dotnet tool install --global dotnet-ef
+# dotnet tool update  --global dotnet-ef
+
 
 # 确保当前脚本目录作为起点
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
