@@ -111,10 +111,11 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
     }
   };
 
-  const handleFetchTools = async () => {
+  // internal fetch tools with optional silent mode (no toast)
+  const fetchToolsInternal = async (silent: boolean) => {
     if (!formData.url) {
-      toast.error(t('Please enter server URL first'));
-      return;
+      if (!silent) toast.error(t('Please enter server URL first'));
+      return false;
     }
 
     setFetchingTools(true);
@@ -130,13 +131,19 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
       }));
 
       setTools(newTools);
-      toast.success(t('Tools fetched successfully'));
+      if (!silent) toast.success(t('Tools fetched successfully'));
+      return true;
     } catch (error) {
       console.error('Failed to fetch tools:', error);
-      toast.error(t('Failed to fetch tools'));
+      if (!silent) toast.error(t('Failed to fetch tools'));
+      return false;
     } finally {
       setFetchingTools(false);
     }
+  };
+
+  const handleFetchTools = async () => {
+    await fetchToolsInternal(false);
   };
 
   const handleToolChange = (index: number, field: keyof McpToolDto, value: any) => {
@@ -184,26 +191,35 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
       return;
     }
 
-    // Validate tools
-    for (const tool of tools) {
-      if (!tool.name.trim()) {
-        toast.error(t('All tools must have a name'));
-        return;
-      }
-
-      // 验证参数是否为有效的 JSON
-      if (tool.parameters && !validateJSON(tool.parameters)) {
-        toast.error(t('Invalid JSON format in tool parameters'));
-        return;
-      }
+    // If in create mode and tools are empty, auto-fetch tools first, then proceed to save regardless of result
+    let skipToolValidation = false;
+    if (isCreateMode && tools.length === 0) {
+      await fetchToolsInternal(true); // silent fetch, shows fetching state on button
+      skipToolValidation = true;
     }
 
-    // Check for duplicate tool names
-    const toolNames = tools.map(t => t.name);
-    const uniqueNames = new Set(toolNames);
-    if (toolNames.length !== uniqueNames.size) {
-      toast.error(t('Tool names must be unique'));
-      return;
+    if (!skipToolValidation) {
+      // Validate tools
+      for (const tool of tools) {
+        if (!tool.name.trim()) {
+          toast.error(t('All tools must have a name'));
+          return;
+        }
+
+        // 验证参数是否为有效的 JSON
+        if (tool.parameters && !validateJSON(tool.parameters)) {
+          toast.error(t('Invalid JSON format in tool parameters'));
+          return;
+        }
+      }
+
+      // Check for duplicate tool names
+      const toolNames = tools.map(t => t.name);
+      const uniqueNames = new Set(toolNames);
+      if (toolNames.length !== uniqueNames.size) {
+        toast.error(t('Tool names must be unique'));
+        return;
+      }
     }
 
     setLoading(true);
@@ -406,7 +422,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
             {isReadOnly ? t('Close') : t('Cancel')}
           </Button>
           {!isReadOnly && (
-            <Button onClick={handleSubmit} disabled={loading || isLoadingData}>
+            <Button onClick={handleSubmit} disabled={loading || isLoadingData || fetchingTools}>
               <IconCheck size={16} className="mr-2" stroke={getIconStroke(theme)} />
               {loading ? t('Saving...') : t('Save')}
             </Button>

@@ -541,5 +541,6 @@
   "Template ID must be a number": "模板ID必须是数字",
   "Label cannot contain ':'": "标签不能包含冒号 ':'",
   "Label cannot contain colon ':'": "标签不能包含冒号 ':'",
-  "Invalid JSON format": "JSON 格式无效"
+  "Invalid JSON format": "JSON 格式无效",
+  "This label is already taken, please choose another one": "该标签已被占用，请换一个"
 }

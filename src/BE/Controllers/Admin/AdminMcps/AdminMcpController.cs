@@ -123,6 +123,13 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             return BadRequest("Label cannot contain ':'");
         }
 
+        // Validate label must be globally unique
+        bool labelExists = await db.McpServers.AnyAsync(x => x.Label == request.Label, cancellationToken);
+        if (labelExists)
+        {
+            return BadRequest("This label is already taken, please choose another one");
+        }
+
         if (!Uri.IsWellFormedUriString(request.Url, UriKind.Absolute))
         {
             return BadRequest("Invalid URL");
@@ -198,6 +205,13 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             return BadRequest("Label cannot contain ':'");
         }
 
+        // Validate label must be globally unique (exclude current server)
+        bool labelExists = await db.McpServers.AnyAsync(x => x.Label == request.Label && x.Id != mcpId, cancellationToken);
+        if (labelExists)
+        {
+            return BadRequest("This label is already taken, please choose another one");
+        }
+
         IQueryable<McpServer> finder = db.McpServers
             .Include(x => x.UserMcps)
             .Where(x => x.Id == mcpId);
@@ -234,12 +248,9 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             });
         }
 
-        // Update tools if provided
-        if (request.Tools.Count != 0)
-        {
-            UpdateMcpToolsInMemory(server, request.Tools);
-            server.LastFetchAt = DateTime.UtcNow;
-        }
+        // Always overwrite tools according to request (even when empty)
+        UpdateMcpToolsInMemory(server, request.Tools);
+        server.LastFetchAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken);
 
