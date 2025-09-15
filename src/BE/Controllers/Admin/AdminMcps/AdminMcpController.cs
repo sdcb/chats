@@ -117,6 +117,12 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             return BadRequest(ModelState);
         }
 
+        // Validate label cannot contain ASCII colon ':'
+        if (!string.IsNullOrWhiteSpace(request.Label) && request.Label.Contains(':'))
+        {
+            return BadRequest("Label cannot contain ':'");
+        }
+
         if (!Uri.IsWellFormedUriString(request.Url, UriKind.Absolute))
         {
             return BadRequest("Invalid URL");
@@ -184,6 +190,12 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
         if (request.IsSystem && !currentUser.IsAdmin)
         {
             return Forbid();
+        }
+
+        // Validate label cannot contain ASCII colon ':'
+        if (!string.IsNullOrWhiteSpace(request.Label) && request.Label.Contains(':'))
+        {
+            return BadRequest("Label cannot contain ':'");
         }
 
         IQueryable<McpServer> finder = db.McpServers

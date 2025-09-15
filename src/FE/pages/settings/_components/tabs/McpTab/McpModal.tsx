@@ -61,6 +61,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
   const [tools, setTools] = useState<McpToolDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchingTools, setFetchingTools] = useState(false);
+  const [labelError, setLabelError] = useState<string | null>(null);
   const user = getUserInfo();
   const isAdmin = user?.role === 'admin';
 
@@ -100,6 +101,14 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
       ...prev,
       [field]: value,
     }));
+
+    if (field === 'label') {
+      if (value && value.includes(':')) {
+        setLabelError(t("Label cannot contain ':'"));
+      } else {
+        setLabelError(null);
+      }
+    }
   };
 
   const handleFetchTools = async () => {
@@ -155,6 +164,12 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
   const handleSubmit = async () => {
     if (!formData.label.trim()) {
       toast.error(t('Please enter a label'));
+      return;
+    }
+
+    if (formData.label.includes(':')) {
+      toast.error(t("Label cannot contain ':'"));
+      setLabelError(t("Label cannot contain ':'"));
       return;
     }
 
@@ -249,7 +264,11 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
                     onChange={(e) => handleInputChange('label', e.target.value)}
                     placeholder={t('Enter server label')}
                     disabled={isReadOnly}
+                    className={labelError ? 'border-red-500 focus:border-red-500' : ''}
                   />
+                  {labelError && (
+                    <p className="text-xs text-red-500 mt-1">{labelError}</p>
+                  )}
                 </div>
 
                 <div>

@@ -538,5 +538,8 @@
   "SDK App ID must be a number": "SDK App ID必须是数字",
   "Sign Name is required": "签名名称为必填项",
   "Template ID is required": "模板ID为必填项",
-  "Template ID must be a number": "模板ID必须是数字"
+  "Template ID must be a number": "模板ID必须是数字",
+  "Label cannot contain ':'": "标签不能包含冒号 ':'",
+  "Label cannot contain colon ':'": "标签不能包含冒号 ':'",
+  "Invalid JSON format": "JSON 格式无效"
 }
