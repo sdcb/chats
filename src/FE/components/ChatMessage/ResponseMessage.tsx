@@ -38,6 +38,32 @@ import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 
+// 骨架动画组件
+const SkeletonLine = ({ width = '100%', height = '1rem', delay = '0s' }: { width?: string; height?: string; delay?: string }) => (
+  <div 
+    className="animate-pulse bg-muted rounded" 
+    style={{ 
+      width, 
+      height,
+      animationDelay: delay,
+      animationDuration: '1.5s'
+    }}
+  />
+);
+
+const MessageSkeleton = () => (
+  <div className="space-y-3 py-2">
+    {/* 第一行较短，立即显示 */}
+    <SkeletonLine width="75%" delay="0s" />
+    {/* 第二行完整，稍微延迟 */}
+    <SkeletonLine width="100%" delay="0.1s" />
+    {/* 第三行中等长度 */}
+    <SkeletonLine width="60%" delay="0.2s" />
+    {/* 第四行较短，模拟段落结束 */}
+    <SkeletonLine width="40%" delay="0.3s" />
+  </div>
+);
+
 interface Props {
   message: IChatMessage;
   chatStatus: ChatStatus;
@@ -186,6 +212,21 @@ const ResponseMessage = (props: Props) => {
   // 使用最新的内容进行处理，但在编辑模式时使用本地状态
   const contentToProcess = editId !== EMPTY_ID ? messageContent : content;
   const processedContent = processContentInOrder(contentToProcess);
+
+  // 判断是否应该显示骨架动画
+  const shouldShowSkeleton = 
+    (messageStatus === ChatSpanStatus.Pending || messageStatus === ChatSpanStatus.Chatting) &&
+    (!contentToProcess || contentToProcess.length === 0 || 
+     (contentToProcess.length === 1 && contentToProcess[0].$type === MessageContentType.text && !contentToProcess[0].c));
+
+  // 如果应该显示骨架动画，则直接返回骨架
+  if (shouldShowSkeleton) {
+    return (
+      <div className="space-y-4">
+        <MessageSkeleton />
+      </div>
+    );
+  }
 
   return (
     <>
