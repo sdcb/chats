@@ -6,7 +6,7 @@ namespace Chats.BE.DB;
 
 public partial class ChatConfig
 {
-    public ChatConfig SimpleClone()
+    public ChatConfig Clone()
     {
         return new ChatConfig
         {
@@ -22,6 +22,7 @@ public partial class ChatConfig
             {
                 McpServerId = x.McpServerId,
                 CustomHeaders = x.CustomHeaders,
+                McpServer = x.McpServer,
             })],
         };
     }

@@ -26,7 +26,7 @@ public class ChatConfigService(ChatsDB db)
         }
         else
         {
-            ChatConfig newConfig = raw.SimpleClone();
+            ChatConfig newConfig = raw.Clone();
             newConfig.Id = 0;
             newConfig.ChatConfigArchived = new()
             {

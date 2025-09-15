@@ -161,7 +161,9 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         }
         else if (req is GeneralChatRequest or RegenerateAllAssistantMessageRequest)
         {
-            toGenerateSpans = [.. chat.ChatSpans.Where(x => x.Enabled)];
+            toGenerateSpans = [..chat.ChatSpans
+                .Where(x => x.Enabled)
+                .Select(x => x.Clone())];
         }
         if (toGenerateSpans.Length == 0)
         {
@@ -478,7 +480,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                         AdditionalHeaders = headers == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(headers),
                     }), cancellationToken: cancellationToken);
 
-                    logger.LogInformation("{mcpServer.Label} connected, elapsed={elapsed}ms, Calling tool: {toolName}, parameters: {call.Parameters}", 
+                    logger.LogInformation("{mcpServer.Label} connected, elapsed={elapsed}ms, Calling tool: {toolName}, parameters: {call.Parameters}",
                         mcpServer.Label, sw.ElapsedMilliseconds, toolName, call.Parameters);
 
                     (bool isSuccess, string toolResult) = await CallMcp();
@@ -656,7 +658,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 ChatRoleId = (byte)DBChatRole.Assistant,
                 CreatedAt = DateTime.UtcNow,
                 Usage = icc.ToUserModelUsage(currentUser.Id, calc, userModel, await clientInfoIdTask, isApi: false),
-                StepContents = [..StepContent.FromFullResponse(icc.FullResponse, errorText, imageFileCache)],
+                StepContents = [.. StepContent.FromFullResponse(icc.FullResponse, errorText, imageFileCache)],
                 Turn = turn,
             };
 
