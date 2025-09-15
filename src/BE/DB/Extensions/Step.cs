@@ -25,7 +25,9 @@ public partial class Step
             bool hasContent = false, hasToolCall = false;
             foreach (StepContent stepContent in stepContents)
             {
-                if (stepContent.ContentTypeId == (byte)DBMessageContentType.FileId || stepContent.ContentTypeId == (byte)DBMessageContentType.Text)
+                if (stepContent.ContentTypeId == (byte)DBMessageContentType.FileId || 
+                    stepContent.ContentTypeId == (byte)DBMessageContentType.Text || 
+                    stepContent.ContentTypeId == (byte)DBMessageContentType.Error)
                 {
                     hasContent = true;
                 }
@@ -42,7 +44,7 @@ public partial class Step
             if (hasContent)
             {
                 AssistantChatMessage msg = new(await stepContents
-                    .Where(x => (DBMessageContentType)x.ContentTypeId is DBMessageContentType.FileId or DBMessageContentType.Text)
+                    .Where(x => (DBMessageContentType)x.ContentTypeId is DBMessageContentType.FileId or DBMessageContentType.Text or DBMessageContentType.Error)
                     .ToAsyncEnumerable()
                     .SelectAwait(async c => await c.ToOpenAI(fup, cancellationToken))
                     .ToArrayAsync(cancellationToken));

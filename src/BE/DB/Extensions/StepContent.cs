@@ -17,21 +17,10 @@ public partial class StepContent
         {
             DBMessageContentType.Text => ChatMessageContentPart.CreateTextPart(StepContentText!.Content),
             DBMessageContentType.FileId => await fup.CreateOpenAIPart(StepContentFile, cancellationToken),
+            DBMessageContentType.Error => ChatMessageContentPart.CreateTextPart(StepContentText!.Content),
             _ => throw new NotImplementedException()
         };
     }
-
-    //public static MessageLiteDto FromDB(ChatTurn message)
-    //{
-    //    return new MessageLiteDto
-    //    {
-    //        Id = message.Id,
-    //        ParentId = message.ParentId,
-    //        Role = message.IsUser ? DBChatRole.User : DBChatRole.Assistant,
-    //        SpanId = message.SpanId,
-    //        Content = [.. message.Steps.SelectMany(x => x.StepContents)]
-    //    };
-    //}
 
     public override string ToString()
     {
