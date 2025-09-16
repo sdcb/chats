@@ -197,7 +197,10 @@ const ConversationComponent = ({ chat, onDragItemStart }: Props) => {
         >
           <div
             className={cn(
-              'group relative max-w-[20px] transition-all duration-1000 overflow-hidden hover:max-w-[240px]',
+              'group relative transition-all duration-1000 overflow-hidden hover:max-w-[240px]',
+              chatsSelectType !== CHATS_SELECT_TYPE.NONE 
+                ? 'max-w-[20px]' 
+                : `max-w-[${Math.max(20, 20 + (chat.spans.length - 1) * 10)}px]`
             )}
           >
             <div className="flex overflow-hidden">
@@ -213,12 +216,20 @@ const ConversationComponent = ({ chat, onDragItemStart }: Props) => {
                   }}
                 />
               ) : (
-                chat.spans.map((span) => (
-                  <ChatIcon
-                    className="border border-muted"
-                    key={'chat-icon-' + span.spanId}
-                    providerId={span.modelProviderId}
-                  />
+                chat.spans.map((span, index) => (
+                  <div
+                    key={'chat-icon-wrapper-' + span.spanId}
+                    className={cn(
+                      "flex-shrink-0 relative",
+                      index > 0 && "-ml-2.5"
+                    )}
+                    style={{ zIndex: chat.spans.length - index }}
+                  >
+                    <ChatIcon
+                      key={'chat-icon-' + span.spanId}
+                      providerId={span.modelProviderId}
+                    />
+                  </div>
                 ))
               )}
             </div>
