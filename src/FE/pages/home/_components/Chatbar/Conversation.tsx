@@ -16,6 +16,7 @@ import { CHATS_SELECT_TYPE, ChatStatus, IChat } from '@/types/chat';
 
 import SidebarActionButton from '@/components/Button/SidebarActionButton';
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import Tips from '@/components/Tips/Tips';
 import {
   IconArchive,
   IconCheck,
@@ -225,9 +226,17 @@ const ConversationComponent = ({ chat, onDragItemStart }: Props) => {
                     )}
                     style={{ zIndex: chat.spans.length - index }}
                   >
-                    <ChatIcon
-                      key={'chat-icon-' + span.spanId}
-                      providerId={span.modelProviderId}
+                    <Tips
+                      trigger={
+                        <div>
+                          <ChatIcon
+                            key={'chat-icon-' + span.spanId}
+                            providerId={span.modelProviderId}
+                          />
+                        </div>
+                      }
+                      side="bottom"
+                      content={span.modelName}
                     />
                   </div>
                 ))
