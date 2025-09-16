@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { IconPlus, IconChevronDown, IconChevronRight, IconLoader } from '@/components/Icons';
+import { IconPlus, IconChevronDown, IconChevronRight, IconLoader, IconPencil } from '@/components/Icons';
 
 import EditUserBalanceModal from '../_components/Users/EditUserBalanceModel';
 import UserModal from '../_components/Users/UserModal';
@@ -200,6 +200,7 @@ export default function Users() {
                 {t('Balance')}({t('Yuan')})
               </TableHead>
               <TableHead>{t('Model Count')}</TableHead>
+              <TableHead>{t('Actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody isLoading={loading} isEmpty={users.rows.length === 0}>
@@ -222,15 +223,7 @@ export default function Users() {
                   <TableCell>{item.account}</TableCell>
                   <TableCell>{item.role}</TableCell>
                   <TableCell>{item.phone}</TableCell>
-                  <TableCell
-                    className="hover:underline cursor-pointer"
-                    onClick={(e) => {
-                      handleShowEditModal(item);
-                      e.stopPropagation();
-                    }}
-                  >
-                    {item.email}
-                  </TableCell>
+                  <TableCell>{item.email}</TableCell>
                   <TableCell
                     className="hover:underline cursor-pointer"
                     onClick={(e) => {
@@ -263,9 +256,24 @@ export default function Users() {
                       </Button>
                     </div>
                   </TableCell>
+                  <TableCell>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      title={t('Edit User')}
+                      onClick={(e) => {
+                        handleShowEditModal(item);
+                        e.stopPropagation();
+                      }}
+                    >
+                      <IconPencil size={16} />
+                    </Button>
+                  </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell colSpan={7} className="p-0">
+                  <TableCell colSpan={8} className="p-0">
                     <div 
                       className={`overflow-hidden transition-all duration-300 ease-in-out ${
                         expandedUserId === item.id 
