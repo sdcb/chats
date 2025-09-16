@@ -97,7 +97,7 @@ export default function UserModelRow({ userModel, userId, onUpdate }: IProps) {
           {userModel.displayName}
         </div>
       </TableCell>
-      <TableCell className="text-muted-foreground">
+      <TableCell className="text-muted-foreground hidden sm:table-cell">
         {userModel.modelKeyName}
       </TableCell>
       <TableCell>

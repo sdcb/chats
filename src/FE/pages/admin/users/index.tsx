@@ -192,10 +192,10 @@ export default function Users() {
           <TableHeader>
             <TableRow>
               <TableHead>{t('User Name')}</TableHead>
-              <TableHead>{t('Account')}</TableHead>
-              <TableHead>{t('Role')}</TableHead>
-              <TableHead>{t('Phone')}</TableHead>
-              <TableHead>{t('E-Mail')}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t('Account')}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t('Role')}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t('Phone')}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t('E-Mail')}</TableHead>
               <TableHead>
                 {t('Balance')}({t('Yuan')})
               </TableHead>
@@ -220,10 +220,10 @@ export default function Users() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>{item.account}</TableCell>
-                  <TableCell>{item.role}</TableCell>
-                  <TableCell>{item.phone}</TableCell>
-                  <TableCell>{item.email}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{item.account}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{item.role}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{item.phone}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{item.email}</TableCell>
                   <TableCell
                     className="hover:underline cursor-pointer"
                     onClick={(e) => {
@@ -273,7 +273,7 @@ export default function Users() {
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell colSpan={8} className="p-0">
+                  <TableCell colSpan={4} className="p-0 sm:hidden">
                     <div 
                       className={`overflow-hidden transition-all duration-300 ease-in-out ${
                         expandedUserId === item.id 
@@ -295,7 +295,74 @@ export default function Users() {
                                 <TableHeader>
                                   <TableRow>
                                     <TableHead>{t('Model')}</TableHead>
-                                    <TableHead>{t('Model Key')}</TableHead>
+                                    <TableHead className="hidden sm:table-cell">{t('Model Key')}</TableHead>
+                                    <TableHead>{t('Tokens')}</TableHead>
+                                    <TableHead>{t('Counts')}</TableHead>
+                                    <TableHead>{t('Expires')}</TableHead>
+                                    <TableHead>
+                                      <div className="flex items-center justify-end">
+                                        <AddUserModelButton
+                                          userId={item.id}
+                                          onUpdate={() => handleUserModelsUpdate(item.id)}
+                                        />
+                                      </div>
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {userModels[item.id].map((userModel) => (
+                                    <UserModelRow
+                                      key={userModel.id}
+                                      userModel={userModel}
+                                      userId={item.id}
+                                      onUpdate={() => handleUserModelsUpdate(item.id)}
+                                    />
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            ) : (
+                              <div>
+                                <div className="text-center py-4 text-muted-foreground">
+                                  {t('No models assigned')}
+                                </div>
+                                <div className="flex justify-center">
+                                  <AddUserModelButton
+                                    userId={item.id}
+                                    onUpdate={() => handleUserModelsUpdate(item.id)}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={8} className="p-0 hidden sm:table-cell">
+                    <div 
+                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                        expandedUserId === item.id 
+                          ? 'max-h-screen opacity-100' 
+                          : 'max-h-0 opacity-0'
+                      }`}
+                    >
+                      <div className={`bg-muted/30 transition-all duration-300 ease-in-out ${
+                        expandedUserId === item.id ? 'p-4' : 'p-0'
+                      }`}>
+                        {(expandedUserId === item.id || loadingModels.has(item.id)) && (
+                          <>
+                            {loadingModels.has(item.id) ? (
+                              <div className="text-center py-4">
+                                {t('Loading...')}
+                              </div>
+                            ) : userModels[item.id] && userModels[item.id].length > 0 ? (
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>{t('Model')}</TableHead>
+                                    <TableHead className="hidden sm:table-cell">{t('Model Key')}</TableHead>
                                     <TableHead>{t('Tokens')}</TableHead>
                                     <TableHead>{t('Counts')}</TableHead>
                                     <TableHead>{t('Expires')}</TableHead>
