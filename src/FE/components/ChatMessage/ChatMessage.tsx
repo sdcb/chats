@@ -74,7 +74,7 @@ export const ChatMessage: FC<Props> = memo(
             >
               {messages.map((message, index) => {
                 return (
-                  <div key={`message-${message.id}`}>
+                  <div key={`message-${message.id}`} data-message-id={message.id} data-message-role={message.role}>
                     {message.role === ChatRole.User && (
                       <div
                         key={'user-message-' + index}
@@ -82,6 +82,7 @@ export const ChatMessage: FC<Props> = memo(
                           'prose w-full dark:prose-invert rounded-r-md group sm:w-[50vw] xl:w-[50vw]',
                           index > 0 && 'mt-4',
                         )}
+                        data-user-message-id={message.id}
                       >
                         <UserMessage
                           readonly={readonly}

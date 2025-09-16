@@ -3,6 +3,8 @@ export { default as IconAddress } from './IconAddress';
 export { default as IconArchive } from './IconArchive';
 export { default as IconArrowCompactDown } from './IconArrowCompactDown';
 export { default as IconArrowDown } from './IconArrowDown';
+export { default as IconArrowDoubleUp } from './IconArrowDoubleUp';
+export { default as IconArrowUp } from './IconArrowUp';
 export { default as IconArrowsDiagonal } from './IconArrowsDiagonal';
 export { default as IconArrowsDiagonalMinimize } from './IconArrowsDiagonalMinimize';
 export { default as IconBolt } from './IconBolt';

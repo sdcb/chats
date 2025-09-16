@@ -97,6 +97,10 @@ const Chat = memo(() => {
   const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(true);
   const [showScrollDownButton, setShowScrollDownButton] =
     useState<boolean>(false);
+  const [showScrollToTopButton, setShowScrollToTopButton] =
+    useState<boolean>(false);
+  const [showScrollToPrevUserMessageButton, setShowScrollToPrevUserMessageButton] =
+    useState<boolean>(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -806,6 +810,13 @@ const Chat = memo(() => {
         setAutoScrollEnabled(true);
         setShowScrollDownButton(false);
       }
+
+      // 判断是否显示滚动到顶部按钮（滚动超过100px时显示）
+      setShowScrollToTopButton(scrollTop > 100);
+      
+      // 判断是否显示滚动到上一个用户消息按钮
+      // 简单的逻辑：滚动超过200px且有多个消息时显示
+      setShowScrollToPrevUserMessageButton(scrollTop > 200 && selectedMessages.length > 1);
     }
   };
 
@@ -814,6 +825,72 @@ const Chat = memo(() => {
       top: chatContainerRef.current.scrollHeight,
       behavior: 'smooth',
     });
+  };
+
+  const handleScrollToTop = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleScrollToPrevUserMessage = () => {
+    if (!chatContainerRef.current) return;
+    
+    // 获取当前滚动位置
+    const currentScrollTop = chatContainerRef.current.scrollTop;
+    
+    // 从 selectedMessages 中找到用户消息，按时间顺序排列
+    const allUserMessages: string[] = [];
+    selectedMessages.forEach((messageGroup) => {
+      messageGroup.forEach((message) => {
+        if (message.role === ChatRole.User) {
+          allUserMessages.push(message.id);
+        }
+      });
+    });
+    
+    if (allUserMessages.length === 0) {
+      handleScrollToTop();
+      return;
+    }
+    
+    // 使用新的data属性查找用户消息元素
+    let targetElement: Element | null = null;
+    
+    // 从后往前查找当前视口上方的用户消息
+    for (let i = allUserMessages.length - 1; i >= 0; i--) {
+      const messageId = allUserMessages[i];
+      
+      // 使用data属性查找用户消息元素
+      const element = chatContainerRef.current.querySelector(`[data-user-message-id="${messageId}"]`) ||
+                     chatContainerRef.current.querySelector(`[data-message-id="${messageId}"][data-message-role="user"]`);
+      
+      if (element) {
+        const elementTop = (element as HTMLElement).offsetTop;
+        // 如果这个消息在当前视口上方（留100px缓冲区）
+        if (elementTop < currentScrollTop - 100) {
+          targetElement = element;
+          break;
+        }
+      }
+    }
+    
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (allUserMessages.length > 0) {
+      // 如果没有找到在视口上方的用户消息，滚动到第一个用户消息
+      const firstMessageId = allUserMessages[0];
+      const firstElement = chatContainerRef.current.querySelector(`[data-user-message-id="${firstMessageId}"]`) ||
+                          chatContainerRef.current.querySelector(`[data-message-id="${firstMessageId}"][data-message-role="user"]`);
+      
+      if (firstElement) {
+        firstElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        handleScrollToTop();
+      }
+    } else {
+      handleScrollToTop();
+    }
   };
 
   const scrollDown = () => {
@@ -1147,7 +1224,11 @@ const Chat = memo(() => {
               handleSend(message, lastMessage?.id);
             }}
             onScrollDownClick={handleScrollDown}
+            onScrollToTopClick={handleScrollToTop}
+            onScrollToPrevUserMessageClick={handleScrollToPrevUserMessage}
             showScrollDownButton={showScrollDownButton}
+            showScrollToTopButton={showScrollToTopButton}
+            showScrollToPrevUserMessageButton={showScrollToPrevUserMessageButton}
             onChangePrompt={handleChangePrompt}
           />
         )}
