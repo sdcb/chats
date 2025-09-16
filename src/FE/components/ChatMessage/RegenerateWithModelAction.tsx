@@ -19,6 +19,8 @@ interface Props {
   isHoverVisible?: boolean;
   onRegenerate: () => void;
   onChangeModel: (model: AdminModelDto) => void;
+  // 展示提示用：点击后将使用的模型名称
+  regenerateModelName?: string;
 }
 
 export const RegenerateWithModelAction = forwardRef<HTMLButtonElement, Props>(
@@ -32,6 +34,7 @@ export const RegenerateWithModelAction = forwardRef<HTMLButtonElement, Props>(
       isHoverVisible,
       onRegenerate,
       onChangeModel,
+      regenerateModelName,
     } = props;
 
     const Render = () => {
@@ -56,7 +59,11 @@ export const RegenerateWithModelAction = forwardRef<HTMLButtonElement, Props>(
               </Button>
             }
             side="bottom"
-            content={t('Regenerate')!}
+            content={
+              regenerateModelName
+                ? `${t('Regenerate')}: ${regenerateModelName}`
+                : t('Regenerate')!
+            }
           />
 
           {/* 右侧下拉箭头按钮 - 复用现有的 ChatModelDropdownMenu */}

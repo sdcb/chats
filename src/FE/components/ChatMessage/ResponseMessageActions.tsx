@@ -1,4 +1,6 @@
 import { isChatting } from '@/utils/chats';
+import HomeContext from '@/pages/home/_contexts/home.context';
+import { useContext, useMemo } from 'react';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatStatus, MessageContentType, TextContent } from '@/types/chat';
@@ -48,6 +50,23 @@ const ResponseMessageActions = (props: Props) => {
   const chatting = isChatting(chatStatus);
   const messageReceiving = isChatting(messageStatus);
 
+  // 根据“当前位置对应的 span（顶部设置）”确定重新生成所用模型；
+  // 若无法对应（例如 span 被删），回退到当前消息模型。
+  const { state: { selectedChat } } = useContext(HomeContext);
+  const { spanId } = message;
+  const spanModel = useMemo(() => {
+    const s = selectedChat.spans.find((x) => x.spanId === spanId);
+    if (!s) return null;
+    const m = models.find((mm) => mm.modelId === s.modelId);
+    return {
+      modelId: s.modelId,
+      modelName: s.modelName || m?.name || modelName,
+    } as { modelId: number; modelName?: string };
+  }, [spanId, selectedChat?.spans, models, modelName]);
+
+  const regenerateModelId = spanModel?.modelId ?? modelId;
+  const regenerateModelName = spanModel?.modelName ?? modelName;
+
   const handleReactionMessage = (type: ReactionMessageType) => {
     onReactionMessage && onReactionMessage(type, messageId);
   };
@@ -95,8 +114,9 @@ const ResponseMessageActions = (props: Props) => {
           hidden={readonly}
           disabled={chatting}
           models={models}
+          regenerateModelName={regenerateModelName}
           onRegenerate={() => {
-            onRegenerate && onRegenerate(parentId!, modelId);
+            onRegenerate && onRegenerate(parentId!, regenerateModelId);
           }}
           onChangeModel={(model) => {
             onRegenerate && onRegenerate(parentId!, model.modelId);
