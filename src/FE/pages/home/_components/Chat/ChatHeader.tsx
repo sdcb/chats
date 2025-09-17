@@ -8,7 +8,8 @@ import { ChatStatus, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
 
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
-import { IconDots, IconPlus, IconX } from '@/components/Icons';
+import { IconDots, IconPlus, IconSettingsCog, IconX } from '@/components/Icons';
+import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -21,6 +22,7 @@ import {
 import { setSelectedChat } from '../../_actions/chat.actions';
 import HomeContext from '../../_contexts/home.context';
 import ChatModelSettingModal from './ChatModelSettingsModal';
+import ChatPresetResetDialog from './ChatPresetResetDialog';
 
 import {
   deleteUserChatSpan,
@@ -39,6 +41,7 @@ const ChatHeader = () => {
   } = useContext(HomeContext);
 
   const [selectedSpanId, setSelectedSpanId] = useState<number | null>(null);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const notSetSpanDisabled =
     selectedChat.spans.filter((x) => x.enabled).length === 1;
 
@@ -114,27 +117,57 @@ const ChatHeader = () => {
     chatDispatch(setSelectedChat(selectedChat));
   };
 
-  const AddBtnRender = () => (
-    <div className="flex items-center">
-      {selectedChat.spans.length < MAX_SELECT_MODEL_COUNT && (
-        <ChatModelDropdownMenu
-          className="p-0"
-          triggerClassName={'hover:bg-transparent p-0 bg-button'}
-          models={models}
-          content={
-            <div className="flex items-center gap-2 px-4 py-2">
-              <IconPlus />
-              {t('Add Model')}
-            </div>
+  const AddBtnRender = () => {
+    if (selectedChat.spans.length >= MAX_SELECT_MODEL_COUNT) {
+      return null;
+    }
+
+    return (
+      <div className="flex items-center ml-2">
+        <Tips
+          trigger={
+            <ChatModelDropdownMenu
+              className="p-0"
+              triggerClassName={'hover:bg-transparent p-2 bg-button hover:bg-accent'}
+              models={models}
+              content={<IconPlus size={16} />}
+              hideIcon={true}
+              onChangeModel={(model) => {
+                handleAddChatModel(model.modelId);
+              }}
+            />
           }
-          hideIcon={true}
-          onChangeModel={(model) => {
-            handleAddChatModel(model.modelId);
-          }}
+          content={t('Add Model')}
         />
-      )}
-    </div>
-  );
+      </div>
+    );
+  };
+
+  const ResetBtnRender = () => {
+    // 只在有消息时显示重设按钮
+    const hasMessages = selectedChat.leafMessageId && selectedChat.leafMessageId.trim() !== '';
+    
+    if (!hasMessages) {
+      return null;
+    }
+
+    return (
+      <div className="flex items-center ml-2">
+        <Tips
+          trigger={
+            <Button
+              variant="ghost"
+              className="p-2 h-auto hover:bg-accent"
+              onClick={() => setIsResetDialogOpen(true)}
+            >
+              <IconSettingsCog size={16} />
+            </Button>
+          }
+          content={t('Reset Models')}
+        />
+      </div>
+    );
+  };
 
   return (
     <>
@@ -272,6 +305,7 @@ const ChatHeader = () => {
                     </div>
                   ))}
                   <AddBtnRender />
+                  <ResetBtnRender />
                 </div>
               </div>
             </div>
@@ -288,6 +322,10 @@ const ChatHeader = () => {
         onClose={() => {
           setSelectedSpanId(null);
         }}
+      />
+      <ChatPresetResetDialog
+        isOpen={isResetDialogOpen}
+        onClose={() => setIsResetDialogOpen(false)}
       />
     </>
   );

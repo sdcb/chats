@@ -319,7 +319,7 @@ const ChatPresetList = () => {
           onDragEnd={onDragEnd}
           collisionDetection={closestCorners}
         >
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(144px,320px))] place-content-center gap-4 w-full">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,240px))] place-content-center gap-4 w-full">
             <SortableContext
               items={chatPresets.map(preset => preset.id)}
               strategy={rectSortingStrategy}
