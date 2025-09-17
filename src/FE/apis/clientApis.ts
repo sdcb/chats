@@ -47,6 +47,10 @@ import {
   FetchToolsRequest,
   McpToolBasicInfo,
   McpServerListManagementItemDto,
+  AssignUsersToMcpRequest,
+  UnassignedUserDto,
+  AssignedUserDetailsDto,
+  AssignedUserNameDto,
 } from '@/types/clientApis';
 import { SiteInfoConfig } from '@/types/config';
 import { IChatGroup } from '@/types/group';
@@ -572,5 +576,32 @@ export const deleteMcpServer = (mcpId: number) => {
 export const fetchMcpTools = (params: FetchToolsRequest): Promise<McpToolBasicInfo[]> => {
   const fetchService = useFetch();
   return fetchService.post('/api/mcp/fetch-tools', { body: params });
+};
+
+// MCP用户分配相关API
+export const assignUsersToMcp = (mcpId: number, params: AssignUsersToMcpRequest): Promise<void> => {
+  const fetchService = useFetch();
+  return fetchService.post(`/api/mcp/${mcpId}/assign-to-users`, { body: params });
+};
+
+export const getUnassignedUsers = (mcpId: number, search?: string, limit: number = 10): Promise<UnassignedUserDto[]> => {
+  const fetchService = useFetch();
+  const params = new URLSearchParams();
+  if (search) {
+    params.append('search', search);
+  }
+  params.append('limit', limit.toString());
+  const queryString = params.toString();
+  return fetchService.get(`/api/mcp/${mcpId}/get-unassigned-users${queryString ? `?${queryString}` : ''}`);
+};
+
+export const getAssignedUserDetails = (mcpId: number): Promise<AssignedUserDetailsDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get(`/api/mcp/${mcpId}/assigned-user-details`);
+};
+
+export const getAssignedUserNames = (mcpId: number): Promise<AssignedUserNameDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get(`/api/mcp/${mcpId}/assigned-user-names`);
 };
 

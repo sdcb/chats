@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import useDebounce from '@/hooks/useDebounce';
-import { useThrottle } from '@/hooks/useThrottle';
 import useTranslation from '@/hooks/useTranslation';
 
 import { toFixed } from '@/utils/common';
@@ -23,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { IconPlus, IconChevronDown, IconChevronRight, IconLoader, IconPencil } from '@/components/Icons';
+import { IconChevronDown, IconChevronRight, IconLoader, IconPencil } from '@/components/Icons';
 
 import EditUserBalanceModal from '../_components/Users/EditUserBalanceModel';
 import UserModal from '../_components/Users/UserModal';

@@ -360,6 +360,7 @@ export interface McpServerListManagementItemDto {
   toolsCount: number;
   owner: string;
   editable: boolean;
+  assignedUserCount: number;
 }
 
 export interface McpServerDetailsDto extends McpServerListManagementItemDto {
@@ -377,4 +378,32 @@ export interface UpdateMcpServerRequest {
 export interface FetchToolsRequest {
   serverUrl: string;
   headers?: string;
+}
+
+// MCP用户分配相关类型
+export interface AssignedUserInfo {
+  id: number;
+  customHeaders?: string;
+}
+
+export interface AssignUsersToMcpRequest {
+  toAssignedUsers: AssignedUserInfo[];
+  toUpdateUsers: AssignedUserInfo[];
+  toDeleteUserIds: number[];
+}
+
+export interface UnassignedUserDto {
+  id: number;
+  userName: string;
+}
+
+export interface AssignedUserDetailsDto {
+  id: number;
+  userName: string;
+  customHeaders?: string;
+}
+
+export interface AssignedUserNameDto {
+  id: number;
+  userName: string;
 }

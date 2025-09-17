@@ -16,5 +16,5 @@ public record ManagementMcpServerDto : McpServerListItemDto
     [JsonPropertyName("toolsCount")] public required int ToolsCount { get; init; }
     [JsonPropertyName("owner")] public required string Owner { get; init; }
     [JsonPropertyName("editable")] public required bool Editable { get; init; }
-
+    [JsonPropertyName("assignedUserCount")] public required int AssignedUserCount { get; init; }
 }

@@ -79,6 +79,7 @@ export { default as IconTools } from './IconTools';
 export { default as IconTrash } from './IconTrash';
 export { default as IconUser } from './IconUser';
 export { default as IconUserCog } from './IconUserCog';
+export { default as IconUserPlus } from './IconUserPlus';
 export { default as IconUsers } from './IconUsers';
 export { default as IconWorld } from './IconWorld';
 export { default as IconX } from './IconX';

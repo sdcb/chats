@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useTheme } from 'next-themes';
+// import { useTheme } from 'next-themes';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { McpServerDetailsDto, McpServerListManagementItemDto } from '@/types/clientApis';
+import { 
+  McpServerDetailsDto, 
+  McpServerListManagementItemDto,
+  AssignedUserNameDto 
+} from '@/types/clientApis';
 
 import DeletePopover from '@/pages/home/_components/Popover/DeletePopover';
 
@@ -14,6 +18,7 @@ import {
   IconEdit,
   IconRefresh,
   IconEye,
+  IconUserPlus,
 } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -27,8 +32,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import Tips from '@/components/Tips/Tips';
+// Tooltips are handled via <Tips /> component
+// Use Radix Tooltip primitives locally to avoid changing shared Tips/tooltip components
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 
 import McpModal from './McpTab/McpModal';
+import AssignUsersModal from './McpTab/AssignUsersModal';
 
 import {
   getMcpServersForManagement,
@@ -36,12 +46,75 @@ import {
   createMcpServer,
   updateMcpServer,
   deleteMcpServer,
+  getAssignedUserNames,
 } from '@/apis/clientApis';
 import { useUserInfo } from '@/providers/UserProvider';
 
+const AssignedUsersTooltip = ({ mcpId, assignedUserCount, editable }: { mcpId: number; assignedUserCount: number; editable: boolean }) => {
+  const { t } = useTranslation();
+  const [assignedUsers, setAssignedUsers] = useState<AssignedUserNameDto[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  const loadAssignedUsers = async () => {
+    if (assignedUserCount === 0) return;
+    if (!editable) return; // 如果不可编辑，则说明没有权限查看分配的用户
+    
+    setLoadingUsers(true);
+    try {
+      const users = await getAssignedUserNames(mcpId);
+      setAssignedUsers(users);
+    } catch (error) {
+      console.error('Failed to fetch assigned users:', error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  if (assignedUserCount === 0) {
+    return <Badge variant="outline">0</Badge>;
+  }
+
+  return (
+    <TooltipPrimitive.Provider delayDuration={50}>
+      <TooltipPrimitive.Root>
+        <TooltipPrimitive.Trigger asChild>
+          <span onMouseEnter={loadAssignedUsers} className="inline-block">
+            <Badge
+              variant="outline"
+              className="cursor-pointer hover:bg-muted"
+            >
+              {assignedUserCount}
+            </Badge>
+          </span>
+        </TooltipPrimitive.Trigger>
+        <TooltipPrimitive.Portal>
+          <TooltipPrimitive.Content
+            side="bottom"
+            sideOffset={4}
+            className="z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+          >
+            {loadingUsers ? (
+              <p>{t('Loading...')}</p>
+            ) : assignedUsers.length > 0 ? (
+              <div className="max-w-sm">
+                <p className="font-medium mb-1">{t('Assigned Users')}</p>
+                <p className="text-sm whitespace-normal break-words">
+                  {assignedUsers.map((user) => user.userName).join(', ')}
+                </p>
+              </div>
+            ) : (
+              <p>{t('No assigned users')}</p>
+            )}
+          </TooltipPrimitive.Content>
+        </TooltipPrimitive.Portal>
+      </TooltipPrimitive.Root>
+    </TooltipPrimitive.Provider>
+  );
+};
+
 const McpTab = () => {
   const { t } = useTranslation();
-  const { theme } = useTheme();
+  // const { theme } = useTheme();
   const [mcpServers, setMcpServers] = useState<McpServerListManagementItemDto[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredServers, setFilteredServers] = useState<McpServerListManagementItemDto[]>([]);
@@ -51,6 +124,8 @@ const McpTab = () => {
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingServerDetails, setLoadingServerDetails] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignMcpId, setAssignMcpId] = useState<number | null>(null);
   const user = useUserInfo();
   const isAdmin = user?.role === 'admin';
 
@@ -125,6 +200,11 @@ const McpTab = () => {
     }
   };
 
+  const handleAssignUsers = (serverId: number) => {
+    setAssignMcpId(serverId);
+    setShowAssignModal(true);
+  };
+
   const handleDeleteServer = async (serverId: number) => {
     try {
       await deleteMcpServer(serverId);
@@ -158,8 +238,49 @@ const McpTab = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
+  // 渲染编辑和分配用户的组合按钮
+  const renderEditAssignComboButton = (server: McpServerListManagementItemDto) => {
+    if (!server.editable) return null;
+    
+    return (
+      <div className="flex">
+        {/* 左侧编辑按钮 */}
+        <Tips
+          trigger={
+            <Button
+              variant="ghost"
+              size="sm"
+              className="p-1 m-0 h-8 w-8 rounded-r-none border-r border-r-border/50 hover:bg-accent hover:border-r-accent-foreground/20"
+              onClick={() => handleEditServer(server.id)}
+            >
+              <IconEdit size={16} />
+            </Button>
+          }
+          side="bottom"
+          content={t('Edit')!}
+        />
+
+        {/* 右侧分配用户按钮 */}
+        <Tips
+          trigger={
+            <Button
+              variant="ghost"
+              size="sm"
+              className="p-1 m-0 h-8 w-8 rounded-l-none hover:bg-accent"
+              onClick={() => handleAssignUsers(server.id)}
+            >
+              <IconUserPlus size={16} />
+            </Button>
+          }
+          side="bottom"
+          content={t('Assign Users')!}
+        />
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-4">
+      <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">{t('MCP Management')}</h2>
         <div className="flex items-center gap-2">
@@ -200,16 +321,17 @@ const McpTab = () => {
                   <TableHead>{t('Label')}</TableHead>
                   <TableHead>{t('URL')}</TableHead>
                   <TableHead>{t('Tool Count')}</TableHead>
+                  <TableHead>{t('Assigned Users')}</TableHead>
                   {isAdmin && <TableHead>{t('Owner')}</TableHead>}
-                  <TableHead>{t('Created')}</TableHead>
-                  <TableHead>{t('Updated')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('Created')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('Updated')}</TableHead>
                   <TableHead>{t('Actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredServers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={isAdmin ? 8 : 7} className="text-center py-8">
                       {searchTerm ? t('No MCP servers found') : t('No MCP servers yet')}
                     </TableCell>
                   </TableRow>
@@ -223,23 +345,25 @@ const McpTab = () => {
                       <TableCell>
                         <Badge variant="outline">{server.toolsCount}</Badge>
                       </TableCell>
-                      {isAdmin && <TableCell>{server.owner || t('System')}</TableCell>}
-                      <TableCell>{formatDate(server.createdAt)}</TableCell>
                       <TableCell>
+                        <AssignedUsersTooltip 
+                          mcpId={server.id} 
+                          assignedUserCount={server.assignedUserCount}
+                          editable={server.editable}
+                        />
+                      </TableCell>
+                      {isAdmin && <TableCell>{server.owner || t('System')}</TableCell>}
+                      <TableCell className="hidden md:table-cell">{formatDate(server.createdAt)}</TableCell>
+                      <TableCell className="hidden md:table-cell">
                         {formatDate(server.updatedAt)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {server.editable ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditServer(server.id)}
-                              title={t('Edit')}
-                            >
-                              <IconEdit size={16} />
-                            </Button>
-                          ) : (
+                          {/* 编辑和分配用户组合按钮 */}
+                          {renderEditAssignComboButton(server)}
+                          
+                          {/* 查看按钮（非editable时显示） */}
+                          {!server.editable && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -249,6 +373,8 @@ const McpTab = () => {
                               <IconEye size={16} />
                             </Button>
                           )}
+                          
+                          {/* 删除按钮 */}
                           {server.editable && (
                             <DeletePopover
                               onDelete={() => handleDeleteServer(server.id)}
@@ -276,7 +402,15 @@ const McpTab = () => {
           isLoadingData={loadingServerDetails}
         />
       )}
-    </div>
+
+      <AssignUsersModal
+        isOpen={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        mcpId={assignMcpId}
+        onSuccess={fetchMcpServers}
+        isAdmin={isAdmin}
+      />
+      </div>
   );
 };
 

@@ -35,6 +35,7 @@ import {
 import { Card } from '@/components/ui/card';
 
 import { fetchMcpTools } from '@/apis/clientApis';
+import { isEmptyOrJsonObject } from '@/utils/json';
 import { getUserInfo } from '@/utils/user';
 
 interface McpModalProps {
@@ -62,16 +63,8 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
   const user = getUserInfo();
   const isAdmin = user?.role === 'admin';
 
-  // JSON 验证函数
-  const validateJSON = (jsonString: string): boolean => {
-    if (!jsonString.trim()) return true; // 空字符串认为是有效的
-    try {
-      JSON.parse(jsonString);
-      return true;
-    } catch {
-      return false;
-    }
-  };
+  // 前端校验：允许空白或JSON对象
+  const validateJSON = (jsonString: string): boolean => isEmptyOrJsonObject(jsonString);
 
   useEffect(() => {
     if (server && !isCreateMode) {
@@ -178,9 +171,9 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
       return;
     }
 
-    // 验证 headers 是否为有效的 JSON
+    // 验证 headers：必须为空白或合法 JSON 对象
     if (formData.headers && !validateJSON(formData.headers)) {
-      toast.error(t('Invalid JSON format in headers'));
+      toast.error(t('Headers must be empty or a valid JSON object'));
       return;
     }
 
@@ -299,7 +292,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
                       }`}
                   />
                   {formData.headers && !validateJSON(formData.headers) && (
-                    <p className="text-xs text-red-500 mt-1">{t('Invalid JSON format')}</p>
+                    <p className="text-xs text-red-500 mt-1">{t('Headers must be empty or a valid JSON object')}</p>
                   )}
                 </div>
               </div>

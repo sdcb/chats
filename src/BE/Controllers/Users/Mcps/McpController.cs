@@ -12,6 +12,19 @@ namespace Chats.BE.Controllers.Users.Mcps;
 [Route("api/mcp"), Authorize]
 public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
 {
+    private static bool IsNullOrWhiteSpaceOrJsonObject(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return true;
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(text);
+            return doc.RootElement.ValueKind == JsonValueKind.Object;
+        }
+        catch
+        {
+            return false;
+        }
+    }
     [HttpGet]
     public async Task<ActionResult<McpServerListItemDto[]>> ListAllMcpServers(CancellationToken cancellationToken)
     {
@@ -47,6 +60,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
                     ToolsCount = x.McpTools.Count,
                     Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id, // admin or owner can edit
                     Owner = x.OwnerUser.DisplayName,
+                    AssignedUserCount = x.UserMcps.Count,
                 })
                 .ToArrayAsync(cancellationToken);
         return Ok(data);
@@ -80,6 +94,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
                 UpdatedAt = x.UpdatedAt,
                 ToolsCount = x.McpTools.Count,
                 Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id,
+                AssignedUserCount = x.UserMcps.Count,
                 Tools = x.McpTools
                     .OrderBy(t => t.Id)
                     .Select(t => new McpToolBasicInfo
@@ -126,6 +141,23 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
         if (!request.ValidateToolNameUnique())
         {
             return BadRequest("Tool names must be unique within the server");
+        }
+
+        // Validate headers: allow null/empty/whitespace; non-empty must be a valid JSON object
+        if (!string.IsNullOrWhiteSpace(request.Headers))
+        {
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(request.Headers);
+                if (doc.RootElement.ValueKind != JsonValueKind.Object)
+                {
+                    return BadRequest("Headers must be empty or a valid JSON object");
+                }
+            }
+            catch
+            {
+                return BadRequest("Headers must be empty or a valid JSON object");
+            }
         }
 
         McpServer server = new()
@@ -202,6 +234,23 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             return BadRequest("Tool names must be unique within the server");
         }
 
+        // Validate headers: allow null/empty/whitespace; non-empty must be a valid JSON object
+        if (!string.IsNullOrWhiteSpace(request.Headers))
+        {
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(request.Headers);
+                if (doc.RootElement.ValueKind != JsonValueKind.Object)
+                {
+                    return BadRequest("Headers must be empty or a valid JSON object");
+                }
+            }
+            catch
+            {
+                return BadRequest("Headers must be empty or a valid JSON object");
+            }
+        }
+
         server.Label = request.Label;
         server.Url = request.Url;
         server.Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers;
@@ -275,55 +324,6 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("assign-user-mcps")]
-    public async Task<ActionResult> AssignMcpsToUser([FromBody] AssignUserMcpsRequest req, CancellationToken cancellationToken)
-    {
-        if (!currentUser.IsAdmin)
-        {
-            return Forbid();
-        }
-
-        User? user = await db.Users.FirstOrDefaultAsync(x => x.Id == req.UserId, cancellationToken);
-        if (user == null)
-        {
-            return NotFound();
-        }
-
-        if (req.HasDuplicateMcpServerIds())
-        {
-            return BadRequest("Duplicate MCP server IDs in request");
-        }
-
-        Dictionary<int, McpServer> desiredServers = await db.McpServers
-            .Where(x => req.McpServerIds.Contains(x.Id))
-            .ToDictionaryAsync(k => k.Id, v => v, cancellationToken);
-        if (desiredServers.Count != req.McpServerIds.Length)
-        {
-            return BadRequest("Some MCP servers not found");
-        }
-
-        List<UserMcp> existing = await db.UserMcps.Where(x => x.UserId == req.UserId).ToListAsync(cancellationToken);
-        HashSet<int> existingIds = [.. existing.Select(x => x.McpServerId)];
-        HashSet<int> desiredIds = [.. req.McpServerIds.Where(id => desiredServers.ContainsKey(id))];
-
-        foreach (int toAdd in desiredIds.Except(existingIds))
-        {
-            db.UserMcps.Add(new UserMcp
-            {
-                UserId = req.UserId,
-                McpServerId = toAdd,
-            });
-        }
-
-        foreach (UserMcp toRemove in existing.Where(x => !desiredIds.Contains(x.McpServerId)))
-        {
-            db.UserMcps.Remove(toRemove);
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
-        return NoContent();
-    }
-
     [HttpPost("fetch-tools")]
     public async Task<ActionResult<List<McpToolBasicInfo>>> FetchMcpTools([FromBody] FetchToolsRequest req, [FromServices] ILogger<McpController> logger, CancellationToken cancellationToken)
     {
@@ -374,5 +374,211 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             logger.LogWarning(ex, "Failed to fetch MCP tools from {Url}", req.ServerUrl);
             return BadRequest(ex.Message);
         }
+    }
+
+    // 用户分配相关的API端点
+
+    [HttpPost("{mcpId:int}/assign-to-users")]
+    public async Task<ActionResult> AssignUsersToMcp(int mcpId, [FromBody] AssignUsersToMcpRequest request, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if (request.ToAssignedUsers.Count != 0 && !currentUser.IsAdmin)
+        {
+            return Forbid(); // 只有管理员可以分配新用户
+        }
+
+        // 检查MCP服务器是否存在
+        McpServer? server = await db.McpServers
+            .Include(x => x.UserMcps)
+            .FirstOrDefaultAsync(x => x.Id == mcpId, cancellationToken);
+        
+        if (server == null)
+        {
+            return NotFound();
+        }
+
+        if (!(currentUser.IsAdmin || server.OwnerUserId == currentUser.Id))
+        {
+            return Forbid(); // 只有管理员或拥有者可以分配用户
+        }
+
+        // 验证所有用户ID是否存在
+        HashSet<int> allUserIds = [.. request.ToAssignedUsers.Select(x => x.Id), .. request.ToUpdateUsers.Select(x => x.Id), .. request.ToDeleteUserIds];
+        List<int> existingUserIds = await db.Users
+            .Where(u => allUserIds.Contains(u.Id))
+            .Select(u => u.Id)
+            .ToListAsync(cancellationToken);
+        
+        if (existingUserIds.Count != allUserIds.Count)
+        {
+            List<int> missingUserIds = allUserIds.Except(existingUserIds).ToList();
+            return BadRequest($"User IDs not found: {string.Join(", ", missingUserIds)}");
+        }
+
+        // 处理新分配的用户
+        foreach (AssignedUserInfo userInfo in request.ToAssignedUsers)
+        {
+            // customHeaders 校验：允许空白或合法 JSON 对象
+            if (!IsNullOrWhiteSpaceOrJsonObject(userInfo.CustomHeaders))
+            {
+                return BadRequest("Headers must be empty or a valid JSON object");
+            }
+
+            // 检查是否已经分配过
+            if (server.UserMcps.Any(um => um.UserId == userInfo.Id))
+            {
+                return BadRequest($"User {userInfo.Id} is already assigned to this MCP server");
+            }
+
+            server.UserMcps.Add(new UserMcp
+            {
+                UserId = userInfo.Id,
+                CustomHeaders = userInfo.CustomHeaders,
+                McpServerId = mcpId
+            });
+        }
+
+        // 处理更新的用户
+        foreach (AssignedUserInfo userInfo in request.ToUpdateUsers)
+        {
+            // customHeaders 校验：允许空白或合法 JSON 对象
+            if (!IsNullOrWhiteSpaceOrJsonObject(userInfo.CustomHeaders))
+            {
+                return BadRequest("Headers must be empty or a valid JSON object");
+            }
+            UserMcp? existingAssignment = server.UserMcps.FirstOrDefault(um => um.UserId == userInfo.Id);
+            if (existingAssignment == null)
+            {
+                return BadRequest($"User {userInfo.Id} is not assigned to this MCP server");
+            }
+
+            existingAssignment.CustomHeaders = userInfo.CustomHeaders;
+        }
+
+        // 处理删除的用户
+        foreach (int userId in request.ToDeleteUserIds)
+        {
+            UserMcp? existingAssignment = server.UserMcps.FirstOrDefault(um => um.UserId == userId);
+            if (existingAssignment == null)
+            {
+                return BadRequest($"User {userId} is not assigned to this MCP server");
+            }
+
+            server.UserMcps.Remove(existingAssignment);
+        }
+
+        if (db.ChangeTracker.HasChanges())
+        {
+            server.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return Ok();
+    }
+
+    [HttpGet("{mcpId:int}/get-unassigned-users")]
+    public async Task<ActionResult<UnassignedUserDto[]>> GetUnassignedUsers(
+        int mcpId, 
+        [FromQuery] string? search = null, 
+        [FromQuery] int limit = 10, 
+        CancellationToken cancellationToken = default)
+    {
+        // 只有管理员可以调用此API
+        if (!currentUser.IsAdmin)
+        {
+            return Forbid();
+        }
+
+        // 检查MCP服务器是否存在
+        bool mcpExists = await db.McpServers.AnyAsync(x => x.Id == mcpId, cancellationToken);
+        if (!mcpExists)
+        {
+            return NotFound();
+        }
+
+        // 获取已分配的用户ID
+        List<int> assignedUserIds = await db.UserMcps
+            .Where(um => um.McpServerId == mcpId)
+            .Select(um => um.UserId)
+            .ToListAsync(cancellationToken);
+
+        // 构建查询，排除已分配的用户
+        IQueryable<User> query = db.Users.Where(u => !assignedUserIds.Contains(u.Id));
+
+        // 如果有搜索条件，添加搜索过滤
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(u => u.DisplayName.Contains(search) || u.UserName.Contains(search));
+        }
+
+        // 按更新时间倒序排列，限制数量
+        UnassignedUserDto[] unassignedUsers = await query
+            .OrderByDescending(u => u.UpdatedAt)
+            .Take(Math.Min(limit, 50)) // 最多50条
+            .Select(u => new UnassignedUserDto
+            {
+                Id = u.Id,
+                UserName = u.DisplayName
+            })
+            .ToArrayAsync(cancellationToken);
+
+        return Ok(unassignedUsers);
+    }
+
+    [HttpGet("{mcpId:int}/assigned-user-details")]
+    public async Task<ActionResult<AssignedUserDetailsDto[]>> GetAssignedUserDetails(int mcpId, CancellationToken cancellationToken)
+    {
+        IQueryable<McpServer> query = db.McpServers.Where(x => x.Id == mcpId);
+        query = ApplyAdminFilter(query);
+
+        bool hasAccess = await query.AnyAsync(cancellationToken);
+        if (!hasAccess)
+        {
+            return NotFound();
+        }
+
+        AssignedUserDetailsDto[] assignedUsers = await db.UserMcps
+            .Where(um => um.McpServerId == mcpId)
+            .Include(um => um.User)
+            .OrderBy(um => um.User.DisplayName)
+            .Select(um => new AssignedUserDetailsDto
+            {
+                Id = um.UserId,
+                UserName = um.User.DisplayName,
+                CustomHeaders = um.CustomHeaders
+            })
+            .ToArrayAsync(cancellationToken);
+
+        return Ok(assignedUsers);
+    }
+
+    [HttpGet("{mcpId:int}/assigned-user-names")]
+    public async Task<ActionResult<AssignedUserNameDto[]>> GetAssignedUserNames(int mcpId, CancellationToken cancellationToken)
+    {
+        IQueryable<McpServer> query = db.McpServers.Where(x => x.Id == mcpId && (currentUser.IsAdmin || x.OwnerUserId == currentUser.Id));
+        query = ApplyAdminFilter(query);
+
+        bool hasAccess = await query.AnyAsync(cancellationToken);
+        if (!hasAccess)
+        {
+            return NotFound();
+        }
+
+        AssignedUserNameDto[] assignedUsers = await db.UserMcps
+            .Where(um => um.McpServerId == mcpId)
+            .Include(um => um.User)
+            .OrderBy(um => um.User.DisplayName)
+            .Select(um => new AssignedUserNameDto
+            {
+                Id = um.UserId,
+                UserName = um.User.DisplayName
+            })
+            .ToArrayAsync(cancellationToken);
+
+        return Ok(assignedUsers);
     }
 }
