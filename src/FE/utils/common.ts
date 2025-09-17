@@ -63,6 +63,25 @@ export function toFixed(value: number, precision: number = 2) {
   return value ? value.toFixed(precision) : '0';
 }
 
+/**
+ * 检测系统是否为深色主题
+ */
+export function isSystemDark(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+/**
+ * 解析主题值，将 system 转换为实际的 dark/light
+ */
+export function resolveTheme(theme?: string): 'dark' | 'light' {
+  if (theme === 'system') {
+    return isSystemDark() ? 'dark' : 'light';
+  }
+  return theme === 'dark' ? 'dark' : 'light';
+}
+
 export function getIconStroke(theme?: string) {
-  return theme === 'dark' ? 'rgb(54 67 75)' : 'rgb(243 244 246)';
+  const resolvedTheme = resolveTheme(theme);
+  return resolvedTheme === 'dark' ? 'rgb(54 67 75)' : 'rgb(243 244 246)';
 }
