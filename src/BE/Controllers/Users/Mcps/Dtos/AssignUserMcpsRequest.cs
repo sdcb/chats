@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.BE.Controllers.Admin.AdminMcps.Dtos;
+namespace Chats.BE.Controllers.Users.Mcps.Dtos;
 
 public record AssignUserMcpsRequest
 {

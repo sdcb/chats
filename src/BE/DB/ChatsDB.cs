@@ -135,6 +135,8 @@ public partial class ChatsDB : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.UseCollation("SQL_Latin1_General_CP1_CI_AS");
+
         modelBuilder.Entity<BalanceTransaction>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_BalanceLog2");
@@ -327,6 +329,8 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<McpServer>(entity =>
         {
+            entity.HasIndex(e => e.OwnerUserId, "IX_McpServer_OwnerUserId").HasFilter("([OwnerUserId] IS NOT NULL)");
+
             entity.HasOne(d => d.OwnerUser).WithMany(p => p.McpServers)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_McpServer_User");
@@ -642,6 +646,14 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<UserModelUsage>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_ModelUsage");
+
+            entity.HasIndex(e => e.BalanceTransactionId, "IX_ModelUsage_BalanceTransaction")
+                .IsUnique()
+                .HasFilter("([BalanceTransactionId] IS NOT NULL)");
+
+            entity.HasIndex(e => e.UsageTransactionId, "IX_ModelUsage_UsageTransaction")
+                .IsUnique()
+                .HasFilter("([UsageTransactionId] IS NOT NULL)");
 
             entity.HasOne(d => d.BalanceTransaction).WithOne(p => p.UserModelUsage).HasConstraintName("FK_ModelUsage_TransactionLog");
 

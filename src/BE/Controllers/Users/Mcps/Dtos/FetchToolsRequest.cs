@@ -1,3 +1,3 @@
-﻿namespace Chats.BE.Controllers.Admin.AdminMcps.Dtos;
+﻿namespace Chats.BE.Controllers.Users.Mcps.Dtos;
 
 public record FetchToolsRequest(string ServerUrl, string? Headers);

@@ -202,7 +202,6 @@ const McpTab = () => {
                 <TableRow>
                   <TableHead>{t('Label')}</TableHead>
                   <TableHead>{t('URL')}</TableHead>
-                  {isAdmin && <TableHead>{t('Status')}</TableHead>}
                   <TableHead>{t('Tool Count')}</TableHead>
                   {isAdmin && <TableHead>{t('Owner')}</TableHead>}
                   <TableHead>{t('Created')}</TableHead>
@@ -213,7 +212,7 @@ const McpTab = () => {
               <TableBody>
                 {filteredServers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       {searchTerm ? t('No MCP servers found') : t('No MCP servers yet')}
                     </TableCell>
                   </TableRow>
@@ -224,13 +223,6 @@ const McpTab = () => {
                       <TableCell className="max-w-xs truncate" title={server.url}>
                         {server.url}
                       </TableCell>
-                      {isAdmin && (
-                        <TableCell>
-                          <Badge variant={server.isSystem ? 'default' : 'secondary'}>
-                            {server.isSystem ? t('System') : t('User')}
-                          </Badge>
-                        </TableCell>
-                      )}
                       <TableCell>
                         <Badge variant="outline">{server.toolsCount}</Badge>
                       </TableCell>

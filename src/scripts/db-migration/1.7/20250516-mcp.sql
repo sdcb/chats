@@ -192,9 +192,8 @@ CREATE TABLE [McpServer] (
     [Label]           NVARCHAR (50)  NOT NULL,
     [Url]             NVARCHAR (300) NOT NULL,
     [Headers]         NVARCHAR (MAX) NULL,
-    [CreatedAt]       DATETIME2 (7)  CONSTRAINT [DEFAULT_Mcp_CreatedAt] DEFAULT SYSUTCDATETIME() NOT NULL,
+    [CreatedAt]       DATETIME2 (7)  NOT NULL,
     [OwnerUserId]     INT            NOT NULL,
-    [IsSystem]        BIT            CONSTRAINT [DEFAULT_Mcp_IsSystem] DEFAULT 0 NOT NULL,
     [UpdatedAt]       DATETIME2 (7)  NOT NULL,
     CONSTRAINT [PK_McpServer] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_McpServer_User] FOREIGN KEY ([OwnerUserId]) REFERENCES [User] ([Id]),
@@ -208,7 +207,6 @@ CREATE TABLE [dbo].[McpTool] (
     [ToolName]        NVARCHAR (100) NOT NULL,
     [Description]     NVARCHAR (MAX) NULL,
     [Parameters]      NVARCHAR (MAX) NULL, -- 存储参数的 JSON Schema
-    [RequireApproval] BIT            CONSTRAINT [DEFAULT_Mcp_RequireApproval] DEFAULT 0 NOT NULL,
 
     CONSTRAINT [PK_McpTool] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_McpTool_McpServer] FOREIGN KEY ([McpServerId]) REFERENCES [dbo].[McpServer] ([Id]) ON DELETE CASCADE, -- 级联删除
@@ -491,13 +489,6 @@ ALTER TABLE [InvitationCode] DROP CONSTRAINT [DF_InvitationCode_isDeleted];
 ALTER TABLE [LoginService] DROP CONSTRAINT [DF_LoginServices_configs];
 ALTER TABLE [LoginService] DROP CONSTRAINT [DF_LoginServices_createdAt];
 ALTER TABLE [LoginService] DROP CONSTRAINT [DF_LoginServices_enabled];
-
--- McpServer表
-ALTER TABLE [McpServer] DROP CONSTRAINT [DEFAULT_Mcp_CreatedAt];
-ALTER TABLE [McpServer] DROP CONSTRAINT [DEFAULT_Mcp_IsSystem];
-
--- McpTool表
-ALTER TABLE [McpTool] DROP CONSTRAINT [DEFAULT_Mcp_RequireApproval];
 
 -- Model表
 ALTER TABLE [Model] DROP CONSTRAINT [DF_Model_IsDeleted];

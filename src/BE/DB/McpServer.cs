@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.BE.DB;
 
 [Table("McpServer")]
-[Index("OwnerUserId", Name = "IX_McpServer_OwnerUserId")]
 [Index("Label", Name = "UX_McpServer_Label", IsUnique = true)]
 public partial class McpServer
 {
@@ -25,8 +24,6 @@ public partial class McpServer
     public DateTime CreatedAt { get; set; }
 
     public int OwnerUserId { get; set; }
-
-    public bool IsSystem { get; set; }
 
     public DateTime UpdatedAt { get; set; }
 

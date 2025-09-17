@@ -346,36 +346,32 @@ export interface McpToolBasicInfo {
   parameters?: string;
 }
 
-export interface McpToolDto extends McpToolBasicInfo {
-  requireApproval: boolean;
+export interface McpServerListItemDto {
+  id: number;
+  label: string;
 }
 
-export interface McpServerListItemDto {
+export interface McpServerListManagementItemDto {
   id: number;
   label: string;
   url: string;
   createdAt: string;
   updatedAt: string;
   toolsCount: number;
-}
-
-export interface McpServerListManagementItemDto extends McpServerListItemDto {
-  isSystem: boolean;
   owner: string;
   editable: boolean;
 }
 
 export interface McpServerDetailsDto extends McpServerListManagementItemDto {
   headers?: string;
-  tools: McpToolDto[];
+  tools: McpToolBasicInfo[];
 }
 
 export interface UpdateMcpServerRequest {
   label: string;
   url: string;
   headers?: string;
-  isSystem: boolean;
-  tools: McpToolDto[];
+  tools: McpToolBasicInfo[];
 }
 
 export interface FetchToolsRequest {

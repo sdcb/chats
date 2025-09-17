@@ -4,7 +4,7 @@ import { useTheme } from 'next-themes';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { McpServerDetailsDto, McpToolDto, McpToolBasicInfo, UpdateMcpServerRequest } from '@/types/clientApis';
+import { McpServerDetailsDto, McpToolBasicInfo, UpdateMcpServerRequest } from '@/types/clientApis';
 
 import {
   IconPlus,
@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -56,9 +55,8 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
     label: '',
     url: '',
     headers: '',
-    isSystem: false,
   });
-  const [tools, setTools] = useState<McpToolDto[]>([]);
+  const [tools, setTools] = useState<McpToolBasicInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchingTools, setFetchingTools] = useState(false);
   const [labelError, setLabelError] = useState<string | null>(null);
@@ -82,7 +80,6 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
         label: server.label,
         url: server.url,
         headers: server.headers || '',
-        isSystem: server.isSystem,
       });
       setTools(server.tools);
     } else {
@@ -90,7 +87,6 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
         label: '',
         url: '',
         headers: '',
-        isSystem: false,
       });
       setTools([]);
     }
@@ -112,7 +108,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
   };
 
   // internal fetch tools with optional silent mode (no toast)
-  const fetchToolsInternal = async (silent: boolean): Promise<McpToolDto[] | null> => {
+  const fetchToolsInternal = async (silent: boolean): Promise<McpToolBasicInfo[] | null> => {
     if (!formData.url) {
       if (!silent) toast.error(t('Please enter server URL first'));
       return null;
@@ -125,9 +121,8 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
         headers: formData.headers || undefined,
       });
 
-      const newTools: McpToolDto[] = fetchedTools.map(tool => ({
+      const newTools: McpToolBasicInfo[] = fetchedTools.map(tool => ({
         ...tool,
-        requireApproval: false,
       }));
 
       setTools(newTools);
@@ -146,7 +141,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
     await fetchToolsInternal(false);
   };
 
-  const handleToolChange = (index: number, field: keyof McpToolDto, value: any) => {
+  const handleToolChange = (index: number, field: keyof McpToolBasicInfo, value: any) => {
     setTools(prev => prev.map((tool, i) =>
       i === index ? { ...tool, [field]: value } : tool
     ));
@@ -159,7 +154,6 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
         name: '',
         description: '',
         parameters: '',
-        requireApproval: false,
       }
     ]);
   };
@@ -232,7 +226,6 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
         label: formData.label.trim(),
         url: formData.url.trim(),
         headers: formData.headers.trim() || undefined,
-        isSystem: formData.isSystem,
         tools: toolsToSave,
       });
     } catch (error) {
@@ -264,16 +257,6 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
             <Card className="p-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium">{t('Basic Information')}</h3>
-                {isAdmin && <div className="flex items-center space-x-2">
-                  <Label htmlFor="isSystem">{t('Is System')}</Label>
-                  <Switch
-                    id="isSystem"
-                    checked={formData.isSystem}
-                    onCheckedChange={(checked) => handleInputChange('isSystem', checked)}
-                    disabled={isReadOnly}
-                  />
-                </div>
-                }
               </div>
               <div className="space-y-4">
                 <div>

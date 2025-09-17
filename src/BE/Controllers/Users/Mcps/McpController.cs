@@ -1,4 +1,4 @@
-using Chats.BE.Controllers.Admin.AdminMcps.Dtos;
+using Chats.BE.Controllers.Users.Mcps.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
@@ -7,16 +7,15 @@ using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Client;
 using System.Text.Json;
 
-namespace Chats.BE.Controllers.Admin.AdminMcps;
+namespace Chats.BE.Controllers.Users.Mcps;
 
 [Route("api/mcp"), Authorize]
-public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
+public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<McpServerListItemDto[]>> ListAllMcpServers(CancellationToken cancellationToken)
     {
-        IQueryable<McpServer> query = db.McpServers;
-        query = query.Where(x => x.UserMcps.Any(um => um.UserId == currentUser.Id));
+        IQueryable<McpServer> query = db.McpServers.Where(x => x.UserMcps.Any(um => um.UserId == currentUser.Id));
 
         McpServerListItemDto[] data = await query
             .OrderByDescending(x => x.Id)
@@ -24,10 +23,6 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             {
                 Id = x.Id,
                 Label = x.Label,
-                Url = x.Url,
-                CreatedAt = x.CreatedAt,
-                UpdatedAt = x.UpdatedAt,
-                ToolsCount = x.McpTools.Count,
             })
             .ToArrayAsync(cancellationToken);
         return Ok(data);
@@ -40,7 +35,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
         query = ApplyAdminFilter(query);
 
         ManagementMcpServerDto[] data = await query
-                .OrderBy(x => x.IsSystem) // non-system first
+                .OrderBy(x => x.OwnerUserId == currentUser.Id ? 0 : 1) // own first
                 .ThenByDescending(x => x.Id)
                 .Select(x => new ManagementMcpServerDto
                 {
@@ -50,8 +45,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
                     CreatedAt = x.CreatedAt,
                     UpdatedAt = x.UpdatedAt,
                     ToolsCount = x.McpTools.Count,
-                    Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id,
-                    IsSystem = x.IsSystem,
+                    Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id, // admin or owner can edit
                     Owner = x.OwnerUser.DisplayName,
                 })
                 .ToArrayAsync(cancellationToken);
@@ -62,11 +56,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
     {
         if (!currentUser.IsAdmin)
         {
-            query = query.Where(x => x.OwnerUserId == currentUser.Id);
-        }
-        else
-        {
-            query = query.Where(x => x.IsSystem || x.OwnerUserId == currentUser.Id);
+            query = query.Where(x => x.OwnerUserId == currentUser.Id || x.UserMcps.Any(um => um.UserId == currentUser.Id));
         }
 
         return query;
@@ -85,7 +75,6 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
                 Label = x.Label,
                 Url = x.Url,
                 Headers = x.Headers,
-                IsSystem = x.IsSystem,
                 Owner = x.OwnerUser.DisplayName,
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt,
@@ -93,12 +82,11 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
                 Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id,
                 Tools = x.McpTools
                     .OrderBy(t => t.Id)
-                    .Select(t => new McpToolDto
+                    .Select(t => new McpToolBasicInfo
                     {
                         Name = t.ToolName,
                         Description = t.Description,
                         Parameters = t.Parameters,
-                        RequireApproval = t.RequireApproval,
                     }).ToList(),
             })
             .FirstOrDefaultAsync(cancellationToken);
@@ -135,11 +123,6 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             return BadRequest("Invalid URL");
         }
 
-        if (request.IsSystem && !currentUser.IsAdmin)
-        {
-            return Forbid();
-        }
-
         if (!request.ValidateToolNameUnique())
         {
             return BadRequest("Tool names must be unique within the server");
@@ -150,7 +133,6 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
             Label = request.Label,
             Url = request.Url,
             Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers,
-            IsSystem = request.IsSystem,
             OwnerUserId = currentUser.Id,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -164,20 +146,9 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
         };
 
         // Add tools
-        foreach (McpToolDto toolRequest in request.Tools)
+        foreach (McpToolBasicInfo toolRequest in request.Tools)
         {
-            server.McpTools.Add(new McpTool
-            {
-                McpServerId = server.Id,
-                ToolName = toolRequest.Name,
-                Description = toolRequest.Description,
-                Parameters = toolRequest.Parameters,
-                RequireApproval = toolRequest.RequireApproval,
-            });
-        }
-        if (server.McpTools.Count != 0)
-        {
-            server.UpdatedAt = DateTime.UtcNow;
+            server.McpTools.Add(toolRequest.ToDB());
         }
 
         db.McpServers.Add(server);
@@ -192,11 +163,6 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
-        }
-
-        if (request.IsSystem && !currentUser.IsAdmin)
-        {
-            return Forbid();
         }
 
         // Validate label cannot contain ASCII colon ':'
@@ -239,7 +205,6 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
         server.Label = request.Label;
         server.Url = request.Url;
         server.Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers;
-        server.IsSystem = request.IsSystem;
         if (!server.UserMcps.Any(um => um.UserId == currentUser.Id))
         {
             server.UserMcps.Add(new UserMcp
@@ -250,41 +215,36 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
 
         // Always overwrite tools according to request (even when empty)
         UpdateMcpToolsInMemory(server, request.Tools);
-        server.UpdatedAt = DateTime.UtcNow;
+
+        if (db.ChangeTracker.HasChanges())
+        {
+            server.UpdatedAt = DateTime.UtcNow;
+        }
 
         await db.SaveChangesAsync(cancellationToken);
-
         return await GetMcpServerDetails(mcpId, cancellationToken);
     }
 
-    private static void UpdateMcpToolsInMemory(McpServer server, List<McpToolDto> requestTools)
+    private static void UpdateMcpToolsInMemory(McpServer server, List<McpToolBasicInfo> requestTools)
     {
         // Create lookup dictionaries
         Dictionary<string, McpTool> existingToolsDict = server.McpTools.ToDictionary(t => t.ToolName, t => t);
-        Dictionary<string, McpToolDto> requestToolsDict = requestTools.ToDictionary(t => t.Name, t => t);
+        Dictionary<string, McpToolBasicInfo> requestToolsDict = requestTools.ToDictionary(t => t.Name, t => t);
 
         // Find tools to add (exist in request but not in database)
-        IEnumerable<McpToolDto> toolsToAdd = requestTools.Where(rt => !existingToolsDict.ContainsKey(rt.Name));
-        foreach (McpToolDto toolToAdd in toolsToAdd)
+        IEnumerable<McpToolBasicInfo> toolsToAdd = requestTools.Where(rt => !existingToolsDict.ContainsKey(rt.Name));
+        foreach (McpToolBasicInfo toolToAdd in toolsToAdd)
         {
-            server.McpTools.Add(new McpTool
-            {
-                McpServerId = server.Id,
-                ToolName = toolToAdd.Name,
-                Description = toolToAdd.Description,
-                Parameters = toolToAdd.Parameters,
-                RequireApproval = toolToAdd.RequireApproval,
-            });
+            server.McpTools.Add(toolToAdd.ToDB());
         }
 
         // Find tools to update (exist in both request and database)
         IEnumerable<McpTool> toolsToUpdate = server.McpTools.Where(et => requestToolsDict.ContainsKey(et.ToolName));
         foreach (McpTool? existingTool in toolsToUpdate)
         {
-            McpToolDto requestTool = requestToolsDict[existingTool.ToolName];
+            McpToolBasicInfo requestTool = requestToolsDict[existingTool.ToolName];
             existingTool.Description = requestTool.Description;
             existingTool.Parameters = requestTool.Parameters;
-            existingTool.RequireApproval = requestTool.RequireApproval;
         }
 
         // Find tools to remove (exist in database but not in request)
@@ -365,7 +325,7 @@ public class AdminMcpController(ChatsDB db, CurrentUser currentUser) : Controlle
     }
 
     [HttpPost("fetch-tools")]
-    public async Task<ActionResult<List<McpToolBasicInfo>>> FetchMcpTools([FromBody] FetchToolsRequest req, [FromServices] ILogger<AdminMcpController> logger, CancellationToken cancellationToken)
+    public async Task<ActionResult<List<McpToolBasicInfo>>> FetchMcpTools([FromBody] FetchToolsRequest req, [FromServices] ILogger<McpController> logger, CancellationToken cancellationToken)
     {
         if (!Uri.TryCreate(req.ServerUrl, UriKind.Absolute, out Uri? serverUri))
         {
