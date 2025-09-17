@@ -4,8 +4,6 @@ import { useTheme } from 'next-themes';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { getIconStroke } from '@/utils/common';
-
 import { McpServerDetailsDto, McpServerListManagementItemDto } from '@/types/clientApis';
 
 import DeletePopover from '@/pages/home/_components/Popover/DeletePopover';
@@ -172,8 +170,7 @@ const McpTab = () => {
           <Button onClick={handleCreateServer}>
             <IconPlus
               size={16}
-              className="mr-2"
-              stroke={getIconStroke(theme)}
+              className="mr-2 stroke-primary-foreground"
             />
             {t('Add MCP Server')}
           </Button>

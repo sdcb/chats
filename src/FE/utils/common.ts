@@ -80,8 +80,3 @@ export function resolveTheme(theme?: string): 'dark' | 'light' {
   }
   return theme === 'dark' ? 'dark' : 'light';
 }
-
-export function getIconStroke(theme?: string) {
-  const resolvedTheme = resolveTheme(theme);
-  return resolvedTheme === 'dark' ? 'rgb(54 67 75)' : 'rgb(243 244 246)';
-}

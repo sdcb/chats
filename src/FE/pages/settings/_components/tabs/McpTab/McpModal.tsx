@@ -35,7 +35,6 @@ import {
 import { Card } from '@/components/ui/card';
 
 import { fetchMcpTools } from '@/apis/clientApis';
-import { getIconStroke } from '@/utils/common';
 import { getUserInfo } from '@/utils/user';
 
 interface McpModalProps {
@@ -410,7 +409,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
           </Button>
           {!isReadOnly && (
             <Button onClick={handleSubmit} disabled={loading || isLoadingData || fetchingTools}>
-              <IconCheck size={16} className="mr-2" stroke={getIconStroke(theme)} />
+              <IconCheck size={16} className="mr-2 stroke-primary-foreground" />
               {loading ? t('Saving...') : t('Save')}
             </Button>
           )}
