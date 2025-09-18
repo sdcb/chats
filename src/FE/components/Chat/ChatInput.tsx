@@ -98,14 +98,7 @@ const ChatInput = ({
   const [isFullWriting, setIsFullWriting] = useState(false);
   const [isCollapsedByChat, setIsCollapsedByChat] = useState(false);
 
-  // 如果没有选中的聊天，不渲染ChatInput
-  if (!selectedChat) {
-    return null;
-  }
-
-  const filteredPrompts = prompts.filter((prompt) =>
-    prompt.name.toLowerCase().includes(promptInputValue.toLowerCase()),
-  );
+  // 定义所有需要在hooks规则下的callbacks和effects
   const updatePromptListVisibility = useCallback((text: string) => {
     const match = text.match(/\/\w*$/);
     const textLength = text.length;
@@ -119,6 +112,46 @@ const ChatInput = ({
       setPromptInputValue('');
     }
   }, []);
+
+  useEffect(() => {
+    if (isFullWriting) return;
+    if (textareaRef && textareaRef.current) {
+      textareaRef.current.style.height = 'inherit';
+      textareaRef.current.style.height = `${textareaRef.current?.scrollHeight}px`;
+      textareaRef.current.style.overflow = `${
+        textareaRef?.current?.scrollHeight > 96 ? 'auto' : 'hidden'
+      }`;
+    }
+  }, [contentText, contentFiles, isFullWriting]);
+
+  // 监听聊天状态变化，实现自动收起/展开抽屉
+  useEffect(() => {
+    if (!selectedChat) return;
+    
+    const prevStatus = prevChatStatusRef.current;
+    const currentStatus = selectedChat.status;
+    
+    // 只在聊天状态从非Chatting变为Chatting时触发一次关闭
+    if (prevStatus !== ChatStatus.Chatting && currentStatus === ChatStatus.Chatting) {
+      // 如果抽屉是展开的，自动收起
+      if (showChatInput) {
+        setIsCollapsedByChat(true);
+        settingDispatch(setShowChatInput(false));
+      }
+    }
+    
+    // 更新上一次的状态
+    prevChatStatusRef.current = currentStatus;
+  }, [selectedChat?.status, showChatInput, settingDispatch]);
+
+  // 如果没有选中的聊天，不渲染ChatInput
+  if (!selectedChat) {
+    return null;
+  }
+
+  const filteredPrompts = prompts.filter((prompt) =>
+    prompt.name.toLowerCase().includes(promptInputValue.toLowerCase()),
+  );
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -322,45 +355,6 @@ const ChatInput = ({
     setIsCollapsedByChat(false);
     settingDispatch(setShowChatInput(!showChatInput));
   };
-
-  useEffect(() => {
-    if (isFullWriting) return;
-    if (textareaRef && textareaRef.current) {
-      textareaRef.current.style.height = 'inherit';
-      textareaRef.current.style.height = `${textareaRef.current?.scrollHeight}px`;
-      textareaRef.current.style.overflow = `${
-        textareaRef?.current?.scrollHeight > 96 ? 'auto' : 'hidden'
-      }`;
-    }
-  }, [contentText, contentFiles]);
-
-  // 监听聊天状态变化，实现自动收起/展开抽屉
-  useEffect(() => {
-    if (!selectedChat) return;
-    
-    const prevStatus = prevChatStatusRef.current;
-    const currentStatus = selectedChat.status;
-    
-    // 只在聊天状态从非Chatting变为Chatting时触发一次关闭
-    if (prevStatus !== ChatStatus.Chatting && currentStatus === ChatStatus.Chatting) {
-      // 如果抽屉是展开的，自动收起
-      if (showChatInput) {
-        setIsCollapsedByChat(true);
-        settingDispatch(setShowChatInput(false));
-      }
-    } 
-    // 如果聊天结束且之前是因为聊天而收起的，自动展开
-    else if (prevStatus === ChatStatus.Chatting && currentStatus !== ChatStatus.Chatting) {
-      // 只要之前是因为聊天而收起的，就自动展开（不管当前抽屉状态如何）
-      if (isCollapsedByChat) {
-        setIsCollapsedByChat(false);
-        settingDispatch(setShowChatInput(true));
-      }
-    }
-    
-    // 更新前一个状态
-    prevChatStatusRef.current = currentStatus;
-  }, [selectedChat?.status, showChatInput, isCollapsedByChat, settingDispatch]);
 
   return (
     <div>

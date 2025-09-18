@@ -103,6 +103,101 @@ const Chat = memo(() => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
+  // 定义所有需要在hooks规则下的callback和effect
+  const handleSend = useCallback(
+    async (message: Message, messageId?: string) => {
+      if (!selectedChat) return;
+      if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
+      
+      // 检查是否存在任何助手回复
+      const hasAssistantResponse = selectedMessages.some(messageGroup => 
+        messageGroup.some(msg => msg.role === ChatRole.Assistant)
+      );
+      
+      // 如果有用户消息但没有助手回复，提示错误
+      if (selectedMessages.length > 0 && !hasAssistantResponse) {
+        toast.error(t('Cannot send message: No valid conversation context. Please start a new chat.'));
+        return;
+      }
+      
+      startChat();
+      let { id: chatId } = selectedChat;
+      let selectedMessageList = [...selectedMessages];
+      let userMessage = generateUserMessage(message.content, messageId);
+      selectedMessageList.push([userMessage]);
+      let responseMessages = generateResponseMessages(selectedChat, messageId);
+      selectedMessageList.push(responseMessages);
+      messageDispatch(setSelectedMessages(selectedMessageList));
+      const requestContent: RequestContent[] = responseContentToRequest(
+        message.content,
+      );
+      let chatBody = {
+        chatId,
+        timezoneOffset: getTz(),
+        parentAssistantMessageId: messageId || null,
+        userMessage: requestContent,
+      };
+
+      const response = await fetch(`${getApiUrl()}/api/chats/general`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getUserSession()}`,
+        },
+        body: JSON.stringify(chatBody),
+      });
+
+      await handleChatMessage(response, selectedMessageList);
+    },
+    [chats, selectedChat, selectedMessages, t, messageDispatch],
+  );
+
+  const autoScrollCallback = useCallback(() => {
+    if (autoScrollEnabled) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [autoScrollEnabled]);
+
+  const scrollDown = useCallback(() => {
+    if (autoScrollEnabled) {
+      messagesEndRef.current?.scrollIntoView(true);
+    }
+  }, [autoScrollEnabled]);
+  
+  const throttledScrollDown = useCallback(
+    throttle(scrollDown, 250),
+    [scrollDown]
+  );
+
+  const handleScroll = useCallback(() => {
+    if (chatContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } =
+        chatContainerRef.current;
+      const bottomTolerance = 30;
+
+      if (scrollTop + clientHeight < scrollHeight - bottomTolerance) {
+        setAutoScrollEnabled(false);
+        setShowScrollDownButton(true && selectedMessages.length > 0);
+      } else {
+        setAutoScrollEnabled(true);
+        setShowScrollDownButton(false);
+      }
+
+      // 判断是否显示滚动到顶部按钮（滚动超过100px时显示）
+      setShowScrollToTopButton(scrollTop > 100);
+      
+      // 判断是否显示滚动到上一个用户消息按钮
+      // 简单的逻辑：滚动超过200px且有多个消息时显示
+      setShowScrollToPrevUserMessageButton(scrollTop > 200 && selectedMessages.length > 1);
+    }
+  }, [selectedMessages]);
+
+  useEffect(() => {
+    if (!selectedChat) return;
+    throttledScrollDown();
+    handleScroll();
+  }, [selectedMessages, selectedChat, throttledScrollDown, handleScroll]);
+
   // 如果没有选中的聊天，显示NoChat组件
   if (!selectedChat) {
     return hasModel() ? <NoChat /> : <NoModel />;
@@ -465,53 +560,6 @@ const Chat = memo(() => {
     return count === 0;
   };
 
-  const handleSend = useCallback(
-    async (message: Message, messageId?: string) => {
-      if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
-      
-      // 检查是否存在任何助手回复
-      const hasAssistantResponse = selectedMessages.some(messageGroup => 
-        messageGroup.some(msg => msg.role === ChatRole.Assistant)
-      );
-      
-      // 如果有用户消息但没有助手回复，提示错误
-      if (selectedMessages.length > 0 && !hasAssistantResponse) {
-        toast.error(t('Cannot send message: No valid conversation context. Please start a new chat.'));
-        return;
-      }
-      
-      startChat();
-      let { id: chatId } = selectedChat;
-      let selectedMessageList = [...selectedMessages];
-      let userMessage = generateUserMessage(message.content, messageId);
-      selectedMessageList.push([userMessage]);
-      let responseMessages = generateResponseMessages(selectedChat, messageId);
-      selectedMessageList.push(responseMessages);
-      messageDispatch(setSelectedMessages(selectedMessageList));
-      const requestContent: RequestContent[] = responseContentToRequest(
-        message.content,
-      );
-      let chatBody = {
-        chatId,
-        timezoneOffset: getTz(),
-        parentAssistantMessageId: messageId || null,
-        userMessage: requestContent,
-      };
-
-      const response = await fetch(`${getApiUrl()}/api/chats/general`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getUserSession()}`,
-        },
-        body: JSON.stringify(chatBody),
-      });
-
-      await handleChatMessage(response, selectedMessageList);
-    },
-    [chats, selectedChat, selectedMessages],
-  );
-
   const handleRegenerate = async (
     spanId: number,
     messageId: string,
@@ -803,35 +851,6 @@ const Chat = memo(() => {
     changeSelectedChatStatus(ChatStatus.None);
   };
 
-  useCallback(() => {
-    if (autoScrollEnabled) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [autoScrollEnabled]);
-
-  const handleScroll = () => {
-    if (chatContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } =
-        chatContainerRef.current;
-      const bottomTolerance = 30;
-
-      if (scrollTop + clientHeight < scrollHeight - bottomTolerance) {
-        setAutoScrollEnabled(false);
-        setShowScrollDownButton(true && selectedMessages.length > 0);
-      } else {
-        setAutoScrollEnabled(true);
-        setShowScrollDownButton(false);
-      }
-
-      // 判断是否显示滚动到顶部按钮（滚动超过100px时显示）
-      setShowScrollToTopButton(scrollTop > 100);
-      
-      // 判断是否显示滚动到上一个用户消息按钮
-      // 简单的逻辑：滚动超过200px且有多个消息时显示
-      setShowScrollToPrevUserMessageButton(scrollTop > 200 && selectedMessages.length > 1);
-    }
-  };
-
   const handleScrollDown = () => {
     chatContainerRef.current?.scrollTo({
       top: chatContainerRef.current.scrollHeight,
@@ -904,18 +923,6 @@ const Chat = memo(() => {
       handleScrollToTop();
     }
   };
-
-  const scrollDown = () => {
-    if (autoScrollEnabled) {
-      messagesEndRef.current?.scrollIntoView(true);
-    }
-  };
-  const throttledScrollDown = throttle(scrollDown, 250);
-
-  useEffect(() => {
-    throttledScrollDown();
-    handleScroll();
-  }, [selectedMessages, throttledScrollDown]);
 
   const handleChangePrompt = (prompt: Prompt) => {
     // to do

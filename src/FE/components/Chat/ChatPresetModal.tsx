@@ -41,7 +41,8 @@ interface Props {
 const ChatPresetModal = (props: Props) => {
   const { chatPreset, isOpen, onClose } = props;
   const {
-    state: { selectedChat, modelMap, prompts, models, defaultPrompt },
+    state: { modelMap, prompts, models, defaultPrompt },
+    selectedChat,
   } = useContext(HomeContext);
   const [spans, setSpans] = useState<ChatSpanDto[]>([]);
   const [selectedSpan, setSelectedSpan] = useState<ChatSpanDto>();
@@ -420,7 +421,7 @@ const ChatPresetModal = (props: Props) => {
                     {span.modelName}
                   </div>
                 ))}
-                {selectedChat.spans.length < MAX_SELECT_MODEL_COUNT && (
+                {selectedChat && selectedChat.spans.length < MAX_SELECT_MODEL_COUNT && (
                   <ChatModelDropdownMenu
                     className="p-0"
                     triggerClassName={'hover:bg-transparent p-0 h-10'}
