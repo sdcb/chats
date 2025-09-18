@@ -152,21 +152,27 @@ const ChatHeader = () => {
 
     return (
       <div className="flex items-center ml-2">
-        <Tips
-          trigger={
-            <ChatModelDropdownMenu
-              className="p-0"
-              triggerClassName={'hover:bg-transparent p-2 bg-button hover:bg-accent'}
-              models={models}
-              content={<IconPlus size={16} />}
-              hideIcon={true}
-              onChangeModel={(model) => {
-                handleAddChatModel(model.modelId);
-              }}
-            />
-          }
-          content={t('Add Model')}
-        />
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <ChatModelDropdownMenu
+                  className="p-0"
+                  triggerClassName={'hover:bg-transparent p-2 bg-button hover:bg-accent'}
+                  models={models}
+                  content={<IconPlus size={16} />}
+                  hideIcon={true}
+                  onChangeModel={(model) => {
+                    handleAddChatModel(model.modelId);
+                  }}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t('Add Model')}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     );
   };
