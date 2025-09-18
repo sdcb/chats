@@ -1,10 +1,12 @@
+import { getSettings } from '@/utils/settings';
+
 interface SettingInitialState {
   showChatBar: boolean;
   showChatInput: boolean;
 }
 
 export const settingInitialState: SettingInitialState = {
-  showChatBar: true,
+  showChatBar: getSettings().showChatBar,
   showChatInput: true,
 };
 

@@ -4,6 +4,7 @@ import { ActionType } from '@/hooks/useCreateReducer';
 
 import { CHATS_SELECT_TYPE, IChat } from '@/types/chat';
 import { GetChatsParams } from '@/types/clientApis';
+import { getSettings } from '@/utils/settings';
 
 import {
   ChatAction,
@@ -71,7 +72,7 @@ export const initialState: HomeInitialState = {
   defaultPrompt: null,
   prompts: [],
 
-  showChatBar: true,
+  showChatBar: getSettings().showChatBar,
   showChatInput: true,
 };
 
