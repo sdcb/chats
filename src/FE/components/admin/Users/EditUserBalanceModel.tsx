@@ -89,7 +89,7 @@ const EditUserBalanceModal = (props: IProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       {isOpen && (
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t('User recharge')}</DialogTitle>
           </DialogHeader>
