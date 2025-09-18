@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from 'react';
+import { useEffect, useReducer, useState, useMemo } from 'react';
 
 import { useRouter } from 'next/router';
 
@@ -27,7 +27,7 @@ import {
   setChatPaging,
   setChats,
   setIsChatsLoading,
-  setSelectedChat,
+  setSelectedChatId,
   setStopIds,
 } from '@/actions/chat.actions';
 import {
@@ -90,9 +90,61 @@ const HomeContent = () => {
     promptInitialState,
   );
 
-  const { chats, chatPaging, stopIds } = chatState;
+  const { chats, chatPaging, stopIds, selectedChatId } = chatState;
   const { models } = modelState;
   const [isPageLoading, setIsPageLoading] = useState(true);
+
+  // 解析 hash 中的 chatId，例如 "#/abc" -> "abc"
+  const getHashChatId = (): string | undefined => {
+    if (typeof window === 'undefined') return undefined;
+    const hash = window.location.hash || '';
+    if (hash.startsWith('#/')) return hash.slice(2) || undefined;
+    return undefined;
+  };
+
+  // 根据 selectedChatId 纯计算 selectedChat（无副作用）
+  const selectedChat = useMemo(() => {
+    if (!selectedChatId) return undefined;
+    return chats.find((chat) => chat.id === selectedChatId);
+  }, [chats, selectedChatId]);
+
+  // 当 chats 就绪且还未选中任何聊天时，依据 URL 或默认规则初始化 selectedChatId
+  useEffect(() => {
+    if (!chats.length) return;
+    if (selectedChatId) return; // 已有选中，无需初始化
+
+    // 优先 URL 中的 chatId，其次未分组的第一个，最后列表第一个
+    const urlChatId = getHashChatId();
+    const targetFromUrl = urlChatId
+      ? chats.find((c) => c.id === urlChatId)
+      : undefined;
+    const target =
+      targetFromUrl || chats.find((c) => c.groupId === null) || chats[0];
+    if (target) {
+      // 使用既有的选择逻辑，确保同步加载消息与选中路径
+      selectChat(chats, target.id);
+    }
+  }, [chats, selectedChatId, router.asPath, chatDispatch]);
+
+  // 当 selectedChatId 无效（对应的 chat 不在列表中）时，自动回退到有效的聊天
+  useEffect(() => {
+    if (!chats.length) return;
+    if (!selectedChatId) return;
+    const exists = chats.some((c) => c.id === selectedChatId);
+    if (exists) return;
+
+    const urlChatId = getHashChatId();
+    const targetFromUrl = urlChatId
+      ? chats.find((c) => c.id === urlChatId)
+      : undefined;
+    const fallback =
+      targetFromUrl || chats.find((c) => c.groupId === null) || chats[0];
+    if (fallback) {
+      selectChat(chats, fallback.id);
+    } else {
+      chatDispatch(setSelectedChatId(undefined));
+    }
+  }, [chats, selectedChatId]);
 
   const contextValue = useCreateReducer<HomeInitialState>({
     initialState,
@@ -134,7 +186,7 @@ const HomeContent = () => {
   const selectChat = (chatList: IChat[], chatId?: string) => {
     const chat = findChat(chatList, chatId);
     if (chat) {
-      chatDispatch(setSelectedChat(supplyChatProperty(chat)));
+      chatDispatch(setSelectedChatId(chat.id));
 
       getUserMessages(chat.id).then((data) => {
         if (data.length > 0) {
@@ -157,7 +209,7 @@ const HomeContent = () => {
       chat.groupId = groupId;
       const chatList = [chat, ...chats];
       chatDispatch(setChats(chatList));
-      chatDispatch(setSelectedChat(chat));
+      chatDispatch(setSelectedChatId(chat.id));
       messageDispatch(setMessages([]));
       messageDispatch(setSelectedMessages([]));
 
@@ -171,7 +223,7 @@ const HomeContent = () => {
   };
 
   const handleSelectChat = (chat: IChat) => {
-    chatDispatch(setSelectedChat(chat));
+    chatDispatch(setSelectedChatId(chat.id));
     getUserMessages(chat.id).then((data) => {
       if (data.length > 0) {
         selectChatMessage(data, chat.leafMessageId);
@@ -250,7 +302,7 @@ const HomeContent = () => {
 
       selectChat(chatList, chatIdToSelect);
     } else {
-      chatDispatch(setSelectedChat(undefined));
+      chatDispatch(setSelectedChatId(undefined));
       messageDispatch(setSelectedMessages([]));
       messageDispatch(setMessages([]));
     }
@@ -284,11 +336,7 @@ const HomeContent = () => {
       chatGroupList.push({ ...d, isExpanded: query ? true : d.isExpanded });
       chatList.push(...d.chats.rows);
     });
-    const chat = selectChat(chatList);
-    if (chat)
-      chatGroupList = chatGroupList.map((x) =>
-        x.id === chat.groupId ? { ...x, isExpanded: true } : x,
-      );
+    
     chatDispatch(setChats(chatList));
     chatDispatch(setChatGroup(chatGroupList));
     chatDispatch(setChatPaging(chatPagingList));
@@ -379,6 +427,7 @@ const HomeContent = () => {
           ...settingState,
           ...promptState,
         },
+        selectedChat,
         chatDispatch: chatDispatch,
         messageDispatch: messageDispatch,
         modelDispatch: modelDispatch,

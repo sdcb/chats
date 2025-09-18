@@ -76,14 +76,15 @@ const ChatInput = ({
   const { t } = useTranslation();
 
   const {
-    state: { prompts, selectedChat, modelMap, showChatInput },
+    state: { prompts, modelMap, showChatInput },
+    selectedChat,
     handleStopChats,
     settingDispatch,
   } = useContext(HomeContext);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const promptListRef = useRef<HTMLUListElement | null>(null);
-  const prevChatStatusRef = useRef<ChatStatus>(selectedChat.status);
+  const prevChatStatusRef = useRef<ChatStatus>(selectedChat?.status || ChatStatus.None);
   const [contentText, setContentText] = useState('');
   const [contentFiles, setContentFiles] = useState<FileDef[]>([]);
 
@@ -96,6 +97,11 @@ const ChatInput = ({
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isFullWriting, setIsFullWriting] = useState(false);
   const [isCollapsedByChat, setIsCollapsedByChat] = useState(false);
+
+  // 如果没有选中的聊天，不渲染ChatInput
+  if (!selectedChat) {
+    return null;
+  }
 
   const filteredPrompts = prompts.filter((prompt) =>
     prompt.name.toLowerCase().includes(promptInputValue.toLowerCase()),
@@ -330,6 +336,8 @@ const ChatInput = ({
 
   // 监听聊天状态变化，实现自动收起/展开抽屉
   useEffect(() => {
+    if (!selectedChat) return;
+    
     const prevStatus = prevChatStatusRef.current;
     const currentStatus = selectedChat.status;
     
@@ -352,7 +360,7 @@ const ChatInput = ({
     
     // 更新前一个状态
     prevChatStatusRef.current = currentStatus;
-  }, [selectedChat.status, showChatInput, isCollapsedByChat, settingDispatch]);
+  }, [selectedChat?.status, showChatInput, isCollapsedByChat, settingDispatch]);
 
   return (
     <div>

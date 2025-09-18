@@ -9,7 +9,7 @@ import {
   SetChatsPagingType,
   SetChatsType,
   SetIsChatsLoadingType,
-  SetSelectedChatType,
+  SetSelectedChatIdType,
   SetStopIdsType,
 } from '@/reducers/chat.reducer';
 
@@ -18,33 +18,40 @@ export const setChats = (chats: SetChatsType): ChatAction => ({
   payload: chats,
 });
 
-export const setSelectedChat = (chat?: SetSelectedChatType): ChatAction => {
+export const setSelectedChatId = (chatId?: SetSelectedChatIdType): ChatAction => {
   return {
-    type: ChatActionTypes.SET_SELECTED_CHAT,
-    payload: chat,
+    type: ChatActionTypes.SET_SELECTED_CHAT_ID,
+    payload: chatId,
   };
 };
 
 export const setChangeSelectedChatSpan = (
-  chat: IChat,
+  chats: SetChatsType,
+  chatId: string,
   span: ChatSpanDto,
   model: AdminModelDto,
 ): ChatAction => {
-  chat.spans = chat.spans.map((s) => {
-    if (s.spanId === span.spanId) {
-      s = {
-        ...s,
-        ...span,
-        modelId: model.modelId,
-        modelName: model.name,
-        modelProviderId: model.modelProviderId,
-      };
+  const updatedChats = chats.map((chat) => {
+    if (chat.id === chatId) {
+      const updatedSpans = chat.spans.map((s) => {
+        if (s.spanId === span.spanId) {
+          return {
+            ...s,
+            ...span,
+            modelId: model.modelId,
+            modelName: model.name,
+            modelProviderId: model.modelProviderId,
+          };
+        }
+        return s;
+      });
+      return { ...chat, spans: updatedSpans };
     }
-    return s;
+    return chat;
   });
   return {
-    type: ChatActionTypes.SET_SELECTED_CHAT,
-    payload: chat,
+    type: ChatActionTypes.SET_CHATS,
+    payload: updatedChats,
   };
 };
 

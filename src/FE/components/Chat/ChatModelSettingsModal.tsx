@@ -24,7 +24,7 @@ import {
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 
-import { setSelectedChat } from '@/actions/chat.actions';
+import { setChats } from '@/actions/chat.actions';
 import HomeContext from '@/contexts/home.context';
 import ChatModelInfo from './ChatModelInfo';
 import EnableNetworkSearch from './EnableNetworkSearch';
@@ -42,7 +42,8 @@ interface Props {
 const ChatModelSettingModal = (props: Props) => {
   const { spanId, notSetSpanDisabled, isOpen, onRemove, onClose } = props;
   const {
-    state: { selectedChat, modelMap, prompts, models },
+    state: { modelMap, prompts, models, chats },
+    selectedChat,
     hasModel,
     chatDispatch,
   } = useContext(HomeContext);
@@ -63,6 +64,8 @@ const ChatModelSettingModal = (props: Props) => {
   };
 
   useEffect(() => {
+    if (!selectedChat) return;
+    
     const sp = selectedChat.spans.find((x) => x.spanId === spanId)!;
     setSpan(sp);
     setModel(modelMap[sp?.modelId]);
@@ -73,7 +76,7 @@ const ChatModelSettingModal = (props: Props) => {
         setMcpServersLoaded(true);
       }).catch(console.error);
     }
-  }, [isOpen]);
+  }, [isOpen, selectedChat]);
 
   const { t } = useTranslation();
 
@@ -133,7 +136,7 @@ const ChatModelSettingModal = (props: Props) => {
   };
 
   const handleSave = async () => {
-    if (!span) return;
+    if (!span || !selectedChat) return;
 
     // 验证MCP工具设置
     if (span.mcps && span.mcps.length > 0) {
@@ -154,7 +157,7 @@ const ChatModelSettingModal = (props: Props) => {
 
     setIsLoading(true);
     try {
-      await putChatSpan(span!.spanId, selectedChat.id, {
+      await putChatSpan(span.spanId, selectedChat.id, {
         enabled: span.enabled,
         modelId: span.modelId,
         systemPrompt: span.systemPrompt,
@@ -166,10 +169,15 @@ const ChatModelSettingModal = (props: Props) => {
         mcps: span.mcps,
       });
       
-      const spans = selectedChat.spans.map((s) =>
-        s.spanId === spanId ? { ...span! } : s,
+      const updatedSpans = selectedChat.spans.map((s) =>
+        s.spanId === spanId ? { ...span } : s,
       );
-      chatDispatch(setSelectedChat({ ...selectedChat, spans }));
+      const updatedChat = { ...selectedChat, spans: updatedSpans };
+      const updatedChats = chats.map((chat) =>
+        chat.id === selectedChat.id ? updatedChat : chat
+      );
+      
+      chatDispatch(setChats(updatedChats));
       onClose();
     } catch (error) {
       console.error('Failed to save chat span:', error);

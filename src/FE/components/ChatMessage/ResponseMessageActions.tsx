@@ -3,6 +3,7 @@ import HomeContext from '@/contexts/home.context';
 import { useContext, useMemo } from 'react';
 
 import { AdminModelDto } from '@/types/adminApis';
+import { ChatSpanDto } from '@/types/clientApis';
 import { ChatStatus, MessageContentType, TextContent } from '@/types/chat';
 import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
 
@@ -52,10 +53,11 @@ const ResponseMessageActions = (props: Props) => {
 
   // 根据"当前位置对应的 span（顶部设置）"确定重新生成所用模型；
   // 若无法对应（例如 span 被删），则禁用重新生成按钮。
-  const { state: { selectedChat } } = useContext(HomeContext);
+  const { selectedChat } = useContext(HomeContext);
   const { spanId } = message;
   const spanModel = useMemo(() => {
-    const s = selectedChat.spans.find((x) => x.spanId === spanId);
+    if (!selectedChat?.spans) return null;
+    const s = selectedChat.spans.find((x: ChatSpanDto) => x.spanId === spanId);
     if (!s) return null;
     const m = models.find((mm) => mm.modelId === s.modelId);
     return {

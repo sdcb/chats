@@ -30,7 +30,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-import { setChats, setSelectedChat } from '@/actions/chat.actions';
+import { setChats } from '@/actions/chat.actions';
 import HomeContext from '@/contexts/home.context';
 import ChatPresetModal from './ChatPresetModal';
 
@@ -175,7 +175,8 @@ const ChatPresetList = () => {
   const {
     hasModel,
     chatDispatch,
-    state: { selectedChat, chats, modelMap },
+    state: { chats, modelMap },
+    selectedChat,
   } = useContext(HomeContext);
   const [chatPresets, setChatPresets] = useState<GetChatPresetResult[]>([]);
   const [chatPreset, setChatPreset] = useState<GetChatPresetResult>();
@@ -221,24 +222,18 @@ const ChatPresetList = () => {
   };
 
   const handleSelectChatPreset = (item: GetChatPresetResult) => {
-    if (item.spans.length > 0) {
-      setSelectedChatPresetId(item.id);
-      postApplyChatPreset(selectedChat.id, item.id).then(() => {
-        chatDispatch(
-          setSelectedChat({
-            ...selectedChat,
-            spans: item.spans,
-          }),
-        );
-        const chatList = chats.map((c) => {
-          if (c.id === selectedChat.id) {
-            c.spans = item.spans;
-          }
-          return c;
-        });
-        chatDispatch(setChats(chatList));
+    if (!selectedChat || item.spans.length === 0) return;
+    
+    setSelectedChatPresetId(item.id);
+    postApplyChatPreset(selectedChat.id, item.id).then(() => {
+      const updatedChats = chats.map((c) => {
+        if (c.id === selectedChat.id) {
+          return { ...c, spans: item.spans };
+        }
+        return c;
       });
-    }
+      chatDispatch(setChats(updatedChats));
+    });
   };
 
   const onDragStart = (event: any) => {

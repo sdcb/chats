@@ -11,6 +11,7 @@ import {
   SetChatGroupType,
   SetChatsPagingType,
   SetChatsType,
+  SetSelectedChatIdType,
 } from '@/reducers/chat.reducer';
 import {
   MessageAction,
@@ -40,7 +41,7 @@ export interface HomeInitialState {
 
   chats: SetChatsType;
   chatGroups: SetChatGroupType;
-  selectedChat: IChat;
+  selectedChatId: SetSelectedChatIdType;
   chatPaging: SetChatsPagingType;
   isChatsLoading: boolean;
   chatsSelectType: CHATS_SELECT_TYPE;
@@ -61,7 +62,7 @@ export const initialState: HomeInitialState = {
 
   chats: [],
   chatGroups: [],
-  selectedChat: {} as IChat,
+  selectedChatId: undefined,
   chatPaging: [],
   isChatsLoading: false,
   chatsSelectType: CHATS_SELECT_TYPE.NONE,
@@ -79,6 +80,9 @@ export const initialState: HomeInitialState = {
 export interface HomeContextProps {
   state: HomeInitialState;
   dispatch: Dispatch<ActionType<HomeInitialState>>;
+
+  // 计算属性
+  selectedChat: IChat | undefined;
 
   chatDispatch: Dispatch<ChatAction>;
   messageDispatch: Dispatch<MessageAction>;

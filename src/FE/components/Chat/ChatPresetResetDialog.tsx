@@ -19,7 +19,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-import { setChats, setSelectedChat } from '@/actions/chat.actions';
+import { setChats } from '@/actions/chat.actions';
 import HomeContext from '@/contexts/home.context';
 
 import { getChatPreset, postApplyChatPreset } from '@/apis/clientApis';
@@ -37,7 +37,8 @@ const ChatPresetResetDialog = ({
   const { t } = useTranslation();
   const {
     chatDispatch,
-    state: { selectedChat, chats, modelMap },
+    state: { chats, modelMap },
+    selectedChat,
   } = useContext(HomeContext);
   const [chatPresets, setChatPresets] = useState<GetChatPresetResult[]>([]);
 
@@ -50,26 +51,20 @@ const ChatPresetResetDialog = ({
   }, [isOpen]);
 
   const handleSelectChatPreset = async (item: GetChatPresetResult) => {
-    if (item.spans.length > 0) {
-      try {
-        await postApplyChatPreset(selectedChat.id, item.id);
-        chatDispatch(
-          setSelectedChat({
-            ...selectedChat,
-            spans: item.spans,
-          }),
-        );
-        const chatList = chats.map((c) => {
-          if (c.id === selectedChat.id) {
-            c.spans = item.spans;
-          }
-          return c;
-        });
-        chatDispatch(setChats(chatList));
-        onClose();
-      } catch (error) {
-        console.error('Failed to apply chat preset:', error);
-      }
+    if (!selectedChat || item.spans.length === 0) return;
+    
+    try {
+      await postApplyChatPreset(selectedChat.id, item.id);
+      const updatedChats = chats.map((c) => {
+        if (c.id === selectedChat.id) {
+          return { ...c, spans: item.spans };
+        }
+        return c;
+      });
+      chatDispatch(setChats(updatedChats));
+      onClose();
+    } catch (error) {
+      console.error('Failed to apply chat preset:', error);
     }
   };
 

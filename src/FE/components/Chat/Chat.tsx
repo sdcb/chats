@@ -50,7 +50,6 @@ import { Prompt } from '@/types/prompt';
 
 import {
   setChats,
-  setSelectedChat,
   setStopIds,
 } from '@/actions/chat.actions';
 import {
@@ -81,7 +80,6 @@ const Chat = memo(() => {
   const {
     state: {
       chats,
-      selectedChat,
       messages,
       selectedMessages,
       models,
@@ -89,7 +87,7 @@ const Chat = memo(() => {
       showChatBar,
       showChatInput,
     },
-
+    selectedChat,
     hasModel,
     chatDispatch,
     messageDispatch,
@@ -105,6 +103,11 @@ const Chat = memo(() => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
+  // 如果没有选中的聊天，显示NoChat组件
+  if (!selectedChat) {
+    return hasModel() ? <NoChat /> : <NoModel />;
+  }
+
   const getSelectedMessagesLastActiveMessage = () => {
     const selectedMessageLength = selectedMessages.length - 1;
     if (selectedMessageLength === -1) return null;
@@ -115,9 +118,13 @@ const Chat = memo(() => {
   };
 
   const changeChatTitle = (title: string, append: boolean = false) => {
+    if (!selectedChat) return;
+    
     const newChats = chats.map((chat) => {
       if (chat.id === selectedChat.id) {
-        append ? (chat.title += title) : (chat.title = title);
+        const updatedChat = { ...chat };
+        append ? (updatedChat.title += title) : (updatedChat.title = title);
+        return updatedChat;
       }
       return chat;
     });
@@ -125,7 +132,12 @@ const Chat = memo(() => {
   };
 
   const changeSelectedChatStatus = (status: ChatStatus) => {
-    chatDispatch(setSelectedChat({ ...selectedChat, status }));
+    if (!selectedChat) return;
+    
+    const updatedChats = chats.map((chat) =>
+      chat.id === selectedChat.id ? { ...chat, status } : chat
+    );
+    chatDispatch(setChats(updatedChats));
   };
 
   const startChat = () => {
@@ -921,15 +933,15 @@ const Chat = memo(() => {
     const leafId = findLastLeafId(messages, messageId);
     const selectedMsgs = findSelectedMessageByLeafId(messages, leafId);
     messageDispatch(setSelectedMessages(selectedMsgs));
-    chatDispatch(
-      setSelectedChat({ ...selectedChat, leafMessageId: messageId }),
-    );
+    
+    // 更新selectedChat的leafMessageId
     const chatList = chats.map((x) =>
       x.id === selectedChat.id
-        ? { ...x, updatedAt: currentISODateString() }
+        ? { ...x, leafMessageId: messageId, updatedAt: currentISODateString() }
         : x,
     );
     chatDispatch(setChats(chatList));
+    
     putChats(selectedChat.id, {
       setsLeafMessageId: true,
       leafMessageId: leafId,
@@ -1034,9 +1046,14 @@ const Chat = memo(() => {
       });
 
       msgs.push(copyMsg!);
-      chatDispatch(
-        setSelectedChat({ ...selectedChat, leafMessageId: copyMsg!.id }),
+      
+      // 更新chats中的leafMessageId
+      const updatedChats = chats.map((chat) =>
+        chat.id === selectedChat.id
+          ? { ...chat, leafMessageId: copyMsg!.id }
+          : chat
       );
+      chatDispatch(setChats(updatedChats));
     }
     messageDispatch(setMessages(msgs));
     messageDispatch(setSelectedMessages(selectedMsgs));

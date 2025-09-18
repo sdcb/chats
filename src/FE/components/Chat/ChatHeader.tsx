@@ -19,7 +19,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-import { setSelectedChat } from '@/actions/chat.actions';
+import { setChats } from '@/actions/chat.actions';
 import HomeContext from '@/contexts/home.context';
 import ChatModelSettingModal from './ChatModelSettingsModal';
 import ChatPresetResetDialog from './ChatPresetResetDialog';
@@ -36,62 +36,87 @@ import { cn } from '@/lib/utils';
 const ChatHeader = () => {
   const { t } = useTranslation();
   const {
-    state: { selectedChat, models, defaultPrompt, showChatBar },
+    state: { models, defaultPrompt, showChatBar, chats },
+    selectedChat,
     chatDispatch,
   } = useContext(HomeContext);
 
   const [selectedSpanId, setSelectedSpanId] = useState<number | null>(null);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  
+  // 如果没有选中的聊天，返回空
+  if (!selectedChat) {
+    return null;
+  }
+  
   const notSetSpanDisabled =
     selectedChat.spans.filter((x) => x.enabled).length === 1;
 
+  // 直接修改chats数组中的chat数据的辅助函数
+  const updateChatInChats = (updatedChat: typeof selectedChat) => {
+    const updatedChats = chats.map((chat) =>
+      chat.id === selectedChat.id ? updatedChat : chat
+    );
+    chatDispatch(setChats(updatedChats));
+  };
+
   const handleAddChatModel = async (modelId: number) => {
     await postUserChatSpan(selectedChat.id, { modelId }).then((data) => {
-      selectedChat.spans.push({
-        maxOutputTokens: data.maxOutputTokens,
-        spanId: data.spanId,
-        enabled: data.enabled,
-        modelId: data.modelId,
-        modelName: data.modelName,
-        modelProviderId: data.modelProviderId,
-        temperature: data.temperature,
-        webSearchEnabled: data.webSearchEnabled,
-        reasoningEffort: data?.reasoningEffort,
-        systemPrompt: defaultPrompt?.content!,
-        imageSize: data?.imageSize || 0,
-        mcps: data?.mcps || [],
-      });
-      chatDispatch(setSelectedChat(selectedChat));
+      const updatedChat = {
+        ...selectedChat,
+        spans: [
+          ...selectedChat.spans,
+          {
+            maxOutputTokens: data.maxOutputTokens,
+            spanId: data.spanId,
+            enabled: data.enabled,
+            modelId: data.modelId,
+            modelName: data.modelName,
+            modelProviderId: data.modelProviderId,
+            temperature: data.temperature,
+            webSearchEnabled: data.webSearchEnabled,
+            reasoningEffort: data?.reasoningEffort,
+            systemPrompt: defaultPrompt?.content!,
+            imageSize: data?.imageSize || 0,
+            mcps: data?.mcps || [],
+          }
+        ]
+      };
+      updateChatInChats(updatedChat);
     });
   };
 
   const handleRemoveChatModel = async (spanId: number) => {
     await deleteUserChatSpan(selectedChat.id, spanId).then(() => {
-      selectedChat.spans = selectedChat.spans.filter(
-        (s) => s.spanId !== spanId,
-      );
-      chatDispatch(setSelectedChat(selectedChat));
+      const updatedChat = {
+        ...selectedChat,
+        spans: selectedChat.spans.filter((s) => s.spanId !== spanId)
+      };
+      updateChatInChats(updatedChat);
     });
   };
 
   const handleUpdateChatModel = async (spanId: number, modelId: number) => {
     await switchUserChatSpanModel(selectedChat.id, spanId, modelId).then(
       (data) => {
-        selectedChat.spans = selectedChat.spans.map((s) => {
-          if (s.spanId === spanId) {
-            return {
-              ...s,
-              enabled: data.enabled,
-              modelId: data.modelId,
-              modelName: data.modelName,
-              modelProviderId: data.modelProviderId,
-              temperature: data.temperature,
-              webSearchEnabled: data.webSearchEnabled,
-            };
-          }
-          return s;
-        });
-        chatDispatch(setSelectedChat(selectedChat));
+        const updatedChat = {
+          ...selectedChat,
+          spans: selectedChat.spans.map((s) => {
+            if (s.spanId === spanId) {
+              return {
+                ...s,
+                enabled: data.enabled,
+                modelId: data.modelId,
+                modelName: data.modelName,
+                modelProviderId: data.modelProviderId,
+                temperature: data.temperature,
+                webSearchEnabled: data.webSearchEnabled,
+              };
+            }
+            return s;
+          })
+        };
+        updateChatInChats(updatedChat);
       },
     );
   };
@@ -105,16 +130,19 @@ const ChatHeader = () => {
     } else {
       postChatDisableSpan(spanId, selectedChat.id);
     }
-    selectedChat.spans = selectedChat.spans.map((s) => {
-      if (s.spanId === spanId) {
-        return {
-          ...s,
-          enabled: enable,
-        };
-      }
-      return s;
-    });
-    chatDispatch(setSelectedChat(selectedChat));
+    const updatedChat = {
+      ...selectedChat,
+      spans: selectedChat.spans.map((s) => {
+        if (s.spanId === spanId) {
+          return {
+            ...s,
+            enabled: enable,
+          };
+        }
+        return s;
+      })
+    };
+    updateChatInChats(updatedChat);
   };
 
   const AddBtnRender = () => {
