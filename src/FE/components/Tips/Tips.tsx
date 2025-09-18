@@ -1,4 +1,4 @@
-import { ReactElement, useState } from 'react';
+import { ReactElement } from 'react';
 
 import {
   Tooltip,
@@ -11,7 +11,7 @@ const Tips = ({
   trigger,
   content,
   className,
-  delayDuration,
+  delayDuration = 0,
   side = 'top',
 }: {
   className?: string;
@@ -20,17 +20,12 @@ const Tips = ({
   delayDuration?: number;
   side?: 'top' | 'right' | 'bottom' | 'left';
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
     <TooltipProvider delayDuration={delayDuration}>
-      <Tooltip open={isOpen}>
+      <Tooltip>
         <TooltipTrigger
           asChild={true}
           className={className}
-          onMouseEnter={() => setIsOpen(true)}
-          onMouseLeave={() => setIsOpen(false)}
-          onClick={() => setIsOpen(true)}
         >
           {trigger}
         </TooltipTrigger>
