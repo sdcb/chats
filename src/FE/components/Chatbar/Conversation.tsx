@@ -174,7 +174,7 @@ const ConversationComponent = ({ chat, onDragItemStart }: Props) => {
   }, [isChanging, isDeleting]);
 
   return (
-    <div className="group relative flex items-center rounded-lg">
+    <div className="relative flex items-center rounded-lg">
       {isChanging && selectChatId === chat.id ? (
         <div className="flex w-full h-11 items-center gap-2 rounded-lg bg-background p-3">
           <input
@@ -265,8 +265,8 @@ const ConversationComponent = ({ chat, onDragItemStart }: Props) => {
         </div>
       )}
 
-      {!isDeleting && !isChanging && !isArchive && (
-        <div className="absolute right-[0.6rem] z-10 flex text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity duration-200 data-[selected=true]:opacity-100" data-selected={selectChatId === chat.id}>
+      {selectChatId === chat.id && !isDeleting && !isChanging && !isArchive && (
+        <div className="absolute right-[0.6rem] z-10 flex text-gray-300">
           <DropdownMenu>
             <DropdownMenuTrigger
               disabled={chatting}
