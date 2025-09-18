@@ -50,8 +50,8 @@ const ResponseMessageActions = (props: Props) => {
   const chatting = isChatting(chatStatus);
   const messageReceiving = isChatting(messageStatus);
 
-  // 根据“当前位置对应的 span（顶部设置）”确定重新生成所用模型；
-  // 若无法对应（例如 span 被删），回退到当前消息模型。
+  // 根据"当前位置对应的 span（顶部设置）"确定重新生成所用模型；
+  // 若无法对应（例如 span 被删），则禁用重新生成按钮。
   const { state: { selectedChat } } = useContext(HomeContext);
   const { spanId } = message;
   const spanModel = useMemo(() => {
@@ -64,6 +64,8 @@ const ResponseMessageActions = (props: Props) => {
     } as { modelId: number; modelName?: string };
   }, [spanId, selectedChat?.spans, models, modelName]);
 
+  // 如果对应的 span 被删除了，则禁用重新生成功能
+  const isSpanDeleted = !spanModel;
   const regenerateModelId = spanModel?.modelId ?? modelId;
   const regenerateModelName = spanModel?.modelName ?? modelName;
 
@@ -112,7 +114,7 @@ const ResponseMessageActions = (props: Props) => {
 
         <RegenerateWithModelAction
           hidden={readonly}
-          disabled={chatting}
+          disabled={chatting || isSpanDeleted}
           models={models}
           regenerateModelName={regenerateModelName}
           onRegenerate={() => {
