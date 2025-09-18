@@ -284,7 +284,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
         }
 
         // 验证 previous 和 next 的顺序（Order 是从小到大排列的）
-        if (previousModelKey != null && nextModelKey != null && previousModelKey.Order >= nextModelKey.Order)
+        if (previousModelKey != null && nextModelKey != null && previousModelKey.Order > nextModelKey.Order)
         {
             return BadRequest("Invalid order: previous model key should have smaller order than next model key");
         }

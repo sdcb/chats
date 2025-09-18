@@ -2,7 +2,7 @@ import React from 'react';
 import { AdminModelDto } from '@/types/adminApis';
 import { formatNumberAsMoney } from '@/utils/common';
 import { Button } from '@/components/ui/button';
-import { IconPencil, IconChartHistogram } from '@/components/Icons';
+import { IconPencil, IconChartHistogram, IconEyeOff } from '@/components/Icons';
 import DeletePopover from '@/components/Popover/DeletePopover';
 import useTranslation from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
@@ -49,20 +49,40 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage }: Mode
   return (
     <div 
       className={cn(
-        "flex items-center justify-between px-2 py-1 rounded hover:bg-muted/40 transition-all duration-200",
-        isDragging ? "opacity-60 cursor-grabbing" : "cursor-move"
+        "flex items-center justify-between px-2 py-1 rounded hover:bg-muted/40 transition-all duration-200 relative",
+        isDragging ? "opacity-60 cursor-grabbing" : "cursor-move",
+        !model.enabled && "opacity-60"
       )}
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
     >
+      {/* 禁用状态蒙版 */}
+      {!model.enabled && (
+        <div className="absolute inset-0 bg-muted/20 rounded flex items-center justify-center pointer-events-none">
+          <div className="flex items-center gap-1 bg-muted/80 px-2 py-1 rounded text-xs text-muted-foreground">
+            <IconEyeOff size={12} />
+            <span>{t('Disabled')}</span>
+          </div>
+        </div>
+      )}
+      
       <div
-        className="flex-1 min-w-0 cursor-pointer"
+        className={cn(
+          "flex-1 min-w-0 cursor-pointer",
+          !model.enabled && "text-muted-foreground"
+        )}
         onClick={handleContentClick}
       >
-        <div className="truncate">{model.name}</div>
-        <div className="text-xs text-blue-600 truncate">
+        <div className="truncate flex items-center gap-2">
+          {!model.enabled && <IconEyeOff size={14} className="text-muted-foreground flex-shrink-0" />}
+          <span className={cn("truncate", !model.enabled && "line-through")}>{model.name}</span>
+        </div>
+        <div className={cn(
+          "text-xs truncate",
+          model.enabled ? "text-blue-600" : "text-muted-foreground"
+        )}>
           {'￥' + formatNumberAsMoney(model.inputTokenPrice1M) + '/' + formatNumberAsMoney(model.outputTokenPrice1M)}
         </div>
       </div>
@@ -75,6 +95,7 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage }: Mode
             onGoToUsage({ model: model.name });
           }}
           title={t('View Usage Records')}
+          disabled={!model.enabled}
         >
           <IconChartHistogram size={16} />
         </Button>

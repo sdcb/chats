@@ -257,7 +257,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
         }
 
         // 验证 previous 和 next 的顺序（Order 是从小到大排列的）
-        if (previousModel != null && nextModel != null && previousModel.Order >= nextModel.Order)
+        if (previousModel != null && nextModel != null && previousModel.Order > nextModel.Order)
         {
             return BadRequest("Invalid order: previous model should have smaller order than next model");
         }
