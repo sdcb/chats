@@ -1,4 +1,4 @@
-﻿import { IconProps } from './types';
+import { IconProps } from './types';
 
 const IconTools = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
@@ -25,7 +25,8 @@ const IconTools = (props: IconProps) => {
       <path d="M16 12l5 5l-4 4l-5 -5" />
       <path d="M16 17l-1.5 1.5" />
     </svg>
-  );
+  );
+
 };
 
 export default IconTools;

@@ -1,4 +1,4 @@
-﻿import { IconProps } from './types';
+import { IconProps } from './types';
 
 const IconCheck = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
@@ -20,7 +20,8 @@ const IconCheck = (props: IconProps) => {
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
       <path d="M5 12l5 5l10 -10" />
     </svg>
-  );
+  );
+
 };
 
 export default IconCheck;

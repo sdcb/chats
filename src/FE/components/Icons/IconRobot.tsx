@@ -1,4 +1,4 @@
-﻿import { IconProps } from './types';
+import { IconProps } from './types';
 
 const IconRobot = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
@@ -28,7 +28,8 @@ const IconRobot = (props: IconProps) => {
       <path d="M10 8v.01" />
       <path d="M14 8v.01" />
     </svg>
-  );
+  );
+
 };
 
 export default IconRobot;

@@ -1,4 +1,4 @@
-﻿import { IconProps } from './types';
+import { IconProps } from './types';
 
 const IconMessageChatbot = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
@@ -23,7 +23,8 @@ const IconMessageChatbot = (props: IconProps) => {
       <path d="M14.5 9h.01" />
       <path d="M9.5 13a3.5 3.5 0 0 0 5 0" />
     </svg>
-  );
+  );
+
 };
 
 export default IconMessageChatbot;

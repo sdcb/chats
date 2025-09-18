@@ -24,10 +24,10 @@ import {
 } from '@/components/ui/table';
 import { IconChevronDown, IconChevronRight, IconLoader, IconPencil } from '@/components/Icons';
 
-import EditUserBalanceModal from '../_components/Users/EditUserBalanceModel';
-import UserModal from '../_components/Users/UserModal';
-import UserModelRow from '../_components/Users/UserModelRow';
-import AddUserModelButton from '../_components/Users/AddUserModelButton';
+import EditUserBalanceModal from '@/components/admin/Users/EditUserBalanceModel';
+import UserModal from '@/components/admin/Users/UserModal';
+import UserModelRow from '@/components/admin/Users/UserModelRow';
+import AddUserModelButton from '@/components/admin/Users/AddUserModelButton';
 
 import { getUsers, getModelsByUserId } from '@/apis/adminApis';
 

@@ -1,4 +1,4 @@
-﻿import { IconProps } from './types';
+import { IconProps } from './types';
 
 const IconBulbFilled = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
@@ -55,7 +55,8 @@ const IconBulbFilled = (props: IconProps) => {
         fill="currentColor"
       />
     </svg>
-  );
+  );
+
 };
 
 export default IconBulbFilled;

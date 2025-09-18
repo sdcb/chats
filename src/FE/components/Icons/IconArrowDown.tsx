@@ -1,4 +1,4 @@
-﻿import { IconProps } from './types';
+import { IconProps } from './types';
 
 const IconArrowDown = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
@@ -22,7 +22,8 @@ const IconArrowDown = (props: IconProps) => {
       <path d="M18 13l-6 6" />
       <path d="M6 13l6 6" />
     </svg>
-  );
+  );
+
 };
 
 export default IconArrowDown;

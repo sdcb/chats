@@ -1,4 +1,4 @@
-﻿import { IconProps } from './types';
+import { IconProps } from './types';
 
 const IconPasswordUser = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
@@ -30,7 +30,8 @@ const IconPasswordUser = (props: IconProps) => {
       <path d="M9 6a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
       <path d="M7 14a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2" />
     </svg>
-  );
+  );
+
 };
 
 export default IconPasswordUser;

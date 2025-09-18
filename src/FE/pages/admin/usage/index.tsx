@@ -18,7 +18,7 @@ import {
 import { feModelProviders } from '@/types/model';
 import { PageResult } from '@/types/page';
 
-import DateTimePopover from '@/pages/home/_components/Popover/DateTimePopover';
+import DateTimePopover from '@/components/Popover/DateTimePopover';
 
 import ExportButton from '@/components/Button/ExportButtom';
 import PaginationContainer from '@/components/Pagiation/Pagiation';

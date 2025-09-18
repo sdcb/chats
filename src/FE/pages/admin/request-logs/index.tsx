@@ -20,7 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import RequestLogDetailsModal from '../_components/RequestLogs/RequestLogDetailsModal';
+import RequestLogDetailsModal from '@/components/admin/RequestLogs/RequestLogDetailsModal';
 
 import { getRequestLogs } from '@/apis/adminApis';
 import useDebounce from '@/hooks/useDebounce';

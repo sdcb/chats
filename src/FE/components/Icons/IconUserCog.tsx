@@ -1,4 +1,4 @@
-﻿import { IconProps } from './types';
+import { IconProps } from './types';
 
 const IconUserCog = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
@@ -28,7 +28,8 @@ const IconUserCog = (props: IconProps) => {
       <path d="M15.97 17.25l1.3 .75" />
       <path d="M20.733 20l1.3 .75" />
     </svg>
-  );
+  );
+
 };
 
 export default IconUserCog;

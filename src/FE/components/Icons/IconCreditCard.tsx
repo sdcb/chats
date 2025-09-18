@@ -1,4 +1,4 @@
-﻿import { IconProps } from './types';
+import { IconProps } from './types';
 
 const IconCreditCard = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
@@ -23,7 +23,8 @@ const IconCreditCard = (props: IconProps) => {
       <path d="M7 15l.01 0" />
       <path d="M11 15l2 0" />
     </svg>
-  );
+  );
+
 };
 
 export default IconCreditCard;

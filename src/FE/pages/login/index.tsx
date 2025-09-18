@@ -11,11 +11,11 @@ import { LoginType } from '@/types/user';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import AccountLoginCard from './_components/AccountLoginCard';
-import KeyCloakLogin from './_components/KeyCloakLogin';
-import PhoneLoginCard from './_components/PhoneLoginCard';
-import PhoneRegisterCard from './_components/PhoneRegisterCard';
-import WeChatLogin from './_components/WeChatLogin';
+import AccountLoginCard from '@/components/login/AccountLoginCard';
+import KeyCloakLogin from '@/components/login/KeyCloakLogin';
+import PhoneLoginCard from '@/components/login/PhoneLoginCard';
+import PhoneRegisterCard from '@/components/login/PhoneRegisterCard';
+import WeChatLogin from '@/components/login/WeChatLogin';
 
 import { getLoginProviders, getSiteInfo } from '@/apis/clientApis';
 

@@ -1,5 +1,5 @@
 import { isChatting } from '@/utils/chats';
-import HomeContext from '@/pages/home/_contexts/home.context';
+import HomeContext from '@/contexts/home.context';
 import { useContext, useMemo } from 'react';
 
 import { AdminModelDto } from '@/types/adminApis';

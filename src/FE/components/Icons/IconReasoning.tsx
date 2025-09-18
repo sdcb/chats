@@ -1,4 +1,4 @@
-﻿import { IconProps } from './types';
+import { IconProps } from './types';
 
 const IconReasoning = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 0, stroke, onClick } = props;

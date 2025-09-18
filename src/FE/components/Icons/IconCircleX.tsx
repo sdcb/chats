@@ -1,4 +1,4 @@
-﻿import { IconProps } from './types';
+import { IconProps } from './types';
 
 const IconCircleX = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
@@ -21,7 +21,8 @@ const IconCircleX = (props: IconProps) => {
       <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
       <path d="M10 10l4 4m0 -4l-4 4" />
     </svg>
-  );
+  );
+
 };
 
 export default IconCircleX;

@@ -13,10 +13,10 @@ import { LabelSwitch } from '@/components/ui/label-switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { IconPlus } from '@/components/Icons';
 import { getModelKeys, getModels, deleteModelKeys, deleteModels, reorderModelProviders, reorderModelKeys, reorderModels } from '@/apis/adminApis';
-import ModelKeysModal from '../_components/ModelKeys/ModelKeysModal';
-import ConfigModelModal from '../_components/ModelKeys/ConfigModelModal';
-import ModelModal from '../_components/Models/ModelModal';
-import ModelProvider, { ProviderGroup } from './components/ModelProvider';
+import ModelKeysModal from '@/components/admin/ModelKeys/ModelKeysModal';
+import ConfigModelModal from '@/components/admin/ModelKeys/ConfigModelModal';
+import ModelModal from '@/components/admin/Models/ModelModal';
+import ModelProvider, { ProviderGroup } from '@/components/admin/model/ModelProvider';
 
 export default function ModelManager() {
   const { t } = useTranslation();

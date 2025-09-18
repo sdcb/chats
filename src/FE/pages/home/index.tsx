@@ -1,6 +1,6 @@
 import Head from 'next/head';
 
-import HomeContent from './_components/Home/HomeContent';
+import HomeContent from '@/components/Home/HomeContent';
 
 import { UserProvider } from '@/providers/UserProvider';
 

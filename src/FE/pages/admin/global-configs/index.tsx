@@ -5,8 +5,8 @@ import useTranslation from '@/hooks/useTranslation';
 import { GetConfigsResult } from '@/types/adminApis';
 import { getConfigs } from '@/apis/adminApis';
 
-import SiteInfoConfig from './SiteInfoConfig';
-import TencentSmsConfig from './TencentSmsConfig';
+import SiteInfoConfig from '@/components/admin/global-configs/SiteInfoConfig';
+import TencentSmsConfig from '@/components/admin/global-configs/TencentSmsConfig';
 
 export default function Configs() {
   const { t } = useTranslation();

@@ -1,4 +1,4 @@
-﻿// Auto-generated exports for individual icon files
+// Auto-generated exports for individual icon files
 export { default as IconAddress } from './IconAddress';
 export { default as IconArchive } from './IconArchive';
 export { default as IconArrowCompactDown } from './IconArrowCompactDown';

@@ -16,12 +16,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import AccountTab from './_components/tabs/AccountTab';
-import ApiKeysTab from './_components/tabs/ApiKeysTab';
-import GeneralTab from './_components/tabs/GeneralTab';
-import PromptsTab from './_components/tabs/PromptsTab';
-import McpTab from './_components/tabs/McpTab';
-import UsageRecordsTab from './_components/tabs/UsageRecordsTab';
+import AccountTab from '@/components/settings/tabs/AccountTab';
+import ApiKeysTab from '@/components/settings/tabs/ApiKeysTab';
+import GeneralTab from '@/components/settings/tabs/GeneralTab';
+import PromptsTab from '@/components/settings/tabs/PromptsTab';
+import McpTab from '@/components/settings/tabs/McpTab';
+import UsageRecordsTab from '@/components/settings/tabs/UsageRecordsTab';
 
 const SettingsPage = () => {
   const { t } = useTranslation();

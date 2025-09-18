@@ -18,8 +18,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import UserInitialConfigModal from '../_components/Users/UserInitialConfigModal';
-import DeletePopover from '@/pages/home/_components/Popover/DeletePopover';
+import UserInitialConfigModal from '@/components/admin/Users/UserInitialConfigModal';
+import DeletePopover from '@/components/Popover/DeletePopover';
 
 import { getModels, getUserInitialConfig, deleteUserInitialConfig } from '@/apis/adminApis';
 import toast from 'react-hot-toast';

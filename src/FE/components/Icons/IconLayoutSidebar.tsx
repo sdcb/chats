@@ -1,4 +1,4 @@
-﻿import { IconProps } from './types';
+import { IconProps } from './types';
 
 const IconLayoutSidebar = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.5, stroke, onClick } = props;

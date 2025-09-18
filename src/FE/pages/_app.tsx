@@ -10,7 +10,7 @@ import { getUserInfo } from '@/utils/user';
 import { UserRole } from '@/types/adminApis';
 
 import ErrorPage from './_error';
-import AdminLayout from './admin/layout';
+import AdminLayout from '@/components/admin/layout/AdminLayout';
 import './globals.css';
 
 import { ThemeProvider } from '@/providers/ThemeProvider';

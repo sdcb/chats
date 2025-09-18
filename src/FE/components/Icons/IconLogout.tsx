@@ -1,4 +1,4 @@
-﻿import { IconProps } from './types';
+import { IconProps } from './types';
 
 const IconLogout = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
@@ -22,7 +22,8 @@ const IconLogout = (props: IconProps) => {
       <path d="M9 12h12l-3 -3" />
       <path d="M18 15l3 -3" />
     </svg>
-  );
+  );
+
 };
 
 export default IconLogout;

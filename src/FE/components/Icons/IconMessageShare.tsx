@@ -1,4 +1,4 @@
-﻿import { IconProps } from './types';
+import { IconProps } from './types';
 
 const IconMessageShare = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
@@ -24,7 +24,8 @@ const IconMessageShare = (props: IconProps) => {
       <path d="M16 22l5 -5" />
       <path d="M21 21.5v-4.5h-4.5" />
     </svg>
-  );
+  );
+
 };
 
 export default IconMessageShare;

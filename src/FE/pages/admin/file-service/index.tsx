@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import FileServiceModal from '../_components/Files/FileServiceModal';
+import FileServiceModal from '@/components/admin/Files/FileServiceModal';
 
 import { getFileServices } from '@/apis/adminApis';
 

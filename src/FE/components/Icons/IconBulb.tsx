@@ -1,4 +1,4 @@
-﻿import { IconProps } from './types';
+import { IconProps } from './types';
 
 const IconBulb = (props: IconProps) => {
   const { className, size = 20, strokeWidth = 1.6, stroke, onClick } = props;
@@ -23,7 +23,8 @@ const IconBulb = (props: IconProps) => {
       <path d="M9 16a5 5 0 1 1 6 0a3.5 3.5 0 0 0 -1 3a2 2 0 0 1 -4 0a3.5 3.5 0 0 0 -1 -3" />
       <path d="M9.7 17l4.6 0" />
     </svg>
-  );
+  );
+
 };
 
 export default IconBulb;
