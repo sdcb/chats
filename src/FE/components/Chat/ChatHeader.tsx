@@ -61,26 +61,23 @@ const ChatHeader = () => {
   };
 
   const handleAddChatModel = async (modelId: number) => {
-    await postUserChatSpan(selectedChat.id, { modelId }).then((data) => {
+    await postUserChatSpan(selectedChat.id, { modelId }).then((spans) => {
       const updatedChat = {
         ...selectedChat,
-        spans: [
-          ...selectedChat.spans,
-          {
-            maxOutputTokens: data.maxOutputTokens,
-            spanId: data.spanId,
-            enabled: data.enabled,
-            modelId: data.modelId,
-            modelName: data.modelName,
-            modelProviderId: data.modelProviderId,
-            temperature: data.temperature,
-            webSearchEnabled: data.webSearchEnabled,
-            reasoningEffort: data?.reasoningEffort,
-            systemPrompt: defaultPrompt?.content!,
-            imageSize: data?.imageSize || 0,
-            mcps: data?.mcps || [],
-          }
-        ]
+        spans: spans.map(span => ({
+          maxOutputTokens: span.maxOutputTokens,
+          spanId: span.spanId,
+          enabled: span.enabled,
+          modelId: span.modelId,
+          modelName: span.modelName,
+          modelProviderId: span.modelProviderId,
+          temperature: span.temperature,
+          webSearchEnabled: span.webSearchEnabled,
+          reasoningEffort: span?.reasoningEffort,
+          systemPrompt: defaultPrompt?.content!,
+          imageSize: span?.imageSize || 0,
+          mcps: span?.mcps || [],
+        }))
       };
       updateChatInChats(updatedChat);
     });

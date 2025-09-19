@@ -271,7 +271,7 @@ export const postUserChatSpan = (
   params?: PostUserChatSpanParams,
 ) => {
   const fetchServer = useFetch();
-  return fetchServer.post<PostUserChatSpanResult>(`/api/chat/${chatId}/span`, {
+  return fetchServer.post<PostUserChatSpanResult[]>(`/api/chat/${chatId}/span`, {
     body: params,
   });
 };

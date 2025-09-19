@@ -16,7 +16,7 @@ namespace Chats.BE.Controllers.Chats.Chats;
 public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, CurrentUser currentUser) : ControllerBase
 {
     [HttpPost]
-    public async Task<ActionResult<ChatSpanDto>> CreateChatSpan(string encryptedChatId, [FromBody] CreateChatSpanRequest request,
+    public async Task<ActionResult<ChatSpanDto[]>> CreateChatSpan(string encryptedChatId, [FromBody] CreateChatSpanRequest request,
         [FromServices] UserModelManager userModelManager,
         CancellationToken cancellationToken)
     {
@@ -26,7 +26,9 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         }
 
         Chat? chat = await db.Chats
-            .Include(x => x.ChatSpans.OrderByDescending(x => x.SpanId))
+            .Include(x => x.ChatSpans.OrderBy(x => x.SpanId)).ThenInclude(x => x.ChatConfig.ChatConfigMcps)
+            .Include(x => x.ChatSpans.OrderBy(x => x.SpanId)).ThenInclude(x => x.ChatConfig.Model.ModelKey)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == idEncryption.DecryptChatId(encryptedChatId) && x.UserId == currentUser.Id && !x.IsArchived, cancellationToken);
         if (chat == null)
         {
@@ -47,12 +49,39 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         }
 
         PromptDto defaultPrompt = await PromptsController.GetDefaultPrompt(db, currentUser.Id, cancellationToken);
-        ChatSpan toAdd = new()
+        // 计算已有 SpanId 集合与第一个空洞 gap
+        HashSet<byte> existingIds = [.. chat.ChatSpans.Select(x => x.SpanId)];
+        byte gap = 0;
+        while (existingIds.Contains(gap))
         {
-            ChatId = chat.Id,
-            SpanId = CreateChatSpanRequest.FindAvailableSpanId([.. chat.ChatSpans.Select(x => x.SpanId)]),
-            Enabled = true,
-            ChatConfig = new ChatConfig
+            gap++;
+        }
+        // 下一个顺位 ID（无空洞时使用）
+        byte nextId = existingIds.Count > 0 ? (byte)(existingIds.Max() + 1) : (byte)0;
+
+        // 如果 gap 小于 nextId，说明存在空洞；我们用“克隆填洞 + 用新内容覆盖来源 span”来避免改主键
+        if (gap < nextId)
+        {
+            // 找到第一个大于 gap 的现有 span，作为克隆来源（例如：只有 1 存在且缺 0，则来源为 1）
+            byte sourceId = existingIds.Where(x => x > gap).Min();
+            ChatSpan? sourceSpan = chat.ChatSpans.FirstOrDefault(x => x.SpanId == sourceId);
+            if (sourceSpan == null)
+            {
+                return Problem("Source span not found while filling gap.");
+            }
+
+            // 在 gap 位置创建一个新的 span，直接引用现有的 ChatConfig 避免追踪冲突
+            chat.ChatSpans.Add(new()
+            {
+                SpanId = gap,
+                Enabled = sourceSpan.Enabled,
+                ChatConfig = sourceSpan.ChatConfig,
+                ChatConfigId = sourceSpan.ChatConfigId
+            });
+
+            // 将“新请求”的内容写入来源 span（例如：把 1 改成新的模型配置）
+            sourceSpan.Enabled = true;
+            sourceSpan.ChatConfig = new()
             {
                 ModelId = um.ModelId,
                 Model = um.Model,
@@ -61,13 +90,38 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
                 MaxOutputTokens = null,
                 ReasoningEffort = 0,
                 SystemPrompt = defaultPrompt.Content,
-                ImageSizeId = 0, // Default to 0 (DBKnownImageSize.Default)
-            }
-        };
-
-        chat.ChatSpans.Add(toAdd);
+                ImageSizeId = 0,
+                ChatConfigMcps = [],
+            };
+        }
+        else
+        {
+            // 无空洞，直接在顺位 nextId 新建一个 span 作为“新请求”的内容
+            ChatSpan toAdd = new()
+            {
+                SpanId = nextId,
+                Enabled = true,
+                ChatConfig = new ChatConfig
+                {
+                    ModelId = um.ModelId,
+                    Model = um.Model,
+                    Temperature = null,
+                    WebSearchEnabled = false,
+                    MaxOutputTokens = null,
+                    ReasoningEffort = 0,
+                    SystemPrompt = defaultPrompt.Content,
+                    ImageSizeId = 0, // Default to 0 (DBKnownImageSize.Default)
+                    ChatConfigMcps = [],
+                }
+            };
+            chat.ChatSpans.Add(toAdd);
+        }
+        chat.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
-        return Created(default(string), ChatSpanDto.FromDB(toAdd));
+
+        // Return all spans in the new order
+        ChatSpanDto[] result = [.. chat.ChatSpans.OrderBy(x => x.SpanId).Select(ChatSpanDto.FromDB)];
+        return Created(default(string), result);
     }
 
     [HttpPost("{spanId:int}/enable")]
