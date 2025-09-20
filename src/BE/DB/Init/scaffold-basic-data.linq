@@ -21,6 +21,7 @@ void Main()
 		"FinishReason",
 		"StepContentType",
 		"Tokenizer",
+		"KnownImageSize",
 		"TransactionType",
 		"ReasoningResponseKind",
 		"ModelProvider",

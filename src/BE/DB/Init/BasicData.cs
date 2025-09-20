@@ -12,6 +12,7 @@ internal static class BasicData
         InsertFinishReasons(db);
         InsertStepContentTypes(db);
         InsertTokenizers(db);
+        InsertKnownImageSizes(db);
         InsertTransactionTypes(db);
         InsertReasoningResponseKinds(db);
         InsertModelProviders(db);
@@ -95,6 +96,18 @@ internal static class BasicData
         [
             new(){ Id=1, Name="cl100k_base", },
             new(){ Id=2, Name="o200k_base",  }
+        ]);
+    }
+
+    private static void InsertKnownImageSizes(ChatsDB db)
+    {
+        // Generated from data, hash: f6bb405dfbf5ddc5f9a745339a485ee743ffbd2ad0f1ec607cbb94fae93a0e6e
+        db.KnownImageSizes.AddRange(
+        [
+            new(){ Id=0, Width=0,    Height=0,    },
+            new(){ Id=1, Width=1024, Height=1024, },
+            new(){ Id=2, Width=1536, Height=1024, },
+            new(){ Id=3, Width=1024, Height=1536, }
         ]);
     }
 
