@@ -114,7 +114,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentText)
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCallResponse)
-            .Where(m => m.ChatId == chatId)
+            .Where(m => m.ChatId == chatId && m.Steps.Any())
             .Select(x => new ChatMessageTemp()
             {
                 Id = x.Id,

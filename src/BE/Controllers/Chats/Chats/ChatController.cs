@@ -687,7 +687,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             catch (Exception e)
             {
                 icc.FinishReason = DBFinishReason.UnknownError;
-                errorText = "Unknown Error";
+                errorText = e.Message;
                 logger.LogError(e, "Error in conversation for message: {userMessageId}", req.LastMessageId);
             }
             finally
