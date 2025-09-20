@@ -134,6 +134,7 @@ export const ChatMessage: FC<Props> = memo(
                           readonly={readonly}
                           models={models}
                           chatStatus={selectedChat.status}
+                          selectedChat={selectedChat}
                           message={message}
                           onChangeMessage={onChangeChatLeafMessageId}
                           onReactionMessage={onReactionMessage}

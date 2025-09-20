@@ -1,10 +1,9 @@
 import { isChatting } from '@/utils/chats';
-import HomeContext from '@/contexts/home.context';
-import { useContext, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatSpanDto } from '@/types/clientApis';
-import { ChatStatus, MessageContentType, TextContent } from '@/types/chat';
+import { ChatStatus, IChat, MessageContentType, TextContent } from '@/types/chat';
 import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
 
 import CopyAction from './CopyAction';
@@ -19,6 +18,7 @@ interface Props {
   models: AdminModelDto[];
   message: IChatMessage;
   chatStatus: ChatStatus;
+  selectedChat: IChat;
   readonly?: boolean;
   onChangeMessage?: (messageId: string) => void;
   onRegenerate?: (messageId: string, modelId: number) => void;
@@ -31,6 +31,7 @@ const ResponseMessageActions = (props: Props) => {
     models,
     message,
     chatStatus,
+    selectedChat,
     readonly,
     onChangeMessage,
     onRegenerate,
@@ -53,7 +54,6 @@ const ResponseMessageActions = (props: Props) => {
 
   // 根据"当前位置对应的 span（顶部设置）"确定重新生成所用模型；
   // 若无法对应（例如 span 被删），则禁用重新生成按钮。
-  const { selectedChat } = useContext(HomeContext);
   const { spanId } = message;
   const spanModel = useMemo(() => {
     if (!selectedChat?.spans) return null;
