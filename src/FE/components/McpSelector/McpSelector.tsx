@@ -12,12 +12,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 interface Props {
   value: ChatSpanMcp[];
   onValueChange: (value: ChatSpanMcp[]) => void;
+  onRequestMcpLoad?: () => Promise<void>; // 请求加载MCP服务器的回调
+  mcpServersLoaded?: boolean; // MCP服务器是否已加载
   validate?: () => string | null; // 返回错误信息，null表示验证通过
 }
 
 const McpSelector: FC<Props> = ({
   value = [],
   onValueChange,
+  onRequestMcpLoad,
+  mcpServersLoaded = false,
 }) => {
   const { t } = useTranslation();
   const [mcpServers, setMcpServers] = useState<McpServerListItemDto[]>([]);
@@ -50,10 +54,13 @@ const McpSelector: FC<Props> = ({
     (window as any).validateMcps = validateMcps;
   }
 
-  // 组件初始化时加载MCP服务器列表
+  // 组件初始化时不自动加载MCP服务器列表，由父组件控制
   useEffect(() => {
-    fetchMcpServers();
-  }, []);
+    // 父组件告知可以加载时，并且本地还没有数据或未在加载中，再触发一次请求
+    if (mcpServersLoaded && !isLoading && mcpServers.length === 0) {
+      fetchMcpServers();
+    }
+  }, [mcpServersLoaded]);
 
   const fetchMcpServers = async () => {
     try {
@@ -67,15 +74,25 @@ const McpSelector: FC<Props> = ({
     }
   };
 
-  const handleAddMcp = () => {
-    // 当用户点击加号时，先获取MCP服务器列表
-    if (mcpServers.length === 0) {
-      fetchMcpServers();
+  const handleAddMcp = async () => {
+    // 当用户点击加号时，触发父组件加载MCP服务器（只发信号，不直接请求）
+    if (onRequestMcpLoad && !mcpServersLoaded) {
+      await onRequestMcpLoad();
     }
+    // 如果本地还没有服务器列表，且父组件已允许加载，则由本组件拉取一次
+    if (mcpServersLoaded && mcpServers.length === 0 && !isLoading) {
+      await fetchMcpServers();
+    }
+    
+    // 获取已选择的服务器ID
+    const selectedIds = value.map(mcp => mcp.id);
+    
+  // 找到第一个未被选择的服务器
+  const availableServer = mcpServers.find(server => !selectedIds.includes(server.id));
     
     // 添加一个新的MCP项
     const newMcp: ChatSpanMcp = {
-      id: mcpServers.length > 0 ? mcpServers[0].id : 0,
+      id: availableServer ? availableServer.id : (mcpServers.length > 0 ? mcpServers[0].id : 0),
       customHeaders: '',
     };
     onValueChange([...value, newMcp]);
@@ -93,9 +110,22 @@ const McpSelector: FC<Props> = ({
     onValueChange(updatedMcps);
   };
 
+  const getAvailableServers = (currentIndex: number) => {
+    const selectedIds = value
+      .map((mcp, index) => index !== currentIndex ? mcp.id : null)
+      .filter(id => id !== null);
+    
+    return mcpServers.filter(server => !selectedIds.includes(server.id));
+  };
+
   const getServerLabel = (id: number) => {
     const server = mcpServers.find(s => s.id === id);
     return server ? server.label : `Server ${id}`;
+  };
+
+  const hasAvailableServers = () => {
+    const selectedIds = value.map(mcp => mcp.id);
+    return mcpServers.some(server => !selectedIds.includes(server.id));
   };
 
   return (
@@ -109,7 +139,7 @@ const McpSelector: FC<Props> = ({
           variant="ghost"
           size="sm"
           onClick={handleAddMcp}
-          disabled={isLoading}
+          disabled={isLoading || (mcpServersLoaded && !hasAvailableServers())}
           className="h-6 w-6 p-0"
         >
           <IconPlus size={16} />
@@ -123,18 +153,25 @@ const McpSelector: FC<Props> = ({
               <div className="flex-1">
                 <div className="text-xs text-gray-500 mb-1">{t('Tool Name')}</div>
                 <Select
-                  value={mcp.id.toString()}
+                  value={mcp.id > 0 ? mcp.id.toString() : ""}
                   onValueChange={(newValue) => handleUpdateMcp(index, 'id', parseInt(newValue))}
+                  disabled={isLoading}
                 >
                   <SelectTrigger className="h-8">
-                    <SelectValue placeholder={t('Select Tool')} />
+                    <SelectValue placeholder={isLoading ? t('Loading...') : t('Select Tool')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {mcpServers.map((server) => (
-                      <SelectItem key={server.id} value={server.id.toString()}>
-                        {server.label}
+                    {isLoading ? (
+                      <SelectItem disabled value="loading">
+                        {t('Loading...')}
                       </SelectItem>
-                    ))}
+                    ) : (
+                      getAvailableServers(index).map((server) => (
+                        <SelectItem key={server.id} value={server.id.toString()}>
+                          {server.label}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>

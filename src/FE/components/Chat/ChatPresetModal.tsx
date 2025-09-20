@@ -29,7 +29,7 @@ import ChatModelInfo from './ChatModelInfo';
 import EnableNetworkSearch from './EnableNetworkSearch';
 import SystemPrompt from './SystemPrompt';
 
-import { postChatPreset, putChatPreset, getMcpServers } from '@/apis/clientApis';
+import { postChatPreset, putChatPreset } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -50,6 +50,7 @@ const ChatPresetModal = (props: Props) => {
   const [presetSpanCount, setPresetSpanCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [mcpServersLoaded, setMcpServersLoaded] = useState(false);
+  const [mcpLoadingTriggered, setMcpLoadingTriggered] = useState(false);
 
   // JSON 验证函数
   const validateJSON = (jsonString: string): boolean => {
@@ -60,6 +61,21 @@ const ChatPresetModal = (props: Props) => {
     } catch {
       return false;
     }
+  };
+
+  // 检查是否需要在初始化时加载MCP
+  const shouldLoadMcpOnInit = (preset?: GetChatPresetResult) => {
+    if (!preset) return false;
+    return preset.spans.some(span => span.mcps && span.mcps.length > 0);
+  };
+
+  // 加载MCP服务器数据
+  const loadMcpServers = async () => {
+    if (mcpServersLoaded || mcpLoadingTriggered) return;
+    
+    setMcpLoadingTriggered(true);
+    // 仅通知需要加载，由子组件实际发起请求
+    setMcpServersLoaded(true);
   };
 
   useEffect(() => {
@@ -76,11 +92,12 @@ const ChatPresetModal = (props: Props) => {
     }
     setPresetSpanCount(chatPreset?.spans.length || 0);
     setMcpServersLoaded(false);
-    // 加载MCP服务器数据
-    if (isOpen) {
-      getMcpServers().then(() => {
-        setMcpServersLoaded(true);
-      }).catch(console.error);
+    setMcpLoadingTriggered(false);
+    
+    // 只在以下情况加载MCP服务器数据：
+    // A. 当前ChatPreset拥有至少一个MCP时
+    if (isOpen && shouldLoadMcpOnInit(chatPreset)) {
+      loadMcpServers();
     }
   }, [isOpen]);
 
@@ -519,12 +536,14 @@ const ChatPresetModal = (props: Props) => {
                         }}
                       />
                     )}
-                    {modelMap[selectedSpan.modelId]?.modelReferenceName !== 'gpt-image-1' && mcpServersLoaded && (
+                    {modelMap[selectedSpan.modelId]?.modelReferenceName !== 'gpt-image-1' && (
                       <McpSelector
                         value={selectedSpan?.mcps || []}
                         onValueChange={(mcps) => {
                           onChangeMcps(mcps);
                         }}
+                        onRequestMcpLoad={loadMcpServers}
+                        mcpServersLoaded={mcpServersLoaded}
                       />
                     )}
                     

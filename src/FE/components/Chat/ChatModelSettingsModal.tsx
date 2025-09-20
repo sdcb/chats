@@ -30,7 +30,7 @@ import ChatModelInfo from './ChatModelInfo';
 import EnableNetworkSearch from './EnableNetworkSearch';
 import SystemPrompt from './SystemPrompt';
 
-import { putChatSpan, getMcpServers } from '@/apis/clientApis';
+import { putChatSpan } from '@/apis/clientApis';
 
 interface Props {
   spanId: number;
@@ -51,6 +51,7 @@ const ChatModelSettingModal = (props: Props) => {
   const [model, setModel] = useState<AdminModelDto>();
   const [isLoading, setIsLoading] = useState(false);
   const [mcpServersLoaded, setMcpServersLoaded] = useState(false);
+  const [mcpLoadingTriggered, setMcpLoadingTriggered] = useState(false);
 
   // JSON 验证函数
   const validateJSON = (jsonString: string): boolean => {
@@ -63,6 +64,21 @@ const ChatModelSettingModal = (props: Props) => {
     }
   };
 
+  // 检查是否需要在初始化时加载MCP
+  const shouldLoadMcpOnInit = (currentSpan?: ChatSpanDto) => {
+    if (!currentSpan) return false;
+    return currentSpan.mcps && currentSpan.mcps.length > 0;
+  };
+
+  // 加载MCP服务器数据
+  const loadMcpServers = async () => {
+    if (mcpServersLoaded || mcpLoadingTriggered) return;
+    
+    setMcpLoadingTriggered(true);
+    // 仅标记需要加载，由子组件来执行实际请求
+    setMcpServersLoaded(true);
+  };
+
   useEffect(() => {
     if (!selectedChat) return;
     
@@ -70,11 +86,12 @@ const ChatModelSettingModal = (props: Props) => {
     setSpan(sp);
     setModel(modelMap[sp?.modelId]);
     setMcpServersLoaded(false);
-    // 加载MCP服务器数据
-    if (isOpen) {
-      getMcpServers().then(() => {
-        setMcpServersLoaded(true);
-      }).catch(console.error);
+    setMcpLoadingTriggered(false);
+    
+    // 只在以下情况加载MCP服务器数据：
+    // A. 当前span拥有至少一个MCP时
+    if (isOpen && shouldLoadMcpOnInit(sp)) {
+      loadMcpServers();
     }
   }, [isOpen, selectedChat]);
 
@@ -253,12 +270,14 @@ const ChatModelSettingModal = (props: Props) => {
                   }}
                 />
               )}
-              {model?.modelReferenceName !== 'gpt-image-1' && mcpServersLoaded && (
+              {model?.modelReferenceName !== 'gpt-image-1' && (
                 <McpSelector
                   value={span?.mcps || []}
                   onValueChange={(mcps) => {
                     onChangeMcps(mcps);
                   }}
+                  onRequestMcpLoad={loadMcpServers}
+                  mcpServersLoaded={mcpServersLoaded}
                 />
               )}
               
