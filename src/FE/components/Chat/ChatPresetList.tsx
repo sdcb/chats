@@ -269,23 +269,6 @@ const ChatPresetList = () => {
           previousId = overIndex > 0 ? chatPresets[overIndex - 1].id : null;
           nextId = chatPresets[overIndex].id;
         }
-        
-        console.log('Drag operation:', {
-          activeIndex,
-          overIndex,
-          targetPosition,
-          direction: activeIndex < overIndex ? 'right' : 'left',
-          activeId: active.id,
-          activeName: chatPresets[activeIndex].name,
-          originalArray: chatPresets.map((p, i) => `${i}:${p.name}`)
-        });
-        
-        console.log('Calculated IDs:', {
-          previousId,
-          nextId,
-          previousName: previousId ? chatPresets.find(p => p.id === previousId)?.name : 'null',
-          nextName: nextId ? chatPresets.find(p => p.id === nextId)?.name : 'null'
-        });
 
         // 调用后端API进行重排序
         await reorderChatPresets({
