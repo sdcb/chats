@@ -246,12 +246,10 @@ const ChatHeader = () => {
                         >
                           <ChatIcon providerId={span.modelProviderId} />
                           <span>{span?.modelName}</span>
-                          <Button
-                            variant="ghost"
-                            className="w-6 h-6 p-0 m-0 hidden sm:block"
-                          >
+                          {/* 避免 button 嵌套 button：内层改为 div */}
+                          <div className="w-6 h-6 p-0 m-0 hidden sm:block">
                             <IconDots className="rotate-90" size={16} />
-                          </Button>
+                          </div>
                         </Button>
                       ) : (
                         <div className="flex items-center bg-card rounded-md hover:bg-muted">

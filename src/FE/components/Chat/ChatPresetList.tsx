@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from 'react';
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { GripVertical } from 'lucide-react';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -16,7 +17,6 @@ import {
   IconPlus,
   IconTrash,
 } from '@/components/Icons';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,16 +83,25 @@ const SortableChatPresetItem = ({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
       className={cn(
-        'rounded-sm p-4 h-24 md:h-32 hover:bg-muted cursor-grab active:cursor-grabbing shadow-sm bg-card',
+        // touch-pan-y 允许在移动端默认纵向滚动；只有真正进入拖拽后才会“占用”手势
+        'rounded-sm p-4 h-24 md:h-32 hover:bg-muted cursor-grab active:cursor-grabbing shadow-sm bg-card touch-pan-y select-none',
         selectedChatPresetId === item.id && 'bg-muted',
         isDragging && 'opacity-50'
       )}
       onClick={() => onSelect(item)}
     >
       <div className="flex justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {/* 拖拽手柄：仅在此元素上启用拖拽，避免与滚动冲突 */}
+          <button
+            className="-ml-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
+            {...listeners}
+            aria-label={t('Drag to reorder')}
+            onClick={(e) => e.preventDefault()}
+          >
+            <GripVertical size={16} />
+          </button>
           <span className="text-ellipsis whitespace-nowrap overflow-hidden">
             {item.name}
           </span>
@@ -150,7 +159,7 @@ const SortableChatPresetItem = ({
             >
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button className="bg-transparent p-0 m-0 h-auto hover:bg-transparent">
+                  <span className="inline-flex p-0 m-0 h-auto bg-transparent">
                     <ChatIcon
                       className={cn(
                         'cursor-pointer border border-1 border-muted-foreground bg-white',
@@ -159,7 +168,7 @@ const SortableChatPresetItem = ({
                       key={'chat-icon-' + s.spanId}
                       providerId={s.modelProviderId}
                     />
-                  </Button>
+                  </span>
                 </TooltipTrigger>
                 <TooltipContent>{s.modelName}</TooltipContent>
               </Tooltip>
@@ -184,12 +193,13 @@ const ChatPresetList = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
 
+  // 统一拖拽激活规则：
+  // 使用较小距离阈值以避免误触，同时不影响移动端滚动（结合手柄触发）
+
   // dnd-kit sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
-      },
+      activationConstraint: { distance: 4 },
     })
   );
 
