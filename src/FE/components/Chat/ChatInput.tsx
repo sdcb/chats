@@ -625,12 +625,16 @@ const ChatInput = ({
                   <div className="text-gray-400">
                     Enter {t('Send')} / Ctrl Enter {t('Line break')}
                   </div>
-                  <Button className="rounded-sm w-20 h-9" onClick={handleSend}>
+                  <Button
+                    className="rounded-sm w-20 h-9"
+                    onClick={
+                      selectedChat.status === ChatStatus.Chatting
+                        ? handleStopChats
+                        : handleSend
+                    }
+                  >
                     {selectedChat.status === ChatStatus.Chatting ? (
-                      <IconStopFilled
-                        onClick={handleStopChats}
-                        className="h-4 w-4"
-                      />
+                      <IconStopFilled className="h-4 w-4" />
                     ) : (
                       t('Send')
                     )}
