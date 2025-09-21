@@ -182,7 +182,6 @@ const ChatPresetList = () => {
   const [chatPreset, setChatPreset] = useState<GetChatPresetResult>();
   const [selectedChatPresetId, setSelectedChatPresetId] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const [activeId, setActiveId] = useState<string | null>(null);
   const { t } = useTranslation();
 
   // dnd-kit sensors
@@ -236,13 +235,8 @@ const ChatPresetList = () => {
     });
   };
 
-  const onDragStart = (event: any) => {
-    setActiveId(event.active.id);
-  };
-
   const onDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveId(null);
     
     if (!over || active.id === over.id) {
       return;
@@ -253,33 +247,18 @@ const ChatPresetList = () => {
 
     if (activeIndex !== -1 && overIndex !== -1) {
       try {
-        // 简化逻辑：直接基于目标位置计算，让后端处理Order验证和重排序
-        let previousId: string | null = null;
-        let nextId: string | null = null;
-        
-        // 计算插入位置：移除被拖拽元素后的目标位置
-        const targetPosition = activeIndex < overIndex ? overIndex : overIndex;
-        
-        if (activeIndex < overIndex) {
-          // 向右移动到overIndex位置
-          previousId = overIndex > 0 ? chatPresets[overIndex].id : null;
-          nextId = overIndex + 1 < chatPresets.length ? chatPresets[overIndex + 1].id : null;
-        } else {
-          // 向左移动到overIndex位置  
-          previousId = overIndex > 0 ? chatPresets[overIndex - 1].id : null;
-          nextId = chatPresets[overIndex].id;
-        }
-
-        // 调用后端API进行重排序
-        await reorderChatPresets({
-          sourceId: active.id as string,
-          previousId,
-          nextId,
-        });
-
-        // 只有API成功后才更新本地状态
+        // 1) 乐观更新，先本地移动，避免回弹闪烁
         const newPresets = arrayMove(chatPresets, activeIndex, overIndex);
         setChatPresets(newPresets);
+
+        // 2) 基于新顺序计算前后邻居
+        const movedId = active.id as string;
+        const newIdx = newPresets.findIndex(p => p.id === movedId);
+        const previousId = newIdx > 0 ? newPresets[newIdx - 1].id : null;
+        const nextId = newIdx < newPresets.length - 1 ? newPresets[newIdx + 1].id : null;
+
+        // 3) 通知后端；失败则回滚（重新拉取）
+        await reorderChatPresets({ sourceId: movedId, previousId, nextId });
       } catch (error) {
         console.error('Failed to reorder chat presets:', error);
         // 如果后端调用失败，刷新列表以恢复正确顺序
@@ -293,7 +272,6 @@ const ChatPresetList = () => {
       {hasModel() && (
         <DndContext
           sensors={sensors}
-          onDragStart={onDragStart}
           onDragEnd={onDragEnd}
           collisionDetection={closestCorners}
         >
@@ -304,7 +282,7 @@ const ChatPresetList = () => {
             >
               {chatPresets?.map((item) => (
                 <SortableChatPresetItem
-                  key={'chat-preset' + item.id}
+                  key={item.id}
                   item={item}
                   selectedChatPresetId={selectedChatPresetId}
                   modelMap={modelMap}
