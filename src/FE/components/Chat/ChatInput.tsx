@@ -32,6 +32,7 @@ import {
   IconArrowsDiagonalMinimize,
   IconCircleX,
   IconEraser,
+  IconCamera,
   IconLoader,
   IconPaperclip,
   IconStopFilled,
@@ -490,15 +491,33 @@ const ChatInput = ({
                     isFullWriting ? 'visible' : 'visible',
                   )}
                 >
-                  <div>
+                  <div className="flex items-center">
                     {canUploadFile() && (
                       <UploadButton
                         fileConfig={defaultFileConfig}
                         onUploading={handleUploading}
                         onFailed={handleUploadFailed}
                         onSuccessful={handleUploadSuccessful}
+                        capture={false}
+                        inputId="upload-device"
+                        tip={t('Upload from device')}
+                        tipSide="top"
                       >
                         <IconPaperclip size={22} />
+                      </UploadButton>
+                    )}
+                    {canUploadFile() && isMobile() && (
+                      <UploadButton
+                        fileConfig={defaultFileConfig}
+                        onUploading={handleUploading}
+                        onFailed={handleUploadFailed}
+                        onSuccessful={handleUploadSuccessful}
+                        capture={true}
+                        inputId="upload-camera"
+                        tip={t('Take photo')}
+                        tipSide="top"
+                      >
+                        <IconCamera size={22} />
                       </UploadButton>
                     )}
                     {canUploadFile() && (
@@ -513,13 +532,13 @@ const ChatInput = ({
                     {uploading && (
                       <Button
                         disabled
-                        className="rounded-sm p-1 m-1 h-auto w-auto bg-transparent hover:bg-muted"
+                        className="rounded-sm m-1 h-9 w-9 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
                       >
                         <IconLoader className="animate-spin" size={22} />
                       </Button>
                     )}
                   </div>
-                  <div>
+                  <div className="flex items-center">
                     <FilesPopover
                       onSelect={handleFileSelect}
                       selectedFiles={contentFiles}

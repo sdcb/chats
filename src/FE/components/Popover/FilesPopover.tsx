@@ -4,6 +4,8 @@ import { FileDef, getFileUrl } from '@/types/chat';
 import { GetUserFilesResult } from '@/types/clientApis';
 
 import { IconFolder } from '@/components/Icons';
+import Tips from '@/components/Tips/Tips';
+import useTranslation from '@/hooks/useTranslation';
 import PaginationContainer from '@/components/Pagiation/Pagiation';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,13 +44,20 @@ const FilesPopover = ({ onSelect, selectedFiles }: FilesPopoverProps) => {
     setPagination({ ...pagination, page });
   };
 
+  const { t } = useTranslation();
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button className="rounded-sm p-1 m-1 h-auto w-auto bg-transparent hover:bg-muted">
-          <IconFolder size={22} />
-        </Button>
-      </PopoverTrigger>
+      <Tips
+        trigger={
+          <PopoverTrigger asChild>
+            <Button className="rounded-sm m-1 h-9 w-9 p-0 bg-transparent hover:bg-muted flex items-center justify-center">
+              <IconFolder size={22} />
+            </Button>
+          </PopoverTrigger>
+        }
+        side="top"
+        content={t('Select remote photos')}
+      />
       <PopoverContent className="min-w-80 max-w-lg">
         <div className="grid grid-cols-3 gap-2">
           {files.map((file) => (

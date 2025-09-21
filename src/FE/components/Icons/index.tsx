@@ -52,6 +52,7 @@ export { default as IconPaperclip } from './IconPaperclip';
 export { default as IconPasswordUser } from './IconPasswordUser';
 export { default as IconPencil } from './IconPencil';
 export { default as IconPhoto } from './IconPhoto';
+export { default as IconCamera } from './IconCamera';
 export { default as IconPin } from './IconPin';
 export { default as IconPinnedOff } from './IconPinnedOff';
 export { default as IconPlus } from './IconPlus';
