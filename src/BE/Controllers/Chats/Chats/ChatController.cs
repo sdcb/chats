@@ -20,6 +20,7 @@ using ModelContextProtocol.Protocol;
 using OpenAI.Chat;
 using System.ClientModel;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Channels;
 using EmptyResult = Microsoft.AspNetCore.Mvc.EmptyResult;
@@ -442,10 +443,25 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             ImageSize = (DBKnownImageSize)chatSpan.ChatConfig.ImageSizeId,
         };
 
+        // Build a name mapping for tools to avoid collisions while keeping names clean
+        Dictionary<string, (int serverId, string originalToolName)> toolNameMap = new(StringComparer.Ordinal);
+        HashSet<string> usedToolNames = new(StringComparer.Ordinal);
         foreach (McpTool tool in chatSpan.ChatConfig.ChatConfigMcps.SelectMany(x => x.McpServer.McpTools))
         {
-            string toolNameWithServerIdPrefix = $"{tool.McpServerId}_{tool.ToolName}";
-            cco.Tools.Add(ChatTool.CreateFunctionTool(toolNameWithServerIdPrefix, tool.Description, tool.Parameters == null ? null : BinaryData.FromString(tool.Parameters)));
+            string finalName = tool.ToolName;
+            if (!usedToolNames.Add(finalName))
+            {
+                // Duplicate detected, generate a non-digit-leading 8-char random prefix
+                string prefix;
+                do
+                {
+                    prefix = GenerateAlphaFirstToken(8);
+                    finalName = prefix + "_" + tool.ToolName;
+                } while (!usedToolNames.Add(finalName));
+            }
+
+            toolNameMap[finalName] = (tool.McpServerId, tool.ToolName);
+            cco.Tools.Add(ChatTool.CreateFunctionTool(finalName, tool.Description, tool.Parameters == null ? null : BinaryData.FromString(tool.Parameters)));
         }
 
         ChatTurn turn = new()
@@ -474,9 +490,12 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     .Where(x => x.StepContentToolCall != null)
                     .Select(x => x.StepContentToolCall!))
                 {
-                    string[] segments = call.Name!.Split('_', 2);
-                    int serverId = int.Parse(segments[0]);
-                    string toolName = segments[1];
+                    if (!toolNameMap.TryGetValue(call.Name!, out var mapped))
+                    {
+                        throw new InvalidOperationException($"Tool name not found in map: {call.Name}");
+                    }
+                    int serverId = mapped.serverId;
+                    string toolName = mapped.originalToolName;
 
                     McpServer mcpServer = chatSpan.ChatConfig.ChatConfigMcps
                         .Where(x => x.McpServerId == serverId)
@@ -792,5 +811,20 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         {
             return NotFound();
         }
+    }
+
+    private static string GenerateAlphaFirstToken(int length)
+    {
+        if (length <= 0) throw new ArgumentOutOfRangeException(nameof(length));
+        const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        const string alphanum = letters + "0123456789";
+
+        Span<char> buffer = stackalloc char[length];
+        buffer[0] = letters[RandomNumberGenerator.GetInt32(letters.Length)];
+        for (int i = 1; i < length; i++)
+        {
+            buffer[i] = alphanum[RandomNumberGenerator.GetInt32(alphanum.Length)];
+        }
+        return new string(buffer);
     }
 }
