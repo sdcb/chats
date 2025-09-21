@@ -127,22 +127,37 @@ const ChatInput = ({
   // 监听聊天状态变化，实现自动收起/展开抽屉
   useEffect(() => {
     if (!selectedChat) return;
-    
+
     const prevStatus = prevChatStatusRef.current;
     const currentStatus = selectedChat.status;
-    
-    // 只在聊天状态从非Chatting变为Chatting时触发一次关闭
-    if (prevStatus !== ChatStatus.Chatting && currentStatus === ChatStatus.Chatting) {
-      // 如果抽屉是展开的，自动收起
+
+    // 从“非聊天” -> “聊天” 开始：标记本轮会话需要在结束时自动展开；如当前是展开，则先自动收起
+    if (
+      prevStatus !== ChatStatus.Chatting &&
+      currentStatus === ChatStatus.Chatting
+    ) {
+      // 会话上下文开始：预期结束时自动展开，除非期间被用户手动修改
+      setIsCollapsedByChat(true);
       if (showChatInput) {
-        setIsCollapsedByChat(true);
         settingDispatch(setShowChatInput(false));
       }
     }
-    
+
+    // 从“聊天” -> “非聊天”（完成/失败）结束：若本轮是因聊天自动收起，且期间未被用户修改，则自动展开
+    if (
+      prevStatus === ChatStatus.Chatting &&
+      currentStatus !== ChatStatus.Chatting
+    ) {
+      if (isCollapsedByChat && !showChatInput) {
+        settingDispatch(setShowChatInput(true));
+      }
+      // 无论是否展开，结束后重置标记，新的聊天重新计算
+      setIsCollapsedByChat(false);
+    }
+
     // 更新上一次的状态
     prevChatStatusRef.current = currentStatus;
-  }, [selectedChat?.status, showChatInput, settingDispatch]);
+  }, [selectedChat?.status, showChatInput, settingDispatch, isCollapsedByChat]);
 
   // 如果没有选中的聊天，不渲染ChatInput
   if (!selectedChat) {
