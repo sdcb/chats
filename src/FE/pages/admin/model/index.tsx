@@ -540,7 +540,8 @@ export default function ModelManager() {
                   {/* 简化的 Overlay 头部，避免在 Overlay 中再次使用 useSortable */}
                   <span className="font-semibold">{t(p.providerName)}</span>
                   <span className="text-muted-foreground text-sm">
-                    {t('Model Keys')}: {p.keys.length} {t('Models')}: {p.keys.reduce((sum, k) => sum + (modelsByKey[k.id]?.length || 0), 0)}
+                    {t('Model Keys')}: {p.keys.length}
+                    <span className="hidden sm:inline"> {t('Models')}: {p.keys.reduce((sum, k) => sum + (modelsByKey[k.id]?.length || 0), 0)}</span>
                   </span>
                 </div>
               </div>

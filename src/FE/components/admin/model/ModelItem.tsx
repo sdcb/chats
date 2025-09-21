@@ -49,14 +49,13 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage }: Mode
   return (
     <div 
       className={cn(
-        "flex items-center justify-between px-2 py-1 rounded hover:bg-muted/40 transition-all duration-200 relative",
-        isDragging ? "opacity-60 cursor-grabbing" : "cursor-move",
+        "flex items-center justify-between px-2 py-1 rounded hover:bg-muted/40 transition-all duration-200 relative touch-pan-y",
+        isDragging ? "opacity-60 cursor-grabbing" : "",
         !model.enabled && "opacity-60"
       )}
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
     >
       {/* 禁用状态蒙版 */}
       {!model.enabled && (
@@ -70,14 +69,32 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage }: Mode
       
       <div
         className={cn(
-          "flex-1 min-w-0 cursor-pointer",
+          "flex-1 min-w-0",
           !model.enabled && "text-muted-foreground"
         )}
-        onClick={handleContentClick}
       >
         <div className="truncate flex items-center gap-2">
           {!model.enabled && <IconEyeOff size={14} className="text-muted-foreground flex-shrink-0" />}
-          <span className={cn("truncate", !model.enabled && "line-through")}>{model.name}</span>
+          {/* 模型名作为拖拽把手；点击（非拖拽）时仍进入编辑 */}
+          <button
+            className={cn(
+              "truncate text-left bg-transparent border-0 p-0 m-0 inline-flex items-center touch-none",
+              model.enabled ? "cursor-grab active:cursor-grabbing" : "cursor-default"
+            )}
+            aria-label={t('Drag to reorder')}
+            onClick={(e) => {
+              if (isDragging) {
+                e.preventDefault();
+                e.stopPropagation();
+              } else {
+                handleContentClick(e);
+              }
+            }}
+            {...(model.enabled ? listeners : {})}
+            disabled={!model.enabled}
+          >
+            <span className={cn("truncate", !model.enabled && "line-through")}>{model.name}</span>
+          </button>
         </div>
         <div className={cn(
           "text-xs truncate",

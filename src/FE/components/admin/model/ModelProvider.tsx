@@ -73,7 +73,9 @@ export default function ModelProvider({
     
     // 如果点击的是按钮区域，不触发展开/收起
     const target = e.target as HTMLElement;
-    if (target.closest('button')) {
+    const btn = target.closest('button');
+    // 允许带有 data-allow-toggle 的按钮触发展开/收起（拖拽把手点击）
+    if (btn && !btn.getAttribute('data-allow-toggle')) {
       return;
     }
     
@@ -82,25 +84,49 @@ export default function ModelProvider({
 
   // Provider 的拖拽由上层 dnd-kit 管理
 
+  const handleEnabled = provider.keys.length > 0;
+
   return (
     <div className="mb-3" ref={setNodeRef} style={style}>
       <div 
         className={cn(
-          "rounded-xl border bg-card transition-all duration-200",
-          provider.keys.length > 0 && (isDragging ? "opacity-60 cursor-grabbing" : "cursor-grab")
+          "rounded-xl border bg-card transition-all duration-200 touch-pan-y",
+          handleEnabled && isDragging && "opacity-60"
         )}
         {...attributes}
-        {...listeners}
       >
         <div
           className="flex items-center justify-between p-3 select-none"
           onClick={handleHeaderClick}
         >
           <div className="flex items-center gap-2">
-            <ChatIcon className="h-6 w-6" providerId={provider.providerId} />
-            <span className="font-semibold">{t(provider.providerName)}</span>
+            {/* 拖拽把手：图标 + 名称 都作为把手，避免与页面滚动冲突 */}
+            <button
+              className={cn(
+                "p-0 m-0 bg-transparent border-0 inline-flex items-center gap-2 touch-none",
+                handleEnabled ? "cursor-grab active:cursor-grabbing" : "cursor-default",
+                handleEnabled && isDragging && "cursor-grabbing"
+              )}
+              aria-label={t('Drag to reorder')}
+              data-allow-toggle
+              // 点击把手：若非拖拽，允许冒泡到 header 触发展开；拖拽中则拦截
+              onClick={(e) => {
+                if (isDragging) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+              }}
+              {...(handleEnabled ? listeners : {})}
+              disabled={!handleEnabled}
+            >
+              <ChatIcon className="h-6 w-6" providerId={provider.providerId} />
+              {/* 小屏隐藏标题，仅显示图标；大屏显示提供商标题 */}
+              <span className="font-semibold hidden sm:inline">{t(provider.providerName)}</span>
+            </button>
+            {/* 计数信息：小屏仅显示“密钥: X”，大屏显示“密钥: X 模型: Y” */}
             <span className="text-muted-foreground text-sm">
-              {t('Model Keys')}: {provider.keys.length} {t('Models')}: {modelCount}
+              {t('Model Keys')}: {provider.keys.length}
+              <span className="hidden sm:inline"> {t('Models')}: {modelCount}</span>
             </span>
           </div>
           <div className="flex items-center gap-2">

@@ -59,7 +59,9 @@ export default function ModelKey({
     
     // 如果点击的是按钮区域，不触发展开/收起
     const target = e.target as HTMLElement;
-    if (target.closest('button')) {
+    const btn = target.closest('button');
+    // 允许带 data-allow-toggle 的按钮点击触发展开/收起（标题把手点击）
+    if (btn && !btn.getAttribute('data-allow-toggle')) {
       return;
     }
     
@@ -71,19 +73,33 @@ export default function ModelKey({
   return (
     <div 
       className={cn(
-        "rounded-md border bg-background/30 transition-all duration-200 cursor-move"
+        "rounded-md border bg-background/30 transition-all duration-200 touch-pan-y",
+        isDragging && "opacity-60"
       )}
       ref={setNodeRef}
       style={style}
     >
       <div
-        className="flex items-center justify-between p-3 cursor-pointer select-none"
+        className="flex items-center justify-between p-3 select-none"
         onClick={handleClick}
         {...attributes}
-        {...listeners}
       >
         <div className="flex items-center gap-2">
-          <span className="font-medium">{modelKey.name}</span>
+          {/* 标题作为拖拽把手：只在标题上绑定 listeners，避免与滚动冲突；点击非拖拽时允许展开 */}
+          <button
+            className="p-0 m-0 bg-transparent border-0 inline-flex items-center font-medium touch-none cursor-grab active:cursor-grabbing"
+            aria-label={t('Drag to reorder')}
+            data-allow-toggle
+            onClick={(e) => {
+              if (isDragging) {
+                e.preventDefault();
+                e.stopPropagation();
+              }
+            }}
+            {...listeners}
+          >
+            {modelKey.name}
+          </button>
         </div>
         <div className="flex gap-2">
           <Button
