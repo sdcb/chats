@@ -24,8 +24,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "scripts", "src\scripts\scri
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "eng", "eng", "{BB4E62F3-F7F2-43BD-968A-CCCCB26017DB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReleaseWebhook", "eng\ReleaseWebhook\ReleaseWebhook.csproj", "{0F444B2A-D877-453E-9347-D59F4252609A}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureFileMigrator", "AzureFileMigrator\AzureFileMigrator.csproj", "{1C0D7033-6A27-4628-A754-D9DA8E2A56D0}"
 EndProject
 Global
@@ -46,10 +44,6 @@ Global
 		{1AE54C98-13A3-408B-B428-1FD975C02AF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1AE54C98-13A3-408B-B428-1FD975C02AF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1AE54C98-13A3-408B-B428-1FD975C02AF2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0F444B2A-D877-453E-9347-D59F4252609A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0F444B2A-D877-453E-9347-D59F4252609A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0F444B2A-D877-453E-9347-D59F4252609A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0F444B2A-D877-453E-9347-D59F4252609A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1C0D7033-6A27-4628-A754-D9DA8E2A56D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1C0D7033-6A27-4628-A754-D9DA8E2A56D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1C0D7033-6A27-4628-A754-D9DA8E2A56D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -60,7 +54,6 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{29CC0F58-0B4E-4F4F-A084-7C461F7A4E60} = {6C78A2EB-D01E-4634-BBA7-85F12BF86232}
-		{0F444B2A-D877-453E-9347-D59F4252609A} = {BB4E62F3-F7F2-43BD-968A-CCCCB26017DB}
 		{1C0D7033-6A27-4628-A754-D9DA8E2A56D0} = {BB4E62F3-F7F2-43BD-968A-CCCCB26017DB}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
