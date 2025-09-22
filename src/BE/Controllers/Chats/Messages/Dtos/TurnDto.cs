@@ -218,7 +218,7 @@ public record ChatMessageTemp
                     ReasoningTokens = usages.Sum(x => x.ReasoningTokens),
                     Duration = usages.Sum(x => x.TotalDurationMs),
                     ReasoningDuration = usages.Sum(x => x.ReasoningDurationMs),
-                    FirstTokenLatency = usages.Sum(x => x.FirstResponseDurationMs),
+                    FirstTokenLatency = usages.First().FirstResponseDurationMs,
                     ModelId = assistantMessage.Steps.First().Usage!.ModelId,
                     ModelName = assistantMessage.Steps.First().Usage!.Model.Name,
                     ModelProviderId = assistantMessage.Steps.First().Usage!.Model.ModelKey.ModelProviderId,

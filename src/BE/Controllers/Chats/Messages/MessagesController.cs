@@ -47,7 +47,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                     ReasoningTokens = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.ReasoningTokens),
                     Duration = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.TotalDurationMs),
                     ReasoningDuration = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.ReasoningDurationMs),
-                    FirstTokenLatency = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.FirstResponseDurationMs),
+                    FirstTokenLatency = x.Steps.First().Usage!.FirstResponseDurationMs,
                     ModelId = x.Steps.First().Usage!.ModelId,
                     ModelName = x.Steps.First().Usage!.Model.Name,
                     ModelProviderId = x.Steps.First().Usage!.Model.ModelKey.ModelProviderId,
