@@ -17,7 +17,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "github-actions", "github-actions", "{29CC0F58-0B4E-4F4F-A084-7C461F7A4E60}"
 	ProjectSection(SolutionItems) = preProject
 		.github\workflows\build.yml = .github\workflows\build.yml
-		.github\workflows\deploy-release-webhook.yml = .github\workflows\deploy-release-webhook.yml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "scripts", "src\scripts\scripts.csproj", "{1AE54C98-13A3-408B-B428-1FD975C02AF2}"
