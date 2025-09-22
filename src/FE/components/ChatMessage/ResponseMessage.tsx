@@ -19,9 +19,9 @@ import { IChatMessage, MessageDisplayType } from '@/types/chatMessage';
 
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
+import ToolCallBlock from '@/components/Markdown/ToolCallBlock';
 
 import ChatError from '../ChatError/ChatError';
-import CopyButton from '../Button/CopyButton';
 import { IconCopy, IconDots, IconEdit } from '../Icons';
 import { Button } from '../ui/button';
 import {
@@ -167,34 +167,11 @@ const ResponseMessage = (props: Props) => {
     const { toolCall, toolResponse } = toolGroup;
 
     return (
-      <div key={`tool-group-${index}`} className="my-4 border rounded-lg overflow-hidden bg-muted/50">
-        {/* Tool header */}
-        <div className="bg-muted px-4 py-2 border-b flex items-center gap-2">
-          <span className="text-blue-600">🔧</span>
-          <span className="font-semibold text-sm">{toolCall.n}</span>
-        </div>
-        
-        {/* Tool call parameters */}
-        <div className="px-4 py-2 relative group/param" tabIndex={0}>
-          <div className="absolute top-2 right-2 z-10 invisible group-hover/param:visible group-focus-within/param:visible">
-            <CopyButton value={toolCall.p} />
-          </div>
-          <div className="whitespace-pre-wrap break-words font-mono text-sm pr-8 not-prose">{toolCall.p}</div>
-        </div>
-        
-        {/* Separator - only show if there's a response */}
-        {toolResponse && <div className="border-t border-muted-foreground/20" />}
-        
-        {/* Tool response */}
-        {toolResponse && (
-          <div className="px-4 py-2 relative group/resp" tabIndex={0}>
-            <div className="absolute top-2 right-2 z-10 invisible group-hover/resp:visible group-focus-within/resp:visible">
-              <CopyButton value={toolResponse.r} />
-            </div>
-            <div className="whitespace-pre-wrap break-words text-sm pr-8">{toolResponse.r}</div>
-          </div>
-        )}
-      </div>
+      <ToolCallBlock
+        key={`tool-group-${index}`}
+        toolCall={toolCall}
+        toolResponse={toolResponse}
+      />
     );
   };
 
