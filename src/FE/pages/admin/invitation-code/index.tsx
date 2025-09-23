@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import InvitationCodeModal from '../_components/InvitationCode/InvitationCodeModal';
+import InvitationCodeModal from '@/components/admin/InvitationCode/InvitationCodeModal';
 
 import { getInvitationCode } from '@/apis/adminApis';
 

@@ -18,29 +18,26 @@ public record JsonTokenBalance
     [JsonPropertyName("expires")]
     public required DateTime Expires { get; init; }
 
-    [JsonPropertyName("enabled")]
-    public required bool Enabled { get; init; }
-
-    public bool ApplyTo(UserModel existingItem, int? creditUserId)
+    public bool ApplyTo(UserModel existingItem, int? creditUserId, out UsageTransaction? usageTransaction)
     {
         bool needsTransaction = existingItem.CountBalance != Counts || existingItem.TokenBalance != Tokens;
-        bool hasDifference =
-            needsTransaction ||
-            existingItem.IsDeleted != !Enabled ||
-            (Enabled && existingItem.ExpiresAt != Expires);
+        bool hasDifference = needsTransaction || existingItem.ExpiresAt != Expires;
 
         if (needsTransaction)
         {
-            UsageTransaction ut = new()
+            usageTransaction = new UsageTransaction()
             {
                 CreatedAt = DateTime.UtcNow,
                 CountAmount = Counts - existingItem.CountBalance,
                 TokenAmount = Tokens - existingItem.TokenBalance,
-                UserModelId = existingItem.Id,
+                ModelId = ModelId,
                 TransactionTypeId = (byte)DBTransactionType.Charge,
             };
-            ApplyCreditUser(existingItem, creditUserId, ut);
-            existingItem.UsageTransactions.Add(ut);
+            ApplyCreditUser(existingItem, creditUserId, usageTransaction);
+        }
+        else
+        {
+            usageTransaction = null;
         }
 
         if (hasDifference)
@@ -48,7 +45,6 @@ public record JsonTokenBalance
             existingItem.CountBalance = Counts;
             existingItem.TokenBalance = Tokens;
             existingItem.ExpiresAt = Expires;
-            existingItem.IsDeleted = !Enabled;
             existingItem.UpdatedAt = DateTime.UtcNow;
         }
 

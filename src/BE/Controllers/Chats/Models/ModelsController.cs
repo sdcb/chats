@@ -17,8 +17,8 @@ public class ModelsController : ControllerBase
     {
         int? fileServiceId = await FileService.GetDefaultId(db, cancellationToken);
         AdminModelDto[] data = await db.UserModels
-            .Where(x => x.UserId == currentUser.Id && !x.IsDeleted && !x.Model.IsDeleted)
-            .OrderBy(x => x.Model.Order)
+            .Where(x => x.UserId == currentUser.Id && !x.Model.IsDeleted)
+            .OrderBy(x => x.Model.ModelKey.Order).ThenBy(x => x.Model.Order)
             .Select(x => x.Model)
             .Select(x => new AdminModelDto
             {
@@ -33,7 +33,6 @@ public class ModelsController : ControllerBase
                 ModelReferenceShortName = x.ModelReference.DisplayName,
                 InputTokenPrice1M = x.InputTokenPrice1M,
                 OutputTokenPrice1M = x.OutputTokenPrice1M,
-                Rank = x.Order,
                 DeploymentName = x.DeploymentName,
                 AllowSearch = x.ModelReference.AllowSearch,
                 AllowVision = x.ModelReference.AllowVision,

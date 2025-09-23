@@ -6,7 +6,5 @@ public record ChatSpanResponse
 {
     public required byte SpanId { get; init; }
 
-    public required Message AssistantMessage { get; init; }
-
-    public required UserModelBalanceCost Cost { get; init; }
+    public required List<ChatTurn> NewMessages { get; init; }
 }

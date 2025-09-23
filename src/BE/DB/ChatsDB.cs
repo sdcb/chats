@@ -17,6 +17,10 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<ChatConfig> ChatConfigs { get; set; }
 
+    public virtual DbSet<ChatConfigArchived> ChatConfigArchiveds { get; set; }
+
+    public virtual DbSet<ChatConfigMcp> ChatConfigMcps { get; set; }
+
     public virtual DbSet<ChatGroup> ChatGroups { get; set; }
 
     public virtual DbSet<ChatPreset> ChatPresets { get; set; }
@@ -30,6 +34,8 @@ public partial class ChatsDB : DbContext
     public virtual DbSet<ChatSpan> ChatSpans { get; set; }
 
     public virtual DbSet<ChatTag> ChatTags { get; set; }
+
+    public virtual DbSet<ChatTurn> ChatTurns { get; set; }
 
     public virtual DbSet<ClientInfo> ClientInfos { get; set; }
 
@@ -55,21 +61,13 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<InvitationCode> InvitationCodes { get; set; }
 
+    public virtual DbSet<KnownImageSize> KnownImageSizes { get; set; }
+
     public virtual DbSet<LoginService> LoginServices { get; set; }
 
-    public virtual DbSet<Message> Messages { get; set; }
+    public virtual DbSet<McpServer> McpServers { get; set; }
 
-    public virtual DbSet<MessageContent> MessageContents { get; set; }
-
-    public virtual DbSet<MessageContentBlob> MessageContentBlobs { get; set; }
-
-    public virtual DbSet<MessageContentFile> MessageContentFiles { get; set; }
-
-    public virtual DbSet<MessageContentText> MessageContentTexts { get; set; }
-
-    public virtual DbSet<MessageContentType> MessageContentTypes { get; set; }
-
-    public virtual DbSet<MessageResponse> MessageResponses { get; set; }
+    public virtual DbSet<McpTool> McpTools { get; set; }
 
     public virtual DbSet<Model> Models { get; set; }
 
@@ -90,6 +88,22 @@ public partial class ChatsDB : DbContext
     public virtual DbSet<SmsStatus> SmsStatuses { get; set; }
 
     public virtual DbSet<SmsType> SmsTypes { get; set; }
+
+    public virtual DbSet<Step> Steps { get; set; }
+
+    public virtual DbSet<StepContent> StepContents { get; set; }
+
+    public virtual DbSet<StepContentBlob> StepContentBlobs { get; set; }
+
+    public virtual DbSet<StepContentFile> StepContentFiles { get; set; }
+
+    public virtual DbSet<StepContentText> StepContentTexts { get; set; }
+
+    public virtual DbSet<StepContentToolCall> StepContentToolCalls { get; set; }
+
+    public virtual DbSet<StepContentToolCallResponse> StepContentToolCallResponses { get; set; }
+
+    public virtual DbSet<StepContentType> StepContentTypes { get; set; }
 
     public virtual DbSet<Tokenizer> Tokenizers { get; set; }
 
@@ -113,12 +127,16 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<UserInitialConfig> UserInitialConfigs { get; set; }
 
+    public virtual DbSet<UserMcp> UserMcps { get; set; }
+
     public virtual DbSet<UserModel> UserModels { get; set; }
 
     public virtual DbSet<UserModelUsage> UserModelUsages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.UseCollation("SQL_Latin1_General_CP1_CI_AS");
+
         modelBuilder.Entity<BalanceTransaction>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_BalanceLog2");
@@ -142,7 +160,7 @@ public partial class ChatsDB : DbContext
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_Chat_ChatGroup");
 
-            entity.HasOne(d => d.LeafMessage).WithMany(p => p.Chats).HasConstraintName("FK_Chat_Message");
+            entity.HasOne(d => d.LeafTurn).WithMany(p => p.Chats).HasConstraintName("FK_Chat_Message");
 
             entity.HasOne(d => d.User).WithMany(p => p.Chats)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -167,9 +185,29 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<ChatConfig>(entity =>
         {
+            entity.HasOne(d => d.ImageSize).WithMany(p => p.ChatConfigs)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ChatConfig_ImageSize");
+
             entity.HasOne(d => d.Model).WithMany(p => p.ChatConfigs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ChatConfig_Model");
+        });
+
+        modelBuilder.Entity<ChatConfigArchived>(entity =>
+        {
+            entity.Property(e => e.ChatConfigId).ValueGeneratedNever();
+
+            entity.HasOne(d => d.ChatConfig).WithOne(p => p.ChatConfigArchived)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ChatConfigArchived_ChatConfig");
+        });
+
+        modelBuilder.Entity<ChatConfigMcp>(entity =>
+        {
+            entity.HasOne(d => d.ChatConfig).WithMany(p => p.ChatConfigMcps).HasConstraintName("FK_ChatConfigMcp_ChatConfig");
+
+            entity.HasOne(d => d.McpServer).WithMany(p => p.ChatConfigMcps).HasConstraintName("FK_ChatConfigMcp_McpServer");
         });
 
         modelBuilder.Entity<ChatGroup>(entity =>
@@ -205,6 +243,17 @@ public partial class ChatsDB : DbContext
                 .HasConstraintName("FK_ChatSpan_ChatConfig");
 
             entity.HasOne(d => d.Chat).WithMany(p => p.ChatSpans).HasConstraintName("FK_ChatSpan_Chat");
+        });
+
+        modelBuilder.Entity<ChatTurn>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_Message");
+
+            entity.HasOne(d => d.ChatConfig).WithMany(p => p.ChatTurns).HasConstraintName("FK_ChatTurn_ChatConfig");
+
+            entity.HasOne(d => d.Chat).WithMany(p => p.ChatTurns).HasConstraintName("FK_Message_Chat");
+
+            entity.HasOne(d => d.Parent).WithMany(p => p.InverseParent).HasConstraintName("FK_Message_ParentMessage");
         });
 
         modelBuilder.Entity<ClientInfo>(entity =>
@@ -268,74 +317,28 @@ public partial class ChatsDB : DbContext
             entity.HasKey(e => e.Id).HasName("InvitationCode2_pkey");
         });
 
+        modelBuilder.Entity<KnownImageSize>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedNever();
+        });
+
         modelBuilder.Entity<LoginService>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_LoginServices2");
         });
 
-        modelBuilder.Entity<Message>(entity =>
+        modelBuilder.Entity<McpServer>(entity =>
         {
-            entity.HasOne(d => d.Chat).WithMany(p => p.Messages).HasConstraintName("FK_Message_Chat");
+            entity.HasIndex(e => e.OwnerUserId, "IX_McpServer_OwnerUserId").HasFilter("([OwnerUserId] IS NOT NULL)");
 
-            entity.HasOne(d => d.ChatRole).WithMany(p => p.Messages)
+            entity.HasOne(d => d.OwnerUser).WithMany(p => p.McpServers)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Message_ChatRole");
-
-            entity.HasOne(d => d.Parent).WithMany(p => p.InverseParent).HasConstraintName("FK_Message_ParentMessage");
+                .HasConstraintName("FK_McpServer_User");
         });
 
-        modelBuilder.Entity<MessageContent>(entity =>
+        modelBuilder.Entity<McpTool>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK_MessageContent2");
-
-            entity.HasOne(d => d.ContentType).WithMany(p => p.MessageContents)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_MessageContent2_MessageContentType");
-
-            entity.HasOne(d => d.Message).WithMany(p => p.MessageContents).HasConstraintName("FK_MessageContent_Message");
-        });
-
-        modelBuilder.Entity<MessageContentBlob>(entity =>
-        {
-            entity.Property(e => e.Id).ValueGeneratedNever();
-
-            entity.HasOne(d => d.IdNavigation).WithOne(p => p.MessageContentBlob).HasConstraintName("FK_MessageContentBlob_MessageContent");
-        });
-
-        modelBuilder.Entity<MessageContentFile>(entity =>
-        {
-            entity.Property(e => e.Id).ValueGeneratedNever();
-
-            entity.HasOne(d => d.File).WithMany(p => p.MessageContentFiles).HasConstraintName("FK_MessageContentFile_File");
-
-            entity.HasOne(d => d.IdNavigation).WithOne(p => p.MessageContentFile).HasConstraintName("FK_MessageContentFile_MessageContent");
-        });
-
-        modelBuilder.Entity<MessageContentText>(entity =>
-        {
-            entity.Property(e => e.Id).ValueGeneratedNever();
-
-            entity.HasOne(d => d.IdNavigation).WithOne(p => p.MessageContentText).HasConstraintName("FK_MessageContentUTF16_MessageContent");
-        });
-
-        modelBuilder.Entity<MessageContentType>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__MessageC__3214EC07D7BA864A");
-        });
-
-        modelBuilder.Entity<MessageResponse>(entity =>
-        {
-            entity.Property(e => e.MessageId).ValueGeneratedNever();
-
-            entity.HasOne(d => d.ChatConfig).WithMany(p => p.MessageResponses)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_MessageResponse_ChatConfig");
-
-            entity.HasOne(d => d.Message).WithOne(p => p.MessageResponse).HasConstraintName("FK_MessageResponse_Message");
-
-            entity.HasOne(d => d.Usage).WithMany(p => p.MessageResponses)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_MessageResponse_UserModelUsage");
+            entity.HasOne(d => d.McpServer).WithMany(p => p.McpTools).HasConstraintName("FK_McpTool_McpServer");
         });
 
         modelBuilder.Entity<Model>(entity =>
@@ -420,6 +423,80 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.SmsRecords).HasConstraintName("FK_SmsRecord_UserId");
         });
 
+        modelBuilder.Entity<Step>(entity =>
+        {
+            entity.HasOne(d => d.ChatRole).WithMany(p => p.Steps)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Step_ChatRole");
+
+            entity.HasOne(d => d.Turn).WithMany(p => p.Steps).HasConstraintName("FK_Step_Turn");
+
+            entity.HasOne(d => d.Usage).WithMany(p => p.Steps).HasConstraintName("FK_Step_Usage");
+        });
+
+        modelBuilder.Entity<StepContent>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_MessageContent2");
+
+            entity.HasOne(d => d.ContentType).WithMany(p => p.StepContents)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_MessageContent2_MessageContentType");
+
+            entity.HasOne(d => d.Step).WithMany(p => p.StepContents).HasConstraintName("FK_StepContent_Step");
+        });
+
+        modelBuilder.Entity<StepContentBlob>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_MessageContentBlob");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentBlob).HasConstraintName("FK_MessageContentBlob_MessageContent");
+        });
+
+        modelBuilder.Entity<StepContentFile>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_MessageContentFile");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.HasOne(d => d.File).WithMany(p => p.StepContentFiles).HasConstraintName("FK_MessageContentFile_File");
+
+            entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentFile).HasConstraintName("FK_MessageContentFile_MessageContent");
+        });
+
+        modelBuilder.Entity<StepContentText>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_MessageContentText");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentText).HasConstraintName("FK_MessageContentUTF16_MessageContent");
+        });
+
+        modelBuilder.Entity<StepContentToolCall>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_MessageContentToolCall");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentToolCall).HasConstraintName("FK_MessageContentToolCall_MessageContent");
+        });
+
+        modelBuilder.Entity<StepContentToolCallResponse>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_MessageContentToolCallResponse");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentToolCallResponse).HasConstraintName("FK_MessageContentToolCallResponse_MessageContent");
+        });
+
+        modelBuilder.Entity<StepContentType>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__MessageC__3214EC07D7BA864A");
+        });
+
         modelBuilder.Entity<Tokenizer>(entity =>
         {
             entity.Property(e => e.Id).ValueGeneratedNever();
@@ -436,13 +513,13 @@ public partial class ChatsDB : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UsageTransaction_User");
 
+            entity.HasOne(d => d.Model).WithMany(p => p.UsageTransactions)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UsageTransaction_Model");
+
             entity.HasOne(d => d.TransactionType).WithMany(p => p.UsageTransactions)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UsageTransaction_TransactionType");
-
-            entity.HasOne(d => d.UserModel).WithMany(p => p.UsageTransactions)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_UsageTransaction_UserModel");
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -544,6 +621,15 @@ public partial class ChatsDB : DbContext
                 .HasConstraintName("FK_UserInitialConfig_InvitationCode");
         });
 
+        modelBuilder.Entity<UserMcp>(entity =>
+        {
+            entity.HasOne(d => d.McpServer).WithMany(p => p.UserMcps).HasConstraintName("FK_UserMcp_McpServer");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserMcps)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserMcp_User");
+        });
+
         modelBuilder.Entity<UserModel>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_UserModel2");
@@ -561,6 +647,14 @@ public partial class ChatsDB : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK_ModelUsage");
 
+            entity.HasIndex(e => e.BalanceTransactionId, "IX_ModelUsage_BalanceTransaction")
+                .IsUnique()
+                .HasFilter("([BalanceTransactionId] IS NOT NULL)");
+
+            entity.HasIndex(e => e.UsageTransactionId, "IX_ModelUsage_UsageTransaction")
+                .IsUnique()
+                .HasFilter("([UsageTransactionId] IS NOT NULL)");
+
             entity.HasOne(d => d.BalanceTransaction).WithOne(p => p.UserModelUsage).HasConstraintName("FK_ModelUsage_TransactionLog");
 
             entity.HasOne(d => d.ClientInfo).WithMany(p => p.UserModelUsages)
@@ -571,11 +665,15 @@ public partial class ChatsDB : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserModelUsage_FinishReason");
 
+            entity.HasOne(d => d.Model).WithMany(p => p.UserModelUsages)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserModelUsage_Model");
+
             entity.HasOne(d => d.UsageTransaction).WithOne(p => p.UserModelUsage).HasConstraintName("FK_ModelUsage_UsageTransactionLog");
 
-            entity.HasOne(d => d.UserModel).WithMany(p => p.UserModelUsages)
+            entity.HasOne(d => d.User).WithMany(p => p.UserModelUsages)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ModelUsage_UserModel2");
+                .HasConstraintName("FK_UserModelUsage_User");
         });
 
         OnModelCreatingPartial(modelBuilder);

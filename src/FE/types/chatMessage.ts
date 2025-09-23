@@ -21,6 +21,9 @@ export enum SseResponseKind {
   StartReasoning = 10,
   ImageGenerating = 11,
   ImageGenerated = 12,
+  CallingTool = 13,
+  ToolProgress = 14,
+  ToolCompleted = 15,
 }
 
 // Discriminated unions for SseResponseLine
@@ -85,6 +88,21 @@ interface SseResponseLineImageGenerated {
   r: FileDef;
 }
 
+interface SseResponseLineCallingTool {
+  k: SseResponseKind.CallingTool; // Kind is CallingTool
+  i: number; // SpanId is required for CallingTool
+  u: string; // ToolCallId
+  r: string; // ToolName
+  p: string; // Parameters (流式输出的参数)
+}
+
+interface SseResponseLineToolCompleted {
+  k: SseResponseKind.ToolCompleted; // Kind is ToolCompleted
+  i: number; // SpanId is required for ToolCompleted
+  u: string; // ToolCallId
+  r: string; // Result (工具调用结果)
+}
+
 // Combined type for SseResponseLine
 export type SseResponseLine =
   | SseResponseLineStopId
@@ -97,7 +115,9 @@ export type SseResponseLine =
   | SseResponseLineReasoningSegment
   | SseResponseLineStartResponse
   | SseResponseLineStartReasoning
-  | SseResponseLineImageGenerated;
+  | SseResponseLineImageGenerated
+  | SseResponseLineCallingTool
+  | SseResponseLineToolCompleted;
 
 export interface IChatMessage {
   id: string;

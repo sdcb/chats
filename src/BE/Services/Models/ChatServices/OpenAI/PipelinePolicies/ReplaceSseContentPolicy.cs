@@ -152,15 +152,15 @@ public class ReplaceSseContentPolicy(string SearchText, string ReplaceText) : Pi
             }
 
             // 把本次可读的所有字节拿来做替换（简化处理，未考虑跨缓冲区的分割）
-            var chunkString = encoding.GetString(_readBuffer, _readBufferPos, _readBufferLen - _readBufferPos);
+            string chunkString = encoding.GetString(_readBuffer, _readBufferPos, _readBufferLen - _readBufferPos);
             _readBufferPos = _readBufferLen; // 模拟一次性读完
 
             // 做字符串替换
-            var replacedString = chunkString.Replace(searchText, replaceText);
+            string replacedString = chunkString.Replace(searchText, replaceText);
 
             // 将替换结果转回字节塞到队列中
-            var replacedBytes = encoding.GetBytes(replacedString);
-            foreach (var b in replacedBytes)
+            byte[] replacedBytes = encoding.GetBytes(replacedString);
+            foreach (byte b in replacedBytes)
             {
                 _pendingBuffer.Enqueue(b);
             }

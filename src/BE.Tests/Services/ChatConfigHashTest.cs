@@ -1,4 +1,5 @@
 ﻿using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 
 namespace Chats.BE.Tests.Services;
 
@@ -198,5 +199,191 @@ public class ChatConfigHashTests
 
         // Assert
         Assert.Equal(hash1, hash2);
+    }
+
+    // 新增的 ImageSizeId 字段测试
+    [Fact]
+    public void GenerateDBHashCode_ShouldGenerateDifferentHash_ForDifferentImageSizeId()
+    {
+        // Arrange
+        ChatConfig config1 = new() { ImageSizeId = (short)DBKnownImageSize.Default };
+        ChatConfig config2 = new() { ImageSizeId = (short)DBKnownImageSize.W1024xH1024 };
+
+        // Act
+        long hash1 = config1.GenerateDBHashCode();
+        long hash2 = config2.GenerateDBHashCode();
+
+        // Assert
+        Assert.NotEqual(hash1, hash2);
+    }
+
+    [Fact]
+    public void GenerateDBHashCode_ShouldMaintainCompatibility_ForDefaultImageSizeId()
+    {
+        // Arrange - 测试向后兼容性：默认值(0)不应影响哈希
+        ChatConfig configWithoutImageSize = new() 
+        { 
+            ModelId = 1,
+            SystemPrompt = "Test",
+            ImageSizeId = 0 // 默认值
+        };
+        
+        ChatConfig configExplicitDefault = new() 
+        { 
+            ModelId = 1,
+            SystemPrompt = "Test",
+            ImageSizeId = (short)DBKnownImageSize.Default
+        };
+
+        // Act
+        long hash1 = configWithoutImageSize.GenerateDBHashCode();
+        long hash2 = configExplicitDefault.GenerateDBHashCode();
+
+        // Assert - 默认值应该产生相同的哈希以保持向后兼容
+        Assert.Equal(hash1, hash2);
+    }
+
+    [Fact]
+    public void GenerateDBHashCode_ShouldGenerateDifferentHash_ForDifferentImageSizes()
+    {
+        // Arrange
+        ChatConfig config1 = new() { ImageSizeId = (short)DBKnownImageSize.W1024xH1024 };
+        ChatConfig config2 = new() { ImageSizeId = (short)DBKnownImageSize.W1536xH1024 };
+        ChatConfig config3 = new() { ImageSizeId = (short)DBKnownImageSize.W1024xH1536 };
+
+        // Act
+        long hash1 = config1.GenerateDBHashCode();
+        long hash2 = config2.GenerateDBHashCode();
+        long hash3 = config3.GenerateDBHashCode();
+
+        // Assert
+        Assert.NotEqual(hash1, hash2);
+        Assert.NotEqual(hash1, hash3);
+        Assert.NotEqual(hash2, hash3);
+    }
+
+    // 新增的 McpIds 字段测试
+    [Fact]
+    public void GenerateDBHashCode_ShouldGenerateDifferentHash_ForDifferentMcpIds()
+    {
+        // Arrange
+        ChatConfig config1 = new();
+        config1.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 1 });
+
+        ChatConfig config2 = new();
+        config2.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 2 });
+
+        // Act
+        long hash1 = config1.GenerateDBHashCode();
+        long hash2 = config2.GenerateDBHashCode();
+
+        // Assert
+        Assert.NotEqual(hash1, hash2);
+    }
+
+    [Fact]
+    public void GenerateDBHashCode_ShouldMaintainCompatibility_ForEmptyMcpIds()
+    {
+        // Arrange - 测试向后兼容性：空的MCP关联不应影响哈希
+        ChatConfig configWithoutMcps = new() 
+        { 
+            ModelId = 1,
+            SystemPrompt = "Test"
+        };
+        
+        ChatConfig configWithEmptyMcps = new() 
+        { 
+            ModelId = 1,
+            SystemPrompt = "Test"
+        };
+        // ChatConfigMcps 默认是空集合
+
+        // Act
+        long hash1 = configWithoutMcps.GenerateDBHashCode();
+        long hash2 = configWithEmptyMcps.GenerateDBHashCode();
+
+        // Assert - 空的MCP关联应该产生相同的哈希以保持向后兼容
+        Assert.Equal(hash1, hash2);
+    }
+
+    [Fact]
+    public void GenerateDBHashCode_ShouldGenerateConsistentHash_ForSameMcpIdsInDifferentOrder()
+    {
+        // Arrange - 测试MCP ID排序的一致性
+        ChatConfig config1 = new();
+        config1.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 3 });
+        config1.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 1 });
+        config1.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 2 });
+
+        ChatConfig config2 = new();
+        config2.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 1 });
+        config2.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 2 });
+        config2.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 3 });
+
+        // Act
+        long hash1 = config1.GenerateDBHashCode();
+        long hash2 = config2.GenerateDBHashCode();
+
+        // Assert - 相同的MCP ID集合应该产生相同的哈希，无论添加顺序如何
+        Assert.Equal(hash1, hash2);
+    }
+
+    [Fact]
+    public void GenerateDBHashCode_ShouldGenerateDifferentHash_ForDifferentMcpIdCombinations()
+    {
+        // Arrange
+        ChatConfig config1 = new();
+        config1.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 1 });
+        config1.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 2 });
+
+        ChatConfig config2 = new();
+        config2.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 1 });
+        config2.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 3 });
+
+        ChatConfig config3 = new();
+        config3.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 1 });
+
+        // Act
+        long hash1 = config1.GenerateDBHashCode();
+        long hash2 = config2.GenerateDBHashCode();
+        long hash3 = config3.GenerateDBHashCode();
+
+        // Assert
+        Assert.NotEqual(hash1, hash2);
+        Assert.NotEqual(hash1, hash3);
+        Assert.NotEqual(hash2, hash3);
+    }
+
+    [Fact]
+    public void GenerateDBHashCode_ShouldGenerateDifferentHash_ForCombinedNewFields()
+    {
+        // Arrange - 测试两个新字段的组合
+        ChatConfig config1 = new() 
+        { 
+            ImageSizeId = (short)DBKnownImageSize.W1024xH1024
+        };
+        config1.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 1 });
+
+        ChatConfig config2 = new() 
+        { 
+            ImageSizeId = (short)DBKnownImageSize.W1536xH1024
+        };
+        config2.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 1 });
+
+        ChatConfig config3 = new() 
+        { 
+            ImageSizeId = (short)DBKnownImageSize.W1024xH1024
+        };
+        config3.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 2 });
+
+        // Act
+        long hash1 = config1.GenerateDBHashCode();
+        long hash2 = config2.GenerateDBHashCode();
+        long hash3 = config3.GenerateDBHashCode();
+
+        // Assert
+        Assert.NotEqual(hash1, hash2); // 不同的 ImageSizeId
+        Assert.NotEqual(hash1, hash3); // 不同的 McpServerId
+        Assert.NotEqual(hash2, hash3); // 两者都不同
     }
 }

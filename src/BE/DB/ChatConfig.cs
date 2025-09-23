@@ -7,14 +7,11 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.BE.DB;
 
 [Table("ChatConfig")]
-[Index("HashCode", Name = "IX_ChatConfig_HashCode")]
 [Index("ModelId", Name = "IX_ChatConfig_ModelId")]
 public partial class ChatConfig
 {
     [Key]
     public int Id { get; set; }
-
-    public long HashCode { get; set; }
 
     public short ModelId { get; set; }
 
@@ -28,6 +25,14 @@ public partial class ChatConfig
 
     public byte ReasoningEffort { get; set; }
 
+    public short ImageSizeId { get; set; }
+
+    [InverseProperty("ChatConfig")]
+    public virtual ChatConfigArchived? ChatConfigArchived { get; set; }
+
+    [InverseProperty("ChatConfig")]
+    public virtual ICollection<ChatConfigMcp> ChatConfigMcps { get; set; } = new List<ChatConfigMcp>();
+
     [InverseProperty("ChatConfig")]
     public virtual ICollection<ChatPresetSpan> ChatPresetSpans { get; set; } = new List<ChatPresetSpan>();
 
@@ -35,7 +40,11 @@ public partial class ChatConfig
     public virtual ICollection<ChatSpan> ChatSpans { get; set; } = new List<ChatSpan>();
 
     [InverseProperty("ChatConfig")]
-    public virtual ICollection<MessageResponse> MessageResponses { get; set; } = new List<MessageResponse>();
+    public virtual ICollection<ChatTurn> ChatTurns { get; set; } = new List<ChatTurn>();
+
+    [ForeignKey("ImageSizeId")]
+    [InverseProperty("ChatConfigs")]
+    public virtual KnownImageSize ImageSize { get; set; } = null!;
 
     [ForeignKey("ModelId")]
     [InverseProperty("ChatConfigs")]

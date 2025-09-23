@@ -17,5 +17,5 @@ public partial class ChatRole
     public string Name { get; set; } = null!;
 
     [InverseProperty("ChatRole")]
-    public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
+    public virtual ICollection<Step> Steps { get; set; } = new List<Step>();
 }

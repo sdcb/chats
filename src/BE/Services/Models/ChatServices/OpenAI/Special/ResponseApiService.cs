@@ -270,7 +270,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
         {
             if (assistantChatMessage.ToolCalls != null && assistantChatMessage.ToolCalls.Count > 0)
             {
-                foreach (var toolCall in assistantChatMessage.ToolCalls)
+                foreach (ChatToolCall? toolCall in assistantChatMessage.ToolCalls)
                 {
                     yield return ResponseItem.CreateFunctionCallItem(toolCall.Id, toolCall.FunctionName, toolCall.FunctionArguments);
                 }
@@ -369,16 +369,16 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
 
         if (background)
         {
-            responseCreationOptions.Background = background;
+            responseCreationOptions.BackgroundModeEnabled = background;
         }
 
         foreach (ChatTool tool in options.Tools)
         {
             responseCreationOptions.Tools.Add(ResponseTool.CreateFunctionTool(
                 tool.FunctionName,
-                tool.FunctionDescription,
                 tool.FunctionParameters,
-                tool.FunctionSchemaIsStrict ?? false));
+                tool.FunctionSchemaIsStrict ?? false,
+                tool.FunctionDescription));
         }
 
         return responseCreationOptions;

@@ -53,5 +53,5 @@ public partial class File
     public virtual FileService FileService { get; set; } = null!;
 
     [InverseProperty("File")]
-    public virtual ICollection<MessageContentFile> MessageContentFiles { get; set; } = new List<MessageContentFile>();
+    public virtual ICollection<StepContentFile> StepContentFiles { get; set; } = new List<StepContentFile>();
 }

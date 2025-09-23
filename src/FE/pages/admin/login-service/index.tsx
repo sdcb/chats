@@ -17,7 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import LoginServiceModal from '../_components/LoginService/LoginServiceModal';
+import LoginServiceModal from '@/components/admin/LoginService/LoginServiceModal';
 
 import { getLoginServices } from '@/apis/adminApis';
 

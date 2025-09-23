@@ -10,15 +10,45 @@ public record AccessTokenInfo
     public required string Sub { get; init; }
 
     [JsonPropertyName("given_name")]
-    public required string GivenName { get; init; }
+    public string? GivenName { get; init; }
 
     [JsonPropertyName("family_name")]
-    public required string FamilyName { get; init; }
+    public string? FamilyName { get; init; }
 
     [JsonPropertyName("email")]
-    public required string Email { get; init; }
+    public string? Email { get; init; }
 
-    public string GetSuggestedUserName() => FamilyName + GivenName;
+    // 可选字段，一些 Keycloak 配置可能提供
+    [JsonPropertyName("preferred_username")]
+    public string? PreferredUsername { get; init; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; init; }
+
+    public string GetSuggestedUserName() 
+    {
+        // 优先保持现有逻辑：FamilyName + GivenName
+        if (!string.IsNullOrWhiteSpace(FamilyName) && !string.IsNullOrWhiteSpace(GivenName))
+            return FamilyName + GivenName;
+            
+        // 兼容性处理：当 FamilyName 或 GivenName 不存在时的备选方案
+        if (!string.IsNullOrWhiteSpace(PreferredUsername))
+            return PreferredUsername;
+            
+        if (!string.IsNullOrWhiteSpace(Name))
+            return Name;
+            
+        // 使用 email 前缀
+        if (!string.IsNullOrWhiteSpace(Email))
+        {
+            var emailParts = Email.Split('@');
+            if (emailParts.Length > 0)
+                return emailParts[0];
+        }
+            
+        // 最后使用 sub
+        return Sub;
+    }
 
     public static AccessTokenInfo Decode(string token)
     {
@@ -45,19 +75,7 @@ public record AccessTokenInfo
             case 3: output += "="; break;
             default: throw new FormatException("Invalid Base64 URL string.");
         }
-        var base64EncodedBytes = Convert.FromBase64String(output);
+        byte[] base64EncodedBytes = Convert.FromBase64String(output);
         return Encoding.UTF8.GetString(base64EncodedBytes);
     }
-}
-
-public record RealmAccess
-{
-    [JsonPropertyName("roles")]
-    public required List<string> Roles { get; init; }
-}
-
-public record ResourceAccess
-{
-    [JsonPropertyName("roles")]
-    public required List<string> Roles { get; init; }
 }

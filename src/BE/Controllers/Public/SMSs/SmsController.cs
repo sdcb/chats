@@ -1,4 +1,3 @@
-﻿using Chats.BE.Controllers.Common;
 using Chats.BE.Controllers.Public.SMSs.Dtos;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
@@ -24,11 +23,11 @@ public class SmsController(ChatsDB db, GlobalDBConfig globalConfig, ILogger<SmsC
     {
         if (!ModelState.IsValid)
         {
-            return this.BadRequestMessage("Invalid phone.");
+            return BadRequest("Invalid phone.");
         }
         if (!db.LoginServices.Any(x => x.Enabled && x.Type == KnownLoginProviders.Phone))
         {
-            return this.BadRequestMessage("Phone login is not enabled.");
+            return BadRequest("Phone login is not enabled.");
         }
 
         SmsRecord? existingSms = await db.SmsRecords
@@ -38,7 +37,7 @@ public class SmsController(ChatsDB db, GlobalDBConfig globalConfig, ILogger<SmsC
 
         if (existingSms != null && existingSms.CreatedAt + TimeSpan.FromSeconds(SmsExpirationSeconds) > DateTime.UtcNow)
         {
-            return this.BadRequestMessage("Sms already sent.");
+            return BadRequest("Sms already sent.");
         }
 
         if (req.Type == DBSmsType.Login)
@@ -49,12 +48,12 @@ public class SmsController(ChatsDB db, GlobalDBConfig globalConfig, ILogger<SmsC
         {
             if (req.InvitationCode == null)
             {
-                return this.BadRequestMessage("Invitation code is required.");
+                return BadRequest("Invitation code is required.");
             }
             return await SendRegisterSms(req.Phone, req.InvitationCode, cancellationToken);
         }
 
-        return this.BadRequestMessage("Invalid SMS type.");
+        return BadRequest("Invalid SMS type.");
     }
 
     private async Task<IActionResult> SendLoginSms(string phone, CancellationToken cancellationToken)
@@ -62,7 +61,7 @@ public class SmsController(ChatsDB db, GlobalDBConfig globalConfig, ILogger<SmsC
         User? user = await db.Users.FirstOrDefaultAsync(x => x.Phone == phone, cancellationToken);
         if (user == null)
         {
-            return this.BadRequestMessage("Phone number not registered.");
+            return BadRequest("Phone number not registered.");
         }
 
         return await SendSmsCommon(phone, DBSmsType.Login, cancellationToken);
@@ -73,17 +72,17 @@ public class SmsController(ChatsDB db, GlobalDBConfig globalConfig, ILogger<SmsC
         InvitationCode? code = await db.InvitationCodes.FirstOrDefaultAsync(x => x.Value == invitationCode && !x.IsDeleted, cancellationToken);
         if (code == null)
         {
-            return this.BadRequestMessage("Invalid invitation code.");
+            return BadRequest("Invalid invitation code.");
         }
         if (code.Count <= 0)
         {
-            return this.BadRequestMessage("Invitation code expired.");
+            return BadRequest("Invitation code expired.");
         }
 
         User? user = await db.Users.FirstOrDefaultAsync(x => x.Phone == phone, cancellationToken);
         if (user != null)
         {
-            return this.BadRequestMessage("Phone number already registered.");
+            return BadRequest("Phone number already registered.");
         }
 
         code.Count--;
@@ -113,7 +112,7 @@ public class SmsController(ChatsDB db, GlobalDBConfig globalConfig, ILogger<SmsC
         if (resp.SendStatusSet.Length == 0)
         {
             logger.LogError("Failed to send sms to {phone}, no response.", phone);
-            return this.BadRequestMessage("Failed to send sms.");
+            return BadRequest("Failed to send sms.");
         }
         else if (resp.SendStatusSet[0].Code != "Ok")
         {
@@ -121,7 +120,7 @@ public class SmsController(ChatsDB db, GlobalDBConfig globalConfig, ILogger<SmsC
                 phone,
                 resp.SendStatusSet[0].Code,
                 resp.SendStatusSet[0].Message);
-            return this.BadRequestMessage("Failed to send sms.");
+            return BadRequest("Failed to send sms.");
         }
 
         SmsRecord toInsert = new()

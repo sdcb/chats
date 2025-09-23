@@ -7,16 +7,13 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.BE.DB;
 
 [Table("UserModelUsage")]
-[Index("BalanceTransactionId", Name = "IX_ModelUsage_BalanceTransaction", IsUnique = true)]
 [Index("CreatedAt", Name = "IX_ModelUsage_CreatedAt")]
-[Index("UsageTransactionId", Name = "IX_ModelUsage_UsageTransaction", IsUnique = true)]
-[Index("UserModelId", Name = "IX_ModelUsage_UserModelId")]
+[Index("ModelId", Name = "IX_UserModelUsage_ModelId")]
+[Index("UserId", Name = "IX_UserModelUsage_UserId")]
 public partial class UserModelUsage
 {
     [Key]
     public long Id { get; set; }
-
-    public int UserModelId { get; set; }
 
     public byte FinishReasonId { get; set; }
 
@@ -54,6 +51,10 @@ public partial class UserModelUsage
 
     public DateTime CreatedAt { get; set; }
 
+    public int UserId { get; set; }
+
+    public short ModelId { get; set; }
+
     [ForeignKey("BalanceTransactionId")]
     [InverseProperty("UserModelUsage")]
     public virtual BalanceTransaction? BalanceTransaction { get; set; }
@@ -66,17 +67,21 @@ public partial class UserModelUsage
     [InverseProperty("UserModelUsages")]
     public virtual FinishReason FinishReason { get; set; } = null!;
 
+    [ForeignKey("ModelId")]
+    [InverseProperty("UserModelUsages")]
+    public virtual Model Model { get; set; } = null!;
+
     [InverseProperty("Usage")]
-    public virtual ICollection<MessageResponse> MessageResponses { get; set; } = new List<MessageResponse>();
+    public virtual ICollection<Step> Steps { get; set; } = new List<Step>();
 
     [ForeignKey("UsageTransactionId")]
     [InverseProperty("UserModelUsage")]
     public virtual UsageTransaction? UsageTransaction { get; set; }
 
+    [ForeignKey("UserId")]
+    [InverseProperty("UserModelUsages")]
+    public virtual User User { get; set; } = null!;
+
     [InverseProperty("Usage")]
     public virtual UserApiUsage? UserApiUsage { get; set; }
-
-    [ForeignKey("UserModelId")]
-    [InverseProperty("UserModelUsages")]
-    public virtual UserModel UserModel { get; set; } = null!;
 }

@@ -20,7 +20,7 @@ public class ChatCompletionOptionsTests
     public void IsSearchEnabled_ReturnsTrue_WhenEnableSearchIsTrue()
     {
         // Arrange
-        var options = CreateCCOWithDictionary(new Dictionary<string, BinaryData>
+        ChatCompletionOptions options = CreateCCOWithDictionary(new Dictionary<string, BinaryData>
         {
             { "enable_search", BinaryData.FromObjectAsJson(true) }
         });
@@ -36,7 +36,7 @@ public class ChatCompletionOptionsTests
     public void IsSearchEnabled_ReturnsFalse_WhenEnableSearchIsFalse()
     {
         // Arrange
-        var options = CreateCCOWithDictionary(new Dictionary<string, BinaryData>
+        ChatCompletionOptions options = CreateCCOWithDictionary(new Dictionary<string, BinaryData>
         {
             { "enable_search", BinaryData.FromObjectAsJson(false) }
         });
@@ -52,7 +52,7 @@ public class ChatCompletionOptionsTests
     public void IsSearchEnabled_ReturnsFalse_WhenEnableSearchIsNotPresent()
     {
         // Arrange
-        var options = CreateCCOWithDictionary([]);
+        ChatCompletionOptions options = CreateCCOWithDictionary([]);
 
         // Act
         bool result = IsSearchEnabled(options);

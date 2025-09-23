@@ -10,8 +10,9 @@ internal static class BasicData
         InsertChatRoles(db);
         InsertCurrencyRates(db);
         InsertFinishReasons(db);
-        InsertMessageContentTypes(db);
+        InsertStepContentTypes(db);
         InsertTokenizers(db);
+        InsertKnownImageSizes(db);
         InsertTransactionTypes(db);
         InsertReasoningResponseKinds(db);
         InsertModelProviders(db);
@@ -33,11 +34,12 @@ internal static class BasicData
 
     private static void InsertChatRoles(ChatsDB db)
     {
-        // Generated from data, hash: 88c3bc8417abed479ab20a5da2d3bf139cd21c046354d830571a60d040410616
+        // Generated from data, hash: 4450a3cbc75fbdf25b4af7ed5c400a0f1bc10b873b19b5db6c19f1fbdd7c635e
         db.ChatRoles.AddRange(
         [
             new(){ Id=2, Name="user",      },
-            new(){ Id=3, Name="assistant", }
+            new(){ Id=3, Name="assistant", },
+            new(){ Id=4, Name="tool",      }
         ]);
     }
 
@@ -73,15 +75,17 @@ internal static class BasicData
         ]);
     }
 
-    private static void InsertMessageContentTypes(ChatsDB db)
+    private static void InsertStepContentTypes(ChatsDB db)
     {
-        // Generated from data, hash: d61ced8657ac8b57fcab075196ea33138bbc93162b3f5747b73f986fa867f455
-        db.MessageContentTypes.AddRange(
+        // Generated from data, hash: 766981cc3e16b456244e4580942ca36c81696dcc2e5463594cb29cf96fc83a4a
+        db.StepContentTypes.AddRange(
         [
-            new(){ Id=0, ContentType="error",     },
-            new(){ Id=1, ContentType="text",      },
-            new(){ Id=2, ContentType="fileId",    },
-            new(){ Id=3, ContentType="reasoning", }
+            new(){ Id=0, ContentType="error",            },
+            new(){ Id=1, ContentType="text",             },
+            new(){ Id=2, ContentType="fileId",           },
+            new(){ Id=3, ContentType="reasoning",        },
+            new(){ Id=4, ContentType="toolCall",         },
+            new(){ Id=5, ContentType="toolCallResponse", }
         ]);
     }
 
@@ -92,6 +96,18 @@ internal static class BasicData
         [
             new(){ Id=1, Name="cl100k_base", },
             new(){ Id=2, Name="o200k_base",  }
+        ]);
+    }
+
+    private static void InsertKnownImageSizes(ChatsDB db)
+    {
+        // Generated from data, hash: f6bb405dfbf5ddc5f9a745339a485ee743ffbd2ad0f1ec607cbb94fae93a0e6e
+        db.KnownImageSizes.AddRange(
+        [
+            new(){ Id=0, Width=0,    Height=0,    },
+            new(){ Id=1, Width=1024, Height=1024, },
+            new(){ Id=2, Width=1536, Height=1024, },
+            new(){ Id=3, Width=1024, Height=1536, }
         ]);
     }
 

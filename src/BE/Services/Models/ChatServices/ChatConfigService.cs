@@ -9,13 +9,15 @@ public class ChatConfigService(ChatsDB db)
     {
         long hashCode = raw.GenerateDBHashCode();
         ChatConfig? matchingConfig = await db.ChatConfigs
+            .Include(x => x.ChatConfigMcps)
             .Where(c => 
-                c.HashCode == hashCode && 
+                c.ChatConfigArchived!.HashCode == hashCode &&
                 c.ModelId == raw.ModelId && 
                 c.SystemPrompt == raw.SystemPrompt && 
                 c.WebSearchEnabled == raw.WebSearchEnabled && 
                 c.ReasoningEffort == raw.ReasoningEffort && 
-                c.Temperature == raw.Temperature)
+                c.Temperature == raw.Temperature &&
+                c.ImageSizeId == raw.ImageSizeId)
             .OrderByDescending(x => x.Id)
             .FirstOrDefaultAsync(cancellationToken);
         if (matchingConfig is not null)
@@ -26,7 +28,10 @@ public class ChatConfigService(ChatsDB db)
         {
             ChatConfig newConfig = raw.Clone();
             newConfig.Id = 0;
-            newConfig.HashCode = hashCode;
+            newConfig.ChatConfigArchived = new()
+            {
+                HashCode = hashCode,
+            };
             db.ChatConfigs.Add(newConfig);
             await db.SaveChangesAsync(cancellationToken);
             return newConfig;

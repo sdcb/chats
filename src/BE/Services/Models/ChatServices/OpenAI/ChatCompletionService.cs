@@ -48,12 +48,13 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        ChatFinishReason? finishReason = null;
         await foreach (StreamingChatCompletionUpdate delta in chatClient.CompleteChatStreamingAsync(messages, options, cancellationToken))
         {
             string? segment = delta.ContentUpdate.FirstOrDefault()?.Text;
             string? reasoningSegment = GetReasoningContent(delta);
 
-            if (segment == null && reasoningSegment == null && delta.Usage == null && (delta.ToolCallUpdates == null || delta.ToolCallUpdates.Count == 0))
+            if (segment == null && reasoningSegment == null && delta.Usage == null && (delta.ToolCallUpdates == null || delta.ToolCallUpdates.Count == 0) && delta.FinishReason == null)
             {
                 continue;
             }
@@ -61,7 +62,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
             yield return new ChatSegment
             {
                 Items = ChatSegmentItem.FromTextThinkToolCall(segment, reasoningSegment, delta.ToolCallUpdates),
-                FinishReason = delta.FinishReason,
+                FinishReason = (finishReason ??= delta.FinishReason),
                 Usage = delta.Usage != null ? GetUsage(delta.Usage) : null,
             };
         }

@@ -10,7 +10,6 @@ namespace Chats.BE.DB;
 [Index("ModelKeyId", Name = "IX_Model_ModelKeyId")]
 [Index("ModelReferenceId", Name = "IX_Model_ModelReferenceId")]
 [Index("Name", Name = "IX_Model_Name")]
-[Index("Order", Name = "IX_Model_Order")]
 public partial class Model
 {
     [Key]
@@ -26,7 +25,7 @@ public partial class Model
     [StringLength(50)]
     public string? DeploymentName { get; set; }
 
-    public short? Order { get; set; }
+    public short Order { get; set; }
 
     [Column(TypeName = "decimal(9, 5)")]
     public decimal InputTokenPrice1M { get; set; }
@@ -52,7 +51,13 @@ public partial class Model
     public virtual ModelReference ModelReference { get; set; } = null!;
 
     [InverseProperty("Model")]
+    public virtual ICollection<UsageTransaction> UsageTransactions { get; set; } = new List<UsageTransaction>();
+
+    [InverseProperty("Model")]
     public virtual ICollection<UserApiCache> UserApiCaches { get; set; } = new List<UserApiCache>();
+
+    [InverseProperty("Model")]
+    public virtual ICollection<UserModelUsage> UserModelUsages { get; set; } = new List<UserModelUsage>();
 
     [InverseProperty("Model")]
     public virtual ICollection<UserModel> UserModels { get; set; } = new List<UserModel>();

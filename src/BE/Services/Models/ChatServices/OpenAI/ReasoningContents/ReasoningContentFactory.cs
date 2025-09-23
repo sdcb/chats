@@ -14,7 +14,7 @@ public class ReasoningContentFactory
     public static Func<StreamingChatCompletionUpdate, string?> CreateStreamingReasoningContentAccessor(string reasoningContentProp = "reasoning_content")
     {
         // 1. 获取 StreamingChatCompletionUpdate 类型
-        var streamingChatType = typeof(StreamingChatCompletionUpdate);
+        Type streamingChatType = typeof(StreamingChatCompletionUpdate);
 
         // 2. 获取 internal 属性 "Choices"
         //    类型：IReadOnlyList<InternalCreateChatCompletionStreamResponseChoice>
@@ -96,7 +96,7 @@ public class ReasoningContentFactory
     public static Func<ChatCompletion, string?> CreateReasoningContentAccessor(string reasoningContentProp = "reasoning_content")
     {
         // 1. Get ChatCompletion type
-        var chatCompletionType = typeof(ChatCompletion);
+        Type chatCompletionType = typeof(ChatCompletion);
 
         // 2. Get the internal property "Choices"
         //    This is of type: IReadOnlyList<InternalCreateChatCompletionResponseChoice>

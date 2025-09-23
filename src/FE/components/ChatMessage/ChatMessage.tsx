@@ -32,6 +32,7 @@ export interface Props {
   onEditUserMessage?: (messageId: string, content: ResponseContent) => void;
   onDeleteMessage?: (messageId: string) => void;
   onChangeDisplayType?: (messageId: string, type: MessageDisplayType) => void;
+  onRegenerateAllAssistant?: (messageId: string, modelId: number) => void;
 }
 
 export const ChatMessage: FC<Props> = memo(
@@ -50,6 +51,7 @@ export const ChatMessage: FC<Props> = memo(
     onEditUserMessage,
     onDeleteMessage,
     onChangeDisplayType,
+    onRegenerateAllAssistant,
   }) => {
     const isMultiSpan = hasMultipleSpans(selectedMessages);
     return (
@@ -72,7 +74,7 @@ export const ChatMessage: FC<Props> = memo(
             >
               {messages.map((message, index) => {
                 return (
-                  <>
+                  <div key={`message-${message.id}`} data-message-id={message.id} data-message-role={message.role}>
                     {message.role === ChatRole.User && (
                       <div
                         key={'user-message-' + index}
@@ -80,6 +82,7 @@ export const ChatMessage: FC<Props> = memo(
                           'prose w-full dark:prose-invert rounded-r-md group sm:w-[50vw] xl:w-[50vw]',
                           index > 0 && 'mt-4',
                         )}
+                        data-user-message-id={message.id}
                       >
                         <UserMessage
                           readonly={readonly}
@@ -89,6 +92,7 @@ export const ChatMessage: FC<Props> = memo(
                           onEditAndSendMessage={onEditAndSendMessage}
                           onEditUserMessage={onEditUserMessage}
                           onDeleteMessage={onDeleteMessage}
+                          onRegenerateAllAssistant={onRegenerateAllAssistant}
                         />
                       </div>
                     )}
@@ -117,7 +121,7 @@ export const ChatMessage: FC<Props> = memo(
                         >
                           <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-1 px-2">
                             <ResponseMessage
-                              key={'response-message-' + index}
+                              key={'response-message-' + message.id + '-' + message.spanId}
                               chatStatus={selectedChat.status}
                               message={message}
                               readonly={readonly}
@@ -130,6 +134,7 @@ export const ChatMessage: FC<Props> = memo(
                           readonly={readonly}
                           models={models}
                           chatStatus={selectedChat.status}
+                          selectedChat={selectedChat}
                           message={message}
                           onChangeMessage={onChangeChatLeafMessageId}
                           onReactionMessage={onReactionMessage}
@@ -144,7 +149,7 @@ export const ChatMessage: FC<Props> = memo(
                         />
                       </div>
                     )}
-                  </>
+                  </div>
                 );
               })}
             </div>

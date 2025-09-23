@@ -69,6 +69,11 @@ export interface ChatResult {
   tags: string[];
 }
 
+export interface ChatSpanMcp {
+  id: number;
+  customHeaders?: string;
+}
+
 export interface ChatSpanDto {
   spanId: number;
   enabled: boolean;
@@ -80,6 +85,8 @@ export interface ChatSpanDto {
   webSearchEnabled: boolean;
   reasoningEffort: number;
   maxOutputTokens: number | null;
+  imageSize: number;
+  mcps: ChatSpanMcp[];
 }
 
 export interface PostChatParams {
@@ -140,6 +147,8 @@ export interface PostUserChatSpanResult {
   webSearchEnabled: boolean;
   reasoningEffort: number;
   maxOutputTokens: number;
+  imageSize: number;
+  mcps: ChatSpanMcp[];
 }
 
 interface GetUserChatResult {
@@ -235,6 +244,8 @@ export interface PutChatSpanParams {
   webSearchEnabled?: boolean;
   maxOutputTokens: number | null;
   reasoningEffort?: number | null;
+  imageSize?: number;
+  mcps?: ChatSpanMcp[];
 }
 
 export interface GetChatPresetResult {
@@ -257,6 +268,14 @@ export interface PutChatPresetSpanParams {
   webSearchEnabled?: boolean;
   maxOutputTokens: number | null;
   reasoningEffort?: number | null;
+  imageSize?: number;
+  mcps?: ChatSpanMcp[];
+}
+
+export interface ChatPresetReorderRequest {
+  sourceId: string;
+  previousId: string | null; // 新位置的前一个元素
+  nextId: string | null;     // 新位置的后一个元素
 }
 
 export interface GetUsageParams {
@@ -318,4 +337,73 @@ export interface GetUserFilesResult {
   fileName: string;
   contentType: string;
   url: string;
+}
+
+// MCP related types
+export interface McpToolBasicInfo {
+  name: string;
+  description?: string;
+  parameters?: string;
+}
+
+export interface McpServerListItemDto {
+  id: number;
+  label: string;
+}
+
+export interface McpServerListManagementItemDto {
+  id: number;
+  label: string;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+  toolsCount: number;
+  owner: string;
+  editable: boolean;
+  assignedUserCount: number;
+}
+
+export interface McpServerDetailsDto extends McpServerListManagementItemDto {
+  headers?: string;
+  tools: McpToolBasicInfo[];
+}
+
+export interface UpdateMcpServerRequest {
+  label: string;
+  url: string;
+  headers?: string;
+  tools: McpToolBasicInfo[];
+}
+
+export interface FetchToolsRequest {
+  serverUrl: string;
+  headers?: string;
+}
+
+// MCP用户分配相关类型
+export interface AssignedUserInfo {
+  id: number;
+  customHeaders?: string;
+}
+
+export interface AssignUsersToMcpRequest {
+  toAssignedUsers: AssignedUserInfo[];
+  toUpdateUsers: AssignedUserInfo[];
+  toDeleteUserIds: number[];
+}
+
+export interface UnassignedUserDto {
+  id: number;
+  userName: string;
+}
+
+export interface AssignedUserDetailsDto {
+  id: number;
+  userName: string;
+  customHeaders?: string;
+}
+
+export interface AssignedUserNameDto {
+  id: number;
+  userName: string;
 }

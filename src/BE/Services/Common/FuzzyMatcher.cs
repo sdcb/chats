@@ -30,7 +30,7 @@ public class FuzzyMatcher
         int len1 = s1.Length;
         int len2 = s2.Length;
 
-        var dp = new int[len1 + 1, len2 + 1];
+        int[,] dp = new int[len1 + 1, len2 + 1];
 
         for (int i = 0; i <= len1; i++)
         {

@@ -11,24 +11,20 @@ public partial class ChatConfig
         return new ChatConfig
         {
             Id = Id,
-            HashCode = HashCode,
             ModelId = ModelId,
             SystemPrompt = SystemPrompt,
             Temperature = Temperature,
             WebSearchEnabled = WebSearchEnabled,
             MaxOutputTokens = MaxOutputTokens,
             ReasoningEffort = ReasoningEffort,
+            ImageSizeId = ImageSizeId,
+            ChatConfigMcps = [..ChatConfigMcps.Select(x => new ChatConfigMcp
+            {
+                McpServerId = x.McpServerId,
+                CustomHeaders = x.CustomHeaders,
+                McpServer = x.McpServer,
+            })],
         };
-    }
-
-    public bool ContentEquals(ChatConfig other)
-    {
-        return ModelId == other.ModelId
-            && (SystemPrompt ?? "") == (other.SystemPrompt ?? "")
-            && Temperature == other.Temperature
-            && WebSearchEnabled == other.WebSearchEnabled
-            && MaxOutputTokens == other.MaxOutputTokens
-            && ReasoningEffort == other.ReasoningEffort;
     }
 
     /// <summary>
@@ -95,6 +91,35 @@ public partial class ChatConfig
         // 6. ReasoningEffort (byte): 用 1 字节表示
         flagBuffer[0] = ReasoningEffort;
         AppendField(flagBuffer);
+
+        // 7. ImageSizeId (short): 仅当非默认值(0)时才包含以保持向后兼容
+        if (ImageSizeId != 0)
+        {
+            BitConverter.TryWriteBytes(shortBuffer, ImageSizeId);
+            AppendField(shortBuffer);
+        }
+
+        // 8. McpServers: 仅当存在关联时才包含以保持向后兼容
+        if (ChatConfigMcps.Count > 0)
+        {
+            // 先写入MCP服务器数量
+            BitConverter.TryWriteBytes(intBuffer, ChatConfigMcps.Count);
+            AppendField(intBuffer);
+
+            // 然后写入每个MCP服务器（已排序确保一致性）
+            foreach (ChatConfigMcp mcp in ChatConfigMcps.OrderBy(x => x.McpServerId))
+            {
+                BitConverter.TryWriteBytes(intBuffer, mcp.McpServerId);
+                AppendField(intBuffer);
+
+                if (mcp.CustomHeaders != null)
+                {
+                    ReadOnlySpan<char> charSpan = mcp.CustomHeaders.AsSpan();
+                    ReadOnlySpan<byte> charBytes = MemoryMarshal.AsBytes(charSpan);
+                    AppendField(charBytes);
+                }
+            }
+        }
 
         // 计算 SHA256 哈希，取前 8 字节转换为 long 类型
         byte[] fullHash = incrementalHash.GetHashAndReset();

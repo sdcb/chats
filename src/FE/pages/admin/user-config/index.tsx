@@ -18,9 +18,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import UserInitialConfigModal from '../_components/Users/UserInitialConfigModal';
+import UserInitialConfigModal from '@/components/admin/Users/UserInitialConfigModal';
+import DeletePopover from '@/components/Popover/DeletePopover';
 
-import { getModels, getUserInitialConfig } from '@/apis/adminApis';
+import { getModels, getUserInitialConfig, deleteUserInitialConfig } from '@/apis/adminApis';
+import toast from 'react-hot-toast';
 
 export default function UserInitialConfig() {
   const { t } = useTranslation();
@@ -31,6 +33,7 @@ export default function UserInitialConfig() {
   const [models, setModels] = useState<AdminModelDto[]>([]);
   const [selectConfig, setSelectConfig] =
     useState<GetUserInitialConfigResult | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const handleShowAddModal = () => {
     setSelectConfig(null);
@@ -38,24 +41,37 @@ export default function UserInitialConfig() {
   };
 
   const getConfigs = () => {
-    getUserInitialConfig().then((data) => {
-      setConfigList(data);
-    });
+    setLoading(true);
+    getUserInitialConfig()
+      .then((data) => {
+        setConfigList(data);
+      })
+      .catch((error) => {
+        console.error('Error fetching configs:', error);
+        toast.error(t('Failed to load configurations'));
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
-    getModels().then((data) => {
-      setModels(data.filter((x) => x.enabled === true));
-      getConfigs();
-    });
+    setLoading(true);
+    getModels()
+      .then((data) => {
+        setModels(data.filter((x) => x.enabled === true));
+        getConfigs();
+      })
+      .catch((error) => {
+        console.error('Error fetching models:', error);
+        toast.error(t('Failed to load models'));
+        setLoading(false);
+      });
   }, []);
 
-  const NameCell = (
-    config: GetUserInitialConfigResult,
-    rowSpan: number = 1,
-  ) => {
+  const NameCell = (config: GetUserInitialConfigResult) => {
     return (
-      <TableCell rowSpan={rowSpan}>
+      <TableCell>
         <div className="flex items-center gap-2">
           <div>{config.name}</div>
         </div>
@@ -63,12 +79,9 @@ export default function UserInitialConfig() {
     );
   };
 
-  const InitialPriceCell = (
-    config: GetUserInitialConfigResult,
-    rowSpan: number = 1,
-  ) => {
+  const InitialPriceCell = (config: GetUserInitialConfigResult) => {
     return (
-      <TableCell rowSpan={rowSpan}>
+      <TableCell>
         <div className="flex items-center gap-2">
           <div>{toFixed(+config.price)}</div>
         </div>
@@ -76,9 +89,9 @@ export default function UserInitialConfig() {
     );
   };
 
-  const Cell = (value: string, rowSpan: number = 1) => {
+  const Cell = (value: string) => {
     return (
-      <TableCell rowSpan={rowSpan}>
+      <TableCell>
         <div className="flex items-center gap-2">
           <div>{value}</div>
         </div>
@@ -86,13 +99,20 @@ export default function UserInitialConfig() {
     );
   };
 
-  const ModelCell = (value: any) => {
-    return <TableCell>{value}</TableCell>;
-  };
-
   const handleEditModal = (config: GetUserInitialConfigResult) => {
     setSelectConfig(config);
     setIsOpenModal(true);
+  };
+
+  const handleDeleteConfig = async (id: string) => {
+    try {
+      await deleteUserInitialConfig(id);
+      toast.success(t('Delete successful'));
+      getConfigs(); // 这会自动设置loading状态
+    } catch (error) {
+      toast.error(t('Delete failed'));
+      console.error('Error deleting config:', error);
+    }
   };
 
   return (
@@ -130,71 +150,52 @@ export default function UserInitialConfig() {
               >
                 {t('Invitation Code')}
               </TableHead>
-              <TableHead colSpan={4} className="text-center">
-                {t('Models')}
-              </TableHead>
+              <TableHead rowSpan={2}>{t('Model Count')}</TableHead>
+              <TableHead rowSpan={2}>{t('Actions')}</TableHead>
             </TableRow>
             <TableRow className="pointer-events-none">
-              <TableHead>{t('Model Display Name')}</TableHead>
-              <TableHead>{t('Tokens')}</TableHead>
-              <TableHead>{t('Chat Counts')}</TableHead>
-              <TableHead>{t('Expiration Time')}</TableHead>
             </TableRow>
           </TableHeader>
 
-          {configList.map((config) => (
-            <TableBody
-              key={config.id}
-              className="tbody-hover"
-              style={{ borderTop: '1px solid hsl(var(--muted))' }}
-            >
-              {config.models.length > 0 ? (
-                config.models.map((model, index) => {
-                  return (
-                    <TableRow
-                      onClick={() => handleEditModal(config)}
-                      key={model.modelId}
-                      className={`${
-                        index !== config.models.length - 1 && 'border-none'
-                      }`}
+          <TableBody 
+            isLoading={loading} 
+            isEmpty={!loading && configList.length === 0}
+          >
+            {configList.map((config) => (
+              <TableRow 
+                key={config.id}
+                className="tbody-hover cursor-pointer"
+                style={{ borderTop: '1px solid hsl(var(--muted))' }}
+                onClick={() => handleEditModal(config)}
+              >
+                {NameCell(config)}
+                {InitialPriceCell(config)}
+                {Cell(config.loginType)}
+                {Cell(config.invitationCode)}
+                <TableCell>{config.models.length}</TableCell>
+                <TableCell>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditModal(config);
+                      }}
                     >
-                      {index === 0 && NameCell(config, config.models.length)}
-                      {index === 0 &&
-                        InitialPriceCell(config, config.models.length)}
-                      {index === 0 &&
-                        Cell(config.loginType, config.models.length)}
-                      {index === 0 &&
-                        Cell(config.invitationCode, config.models.length)}
-                      {ModelCell(
-                        models.find((x) => x.modelId === model.modelId)?.name,
-                      )}
-                      {ModelCell(model.tokens)}
-                      {ModelCell(model.counts)}
-                      {ModelCell(formatDate(model.expires))}
-                    </TableRow>
-                  );
-                })
-              ) : (
-                <TableRow
-                  key={config.id}
-                  onClick={() => handleEditModal(config)}
-                >
-                  {NameCell(config, config.models.length)}
-                  {InitialPriceCell(config, config.models.length)}
-                  {ModelCell(config.loginType)}
-                  {ModelCell(config.invitationCode)}
-                  <TableCell colSpan={4}></TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          ))}
+                      ✏️
+                    </Button>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <DeletePopover
+                        onDelete={() => handleDeleteConfig(config.id)}
+                      />
+                    </div>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
         </Table>
-
-        {configList.length === 0 && (
-          <div className="flex p-4 h-32 justify-center items-center text-sm w-full text-muted-foreground">
-            {t('No data')}
-          </div>
-        )}
       </Card>
       <UserInitialConfigModal
         models={models}

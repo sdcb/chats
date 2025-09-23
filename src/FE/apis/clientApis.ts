@@ -10,6 +10,7 @@ import {
 import { IChatMessage } from '@/types/chatMessage';
 import {
   ChatResult,
+  ChatPresetReorderRequest,
   GetBalance7DaysUsageResult,
   GetChatPresetResult,
   GetChatShareResult,
@@ -40,6 +41,16 @@ import {
   PutResponseMessageEditInPlaceParams,
   SingInParams,
   SingInResult,
+  McpServerListItemDto,
+  McpServerDetailsDto,
+  UpdateMcpServerRequest,
+  FetchToolsRequest,
+  McpToolBasicInfo,
+  McpServerListManagementItemDto,
+  AssignUsersToMcpRequest,
+  UnassignedUserDto,
+  AssignedUserDetailsDto,
+  AssignedUserNameDto,
 } from '@/types/clientApis';
 import { SiteInfoConfig } from '@/types/config';
 import { IChatGroup } from '@/types/group';
@@ -260,7 +271,7 @@ export const postUserChatSpan = (
   params?: PostUserChatSpanParams,
 ) => {
   const fetchServer = useFetch();
-  return fetchServer.post<PostUserChatSpanResult>(`/api/chat/${chatId}/span`, {
+  return fetchServer.post<PostUserChatSpanResult[]>(`/api/chat/${chatId}/span`, {
     body: params,
   });
 };
@@ -411,10 +422,11 @@ export const putResponseMessageEditInPlace = (
   );
 };
 
-export const deleteMessage = (messageId: string, leafId: string) => {
+export const deleteMessage = (messageId: string, leafId: string | null) => {
   const fetchServer = useFetch();
+  const encryptedLeafMessageId = leafId || '';
   return fetchServer.delete(
-    `/api/messages/${messageId}?encryptedLeafMessageId=${leafId}&recursive=true`,
+    `/api/messages/${messageId}?encryptedLeafMessageId=${encryptedLeafMessageId}&recursive=true`,
   );
 };
 
@@ -478,6 +490,13 @@ export const postApplyChatPreset = (chatId: string, presetId: string) => {
   return fetchServer.post(`/api/chat/${chatId}/span/apply-preset/${presetId}`);
 };
 
+export const reorderChatPresets = (params: ChatPresetReorderRequest) => {
+  const fetchServer = useFetch();
+  return fetchServer.put('/api/chat-preset/reorder', {
+    body: params,
+  });
+};
+
 export const responseContentToRequest = (
   responseContent: ResponseContent[],
 ) => {
@@ -521,5 +540,68 @@ export const getUserFiles = (params: GetUserFilesParams) => {
   return fetchServer.get<PageResult<GetUserFilesResult[]>>('/api/file', {
     params: params,
   });
+};
+
+// MCP APIs
+export const getMcpServers = (): Promise<McpServerListItemDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get('/api/mcp');
+};
+
+export const getMcpServersForManagement = (): Promise<McpServerListManagementItemDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get('/api/mcp/management');
+};
+
+export const getMcpServerDetails = (mcpId: number): Promise<McpServerDetailsDto> => {
+  const fetchService = useFetch();
+  return fetchService.get(`/api/mcp/${mcpId}`);
+};
+
+export const createMcpServer = (params: UpdateMcpServerRequest): Promise<McpServerDetailsDto> => {
+  const fetchService = useFetch();
+  return fetchService.post('/api/mcp', { body: params });
+};
+
+export const updateMcpServer = (mcpId: number, params: UpdateMcpServerRequest): Promise<McpServerDetailsDto> => {
+  const fetchService = useFetch();
+  return fetchService.put(`/api/mcp/${mcpId}`, { body: params });
+};
+
+export const deleteMcpServer = (mcpId: number) => {
+  const fetchService = useFetch();
+  return fetchService.delete(`/api/mcp/${mcpId}`);
+};
+
+export const fetchMcpTools = (params: FetchToolsRequest): Promise<McpToolBasicInfo[]> => {
+  const fetchService = useFetch();
+  return fetchService.post('/api/mcp/fetch-tools', { body: params });
+};
+
+// MCP用户分配相关API
+export const assignUsersToMcp = (mcpId: number, params: AssignUsersToMcpRequest): Promise<void> => {
+  const fetchService = useFetch();
+  return fetchService.post(`/api/mcp/${mcpId}/assign-to-users`, { body: params });
+};
+
+export const getUnassignedUsers = (mcpId: number, search?: string, limit: number = 10): Promise<UnassignedUserDto[]> => {
+  const fetchService = useFetch();
+  const params = new URLSearchParams();
+  if (search) {
+    params.append('search', search);
+  }
+  params.append('limit', limit.toString());
+  const queryString = params.toString();
+  return fetchService.get(`/api/mcp/${mcpId}/get-unassigned-users${queryString ? `?${queryString}` : ''}`);
+};
+
+export const getAssignedUserDetails = (mcpId: number): Promise<AssignedUserDetailsDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get(`/api/mcp/${mcpId}/assigned-user-details`);
+};
+
+export const getAssignedUserNames = (mcpId: number): Promise<AssignedUserNameDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get(`/api/mcp/${mcpId}/assigned-user-names`);
 };
 

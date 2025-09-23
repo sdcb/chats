@@ -22,8 +22,6 @@ public partial class UserModel
 
     public int CountBalance { get; set; }
 
-    public bool IsDeleted { get; set; }
-
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
@@ -34,13 +32,7 @@ public partial class UserModel
     [InverseProperty("UserModels")]
     public virtual Model Model { get; set; } = null!;
 
-    [InverseProperty("UserModel")]
-    public virtual ICollection<UsageTransaction> UsageTransactions { get; set; } = new List<UsageTransaction>();
-
     [ForeignKey("UserId")]
     [InverseProperty("UserModels")]
     public virtual User User { get; set; } = null!;
-
-    [InverseProperty("UserModel")]
-    public virtual ICollection<UserModelUsage> UserModelUsages { get; set; } = new List<UserModelUsage>();
 }

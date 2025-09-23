@@ -1,4 +1,6 @@
-﻿namespace Chats.BE.Controllers.Users.Usages.Dtos;
+﻿using Microsoft.AspNetCore.Mvc;
+
+namespace Chats.BE.Controllers.Users.Usages.Dtos;
 
 public interface IUsageQuery
 {
@@ -6,7 +8,9 @@ public interface IUsageQuery
 
     public string? ApiKeyId { get; }
 
-    public string? Provider { get;   }
+    public string? Provider { get; }
+    public string? ModelKey { get; init; }
+    public string? Model { get; init; }
 
     public DateOnly? Start { get; }
 

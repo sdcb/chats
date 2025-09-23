@@ -2,6 +2,8 @@
   <Namespace>System.Threading.Tasks</Namespace>
 </Query>
 
+// dotnet tool install --global dotnet-ef
+// dotnet tool update  --global dotnet-ef
 string projectFolder = Path.Combine(new FileInfo(Util.CurrentQueryPath).Directory!.Parent!.Parent!.ToString(), "BE");
 string provider = "Microsoft.EntityFrameworkCore.SqlServer";
 

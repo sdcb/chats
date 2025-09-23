@@ -1,22 +1,19 @@
-﻿using Chats.BE.Controllers.Admin.AdminModels.Dtos;
+using Chats.BE.Controllers.Admin.AdminModels.Dtos;
 using Chats.BE.Controllers.Admin.Common;
-using Chats.BE.Controllers.Common;
+using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.DB;
-using Chats.BE.DB.Jsons;
 using Chats.BE.Infrastructure;
-using Chats.BE.Services;
 using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
 
 namespace Chats.BE.Controllers.Admin.AdminModels;
 
-[Route("api/admin"), AuthorizeAdmin]
-public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : ControllerBase
+[Route("api/admin/models"), AuthorizeAdmin]
+public class AdminModelsController(ChatsDB db) : ControllerBase
 {
-    [HttpGet("models")]
+    [HttpGet]
     public async Task<ActionResult<AdminModelDto[]>> GetAdminModels(bool all, CancellationToken cancellationToken)
     {
         IQueryable<Model> query = db.Models;
@@ -24,7 +21,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
 
         int? fileServiceId = await FileService.GetDefaultId(db, cancellationToken);
         AdminModelDto[] data = await query
-            .OrderBy(x => x.Order)
+            .OrderBy(x => x.ModelKey.Order).ThenBy(x => x.Order)
             .Select(x => new AdminModelDto
             {
                 ModelId = x.Id,
@@ -38,7 +35,6 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
                 ModelReferenceShortName = x.ModelReference.DisplayName,
                 InputTokenPrice1M = x.InputTokenPrice1M,
                 OutputTokenPrice1M = x.OutputTokenPrice1M,
-                Rank = x.Order,
                 DeploymentName = x.DeploymentName,
                 AllowSearch = x.ModelReference.AllowSearch,
                 AllowVision = x.ModelReference.AllowVision,
@@ -54,7 +50,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
         return data;
     }
 
-    [HttpPut("models/{modelId:int}")]
+    [HttpPut("{modelId:int}")]
     public async Task<ActionResult> UpdateModel(short modelId, [FromBody] UpdateModelRequest req, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -64,7 +60,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
 
         if (!await db.ModelReferences.AnyAsync(r => r.Id == req.ModelReferenceId, cancellationToken))
         {
-            return this.BadRequestMessage($"Invalid ModelReferenceId: {req.ModelReferenceId}");
+            return BadRequest($"Invalid ModelReferenceId: {req.ModelReferenceId}");
         }
 
         Model? cm = await db.Models.FindAsync([modelId], cancellationToken);
@@ -80,7 +76,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
         return NoContent();
     }
 
-    [HttpPost("models")]
+    [HttpPost]
     public async Task<ActionResult<int>> CreateModel([FromBody] UpdateModelRequest req, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -90,7 +86,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
 
         if (!await db.ModelReferences.AnyAsync(r => r.Id == req.ModelReferenceId, cancellationToken))
         {
-            return this.BadRequestMessage($"Invalid ModelReferenceId: {req.ModelReferenceId}");
+            return BadRequest($"Invalid ModelReferenceId: {req.ModelReferenceId}");
         }
 
         Model toCreate = new()
@@ -105,7 +101,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
         return Created(default(string), toCreate.Id);
     }
 
-    [HttpPost("models/fast-create")]
+    [HttpPost("fast-create")]
     public async Task<ActionResult<int>> FastCreateModel([FromBody] ValidateModelRequest req, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -144,7 +140,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
         return Created(default(string), toCreate.Id);
     }
 
-    [HttpDelete("models/{modelId:int}")]
+    [HttpDelete("{modelId:int}")]
     public async Task<ActionResult> DeleteModel(short modelId, CancellationToken cancellationToken)
     {
         Model? cm = await db.Models.FindAsync([modelId], cancellationToken);
@@ -168,7 +164,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
             if (refInfo.UserModels) message += "UserModels, ";
             if (refInfo.ApiKeys) message += "ApiKeys, ";
             if (refInfo.UserApiCache) message += "UserApiCache, ";
-            return this.BadRequestMessage(message);
+            return BadRequest(message);
         }
         else
         {
@@ -178,7 +174,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
         }
     }
 
-    [HttpPost("models/validate")]
+    [HttpPost("validate")]
     public async Task<ActionResult<ModelValidateResult>> ValidateModel(
         [FromBody] ValidateModelRequest req,
         [FromServices] ChatFactory chatFactory,
@@ -190,7 +186,7 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
             .SingleOrDefaultAsync(cancellationToken);
         if (modelKey == null)
         {
-            return this.BadRequestMessage($"Model key id: {req.ModelKeyId} not found");
+            return BadRequest($"Model key id: {req.ModelKeyId} not found");
         }
 
         ModelReference? modelReference = await db.ModelReferences
@@ -200,109 +196,109 @@ public class AdminModelsController(ChatsDB db, CurrentUser adminUser) : Controll
             .SingleOrDefaultAsync(cancellationToken);
         if (modelReference == null)
         {
-            return this.BadRequestMessage($"Model reference id: {req.ModelReferenceId} not found");
+            return BadRequest($"Model reference id: {req.ModelReferenceId} not found");
         }
 
         ModelValidateResult result = await chatFactory.ValidateModel(modelKey, modelReference, req.DeploymentName, cancellationToken);
         return Ok(result);
     }
 
-    [HttpGet("user-models/{userId:int}")]
-    public async Task<ActionResult<UserModelDto[]>> GetUserModels(int userId, CancellationToken cancellationToken)
+    [HttpPut("reorder")]
+    public async Task<ActionResult> ReorderModels([FromBody] ReorderRequest<short> request, CancellationToken cancellationToken)
     {
-        UserModelDto[] userModels = await db.Models
-            .Where(x => !x.IsDeleted)
-            .OrderBy(x => x.Order)
-            .ThenByDescending(x => x.Id)
-            .Select(x => new
-            {
-                Model = x,
-                UserModel = x.UserModels.Where(x => x.UserId == userId).FirstOrDefault()
-            })
-            .Select(x => x.UserModel == null ?
-                new UserModelDto()
-                {
-                    Id = -1,
-                    ModelId = x.Model.Id,
-                    DisplayName = x.Model.Name,
-                    ModelKeyName = x.Model.ModelKey.Name,
-                    Enabled = false,
-                    Expires = DateTime.UtcNow,
-                    Counts = 0,
-                    Tokens = 0,
-                } : new UserModelDto()
-                {
-                    Id = x.UserModel.Id,
-                    ModelId = x.Model.Id,
-                    DisplayName = x.Model.Name,
-                    ModelKeyName = x.Model.ModelKey.Name,
-                    Counts = x.UserModel.CountBalance,
-                    Expires = x.UserModel.ExpiresAt,
-                    Enabled = !x.UserModel.IsDeleted,
-                    Tokens = x.UserModel.TokenBalance,
-                })
-            .ToArrayAsync(cancellationToken);
-
-        return Ok(userModels);
-    }
-
-    [HttpPut("user-models")]
-    public async Task<ActionResult> UpdateUserModels([FromBody] UpdateUserModelRequest updateReq,
-        [FromServices] BalanceService balanceService,
-        CancellationToken cancellationToken)
-    {
-        if (!ModelState.IsValid)
+        // 验证被移动的 Model 是否存在
+        Model? sourceModel = await db.Models
+            .FirstOrDefaultAsync(x => x.Id == request.SourceId, cancellationToken);
+        if (sourceModel == null)
         {
-            return this.BadRequestMessage(string.Join("\n", ModelState
-                .Skip(1)
-                .Where(x => x.Value != null && x.Value.ValidationState == ModelValidationState.Invalid)
-                .Select(x => $"{x.Key}: " + string.Join(",", x.Value!.Errors.Select(x => x.ErrorMessage)))));
+            return NotFound("Source model not found");
         }
 
-        HashSet<int> userModelIds = updateReq.Models
-            .Where(x => x.Id != -1)
-            .Select(x => x.Id)
-            .ToHashSet();
-        Dictionary<short, UserModel> userModels = await db.UserModels
-            .Where(x => x.UserId == updateReq.UserId && userModelIds.Contains(x.Id))
-            .ToDictionaryAsync(k => k.ModelId, v => v, cancellationToken);
+        // 验证 previous 和 next 的 Model 是否存在（如果提供的话）
+        Model? previousModel = null;
+        Model? nextModel = null;
 
-        // apply changes
-        HashSet<UserModel> effectedUserModels = [];
-        foreach (JsonTokenBalance req in updateReq.Models)
+        if (request.PreviousId != null)
         {
-            if (userModels.TryGetValue(req.ModelId, out UserModel? existingItem))
+            previousModel = await db.Models
+                .FirstOrDefaultAsync(x => x.Id == request.PreviousId, cancellationToken);
+            if (previousModel == null)
             {
-                bool hasDifference = req.ApplyTo(existingItem, adminUser.Id);
-                if (hasDifference)
-                {
-                    effectedUserModels.Add(existingItem);
-                }
+                return NotFound("Previous model not found");
             }
-            else if (req.Enabled) // not exists in database but enabled in frontend request
+            
+            // 验证 previous 与 source 属于同一个 ModelKey
+            if (previousModel.ModelKeyId != sourceModel.ModelKeyId)
             {
-                UserModel newItem = new()
-                {
-                    UserId = updateReq.UserId,
-                    ModelId = req.ModelId,
-                    CreatedAt = DateTime.UtcNow,
-                };
-                req.ApplyTo(newItem, adminUser.Id);
-                userModels[req.ModelId] = newItem;
-                db.UserModels.Add(newItem);
-                effectedUserModels.Add(newItem);
+                return BadRequest("Previous model must belong to the same ModelKey");
             }
         }
 
-        if (effectedUserModels.Count != 0)
+        if (request.NextId != null)
         {
+            nextModel = await db.Models
+                .FirstOrDefaultAsync(x => x.Id == request.NextId, cancellationToken);
+            if (nextModel == null)
+            {
+                return NotFound("Next model not found");
+            }
+            
+            // 验证 next 与 source 属于同一个 ModelKey
+            if (nextModel.ModelKeyId != sourceModel.ModelKeyId)
+            {
+                return BadRequest("Next model must belong to the same ModelKey");
+            }
+        }
+
+        // 验证 previous 和 next 不能同时为空
+        if (previousModel == null && nextModel == null)
+        {
+            return BadRequest("Both previous and next models cannot be null");
+        }
+
+        // 验证 previous 和 next 的顺序（Order 是从小到大排列的）
+        if (previousModel != null && nextModel != null && previousModel.Order > nextModel.Order)
+        {
+            return BadRequest("Invalid order: previous model should have smaller order than next model");
+        }
+
+        // 尝试应用移动
+        bool needReorder = !TryApplyMove(sourceModel, previousModel, nextModel);
+        
+        if (needReorder)
+        {
+            // 需要重新排序，但只重排序同一个 ModelKey 下的 Models
+            Model[] modelsInSameKey = await db.Models
+                .Where(x => x.ModelKeyId == sourceModel.ModelKeyId)
+                .OrderBy(x => x.Order).ThenByDescending(x => x.Id)
+                .ToArrayAsync(cancellationToken);
+            
+            ReorderModels(modelsInSameKey);
+            
+            // 重新加载并应用移动
+            sourceModel = modelsInSameKey.First(x => x.Id == request.SourceId);
+            previousModel = request.PreviousId != null ? modelsInSameKey.First(x => x.Id == request.PreviousId) : null;
+            nextModel = request.NextId != null ? modelsInSameKey.First(x => x.Id == request.NextId) : null;
+            
+            TryApplyMove(sourceModel, previousModel, nextModel);
+        }
+
+        if (db.ChangeTracker.HasChanges())
+        {
+            sourceModel.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
-            await balanceService.AsyncUpdateUsage(effectedUserModels.Select(x => x.Id), CancellationToken.None);
-            await db.Users
-                .Where(x => x.Id == updateReq.UserId)
-                .ExecuteUpdateAsync(u => u.SetProperty(p => p.UpdatedAt, _ => DateTime.UtcNow), CancellationToken.None);
         }
 
         return NoContent();
+    }
+
+    private static bool TryApplyMove(Model sourceModel, Model? previousModel, Model? nextModel)
+    {
+        return ReorderHelper.Default.TryApplyMove(sourceModel, previousModel, nextModel);
+    }
+
+    private static void ReorderModels(Model[] existingModels)
+    {
+        ReorderHelper.Default.ReorderEntities(existingModels);
     }
 }

@@ -9,7 +9,7 @@ namespace Chats.BE.Services.FileServices;
 
 public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, IUrlEncryptionService urlEncryptionService)
 {
-    public async Task<ChatMessageContentPart> CreateOpenAIPart(MessageContentFile? mcFile, CancellationToken cancellationToken)
+    public async Task<ChatMessageContentPart> CreateOpenAIPart(StepContentFile? mcFile, CancellationToken cancellationToken)
     {
         if (mcFile == null)
         {
@@ -63,7 +63,7 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
         };
     }
 
-    public async Task<MessageContent> CreateFileContent(string encryptedFileId, CancellationToken cancellationToken)
+    public async Task<StepContent> CreateFileContent(string encryptedFileId, CancellationToken cancellationToken)
     {
         int fileId = urlEncryptionService.DecryptFileId(encryptedFileId);
         DB.File file = await db.Files
@@ -71,6 +71,6 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
             .Include(x => x.FileService)
             .Include(x => x.FileImageInfo)
             .FirstAsync(x => x.Id == fileId, cancellationToken);
-        return MessageContent.FromFile(file);
+        return StepContent.FromFile(file);
     }
 }

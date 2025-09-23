@@ -21,10 +21,10 @@ const ReasoningEffortRadio: FC<Props> = ({
     <div className="flex justify-between items-center">
       <label
         className={
-          'mb-2 text-left dark:text-neutral-400 flex gap-1 items-center'
+          'text-left text-neutral-700 dark:text-neutral-400 flex gap-1 items-center'
         }
       >
-        <IconReasoning />
+        <IconReasoning size={16} />
         {t('Reasoning Effort')}
       </label>
 

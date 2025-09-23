@@ -12,6 +12,7 @@ import {
   Message,
   MessageContentType,
   ResponseContent,
+  TextContent,
 } from '@/types/chat';
 
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ import CopyAction from './CopyAction';
 import DeleteAction from './DeleteAction';
 import EditAction from './EditAction';
 import PaginationAction from './PaginationAction';
+import RegenerateAction from './RegenerateAction';
 
 export interface UserMessage {
   id: string;
@@ -39,6 +41,7 @@ interface Props {
   onEditAndSendMessage?: (editedMessage: Message, parentId?: string) => void;
   onEditUserMessage?: (messageId: string, content: ResponseContent) => void;
   onDeleteMessage?: (messageId: string) => void;
+  onRegenerateAllAssistant?: (messageId: string, modelId: number) => void;
 }
 
 const UserMessage = (props: Props) => {
@@ -52,6 +55,7 @@ const UserMessage = (props: Props) => {
     onEditAndSendMessage,
     onEditUserMessage,
     onDeleteMessage,
+    onRegenerateAllAssistant,
   } = props;
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -65,7 +69,7 @@ const UserMessage = (props: Props) => {
     if (isOnlySave) {
       let msgContent = message.content.find(
         (x) => x.$type === MessageContentType.text,
-      )!;
+      )! as TextContent;
       msgContent.c = contentText;
       onEditUserMessage && onEditUserMessage(message.id, msgContent);
     } else {
@@ -106,8 +110,8 @@ const UserMessage = (props: Props) => {
   };
 
   const init = () => {
-    const text =
-      content.find((x) => x.$type === MessageContentType.text)?.c || '';
+    const textContent = content.find((x) => x.$type === MessageContentType.text) as TextContent | undefined;
+    const text = textContent?.c || '';
     setContentText(text as string);
   };
 
@@ -222,12 +226,22 @@ const UserMessage = (props: Props) => {
               text={contentText}
             />
             {!readonly && (
+              <RegenerateAction
+                hidden={!onRegenerateAllAssistant}
+                disabled={isChatting(chatStatus)}
+                isHoverVisible
+                onRegenerate={() => {
+                  if (onRegenerateAllAssistant && selectedChat.spans && selectedChat.spans.length > 0) {
+                    // 使用第一个启用的 span 的 modelId，如果没有启用的就使用第一个
+                    const enabledSpan = selectedChat.spans.find(s => s.enabled) || selectedChat.spans[0];
+                    onRegenerateAllAssistant(messageId, enabledSpan.modelId);
+                  }
+                }}
+              />
+            )}
+            {!readonly && (
               <DeleteAction
-                hidden={
-                  !(
-                    message.parentId !== null || message?.siblingIds?.length > 1
-                  ) || isChatting(chatStatus)
-                }
+                hidden={isChatting(chatStatus)}
                 isHoverVisible
                 onDelete={() => {
                   onDeleteMessage && onDeleteMessage(messageId);

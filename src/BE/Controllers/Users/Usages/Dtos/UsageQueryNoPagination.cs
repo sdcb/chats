@@ -13,6 +13,12 @@ public class UsageQueryNoPagination : IUsageQuery
     [FromQuery(Name = "provider")]
     public string? Provider { get; init; }
 
+    [FromQuery(Name = "model-key")]
+    public string? ModelKey { get; init; }
+
+    [FromQuery(Name = "model")]
+    public string? Model { get; init; }
+
     [FromQuery(Name = "start")]
     public DateOnly? Start { get; init; }
 
@@ -39,6 +45,14 @@ public class UsageQueryNoPagination : IUsageQuery
         if (!string.IsNullOrEmpty(Provider))
         {
             fileName += $"_{Provider}";
+        }
+        if (!string.IsNullOrEmpty(ModelKey))
+        {
+            fileName += $"_{ModelKey}";
+        }
+        if (!string.IsNullOrEmpty(Model))
+        {
+            fileName += $"_{Model}";
         }
         if (Start.HasValue)
         {

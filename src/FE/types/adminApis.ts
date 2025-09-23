@@ -11,9 +11,18 @@ export const enum UserRole {
   'admin' = 'admin',
 }
 
-export interface PutUserModelParams {
-  userId: string;
-  models: UserModelUpdateDto[];
+export interface AddUserModelParams {
+  userId: number;
+  modelId: number;
+  tokens: number;
+  counts: number;
+  expires: string;
+}
+
+export interface EditUserModelParams {
+  tokens: number;
+  counts: number;
+  expires: string;
 }
 
 export interface AdminModelDto {
@@ -48,7 +57,6 @@ export interface UpdateModelDto {
   modelKeyId: number;
   inputTokenPrice1M: number;
   outputTokenPrice1M: number;
-  rank: number | null;
 }
 
 export interface PostUserParams {
@@ -286,16 +294,17 @@ export interface UserInitialModel {
   tokens: number;
   counts: number;
   expires: string;
-  enabled: boolean;
 }
 
-export interface UserModelUpdateDto extends UserInitialModel {
+export interface UserModelDisplayDto {
   id: number;
-}
-
-export interface UserModelDisplayDto extends UserModelUpdateDto {
+  modelId: number;
+  tokens: number;
+  counts: number;
+  expires: string;
   displayName: string;
   modelKeyName: string;
+  modelProviderId: number;
 }
 
 export class UserModelDisplay implements UserModelDisplayDto {
@@ -304,9 +313,9 @@ export class UserModelDisplay implements UserModelDisplayDto {
   tokens: number;
   counts: number;
   expires: string;
-  enabled: boolean;
   displayName: string;
   modelKeyName: string;
+  modelProviderId: number;
 
   constructor(dto: UserModelDisplayDto) {
     this.id = dto.id;
@@ -314,20 +323,9 @@ export class UserModelDisplay implements UserModelDisplayDto {
     this.tokens = dto.tokens;
     this.counts = dto.counts;
     this.expires = dto.expires;
-    this.enabled = dto.enabled;
     this.displayName = dto.displayName;
     this.modelKeyName = dto.modelKeyName;
-  }
-
-  toUpdateDto(): UserModelUpdateDto {
-    return {
-      id: this.id,
-      modelId: this.modelId,
-      tokens: this.tokens,
-      counts: this.counts,
-      expires: this.expires,
-      enabled: this.enabled,
-    };
+    this.modelProviderId = dto.modelProviderId;
   }
 }
 
@@ -416,4 +414,10 @@ export interface CostStatisticsByDateResult {
 export interface ChatCountStatisticsByDateResult {
   date: string;
   value: number;
+}
+
+export interface ReorderRequest {
+  sourceId: number;
+  previousId: number | null; // 新位置的前一个元素
+  nextId: number | null;     // 新位置的后一个元素
 }

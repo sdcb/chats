@@ -11,15 +11,17 @@ import {
   IconMoneybag,
   IconSettings,
   IconUser,
+  IconRobot,
 } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import AccountTab from './_components/tabs/AccountTab';
-import ApiKeysTab from './_components/tabs/ApiKeysTab';
-import GeneralTab from './_components/tabs/GeneralTab';
-import PromptsTab from './_components/tabs/PromptsTab';
-import UsageRecordsTab from './_components/tabs/UsageRecordsTab';
+import AccountTab from '@/components/settings/tabs/AccountTab';
+import ApiKeysTab from '@/components/settings/tabs/ApiKeysTab';
+import GeneralTab from '@/components/settings/tabs/GeneralTab';
+import PromptsTab from '@/components/settings/tabs/PromptsTab';
+import McpTab from '@/components/settings/tabs/McpTab';
+import UsageRecordsTab from '@/components/settings/tabs/UsageRecordsTab';
 
 const SettingsPage = () => {
   const { t } = useTranslation();
@@ -69,6 +71,12 @@ const SettingsPage = () => {
             <IconBulb /> {t('Prompts')}
           </TabsTrigger>
           <TabsTrigger
+            value="mcp"
+            className="flex-1 justify-center items-center sm:flex-none gap-1"
+          >
+            <IconRobot /> {t('MCP')}
+          </TabsTrigger>
+          <TabsTrigger
             value="api-keys"
             className="flex-1 items-center sm:flex-none gap-1"
           >
@@ -87,7 +95,7 @@ const SettingsPage = () => {
             className="flex-1 items-center sm:flex-none gap-1"
           >
             <IconUser />
-            {t('Account')}
+            {t('Password')}
           </TabsTrigger>
         </TabsList>
         <div className="flex-1 mt-4 overflow-auto">
@@ -96,6 +104,9 @@ const SettingsPage = () => {
           </TabsContent>
           <TabsContent value="prompts" className="m-0 h-full">
             <PromptsTab />
+          </TabsContent>
+          <TabsContent value="mcp" className="m-0 h-full">
+            <McpTab />
           </TabsContent>
           <TabsContent value="api-keys" className="m-0 h-full">
             <ApiKeysTab />

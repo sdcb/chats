@@ -101,27 +101,11 @@ public abstract partial class ChatService
             };
         }
 
-        async Task<ChatMessage> DownloadVision(ChatMessage message, CancellationToken cancellationToken)
+        static async Task<ChatMessage> DownloadVision(ChatMessage message, CancellationToken cancellationToken)
         {
-            using HttpClient http = new();
             return message switch
             {
-                UserChatMessage userChatMessage => new UserChatMessage(await userChatMessage.Content
-                    .ToAsyncEnumerable()
-                    .SelectAwait(async c => c switch
-                    {
-                        { Kind: ChatMessageContentPartKind.Image, ImageUri: not null } => await DownloadImagePart(http, c.ImageUri, cancellationToken),
-                        _ => c,
-                    })
-                    .ToArrayAsync(cancellationToken)),
-                AssistantChatMessage assistantChatMessage => new AssistantChatMessage(await assistantChatMessage.Content
-                    .ToAsyncEnumerable()
-                    .SelectAwait(async c => c switch
-                    {
-                        { Kind: ChatMessageContentPartKind.Image, ImageUri: not null } => await DownloadImagePart(http, c.ImageUri, cancellationToken),
-                        _ => c,
-                    })
-                    .ToArrayAsync(cancellationToken)),
+                UserChatMessage or AssistantChatMessage => await HandleMessage(http, message, cancellationToken),
                 _ => message,
             };
 
@@ -136,6 +120,21 @@ public abstract partial class ChatService
                 string contentType = resp.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
                 return ChatMessageContentPart.CreateImagePart(await BinaryData.FromStreamAsync(await resp.Content.ReadAsStreamAsync(cancellationToken), cancellationToken), contentType, null);
             }
+
+            static async Task<T> HandleMessage<T>(HttpClient http, T message, CancellationToken cancellationToken) where T : ChatMessage
+            {
+                List<ChatMessageContentPart> previousContents = [.. message.Content];
+                message.Content.Clear();
+                foreach (ChatMessageContentPart part in previousContents)
+                {
+                    message.Content.Add(part is { Kind: ChatMessageContentPartKind.Image, ImageUri: not null } ?
+                        await DownloadImagePart(http, part.ImageUri, cancellationToken) :
+                        part);
+                }
+                return message;
+            }
         }
     }
+
+    private static readonly HttpClient http = new();
 }

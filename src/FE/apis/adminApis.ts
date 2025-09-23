@@ -3,8 +3,10 @@ import { useFetch } from '@/hooks/useFetch';
 import {
   AdminChatsDto,
   AdminModelDto,
+  AddUserModelParams,
   ChatCountStatisticsByDateResult,
   CostStatisticsByDateResult,
+  EditUserModelParams,
   ErrorResult,
   GetConfigsResult,
   GetFileServicesResult,
@@ -36,8 +38,8 @@ import {
   PutPayServicesParams,
   PutUserBalanceParams,
   PutUserInitialConfigParams,
-  PutUserModelParams,
   PutUserParams,
+  ReorderRequest,
   SimpleModelReferenceDto,
   StatisticsTimeParams,
   TokenStatisticsByDateResult,
@@ -56,16 +58,37 @@ export const getModelsByUserId = async (
 ): Promise<UserModelDisplay[]> => {
   const fetchService = useFetch();
   const data = await fetchService.get<UserModelDisplayDto[]>(
-    `/api/admin/user-models/${userId}`,
+    `/api/admin/user-models/user/${userId}`,
   );
   return data.map((x) => new UserModelDisplay(x));
 };
 
-export const putUserModel = (params: PutUserModelParams): Promise<any> => {
+export const getUserUnassignedModels = async (
+  userId: string,
+): Promise<AdminModelDto[]> => {
   const fetchService = useFetch();
-  return fetchService.put('/api/admin/user-models', {
+  return fetchService.get<AdminModelDto[]>(
+    `/api/admin/user-models/user/${userId}/unassigned`,
+  );
+};
+
+export const addUserModel = (params: AddUserModelParams): Promise<any> => {
+  const fetchService = useFetch();
+  return fetchService.post('/api/admin/user-models', {
     body: params,
   });
+};
+
+export const editUserModel = (userModelId: number, params: EditUserModelParams): Promise<any> => {
+  const fetchService = useFetch();
+  return fetchService.put(`/api/admin/user-models/${userModelId}`, {
+    body: params,
+  });
+};
+
+export const deleteUserModel = (userModelId: number): Promise<any> => {
+  const fetchService = useFetch();
+  return fetchService.delete(`/api/admin/user-models/${userModelId}`);
 };
 
 export const getModels = (all: boolean = true): Promise<AdminModelDto[]> => {
@@ -266,6 +289,27 @@ export const deleteModelKeys = (id: number) => {
   return fetchService.delete(`/api/admin/model-keys/${id}`);
 };
 
+export const reorderModelProviders = (params: ReorderRequest) => {
+  const fetchService = useFetch();
+  return fetchService.put('/api/admin/model-keys/reorder-model-providers', {
+    body: params,
+  });
+};
+
+export const reorderModelKeys = (params: ReorderRequest) => {
+  const fetchService = useFetch();
+  return fetchService.put('/api/admin/model-keys/reorder', {
+    body: params,
+  });
+};
+
+export const reorderModels = (params: ReorderRequest) => {
+  const fetchService = useFetch();
+  return fetchService.put('/api/admin/models/reorder', {
+    body: params,
+  });
+};
+
 export const getUserInitialConfig = () => {
   const fetchServer = useFetch();
   return fetchServer.get<GetUserInitialConfigResult[]>(
@@ -285,7 +329,7 @@ export const putUserInitialConfig = (params: PutUserInitialConfigParams) => {
 
 export const deleteUserInitialConfig = (id: string) => {
   const fetchServer = useFetch();
-  return fetchServer.delete('/api/admin/user-config?id=' + id);
+  return fetchServer.delete('/api/admin/user-config/' + id);
 };
 
 export const getConfigs = () => {

@@ -4,7 +4,7 @@ public enum EncryptionPurpose
 {
     ChatId,
     FileId,
-    MessageId,
+    TurnId,
     ChatGroupId,
     ChatShareId,
     ChatPresetId,

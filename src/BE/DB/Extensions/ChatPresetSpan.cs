@@ -20,25 +20,63 @@ public partial class ChatPresetSpan
         config.WebSearchEnabled = ChatConfig.WebSearchEnabled;
         config.MaxOutputTokens = ChatConfig.MaxOutputTokens;
         config.ReasoningEffort = ChatConfig.ReasoningEffort;
+        config.ImageSizeId = ChatConfig.ImageSizeId;
+
+        // Update ChatConfigMcp associations
+        HashSet<int> existingMcpIds = [.. config.ChatConfigMcps.Select(x => x.McpServerId)];
+        HashSet<int> newMcpIds = [.. ChatConfig.ChatConfigMcps.Select(x => x.McpServerId)];
+
+        // Remove associations that are no longer needed
+        List<ChatConfigMcp> toRemove = [.. config.ChatConfigMcps.Where(x => !newMcpIds.Contains(x.McpServerId))];
+        foreach (ChatConfigMcp? item in toRemove)
+        {
+            config.ChatConfigMcps.Remove(item);
+        }
+
+        // Add new associations
+        foreach (int mcpId in newMcpIds.Where(id => !existingMcpIds.Contains(id)))
+        {
+            config.ChatConfigMcps.Add(new ChatConfigMcp
+            {
+                ChatConfig = config,
+                McpServerId = mcpId
+            });
+        }
     }
 
     public ChatSpan ToChatSpan(Model model, byte spanId)
     {
         ArgumentNullException.ThrowIfNull(model);
-        return new ChatSpan
+
+        ChatConfig chatConfig = new()
+        {
+            ModelId = ChatConfig.ModelId,
+            SystemPrompt = string.IsNullOrEmpty(ChatConfig.SystemPrompt) ? null : ChatConfig.SystemPrompt,
+            Temperature = ChatConfig.Temperature,
+            WebSearchEnabled = ChatConfig.WebSearchEnabled,
+            MaxOutputTokens = ChatConfig.MaxOutputTokens,
+            ReasoningEffort = ChatConfig.ReasoningEffort,
+            ImageSizeId = ChatConfig.ImageSizeId,
+        };
+
+        ChatSpan chatSpan = new()
         {
             ChatId = model.Id,
             SpanId = spanId,
             Enabled = Enabled,
-            ChatConfig = new ChatConfig
-            {
-                ModelId = ChatConfig.ModelId,
-                SystemPrompt = string.IsNullOrEmpty(ChatConfig.SystemPrompt) ? null : ChatConfig.SystemPrompt,
-                Temperature = ChatConfig.Temperature,
-                WebSearchEnabled = ChatConfig.WebSearchEnabled,
-                MaxOutputTokens = ChatConfig.MaxOutputTokens,
-                ReasoningEffort = ChatConfig.ReasoningEffort,
-            },
+            ChatConfig = chatConfig,
         };
+
+        // Add ChatConfigMcp associations
+        foreach (ChatConfigMcp mcpAssoc in ChatConfig.ChatConfigMcps)
+        {
+            chatConfig.ChatConfigMcps.Add(new ChatConfigMcp
+            {
+                ChatConfig = chatConfig,
+                McpServerId = mcpAssoc.McpServerId
+            });
+        }
+
+        return chatSpan;
     }
 }

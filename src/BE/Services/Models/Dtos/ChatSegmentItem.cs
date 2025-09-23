@@ -151,7 +151,11 @@ public abstract record ChatSegmentItem
             Id = delta.ItemId,
             Type = ChatToolCallKind.Function.ToString(),
             Name = null,
-            Arguments = delta.Delta,
+            Arguments = delta.Delta switch
+            {
+                { IsEmpty: true } => "",
+                _ => delta.Delta.ToString()
+            }
         };
     }
 
@@ -160,10 +164,14 @@ public abstract record ChatSegmentItem
         return new ToolCallSegment
         {
             Index = toolCall.Index,
-            Id = toolCall.ToolCallId,
+            Id = toolCall.ToolCallId switch
+            {
+                null or "" => null,
+                _ => toolCall.ToolCallId
+            },
             Type = toolCall.Kind.ToString(),
             Name = toolCall.FunctionName,
-            Arguments = GetBinaryData(toolCall.FunctionArgumentsUpdate).Length == 0 ? "" : toolCall.FunctionArgumentsUpdate.ToString(),
+            Arguments = (toolCall.FunctionArgumentsUpdate == null || GetBinaryData(toolCall.FunctionArgumentsUpdate).Length == 0) ? "" : toolCall.FunctionArgumentsUpdate.ToString(),
         };
     }
 

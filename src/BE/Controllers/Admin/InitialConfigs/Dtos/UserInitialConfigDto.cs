@@ -51,12 +51,7 @@ public class UserInitialConfigDtoTemp
             Id = Id,
             Name = Name,
             LoginType = LoginType,
-            Models = [.. JsonSerializer.Deserialize<JsonArray>(Models)!
-                .Select(x => x!)
-                .OrderByDescending(x => (bool)x["enabled"]!)
-                .ThenByDescending(x => x["tokens"]!.ToString())
-                .ThenByDescending(x => x["counts"]!.ToString())
-                .ThenByDescending(x => x["expires"]!.ToString())],
+            Models = [.. JsonSerializer.Deserialize<JsonArray>(Models)!.Select(x => x!)],
             Price = Price.ToString(),
             InvitationCodeId = InvitationCodeId?.ToString() ?? "-",
             InvitationCode = InvitationCode

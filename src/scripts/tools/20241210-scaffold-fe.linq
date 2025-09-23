@@ -8,15 +8,15 @@ async Task Main()
 {
 	string wwwroot = Path.Combine(new DirectoryInfo(Path.GetDirectoryName(Util.CurrentQueryPath)!).Parent!.Parent!.ToString(), "BE", "wwwroot");
 	Directory.Delete(wwwroot, recursive: true);
-	string latestfeUrl = "https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip";
 	using HttpClient http = new();
-	ZipArchive zip = new(await http.GetStreamAsync(latestfeUrl), ZipArchiveMode.Read, leaveOpen: false);
+	using ZipArchive zip = new(await http.GetStreamAsync("https://chats.sdcb.pub/latest/chats-fe.zip"), ZipArchiveMode.Read, leaveOpen: false);
 	foreach (ZipArchiveEntry entry in zip.Entries)
 	{
 		entry.Uncapsulate()._storedEntryName = entry.FullName.Replace("chats-fe/", "");
 		ExtractRelativeToDirectory(entry, wwwroot, overwrite: false);
 	}
 	File.WriteAllBytes(Path.Combine(wwwroot, ".gitkeep"), new byte[0]);
+	Console.WriteLine("Done!");
 }
 
 internal static void ExtractRelativeToDirectory(ZipArchiveEntry source, string destinationDirectoryName, bool overwrite)

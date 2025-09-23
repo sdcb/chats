@@ -1,4 +1,5 @@
-﻿using Chats.BE.DB;
+﻿using Chats.BE.Controllers.Chats.UserChats.Dtos;
+using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using System.Text.Json.Serialization;
 
@@ -27,6 +28,12 @@ public record UpdateChatSpanRequest
     [JsonPropertyName("reasoningEffort")]
     public DBReasoningEffort ReasoningEffort { get; init; }
 
+    [JsonPropertyName("imageSize")]
+    public DBKnownImageSize ImageSize { get; init; }
+
+    [JsonPropertyName("mcps")]
+    public ChatSpanMcp[] Mcps { get; init; } = [];
+
     public void ApplyTo(ChatSpan span)
     {
         span.Enabled = Enabled;
@@ -38,6 +45,10 @@ public record UpdateChatSpanRequest
         config.WebSearchEnabled = WebSearchEnabled;
         config.MaxOutputTokens = MaxOutputTokens;
         config.ReasoningEffort = (byte)ReasoningEffort;
+        config.ImageSizeId = (short)ImageSize;
+        
+        // Update ChatConfigMcp associations
+        UpdateMcpAssociations(config);
     }
 
     public void ApplyTo(ChatPresetSpan span, Model model)
@@ -56,6 +67,10 @@ public record UpdateChatSpanRequest
         config.WebSearchEnabled = WebSearchEnabled;
         config.MaxOutputTokens = MaxOutputTokens;
         config.ReasoningEffort = (byte)ReasoningEffort;
+        config.ImageSizeId = (short)ImageSize;
+        
+        // Update ChatConfigMcp associations
+        UpdateMcpAssociations(config);
     }
 
     public ChatPresetSpan ToDB(Model model, byte spanId)
@@ -65,20 +80,77 @@ public record UpdateChatSpanRequest
             throw new ArgumentException("ModelId does not match the provided model", nameof(ModelId));
         }
 
-        return new ChatPresetSpan()
+        ChatConfig chatConfig = new ChatConfig()
+        {
+            ModelId = ModelId,
+            Model = model,
+            SystemPrompt = string.IsNullOrEmpty(SystemPrompt) ? null : SystemPrompt,
+            Temperature = Temperature,
+            WebSearchEnabled = WebSearchEnabled,
+            MaxOutputTokens = MaxOutputTokens,
+            ReasoningEffort = (byte)ReasoningEffort,
+            ImageSizeId = (short)ImageSize,
+        };
+
+        ChatPresetSpan presetSpan = new ChatPresetSpan()
         {
             SpanId = spanId, 
             Enabled = Enabled,
-            ChatConfig = new ChatConfig()
-            {
-                ModelId = ModelId,
-                Model = model,
-                SystemPrompt = string.IsNullOrEmpty(SystemPrompt) ? null : SystemPrompt,
-                Temperature = Temperature,
-                WebSearchEnabled = WebSearchEnabled,
-                MaxOutputTokens = MaxOutputTokens,
-                ReasoningEffort = (byte)ReasoningEffort,
-            },
+            ChatConfig = chatConfig,
         };
+
+        // Add ChatConfigMcp associations
+        foreach (ChatSpanMcp mcp in Mcps)
+        {
+            chatConfig.ChatConfigMcps.Add(new ChatConfigMcp
+            {
+                ChatConfig = chatConfig,
+                McpServerId = mcp.Id,
+                CustomHeaders = mcp.CustomHeaders,
+            });
+        }
+
+        return presetSpan;
+    }
+
+    private void UpdateMcpAssociations(ChatConfig config)
+    {
+        HashSet<int> currentMcpIds = [.. config.ChatConfigMcps.Select(x => x.McpServerId)];
+        HashSet<int> requestMcpIds = [.. Mcps.Select(x => x.Id)];
+        HashSet<int> toRemove = [.. currentMcpIds.Except(requestMcpIds)];
+        HashSet<int> toAdd = [.. requestMcpIds.Except(currentMcpIds)];
+        HashSet<int> toUpdate = [.. currentMcpIds.Intersect(requestMcpIds)];
+        
+        // 删除不再需要的关联
+        if (toRemove.Count > 0)
+        {
+            List<ChatConfigMcp> itemsToRemove = [.. config.ChatConfigMcps.Where(x => toRemove.Contains(x.McpServerId))];
+            
+            foreach (ChatConfigMcp item in itemsToRemove)
+            {
+                config.ChatConfigMcps.Remove(item);
+            }
+        }
+
+        // 添加新的关联
+        foreach (int mcpServerId in toAdd)
+        {
+            config.ChatConfigMcps.Add(new ChatConfigMcp
+            {
+                ChatConfig = config,
+                McpServerId = mcpServerId,
+                CustomHeaders = Mcps.First(x => x.Id == mcpServerId).GetNormalizedCustomHeaders(),
+            });
+        }
+        
+        // 更新现有关联的 Headers（如果有变化）
+        foreach (ChatConfigMcp existing in config.ChatConfigMcps.Where(x => toUpdate.Contains(x.McpServerId)))
+        {
+            string? newHeaders = Mcps.First(x => x.Id == existing.McpServerId).GetNormalizedCustomHeaders();
+            if (existing.CustomHeaders != newHeaders)
+            {
+                existing.CustomHeaders = newHeaders;
+            }
+        }
     }
 }

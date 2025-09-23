@@ -10,6 +10,7 @@ using Chats.BE.Services.FileServices;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Chats.BE.DB.Enums;
 
 namespace Chats.BE.Controllers.Admin.AdminMessage;
 
@@ -48,6 +49,12 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
+                    ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+                    Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
+                    {
+                        Id = mcp.McpServerId,
+                        CustomHeaders = mcp.CustomHeaders
+                    }).ToArray()
                 }).ToArray(),
             }), req, cancellationToken);
     }
@@ -85,8 +92,14 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
+                    ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+                    Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
+                    {
+                        Id = mcp.McpServerId,
+                        CustomHeaders = mcp.CustomHeaders
+                    }).ToArray()
                 }).ToArray(),
-                LeafMessageId = urlEncryption.EncryptMessageId(x.LeafMessageId),
+                LeafTurnId = urlEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
             })
             .AsSplitQuery()
@@ -94,38 +107,41 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
 
         if (chats == null) return null;
 
-        return chats.WithMessages(await db.Messages
-            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentBlob)
-            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileContentType)
-            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
-            .Include(x => x.MessageContents).ThenInclude(x => x.MessageContentText)
-            .Where(m => m.ChatId == chatId)
+        return chats.WithMessages(await db.ChatTurns
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentBlob)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileContentType)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentText)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCallResponse)
+            .Where(m => m.ChatId == chatId && m.Steps.Any())
             .Select(x => new ChatMessageTemp()
             {
                 Id = x.Id,
                 ParentId = x.ParentId,
-                Role = (DBChatRole)x.ChatRoleId,
-                Content = x.MessageContents
+                Role = x.IsUser ? DBChatRole.User : DBChatRole.Assistant,
+                Content = x.Steps
+                    .SelectMany(x => x.StepContents)
                     .OrderBy(x => x.Id)
                     .ToArray(),
-                CreatedAt = x.CreatedAt,
+                CreatedAt = x.Steps.First().CreatedAt,
                 SpanId = x.SpanId,
-                Edited = x.Edited,
-                Usage = x.MessageResponse!.Usage == null ? null : new ChatMessageTempUsage()
+                Edited = x.Steps.Any(x => x.Edited),
+                Usage = x.IsUser ? null : new ChatMessageTempUsage()
                 {
-                    InputTokens = x.MessageResponse.Usage.InputTokens,
-                    OutputTokens = x.MessageResponse.Usage.OutputTokens,
-                    InputPrice = x.MessageResponse.Usage.InputCost,
-                    OutputPrice = x.MessageResponse.Usage.OutputCost,
-                    ReasoningTokens = x.MessageResponse.Usage.ReasoningTokens,
-                    Duration = x.MessageResponse.Usage.TotalDurationMs - x.MessageResponse.Usage.PreprocessDurationMs,
-                    ReasoningDuration = x.MessageResponse.Usage.ReasoningDurationMs,
-                    FirstTokenLatency = x.MessageResponse.Usage.FirstResponseDurationMs,
-                    ModelId = x.MessageResponse.Usage.UserModel.ModelId,
-                    ModelName = x.MessageResponse.Usage.UserModel.Model.Name,
-                    ModelProviderId = x.MessageResponse.Usage.UserModel.Model.ModelKey.ModelProviderId,
-                    Reaction = x.MessageResponse.ReactionId,
+                    InputTokens = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.InputTokens),
+                    OutputTokens = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.OutputTokens),
+                    InputPrice = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.InputCost),
+                    OutputPrice = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.OutputCost),
+                    ReasoningTokens = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.ReasoningTokens),
+                    Duration = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.TotalDurationMs),
+                    ReasoningDuration = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.ReasoningDurationMs),
+                    FirstTokenLatency = x.Steps.First().Usage!.FirstResponseDurationMs,
+                    ModelId = x.Steps.First().Usage!.ModelId,
+                    ModelName = x.Steps.First().Usage!.Model.Name,
+                    ModelProviderId = x.Steps.First().Usage!.Model.ModelKey.ModelProviderId,
                 },
+                Reaction = x.ReactionId,
             })
             .OrderBy(x => x.CreatedAt)
             .Select(x => x.ToDto(urlEncryption, fup))

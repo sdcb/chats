@@ -12,11 +12,14 @@ import {
   getFileUrl,
   MessageContentType,
   ResponseContent,
+  ToolCallContent,
+  ToolResponseContent,
 } from '@/types/chat';
 import { IChatMessage, MessageDisplayType } from '@/types/chatMessage';
 
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
+import ToolCallBlock from '@/components/Markdown/ToolCallBlock';
 
 import ChatError from '../ChatError/ChatError';
 import { IconCopy, IconDots, IconEdit } from '../Icons';
@@ -34,6 +37,32 @@ import { cn } from '@/lib/utils';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
+
+// 骨架动画组件
+const SkeletonLine = ({ width = '100%', height = '1rem', delay = '0s' }: { width?: string; height?: string; delay?: string }) => (
+  <div 
+    className="animate-pulse bg-muted rounded" 
+    style={{ 
+      width, 
+      height,
+      animationDelay: delay,
+      animationDuration: '1.5s'
+    }}
+  />
+);
+
+const MessageSkeleton = () => (
+  <div className="space-y-3 py-2">
+    {/* 第一行较短，立即显示 */}
+    <SkeletonLine width="75%" delay="0s" />
+    {/* 第二行完整，稍微延迟 */}
+    <SkeletonLine width="100%" delay="0.1s" />
+    {/* 第三行中等长度 */}
+    <SkeletonLine width="60%" delay="0.2s" />
+    {/* 第四行较短，模拟段落结束 */}
+    <SkeletonLine width="40%" delay="0.3s" />
+  </div>
+);
 
 interface Props {
   message: IChatMessage;
@@ -59,9 +88,11 @@ const ResponseMessage = (props: Props) => {
 
   const handleEditMessage = (isCopyAndSave: boolean = false) => {
     const newContent = messageContent.find((c) => c.i === editId)!;
-    newContent.c = contentText;
-    onEditResponseMessage &&
-      onEditResponseMessage(messageId, newContent, isCopyAndSave);
+    // Only text content can be edited
+    if (newContent.$type === MessageContentType.text) {
+      newContent.c = contentText;
+      onEditResponseMessage && onEditResponseMessage(messageId, newContent, isCopyAndSave);
+    }
     setEditId(EMPTY_ID);
   };
 
@@ -89,6 +120,61 @@ const ResponseMessage = (props: Props) => {
     navigator.clipboard.writeText(text || '');
   };
 
+  // UI层的DTO，用于组合工具调用和响应
+  interface ToolGroupContent {
+    $type: 'toolGroup';
+    toolCall: ToolCallContent;
+    toolResponse?: ToolResponseContent;
+    originalIndex: number;
+  }
+
+  type ProcessedContent = ResponseContent | ToolGroupContent;
+
+  // 按原始顺序处理内容，将工具调用和响应组合
+  const processContentInOrder = (content: ResponseContent[]): ProcessedContent[] => {
+    const toolResponseMap: { [toolCallId: string]: ToolResponseContent } = {};
+    const processedContent: ProcessedContent[] = [];
+    
+    // 首先收集所有工具响应
+    content.forEach((c) => {
+      if (c.$type === MessageContentType.toolResponse) {
+        const toolResponse = c as ToolResponseContent;
+        toolResponseMap[toolResponse.u] = toolResponse;
+      }
+    });
+
+    // 按原始顺序处理内容
+    content.forEach((c, index) => {
+      if (c.$type === MessageContentType.toolCall) {
+        const toolCall = c as ToolCallContent;
+        const toolResponse = toolResponseMap[toolCall.u];
+        processedContent.push({
+          $type: 'toolGroup',
+          toolCall,
+          toolResponse,
+          originalIndex: index
+        });
+      } else if (c.$type !== MessageContentType.toolResponse) {
+        // 跳过工具响应，因为它们已经被组合到工具调用中了
+        processedContent.push(c);
+      }
+    });
+
+    return processedContent;
+  };
+
+  const renderToolGroup = (toolGroup: ToolGroupContent, index: number) => {
+    const { toolCall, toolResponse } = toolGroup;
+
+    return (
+      <ToolCallBlock
+        key={`tool-group-${index}`}
+        toolCall={toolCall}
+        toolResponse={toolResponse}
+      />
+    );
+  };
+
   useEffect(() => {
     setMessageContent(structuredClone(content));
   }, [content]);
@@ -100,13 +186,32 @@ const ResponseMessage = (props: Props) => {
     }
   }, [editId]);
 
+  // 使用最新的内容进行处理，但在编辑模式时使用本地状态
+  const contentToProcess = editId !== EMPTY_ID ? messageContent : content;
+  const processedContent = processContentInOrder(contentToProcess);
+
+  // 判断是否应该显示骨架动画
+  const shouldShowSkeleton = 
+    (messageStatus === ChatSpanStatus.Pending || messageStatus === ChatSpanStatus.Chatting) &&
+    (!contentToProcess || contentToProcess.length === 0 || 
+     (contentToProcess.length === 1 && contentToProcess[0].$type === MessageContentType.text && !contentToProcess[0].c));
+
+  // 如果应该显示骨架动画，则直接返回骨架
+  if (shouldShowSkeleton) {
+    return (
+      <div className="space-y-4">
+        <MessageSkeleton />
+      </div>
+    );
+  }
+
   return (
     <>
-      {messageStatus === ChatSpanStatus.Pending && (
-        <span className="animate-pulse">▍</span>
-      )}
-      {message.content.map((c, index) => {
-        if (c.$type === MessageContentType.reasoning) {
+      {/* Render content in original order */}
+      {processedContent.map((c, index) => {
+        if (c.$type === 'toolGroup') {
+          return renderToolGroup(c, index);
+        } else if (c.$type === MessageContentType.reasoning) {
           return (
             <ThinkingMessage
               key={'reasoning-' + index}
@@ -172,7 +277,7 @@ const ResponseMessage = (props: Props) => {
                     className="rounded-md border border-neutral-300 px-4 py-1 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
                     onClick={(e) => {
                       setContentText('');
-                      setEditId('');
+                      setEditId(EMPTY_ID);
                       e.stopPropagation();
                     }}
                   >
@@ -244,7 +349,11 @@ const ResponseMessage = (props: Props) => {
                     },
                   }}
                 >
-                  {`${preprocessLaTeX(c.c!)}`}
+                  {`${preprocessLaTeX(c.c!)}${
+                    (messageStatus === ChatSpanStatus.Pending || messageStatus === ChatSpanStatus.Chatting) && 
+                    index === processedContent.length - 1 && 
+                    c.$type === MessageContentType.text ? '▍' : ''
+                  }`}
                 </MemoizedReactMarkdown>
               )}
               <div className="absolute -bottom-0.5 right-0 z-10">

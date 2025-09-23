@@ -214,7 +214,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         int fileId = urlEncryption.DecryptFileId(encryptedFileId);
         DB.File? file = await db.Files
             .Include(x => x.FileService)
-            .Include(x => x.MessageContentFiles)
+            .Include(x => x.StepContentFiles)
             .FirstOrDefaultAsync(x => x.Id == fileId, cancellationToken);
         if (file == null)
         {
@@ -226,7 +226,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
             return NotFound("File not found.");
         }
 
-        if (file.MessageContentFiles.Count != 0)
+        if (file.StepContentFiles.Count != 0)
         {
             return BadRequest("File is used in messages, cannot delete.");
         }

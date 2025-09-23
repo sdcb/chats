@@ -1,7 +1,6 @@
-﻿using Chats.BE.Controllers.Chats.Prompts.Dtos;
+using Chats.BE.Controllers.Chats.Prompts.Dtos;
 using Chats.BE.Controllers.Chats.Prompts;
 using Chats.BE.Controllers.Chats.UserChats.Dtos;
-using Chats.BE.Controllers.Common;
 using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Infrastructure;
@@ -10,6 +9,7 @@ using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Chats.BE.DB.Enums;
 
 namespace Chats.BE.Controllers.Chats.UserChats;
 
@@ -41,8 +41,12 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
+                    ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+                    Mcps = span.ChatConfig.ChatConfigMcps
+                        .Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders })
+                        .ToArray()
                 }).ToArray(),
-                LeafMessageId = idEncryption.EncryptMessageId(x.LeafMessageId),
+                LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
             })
             .FirstOrDefaultAsync(cancellationToken);
@@ -87,8 +91,10 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
+                    ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+                    Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders }).ToArray(),
                 }).ToArray(),
-                LeafMessageId = idEncryption.EncryptMessageId(x.LeafMessageId),
+                LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
             })
             .OrderByDescending(x => x.Id), request, cancellationToken);
@@ -113,7 +119,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                 Id = idEncryption.EncryptChatId(x.Id),
                 Title = x.Title,
                 IsTopMost = x.IsTopMost,
-                IsShared = x.ChatShares.Any(),
+                IsShared = x.ChatShares.Count != 0,
                 GroupId = idEncryption.EncryptChatGroupId(x.ChatGroupId),
                 Tags = x.ChatTags.Select(x => x.Name).ToArray(),
                 Spans = x.ChatSpans.Select(span => new ChatSpanDto
@@ -128,8 +134,10 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
+                    ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+                    Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders }).ToArray()
                 }).ToArray(),
-                LeafMessageId = idEncryption.EncryptMessageId(x.LeafMessageId),
+                LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
             }),
             request,
@@ -145,7 +153,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             .ToDictionaryAsync(k => k.ModelId, v => v, cancellationToken);
         if (validModels.Count == 0)
         {
-            return this.BadRequestMessage("No model available.");
+            return BadRequest("No model available.");
         }
 
         if (request.GroupId != null)
@@ -170,7 +178,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
         };
 
         Chat? lastChat = await db.Chats
-            .Include(x => x.ChatSpans.OrderBy(x => x.SpanId)).ThenInclude(x => x.ChatConfig)
+            .Include(x => x.ChatSpans.OrderBy(x => x.SpanId)).ThenInclude(x => x.ChatConfig).ThenInclude(x => x.ChatConfigMcps)
             .Where(x => x.UserId == currentUser.Id && !x.IsArchived && x.ChatSpans.Any())
             .OrderByDescending(x => x.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
@@ -196,7 +204,6 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             [
                 new()
                 {
-                    ChatId = chat.Id,
                     SpanId = 0,
                     Enabled = true,
                     ChatConfig = new ChatConfig
@@ -205,7 +212,6 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                         Model = validModels.First().Value.Model,
                         Temperature = null,
                         WebSearchEnabled = false,
-                        HashCode = 0,
                         MaxOutputTokens = null,
                         ReasoningEffort = 0,
                         SystemPrompt = defaultPrompt.Content,
@@ -225,7 +231,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             GroupId = idEncryption.EncryptChatGroupId(chat.ChatGroupId),
             Tags = [],
             Spans = [.. chat.ChatSpans.Select(ChatSpanDto.FromDB)],
-            LeafMessageId = idEncryption.EncryptMessageId(chat.LeafMessageId),
+            LeafTurnId = idEncryption.EncryptTurnId(chat.LeafTurnId),
             UpdatedAt = chat.UpdatedAt,
         });
     }
@@ -302,9 +308,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             return NotFound();
         }
 
-        ChatShareDto[] result = chat.ChatShares
-            .Select(x => ChatShareDto.FromDB(x, idEncryption))
-            .ToArray();
+        ChatShareDto[] result = [.. chat.ChatShares.Select(x => ChatShareDto.FromDB(x, idEncryption))];
         return Ok(result);
     }
 

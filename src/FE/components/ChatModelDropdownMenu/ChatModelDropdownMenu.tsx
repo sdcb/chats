@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -22,16 +22,7 @@ import {
 
 import { cn } from '@/lib/utils';
 
-const ChatModelDropdownMenu = ({
-  models,
-  readonly,
-  content,
-  className,
-  hideIcon,
-  triggerClassName,
-  groupClassName,
-  onChangeModel,
-}: {
+const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
   models: AdminModelDto[];
   modelId?: number;
   modelName?: string;
@@ -43,7 +34,16 @@ const ChatModelDropdownMenu = ({
   groupClassName?: string;
   hideIcon?: boolean;
   onChangeModel: (model: AdminModelDto) => void;
-}) => {
+}>(({
+  models,
+  readonly,
+  content,
+  className,
+  hideIcon,
+  triggerClassName,
+  groupClassName,
+  onChangeModel,
+}, ref) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -85,6 +85,7 @@ const ChatModelDropdownMenu = ({
   return (
     <DropdownMenu onOpenChange={handleOpenMenu}>
       <DropdownMenuTrigger
+        ref={ref}
         disabled={readonly}
         className={cn(
           'focus:outline-none rounded-sm p-1 m-0 h-7 flex items-center border-neutral-600',
@@ -153,6 +154,8 @@ const ChatModelDropdownMenu = ({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-};
+});
+
+ChatModelDropdownMenu.displayName = 'ChatModelDropdownMenu';
 
 export default ChatModelDropdownMenu;

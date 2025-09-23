@@ -1,24 +1,30 @@
 ﻿using Chats.BE.Controllers.Chats.Chats.Dtos;
+using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Chats.BE.Infrastructure;
+using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Services;
-using Chats.BE.Services.Models;
-using Chats.BE.Services.Models.Dtos;
-using Chats.BE.Services.Models.ChatServices.Test;
 using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models;
+using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.Services.Models.ChatServices.Test;
+using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ModelContextProtocol;
+using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
 using OpenAI.Chat;
 using System.ClientModel;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Channels;
+using EmptyResult = Microsoft.AspNetCore.Mvc.EmptyResult;
 using OpenAIChatMessage = OpenAI.Chat.ChatMessage;
-using Chats.BE.Controllers.Chats.Messages.Dtos;
-using Chats.BE.Services.Models.ChatServices;
-using Chats.BE.DB.Enums;
 
 namespace Chats.BE.Controllers.Chats.Chats;
 
@@ -27,7 +33,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 {
     [HttpPost("regenerate-assistant-message")]
     public async Task<IActionResult> RegenerateOneMessage(
-        [FromBody] RegenerateAssistantMessageRequest req,
+        [FromBody] EncryptedRegenerateAssistantMessageRequest req,
         [FromServices] ChatsDB db,
         [FromServices] CurrentUser currentUser,
         [FromServices] ILogger<ChatController> logger,
@@ -53,7 +59,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
     [HttpPost("regenerate-all-assistant-message")]
     public async Task<IActionResult> RegenerateAllMessage(
-    [FromBody] RegenerateAllAssistantMessageRequest req,
+    [FromBody] EncryptedRegenerateAllAssistantMessageRequest req,
     [FromServices] ChatsDB db,
     [FromServices] CurrentUser currentUser,
     [FromServices] ILogger<ChatController> logger,
@@ -79,7 +85,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
     [HttpPost("general")]
     public async Task<IActionResult> GeneralChat(
-        [FromBody] GeneralChatRequest req,
+        [FromBody] EncryptedGeneralChatRequest req,
         [FromServices] ChatsDB db,
         [FromServices] CurrentUser currentUser,
         [FromServices] ILogger<ChatController> logger,
@@ -109,7 +115,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
     }
 
     private async Task<IActionResult> ChatPrivate(
-        DecryptedChatRequest req,
+        ChatRequest req,
         ChatsDB db,
         CurrentUser currentUser,
         ILogger<ChatController> logger,
@@ -119,7 +125,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         UserModelManager userModelManager,
         FileUrlProvider fup,
         ChatConfigService chatConfigService,
-        DBFileService dbFileService, 
+        DBFileService dbFileService,
         CancellationToken cancellationToken)
     {
         long firstTick = Stopwatch.GetTimestamp();
@@ -128,27 +134,21 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig)
-            .Include(x => x.Messages.Where(x => x.ChatRoleId == (byte)DBChatRole.User || x.ChatRoleId == (byte)DBChatRole.Assistant))
+                .ThenInclude(x => x.ChatConfigMcps).ThenInclude(x => x.McpServer.McpTools)
+            .Include(x => x.ChatTurns)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == req.ChatId && x.UserId == currentUser.Id, cancellationToken);
         if (chat == null)
         {
             return NotFound();
         }
 
-        Dictionary<long, MessageLiteDtoNoContent> existingMessages = chat.Messages
-            .Select(x => new MessageLiteDtoNoContent()
-            {
-                Id = x.Id,
-                Role = (DBChatRole)x.ChatRoleId,
-                ParentId = x.ParentId,
-                SpanId = x.SpanId,
-            })
-            .ToDictionary(x => x.Id, x => x);
+        Dictionary<long, ChatTurn> existingMessages = chat.ChatTurns.ToDictionary(x => x.Id, x => x);
         bool isEmptyChat = existingMessages.Count == 0;
 
         // ensure chat.ChatSpan contains all span ids that in request, otherwise return error
         ChatSpan[] toGenerateSpans = null!;
-        if (req is DecryptedRegenerateAssistantMessageRequest rr)
+        if (req is RegenerateAssistantMessageRequest rr)
         {
             ChatSpan? span = chat.ChatSpans.FirstOrDefault(y => y.SpanId == rr.SpanId);
             if (span == null)
@@ -160,13 +160,26 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             newSpan.ChatConfig.ModelId = rr.ModelId;
             toGenerateSpans = [newSpan];
         }
-        else if (req is DecryptedGeneralChatRequest or DecryptedRegenerateAllAssistantMessageRequest)
+        else if (req is GeneralChatRequest or RegenerateAllAssistantMessageRequest)
         {
-            toGenerateSpans = [.. chat.ChatSpans.Where(x => x.Enabled)];
+            toGenerateSpans = [..chat.ChatSpans
+                .Where(x => x.Enabled)
+                .Select(x => x.Clone())];
         }
         if (toGenerateSpans.Length == 0)
         {
             return BadRequest("No enabled spans");
+        }
+
+        // validate user has access to all ChatSpan's MCP tool
+        HashSet<int> mcpServerIds = [.. toGenerateSpans.SelectMany(x => x.ChatConfig.ChatConfigMcps.Select(y => y.McpServerId))];
+        UserMcp[] userMcps = mcpServerIds.Count == 0 ? [] : await db.UserMcps
+            .Where(x => x.UserId == currentUser.Id && mcpServerIds.Contains(x.McpServerId))
+            .Include(x => x.McpServer)
+            .ToArrayAsync(cancellationToken);
+        if (userMcps.Length != mcpServerIds.Count)
+        {
+            return BadRequest("Invalid MCP server permission");
         }
 
         Dictionary<short, UserModel> userModels = await userModelManager.GetUserModels(currentUser.Id, [.. toGenerateSpans.Select(x => x.ChatConfig.ModelId)], cancellationToken);
@@ -180,77 +193,86 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             }
         }
 
-        Message? newDbUserMessage = null;
-        if (req is DecryptedGeneralChatRequest generalRequest)
+        ChatTurn? newDbUserTurn = null;
+        if (req is GeneralChatRequest generalRequest)
         {
             if (generalRequest.ParentAssistantMessageId != null)
             {
-                if (!existingMessages.TryGetValue(generalRequest.ParentAssistantMessageId.Value, out MessageLiteDtoNoContent? parentMessage))
+                if (!existingMessages.TryGetValue(generalRequest.ParentAssistantMessageId.Value, out ChatTurn? parentMessage))
                 {
                     return BadRequest("Invalid message id");
                 }
 
-                if (parentMessage.Role != DBChatRole.Assistant)
+                if (parentMessage.IsUser)
                 {
                     return BadRequest("Parent message is not assistant message");
                 }
             }
 
-            newDbUserMessage = new()
+            newDbUserTurn = new()
             {
-                ChatRoleId = (byte)DBChatRole.User,
-                MessageContents = await MessageContent.FromRequest(generalRequest.UserMessage, fup, cancellationToken),
-                CreatedAt = DateTime.UtcNow,
+                IsUser = true,
+                Steps =
+                [
+                    new Step()
+                    {
+                        StepContents = await StepContent.FromRequest(generalRequest.UserMessage, fup, cancellationToken),
+                        ChatRoleId = (byte)DBChatRole.User,
+                        CreatedAt = DateTime.UtcNow,
+                        Edited = false,
+                    }
+                ],
                 ParentId = generalRequest.ParentAssistantMessageId,
             };
-            chat.Messages.Add(newDbUserMessage);
+            chat.ChatTurns.Add(newDbUserTurn);
         }
-        else if (req is DecryptedRegenerateAllAssistantMessageRequest regenerateRequest)
+        else if (req is RegenerateAllAssistantMessageRequest regenerateRequest)
         {
-            if (!existingMessages.TryGetValue(regenerateRequest.ParentUserMessageId, out MessageLiteDtoNoContent? parentMessage))
+            if (!existingMessages.TryGetValue(regenerateRequest.ParentUserMessageId, out ChatTurn? parentMessage))
             {
                 return BadRequest("Invalid message id");
             }
 
-            if (parentMessage.Role != DBChatRole.User)
+            if (!parentMessage.IsUser)
             {
                 return BadRequest("ParentUserMessageId is not user message");
             }
         }
 
-        LinkedList<MessageLiteDtoNoContent> messageTreeNoContent = GetMessageTree(existingMessages, req.LastMessageId);
-        MessageLiteDto[] messageTree = await FillContents(messageTreeNoContent, db, cancellationToken);
+        LinkedList<ChatTurn> messageTreeNoContent = GetMessageTree(existingMessages, req.LastMessageId);
+        Step[] messageTree = await FillContents(messageTreeNoContent, db, cancellationToken);
 
         Response.Headers.ContentType = "text/event-stream";
         Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
         Response.Headers.Connection = "keep-alive";
         string stopId = stopService.CreateAndCombineCancellationToken(ref cancellationToken);
-        await YieldResponse(SseResponseLine.StopId(stopId));
+        await YieldResponse(new StopIdLine(stopId));
 
         UserBalance userBalance = await db.UserBalances.Where(x => x.UserId == currentUser.Id).SingleAsync(cancellationToken);
+        UserModelBalanceCalculator cost = new(BalanceInitialInfo.FromDB(userModels.Values, userBalance.Balance), []);
 
         Channel<SseResponseLine>[] channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
         Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache = [];
-        Task<ChatSpanResponse>[] streamTasks = [.. toGenerateSpans
-            .Select((span, index) => ProcessChatSpan(
-                currentUser,
-                logger,
-                chatFactory,
-                fup,
-                span,
-                firstTick,
-                req,
-                chat,
-                userModels[span.ChatConfig.ModelId],
-                messageTree,
-                newDbUserMessage,
-                userBalance,
-                clientInfoIdTask,
-                imageFileCache,
-                channels[index].Writer,
-                cancellationToken))];
+        Task[] streamTasks = [.. toGenerateSpans.Select((span, index) => ProcessChatSpan(
+            currentUser,
+            logger,
+            chatFactory,
+            fup,
+            span,
+            firstTick,
+            req,
+            chat,
+            userModels[span.ChatConfig.ModelId],
+            userMcps,
+            messageTree,
+            newDbUserTurn,
+            cost.WithScoped(span.SpanId.ToString()),
+            clientInfoIdTask,
+            imageFileCache,
+            channels[index].Writer,
+            cancellationToken))];
 
-        if (isEmptyChat && req is DecryptedGeneralChatRequest generalChatRequest)
+        if (isEmptyChat && req is GeneralChatRequest generalChatRequest)
         {
             string text = generalChatRequest.UserMessage
                 .OfType<TextContentRequestItem>()
@@ -263,45 +285,57 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         FileService fs = null!;
         await foreach (SseResponseLine line in MergeChannels(channels).Reader.ReadAllAsync(CancellationToken.None))
         {
-            if (line.Kind == SseResponseKind.End)
+            if (line is EndTurn allEnd)
             {
-                Message dbAssistantMessage = (Message)line.Result;
-                ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == dbAssistantMessage.SpanId);
-                dbAssistantMessage.MessageResponse!.ChatConfig = await chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, default);
-                chat.Messages.Add(dbAssistantMessage);
-                bool isLast = line.SpanId == toGenerateSpans.Last().SpanId;
+                bool isLast = allEnd.SpanId == toGenerateSpans.Last().SpanId;
                 if (isLast)
                 {
-                    chat.LeafMessage = dbAssistantMessage;
+                    chat.LeafTurn = allEnd.Turn;
+                }
+                await db.SaveChangesAsync(CancellationToken.None);
+
+                if (newDbUserTurn != null && !dbUserMessageYield)
+                {
+                    await YieldResponse(SseResponseLine.UserTurn(newDbUserTurn, idEncryption, fup));
+                    dbUserMessageYield = true;
+                }
+                await YieldResponse(SseResponseLine.ResponseMessage(allEnd.SpanId, allEnd.Turn, idEncryption, fup));
+                if (isLast)
+                {
+                    await YieldResponse(SseResponseLine.ChatLeafTurnId(chat.LeafTurnId!.Value, idEncryption));
+                }
+            }
+            else if (line is EndStep endLine)
+            {
+                if (endLine.Step.Turn.ChatConfig == null)
+                {
+                    ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == endLine.SpanId);
+                    endLine.Step.Turn.ChatConfig = await chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, default);
                 }
                 chat.UpdatedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync(CancellationToken.None);
-
-                if (newDbUserMessage != null && !dbUserMessageYield)
-                {
-                    await YieldResponse(SseResponseLine.UserMessage(newDbUserMessage, idEncryption, fup));
-                    dbUserMessageYield = true;
-                }
-                await YieldResponse(SseResponseLine.ResponseMessage(line.SpanId!.Value, dbAssistantMessage, idEncryption, fup));
-                if (isLast)
-                {
-                    await YieldResponse(SseResponseLine.ChatLeafMessageId(chat.LeafMessageId!.Value, idEncryption));
-                }
             }
-            else if (line.Kind == SseResponseKind.ImageGenerated)
+            else if (line is TempImageGeneratedLine tempImageGeneratedLine)
             {
-                ImageChatSegment image = (ImageChatSegment)line.Result;
+                ImageChatSegment image = tempImageGeneratedLine.Image;
                 if (!imageFileCache.TryGetValue(image, out TaskCompletionSource<DB.File>? tcs))
                 {
                     throw new InvalidOperationException("Image file cache not found.");
                 }
+
+                await YieldResponse(new ImageGeneratedLine(tempImageGeneratedLine.SpanId, new FileDto()
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    ContentType = image.ToContentType(),
+                    Url = image.ToTempUrl(),
+                }));
 
                 try
                 {
                     fs ??= await FileService.GetDefault(db, cancellationToken) ?? throw new InvalidOperationException("Default file service config not found.");
                     DB.File file = await dbFileService.StoreImage(image, await clientInfoIdTask, fs, cancellationToken: default);
                     tcs.SetResult(file);
-                    await YieldResponse(SseResponseLine.ImageGenerated(line.SpanId!.Value, fup.CreateFileDto(file, tryWithUrl: false)));
+                    await YieldResponse(new ImageGeneratedLine(tempImageGeneratedLine.SpanId, fup.CreateFileDto(file, tryWithUrl: false)));
                 }
                 catch (Exception e)
                 {
@@ -313,22 +347,30 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 await YieldResponse(line);
             }
         }
+
         cancellationToken = CancellationToken.None;
         stopService.Remove(stopId);
 
         // not cancellable from here
-        ChatSpanResponse[] resps = await Task.WhenAll(streamTasks);
+        await Task.WhenAll(streamTasks);
 
         // finish costs
-        if (resps.Any(x => x.Cost.CostBalance > 0))
+        if (cost.BalanceCost > 0)
         {
             await balanceService.UpdateBalance(db, currentUser.Id, cancellationToken);
         }
-        if (resps.Any(x => x.Cost.CostUsage))
+        if (cost.UsageCosts.Any())
         {
-            foreach (UserModel um in userModels.Values)
+            foreach (BalanceInitialUsageInfo um in cost.UsageCosts)
             {
-                await balanceService.UpdateUsage(db, um.Id, cancellationToken);
+                if (userModels.TryGetValue(um.ModelId, out UserModel? userModel))
+                {
+                    await balanceService.UpdateUsage(db, userModel.Id, cancellationToken);
+                }
+                else
+                {
+                    logger.LogError("UserModel not found for model id: {modelId}", um.ModelId);
+                }
             }
         }
 
@@ -337,43 +379,52 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         return new EmptyResult();
     }
 
-    private static async Task<MessageLiteDto[]> FillContents(LinkedList<MessageLiteDtoNoContent> noContent, ChatsDB db, CancellationToken cancellationToken)
+    private static async Task<Step[]> FillContents(LinkedList<ChatTurn> noContent, ChatsDB db, CancellationToken cancellationToken)
     {
-        HashSet<long> messageIds = [.. noContent.Select(x => x.Id)];
-        Dictionary<long, MessageContent[]> contents = await db.MessageContents
-            .Where(x => messageIds.Contains(x.MessageId))
-            .Include(x => x.MessageContentBlob)
-            .Include(x => x.MessageContentFile).ThenInclude(x => x!.File.FileService)
-            .Include(x => x.MessageContentFile).ThenInclude(x => x!.File.FileImageInfo)
-            .Include(x => x.MessageContentFile).ThenInclude(x => x!.File.FileContentType)
-            .Include(x => x.MessageContentText)
-            .GroupBy(x => x.MessageId)
+        Dictionary<long, ChatTurn> turnMap = noContent.ToDictionary(x => x.Id, x => x);
+        Dictionary<long, Step[]> contents = await db.Steps
+            .Where(x => turnMap.Keys.Contains(x.TurnId))
+            .Include(x => x.StepContents).ThenInclude(x => x.StepContentBlob)
+            .Include(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File.FileService)
+            .Include(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File.FileImageInfo)
+            .Include(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File.FileContentType)
+            .Include(x => x.StepContents).ThenInclude(x => x.StepContentText)
+            .Include(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
+            .Include(x => x.StepContents).ThenInclude(x => x.StepContentToolCallResponse)
+            .OrderBy(x => x.Id)
+            .GroupBy(x => x.TurnId)
             .ToDictionaryAsync(k => k.Key, v => v.ToArray(), cancellationToken);
-        return [.. noContent.Select(x => x.WithContent(contents[x.Id]))];
+        foreach (ChatTurn turn in noContent)
+        {
+            turn.Steps = contents.TryGetValue(turn.Id, out Step[]? steps) ? steps : [];
+        }
+
+        return [.. noContent.SelectMany(x => x.Steps)];
     }
 
-    private static async Task<ChatSpanResponse> ProcessChatSpan(
+    private static async Task ProcessChatSpan(
         CurrentUser currentUser,
         ILogger<ChatController> logger,
         ChatFactory chatFactory,
         FileUrlProvider fup,
         ChatSpan chatSpan,
         long firstTick,
-        DecryptedChatRequest req,
+        ChatRequest req,
         Chat chat,
         UserModel userModel,
-        IEnumerable<MessageLiteDto> messageTree,
-        Message? dbUserMessage,
-        UserBalance userBalance,
+        UserMcp[] userMcps,
+        IEnumerable<Step> messageTree,
+        ChatTurn? dbUserMessage,
+        ScopedBalanceCalculator calc,
         Task<int> clientInfoIdTask,
         Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache,
         ChannelWriter<SseResponseLine> writer,
         CancellationToken cancellationToken)
     {
-        List<OpenAIChatMessage> messageToSend = await ((IEnumerable<MessageLiteDto>)
+        List<OpenAIChatMessage> messageToSend = await ((IEnumerable<Step>)
         [
             ..messageTree,
-            ..dbUserMessage != null ? [MessageLiteDto.FromDB(dbUserMessage)] : Array.Empty<MessageLiteDto>(),
+            ..dbUserMessage != null ? dbUserMessage.Steps : Array.Empty<Step>(),
         ])
         .ToAsyncEnumerable()
         .SelectAwait(async x => await x.ToOpenAI(fup, cancellationToken))
@@ -388,143 +439,299 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         {
             TimezoneOffset = req.TimezoneOffset,
             WebSearchEnabled = chatSpan.ChatConfig.WebSearchEnabled,
-            ReasoningEffort = (DBReasoningEffort)chatSpan.ChatConfig.ReasoningEffort
+            ReasoningEffort = (DBReasoningEffort)chatSpan.ChatConfig.ReasoningEffort,
+            ImageSize = (DBKnownImageSize)chatSpan.ChatConfig.ImageSizeId,
         };
 
-        InChatContext icc = new(firstTick);
-
-        string? errorText = null;
-        try
+        // Build a name mapping for tools to avoid collisions while keeping names clean
+        Dictionary<string, (int serverId, string originalToolName)> toolNameMap = new(StringComparer.Ordinal);
+        HashSet<string> usedToolNames = new(StringComparer.Ordinal);
+        foreach (McpTool tool in chatSpan.ChatConfig.ChatConfigMcps.SelectMany(x => x.McpServer.McpTools))
         {
-            using ChatService s = chatFactory.CreateChatService(userModel.Model);
-
-            bool responseStated = false, reasoningStarted = false;
-            await foreach (InternalChatSegment seg in icc.Run(userBalance.Balance, userModel, s.ChatStreamedFEProcessed(messageToSend, cco, ced, cancellationToken)))
+            string finalName = tool.ToolName;
+            if (!usedToolNames.Add(finalName))
             {
-                foreach (ChatSegmentItem item in seg.Items)
+                // Duplicate detected, generate a non-digit-leading 8-char random prefix
+                string prefix;
+                do
                 {
-                    if (item is ThinkChatSegment thinkSeg)
-                    {
-                        if (!reasoningStarted)
-                        {
-                            await writer.WriteAsync(SseResponseLine.StartReasoning(chatSpan.SpanId), cancellationToken);
-                            reasoningStarted = true;
-                        }
-                        await writer.WriteAsync(SseResponseLine.ReasoningSegment(chatSpan.SpanId, thinkSeg.Think), cancellationToken);
-                    }
-                    else if (item is TextChatSegment textSeg)
-                    {
-                        if (!responseStated)
-                        {
-                            await writer.WriteAsync(SseResponseLine.StartResponse(chatSpan.SpanId, icc.ReasoningDurationMs), cancellationToken);
-                            responseStated = true;
-                        }
-                        await writer.WriteAsync(SseResponseLine.Segment(chatSpan.SpanId, textSeg.Text), cancellationToken);
-                    }
-                    else if (item is ImageChatSegment imgSeg)
-                    {
-                        imageFileCache[imgSeg] = new TaskCompletionSource<DB.File>();
-                        await writer.WriteAsync(SseResponseLine.ImageGeneratedTemp(chatSpan.SpanId, imgSeg), cancellationToken);
-                    }
-                }
+                    prefix = GenerateAlphaFirstToken(8);
+                    finalName = prefix + "_" + tool.ToolName;
+                } while (!usedToolNames.Add(finalName));
+            }
 
-                if (seg.FinishReason == ChatFinishReason.ContentFilter)
-                {
-                    errorText = "Content Filtered";
-                }
+            toolNameMap[finalName] = (tool.McpServerId, tool.ToolName);
+            cco.Tools.Add(ChatTool.CreateFunctionTool(finalName, tool.Description, tool.Parameters == null ? null : BinaryData.FromString(tool.Parameters)));
+        }
 
-                if (cancellationToken.IsCancellationRequested)
+        ChatTurn turn = new()
+        {
+            SpanId = chatSpan.SpanId,
+            IsUser = false,
+        };
+        if (req is GeneralChatRequest && dbUserMessage != null)
+        {
+            turn.Parent = dbUserMessage;
+        }
+        else if (req is RegenerateAllAssistantMessageRequest regenerateAssistantMessageRequest)
+        {
+            turn.ParentId = regenerateAssistantMessageRequest.ParentUserMessageId;
+        }
+        chat.ChatTurns.Add(turn);
+
+        while (true)
+        {
+            Step step = await RunOne(messageToSend);
+            await WriteStep(step);
+
+            if (step.StepContents.Any(x => x.ContentTypeId == (byte)DBMessageContentType.ToolCall))
+            {
+                foreach (StepContentToolCall call in step.StepContents!
+                    .Where(x => x.StepContentToolCall != null)
+                    .Select(x => x.StepContentToolCall!))
                 {
-                    throw new TaskCanceledException();
+                    if (!toolNameMap.TryGetValue(call.Name!, out var mapped))
+                    {
+                        throw new InvalidOperationException($"Tool name not found in map: {call.Name}");
+                    }
+                    int serverId = mapped.serverId;
+                    string toolName = mapped.originalToolName;
+
+                    McpServer mcpServer = chatSpan.ChatConfig.ChatConfigMcps
+                        .Where(x => x.McpServerId == serverId)
+                        .Select(x => x.McpServer)
+                        .FirstOrDefault() ?? throw new InvalidOperationException($"MCP Server not found for id: {serverId}");
+                    UserMcp userMcp = userMcps.FirstOrDefault(x => x.McpServerId == mcpServer.Id)
+                        ?? throw new InvalidOperationException($"UserMcp not found for server id: {mcpServer.Id}");
+                    Dictionary<string, string> headers = MergeHeaders(
+                        mcpServer.Headers, 
+                        userMcp.CustomHeaders, 
+                        chatSpan.ChatConfig.ChatConfigMcps.FirstOrDefault(x => x.McpServerId == mcpServer.Id)?.CustomHeaders);
+
+                    logger.LogInformation("Using MCP Server {mcpServer.Label} ({mcpServer.Url}) for tool call {call.Name} with headers: {headers}",
+                        mcpServer.Label, mcpServer.Url, call.Name, headers);
+                    Stopwatch sw = Stopwatch.StartNew();
+                    IMcpClient mcpClient = await McpClientFactory.CreateAsync(new SseClientTransport(new SseClientTransportOptions
+                    {
+                        Endpoint = new Uri(mcpServer.Url),
+                        AdditionalHeaders = headers,
+                    }), cancellationToken: cancellationToken);
+
+                    logger.LogInformation("{mcpServer.Label} connected, elapsed={elapsed}ms, Calling tool: {toolName}, parameters: {call.Parameters}",
+                        mcpServer.Label, sw.ElapsedMilliseconds, toolName, call.Parameters);
+
+                    (bool isSuccess, string toolResult) = await CallMcp();
+                    logger.LogInformation("Tool {call.Name} completed, success: {success}, result: {result}", call.Name, isSuccess, toolResult);
+                    writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, true, call.ToolCallId!, toolResult));
+                    await WriteStep(new Step()
+                    {
+                        Turn = turn,
+                        ChatRoleId = (byte)DBChatRole.ToolCall,
+                        CreatedAt = DateTime.UtcNow,
+                        Edited = false,
+                        StepContents =
+                        [
+                            new StepContent()
+                            {
+                                StepContentToolCallResponse = new()
+                                {
+                                    ToolCallId = call.ToolCallId,
+                                    Response = toolResult,
+                                    DurationMs = (int)sw.ElapsedMilliseconds,
+                                    IsSuccess = isSuccess,
+                                },
+                                ContentTypeId = (byte)DBMessageContentType.ToolCallResponse,
+                            }
+                        ],
+                    });
+
+                    async Task<(bool success, string result)> CallMcp()
+                    {
+                        try
+                        {
+                            CallToolResult result = await mcpClient.CallToolAsync(toolName, JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Parameters)!, new ProgressReporter(pnv =>
+                            {
+                                logger.LogInformation("Tool {call.Name} progress: {pnv.Message}", call.Name, pnv.Message);
+                                writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId!, pnv.Message!));
+                            }), cancellationToken: cancellationToken);
+                            return (result.IsError switch
+                            {
+                                null => true,
+                                _ => !result.IsError.Value
+                            }, string.Join("\n", result.Content.OfType<TextContentBlock>().Select(x => x.Text)));
+                        }
+                        catch (McpException e)
+                        {
+                            return (false, e.Message);
+                        }
+                    }
+
+                    Dictionary<string, string> MergeHeaders(params string?[] headers)
+                    {
+                        Dictionary<string, string> result = [];
+
+                        foreach (string? header in headers)
+                        {
+                            if (string.IsNullOrWhiteSpace(header)) continue;
+                            try
+                            {
+                                Dictionary<string, string>? dict = JsonSerializer.Deserialize<Dictionary<string, string>>(header);
+                                if (dict != null)
+                                {
+                                    foreach (KeyValuePair<string, string> kv in dict)
+                                    {
+                                        result[kv.Key] = kv.Value;
+                                    }
+                                }
+                            }
+                            catch (JsonException)
+                            {
+                                logger.LogWarning("Invalid MCP header JSON: {header}", header);
+                            }
+                        }
+
+                        return result;
+                    }
                 }
             }
-        }
-        catch (ChatServiceException cse)
-        {
-            icc.FinishReason = cse.ErrorCode;
-            errorText = cse.Message;
-        }
-        catch (ClientResultException e)
-        {
-            icc.FinishReason = DBFinishReason.UpstreamError;
-            errorText = e.Message;
-            logger.LogError(e, "Upstream error: {userMessageId}", req.LastMessageId);
-        }
-        catch (AggregateException e) when (e.InnerException is TaskCanceledException)
-        {
-            // do nothing if cancelled
-            icc.FinishReason = DBFinishReason.Cancelled;
-            errorText = e.InnerException.ToString();
-        }
-        catch (TaskCanceledException)
-        {
-            // do nothing if cancelled
-            icc.FinishReason = DBFinishReason.Cancelled;
-            errorText = "Conversation cancelled";
-        }
-        catch (UriFormatException e)
-        {
-            icc.FinishReason = DBFinishReason.InternalConfigIssue;
-            errorText = e.Message;
-            logger.LogError(e, "Invalid URL in conversation for message: {userMessageId}", req.LastMessageId);
-        }
-        catch (JsonException e)
-        {
-            icc.FinishReason = DBFinishReason.InternalConfigIssue;
-            errorText = e.Message;
-            logger.LogError(e, "Invalid JSON config in conversation for message: {userMessageId}", req.LastMessageId);
-        }
-        catch (Exception e)
-        {
-            icc.FinishReason = DBFinishReason.UnknownError;
-            errorText = "Unknown Error";
-            logger.LogError(e, "Error in conversation for message: {userMessageId}", req.LastMessageId);
-        }
-        finally
-        {
-            // cancel the conversation because following code is credit deduction related
-            cancellationToken = CancellationToken.None;
+            else
+            {
+                break;
+            }
         }
 
-        // success
-        // insert new assistant message
-        Message dbAssistantMessage = new()
-        {
-            ChatId = chat.Id,
-            ChatRoleId = (byte)DBChatRole.Assistant,
-            SpanId = chatSpan.SpanId,
-            CreatedAt = DateTime.UtcNow,
-        };
-        if (req is DecryptedGeneralChatRequest && dbUserMessage != null)
-        {
-            dbAssistantMessage.Parent = dbUserMessage;
-        }
-        else if (req is DecryptedRegenerateAllAssistantMessageRequest decryptedRegenerateAssistantMessageRequest)
-        {
-            dbAssistantMessage.ParentId = decryptedRegenerateAssistantMessageRequest.ParentUserMessageId;
-        }
-        foreach (MessageContent mc in MessageContent.FromFullResponse(icc.FullResponse, errorText, imageFileCache))
-        {
-            dbAssistantMessage.MessageContents.Add(mc);
-        }
-
-        if (errorText != null)
-        {
-            await writer.WriteAsync(SseResponseLine.Error(chatSpan.SpanId, errorText), cancellationToken);
-        }
-        UserModelUsage usage = icc.ToUserModelUsage(currentUser.Id, userModel, await clientInfoIdTask, isApi: false);
-        dbAssistantMessage.MessageResponse = new MessageResponse()
-        {
-            Usage = usage,
-        };
-        await writer.WriteAsync(new SseResponseLine { Kind = SseResponseKind.End, Result = dbAssistantMessage, SpanId = chatSpan.SpanId }, cancellationToken);
+        writer.TryWrite(new EndTurn(chatSpan.SpanId, turn));
         writer.Complete();
-        return new ChatSpanResponse()
+
+        async Task WriteStep(Step step)
         {
-            AssistantMessage = dbAssistantMessage,
-            Cost = icc.Cost,
-            SpanId = chatSpan.SpanId,
-        };
+            messageToSend.Add(await step.ToOpenAI(fup, cancellationToken));
+            turn.Steps.Add(step);
+            writer.TryWrite(new EndStep(chatSpan.SpanId, step));
+        }
+
+        async Task<Step> RunOne(List<OpenAIChatMessage> messageToSend)
+        {
+            InChatContext icc = new(firstTick);
+
+            string? errorText = null;
+            try
+            {
+                using ChatService s = chatFactory.CreateChatService(userModel.Model);
+
+                bool responseStated = false, reasoningStarted = false;
+                await foreach (InternalChatSegment seg in icc.Run(calc, userModel, s.ChatStreamedFEProcessed(messageToSend, cco, ced, cancellationToken)))
+                {
+                    foreach (ChatSegmentItem item in seg.Items)
+                    {
+                        if (item is ThinkChatSegment thinkSeg)
+                        {
+                            if (!reasoningStarted)
+                            {
+                                writer.TryWrite(new StartReasoningLine(chatSpan.SpanId));
+                                reasoningStarted = true;
+                            }
+                            writer.TryWrite(new ReasoningSegmentLine(chatSpan.SpanId, thinkSeg.Think));
+                        }
+                        else if (item is TextChatSegment textSeg)
+                        {
+                            if (!responseStated)
+                            {
+                                writer.TryWrite(new StartResponseLine(chatSpan.SpanId, icc.ReasoningDurationMs));
+                                responseStated = true;
+                            }
+                            writer.TryWrite(new SegmentLine(chatSpan.SpanId, textSeg.Text));
+                        }
+                        else if (item is ToolCallSegment toolCall)
+                        {
+                            if (!responseStated)
+                            {
+                                responseStated = true;
+                            }
+                            writer.TryWrite(new CallingToolLine(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolCall.Arguments));
+                        }
+                        else if (item is ImageChatSegment imgSeg)
+                        {
+                            imageFileCache[imgSeg] = new TaskCompletionSource<DB.File>();
+                            writer.TryWrite(new TempImageGeneratedLine(chatSpan.SpanId, imgSeg));
+                        }
+                    }
+
+                    if (seg.FinishReason == ChatFinishReason.ContentFilter)
+                    {
+                        errorText = "Content Filtered";
+                    }
+
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        throw new TaskCanceledException();
+                    }
+                }
+            }
+            catch (ChatServiceException cse)
+            {
+                icc.FinishReason = cse.ErrorCode;
+                errorText = cse.Message;
+            }
+            catch (ClientResultException e)
+            {
+                icc.FinishReason = DBFinishReason.UpstreamError;
+                errorText = e.Message;
+                logger.LogError(e, "Upstream error: {userMessageId}", req.LastMessageId);
+            }
+            catch (AggregateException e) when (e.InnerException is TaskCanceledException)
+            {
+                // do nothing if cancelled
+                icc.FinishReason = DBFinishReason.Cancelled;
+                errorText = e.InnerException.ToString();
+            }
+            catch (TaskCanceledException)
+            {
+                // do nothing if cancelled
+                icc.FinishReason = DBFinishReason.Cancelled;
+                errorText = "Conversation cancelled";
+            }
+            catch (UriFormatException e)
+            {
+                icc.FinishReason = DBFinishReason.InternalConfigIssue;
+                errorText = e.Message;
+                logger.LogError(e, "Invalid URL in conversation for message: {userMessageId}", req.LastMessageId);
+            }
+            catch (JsonException e)
+            {
+                icc.FinishReason = DBFinishReason.InternalConfigIssue;
+                errorText = e.Message;
+                logger.LogError(e, "Invalid JSON config in conversation for message: {userMessageId}", req.LastMessageId);
+            }
+            catch (Exception e)
+            {
+                icc.FinishReason = DBFinishReason.UnknownError;
+                errorText = e.Message;
+                logger.LogError(e, "Error in conversation for message: {userMessageId}", req.LastMessageId);
+            }
+            finally
+            {
+                // cancel the conversation because following code is credit deduction related
+                cancellationToken = CancellationToken.None;
+            }
+
+            // success
+            // insert new assistant message
+            Step step = new()
+            {
+                ChatRoleId = (byte)DBChatRole.Assistant,
+                CreatedAt = DateTime.UtcNow,
+                Usage = icc.ToUserModelUsage(currentUser.Id, calc, userModel, await clientInfoIdTask, isApi: false),
+                StepContents = [.. StepContent.FromFullResponse(icc.FullResponse, errorText, imageFileCache)],
+                Turn = turn,
+            };
+
+            if (errorText != null)
+            {
+                writer.TryWrite(new ErrorLine(chatSpan.SpanId, errorText));
+            }
+            return step;
+        }
     }
 
     static Channel<T> MergeChannels<T>(params Channel<T>[] channels)
@@ -538,7 +745,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             {
                 try
                 {
-                    await foreach (var item in channel.Reader.ReadAllAsync())
+                    await foreach (T? item in channel.Reader.ReadAllAsync())
                     {
                         await outputChannel.Writer.WriteAsync(item);
                     }
@@ -558,10 +765,10 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
     private async Task YieldTitle(string title)
     {
-        await YieldResponse(SseResponseLine.UpdateTitle(""));
+        await YieldResponse(new UpdateTitleLine(""));
         foreach (string segment in TestChatService.UnicodeCharacterSplit(title))
         {
-            await YieldResponse(SseResponseLine.TitleSegment(segment));
+            await YieldResponse(new TitleSegmentLine(segment));
             await Task.Delay(10);
         }
     }
@@ -577,9 +784,9 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         await Response.Body.FlushAsync();
     }
 
-    static LinkedList<MessageLiteDtoNoContent> GetMessageTree(Dictionary<long, MessageLiteDtoNoContent> existingMessages, long? fromParentId)
+    static LinkedList<ChatTurn> GetMessageTree(Dictionary<long, ChatTurn> existingMessages, long? fromParentId)
     {
-        LinkedList<MessageLiteDtoNoContent> line = [];
+        LinkedList<ChatTurn> line = [];
         long? currentParentId = fromParentId;
         while (currentParentId != null)
         {
@@ -604,5 +811,20 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         {
             return NotFound();
         }
+    }
+
+    private static string GenerateAlphaFirstToken(int length)
+    {
+        if (length <= 0) throw new ArgumentOutOfRangeException(nameof(length));
+        const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        const string alphanum = letters + "0123456789";
+
+        Span<char> buffer = stackalloc char[length];
+        buffer[0] = letters[RandomNumberGenerator.GetInt32(letters.Length)];
+        for (int i = 1; i < length; i++)
+        {
+            buffer[i] = alphanum[RandomNumberGenerator.GetInt32(alphanum.Length)];
+        }
+        return new string(buffer);
     }
 }

@@ -35,24 +35,24 @@ public static class UrlEncryptionServiceExtensions
         return that.DecodeSignedPathAsInt32(path, validBefore, hash, EncryptionPurpose.FileId);
     }
 
-    public static string EncryptMessageId(this IUrlEncryptionService that, long messageId)
+    public static string EncryptTurnId(this IUrlEncryptionService that, long turnId)
     {
-        return that.Encrypt(messageId, EncryptionPurpose.MessageId);
+        return that.Encrypt(turnId, EncryptionPurpose.TurnId);
     }
 
-    public static string? EncryptMessageId(this IUrlEncryptionService that, long? messageId)
+    public static string? EncryptTurnId(this IUrlEncryptionService that, long? turnId)
     {
-        return messageId == null ? null : that.EncryptMessageId(messageId.Value);
+        return turnId == null ? null : that.EncryptTurnId(turnId.Value);
     }
 
-    public static long DecryptMessageId(this IUrlEncryptionService that, string encryptedMessageId)
+    public static long DecryptTurnId(this IUrlEncryptionService that, string encryptedTurnId)
     {
-        return that.DecryptAsInt64(encryptedMessageId, EncryptionPurpose.MessageId);
+        return that.DecryptAsInt64(encryptedTurnId, EncryptionPurpose.TurnId);
     }
 
-    public static long? DecryptMessageIdOrNull(this IUrlEncryptionService that, string? encryptedMessageId)
+    public static long? DecryptTurnIdOrEmpty(this IUrlEncryptionService that, string? encryptedTurnId)
     {
-        return encryptedMessageId == null ? null : that.DecryptAsInt64(encryptedMessageId, EncryptionPurpose.MessageId);
+        return string.IsNullOrEmpty(encryptedTurnId) ? null : that.DecryptAsInt64(encryptedTurnId, EncryptionPurpose.TurnId);
     }
 
     public static string EncryptChatGroupId(this IUrlEncryptionService that, int chatGroupId)

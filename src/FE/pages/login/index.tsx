@@ -11,11 +11,11 @@ import { LoginType } from '@/types/user';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import AccountLoginCard from './_components/AccountLoginCard';
-import KeyCloakLogin from './_components/KeyCloakLogin';
-import PhoneLoginCard from './_components/PhoneLoginCard';
-import PhoneRegisterCard from './_components/PhoneRegisterCard';
-import WeChatLogin from './_components/WeChatLogin';
+import AccountLoginCard from '@/components/login/AccountLoginCard';
+import KeyCloakLogin from '@/components/login/KeyCloakLogin';
+import PhoneLoginCard from '@/components/login/PhoneLoginCard';
+import PhoneRegisterCard from '@/components/login/PhoneRegisterCard';
+import WeChatLogin from '@/components/login/WeChatLogin';
 
 import { getLoginProviders, getSiteInfo } from '@/apis/clientApis';
 
@@ -61,22 +61,29 @@ export default function LoginPage() {
   useEffect(() => {
     setIsClient(true);
     setLoading(true);
-    getLoginProviders().then((data) => {
-      let hasPhoneType = false;
-      setLoginConfigs(
-        data.map((x) => {
-          if (x.key === LoginType.Phone) {
-            hasPhoneType = true;
-          }
-          return {
-            type: x.key,
-            configs: x.config,
-          };
-        }),
-      );
-      setCurrentTab(hasPhoneType ? TabKeys.PHONE : TabKeys.ACCOUNT);
-      setLoading(false);
-    });
+    getLoginProviders()
+      .then((data) => {
+        let hasPhoneType = false;
+        setLoginConfigs(
+          (data || []).map((x) => {  // 添加空值检查
+            if (x.key === LoginType.Phone) {
+              hasPhoneType = true;
+            }
+            return {
+              type: x.key,
+              configs: x.config,
+            };
+          }),
+        );
+        setCurrentTab(hasPhoneType ? TabKeys.PHONE : TabKeys.ACCOUNT);
+        setLoading(false);
+      })
+      .catch((error) => {  // 添加错误处理
+        console.error('Failed to load login providers:', error);
+        setLoginConfigs([]);
+        setCurrentTab(TabKeys.ACCOUNT);
+        setLoading(false);
+      });
     getSiteInfo().then((data) => {
       setWebSiteInfo(data);
     });

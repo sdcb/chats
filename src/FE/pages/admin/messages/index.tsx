@@ -10,6 +10,7 @@ import { PageResult, Paging } from '@/types/page';
 
 import PaginationContainer from '../../../components/Pagiation/Pagiation';
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import Tips from '@/components/Tips/Tips';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,7 @@ import {
 } from '@/components/ui/table';
 
 import { getMessages } from '@/apis/adminApis';
+import { cn } from '@/lib/utils';
 
 export default function Messages() {
   const { t } = useTranslation();
@@ -88,18 +90,31 @@ export default function Messages() {
                   {item.title}
                 </TableCell>
                 <TableCell>
-                  {item.spans.map((x) => (
-                    <div
-                      className="flex gap-x-1"
-                      key={'message-chat-icon' + x.modelId}
-                    >
-                      <ChatIcon
-                        className="inline"
-                        providerId={x.modelProviderId}
-                      />
-                      {x.modelName}
-                    </div>
-                  ))}
+                  <div className="flex overflow-hidden">
+                    {item.spans.map((x, index) => (
+                      <div
+                        key={'message-chat-icon-wrapper-' + x.modelId}
+                        className={cn(
+                          "flex-shrink-0 relative",
+                          index > 0 && "-ml-2.5"
+                        )}
+                        style={{ zIndex: item.spans.length - index }}
+                      >
+                        <Tips
+                          trigger={
+                            <div>
+                              <ChatIcon
+                                className="cursor-pointer"
+                                providerId={x.modelProviderId}
+                              />
+                            </div>
+                          }
+                          side="bottom"
+                          content={x.modelName}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </TableCell>
                 <TableCell>{item.username}</TableCell>
                 <TableCell>{formatDateTime(item.createdAt)}</TableCell>
