@@ -416,75 +416,7 @@ const ChatInput = ({
 
               {/* 滚动按钮组 - 水平排列 */}
               {/* 移除原来的位置，现在放到收起按钮同一排 */}
-              {!isFullWriting && (
-                <div className="absolute left-1/2 -translate-x-1/2 -top-4 flex gap-2 items-center z-10">
-                  {/* 滚动到顶部按钮 */}
-                  {showScrollToTopButton && (
-                    <Tips
-                      trigger={
-                        <Button
-                          className="w-auto h-auto p-1.5 rounded-full bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-lg border border-border/50"
-                          onClick={onScrollToTopClick}
-                        >
-                          <IconArrowDoubleUp className="text-foreground/80 w-4 h-4" />
-                        </Button>
-                      }
-                      side="bottom"
-                      content={t('Scroll to top')}
-                    />
-                  )}
-                  
-                  {/* 滚动到上一条用户消息按钮 */}
-                  {showScrollToPrevUserMessageButton && (
-                    <Tips
-                      trigger={
-                        <Button
-                          className="w-auto h-auto p-1.5 rounded-full bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-lg border border-border/50"
-                          onClick={onScrollToPrevUserMessageClick}
-                        >
-                          <IconArrowUp className="text-foreground/80 w-4 h-4" />
-                        </Button>
-                      }
-                      side="bottom"
-                      content={t('Scroll to previous user message')}
-                    />
-                  )}
-                  
-                  {/* 滚动到底部按钮 */}
-                  {showScrollDownButton && (
-                    <Tips
-                      trigger={
-                        <Button
-                          className="w-auto h-auto p-1.5 rounded-full bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-lg border border-border/50"
-                          onClick={onScrollDownClick}
-                        >
-                          <IconArrowDown className="text-foreground/80 w-4 h-4" />
-                        </Button>
-                      }
-                      side="bottom"
-                      content={t('Scroll to bottom')}
-                    />
-                  )}
-                  
-                  {/* 收起抽屉按钮 */}
-                  <Tips
-                    trigger={
-                      <Button
-                        className={cn(
-                          'w-auto h-5 bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-md border border-border/30'
-                        )}
-                        onClick={handleToggleVisibility}
-                      >
-                        <IconArrowCompactDown className="text-foreground/70" />
-                      </Button>
-                    }
-                    side="bottom"
-                    content={t('Collapse input')}
-                  />
-                </div>
-              )}
-
-              <div className="flex px-1 justify-between">
+              <div className="flex px-1 items-center gap-2">
                 <div
                   className={cn(
                     'flex items-center',
@@ -545,7 +477,76 @@ const ChatInput = ({
                     />
                   </div>
                 </div>
-                <div className="flex items-center">
+                  <div className="flex flex-1 justify-center">
+                    {!isFullWriting && (
+                      <div className="flex items-center gap-2">
+                        {/* 滚动到顶部按钮 */}
+                        {showScrollToTopButton && (
+                          <Tips
+                            trigger={
+                              <Button
+                                className="w-auto h-auto p-1.5 rounded-full bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-lg border border-border/50"
+                                onClick={onScrollToTopClick}
+                              >
+                                <IconArrowDoubleUp className="text-foreground/80 w-4 h-4" />
+                              </Button>
+                            }
+                            side="bottom"
+                            content={t('Scroll to top')}
+                          />
+                        )}
+
+                        {/* 滚动到上一条用户消息按钮 */}
+                        {showScrollToPrevUserMessageButton && (
+                          <Tips
+                            trigger={
+                              <Button
+                                className="w-auto h-auto p-1.5 rounded-full bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-lg border border-border/50"
+                                onClick={onScrollToPrevUserMessageClick}
+                              >
+                                <IconArrowUp className="text-foreground/80 w-4 h-4" />
+                              </Button>
+                            }
+                            side="bottom"
+                            content={t('Scroll to previous user message')}
+                          />
+                        )}
+
+                        {/* 滚动到底部按钮 */}
+                        {showScrollDownButton && (
+                          <Tips
+                            trigger={
+                              <Button
+                                className="w-auto h-auto p-1.5 rounded-full bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-lg border border-border/50"
+                                onClick={onScrollDownClick}
+                              >
+                                <IconArrowDown className="text-foreground/80 w-4 h-4" />
+                              </Button>
+                            }
+                            side="bottom"
+                            content={t('Scroll to bottom')}
+                          />
+                        )}
+
+                        {/* 收起抽屉按钮 */}
+                        <Tips
+                          trigger={
+                            <Button
+                              className={cn(
+                                'w-auto h-5 bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-md border border-border/30'
+                              )}
+                              onClick={handleToggleVisibility}
+                            >
+                              <IconArrowCompactDown className="text-foreground/70" />
+                            </Button>
+                          }
+                          side="bottom"
+                          content={t('Collapse input')}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center">
                   <Button
                     className="rounded-sm p-1 m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
                     onClick={handleClearAll}
