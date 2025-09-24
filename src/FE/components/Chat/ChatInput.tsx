@@ -31,7 +31,6 @@ import {
   IconArrowsDiagonal,
   IconArrowsDiagonalMinimize,
   IconCircleX,
-  IconEraser,
   IconCamera,
   IconLoader,
   IconPaperclip,
@@ -261,11 +260,6 @@ const ChatInput = ({
     setIsFullWriting(value);
   };
 
-  const handleClearAll = () => {
-    setContentText('');
-    setContentFiles([]);
-  };
-
   const parseVariables = (content: string) => {
     const regex = /{{(.*?)}}/g;
     const foundVariables = [];
@@ -385,7 +379,7 @@ const ChatInput = ({
               'stretch flex flex-row rounded-md mx-auto w-full px-2 md:px-4',
             )}
           >
-            <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] p-2">
+            <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] pl-0 pt-0 pr-0 pb-1">
               <div className="absolute mb-1 bottom-full mx-auto flex w-full justify-start z-10">
                 {!isFullWriting &&
                   contentFiles.map((file, index) => (
@@ -416,7 +410,7 @@ const ChatInput = ({
 
               {/* 滚动按钮组 - 水平排列 */}
               {/* 移除原来的位置，现在放到收起按钮同一排 */}
-              <div className="flex px-1 items-center gap-2">
+              <div className="flex px-1 items-center gap-1 md:gap-2 bg-muted/60 md:bg-muted rounded-t-md border-b border-border/40">
                 <div
                   className={cn(
                     'flex items-center',
@@ -477,96 +471,101 @@ const ChatInput = ({
                     />
                   </div>
                 </div>
-                  <div className="flex flex-1 justify-center">
-                    {!isFullWriting && (
-                      <div className="flex items-center gap-2">
-                        {/* 滚动到顶部按钮 */}
-                        {showScrollToTopButton && (
-                          <Tips
-                            trigger={
-                              <Button
-                                className="w-auto h-auto p-1.5 rounded-full bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-lg border border-border/50"
-                                onClick={onScrollToTopClick}
-                              >
-                                <IconArrowDoubleUp className="text-foreground/80 w-4 h-4" />
-                              </Button>
-                            }
-                            side="bottom"
-                            content={t('Scroll to top')}
-                          />
-                        )}
-
-                        {/* 滚动到上一条用户消息按钮 */}
-                        {showScrollToPrevUserMessageButton && (
-                          <Tips
-                            trigger={
-                              <Button
-                                className="w-auto h-auto p-1.5 rounded-full bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-lg border border-border/50"
-                                onClick={onScrollToPrevUserMessageClick}
-                              >
-                                <IconArrowUp className="text-foreground/80 w-4 h-4" />
-                              </Button>
-                            }
-                            side="bottom"
-                            content={t('Scroll to previous user message')}
-                          />
-                        )}
-
-                        {/* 滚动到底部按钮 */}
-                        {showScrollDownButton && (
-                          <Tips
-                            trigger={
-                              <Button
-                                className="w-auto h-auto p-1.5 rounded-full bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-lg border border-border/50"
-                                onClick={onScrollDownClick}
-                              >
-                                <IconArrowDown className="text-foreground/80 w-4 h-4" />
-                              </Button>
-                            }
-                            side="bottom"
-                            content={t('Scroll to bottom')}
-                          />
-                        )}
-
-                        {/* 收起抽屉按钮 */}
+                <div className="flex flex-1" />
+                <div className="flex items-center gap-1 md:gap-2">
+                  {!isFullWriting && (
+                    <div className="flex items-center gap-1 md:gap-2">
+                      {/* 滚动到顶部按钮 */}
+                      {showScrollToTopButton && (
                         <Tips
                           trigger={
                             <Button
-                              className={cn(
-                                'w-auto h-5 bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-md border border-border/30'
-                              )}
-                              onClick={handleToggleVisibility}
+                              className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                              onClick={onScrollToTopClick}
                             >
-                              <IconArrowCompactDown className="text-foreground/70" />
+                              <IconArrowDoubleUp size={22} className="text-foreground/80" />
                             </Button>
                           }
                           side="bottom"
-                          content={t('Collapse input')}
+                          content={t('Scroll to top')}
                         />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center">
-                  <Button
-                    className="rounded-sm p-1 m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
-                    onClick={handleClearAll}
-                  >
-                    <IconEraser size={22} />
-                  </Button>
+                      )}
+
+                      {/* 滚动到上一条用户消息按钮 */}
+                      {showScrollToPrevUserMessageButton && (
+                        <Tips
+                          trigger={
+                            <Button
+                              className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                              onClick={onScrollToPrevUserMessageClick}
+                            >
+                              <IconArrowUp size={22} className="text-foreground/80" />
+                            </Button>
+                          }
+                          side="bottom"
+                          content={t('Scroll to previous user message')}
+                        />
+                      )}
+
+                      {/* 滚动到底部按钮 */}
+                      {showScrollDownButton && (
+                        <Tips
+                          trigger={
+                            <Button
+                              className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                              onClick={onScrollDownClick}
+                            >
+                              <IconArrowDown size={22} className="text-foreground/80" />
+                            </Button>
+                          }
+                          side="bottom"
+                          content={t('Scroll to bottom')}
+                        />
+                      )}
+
+                      {/* 收起抽屉按钮 */}
+                      <Tips
+                        trigger={
+                          <Button
+                            className={cn(
+                              'rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto'
+                            )}
+                            onClick={handleToggleVisibility}
+                          >
+                            <IconArrowCompactDown size={22} className="text-foreground/70" />
+                          </Button>
+                        }
+                        side="bottom"
+                        content={t('Collapse input')}
+                      />
+                    </div>
+                  )}
                   {isFullWriting ? (
-                    <Button
-                      className="rounded-sm p-1 m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
-                      onClick={() => handleFullWriting(false)}
-                    >
-                      <IconArrowsDiagonalMinimize size={22} />
-                    </Button>
+                    <Tips
+                      trigger={
+                        <Button
+                          className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                          onClick={() => handleFullWriting(false)}
+                        >
+                          <IconArrowsDiagonalMinimize size={22} />
+                        </Button>
+                      }
+                      side="bottom"
+                      content={t('Exit fullscreen writing (Ctrl + F)')}
+                    />
                   ) : (
-                    <Button
-                      className="rounded-sm p-1 m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
-                      onClick={() => handleFullWriting(true)}
-                    >
-                      <IconArrowsDiagonal size={22} />
-                    </Button>
+                    <Tips
+                      trigger={
+                        <Button
+                          className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                          onClick={() => handleFullWriting(true)}
+                        >
+                          <IconArrowsDiagonal size={22} />
+                        </Button>
+                      }
+                      side="bottom"
+                      content={t('Enter fullscreen writing (Ctrl + F)')}
+                    />
                   )}
                 </div>
               </div>
@@ -623,23 +622,26 @@ const ChatInput = ({
                     ))}
                 </div>
                 <div className="flex flex-row gap-3 items-center">
-                  <div className="text-gray-400">
-                    Enter {t('Send')} / Ctrl Enter {t('Line break')}
-                  </div>
-                  <Button
-                    className="rounded-sm w-20 h-9"
-                    onClick={
-                      selectedChat.status === ChatStatus.Chatting
-                        ? handleStopChats
-                        : handleSend
+                  <Tips
+                    trigger={
+                      <Button
+                        className="rounded-sm w-20 h-9 mr-1"
+                        onClick={
+                          selectedChat.status === ChatStatus.Chatting
+                            ? handleStopChats
+                            : handleSend
+                        }
+                      >
+                        {selectedChat.status === ChatStatus.Chatting ? (
+                          <IconStopFilled className="h-4 w-4" />
+                        ) : (
+                          t('Send')
+                        )}
+                      </Button>
                     }
-                  >
-                    {selectedChat.status === ChatStatus.Chatting ? (
-                      <IconStopFilled className="h-4 w-4" />
-                    ) : (
-                      t('Send')
-                    )}
-                  </Button>
+                    side="top"
+                    content={`Enter ${t('Send')} / Ctrl Enter ${t('Line break')}`}
+                  />
                 </div>
               </div>
 
@@ -668,16 +670,16 @@ const ChatInput = ({
         </div>
       ) : (
         <div className="absolute bottom-0 left-0 w-full border-transparent bg-background">
-          <div className="absolute left-1/2 -translate-x-1/2 -top-8 flex gap-2 items-center z-10">
+          <div className="absolute right-2 md:right-4 -top-8 flex gap-1 md:gap-2 items-center z-10">
             {/* 滚动到顶部按钮 */}
             {showScrollToTopButton && (
               <Tips
                 trigger={
                   <Button
-                    className="w-auto h-auto p-1.5 rounded-full bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-lg border border-border/50"
+                    className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
                     onClick={onScrollToTopClick}
                   >
-                    <IconArrowDoubleUp className="text-foreground/80 w-4 h-4" />
+                    <IconArrowDoubleUp size={22} className="text-foreground/80" />
                   </Button>
                 }
                 side="bottom"
@@ -690,10 +692,10 @@ const ChatInput = ({
               <Tips
                 trigger={
                   <Button
-                    className="w-auto h-auto p-1.5 rounded-full bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-lg border border-border/50"
+                    className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
                     onClick={onScrollToPrevUserMessageClick}
                   >
-                    <IconArrowUp className="text-foreground/80 w-4 h-4" />
+                    <IconArrowUp size={22} className="text-foreground/80" />
                   </Button>
                 }
                 side="bottom"
@@ -706,10 +708,10 @@ const ChatInput = ({
               <Tips
                 trigger={
                   <Button
-                    className="w-auto h-auto p-1.5 rounded-full bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-lg border border-border/50"
+                    className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
                     onClick={onScrollDownClick}
                   >
-                    <IconArrowDown className="text-foreground/80 w-4 h-4" />
+                    <IconArrowDown size={22} className="text-foreground/80" />
                   </Button>
                 }
                 side="bottom"
@@ -721,15 +723,32 @@ const ChatInput = ({
             <Tips
               trigger={
                 <Button
-                  className="w-auto h-5 bg-card/90 backdrop-blur-sm hover:bg-card/95 shadow-md border border-border/30"
+                  className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
                   onClick={handleToggleVisibility}
                 >
-                  <IconArrowCompactDown className={'rotate-180 text-foreground/70'} />
+                  <IconArrowCompactDown size={22} className={'rotate-180 text-foreground/70'} />
                 </Button>
               }
               side="bottom"
               content={t('Expand input')}
             />
+
+            {selectedChat.status === ChatStatus.Chatting && (
+              <Tips
+                trigger={
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="m-0.5 sm:m-1 h-8 w-8 rounded-sm"
+                    onClick={handleStopChats}
+                  >
+                    <IconStopFilled size={16} />
+                  </Button>
+                }
+                side="bottom"
+                content={t('Stop Generating')}
+              />
+            )}
           </div>
         </div>
       )}
