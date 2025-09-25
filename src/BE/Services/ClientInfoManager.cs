@@ -52,9 +52,20 @@ public class ClientInfoManager(IHttpContextAccessor httpContextAccessor, ChatsDB
         ClientInfo? clientInfo = await db.ClientInfos.FirstOrDefaultAsync(x => x.ClientIpId == ip.Id && x.ClientUserAgentId == userAgent.Id, cancellationToken);
         if (clientInfo == null)
         {
-            clientInfo = new ClientInfo { ClientIpId = ip.Id, ClientUserAgentId = userAgent.Id };
+            clientInfo = new ClientInfo
+            {
+                ClientIpId = ip.Id,
+                ClientUserAgentId = userAgent.Id,
+                ClientIp = ip,
+                ClientUserAgent = userAgent,
+            };
             db.ClientInfos.Add(clientInfo);
             await db.SaveChangesAsync(cancellationToken);
+        }
+        else
+        {
+            clientInfo.ClientIp = ip;
+            clientInfo.ClientUserAgent = userAgent;
         }
         return clientInfo;
     }

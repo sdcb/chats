@@ -8,6 +8,7 @@ namespace Chats.BE.DB;
 
 [Table("SmsAttempt")]
 [Index("ClientInfoId", Name = "IX_SmsAttempt")]
+[Index("CreatedAt", Name = "IX_SmsAttempt_CreatedAt")]
 [Index("SmsRecordId", Name = "IX_SmsAttempt_SmsHistoryId")]
 public partial class SmsAttempt
 {
