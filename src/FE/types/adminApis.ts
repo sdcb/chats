@@ -154,6 +154,57 @@ export interface GetRequestLogsDetailsResult extends GetRequestLogsListResult {
   user: { username: string };
 }
 
+export interface SecurityLogQueryParams extends Paging {
+  start?: string;
+  end?: string;
+  username?: string;
+}
+
+export interface SecurityLogExportParams {
+  start?: string;
+  end?: string;
+  username?: string;
+}
+
+export interface PasswordAttemptLog {
+  id: number;
+  userName: string;
+  userId: number | null;
+  matchedUserName: string | null;
+  isSuccessful: boolean;
+  failureReason: string | null;
+  ip: string;
+  userAgent: string;
+  createdAt: string;
+}
+
+export interface KeycloakAttemptLog {
+  id: number;
+  provider: string;
+  sub: string | null;
+  email: string | null;
+  userId: number | null;
+  userName: string | null;
+  isSuccessful: boolean;
+  failureReason: string | null;
+  ip: string;
+  userAgent: string;
+  createdAt: string;
+}
+
+export interface SmsAttemptLog {
+  id: number;
+  phoneNumber: string;
+  code: string;
+  userId: number | null;
+  userName: string | null;
+  type: string | null;
+  status: string | null;
+  ip: string;
+  userAgent: string;
+  createdAt: string;
+}
+
 export interface GetLoginServicesResult {
   id: number;
   type: LoginType;

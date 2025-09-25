@@ -150,7 +150,7 @@ export const useFetch = () => {
     ): Promise<T> => {
       return handleFetch(url, { ...request, method: 'patch' });
     },
-    delete: async <T>(url: string, request?: RequestModel): Promise<T> => {
+    delete: async <T>(url: string, request?: RequestWithBodyModel): Promise<T> => {
       return handleFetch(url, { ...request, method: 'delete' });
     },
   };

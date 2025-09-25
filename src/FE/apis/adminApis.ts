@@ -18,6 +18,7 @@ import {
   GetRequestLogsDetailsResult,
   GetRequestLogsListResult,
   GetRequestLogsParams,
+  KeycloakAttemptLog,
   GetUserInitialConfigResult,
   GetUserMessageParams,
   GetUsersParams,
@@ -25,6 +26,7 @@ import {
   ModelFastCreateParams,
   ModelProviderInitialConfig,
   ModelReferenceDto,
+  PasswordAttemptLog,
   PossibleModelResult,
   PostAndPutConfigParams,
   PostFileServicesParams,
@@ -39,6 +41,8 @@ import {
   PutUserBalanceParams,
   PutUserInitialConfigParams,
   PutUserParams,
+  SecurityLogExportParams,
+  SecurityLogQueryParams,
   ReorderRequest,
   SimpleModelReferenceDto,
   StatisticsTimeParams,
@@ -47,6 +51,7 @@ import {
   UserModelDisplay,
   UserModelDisplayDto,
   ValidateModelParams,
+  SmsAttemptLog,
 } from '@/types/adminApis';
 import { GetChatShareResult, GetChatVersionResult } from '@/types/clientApis';
 import { IKeyCount } from '@/types/common';
@@ -522,4 +527,99 @@ export const getChatCountStatisticsByDate = (params: StatisticsTimeParams) => {
     '/api/admin/statistics/chat-count-by-date',
     { params: params },
   );
+};
+
+const mapSecurityLogQueryParams = (params: SecurityLogQueryParams) => ({
+  page: params.page,
+  pageSize: params.pageSize,
+  start: params.start,
+  end: params.end,
+  username: params.username,
+});
+
+const mapSecurityLogExportParams = (params: SecurityLogExportParams) => ({
+  start: params.start,
+  end: params.end,
+  username: params.username,
+});
+
+export const getPasswordAttempts = (
+  params: SecurityLogQueryParams,
+): Promise<PageResult<PasswordAttemptLog[]>> => {
+  const fetchServer = useFetch();
+  return fetchServer.get('/api/admin/security-logs/password-attempts', {
+    params: mapSecurityLogQueryParams(params),
+  });
+};
+
+export const exportPasswordAttempts = (
+  params: SecurityLogExportParams,
+): Promise<Blob | null> => {
+  const fetchServer = useFetch();
+  return fetchServer.get('/api/admin/security-logs/password-attempts/export', {
+    params: mapSecurityLogExportParams(params),
+  });
+};
+
+export const clearPasswordAttempts = (
+  params: SecurityLogExportParams,
+): Promise<number> => {
+  const fetchServer = useFetch();
+  return fetchServer.delete('/api/admin/security-logs/password-attempts', {
+    body: params,
+  });
+};
+
+export const getKeycloakAttempts = (
+  params: SecurityLogQueryParams,
+): Promise<PageResult<KeycloakAttemptLog[]>> => {
+  const fetchServer = useFetch();
+  return fetchServer.get('/api/admin/security-logs/keycloak-attempts', {
+    params: mapSecurityLogQueryParams(params),
+  });
+};
+
+export const exportKeycloakAttempts = (
+  params: SecurityLogExportParams,
+): Promise<Blob | null> => {
+  const fetchServer = useFetch();
+  return fetchServer.get('/api/admin/security-logs/keycloak-attempts/export', {
+    params: mapSecurityLogExportParams(params),
+  });
+};
+
+export const clearKeycloakAttempts = (
+  params: SecurityLogExportParams,
+): Promise<number> => {
+  const fetchServer = useFetch();
+  return fetchServer.delete('/api/admin/security-logs/keycloak-attempts', {
+    body: params,
+  });
+};
+
+export const getSmsAttempts = (
+  params: SecurityLogQueryParams,
+): Promise<PageResult<SmsAttemptLog[]>> => {
+  const fetchServer = useFetch();
+  return fetchServer.get('/api/admin/security-logs/sms-attempts', {
+    params: mapSecurityLogQueryParams(params),
+  });
+};
+
+export const exportSmsAttempts = (
+  params: SecurityLogExportParams,
+): Promise<Blob | null> => {
+  const fetchServer = useFetch();
+  return fetchServer.get('/api/admin/security-logs/sms-attempts/export', {
+    params: mapSecurityLogExportParams(params),
+  });
+};
+
+export const clearSmsAttempts = (
+  params: SecurityLogExportParams,
+): Promise<number> => {
+  const fetchServer = useFetch();
+  return fetchServer.delete('/api/admin/security-logs/sms-attempts', {
+    body: params,
+  });
 };

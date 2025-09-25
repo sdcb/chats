@@ -149,6 +149,13 @@ const AdminLayout = ({
       ),
       title: t('Usage Records'),
     },
+    {
+      url: '/admin/security-logs',
+      icon: (stroke?: string) => (
+        <IconShieldLock strokeWidth={1.2} stroke={stroke} />
+      ),
+      title: t('Security Logs'),
+    },
     /**{
       url: '/admin/request-logs',
       icon: (stroke?: string) => <IconNotes strokeWidth={1.2} stroke={stroke} />,
