@@ -16,6 +16,7 @@ import {
   GetUsageStatResult,
 } from '@/types/clientApis';
 import { feModelProviders } from '@/types/model';
+import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import { PageResult } from '@/types/page';
 
 import DateTimePopover from '@/components/Popover/DateTimePopover';
@@ -537,9 +538,10 @@ const UsageRecords = () => {
                   <div>{log.userName}</div>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
-                  <div className="font-medium">{t('Provider/Model')}</div>
-                  <div className="overflow-hidden text-ellipsis whitespace-nowrap">
-                    {log.modelProviderName}/{log.modelName}
+                  <div className="font-medium">{t('Model')}</div>
+                  <div className="overflow-hidden text-ellipsis whitespace-nowrap flex items-center gap-1">
+                    <ChatIcon className="h-4 w-4" providerName={log.modelProviderName} />
+                    <span>{log.modelName}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
@@ -585,7 +587,7 @@ const UsageRecords = () => {
               <TableRow>
                 <TableHead>{t('Date')}</TableHead>
                 <TableHead>{t('Account')}</TableHead>
-                <TableHead>{t('Provider/Model')}</TableHead>
+                <TableHead>{t('Model')}</TableHead>
                 <TableHead>{t('Input/Output Tokens')}</TableHead>
                 <TableHead>{t('Input/Output Cost(￥)')}</TableHead>
                 <TableHead>{t('Total Cost(￥)')}</TableHead>
@@ -600,7 +602,10 @@ const UsageRecords = () => {
                   <TableCell>{formatDateTime(log.usagedCreatedAt)}</TableCell>
                   <TableCell>{log.userName}</TableCell>
                   <TableCell>
-                    {log.modelProviderName}/{log.modelName}
+                    <div className="flex items-center gap-1">
+                      <ChatIcon className="h-5 w-5" providerName={log.modelProviderName} />
+                      <span className="whitespace-nowrap">{log.modelName}</span>
+                    </div>
                   </TableCell>
                   <TableCell>
                     {log.inputTokens}/{log.outputTokens}
