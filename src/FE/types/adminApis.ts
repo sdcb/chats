@@ -159,6 +159,7 @@ export interface SecurityLogQueryParams extends Paging {
   start?: string;
   end?: string;
   username?: string;
+  success?: boolean;
 }
 
 export interface SecurityLogExportParams {
@@ -166,6 +167,7 @@ export interface SecurityLogExportParams {
   start?: string;
   end?: string;
   username?: string;
+  success?: boolean;
 }
 
 export interface PasswordAttemptLog {

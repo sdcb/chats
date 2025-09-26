@@ -18,6 +18,7 @@ import PaginationContainer from '@/components/Pagiation/Pagiation';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -46,6 +47,7 @@ type FiltersState = {
   start: string;
   end: string;
   username: string;
+  success: '' | 'true' | 'false';
 };
 
 type ColumnConfig<T> = {
@@ -95,6 +97,10 @@ const buildQueryObject = ({ tabValue, pageValue, filters }: PushQueryParams) => 
     query.username = filters.username;
   }
 
+  if (filters.success) {
+    query.success = filters.success;
+  }
+
   return query;
 };
 
@@ -109,7 +115,7 @@ const useQueryState = (
   (params: PushQueryParams) => void,
 ] => {
   const router = useRouter();
-  const [filters, setFilters] = useState<FiltersState>({ start: '', end: '', username: '' });
+  const [filters, setFilters] = useState<FiltersState>({ start: '', end: '', username: '', success: '' });
   const [page, setPage] = useState(1);
 
   const pushQuery = useCallback(
@@ -137,7 +143,7 @@ const useQueryState = (
       return;
     }
 
-    const { page: pageQueryParam, start, end, username } = router.query;
+  const { page: pageQueryParam, start, end, username, success } = router.query;
 
     const pageQueryValue = Array.isArray(pageQueryParam)
       ? pageQueryParam[0]
@@ -149,14 +155,27 @@ const useQueryState = (
     const startQuery = typeof start === 'string' ? start : '';
     const endQuery = typeof end === 'string' ? end : '';
     const usernameQuery = typeof username === 'string' ? username : '';
+    const successQuery =
+      typeof success === 'string' && (success === 'true' || success === 'false')
+        ? success
+        : '';
 
-    setFilters((prev) =>
-      prev.start === startQuery &&
-      prev.end === endQuery &&
-      prev.username === usernameQuery
-        ? prev
-        : { start: startQuery, end: endQuery, username: usernameQuery },
-    );
+    setFilters((prev) => {
+      if (
+        prev.start === startQuery &&
+        prev.end === endQuery &&
+        prev.username === usernameQuery &&
+        prev.success === successQuery
+      ) {
+        return prev;
+      }
+      return {
+        start: startQuery,
+        end: endQuery,
+        username: usernameQuery,
+        success: successQuery,
+      };
+    });
   }, [router.isReady, router.query]);
 
   useEffect(() => {
@@ -232,6 +251,7 @@ const SecurityLogPanel = <T,>({
         start: filters.start || undefined,
         end: filters.end || undefined,
         username: filters.username || undefined,
+        success: filters.success ? filters.success === 'true' : undefined,
       };
 
       const fetchKey = JSON.stringify({
@@ -240,6 +260,7 @@ const SecurityLogPanel = <T,>({
         start: params.start ?? '',
         end: params.end ?? '',
         username: params.username ?? '',
+        success: filters.success,
       });
 
       if (!options?.force && fetchKey === lastFetchKeyRef.current) {
@@ -264,7 +285,7 @@ const SecurityLogPanel = <T,>({
           setLoading(false);
         });
     },
-    [fetchList, filters.end, filters.start, filters.username, page, pageSize, router.isReady, t, tab],
+  [fetchList, filters.end, filters.start, filters.username, filters.success, page, pageSize, router.isReady, t, tab],
   );
 
   useEffect(() => {
@@ -281,11 +302,17 @@ const SecurityLogPanel = <T,>({
       tabValue: SecurityLogTab,
       startValue: string,
       endValue: string,
+      successValue: '' | 'true' | 'false',
     ) => {
       pushQuery({
         tabValue,
         pageValue: 1,
-        filters: { start: startValue, end: endValue, username: value },
+        filters: {
+          start: startValue,
+          end: endValue,
+          username: value,
+          success: successValue,
+        },
       });
     },
     600,
@@ -330,11 +357,24 @@ const SecurityLogPanel = <T,>({
     const nextFilters = { ...filters, username: value };
     setFilters(nextFilters);
     setPage(1);
-    debouncedUsernameSync(value, tab, nextFilters.start, nextFilters.end);
+    debouncedUsernameSync(
+      value,
+      tab,
+      nextFilters.start,
+      nextFilters.end,
+      nextFilters.success,
+    );
+  };
+
+  const handleSuccessChange = (value: '' | 'true' | 'false') => {
+    const nextFilters = { ...filters, success: value };
+    setFilters(nextFilters);
+    setPage(1);
+    pushQuery({ tabValue: tab, pageValue: 1, filters: nextFilters });
   };
 
   const getExportParams = useCallback(() => {
-    const params: Record<string, string | number> = {
+    const params: Record<string, string | number | boolean> = {
       token: getUserSession(),
       tz: getTz(),
     };
@@ -351,8 +391,12 @@ const SecurityLogPanel = <T,>({
       params.username = filters.username;
     }
 
+    if (filters.success) {
+      params.success = filters.success === 'true';
+    }
+
     return params;
-  }, [filters.end, filters.start, filters.username]);
+  }, [filters.end, filters.start, filters.username, filters.success]);
 
   const handleClear = useCallback(async () => {
     const params: SecurityLogExportParams = {
@@ -360,6 +404,7 @@ const SecurityLogPanel = <T,>({
       start: filters.start || undefined,
       end: filters.end || undefined,
       username: filters.username || undefined,
+      success: filters.success ? filters.success === 'true' : undefined,
     };
 
     try {
@@ -375,7 +420,7 @@ const SecurityLogPanel = <T,>({
       );
       throw error;
     }
-  }, [clearList, filters.end, filters.start, filters.username, refresh, t]);
+  }, [clearList, filters.end, filters.start, filters.username, filters.success, refresh, t]);
 
   const rows = useMemo(() => data?.rows ?? [], [data?.rows]);
   const totalCount = data?.count ?? 0;
@@ -402,6 +447,24 @@ const SecurityLogPanel = <T,>({
             value={filters.username}
             onChange={(event) => handleUsernameChange(event.target.value)}
           />
+          <div className="w-[160px]">
+            <Select
+              value={filters.success}
+              onValueChange={(val) => handleSuccessChange(val as '' | 'true' | 'false')}
+            >
+              <SelectTrigger onReset={() => handleSuccessChange('')} value={filters.success}>
+                {filters.success
+                  ? filters.success === 'true'
+                    ? t('Success')
+                    : t('Unsuccessful')
+                  : t('All')}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">{t('Success')}</SelectItem>
+                <SelectItem value="false">{t('Unsuccessful')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <div className="flex items-center gap-2 self-end lg:self-auto">
           <ExportButton

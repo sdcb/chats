@@ -535,12 +535,14 @@ const mapSecurityLogQueryParams = (params: SecurityLogQueryParams) => ({
   start: params.start,
   end: params.end,
   username: params.username,
+  success: params.success,
 });
 
 const mapSecurityLogExportParams = (params: SecurityLogExportParams) => ({
   start: params.start,
   end: params.end,
   username: params.username,
+  success: params.success,
 });
 
 export const getPasswordAttempts = (
