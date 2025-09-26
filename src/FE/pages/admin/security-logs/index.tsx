@@ -14,10 +14,10 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import useTranslation from '@/hooks/useTranslation';
-import KeycloakAttemptsPanel from './components/KeycloakAttemptsPanel';
-import PasswordAttemptsPanel from './components/PasswordAttemptsPanel';
-import SmsAttemptsPanel from './components/SmsAttemptsPanel';
-import { SecurityLogTab } from './components/SecurityLogPanel';
+import KeycloakAttemptsPanel from '@/components/admin/security-logs/KeycloakAttemptsPanel';
+import PasswordAttemptsPanel from '@/components/admin/security-logs/PasswordAttemptsPanel';
+import SmsAttemptsPanel from '@/components/admin/security-logs/SmsAttemptsPanel';
+import { SecurityLogTab } from '@/components/admin/security-logs/SecurityLogPanel';
 
 const isValidTab = (value: string | undefined): value is SecurityLogTab =>
   value === 'password' || value === 'keycloak' || value === 'sms';
