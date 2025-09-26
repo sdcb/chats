@@ -101,23 +101,28 @@ const SecurityLogsPage = () => {
   return (
     <div className="space-y-4">
       <Tabs
-  value={resolvedTabFromQuery}
+        value={resolvedTabFromQuery}
         onValueChange={handleTabChange}
         orientation="horizontal"
         className="flex-col gap-3 border-none p-0 text-foreground"
       >
-        <TabsList className="flex w-full flex-row flex-wrap gap-2 rounded-none bg-transparent p-0">
-          {tabMeta.map((tab) => (
-            <TabsTrigger
-              key={tab.value}
-              value={tab.value}
-              className="flex items-center gap-2"
-            >
-              {tab.icon}
-              <span>{tab.label}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        {/* Segmented control style tabs centered at top */}
+        <div className="flex w-full justify-center">
+          <TabsList
+            className="inline-flex flex-row items-center justify-center rounded-full bg-muted p-1 gap-0 shadow-sm border border-border/60"
+          >
+            {tabMeta.map((tab) => (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="flex items-center gap-2 px-5 py-2 text-sm rounded-full data-[state=active]:bg-background data-[state=active]:text-foreground transition-colors focus-visible:ring-0 focus-visible:ring-offset-0 hover:text-foreground/90 first:rounded-l-full last:rounded-r-full"
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
         {resolvedTabFromQuery === 'password' && (
           <TabsContent value="password" className="ml-0 mt-2">
             <PasswordAttemptsPanel />

@@ -4,6 +4,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { IconTrash } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
+// (暂时移除复杂 Tooltip 组合，避免与 Popover ref 冲突)
 import {
   Popover,
   PopoverContent,
@@ -13,11 +14,12 @@ import {
 interface Props {
   onDelete: (() => void) | (() => Promise<void>);
   onCancel?: () => void;
+  tooltip?: string; // 提示文本，可选
 }
 
 export default function DeletePopover(props: Props) {
   const { t } = useTranslation();
-  const { onDelete, onCancel } = props;
+  const { onDelete, onCancel, tooltip } = props;
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -38,44 +40,52 @@ export default function DeletePopover(props: Props) {
       if (result instanceof Promise) {
         await result;
       }
-      
-      setIsOpen(false);
     } catch (error) {
       console.error('Delete operation failed:', error);
       // 删除失败时不关闭弹窗，让用户看到错误状态
     } finally {
+      setIsOpen(false);
       setIsDeleting(false);
     }
   };
 
+  const triggerButton = (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-9 w-9 text-destructive"
+      disabled={isDeleting}
+      onClick={() => !isDeleting && setIsOpen(true)}
+      title={tooltip}
+      aria-label={tooltip || t('Delete') || 'Delete'}
+    >
+      <IconTrash size={18} />
+    </Button>
+  );
+
   return (
-    <Popover open={isOpen}>
+    <Popover open={isOpen} onOpenChange={(open) => !isDeleting && setIsOpen(open)}>
       <PopoverTrigger asChild>
-        <Button
-          variant="link"
-          onClick={() => {
-            setIsOpen(true);
-          }}
-          disabled={isDeleting}
-        >
-          <IconTrash size={18}/>
-        </Button>
+        {triggerButton}
       </PopoverTrigger>
-      <PopoverContent className="w-48 pointer-events-auto">
-        <div className="pb-2">{t('Are you sure you want to delete it?')}</div>
+      <PopoverContent side="bottom" align="center" className="w-56 pointer-events-auto">
+        <div className="pb-2 text-sm leading-relaxed">
+          {t('Are you sure you want to delete it?')}
+        </div>
         <div className="flex justify-end gap-2">
-          <Button 
-            size="sm" 
-            onClick={handleCancel} 
+          <Button
+            size="sm"
+            onClick={handleCancel}
             variant="outline"
             disabled={isDeleting}
           >
             {t('Cancel')}
           </Button>
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             onClick={handleDelete}
             disabled={isDeleting}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             {isDeleting ? (
               <div className="flex items-center space-x-2">

@@ -14,6 +14,7 @@ import { useRouter } from 'next/router';
 import DateTimePopover from '@/components/Popover/DateTimePopover';
 import DeletePopover from '@/components/Popover/DeletePopover';
 import ExportButton from '@/components/Button/ExportButtom';
+import Tips from '@/components/Tips/Tips';
 import PaginationContainer from '@/components/Pagiation/Pagiation';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -467,13 +468,21 @@ const SecurityLogPanel = <T,>({
           </div>
         </div>
         <div className="flex items-center gap-2 self-end lg:self-auto">
-          <ExportButton
-            exportUrl={exportUrl}
-            params={getExportParams()}
-            className="h-9 w-9"
-            disabled={loading}
+          <Tips
+            trigger={
+              <div>
+                <ExportButton
+                  exportUrl={exportUrl}
+                  params={getExportParams()}
+                  className="h-9 w-9"
+                  disabled={loading}
+                />
+              </div>
+            }
+            side="bottom"
+            content={t('Export to Excel')}
           />
-          <DeletePopover onDelete={handleClear} />
+          <DeletePopover onDelete={handleClear} tooltip={t('Clear all logs')!} />
         </div>
       </div>
 
