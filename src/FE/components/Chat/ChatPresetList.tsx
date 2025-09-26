@@ -9,7 +9,7 @@ import useTranslation from '@/hooks/useTranslation';
 import { MAX_CREATE_PRESET_CHAT_COUNT } from '@/types/chat';
 import { GetChatPresetResult } from '@/types/clientApis';
 
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import {
   IconCopy,
   IconDots,
@@ -160,7 +160,7 @@ const SortableChatPresetItem = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="inline-flex p-0 m-0 h-auto bg-transparent">
-                    <ChatIcon
+                    <ModelProviderIcon
                       className={cn(
                         'cursor-pointer border border-1 border-muted-foreground bg-white',
                         !modelMap[s.modelId] && 'grayscale',

@@ -8,13 +8,13 @@ import { DEFAULT_TEMPERATURE, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
 import { ChatSpanDto, ChatSpanMcp, GetChatPresetResult } from '@/types/clientApis';
 import { Prompt } from '@/types/prompt';
 
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
 import {
   IconPlus,
   IconTemperature,
   IconTokens
 } from '@/components/Icons';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import ImageSizeRadio from '@/components/ImageSizeRadio/ImageSizeRadio';
 import McpSelector from '@/components/McpSelector/McpSelector';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
@@ -434,7 +434,7 @@ const ChatPresetModal = (props: Props) => {
                       setSelectedSpan(span);
                     }}
                   >
-                    <ChatIcon providerId={span.modelProviderId} />
+                    <ModelProviderIcon providerId={span.modelProviderId} />
                     {span.modelName}
                   </div>
                 ))}
@@ -470,7 +470,7 @@ const ChatPresetModal = (props: Props) => {
                           models={models}
                           content={
                             <div className="flex gap-2 items-center">
-                              <ChatIcon
+                              <ModelProviderIcon
                                 providerId={selectedSpan.modelProviderId}
                               />
                               {selectedSpan.modelName}

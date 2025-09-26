@@ -25,7 +25,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import DeletePopover from '@/components/Popover/DeletePopover';
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 
 import { editUserModel, deleteUserModel } from '@/apis/adminApis';
 import { cn } from '@/lib/utils';
@@ -93,7 +93,7 @@ export default function UserModelRow({ userModel, userId, onUpdate }: IProps) {
     <TableRow>
       <TableCell className="font-medium">
         <div className="flex items-center gap-2">
-          <ChatIcon providerId={userModel.modelProviderId} />
+          <ModelProviderIcon providerId={userModel.modelProviderId} />
           {userModel.displayName}
         </div>
       </TableCell>

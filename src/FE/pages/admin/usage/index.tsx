@@ -16,7 +16,7 @@ import {
   GetUsageStatResult,
 } from '@/types/clientApis';
 import { feModelProviders } from '@/types/model';
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import { PageResult } from '@/types/page';
 
 import DateTimePopover from '@/components/Popover/DateTimePopover';
@@ -540,7 +540,7 @@ const UsageRecords = () => {
                 <div className="flex items-center justify-between text-xs mt-1">
                   <div className="font-medium">{t('Model')}</div>
                   <div className="overflow-hidden text-ellipsis whitespace-nowrap flex items-center gap-1">
-                    <ChatIcon className="h-4 w-4" providerName={log.modelProviderName} />
+                    <ModelProviderIcon className="h-4 w-4" providerName={log.modelProviderName} />
                     <span>{log.modelName}</span>
                   </div>
                 </div>
@@ -603,7 +603,7 @@ const UsageRecords = () => {
                   <TableCell>{log.userName}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <ChatIcon className="h-5 w-5" providerName={log.modelProviderName} />
+                      <ModelProviderIcon className="h-5 w-5" providerName={log.modelProviderName} />
                       <span className="whitespace-nowrap">{log.modelName}</span>
                     </div>
                   </TableCell>

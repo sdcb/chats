@@ -15,7 +15,7 @@ import { currentISODateString } from '@/utils/date';
 import { CHATS_SELECT_TYPE, ChatStatus, IChat } from '@/types/chat';
 
 import SidebarActionButton from '@/components/Button/SidebarActionButton';
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import Tips from '@/components/Tips/Tips';
 import {
   IconArchive,
@@ -229,7 +229,7 @@ const ConversationComponent = ({ chat, onDragItemStart }: Props) => {
                     <Tips
                       trigger={
                         <div>
-                          <ChatIcon
+                          <ModelProviderIcon
                             key={'chat-icon-' + span.spanId}
                             providerId={span.modelProviderId}
                           />

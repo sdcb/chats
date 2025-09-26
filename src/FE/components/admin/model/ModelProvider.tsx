@@ -5,7 +5,7 @@ import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
 import { Button } from '@/components/ui/button';
 import IconActionButton from '@/components/common/IconActionButton';
 import { IconPlus, IconChartHistogram } from '@/components/Icons';
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import useTranslation from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { feModelProviders } from '@/types/model';
@@ -120,7 +120,7 @@ export default function ModelProvider({
               {...(handleEnabled ? listeners : {})}
               disabled={!handleEnabled}
             >
-              <ChatIcon className="h-6 w-6" providerId={provider.providerId} />
+              <ModelProviderIcon className="h-6 w-6" providerId={provider.providerId} />
               {/* 小屏隐藏标题，仅显示图标；大屏显示提供商标题 */}
               <span className="font-semibold hidden sm:inline">{t(provider.providerName)}</span>
             </button>

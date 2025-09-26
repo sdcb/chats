@@ -4,7 +4,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { GetChatPresetResult } from '@/types/clientApis';
 
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -97,7 +97,7 @@ const ChatPresetResetDialog = ({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button className="bg-transparent p-0 m-0 h-auto hover:bg-transparent">
-                          <ChatIcon
+                          <ModelProviderIcon
                             className={cn(
                               'cursor-pointer border border-1 border-muted-foreground bg-white w-6 h-6',
                               !modelMap[s.modelId] && 'grayscale',

@@ -6,11 +6,11 @@ import { cn } from '@/lib/utils';
 
 interface Props {
   providerId?: DBModelProvider;
-  providerName?: string; // 新增: 如果没有 providerId，通过名称匹配
+  providerName?: string; // 如果没有 providerId，通过名称匹配
   className?: string;
 }
 
-const ChatIcon = (props: Props) => {
+const ModelProviderIcon = (props: Props) => {
   const { providerId, providerName, className } = props;
   const { t } = useTranslation();
 
@@ -37,4 +37,4 @@ const ChatIcon = (props: Props) => {
     />
   );
 };
-export default ChatIcon;
+export default ModelProviderIcon;

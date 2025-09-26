@@ -18,7 +18,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import { feModelProviders } from '@/types/model';
 
 import { addUserModel, getUserUnassignedModels } from '@/apis/adminApis';
@@ -104,7 +104,7 @@ export default function AddUserModelButton({ userId, onUpdate }: IProps) {
               return (
                 <DropdownMenuSub key={providerId}>
                   <DropdownMenuSubTrigger className="p-2 flex gap-2">
-                    <ChatIcon providerId={parseInt(providerId)} />
+                    <ModelProviderIcon providerId={parseInt(providerId)} />
                     <span className="w-full text-nowrap overflow-hidden text-ellipsis whitespace-nowrap">
                       {t(provider.name)}
                     </span>

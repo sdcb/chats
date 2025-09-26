@@ -6,7 +6,7 @@ import { isMobile } from '@/utils/common';
 
 import { ChatStatus, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
 
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
 import { IconDots, IconPlus, IconSettingsCog, IconX } from '@/components/Icons';
 import Tips from '@/components/Tips/Tips';
@@ -244,7 +244,7 @@ const ChatHeader = () => {
                             setSelectedSpanId(span.spanId);
                           }}
                         >
-                          <ChatIcon providerId={span.modelProviderId} />
+                          <ModelProviderIcon providerId={span.modelProviderId} />
                           <span>{span?.modelName}</span>
                           {/* 避免 button 嵌套 button：内层改为 div */}
                           <div className="w-6 h-6 p-0 m-0 hidden sm:block">
@@ -259,7 +259,7 @@ const ChatHeader = () => {
                               !span.enabled && 'opacity-50',
                             )}
                           >
-                            <ChatIcon providerId={span.modelProviderId} />
+                            <ModelProviderIcon providerId={span.modelProviderId} />
                             <ChatModelDropdownMenu
                               key={'change-model-' + span.modelId}
                               models={models}

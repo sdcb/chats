@@ -9,7 +9,7 @@ import { AdminChatsDto } from '@/types/adminApis';
 import { PageResult, Paging } from '@/types/page';
 
 import PaginationContainer from '../../../components/Pagiation/Pagiation';
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import Tips from '@/components/Tips/Tips';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -103,7 +103,7 @@ export default function Messages() {
                         <Tips
                           trigger={
                             <div>
-                              <ChatIcon
+                              <ModelProviderIcon
                                 className="cursor-pointer"
                                 providerId={x.modelProviderId}
                               />
