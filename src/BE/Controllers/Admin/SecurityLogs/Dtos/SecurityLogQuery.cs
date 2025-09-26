@@ -13,6 +13,8 @@ public interface ISecurityLogFilter
     DateTime? End { get; }
 
     string? UserName { get; }
+    
+    short TimezoneOffset { get; }
 }
 
 public record SecurityLogQuery : PagingRequest, ISecurityLogFilter
@@ -28,6 +30,9 @@ public record SecurityLogQuery : PagingRequest, ISecurityLogFilter
     [StringLength(100)]
     [FromQuery(Name = "username")]
     public string? UserName { get; init; }
+
+    [FromQuery(Name = "tz")]
+    public short TimezoneOffset { get; init; }
 }
 
 public record SecurityLogExportQuery : ISecurityLogFilter
@@ -41,4 +46,7 @@ public record SecurityLogExportQuery : ISecurityLogFilter
     [StringLength(100)]
     [FromQuery(Name = "username")]
     public string? UserName { get; init; }
+
+    [FromQuery(Name = "tz")]
+    public short TimezoneOffset { get; init; }
 }

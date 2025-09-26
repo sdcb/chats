@@ -7,24 +7,20 @@ import {
   clearKeycloakAttempts,
   clearPasswordAttempts,
   clearSmsAttempts,
-  exportKeycloakAttempts,
-  exportPasswordAttempts,
-  exportSmsAttempts,
   getKeycloakAttempts,
   getPasswordAttempts,
   getSmsAttempts,
 } from '@/apis/adminApis';
 import DateTimePopover from '@/components/Popover/DateTimePopover';
 import DeletePopover from '@/components/Popover/DeletePopover';
+import ExportButton from '@/components/Button/ExportButtom';
 import {
-  IconArrowDown,
   IconLoader,
   IconMessage,
   IconPasswordUser,
   IconShieldLock,
 } from '@/components/Icons';
 import PaginationContainer from '@/components/Pagiation/Pagiation';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -51,7 +47,8 @@ import {
   SmsAttemptLog,
 } from '@/types/adminApis';
 import { PageResult } from '@/types/page';
-import { formatDateTime } from '@/utils/date';
+import { formatDateTime, getTz } from '@/utils/date';
+import { getUserSession } from '@/utils/user';
 
 type SecurityLogTab = 'password' | 'keycloak' | 'sms';
 
@@ -72,13 +69,10 @@ const listFetchers: Record<
   sms: getSmsAttempts,
 };
 
-const exportFetchers: Record<
-  SecurityLogTab,
-  (params: SecurityLogExportParams) => Promise<Blob | null>
-> = {
-  password: exportPasswordAttempts,
-  keycloak: exportKeycloakAttempts,
-  sms: exportSmsAttempts,
+const exportUrls: Record<SecurityLogTab, string> = {
+  password: '/api/admin/security-logs/password-attempts/export',
+  keycloak: '/api/admin/security-logs/keycloak-attempts/export',
+  sms: '/api/admin/security-logs/sms-attempts/export',
 };
 
 const clearFetchers: Record<
@@ -102,7 +96,6 @@ const SecurityLogsPage = () => {
   const [activeTab, setActiveTab] = useState<SecurityLogTab>('password');
   const [pagination, setPagination] = useState({ page: 1, pageSize: PAGE_SIZE });
   const [loading, setLoading] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [filters, setFilters] = useState({ start: '', end: '', username: '' });
   const [tabData, setTabData] = useState<Record<SecurityLogTab, PageResult<any>>>(
     () => ({
@@ -211,6 +204,7 @@ const SecurityLogsPage = () => {
     const params: SecurityLogQueryParams = {
       page: pagination.page,
       pageSize: pagination.pageSize,
+      tz: getTz(),
       start: filters.start || undefined,
       end: filters.end || undefined,
       username: filters.username || undefined,
@@ -330,45 +324,30 @@ const SecurityLogsPage = () => {
     debouncedUsernameSync(value, activeTab, nextFilters.start, nextFilters.end);
   };
 
-  const handleExport = async () => {
-    if (exporting) {
-      return;
-    }
-
-    setExporting(true);
-    const params: SecurityLogExportParams = {
-      start: filters.start || undefined,
-      end: filters.end || undefined,
-      username: filters.username || undefined,
+  const getExportParams = () => {
+    const params: any = {
+      token: getUserSession(),
+      tz: getTz(),
     };
 
-    try {
-      const blob = await exportFetchers[activeTab](params);
-      if (!blob) {
-        toast.error(t('No data'));
-        return;
-      }
-
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${activeTab}-security-logs-${formatDateParam(new Date())}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error(error);
-      toast.error(
-        t('Operation failed, Please try again later, or contact technical personnel'),
-      );
-    } finally {
-      setExporting(false);
+    if (filters.start) {
+      params.start = filters.start;
     }
+
+    if (filters.end) {
+      params.end = filters.end;
+    }
+
+    if (filters.username) {
+      params.username = filters.username;
+    }
+
+    return params;
   };
 
   const handleClear = async () => {
     const params: SecurityLogExportParams = {
+      tz: getTz(),
       start: filters.start || undefined,
       end: filters.end || undefined,
       username: filters.username || undefined,
@@ -431,20 +410,12 @@ const SecurityLogsPage = () => {
         />
       </div>
       <div className="flex items-center gap-2 self-end lg:self-auto">
-        <Button
-          variant="ghost"
-          size="icon"
+        <ExportButton
+          exportUrl={exportUrls[activeTab]}
+          params={getExportParams()}
           className="h-9 w-9"
-          onClick={handleExport}
-          disabled={exporting || loading}
-          title={t('Export to Excel') || undefined}
-        >
-          {exporting ? (
-            <IconLoader className="animate-spin" size={18} />
-          ) : (
-            <IconArrowDown size={18} />
-          )}
-        </Button>
+          disabled={loading}
+        />
         <DeletePopover onDelete={handleClear} />
       </div>
     </div>
@@ -456,7 +427,7 @@ const SecurityLogsPage = () => {
     const isActive = tab === activeTab;
 
     return (
-      <Card className="mt-4">
+      <Card>
         {isActive && loading ? (
           <div className="flex justify-center py-10">
             <IconLoader className="animate-spin" size={24} />
@@ -608,13 +579,13 @@ const SecurityLogsPage = () => {
 
         <div>{renderFilters()}</div>
 
-        <TabsContent value="password" className="ml-0 mt-4">
+        <TabsContent value="password" className="ml-0 mt-2">
           {renderTable('password')}
         </TabsContent>
-        <TabsContent value="keycloak" className="ml-0 mt-4">
+        <TabsContent value="keycloak" className="ml-0 mt-2">
           {renderTable('keycloak')}
         </TabsContent>
-        <TabsContent value="sms" className="ml-0 mt-4">
+        <TabsContent value="sms" className="ml-0 mt-2">
           {renderTable('sms')}
         </TabsContent>
       </Tabs>

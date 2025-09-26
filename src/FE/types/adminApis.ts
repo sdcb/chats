@@ -155,12 +155,14 @@ export interface GetRequestLogsDetailsResult extends GetRequestLogsListResult {
 }
 
 export interface SecurityLogQueryParams extends Paging {
+  tz?: number;
   start?: string;
   end?: string;
   username?: string;
 }
 
 export interface SecurityLogExportParams {
+  tz?: number;
   start?: string;
   end?: string;
   username?: string;

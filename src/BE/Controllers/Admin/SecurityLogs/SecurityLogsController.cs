@@ -238,13 +238,19 @@ public class SecurityLogsController(ChatsDB db) : ControllerBase
 
         if (query.Start != null)
         {
-            source = source.Where(x => x.CreatedAt >= query.Start.Value);
+            DateTime localStart = DateOnly.FromDateTime(query.Start.Value)
+                .ToDateTime(new TimeOnly(), DateTimeKind.Utc)
+                .AddMinutes(query.TimezoneOffset);
+            source = source.Where(x => x.CreatedAt >= localStart);
         }
 
         if (query.End != null)
         {
-            DateTime end = NormalizeEndInclusive(query.End.Value);
-            source = source.Where(x => x.CreatedAt <= end);
+            DateTime localEnd = DateOnly.FromDateTime(query.End.Value)
+                .AddDays(1)
+                .ToDateTime(new TimeOnly(), DateTimeKind.Utc)
+                .AddMinutes(query.TimezoneOffset);
+            source = source.Where(x => x.CreatedAt < localEnd);
         }
 
         if (!string.IsNullOrWhiteSpace(query.UserName))
@@ -262,13 +268,19 @@ public class SecurityLogsController(ChatsDB db) : ControllerBase
 
         if (query.Start != null)
         {
-            source = source.Where(x => x.CreatedAt >= query.Start.Value);
+            DateTime localStart = DateOnly.FromDateTime(query.Start.Value)
+                .ToDateTime(new TimeOnly(), DateTimeKind.Utc)
+                .AddMinutes(query.TimezoneOffset);
+            source = source.Where(x => x.CreatedAt >= localStart);
         }
 
         if (query.End != null)
         {
-            DateTime end = NormalizeEndInclusive(query.End.Value);
-            source = source.Where(x => x.CreatedAt <= end);
+            DateTime localEnd = DateOnly.FromDateTime(query.End.Value)
+                .AddDays(1)
+                .ToDateTime(new TimeOnly(), DateTimeKind.Utc)
+                .AddMinutes(query.TimezoneOffset);
+            source = source.Where(x => x.CreatedAt < localEnd);
         }
 
         if (!string.IsNullOrWhiteSpace(query.UserName))
@@ -288,13 +300,19 @@ public class SecurityLogsController(ChatsDB db) : ControllerBase
 
         if (query.Start != null)
         {
-            source = source.Where(x => x.CreatedAt >= query.Start.Value);
+            DateTime localStart = DateOnly.FromDateTime(query.Start.Value)
+                .ToDateTime(new TimeOnly(), DateTimeKind.Utc)
+                .AddMinutes(query.TimezoneOffset);
+            source = source.Where(x => x.CreatedAt >= localStart);
         }
 
         if (query.End != null)
         {
-            DateTime end = NormalizeEndInclusive(query.End.Value);
-            source = source.Where(x => x.CreatedAt <= end);
+            DateTime localEnd = DateOnly.FromDateTime(query.End.Value)
+                .AddDays(1)
+                .ToDateTime(new TimeOnly(), DateTimeKind.Utc)
+                .AddMinutes(query.TimezoneOffset);
+            source = source.Where(x => x.CreatedAt < localEnd);
         }
 
         if (!string.IsNullOrWhiteSpace(query.UserName))
@@ -306,13 +324,5 @@ public class SecurityLogsController(ChatsDB db) : ControllerBase
         return source;
     }
 
-    private static DateTime NormalizeEndInclusive(DateTime end)
-    {
-        if (end.TimeOfDay == TimeSpan.Zero)
-        {
-            return end.Date.AddDays(1).AddTicks(-1);
-        }
 
-        return end;
-    }
 }

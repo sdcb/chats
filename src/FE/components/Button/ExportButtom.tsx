@@ -4,6 +4,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { getApiUrl } from '@/utils/common';
 
+import { IconArrowDown } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
 
 interface ExportProps {
@@ -12,6 +13,7 @@ interface ExportProps {
   fileName?: string;
   buttonText?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 const ExportButton: React.FC<ExportProps> = ({
@@ -19,6 +21,7 @@ const ExportButton: React.FC<ExportProps> = ({
   params,
   buttonText,
   className,
+  disabled = false,
 }) => {
   const { t } = useTranslation();
 
@@ -43,9 +46,31 @@ const ExportButton: React.FC<ExportProps> = ({
     document.body.removeChild(form);
   };
 
+  // 如果没有提供buttonText，显示为图标按钮
+  if (!buttonText) {
+    return (
+      <Button 
+        variant="ghost" 
+        size="icon"
+        onClick={handleExport} 
+        className={className}
+        disabled={disabled}
+        title={t('Export to Excel')}
+      >
+        <IconArrowDown size={18} />
+      </Button>
+    );
+  }
+
+  // 如果提供了buttonText，显示为普通文本按钮
   return (
-    <Button variant="default" onClick={handleExport} className={className}>
-      {buttonText || t('Export')}
+    <Button 
+      variant="default" 
+      onClick={handleExport} 
+      className={className}
+      disabled={disabled}
+    >
+      {buttonText}
     </Button>
   );
 };
