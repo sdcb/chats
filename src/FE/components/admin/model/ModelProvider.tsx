@@ -3,6 +3,7 @@ import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
 import { Button } from '@/components/ui/button';
+import IconActionButton from '@/components/common/IconActionButton';
 import { IconPlus, IconChartHistogram } from '@/components/Icons';
 import ChatIcon from '@/components/ChatIcon/ChatIcon';
 import useTranslation from '@/hooks/useTranslation';
@@ -130,31 +131,21 @@ export default function ModelProvider({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
+            <IconActionButton
+              label={t('View Usage Records')}
+              icon={<IconChartHistogram size={18} />}
+              onClick={() => {
                 const providerData = feModelProviders.find(p => p.id === provider.providerId);
                 if (providerData) {
                   onGoToUsage({ provider: providerData.name });
                 }
               }}
-              title={t('View Usage Records')}
-            >
-              <IconChartHistogram size={16} />
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddKey(provider.providerId);
-              }}
-              title={t('Add Model Key')}
-            >
-              <IconPlus size={16} />
-            </Button>
+            />
+            <IconActionButton
+              label={t('Add Model Key')}
+              icon={<IconPlus size={18} />}
+              onClick={() => onAddKey(provider.providerId)}
+            />
           </div>
         </div>
         <CollapsiblePanel open={expanded} className="mt-1">

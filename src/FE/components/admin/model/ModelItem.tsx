@@ -2,6 +2,7 @@ import React from 'react';
 import { AdminModelDto } from '@/types/adminApis';
 import { formatNumberAsMoney } from '@/utils/common';
 import { Button } from '@/components/ui/button';
+import IconActionButton from '@/components/common/IconActionButton';
 import { IconPencil, IconChartHistogram, IconEyeOff } from '@/components/Icons';
 import DeletePopover from '@/components/Popover/DeletePopover';
 import useTranslation from '@/hooks/useTranslation';
@@ -14,11 +15,7 @@ interface ModelItemProps {
   model: AdminModelDto;
   onEdit: (model: AdminModelDto) => void;
   onDelete: (modelId: number) => void;
-  onGoToUsage: (params: {
-    provider?: string;
-    modelKey?: string;
-    model?: string;
-  }) => void;
+  onGoToUsage: (params: { model: string }) => void;
 }
 
 export default function ModelItem({ model, onEdit, onDelete, onGoToUsage }: ModelItemProps) {
@@ -30,28 +27,26 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage }: Mode
     transition,
   };
 
-  const handleContentClick = (e: React.MouseEvent) => {
+  const handleContentClick = (e: React.MouseEvent<HTMLButtonElement | HTMLDivElement>) => {
     // 如果正在拖拽，不触发编辑
     if (isDragging) {
       e.preventDefault();
       return;
     }
-    
     // 如果点击的是按钮区域，不触发编辑
     const target = e.target as HTMLElement;
     if (target.closest('button')) {
       return;
     }
-    
     onEdit(model);
   };
 
   return (
-    <div 
+    <div
       className={cn(
-        "flex items-center justify-between px-2 py-1 rounded hover:bg-muted/40 transition-all duration-200 relative touch-pan-y",
-        isDragging ? "opacity-60 cursor-grabbing" : "",
-        !model.enabled && "opacity-60"
+        'flex items-center justify-between px-2 py-1 rounded hover:bg-muted/40 transition-all duration-200 relative touch-pan-y',
+        isDragging ? 'opacity-60 cursor-grabbing' : '',
+        !model.enabled && 'opacity-60'
       )}
       ref={setNodeRef}
       style={style}
@@ -66,11 +61,11 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage }: Mode
           </div>
         </div>
       )}
-      
+
       <div
         className={cn(
-          "flex-1 min-w-0",
-          !model.enabled && "text-muted-foreground"
+          'flex-1 min-w-0',
+          !model.enabled && 'text-muted-foreground'
         )}
       >
         <div className="truncate flex items-center gap-2">
@@ -78,8 +73,8 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage }: Mode
           {/* 模型名作为拖拽把手；点击（非拖拽）时仍进入编辑 */}
           <button
             className={cn(
-              "truncate text-left bg-transparent border-0 p-0 m-0 inline-flex items-center touch-none",
-              model.enabled ? "cursor-grab active:cursor-grabbing" : "cursor-default"
+              'truncate text-left bg-transparent border-0 p-0 m-0 inline-flex items-center touch-none',
+              model.enabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
             )}
             aria-label={t('Drag to reorder')}
             onClick={(e) => {
@@ -93,41 +88,31 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage }: Mode
             {...(model.enabled ? listeners : {})}
             disabled={!model.enabled}
           >
-            <span className={cn("truncate", !model.enabled && "line-through")}>{model.name}</span>
+            <span className={cn('truncate', !model.enabled && 'line-through')}>{model.name}</span>
           </button>
         </div>
-        <div className={cn(
-          "text-xs truncate",
-          model.enabled ? "text-blue-600" : "text-muted-foreground"
-        )}>
+        <div
+          className={cn(
+            'text-xs truncate',
+            model.enabled ? 'text-blue-600' : 'text-muted-foreground'
+          )}
+        >
           {'￥' + formatNumberAsMoney(model.inputTokenPrice1M) + '/' + formatNumberAsMoney(model.outputTokenPrice1M)}
         </div>
       </div>
       <div className="flex gap-2 ml-3">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onGoToUsage({ model: model.name });
-          }}
-          title={t('View Usage Records')}
+        <IconActionButton
+          label={t('View Usage Records')}
+          icon={<IconChartHistogram size={18} />}
+          onClick={() => onGoToUsage({ model: model.name })}
           disabled={!model.enabled}
-        >
-          <IconChartHistogram size={16} />
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(model);
-          }}
-          title={t('Edit Model')}
-        >
-          <IconPencil size={16} />
-        </Button>
-        <div 
+        />
+        <IconActionButton
+          label={t('Edit Model')}
+          icon={<IconPencil size={18} />}
+          onClick={() => onEdit(model)}
+        />
+        <div
           title={t('Delete Model')}
           onClick={(e) => e.stopPropagation()}
         >
