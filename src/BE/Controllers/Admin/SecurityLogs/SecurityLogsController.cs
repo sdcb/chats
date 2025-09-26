@@ -2,6 +2,7 @@ using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Admin.SecurityLogs.Dtos;
 using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MiniExcelLibs;
@@ -259,6 +260,12 @@ public class SecurityLogsController(ChatsDB db) : ControllerBase
             source = source.Where(x => EF.Functions.Like(x.UserName, $"%{keyword}%") || (x.User != null && EF.Functions.Like(x.User.UserName, $"%{keyword}%")));
         }
 
+        if (query.IsSuccessful != null)
+        {
+            bool success = query.IsSuccessful.Value;
+            source = source.Where(x => x.IsSuccessful == success);
+        }
+
         return source;
     }
 
@@ -291,6 +298,12 @@ public class SecurityLogsController(ChatsDB db) : ControllerBase
                 (x.Email != null && EF.Functions.Like(x.Email, $"%{keyword}%")));
         }
 
+        if (query.IsSuccessful != null)
+        {
+            bool success = query.IsSuccessful.Value;
+            source = source.Where(x => x.IsSuccessful == success);
+        }
+
         return source;
     }
 
@@ -319,6 +332,15 @@ public class SecurityLogsController(ChatsDB db) : ControllerBase
         {
             string keyword = query.UserName.Trim();
             source = source.Where(x => x.SmsRecord.User != null && EF.Functions.Like(x.SmsRecord.User.UserName, $"%{keyword}%"));
+        }
+
+        if (query.IsSuccessful != null)
+        {
+            bool success = query.IsSuccessful.Value;
+            // success=true: Verified; false: not Verified
+            source = success
+                ? source.Where(x => x.SmsRecord.StatusId == (byte)DBSmsStatus.Verified)
+                : source.Where(x => x.SmsRecord.StatusId != (byte)DBSmsStatus.Verified);
         }
 
         return source;

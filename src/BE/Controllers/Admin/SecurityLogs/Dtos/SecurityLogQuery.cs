@@ -15,6 +15,8 @@ public interface ISecurityLogFilter
     string? UserName { get; }
     
     short TimezoneOffset { get; }
+
+    bool? IsSuccessful { get; }
 }
 
 public record SecurityLogQuery : PagingRequest, ISecurityLogFilter
@@ -33,6 +35,9 @@ public record SecurityLogQuery : PagingRequest, ISecurityLogFilter
 
     [FromQuery(Name = "tz")]
     public short TimezoneOffset { get; init; }
+
+    [FromQuery(Name = "success")]
+    public bool? IsSuccessful { get; init; }
 }
 
 public record SecurityLogExportQuery : ISecurityLogFilter
@@ -49,4 +54,7 @@ public record SecurityLogExportQuery : ISecurityLogFilter
 
     [FromQuery(Name = "tz")]
     public short TimezoneOffset { get; init; }
+
+    [FromQuery(Name = "success")]
+    public bool? IsSuccessful { get; init; }
 }
