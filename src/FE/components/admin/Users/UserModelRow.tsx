@@ -145,7 +145,7 @@ export default function UserModelRow({ userModel, userId, onUpdate }: IProps) {
                 mode="single"
                 selected={editData.expires}
                 onSelect={(date) => date && setEditData(prev => ({ ...prev, expires: date }))}
-                initialFocus
+                autoFocus
               />
             </PopoverContent>
           </Popover>
