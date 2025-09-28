@@ -28,6 +28,7 @@ import {
   ChatStatus,
   FileContent,
   FileDef,
+  IChat,
   Message,
   MessageContentType,
   ReasoningContent,
@@ -92,6 +93,19 @@ const Chat = memo(() => {
     chatDispatch,
     messageDispatch,
   } = useContext(HomeContext);
+  const chatsRef = useRef<IChat[]>(chats);
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
+
+  const updateChatsState = useCallback(
+    (updater: (prevChats: IChat[]) => IChat[]) => {
+      const updatedChats = updater(chatsRef.current);
+      chatsRef.current = updatedChats;
+      chatDispatch(setChats(updatedChats));
+    },
+    [chatDispatch],
+  );
   const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(true);
   const [showScrollDownButton, setShowScrollDownButton] =
     useState<boolean>(false);
@@ -214,25 +228,30 @@ const Chat = memo(() => {
 
   const changeChatTitle = (title: string, append: boolean = false) => {
     if (!selectedChat) return;
-    
-    const newChats = chats.map((chat) => {
-      if (chat.id === selectedChat.id) {
-        const updatedChat = { ...chat };
-        append ? (updatedChat.title += title) : (updatedChat.title = title);
-        return updatedChat;
-      }
-      return chat;
-    });
-    chatDispatch(setChats(newChats));
+
+    updateChatsState((prevChats) =>
+      prevChats.map((chat) => {
+        if (chat.id !== selectedChat.id) {
+          return chat;
+        }
+
+        const nextTitle = append
+          ? `${chat.title ?? ''}${title}`
+          : title;
+
+        return { ...chat, title: nextTitle };
+      }),
+    );
   };
 
   const changeSelectedChatStatus = (status: ChatStatus) => {
     if (!selectedChat) return;
-    
-    const updatedChats = chats.map((chat) =>
-      chat.id === selectedChat.id ? { ...chat, status } : chat
+
+    updateChatsState((prevChats) =>
+      prevChats.map((chat) =>
+        chat.id === selectedChat.id ? { ...chat, status } : chat,
+      ),
     );
-    chatDispatch(setChats(updatedChats));
   };
 
   const startChat = () => {
@@ -839,13 +858,13 @@ const Chat = memo(() => {
       leafMessageId,
     );
 
-    const chatList = chats.map((x) =>
-      x.id === selectedChat.id
-        ? { ...x, updatedAt: currentISODateString() }
-        : x,
+    updateChatsState((prevChats) =>
+      prevChats.map((x) =>
+        x.id === selectedChat.id
+          ? { ...x, updatedAt: currentISODateString() }
+          : x,
+      ),
     );
-
-    chatDispatch(setChats(chatList));
     messageDispatch(setSelectedMessages(selectedMsgs));
     messageDispatch(setMessages(messageList));
     changeSelectedChatStatus(ChatStatus.None);
@@ -942,12 +961,17 @@ const Chat = memo(() => {
     messageDispatch(setSelectedMessages(selectedMsgs));
     
     // 更新selectedChat的leafMessageId
-    const chatList = chats.map((x) =>
-      x.id === selectedChat.id
-        ? { ...x, leafMessageId: messageId, updatedAt: currentISODateString() }
-        : x,
+    updateChatsState((prevChats) =>
+      prevChats.map((x) =>
+        x.id === selectedChat.id
+          ? {
+              ...x,
+              leafMessageId: messageId,
+              updatedAt: currentISODateString(),
+            }
+          : x,
+      ),
     );
-    chatDispatch(setChats(chatList));
     
     putChats(selectedChat.id, {
       setsLeafMessageId: true,
@@ -1055,12 +1079,13 @@ const Chat = memo(() => {
       msgs.push(copyMsg!);
       
       // 更新chats中的leafMessageId
-      const updatedChats = chats.map((chat) =>
-        chat.id === selectedChat.id
-          ? { ...chat, leafMessageId: copyMsg!.id }
-          : chat
+      updateChatsState((prevChats) =>
+        prevChats.map((chat) =>
+          chat.id === selectedChat.id
+            ? { ...chat, leafMessageId: copyMsg!.id }
+            : chat,
+        ),
       );
-      chatDispatch(setChats(updatedChats));
     }
     messageDispatch(setMessages(msgs));
     messageDispatch(setSelectedMessages(selectedMsgs));
