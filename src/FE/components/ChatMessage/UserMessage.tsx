@@ -16,6 +16,7 @@ import {
 } from '@/types/chat';
 
 import { Button } from '@/components/ui/button';
+import { SendButton, useSendKeyHandler } from '@/components/ui/send-button';
 
 import { Textarea } from '../ui/textarea';
 import CopyAction from './CopyAction';
@@ -91,6 +92,13 @@ const UserMessage = (props: Props) => {
     setIsEditing(false);
   };
 
+  // 使用发送键盘处理 hook
+  const { handleKeyDown: handleSendKeyDown } = useSendKeyHandler(
+    () => handleEditMessage(false),
+    isTyping,
+    !contentText?.trim()
+  );
+
   const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContentText(event.target.value);
     if (textareaRef.current) {
@@ -98,11 +106,9 @@ const UserMessage = (props: Props) => {
     }
   };
 
-  const handlePressEnter = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !isTyping && e.ctrlKey) {
-      e.preventDefault();
-      handleEditMessage();
-    }
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // 使用新的发送键盘处理逻辑
+    handleSendKeyDown(e);
   };
 
   const handleToggleEditing = () => {
@@ -136,7 +142,7 @@ const UserMessage = (props: Props) => {
               className="w-full outline-none resize-none whitespace-pre-wrap border-none rounded-md bg-muted"
               value={contentText}
               onChange={handleInputChange}
-              onKeyDown={handlePressEnter}
+              onKeyDown={handleKeyDown}
               onCompositionStart={() => setIsTyping(true)}
               onCompositionEnd={() => setIsTyping(false)}
               style={{
@@ -160,16 +166,11 @@ const UserMessage = (props: Props) => {
               >
                 {t('Save')}
               </Button>
-              <Button
-                variant="default"
-                className="rounded-md px-4 py-1 text-sm font-medium"
-                onClick={() => {
-                  handleEditMessage();
-                }}
-                disabled={(contentText || '')?.trim().length <= 0}
-              >
-                {t('Send')}
-              </Button>
+              <SendButton
+                onSend={() => handleEditMessage(false)}
+                disabled={!contentText?.trim()}
+                size="sm"
+              />
               <Button
                 variant="outline"
                 className="rounded-md border border-neutral-300 px-4 py-1 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"

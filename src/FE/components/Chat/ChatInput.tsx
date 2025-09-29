@@ -38,6 +38,8 @@ import {
 } from '@/components/Icons/index';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { SendButton } from '@/components/ui/send-button';
+import { useSendMode } from '@/hooks/useSendMode';
 import Tips from '@/components/Tips/Tips';
 
 import { setShowChatInput } from '@/actions/setting.actions';
@@ -97,6 +99,9 @@ const ChatInput = ({
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isFullWriting, setIsFullWriting] = useState(false);
   const [isCollapsedByChat, setIsCollapsedByChat] = useState(false);
+
+  // 使用发送模式 hook (确保 hook 在组件顶层调用)
+  const { sendMode } = useSendMode();
 
   // 定义所有需要在hooks规则下的callbacks和effects
   const updatePromptListVisibility = useCallback((text: string) => {
@@ -237,9 +242,29 @@ const ChatInput = ({
       } else {
         setActivePromptIndex(0);
       }
-    } else if (e.key === 'Enter' && !isTyping && !isMobile() && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+    } else {
+      // 对于移动端，仍然使用原来的逻辑避免意外发送
+      if (isMobile() && e.key === 'Enter' && !e.shiftKey) {
+        return; // 让移动端用户必须点击发送按钮
+      }
+      
+      // Alt+S 发送
+      if (e.altKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleSend();
+        return;
+      }
+
+      // 根据模式处理 Enter 键
+      if (e.key === 'Enter' && !isTyping) {
+        if (sendMode === 'enter' && !e.shiftKey && !e.ctrlKey) {
+          e.preventDefault();
+          handleSend();
+        } else if (sendMode === 'ctrl-enter' && e.ctrlKey && !e.shiftKey) {
+          e.preventDefault();
+          handleSend();
+        }
+      }
     }
   };
 
@@ -622,26 +647,26 @@ const ChatInput = ({
                     ))}
                 </div>
                 <div className="flex flex-row gap-3 items-center">
-                  <Tips
-                    trigger={
-                      <Button
-                        className="rounded-sm w-20 h-9 mr-1"
-                        onClick={
-                          selectedChat.status === ChatStatus.Chatting
-                            ? handleStopChats
-                            : handleSend
-                        }
-                      >
-                        {selectedChat.status === ChatStatus.Chatting ? (
+                  {selectedChat.status === ChatStatus.Chatting ? (
+                    <Tips
+                      trigger={
+                        <Button
+                          className="rounded-sm w-20 h-9 mr-1"
+                          onClick={handleStopChats}
+                        >
                           <IconStopFilled className="h-4 w-4" />
-                        ) : (
-                          t('Send')
-                        )}
-                      </Button>
-                    }
-                    side="top"
-                    content={`Enter ${t('Send')} / Ctrl Enter ${t('Line break')}`}
-                  />
+                        </Button>
+                      }
+                      side="top"
+                      content={t('Stop Generating')}
+                    />
+                  ) : (
+                    <SendButton
+                      onSend={handleSend}
+                      disabled={!contentText?.trim()}
+                      size="sm"
+                    />
+                  )}
                 </div>
               </div>
 
