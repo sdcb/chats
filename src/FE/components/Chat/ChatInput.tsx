@@ -213,20 +213,6 @@ const ChatInput = ({
       return;
     }
 
-    if (e.ctrlKey && e.key === 'Enter') {
-      e.preventDefault();
-      const textarea = e.target as HTMLTextAreaElement;
-      const value = textarea.value;
-      const selectionStart = textarea.selectionStart;
-      const selectionEnd = textarea.selectionEnd;
-      const newValue = value.substring(0, selectionStart) + '\n' + value.substring(selectionEnd);
-      setContentText(newValue);
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = selectionStart + 1;
-      }, 0);
-      return;
-    }
-
     if (showPromptList) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -252,7 +238,7 @@ const ChatInput = ({
       } else {
         setActivePromptIndex(0);
       }
-    } else if (e.key === 'Enter' && !isTyping && !isMobile() && !e.shiftKey) {
+    } else if (e.ctrlKey && e.key === 'Enter' && !isTyping && !isMobile() && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
@@ -637,7 +623,7 @@ const ChatInput = ({
                 </div>
                 <div className="flex flex-row gap-3 items-center">
                   <div className="text-gray-400">
-                    Enter {t('Send')} / Ctrl Enter {t('Line break')}
+                    Enter {t('Line break')} / Ctrl Enter {t('Send')}
                   </div>
                   <Button
                     className="rounded-sm w-20 h-9"
