@@ -195,7 +195,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
             {
                 CancellationToken = cancellationToken
             });
-            cr = ClientResult.FromValue(FromClientResult(null!, clientResult), clientResult.GetRawResponse());
+            cr = ClientResult.FromValue((GeneratedImageCollection)clientResult, clientResult.GetRawResponse());
         }
 
         JsonObject rawJson = cr.GetRawResponse().Content
