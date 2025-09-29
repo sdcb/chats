@@ -213,6 +213,20 @@ const ChatInput = ({
       return;
     }
 
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      const textarea = e.target as HTMLTextAreaElement;
+      const value = textarea.value;
+      const selectionStart = textarea.selectionStart;
+      const selectionEnd = textarea.selectionEnd;
+      const newValue = value.substring(0, selectionStart) + '\n' + value.substring(selectionEnd);
+      setContentText(newValue);
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = selectionStart + 1;
+      }, 0);
+      return;
+    }
+
     if (showPromptList) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
