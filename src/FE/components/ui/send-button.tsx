@@ -1,6 +1,7 @@
 import { KeyboardEvent, useEffect } from 'react';
 import useTranslation from '@/hooks/useTranslation';
 import { useSendMode, SendMode } from '@/hooks/useSendMode';
+import { useIsMobile } from '@/hooks/useMobile';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -30,6 +31,7 @@ export const SendButton = ({
 }: SendButtonProps) => {
   const { t } = useTranslation();
   const { sendMode, updateSendMode } = useSendMode();
+  const isMobile = useIsMobile();
 
   // 处理 Alt+S 快捷键
   useEffect(() => {
@@ -46,6 +48,21 @@ export const SendButton = ({
 
   const sendText = t('Send');
 
+  // 在移动端显示普通按钮
+  if (isMobile) {
+    return (
+      <Button
+        className={className}
+        onClick={onSend}
+        disabled={disabled || isSending}
+        size={size}
+      >
+        {isSending ? t('Sending...') : sendText}
+      </Button>
+    );
+  }
+
+  // 在桌面端显示组合按钮
   return (
     <div className="flex">
       <Button
