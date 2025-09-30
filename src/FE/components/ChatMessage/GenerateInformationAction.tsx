@@ -2,7 +2,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { formatNumberAsMoney, toFixed } from '@/utils/common';
 
-import { IChatMessage } from '@/types/chatMessage';
+import { IChatMessage, IStepGenerateInfo } from '@/types/chatMessage';
 
 import { IconInfo } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
@@ -12,34 +12,93 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { useState } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCallback, useEffect, useState } from 'react';
 
 interface Props {
   hidden?: boolean;
   disabled?: boolean;
   message: IChatMessage;
+  chatId?: string;
+  chatShareId?: string;
+  isAdminView?: boolean;
+  onFetchGenerateInfo?: (
+    turnId: string,
+    chatId?: string,
+    chatShareId?: string,
+  ) => Promise<IStepGenerateInfo[]>;
 }
 
 export const GenerateInformationAction = (props: Props) => {
   const { t } = useTranslation();
-  const { message, hidden, disabled } = props;
+  const { message, hidden, disabled, chatId, chatShareId, isAdminView, onFetchGenerateInfo } = props;
   const [isOpen, setIsOpen] = useState(false);
+  const [stepInfos, setStepInfos] = useState<IStepGenerateInfo[] | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchGenerateInfo = useCallback(async () => {
+    if (stepInfos || !onFetchGenerateInfo) return;
+    
+    setLoading(true);
+    try {
+      const infos = await onFetchGenerateInfo(message.id, chatId, chatShareId);
+      setStepInfos(infos);
+    } catch (error) {
+      console.error('Failed to fetch generate info:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [stepInfos, onFetchGenerateInfo, message.id, chatId, chatShareId]);
+
+  useEffect(() => {
+    if (isOpen && !stepInfos && !loading) {
+      fetchGenerateInfo();
+    }
+  }, [isOpen, stepInfos, loading, fetchGenerateInfo]);
+
+  // 聚合步骤数据或使用消息中的旧数据
+  const info = stepInfos 
+    ? {
+        inputTokens: stepInfos.reduce((sum, s) => sum + s.inputTokens, 0),
+        outputTokens: stepInfos.reduce((sum, s) => sum + s.outputTokens, 0),
+        inputPrice: stepInfos.reduce((sum, s) => sum + s.inputPrice, 0),
+        outputPrice: stepInfos.reduce((sum, s) => sum + s.outputPrice, 0),
+        reasoningTokens: stepInfos.reduce((sum, s) => sum + s.reasoningTokens, 0),
+        duration: stepInfos.reduce((sum, s) => sum + s.duration, 0),
+        reasoningDuration: stepInfos.reduce((sum, s) => sum + s.reasoningDuration, 0),
+        firstTokenLatency: stepInfos[0]?.firstTokenLatency ?? 0,
+      }
+    : {
+        inputTokens: message.inputTokens,
+        outputTokens: message.outputTokens,
+        inputPrice: message.inputPrice,
+        outputPrice: message.outputPrice,
+        reasoningTokens: message.reasoningTokens,
+        duration: message.duration,
+        reasoningDuration: message.reasoningDuration,
+        firstTokenLatency: message.firstTokenLatency,
+      };
 
   const GenerateInformation = (props: { 
     name: string; 
     value: string;
     icon?: string;
+    loading?: boolean;
   }) => {
-    const { name, value, icon } = props;
+    const { name, value, icon, loading } = props;
     return (
       <div className="flex items-center justify-between py-0.5 px-1.5 rounded hover:bg-accent/50 transition-colors">
         <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
           {icon && <span className="text-xs">{icon}</span>}
           {t(name)}
         </span>
-        <span className="text-[11px] font-semibold text-foreground ml-3">
-          {value}
-        </span>
+        {loading ? (
+          <Skeleton className="h-3 w-20 ml-3" />
+        ) : (
+          <span className="text-[11px] font-semibold text-foreground ml-3">
+            {value}
+          </span>
+        )}
       </div>
     );
   };
@@ -87,59 +146,67 @@ export const GenerateInformationAction = (props: Props) => {
             <div className="space-y-0.5">
               <GenerateInformation
                 name={'total duration'}
-                value={message.duration?.toLocaleString() + 'ms'}
+                value={info.duration?.toLocaleString() + ' ms'}
                 icon="⏱️"
+                loading={loading}
               />
               <GenerateInformation
                 name={'first token latency'}
-                value={message.firstTokenLatency?.toLocaleString() + 'ms'}
+                value={info.firstTokenLatency?.toLocaleString() + ' ms'}
                 icon="⚡"
+                loading={loading}
               />
               <GenerateInformation
                 name={'prompt tokens'}
-                value={`${message.inputTokens?.toLocaleString()}`}
+                value={`${info.inputTokens?.toLocaleString()}`}
                 icon="📥"
+                loading={loading}
               />
               <GenerateInformation
                 name={'response tokens'}
                 value={`${(
-                  message.outputTokens - message.reasoningTokens
+                  (info.outputTokens ?? 0) - (info.reasoningTokens ?? 0)
                 ).toLocaleString()}`}
                 icon="📤"
+                loading={loading}
               />
-              {!!message.reasoningTokens && (
+              {!!(info.reasoningTokens) && (
                 <GenerateInformation
                   name={'reasoning tokens'}
-                  value={`${message.reasoningTokens.toLocaleString()}`}
+                  value={`${info.reasoningTokens.toLocaleString()}`}
                   icon="🧠"
+                  loading={loading}
                 />
               )}
               <GenerateInformation
                 name={'response speed'}
                 value={
-                  message.duration
+                  info.duration
                     ? toFixed(
-                        (message.outputTokens / (message.duration || 0)) *
+                        ((info.outputTokens ?? 0) / (info.duration || 0)) *
                           1000,
                       ) + ' token/s'
                     : '-'
                 }
                 icon="🚀"
+                loading={loading}
               />
-              {(message.inputPrice > 0 || message.outputPrice > 0) && (
+              {((info.inputPrice ?? 0) > 0 || (info.outputPrice ?? 0) > 0 || loading) && (
                 <div className="pt-1.5 mt-1.5 border-t space-y-0.5">
-                  {message.inputPrice > 0 && (
+                  {((info.inputPrice ?? 0) > 0 || loading) && (
                     <GenerateInformation
                       name={'prompt cost'}
-                      value={'￥' + formatNumberAsMoney(+message.inputPrice, 6)}
+                      value={'￥' + formatNumberAsMoney(+(info.inputPrice ?? 0), 6)}
                       icon="💰"
+                      loading={loading}
                     />
                   )}
-                  {message.outputPrice > 0 && (
+                  {((info.outputPrice ?? 0) > 0 || loading) && (
                     <GenerateInformation
                       name={'response cost'}
-                      value={'￥' + formatNumberAsMoney(+message.outputPrice, 6)}
+                      value={'￥' + formatNumberAsMoney(+(info.outputPrice ?? 0), 6)}
                       icon="💵"
+                      loading={loading}
                     />
                   )}
                   <GenerateInformation
@@ -147,11 +214,12 @@ export const GenerateInformationAction = (props: Props) => {
                     value={
                       '￥' +
                       formatNumberAsMoney(
-                        +message.inputPrice + +message.outputPrice,
+                        +(info.inputPrice ?? 0) + +(info.outputPrice ?? 0),
                         6,
                       )
                     }
                     icon="💳"
+                    loading={loading}
                   />
                 </div>
               )}

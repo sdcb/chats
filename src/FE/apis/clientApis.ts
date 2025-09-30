@@ -7,7 +7,7 @@ import {
   RequestContent,
   ResponseContent,
 } from '@/types/chat';
-import { IChatMessage } from '@/types/chatMessage';
+import { IChatMessage, IStepGenerateInfo } from '@/types/chatMessage';
 import {
   ChatResult,
   ChatPresetReorderRequest,
@@ -69,6 +69,24 @@ export const changeUserPassword = (params: PostUserPassword) => {
 export const getUserMessages = (chatId: string): Promise<IChatMessage[]> => {
   const fetchService = useFetch();
   return fetchService.get(`/api/messages/${chatId}`);
+};
+
+export const getTurnGenerateInfo = (
+  chatId: string,
+  turnId: string,
+): Promise<IStepGenerateInfo[]> => {
+  const fetchService = useFetch();
+  return fetchService.get(`/api/messages/${chatId}/${turnId}/generate-info`);
+};
+
+export const getSharedTurnGenerateInfo = (
+  chatShareId: string,
+  turnId: string,
+): Promise<IStepGenerateInfo[]> => {
+  const fetchService = useFetch();
+  return fetchService.get(
+    `/api/public/chat-share/${chatShareId}/${turnId}/generate-info`,
+  );
 };
 
 export const getChatsByPaging = (

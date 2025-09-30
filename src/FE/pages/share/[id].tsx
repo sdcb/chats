@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -9,14 +9,14 @@ import { getQueryId } from '@/utils/common';
 import { findLastLeafId, findSelectedMessageByLeafId } from '@/utils/message';
 
 import { ChatStatus, IChat } from '@/types/chat';
-import { IChatMessage } from '@/types/chatMessage';
+import { IChatMessage, ITurnGenerateInfo } from '@/types/chatMessage';
 
 import { ChatMessage } from '@/components/ChatMessage';
 import { IconArrowCompactDown } from '@/components/Icons/index';
 import PageNotFound from '@/components/PageNotFound/PageNotFound';
 import { Button } from '@/components/ui/button';
 
-import { getChatShare } from '@/apis/clientApis';
+import { getChatShare, getSharedTurnGenerateInfo } from '@/apis/clientApis';
 
 export default function ShareMessage() {
   const { t } = useTranslation();
@@ -28,6 +28,7 @@ export default function ShareMessage() {
   );
   const [loading, setLoading] = useState(true);
   const [showBottomBar, setShowBottomBar] = useState(true);
+  const [chatShareId, setChatShareId] = useState<string>('');
 
   const handleToggleBottomBar = () => {
     setShowBottomBar(!showBottomBar);
@@ -39,11 +40,21 @@ export default function ShareMessage() {
     setSelectedMessages(selectedMsgs);
   };
 
+  const handleFetchGenerateInfo = useCallback(
+    async (turnId: string, _chatId?: string, shareId?: string): Promise<ITurnGenerateInfo> => {
+      const id = shareId || chatShareId;
+      if (!id) return Promise.reject('chatShareId is required');
+      return await getSharedTurnGenerateInfo(id, turnId);
+    },
+    [chatShareId],
+  );
+
   useEffect(() => {
     setLoading(true);
     if (!router.isReady) return;
-    const chatShareId = getQueryId(router)!;
-    getChatShare(chatShareId).then((data) => {
+    const shareId = getQueryId(router)!;
+    setChatShareId(shareId);
+    getChatShare(shareId).then((data) => {
       setSelectedChat({ ...data, status: ChatStatus.None });
       setMessages(data.messages);
       let selectedMsgs = findSelectedMessageByLeafId(
@@ -71,7 +82,9 @@ export default function ShareMessage() {
             selectedMessages={selectedMessages}
             messagesEndRef={null}
             readonly={true}
+            chatShareId={chatShareId}
             onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
+            onFetchGenerateInfo={handleFetchGenerateInfo}
           />
         </div>
         {showBottomBar ? (

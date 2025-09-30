@@ -4,7 +4,7 @@ import { hasMultipleSpans } from '@/utils/chats';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatRole, IChat, Message, ResponseContent } from '@/types/chat';
-import { IChatMessage, MessageDisplayType, ReactionMessageType } from '@/types/chatMessage';
+import { IChatMessage, ITurnGenerateInfo, MessageDisplayType, ReactionMessageType } from '@/types/chatMessage';
 
 import ChatMessageHeader from './ChatMessageHeader';
 import ResponseMessage from './ResponseMessage';
@@ -20,6 +20,8 @@ export interface Props {
   messagesEndRef: any;
   readonly?: boolean;
   className?: string;
+  chatShareId?: string;
+  isAdminView?: boolean;
   onChangeChatLeafMessageId?: (messageId: string) => void;
   onEditAndSendMessage?: (editedMessage: Message, parentId?: string) => void;
   onRegenerate?: (spanId: number, messageId: string, modelId: number) => void;
@@ -33,6 +35,11 @@ export interface Props {
   onDeleteMessage?: (messageId: string) => void;
   onChangeDisplayType?: (messageId: string, type: MessageDisplayType) => void;
   onRegenerateAllAssistant?: (messageId: string, modelId: number) => void;
+  onFetchGenerateInfo?: (
+    turnId: string,
+    chatId?: string,
+    chatShareId?: string,
+  ) => Promise<ITurnGenerateInfo>;
 }
 
 export const ChatMessage: FC<Props> = memo(
@@ -43,6 +50,8 @@ export const ChatMessage: FC<Props> = memo(
     messagesEndRef,
     readonly,
     className,
+    chatShareId,
+    isAdminView,
     onChangeChatLeafMessageId,
     onEditAndSendMessage,
     onRegenerate,
@@ -52,6 +61,7 @@ export const ChatMessage: FC<Props> = memo(
     onDeleteMessage,
     onChangeDisplayType,
     onRegenerateAllAssistant,
+    onFetchGenerateInfo,
   }) => {
     const isMultiSpan = hasMultipleSpans(selectedMessages);
     return (
@@ -136,6 +146,8 @@ export const ChatMessage: FC<Props> = memo(
                           chatStatus={selectedChat.status}
                           selectedChat={selectedChat}
                           message={message}
+                          chatShareId={chatShareId}
+                          isAdminView={isAdminView}
                           onChangeMessage={onChangeChatLeafMessageId}
                           onReactionMessage={onReactionMessage}
                           onRegenerate={(
@@ -146,6 +158,7 @@ export const ChatMessage: FC<Props> = memo(
                               onRegenerate(message.spanId!, messageId, modelId);
                           }}
                           onDeleteMessage={onDeleteMessage}
+                          onFetchGenerateInfo={onFetchGenerateInfo}
                         />
                       </div>
                     )}

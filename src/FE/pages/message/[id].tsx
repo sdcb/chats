@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 import { useRouter } from 'next/router';
 
@@ -6,12 +6,12 @@ import { getQueryId } from '@/utils/common';
 import { findLastLeafId, findSelectedMessageByLeafId } from '@/utils/message';
 
 import { ChatStatus, IChat } from '@/types/chat';
-import { IChatMessage } from '@/types/chatMessage';
+import { IChatMessage, ITurnGenerateInfo } from '@/types/chatMessage';
 
 import { ChatMessage } from '@/components/ChatMessage';
 import PageNotFound from '@/components/PageNotFound/PageNotFound';
 
-import { getAdminMessage } from '@/apis/adminApis';
+import { getAdminMessage, getAdminTurnGenerateInfo } from '@/apis/adminApis';
 
 export default function MessageDetails() {
   const router = useRouter();
@@ -21,6 +21,7 @@ export default function MessageDetails() {
     [],
   );
   const [loading, setLoading] = useState(true);
+  const [chatId, setChatId] = useState<number>(0);
 
   const handleChangeChatLeafMessageId = (messageId: string) => {
     const leafId = findLastLeafId(messages, messageId);
@@ -28,11 +29,21 @@ export default function MessageDetails() {
     setSelectedMessages(selectedMsgs);
   };
 
+  const handleFetchGenerateInfo = useCallback(
+    async (turnId: string): Promise<ITurnGenerateInfo> => {
+      if (!chatId) return Promise.reject('chatId is required');
+      return await getAdminTurnGenerateInfo(chatId, turnId);
+    },
+    [chatId],
+  );
+
   useEffect(() => {
     setLoading(true);
     if (!router.isReady) return;
-    const chatShareId = getQueryId(router)!;
-    getAdminMessage(chatShareId).then((data) => {
+    const chatIdStr = getQueryId(router)!;
+    const id = parseInt(chatIdStr, 10);
+    setChatId(id);
+    getAdminMessage(chatIdStr).then((data) => {
       setSelectedChat({ ...data, status: ChatStatus.None });
       setMessages(data.messages);
       const selectedMsgs = findSelectedMessageByLeafId(
@@ -52,7 +63,9 @@ export default function MessageDetails() {
           selectedMessages={selectedMessages}
           messagesEndRef={null}
           readonly={true}
+          isAdminView={true}
           onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
+          onFetchGenerateInfo={handleFetchGenerateInfo}
         />
       </>
     ) : (

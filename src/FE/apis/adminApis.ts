@@ -54,6 +54,7 @@ import {
   SmsAttemptLog,
 } from '@/types/adminApis';
 import { GetChatShareResult, GetChatVersionResult } from '@/types/clientApis';
+import { IStepGenerateInfo } from '@/types/chatMessage';
 import { IKeyCount } from '@/types/common';
 import { ChatModelFileConfig, DBModelProvider } from '@/types/model';
 import { PageResult } from '@/types/page';
@@ -432,6 +433,16 @@ export const getAdminMessage = (chatId: string) => {
   const fetchServer = useFetch();
   return fetchServer.get<GetChatShareResult>(
     `/api/admin/message-details?chatId=${chatId}`,
+  );
+};
+
+export const getAdminTurnGenerateInfo = (
+  chatId: number,
+  turnId: string,
+): Promise<IStepGenerateInfo[]> => {
+  const fetchServer = useFetch();
+  return fetchServer.get(
+    `/api/admin/message-details/${turnId}/generate-info?chatId=${chatId}`,
   );
 };
 

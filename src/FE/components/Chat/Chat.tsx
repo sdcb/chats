@@ -67,6 +67,7 @@ import NoModel from './NoModel';
 
 import {
   deleteMessage,
+  getTurnGenerateInfo,
   putChats,
   putMessageReactionClear,
   putMessageReactionUp,
@@ -211,11 +212,6 @@ const Chat = memo(() => {
     throttledScrollDown();
     handleScroll();
   }, [selectedMessages, selectedChat, throttledScrollDown, handleScroll]);
-
-  // 如果没有选中的聊天，显示NoChat组件
-  if (!selectedChat) {
-    return hasModel() ? <NoChat /> : <NoModel />;
-  }
 
   const getSelectedMessagesLastActiveMessage = () => {
     const selectedMessageLength = selectedMessages.length - 1;
@@ -584,6 +580,7 @@ const Chat = memo(() => {
     messageId: string,
     modelId: number,
   ) => {
+    if (!selectedChat) return;
     if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
     startChat();
     let { id: chatId } = selectedChat;
@@ -636,6 +633,7 @@ const Chat = memo(() => {
     messageId: string,
     modelId: number,
   ) => {
+    if (!selectedChat) return;
     if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
     startChat();
     let { id: chatId } = selectedChat;
@@ -682,6 +680,7 @@ const Chat = memo(() => {
     message: Message,
     messageId?: string,
   ) => {
+    if (!selectedChat) return;
     if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
     startChat();
     let { id: chatId, spans: chatSpans } = selectedChat;
@@ -722,6 +721,7 @@ const Chat = memo(() => {
     response: Response,
     selectedMessageList: IChatMessage[][],
   ) => {
+  if (!selectedChat) return;
   let messageList = [...messages];
   // 用于跟踪每个 span 最近一次非空的工具调用 ID，便于将 u 为 null 的参数片段归并
   const currentToolCallIdBySpan = new Map<number, string>();
@@ -948,6 +948,7 @@ const Chat = memo(() => {
   };
 
   const handleChangeChatLeafMessageId = (messageId: string) => {
+    if (!selectedChat) return;
     if (selectedChat.status === ChatStatus.Chatting) return;
     for (const levelMessages of selectedMessages) {
       for (const message of levelMessages) {
@@ -1020,6 +1021,7 @@ const Chat = memo(() => {
     content: ResponseContent,
     isCopy: boolean = false,
   ) => {
+    if (!selectedChat) return;
     let data: IChatMessage;
     const params = {
       messageId,
@@ -1201,6 +1203,14 @@ const Chat = memo(() => {
     messageDispatch(setMessages(msgs));
   };
 
+  const handleFetchGenerateInfo = useCallback(
+    async (turnId: string, chatId?: string) => {
+      if (!chatId) return Promise.reject('chatId is required');
+      return await getTurnGenerateInfo(chatId, turnId);
+    },
+    [],
+  );
+
   const handleChangeDisplayType = (
     messageId: string,
     type: MessageDisplayType,
@@ -1225,10 +1235,27 @@ const Chat = memo(() => {
     messageDispatch(setSelectedMessages(selectedMsgs));
   };
 
+  // 如果没有选中的聊天，显示NoChat或NoModel组件
+  if (!selectedChat) {
+    return (
+      <div className="relative flex-1">
+        <div className="flex flex-col">
+          <div className="relative h-16"></div>
+          <div
+            className="relative h-[calc(100vh-64px)] overflow-x-hidden scroll-container w-full"
+            ref={chatContainerRef}
+          >
+            {hasModel() ? <NoChat /> : <NoModel />}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex-1">
       <div className="flex flex-col">
-        <div className="relative h-16">{selectedChat && <ChatHeader />}</div>
+        <div className="relative h-16"><ChatHeader /></div>
         <div
           className="relative h-[calc(100vh-64px)] overflow-x-hidden scroll-container w-full"
           ref={chatContainerRef}
@@ -1240,9 +1267,7 @@ const Chat = memo(() => {
               width: `calc(100vw - ${showChatBar ? 280 : 0}px)`,
             }}
           >
-            {selectedChat && selectedMessages.length === 0 && (
-              <ChatPresetList />
-            )}
+            {selectedMessages.length === 0 && <ChatPresetList />}
           </div>
 
           <ChatMessageMemoized
@@ -1259,14 +1284,13 @@ const Chat = memo(() => {
             onDeleteMessage={handleDeleteMessage}
             onChangeDisplayType={handleChangeDisplayType}
             onRegenerateAllAssistant={handleRegenerateAllAssistant}
+            onFetchGenerateInfo={handleFetchGenerateInfo}
           />
 
-          {!hasModel() && !selectedChat?.id && <NoModel />}
-          {hasModel() && !selectedChat?.id && <NoChat />}
           <div className={cn(showChatInput ? 'h-40' : 'h-2')}></div>
         </div>
 
-        {hasModel() && selectedChat && (
+        {hasModel() && (
           <ChatInput
             onSend={(message) => {
               const lastMessage = getSelectedMessagesLastActiveMessage();

@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatSpanDto } from '@/types/clientApis';
 import { ChatStatus, IChat, MessageContentType, TextContent } from '@/types/chat';
-import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
+import { IChatMessage, IStepGenerateInfo, ReactionMessageType } from '@/types/chatMessage';
 
 import CopyAction from './CopyAction';
 import DeleteAction from './DeleteAction';
@@ -20,10 +20,17 @@ interface Props {
   chatStatus: ChatStatus;
   selectedChat: IChat;
   readonly?: boolean;
+  chatShareId?: string;
+  isAdminView?: boolean;
   onChangeMessage?: (messageId: string) => void;
   onRegenerate?: (messageId: string, modelId: number) => void;
   onReactionMessage?: (type: ReactionMessageType, messageId: string) => void;
   onDeleteMessage?: (messageId: string) => void;
+  onFetchGenerateInfo?: (
+    turnId: string,
+    chatId?: string,
+    chatShareId?: string,
+  ) => Promise<IStepGenerateInfo[]>;
 }
 
 const ResponseMessageActions = (props: Props) => {
@@ -33,10 +40,13 @@ const ResponseMessageActions = (props: Props) => {
     chatStatus,
     selectedChat,
     readonly,
+    chatShareId,
+    isAdminView,
     onChangeMessage,
     onRegenerate,
     onReactionMessage,
     onDeleteMessage,
+    onFetchGenerateInfo,
   } = props;
 
   const {
@@ -106,6 +116,10 @@ const ResponseMessageActions = (props: Props) => {
           hidden={message.edited}
           disabled={messageReceiving}
           message={message}
+          chatId={selectedChat.id}
+          chatShareId={chatShareId}
+          isAdminView={isAdminView}
+          onFetchGenerateInfo={onFetchGenerateInfo}
         />
 
         <ReactionAction
