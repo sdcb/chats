@@ -4,7 +4,7 @@ import { hasMultipleSpans } from '@/utils/chats';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatRole, IChat, Message, ResponseContent } from '@/types/chat';
-import { IChatMessage, ITurnGenerateInfo, MessageDisplayType, ReactionMessageType } from '@/types/chatMessage';
+import { IChatMessage, IStepGenerateInfo, MessageDisplayType, ReactionMessageType } from '@/types/chatMessage';
 
 import ChatMessageHeader from './ChatMessageHeader';
 import ResponseMessage from './ResponseMessage';
@@ -39,7 +39,7 @@ export interface Props {
     turnId: string,
     chatId?: string,
     chatShareId?: string,
-  ) => Promise<ITurnGenerateInfo>;
+  ) => Promise<IStepGenerateInfo[]>;
 }
 
 export const ChatMessage: FC<Props> = memo(

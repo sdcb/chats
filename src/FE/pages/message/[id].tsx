@@ -6,7 +6,7 @@ import { getQueryId } from '@/utils/common';
 import { findLastLeafId, findSelectedMessageByLeafId } from '@/utils/message';
 
 import { ChatStatus, IChat } from '@/types/chat';
-import { IChatMessage, ITurnGenerateInfo } from '@/types/chatMessage';
+import { IChatMessage, IStepGenerateInfo } from '@/types/chatMessage';
 
 import { ChatMessage } from '@/components/ChatMessage';
 import PageNotFound from '@/components/PageNotFound/PageNotFound';
@@ -30,7 +30,7 @@ export default function MessageDetails() {
   };
 
   const handleFetchGenerateInfo = useCallback(
-    async (turnId: string): Promise<ITurnGenerateInfo> => {
+    async (turnId: string): Promise<IStepGenerateInfo[]> => {
       if (!chatId) return Promise.reject('chatId is required');
       return await getAdminTurnGenerateInfo(chatId, turnId);
     },

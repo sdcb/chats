@@ -9,7 +9,7 @@ import { getQueryId } from '@/utils/common';
 import { findLastLeafId, findSelectedMessageByLeafId } from '@/utils/message';
 
 import { ChatStatus, IChat } from '@/types/chat';
-import { IChatMessage, ITurnGenerateInfo } from '@/types/chatMessage';
+import { IChatMessage, IStepGenerateInfo } from '@/types/chatMessage';
 
 import { ChatMessage } from '@/components/ChatMessage';
 import { IconArrowCompactDown } from '@/components/Icons/index';
@@ -41,7 +41,7 @@ export default function ShareMessage() {
   };
 
   const handleFetchGenerateInfo = useCallback(
-    async (turnId: string, _chatId?: string, shareId?: string): Promise<ITurnGenerateInfo> => {
+    async (turnId: string, _chatId?: string, shareId?: string): Promise<IStepGenerateInfo[]> => {
       const id = shareId || chatShareId;
       if (!id) return Promise.reject('chatShareId is required');
       return await getSharedTurnGenerateInfo(id, turnId);
