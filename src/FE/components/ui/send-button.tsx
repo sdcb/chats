@@ -83,7 +83,7 @@ export const SendButton = ({
             className="rounded-l-none px-2 border-l-0"
             variant="default"
             size={size}
-            disabled={disabled || isSending}
+            disabled={isSending}
           >
             <IconChevronDown size={14} className="text-white dark:text-black" />
           </Button>
