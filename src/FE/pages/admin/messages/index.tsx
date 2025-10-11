@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 
 import useDebounce from '@/hooks/useDebounce';
 import useTranslation from '@/hooks/useTranslation';
@@ -28,31 +29,94 @@ import { cn } from '@/lib/utils';
 
 export default function Messages() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState<Paging>({
-    page: 1,
-    pageSize: 12,
-  });
   const [messages, setMessages] = useState<PageResult<AdminChatsDto[]>>({
     count: 0,
     rows: [],
   });
-  const [query, setQuery] = useState('');
+  
+  // 本地搜索输入状态（用于防抖）
+  const [searchInput, setSearchInput] = useState('');
 
-  const updateQueryWithDebounce = useDebounce((query: string) => {
-    init(query);
+  // 从 URL 中读取状态
+  const query = (router.query.query as string) || '';
+  const page = parseInt((router.query.p as string) || '1', 10);
+  const pageSize = parseInt((router.query.pageSize as string) || '12', 10);
+  const defaultPageSize = 12;
+
+  // 更新 URL 的函数
+  const updateUrl = (params: { query?: string; page?: number; pageSize?: number }) => {
+    const newQuery: Record<string, string> = {};
+    
+    // 复制现有的 query 参数（只保留 string 类型）
+    Object.keys(router.query).forEach(key => {
+      const value = router.query[key];
+      if (typeof value === 'string') {
+        newQuery[key] = value;
+      }
+    });
+    
+    // 更新或删除 query 参数
+    if (params.query !== undefined) {
+      if (params.query) {
+        newQuery.query = params.query;
+      } else {
+        delete newQuery.query;
+      }
+    }
+    
+    // 更新 p (page)，第一页时不显示
+    if (params.page !== undefined) {
+      if (params.page === 1) {
+        delete newQuery.p;
+      } else {
+        newQuery.p = params.page.toString();
+      }
+    }
+    
+    // 更新 pageSize，默认值 12 时不显示
+    if (params.pageSize !== undefined) {
+      if (params.pageSize === defaultPageSize) {
+        delete newQuery.pageSize;
+      } else {
+        newQuery.pageSize = params.pageSize.toString();
+      }
+    }
+
+    router.push(
+      {
+        pathname: router.pathname,
+        query: newQuery,
+      },
+      undefined,
+      { shallow: true }
+    );
+  };
+
+  const updateQueryWithDebounce = useDebounce((searchQuery: string) => {
+    updateUrl({ query: searchQuery, page: 1 }); // 搜索时重置到第一页
   }, 1000);
 
-  const init = (query: string = '') => {
-    getMessages({ ...pagination, query }).then((data) => {
+  const init = () => {
+    setLoading(true);
+    getMessages({ page, pageSize, query }).then((data) => {
       setMessages(data);
       setLoading(false);
     });
   };
 
   useEffect(() => {
-    init(query);
-  }, [pagination]);
+    // 只有当 router 准备好时才执行
+    if (router.isReady) {
+      init();
+    }
+  }, [router.isReady, router.query]);
+
+  // 同步 URL 中的 query 到本地搜索输入状态
+  useEffect(() => {
+    setSearchInput(query);
+  }, [query]);
 
   return (
     <>
@@ -60,9 +124,9 @@ export default function Messages() {
         <Input
           className="max-w-[238px] w-full"
           placeholder={t('Search...')!}
-          value={query}
+          value={searchInput}
           onChange={(e) => {
-            setQuery(e.target.value);
+            setSearchInput(e.target.value);
             updateQueryWithDebounce(e.target.value);
           }}
         />
@@ -132,12 +196,12 @@ export default function Messages() {
         </Table>
         {messages.count !== 0 && (
           <PaginationContainer
-            page={pagination.page}
-            pageSize={pagination.pageSize}
+            page={page}
+            pageSize={pageSize}
             currentCount={messages.rows.length}
             totalCount={messages.count}
-            onPagingChange={(page, pageSize) => {
-              setPagination({ page, pageSize });
+            onPagingChange={(newPage, newPageSize) => {
+              updateUrl({ page: newPage, pageSize: newPageSize });
             }}
           />
         )}
