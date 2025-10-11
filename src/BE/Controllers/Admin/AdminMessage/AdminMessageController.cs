@@ -18,13 +18,21 @@ namespace Chats.BE.Controllers.Admin.AdminMessage;
 public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEncryptionService urlEncryption) : ControllerBase
 {
     [HttpGet("chats")]
-    public async Task<ActionResult<PagedResult<AdminChatsDto>>> GetAdminChats([FromQuery] QueryPagingRequest req, CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<AdminChatsDto>>> GetAdminChats([FromQuery] AdminChatsQueryRequest req, CancellationToken cancellationToken)
     {
         IQueryable<Chat> chats = db.Chats
             .Where(x => x.User.Role != "admin" || x.UserId == currentUser.Id);
-        if (!string.IsNullOrEmpty(req.Query))
+        
+        // 按用户名搜索
+        if (!string.IsNullOrEmpty(req.User))
         {
-            chats = chats.Where(x => x.User.UserName == req.Query);
+            chats = chats.Where(x => x.User.UserName.StartsWith(req.User));
+        }
+        
+        // 按消息内容搜索
+        if (!string.IsNullOrEmpty(req.Content))
+        {
+            chats = chats.Where(x => x.Title.Contains(req.Content));
         }
 
         return await PagedResult.FromQuery(chats

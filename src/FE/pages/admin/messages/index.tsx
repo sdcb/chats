@@ -37,16 +37,18 @@ export default function Messages() {
   });
   
   // 本地搜索输入状态（用于防抖）
-  const [searchInput, setSearchInput] = useState('');
+  const [userInput, setUserInput] = useState('');
+  const [contentInput, setContentInput] = useState('');
 
   // 从 URL 中读取状态
-  const query = (router.query.query as string) || '';
+  const user = (router.query.user as string) || '';
+  const content = (router.query.content as string) || '';
   const page = parseInt((router.query.p as string) || '1', 10);
   const pageSize = parseInt((router.query.pageSize as string) || '12', 10);
   const defaultPageSize = 12;
 
   // 更新 URL 的函数
-  const updateUrl = (params: { query?: string; page?: number; pageSize?: number }) => {
+  const updateUrl = (params: { user?: string; content?: string; page?: number; pageSize?: number }) => {
     const newQuery: Record<string, string> = {};
     
     // 复制现有的 query 参数（只保留 string 类型）
@@ -57,12 +59,21 @@ export default function Messages() {
       }
     });
     
-    // 更新或删除 query 参数
-    if (params.query !== undefined) {
-      if (params.query) {
-        newQuery.query = params.query;
+    // 更新或删除 user 参数
+    if (params.user !== undefined) {
+      if (params.user) {
+        newQuery.user = params.user;
       } else {
-        delete newQuery.query;
+        delete newQuery.user;
+      }
+    }
+    
+    // 更新或删除 content 参数
+    if (params.content !== undefined) {
+      if (params.content) {
+        newQuery.content = params.content;
+      } else {
+        delete newQuery.content;
       }
     }
     
@@ -94,13 +105,17 @@ export default function Messages() {
     );
   };
 
-  const updateQueryWithDebounce = useDebounce((searchQuery: string) => {
-    updateUrl({ query: searchQuery, page: 1 }); // 搜索时重置到第一页
+  const updateUserWithDebounce = useDebounce((searchUser: string) => {
+    updateUrl({ user: searchUser, page: 1 }); // 搜索时重置到第一页
+  }, 1000);
+
+  const updateContentWithDebounce = useDebounce((searchContent: string) => {
+    updateUrl({ content: searchContent, page: 1 }); // 搜索时重置到第一页
   }, 1000);
 
   const init = () => {
     setLoading(true);
-    getMessages({ page, pageSize, query }).then((data) => {
+    getMessages({ page, pageSize, user, content }).then((data) => {
       setMessages(data);
       setLoading(false);
     });
@@ -113,21 +128,31 @@ export default function Messages() {
     }
   }, [router.isReady, router.query]);
 
-  // 同步 URL 中的 query 到本地搜索输入状态
+  // 同步 URL 中的参数到本地搜索输入状态
   useEffect(() => {
-    setSearchInput(query);
-  }, [query]);
+    setUserInput(user);
+    setContentInput(content);
+  }, [user, content]);
 
   return (
     <>
-      <div className="flex flex-warp gap-4 mb-4">
+      <div className="flex flex-wrap gap-4 mb-4">
         <Input
           className="max-w-[238px] w-full"
-          placeholder={t('Search...')!}
-          value={searchInput}
+          placeholder={t('User Name') + '...'}
+          value={userInput}
           onChange={(e) => {
-            setSearchInput(e.target.value);
-            updateQueryWithDebounce(e.target.value);
+            setUserInput(e.target.value);
+            updateUserWithDebounce(e.target.value);
+          }}
+        />
+        <Input
+          className="max-w-[238px] w-full"
+          placeholder={t('Message Content') + '...'}
+          value={contentInput}
+          onChange={(e) => {
+            setContentInput(e.target.value);
+            updateContentWithDebounce(e.target.value);
           }}
         />
       </div>

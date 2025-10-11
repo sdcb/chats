@@ -95,7 +95,8 @@ export interface GetUsersResult {
 }
 
 export interface GetUserMessageParams extends Paging {
-  query: string;
+  user?: string;
+  content?: string;
 }
 
 export interface AdminChatsDto {

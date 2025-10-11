@@ -159,10 +159,18 @@ export const putUserBalance = (params: PutUserBalanceParams) => {
 export const getMessages = (
   params: GetUserMessageParams,
 ): Promise<PageResult<AdminChatsDto[]>> => {
-  const { query = null, page = 1, pageSize = 12 } = params;
+  const { user, content, page = 1, pageSize = 12 } = params;
   const fetchService = useFetch();
+  
+  // 构建查询参数
+  const queryParams = new URLSearchParams();
+  queryParams.append('page', page.toString());
+  queryParams.append('pageSize', pageSize.toString());
+  if (user) queryParams.append('user', user);
+  if (content) queryParams.append('content', content);
+  
   return fetchService.get(
-    `/api/admin/chats?page=${page}&pageSize=${pageSize}&query=${query}`,
+    `/api/admin/chats?${queryParams.toString()}`,
   );
 };
 
