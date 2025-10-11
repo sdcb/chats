@@ -490,10 +490,12 @@ const ChatInput = ({
                     )}
                   </div>
                   <div className="flex items-center">
-                    <FilesPopover
-                      onSelect={handleFileSelect}
-                      selectedFiles={contentFiles}
-                    />
+                    {canUploadFile() && (
+                      <FilesPopover
+                        onSelect={handleFileSelect}
+                        selectedFiles={contentFiles}
+                      />
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-1" />
