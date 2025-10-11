@@ -15,7 +15,7 @@ import DateTimePopover from '@/components/Popover/DateTimePopover';
 import DeletePopover from '@/components/Popover/DeletePopover';
 import ExportButton from '@/components/Button/ExportButtom';
 import Tips from '@/components/Tips/Tips';
-import PaginationContainer from '@/components/Pagiation/Pagiation';
+import PaginationContainer from '@/components/Pagination/Pagination';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';

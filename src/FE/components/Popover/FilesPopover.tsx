@@ -6,7 +6,7 @@ import { GetUserFilesResult } from '@/types/clientApis';
 import { IconFolder } from '@/components/Icons';
 import Tips from '@/components/Tips/Tips';
 import useTranslation from '@/hooks/useTranslation';
-import PaginationContainer from '@/components/Pagiation/Pagiation';
+import PaginationContainer from '@/components/Pagination/Pagination';
 import { Button } from '@/components/ui/button';
 import {
   Popover,

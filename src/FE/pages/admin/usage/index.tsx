@@ -22,7 +22,7 @@ import { PageResult } from '@/types/page';
 import DateTimePopover from '@/components/Popover/DateTimePopover';
 
 import ExportButton from '@/components/Button/ExportButtom';
-import PaginationContainer from '@/components/Pagiation/Pagiation';
+import PaginationContainer from '@/components/Pagination/Pagination';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -625,24 +625,22 @@ const UsageRecords = () => {
               ))}
             </TableBody>
           </Table>
+
+          {totalCount > 0 && (
+            <PaginationContainer
+              showPageNumbers={true}
+              page={pagination.page}
+              pageSize={pagination.pageSize}
+              currentCount={usageLogs.length}
+              totalCount={totalCount}
+              onPagingChange={(page: number, pageSize: number) => {
+                setPagination({ page, pageSize });
+                handlePageChange(page);
+              }}
+            />
+          )}
         </Card>
       </div>
-
-      {totalCount > 0 && (
-        <div className="mt-4 flex flex-col items-center">
-          <PaginationContainer
-            showPageNumbers={true}
-            page={pagination.page}
-            pageSize={pagination.pageSize}
-            currentCount={usageLogs.length}
-            totalCount={totalCount}
-            onPagingChange={(page: number, pageSize: number) => {
-              setPagination({ page, pageSize });
-              handlePageChange(page);
-            }}
-          />
-        </div>
-      )}
     </div>
   );
 };

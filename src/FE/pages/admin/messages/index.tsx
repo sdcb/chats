@@ -8,7 +8,7 @@ import { formatDateTime } from '@/utils/date';
 import { AdminChatsDto } from '@/types/adminApis';
 import { PageResult, Paging } from '@/types/page';
 
-import PaginationContainer from '../../../components/Pagiation/Pagiation';
+import PaginationContainer from '../../../components/Pagination/Pagination';
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import Tips from '@/components/Tips/Tips';
 import { Badge } from '@/components/ui/badge';

@@ -8,7 +8,7 @@ import { GetRequestLogsListResult } from '@/types/adminApis';
 import { PageResult, Paging } from '@/types/page';
 import { StatusCodeColor } from '@/types/statusCode';
 
-import PaginationContainer from '../../../components/Pagiation/Pagiation';
+import PaginationContainer from '../../../components/Pagination/Pagination';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
