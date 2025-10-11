@@ -18,6 +18,7 @@ import { GetUserApiKeyResult } from '@/types/clientApis';
 import { feModelProviders } from '@/types/model';
 import { PageResult } from '@/types/page';
 
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import DateTimePopover from '@/components/Popover/DateTimePopover';
 
 import ExportButton from '@/components/Button/ExportButtom';
@@ -520,9 +521,10 @@ const UsageRecordsTab = () => {
                   <div>{formatDateTime(log.usagedCreatedAt)}</div>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
-                  <div className="font-medium">{t('Provider/Model')}</div>
-                  <div className="overflow-hidden text-ellipsis whitespace-nowrap">
-                    {log.modelProviderName}/{log.modelName}
+                  <div className="font-medium">{t('Model')}</div>
+                  <div className="overflow-hidden text-ellipsis whitespace-nowrap flex items-center gap-1">
+                    <ModelProviderIcon className="h-4 w-4" providerName={log.modelProviderName} />
+                    <span>{log.modelName}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
@@ -567,7 +569,7 @@ const UsageRecordsTab = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>{t('Date')}</TableHead>
-                <TableHead>{t('Provider/Model')}</TableHead>
+                <TableHead>{t('Model')}</TableHead>
                 <TableHead>{t('Input/Output Tokens')}</TableHead>
                 <TableHead>{t('Input/Output Cost(￥)')}</TableHead>
                 <TableHead>{t('Total Cost(￥)')}</TableHead>
@@ -581,7 +583,10 @@ const UsageRecordsTab = () => {
                 <TableRow key={index} className="cursor-pointer">
                   <TableCell>{formatDateTime(log.usagedCreatedAt)}</TableCell>
                   <TableCell>
-                    {log.modelProviderName}/{log.modelName}
+                    <div className="flex items-center gap-1">
+                      <ModelProviderIcon providerName={log.modelProviderName} />
+                      <span className="whitespace-nowrap">{log.modelName}</span>
+                    </div>
                   </TableCell>
                   <TableCell>
                     {log.inputTokens}/{log.outputTokens}
