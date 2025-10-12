@@ -1203,13 +1203,6 @@ const Chat = memo(() => {
     messageDispatch(setMessages(msgs));
   };
 
-  const handleFetchGenerateInfo = useCallback(
-    async (turnId: string, chatId?: string) => {
-      if (!chatId) return Promise.reject('chatId is required');
-      return await getTurnGenerateInfo(chatId, turnId);
-    },
-    [],
-  );
 
   const handleChangeDisplayType = (
     messageId: string,
@@ -1284,7 +1277,6 @@ const Chat = memo(() => {
             onDeleteMessage={handleDeleteMessage}
             onChangeDisplayType={handleChangeDisplayType}
             onRegenerateAllAssistant={handleRegenerateAllAssistant}
-            onFetchGenerateInfo={handleFetchGenerateInfo}
           />
 
           <div className={cn(showChatInput ? 'h-40' : 'h-2')}></div>
