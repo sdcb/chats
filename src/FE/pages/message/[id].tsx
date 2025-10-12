@@ -6,12 +6,12 @@ import { getQueryId } from '@/utils/common';
 import { findLastLeafId, findSelectedMessageByLeafId } from '@/utils/message';
 
 import { ChatStatus, IChat } from '@/types/chat';
-import { IChatMessage, IStepGenerateInfo } from '@/types/chatMessage';
+import { IChatMessage } from '@/types/chatMessage';
 
 import { ChatMessage } from '@/components/ChatMessage';
 import PageNotFound from '@/components/PageNotFound/PageNotFound';
 
-import { getAdminMessage, getAdminTurnGenerateInfo } from '@/apis/adminApis';
+import { getAdminMessage } from '@/apis/adminApis';
 
 export default function MessageDetails() {
   const router = useRouter();
@@ -28,14 +28,6 @@ export default function MessageDetails() {
     const selectedMsgs = findSelectedMessageByLeafId(messages, leafId);
     setSelectedMessages(selectedMsgs);
   };
-
-  const handleFetchGenerateInfo = useCallback(
-    async (turnId: string): Promise<IStepGenerateInfo[]> => {
-      if (!chatId) return Promise.reject('chatId is required');
-      return await getAdminTurnGenerateInfo(chatId, turnId);
-    },
-    [chatId],
-  );
 
   useEffect(() => {
     setLoading(true);
@@ -65,7 +57,6 @@ export default function MessageDetails() {
           readonly={true}
           isAdminView={true}
           onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
-          onFetchGenerateInfo={handleFetchGenerateInfo}
         />
       </>
     ) : (
