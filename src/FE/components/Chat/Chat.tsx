@@ -108,6 +108,8 @@ const Chat = memo(() => {
     [chatDispatch],
   );
   const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(true);
+  const [autoScrollTemporarilyDisabled, setAutoScrollTemporarilyDisabled] =
+    useState<boolean>(false);
   const [showScrollDownButton, setShowScrollDownButton] =
     useState<boolean>(false);
   const [showScrollToTopButton, setShowScrollToTopButton] =
@@ -117,6 +119,11 @@ const Chat = memo(() => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const autoScrollDisabledRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    autoScrollDisabledRef.current = autoScrollTemporarilyDisabled;
+  }, [autoScrollTemporarilyDisabled]);
 
   // 定义所有需要在hooks规则下的callback和effect
   const handleSend = useCallback(
@@ -191,10 +198,14 @@ const Chat = memo(() => {
       const bottomTolerance = 30;
 
       if (scrollTop + clientHeight < scrollHeight - bottomTolerance) {
-        setAutoScrollEnabled(false);
+        if (!autoScrollDisabledRef.current) {
+          setAutoScrollEnabled(false);
+        }
         setShowScrollDownButton(true && selectedMessages.length > 0);
       } else {
-        setAutoScrollEnabled(true);
+        if (!autoScrollDisabledRef.current) {
+          setAutoScrollEnabled(true);
+        }
         setShowScrollDownButton(false);
       }
 
@@ -209,9 +220,69 @@ const Chat = memo(() => {
 
   useEffect(() => {
     if (!selectedChat) return;
-    throttledScrollDown();
+    if (autoScrollEnabled) {
+      throttledScrollDown();
+    }
     handleScroll();
-  }, [selectedMessages, selectedChat, throttledScrollDown, handleScroll]);
+  }, [
+    selectedMessages,
+    selectedChat,
+    throttledScrollDown,
+    handleScroll,
+    autoScrollEnabled,
+  ]);
+
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    let touchStartY = 0;
+
+    const disableAutoScrollForRequest = () => {
+      if (autoScrollDisabledRef.current) {
+        return;
+      }
+      setAutoScrollEnabled(false);
+      setAutoScrollTemporarilyDisabled(true);
+      autoScrollDisabledRef.current = true;
+    };
+
+    const handleWheel = (event: WheelEvent) => {
+      if (event.deltaY < 0) {
+        disableAutoScrollForRequest();
+      }
+    };
+
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length === 1) {
+        touchStartY = event.touches[0].clientY;
+      }
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (event.touches.length === 1) {
+        const currentY = event.touches[0].clientY;
+        const deltaY = currentY - touchStartY;
+        if (deltaY > 0) {
+          disableAutoScrollForRequest();
+        }
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: true });
+    container.addEventListener('touchstart', handleTouchStart, {
+      passive: true,
+    });
+    container.addEventListener('touchmove', handleTouchMove, {
+      passive: true,
+    });
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, []);
 
   const getSelectedMessagesLastActiveMessage = () => {
     const selectedMessageLength = selectedMessages.length - 1;
@@ -252,6 +323,9 @@ const Chat = memo(() => {
 
   const startChat = () => {
     changeSelectedChatStatus(ChatStatus.Chatting);
+    autoScrollDisabledRef.current = false;
+    setAutoScrollTemporarilyDisabled(false);
+    setAutoScrollEnabled(true);
   };
 
   const handleChatError = () => {
@@ -868,6 +942,8 @@ const Chat = memo(() => {
     messageDispatch(setSelectedMessages(selectedMsgs));
     messageDispatch(setMessages(messageList));
     changeSelectedChatStatus(ChatStatus.None);
+    autoScrollDisabledRef.current = false;
+    setAutoScrollTemporarilyDisabled(false);
   };
 
   const handleScrollDown = () => {
