@@ -3,6 +3,14 @@ import useTranslation from '@/hooks/useTranslation';
 import { formatNumberAsMoney, toFixed } from '@/utils/common';
 
 import { IChatMessage, IStepGenerateInfo } from '@/types/chatMessage';
+import {
+  aggregateStepGenerateInfo,
+  fetchGenerateInfoCached,
+  getCachedGenerateInfo,
+  subscribeGenerateInfoCache,
+  GenerateInfoCacheKey,
+  requestGenerateInfo,
+} from '@/utils/generateInfoCache';
 
 import { IconInfo } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
@@ -13,7 +21,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface Props {
   hidden?: boolean;
@@ -22,33 +30,41 @@ interface Props {
   chatId?: string;
   chatShareId?: string;
   isAdminView?: boolean;
-  onFetchGenerateInfo?: (
-    turnId: string,
-    chatId?: string,
-    chatShareId?: string,
-  ) => Promise<IStepGenerateInfo[]>;
 }
 
 export const GenerateInformationAction = (props: Props) => {
   const { t } = useTranslation();
-  const { message, hidden, disabled, chatId, chatShareId, isAdminView, onFetchGenerateInfo } = props;
+  const { message, hidden, disabled, chatId, chatShareId, isAdminView } = props;
   const [isOpen, setIsOpen] = useState(false);
-  const [stepInfos, setStepInfos] = useState<IStepGenerateInfo[] | null>(null);
+  const cacheKey = useMemo<GenerateInfoCacheKey>(
+    () => ({ turnId: message.id, chatId, chatShareId }),
+    [message.id, chatId, chatShareId],
+  );
+  const [stepInfos, setStepInfos] = useState<IStepGenerateInfo[] | null>(() => {
+    const cached = getCachedGenerateInfo(cacheKey);
+    return cached ? [...cached] : null;
+  });
   const [loading, setLoading] = useState(false);
 
   const fetchGenerateInfo = useCallback(async () => {
-    if (stepInfos || !onFetchGenerateInfo) return;
-    
+    if (stepInfos) return;
+
+    const cached = getCachedGenerateInfo(cacheKey);
+    if (cached) {
+      setStepInfos([...cached]);
+      return;
+    }
+
     setLoading(true);
     try {
-      const infos = await onFetchGenerateInfo(message.id, chatId, chatShareId);
-      setStepInfos(infos);
+      const infos = await fetchGenerateInfoCached(cacheKey, () => requestGenerateInfo(cacheKey));
+      setStepInfos(infos ? [...infos] : []);
     } catch (error) {
       console.error('Failed to fetch generate info:', error);
     } finally {
       setLoading(false);
     }
-  }, [stepInfos, onFetchGenerateInfo, message.id, chatId, chatShareId]);
+  }, [stepInfos, cacheKey]);
 
   useEffect(() => {
     if (isOpen && !stepInfos && !loading) {
@@ -56,27 +72,36 @@ export const GenerateInformationAction = (props: Props) => {
     }
   }, [isOpen, stepInfos, loading, fetchGenerateInfo]);
 
+  useEffect(() => {
+    const cached = getCachedGenerateInfo(cacheKey);
+    if (cached && cached.length > 0) {
+      setStepInfos([...cached]);
+    } else {
+      setStepInfos(null);
+    }
+
+    const unsubscribe = subscribeGenerateInfoCache(cacheKey, (data) => {
+      setStepInfos(data.length > 0 ? [...data] : []);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [cacheKey]);
+
   // 聚合步骤数据或使用消息中的旧数据
-  const info = stepInfos 
-    ? {
-        inputTokens: stepInfos.reduce((sum, s) => sum + s.inputTokens, 0),
-        outputTokens: stepInfos.reduce((sum, s) => sum + s.outputTokens, 0),
-        inputPrice: stepInfos.reduce((sum, s) => sum + s.inputPrice, 0),
-        outputPrice: stepInfos.reduce((sum, s) => sum + s.outputPrice, 0),
-        reasoningTokens: stepInfos.reduce((sum, s) => sum + s.reasoningTokens, 0),
-        duration: stepInfos.reduce((sum, s) => sum + s.duration, 0),
-        reasoningDuration: stepInfos.reduce((sum, s) => sum + s.reasoningDuration, 0),
-        firstTokenLatency: stepInfos[0]?.firstTokenLatency ?? 0,
-      }
+  const aggregated = aggregateStepGenerateInfo(stepInfos);
+  const info = aggregated
+    ? aggregated
     : {
-        inputTokens: message.inputTokens,
-        outputTokens: message.outputTokens,
-        inputPrice: message.inputPrice,
-        outputPrice: message.outputPrice,
-        reasoningTokens: message.reasoningTokens,
-        duration: message.duration,
-        reasoningDuration: message.reasoningDuration,
-        firstTokenLatency: message.firstTokenLatency,
+        inputTokens: message.inputTokens ?? 0,
+        outputTokens: message.outputTokens ?? 0,
+        inputPrice: message.inputPrice ?? 0,
+        outputPrice: message.outputPrice ?? 0,
+        reasoningTokens: message.reasoningTokens ?? 0,
+        duration: message.duration ?? 0,
+        reasoningDuration: message.reasoningDuration ?? 0,
+        firstTokenLatency: message.firstTokenLatency ?? 0,
       };
 
   const GenerateInformation = (props: { 

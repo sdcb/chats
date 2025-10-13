@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatSpanDto } from '@/types/clientApis';
 import { ChatStatus, IChat, MessageContentType, TextContent } from '@/types/chat';
-import { IChatMessage, IStepGenerateInfo, ReactionMessageType } from '@/types/chatMessage';
+import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
 
 import CopyAction from './CopyAction';
 import DeleteAction from './DeleteAction';
@@ -26,11 +26,6 @@ interface Props {
   onRegenerate?: (messageId: string, modelId: number) => void;
   onReactionMessage?: (type: ReactionMessageType, messageId: string) => void;
   onDeleteMessage?: (messageId: string) => void;
-  onFetchGenerateInfo?: (
-    turnId: string,
-    chatId?: string,
-    chatShareId?: string,
-  ) => Promise<IStepGenerateInfo[]>;
 }
 
 const ResponseMessageActions = (props: Props) => {
@@ -46,7 +41,6 @@ const ResponseMessageActions = (props: Props) => {
     onRegenerate,
     onReactionMessage,
     onDeleteMessage,
-    onFetchGenerateInfo,
   } = props;
 
   const {
@@ -119,7 +113,6 @@ const ResponseMessageActions = (props: Props) => {
           chatId={selectedChat.id}
           chatShareId={chatShareId}
           isAdminView={isAdminView}
-          onFetchGenerateInfo={onFetchGenerateInfo}
         />
 
         <ReactionAction

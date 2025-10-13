@@ -15,7 +15,7 @@ import {
   ToolCallContent,
   ToolResponseContent,
 } from '@/types/chat';
-import { IChatMessage, MessageDisplayType } from '@/types/chatMessage';
+import { IChatMessage, IStepGenerateInfo, MessageDisplayType } from '@/types/chatMessage';
 
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
@@ -68,6 +68,8 @@ interface Props {
   message: IChatMessage;
   chatStatus: ChatStatus;
   readonly?: boolean;
+  chatId?: string;
+  chatShareId?: string;
   onEditResponseMessage?: (
     messageId: string,
     content: ResponseContent,
@@ -76,7 +78,7 @@ interface Props {
 }
 
 const ResponseMessage = (props: Props) => {
-  const { message, chatStatus, readonly, onEditResponseMessage } = props;
+  const { message, chatStatus, readonly, chatId, chatShareId, onEditResponseMessage } = props;
   const { t } = useTranslation();
 
   const { id: messageId, status: messageStatus, content } = message;
@@ -218,6 +220,9 @@ const ResponseMessage = (props: Props) => {
               content={c.c}
               chatStatus={message.status}
               reasoningDuration={message.reasoningDuration}
+              messageId={message.id}
+              chatId={chatId}
+              chatShareId={chatShareId}
             />
           );
         } else if (c.$type === MessageContentType.fileId) {

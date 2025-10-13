@@ -4,7 +4,7 @@ import { hasMultipleSpans } from '@/utils/chats';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatRole, IChat, Message, ResponseContent } from '@/types/chat';
-import { IChatMessage, IStepGenerateInfo, MessageDisplayType, ReactionMessageType } from '@/types/chatMessage';
+import { IChatMessage, MessageDisplayType, ReactionMessageType } from '@/types/chatMessage';
 
 import ChatMessageHeader from './ChatMessageHeader';
 import ResponseMessage from './ResponseMessage';
@@ -35,11 +35,6 @@ export interface Props {
   onDeleteMessage?: (messageId: string) => void;
   onChangeDisplayType?: (messageId: string, type: MessageDisplayType) => void;
   onRegenerateAllAssistant?: (messageId: string, modelId: number) => void;
-  onFetchGenerateInfo?: (
-    turnId: string,
-    chatId?: string,
-    chatShareId?: string,
-  ) => Promise<IStepGenerateInfo[]>;
 }
 
 export const ChatMessage: FC<Props> = memo(
@@ -61,7 +56,6 @@ export const ChatMessage: FC<Props> = memo(
     onDeleteMessage,
     onChangeDisplayType,
     onRegenerateAllAssistant,
-    onFetchGenerateInfo,
   }) => {
     const isMultiSpan = hasMultipleSpans(selectedMessages);
     return (
@@ -135,6 +129,8 @@ export const ChatMessage: FC<Props> = memo(
                               chatStatus={selectedChat.status}
                               message={message}
                               readonly={readonly}
+                              chatId={selectedChat.id}
+                              chatShareId={chatShareId}
                               onEditResponseMessage={onEditResponseMessage}
                             />
                           </div>
@@ -158,7 +154,6 @@ export const ChatMessage: FC<Props> = memo(
                               onRegenerate(message.spanId!, messageId, modelId);
                           }}
                           onDeleteMessage={onDeleteMessage}
-                          onFetchGenerateInfo={onFetchGenerateInfo}
                         />
                       </div>
                     )}

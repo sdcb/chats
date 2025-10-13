@@ -16,7 +16,7 @@ import { IconArrowCompactDown } from '@/components/Icons/index';
 import PageNotFound from '@/components/PageNotFound/PageNotFound';
 import { Button } from '@/components/ui/button';
 
-import { getChatShare, getSharedTurnGenerateInfo } from '@/apis/clientApis';
+import { getChatShare } from '@/apis/clientApis';
 
 export default function ShareMessage() {
   const { t } = useTranslation();
@@ -40,14 +40,6 @@ export default function ShareMessage() {
     setSelectedMessages(selectedMsgs);
   };
 
-  const handleFetchGenerateInfo = useCallback(
-    async (turnId: string, _chatId?: string, shareId?: string): Promise<IStepGenerateInfo[]> => {
-      const id = shareId || chatShareId;
-      if (!id) return Promise.reject('chatShareId is required');
-      return await getSharedTurnGenerateInfo(id, turnId);
-    },
-    [chatShareId],
-  );
 
   useEffect(() => {
     setLoading(true);
@@ -84,7 +76,6 @@ export default function ShareMessage() {
             readonly={true}
             chatShareId={chatShareId}
             onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
-            onFetchGenerateInfo={handleFetchGenerateInfo}
           />
         </div>
         {showBottomBar ? (
