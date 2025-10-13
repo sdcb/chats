@@ -131,18 +131,29 @@ export interface IChatMessage {
   modelName?: string;
   modelId: number;
   modelProviderId?: number;
-  inputPrice: number;
-  outputPrice: number;
-  inputTokens: number;
-  outputTokens: number;
-  reasoningTokens: number;
-  reasoningDuration: number;
-  duration: number;
-  firstTokenLatency: number;
+  inputPrice?: number;
+  outputPrice?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  reasoningTokens?: number;
+  reasoningDuration?: number;
+  duration?: number;
+  firstTokenLatency?: number;
   reaction?: boolean | null;
   edited?: boolean;
   displayType?: MessageDisplayType;
   createdAt?: string;
+}
+
+export interface IStepGenerateInfo {
+  inputTokens: number;
+  outputTokens: number;
+  inputPrice: number;
+  outputPrice: number;
+  reasoningTokens: number;
+  duration: number;
+  reasoningDuration: number;
+  firstTokenLatency: number;
 }
 
 export interface MessageNode {
@@ -170,14 +181,14 @@ export interface ChatMessageNode {
   spanId: number | null;
   role: ChatRole;
   modelName?: string;
-  inputTokens: number;
-  outputTokens: number;
-  reasoningTokens: number;
-  inputPrice: number;
-  outputPrice: number;
-  reasoningDuration: number;
-  duration: number;
-  firstTokenLatency: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  reasoningTokens?: number;
+  inputPrice?: number;
+  outputPrice?: number;
+  reasoningDuration?: number;
+  duration?: number;
+  firstTokenLatency?: number;
   reaction?: boolean | null;
   edited?: boolean;
 }

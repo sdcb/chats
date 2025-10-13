@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import "react-day-picker/style.css";
+
 @layer base {
   :root {
     --sidebar: #fff;
@@ -219,4 +221,17 @@ button,
 a,
 div {
   -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Calendar theme support */
+.rdp-root {
+  --rdp-accent-color: hsl(var(--primary));
+  --rdp-background-color: hsl(var(--background));
+  --rdp-accent-color-dark: hsl(var(--primary-foreground));
+}
+
+.dark .rdp-root {
+  --rdp-accent-color: hsl(var(--primary));
+  --rdp-background-color: hsl(var(--background));
+  --rdp-accent-color-dark: hsl(var(--primary-foreground));
 }

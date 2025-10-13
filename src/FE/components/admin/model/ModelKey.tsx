@@ -1,6 +1,7 @@
 import React from 'react';
 import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
 import { Button } from '@/components/ui/button';
+import IconActionButton from '@/components/common/IconActionButton';
 import { IconPlus, IconPencil, IconBolt, IconChartHistogram } from '@/components/Icons';
 import DeletePopover from '@/components/Popover/DeletePopover';
 import useTranslation from '@/hooks/useTranslation';
@@ -102,50 +103,26 @@ export default function ModelKey({
           </button>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onGoToUsage({ modelKey: modelKey.name });
-            }}
-            title={t('View Usage Records')}
-          >
-            <IconChartHistogram size={16} />
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onConfigModels(modelKey.id);
-            }}
-            title={t('Fast Add Models')}
-          >
-            <IconBolt size={16} />
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddModel(modelKey.id);
-            }}
-            title={t('Add Model')}
-          >
-            <IconPlus size={16} />
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(modelKey);
-            }}
-            title={t('Edit')}
-          >
-            <IconPencil size={16} />
-          </Button>
+          <IconActionButton
+            label={t('View Usage Records')}
+            icon={<IconChartHistogram size={18} />}
+            onClick={() => onGoToUsage({ modelKey: modelKey.name })}
+          />
+          <IconActionButton
+            label={t('Fast Add Models')}
+            icon={<IconBolt size={18} />}
+            onClick={() => onConfigModels(modelKey.id)}
+          />
+          <IconActionButton
+            label={t('Add Model')}
+            icon={<IconPlus size={18} />}
+            onClick={() => onAddModel(modelKey.id)}
+          />
+          <IconActionButton
+            label={t('Edit')}
+            icon={<IconPencil size={18} />}
+            onClick={() => onEdit(modelKey)}
+          />
           {models.length === 0 && (
             <div onClick={(e) => e.stopPropagation()} title={t('Delete')}>
               <DeletePopover onDelete={() => onDelete(modelKey.id)} />

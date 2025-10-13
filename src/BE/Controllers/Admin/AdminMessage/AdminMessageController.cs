@@ -18,13 +18,21 @@ namespace Chats.BE.Controllers.Admin.AdminMessage;
 public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEncryptionService urlEncryption) : ControllerBase
 {
     [HttpGet("chats")]
-    public async Task<ActionResult<PagedResult<AdminChatsDto>>> GetAdminChats([FromQuery] QueryPagingRequest req, CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<AdminChatsDto>>> GetAdminChats([FromQuery] AdminChatsQueryRequest req, CancellationToken cancellationToken)
     {
         IQueryable<Chat> chats = db.Chats
             .Where(x => x.User.Role != "admin" || x.UserId == currentUser.Id);
-        if (!string.IsNullOrEmpty(req.Query))
+        
+        // 按用户名搜索
+        if (!string.IsNullOrEmpty(req.User))
         {
-            chats = chats.Where(x => x.User.UserName == req.Query);
+            chats = chats.Where(x => x.User.UserName.StartsWith(req.User));
+        }
+        
+        // 按消息内容搜索
+        if (!string.IsNullOrEmpty(req.Content))
+        {
+            chats = chats.Where(x => x.Title.Contains(req.Content));
         }
 
         return await PagedResult.FromQuery(chats
@@ -66,6 +74,37 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
     {
         ChatsResponseWithMessage? resp = await InternalGetChatWithMessages(db, urlEncryption, chatId, fup, cancellationToken);
         return Ok(resp);
+    }
+
+    [HttpGet("message-details/{encryptedTurnId}/generate-info")]
+    public async Task<ActionResult<StepGenerateInfoDto[]>> GetAdminTurnGenerateInfo(int chatId, string encryptedTurnId, CancellationToken cancellationToken)
+    {
+        long turnId = urlEncryption.DecryptTurnId(encryptedTurnId);
+        
+        var stepInfos = await db.ChatTurns
+            .Where(x => x.Id == turnId && x.ChatId == chatId)
+            .SelectMany(x => x.Steps
+                .Where(s => s.Usage != null)
+                .OrderBy(s => s.CreatedAt)
+                .Select(s => new StepGenerateInfoDto
+                {
+                    InputTokens = s.Usage!.InputTokens,
+                    OutputTokens = s.Usage!.OutputTokens,
+                    InputPrice = s.Usage!.InputCost,
+                    OutputPrice = s.Usage!.OutputCost,
+                    ReasoningTokens = s.Usage!.ReasoningTokens,
+                    Duration = s.Usage!.TotalDurationMs,
+                    ReasoningDuration = s.Usage!.ReasoningDurationMs,
+                    FirstTokenLatency = s.Usage!.FirstResponseDurationMs,
+                }))
+            .ToArrayAsync(cancellationToken);
+
+        if (stepInfos.Length == 0)
+        {
+            return NotFound();
+        }
+
+        return Ok(stepInfos);
     }
 
     internal static async Task<ChatsResponseWithMessage?> InternalGetChatWithMessages(ChatsDB db, IUrlEncryptionService urlEncryption, int chatId, FileUrlProvider fup, CancellationToken cancellationToken)
@@ -129,14 +168,6 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                 Edited = x.Steps.Any(x => x.Edited),
                 Usage = x.IsUser ? null : new ChatMessageTempUsage()
                 {
-                    InputTokens = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.InputTokens),
-                    OutputTokens = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.OutputTokens),
-                    InputPrice = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.InputCost),
-                    OutputPrice = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.OutputCost),
-                    ReasoningTokens = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.ReasoningTokens),
-                    Duration = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.TotalDurationMs),
-                    ReasoningDuration = x.Steps.Where(x => x.Usage != null).Sum(x => x.Usage!.ReasoningDurationMs),
-                    FirstTokenLatency = x.Steps.First().Usage!.FirstResponseDurationMs,
                     ModelId = x.Steps.First().Usage!.ModelId,
                     ModelName = x.Steps.First().Usage!.Model.Name,
                     ModelProviderId = x.Steps.First().Usage!.Model.ModelKey.ModelProviderId,

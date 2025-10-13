@@ -8,7 +8,7 @@ import { DEFAULT_TEMPERATURE } from '@/types/chat';
 import { ChatSpanDto, ChatSpanMcp } from '@/types/clientApis';
 import { Prompt } from '@/types/prompt';
 
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
 import { IconTemperature, IconTokens } from '@/components/Icons';
 import ImageSizeRadio from '@/components/ImageSizeRadio/ImageSizeRadio';
@@ -221,7 +221,7 @@ const ChatModelSettingModal = (props: Props) => {
                   models={models}
                   content={
                     <div className="flex gap-2 items-center">
-                      <ChatIcon providerId={span.modelProviderId} />
+                      <ModelProviderIcon providerId={span.modelProviderId} />
                       {span.modelName}
                     </div>
                   }

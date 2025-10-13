@@ -65,8 +65,14 @@ public partial class User
     [InverseProperty("CreateUser")]
     public virtual ICollection<File> Files { get; set; } = new List<File>();
 
+    [InverseProperty("User")]
+    public virtual ICollection<KeycloakAttempt> KeycloakAttempts { get; set; } = new List<KeycloakAttempt>();
+
     [InverseProperty("OwnerUser")]
     public virtual ICollection<McpServer> McpServers { get; set; } = new List<McpServer>();
+
+    [InverseProperty("User")]
+    public virtual ICollection<PasswordAttempt> PasswordAttempts { get; set; } = new List<PasswordAttempt>();
 
     [InverseProperty("CreateUser")]
     public virtual ICollection<Prompt> Prompts { get; set; } = new List<Prompt>();

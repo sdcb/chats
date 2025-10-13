@@ -7,6 +7,7 @@ using Chats.BE.Services.Models;
 using Chats.BE.Services.UrlEncryption;
 using Chats.BE.Services.OpenAIApiKeySession;
 using Chats.BE.Services.Sessions;
+using Chats.BE.Services.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using System.Runtime.CompilerServices;
@@ -64,6 +65,7 @@ public class Program
         builder.Services.AddScoped<ChatConfigService>();
         builder.Services.AddScoped<FileContentTypeService>();
         builder.Services.AddScoped<DBFileService>();
+    builder.Services.AddScoped<LoginRateLimiter>();
 
         builder.Services.AddUrlEncryption();
         builder.Services.AddHttpContextAccessor();

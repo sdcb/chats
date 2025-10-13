@@ -1,4 +1,5 @@
 ﻿using Chats.BE.Controllers.Admin.AdminMessage;
+using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.Controllers.Chats.UserChats.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Infrastructure;
@@ -29,6 +30,46 @@ public class SharedChatController(ChatsDB db) : ControllerBase
         ChatsResponseWithMessage data = (await AdminMessageController.InternalGetChatWithMessages(db, idEncryption, chatShare.ChatId, fup, cancellationToken))!;
         data.Messages = data.Messages.Where(x => x.CreatedAt <= chatShare.SnapshotTime).ToArray();
         return Ok(data);
+    }
+
+    [HttpGet("{encryptedChatShareId}/{encryptedTurnId}/generate-info")]
+    public async Task<ActionResult<StepGenerateInfoDto[]>> GetSharedTurnGenerateInfo(string encryptedChatShareId, string encryptedTurnId,
+        [FromServices] IUrlEncryptionService idEncryption,
+        CancellationToken cancellationToken)
+    {
+        int chatShareId = idEncryption.DecryptChatShareId(encryptedChatShareId);
+        long turnId = idEncryption.DecryptTurnId(encryptedTurnId);
+        
+        ChatShare? chatShare = await db.ChatShares.FirstOrDefaultAsync(x => x.Id == chatShareId, cancellationToken);
+        if (chatShare == null || chatShare.ExpiresAt < DateTime.UtcNow)
+        {
+            return NotFound();
+        }
+
+        var stepInfos = await db.ChatTurns
+            .Where(x => x.Id == turnId && x.ChatId == chatShare.ChatId && x.Steps.First().CreatedAt <= chatShare.SnapshotTime)
+            .SelectMany(x => x.Steps
+                .Where(s => s.Usage != null)
+                .OrderBy(s => s.CreatedAt)
+                .Select(s => new StepGenerateInfoDto
+                {
+                    InputTokens = s.Usage!.InputTokens,
+                    OutputTokens = s.Usage!.OutputTokens,
+                    InputPrice = s.Usage!.InputCost,
+                    OutputPrice = s.Usage!.OutputCost,
+                    ReasoningTokens = s.Usage!.ReasoningTokens,
+                    Duration = s.Usage!.TotalDurationMs,
+                    ReasoningDuration = s.Usage!.ReasoningDurationMs,
+                    FirstTokenLatency = s.Usage!.FirstResponseDurationMs,
+                }))
+            .ToArrayAsync(cancellationToken);
+
+        if (stepInfos.Length == 0)
+        {
+            return NotFound();
+        }
+
+        return Ok(stepInfos);
     }
 
     [HttpPut("{encryptedChatShareId}"), Authorize]

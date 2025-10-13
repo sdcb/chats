@@ -18,6 +18,7 @@ import {
   GetRequestLogsDetailsResult,
   GetRequestLogsListResult,
   GetRequestLogsParams,
+  KeycloakAttemptLog,
   GetUserInitialConfigResult,
   GetUserMessageParams,
   GetUsersParams,
@@ -25,6 +26,7 @@ import {
   ModelFastCreateParams,
   ModelProviderInitialConfig,
   ModelReferenceDto,
+  PasswordAttemptLog,
   PossibleModelResult,
   PostAndPutConfigParams,
   PostFileServicesParams,
@@ -39,6 +41,8 @@ import {
   PutUserBalanceParams,
   PutUserInitialConfigParams,
   PutUserParams,
+  SecurityLogExportParams,
+  SecurityLogQueryParams,
   ReorderRequest,
   SimpleModelReferenceDto,
   StatisticsTimeParams,
@@ -47,8 +51,10 @@ import {
   UserModelDisplay,
   UserModelDisplayDto,
   ValidateModelParams,
+  SmsAttemptLog,
 } from '@/types/adminApis';
 import { GetChatShareResult, GetChatVersionResult } from '@/types/clientApis';
+import { IStepGenerateInfo } from '@/types/chatMessage';
 import { IKeyCount } from '@/types/common';
 import { ChatModelFileConfig, DBModelProvider } from '@/types/model';
 import { PageResult } from '@/types/page';
@@ -153,10 +159,18 @@ export const putUserBalance = (params: PutUserBalanceParams) => {
 export const getMessages = (
   params: GetUserMessageParams,
 ): Promise<PageResult<AdminChatsDto[]>> => {
-  const { query = null, page = 1, pageSize = 12 } = params;
+  const { user, content, page = 1, pageSize = 12 } = params;
   const fetchService = useFetch();
+  
+  // 构建查询参数
+  const queryParams = new URLSearchParams();
+  queryParams.append('page', page.toString());
+  queryParams.append('pageSize', pageSize.toString());
+  if (user) queryParams.append('user', user);
+  if (content) queryParams.append('content', content);
+  
   return fetchService.get(
-    `/api/admin/chats?page=${page}&pageSize=${pageSize}&query=${query}`,
+    `/api/admin/chats?${queryParams.toString()}`,
   );
 };
 
@@ -430,6 +444,16 @@ export const getAdminMessage = (chatId: string) => {
   );
 };
 
+export const getAdminTurnGenerateInfo = (
+  chatId: number,
+  turnId: string,
+): Promise<IStepGenerateInfo[]> => {
+  const fetchServer = useFetch();
+  return fetchServer.get(
+    `/api/admin/message-details/${turnId}/generate-info?chatId=${chatId}`,
+  );
+};
+
 export const postChatsVersion = () => {
   const fetchServer = useFetch();
   return fetchServer.post<GetChatVersionResult>(`/api/version/check-update`);
@@ -522,4 +546,101 @@ export const getChatCountStatisticsByDate = (params: StatisticsTimeParams) => {
     '/api/admin/statistics/chat-count-by-date',
     { params: params },
   );
+};
+
+const mapSecurityLogQueryParams = (params: SecurityLogQueryParams) => ({
+  page: params.page,
+  pageSize: params.pageSize,
+  start: params.start,
+  end: params.end,
+  username: params.username,
+  success: params.success,
+});
+
+const mapSecurityLogExportParams = (params: SecurityLogExportParams) => ({
+  start: params.start,
+  end: params.end,
+  username: params.username,
+  success: params.success,
+});
+
+export const getPasswordAttempts = (
+  params: SecurityLogQueryParams,
+): Promise<PageResult<PasswordAttemptLog[]>> => {
+  const fetchServer = useFetch();
+  return fetchServer.get('/api/admin/security-logs/password-attempts', {
+    params: mapSecurityLogQueryParams(params),
+  });
+};
+
+export const exportPasswordAttempts = (
+  params: SecurityLogExportParams,
+): Promise<Blob | null> => {
+  const fetchServer = useFetch();
+  return fetchServer.get('/api/admin/security-logs/password-attempts/export', {
+    params: mapSecurityLogExportParams(params),
+  });
+};
+
+export const clearPasswordAttempts = (
+  params: SecurityLogExportParams,
+): Promise<number> => {
+  const fetchServer = useFetch();
+  return fetchServer.delete('/api/admin/security-logs/password-attempts', {
+    body: params,
+  });
+};
+
+export const getKeycloakAttempts = (
+  params: SecurityLogQueryParams,
+): Promise<PageResult<KeycloakAttemptLog[]>> => {
+  const fetchServer = useFetch();
+  return fetchServer.get('/api/admin/security-logs/keycloak-attempts', {
+    params: mapSecurityLogQueryParams(params),
+  });
+};
+
+export const exportKeycloakAttempts = (
+  params: SecurityLogExportParams,
+): Promise<Blob | null> => {
+  const fetchServer = useFetch();
+  return fetchServer.get('/api/admin/security-logs/keycloak-attempts/export', {
+    params: mapSecurityLogExportParams(params),
+  });
+};
+
+export const clearKeycloakAttempts = (
+  params: SecurityLogExportParams,
+): Promise<number> => {
+  const fetchServer = useFetch();
+  return fetchServer.delete('/api/admin/security-logs/keycloak-attempts', {
+    body: params,
+  });
+};
+
+export const getSmsAttempts = (
+  params: SecurityLogQueryParams,
+): Promise<PageResult<SmsAttemptLog[]>> => {
+  const fetchServer = useFetch();
+  return fetchServer.get('/api/admin/security-logs/sms-attempts', {
+    params: mapSecurityLogQueryParams(params),
+  });
+};
+
+export const exportSmsAttempts = (
+  params: SecurityLogExportParams,
+): Promise<Blob | null> => {
+  const fetchServer = useFetch();
+  return fetchServer.get('/api/admin/security-logs/sms-attempts/export', {
+    params: mapSecurityLogExportParams(params),
+  });
+};
+
+export const clearSmsAttempts = (
+  params: SecurityLogExportParams,
+): Promise<number> => {
+  const fetchServer = useFetch();
+  return fetchServer.delete('/api/admin/security-logs/sms-attempts', {
+    body: params,
+  });
 };

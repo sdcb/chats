@@ -28,6 +28,7 @@ import {
   ChatStatus,
   FileContent,
   FileDef,
+  IChat,
   Message,
   MessageContentType,
   ReasoningContent,
@@ -66,6 +67,7 @@ import NoModel from './NoModel';
 
 import {
   deleteMessage,
+  getTurnGenerateInfo,
   putChats,
   putMessageReactionClear,
   putMessageReactionUp,
@@ -92,7 +94,22 @@ const Chat = memo(() => {
     chatDispatch,
     messageDispatch,
   } = useContext(HomeContext);
+  const chatsRef = useRef<IChat[]>(chats);
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
+
+  const updateChatsState = useCallback(
+    (updater: (prevChats: IChat[]) => IChat[]) => {
+      const updatedChats = updater(chatsRef.current);
+      chatsRef.current = updatedChats;
+      chatDispatch(setChats(updatedChats));
+    },
+    [chatDispatch],
+  );
   const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(true);
+  const [autoScrollTemporarilyDisabled, setAutoScrollTemporarilyDisabled] =
+    useState<boolean>(false);
   const [showScrollDownButton, setShowScrollDownButton] =
     useState<boolean>(false);
   const [showScrollToTopButton, setShowScrollToTopButton] =
@@ -102,6 +119,11 @@ const Chat = memo(() => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const autoScrollDisabledRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    autoScrollDisabledRef.current = autoScrollTemporarilyDisabled;
+  }, [autoScrollTemporarilyDisabled]);
 
   // 定义所有需要在hooks规则下的callback和effect
   const handleSend = useCallback(
@@ -176,10 +198,14 @@ const Chat = memo(() => {
       const bottomTolerance = 30;
 
       if (scrollTop + clientHeight < scrollHeight - bottomTolerance) {
-        setAutoScrollEnabled(false);
+        if (!autoScrollDisabledRef.current) {
+          setAutoScrollEnabled(false);
+        }
         setShowScrollDownButton(true && selectedMessages.length > 0);
       } else {
-        setAutoScrollEnabled(true);
+        if (!autoScrollDisabledRef.current) {
+          setAutoScrollEnabled(true);
+        }
         setShowScrollDownButton(false);
       }
 
@@ -194,14 +220,69 @@ const Chat = memo(() => {
 
   useEffect(() => {
     if (!selectedChat) return;
-    throttledScrollDown();
+    if (autoScrollEnabled) {
+      throttledScrollDown();
+    }
     handleScroll();
-  }, [selectedMessages, selectedChat, throttledScrollDown, handleScroll]);
+  }, [
+    selectedMessages,
+    selectedChat,
+    throttledScrollDown,
+    handleScroll,
+    autoScrollEnabled,
+  ]);
 
-  // 如果没有选中的聊天，显示NoChat组件
-  if (!selectedChat) {
-    return hasModel() ? <NoChat /> : <NoModel />;
-  }
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    let touchStartY = 0;
+
+    const disableAutoScrollForRequest = () => {
+      if (autoScrollDisabledRef.current) {
+        return;
+      }
+      setAutoScrollEnabled(false);
+      setAutoScrollTemporarilyDisabled(true);
+      autoScrollDisabledRef.current = true;
+    };
+
+    const handleWheel = (event: WheelEvent) => {
+      if (event.deltaY < 0) {
+        disableAutoScrollForRequest();
+      }
+    };
+
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length === 1) {
+        touchStartY = event.touches[0].clientY;
+      }
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (event.touches.length === 1) {
+        const currentY = event.touches[0].clientY;
+        const deltaY = currentY - touchStartY;
+        if (deltaY > 0) {
+          disableAutoScrollForRequest();
+        }
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: true });
+    container.addEventListener('touchstart', handleTouchStart, {
+      passive: true,
+    });
+    container.addEventListener('touchmove', handleTouchMove, {
+      passive: true,
+    });
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, []);
 
   const getSelectedMessagesLastActiveMessage = () => {
     const selectedMessageLength = selectedMessages.length - 1;
@@ -214,29 +295,37 @@ const Chat = memo(() => {
 
   const changeChatTitle = (title: string, append: boolean = false) => {
     if (!selectedChat) return;
-    
-    const newChats = chats.map((chat) => {
-      if (chat.id === selectedChat.id) {
-        const updatedChat = { ...chat };
-        append ? (updatedChat.title += title) : (updatedChat.title = title);
-        return updatedChat;
-      }
-      return chat;
-    });
-    chatDispatch(setChats(newChats));
+
+    updateChatsState((prevChats) =>
+      prevChats.map((chat) => {
+        if (chat.id !== selectedChat.id) {
+          return chat;
+        }
+
+        const nextTitle = append
+          ? `${chat.title ?? ''}${title}`
+          : title;
+
+        return { ...chat, title: nextTitle };
+      }),
+    );
   };
 
   const changeSelectedChatStatus = (status: ChatStatus) => {
     if (!selectedChat) return;
-    
-    const updatedChats = chats.map((chat) =>
-      chat.id === selectedChat.id ? { ...chat, status } : chat
+
+    updateChatsState((prevChats) =>
+      prevChats.map((chat) =>
+        chat.id === selectedChat.id ? { ...chat, status } : chat,
+      ),
     );
-    chatDispatch(setChats(updatedChats));
   };
 
   const startChat = () => {
     changeSelectedChatStatus(ChatStatus.Chatting);
+    autoScrollDisabledRef.current = false;
+    setAutoScrollTemporarilyDisabled(false);
+    setAutoScrollEnabled(true);
   };
 
   const handleChatError = () => {
@@ -565,6 +654,7 @@ const Chat = memo(() => {
     messageId: string,
     modelId: number,
   ) => {
+    if (!selectedChat) return;
     if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
     startChat();
     let { id: chatId } = selectedChat;
@@ -617,6 +707,7 @@ const Chat = memo(() => {
     messageId: string,
     modelId: number,
   ) => {
+    if (!selectedChat) return;
     if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
     startChat();
     let { id: chatId } = selectedChat;
@@ -663,6 +754,7 @@ const Chat = memo(() => {
     message: Message,
     messageId?: string,
   ) => {
+    if (!selectedChat) return;
     if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
     startChat();
     let { id: chatId, spans: chatSpans } = selectedChat;
@@ -703,6 +795,7 @@ const Chat = memo(() => {
     response: Response,
     selectedMessageList: IChatMessage[][],
   ) => {
+  if (!selectedChat) return;
   let messageList = [...messages];
   // 用于跟踪每个 span 最近一次非空的工具调用 ID，便于将 u 为 null 的参数片段归并
   const currentToolCallIdBySpan = new Map<number, string>();
@@ -839,16 +932,18 @@ const Chat = memo(() => {
       leafMessageId,
     );
 
-    const chatList = chats.map((x) =>
-      x.id === selectedChat.id
-        ? { ...x, updatedAt: currentISODateString() }
-        : x,
+    updateChatsState((prevChats) =>
+      prevChats.map((x) =>
+        x.id === selectedChat.id
+          ? { ...x, updatedAt: currentISODateString() }
+          : x,
+      ),
     );
-
-    chatDispatch(setChats(chatList));
     messageDispatch(setSelectedMessages(selectedMsgs));
     messageDispatch(setMessages(messageList));
     changeSelectedChatStatus(ChatStatus.None);
+    autoScrollDisabledRef.current = false;
+    setAutoScrollTemporarilyDisabled(false);
   };
 
   const handleScrollDown = () => {
@@ -929,6 +1024,7 @@ const Chat = memo(() => {
   };
 
   const handleChangeChatLeafMessageId = (messageId: string) => {
+    if (!selectedChat) return;
     if (selectedChat.status === ChatStatus.Chatting) return;
     for (const levelMessages of selectedMessages) {
       for (const message of levelMessages) {
@@ -942,12 +1038,17 @@ const Chat = memo(() => {
     messageDispatch(setSelectedMessages(selectedMsgs));
     
     // 更新selectedChat的leafMessageId
-    const chatList = chats.map((x) =>
-      x.id === selectedChat.id
-        ? { ...x, leafMessageId: messageId, updatedAt: currentISODateString() }
-        : x,
+    updateChatsState((prevChats) =>
+      prevChats.map((x) =>
+        x.id === selectedChat.id
+          ? {
+              ...x,
+              leafMessageId: messageId,
+              updatedAt: currentISODateString(),
+            }
+          : x,
+      ),
     );
-    chatDispatch(setChats(chatList));
     
     putChats(selectedChat.id, {
       setsLeafMessageId: true,
@@ -996,6 +1097,7 @@ const Chat = memo(() => {
     content: ResponseContent,
     isCopy: boolean = false,
   ) => {
+    if (!selectedChat) return;
     let data: IChatMessage;
     const params = {
       messageId,
@@ -1055,12 +1157,13 @@ const Chat = memo(() => {
       msgs.push(copyMsg!);
       
       // 更新chats中的leafMessageId
-      const updatedChats = chats.map((chat) =>
-        chat.id === selectedChat.id
-          ? { ...chat, leafMessageId: copyMsg!.id }
-          : chat
+      updateChatsState((prevChats) =>
+        prevChats.map((chat) =>
+          chat.id === selectedChat.id
+            ? { ...chat, leafMessageId: copyMsg!.id }
+            : chat,
+        ),
       );
-      chatDispatch(setChats(updatedChats));
     }
     messageDispatch(setMessages(msgs));
     messageDispatch(setSelectedMessages(selectedMsgs));
@@ -1176,6 +1279,7 @@ const Chat = memo(() => {
     messageDispatch(setMessages(msgs));
   };
 
+
   const handleChangeDisplayType = (
     messageId: string,
     type: MessageDisplayType,
@@ -1200,10 +1304,27 @@ const Chat = memo(() => {
     messageDispatch(setSelectedMessages(selectedMsgs));
   };
 
+  // 如果没有选中的聊天，显示NoChat或NoModel组件
+  if (!selectedChat) {
+    return (
+      <div className="relative flex-1">
+        <div className="flex flex-col">
+          <div className="relative h-16"></div>
+          <div
+            className="relative h-[calc(100vh-64px)] overflow-x-hidden scroll-container w-full"
+            ref={chatContainerRef}
+          >
+            {hasModel() ? <NoChat /> : <NoModel />}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex-1">
       <div className="flex flex-col">
-        <div className="relative h-16">{selectedChat && <ChatHeader />}</div>
+        <div className="relative h-16"><ChatHeader /></div>
         <div
           className="relative h-[calc(100vh-64px)] overflow-x-hidden scroll-container w-full"
           ref={chatContainerRef}
@@ -1215,9 +1336,7 @@ const Chat = memo(() => {
               width: `calc(100vw - ${showChatBar ? 280 : 0}px)`,
             }}
           >
-            {selectedChat && selectedMessages.length === 0 && (
-              <ChatPresetList />
-            )}
+            {selectedMessages.length === 0 && <ChatPresetList />}
           </div>
 
           <ChatMessageMemoized
@@ -1236,12 +1355,10 @@ const Chat = memo(() => {
             onRegenerateAllAssistant={handleRegenerateAllAssistant}
           />
 
-          {!hasModel() && !selectedChat?.id && <NoModel />}
-          {hasModel() && !selectedChat?.id && <NoChat />}
           <div className={cn(showChatInput ? 'h-40' : 'h-2')}></div>
         </div>
 
-        {hasModel() && selectedChat && (
+        {hasModel() && (
           <ChatInput
             onSend={(message) => {
               const lastMessage = getSelectedMessagesLastActiveMessage();

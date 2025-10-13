@@ -52,30 +52,6 @@ public record RequestMessageDto : TurnDto
 
 public record ResponseMessageDto : TurnDto
 {
-    [JsonPropertyName("inputTokens")]
-    public required int InputTokens { get; init; }
-
-    [JsonPropertyName("outputTokens")]
-    public required int OutputTokens { get; init; }
-
-    [JsonPropertyName("inputPrice")]
-    public required decimal InputPrice { get; init; }
-
-    [JsonPropertyName("outputPrice")]
-    public required decimal OutputPrice { get; init; }
-
-    [JsonPropertyName("reasoningTokens")]
-    public required int ReasoningTokens { get; init; }
-
-    [JsonPropertyName("duration")]
-    public required int Duration { get; init; }
-
-    [JsonPropertyName("reasoningDuration")]
-    public required int ReasoningDuration { get; init; }
-
-    [JsonPropertyName("firstTokenLatency")]
-    public required int FirstTokenLatency { get; init; }
-
     [JsonPropertyName("modelId")]
     public required short ModelId { get; init; }
 
@@ -106,18 +82,9 @@ public record FileDto
 
 public record ChatMessageTempUsage
 {
-    public required int Duration { get; init; }
-    public required int ReasoningDuration { get; init; }
-    public required int FirstTokenLatency { get; init; }
-    public required decimal InputPrice { get; init; }
-    public required int InputTokens { get; init; }
     public required short ModelId { get; init; }
     public required string ModelName { get; init; }
-
     public required short ModelProviderId { get; init; }
-    public required decimal OutputPrice { get; init; }
-    public required int OutputTokens { get; init; }
-    public required int ReasoningTokens { get; init; }
 }
 
 public record ChatMessageTemp
@@ -159,14 +126,6 @@ public record ChatMessageTemp
                 SpanId = SpanId,
                 Edited = Edited,
 
-                InputTokens = Usage.InputTokens,
-                OutputTokens = Usage.OutputTokens,
-                InputPrice = Usage.InputPrice,
-                OutputPrice = Usage.OutputPrice,
-                ReasoningTokens = Usage.ReasoningTokens,
-                Duration = Usage.Duration,
-                ReasoningDuration = Usage.ReasoningDuration,
-                FirstTokenLatency = Usage.FirstTokenLatency,
                 ModelId = Usage.ModelId,
                 ModelName = Usage.ModelName,
                 ModelProviderId = Usage.ModelProviderId,
@@ -211,14 +170,6 @@ public record ChatMessageTemp
                 Edited = assistantMessage.Steps.Any(x => x.Edited),
                 Usage = new ChatMessageTempUsage()
                 {
-                    InputTokens = usages.Sum(x => x.InputTokens),
-                    OutputTokens = usages.Sum(x => x.OutputTokens),
-                    InputPrice = usages.Sum(x => x.InputCost),
-                    OutputPrice = usages.Sum(x => x.OutputCost),
-                    ReasoningTokens = usages.Sum(x => x.ReasoningTokens),
-                    Duration = usages.Sum(x => x.TotalDurationMs),
-                    ReasoningDuration = usages.Sum(x => x.ReasoningDurationMs),
-                    FirstTokenLatency = usages.First().FirstResponseDurationMs,
                     ModelId = assistantMessage.Steps.First().Usage!.ModelId,
                     ModelName = assistantMessage.Steps.First().Usage!.Model.Name,
                     ModelProviderId = assistantMessage.Steps.First().Usage!.Model.ModelKey.ModelProviderId,

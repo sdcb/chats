@@ -9,6 +9,7 @@ import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
 import { feModelProviders } from '@/types/model';
 import { formatNumberAsMoney } from '@/utils/common';
 import { Button } from '@/components/ui/button';
+import IconActionButton from '@/components/common/IconActionButton';
 import { LabelSwitch } from '@/components/ui/label-switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { IconPlus } from '@/components/Icons';
@@ -442,16 +443,14 @@ export default function ModelManager() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
+          <IconActionButton
+            label={t('Add Model Key')}
+            icon={<IconPlus size={18} />}
             onClick={() => {
               setCurrentProviderId(undefined);
               setIsOpenKeyModal(true);
             }}
-            title={t('Add Model Key')}
-          >
-            <IconPlus size={16} />
-          </Button>
+          />
         </div>
       </div>
 

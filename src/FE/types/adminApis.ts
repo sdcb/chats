@@ -95,7 +95,8 @@ export interface GetUsersResult {
 }
 
 export interface GetUserMessageParams extends Paging {
-  query: string;
+  user?: string;
+  content?: string;
 }
 
 export interface AdminChatsDto {
@@ -152,6 +153,61 @@ export interface GetRequestLogsDetailsResult extends GetRequestLogsListResult {
   requestTime: number;
   responseTime: number;
   user: { username: string };
+}
+
+export interface SecurityLogQueryParams extends Paging {
+  tz?: number;
+  start?: string;
+  end?: string;
+  username?: string;
+  success?: boolean;
+}
+
+export interface SecurityLogExportParams {
+  tz?: number;
+  start?: string;
+  end?: string;
+  username?: string;
+  success?: boolean;
+}
+
+export interface PasswordAttemptLog {
+  id: number;
+  userName: string;
+  userId: number | null;
+  matchedUserName: string | null;
+  isSuccessful: boolean;
+  failureReason: string | null;
+  ip: string;
+  userAgent: string;
+  createdAt: string;
+}
+
+export interface KeycloakAttemptLog {
+  id: number;
+  provider: string;
+  sub: string | null;
+  email: string | null;
+  userId: number | null;
+  userName: string | null;
+  isSuccessful: boolean;
+  failureReason: string | null;
+  ip: string;
+  userAgent: string;
+  createdAt: string;
+}
+
+export interface SmsAttemptLog {
+  id: number;
+  phoneNumber: string;
+  code: string;
+  userId: number | null;
+  userName: string | null;
+  type: string | null;
+  status: string | null;
+  ip: string;
+  userAgent: string;
+  createdAt: string;
 }
 
 export interface GetLoginServicesResult {

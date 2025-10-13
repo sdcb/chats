@@ -4,7 +4,7 @@ import { formatRelativeTime } from '@/utils/date';
 
 import { IChatMessage, MessageDisplayType } from '@/types/chatMessage';
 
-import ChatIcon from '../ChatIcon/ChatIcon';
+import ModelProviderIcon from '../common/ModelProviderIcon';
 import { Button } from '../ui/button';
 
 import { cn } from '@/lib/utils';
@@ -23,7 +23,7 @@ const ChatMessageHeader = ({
   return (
     <div className="flex justify-between items-center h-8 mb-1">
       <div className="flex gap-1 items-center">
-        <ChatIcon
+  <ModelProviderIcon
           providerId={message.modelProviderId}
           className="w-4 h-4 hidden sm:block"
         />

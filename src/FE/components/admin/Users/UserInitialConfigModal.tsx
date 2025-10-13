@@ -52,7 +52,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 
 import { feModelProviders } from '@/types/model';
 
@@ -332,7 +332,7 @@ const UserInitialConfigModal = (props: IProps) => {
                               return (
                                 <DropdownMenuSub key={providerId}>
                                   <DropdownMenuSubTrigger className="p-2 flex gap-2">
-                                    <ChatIcon providerId={parseInt(providerId)} />
+                                    <ModelProviderIcon providerId={parseInt(providerId)} />
                                     <span className="w-full text-nowrap overflow-hidden text-ellipsis whitespace-nowrap">
                                       {t(provider.name)}
                                     </span>

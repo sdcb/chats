@@ -9,7 +9,7 @@ import { toFixed } from '@/utils/common';
 import { GetUsersResult, UserModelDisplay } from '@/types/adminApis';
 import { PageResult, Paging } from '@/types/page';
 
-import PaginationContainer from '../../../components/Pagiation/Pagiation';
+import PaginationContainer from '../../../components/Pagination/Pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';

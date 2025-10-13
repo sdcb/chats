@@ -79,6 +79,9 @@ const PaginationContainer = ({
   };
 
   const paginationItems = generatePagination();
+  
+  const isFirstPage = page === 1;
+  const isLastPage = totalCount <= page * pageSize;
 
   return (
     <div className="flex w-full p-4 items-center justify-between text-gray-500 text-sm flex-wrap">
@@ -98,12 +101,11 @@ const PaginationContainer = ({
       <div>
         <Pagination className="justify-normal">
           <PaginationContent className="flex-wrap">
-            <PaginationItem
-              className={page === 1 ? 'pointer-events-none' : ''}
-              onClick={previous}
-            >
-              <PaginationPrevious>{t('Previous')}</PaginationPrevious>
-            </PaginationItem>
+            {!isFirstPage && (
+              <PaginationItem onClick={previous}>
+                <PaginationPrevious>{t('Previous')}</PaginationPrevious>
+              </PaginationItem>
+            )}
             
             {showPageNumbers && paginationItems.map((pageNumber, index) => (
               pageNumber === -1 || pageNumber === -2 ? (
@@ -122,14 +124,11 @@ const PaginationContainer = ({
               )
             ))}
             
-            <PaginationItem
-              className={
-                totalCount <= page * pageSize ? 'pointer-events-none' : ''
-              }
-              onClick={next}
-            >
-              <PaginationNext>{t('Next')}</PaginationNext>
-            </PaginationItem>
+            {!isLastPage && (
+              <PaginationItem onClick={next}>
+                <PaginationNext>{t('Next')}</PaginationNext>
+              </PaginationItem>
+            )}
           </PaginationContent>
         </Pagination>
       </div>

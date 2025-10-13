@@ -6,7 +6,7 @@ import { isMobile } from '@/utils/common';
 
 import { ChatStatus, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
 
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
 import { IconDots, IconPlus, IconSettingsCog, IconX } from '@/components/Icons';
 import Tips from '@/components/Tips/Tips';
@@ -237,98 +237,88 @@ const ChatHeader = () => {
                         <Button
                           variant="ghost"
                           className={cn(
-                            'h-auto p-4 sm:p-2 m-0 gap-2',
+                            'h-auto p-1 m-0 gap-1',
                             !span.enabled && 'opacity-50',
                           )}
                           onClick={() => {
                             setSelectedSpanId(span.spanId);
                           }}
                         >
-                          <ChatIcon providerId={span.modelProviderId} />
+                          <ModelProviderIcon providerId={span.modelProviderId} />
                           <span>{span?.modelName}</span>
-                          {/* 避免 button 嵌套 button：内层改为 div */}
-                          <div className="w-6 h-6 p-0 m-0 hidden sm:block">
-                            <IconDots className="rotate-90" size={16} />
-                          </div>
                         </Button>
                       ) : (
-                        <div className="flex items-center bg-card rounded-md hover:bg-muted">
-                          <div
-                            className={cn(
-                              'flex items-center pl-2',
-                              !span.enabled && 'opacity-50',
-                            )}
-                          >
-                            <ChatIcon providerId={span.modelProviderId} />
-                            <ChatModelDropdownMenu
-                              key={'change-model-' + span.modelId}
-                              models={models}
-                              modelName={span.modelName}
-                              className="text-sm"
-                              content={span?.modelName}
-                              hideIcon={true}
-                              onChangeModel={(model) => {
-                                handleUpdateChatModel(
-                                  span.spanId,
-                                  model.modelId,
-                                );
-                              }}
-                            />
-                          </div>
-                          <TooltipProvider>
-                            <Tooltip delayDuration={100}>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  className={cn(
-                                    'h-auto p-4 sm:p-1 m-0 gap-2',
-                                    !span.enabled && 'opacity-50',
-                                  )}
-                                  onClick={() => {
-                                    setSelectedSpanId(span.spanId);
-                                  }}
-                                >
-                                  <div className="w-6 h-6 p-0 m-0 hidden sm:flex items-center justify-center cursor-pointer hover:bg-accent rounded-sm -ml-1">
-                                    <IconDots className="rotate-90" size={16} />
-                                  </div>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                sideOffset={-44}
-                                side="right"
-                                className="flex items-center border-none gap-2"
+                        <div 
+                          className="flex items-center bg-card rounded-md hover:bg-muted overflow-hidden transition-all duration-300 ease-in-out group"
+                          onMouseEnter={(e) => {
+                            const target = e.currentTarget;
+                            target.style.width = 'auto';
+                          }}
+                          onMouseLeave={(e) => {
+                            const target = e.currentTarget;
+                            target.style.width = '';
+                          }}
+                        >
+                          <ChatModelDropdownMenu
+                            key={'change-model-' + span.modelId}
+                            models={models}
+                            modelName={span.modelName}
+                            className="text-sm"
+                            triggerClassName="flex items-center pl-2 hover:bg-transparent"
+                            content={
+                              <div
+                                className={cn(
+                                  'flex items-center gap-1',
+                                  !span.enabled && 'opacity-50',
+                                )}
                               >
-                                <Button
-                                  variant="ghost"
-                                  className="w-6 h-6 p-0 m-0"
-                                >
-                                  <IconDots
-                                    className="rotate-90"
-                                    size={16}
-                                    onClick={() => {
-                                      setSelectedSpanId(span.spanId);
-                                    }}
-                                  />
-                                </Button>
-                                <Switch
-                                  onCheckedChange={(checked) => {
-                                    handleChangeChatSpan(span.spanId, checked);
-                                  }}
-                                  checked={span.enabled}
-                                ></Switch>
-                                <Button
-                                  disabled={selectedChat.spans.length === 1}
-                                  onClick={() => {
-                                    handleRemoveChatModel(span.spanId);
-                                  }}
-                                  variant="ghost"
-                                  className="h-6 w-6 m-0 p-0 hover:bg-none"
-                                >
-                                  <IconX />
-                                </Button>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                                <ModelProviderIcon providerId={span.modelProviderId} />
+                                <span>{span?.modelName}</span>
+                              </div>
+                            }
+                            hideIcon={true}
+                            onChangeModel={(model) => {
+                              handleUpdateChatModel(
+                                span.spanId,
+                                model.modelId,
+                              );
+                            }}
+                          />
+                          <div className="flex items-center">
+                            <Button
+                              variant="ghost"
+                              className={cn(
+                                'h-auto p-1 m-0 gap-2 hidden sm:flex',
+                                !span.enabled && 'opacity-50',
+                              )}
+                              onClick={() => {
+                                setSelectedSpanId(span.spanId);
+                              }}
+                            >
+                              <div className="w-6 h-6 p-0 m-0 flex items-center justify-center cursor-pointer hover:bg-accent rounded-sm -ml-1">
+                                <IconDots className="rotate-90" size={16} />
+                              </div>
+                            </Button>
+                            <div className="flex items-center gap-2 max-w-0 group-hover:max-w-[200px] overflow-hidden transition-all duration-300 ease-in-out opacity-0 group-hover:opacity-100">
+                              <Switch
+                                onCheckedChange={(checked) => {
+                                  handleChangeChatSpan(span.spanId, checked);
+                                }}
+                                checked={span.enabled}
+                                className="ml-2"
+                              ></Switch>
+                              <Button
+                                disabled={selectedChat.spans.length === 1}
+                                onClick={() => {
+                                  handleRemoveChatModel(span.spanId);
+                                }}
+                                variant="ghost"
+                                className="h-6 w-6 m-0 p-0 hover:bg-accent"
+                              >
+                                <IconX size={16} />
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>

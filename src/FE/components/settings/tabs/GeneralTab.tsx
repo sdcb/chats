@@ -83,8 +83,8 @@ const GeneralTab = () => {
                   <SelectValue placeholder={t('Select Language')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="zh-CN">{t('Chinese')}</SelectItem>
-                  <SelectItem value="en">{t('English')}</SelectItem>
+                  <SelectItem value="zh-CN">简体中文</SelectItem>
+                  <SelectItem value="en">English</SelectItem>
                 </SelectContent>
               </Select>
             </div>

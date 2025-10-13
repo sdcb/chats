@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 import { useRouter } from 'next/router';
 
@@ -21,6 +21,7 @@ export default function MessageDetails() {
     [],
   );
   const [loading, setLoading] = useState(true);
+  const [chatId, setChatId] = useState<number>(0);
 
   const handleChangeChatLeafMessageId = (messageId: string) => {
     const leafId = findLastLeafId(messages, messageId);
@@ -31,8 +32,10 @@ export default function MessageDetails() {
   useEffect(() => {
     setLoading(true);
     if (!router.isReady) return;
-    const chatShareId = getQueryId(router)!;
-    getAdminMessage(chatShareId).then((data) => {
+    const chatIdStr = getQueryId(router)!;
+    const id = parseInt(chatIdStr, 10);
+    setChatId(id);
+    getAdminMessage(chatIdStr).then((data) => {
       setSelectedChat({ ...data, status: ChatStatus.None });
       setMessages(data.messages);
       const selectedMsgs = findSelectedMessageByLeafId(
@@ -52,6 +55,7 @@ export default function MessageDetails() {
           selectedMessages={selectedMessages}
           messagesEndRef={null}
           readonly={true}
+          isAdminView={true}
           onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
         />
       </>

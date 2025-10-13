@@ -20,6 +20,8 @@ export interface Props {
   messagesEndRef: any;
   readonly?: boolean;
   className?: string;
+  chatShareId?: string;
+  isAdminView?: boolean;
   onChangeChatLeafMessageId?: (messageId: string) => void;
   onEditAndSendMessage?: (editedMessage: Message, parentId?: string) => void;
   onRegenerate?: (spanId: number, messageId: string, modelId: number) => void;
@@ -43,6 +45,8 @@ export const ChatMessage: FC<Props> = memo(
     messagesEndRef,
     readonly,
     className,
+    chatShareId,
+    isAdminView,
     onChangeChatLeafMessageId,
     onEditAndSendMessage,
     onRegenerate,
@@ -125,6 +129,8 @@ export const ChatMessage: FC<Props> = memo(
                               chatStatus={selectedChat.status}
                               message={message}
                               readonly={readonly}
+                              chatId={selectedChat.id}
+                              chatShareId={chatShareId}
                               onEditResponseMessage={onEditResponseMessage}
                             />
                           </div>
@@ -136,6 +142,8 @@ export const ChatMessage: FC<Props> = memo(
                           chatStatus={selectedChat.status}
                           selectedChat={selectedChat}
                           message={message}
+                          chatShareId={chatShareId}
+                          isAdminView={isAdminView}
                           onChangeMessage={onChangeChatLeafMessageId}
                           onReactionMessage={onReactionMessage}
                           onRegenerate={(

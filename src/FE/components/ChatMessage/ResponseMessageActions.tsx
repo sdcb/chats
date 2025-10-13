@@ -20,6 +20,8 @@ interface Props {
   chatStatus: ChatStatus;
   selectedChat: IChat;
   readonly?: boolean;
+  chatShareId?: string;
+  isAdminView?: boolean;
   onChangeMessage?: (messageId: string) => void;
   onRegenerate?: (messageId: string, modelId: number) => void;
   onReactionMessage?: (type: ReactionMessageType, messageId: string) => void;
@@ -33,6 +35,8 @@ const ResponseMessageActions = (props: Props) => {
     chatStatus,
     selectedChat,
     readonly,
+    chatShareId,
+    isAdminView,
     onChangeMessage,
     onRegenerate,
     onReactionMessage,
@@ -106,6 +110,9 @@ const ResponseMessageActions = (props: Props) => {
           hidden={message.edited}
           disabled={messageReceiving}
           message={message}
+          chatId={selectedChat.id}
+          chatShareId={chatShareId}
+          isAdminView={isAdminView}
         />
 
         <ReactionAction

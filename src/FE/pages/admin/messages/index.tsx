@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 
 import useDebounce from '@/hooks/useDebounce';
 import useTranslation from '@/hooks/useTranslation';
@@ -8,8 +9,8 @@ import { formatDateTime } from '@/utils/date';
 import { AdminChatsDto } from '@/types/adminApis';
 import { PageResult, Paging } from '@/types/page';
 
-import PaginationContainer from '../../../components/Pagiation/Pagiation';
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import PaginationContainer from '../../../components/Pagination/Pagination';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import Tips from '@/components/Tips/Tips';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -28,42 +29,130 @@ import { cn } from '@/lib/utils';
 
 export default function Messages() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState<Paging>({
-    page: 1,
-    pageSize: 12,
-  });
   const [messages, setMessages] = useState<PageResult<AdminChatsDto[]>>({
     count: 0,
     rows: [],
   });
-  const [query, setQuery] = useState('');
+  
+  // 本地搜索输入状态（用于防抖）
+  const [userInput, setUserInput] = useState('');
+  const [contentInput, setContentInput] = useState('');
 
-  const updateQueryWithDebounce = useDebounce((query: string) => {
-    init(query);
+  // 从 URL 中读取状态
+  const user = (router.query.user as string) || '';
+  const content = (router.query.content as string) || '';
+  const page = parseInt((router.query.p as string) || '1', 10);
+  const pageSize = parseInt((router.query.pageSize as string) || '12', 10);
+  const defaultPageSize = 12;
+
+  // 更新 URL 的函数
+  const updateUrl = (params: { user?: string; content?: string; page?: number; pageSize?: number }) => {
+    const newQuery: Record<string, string> = {};
+    
+    // 复制现有的 query 参数（只保留 string 类型）
+    Object.keys(router.query).forEach(key => {
+      const value = router.query[key];
+      if (typeof value === 'string') {
+        newQuery[key] = value;
+      }
+    });
+    
+    // 更新或删除 user 参数
+    if (params.user !== undefined) {
+      if (params.user) {
+        newQuery.user = params.user;
+      } else {
+        delete newQuery.user;
+      }
+    }
+    
+    // 更新或删除 content 参数
+    if (params.content !== undefined) {
+      if (params.content) {
+        newQuery.content = params.content;
+      } else {
+        delete newQuery.content;
+      }
+    }
+    
+    // 更新 p (page)，第一页时不显示
+    if (params.page !== undefined) {
+      if (params.page === 1) {
+        delete newQuery.p;
+      } else {
+        newQuery.p = params.page.toString();
+      }
+    }
+    
+    // 更新 pageSize，默认值 12 时不显示
+    if (params.pageSize !== undefined) {
+      if (params.pageSize === defaultPageSize) {
+        delete newQuery.pageSize;
+      } else {
+        newQuery.pageSize = params.pageSize.toString();
+      }
+    }
+
+    router.push(
+      {
+        pathname: router.pathname,
+        query: newQuery,
+      },
+      undefined,
+      { shallow: true }
+    );
+  };
+
+  const updateUserWithDebounce = useDebounce((searchUser: string) => {
+    updateUrl({ user: searchUser, page: 1 }); // 搜索时重置到第一页
   }, 1000);
 
-  const init = (query: string = '') => {
-    getMessages({ ...pagination, query }).then((data) => {
+  const updateContentWithDebounce = useDebounce((searchContent: string) => {
+    updateUrl({ content: searchContent, page: 1 }); // 搜索时重置到第一页
+  }, 1000);
+
+  const init = () => {
+    setLoading(true);
+    getMessages({ page, pageSize, user, content }).then((data) => {
       setMessages(data);
       setLoading(false);
     });
   };
 
   useEffect(() => {
-    init(query);
-  }, [pagination]);
+    // 只有当 router 准备好时才执行
+    if (router.isReady) {
+      init();
+    }
+  }, [router.isReady, router.query]);
+
+  // 同步 URL 中的参数到本地搜索输入状态
+  useEffect(() => {
+    setUserInput(user);
+    setContentInput(content);
+  }, [user, content]);
 
   return (
     <>
-      <div className="flex flex-warp gap-4 mb-4">
+      <div className="flex flex-wrap gap-4 mb-4">
         <Input
           className="max-w-[238px] w-full"
-          placeholder={t('Search...')!}
-          value={query}
+          placeholder={t('User Name') + '...'}
+          value={userInput}
           onChange={(e) => {
-            setQuery(e.target.value);
-            updateQueryWithDebounce(e.target.value);
+            setUserInput(e.target.value);
+            updateUserWithDebounce(e.target.value);
+          }}
+        />
+        <Input
+          className="max-w-[238px] w-full"
+          placeholder={t('Message Content') + '...'}
+          value={contentInput}
+          onChange={(e) => {
+            setContentInput(e.target.value);
+            updateContentWithDebounce(e.target.value);
           }}
         />
       </div>
@@ -103,7 +192,7 @@ export default function Messages() {
                         <Tips
                           trigger={
                             <div>
-                              <ChatIcon
+                              <ModelProviderIcon
                                 className="cursor-pointer"
                                 providerId={x.modelProviderId}
                               />
@@ -132,12 +221,12 @@ export default function Messages() {
         </Table>
         {messages.count !== 0 && (
           <PaginationContainer
-            page={pagination.page}
-            pageSize={pagination.pageSize}
+            page={page}
+            pageSize={pageSize}
             currentCount={messages.rows.length}
             totalCount={messages.count}
-            onPagingChange={(page, pageSize) => {
-              setPagination({ page, pageSize });
+            onPagingChange={(newPage, newPageSize) => {
+              updateUrl({ page: newPage, pageSize: newPageSize });
             }}
           />
         )}

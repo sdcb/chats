@@ -5,7 +5,7 @@ import useTranslation from '@/hooks/useTranslation';
 import { AdminModelDto } from '@/types/adminApis';
 import { feModelProviders } from '@/types/model';
 
-import ChatIcon from '@/components/ChatIcon/ChatIcon';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import { IconChevronDown } from '@/components/Icons';
 import Search from '@/components/Search/Search';
 import {
@@ -124,7 +124,7 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
                   key={`trigger-${m.providerId}`}
                   className="p-2 flex gap-2"
                 >
-                  <ChatIcon providerId={m.providerId} />
+                  <ModelProviderIcon providerId={m.providerId} />
                   <span className="w-full text-nowrap overflow-hidden text-ellipsis whitespace-nowrap">
                     {t(feModelProviders[m.providerId].name)}
                   </span>

@@ -6,7 +6,7 @@ import { GetUserFilesResult } from '@/types/clientApis';
 import { IconFolder } from '@/components/Icons';
 import Tips from '@/components/Tips/Tips';
 import useTranslation from '@/hooks/useTranslation';
-import PaginationContainer from '@/components/Pagiation/Pagiation';
+import PaginationContainer from '@/components/Pagination/Pagination';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -50,7 +50,10 @@ const FilesPopover = ({ onSelect, selectedFiles }: FilesPopoverProps) => {
       <Tips
         trigger={
           <PopoverTrigger asChild>
-            <Button className="rounded-sm m-1 h-9 w-9 p-0 bg-transparent hover:bg-muted flex items-center justify-center">
+            <Button
+              size="xs"
+              className="m-0.5 h-8 w-8 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
+            >
               <IconFolder size={22} />
             </Button>
           </PopoverTrigger>

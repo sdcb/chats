@@ -29,6 +29,12 @@ public partial class ClientInfo
     public virtual ICollection<File> Files { get; set; } = new List<File>();
 
     [InverseProperty("ClientInfo")]
+    public virtual ICollection<KeycloakAttempt> KeycloakAttempts { get; set; } = new List<KeycloakAttempt>();
+
+    [InverseProperty("ClientInfo")]
+    public virtual ICollection<PasswordAttempt> PasswordAttempts { get; set; } = new List<PasswordAttempt>();
+
+    [InverseProperty("ClientInfo")]
     public virtual ICollection<SmsAttempt> SmsAttempts { get; set; } = new List<SmsAttempt>();
 
     [InverseProperty("ClientInfo")]

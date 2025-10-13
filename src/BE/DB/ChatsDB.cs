@@ -61,6 +61,8 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<InvitationCode> InvitationCodes { get; set; }
 
+    public virtual DbSet<KeycloakAttempt> KeycloakAttempts { get; set; }
+
     public virtual DbSet<KnownImageSize> KnownImageSizes { get; set; }
 
     public virtual DbSet<LoginService> LoginServices { get; set; }
@@ -76,6 +78,8 @@ public partial class ChatsDB : DbContext
     public virtual DbSet<ModelProvider> ModelProviders { get; set; }
 
     public virtual DbSet<ModelReference> ModelReferences { get; set; }
+
+    public virtual DbSet<PasswordAttempt> PasswordAttempts { get; set; }
 
     public virtual DbSet<Prompt> Prompts { get; set; }
 
@@ -135,8 +139,6 @@ public partial class ChatsDB : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.UseCollation("SQL_Latin1_General_CP1_CI_AS");
-
         modelBuilder.Entity<BalanceTransaction>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_BalanceLog2");
@@ -317,6 +319,15 @@ public partial class ChatsDB : DbContext
             entity.HasKey(e => e.Id).HasName("InvitationCode2_pkey");
         });
 
+        modelBuilder.Entity<KeycloakAttempt>(entity =>
+        {
+            entity.HasOne(d => d.ClientInfo).WithMany(p => p.KeycloakAttempts)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_KeycloakAttempt_ClientInfo");
+
+            entity.HasOne(d => d.User).WithMany(p => p.KeycloakAttempts).HasConstraintName("FK_KeycloakAttempt_User");
+        });
+
         modelBuilder.Entity<KnownImageSize>(entity =>
         {
             entity.Property(e => e.Id).ValueGeneratedNever();
@@ -329,8 +340,6 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<McpServer>(entity =>
         {
-            entity.HasIndex(e => e.OwnerUserId, "IX_McpServer_OwnerUserId").HasFilter("([OwnerUserId] IS NOT NULL)");
-
             entity.HasOne(d => d.OwnerUser).WithMany(p => p.McpServers)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_McpServer_User");
@@ -388,6 +397,15 @@ public partial class ChatsDB : DbContext
                 .HasConstraintName("FK_ModelReference_ReasoningResponseKind");
 
             entity.HasOne(d => d.Tokenizer).WithMany(p => p.ModelReferences).HasConstraintName("FK_ModelReference_Tokenizer");
+        });
+
+        modelBuilder.Entity<PasswordAttempt>(entity =>
+        {
+            entity.HasOne(d => d.ClientInfo).WithMany(p => p.PasswordAttempts)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PasswordAttempt_ClientInfo");
+
+            entity.HasOne(d => d.User).WithMany(p => p.PasswordAttempts).HasConstraintName("FK_PasswordAttempt_User");
         });
 
         modelBuilder.Entity<Prompt>(entity =>
@@ -646,14 +664,6 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<UserModelUsage>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_ModelUsage");
-
-            entity.HasIndex(e => e.BalanceTransactionId, "IX_ModelUsage_BalanceTransaction")
-                .IsUnique()
-                .HasFilter("([BalanceTransactionId] IS NOT NULL)");
-
-            entity.HasIndex(e => e.UsageTransactionId, "IX_ModelUsage_UsageTransaction")
-                .IsUnique()
-                .HasFilter("([UsageTransactionId] IS NOT NULL)");
 
             entity.HasOne(d => d.BalanceTransaction).WithOne(p => p.UserModelUsage).HasConstraintName("FK_ModelUsage_TransactionLog");
 

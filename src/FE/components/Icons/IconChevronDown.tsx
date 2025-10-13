@@ -11,7 +11,7 @@ const IconChevronDown = (props: IconProps) => {
       width={size}
       height={size}
       strokeWidth={strokeWidth}
-      stroke={stroke || 'var(--foreground)'}
+      stroke={stroke ?? 'currentColor'}
       viewBox="0 0 24 24"
       fill="none"
       strokeLinecap="round"
