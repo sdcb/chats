@@ -52,7 +52,7 @@ export const SendButton = ({
   if (isMobile) {
     return (
       <Button
-        className={className}
+        className={cn('h-auto py-1.5 bg-primary/90 hover:bg-primary/80 active:bg-primary/75', className)}
         onClick={onSend}
         disabled={disabled || isSending}
         size={size}
