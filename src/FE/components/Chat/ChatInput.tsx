@@ -445,137 +445,133 @@ const ChatInput = ({
               {/* 滚动按钮组 - 水平排列 */}
               {/* 移除原来的位置，现在放到收起按钮同一排 */}
               <div className="flex px-1 items-center gap-1 md:gap-2 bg-muted/60 md:bg-muted rounded-t-md border-b border-border/40">
-                {/* 非全屏模式下显示的工具 */}
-                {!isFullWriting && (
-                  <>
-                    <div className="flex items-center">
-                      <div className="flex items-center">
-                        {canUploadFile() && (
-                          <UploadButton
-                            fileConfig={defaultFileConfig}
-                            onUploading={handleUploading}
-                            onFailed={handleUploadFailed}
-                            onSuccessful={handleUploadSuccessful}
-                            capture={false}
-                            inputId="upload-device"
-                            tip={t('Upload from device')}
-                            tipSide="top"
-                          >
-                            <IconPaperclip size={22} />
-                          </UploadButton>
-                        )}
-                        {canUploadFile() && isMobile() && (
-                          <UploadButton
-                            fileConfig={defaultFileConfig}
-                            onUploading={handleUploading}
-                            onFailed={handleUploadFailed}
-                            onSuccessful={handleUploadSuccessful}
-                            capture={true}
-                            inputId="upload-camera"
-                            tip={t('Take photo')}
-                            tipSide="top"
-                          >
-                            <IconCamera size={22} />
-                          </UploadButton>
-                        )}
-                        {canUploadFile() && (
-                          <PasteUpload
-                            fileConfig={defaultFileConfig}
-                            onUploading={handleUploading}
-                            onFailed={handleUploadFailed}
-                            onSuccessful={handleUploadSuccessful}
-                          />
-                        )}
-
-                        {uploading && (
-                          <Button
-                            disabled
-                            className="rounded-sm m-1 h-9 w-9 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
-                          >
-                            <IconLoader className="animate-spin" size={22} />
-                          </Button>
-                        )}
-                      </div>
-                      <div className="flex items-center">
-                        {canUploadFile() && (
-                          <FilesPopover
-                            onSelect={handleFileSelect}
-                            selectedFiles={contentFiles}
-                          />
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-1" />
-                    <div className="flex items-center gap-1 md:gap-2">
-                      {/* 滚动到顶部按钮 */}
-                      {showScrollToTopButton && (
-                        <Tips
-                          trigger={
-                            <Button
-                              className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
-                              onClick={onScrollToTopClick}
-                            >
-                              <IconArrowDoubleUp size={22} className="text-foreground/80" />
-                            </Button>
-                          }
-                          side="bottom"
-                          content={t('Scroll to top')}
-                        />
-                      )}
-
-                      {/* 滚动到上一条用户消息按钮 */}
-                      {showScrollToPrevUserMessageButton && (
-                        <Tips
-                          trigger={
-                            <Button
-                              className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
-                              onClick={onScrollToPrevUserMessageClick}
-                            >
-                              <IconArrowUp size={22} className="text-foreground/80" />
-                            </Button>
-                          }
-                          side="bottom"
-                          content={t('Scroll to previous user message')}
-                        />
-                      )}
-
-                      {/* 滚动到底部按钮 */}
-                      {showScrollDownButton && (
-                        <Tips
-                          trigger={
-                            <Button
-                              className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
-                              onClick={onScrollDownClick}
-                            >
-                              <IconArrowDown size={22} className="text-foreground/80" />
-                            </Button>
-                          }
-                          side="bottom"
-                          content={t('Scroll to bottom')}
-                        />
-                      )}
-
-                      {/* 收起抽屉按钮 */}
-                      <Tips
-                        trigger={
-                          <Button
-                            className={cn(
-                              'rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto'
-                            )}
-                            onClick={handleToggleVisibility}
-                          >
-                            <IconArrowCompactDown size={22} className="text-foreground/70" />
-                          </Button>
-                        }
-                        side="bottom"
-                        content={t('Collapse input')}
+                <div className="flex items-center gap-1 md:gap-2">
+                  <div className="flex items-center">
+                    {canUploadFile() && (
+                      <UploadButton
+                        fileConfig={defaultFileConfig}
+                        onUploading={handleUploading}
+                        onFailed={handleUploadFailed}
+                        onSuccessful={handleUploadSuccessful}
+                        capture={false}
+                        inputId="upload-device"
+                        tip={t('Upload from device')}
+                        tipSide="top"
+                      >
+                        <IconPaperclip size={22} />
+                      </UploadButton>
+                    )}
+                    {canUploadFile() && isMobile() && (
+                      <UploadButton
+                        fileConfig={defaultFileConfig}
+                        onUploading={handleUploading}
+                        onFailed={handleUploadFailed}
+                        onSuccessful={handleUploadSuccessful}
+                        capture={true}
+                        inputId="upload-camera"
+                        tip={t('Take photo')}
+                        tipSide="top"
+                      >
+                        <IconCamera size={22} />
+                      </UploadButton>
+                    )}
+                    {canUploadFile() && (
+                      <PasteUpload
+                        fileConfig={defaultFileConfig}
+                        onUploading={handleUploading}
+                        onFailed={handleUploadFailed}
+                        onSuccessful={handleUploadSuccessful}
                       />
-                    </div>
-                  </>
-                )}
-                
-                {/* 全屏/退出全屏按钮 - 始终显示 */}
-                <div className={cn("flex items-center gap-1 md:gap-2", isFullWriting && "ml-auto")}>
+                    )}
+
+                    {uploading && (
+                      <Button
+                        disabled
+                        className="rounded-sm m-1 h-9 w-9 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
+                      >
+                        <IconLoader className="animate-spin" size={22} />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex items-center">
+                    {canUploadFile() && (
+                      <FilesPopover
+                        onSelect={handleFileSelect}
+                        selectedFiles={contentFiles}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-1" />
+
+                <div className="flex items-center gap-1 md:gap-2">
+                  {/* 滚动到顶部按钮 */}
+                  {showScrollToTopButton && (
+                    <Tips
+                      trigger={
+                        <Button
+                          className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                          onClick={onScrollToTopClick}
+                        >
+                          <IconArrowDoubleUp size={22} className="text-foreground/80" />
+                        </Button>
+                      }
+                      side="bottom"
+                      content={t('Scroll to top')}
+                    />
+                  )}
+
+                  {/* 滚动到上一条用户消息按钮 */}
+                  {showScrollToPrevUserMessageButton && (
+                    <Tips
+                      trigger={
+                        <Button
+                          className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                          onClick={onScrollToPrevUserMessageClick}
+                        >
+                          <IconArrowUp size={22} className="text-foreground/80" />
+                        </Button>
+                      }
+                      side="bottom"
+                      content={t('Scroll to previous user message')}
+                    />
+                  )}
+
+                  {/* 滚动到底部按钮 */}
+                  {showScrollDownButton && (
+                    <Tips
+                      trigger={
+                        <Button
+                          className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                          onClick={onScrollDownClick}
+                        >
+                          <IconArrowDown size={22} className="text-foreground/80" />
+                        </Button>
+                      }
+                      side="bottom"
+                      content={t('Scroll to bottom')}
+                    />
+                  )}
+
+                  {/* 收起抽屉按钮 */}
+                  <Tips
+                    trigger={
+                      <Button
+                        className={cn(
+                          'rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto'
+                        )}
+                        onClick={handleToggleVisibility}
+                      >
+                        <IconArrowCompactDown size={22} className="text-foreground/70" />
+                      </Button>
+                    }
+                    side="bottom"
+                    content={t('Collapse input')}
+                  />
+                </div>
+
+                <div className="flex items-center gap-1 md:gap-2">
                   {isFullWriting ? (
                     <Tips
                       trigger={
