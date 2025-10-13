@@ -50,7 +50,10 @@ const FilesPopover = ({ onSelect, selectedFiles }: FilesPopoverProps) => {
       <Tips
         trigger={
           <PopoverTrigger asChild>
-            <Button className="rounded-sm m-1 h-9 w-9 p-0 bg-transparent hover:bg-muted flex items-center justify-center">
+            <Button
+              size="xs"
+              className="m-0.5 h-8 w-8 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
+            >
               <IconFolder size={22} />
             </Button>
           </PopoverTrigger>

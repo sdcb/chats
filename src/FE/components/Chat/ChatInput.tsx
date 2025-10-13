@@ -487,7 +487,8 @@ const ChatInput = ({
                     {uploading && (
                       <Button
                         disabled
-                        className="rounded-sm m-1 h-9 w-9 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
+                        size="xs"
+                        className="m-0.5 h-8 w-8 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
                       >
                         <IconLoader className="animate-spin" size={22} />
                       </Button>
@@ -511,7 +512,8 @@ const ChatInput = ({
                     <Tips
                       trigger={
                         <Button
-                          className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                          size="xs"
+                          className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                           onClick={onScrollToTopClick}
                         >
                           <IconArrowDoubleUp size={22} className="text-foreground/80" />
@@ -527,7 +529,8 @@ const ChatInput = ({
                     <Tips
                       trigger={
                         <Button
-                          className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                          size="xs"
+                          className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                           onClick={onScrollToPrevUserMessageClick}
                         >
                           <IconArrowUp size={22} className="text-foreground/80" />
@@ -543,7 +546,8 @@ const ChatInput = ({
                     <Tips
                       trigger={
                         <Button
-                          className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                          size="xs"
+                          className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                           onClick={onScrollDownClick}
                         >
                           <IconArrowDown size={22} className="text-foreground/80" />
@@ -558,8 +562,9 @@ const ChatInput = ({
                   <Tips
                     trigger={
                       <Button
+                        size="xs"
                         className={cn(
-                          'rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto'
+                          'p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted'
                         )}
                         onClick={handleToggleVisibility}
                       >
@@ -576,7 +581,8 @@ const ChatInput = ({
                     <Tips
                       trigger={
                         <Button
-                          className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                          size="xs"
+                          className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                           onClick={() => handleFullWriting(false)}
                         >
                           <IconArrowsDiagonalMinimize size={22} />
@@ -589,7 +595,8 @@ const ChatInput = ({
                     <Tips
                       trigger={
                         <Button
-                          className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                          size="xs"
+                          className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                           onClick={() => handleFullWriting(true)}
                         >
                           <IconArrowsDiagonal size={22} />
@@ -708,7 +715,8 @@ const ChatInput = ({
               <Tips
                 trigger={
                   <Button
-                    className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                    size="xs"
+                    className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                     onClick={onScrollToTopClick}
                   >
                     <IconArrowDoubleUp size={22} className="text-foreground/80" />
@@ -724,7 +732,8 @@ const ChatInput = ({
               <Tips
                 trigger={
                   <Button
-                    className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                    size="xs"
+                    className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                     onClick={onScrollToPrevUserMessageClick}
                   >
                     <IconArrowUp size={22} className="text-foreground/80" />
@@ -740,7 +749,8 @@ const ChatInput = ({
               <Tips
                 trigger={
                   <Button
-                    className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                    size="xs"
+                    className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                     onClick={onScrollDownClick}
                   >
                     <IconArrowDown size={22} className="text-foreground/80" />
@@ -755,7 +765,8 @@ const ChatInput = ({
             <Tips
               trigger={
                 <Button
-                  className="rounded-sm p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted w-auto h-auto"
+                  size="xs"
+                  className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                   onClick={handleToggleVisibility}
                 >
                   <IconArrowCompactDown size={22} className={'rotate-180 text-foreground/70'} />
@@ -770,7 +781,7 @@ const ChatInput = ({
                 trigger={
                   <Button
                     variant="destructive"
-                    size="icon"
+                    size="xs"
                     className="m-0.5 sm:m-1 h-8 w-8 rounded-sm"
                     onClick={handleStopChats}
                   >
