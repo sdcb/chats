@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
+import remarkBreaks from 'remark-breaks';
 
 // 骨架动画组件
 const SkeletonLine = ({ width = '100%', height = '1rem', delay = '0s' }: { width?: string; height?: string; delay?: string }) => (
@@ -299,7 +300,8 @@ const ResponseMessage = (props: Props) => {
                 </div>
               ) : (
                 <MemoizedReactMarkdown
-                  remarkPlugins={[remarkMath, remarkGfm]}
+                  // 顺序：math -> gfm -> breaks，确保数学与 GFM 处理后，再将 softbreak 转为 <br/>
+                  remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
                   rehypePlugins={[rehypeKatex as any]}
                   components={{
                     code({ node, className, inline, children, ...props }) {
