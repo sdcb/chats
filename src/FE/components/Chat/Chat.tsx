@@ -1355,7 +1355,7 @@ const Chat = memo(() => {
             onRegenerateAllAssistant={handleRegenerateAllAssistant}
           />
 
-          <div className={cn(showChatInput ? 'h-40' : 'h-2')}></div>
+          <div className={cn(showChatInput ? 'h-32' : 'h-2')}></div>
         </div>
 
         {hasModel() && (
