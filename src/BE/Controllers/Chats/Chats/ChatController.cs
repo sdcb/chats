@@ -510,7 +510,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     logger.LogInformation("Using MCP Server {mcpServer.Label} ({mcpServer.Url}) for tool call {call.Name} with headers: {headers}",
                         mcpServer.Label, mcpServer.Url, call.Name, headers);
                     Stopwatch sw = Stopwatch.StartNew();
-                    IMcpClient mcpClient = await McpClientFactory.CreateAsync(new SseClientTransport(new SseClientTransportOptions
+                    McpClient mcpClient = await McpClient.CreateAsync(new HttpClientTransport(new HttpClientTransportOptions
                     {
                         Endpoint = new Uri(mcpServer.Url),
                         AdditionalHeaders = headers,

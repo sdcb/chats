@@ -345,7 +345,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             }
         }
 
-        SseClientTransportOptions options = new()
+        HttpClientTransportOptions options = new()
         {
             Endpoint = serverUri,
         };
@@ -356,7 +356,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
 
         try
         {
-            IMcpClient client = await McpClientFactory.CreateAsync(new SseClientTransport(options), cancellationToken: cancellationToken);
+            McpClient client = await McpClient.CreateAsync(new HttpClientTransport(options), cancellationToken: cancellationToken);
             List<McpToolBasicInfo> tools = [];
             await foreach (McpClientTool tool in client.EnumerateToolsAsync(cancellationToken: cancellationToken))
             {
@@ -415,7 +415,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
         
         if (existingUserIds.Count != allUserIds.Count)
         {
-            List<int> missingUserIds = allUserIds.Except(existingUserIds).ToList();
+            List<int> missingUserIds = [.. allUserIds.Except(existingUserIds)];
             return BadRequest($"User IDs not found: {string.Join(", ", missingUserIds)}");
         }
 
