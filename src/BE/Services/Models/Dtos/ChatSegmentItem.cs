@@ -175,6 +175,17 @@ public abstract record ChatSegmentItem
         };
     }
 
+    public static ToolCallResponseSegment FromToolCallResponse(string toolCallId, string? response, int durationMs, bool isSuccess)
+    {
+        return new ToolCallResponseSegment()
+        {
+            ToolCallId = toolCallId,
+            Response = response,
+            DurationMs = durationMs,
+            IsSuccess = isSuccess,
+        };
+    }
+
     static IEnumerable<ChatSegmentItem> FromToolCalls(IReadOnlyList<ChatToolCall> toolCall)
     {
         return toolCall.Select((x, i) => new ToolCallSegment()

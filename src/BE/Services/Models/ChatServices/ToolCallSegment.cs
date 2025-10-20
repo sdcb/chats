@@ -1,4 +1,5 @@
 ﻿using Chats.BE.Controllers.OpenAICompatible.Dtos;
+using Chats.BE.DB;
 using Chats.BE.Services.Models.Dtos;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -27,6 +28,28 @@ public sealed record ToolCallSegment : ChatSegmentItem
     // 原 function.arguments（此处往往是 JSON 片段）
     [JsonPropertyName("arguments")]
     public required string Arguments { get; init; }
+}
+
+public sealed record ToolCallResponseSegment : ChatSegmentItem
+{
+    public required string ToolCallId { get; init; }
+
+    public string? Response { get; init; }
+
+    public required int DurationMs { get; init; }
+
+    public required bool IsSuccess { get; init; }
+
+    public StepContentToolCallResponse ToDB()
+    {
+        return new StepContentToolCallResponse
+        {
+            ToolCallId = ToolCallId!,
+            Response = Response!,
+            DurationMs = DurationMs,
+            IsSuccess = IsSuccess
+        };
+    }
 }
 
 /// <summary>

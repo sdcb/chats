@@ -485,11 +485,9 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             Step step = await RunOne(messageToSend);
             await WriteStep(step);
 
-            if (step.StepContents.Any(x => x.ContentTypeId == (byte)DBMessageContentType.ToolCall))
+            if (TryGetUnfinishedToolCall(step, out List<StepContentToolCall> unfinishedToolCalls))
             {
-                foreach (StepContentToolCall call in step.StepContents!
-                    .Where(x => x.StepContentToolCall != null)
-                    .Select(x => x.StepContentToolCall!))
+                foreach (StepContentToolCall call in unfinishedToolCalls)
                 {
                     if (!toolNameMap.TryGetValue(call.Name!, out var mapped))
                     {
@@ -601,6 +599,28 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             }
         }
 
+        static bool TryGetUnfinishedToolCall(Step step, out List<StepContentToolCall> toolCall)
+        {
+            toolCall = [];
+            foreach (StepContent content in step.StepContents!)
+            {
+                if (content.ContentTypeId == (byte)DBMessageContentType.ToolCall && content.StepContentToolCall != null)
+                {
+                    string toolCallId = content.StepContentToolCall.ToolCallId!;
+                    bool hasResponse = step.StepContents.Any(x => 
+                        x.ContentTypeId == (byte)DBMessageContentType.ToolCallResponse 
+                        && x.StepContentToolCallResponse != null
+                        && x.StepContentToolCallResponse.ToolCallId == toolCallId);
+                    if (!hasResponse)
+                    {
+                        toolCall.Add(content.StepContentToolCall);
+                    }
+                }
+            }
+
+            return toolCall.Count > 0;
+        }
+
         writer.TryWrite(new EndTurn(chatSpan.SpanId, turn));
         writer.Complete();
 
@@ -650,6 +670,10 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                                 responseStated = true;
                             }
                             writer.TryWrite(new CallingToolLine(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolCall.Arguments));
+                        }
+                        else if (item is ToolCallResponseSegment toolCallResponse)
+                        {
+                            writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, toolCallResponse.IsSuccess, toolCallResponse.ToolCallId!, toolCallResponse.Response!));
                         }
                         else if (item is ImageChatSegment imgSeg)
                         {

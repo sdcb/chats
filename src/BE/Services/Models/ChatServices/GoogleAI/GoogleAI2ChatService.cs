@@ -3,6 +3,7 @@ using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
 using Mscc.GenerativeAI;
 using OpenAI.Chat;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using ChatMessage = OpenAI.Chat.ChatMessage;
@@ -87,6 +88,8 @@ public class GoogleAI2ChatService : ChatService
             SafetySettings = _safetySettings,
             Tools = tool == null ? null : [tool],
         };
+        Stopwatch codeExecutionSw = new();
+        string? codeExecutionId = null;
         await foreach (GenerateContentResponse response in _generativeModel.GenerateContentStream(gcr, new RequestOptions(null, NetworkTimeout), cancellationToken))
         {
             if (response.Candidates != null && response.Candidates.Count > 0)
@@ -96,29 +99,27 @@ public class GoogleAI2ChatService : ChatService
                 {
                     if (part.ExecutableCode != null)
                     {
-                        items.Add(ChatSegmentItem.FromText($"""
-                        ```{part.ExecutableCode.Language}
-                        {part.ExecutableCode.Code}
-                        ```
-
-                        """));
-                        //items.Add(ChatSegmentItem.FromToolCall(0, new FunctionCall()
-                        //{
-                        //    Name = "code_execution",
-                        //    Args = new JsonObject
-                        //    {
-                        //        ["code"] = part.ExecutableCode.Code,
-                        //    },
-                        //}));
+                        codeExecutionId = "ce-" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                        items.Add(ChatSegmentItem.FromToolCall(0, new FunctionCall()
+                        {
+                            Id = codeExecutionId,
+                            Name = part.ExecutableCode.Language.ToString(),
+                            Args = new
+                            {
+                                code = part.ExecutableCode.Code,
+                            },
+                        }));
+                        codeExecutionSw = Stopwatch.StartNew();
                     }
                     else if (part.CodeExecutionResult != null)
                     {
-                        items.Add(ChatSegmentItem.FromText($"""
-                        ```
-                        {part.CodeExecutionResult.Output}
-                        ```
-
-                        """));
+                        if (codeExecutionId == null)
+                        {
+                            throw new InvalidOperationException("CodeExecutionResult received without prior ExecutableCode.");
+                        }
+                        items.Add(ChatSegmentItem.FromToolCallResponse(codeExecutionId, part.CodeExecutionResult.Output,
+                            (int)codeExecutionSw.ElapsedMilliseconds,
+                            isSuccess: part.CodeExecutionResult.Outcome == Outcome.OutcomeOk));
                     }
                     else if (part.Text != null)
                     {

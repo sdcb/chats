@@ -56,6 +56,21 @@ public partial class StepContent
         return new StepContent { StepContentToolCall = new() { Name = name, ToolCallId = toolCallId, Parameters = parameters }, ContentTypeId = (byte)DBMessageContentType.ToolCall };
     }
 
+    public static StepContent FromToolResponse(string toolCallId, string? response, int durationMs, bool isSuccess)
+    {
+        return new StepContent 
+        { 
+            StepContentToolCallResponse = new() 
+            { 
+                ToolCallId = toolCallId, 
+                Response = response!, 
+                DurationMs = durationMs, 
+                IsSuccess = isSuccess 
+            }, 
+            ContentTypeId = (byte)DBMessageContentType.ToolCallResponse 
+        };
+    }
+
     public static StepContent FromError(string error)
     {
         return new StepContent { StepContentText = new() { Content = error }, ContentTypeId = (byte)DBMessageContentType.Error };
@@ -84,6 +99,7 @@ public partial class StepContent
                 ThinkChatSegment think => FromThink(think.Think),
                 ImageChatSegment image => FromFile(imageMcCache[image].Task.GetAwaiter().GetResult()),
                 ToolCallSegment tool => FromTool(tool.Id ?? tool.Index.ToString(), tool.Name!, tool.Arguments),
+                ToolCallResponseSegment toolResp => FromToolResponse(toolResp.ToolCallId, toolResp.Response, toolResp.DurationMs, toolResp.IsSuccess),
                 _ => throw new NotSupportedException(),
             };
         }))
