@@ -10,7 +10,7 @@ import { Prompt } from '@/types/prompt';
 
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
-import { IconTemperature, IconTokens } from '@/components/Icons';
+import { IconCode, IconTemperature, IconTokens, IconWorld } from '@/components/Icons';
 import ImageSizeRadio from '@/components/ImageSizeRadio/ImageSizeRadio';
 import McpSelector from '@/components/McpSelector/McpSelector';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
@@ -27,7 +27,7 @@ import { Switch } from '@/components/ui/switch';
 import { setChats } from '@/actions/chat.actions';
 import HomeContext from '@/contexts/home.context';
 import ChatModelInfo from './ChatModelInfo';
-import EnableNetworkSearch from './EnableNetworkSearch';
+import FeatureToggle from './FeatureToggle';
 import SystemPrompt from './SystemPrompt';
 
 import { putChatSpan } from '@/apis/clientApis';
@@ -129,6 +129,10 @@ const ChatModelSettingModal = (props: Props) => {
     setSpan({ ...span!, webSearchEnabled: value });
   };
 
+  const onChangeCodeExecution = (value: boolean) => {
+    setSpan({ ...span!, codeExecutionEnabled: value });
+  };
+
   const onChangeReasoningEffort = (value: string) => {
     setSpan({ ...span!, reasoningEffort: Number(value) });
   };
@@ -182,6 +186,7 @@ const ChatModelSettingModal = (props: Props) => {
         temperature: span?.temperature || null,
         reasoningEffort: span.reasoningEffort,
         webSearchEnabled: !!span.webSearchEnabled,
+        codeExecutionEnabled: !!span.codeExecutionEnabled,
         imageSize: span.imageSize,
         mcps: span.mcps,
       });
@@ -210,7 +215,7 @@ const ChatModelSettingModal = (props: Props) => {
         <DialogTitle></DialogTitle>
         {span && model && hasModel() && (
           <div className="flex-1 overflow-y-auto p-4 mt-5">
-            <div className="space-y-4 rounded-lg">
+            <div className="space-y-3 rounded-lg">
               <div className="flex flex-col gap-1">
                 <ChatModelDropdownMenu
                   className="p-0"
@@ -246,13 +251,28 @@ const ChatModelSettingModal = (props: Props) => {
                 />
               )}
               {model?.allowSearch && (
-                <EnableNetworkSearch
-                  label={t('Internet Search')}
-                  enable={span.webSearchEnabled}
-                  onChange={(value) => {
-                    onChangeEnableSearch(value);
-                  }}
-                />
+                <div className="w-1/2 pr-1.5 inline-block">
+                  <FeatureToggle
+                    label={t('Internet Search')}
+                    enable={span.webSearchEnabled}
+                    icon={<IconWorld size={16} />}
+                    onChange={(value) => {
+                      onChangeEnableSearch(value);
+                    }}
+                  />
+                </div>
+              )}
+              {model?.allowCodeExecution && (
+                <div className="w-1/2 pl-1.5 inline-block">
+                  <FeatureToggle
+                    label={t('Code Execution')}
+                    enable={span.codeExecutionEnabled}
+                    icon={<IconCode size={16} />}
+                    onChange={(value) => {
+                      onChangeCodeExecution(value);
+                    }}
+                  />
+                </div>
               )}
               {model?.reasoningEffortOptions && model.reasoningEffortOptions.length > 0 && (
                 <ReasoningEffortRadio

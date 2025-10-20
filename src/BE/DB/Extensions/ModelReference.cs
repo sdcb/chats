@@ -19,6 +19,15 @@ public partial class ModelReference
         _ => false
     };
 
+    public static bool SupportsCodeExecution(string modelReferenceName) => modelReferenceName switch
+    {
+        "gemini-2.0-flash-lite" => false,
+        "gemini-2.0-flash-exp" => false,
+        "gemini-2.0-flash-exp-image-generation" => false,
+        _ when modelReferenceName.StartsWith("gemini-") => true,
+        _ => false
+    };
+
     public static bool TryGetLowestSupportedReasoningEffort(string modelReferenceName, out DBReasoningEffort reasoningEffort)
     {
         DBReasoningEffort[] options = ReasoningEffortOptions(modelReferenceName);

@@ -15,6 +15,7 @@ public partial class ChatConfig
             SystemPrompt = SystemPrompt,
             Temperature = Temperature,
             WebSearchEnabled = WebSearchEnabled,
+            CodeExecutionEnabled = CodeExecutionEnabled,
             MaxOutputTokens = MaxOutputTokens,
             ReasoningEffort = ReasoningEffort,
             ImageSizeId = ImageSizeId,
@@ -78,6 +79,13 @@ public partial class ChatConfig
         // 4. WebSearchEnabled (bool)：用 1 字节表示
         flagBuffer[0] = (byte)(WebSearchEnabled ? 1 : 0);
         AppendField(flagBuffer);
+
+        // 4.5. CodeExecutionEnabled (bool): 仅当为true时才包含以保持向后兼容
+        if (CodeExecutionEnabled)
+        {
+            flagBuffer[0] = 1;
+            AppendField(flagBuffer);
+        }
 
         // 5. MaxOutputTokens (int?): 先写存在标志，再写 4 字节 int（如有值）
         flagBuffer[0] = (byte)(MaxOutputTokens.HasValue ? 1 : 0);

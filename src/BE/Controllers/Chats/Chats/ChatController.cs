@@ -439,6 +439,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         {
             TimezoneOffset = req.TimezoneOffset,
             WebSearchEnabled = chatSpan.ChatConfig.WebSearchEnabled,
+            CodeExecutionEnabled = chatSpan.ChatConfig.CodeExecutionEnabled,
             ReasoningEffort = (DBReasoningEffort)chatSpan.ChatConfig.ReasoningEffort,
             ImageSize = (DBKnownImageSize)chatSpan.ChatConfig.ImageSizeId,
         };

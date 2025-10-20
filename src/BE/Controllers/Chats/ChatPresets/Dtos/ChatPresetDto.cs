@@ -37,6 +37,7 @@ public record ChatPresetDto
                 ModelProviderId = x.ChatConfig.Model.ModelReference.ProviderId,
                 Temperature = x.ChatConfig.Temperature,
                 WebSearchEnabled = x.ChatConfig.WebSearchEnabled,
+                CodeExecutionEnabled = x.ChatConfig.CodeExecutionEnabled,
                 MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
                 ReasoningEffort = x.ChatConfig.ReasoningEffort,
                 ImageSize =  (DBKnownImageSize)x.ChatConfig.ImageSizeId,

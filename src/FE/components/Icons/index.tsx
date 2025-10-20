@@ -17,6 +17,7 @@ export { default as IconChevronLeft } from './IconChevronLeft';
 export { default as IconChevronRight } from './IconChevronRight';
 export { default as IconCircleX } from './IconCircleX';
 export { default as IconClipboard } from './IconClipboard';
+export { default as IconCode } from './IconCode';
 export { default as IconCopy } from './IconCopy';
 export { default as IconDesktop } from './IconDesktop';
 export { default as IconDots } from './IconDots';

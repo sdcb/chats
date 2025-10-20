@@ -42,10 +42,7 @@ public class GoogleAI2ChatService : ChatService
     public bool AllowImageGeneration => Model.ModelReference.Name == "gemini-2.0-flash-exp" ||
                                         Model.ModelReference.Name == "gemini-2.0-flash-exp-image-generation";
 
-    public bool SupportsCodeExecution =>
-        Model.ModelReference.Name != "gemini-2.0-flash-lite" &&
-        Model.ModelReference.Name != "gemini-2.0-flash-exp" &&
-        Model.ModelReference.Name != "gemini-2.0-flash-exp-image-generation";
+    private bool _codeExecutionEnabled = false;
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -69,7 +66,7 @@ public class GoogleAI2ChatService : ChatService
         }
 
         Tool? tool = ToGoogleAIToolCallTool(options);
-        if (tool == null && SupportsCodeExecution)
+        if (tool == null && _codeExecutionEnabled)
         {
             tool = new Tool()
             {
@@ -105,6 +102,14 @@ public class GoogleAI2ChatService : ChatService
                         ```
 
                         """));
+                        //items.Add(ChatSegmentItem.FromToolCall(0, new FunctionCall()
+                        //{
+                        //    Name = "code_execution",
+                        //    Args = new JsonObject
+                        //    {
+                        //        ["code"] = part.ExecutableCode.Code,
+                        //    },
+                        //}));
                     }
                     else if (part.CodeExecutionResult != null)
                     {
@@ -164,6 +169,11 @@ public class GoogleAI2ChatService : ChatService
     protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
     {
         _reasoningEffort = reasoningEffort;
+    }
+
+    protected override void SetCodeExecutionEnabled(ChatCompletionOptions options, bool enabled)
+    {
+        _codeExecutionEnabled = enabled;
     }
 
     static ChatFinishReason? ToChatFinishReason(FinishReason? finishReason)

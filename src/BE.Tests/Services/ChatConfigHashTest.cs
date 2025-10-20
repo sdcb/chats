@@ -128,6 +128,77 @@ public class ChatConfigHashTests
     }
 
     [Fact]
+    public void GenerateDBHashCode_ShouldGenerateDifferentHash_ForDifferentCodeExecutionEnabled()
+    {
+        // Arrange
+        ChatConfig config1 = new() { CodeExecutionEnabled = true };
+        ChatConfig config2 = new() { CodeExecutionEnabled = false };
+
+        // Act
+        long hash1 = config1.GenerateDBHashCode();
+        long hash2 = config2.GenerateDBHashCode();
+
+        // Assert
+        Assert.NotEqual(hash1, hash2);
+    }
+
+    [Fact]
+    public void GenerateDBHashCode_ShouldMaintainCompatibility_ForDefaultCodeExecutionEnabled()
+    {
+        // Arrange - 测试向后兼容性：false(默认值)不应影响哈希
+        ChatConfig configOld = new() 
+        { 
+            ModelId = 1,
+            SystemPrompt = "Test",
+            WebSearchEnabled = true
+            // CodeExecutionEnabled 未显式设置，默认为 false
+        };
+        
+        ChatConfig configNew = new() 
+        { 
+            ModelId = 1,
+            SystemPrompt = "Test",
+            WebSearchEnabled = true,
+            CodeExecutionEnabled = false // 显式设置为 false
+        };
+
+        // Act
+        long hash1 = configOld.GenerateDBHashCode();
+        long hash2 = configNew.GenerateDBHashCode();
+
+        // Assert - false 值应该产生相同的哈希以保持向后兼容
+        Assert.Equal(hash1, hash2);
+    }
+
+    [Fact]
+    public void GenerateDBHashCode_ShouldIncludeCodeExecutionEnabled_WhenTrue()
+    {
+        // Arrange - 验证当 CodeExecutionEnabled 为 true 时确实影响哈希
+        ChatConfig configWithoutCodeExecution = new() 
+        { 
+            ModelId = 1,
+            SystemPrompt = "Test",
+            WebSearchEnabled = false,
+            CodeExecutionEnabled = false
+        };
+        
+        ChatConfig configWithCodeExecution = new() 
+        { 
+            ModelId = 1,
+            SystemPrompt = "Test",
+            WebSearchEnabled = false,
+            CodeExecutionEnabled = true
+        };
+
+        // Act
+        long hash1 = configWithoutCodeExecution.GenerateDBHashCode();
+        long hash2 = configWithCodeExecution.GenerateDBHashCode();
+
+        // Assert - true 值应该产生不同的哈希
+        Assert.NotEqual(hash1, hash2);
+    }
+
+    [Fact]
     public void GenerateDBHashCode_ShouldGenerateDifferentHash_ForDifferentMaxOutputTokens()
     {
         // Arrange

@@ -84,6 +84,9 @@ public record ChatSpanDto
     [JsonPropertyName("webSearchEnabled")]
     public required bool WebSearchEnabled { get; init; }
 
+    [JsonPropertyName("codeExecutionEnabled")]
+    public required bool CodeExecutionEnabled { get; init; }
+
     [JsonPropertyName("maxOutputTokens")]
     public required int? MaxOutputTokens { get; init; }
 
@@ -106,6 +109,7 @@ public record ChatSpanDto
         ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
         Temperature = span.ChatConfig.Temperature,
         WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
+        CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
         MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
         ReasoningEffort = span.ChatConfig.ReasoningEffort,
         ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
@@ -127,6 +131,7 @@ public record ChatSpanDto
         ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
         Temperature = span.ChatConfig.Temperature,
         WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
+        CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
         MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
         ReasoningEffort = span.ChatConfig.ReasoningEffort,
         ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,

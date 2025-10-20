@@ -10,9 +10,11 @@ import { Prompt } from '@/types/prompt';
 
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
 import {
+  IconCode,
   IconPlus,
   IconTemperature,
-  IconTokens
+  IconTokens,
+  IconWorld
 } from '@/components/Icons';
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import ImageSizeRadio from '@/components/ImageSizeRadio/ImageSizeRadio';
@@ -26,7 +28,7 @@ import { Switch } from '@/components/ui/switch';
 
 import HomeContext from '@/contexts/home.context';
 import ChatModelInfo from './ChatModelInfo';
-import EnableNetworkSearch from './EnableNetworkSearch';
+import FeatureToggle from './FeatureToggle';
 import SystemPrompt from './SystemPrompt';
 
 import { postChatPreset, putChatPreset } from '@/apis/clientApis';
@@ -119,6 +121,7 @@ const ChatPresetModal = (props: Props) => {
             temperature: null,
             reasoningEffort: 0,
             webSearchEnabled: false,
+            codeExecutionEnabled: false,
             imageSize: 0,
             mcps: [],
           });
@@ -164,6 +167,7 @@ const ChatPresetModal = (props: Props) => {
         temperature: span?.temperature || null,
         reasoningEffort: span.reasoningEffort,
         webSearchEnabled: !!span.webSearchEnabled,
+        codeExecutionEnabled: !!span.codeExecutionEnabled,
         imageSize: span.imageSize,
         mcps: span.mcps,
       })),
@@ -189,7 +193,7 @@ const ChatPresetModal = (props: Props) => {
     const m = modelMap[modelId];
     const count = presetSpanCount + 1;
     setPresetSpanCount(count);
-    const span = {
+    const span: ChatSpanDto = {
       spanId: count,
       enabled: true,
       modelId: m.modelId,
@@ -200,6 +204,7 @@ const ChatPresetModal = (props: Props) => {
       temperature: null,
       reasoningEffort: 0,
       webSearchEnabled: false,
+      codeExecutionEnabled: false,
       imageSize: 0,
       mcps: [],
     };
@@ -271,6 +276,24 @@ const ChatPresetModal = (props: Props) => {
           const s = {
             ...span!,
             webSearchEnabled: value,
+          };
+          setSelectedSpan({
+            ...s,
+          });
+          return s;
+        }
+        return span;
+      });
+    });
+  };
+
+  const onChangeCodeExecution = (value: boolean) => {
+    setSpans((prev) => {
+      return prev.map((span) => {
+        if (selectedSpan?.spanId === span.spanId) {
+          const s = {
+            ...span!,
+            codeExecutionEnabled: value,
           };
           setSelectedSpan({
             ...s,
@@ -512,11 +535,22 @@ const ChatPresetModal = (props: Props) => {
                       />
                     )}
                     {modelMap[selectedSpan.modelId]?.allowSearch && (
-                      <EnableNetworkSearch
+                      <FeatureToggle
                         label={t('Internet Search')}
                         enable={selectedSpan.webSearchEnabled}
+                        icon={<IconWorld size={16} />}
                         onChange={(value) => {
                           onChangeEnableSearch(value);
+                        }}
+                      />
+                    )}
+                    {modelMap[selectedSpan.modelId]?.allowCodeExecution && (
+                      <FeatureToggle
+                        label={t('Code Execution')}
+                        enable={selectedSpan.codeExecutionEnabled}
+                        icon={<IconCode size={16} />}
+                        onChange={(value) => {
+                          onChangeCodeExecution(value);
                         }}
                       />
                     )}

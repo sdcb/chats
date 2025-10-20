@@ -83,6 +83,7 @@ export interface ChatSpanDto {
   modelProviderId: DBModelProvider;
   temperature: number | null;
   webSearchEnabled: boolean;
+  codeExecutionEnabled: boolean;
   reasoningEffort: number;
   maxOutputTokens: number | null;
   imageSize: number;
@@ -135,6 +136,7 @@ export interface PostUserChatSpanParams {
   setTemperature?: boolean;
   temperature?: number | null;
   webSearchEnabled?: boolean;
+  codeExecutionEnabled?: boolean;
 }
 
 export interface PostUserChatSpanResult {
@@ -145,6 +147,7 @@ export interface PostUserChatSpanResult {
   modelProviderId: number;
   temperature: number;
   webSearchEnabled: boolean;
+  codeExecutionEnabled: boolean;
   reasoningEffort: number;
   maxOutputTokens: number;
   imageSize: number;
@@ -242,6 +245,7 @@ export interface PutChatSpanParams {
   systemPrompt: string;
   temperature?: number | null;
   webSearchEnabled?: boolean;
+  codeExecutionEnabled?: boolean;
   maxOutputTokens: number | null;
   reasoningEffort?: number | null;
   imageSize?: number;
@@ -266,6 +270,7 @@ export interface PutChatPresetSpanParams {
   systemPrompt: string;
   temperature?: number | null;
   webSearchEnabled?: boolean;
+  codeExecutionEnabled?: boolean;
   maxOutputTokens: number | null;
   reasoningEffort?: number | null;
   imageSize?: number;
