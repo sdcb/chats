@@ -47,21 +47,14 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                 new ImageGenerationOptions()
                 {
                     EndUserId = options.EndUserId,
-                    Quality = _reasoningEffort switch
-                    {
-                        DBReasoningEffort.Default => (GeneratedImageQuality?)null,
-                        DBReasoningEffort.Low => "low",
-                        DBReasoningEffort.Medium => "medium",
-                        DBReasoningEffort.High => "high",
-                        _ => throw new ArgumentOutOfRangeException(nameof(_reasoningEffort), _reasoningEffort, null)
-                    },
+                    Quality = _reasoningEffort.ToGeneratedImageQuality(),
                     Size = _imageSize switch
                     {
                         DBKnownImageSize.Default => prompt.Contains("3:2") ? GeneratedImageSize.W1536xH1024 : prompt.Contains("2:3") ? GeneratedImageSize.W1024xH1536 : null,
                         DBKnownImageSize.W1024xH1024 => GeneratedImageSize.W1024xH1024,
                         DBKnownImageSize.W1536xH1024 => GeneratedImageSize.W1536xH1024,
                         DBKnownImageSize.W1024xH1536 => GeneratedImageSize.W1024xH1536,
-                        _ => throw new ArgumentOutOfRangeException(nameof(_imageSize), _imageSize, null)
+                        _ => throw new NotSupportedException($"Unsupported image size: {_imageSize}"),
                     },
                     ModerationLevel = GeneratedImageModerationLevel.Low,
                 }, cancellationToken);
@@ -160,7 +153,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                     DBKnownImageSize.W1024xH1024 => "1024x1024",
                     DBKnownImageSize.W1536xH1024 => "1536x1024",
                     DBKnownImageSize.W1024xH1536 => "1024x1536",
-                    _ => throw new ArgumentOutOfRangeException(nameof(_imageSize), _imageSize, null)
+                    _ => throw new NotSupportedException($"Unsupported image size: {_imageSize}"),
                 }, "size");
             }
             else
@@ -182,13 +175,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
             form.Add("low", "moderation");
             if (_reasoningEffort != DBReasoningEffort.Default)
             {
-                form.Add(_reasoningEffort switch
-                {
-                    DBReasoningEffort.Low => "low",
-                    DBReasoningEffort.Medium => "medium",
-                    DBReasoningEffort.High => "high",
-                    _ => throw new ArgumentOutOfRangeException(nameof(_reasoningEffort), _reasoningEffort, null)
-                }, "quality");
+                form.Add(_reasoningEffort.ToGeneratedImageQualityText()!, "quality");
             }
 
             ClientResult clientResult = await imageClient.GenerateImageEditsAsync(form, form.ContentType, new RequestOptions()

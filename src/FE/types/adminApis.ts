@@ -41,7 +41,7 @@ export interface AdminModelDto {
   allowSearch: boolean;
   allowVision: boolean;
   allowSystemPrompt: boolean;
-  allowReasoningEffort: boolean;
+  reasoningEffortOptions: number[];
   allowStreaming: boolean;
   minTemperature: number;
   maxTemperature: number;

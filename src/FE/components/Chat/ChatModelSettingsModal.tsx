@@ -254,9 +254,10 @@ const ChatModelSettingModal = (props: Props) => {
                   }}
                 />
               )}
-              {model?.allowReasoningEffort && (
+              {model?.reasoningEffortOptions && model.reasoningEffortOptions.length > 0 && (
                 <ReasoningEffortRadio
                   value={`${span?.reasoningEffort}`}
+                  availableOptions={model.reasoningEffortOptions}
                   onValueChange={(value) => {
                     onChangeReasoningEffort(value);
                   }}

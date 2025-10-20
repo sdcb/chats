@@ -14,7 +14,7 @@ public class QwenChatService(Model model) : ChatCompletionService(model, new Uri
 
     protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
     {
-        if (reasoningEffort == DBReasoningEffort.Low)
+        if (reasoningEffort.IsLowOrMinimal())
         {
             options.GetOrCreateSerializedAdditionalRawData()["enable_thinking"] = BinaryData.FromObjectAsJson(false);
         }

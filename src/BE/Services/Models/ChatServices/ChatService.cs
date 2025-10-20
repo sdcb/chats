@@ -65,7 +65,7 @@ public abstract partial class ChatService : IDisposable
             SetWebSearchEnabled(options, feOptions.WebSearchEnabled);
         }
 
-        if (ModelReference.SupportReasoningEffort(Model.ModelReference.Name) && feOptions.ReasoningEffort != DBReasoningEffort.Default)
+        if (ModelReference.ReasoningEffortOptions(Model.ModelReference.Name).Length > 0 && feOptions.ReasoningEffort != DBReasoningEffort.Default)
         {
             SetReasoningEffort(options, feOptions.ReasoningEffort);
         }

@@ -90,9 +90,9 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
         try
         {
             ChatCompletionOptions cco = new();
-            if (ModelReference.SupportReasoningEffort(modelReference.Name))
+            if (ModelReference.TryGetLowestSupportedReasoningEffort(modelReference.Name, out DBReasoningEffort reasoningEffort))
             {
-                cco.ReasoningEffortLevel = ChatReasoningEffortLevel.Low;
+                cco.ReasoningEffortLevel = reasoningEffort.ToReasoningEffort();
             }
 
             await foreach (Dtos.InternalChatSegment seg in cs.ChatStreamedFEProcessed([new UserChatMessage("1+1=?")], cco, ChatExtraDetails.Default, cancellationToken))

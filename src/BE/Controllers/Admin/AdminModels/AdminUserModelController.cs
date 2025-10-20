@@ -70,7 +70,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                 AllowVision = x.ModelReference.AllowVision,
                 AllowStreaming = x.ModelReference.AllowStreaming,
                 AllowSystemPrompt = x.ModelReference.AllowSystemPrompt,
-                AllowReasoningEffort = ModelReference.SupportReasoningEffort(x.ModelReference.Name),
+                ReasoningEffortOptions = ModelReference.ReasoningEffortOptionsAsInt32(x.ModelReference.Name),
                 MinTemperature = x.ModelReference.MinTemperature,
                 MaxTemperature = x.ModelReference.MaxTemperature,
                 ContextWindow = x.ModelReference.ContextWindow,

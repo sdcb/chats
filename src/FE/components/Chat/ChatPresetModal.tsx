@@ -520,9 +520,11 @@ const ChatPresetModal = (props: Props) => {
                         }}
                       />
                     )}
-                    {modelMap[selectedSpan.modelId]?.allowReasoningEffort && (
+                    {modelMap[selectedSpan.modelId]?.reasoningEffortOptions && 
+                     modelMap[selectedSpan.modelId]?.reasoningEffortOptions.length > 0 && (
                       <ReasoningEffortRadio
                         value={`${selectedSpan?.reasoningEffort}`}
+                        availableOptions={modelMap[selectedSpan.modelId]?.reasoningEffortOptions || []}
                         onValueChange={(value) => {
                           onChangeReasoningEffort(value);
                         }}

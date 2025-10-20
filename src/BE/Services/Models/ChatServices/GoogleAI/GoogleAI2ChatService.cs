@@ -55,13 +55,13 @@ public class GoogleAI2ChatService : ChatService
             ResponseModalities = AllowImageGeneration ? [ResponseModality.Text, ResponseModality.Image] : [ResponseModality.Text],
             EnableEnhancedCivicAnswers = true,
         };
-        if (ModelReference.SupportReasoningEffort(Model.ModelReference.Name))
+        if (ModelReference.ReasoningEffortOptions(Model.ModelReference.Name).Length > 0)
         {
             gc.ThinkingConfig = new ThinkingConfig
             {
                 ThinkingBudget = _reasoningEffort switch
                 {
-                    DBReasoningEffort.Low => 1024,
+                    var x when x.IsLowOrMinimal() => 1024,
                     _ => null,
                 },
                 IncludeThoughts = true,
