@@ -58,7 +58,7 @@ public partial class ModelReference
             "codex-mini" => TranditionalReasoning,
             "gemini-2.5-pro" => Compatible,
             "gemini-2.5-flash" => Compatible,
-            "gpt-image-1" => TranditionalReasoning,
+            "gpt-image-1" or "gpt-image-1-mini" => TranditionalReasoning,
             "Qwen/Qwen3-235B-A22B" => Compatible,
             "Qwen/Qwen3-30B-A3B" => Compatible,
             "Qwen/Qwen3-32B" => Compatible,
@@ -72,7 +72,7 @@ public partial class ModelReference
             "qwen3-4b" => Compatible,
             "qwen3-1.7b" => Compatible,
             "qwen3-0.6b" => Compatible,
-            "gpt-5" or "gpt-5-mini" or "gpt-5-nano" => Gpt5Reasoning,
+            "gpt-5" or "gpt-5-mini" or "gpt-5-nano" or "gpt-5-codex" => Gpt5Reasoning,
             _ => []
         };
     }

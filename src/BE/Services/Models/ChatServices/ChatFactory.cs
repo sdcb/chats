@@ -20,14 +20,14 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
             DBModelProvider.Test => new TestChatService(model),
             DBModelProvider.OpenAI => model.ModelReference.Name switch
             {
-                "o3" or "o3-pro" or "o4-mini" or "codex-mini" or "gpt-5" or "gpt-5-mini" or "gpt-5-nano" => new ResponseApiService(model, logger),
-                "gpt-image-1" => new ImageGenerationService(model),
+                "o3" or "o3-pro" or "o4-mini" or "codex-mini" or "gpt-5" or "gpt-5-mini" or "gpt-5-nano" or "gpt-5-codex" or "gpt-5-pro" => new ResponseApiService(model, logger),
+                "gpt-image-1" or "gpt-image-1-mini" => new ImageGenerationService(model),
                 _ => new ChatCompletionService(model),
             },
             DBModelProvider.AzureOpenAI => model.ModelReference.Name switch
             {
-                "o3" or "o3-pro" or "o4-mini" or "codex-mini" or "gpt-5" or "gpt-5-mini" or "gpt-5-nano" => new AzureResponseApiService(model, logger), 
-                "gpt-image-1" => new AzureImageGenerationService(model),
+                "o3" or "o3-pro" or "o4-mini" or "codex-mini" or "gpt-5" or "gpt-5-mini" or "gpt-5-nano" or "gpt-5-codex" or "gpt-5-pro" => new AzureResponseApiService(model, logger), 
+                "gpt-image-1" or "gpt-image-1-mini" => new AzureImageGenerationService(model),
                 _ => new AzureChatCompletionService(model),
             },
             DBModelProvider.WenXinQianFan => new QianFanChatService(model),

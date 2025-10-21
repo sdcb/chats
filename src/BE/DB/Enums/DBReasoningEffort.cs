@@ -24,9 +24,9 @@ public static class DBReasoningEffortExtensions
         _ => throw new Exception($"Unknown DBReasoningEffort value: {effort}"),
     };
 
-    public static GeneratedImageQuality? ToGeneratedImageQuality(this DBReasoningEffort effort) => effort switch
+    public static GeneratedImageQuality ToGeneratedImageQuality(this DBReasoningEffort effort) => effort switch
     {
-        DBReasoningEffort.Default => null,
+        DBReasoningEffort.Default => GeneratedImageQuality.Auto,
         DBReasoningEffort.Minimal => GeneratedImageQuality.Low, // treating minimal as low for image quality
         DBReasoningEffort.Low => GeneratedImageQuality.Low,
         DBReasoningEffort.Medium => GeneratedImageQuality.Medium,
