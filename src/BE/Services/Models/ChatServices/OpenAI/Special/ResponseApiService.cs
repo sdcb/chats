@@ -335,11 +335,6 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
         }
     }
 
-    protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
-    {
-        // override in ToResponse
-    }
-
     static ResponseCreationOptions ToResponse(ChatCompletionOptions options, bool background = false)
     {
         ResponseCreationOptions responseCreationOptions = new()
@@ -352,6 +347,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
                 ReasoningEffortLevel = options.ReasoningEffortLevel switch
                 {
                     null => (ResponseReasoningEffortLevel?)null,
+                    var x when x == "minimal" => new ResponseReasoningEffortLevel("minimal"),
                     var x when x == ChatReasoningEffortLevel.Low => ResponseReasoningEffortLevel.Low,
                     var x when x == ChatReasoningEffortLevel.Medium => ResponseReasoningEffortLevel.Medium,
                     var x when x == ChatReasoningEffortLevel.High => ResponseReasoningEffortLevel.High,

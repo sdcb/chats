@@ -128,8 +128,7 @@ public abstract partial class ChatService : IDisposable
 
     protected virtual void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
     {
-        // chat service not enable reasoning effort by default, prompt a warning
-        Console.WriteLine($"{Model.ModelReference.Name} chat service not support reasoning effort.");
+        options.ReasoningEffortLevel = reasoningEffort.ToReasoningEffort();
     }
 
     public void Dispose()

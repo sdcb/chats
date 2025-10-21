@@ -48,16 +48,10 @@ public partial class ModelReference
 
         return modelReferenceName switch
         {
-            "o1-2024-12-17" => TranditionalReasoning,
-            "o3-mini-2025-01-31" => TranditionalReasoning,
-            "grok-3-mini" => TranditionalReasoning,
-            "grok-3-mini-fast" => TranditionalReasoning,
-            "o3" => TranditionalReasoning,
-            "o3-pro" => TranditionalReasoning,
-            "o4-mini" => TranditionalReasoning,
-            "codex-mini" => TranditionalReasoning,
-            "gemini-2.5-pro" => Compatible,
-            "gemini-2.5-flash" => Compatible,
+            "grok-3-mini" or "grok-3-mini-fast" => TranditionalReasoning,
+            "o1-2024-12-17" or "o3" or "o3-pro" or "o3-mini-2025-01-31" or "gpt-5-codex" => TranditionalReasoning,
+            "o4-mini" or "codex-mini" => TranditionalReasoning,
+            "gemini-2.5-pro" or "gemini-2.5-flash" => Compatible,
             "gpt-image-1" or "gpt-image-1-mini" => TranditionalReasoning,
             "Qwen/Qwen3-235B-A22B" => Compatible,
             "Qwen/Qwen3-30B-A3B" => Compatible,
@@ -72,7 +66,7 @@ public partial class ModelReference
             "qwen3-4b" => Compatible,
             "qwen3-1.7b" => Compatible,
             "qwen3-0.6b" => Compatible,
-            "gpt-5" or "gpt-5-mini" or "gpt-5-nano" or "gpt-5-codex" => Gpt5Reasoning,
+            "gpt-5" or "gpt-5-mini" or "gpt-5-nano" => Gpt5Reasoning,
             _ => []
         };
     }
