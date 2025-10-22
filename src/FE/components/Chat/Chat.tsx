@@ -408,7 +408,7 @@ const Chat = memo(() => {
           newContent[lastContentIndex] = {
             ...newContent[lastContentIndex],
             c: text
-          };
+          } as TempFileContent;
         } else {
           // 插入新的预览位置
           newContent.push({ i: '', $type: MessageContentType.tempFileId, c: text });
@@ -450,7 +450,7 @@ const Chat = memo(() => {
             ...newContent[lastContentIndex],
             $type: MessageContentType.fileId,
             c: text
-          };
+          } as FileContent;
         } else {
           // 没有预览图片，直接追加最终图片
           newContent.push({ i: '', $type: MessageContentType.fileId, c: text });
