@@ -30,7 +30,7 @@ public static class DBReasoningEffortExtensions
         DBReasoningEffort.Minimal => GeneratedImageQuality.Low, // treating minimal as low for image quality
         DBReasoningEffort.Low => GeneratedImageQuality.Low,
         DBReasoningEffort.Medium => GeneratedImageQuality.Medium,
-        DBReasoningEffort.High => GeneratedImageQuality.High,
+        DBReasoningEffort.High => new GeneratedImageQuality("high"),
         _ => throw new Exception($"Unknown DBReasoningEffort value: {effort}"),
     };
 

@@ -37,6 +37,17 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
         string prompt = GetPromptStatic(messages);
         ChatMessageContentPart[] images = GetImagesStatic(messages);
 
+        // 兼容 n>1 时不走 stream
+        int n = options.MaxOutputTokenCount ?? 1;
+        if (n > 1)
+        {
+            // fallback 到 Chat 方法
+            Console.WriteLine("ImageGenerationService.ChatStreamed: n > 1, fallback to non-streaming Chat method.");
+            ChatSegment result = await Chat(messages, options, cancellationToken);
+            yield return result;
+            yield break;
+        }
+
         ClientPipeline pipeline = imageClient.Pipeline;
 
         if (images.Length == 0)
@@ -46,7 +57,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
             {
                 ["prompt"] = prompt,
                 ["model"] = Model.ApiModelId,
-                ["n"] = options.MaxOutputTokenCount ?? 1,
+                ["n"] = n,
                 ["stream"] = true,
                 ["partial_images"] = 3,
                 ["moderation"] = "low"
@@ -66,17 +77,6 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                     DBKnownImageSize.W1024xH1536 => "1024x1536",
                     _ => throw new NotSupportedException($"Unsupported image size: {_imageSize}"),
                 };
-            }
-            else
-            {
-                if (prompt.Contains("3:2"))
-                {
-                    requestBody["size"] = "1536x1024";
-                }
-                else if (prompt.Contains("2:3"))
-                {
-                    requestBody["size"] = "1024x1536";
-                }
             }
 
             if (options.EndUserId != null)
@@ -170,7 +170,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                     Quality = _reasoningEffort.ToGeneratedImageQuality(),
                     Size = _imageSize switch
                     {
-                        DBKnownImageSize.Default => prompt.Contains("3:2") ? GeneratedImageSize.W1536xH1024 : prompt.Contains("2:3") ? GeneratedImageSize.W1024xH1536 : null,
+                        DBKnownImageSize.Default => null,
                         DBKnownImageSize.W1024xH1024 => GeneratedImageSize.W1024xH1024,
                         DBKnownImageSize.W1536xH1024 => GeneratedImageSize.W1536xH1024,
                         DBKnownImageSize.W1024xH1536 => GeneratedImageSize.W1024xH1536,
@@ -296,17 +296,6 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                 DBKnownImageSize.W1024xH1536 => "1024x1536",
                 _ => throw new NotSupportedException($"Unsupported image size: {_imageSize}"),
             }, "size");
-        }
-        else
-        {
-            if (prompt.Contains("3:2"))
-            {
-                form.Add("1536x1024", "size");
-            }
-            else if (prompt.Contains("2:3"))
-            {
-                form.Add("1024x1536", "size");
-            }
         }
 
         if (options.EndUserId != null)
