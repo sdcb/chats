@@ -677,6 +677,10 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                         {
                             writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, toolCallResponse.IsSuccess, toolCallResponse.ToolCallId!, toolCallResponse.Response!));
                         }
+                        else if (item is Base64PreviewImage preview)
+                        {
+                            writer.TryWrite(new ImageGeneratingLine(chatSpan.SpanId, preview.ToTempFileDto()));
+                        }
                         else if (item is ImageChatSegment imgSeg)
                         {
                             imageFileCache[imgSeg] = new TaskCompletionSource<DB.File>();
@@ -842,7 +846,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
     private static string GenerateAlphaFirstToken(int length)
     {
-        if (length <= 0) throw new ArgumentOutOfRangeException(nameof(length));
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
         const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
         const string alphanum = letters + "0123456789";
 

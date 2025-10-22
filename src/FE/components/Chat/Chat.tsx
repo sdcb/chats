@@ -340,21 +340,21 @@ const Chat = memo(() => {
     status: ChatSpanStatus,
     finalMessageId?: string,
   ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        const contentCount = x.content.length - 1;
+        const lastContentIndex = x.content.length - 1;
         let newContent = [...x.content];
         
         if (
-          contentCount >= 0 &&
-          newContent[contentCount].$type === MessageContentType.text
+          lastContentIndex >= 0 &&
+          newContent[lastContentIndex].$type === MessageContentType.text
         ) {
-          const oldText = (newContent[contentCount] as TextContent).c;
+          const oldText = (newContent[lastContentIndex] as TextContent).c;
           const newText = oldText + text;
-          newContent[contentCount] = {
-            ...newContent[contentCount],
+          newContent[lastContentIndex] = {
+            ...newContent[lastContentIndex],
             c: newText
           } as TextContent;
         } else {
@@ -382,35 +382,7 @@ const Chat = memo(() => {
     });
     
     const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
-    messageDispatch(setSelectedMessages(newSelectedMsgs));
-    return newSelectedMsgs;
-  };
-
-  const changeSelectedResponseFile = (
-    selectedMsgs: IChatMessage[][],
-    messageId: string,
-    text: FileDef,
-  ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
-    const updatedMessageList = messageList.map((x) => {
-      if (x.id === messageId) {
-        let newContent = [...x.content];
-        
-        // 总是追加新的图片内容
-        newContent.push({ i: '', $type: MessageContentType.fileId, c: text });
-
-        return {
-          ...x,
-          content: newContent,
-        };
-      }
-      return x;
-    });
-    
-    const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
     return newSelectedMsgs;
   };
@@ -420,21 +392,21 @@ const Chat = memo(() => {
     messageId: string,
     text: FileDef,
   ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        const contentCount = x.content.length - 1;
+        const lastContentIndex = x.content.length - 1;
         let newContent = [...x.content];
         
         // 检查最后一个内容是否是 tempFileId 类型（预览图片）
         if (
-          contentCount >= 0 &&
-          newContent[contentCount].$type === MessageContentType.tempFileId
+          lastContentIndex >= 0 &&
+          newContent[lastContentIndex].$type === MessageContentType.tempFileId
         ) {
           // 更新现有的预览图片
-          newContent[contentCount] = {
-            ...newContent[contentCount],
+          newContent[lastContentIndex] = {
+            ...newContent[lastContentIndex],
             c: text
           };
         } else {
@@ -451,7 +423,7 @@ const Chat = memo(() => {
     });
     
     const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
     return newSelectedMsgs;
   };
@@ -461,21 +433,21 @@ const Chat = memo(() => {
     messageId: string,
     text: FileDef,
   ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        const contentCount = x.content.length - 1;
+        const lastContentIndex = x.content.length - 1;
         let newContent = [...x.content];
         
         // 检查最后一个内容是否是 tempFileId 类型（预览图片）
         if (
-          contentCount >= 0 &&
-          newContent[contentCount].$type === MessageContentType.tempFileId
+          lastContentIndex >= 0 &&
+          newContent[lastContentIndex].$type === MessageContentType.tempFileId
         ) {
           // 将预览图片替换为最终图片（改变类型为 fileId）
-          newContent[contentCount] = {
-            ...newContent[contentCount],
+          newContent[lastContentIndex] = {
+            ...newContent[lastContentIndex],
             $type: MessageContentType.fileId,
             c: text
           };
@@ -493,7 +465,7 @@ const Chat = memo(() => {
     });
     
     const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
     return newSelectedMsgs;
   };
@@ -503,20 +475,20 @@ const Chat = memo(() => {
     messageId: string,
     text: string,
   ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        const contentCount = x.content.length - 1;
+        const lastContentIndex = x.content.length - 1;
         let newContent = [...x.content];
         
         if (
-          contentCount >= 0 &&
-          newContent[contentCount].$type === MessageContentType.reasoning
+          lastContentIndex >= 0 &&
+          newContent[lastContentIndex].$type === MessageContentType.reasoning
         ) {
-          newContent[contentCount] = {
-            ...newContent[contentCount],
-            c: (newContent[contentCount] as ReasoningContent).c + text
+          newContent[lastContentIndex] = {
+            ...newContent[lastContentIndex],
+            c: (newContent[lastContentIndex] as ReasoningContent).c + text
           } as ReasoningContent;
         } else {
           newContent.push({
@@ -536,7 +508,7 @@ const Chat = memo(() => {
     });
     
     const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
     return newSelectedMsgs;
   };
@@ -546,8 +518,8 @@ const Chat = memo(() => {
     messageId: string,
     time: number,
   ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
         return {
@@ -559,7 +531,7 @@ const Chat = memo(() => {
     });
     
     const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
     return newSelectedMsgs;
   };
@@ -571,8 +543,8 @@ const Chat = memo(() => {
     toolName: string,
     parameters: string,
   ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
         let newContent = [...x.content];
@@ -618,7 +590,7 @@ const Chat = memo(() => {
     });
     
     const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
     return newSelectedMsgs;
   };
@@ -629,8 +601,8 @@ const Chat = memo(() => {
     toolCallId: string,
     result: string,
   ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
         let newContent = [...x.content];
@@ -674,7 +646,7 @@ const Chat = memo(() => {
     });
     
     const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
     return newSelectedMsgs;
   };
@@ -684,8 +656,8 @@ const Chat = memo(() => {
     spanId: number,
     message: IChatMessage,
   ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.spanId === spanId) {
         return {
@@ -703,7 +675,7 @@ const Chat = memo(() => {
     });
     
     const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
     return newSelectedMsgs;
   };

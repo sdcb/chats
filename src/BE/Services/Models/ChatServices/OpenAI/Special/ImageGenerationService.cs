@@ -104,7 +104,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
 
             if (!message.Response.IsError)
             {
-                await foreach (ChatSegment segment in ProcessImageStreamResponseAsync(message.Response, sw, "image_gen_sse", cancellationToken))
+                await foreach (ChatSegment segment in ProcessImageStreamResponseAsync(message.Response, sw, cancellationToken))
                 {
                     yield return segment;
                 }
@@ -140,7 +140,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
 
             if (!message.Response.IsError)
             {
-                await foreach (ChatSegment segment in ProcessImageStreamResponseAsync(message.Response, sw, "image_edit_sse", cancellationToken))
+                await foreach (ChatSegment segment in ProcessImageStreamResponseAsync(message.Response, sw, cancellationToken))
                 {
                     yield return segment;
                 }
@@ -336,7 +336,6 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
     private static async IAsyncEnumerable<ChatSegment> ProcessImageStreamResponseAsync(
         PipelineResponse response,
         Stopwatch sw,
-        string logPrefix,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         if (response.ContentStream == null)
@@ -378,7 +377,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                 yield return new ChatSegment()
                 {
                     FinishReason = null,
-                    Items = [ChatSegmentItem.FromBase64Image(b64Json, contentType)],
+                    Items = [ChatSegmentItem.FromBase64PreviewImage(b64Json, contentType)],
                     Usage = null,
                 };
             }

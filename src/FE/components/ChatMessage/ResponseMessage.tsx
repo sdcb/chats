@@ -235,6 +235,43 @@ const ResponseMessage = (props: Props) => {
               src={getFileUrl(c.c as FileDef)}
             />
           );
+        } else if (c.$type === MessageContentType.tempFileId) {
+          return (
+            <div key={'temp-file-' + index} className="relative w-full md:w-1/2 rounded-md overflow-hidden">
+              <img
+                alt={t('Loading...')}
+                className="w-full rounded-md"
+                src={getFileUrl(c.c as FileDef)}
+              />
+              {/* 蓝色激光扫描效果 */}
+              <div className="absolute inset-0 pointer-events-none">
+                <div 
+                  className="absolute w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent shadow-[0_0_20px_rgba(59,130,246,0.8)]"
+                  style={{
+                    animation: 'scan 2s linear infinite',
+                  }}
+                />
+              </div>
+              <style jsx>{`
+                @keyframes scan {
+                  0% {
+                    top: -4px;
+                    opacity: 0;
+                  }
+                  10% {
+                    opacity: 1;
+                  }
+                  90% {
+                    opacity: 1;
+                  }
+                  100% {
+                    top: 100%;
+                    opacity: 0;
+                  }
+                }
+              `}</style>
+            </div>
+          );
         } else if (c.$type === MessageContentType.text) {
           return editId === c.i ? (
             <div className="flex relative" key={'edit-text-' + c.i}>

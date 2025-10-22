@@ -91,10 +91,11 @@ public partial class StepContent
             yield return FromError(errorText);
         }
         // lastSegment.Items is merged now
-        foreach (StepContent item in lastSegment.Items.Select(x =>
+        foreach (StepContent? item in lastSegment.Items.Select(x =>
         {
             return x switch
             {
+                Base64PreviewImage => null, // skip preview images
                 TextChatSegment text => FromText(text.Text),
                 ThinkChatSegment think => FromThink(think.Think),
                 ImageChatSegment image => FromFile(imageMcCache[image].Task.GetAwaiter().GetResult()),
@@ -104,7 +105,10 @@ public partial class StepContent
             };
         }))
         {
-            yield return item;
+            if (item is not null)
+            {
+                yield return item;
+            }
         }
     }
 }

@@ -37,6 +37,15 @@ public abstract record ChatSegmentItem
         };
     }
 
+    public static ImageChatSegment FromBase64PreviewImage(string base64, string contentType)
+    {
+        return new Base64PreviewImage
+        {
+            Base64 = base64,
+            ContentType = contentType
+        };
+    }
+
     public static ImageChatSegment FromBinaryData(BinaryData binaryData, string contentType)
     {
         return new Base64Image
