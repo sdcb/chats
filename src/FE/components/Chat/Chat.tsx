@@ -34,6 +34,7 @@ import {
   ReasoningContent,
   RequestContent,
   ResponseContent,
+  TempFileContent,
   TextContent,
   ToolCallContent,
   ToolResponseContent,
@@ -395,19 +396,91 @@ const Chat = memo(() => {
     const messageList = selectedMsgs[messageCount];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
+        let newContent = [...x.content];
+        
+        // 总是追加新的图片内容
+        newContent.push({ i: '', $type: MessageContentType.fileId, c: text });
+
+        return {
+          ...x,
+          content: newContent,
+        };
+      }
+      return x;
+    });
+    
+    const newSelectedMsgs = [...selectedMsgs];
+    newSelectedMsgs[messageCount] = updatedMessageList;
+    messageDispatch(setSelectedMessages(newSelectedMsgs));
+    return newSelectedMsgs;
+  };
+
+  const changeSelectedResponseFilePreview = (
+    selectedMsgs: IChatMessage[][],
+    messageId: string,
+    text: FileDef,
+  ): IChatMessage[][] => {
+    const messageCount = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[messageCount];
+    const updatedMessageList = messageList.map((x) => {
+      if (x.id === messageId) {
         const contentCount = x.content.length - 1;
         let newContent = [...x.content];
         
+        // 检查最后一个内容是否是 tempFileId 类型（预览图片）
         if (
           contentCount >= 0 &&
-          newContent[contentCount].$type === MessageContentType.fileId
+          newContent[contentCount].$type === MessageContentType.tempFileId
         ) {
-          // Update existing file content
+          // 更新现有的预览图片
           newContent[contentCount] = {
             ...newContent[contentCount],
             c: text
-          } as FileContent;
+          };
         } else {
+          // 插入新的预览位置
+          newContent.push({ i: '', $type: MessageContentType.tempFileId, c: text });
+        }
+
+        return {
+          ...x,
+          content: newContent,
+        };
+      }
+      return x;
+    });
+    
+    const newSelectedMsgs = [...selectedMsgs];
+    newSelectedMsgs[messageCount] = updatedMessageList;
+    messageDispatch(setSelectedMessages(newSelectedMsgs));
+    return newSelectedMsgs;
+  };
+
+  const changeSelectedResponseFileFinal = (
+    selectedMsgs: IChatMessage[][],
+    messageId: string,
+    text: FileDef,
+  ): IChatMessage[][] => {
+    const messageCount = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[messageCount];
+    const updatedMessageList = messageList.map((x) => {
+      if (x.id === messageId) {
+        const contentCount = x.content.length - 1;
+        let newContent = [...x.content];
+        
+        // 检查最后一个内容是否是 tempFileId 类型（预览图片）
+        if (
+          contentCount >= 0 &&
+          newContent[contentCount].$type === MessageContentType.tempFileId
+        ) {
+          // 将预览图片替换为最终图片（改变类型为 fileId）
+          newContent[contentCount] = {
+            ...newContent[contentCount],
+            $type: MessageContentType.fileId,
+            c: text
+          };
+        } else {
+          // 没有预览图片，直接追加最终图片
           newContent.push({ i: '', $type: MessageContentType.fileId, c: text });
         }
 
@@ -881,10 +954,14 @@ const Chat = memo(() => {
           msgId,
           time,
         );
+      } else if (value.k === SseResponseKind.ImageGenerating) {
+        const { r, i: spanId } = value;
+        const msgId = `${ResponseMessageTempId}-${spanId}`;
+        selectedMessageList = changeSelectedResponseFilePreview(selectedMessageList, msgId, r);
       } else if (value.k === SseResponseKind.ImageGenerated) {
         const { r, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
-        selectedMessageList = changeSelectedResponseFile(selectedMessageList, msgId, r);
+        selectedMessageList = changeSelectedResponseFileFinal(selectedMessageList, msgId, r);
       } else if (value.k === SseResponseKind.CallingTool) {
         // 13 事件：u 仅在首个片段非空，后续片段 u/r 可能为 null，只携带 p（参数增量）
         const { u, r: toolName, p: parameters, i: spanId } = value;
