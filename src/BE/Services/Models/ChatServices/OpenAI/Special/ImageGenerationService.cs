@@ -42,8 +42,6 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
         if (images.Length == 0)
         {
             // Generate images API with streaming
-            Console.WriteLine("=== Generating images with streaming ===");
-
             JsonObject requestBody = new()
             {
                 ["prompt"] = prompt,
@@ -86,10 +84,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                 requestBody["user"] = options.EndUserId;
             }
 
-            string jsonContent = requestBody.ToJsonString();
-            Console.WriteLine($"Request body: {jsonContent}");
-
-            BinaryContent content = BinaryContent.Create(BinaryData.FromString(jsonContent));
+            BinaryContent content = BinaryContent.Create(BinaryData.FromString(requestBody.ToJsonString()));
             PipelineMessage message = pipeline.CreateMessage();
             message.Request.Method = "POST";
             message.Request.Uri = new Uri(imageClient.Endpoint, "v1/images/generations");
@@ -122,18 +117,9 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
         else
         {
             // Image edits API with streaming
-            Console.WriteLine("=== Generating image edits with streaming ===");
-
             MultiPartFormDataBinaryContent form = await BuildImageEditFormAsync(images, prompt, options, cancellationToken);
             form.Add("true", "stream");
             form.Add("3", "partial_images");
-
-            Console.WriteLine("Request form fields:");
-            Console.WriteLine($"  prompt: {prompt}");
-            Console.WriteLine($"  model: {Model.ApiModelId}");
-            Console.WriteLine($"  n: {options.MaxOutputTokenCount ?? 1}");
-            Console.WriteLine($"  stream: true");
-            Console.WriteLine($"  partial_images: 3");
 
             PipelineMessage message = pipeline.CreateMessage();
             message.Request.Method = "POST";
@@ -358,19 +344,10 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
             yield break;
         }
 
-        string baseTimestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        string logDir = Path.Combine(Path.GetTempPath(), $"{logPrefix}_{baseTimestamp}");
-        Directory.CreateDirectory(logDir);
-        Console.WriteLine($"SSE responses will be saved to: {logDir}");
-
         int eventIndex = 0;
 
         await foreach (SseItem<string> item in SseParser.Create(response.ContentStream).EnumerateAsync(cancellationToken))
         {
-            string logFileName = Path.Combine(logDir, $"{eventIndex:D3}_{item.EventType}_{sw.Elapsed.TotalSeconds:F3}s.json");
-            await System.IO.File.WriteAllTextAsync(logFileName, item.Data, cancellationToken);
-            Console.WriteLine($"[{sw.Elapsed.TotalSeconds:F3}s] SSE Event: {item.EventType} -> {Path.GetFileName(logFileName)}");
-
             JsonDocument doc = JsonDocument.Parse(item.Data);
             JsonElement root = doc.RootElement;
             string eventType = root.GetProperty("type").GetString()!;
@@ -394,6 +371,8 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                 string b64Json = root.GetProperty("b64_json").GetString()!;
                 string outputFormat = root.GetProperty("output_format").GetString()!;
                 string contentType = GetContentTypeFromOutputFormat(outputFormat);
+
+                Console.WriteLine($"[{sw.Elapsed.TotalSeconds:F3}s] {eventType} #{eventIndex}");
 
                 // Yield partial image
                 yield return new ChatSegment()
@@ -456,6 +435,8 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                     ReasoningTokens = 0,
                 };
 
+                Console.WriteLine($"[{sw.Elapsed.TotalSeconds:F3}s] {eventType} #{eventIndex}, input={usage.InputTokens}, output={usage.OutputTokens}");
+
                 // Yield final complete image with usage
                 yield return new ChatSegment()
                 {
@@ -467,20 +448,14 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
 
             eventIndex++;
         }
-        Console.WriteLine($"SSE logs saved to: {logDir}");
     }
 
     private static async void ThrowErrorResponse(PipelineResponse response, CancellationToken cancellationToken)
     {
-        // Handle error response
-        Console.WriteLine($"Error response - Status: {response.Status}");
-        Console.WriteLine($"Reason: {response.ReasonPhrase}");
-
         if (response.ContentStream != null)
         {
             using StreamReader reader = new(response.ContentStream);
             string errorContent = await reader.ReadToEndAsync(cancellationToken);
-            Console.WriteLine($"Error content: {errorContent}");
             throw new Exception($"Request failed with status {response.Status}: {errorContent}");
         }
         else
