@@ -10,7 +10,6 @@ import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { getApiUrl } from '@/utils/common';
 import { currentISODateString, getTz } from '@/utils/date';
 import {
   findLastLeafId,
@@ -20,7 +19,6 @@ import {
   generateUserMessage,
 } from '@/utils/message';
 import { throttle } from '@/utils/throttle';
-import { getUserSession } from '@/utils/user';
 
 import {
   ChatRole,
@@ -76,6 +74,7 @@ import {
   putResponseMessageEditInPlace,
   responseContentToRequest,
 } from '@/apis/clientApis';
+import { streamGeneralChat, streamRegenerateAssistant, streamRegenerateAllAssistant, ChatApiError } from '@/apis/chatApi';
 import { cn } from '@/lib/utils';
 
 const Chat = memo(() => {
@@ -161,16 +160,15 @@ const Chat = memo(() => {
         userMessage: requestContent,
       };
 
-      const response = await fetch(`${getApiUrl()}/api/chats/general`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getUserSession()}`,
-        },
-        body: JSON.stringify(chatBody),
-      });
-
-      await handleChatMessage(response, selectedMessageList);
+      try {
+        const stream = streamGeneralChat(chatBody);
+        await handleChatMessage(stream, selectedMessageList);
+      } catch (e: any) {
+        handleChatError();
+        const err = e as ChatApiError;
+        const msg = err?.message || (typeof e === 'string' ? e : '');
+        toast.error(t(msg) || msg);
+      }
     },
     [chats, selectedChat, selectedMessages, t, messageDispatch],
   );
@@ -733,19 +731,15 @@ const Chat = memo(() => {
       timezoneOffset: getTz(),
     };
 
-    const response = await fetch(
-      `${getApiUrl()}/api/chats/regenerate-assistant-message`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getUserSession()}`,
-        },
-        body: JSON.stringify(chatBody),
-      },
-    );
-
-    await handleChatMessage(response, selectedMessageList);
+    try {
+      const stream = streamRegenerateAssistant(chatBody);
+      await handleChatMessage(stream, selectedMessageList);
+    } catch (e: any) {
+      handleChatError();
+      const err = e as ChatApiError;
+      const msg = err?.message || (typeof e === 'string' ? e : '');
+      toast.error(t(msg) || msg);
+    }
   };
 
   const handleRegenerateAllAssistant = async (
@@ -780,19 +774,15 @@ const Chat = memo(() => {
       timezoneOffset: getTz(),
     };
 
-    const response = await fetch(
-      `${getApiUrl()}/api/chats/regenerate-all-assistant-message`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getUserSession()}`,
-        },
-        body: JSON.stringify(chatBody),
-      },
-    );
-
-    await handleChatMessage(response, selectedMessageList);
+    try {
+      const stream = streamRegenerateAllAssistant(chatBody);
+      await handleChatMessage(stream, selectedMessageList);
+    } catch (e: any) {
+      handleChatError();
+      const err = e as ChatApiError;
+      const msg = err?.message || (typeof e === 'string' ? e : '');
+      toast.error(t(msg) || msg);
+    }
   };
 
   const handleEditAndSendMessage = async (
@@ -824,63 +814,26 @@ const Chat = memo(() => {
       timezoneOffset: getTz(),
     };
 
-    const response = await fetch(`${getApiUrl()}/api/chats/general`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${getUserSession()}`,
-      },
-      body: JSON.stringify(chatBody),
-    });
-
-    await handleChatMessage(response, selectedMessageList);
+    try {
+      const stream = streamGeneralChat(chatBody);
+      await handleChatMessage(stream, selectedMessageList);
+    } catch (e: any) {
+      handleChatError();
+      const err = e as ChatApiError;
+      const msg = err?.message || (typeof e === 'string' ? e : '');
+      toast.error(t(msg) || msg);
+    }
   };
 
   const handleChatMessage = async (
-    response: Response,
+    stream: AsyncIterable<SseResponseLine>,
     selectedMessageList: IChatMessage[][],
   ) => {
   if (!selectedChat) return;
   let messageList = [...messages];
   // 用于跟踪每个 span 最近一次非空的工具调用 ID，便于将 u 为 null 的参数片段归并
   const currentToolCallIdBySpan = new Map<number, string>();
-    const data = response.body;
-    if (!response.ok) {
-      handleChatError();
-      const errMsg = await response.text();
-      toast.error(t(errMsg) || response.statusText);
-      return;
-    }
-    if (!data) {
-      handleChatError();
-      return;
-    }
-
-    const reader = data.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    async function* processBuffer() {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
-        }
-        buffer += decoder.decode(value, { stream: true });
-        let newlineIndex;
-        while ((newlineIndex = buffer.indexOf('\r\n\r\n')) >= 0) {
-          const line = buffer.slice(0, newlineIndex).trim();
-          buffer = buffer.slice(newlineIndex + 4); // Skip '\r\n\r\n'
-          if (line.startsWith('data: ')) {
-            yield line.slice(6);
-          }
-          if (line === '') {
-            continue;
-          }
-        }
-      }
-    }
-    for await (const message of processBuffer()) {
-      const value: SseResponseLine = JSON.parse(message);
+    for await (const value of stream) {
       if (value.k === SseResponseKind.StopId) {
         chatDispatch(setStopIds([value.r]));
       } else if (value.k === SseResponseKind.ReasoningSegment) {
