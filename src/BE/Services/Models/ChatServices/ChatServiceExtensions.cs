@@ -43,7 +43,7 @@ public abstract partial class ChatService
     }
 
     public async IAsyncEnumerable<InternalChatSegment> ChatStreamedSimulated(bool suggestedStreaming, IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
+    {        
         // notify inputTokenCount first to better support price calculation
         int inputTokens = GetPromptTokenCount(messages);
         int outputTokens = 0;

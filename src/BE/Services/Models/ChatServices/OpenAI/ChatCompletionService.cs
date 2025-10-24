@@ -100,12 +100,6 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
         };
     }
 
-    protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
-    {
-        if (reasoningEffort == DBReasoningEffort.Default) return;
-        options.ReasoningEffortLevel = reasoningEffort.ToReasoningEffort();
-    }
-
     private class DeveloperChatMessage(string content) : SystemChatMessage(content), IJsonModel<DeveloperChatMessage>
     {
         public DeveloperChatMessage Create(ref Utf8JsonReader reader, ModelReaderWriterOptions options)

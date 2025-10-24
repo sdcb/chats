@@ -18,7 +18,6 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
 public class ImageGenerationService(Model model, ImageClient imageClient) : ChatService(model)
 {
-    private DBReasoningEffort _reasoningEffort;
     private DBKnownImageSize _imageSize;
 
     public ImageGenerationService(Model model, Uri? suggestedUri = null, params PipelinePolicy[] perCallPolicies) : this(model, CreateImageGenerationAPI(model, suggestedUri, perCallPolicies))
@@ -63,9 +62,9 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                 ["moderation"] = "low"
             };
 
-            if (_reasoningEffort != DBReasoningEffort.Default)
+            if (options.ReasoningEffortLevel != null)
             {
-                requestBody["quality"] = _reasoningEffort.ToGeneratedImageQualityText();
+                requestBody["quality"] = options.ReasoningEffortLevel.ToDBReasoningEffort().ToGeneratedImageQualityText();
             }
 
             if (_imageSize != DBKnownImageSize.Default)
@@ -167,7 +166,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                 new ImageGenerationOptions()
                 {
                     EndUserId = options.EndUserId,
-                    Quality = _reasoningEffort.ToGeneratedImageQuality(),
+                    Quality = options.ReasoningEffortLevel.ToDBReasoningEffort().ToGeneratedImageQuality(),
                     Size = _imageSize switch
                     {
                         DBKnownImageSize.Default => null,
@@ -305,9 +304,9 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
 
         form.Add("low", "moderation");
 
-        if (_reasoningEffort != DBReasoningEffort.Default)
+        if (options.ReasoningEffortLevel != null)
         {
-            form.Add(_reasoningEffort.ToGeneratedImageQualityText()!, "quality");
+            form.Add(options.ReasoningEffortLevel.ToDBReasoningEffort().ToGeneratedImageQualityText()!, "quality");
         }
 
         return form;
@@ -454,11 +453,6 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
 
     [UnsafeAccessor(UnsafeAccessorKind.StaticMethod, Name = "FromClientResult")]
     static extern GeneratedImageCollection FromClientResult(GeneratedImageCollection _, ClientResult result);
-
-    protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
-    {
-        _reasoningEffort = reasoningEffort;
-    }
 
     protected override void SetImageSize(ChatCompletionOptions options, DBKnownImageSize imageSize)
     {

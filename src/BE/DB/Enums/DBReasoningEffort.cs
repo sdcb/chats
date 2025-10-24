@@ -46,3 +46,22 @@ public static class DBReasoningEffortExtensions
 
     public static bool IsLowOrMinimal(this DBReasoningEffort effort) => effort == DBReasoningEffort.Low || effort == DBReasoningEffort.Minimal;
 }
+
+public static class ReasoningEffortLevelExtensions
+{
+    public static DBReasoningEffort ToDBReasoningEffort(this ChatReasoningEffortLevel? effort)
+    {
+        if (effort == null)
+        {
+            return DBReasoningEffort.Default;
+        }
+        return effort.Value.ToString() switch
+        {
+            "minimal" => DBReasoningEffort.Minimal,
+            "low" => DBReasoningEffort.Low,
+            "medium" => DBReasoningEffort.Medium,
+            "high" => DBReasoningEffort.High,
+            _ => throw new Exception($"Unknown ChatReasoningEffortLevel value: {effort}"),
+        };
+    }
+}

@@ -7,6 +7,7 @@ namespace Chats.BE.Services.Models.ChatServices;
 
 [JsonPolymorphic]
 [JsonDerivedType(typeof(Base64Image), typeDiscriminator: "base64")]
+[JsonDerivedType(typeof(Base64PreviewImage), typeDiscriminator: "base64_preview")]
 [JsonDerivedType(typeof(UrlImage), typeDiscriminator: "url")]
 public abstract record ImageChatSegment : ChatSegmentItem
 {

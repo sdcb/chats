@@ -167,11 +167,6 @@ public class GoogleAI2ChatService : ChatService
         return usage;
     }
 
-    protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
-    {
-        _reasoningEffort = reasoningEffort;
-    }
-
     protected override void SetCodeExecutionEnabled(ChatCompletionOptions options, bool enabled)
     {
         _codeExecutionEnabled = enabled;

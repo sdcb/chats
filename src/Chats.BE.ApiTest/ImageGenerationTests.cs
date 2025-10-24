@@ -34,6 +34,8 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
         _output.WriteLine($"Testing: Image Generation (model: {model}, stream: false)");
 
         // Arrange
+        // 注意: reasoning_effort 在图片生成中会被映射为 quality 参数
+        // low -> quality: "low", medium -> quality: "medium", high -> quality: "high"
         var request = new
         {
             model,
@@ -119,24 +121,32 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
         string? finishReason = result["choices"]?[0]?["finish_reason"]?.GetValue<string>();
         _output.WriteLine($"Finish Reason: {finishReason ?? "(null)"}");
 
-        // 验证 usage
+        // 验证 usage - 非流式必须有 usage
         JsonNode? usage = result["usage"];
-        if (usage != null)
-        {
-            _output.WriteLine($"Usage: prompt_tokens={usage["prompt_tokens"]}, completion_tokens={usage["completion_tokens"]}");
-        }
+        Assert.NotNull(usage);
+        
+        int? promptTokens = usage["prompt_tokens"]?.GetValue<int>();
+        int? completionTokens = usage["completion_tokens"]?.GetValue<int>();
+        int? totalTokens = usage["total_tokens"]?.GetValue<int>();
+        
+        Assert.NotNull(promptTokens);
+        Assert.NotNull(completionTokens);
+        Assert.NotNull(totalTokens);
+        Assert.True(promptTokens > 0, "Prompt tokens should be greater than 0");
+        Assert.True(completionTokens > 0, "Completion tokens should be greater than 0");
+        Assert.Equal(promptTokens + completionTokens, totalTokens);
+        
+        _output.WriteLine($"Usage: prompt_tokens={promptTokens}, completion_tokens={completionTokens}, total_tokens={totalTokens}");
     }
 
-    // 注意：图片生成的流式API在当前后端实现中可能不完全支持
-    // 流可能会在传输大尺寸base64编码图片时提前结束
-    // 这不是测试代码的问题，而是后端流式处理大payload的限制
-    [Theory(Skip = "Image generation streaming may not be fully supported in current backend implementation")]
+    [Theory]
     [MemberData(nameof(GetImageGenerationModels))]
     public async Task ImageGeneration_Streaming_ShouldReturnImage(string model)
     {
         _output.WriteLine($"Testing: Image Generation (model: {model}, stream: true)");
 
         // Arrange
+        // 注意: reasoning_effort 在图片生成中会被映射为 quality 参数
         var request = new
         {
             model,
@@ -165,6 +175,7 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
         int chunkCount = 0;
         bool hasImageContent = false;
         string? finishReason = null;
+        JsonNode? finalUsage = null;
         
         try
         {
@@ -191,6 +202,17 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
                             _output.WriteLine($"Finish Reason: {finishReason}");
                         }
                         
+                        // 检查 usage - 流式的最后一个 chunk 应该包含 usage
+                        JsonNode? usage = chunk?["usage"];
+                        if (usage != null)
+                        {
+                            finalUsage = usage;
+                            int? pt = usage["prompt_tokens"]?.GetValue<int>();
+                            int? ct = usage["completion_tokens"]?.GetValue<int>();
+                            int? tt = usage["total_tokens"]?.GetValue<int>();
+                            _output.WriteLine($"Usage: prompt_tokens={pt}, completion_tokens={ct}, total_tokens={tt}");
+                        }
+                        
                         // 检查是否有图片内容
                         if (delta?["image"] != null)
                         {
@@ -203,10 +225,18 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
                                 string? contentType = imageObj["contentType"]?.GetValue<string>();
                                 string? base64 = imageObj["base64"]?.GetValue<string>();
                                 
-                                if (type == "base64" && !string.IsNullOrEmpty(base64))
+                                // 支持 base64_preview (预览图) 和 base64 (最终图片)
+                                if ((type == "base64" || type == "base64_preview") && !string.IsNullOrEmpty(base64))
                                 {
-                                    hasImageContent = true;
-                                    _output.WriteLine($"Chunk {chunkCount}: Received image content (type={type}, contentType={contentType}, base64 length={base64.Length})");
+                                    if (type == "base64")
+                                    {
+                                        hasImageContent = true;
+                                        _output.WriteLine($"Chunk {chunkCount}: Received FINAL image (type={type}, contentType={contentType}, base64 length={base64.Length})");
+                                    }
+                                    else
+                                    {
+                                        _output.WriteLine($"Chunk {chunkCount}: Received preview image (type={type}, contentType={contentType}, base64 length={base64.Length})");
+                                    }
                                 }
                             }
                         }
@@ -241,6 +271,20 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
         }
 
         Assert.True(hasImageContent, "Stream should contain at least one image chunk");
+        Assert.NotNull(finalUsage);
+        
+        // 验证 usage 的值
+        int? promptTokens = finalUsage["prompt_tokens"]?.GetValue<int>();
+        int? completionTokens = finalUsage["completion_tokens"]?.GetValue<int>();
+        int? totalTokens = finalUsage["total_tokens"]?.GetValue<int>();
+        
+        Assert.NotNull(promptTokens);
+        Assert.NotNull(completionTokens);
+        Assert.NotNull(totalTokens);
+        Assert.True(promptTokens > 0, "Prompt tokens should be greater than 0");
+        Assert.True(completionTokens > 0, "Completion tokens should be greater than 0");
+        Assert.Equal(promptTokens + completionTokens, totalTokens);
+        
         _output.WriteLine($"Total chunks received: {chunkCount}");
     }
 
