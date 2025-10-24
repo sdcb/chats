@@ -27,6 +27,7 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 
 import HomeContext from '@/contexts/home.context';
+import { isImageGenerationModel } from '@/utils/model';
 import ChatModelInfo from './ChatModelInfo';
 import FeatureToggle from './FeatureToggle';
 import SystemPrompt from './SystemPrompt';
@@ -564,7 +565,7 @@ const ChatPresetModal = (props: Props) => {
                         }}
                       />
                     )}
-                    {modelMap[selectedSpan.modelId]?.modelReferenceName === 'gpt-image-1' && (
+                    {isImageGenerationModel(modelMap[selectedSpan.modelId]?.modelReferenceName) && (
                       <ImageSizeRadio
                         value={`${selectedSpan?.imageSize}`}
                         onValueChange={(value) => {
@@ -572,7 +573,7 @@ const ChatPresetModal = (props: Props) => {
                         }}
                       />
                     )}
-                    {modelMap[selectedSpan.modelId]?.modelReferenceName !== 'gpt-image-1' && (
+                    {!isImageGenerationModel(modelMap[selectedSpan.modelId]?.modelReferenceName) && (
                       <McpSelector
                         value={selectedSpan?.mcps || []}
                         onValueChange={(mcps) => {

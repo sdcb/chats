@@ -26,6 +26,7 @@ import { Switch } from '@/components/ui/switch';
 
 import { setChats } from '@/actions/chat.actions';
 import HomeContext from '@/contexts/home.context';
+import { isImageGenerationModel } from '@/utils/model';
 import ChatModelInfo from './ChatModelInfo';
 import FeatureToggle from './FeatureToggle';
 import SystemPrompt from './SystemPrompt';
@@ -283,7 +284,7 @@ const ChatModelSettingModal = (props: Props) => {
                   }}
                 />
               )}
-              {model?.modelReferenceName === 'gpt-image-1' && (
+              {isImageGenerationModel(model?.modelReferenceName) && (
                 <ImageSizeRadio
                   value={`${span?.imageSize}`}
                   onValueChange={(value) => {
@@ -291,7 +292,7 @@ const ChatModelSettingModal = (props: Props) => {
                   }}
                 />
               )}
-              {model?.modelReferenceName !== 'gpt-image-1' && (
+              {!isImageGenerationModel(model?.modelReferenceName) && (
                 <McpSelector
                   value={span?.mcps || []}
                   onValueChange={(mcps) => {
