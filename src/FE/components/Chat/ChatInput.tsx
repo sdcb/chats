@@ -405,7 +405,7 @@ const ChatInput = ({
       {showChatInput ? (
         <div
           className={cn(
-            'absolute bottom-0 left-0 w-full border-transparent bg-background',
+            'absolute bottom-0 left-0 w-full border-transparent bg-background z-20',
           )}
         >
           <div
