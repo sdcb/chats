@@ -22,6 +22,9 @@ public record UpdateChatSpanRequest
     [JsonPropertyName("webSearchEnabled")]
     public bool WebSearchEnabled { get; init; }
 
+    [JsonPropertyName("codeExecutionEnabled")]
+    public bool CodeExecutionEnabled { get; init; }
+
     [JsonPropertyName("maxOutputTokens")]
     public int? MaxOutputTokens { get; init; }
 
@@ -43,6 +46,7 @@ public record UpdateChatSpanRequest
         config.SystemPrompt = string.IsNullOrEmpty(SystemPrompt) ? null : SystemPrompt;
         config.Temperature = Temperature;
         config.WebSearchEnabled = WebSearchEnabled;
+        config.CodeExecutionEnabled = CodeExecutionEnabled;
         config.MaxOutputTokens = MaxOutputTokens;
         config.ReasoningEffort = (byte)ReasoningEffort;
         config.ImageSizeId = (short)ImageSize;
@@ -65,6 +69,7 @@ public record UpdateChatSpanRequest
         config.SystemPrompt = string.IsNullOrEmpty(SystemPrompt) ? null : SystemPrompt;
         config.Temperature = Temperature;
         config.WebSearchEnabled = WebSearchEnabled;
+        config.CodeExecutionEnabled = CodeExecutionEnabled;
         config.MaxOutputTokens = MaxOutputTokens;
         config.ReasoningEffort = (byte)ReasoningEffort;
         config.ImageSizeId = (short)ImageSize;
@@ -87,6 +92,7 @@ public record UpdateChatSpanRequest
             SystemPrompt = string.IsNullOrEmpty(SystemPrompt) ? null : SystemPrompt,
             Temperature = Temperature,
             WebSearchEnabled = WebSearchEnabled,
+            CodeExecutionEnabled = CodeExecutionEnabled,
             MaxOutputTokens = MaxOutputTokens,
             ReasoningEffort = (byte)ReasoningEffort,
             ImageSizeId = (short)ImageSize,

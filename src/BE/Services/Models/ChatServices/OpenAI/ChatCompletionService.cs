@@ -100,19 +100,6 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
         };
     }
 
-    protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
-    {
-        if (reasoningEffort == DBReasoningEffort.Default) return;
-
-        options.GetOrCreateSerializedAdditionalRawData()["reasoning_effort"] = BinaryData.FromObjectAsJson(reasoningEffort switch
-        {
-            DBReasoningEffort.Low => "low",
-            DBReasoningEffort.Medium => "medium",
-            DBReasoningEffort.High => "high",
-            _ => throw new ArgumentOutOfRangeException(nameof(reasoningEffort), reasoningEffort, null),
-        });
-    }
-
     private class DeveloperChatMessage(string content) : SystemChatMessage(content), IJsonModel<DeveloperChatMessage>
     {
         public DeveloperChatMessage Create(ref Utf8JsonReader reader, ModelReaderWriterOptions options)

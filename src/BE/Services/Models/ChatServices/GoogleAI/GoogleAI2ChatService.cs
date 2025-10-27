@@ -3,6 +3,7 @@ using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
 using Mscc.GenerativeAI;
 using OpenAI.Chat;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using ChatMessage = OpenAI.Chat.ChatMessage;
@@ -42,10 +43,7 @@ public class GoogleAI2ChatService : ChatService
     public bool AllowImageGeneration => Model.ModelReference.Name == "gemini-2.0-flash-exp" ||
                                         Model.ModelReference.Name == "gemini-2.0-flash-exp-image-generation";
 
-    public bool SupportsCodeExecution =>
-        Model.ModelReference.Name != "gemini-2.0-flash-lite" &&
-        Model.ModelReference.Name != "gemini-2.0-flash-exp" &&
-        Model.ModelReference.Name != "gemini-2.0-flash-exp-image-generation";
+    private bool _codeExecutionEnabled = false;
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -55,13 +53,13 @@ public class GoogleAI2ChatService : ChatService
             ResponseModalities = AllowImageGeneration ? [ResponseModality.Text, ResponseModality.Image] : [ResponseModality.Text],
             EnableEnhancedCivicAnswers = true,
         };
-        if (ModelReference.SupportReasoningEffort(Model.ModelReference.Name))
+        if (ModelReference.ReasoningEffortOptions(Model.ModelReference.Name).Length > 0)
         {
             gc.ThinkingConfig = new ThinkingConfig
             {
                 ThinkingBudget = _reasoningEffort switch
                 {
-                    DBReasoningEffort.Low => 1024,
+                    var x when x.IsLowOrMinimal() => 1024,
                     _ => null,
                 },
                 IncludeThoughts = true,
@@ -69,7 +67,7 @@ public class GoogleAI2ChatService : ChatService
         }
 
         Tool? tool = ToGoogleAIToolCallTool(options);
-        if (tool == null && SupportsCodeExecution)
+        if (tool == null && _codeExecutionEnabled)
         {
             tool = new Tool()
             {
@@ -90,6 +88,8 @@ public class GoogleAI2ChatService : ChatService
             SafetySettings = _safetySettings,
             Tools = tool == null ? null : [tool],
         };
+        Stopwatch codeExecutionSw = new();
+        string? codeExecutionId = null;
         await foreach (GenerateContentResponse response in _generativeModel.GenerateContentStream(gcr, new RequestOptions(null, NetworkTimeout), cancellationToken))
         {
             if (response.Candidates != null && response.Candidates.Count > 0)
@@ -99,21 +99,27 @@ public class GoogleAI2ChatService : ChatService
                 {
                     if (part.ExecutableCode != null)
                     {
-                        items.Add(ChatSegmentItem.FromText($"""
-                        ```{part.ExecutableCode.Language}
-                        {part.ExecutableCode.Code}
-                        ```
-
-                        """));
+                        codeExecutionId = "ce-" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                        items.Add(ChatSegmentItem.FromToolCall(0, new FunctionCall()
+                        {
+                            Id = codeExecutionId,
+                            Name = part.ExecutableCode.Language.ToString(),
+                            Args = new
+                            {
+                                code = part.ExecutableCode.Code,
+                            },
+                        }));
+                        codeExecutionSw = Stopwatch.StartNew();
                     }
                     else if (part.CodeExecutionResult != null)
                     {
-                        items.Add(ChatSegmentItem.FromText($"""
-                        ```
-                        {part.CodeExecutionResult.Output}
-                        ```
-
-                        """));
+                        if (codeExecutionId == null)
+                        {
+                            throw new InvalidOperationException("CodeExecutionResult received without prior ExecutableCode.");
+                        }
+                        items.Add(ChatSegmentItem.FromToolCallResponse(codeExecutionId, part.CodeExecutionResult.Output,
+                            (int)codeExecutionSw.ElapsedMilliseconds,
+                            isSuccess: part.CodeExecutionResult.Outcome == Outcome.OutcomeOk));
                     }
                     else if (part.Text != null)
                     {
@@ -161,9 +167,9 @@ public class GoogleAI2ChatService : ChatService
         return usage;
     }
 
-    protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
+    protected override void SetCodeExecutionEnabled(ChatCompletionOptions options, bool enabled)
     {
-        _reasoningEffort = reasoningEffort;
+        _codeExecutionEnabled = enabled;
     }
 
     static ChatFinishReason? ToChatFinishReason(FinishReason? finishReason)

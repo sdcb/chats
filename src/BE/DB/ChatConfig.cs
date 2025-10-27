@@ -27,6 +27,8 @@ public partial class ChatConfig
 
     public short ImageSizeId { get; set; }
 
+    public bool CodeExecutionEnabled { get; set; }
+
     [InverseProperty("ChatConfig")]
     public virtual ChatConfigArchived? ChatConfigArchived { get; set; }
 

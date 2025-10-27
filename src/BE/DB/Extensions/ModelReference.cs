@@ -1,4 +1,6 @@
-﻿namespace Chats.BE.DB;
+﻿using Chats.BE.DB.Enums;
+
+namespace Chats.BE.DB;
 
 public partial class ModelReference
 {
@@ -17,36 +19,57 @@ public partial class ModelReference
         _ => false
     };
 
-    public static bool SupportReasoningEffort(string modelReferenceName)
+    public static bool SupportsCodeExecution(string modelReferenceName) => modelReferenceName switch
     {
+        "gemini-2.0-flash-lite" => false,
+        "gemini-2.0-flash-exp" => false,
+        "gemini-2.0-flash-exp-image-generation" => false,
+        _ when modelReferenceName.StartsWith("gemini-") => true,
+        _ => false
+    };
+
+    public static bool TryGetLowestSupportedReasoningEffort(string modelReferenceName, out DBReasoningEffort reasoningEffort)
+    {
+        DBReasoningEffort[] options = ReasoningEffortOptions(modelReferenceName);
+        if (options.Length == 0)
+        {
+            reasoningEffort = DBReasoningEffort.Default;
+            return false;
+        }
+        reasoningEffort = options.Min();
+        return true;
+    }
+
+    public static DBReasoningEffort[] ReasoningEffortOptions(string modelReferenceName)
+    {
+        DBReasoningEffort[] TranditionalReasoning = [DBReasoningEffort.Low, DBReasoningEffort.Medium, DBReasoningEffort.High];
+        DBReasoningEffort[] Gpt5Reasoning = [DBReasoningEffort.Minimal, DBReasoningEffort.Low, DBReasoningEffort.Medium, DBReasoningEffort.High];
+        DBReasoningEffort[] Compatible = [DBReasoningEffort.Low];
+
         return modelReferenceName switch
         {
-            "o1-2024-12-17" => true,
-            "o3-mini-2025-01-31" => true,
-            "grok-3-mini" => true,
-            "grok-3-mini-fast" => true,
-            "o3" => true,
-            "o3-pro" => true,
-            "o4-mini" => true,
-            "codex-mini" => true,
-            "gemini-2.5-pro" => true,
-            "gemini-2.5-flash" => true, 
-            "gpt-image-1" => true, 
-            "Qwen/Qwen3-235B-A22B" => true,
-            "Qwen/Qwen3-30B-A3B" => true,
-            "Qwen/Qwen3-32B" => true,
-            "Qwen/Qwen3-14B" => true,
-            "Qwen/Qwen3-8B" => true,
-            "qwen3-235b-a22b" => true,
-            "qwen3-30b-a3b" => true,
-            "qwen3-32b" => true,
-            "qwen3-14b" => true,
-            "qwen3-8b" => true,
-            "qwen3-4b" => true,
-            "qwen3-1.7b" => true,
-            "qwen3-0.6b" => true,
-            "gpt-5" or "gpt-5-mini" or "gpt-5-nano" => true,
-            _ => false
+            "grok-3-mini" or "grok-3-mini-fast" => TranditionalReasoning,
+            "o1-2024-12-17" or "o3" or "o3-pro" or "o3-mini-2025-01-31" or "gpt-5-codex" => TranditionalReasoning,
+            "o4-mini" or "codex-mini" => TranditionalReasoning,
+            "gemini-2.5-pro" or "gemini-2.5-flash" => Compatible,
+            "gpt-image-1" or "gpt-image-1-mini" => TranditionalReasoning,
+            "Qwen/Qwen3-235B-A22B" => Compatible,
+            "Qwen/Qwen3-30B-A3B" => Compatible,
+            "Qwen/Qwen3-32B" => Compatible,
+            "Qwen/Qwen3-14B" => Compatible,
+            "Qwen/Qwen3-8B" => Compatible,
+            "qwen3-235b-a22b" => Compatible,
+            "qwen3-30b-a3b" => Compatible,
+            "qwen3-32b" => Compatible,
+            "qwen3-14b" => Compatible,
+            "qwen3-8b" => Compatible,
+            "qwen3-4b" => Compatible,
+            "qwen3-1.7b" => Compatible,
+            "qwen3-0.6b" => Compatible,
+            "gpt-5" or "gpt-5-mini" or "gpt-5-nano" => Gpt5Reasoning,
+            _ => []
         };
     }
+
+    public static int[] ReasoningEffortOptionsAsInt32(string modelReferenceName) => [.. ReasoningEffortOptions(modelReferenceName).Select(e => (int)e)];
 }

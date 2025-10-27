@@ -15,7 +15,7 @@ public class SiliconFlowChatService(Model model) : ChatCompletionService(model, 
 
     protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
     {
-        if (reasoningEffort == DBReasoningEffort.Low)
+        if (reasoningEffort.IsLowOrMinimal())
         {
             options.GetOrCreateSerializedAdditionalRawData()["enable_thinking"] = BinaryData.FromObjectAsJson(false);
         }

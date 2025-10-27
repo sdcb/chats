@@ -73,6 +73,7 @@
     "postcss": "^8.4.41",
     "prettier": "^2.8.7",
     "prettier-plugin-tailwindcss": "^0.2.5",
+    "remark-breaks": "^4.0.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "5.2.2"
   },

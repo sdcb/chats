@@ -83,8 +83,14 @@ interface SseResponseLineStartReasoning {
 }
 
 interface SseResponseLineImageGenerated {
-  k: SseResponseKind.ImageGenerated; // Kind is StartReasoning
-  i: number; // SpanId is required for StartReasoning
+  k: SseResponseKind.ImageGenerated; // Kind is ImageGenerated
+  i: number; // SpanId is required for ImageGenerated
+  r: FileDef;
+}
+
+interface SseResponseLineImageGenerating {
+  k: SseResponseKind.ImageGenerating; // Kind is ImageGenerating (preview)
+  i: number; // SpanId is required for ImageGenerating
   r: FileDef;
 }
 
@@ -116,6 +122,7 @@ export type SseResponseLine =
   | SseResponseLineStartResponse
   | SseResponseLineStartReasoning
   | SseResponseLineImageGenerated
+  | SseResponseLineImageGenerating
   | SseResponseLineCallingTool
   | SseResponseLineToolCompleted;
 

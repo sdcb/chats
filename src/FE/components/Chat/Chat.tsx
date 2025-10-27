@@ -10,7 +10,6 @@ import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { getApiUrl } from '@/utils/common';
 import { currentISODateString, getTz } from '@/utils/date';
 import {
   findLastLeafId,
@@ -20,7 +19,6 @@ import {
   generateUserMessage,
 } from '@/utils/message';
 import { throttle } from '@/utils/throttle';
-import { getUserSession } from '@/utils/user';
 
 import {
   ChatRole,
@@ -34,6 +32,7 @@ import {
   ReasoningContent,
   RequestContent,
   ResponseContent,
+  TempFileContent,
   TextContent,
   ToolCallContent,
   ToolResponseContent,
@@ -75,6 +74,7 @@ import {
   putResponseMessageEditInPlace,
   responseContentToRequest,
 } from '@/apis/clientApis';
+import { streamGeneralChat, streamRegenerateAssistant, streamRegenerateAllAssistant, ChatApiError } from '@/apis/chatApi';
 import { cn } from '@/lib/utils';
 
 const Chat = memo(() => {
@@ -160,16 +160,15 @@ const Chat = memo(() => {
         userMessage: requestContent,
       };
 
-      const response = await fetch(`${getApiUrl()}/api/chats/general`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getUserSession()}`,
-        },
-        body: JSON.stringify(chatBody),
-      });
-
-      await handleChatMessage(response, selectedMessageList);
+      try {
+        const stream = streamGeneralChat(chatBody);
+        await handleChatMessage(stream, selectedMessageList);
+      } catch (e: any) {
+        handleChatError();
+        const err = e as ChatApiError;
+        const msg = err?.message || (typeof e === 'string' ? e : '');
+        toast.error(t(msg) || msg);
+      }
     },
     [chats, selectedChat, selectedMessages, t, messageDispatch],
   );
@@ -339,21 +338,21 @@ const Chat = memo(() => {
     status: ChatSpanStatus,
     finalMessageId?: string,
   ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        const contentCount = x.content.length - 1;
+        const lastContentIndex = x.content.length - 1;
         let newContent = [...x.content];
         
         if (
-          contentCount >= 0 &&
-          newContent[contentCount].$type === MessageContentType.text
+          lastContentIndex >= 0 &&
+          newContent[lastContentIndex].$type === MessageContentType.text
         ) {
-          const oldText = (newContent[contentCount] as TextContent).c;
+          const oldText = (newContent[lastContentIndex] as TextContent).c;
           const newText = oldText + text;
-          newContent[contentCount] = {
-            ...newContent[contentCount],
+          newContent[lastContentIndex] = {
+            ...newContent[lastContentIndex],
             c: newText
           } as TextContent;
         } else {
@@ -381,33 +380,77 @@ const Chat = memo(() => {
     });
     
     const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
     return newSelectedMsgs;
   };
 
-  const changeSelectedResponseFile = (
+  const changeSelectedResponseFilePreview = (
     selectedMsgs: IChatMessage[][],
     messageId: string,
     text: FileDef,
   ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        const contentCount = x.content.length - 1;
+        const lastContentIndex = x.content.length - 1;
         let newContent = [...x.content];
         
+        // 检查最后一个内容是否是 tempFileId 类型（预览图片）
         if (
-          contentCount >= 0 &&
-          newContent[contentCount].$type === MessageContentType.fileId
+          lastContentIndex >= 0 &&
+          newContent[lastContentIndex].$type === MessageContentType.tempFileId
         ) {
-          // Update existing file content
-          newContent[contentCount] = {
-            ...newContent[contentCount],
+          // 更新现有的预览图片
+          newContent[lastContentIndex] = {
+            ...newContent[lastContentIndex],
+            c: text
+          } as TempFileContent;
+        } else {
+          // 插入新的预览位置
+          newContent.push({ i: '', $type: MessageContentType.tempFileId, c: text });
+        }
+
+        return {
+          ...x,
+          content: newContent,
+        };
+      }
+      return x;
+    });
+    
+    const newSelectedMsgs = [...selectedMsgs];
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
+    messageDispatch(setSelectedMessages(newSelectedMsgs));
+    return newSelectedMsgs;
+  };
+
+  const changeSelectedResponseFileFinal = (
+    selectedMsgs: IChatMessage[][],
+    messageId: string,
+    text: FileDef,
+  ): IChatMessage[][] => {
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
+    const updatedMessageList = messageList.map((x) => {
+      if (x.id === messageId) {
+        const lastContentIndex = x.content.length - 1;
+        let newContent = [...x.content];
+        
+        // 检查最后一个内容是否是 tempFileId 类型（预览图片）
+        if (
+          lastContentIndex >= 0 &&
+          newContent[lastContentIndex].$type === MessageContentType.tempFileId
+        ) {
+          // 将预览图片替换为最终图片（改变类型为 fileId）
+          newContent[lastContentIndex] = {
+            ...newContent[lastContentIndex],
+            $type: MessageContentType.fileId,
             c: text
           } as FileContent;
         } else {
+          // 没有预览图片，直接追加最终图片
           newContent.push({ i: '', $type: MessageContentType.fileId, c: text });
         }
 
@@ -420,7 +463,7 @@ const Chat = memo(() => {
     });
     
     const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
     return newSelectedMsgs;
   };
@@ -430,20 +473,20 @@ const Chat = memo(() => {
     messageId: string,
     text: string,
   ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        const contentCount = x.content.length - 1;
+        const lastContentIndex = x.content.length - 1;
         let newContent = [...x.content];
         
         if (
-          contentCount >= 0 &&
-          newContent[contentCount].$type === MessageContentType.reasoning
+          lastContentIndex >= 0 &&
+          newContent[lastContentIndex].$type === MessageContentType.reasoning
         ) {
-          newContent[contentCount] = {
-            ...newContent[contentCount],
-            c: (newContent[contentCount] as ReasoningContent).c + text
+          newContent[lastContentIndex] = {
+            ...newContent[lastContentIndex],
+            c: (newContent[lastContentIndex] as ReasoningContent).c + text
           } as ReasoningContent;
         } else {
           newContent.push({
@@ -463,7 +506,7 @@ const Chat = memo(() => {
     });
     
     const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
     return newSelectedMsgs;
   };
@@ -473,8 +516,8 @@ const Chat = memo(() => {
     messageId: string,
     time: number,
   ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
         return {
@@ -486,7 +529,7 @@ const Chat = memo(() => {
     });
     
     const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
     return newSelectedMsgs;
   };
@@ -498,8 +541,8 @@ const Chat = memo(() => {
     toolName: string,
     parameters: string,
   ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
         let newContent = [...x.content];
@@ -545,7 +588,7 @@ const Chat = memo(() => {
     });
     
     const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
     return newSelectedMsgs;
   };
@@ -556,8 +599,8 @@ const Chat = memo(() => {
     toolCallId: string,
     result: string,
   ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
         let newContent = [...x.content];
@@ -601,7 +644,7 @@ const Chat = memo(() => {
     });
     
     const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
     return newSelectedMsgs;
   };
@@ -611,8 +654,8 @@ const Chat = memo(() => {
     spanId: number,
     message: IChatMessage,
   ): IChatMessage[][] => {
-    const messageCount = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[messageCount];
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.spanId === spanId) {
         return {
@@ -630,7 +673,7 @@ const Chat = memo(() => {
     });
     
     const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[messageCount] = updatedMessageList;
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
     return newSelectedMsgs;
   };
@@ -688,19 +731,15 @@ const Chat = memo(() => {
       timezoneOffset: getTz(),
     };
 
-    const response = await fetch(
-      `${getApiUrl()}/api/chats/regenerate-assistant-message`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getUserSession()}`,
-        },
-        body: JSON.stringify(chatBody),
-      },
-    );
-
-    await handleChatMessage(response, selectedMessageList);
+    try {
+      const stream = streamRegenerateAssistant(chatBody);
+      await handleChatMessage(stream, selectedMessageList);
+    } catch (e: any) {
+      handleChatError();
+      const err = e as ChatApiError;
+      const msg = err?.message || (typeof e === 'string' ? e : '');
+      toast.error(t(msg) || msg);
+    }
   };
 
   const handleRegenerateAllAssistant = async (
@@ -735,19 +774,15 @@ const Chat = memo(() => {
       timezoneOffset: getTz(),
     };
 
-    const response = await fetch(
-      `${getApiUrl()}/api/chats/regenerate-all-assistant-message`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getUserSession()}`,
-        },
-        body: JSON.stringify(chatBody),
-      },
-    );
-
-    await handleChatMessage(response, selectedMessageList);
+    try {
+      const stream = streamRegenerateAllAssistant(chatBody);
+      await handleChatMessage(stream, selectedMessageList);
+    } catch (e: any) {
+      handleChatError();
+      const err = e as ChatApiError;
+      const msg = err?.message || (typeof e === 'string' ? e : '');
+      toast.error(t(msg) || msg);
+    }
   };
 
   const handleEditAndSendMessage = async (
@@ -779,63 +814,26 @@ const Chat = memo(() => {
       timezoneOffset: getTz(),
     };
 
-    const response = await fetch(`${getApiUrl()}/api/chats/general`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${getUserSession()}`,
-      },
-      body: JSON.stringify(chatBody),
-    });
-
-    await handleChatMessage(response, selectedMessageList);
+    try {
+      const stream = streamGeneralChat(chatBody);
+      await handleChatMessage(stream, selectedMessageList);
+    } catch (e: any) {
+      handleChatError();
+      const err = e as ChatApiError;
+      const msg = err?.message || (typeof e === 'string' ? e : '');
+      toast.error(t(msg) || msg);
+    }
   };
 
   const handleChatMessage = async (
-    response: Response,
+    stream: AsyncIterable<SseResponseLine>,
     selectedMessageList: IChatMessage[][],
   ) => {
   if (!selectedChat) return;
   let messageList = [...messages];
   // 用于跟踪每个 span 最近一次非空的工具调用 ID，便于将 u 为 null 的参数片段归并
   const currentToolCallIdBySpan = new Map<number, string>();
-    const data = response.body;
-    if (!response.ok) {
-      handleChatError();
-      const errMsg = await response.text();
-      toast.error(t(errMsg) || response.statusText);
-      return;
-    }
-    if (!data) {
-      handleChatError();
-      return;
-    }
-
-    const reader = data.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    async function* processBuffer() {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
-        }
-        buffer += decoder.decode(value, { stream: true });
-        let newlineIndex;
-        while ((newlineIndex = buffer.indexOf('\r\n\r\n')) >= 0) {
-          const line = buffer.slice(0, newlineIndex).trim();
-          buffer = buffer.slice(newlineIndex + 4); // Skip '\r\n\r\n'
-          if (line.startsWith('data: ')) {
-            yield line.slice(6);
-          }
-          if (line === '') {
-            continue;
-          }
-        }
-      }
-    }
-    for await (const message of processBuffer()) {
-      const value: SseResponseLine = JSON.parse(message);
+    for await (const value of stream) {
       if (value.k === SseResponseKind.StopId) {
         chatDispatch(setStopIds([value.r]));
       } else if (value.k === SseResponseKind.ReasoningSegment) {
@@ -881,10 +879,14 @@ const Chat = memo(() => {
           msgId,
           time,
         );
+      } else if (value.k === SseResponseKind.ImageGenerating) {
+        const { r, i: spanId } = value;
+        const msgId = `${ResponseMessageTempId}-${spanId}`;
+        selectedMessageList = changeSelectedResponseFilePreview(selectedMessageList, msgId, r);
       } else if (value.k === SseResponseKind.ImageGenerated) {
         const { r, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
-        selectedMessageList = changeSelectedResponseFile(selectedMessageList, msgId, r);
+        selectedMessageList = changeSelectedResponseFileFinal(selectedMessageList, msgId, r);
       } else if (value.k === SseResponseKind.CallingTool) {
         // 13 事件：u 仅在首个片段非空，后续片段 u/r 可能为 null，只携带 p（参数增量）
         const { u, r: toolName, p: parameters, i: spanId } = value;
@@ -1355,7 +1357,7 @@ const Chat = memo(() => {
             onRegenerateAllAssistant={handleRegenerateAllAssistant}
           />
 
-          <div className={cn(showChatInput ? 'h-40' : 'h-2')}></div>
+          <div className={cn(showChatInput ? 'h-32' : 'h-2')}></div>
         </div>
 
         {hasModel() && (

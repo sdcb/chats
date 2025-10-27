@@ -73,6 +73,7 @@ const ChatHeader = () => {
           modelProviderId: span.modelProviderId,
           temperature: span.temperature,
           webSearchEnabled: span.webSearchEnabled,
+          codeExecutionEnabled: span.codeExecutionEnabled,
           reasoningEffort: span?.reasoningEffort,
           systemPrompt: defaultPrompt?.content!,
           imageSize: span?.imageSize || 0,
@@ -108,6 +109,7 @@ const ChatHeader = () => {
                 modelProviderId: data.modelProviderId,
                 temperature: data.temperature,
                 webSearchEnabled: data.webSearchEnabled,
+                codeExecutionEnabled: data.codeExecutionEnabled,
               };
             }
             return s;

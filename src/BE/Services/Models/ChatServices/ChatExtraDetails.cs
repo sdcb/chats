@@ -8,6 +8,8 @@ public record ChatExtraDetails
 
     public bool WebSearchEnabled { get; init; }
 
+    public bool CodeExecutionEnabled { get; init; }
+
     public DBReasoningEffort ReasoningEffort { get; init; }
 
     public DBKnownImageSize ImageSize { get; init; }

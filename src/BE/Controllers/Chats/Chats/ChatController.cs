@@ -323,18 +323,20 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     throw new InvalidOperationException("Image file cache not found.");
                 }
 
-                await YieldResponse(new ImageGeneratedLine(tempImageGeneratedLine.SpanId, new FileDto()
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    ContentType = image.ToContentType(),
-                    Url = image.ToTempUrl(),
-                }));
+                // yield raw temp file with data url
+                //await YieldResponse(new ImageGeneratedLine(tempImageGeneratedLine.SpanId, new FileDto()
+                //{
+                //    Id = Guid.NewGuid().ToString(),
+                //    ContentType = image.ToContentType(),
+                //    Url = image.ToTempUrl(),
+                //}));
 
                 try
                 {
                     fs ??= await FileService.GetDefault(db, cancellationToken) ?? throw new InvalidOperationException("Default file service config not found.");
                     DB.File file = await dbFileService.StoreImage(image, await clientInfoIdTask, fs, cancellationToken: default);
                     tcs.SetResult(file);
+                    // yield final file dto
                     await YieldResponse(new ImageGeneratedLine(tempImageGeneratedLine.SpanId, fup.CreateFileDto(file, tryWithUrl: false)));
                 }
                 catch (Exception e)
@@ -439,6 +441,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         {
             TimezoneOffset = req.TimezoneOffset,
             WebSearchEnabled = chatSpan.ChatConfig.WebSearchEnabled,
+            CodeExecutionEnabled = chatSpan.ChatConfig.CodeExecutionEnabled,
             ReasoningEffort = (DBReasoningEffort)chatSpan.ChatConfig.ReasoningEffort,
             ImageSize = (DBKnownImageSize)chatSpan.ChatConfig.ImageSizeId,
         };
@@ -484,11 +487,9 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             Step step = await RunOne(messageToSend);
             await WriteStep(step);
 
-            if (step.StepContents.Any(x => x.ContentTypeId == (byte)DBMessageContentType.ToolCall))
+            if (TryGetUnfinishedToolCall(step, out List<StepContentToolCall> unfinishedToolCalls))
             {
-                foreach (StepContentToolCall call in step.StepContents!
-                    .Where(x => x.StepContentToolCall != null)
-                    .Select(x => x.StepContentToolCall!))
+                foreach (StepContentToolCall call in unfinishedToolCalls)
                 {
                     if (!toolNameMap.TryGetValue(call.Name!, out var mapped))
                     {
@@ -511,7 +512,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     logger.LogInformation("Using MCP Server {mcpServer.Label} ({mcpServer.Url}) for tool call {call.Name} with headers: {headers}",
                         mcpServer.Label, mcpServer.Url, call.Name, headers);
                     Stopwatch sw = Stopwatch.StartNew();
-                    IMcpClient mcpClient = await McpClientFactory.CreateAsync(new SseClientTransport(new SseClientTransportOptions
+                    McpClient mcpClient = await McpClient.CreateAsync(new HttpClientTransport(new HttpClientTransportOptions
                     {
                         Endpoint = new Uri(mcpServer.Url),
                         AdditionalHeaders = headers,
@@ -600,6 +601,28 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             }
         }
 
+        static bool TryGetUnfinishedToolCall(Step step, out List<StepContentToolCall> toolCall)
+        {
+            toolCall = [];
+            foreach (StepContent content in step.StepContents!)
+            {
+                if (content.ContentTypeId == (byte)DBMessageContentType.ToolCall && content.StepContentToolCall != null)
+                {
+                    string toolCallId = content.StepContentToolCall.ToolCallId!;
+                    bool hasResponse = step.StepContents.Any(x => 
+                        x.ContentTypeId == (byte)DBMessageContentType.ToolCallResponse 
+                        && x.StepContentToolCallResponse != null
+                        && x.StepContentToolCallResponse.ToolCallId == toolCallId);
+                    if (!hasResponse)
+                    {
+                        toolCall.Add(content.StepContentToolCall);
+                    }
+                }
+            }
+
+            return toolCall.Count > 0;
+        }
+
         writer.TryWrite(new EndTurn(chatSpan.SpanId, turn));
         writer.Complete();
 
@@ -649,6 +672,14 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                                 responseStated = true;
                             }
                             writer.TryWrite(new CallingToolLine(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolCall.Arguments));
+                        }
+                        else if (item is ToolCallResponseSegment toolCallResponse)
+                        {
+                            writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, toolCallResponse.IsSuccess, toolCallResponse.ToolCallId!, toolCallResponse.Response!));
+                        }
+                        else if (item is Base64PreviewImage preview)
+                        {
+                            writer.TryWrite(new ImageGeneratingLine(chatSpan.SpanId, preview.ToTempFileDto()));
                         }
                         else if (item is ImageChatSegment imgSeg)
                         {
@@ -815,7 +846,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
     private static string GenerateAlphaFirstToken(int length)
     {
-        if (length <= 0) throw new ArgumentOutOfRangeException(nameof(length));
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
         const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
         const string alphanum = letters + "0123456789";
 

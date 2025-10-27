@@ -185,7 +185,12 @@ select:focus {
 }
 
 .md-p {
-  white-space: pre-wrap;
+  /* 注意：pre-wrap 会同时尊重 <br> 和源码中的换行符，
+     当 Markdown 转成 <br> 后后面仍有一个 \n 时会产生“双换行”（空行）。
+     这里改为 normal，避免叠加的换行导致空行。*/
+  white-space: normal;
+  /* 仍然保证长词/URL 在移动端可断行 */
+  overflow-wrap: anywhere;
   margin     : .5em 0 !important;
 }
 

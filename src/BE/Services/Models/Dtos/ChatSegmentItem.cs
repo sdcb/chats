@@ -37,6 +37,15 @@ public abstract record ChatSegmentItem
         };
     }
 
+    public static ImageChatSegment FromBase64PreviewImage(string base64, string contentType)
+    {
+        return new Base64PreviewImage
+        {
+            Base64 = base64,
+            ContentType = contentType
+        };
+    }
+
     public static ImageChatSegment FromBinaryData(BinaryData binaryData, string contentType)
     {
         return new Base64Image
@@ -172,6 +181,17 @@ public abstract record ChatSegmentItem
             Type = toolCall.Kind.ToString(),
             Name = toolCall.FunctionName,
             Arguments = (toolCall.FunctionArgumentsUpdate == null || GetBinaryData(toolCall.FunctionArgumentsUpdate).Length == 0) ? "" : toolCall.FunctionArgumentsUpdate.ToString(),
+        };
+    }
+
+    public static ToolCallResponseSegment FromToolCallResponse(string toolCallId, string? response, int durationMs, bool isSuccess)
+    {
+        return new ToolCallResponseSegment()
+        {
+            ToolCallId = toolCallId,
+            Response = response,
+            DurationMs = durationMs,
+            IsSuccess = isSuccess,
         };
     }
 

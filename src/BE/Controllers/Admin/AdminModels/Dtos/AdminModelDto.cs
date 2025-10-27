@@ -43,8 +43,11 @@ public record AdminModelDto
     [JsonPropertyName("allowSystemPrompt")]
     public required bool AllowSystemPrompt { get; init; }
 
-    [JsonPropertyName("allowReasoningEffort")]
-    public required bool AllowReasoningEffort { get; init; }
+    [JsonPropertyName("allowCodeExecution")]
+    public required bool AllowCodeExecution { get; init; }
+
+    [JsonPropertyName("reasoningEffortOptions")]
+    public required int[] ReasoningEffortOptions { get; init; }
 
     [JsonPropertyName("allowStreaming")]
     public required bool AllowStreaming { get; init; }

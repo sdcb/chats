@@ -57,6 +57,7 @@ export type ResponseContent =
   | ReasoningContent
   | TextContent
   | FileContent
+  | TempFileContent
   | ErrorContent
   | ToolCallContent
   | ToolResponseContent;
@@ -76,6 +77,12 @@ export type TextContent = {
 export type FileContent = {
   i: string;
   $type: MessageContentType.fileId;
+  c: FileDef | string;
+};
+
+export type TempFileContent = {
+  i: string;
+  $type: MessageContentType.tempFileId;
   c: FileDef | string;
 };
 
@@ -181,6 +188,7 @@ export enum MessageContentType {
   reasoning = 3,
   toolCall = 4,
   toolResponse = 5,
+  tempFileId = 6,
 }
 
 export const EMPTY_ID = 'EMPTY_ID';

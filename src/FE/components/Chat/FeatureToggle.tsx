@@ -2,16 +2,16 @@ import { useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { IconWorld } from '@/components/Icons';
 import { Checkbox } from '@/components/ui/checkbox';
 
-const EnableNetworkSearch = (props: {
+const FeatureToggle = (props: {
   label: string;
   enable: boolean;
   onChange: (checked: boolean) => void;
+  icon: React.ReactNode;
 }) => {
   const { t } = useTranslation();
-  const { label, enable, onChange } = props;
+  const { label, enable, onChange, icon } = props;
   const [check, setCheck] = useState(enable);
 
   useEffect(() => {
@@ -20,10 +20,9 @@ const EnableNetworkSearch = (props: {
 
   return (
     <div className="flex flex-col">
-      <label className="mb-2 text-left text-neutral-700 dark:text-neutral-400"></label>
       <div className="flex items-center justify-between gap-1">
         <span className='flex gap-1 items-center text-neutral-700 dark:text-neutral-400'>
-          <IconWorld size={16} />
+          {icon}
           {label}
         </span>
         <div className="flex gap-1 items-center">
@@ -33,10 +32,10 @@ const EnableNetworkSearch = (props: {
               onChange(state);
               setCheck(state);
             }}
-            id="enable-search"
+            id={`feature-${label}`}
           />
           <label
-            htmlFor="enable-search"
+            htmlFor={`feature-${label}`}
             className="text-neutral-900 dark:text-neutral-100"
           >
             {check ? t('Enable') : t('Close')}
@@ -47,4 +46,4 @@ const EnableNetworkSearch = (props: {
   );
 };
 
-export default EnableNetworkSearch;
+export default FeatureToggle;

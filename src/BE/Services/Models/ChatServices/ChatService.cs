@@ -65,7 +65,12 @@ public abstract partial class ChatService : IDisposable
             SetWebSearchEnabled(options, feOptions.WebSearchEnabled);
         }
 
-        if (ModelReference.SupportReasoningEffort(Model.ModelReference.Name) && feOptions.ReasoningEffort != DBReasoningEffort.Default)
+        if (ModelReference.SupportsCodeExecution(Model.ModelReference.Name))
+        {
+            SetCodeExecutionEnabled(options, feOptions.CodeExecutionEnabled);
+        }
+
+        if (ModelReference.ReasoningEffortOptions(Model.ModelReference.Name).Length > 0 && feOptions.ReasoningEffort != DBReasoningEffort.Default)
         {
             SetReasoningEffort(options, feOptions.ReasoningEffort);
         }
@@ -115,10 +120,15 @@ public abstract partial class ChatService : IDisposable
         Console.WriteLine($"{Model.ModelReference.Name} chat service not support web search.");
     }
 
+    protected virtual void SetCodeExecutionEnabled(ChatCompletionOptions options, bool enabled)
+    {
+        // chat service not enable code execution by default, prompt a warning
+        Console.WriteLine($"{Model.ModelReference.Name} chat service not support code execution.");
+    }
+
     protected virtual void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
     {
-        // chat service not enable reasoning effort by default, prompt a warning
-        Console.WriteLine($"{Model.ModelReference.Name} chat service not support reasoning effort.");
+        options.ReasoningEffortLevel = reasoningEffort.ToReasoningEffort();
     }
 
     public void Dispose()

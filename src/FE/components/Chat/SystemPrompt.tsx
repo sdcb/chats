@@ -20,6 +20,8 @@ import VariableModal from './VariableModal';
 
 import { getUserPromptDetail } from '@/apis/clientApis';
 
+const TEXTAREA_MAX_HEIGHT = 300;
+
 interface Props {
   currentPrompt: string | null;
   prompts: PromptSlim[];
@@ -45,6 +47,7 @@ const SystemPrompt: FC<Props> = ({
   const [variables, setVariables] = useState<string[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null); // 当前选中的prompt
+  const [isScrollable, setIsScrollable] = useState(false);
 
   // 获取渲染文本的函数
   const getRenderedText = () => {
@@ -181,11 +184,25 @@ const SystemPrompt: FC<Props> = ({
   };
 
   useEffect(() => {
-    if (isEditing && textareaRef && textareaRef.current) {
-      textareaRef.current.style.height = 'inherit';
-      textareaRef.current.style.height = `${textareaRef.current?.scrollHeight}px`;
+    if (!isEditing || !textareaRef.current) {
+      return;
     }
+
+    const textarea = textareaRef.current;
+    textarea.style.height = 'auto';
+
+    const { scrollHeight } = textarea;
+    const clampedHeight = Math.min(scrollHeight, TEXTAREA_MAX_HEIGHT);
+    textarea.style.height = `${clampedHeight}px`;
+
+    setIsScrollable(scrollHeight > TEXTAREA_MAX_HEIGHT);
   }, [rawValue, isEditing]);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setIsScrollable(false);
+    }
+  }, [isEditing]);
 
   useEffect(() => {
     const rawContent = currentPrompt || '';
@@ -223,13 +240,8 @@ const SystemPrompt: FC<Props> = ({
           className="w-full rounded-lg border border-neutral-200 bg-transparent px-4 py-3 text-neutral-900 dark:border-neutral-600 dark:text-neutral-100"
           style={{
             resize: 'none',
-            bottom: `${textareaRef?.current?.scrollHeight}px`,
-            maxHeight: '300px',
-            overflow: `${
-              textareaRef.current && textareaRef.current.scrollHeight > 400
-                ? 'auto'
-                : 'hidden'
-            }`,
+            maxHeight: `${TEXTAREA_MAX_HEIGHT}px`,
+            overflowY: isScrollable ? 'auto' : 'hidden',
             fontFamily: 'Consolas, "Courier New", monospace',
           }}
           placeholder={
@@ -249,7 +261,7 @@ const SystemPrompt: FC<Props> = ({
         <div
           className="w-full rounded-lg border border-neutral-200 bg-transparent px-4 py-3 text-neutral-900 dark:border-neutral-600 dark:text-neutral-100 cursor-text min-h-[2.75rem]"
           style={{
-            maxHeight: '300px',
+            maxHeight: `${TEXTAREA_MAX_HEIGHT}px`,
             overflow: 'auto',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
