@@ -7,7 +7,7 @@ public class GithubModelsChatService(Model model) : ChatCompletionService(model,
 {
     protected override Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, CancellationToken cancellationToken)
     {
-        if (Model.ModelReference.DisplayName == "Mistral")
+        if (Model.Name.Contains("Mistral", StringComparison.OrdinalIgnoreCase))
         {
             // Mistral model does not support end-user ID
             options.EndUserId = null;

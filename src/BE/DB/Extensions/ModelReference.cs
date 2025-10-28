@@ -4,7 +4,7 @@ namespace Chats.BE.DB;
 
 public partial class ModelReference
 {
-    public float? UnnormalizeTemperature(float? temperature)
+    public float? ClampTemperature(float? temperature)
     {
         if (temperature == null) return null;
         return (float)Math.Clamp(temperature.Value, (float)MinTemperature, (float)MaxTemperature);

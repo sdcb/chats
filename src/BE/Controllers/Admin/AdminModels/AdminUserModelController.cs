@@ -50,7 +50,6 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         var unassignedModels = await db.Models
             .Where(x => !x.IsDeleted && !assignedModelIds.Contains(x.Id))
             .Include(x => x.ModelKey)
-            .Include(x => x.ModelReference)
             .OrderBy(x => x.ModelKey.Order).ThenBy(x => x.Order)
             .Select(x => new AdminModelDto
             {
@@ -60,22 +59,26 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                 FileServiceId = fileServiceId,
                 ModelKeyId = x.ModelKeyId,
                 ModelProviderId = x.ModelKey.ModelProviderId,
-                ModelReferenceId = x.ModelReferenceId,
-                ModelReferenceName = x.ModelReference.Name,
-                ModelReferenceShortName = x.ModelReference.DisplayName,
                 InputTokenPrice1M = x.InputTokenPrice1M,
                 OutputTokenPrice1M = x.OutputTokenPrice1M,
                 DeploymentName = x.DeploymentName,
-                AllowSearch = x.ModelReference.AllowSearch,
-                AllowVision = x.ModelReference.AllowVision,
-                AllowStreaming = x.ModelReference.AllowStreaming,
-                AllowSystemPrompt = x.ModelReference.AllowSystemPrompt,
-                AllowCodeExecution = ModelReference.SupportsCodeExecution(x.ModelReference.Name),
-                ReasoningEffortOptions = ModelReference.ReasoningEffortOptionsAsInt32(x.ModelReference.Name),
-                MinTemperature = x.ModelReference.MinTemperature,
-                MaxTemperature = x.ModelReference.MaxTemperature,
-                ContextWindow = x.ModelReference.ContextWindow,
-                MaxResponseTokens = x.ModelReference.MaxResponseTokens,
+                AllowSearch = x.AllowSearch,
+                AllowVision = x.AllowVision,
+                AllowStreaming = x.AllowStreaming,
+                AllowSystemPrompt = x.AllowSystemPrompt,
+                AllowCodeExecution = x.AllowCodeExecution,
+                ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(x.ReasoningEffortOptions),
+                MinTemperature = x.MinTemperature,
+                MaxTemperature = x.MaxTemperature,
+                ContextWindow = x.ContextWindow,
+                MaxResponseTokens = x.MaxResponseTokens,
+                AllowToolCall = x.AllowToolCall,
+                SupportedImageSizes = Model.GetSupportedImageSizesAsArray(x.SupportedImageSizes),
+                ApiType = (DBApiType)x.ApiType,
+                UseAsyncApi = x.UseAsyncApi,
+                UseMaxCompletionTokens = x.UseMaxCompletionTokens,
+                IsLegacy = x.IsLegacy,
+                ThinkTagParserEnabled = x.ThinkTagParserEnabled,
             })
             .ToArrayAsync(cancellationToken);
 

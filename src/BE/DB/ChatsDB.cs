@@ -355,10 +355,6 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.ModelKey).WithMany(p => p.Models)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Model_ModelKey2");
-
-            entity.HasOne(d => d.ModelReference).WithMany(p => p.Models)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Model_ModelReference");
         });
 
         modelBuilder.Entity<ModelKey>(entity =>

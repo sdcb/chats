@@ -2,6 +2,7 @@ using Chats.BE.Controllers.Admin.AdminModels.Dtos;
 using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Chats.BE.Infrastructure;
 using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
@@ -30,22 +31,26 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
                 FileServiceId = fileServiceId,
                 ModelKeyId = x.ModelKeyId,
                 ModelProviderId = x.ModelKey.ModelProviderId,
-                ModelReferenceId = x.ModelReferenceId,
-                ModelReferenceName = x.ModelReference.Name,
-                ModelReferenceShortName = x.ModelReference.DisplayName,
                 InputTokenPrice1M = x.InputTokenPrice1M,
                 OutputTokenPrice1M = x.OutputTokenPrice1M,
                 DeploymentName = x.DeploymentName,
-                AllowSearch = x.ModelReference.AllowSearch,
-                AllowVision = x.ModelReference.AllowVision,
-                AllowStreaming = x.ModelReference.AllowStreaming,
-                AllowSystemPrompt = x.ModelReference.AllowSystemPrompt,
-                AllowCodeExecution = ModelReference.SupportsCodeExecution(x.ModelReference.Name),
-                ReasoningEffortOptions = ModelReference.ReasoningEffortOptionsAsInt32(x.ModelReference.Name),
-                MinTemperature = x.ModelReference.MinTemperature,
-                MaxTemperature = x.ModelReference.MaxTemperature,
-                ContextWindow = x.ModelReference.ContextWindow,
-                MaxResponseTokens = x.ModelReference.MaxResponseTokens,
+                AllowSearch = x.AllowSearch,
+                AllowVision = x.AllowVision,
+                AllowStreaming = x.AllowStreaming,
+                AllowSystemPrompt = x.AllowSystemPrompt,
+                AllowCodeExecution = x.AllowCodeExecution,
+                ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(x.ReasoningEffortOptions),
+                MinTemperature = x.MinTemperature,
+                MaxTemperature = x.MaxTemperature,
+                ContextWindow = x.ContextWindow,
+                MaxResponseTokens = x.MaxResponseTokens,
+                AllowToolCall = x.AllowToolCall,
+                SupportedImageSizes = Model.GetSupportedImageSizesAsArray(x.SupportedImageSizes),
+                ApiType = (DBApiType)x.ApiType,
+                UseAsyncApi = x.UseAsyncApi,
+                UseMaxCompletionTokens = x.UseMaxCompletionTokens,
+                IsLegacy = x.IsLegacy,
+                ThinkTagParserEnabled = x.ThinkTagParserEnabled,
             })
             .ToArrayAsync(cancellationToken);
         return data;
@@ -57,11 +62,6 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
-        }
-
-        if (!await db.ModelReferences.AnyAsync(r => r.Id == req.ModelReferenceId, cancellationToken))
-        {
-            return BadRequest($"Invalid ModelReferenceId: {req.ModelReferenceId}");
         }
 
         Model? cm = await db.Models.FindAsync([modelId], cancellationToken);
@@ -85,56 +85,12 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
             return BadRequest(ModelState);
         }
 
-        if (!await db.ModelReferences.AnyAsync(r => r.Id == req.ModelReferenceId, cancellationToken))
-        {
-            return BadRequest($"Invalid ModelReferenceId: {req.ModelReferenceId}");
-        }
-
         Model toCreate = new()
         {
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
         req.ApplyTo(toCreate);
-        db.Models.Add(toCreate);
-        await db.SaveChangesAsync(cancellationToken);
-
-        return Created(default(string), toCreate.Id);
-    }
-
-    [HttpPost("fast-create")]
-    public async Task<ActionResult<int>> FastCreateModel([FromBody] ValidateModelRequest req, CancellationToken cancellationToken)
-    {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        if (!await db.ModelKeys.AnyAsync(r => r.Id == req.ModelKeyId, cancellationToken))
-        {
-            return BadRequest($"Invalid ModelKeyId: {req.ModelKeyId}");
-        }
-
-        ModelReference? modelRef = await db.ModelReferences
-            .Include(x => x.CurrencyCodeNavigation)
-            .FirstOrDefaultAsync(x => x.Id == req.ModelReferenceId, cancellationToken);
-        if (modelRef == null)
-        {
-            return BadRequest($"Invalid ModelReferenceId: {req.ModelReferenceId}");
-        }
-
-        Model toCreate = new()
-        {
-            ModelKeyId = req.ModelKeyId,
-            ModelReferenceId = req.ModelReferenceId,
-            Name = req.DeploymentName ?? modelRef.Name,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            DeploymentName = req.DeploymentName,
-            IsDeleted = false,
-            InputTokenPrice1M = modelRef.InputTokenPrice1M * modelRef.CurrencyCodeNavigation.ExchangeRate,
-            OutputTokenPrice1M = modelRef.OutputTokenPrice1M * modelRef.CurrencyCodeNavigation.ExchangeRate,
-        };
         db.Models.Add(toCreate);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -177,7 +133,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
 
     [HttpPost("validate")]
     public async Task<ActionResult<ModelValidateResult>> ValidateModel(
-        [FromBody] ValidateModelRequest req,
+        [FromBody] UpdateModelRequest req,
         [FromServices] ChatFactory chatFactory,
         CancellationToken cancellationToken)
     {
@@ -190,17 +146,30 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
             return BadRequest($"Model key id: {req.ModelKeyId} not found");
         }
 
-        ModelReference? modelReference = await db.ModelReferences
-            .Include(x => x.Provider)
-            .Include(x => x.Tokenizer)
-            .Where(x => x.Id == req.ModelReferenceId)
-            .SingleOrDefaultAsync(cancellationToken);
-        if (modelReference == null)
+        // 创建临时 Model 对象用于验证
+        Model tempModel = new()
         {
-            return BadRequest($"Model reference id: {req.ModelReferenceId} not found");
-        }
+            ModelKey = modelKey,
+            ModelKeyId = req.ModelKeyId,
+            DeploymentName = req.DeploymentName,
+            AllowSearch = req.AllowSearch,
+            AllowVision = req.AllowVision,
+            AllowSystemPrompt = req.AllowSystemPrompt,
+            AllowStreaming = req.AllowStreaming,
+            AllowCodeExecution = req.AllowCodeExecution,
+            ReasoningEffortOptions = string.Join(',', req.ReasoningEffortOptions),
+            MinTemperature = req.MinTemperature,
+            MaxTemperature = req.MaxTemperature,
+            ContextWindow = req.ContextWindow,
+            MaxResponseTokens = req.MaxResponseTokens,
+            AllowToolCall = req.AllowToolCall,
+            SupportedImageSizes = string.Join(',', req.SupportedImageSizes),
+            ApiType = (byte)req.ApiType,
+            UseAsyncApi = req.UseAsyncApi,
+            ThinkTagParserEnabled = req.ThinkTagParserEnabled,
+        };
 
-        ModelValidateResult result = await chatFactory.ValidateModel(modelKey, modelReference, req.DeploymentName, cancellationToken);
+        ModelValidateResult result = await chatFactory.ValidateModel(tempModel, cancellationToken);
         return Ok(result);
     }
 

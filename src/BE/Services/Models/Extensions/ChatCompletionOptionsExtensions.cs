@@ -28,6 +28,20 @@ public static class ChatCompletionOptionsExtensions
         rawData["max_tokens"] = BinaryData.FromObjectAsJson(value);
     }
 
+    public static void SetMaxTokens(this ChatCompletionOptions options, int value, bool useMaxCompletionTokens)
+    {
+        if (useMaxCompletionTokens)
+        {
+            // OpenAI/Azure OpenAI 使用 max_completion_tokens
+            options.MaxOutputTokenCount = value;
+        }
+        else
+        {
+            // 其他提供商使用 max_tokens
+            SetMaxTokens(options, value);
+        }
+    }
+
     [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_SerializedAdditionalRawData")]
     private extern static IDictionary<string, BinaryData>? GetSerializedAdditionalRawData(ChatCompletionOptions @this);
 

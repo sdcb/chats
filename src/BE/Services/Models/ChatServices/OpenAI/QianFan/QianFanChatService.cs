@@ -25,7 +25,7 @@ public class QianFanChatService(Model model) : ChatCompletionService(model, Crea
         oaic.AddPolicy(new AddHeaderPolicy("appid", cfg.AppId), PipelinePosition.PerCall);
         oaic.AddPolicy(new ReplaceSseContentPolicy("\"finish_reason\":\"normal\"", "\"finish_reason\":null"), PipelinePosition.PerCall);
         OpenAIClient api = new(new ApiKeyCredential(cfg.ApiKey), oaic);
-        return api.GetChatClient(model.ApiModelId);
+        return api.GetChatClient(model.DeploymentName);
     }
 
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)

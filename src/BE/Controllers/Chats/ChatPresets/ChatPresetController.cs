@@ -36,7 +36,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     SystemPrompt = x.ChatConfig.SystemPrompt,
                     ModelId = x.ChatConfig.ModelId,
                     ModelName = x.ChatConfig.Model.Name,
-                    ModelProviderId = x.ChatConfig.Model.ModelReference.ProviderId,
+                    ModelProviderId = x.ChatConfig.Model.ModelKey.ModelProviderId,
                     Temperature = x.ChatConfig.Temperature,
                     WebSearchEnabled = x.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = x.ChatConfig.CodeExecutionEnabled,
@@ -292,7 +292,6 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         ChatPresetSpan? span = await db.ChatPresetSpans
             .Include(x => x.ChatConfig)
                 .ThenInclude(x => x.Model)
-                .ThenInclude(x => x.ModelReference)
             .Where(x => x.ChatPresetId == idEncryption.DecryptChatPresetId(presetId) && x.SpanId == spanId && x.ChatPreset.UserId == currentUser.Id)
             .FirstOrDefaultAsync(cancellationToken);
         if (span == null)
@@ -434,7 +433,6 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
             .Include(x => x.ChatPresetSpans)
                 .ThenInclude(x => x.ChatConfig)
                 .ThenInclude(x => x.Model)
-                .ThenInclude(x => x.ModelReference)
             .Include(x => x.ChatPresetSpans)
                 .ThenInclude(x => x.ChatConfig)
                 .ThenInclude(x => x.ChatConfigMcps)

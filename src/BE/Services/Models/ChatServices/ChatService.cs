@@ -21,14 +21,8 @@ public abstract partial class ChatService : IDisposable
     public ChatService(Model model)
     {
         Model = model;
-        if (model.ModelReference.Tokenizer is not null)
-        {
-            Tokenizer = TiktokenTokenizer.CreateForEncoding(model.ModelReference.Tokenizer.Name);
-        }
-        else
-        {
-            Tokenizer = DefaultTokenizer;
-        }
+        // Tokenizer 现在统一使用 DefaultTokenizer 作为兜底
+        Tokenizer = DefaultTokenizer;
     }
 
     public abstract IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, CancellationToken cancellationToken);
@@ -60,17 +54,17 @@ public abstract partial class ChatService : IDisposable
 
     protected virtual async Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, CancellationToken cancellationToken)
     {
-        if (Model.ModelReference.AllowSearch)
+        if (Model.AllowSearch)
         {
             SetWebSearchEnabled(options, feOptions.WebSearchEnabled);
         }
 
-        if (ModelReference.SupportsCodeExecution(Model.ModelReference.Name))
+        if (Model.AllowCodeExecution)
         {
             SetCodeExecutionEnabled(options, feOptions.CodeExecutionEnabled);
         }
 
-        if (ModelReference.ReasoningEffortOptions(Model.ModelReference.Name).Length > 0 && feOptions.ReasoningEffort != DBReasoningEffort.Default)
+        if (Model.ReasoningEffortOptions != null && Model.ReasoningEffortOptions.Length > 0 && feOptions.ReasoningEffort != DBReasoningEffort.Default)
         {
             SetReasoningEffort(options, feOptions.ReasoningEffort);
         }
@@ -80,7 +74,7 @@ public abstract partial class ChatService : IDisposable
             SetImageSize(options, feOptions.ImageSize);
         }
 
-        if (!Model.ModelReference.AllowSystemPrompt)
+        if (!Model.AllowSystemPrompt)
         {
             // Remove system prompt
             messages = [.. messages.Where(m => m is not SystemChatMessage)];
@@ -94,16 +88,16 @@ public abstract partial class ChatService : IDisposable
             {
                 existingSystemPrompt.Content[0] = existingSystemPrompt.Content[0].Text
                     .Replace("{{CURRENT_DATE}}", now.ToString("yyyy/MM/dd"))
-                    .Replace("{{MODEL_NAME}}", Model.ModelReference.DisplayName ?? Model.ModelReference.Name)
+                    .Replace("{{MODEL_NAME}}", Model.Name)
                     .Replace("{{CURRENT_TIME}}", now.ToString("HH:mm:ss"));
             }
         }
 
         ChatMessage[] filteredMessage = await messages
             .ToAsyncEnumerable()
-            .SelectAwait(async m => await FilterVision(Model.ModelReference.AllowVision, m, cancellationToken))
+            .SelectAwait(async m => await FilterVision(Model.AllowVision, m, cancellationToken))
             .ToArrayAsync(cancellationToken);
-        options.Temperature = Model.ModelReference.UnnormalizeTemperature(options.Temperature);
+        options.Temperature = Model.ClampTemperature(options.Temperature);
 
         return filteredMessage;
     }
@@ -111,19 +105,19 @@ public abstract partial class ChatService : IDisposable
     protected virtual void SetImageSize(ChatCompletionOptions options, DBKnownImageSize imageSize)
     {
         // chat service not enable image size by default, prompt a warning
-        Console.WriteLine($"{Model.ModelReference.Name} chat service not support image generation.");
+        Console.WriteLine($"{Model.DeploymentName} chat service not support image generation.");
     }
 
     protected virtual void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {
         // chat service not enable search by default, prompt a warning
-        Console.WriteLine($"{Model.ModelReference.Name} chat service not support web search.");
+        Console.WriteLine($"{Model.DeploymentName} chat service not support web search.");
     }
 
     protected virtual void SetCodeExecutionEnabled(ChatCompletionOptions options, bool enabled)
     {
         // chat service not enable code execution by default, prompt a warning
-        Console.WriteLine($"{Model.ModelReference.Name} chat service not support code execution.");
+        Console.WriteLine($"{Model.DeploymentName} chat service not support code execution.");
     }
 
     protected virtual void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)

@@ -21,7 +21,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
     private static ChatClient CreateChatClient(Model model, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
     {
         OpenAIClient api = CreateOpenAIClient(model, suggestedApiUrl, perCallPolicies);
-        return api.GetChatClient(model.ApiModelId);
+        return api.GetChatClient(model.DeploymentName);
     }
 
     internal static OpenAIClient CreateOpenAIClient(Model model, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
@@ -70,7 +70,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
 
     public override async Task<ChatSegment> Chat(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, CancellationToken cancellationToken)
     {
-        if (ModelReference.SupportsDeveloperMessage(Model.ModelReference.Name))
+        if (ModelReference.SupportsDeveloperMessage(Model.DeploymentName))
         {
             // must use replace system chat message into developer chat message for unsupported model
             messages = [.. messages.Select(m => m switch

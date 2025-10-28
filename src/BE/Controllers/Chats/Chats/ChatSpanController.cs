@@ -174,14 +174,14 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
 
         span.ChatConfig.Model = um.Model;
         span.ChatConfig.ModelId = um.ModelId;
-        span.ChatConfig.WebSearchEnabled = um.Model.ModelReference.AllowSearch && span.ChatConfig.WebSearchEnabled;
+        span.ChatConfig.WebSearchEnabled = um.Model.AllowSearch && span.ChatConfig.WebSearchEnabled;
         if (span.ChatConfig.Temperature != null)
         {
-            span.ChatConfig.Temperature = (float)Math.Clamp((decimal)span.ChatConfig.Temperature.Value, um.Model.ModelReference.MinTemperature, um.Model.ModelReference.MaxTemperature);
+            span.ChatConfig.Temperature = (float)Math.Clamp((decimal)span.ChatConfig.Temperature.Value, um.Model.MinTemperature, um.Model.MaxTemperature);
         }
         if (span.ChatConfig.MaxOutputTokens != null)
         {
-            span.ChatConfig.MaxOutputTokens = Math.Min(span.ChatConfig.MaxOutputTokens.Value, um.Model.ModelReference.MaxResponseTokens);
+            span.ChatConfig.MaxOutputTokens = Math.Min(span.ChatConfig.MaxOutputTokens.Value, um.Model.MaxResponseTokens);
         }
         await db.SaveChangesAsync(cancellationToken);
         return Ok(ChatSpanDto.FromDB(span));

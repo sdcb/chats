@@ -32,7 +32,7 @@ public class GoogleAI2ChatService : ChatService
         _generativeModel = new()
         {
             ApiKey = model.ModelKey.Secret,
-            Model = model.ApiModelId,
+            Model = model.DeploymentName,
         };
         if (_generativeModel.Timeout != NetworkTimeout)
         {
@@ -40,8 +40,8 @@ public class GoogleAI2ChatService : ChatService
         }
     }
 
-    public bool AllowImageGeneration => Model.ModelReference.Name == "gemini-2.0-flash-exp" ||
-                                        Model.ModelReference.Name == "gemini-2.0-flash-exp-image-generation";
+    public bool AllowImageGeneration => Model.DeploymentName == "gemini-2.0-flash-exp" ||
+                                        Model.DeploymentName == "gemini-2.0-flash-exp-image-generation";
 
     private bool _codeExecutionEnabled = false;
 
@@ -53,7 +53,7 @@ public class GoogleAI2ChatService : ChatService
             ResponseModalities = AllowImageGeneration ? [ResponseModality.Text, ResponseModality.Image] : [ResponseModality.Text],
             EnableEnhancedCivicAnswers = true,
         };
-        if (ModelReference.ReasoningEffortOptions(Model.ModelReference.Name).Length > 0)
+        if (Model.GetReasoningEffortOptionsAsInt32(Model.ReasoningEffortOptions).Length > 0)
         {
             gc.ThinkingConfig = new ThinkingConfig
             {

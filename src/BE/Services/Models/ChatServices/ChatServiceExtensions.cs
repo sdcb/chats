@@ -12,7 +12,7 @@ public abstract partial class ChatService
     {
         ChatMessage[] filteredMessage = await FEPreprocess(messages, options, feOptions, cancellationToken);
 
-        if (Model.ModelReference.ReasoningResponseKindId == (byte)DBReasoningResponseKind.ThinkTag)
+        if (Model.ThinkTagParserEnabled)
         {
             InternalChatSegment current = null!;
             async IAsyncEnumerable<string> TokenYielder()
@@ -57,7 +57,7 @@ public abstract partial class ChatService
             ReasoningTokens = reasoningTokens += seg.Items.GetThink() switch { null => 0, var x => Tokenizer.CountTokens(x) },
         };
 
-        if (suggestedStreaming && Model.ModelReference.AllowStreaming)
+        if (suggestedStreaming && Model.AllowStreaming)
         {
             await foreach (ChatSegment seg in ChatStreamed(messages, options, cancellationToken))
             {

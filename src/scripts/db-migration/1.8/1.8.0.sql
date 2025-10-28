@@ -7,7 +7,7 @@
 -- 第一步：给 Model 表添加新字段
 -- =============================================
 
-PRINT N'* 给 Model 表添加模型能力配置字段';
+PRINT N'[Step 1] 给 Model 表添加模型能力配置字段';
 
 -- 从 ModelReference 迁移的字段
 IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'AllowSearch' AND Object_ID = Object_ID(N'dbo.Model'))
@@ -101,110 +101,178 @@ BEGIN
     ALTER TABLE dbo.Model DROP CONSTRAINT DF_Model_ApiType;
 END
 
+IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'UseAsyncApi' AND Object_ID = Object_ID(N'dbo.Model'))
+BEGIN
+    -- 是否使用异步API（如OpenAI的o3-pro模型），0: 同步, 1: 异步
+    ALTER TABLE dbo.Model ADD UseAsyncApi BIT NOT NULL CONSTRAINT DF_Model_UseAsyncApi DEFAULT 0;
+    ALTER TABLE dbo.Model DROP CONSTRAINT DF_Model_UseAsyncApi;
+END
+
+IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'UseMaxCompletionTokens' AND Object_ID = Object_ID(N'dbo.Model'))
+BEGIN
+    -- 是否使用 max_completion_tokens 字段（OpenAI/Azure OpenAI），0: 使用 max_tokens, 1: 使用 max_completion_tokens
+    ALTER TABLE dbo.Model ADD UseMaxCompletionTokens BIT NOT NULL CONSTRAINT DF_Model_UseMaxCompletionTokens DEFAULT 0;
+    ALTER TABLE dbo.Model DROP CONSTRAINT DF_Model_UseMaxCompletionTokens;
+END
+
+IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'IsLegacy' AND Object_ID = Object_ID(N'dbo.Model'))
+BEGIN
+    -- 是否为遗留模型（2024年7月之前发布的模型），用于前端排序和标识
+    ALTER TABLE dbo.Model ADD IsLegacy BIT NOT NULL CONSTRAINT DF_Model_IsLegacy DEFAULT 0;
+    ALTER TABLE dbo.Model DROP CONSTRAINT DF_Model_IsLegacy;
+END
+
 GO
 
 -- =============================================
 -- 第二步：数据迁移
 -- =============================================
 
-PRINT N'* 从 ModelReference 迁移数据到 Model 表';
+PRINT N'[Step 2] 从 ModelReference 迁移数据到 Model 表';
 
--- 迁移基础字段（从 ModelReference 复制）
-UPDATE m
-SET 
-    m.AllowSearch = mr.AllowSearch,
-    m.AllowVision = mr.AllowVision,
-    m.AllowSystemPrompt = mr.AllowSystemPrompt,
-    m.AllowStreaming = mr.AllowStreaming,
-    m.ThinkTagParserEnabled = CASE WHEN mr.ReasoningResponseKindId = 2 THEN 1 ELSE 0 END,
-    m.MinTemperature = mr.MinTemperature,
-    m.MaxTemperature = mr.MaxTemperature,
-    m.ContextWindow = mr.ContextWindow,
-    m.MaxResponseTokens = mr.MaxResponseTokens
-FROM dbo.Model m
-INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
-WHERE 
-    m.AllowSearch = 0 AND m.AllowVision = 0 AND m.AllowSystemPrompt = 1 
-    AND m.AllowStreaming = 1 AND m.ThinkTagParserEnabled = 0 
-    AND m.MinTemperature = 0 AND m.MaxTemperature = 2
-    AND m.ContextWindow = 0 AND m.MaxResponseTokens = 0;
-
-GO
-
-PRINT N'* 迁移 AllowCodeExecution 字段（基于模型名称判断）';
-
--- 迁移 AllowCodeExecution
--- gemini-2.0-flash-lite, gemini-2.0-flash-exp, gemini-2.0-flash-exp-image-generation => false
--- 其他以 "gemini-" 开头的模型 => true
-UPDATE m
-SET m.AllowCodeExecution = 0
-FROM dbo.Model m
-INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
-WHERE mr.Name IN (
-    'gemini-2.0-flash-lite', 
-    'gemini-2.0-flash-exp', 
-    'gemini-2.0-flash-exp-image-generation'
-);
-
-UPDATE m
-SET m.AllowCodeExecution = 1
-FROM dbo.Model m
-INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
-WHERE mr.Name LIKE 'gemini-%'
-  AND mr.Name NOT IN (
-    'gemini-2.0-flash-lite', 
-    'gemini-2.0-flash-exp', 
-    'gemini-2.0-flash-exp-image-generation'
-  );
+IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'ModelReferenceId' AND Object_ID = Object_ID(N'dbo.Model'))
+BEGIN
+    -- 迁移基础字段（从 ModelReference 复制）
+    UPDATE m
+    SET 
+        m.AllowSearch = mr.AllowSearch,
+        m.AllowVision = mr.AllowVision,
+        m.AllowSystemPrompt = mr.AllowSystemPrompt,
+        m.AllowStreaming = mr.AllowStreaming,
+        m.ThinkTagParserEnabled = CASE WHEN mr.ReasoningResponseKindId = 2 THEN 1 ELSE 0 END,
+        m.MinTemperature = mr.MinTemperature,
+        m.MaxTemperature = mr.MaxTemperature,
+        m.ContextWindow = mr.ContextWindow,
+        m.MaxResponseTokens = mr.MaxResponseTokens,
+        m.DeploymentName = ISNULL(m.DeploymentName, mr.Name),
+        m.IsLegacy = CASE WHEN mr.PublishDate IS NULL OR mr.PublishDate < '2024-07-01' THEN 1 ELSE 0 END
+    FROM dbo.Model m
+    INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id;
+    
+    PRINT N'    -> 已迁移基础字段和 IsLegacy 标记';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，Model.ModelReferenceId 字段不存在';
+END
 
 GO
 
-PRINT N'* 迁移 ReasoningEffortOptions 字段（基于模型名称判断）';
+PRINT N'[Step 2.1] 设置 UseMaxCompletionTokens（OpenAI/Azure OpenAI）';
 
--- 迁移 ReasoningEffortOptions
--- TranditionalReasoning (Low=2, Medium=3, High=4) => "2,3,4"
-UPDATE m
-SET m.ReasoningEffortOptions = '2,3,4'
-FROM dbo.Model m
-INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
-WHERE mr.Name IN (
-    'grok-3-mini', 'grok-3-mini-fast',
-    'o1-2024-12-17', 'o3', 'o3-pro', 'o3-mini-2025-01-31', 'gpt-5-codex',
-    'o4-mini', 'codex-mini',
-    'gpt-image-1', 'gpt-image-1-mini'
-);
-
--- Gpt5Reasoning (Minimal=1, Low=2, Medium=3, High=4) => "1,2,3,4"
-UPDATE m
-SET m.ReasoningEffortOptions = '1,2,3,4'
-FROM dbo.Model m
-INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
-WHERE mr.Name IN (
-    'gpt-5', 'gpt-5-mini', 'gpt-5-nano'
-);
-
--- Compatible (Low=2) => "2"
-UPDATE m
-SET m.ReasoningEffortOptions = '2'
-FROM dbo.Model m
-INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
-WHERE mr.Name IN (
-    'gemini-2.5-pro', 'gemini-2.5-flash',
-    'Qwen/Qwen3-235B-A22B', 'Qwen/Qwen3-30B-A3B', 'Qwen/Qwen3-32B', 'Qwen/Qwen3-14B', 'Qwen/Qwen3-8B',
-    'qwen3-235b-a22b', 'qwen3-30b-a3b', 'qwen3-32b', 'qwen3-14b', 'qwen3-8b', 'qwen3-4b', 'qwen3-1.7b', 'qwen3-0.6b'
-);
+IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'ModelReferenceId' AND Object_ID = Object_ID(N'dbo.Model'))
+BEGIN
+    -- OpenAI 和 Azure OpenAI 使用 max_completion_tokens
+    UPDATE m
+    SET m.UseMaxCompletionTokens = 1
+    FROM dbo.Model m
+    INNER JOIN dbo.ModelKey mk ON m.ModelKeyId = mk.Id
+    WHERE mk.ModelProviderId IN (1, 2); -- 1: OpenAI, 2: Azure OpenAI
+    
+    PRINT N'    -> OpenAI 和 Azure OpenAI 模型已设置 UseMaxCompletionTokens = 1';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，Model.ModelReferenceId 字段不存在';
+END
 
 GO
 
-PRINT N'* 迁移 SupportedImageSizes 并设置图片生成模型的 AllowToolCall';
+PRINT N'[Step 3] 迁移 AllowCodeExecution 字段（基于模型名称判断）';
 
--- 迁移 SupportedImageSizes：根据模型名称判断是否为图片生成模型
--- gpt-image-1 和 gpt-image-1-mini 支持特定的图片尺寸
-UPDATE m
-SET m.SupportedImageSizes = '1024x1024,1792x1024,1024x1792'
-FROM dbo.Model m
-INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
-WHERE mr.Name IN ('gpt-image-1', 'gpt-image-1-mini');
+IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'ModelReferenceId' AND Object_ID = Object_ID(N'dbo.Model'))
+BEGIN
+        -- 迁移 AllowCodeExecution
+        -- gemini-2.0-flash-lite, gemini-2.0-flash-exp, gemini-2.0-flash-exp-image-generation => false
+        -- 其他以 "gemini-" 开头的模型 => true
+        UPDATE m
+        SET m.AllowCodeExecution = 0
+        FROM dbo.Model m
+        INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
+        WHERE mr.Name IN (
+                'gemini-2.0-flash-lite', 
+                'gemini-2.0-flash-exp', 
+                'gemini-2.0-flash-exp-image-generation'
+        );
+
+        UPDATE m
+        SET m.AllowCodeExecution = 1
+        FROM dbo.Model m
+        INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
+        WHERE mr.Name LIKE 'gemini-%'
+            AND mr.Name NOT IN (
+                'gemini-2.0-flash-lite', 
+                'gemini-2.0-flash-exp', 
+                'gemini-2.0-flash-exp-image-generation'
+            );
+END
+ELSE
+BEGIN
+        PRINT N'    -> 已跳过，Model.ModelReferenceId 字段不存在';
+END
+
+GO
+
+PRINT N'[Step 4] 迁移 ReasoningEffortOptions 字段（基于模型名称判断）';
+
+IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'ModelReferenceId' AND Object_ID = Object_ID(N'dbo.Model'))
+BEGIN
+    -- 迁移 ReasoningEffortOptions
+    -- TranditionalReasoning (Low=2, Medium=3, High=4) => "2,3,4"
+    UPDATE m
+    SET m.ReasoningEffortOptions = '2,3,4'
+    FROM dbo.Model m
+    INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
+    WHERE mr.Name IN (
+        'grok-3-mini', 'grok-3-mini-fast',
+        'o1-2024-12-17', 'o3', 'o3-pro', 'o3-mini-2025-01-31', 'gpt-5-codex',
+        'o4-mini', 'codex-mini',
+        'gpt-image-1', 'gpt-image-1-mini'
+    );
+
+    -- Gpt5Reasoning (Minimal=1, Low=2, Medium=3, High=4) => "1,2,3,4"
+    UPDATE m
+    SET m.ReasoningEffortOptions = '1,2,3,4'
+    FROM dbo.Model m
+    INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
+    WHERE mr.Name IN (
+        'gpt-5', 'gpt-5-mini', 'gpt-5-nano'
+    );
+
+    -- Compatible (Low=2) => "2"
+    UPDATE m
+    SET m.ReasoningEffortOptions = '2'
+    FROM dbo.Model m
+    INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
+    WHERE mr.Name IN (
+        'gemini-2.5-pro', 'gemini-2.5-flash',
+        'Qwen/Qwen3-235B-A22B', 'Qwen/Qwen3-30B-A3B', 'Qwen/Qwen3-32B', 'Qwen/Qwen3-14B', 'Qwen/Qwen3-8B',
+        'qwen3-235b-a22b', 'qwen3-30b-a3b', 'qwen3-32b', 'qwen3-14b', 'qwen3-8b', 'qwen3-4b', 'qwen3-1.7b', 'qwen3-0.6b'
+    );
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，Model.ModelReferenceId 字段不存在';
+END
+
+GO
+
+PRINT N'[Step 5] 迁移 SupportedImageSizes 并设置图片生成模型的 AllowToolCall';
+
+IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'ModelReferenceId' AND Object_ID = Object_ID(N'dbo.Model'))
+BEGIN
+    -- 迁移 SupportedImageSizes：根据模型名称判断是否为图片生成模型
+    -- gpt-image-1 和 gpt-image-1-mini 支持特定的图片尺寸
+    UPDATE m
+    SET m.SupportedImageSizes = '1024x1024,1792x1024,1024x1792'
+    FROM dbo.Model m
+    INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
+    WHERE mr.Name IN ('gpt-image-1', 'gpt-image-1-mini');
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过图片分辨率迁移：Model.ModelReferenceId 字段不存在';
+END
 
 -- 图片生成模型不支持工具调用
 UPDATE m
@@ -214,4 +282,72 @@ WHERE m.SupportedImageSizes <> '';
 
 GO
 
-PRINT N'* 数据迁移完成';
+PRINT N'[Step 5.1] 设置 UseAsyncApi 和 ApiType 字段（o3-pro 使用异步Response API）';
+
+IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'ModelReferenceId' AND Object_ID = Object_ID(N'dbo.Model'))
+BEGIN
+    -- 设置 o3-pro 为异步API和Response API
+    UPDATE m
+    SET m.UseAsyncApi = 1,
+        m.ApiType = 1
+    FROM dbo.Model m
+    INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
+    WHERE mr.Name = 'o3-pro';
+    
+    PRINT N'    -> o3-pro 已设置为使用异步Response API';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，Model.ModelReferenceId 字段不存在';
+END
+
+GO
+
+PRINT N'[Step 6] 将 DeploymentName 改为必填字段';
+
+IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'DeploymentName' AND Object_ID = Object_ID(N'dbo.Model') AND is_nullable = 1)
+BEGIN
+    ALTER TABLE dbo.Model ALTER COLUMN DeploymentName NVARCHAR(50) NOT NULL;
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，DeploymentName 已经是必填字段';
+END
+
+GO
+
+PRINT N'[Step 7] 移除 Model.ModelReferenceId 外键与字段';
+
+IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'ModelReferenceId' AND Object_ID = Object_ID(N'dbo.Model'))
+BEGIN
+    DECLARE @fkName NVARCHAR(128);
+    SELECT TOP 1 @fkName = fk.name
+    FROM sys.foreign_key_columns fkc
+    INNER JOIN sys.objects fk ON fk.object_id = fkc.constraint_object_id
+    INNER JOIN sys.tables t ON t.object_id = fkc.parent_object_id
+    INNER JOIN sys.tables rt ON rt.object_id = fkc.referenced_object_id
+    WHERE t.object_id = OBJECT_ID(N'dbo.Model') AND rt.object_id = OBJECT_ID(N'dbo.ModelReference');
+
+    IF @fkName IS NOT NULL
+    BEGIN
+        DECLARE @dropFkSql NVARCHAR(MAX) = N'ALTER TABLE dbo.Model DROP CONSTRAINT ' + QUOTENAME(@fkName) + N';';
+        EXEC sp_executesql @dropFkSql;
+    END
+
+    IF EXISTS(SELECT * FROM sys.indexes WHERE name = N'IX_Model_ModelReferenceId' AND object_id = OBJECT_ID(N'dbo.Model'))
+    BEGIN
+        DROP INDEX IX_Model_ModelReferenceId ON dbo.Model;
+    END
+
+    ALTER TABLE dbo.Model DROP COLUMN ModelReferenceId;
+    
+    PRINT N'    -> 已成功删除 Model.ModelReferenceId 字段';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，Model.ModelReferenceId 字段不存在';
+END
+
+GO
+
+PRINT N'[Done] 数据迁移完成';

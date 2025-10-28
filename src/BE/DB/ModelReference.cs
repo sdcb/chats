@@ -60,9 +60,6 @@ public partial class ModelReference
     [InverseProperty("ModelReferences")]
     public virtual CurrencyRate CurrencyCodeNavigation { get; set; } = null!;
 
-    [InverseProperty("ModelReference")]
-    public virtual ICollection<Model> Models { get; set; } = new List<Model>();
-
     [ForeignKey("ProviderId")]
     [InverseProperty("ModelReferences")]
     public virtual ModelProvider Provider { get; set; } = null!;

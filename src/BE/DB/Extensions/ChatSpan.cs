@@ -15,14 +15,7 @@ public partial class ChatSpan
         };
         if (span.ChatConfig.MaxOutputTokens.HasValue)
         {
-            if (userModel.Model.ModelReference.ProviderId == (int)DBModelProvider.AzureOpenAI || userModel.Model.ModelReference.ProviderId == (int)DBModelProvider.OpenAI)
-            {
-                cco.MaxOutputTokenCount = span.ChatConfig.MaxOutputTokens.Value;
-            }
-            else
-            {
-                cco.GetOrCreateSerializedAdditionalRawData()["max_tokens"] = BinaryData.FromObjectAsJson(span.ChatConfig.MaxOutputTokens.Value);
-            }
+            cco.SetMaxTokens(span.ChatConfig.MaxOutputTokens.Value, userModel.Model.UseMaxCompletionTokens);
         }
         return cco;
     }

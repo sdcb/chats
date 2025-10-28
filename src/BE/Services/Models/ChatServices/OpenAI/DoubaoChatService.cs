@@ -8,7 +8,7 @@ public class DoubaoChatService(Model model) : ChatCompletionService(model, new U
 {
     protected override Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, CancellationToken cancellationToken)
     {
-        options.SetMaxTokens(Model.ModelReference.MaxResponseTokens);
+        options.SetMaxTokens(Model.MaxResponseTokens, Model.UseMaxCompletionTokens);
         return base.FEPreprocess(messages, options, feOptions, cancellationToken);
     }
 }

@@ -27,7 +27,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
     private static ImageClient CreateImageGenerationAPI(Model model, Uri? suggestedUrl, PipelinePolicy[] perCallPolicies)
     {
         OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model, suggestedUrl, perCallPolicies);
-        ImageClient cc = api.GetImageClient(model.ApiModelId);
+        ImageClient cc = api.GetImageClient(model.DeploymentName);
         return cc;
     }
 
@@ -55,7 +55,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
             JsonObject requestBody = new()
             {
                 ["prompt"] = prompt,
-                ["model"] = Model.ApiModelId,
+                ["model"] = Model.DeploymentName,
                 ["n"] = n,
                 ["stream"] = true,
                 ["partial_images"] = 3,
@@ -284,7 +284,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
 
         form.Add(prompt, "prompt");
         form.Add(options.MaxOutputTokenCount ?? 1, "n");
-        form.Add(Model.ApiModelId, "model");
+        form.Add(Model.DeploymentName, "model");
 
         if (_imageSize != DBKnownImageSize.Default)
         {
