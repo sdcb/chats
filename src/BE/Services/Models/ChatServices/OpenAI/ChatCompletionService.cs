@@ -84,7 +84,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
         ChatCompletion delta = cc.Value;
         return new ChatSegment
         {
-            Items = ChatSegmentItem.FromTextThinkToolCall(delta.Content[0].Text, GetReasoningContent(delta), delta.ToolCalls),
+            Items = ChatSegmentItem.FromTextThinkToolCall(delta.Content.Count > 0 ? delta.Content[0].Text : null, GetReasoningContent(delta), delta.ToolCalls),
             FinishReason = delta.FinishReason,
             Usage = delta.Usage != null ? GetUsage(delta.Usage) : null,
         };
