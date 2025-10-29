@@ -26,7 +26,6 @@ import { Switch } from '@/components/ui/switch';
 
 import { setChats } from '@/actions/chat.actions';
 import HomeContext from '@/contexts/home.context';
-import { isImageGenerationModel } from '@/utils/model';
 import ChatModelInfo from './ChatModelInfo';
 import FeatureToggle from './FeatureToggle';
 import SystemPrompt from './SystemPrompt';
@@ -251,7 +250,7 @@ const ChatModelSettingModal = (props: Props) => {
                   }}
                 />
               )}
-              {model?.allowSearch && (
+              {model.allowSearch && (
                 <div className="w-1/2 pr-1.5 inline-block">
                   <FeatureToggle
                     label={t('Internet Search')}
@@ -263,7 +262,7 @@ const ChatModelSettingModal = (props: Props) => {
                   />
                 </div>
               )}
-              {model?.allowCodeExecution && (
+              {model.allowCodeExecution && (
                 <div className="w-1/2 pl-1.5 inline-block">
                   <FeatureToggle
                     label={t('Code Execution')}
@@ -275,7 +274,7 @@ const ChatModelSettingModal = (props: Props) => {
                   />
                 </div>
               )}
-              {model?.reasoningEffortOptions && model.reasoningEffortOptions.length > 0 && (
+              {model.reasoningEffortOptions && model.reasoningEffortOptions.length > 0 && (
                 <ReasoningEffortRadio
                   value={`${span?.reasoningEffort}`}
                   availableOptions={model.reasoningEffortOptions}
@@ -284,7 +283,7 @@ const ChatModelSettingModal = (props: Props) => {
                   }}
                 />
               )}
-              {isImageGenerationModel(model?.modelReferenceName) && (
+              {model.supportedImageSizes && model.supportedImageSizes.length > 0 && (
                 <ImageSizeRadio
                   value={`${span?.imageSize}`}
                   onValueChange={(value) => {
@@ -292,7 +291,7 @@ const ChatModelSettingModal = (props: Props) => {
                   }}
                 />
               )}
-              {!isImageGenerationModel(model?.modelReferenceName) && (
+              {model.allowToolCall && (
                 <McpSelector
                   value={span?.mcps || []}
                   onValueChange={(mcps) => {

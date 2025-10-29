@@ -10,9 +10,7 @@ export const PromptVariables = {
   '{{CURRENT_DATE}}': () => formatDate(new Date().toLocaleDateString()),
   '{{CURRENT_TIME}}': () => formatDateTime(new Date().toLocaleString()),
   '{{MODEL_NAME}}': (params?: PromptParams) =>
-    params?.model?.modelReferenceShortName ||
-    params?.model?.modelReferenceName ||
-    '',
+    params?.model?.name || '',
 };
 
 export function formatPrompt(prompt: string, params?: PromptParams) {

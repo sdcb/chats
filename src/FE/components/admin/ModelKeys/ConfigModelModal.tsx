@@ -26,9 +26,11 @@ import {
 
 import {
   getModelKeyPossibleModels,
-  postModelFastCreate,
+  postModels,
   postModelValidate,
 } from '@/apis/adminApis';
+import { UpdateModelDto } from '@/types/adminApis';
+import { DEFAULT_MODEL_CONFIG } from '@/constants/modelDefaults';
 
 interface IProps {
   modelKeyId: number;
@@ -39,14 +41,11 @@ interface IProps {
 }
 
 export interface PossibleModel {
-  referenceName: string;
-  modelReferenceId: number;
+  deploymentName: string;
   isExists: boolean;
-  isLegacy: boolean;
   validating: boolean;
   validateMessage: string | null;
   adding: boolean;
-  deploymentName: string | null;
 }
 
 const ConfigModelModal = (props: IProps) => {
@@ -54,14 +53,6 @@ const ConfigModelModal = (props: IProps) => {
   const { modelKeyId, isOpen, onClose } = props;
   const [models, setModels] = useState<PossibleModel[]>([]);
   const [loading, setLoading] = React.useState(false);
-  const onSave = async (index: number) => {
-    const model = models[index];
-    postModelFastCreate({
-      modelKeyId: modelKeyId,
-      modelReferenceId: model.modelReferenceId,
-      deploymentName: null,
-    });
-  };
 
   useEffect(() => {
     if (isOpen) {
@@ -77,6 +68,10 @@ const ConfigModelModal = (props: IProps) => {
           })),
         );
         setLoading(false);
+      }).catch((error) => {
+        console.error('Failed to fetch models:', error);
+        toast.error(t('Failed to fetch available models'));
+        setLoading(false);
       });
     }
   }, [isOpen]);
@@ -86,13 +81,24 @@ const ConfigModelModal = (props: IProps) => {
     const modelList = [...models];
     model.adding = true;
     setModels([...modelList.map((x, i) => (i === index ? model : x))]);
-    postModelFastCreate({
+    
+    // 使用普通创建接口，传入完整配置
+    const dto: UpdateModelDto = {
+      name: model.deploymentName,
+      deploymentName: model.deploymentName,
       modelKeyId: modelKeyId,
-      modelReferenceId: model.modelReferenceId,
-      deploymentName: model.deploymentName || null,
-    }).then(() => {
+      enabled: true,
+      ...DEFAULT_MODEL_CONFIG,
+    };
+    
+    postModels(dto).then(() => {
       toast.success(t('Added successfully'));
       model.isExists = true;
+      model.adding = false;
+      setModels([...modelList.map((x, i) => (i === index ? model : x))]);
+    }).catch((error) => {
+      console.error('Failed to add model:', error);
+      toast.error(t('Failed to add model'));
       model.adding = false;
       setModels([...modelList.map((x, i) => (i === index ? model : x))]);
     });
@@ -103,11 +109,17 @@ const ConfigModelModal = (props: IProps) => {
     const modelList = [...models];
     model.validating = true;
     setModels([...modelList.map((x, i) => (i === index ? model : x))]);
-    postModelValidate({
+    
+    // 构造完整的配置对象进行验证
+    const params: UpdateModelDto = {
+      name: model.deploymentName,
+      deploymentName: model.deploymentName,
       modelKeyId: modelKeyId,
-      modelReferenceId: model.modelReferenceId,
-      deploymentName: model.deploymentName || null,
-    }).then((data) => {
+      enabled: true,
+      ...DEFAULT_MODEL_CONFIG,
+    };
+    
+    postModelValidate(params).then((data) => {
       if (data.isSuccess) {
         model.validateMessage = null;
         toast.success(t('Verified Successfully'));
@@ -115,6 +127,11 @@ const ConfigModelModal = (props: IProps) => {
         toast.error(t('Verified Failed'));
         model.validateMessage = data.errorMessage;
       }
+      model.validating = false;
+      setModels([...modelList.map((x, i) => (i === index ? model : x))]);
+    }).catch((error) => {
+      console.error('Validation failed:', error);
+      toast.error(t('Validation failed'));
       model.validating = false;
       setModels([...modelList.map((x, i) => (i === index ? model : x))]);
     });
@@ -144,27 +161,22 @@ const ConfigModelModal = (props: IProps) => {
             </TableHeader>
             <TableBody>
               {models.map((model, index) => (
-                <TableRow key={model.modelReferenceId}>
+                <TableRow key={model.deploymentName}>
                   <TableCell>
                     <Input
                       className="max-w-[300px]"
                       disabled={model.isExists}
-                      value={model.deploymentName || ''}
+                      value={model.deploymentName}
                       onChange={(e) => {
                         handleChangeDeploymentName(index, e.target.value);
                       }}
                     />
                   </TableCell>
                   <TableCell>
-                    {model.referenceName}
+                    {model.deploymentName}
                     {model.isExists && (
                       <Badge variant="default" className="ml-2">
                         {t('Existed')}
-                      </Badge>
-                    )}
-                    {model.isLegacy && (
-                      <Badge variant="destructive" className="ml-2">
-                        {t('Legacy')}
                       </Badge>
                     )}
                   </TableCell>

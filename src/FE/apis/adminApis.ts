@@ -23,9 +23,7 @@ import {
   GetUserMessageParams,
   GetUsersParams,
   GetUsersResult,
-  ModelFastCreateParams,
   ModelProviderInitialConfig,
-  ModelReferenceDto,
   PasswordAttemptLog,
   PossibleModelResult,
   PostAndPutConfigParams,
@@ -41,10 +39,9 @@ import {
   PutUserBalanceParams,
   PutUserInitialConfigParams,
   PutUserParams,
-  SecurityLogExportParams,
   SecurityLogQueryParams,
+  SecurityLogExportParams,
   ReorderRequest,
-  SimpleModelReferenceDto,
   StatisticsTimeParams,
   TokenStatisticsByDateResult,
   UpdateModelDto,
@@ -402,19 +399,8 @@ export const getModelProviderInitialConfig = (
   );
 };
 
-export const getModelProviderModels = (modelProviderId: DBModelProvider) => {
-  const fetchServer = useFetch();
-  return fetchServer.get<SimpleModelReferenceDto[]>(
-    `/api/model-provider/${modelProviderId}/models`,
-  );
-};
-
-export const getModelReference = (modelReferenceId: number) => {
-  const fetchServer = useFetch();
-  return fetchServer.get<ModelReferenceDto>(
-    `/api/model-reference/${modelReferenceId}`,
-  );
-};
+// getModelProviderModels 已删除 - 不再需要
+// getModelReference 已删除 - 不再需要
 
 export const getModelKeyPossibleModels = (modelKeyId: number) => {
   const fetchServer = useFetch();
@@ -430,12 +416,7 @@ export const postModelValidate = (params: ValidateModelParams) => {
   });
 };
 
-export const postModelFastCreate = (params: ModelFastCreateParams) => {
-  const fetchServer = useFetch();
-  return fetchServer.post<ErrorResult>(`/api/admin/models/fast-create`, {
-    body: params,
-  });
-};
+// postModelFastCreate 已删除 - 使用 postModels 代替
 
 export const getAdminMessage = (chatId: string) => {
   const fetchServer = useFetch();

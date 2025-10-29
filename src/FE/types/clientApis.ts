@@ -301,7 +301,6 @@ export interface GetUsageResult {
   apiKeyId: string;
   apiKey: string;
   modelProviderName: string;
-  modelReferenceName: string;
   modelName: string;
   preprocessDurationMs: number;
   firstResponseDurationMs: number;
