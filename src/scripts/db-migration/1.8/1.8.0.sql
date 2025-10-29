@@ -257,17 +257,20 @@ END
 
 GO
 
-PRINT N'[Step 5] 迁移 SupportedImageSizes 并设置图片生成模型的 AllowToolCall';
+PRINT N'[Step 5] 迁移 SupportedImageSizes 并设置图片生成模型的 ApiType 和 AllowToolCall';
 
 IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'ModelReferenceId' AND Object_ID = Object_ID(N'dbo.Model'))
 BEGIN
     -- 迁移 SupportedImageSizes：根据模型名称判断是否为图片生成模型
     -- gpt-image-1 和 gpt-image-1-mini 支持特定的图片尺寸
     UPDATE m
-    SET m.SupportedImageSizes = '1024x1024,1792x1024,1024x1792'
+    SET m.SupportedImageSizes = '1024x1024,1792x1024,1024x1792',
+        m.ApiType = 2  -- ImageGeneration
     FROM dbo.Model m
     INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
     WHERE mr.Name IN ('gpt-image-1', 'gpt-image-1-mini');
+    
+    PRINT N'    -> 图片生成模型已设置 ApiType=2 (ImageGeneration)';
 END
 ELSE
 BEGIN
@@ -282,19 +285,23 @@ WHERE m.SupportedImageSizes <> '';
 
 GO
 
-PRINT N'[Step 5.1] 设置 UseAsyncApi 和 ApiType 字段（o3-pro 使用异步Response API）';
+PRINT N'[Step 5.1] 设置 UseAsyncApi 和 ApiType 字段（推理模型使用 Response API）';
 
 IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'ModelReferenceId' AND Object_ID = Object_ID(N'dbo.Model'))
 BEGIN
-    -- 设置 o3-pro 为异步API和Response API
+    -- 设置推理模型为 Response API (ApiType=1)
+    -- o3-pro 同时设置为异步API
     UPDATE m
-    SET m.UseAsyncApi = 1,
-        m.ApiType = 1
+    SET m.ApiType = 1,
+        m.UseAsyncApi = CASE 
+            WHEN mr.Name = 'o3-pro' THEN 1 
+            ELSE 0 
+        END
     FROM dbo.Model m
     INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
-    WHERE mr.Name = 'o3-pro';
+    WHERE mr.Name IN ('o3', 'o3-pro', 'o4-mini', 'codex-mini', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-5-codex', 'gpt-5-pro');
     
-    PRINT N'    -> o3-pro 已设置为使用异步Response API';
+    PRINT N'    -> 推理模型已设置为使用 Response API (o3-pro 额外设置为异步模式)';
 END
 ELSE
 BEGIN

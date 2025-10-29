@@ -30,7 +30,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         bool hasTools = false;
-        if (Model.DeploymentName == "o3-pro")
+        if (Model.UseAsyncApi)
         {
             Stopwatch sw = Stopwatch.StartNew();
             OpenAIResponse response = await responseClient.CreateResponseAsync(ToResponse(messages), ToResponse(options, background: true), cancellationToken);
