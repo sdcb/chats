@@ -110,7 +110,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
             }
             else
             {
-                ThrowErrorResponse(message.Response, cancellationToken);
+                await ThrowErrorResponse(message.Response, cancellationToken);
             }
         }
         else
@@ -146,7 +146,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
             }
             else
             {
-                ThrowErrorResponse(message.Response, cancellationToken);
+                await ThrowErrorResponse(message.Response, cancellationToken);
             }
         }
 
@@ -437,7 +437,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
         }
     }
 
-    private static async void ThrowErrorResponse(PipelineResponse response, CancellationToken cancellationToken)
+    private static async Task ThrowErrorResponse(PipelineResponse response, CancellationToken cancellationToken)
     {
         if (response.ContentStream != null)
         {

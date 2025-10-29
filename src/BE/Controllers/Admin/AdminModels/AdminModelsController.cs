@@ -137,6 +137,11 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
         [FromServices] ChatFactory chatFactory,
         CancellationToken cancellationToken)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         ModelKey? modelKey = await db.ModelKeys
             .Include(x => x.ModelProvider)
             .Where(x => x.Id == req.ModelKeyId)

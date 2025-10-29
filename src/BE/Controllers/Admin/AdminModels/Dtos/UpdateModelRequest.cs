@@ -1,27 +1,40 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.DB.Enums;
+using Chats.BE.Controllers.Admin.AdminModels.Validators;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Admin.AdminModels.Dtos;
 
+[ValidateTemperatureRange]
+[ValidateChatResponseTokens]
+[ValidateImageSizes]
+[ValidateImageBatchCount]
 public record UpdateModelRequest
 {
     [JsonPropertyName("name")]
+    [Required(ErrorMessage = "Name is required")]
+    [StringLength(100, MinimumLength = 1, ErrorMessage = "Name must be between 1 and 100 characters")]
     public required string Name { get; init; }
 
     [JsonPropertyName("enabled")]
     public required bool Enabled { get; init; }
 
     [JsonPropertyName("deploymentName")]
+    [Required(ErrorMessage = "Deployment name is required")]
+    [StringLength(100, MinimumLength = 1, ErrorMessage = "Deployment name must be between 1 and 100 characters")]
     public required string DeploymentName { get; init; }
 
     [JsonPropertyName("modelKeyId")]
+    [Range(1, short.MaxValue, ErrorMessage = "Model key ID must be greater than 0")]
     public required short ModelKeyId { get; init; }
 
     [JsonPropertyName("inputTokenPrice1M")]
+    [Range(0, double.MaxValue, ErrorMessage = "Input token price must be non-negative")]
     public required decimal InputTokenPrice1M { get; init; }
 
     [JsonPropertyName("outputTokenPrice1M")]
+    [Range(0, double.MaxValue, ErrorMessage = "Output token price must be non-negative")]
     public required decimal OutputTokenPrice1M { get; init; }
 
     [JsonPropertyName("allowSearch")]
@@ -43,15 +56,19 @@ public record UpdateModelRequest
     public required int[] ReasoningEffortOptions { get; init; }
 
     [JsonPropertyName("minTemperature")]
+    [Range(0, 2, ErrorMessage = "Minimum temperature must be between 0 and 2")]
     public required decimal MinTemperature { get; init; }
 
     [JsonPropertyName("maxTemperature")]
+    [Range(0, 2, ErrorMessage = "Maximum temperature must be between 0 and 2")]
     public required decimal MaxTemperature { get; init; }
 
     [JsonPropertyName("contextWindow")]
+    [Range(0, int.MaxValue, ErrorMessage = "Context window must be non-negative")]
     public required int ContextWindow { get; init; }
 
     [JsonPropertyName("maxResponseTokens")]
+    [Range(0, int.MaxValue, ErrorMessage = "Max response tokens must be non-negative")]
     public required int MaxResponseTokens { get; init; }
 
     [JsonPropertyName("allowToolCall")]
