@@ -60,7 +60,7 @@ import HomeContext from '@/contexts/home.context';
 import ChatHeader from './ChatHeader';
 import ChatInput from './ChatInput';
 import ChatPresetList from './ChatPresetList';
-import ChatMessageMemoized from './MemoizedChatMessage';
+import { ChatMessage } from '@/components/ChatMessage';
 import ChatMessagesSkeleton from './ChatMessagesSkeleton';
 import NoChat from './NoChat';
 import NoModel from './NoModel';
@@ -1347,7 +1347,7 @@ const ChatView = memo(() => {
                 {selectedMessages.length === 0 && <ChatPresetList />}
               </div>
 
-              <ChatMessageMemoized
+              <ChatMessage
                 selectedChat={selectedChat}
                 selectedMessages={selectedMessages}
                 models={models}
