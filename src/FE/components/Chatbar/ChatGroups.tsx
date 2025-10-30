@@ -131,7 +131,7 @@ const ChatGroups = ({ onShowMore }: Props) => {
   };
 
   const handleItemDragStart = (
-    e: DragEvent<HTMLButtonElement>,
+    e: DragEvent<HTMLElement>,
     chat: IChat,
   ) => {
     const chatGroupList = chatGroups.map((x) => ({ ...x, isExpanded: false }));
