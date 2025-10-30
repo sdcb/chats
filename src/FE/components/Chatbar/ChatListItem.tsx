@@ -46,7 +46,7 @@ import { cn } from '@/lib/utils';
 
 interface Props {
   chat: IChat;
-  onDragItemStart?: (e: DragEvent<HTMLButtonElement>, chat: IChat) => void;
+  onDragItemStart?: (e: DragEvent<HTMLElement>, chat: IChat) => void;
 }
 
 const ChatListItem = ({ chat, onDragItemStart }: Props) => {
@@ -93,7 +93,7 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
     }
   };
 
-  const handleDragStart = (e: DragEvent<HTMLButtonElement>, chat: IChat) => {
+  const handleDragStart = (e: DragEvent<HTMLElement>, chat: IChat) => {
     onDragItemStart && onDragItemStart(e, chat);
   };
 
@@ -187,12 +187,19 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
           />
         </div>
       ) : (
-        <button
-          className={`flex w-full h-11 cursor-pointer items-center gap-2 rounded-lg px-2 transition-colors duration-200 hover:bg-muted ${
-            chatting ? 'disabled:cursor-not-allowed' : ''
+        <a
+          href={`#/${chat.id}`}
+          className={`flex w-full h-11 cursor-pointer items-center gap-2 rounded-lg px-2 transition-colors duration-200 hover:bg-muted no-underline ${
+            chatting ? 'pointer-events-none cursor-not-allowed opacity-60' : ''
           } ${selectChatId === chat.id ? 'bg-muted' : ''}`}
-          onClick={() => handleSelectChat(chat)}
-          disabled={chatting}
+          onClick={(e) => {
+            if (chatting) {
+              e.preventDefault();
+              return;
+            }
+            e.preventDefault();
+            handleSelectChat(chat);
+          }}
           draggable
           onDragStart={(e) => handleDragStart(e, chat)}
         >
@@ -251,7 +258,7 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
           >
             {chat.title}
           </div>
-        </button>
+        </a>
       )}
 
       {(isDeleting || isChanging || isArchive) && selectChatId === chat.id && (

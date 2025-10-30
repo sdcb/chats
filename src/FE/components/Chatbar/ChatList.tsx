@@ -17,7 +17,7 @@ interface Props {
   groupId: string | null;
   chatGroups: Map<string, IChat[]>;
   onShowMore?: (groupId: string | null) => void;
-  onDragItemStart?: (e: DragEvent<HTMLButtonElement>, chat: IChat) => void;
+  onDragItemStart?: (e: DragEvent<HTMLElement>, chat: IChat) => void;
 }
 
 const ChatList = ({
