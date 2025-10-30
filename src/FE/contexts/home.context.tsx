@@ -44,6 +44,7 @@ export interface HomeInitialState {
   selectedChatId: SetSelectedChatIdType;
   chatPaging: SetChatsPagingType;
   isChatsLoading: boolean;
+  isMessagesLoading: boolean;
   chatsSelectType: CHATS_SELECT_TYPE;
 
   models: SetModelsType;
@@ -65,6 +66,7 @@ export const initialState: HomeInitialState = {
   selectedChatId: undefined,
   chatPaging: [],
   isChatsLoading: false,
+  isMessagesLoading: false,
   chatsSelectType: CHATS_SELECT_TYPE.NONE,
 
   models: [],

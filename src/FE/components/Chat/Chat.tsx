@@ -61,6 +61,7 @@ import ChatHeader from './ChatHeader';
 import ChatInput from './ChatInput';
 import ChatPresetList from './ChatPresetList';
 import ChatMessageMemoized from './MemoizedChatMessage';
+import ChatMessagesSkeleton from './ChatMessagesSkeleton';
 import NoChat from './NoChat';
 import NoModel from './NoModel';
 
@@ -88,6 +89,7 @@ const Chat = memo(() => {
       modelMap,
       showChatBar,
       showChatInput,
+      isMessagesLoading,
     },
     selectedChat,
     hasModel,
@@ -1332,32 +1334,38 @@ const Chat = memo(() => {
           ref={chatContainerRef}
           onScroll={handleScroll}
         >
-          <div
-            className="sm:w-full chat-container"
-            style={{
-              width: `calc(100vw - ${showChatBar ? 280 : 0}px)`,
-            }}
-          >
-            {selectedMessages.length === 0 && <ChatPresetList />}
-          </div>
+          {isMessagesLoading ? (
+            <ChatMessagesSkeleton selectedChat={selectedChat} />
+          ) : (
+            <>
+              <div
+                className="sm:w-full chat-container"
+                style={{
+                  width: `calc(100vw - ${showChatBar ? 280 : 0}px)`,
+                }}
+              >
+                {selectedMessages.length === 0 && <ChatPresetList />}
+              </div>
 
-          <ChatMessageMemoized
-            selectedChat={selectedChat}
-            selectedMessages={selectedMessages}
-            models={models}
-            messagesEndRef={messagesEndRef}
-            onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
-            onEditAndSendMessage={handleEditAndSendMessage}
-            onRegenerate={handleRegenerate}
-            onReactionMessage={handleReactionMessage}
-            onEditResponseMessage={handleUpdateResponseMessage}
-            onEditUserMessage={handleUpdateUserMessage}
-            onDeleteMessage={handleDeleteMessage}
-            onChangeDisplayType={handleChangeDisplayType}
-            onRegenerateAllAssistant={handleRegenerateAllAssistant}
-          />
+              <ChatMessageMemoized
+                selectedChat={selectedChat}
+                selectedMessages={selectedMessages}
+                models={models}
+                messagesEndRef={messagesEndRef}
+                onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
+                onEditAndSendMessage={handleEditAndSendMessage}
+                onRegenerate={handleRegenerate}
+                onReactionMessage={handleReactionMessage}
+                onEditResponseMessage={handleUpdateResponseMessage}
+                onEditUserMessage={handleUpdateUserMessage}
+                onDeleteMessage={handleDeleteMessage}
+                onChangeDisplayType={handleChangeDisplayType}
+                onRegenerateAllAssistant={handleRegenerateAllAssistant}
+              />
 
-          <div className={cn(showChatInput ? 'h-32' : 'h-2')}></div>
+              <div className={cn(showChatInput ? 'h-32' : 'h-2')}></div>
+            </>
+          )}
         </div>
 
         {hasModel() && (

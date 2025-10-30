@@ -9,6 +9,7 @@ import {
   SetChatsPagingType,
   SetChatsType,
   SetIsChatsLoadingType,
+  SetIsMessagesLoadingType,
   SetSelectedChatIdType,
   SetStopIdsType,
 } from '@/reducers/chat.reducer';
@@ -65,6 +66,13 @@ export const setIsChatsLoading = (
 ): ChatAction => ({
   type: ChatActionTypes.SET_IS_CHATS_LOADING,
   payload: isChatsLoading,
+});
+
+export const setIsMessagesLoading = (
+  isMessagesLoading: SetIsMessagesLoadingType,
+): ChatAction => ({
+  type: ChatActionTypes.SET_IS_MESSAGES_LOADING,
+  payload: isMessagesLoading,
 });
 
 export const setStopIds = (stopIds: SetStopIdsType): ChatAction => ({
