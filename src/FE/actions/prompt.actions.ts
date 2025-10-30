@@ -1,18 +1,18 @@
+import { Prompt, PromptSlim } from '@/types/prompt';
+
 import {
   PromptAction,
   PromptActionTypes,
-  SetDefaultPromptType,
-  SetPromptsType,
 } from '@/reducers/prompt.reducer';
 
 export const setDefaultPrompt = (
-  prompt: SetDefaultPromptType,
+  prompt: Prompt,
 ): PromptAction => ({
   type: PromptActionTypes.SET_DEFAULT_PROMPT,
   payload: prompt,
 });
 
-export const setPrompts = (prompts: SetPromptsType): PromptAction => ({
+export const setPrompts = (prompts: PromptSlim[]): PromptAction => ({
   type: PromptActionTypes.SET_PROMPTS,
   payload: prompts,
 });
