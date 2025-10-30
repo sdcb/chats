@@ -78,7 +78,7 @@ import {
 import { streamGeneralChat, streamRegenerateAssistant, streamRegenerateAllAssistant, ChatApiError } from '@/apis/chatApi';
 import { cn } from '@/lib/utils';
 
-const Chat = memo(() => {
+const ChatView = memo(() => {
   const { t } = useTranslation();
   const {
     state: {
@@ -1387,5 +1387,5 @@ const Chat = memo(() => {
     </div>
   );
 });
-Chat.displayName = 'Chat';
-export default Chat;
+ChatView.displayName = 'ChatView';
+export default ChatView;

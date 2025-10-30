@@ -56,7 +56,7 @@ import promptReducer, {
 import settingReducer, {
   settingInitialState,
 } from '@/reducers/setting.reducer';
-import Chat from '../Chat/Chat';
+import Chat from '../Chat/ChatView';
 import Chatbar from '../Chatbar/Chatbar';
 
 import {

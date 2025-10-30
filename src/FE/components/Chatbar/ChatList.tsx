@@ -9,7 +9,7 @@ import { IChat } from '@/types/chat';
 import { Button } from '@/components/ui/button';
 
 import HomeContext from '@/contexts/home.context';
-import ConversationComponent from './Conversation';
+import ChatListItem from './ChatListItem';
 
 import { cn } from '@/lib/utils';
 
@@ -20,7 +20,7 @@ interface Props {
   onDragItemStart?: (e: DragEvent<HTMLButtonElement>, chat: IChat) => void;
 }
 
-const Conversations = ({
+const ChatList = ({
   groupId,
   chatGroups,
   onShowMore,
@@ -57,7 +57,7 @@ const Conversations = ({
                 className={cn(!isUnGroupChat(groupId) && 'ml-1')}
                 key={'conversation-' + index}
               >
-                <ConversationComponent
+                <ChatListItem
                   onDragItemStart={onDragItemStart}
                   chat={chat}
                 />
@@ -73,4 +73,4 @@ const Conversations = ({
     </div>
   );
 };
-export default Conversations;
+export default ChatList;

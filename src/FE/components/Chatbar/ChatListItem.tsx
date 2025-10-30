@@ -49,7 +49,7 @@ interface Props {
   onDragItemStart?: (e: DragEvent<HTMLButtonElement>, chat: IChat) => void;
 }
 
-const ConversationComponent = ({ chat, onDragItemStart }: Props) => {
+const ChatListItem = ({ chat, onDragItemStart }: Props) => {
   const { t } = useTranslation();
   const {
     state: {
@@ -344,4 +344,4 @@ const ConversationComponent = ({ chat, onDragItemStart }: Props) => {
   );
 };
 
-export default ConversationComponent;
+export default ChatListItem;

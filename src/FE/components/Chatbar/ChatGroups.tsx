@@ -11,7 +11,7 @@ import Folder from '@/components/Folder/Folder';
 
 import { setChatGroup, setChats } from '@/actions/chat.actions';
 import HomeContext from '@/contexts/home.context';
-import Conversations from './Conversations';
+import ChatList from './ChatList';
 
 import {
   deleteChatGroup,
@@ -173,7 +173,7 @@ const ChatGroups = ({ onShowMore }: Props) => {
       <div
         className={cn(!isUnGroupChat(chatGroup.id) && 'ml-4 gap-2 border-l')}
       >
-        <Conversations
+        <ChatList
           onDragItemStart={handleItemDragStart}
           groupId={chatGroup.id}
           onShowMore={onShowMore}
