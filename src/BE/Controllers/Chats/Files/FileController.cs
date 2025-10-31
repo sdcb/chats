@@ -4,7 +4,6 @@ using Chats.BE.Infrastructure;
 using Chats.BE.Services;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.UrlEncryption;
-using Chats.BE.Services.ImageInfo;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
@@ -86,14 +85,34 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         }
 
         IFileService fs = fileServiceFactory.Create(fileService);
-        using Stream baseStream = file.OpenReadStream();
-        using PartialBufferedStream pbStream = new(baseStream, 4 * 1024);
-        string storageKey = await fs.Upload(new FileUploadRequest
+        
+        // Read file to memory for parsing and uploading
+        byte[] fileBytes;
+        using (Stream baseStream = file.OpenReadStream())
         {
-            ContentType = file.ContentType,
-            Stream = pbStream,
-            FileName = file.FileName
-        }, cancellationToken);
+            using MemoryStream ms = new();
+            await baseStream.CopyToAsync(ms, cancellationToken);
+            fileBytes = ms.ToArray();
+        }
+
+        // Get image info before upload (for images only)
+        FileImageInfo? imageInfo = fileImageInfoService.GetImageInfo(
+            file.FileName, 
+            file.ContentType, 
+            fileBytes);
+
+        // Upload file
+        string storageKey;
+        using (MemoryStream uploadStream = new(fileBytes))
+        {
+            storageKey = await fs.Upload(new FileUploadRequest
+            {
+                ContentType = file.ContentType,
+                Stream = uploadStream,
+                FileName = file.FileName
+            }, cancellationToken);
+        }
+
         DB.File dbFile = new()
         {
             FileName = file.FileName,
@@ -104,7 +123,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
             ClientInfo = await clientInfoManager.GetClientInfo(cancellationToken),
             CreateUserId = currentUser.Id,
             CreatedAt = DateTime.UtcNow,
-            FileImageInfo = fileImageInfoService.GetImageInfo(file.FileName, file.ContentType, pbStream.SeekedBytes)
+            FileImageInfo = imageInfo
         };
         db.Files.Add(dbFile);
         await db.SaveChangesAsync(cancellationToken);

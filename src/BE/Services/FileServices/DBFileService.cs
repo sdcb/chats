@@ -13,6 +13,9 @@ public class DBFileService(ChatsDB db, FileServiceFactory fsf, CurrentUser curre
         IFileService fs = fsf.Create(dbfs);
         FileContentTypeService fstService = new(db);
 
+        // Get image info before upload
+        FileImageInfo? imageInfo = fiis.GetImageInfo(def.FileName, def.ContentType, def.Bytes);
+
         string storageKey = await fs.Upload(new FileUploadRequest
         {
             Stream = new MemoryStream(def.Bytes),
@@ -33,7 +36,7 @@ public class DBFileService(ChatsDB db, FileServiceFactory fsf, CurrentUser curre
             CreateUserId = currentUser.Id,
             FileServiceId = dbfs.Id,
             FileService = dbfs,
-            FileImageInfo = fiis.GetImageInfo(def.FileName, def.ContentType, def.Bytes),
+            FileImageInfo = imageInfo,
         };
         db.Files.Add(file);
         await db.SaveChangesAsync(cancellationToken);

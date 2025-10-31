@@ -1,21 +1,35 @@
 ﻿using Chats.BE.DB;
-using Chats.BE.Services.ImageInfo;
-using System.Drawing;
+using SkiaSharp;
 
 namespace Chats.BE.Services.FileServices;
 
 public class FileImageInfoService(ILogger<FileImageInfoService> logger)
 {
-    public FileImageInfo? GetImageInfo(string fileName, string contentType, byte[] imageFirst4KBytes)
+    /// <summary>
+    /// Get image info from a byte array.
+    /// </summary>
+    public FileImageInfo? GetImageInfo(string fileName, string contentType, byte[] imageBytes)
     {
+        // Only process image files
+        if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
         try
         {
-            IImageInfoService iis = ImageInfoFactory.CreateImageInfoService(contentType);
-            Size size = iis.GetImageSize(imageFirst4KBytes);
+            using MemoryStream stream = new MemoryStream(imageBytes);
+            using SKCodec codec = SKCodec.Create(stream);
+            if (codec == null)
+            {
+                logger.LogWarning("Failed to create codec for {fileName}({contentType})", fileName, contentType);
+                return null;
+            }
+
             return new FileImageInfo
             {
-                Width = size.Width,
-                Height = size.Height
+                Width = codec.Info.Width,
+                Height = codec.Info.Height
             };
         }
         catch (Exception e)
