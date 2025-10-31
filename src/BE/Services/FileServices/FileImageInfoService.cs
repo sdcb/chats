@@ -1,5 +1,5 @@
 ﻿using Chats.BE.DB;
-using SkiaSharp;
+using SixLabors.ImageSharp;
 
 namespace Chats.BE.Services.FileServices;
 
@@ -18,18 +18,17 @@ public class FileImageInfoService(ILogger<FileImageInfoService> logger)
 
         try
         {
-            using MemoryStream stream = new MemoryStream(imageBytes);
-            using SKCodec codec = SKCodec.Create(stream);
-            if (codec == null)
+            ImageInfo image = Image.Identify(imageBytes);
+            if (image == null)
             {
-                logger.LogWarning("Failed to create codec for {fileName}({contentType})", fileName, contentType);
+                logger.LogWarning("Failed to identify image for {fileName}({contentType})", fileName, contentType);
                 return null;
             }
 
             return new FileImageInfo
             {
-                Width = codec.Info.Width,
-                Height = codec.Info.Height
+                Width = image.Width,
+                Height = image.Height
             };
         }
         catch (Exception e)

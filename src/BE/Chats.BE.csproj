@@ -27,8 +27,7 @@
     <PackageReference Include="Mscc.GenerativeAI" Version="2.8.18" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageReference Include="OpenAI" Version="2.5.0" />
-    <PackageReference Include="SkiaSharp" Version="3.119.1" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.1" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.3" />
