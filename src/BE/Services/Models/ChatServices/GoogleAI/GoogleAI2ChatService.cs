@@ -41,7 +41,8 @@ public class GoogleAI2ChatService : ChatService
     }
 
     public bool AllowImageGeneration => Model.DeploymentName == "gemini-2.0-flash-exp" ||
-                                        Model.DeploymentName == "gemini-2.0-flash-exp-image-generation";
+                                        Model.DeploymentName == "gemini-2.0-flash-exp-image-generation" ||
+                                        Model.DeploymentName == "gemini-2.5-flash-image";
 
     private bool _codeExecutionEnabled = false;
 
@@ -93,7 +94,16 @@ public class GoogleAI2ChatService : ChatService
         };
         Stopwatch codeExecutionSw = new();
         string? codeExecutionId = null;
-        await foreach (GenerateContentResponse response in _generativeModel.GenerateContentStream(gcr, new RequestOptions(null, NetworkTimeout), cancellationToken))
+        await foreach (GenerateContentResponse response in _generativeModel.GenerateContentStream(gcr, new RequestOptions()
+        {
+            Retry = new Retry()
+            {
+                Maximum = 3,
+                Initial = 1,
+                Multiplies = 2,
+            },
+            Timeout = NetworkTimeout,
+        }, cancellationToken))
         {
             if (response.Candidates != null && response.Candidates.Count > 0)
             {
