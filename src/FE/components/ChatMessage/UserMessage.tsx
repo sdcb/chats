@@ -17,6 +17,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { SendButton, useSendKeyHandler } from '@/components/ui/send-button';
+import ImagePreview from '@/components/ImagePreview/ImagePreview';
 
 import { Textarea } from '../ui/textarea';
 import CopyAction from './CopyAction';
@@ -62,6 +63,10 @@ const UserMessage = (props: Props) => {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [contentText, setContentText] = useState('');
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [sourceImageElement, setSourceImageElement] = useState<HTMLImageElement | null>(null);
   const { id: messageId, siblingIds, parentId, content } = message;
   const { status: chatStatus } = selectedChat;
   const currentMessageIndex = siblingIds.findIndex((x) => x === messageId);
@@ -115,6 +120,13 @@ const UserMessage = (props: Props) => {
     setIsEditing(!isEditing);
   };
 
+  const handleImageClick = (imageUrl: string, allImages: string[], event: React.MouseEvent<HTMLImageElement>) => {
+    setSourceImageElement(event.currentTarget);
+    setPreviewImages(allImages);
+    setPreviewIndex(allImages.indexOf(imageUrl));
+    setIsPreviewOpen(true);
+  };
+
   const init = () => {
     const textContent = content.find((x) => x.$type === MessageContentType.text) as TextContent | undefined;
     const text = textContent?.c || '';
@@ -132,8 +144,22 @@ const UserMessage = (props: Props) => {
     }
   }, [isEditing]);
 
+  // 收集所有图片URL用于预览
+  const allImageUrls = content
+    .filter((x) => x.$type === MessageContentType.fileId)
+    .map((img: any) => getFileUrl(img.c));
+
   return (
     <>
+      {/* 图片预览组件 */}
+      <ImagePreview
+        images={previewImages}
+        initialIndex={previewIndex}
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        sourceElement={sourceImageElement}
+      />
+
       <div className="flex flex-row-reverse relative">
         {isEditing ? (
           <div className="flex w-full flex-col flex-wrap rounded-md bg-muted shadow-sm mb-3">
@@ -188,15 +214,19 @@ const UserMessage = (props: Props) => {
             <div className="flex flex-wrap justify-end text-right gap-2">
               {content
                 .filter((x) => x.$type === MessageContentType.fileId)
-                .map((img: any, index) => (
-                  <img
-                    className="rounded-md not-prose"
-                    key={'user-img-' + index}
-                    style={{ maxWidth: 268, maxHeight: 168 }}
-                    src={getFileUrl(img.c)}
-                    alt=""
-                  />
-                ))}
+                .map((img: any, index) => {
+                  const imageUrl = getFileUrl(img.c);
+                  return (
+                    <img
+                      className="rounded-md not-prose cursor-pointer hover:opacity-90 transition-opacity"
+                      key={'user-img-' + index}
+                      style={{ maxWidth: 300, maxHeight: 300 }}
+                      src={imageUrl}
+                      alt=""
+                      onClick={(e) => handleImageClick(imageUrl, allImageUrls, e)}
+                    />
+                  );
+                })}
             </div>
             <div
               className={`prose whitespace-pre-wrap dark:prose-invert text-base overflow-x-auto ${
