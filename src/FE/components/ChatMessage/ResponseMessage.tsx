@@ -205,10 +205,12 @@ const ResponseMessage = (props: Props) => {
   const contentToProcess = editId !== EMPTY_ID ? messageContent : content;
   const processedContent = processContentInOrder(contentToProcess);
 
-  // 收集所有图片URL用于预览
-  const allImageUrls = contentToProcess
-    .filter((c) => c.$type === MessageContentType.fileId || c.$type === MessageContentType.tempFileId)
-    .map((c) => getFileUrl(c.c as FileDef));
+  // 收集所有图片URL用于预览（类型守卫确保 c 上有属性）
+  const imageContents = contentToProcess.filter(
+    (c): c is ResponseContent & { c: FileDef } =>
+      c.$type === MessageContentType.fileId || c.$type === MessageContentType.tempFileId,
+  );
+  const allImageUrls = imageContents.map((c) => getFileUrl(c.c as FileDef));
 
   // 将连续的图片内容分组
   const groupedContent: (ProcessedContent | ProcessedContent[])[] = [];
