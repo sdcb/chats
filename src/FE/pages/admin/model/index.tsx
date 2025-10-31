@@ -15,9 +15,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { IconPlus } from '@/components/Icons';
 import { getModelKeys, getModels, deleteModelKeys, deleteModels, reorderModelProviders, reorderModelKeys, reorderModels } from '@/apis/adminApis';
 import ModelKeysModal from '@/components/admin/ModelKeys/ModelKeysModal';
-import ConfigModelModal from '@/components/admin/ModelKeys/ConfigModelModal';
+import QuickAddModelModal from '@/components/admin/ModelKeys/QuickAddModelModal';
 import ModelModal from '@/components/admin/Models/ModelModal';
 import ModelProvider, { ProviderGroup } from '@/components/admin/model/ModelProvider';
+import { 
+  ApiType,
+  getDefaultConfigByApiType 
+} from '@/constants/modelDefaults';
 
 export default function ModelManager() {
   const { t } = useTranslation();
@@ -54,7 +58,7 @@ export default function ModelManager() {
 
   // dialogs
   const [isOpenKeyModal, setIsOpenKeyModal] = useState(false);
-  const [isOpenConfigModels, setIsOpenConfigModels] = useState(false);
+  const [isOpenQuickAddModels, setIsOpenQuickAddModels] = useState(false);
   const [isOpenAddModel, setIsOpenAddModel] = useState(false);
   const [isOpenEditModel, setIsOpenEditModel] = useState(false);
 
@@ -63,6 +67,7 @@ export default function ModelManager() {
   const [currentModelKeyId, setCurrentModelKeyId] = useState<number | undefined>(undefined);
   const [selectedModel, setSelectedModel] = useState<AdminModelDto | undefined>(undefined);
   const [selectedKey, setSelectedKey] = useState<GetModelKeysResult | undefined>(undefined);
+  const [addModelDefaults, setAddModelDefaults] = useState<any>(undefined);
 
   useEffect(() => {
     init();
@@ -185,7 +190,7 @@ export default function ModelManager() {
   const openConfigModels = (keyId: number, providerId: number) => {
     setCurrentModelKeyId(keyId);
     setCurrentProviderId(providerId);
-    setIsOpenConfigModels(true);
+    setIsOpenQuickAddModels(true);
   };
 
   const openAddModel = (keyId: number) => {
@@ -603,15 +608,40 @@ export default function ModelManager() {
         />
       )}
 
-      {isOpenConfigModels && currentModelKeyId !== undefined && (
-        <ConfigModelModal
+      {isOpenQuickAddModels && currentModelKeyId !== undefined && (
+        <QuickAddModelModal
           modelKeyId={currentModelKeyId}
           modelProverId={currentProviderId!}
-          isOpen={isOpenConfigModels}
-          onClose={() => setIsOpenConfigModels(false)}
+          isOpen={isOpenQuickAddModels}
+          onClose={() => setIsOpenQuickAddModels(false)}
           onSuccessful={() => {
-            setIsOpenConfigModels(false);
+            // 不关闭对话框，只刷新数据，让用户可以继续添加
             init(true);
+          }}
+          onOpenEditModel={(deploymentName, apiType) => {
+            // 根据 deploymentName 和 currentModelKeyId 找到对应的模型
+            const model = models.find(
+              m => m.deploymentName === deploymentName && m.modelKeyId === currentModelKeyId
+            );
+            if (model) {
+              // 编辑已存在的模型
+              setSelectedModel(model);
+              setIsOpenEditModel(true);
+            } else {
+              // 创建新模型，根据 apiType 设置默认配置
+              const defaultConfig = getDefaultConfigByApiType(apiType as ApiType);
+              
+              // 打开添加模型对话框，并传递默认值
+              setIsOpenAddModel(true);
+              // defaultValues 按照后端 UpdateModelDto 格式传递
+              setAddModelDefaults({
+                name: deploymentName, // 使用部署名称作为模型显示名称的默认值
+                deploymentName: deploymentName,
+                modelKeyId: currentModelKeyId, // 保持 number 类型，让 ModelModal 自动转换
+                ...defaultConfig,
+              });
+            }
+            // 保持 ConfigModelModal 打开，用户可以继续操作其他模型
           }}
         />
       )}
@@ -619,13 +649,19 @@ export default function ModelManager() {
       {isOpenAddModel && (
         <ModelModal
           isOpen={isOpenAddModel}
-          onClose={() => setIsOpenAddModel(false)}
+          onClose={() => {
+            setIsOpenAddModel(false);
+            setAddModelDefaults(undefined); // 清除默认值
+          }}
           onSuccessful={() => {
             setIsOpenAddModel(false);
+            setAddModelDefaults(undefined); // 清除默认值
             init(true);
           }}
           modelKeys={modelKeys}
-          defaultModelKeyId={currentModelKeyId}
+          defaultValues={addModelDefaults || {
+            modelKeyId: currentModelKeyId // number 类型
+          }}
         />
       )}
 

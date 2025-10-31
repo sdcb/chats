@@ -1,8 +1,19 @@
+import { UpdateModelDto } from '@/types/adminApis';
+
+/**
+ * API 类型枚举
+ */
+export enum ApiType {
+  ChatCompletion = 0,
+  Response = 1,
+  ImageGeneration = 2,
+}
+
 /**
  * ChatCompletion/Response API 默认模型配置
  * 用于创建新的聊天/对话模型时的初始配置
  */
-export const DEFAULT_CHAT_MODEL_CONFIG = {
+const DEFAULT_CHAT_MODEL_CONFIG: Partial<UpdateModelDto> = {
   allowVision: false,
   allowSearch: false,
   allowSystemPrompt: true,
@@ -13,12 +24,38 @@ export const DEFAULT_CHAT_MODEL_CONFIG = {
   minTemperature: 0.0,
   maxTemperature: 2.0,
   contextWindow: 128000,
-  maxResponseTokens: 4096,
+  maxResponseTokens: 8192,
   reasoningEffortOptions: [] as number[],
   supportedImageSizes: [] as string[],
-  apiType: 0,
+  apiType: ApiType.ChatCompletion,
   useAsyncApi: false,
   useMaxCompletionTokens: false,
+  isLegacy: false,
+  inputTokenPrice1M: 0,
+  outputTokenPrice1M: 0,
+};
+
+/**
+ * Response API 默认模型配置
+ * 用于创建新的推理模型时的初始配置（如 gpt-5 系列）
+ */
+const DEFAULT_RESPONSE_MODEL_CONFIG: Partial<UpdateModelDto> = {
+  allowVision: true,
+  allowSearch: false,
+  allowSystemPrompt: true,
+  allowStreaming: true,
+  allowCodeExecution: false,
+  allowToolCall: true,
+  thinkTagParserEnabled: false,
+  minTemperature: 0.0,
+  maxTemperature: 2.0,
+  contextWindow: 128000,
+  maxResponseTokens: 16384,
+  reasoningEffortOptions: [2, 3, 4], // 推理努力程度：低、中、高
+  supportedImageSizes: [] as string[],
+  apiType: ApiType.Response,
+  useAsyncApi: false,
+  useMaxCompletionTokens: true,
   isLegacy: false,
   inputTokenPrice1M: 0,
   outputTokenPrice1M: 0,
@@ -28,7 +65,7 @@ export const DEFAULT_CHAT_MODEL_CONFIG = {
  * ImageGeneration API 默认模型配置
  * 用于创建新的图片生成模型时的初始配置
  */
-export const DEFAULT_IMAGE_MODEL_CONFIG = {
+const DEFAULT_IMAGE_MODEL_CONFIG: Partial<UpdateModelDto> = {
   allowVision: false,
   allowSearch: false,
   allowSystemPrompt: false,
@@ -40,9 +77,9 @@ export const DEFAULT_IMAGE_MODEL_CONFIG = {
   maxTemperature: 2.0,
   contextWindow: 0,
   maxResponseTokens: 10, // 最大批量生成图片数量
-  reasoningEffortOptions: [2, 3, 4] as number[], // 图片质量：低、中、高
-  supportedImageSizes: ['1024x1024', '1792x1024', '1024x1792'] as string[],
-  apiType: 2,
+  reasoningEffortOptions: [2, 3, 4], // 图片质量：低、中、高
+  supportedImageSizes: ['1024x1024', '1792x1024', '1024x1792'],
+  apiType: ApiType.ImageGeneration,
   useAsyncApi: false,
   useMaxCompletionTokens: false,
   isLegacy: false,
@@ -51,7 +88,19 @@ export const DEFAULT_IMAGE_MODEL_CONFIG = {
 };
 
 /**
- * 默认模型配置（向后兼容）
- * @deprecated 请使用 DEFAULT_CHAT_MODEL_CONFIG 或 DEFAULT_IMAGE_MODEL_CONFIG
+ * 根据 API 类型获取默认配置
+ * @param apiType API 类型
+ * @returns 默认配置的部分字段
  */
-export const DEFAULT_MODEL_CONFIG = DEFAULT_CHAT_MODEL_CONFIG;
+export function getDefaultConfigByApiType(apiType: ApiType): Partial<UpdateModelDto> {
+  switch (apiType) {
+    case ApiType.ChatCompletion:
+      return { ...DEFAULT_CHAT_MODEL_CONFIG };
+    case ApiType.Response:
+      return { ...DEFAULT_RESPONSE_MODEL_CONFIG };
+    case ApiType.ImageGeneration:
+      return { ...DEFAULT_IMAGE_MODEL_CONFIG };
+    default:
+      return { ...DEFAULT_CHAT_MODEL_CONFIG };
+  }
+}

@@ -1,4 +1,5 @@
 using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Admin.AdminModels.Dtos;
 using Chats.BE.Controllers.Admin.ModelKeys.Dtos;
 using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.DB;
@@ -167,16 +168,54 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
         ModelLoader loader = cf.CreateModelLoader(modelProvider);
         string[] models = await loader.ListModels(modelKey, cancellationToken);
         
-        HashSet<string> existsDeploymentNames = await db.Models
-            .Where(x => x.ModelKeyId == modelKeyId && x.DeploymentName != null)
-            .Select(x => x.DeploymentName!)
-            .ToHashSetAsync(cancellationToken);
+        // 构建 deploymentName -> Model 的映射
+        Dictionary<string, Model> existingModelsMap = modelKey.Models
+            .ToDictionary(x => x.DeploymentName, StringComparer.Ordinal);
+        
+        int? fileServiceId = await FileService.GetDefaultId(db, cancellationToken);
 
-        PossibleModelDto[] result = models.Select(model => new PossibleModelDto()
+        PossibleModelDto[] result = [.. models.Select(model => 
         {
-            DeploymentName = model,
-            IsExists = existsDeploymentNames.Contains(model),
-        }).ToArray();
+            AdminModelDto? existingModelDto = null;
+            if (existingModelsMap.TryGetValue(model, out Model? existingModel))
+            {
+                existingModelDto = new AdminModelDto
+                {
+                    ModelId = existingModel.Id,
+                    Name = existingModel.Name,
+                    Enabled = !existingModel.IsDeleted,
+                    FileServiceId = fileServiceId,
+                    ModelKeyId = existingModel.ModelKeyId,
+                    ModelProviderId = existingModel.ModelKey.ModelProviderId,
+                    InputTokenPrice1M = existingModel.InputTokenPrice1M,
+                    OutputTokenPrice1M = existingModel.OutputTokenPrice1M,
+                    DeploymentName = existingModel.DeploymentName,
+                    AllowSearch = existingModel.AllowSearch,
+                    AllowVision = existingModel.AllowVision,
+                    AllowStreaming = existingModel.AllowStreaming,
+                    AllowSystemPrompt = existingModel.AllowSystemPrompt,
+                    AllowCodeExecution = existingModel.AllowCodeExecution,
+                    ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(existingModel.ReasoningEffortOptions),
+                    MinTemperature = existingModel.MinTemperature,
+                    MaxTemperature = existingModel.MaxTemperature,
+                    ContextWindow = existingModel.ContextWindow,
+                    MaxResponseTokens = existingModel.MaxResponseTokens,
+                    AllowToolCall = existingModel.AllowToolCall,
+                    SupportedImageSizes = Model.GetSupportedImageSizesAsArray(existingModel.SupportedImageSizes),
+                    ApiType = (DBApiType)existingModel.ApiType,
+                    UseAsyncApi = existingModel.UseAsyncApi,
+                    UseMaxCompletionTokens = existingModel.UseMaxCompletionTokens,
+                    IsLegacy = existingModel.IsLegacy,
+                    ThinkTagParserEnabled = existingModel.ThinkTagParserEnabled,
+                };
+            }
+            
+            return new PossibleModelDto
+            {
+                DeploymentName = model,
+                ExistingModel = existingModelDto,
+            };
+        })];
 
         return Ok(result);
     }

@@ -40,11 +40,23 @@ import {
   putModels,
 } from '@/apis/adminApis';
 import { 
-  DEFAULT_CHAT_MODEL_CONFIG, 
-  DEFAULT_IMAGE_MODEL_CONFIG 
+  ApiType,
+  getDefaultConfigByApiType 
 } from '@/constants/modelDefaults';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+
+// 表单类型：基于 UpdateModelDto，但因 HTML 表单和自定义组件的限制，需要做以下调整：
+// 1. modelKeyId: number → string (FormSelect 组件要求 select value 必须是 string)
+// 2. reasoningEffortOptions: number[] → string (OptionButtonGroup 组件使用逗号分隔的字符串)
+// 3. supportedImageSizes: string[] → string (Input 组件接收用户输入的逗号分隔字符串)
+// 4. 添加 modelId?: string (仅编辑模式需要，用于标识要更新的模型)
+type ModelFormValues = Omit<UpdateModelDto, 'modelKeyId' | 'reasoningEffortOptions' | 'supportedImageSizes'> & {
+  modelId?: string;
+  modelKeyId: string;
+  reasoningEffortOptions: string;
+  supportedImageSizes: string;
+};
 
 interface IProps {
   isOpen: boolean;
@@ -54,8 +66,9 @@ interface IProps {
   saveLoading?: boolean;
   // For edit mode
   selected?: AdminModelDto;
-  // For add mode: preselect model key when creating a model
-  defaultModelKeyId?: number;
+  // For add mode: provide partial default values (e.g., from quick add)
+  // 使用 UpdateModelDto 作为默认值类型（更直接，自动转换在 useEffect 中处理）
+  defaultValues?: Partial<UpdateModelDto>;
 }
 
 const ModelModal = (props: IProps) => {
@@ -67,27 +80,25 @@ const ModelModal = (props: IProps) => {
     onClose, 
     onSuccessful, 
     modelKeys, 
-    defaultModelKeyId, 
+    defaultValues,
     selected 
   } = props;
 
   // Determine if this is edit mode
   const isEditMode = !!selected;
 
-  // 使用 useMemo 确保 schema 稳定
+  // 创建 form schema
   const formSchema = useMemo(() => z.object({
+    // 基础字段
     name: z.string().min(1, t('This field is require')),
     enabled: z.boolean(),
     deploymentName: z.string().min(1, t('This field is require')),
-    modelKeyId: z
-      .string()
-      .min(1, t('This field is require'))
-      .default('0'),
-    inputPrice1M: z.coerce.number(),
-    outputPrice1M: z.coerce.number(),
+    modelKeyId: z.string().min(1, t('This field is require')).default('0'),
+    inputTokenPrice1M: z.coerce.number(),
+    outputTokenPrice1M: z.coerce.number(),
     modelId: z.string().optional(),
     
-    // === 新增 18 个字段 ===
+    // === 功能开关 ===
     allowSearch: z.boolean(),
     allowVision: z.boolean(),
     allowSystemPrompt: z.boolean(),
@@ -96,39 +107,28 @@ const ModelModal = (props: IProps) => {
     allowToolCall: z.boolean(),
     thinkTagParserEnabled: z.boolean(),
     
+    // === 温度范围 ===
     minTemperature: z.coerce.number().min(0).max(2),
     maxTemperature: z.coerce.number().min(0).max(2),
     
+    // === Token 配置 ===
     contextWindow: z.coerce.number().min(0),
     maxResponseTokens: z.coerce.number().min(0),
     
-    reasoningEffortOptions: z.string(), // 存储为逗号分隔的字符串
-    supportedImageSizes: z.string(), // 存储为逗号分隔的字符串
+    // === 数组字段（表单中用字符串） ===
+    reasoningEffortOptions: z.string(),
+    supportedImageSizes: z.string(),
     
+    // === API 配置 ===
     apiType: z.coerce.number(),
     useAsyncApi: z.boolean(),
     useMaxCompletionTokens: z.boolean(),
     isLegacy: z.boolean(),
-  })
+  } satisfies Record<keyof ModelFormValues, z.ZodTypeAny>)
   .refine((data) => {
-    // ChatCompletion/Response API 验证
+    // ChatCompletion/Response: 温度验证
     if (data.apiType === 0 || data.apiType === 1) {
-      // 温度验证
-      if (data.minTemperature > data.maxTemperature) {
-        return false;
-      }
-      // 上下文窗口必须有值
-      if (data.contextWindow <= 0) {
-        return false;
-      }
-      // 最大响应token数必须有值
-      if (data.maxResponseTokens <= 0) {
-        return false;
-      }
-      // 最大响应token数要小于上下文窗口
-      if (data.maxResponseTokens >= data.contextWindow) {
-        return false;
-      }
+      return data.minTemperature <= data.maxTemperature;
     }
     return true;
   }, {
@@ -179,7 +179,6 @@ const ModelModal = (props: IProps) => {
     // ImageGeneration: 支持的图片尺寸格式验证 (宽x高)
     if (data.apiType === 2 && data.supportedImageSizes.trim().length > 0) {
       const sizes = data.supportedImageSizes.split(',').map(s => s.trim()).filter(s => s !== '');
-      // 验证每个尺寸格式: 数字x数字 (如: 1024x1024)
       const sizeRegex = /^\d+x\d+$/;
       return sizes.every(size => sizeRegex.test(size));
     }
@@ -199,33 +198,47 @@ const ModelModal = (props: IProps) => {
     path: ['maxResponseTokens'],
   }), [t]);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<ModelFormValues>({
     resolver: zodResolver(formSchema),
-    mode: 'onChange', // 实时验证，确保 isValid 状态准确
+    mode: 'onChange',
     defaultValues: {
       name: '',
       enabled: true,
       deploymentName: '',
-      modelKeyId: '',
-      inputPrice1M: 0,
-      outputPrice1M: 0,
+      modelKeyId: '0',
+      inputTokenPrice1M: 0,
+      outputTokenPrice1M: 0,
       modelId: '',
-      ...DEFAULT_CHAT_MODEL_CONFIG,
+      apiType: ApiType.ChatCompletion,
+      allowSearch: false,
+      allowVision: false,
+      allowSystemPrompt: false,
+      allowStreaming: false,
+      allowCodeExecution: false,
+      allowToolCall: false,
+      thinkTagParserEnabled: false,
+      minTemperature: 0,
+      maxTemperature: 2,
+      contextWindow: 0,
+      maxResponseTokens: 0,
       reasoningEffortOptions: '',
       supportedImageSizes: '',
+      useAsyncApi: false,
+      useMaxCompletionTokens: false,
+      isLegacy: false,
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: ModelFormValues) => {
     const dto: UpdateModelDto = {
       deploymentName: values.deploymentName,
       enabled: values.enabled,
-      inputTokenPrice1M: values.inputPrice1M,
-      outputTokenPrice1M: values.outputPrice1M,
+      inputTokenPrice1M: values.inputTokenPrice1M,
+      outputTokenPrice1M: values.outputTokenPrice1M,
       modelKeyId: parseInt(values.modelKeyId),
       name: values.name,
       
-      // === 新增字段 ===
+      // === 新增字段（直接映射，无需转换）===
       allowSearch: values.allowSearch,
       allowVision: values.allowVision,
       allowSystemPrompt: values.allowSystemPrompt,
@@ -240,6 +253,7 @@ const ModelModal = (props: IProps) => {
       contextWindow: values.contextWindow,
       maxResponseTokens: values.maxResponseTokens,
       
+      // 数组字段：从逗号分隔的字符串转为数组
       reasoningEffortOptions: values.reasoningEffortOptions
         .split(',')
         .map((x) => parseInt(x.trim()))
@@ -291,8 +305,8 @@ const ModelModal = (props: IProps) => {
         enabled: values.enabled,
         deploymentName: values.deploymentName,
         modelKeyId: parseInt(values.modelKeyId),
-        inputTokenPrice1M: values.inputPrice1M,
-        outputTokenPrice1M: values.outputPrice1M,
+        inputTokenPrice1M: values.inputTokenPrice1M,
+        outputTokenPrice1M: values.outputTokenPrice1M,
         
         allowSearch: values.allowSearch,
         allowVision: values.allowVision,
@@ -382,8 +396,8 @@ const ModelModal = (props: IProps) => {
         form.setValue('enabled', enabled);
         form.setValue('modelKeyId', modelKeyId.toString());
         form.setValue('deploymentName', deploymentName);
-        form.setValue('inputPrice1M', inputTokenPrice1M);
-        form.setValue('outputPrice1M', outputTokenPrice1M);
+        form.setValue('inputTokenPrice1M', inputTokenPrice1M);
+        form.setValue('outputTokenPrice1M', outputTokenPrice1M);
         
         form.setValue('allowSearch', allowSearch);
         form.setValue('allowVision', allowVision);
@@ -408,21 +422,36 @@ const ModelModal = (props: IProps) => {
         form.setValue('isLegacy', isLegacy);
       } else {
         // Add mode: set default values
-        if (defaultModelKeyId !== undefined) {
-          form.setValue('modelKeyId', defaultModelKeyId.toString());
-        }
-        // 使用默认配置（ChatCompletion）
-        Object.keys(DEFAULT_CHAT_MODEL_CONFIG).forEach((key) => {
-          const value = DEFAULT_CHAT_MODEL_CONFIG[key as keyof typeof DEFAULT_CHAT_MODEL_CONFIG];
+        // 先应用基础的 ChatCompletion 默认配置
+        const chatDefaults = getDefaultConfigByApiType(ApiType.ChatCompletion);
+        Object.entries(chatDefaults).forEach(([key, value]) => {
           if (Array.isArray(value)) {
             form.setValue(key as any, '');
           } else {
             form.setValue(key as any, value);
           }
         });
+        
+        // 然后应用来自 props 的 defaultValues (可能来自快速添加)
+        // defaultValues 是 Partial<UpdateModelDto> 格式，数组需要转换为逗号分隔的字符串
+        if (defaultValues) {
+          Object.entries(defaultValues).forEach(([key, value]) => {
+            if (value !== undefined) {
+              // 如果是数组类型（reasoningEffortOptions 或 supportedImageSizes），转为字符串
+              if (Array.isArray(value)) {
+                form.setValue(key as any, value.join(', '));
+              } else if (key === 'modelKeyId' && typeof value === 'number') {
+                // modelKeyId 需要从 number 转为 string
+                form.setValue(key as any, value.toString());
+              } else {
+                form.setValue(key as any, value);
+              }
+            }
+          });
+        }
       }
     }
-  }, [isOpen, selected, defaultModelKeyId, isEditMode]);
+  }, [isOpen, selected, defaultValues, isEditMode]);
 
   const getAvailableModelKeys = () => {
     if (isEditMode && selected) {
@@ -456,35 +485,16 @@ const ModelModal = (props: IProps) => {
       return;
     }
     
-    if (currentApiType === 2) {
-      // ImageGeneration 默认值 - 应用完整配置
-      const imageDefaults = DEFAULT_IMAGE_MODEL_CONFIG;
-      form.setValue('reasoningEffortOptions', imageDefaults.reasoningEffortOptions.join(', '));
-      form.setValue('supportedImageSizes', imageDefaults.supportedImageSizes.join(', '));
-      form.setValue('maxResponseTokens', imageDefaults.maxResponseTokens);
-      form.setValue('allowStreaming', imageDefaults.allowStreaming);
-      form.setValue('contextWindow', imageDefaults.contextWindow);
-      form.setValue('allowVision', imageDefaults.allowVision);
-      form.setValue('allowSearch', imageDefaults.allowSearch);
-      form.setValue('allowSystemPrompt', imageDefaults.allowSystemPrompt);
-      form.setValue('allowCodeExecution', imageDefaults.allowCodeExecution);
-      form.setValue('allowToolCall', imageDefaults.allowToolCall);
-      form.setValue('thinkTagParserEnabled', imageDefaults.thinkTagParserEnabled);
-    } else if (currentApiType === 0 || currentApiType === 1) {
-      // ChatCompletion / Response 默认值
-      const chatDefaults = DEFAULT_CHAT_MODEL_CONFIG;
-      form.setValue('reasoningEffortOptions', ''); // 推理模型默认关闭
-      form.setValue('supportedImageSizes', '');
-      form.setValue('maxResponseTokens', chatDefaults.maxResponseTokens);
-      form.setValue('allowStreaming', chatDefaults.allowStreaming);
-      form.setValue('contextWindow', chatDefaults.contextWindow);
-      form.setValue('allowVision', chatDefaults.allowVision);
-      form.setValue('allowSearch', chatDefaults.allowSearch);
-      form.setValue('allowSystemPrompt', chatDefaults.allowSystemPrompt);
-      form.setValue('allowCodeExecution', chatDefaults.allowCodeExecution);
-      form.setValue('allowToolCall', chatDefaults.allowToolCall);
-      form.setValue('thinkTagParserEnabled', chatDefaults.thinkTagParserEnabled);
-    }
+    // 根据 API 类型应用默认配置
+    const defaults = getDefaultConfigByApiType(currentApiType as ApiType);
+    Object.entries(defaults).forEach(([key, value]) => {
+      if (key === 'reasoningEffortOptions' || key === 'supportedImageSizes') {
+        // 数组字段需要转为逗号分隔的字符串
+        form.setValue(key as any, Array.isArray(value) ? value.join(', ') : '');
+      } else if (value !== undefined) {
+        form.setValue(key as any, value);
+      }
+    });
   }, [apiType, isOpen, isEditMode, selected, isInitialLoad, form]);
 
   return (
@@ -577,9 +587,9 @@ const ModelModal = (props: IProps) => {
                   
                   {/* 模型价格 */}
                   <FormField
-                    key="inputPrice1M"
+                    key="inputTokenPrice1M"
                     control={form.control}
-                    name="inputPrice1M"
+                    name="inputTokenPrice1M"
                     render={({ field }) => {
                       return (
                         <FormInput
@@ -591,9 +601,9 @@ const ModelModal = (props: IProps) => {
                     }}
                   ></FormField>
                   <FormField
-                    key="outputPrice1M"
+                    key="outputTokenPrice1M"
                     control={form.control}
-                    name="outputPrice1M"
+                    name="outputTokenPrice1M"
                     render={({ field }) => {
                       return (
                         <FormInput

@@ -452,7 +452,7 @@ export interface AutoCreateModelResult {
 
 export interface PossibleModelResult {
   deploymentName: string;
-  isExists: boolean;
+  existingModel: AdminModelDto | null;
 }
 
 export interface ValidateModelParams extends UpdateModelDto {

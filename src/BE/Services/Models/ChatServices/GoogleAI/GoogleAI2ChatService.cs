@@ -51,8 +51,11 @@ public class GoogleAI2ChatService : ChatService
         {
             Temperature = options.Temperature,
             ResponseModalities = AllowImageGeneration ? [ResponseModality.Text, ResponseModality.Image] : [ResponseModality.Text],
-            EnableEnhancedCivicAnswers = true,
         };
+        if (!AllowImageGeneration)
+        {
+            gc.EnableEnhancedCivicAnswers = true;
+        }
         if (Model.GetReasoningEffortOptionsAsInt32(Model.ReasoningEffortOptions).Length > 0)
         {
             gc.ThinkingConfig = new ThinkingConfig

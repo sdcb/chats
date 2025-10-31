@@ -95,7 +95,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
               <LabelSwitch
                 checked={field.value}
                 onCheckedChange={field.onChange}
-                label={t('Think Tag Parser Enabled')!}
+                label={t('<think> Tag Parser Enabled')!}
               />
             )}
           />
