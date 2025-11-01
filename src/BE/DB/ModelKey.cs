@@ -32,10 +32,6 @@ public partial class ModelKey
 
     public short Order { get; set; }
 
-    [ForeignKey("ModelProviderId")]
-    [InverseProperty("ModelKeys")]
-    public virtual ModelProvider ModelProvider { get; set; } = null!;
-
     [InverseProperty("ModelKey")]
     public virtual ICollection<Model> Models { get; set; } = new List<Model>();
 }

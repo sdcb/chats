@@ -358,3 +358,191 @@ END
 GO
 
 PRINT N'[Done] 数据迁移完成';
+
+-- =============================================
+-- 第八步：删除废弃的表
+-- =============================================
+
+PRINT N'[Step 8] 删除 ModelReference 表及其关联';
+
+-- 删除 ModelReference 的外键约束
+IF EXISTS(SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.ModelReference'))
+BEGIN
+    -- 删除外键：ModelReference -> CurrencyRate
+    DECLARE @fkCurrency NVARCHAR(128);
+    SELECT TOP 1 @fkCurrency = fk.name
+    FROM sys.foreign_key_columns fkc
+    INNER JOIN sys.objects fk ON fk.object_id = fkc.constraint_object_id
+    INNER JOIN sys.tables t ON t.object_id = fkc.parent_object_id
+    WHERE t.object_id = OBJECT_ID(N'dbo.ModelReference') 
+        AND fkc.referenced_object_id = OBJECT_ID(N'dbo.CurrencyRate');
+    
+    IF @fkCurrency IS NOT NULL
+    BEGIN
+        DECLARE @dropFkCurrencySql NVARCHAR(MAX) = N'ALTER TABLE dbo.ModelReference DROP CONSTRAINT ' + QUOTENAME(@fkCurrency);
+        EXEC sp_executesql @dropFkCurrencySql;
+        PRINT N'    -> 已删除外键：ModelReference -> CurrencyRate';
+    END
+
+    -- 删除外键：ModelReference -> ModelProvider
+    DECLARE @fkProvider NVARCHAR(128);
+    SELECT TOP 1 @fkProvider = fk.name
+    FROM sys.foreign_key_columns fkc
+    INNER JOIN sys.objects fk ON fk.object_id = fkc.constraint_object_id
+    INNER JOIN sys.tables t ON t.object_id = fkc.parent_object_id
+    WHERE t.object_id = OBJECT_ID(N'dbo.ModelReference') 
+        AND fkc.referenced_object_id = OBJECT_ID(N'dbo.ModelProvider');
+    
+    IF @fkProvider IS NOT NULL
+    BEGIN
+        DECLARE @dropFkProviderSql NVARCHAR(MAX) = N'ALTER TABLE dbo.ModelReference DROP CONSTRAINT ' + QUOTENAME(@fkProvider);
+        EXEC sp_executesql @dropFkProviderSql;
+        PRINT N'    -> 已删除外键：ModelReference -> ModelProvider';
+    END
+
+    -- 删除外键：ModelReference -> ReasoningResponseKind
+    DECLARE @fkReasoning NVARCHAR(128);
+    SELECT TOP 1 @fkReasoning = fk.name
+    FROM sys.foreign_key_columns fkc
+    INNER JOIN sys.objects fk ON fk.object_id = fkc.constraint_object_id
+    INNER JOIN sys.tables t ON t.object_id = fkc.parent_object_id
+    WHERE t.object_id = OBJECT_ID(N'dbo.ModelReference') 
+        AND fkc.referenced_object_id = OBJECT_ID(N'dbo.ReasoningResponseKind');
+    
+    IF @fkReasoning IS NOT NULL
+    BEGIN
+        DECLARE @dropFkReasoningSql NVARCHAR(MAX) = N'ALTER TABLE dbo.ModelReference DROP CONSTRAINT ' + QUOTENAME(@fkReasoning);
+        EXEC sp_executesql @dropFkReasoningSql;
+        PRINT N'    -> 已删除外键：ModelReference -> ReasoningResponseKind';
+    END
+
+    -- 删除外键：ModelReference -> Tokenizer
+    DECLARE @fkTokenizer NVARCHAR(128);
+    SELECT TOP 1 @fkTokenizer = fk.name
+    FROM sys.foreign_key_columns fkc
+    INNER JOIN sys.objects fk ON fk.object_id = fkc.constraint_object_id
+    INNER JOIN sys.tables t ON t.object_id = fkc.parent_object_id
+    WHERE t.object_id = OBJECT_ID(N'dbo.ModelReference') 
+        AND fkc.referenced_object_id = OBJECT_ID(N'dbo.Tokenizer');
+    
+    IF @fkTokenizer IS NOT NULL
+    BEGIN
+        DECLARE @dropFkTokenizerSql NVARCHAR(MAX) = N'ALTER TABLE dbo.ModelReference DROP CONSTRAINT ' + QUOTENAME(@fkTokenizer);
+        EXEC sp_executesql @dropFkTokenizerSql;
+        PRINT N'    -> 已删除外键：ModelReference -> Tokenizer';
+    END
+
+    -- 删除表
+    DROP TABLE dbo.ModelReference;
+    PRINT N'    -> 已删除表 ModelReference';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，ModelReference 表不存在';
+END
+
+GO
+
+PRINT N'[Step 9] 删除 ModelProvider 表及其关联';
+
+-- 删除 ModelProvider 的外键约束
+IF EXISTS(SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.ModelProvider'))
+BEGIN
+    -- 删除外键：ModelKey -> ModelProvider
+    DECLARE @fkModelKey NVARCHAR(128);
+    SELECT TOP 1 @fkModelKey = fk.name
+    FROM sys.foreign_key_columns fkc
+    INNER JOIN sys.objects fk ON fk.object_id = fkc.constraint_object_id
+    INNER JOIN sys.tables t ON t.object_id = fkc.parent_object_id
+    WHERE t.object_id = OBJECT_ID(N'dbo.ModelKey') 
+        AND fkc.referenced_object_id = OBJECT_ID(N'dbo.ModelProvider');
+    
+    IF @fkModelKey IS NOT NULL
+    BEGIN
+        DECLARE @dropFkModelKeySql NVARCHAR(MAX) = N'ALTER TABLE dbo.ModelKey DROP CONSTRAINT ' + QUOTENAME(@fkModelKey);
+        EXEC sp_executesql @dropFkModelKeySql;
+        PRINT N'    -> 已删除外键：ModelKey -> ModelProvider';
+    END
+
+    -- 删除表
+    DROP TABLE dbo.ModelProvider;
+    PRINT N'    -> 已删除表 ModelProvider';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，ModelProvider 表不存在';
+END
+
+GO
+
+PRINT N'[Step 10] 删除 CurrencyRate 表';
+
+IF EXISTS(SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.CurrencyRate'))
+BEGIN
+    DROP TABLE dbo.CurrencyRate;
+    PRINT N'    -> 已删除表 CurrencyRate';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，CurrencyRate 表不存在';
+END
+
+GO
+
+PRINT N'[Step 11] 删除 Tokenizer 表';
+
+IF EXISTS(SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.Tokenizer'))
+BEGIN
+    DROP TABLE dbo.Tokenizer;
+    PRINT N'    -> 已删除表 Tokenizer';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，Tokenizer 表不存在';
+END
+
+GO
+
+PRINT N'[Step 12] 删除 ReasoningResponseKind 表';
+
+IF EXISTS(SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.ReasoningResponseKind'))
+BEGIN
+    DROP TABLE dbo.ReasoningResponseKind;
+    PRINT N'    -> 已删除表 ReasoningResponseKind';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，ReasoningResponseKind 表不存在';
+END
+
+GO
+
+PRINT N'[Done] 所有废弃表删除完成';
+
+-- =============================================
+-- 第十三步：创建新的 ModelProviderOrder 表
+-- =============================================
+
+PRINT N'[Step 13] 创建 ModelProviderOrder 表';
+
+IF NOT EXISTS(SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.ModelProviderOrder'))
+BEGIN
+    CREATE TABLE dbo.ModelProviderOrder (
+        ModelProviderId SMALLINT NOT NULL,
+        [Order] SMALLINT NOT NULL,
+        CONSTRAINT PK_ModelProviderOrder PRIMARY KEY (ModelProviderId)
+    );
+    
+    -- 创建索引以优化按 Order 排序的查询
+    CREATE INDEX IX_ModelProviderOrder_Order ON dbo.ModelProviderOrder([Order]);
+    
+    PRINT N'    -> 已创建表 ModelProviderOrder';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，ModelProviderOrder 表已存在';
+END
+
+GO
+
+PRINT N'[Done] 1.8.0 数据库迁移完成';

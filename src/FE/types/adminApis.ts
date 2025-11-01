@@ -444,12 +444,6 @@ export interface ModelReferenceDto extends SimpleModelReferenceDto {
   exchangeRate: number;
 }
 
-export interface AutoCreateModelResult {
-  modelName: string;
-  isCreated: boolean;
-  error: string | null;
-}
-
 export interface PossibleModelResult {
   deploymentName: string;
   existingModel: AdminModelDto | null;

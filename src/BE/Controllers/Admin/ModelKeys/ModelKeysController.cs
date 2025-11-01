@@ -53,7 +53,8 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             return NotFound();
         }
 
-        if (!await db.ModelProviders.AnyAsync(x => x.Id == request.ModelProviderId, cancellationToken))
+        // 验证 ModelProviderId 是否有效
+        if (!Enum.IsDefined(typeof(DBModelProvider), (int)request.ModelProviderId))
         {
             return BadRequest("Invalid model provider");
         }
@@ -76,7 +77,8 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
     [HttpPost]
     public async Task<ActionResult> CreateModelKey([FromBody] UpdateModelKeyRequest request, CancellationToken cancellationToken)
     {
-        if (!await db.ModelProviders.AnyAsync(x => x.Id == request.ModelProviderId, cancellationToken))
+        // 验证 ModelProviderId 是否有效
+        if (!Enum.IsDefined(typeof(DBModelProvider), (int)request.ModelProviderId))
         {
             return BadRequest("Invalid model provider");
         }
@@ -310,148 +312,110 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
     public async Task<ActionResult> ReorderModelProviders([FromBody] ReorderRequest<short> request, CancellationToken cancellationToken)
     {
         // 验证被移动的 ModelProvider 是否存在
-        ModelProvider? sourceProvider = await db.ModelProviders
-            .FirstOrDefaultAsync(x => x.Id == request.SourceId, cancellationToken);
-        if (sourceProvider == null)
+        if (!Enum.IsDefined(typeof(DBModelProvider), (int)request.SourceId))
         {
             return NotFound("Source model provider not found");
         }
 
         // 验证 previous 和 next 的 ModelProvider 是否存在（如果提供的话）
-        ModelProvider? previousProvider = null;
-        ModelProvider? nextProvider = null;
-
-        if (request.PreviousId != null)
+        if (request.PreviousId != null && !Enum.IsDefined(typeof(DBModelProvider), (int)request.PreviousId))
         {
-            previousProvider = await db.ModelProviders
-                .FirstOrDefaultAsync(x => x.Id == request.PreviousId, cancellationToken);
-            if (previousProvider == null)
-            {
-                return NotFound("Previous model provider not found");
-            }
+            return NotFound("Previous model provider not found");
         }
 
-        if (request.NextId != null)
+        if (request.NextId != null && !Enum.IsDefined(typeof(DBModelProvider), (int)request.NextId))
         {
-            nextProvider = await db.ModelProviders
-                .FirstOrDefaultAsync(x => x.Id == request.NextId, cancellationToken);
-            if (nextProvider == null)
-            {
-                return NotFound("Next model provider not found");
-            }
+            return NotFound("Next model provider not found");
         }
 
         // 验证 previous 和 next 不能同时为空
-        if (previousProvider == null && nextProvider == null)
+        if (request.PreviousId == null && request.NextId == null)
         {
             return BadRequest("Both previous and next model providers cannot be null");
         }
 
-        // 获取所有 ModelKey 并按当前顺序排列
-        ModelKey[] allModelKeys = await db.ModelKeys
-            .OrderBy(x => x.Order).ThenByDescending(x => x.Id)
-            .ToArrayAsync(cancellationToken);
-
-        // 按 ModelProviderId 分组，获取每个 ModelProvider 的第一个 ModelKey 作为代表
-        Dictionary<short, ModelKey> providerRepresentatives = allModelKeys
-            .GroupBy(x => x.ModelProviderId)
-            .ToDictionary(g => g.Key, g => g.First());
-
-        // 获取当前 ModelProvider 的顺序（基于其代表 ModelKey 的 Order）
-        List<short> currentProviderOrder = [.. providerRepresentatives.Values
+        // 获取所有 ModelProviderOrder，如果没有则按 ModelProviderId 排序
+        var providerOrders = await db.ModelProviderOrders
             .OrderBy(x => x.Order)
-            .Select(x => x.ModelProviderId)];
+            .ToListAsync(cancellationToken);
 
-        // 验证 previous 和 next 的顺序
-        if (previousProvider != null && nextProvider != null)
+        // 如果 ModelProviderOrder 表为空，初始化所有已定义的 Provider
+        if (providerOrders.Count == 0)
         {
-            int previousIndex = currentProviderOrder.IndexOf(previousProvider.Id);
-            int nextIndex = currentProviderOrder.IndexOf(nextProvider.Id);
-            if (previousIndex + 1 != nextIndex)
+            var allProviders = Enum.GetValues<DBModelProvider>()
+                .Select((p, index) => new ModelProviderOrder 
+                { 
+                    ModelProviderId = (short)p, 
+                    Order = (short)(index * 100) 
+                })
+                .ToList();
+            
+            db.ModelProviderOrders.AddRange(allProviders);
+            await db.SaveChangesAsync(cancellationToken);
+            providerOrders = allProviders.OrderBy(x => x.Order).ToList();
+        }
+
+        // 获取当前的排序列表
+        List<short> currentProviderOrder = providerOrders.Select(x => x.ModelProviderId).ToList();
+
+        // 验证 previous 和 next 的顺序（必须相邻）
+        if (request.PreviousId != null && request.NextId != null)
+        {
+            int previousIndex = currentProviderOrder.IndexOf(request.PreviousId.Value);
+            int nextIndex = currentProviderOrder.IndexOf(request.NextId.Value);
+            if (previousIndex == -1 || nextIndex == -1 || previousIndex + 1 != nextIndex)
             {
                 return BadRequest("Previous and next model providers must be adjacent");
             }
         }
 
         // 从当前列表中移除 source
-        List<short> newProviderOrder = [.. currentProviderOrder];
+        List<short> newProviderOrder = new List<short>(currentProviderOrder);
         newProviderOrder.Remove(request.SourceId);
 
         // 计算插入位置
         int insertIndex = 0;
-        if (previousProvider != null && nextProvider != null)
+        if (request.PreviousId != null && request.NextId != null)
         {
             // 插入到 previous 和 next 之间
-            int previousIndex = newProviderOrder.IndexOf(previousProvider.Id);
+            int previousIndex = newProviderOrder.IndexOf(request.PreviousId.Value);
             insertIndex = previousIndex + 1;
         }
-        else if (previousProvider != null)
+        else if (request.PreviousId != null)
         {
             // 插入到 previous 之后（末尾）
-            int previousIndex = newProviderOrder.IndexOf(previousProvider.Id);
+            int previousIndex = newProviderOrder.IndexOf(request.PreviousId.Value);
             insertIndex = previousIndex + 1;
         }
-        else if (nextProvider != null)
+        else if (request.NextId != null)
         {
             // 插入到 next 之前（开头）
-            int nextIndex = newProviderOrder.IndexOf(nextProvider.Id);
+            int nextIndex = newProviderOrder.IndexOf(request.NextId.Value);
             insertIndex = nextIndex;
         }
 
         // 插入到新位置
         newProviderOrder.Insert(insertIndex, request.SourceId);
 
-        // 计算每个 ModelProvider 组应该的 Order 范围
-        Dictionary<short, (short minOrder, short maxOrder)> providerOrderRanges = [];
-        int providerSpacing = 1000; // 每个 Provider 之间的间距
-        
+        // 更新所有 Provider 的 Order 值（使用100的间隔）
         for (int i = 0; i < newProviderOrder.Count; i++)
         {
             short providerId = newProviderOrder[i];
-            short baseOrder = (short)(ReorderHelper.Default.ReorderStart + i * providerSpacing);
-            short minOrder = baseOrder;
-            short maxOrder = (short)(baseOrder + providerSpacing - 1);
+            var providerOrder = providerOrders.FirstOrDefault(x => x.ModelProviderId == providerId);
             
-            // 确保不超出 short 的范围
-            if (maxOrder > short.MaxValue)
+            if (providerOrder != null)
             {
-                // 重新计算，压缩间距
-                providerSpacing = Math.Max(100, (short.MaxValue - ReorderHelper.Default.ReorderStart) / newProviderOrder.Count);
-                break;
+                providerOrder.Order = (short)(i * 100);
             }
-            
-            providerOrderRanges[providerId] = (minOrder, maxOrder);
-        }
-
-        // 如果需要重新计算间距
-        if (providerOrderRanges.Count != newProviderOrder.Count)
-        {
-            providerOrderRanges.Clear();
-            for (int i = 0; i < newProviderOrder.Count; i++)
+            else
             {
-                short providerId = newProviderOrder[i];
-                short baseOrder = (short)(ReorderHelper.Default.ReorderStart + i * providerSpacing);
-                short minOrder = baseOrder;
-                short maxOrder = (short)(baseOrder + providerSpacing - 1);
-                providerOrderRanges[providerId] = (minOrder, maxOrder);
+                // 如果不存在，创建新的记录
+                db.ModelProviderOrders.Add(new ModelProviderOrder
+                {
+                    ModelProviderId = providerId,
+                    Order = (short)(i * 100)
+                });
             }
-        }
-
-        // 重新分配每个 ModelKey 的 Order
-        foreach (IGrouping<short, ModelKey> providerGroup in allModelKeys.GroupBy(x => x.ModelProviderId))
-        {
-            short providerId = providerGroup.Key;
-            if (!providerOrderRanges.TryGetValue(providerId, out (short minOrder, short maxOrder) range))
-            {
-                continue; // 跳过不存在的 Provider
-            }
-
-            ModelKey[] providerModelKeys = [.. providerGroup.OrderBy(x => x.Order).ThenByDescending(x => x.Id)];
-            
-            if (providerModelKeys.Length == 0) continue;
-            
-            // 使用重排序工具类在指定范围内重新分布
-            ReorderHelper.Default.RedistributeInRange(providerModelKeys, range.minOrder, range.maxOrder);
         }
 
         if (db.ChangeTracker.HasChanges())

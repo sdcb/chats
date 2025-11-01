@@ -18,7 +18,6 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             .Where(x => x.UserId == userId)
             .Include(x => x.Model)
             .Include(x => x.Model.ModelKey)
-            .Include(x => x.Model.ModelKey.ModelProvider)
             .OrderByDescending(x => x.Id)
             .Select(x => new UserModelDto()
             {

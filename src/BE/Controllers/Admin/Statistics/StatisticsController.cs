@@ -2,6 +2,7 @@
 using Chats.BE.Controllers.Admin.Statistics.Dtos;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -46,10 +47,12 @@ public class StatisticsController(ChatsDB db) : ControllerBase
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
         Dictionary<string, int> r = await q
-            .GroupBy(x => x.Model.ModelKey.ModelProvider.Name)
-            .ToDictionaryAsync(
-                x => x.Key,
-                x => x.Count(), cancellationToken);
+            .GroupBy(x => x.Model.ModelKey.ModelProviderId)
+            .Select(g => new { ProviderId = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken)
+            .ContinueWith(t => t.Result.ToDictionary(
+                x => ModelProviderInfo.GetName((DBModelProvider)x.ProviderId),
+                x => x.Count));
         return Ok(r);
     }
 

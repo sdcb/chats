@@ -143,7 +143,6 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
         }
 
         ModelKey? modelKey = await db.ModelKeys
-            .Include(x => x.ModelProvider)
             .Where(x => x.Id == req.ModelKeyId)
             .SingleOrDefaultAsync(cancellationToken);
         if (modelKey == null)
