@@ -6,25 +6,11 @@ internal static class BasicData
 {
     public static void InsertAll(ChatsDB db)
     {
-        InsertFileServiceTypes(db);
         InsertChatRoles(db);
         InsertFinishReasons(db);
         InsertStepContentTypes(db);
         InsertKnownImageSizes(db);
         InsertTransactionTypes(db);
-    }
-
-    private static void InsertFileServiceTypes(ChatsDB db)
-    {
-        // Generated from data, hash: 639406aab3eda8539e3adcc6be70809c19a4e7e557a309c7d4fcaadb0281a486
-        db.FileServiceTypes.AddRange(
-        [
-            new(){ Id=0, Name="Local",              InitialConfig="./AppData/Files",                                                                                                                                                                            },
-            new(){ Id=1, Name="Minio",              InitialConfig="""{"endpoint": "https://minio.example.com", "accessKey": "your-access-key", "secretKey": "your-secret-key", "bucket": "your-bucket", "region": null}""",                                     },
-            new(){ Id=2, Name="AWS S3",             InitialConfig="""{"region": "ap-southeast-1", "accessKeyId": "your-access-key-id", "secretAccessKey": "your-secret-access-key", "bucket": "your-bucket"}""",                                                },
-            new(){ Id=3, Name="Aliyun OSS",         InitialConfig="""{"endpoint": "oss-cn-hangzhou.aliyuncs.com", "accessKeyId": "your-access-key-id", "accessKeySecret": "your-access-key-secret", "bucket": "your-bucket"}""",                                },
-            new(){ Id=4, Name="Azure Blob Storage", InitialConfig="""{"connectionString": "DefaultEndpointsProtocol=https;AccountName=your-account-name;AccountKey=your-account-key;EndpointSuffix=core.windows.net", "containerName": "YourContainerName"}""", }
-        ]);
     }
 
     private static void InsertChatRoles(ChatsDB db)

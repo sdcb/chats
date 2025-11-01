@@ -26,10 +26,6 @@ public partial class FileService
 
     public DateTime UpdatedAt { get; set; }
 
-    [ForeignKey("FileServiceTypeId")]
-    [InverseProperty("FileServices")]
-    public virtual FileServiceType FileServiceType { get; set; } = null!;
-
     [InverseProperty("FileService")]
     public virtual ICollection<File> Files { get; set; } = new List<File>();
 }

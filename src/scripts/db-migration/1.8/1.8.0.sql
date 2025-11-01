@@ -545,4 +545,30 @@ END
 
 GO
 
+-- =============================================
+-- 第十四步：删除 FileServiceType 表
+-- =============================================
+
+PRINT N'[Step 14] 删除 FileServiceType 表';
+
+IF EXISTS(SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.FileServiceType'))
+BEGIN
+    -- 先删除外键约束
+    IF EXISTS(SELECT * FROM sys.foreign_keys WHERE name = 'FK_FileService_FileServiceType')
+    BEGIN
+        ALTER TABLE dbo.FileService DROP CONSTRAINT FK_FileService_FileServiceType;
+        PRINT N'    -> 已删除外键约束 FK_FileService_FileServiceType';
+    END
+    
+    -- 删除表
+    DROP TABLE dbo.FileServiceType;
+    PRINT N'    -> 已删除表 FileServiceType';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，FileServiceType 表不存在';
+END
+
+GO
+
 PRINT N'[Done] 1.8.0 数据库迁移完成';
