@@ -14,7 +14,6 @@ void Main()
 	Environment.CurrentDirectory = Path.GetDirectoryName(Util.CurrentQueryPath)!;
 	TableDef[] tableDefs = new string[]
 	{
-		"FileServiceType",
 		"ChatRole",
 		"FinishReason",
 		"StepContentType",
