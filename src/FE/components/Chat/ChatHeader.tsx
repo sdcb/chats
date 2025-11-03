@@ -76,7 +76,7 @@ const ChatHeader = () => {
           codeExecutionEnabled: span.codeExecutionEnabled,
           reasoningEffort: span?.reasoningEffort,
           systemPrompt: defaultPrompt?.content!,
-          imageSize: span?.imageSize || 0,
+          imageSize: span?.imageSize || null,
           mcps: span?.mcps || [],
         }))
       };
@@ -247,7 +247,7 @@ const ChatHeader = () => {
                           }}
                         >
                           <ModelProviderIcon providerId={span.modelProviderId} />
-                          <span>{span?.modelName}</span>
+                          <span className="font-mono">{span?.modelName}</span>
                         </Button>
                       ) : (
                         <div 
@@ -275,7 +275,7 @@ const ChatHeader = () => {
                                 )}
                               >
                                 <ModelProviderIcon providerId={span.modelProviderId} />
-                                <span>{span?.modelName}</span>
+                                <span className="font-mono">{span?.modelName}</span>
                               </div>
                             }
                             hideIcon={true}

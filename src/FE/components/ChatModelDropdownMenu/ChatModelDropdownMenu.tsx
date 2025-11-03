@@ -6,7 +6,7 @@ import { AdminModelDto } from '@/types/adminApis';
 import { feModelProviders } from '@/types/model';
 
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
-import { IconChevronDown } from '@/components/Icons';
+import { IconChevronDown, IconMessage, IconMessageStar, IconPhoto } from '@/components/Icons';
 import Search from '@/components/Search/Search';
 import {
   DropdownMenu,
@@ -21,6 +21,20 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import { cn } from '@/lib/utils';
+
+// Helper function to get icon based on API type
+const getApiTypeIcon = (apiType: number) => {
+  switch (apiType) {
+    case 0: // ChatCompletion
+      return IconMessage;
+    case 1: // Response
+      return IconMessageStar;
+    case 2: // ImageGeneration
+      return IconPhoto;
+    default:
+      return IconMessage;
+  }
+};
 
 const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
   models: AdminModelDto[];
@@ -134,17 +148,22 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
                     className="max-h-96 overflow-y-auto custom-scrollbar max-w-[64px] md:max-w-[256px]"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {m.child.map((x) => (
-                      <DropdownMenuItem
-                        key={x.modelId}
-                        onClick={(e) => {
-                          onChangeModel(x);
-                          e.stopPropagation();
-                        }}
-                      >
-                        {x.name}
-                      </DropdownMenuItem>
-                    ))}
+                    {m.child.map((x) => {
+                      const ApiIcon = getApiTypeIcon(x.apiType);
+                      return (
+                        <DropdownMenuItem
+                          key={x.modelId}
+                          onClick={(e) => {
+                            onChangeModel(x);
+                            e.stopPropagation();
+                          }}
+                          className="flex items-center gap-1"
+                        >
+                          <ApiIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span className="truncate font-mono text-sm">{x.name}</span>
+                        </DropdownMenuItem>
+                      );
+                    })}
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>
