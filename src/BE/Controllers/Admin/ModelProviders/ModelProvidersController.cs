@@ -17,47 +17,28 @@ public class ModelProvidersController(ChatsDB db) : ControllerBase
     [HttpGet]
     public async Task<ActionResult<ModelProviderDto[]>> GetAllModelProviders(CancellationToken cancellationToken)
     {
-        // 获取所有 ModelProviderOrder
-        var providerOrders = await db.ModelProviderOrders
-            .OrderBy(x => x.Order)
-            .ToListAsync(cancellationToken);
+        // 单次查询（EF 可翻译）：先将 GroupBy 投影为可连接的匿名对象，再 LEFT JOIN 排序，并使用相关子查询统计模型数量
+        var providersWithKeyCounts =
+            from mk in db.ModelKeys
+            group mk by mk.ModelProviderId into g
+            select new { ProviderId = g.Key, KeyCount = g.Count() };
 
-        // 如果 ModelProviderOrder 表为空，按 enum 值顺序初始化所有已定义的 Provider
-        if (providerOrders.Count == 0)
-        {
-            var allProviders = Enum.GetValues<DBModelProvider>()
-                .Select((p, index) => new ModelProviderOrder 
-                { 
-                    ModelProviderId = (short)p, 
-                    Order = (short)(index * 100) 
-                })
-                .ToList();
-            
-            db.ModelProviderOrders.AddRange(allProviders);
-            await db.SaveChangesAsync(cancellationToken);
-            providerOrders = allProviders.OrderBy(x => x.Order).ToList();
-        }
+        ModelProviderDto[] data = await (
+            from k in providersWithKeyCounts
+            join mpo in db.ModelProviderOrders on k.ProviderId equals mpo.ModelProviderId into j
+            from mpo in j.DefaultIfEmpty()
+            let sortOrder = (int?)mpo.Order
+            let modelCount = db.Models.Count(m => !m.IsDeleted && m.ModelKey.ModelProviderId == k.ProviderId)
+            orderby (sortOrder ?? short.MaxValue), k.ProviderId
+            select new ModelProviderDto
+            {
+                ProviderId = k.ProviderId,
+                KeyCount = k.KeyCount,
+                ModelCount = modelCount
+            }
+        ).ToArrayAsync(cancellationToken);
 
-        // 获取每个 Provider 的 Key 数量和 Model 数量
-        var keyCountByProvider = await db.ModelKeys
-            .GroupBy(x => x.ModelProviderId)
-            .Select(g => new { ProviderId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.ProviderId, x => x.Count, cancellationToken);
-
-        var modelCountByProvider = await db.Models
-            .Where(m => !m.IsDeleted)
-            .GroupBy(m => m.ModelKey.ModelProviderId)
-            .Select(g => new { ProviderId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.ProviderId, x => x.Count, cancellationToken);
-
-        var result = providerOrders.Select(po => new ModelProviderDto
-        {
-            ProviderId = po.ModelProviderId,
-            KeyCount = keyCountByProvider.GetValueOrDefault(po.ModelProviderId, 0),
-            ModelCount = modelCountByProvider.GetValueOrDefault(po.ModelProviderId, 0)
-        }).ToArray();
-
-        return Ok(result);
+        return Ok(data);
     }
 
     [HttpGet("{providerId}/model-keys")]

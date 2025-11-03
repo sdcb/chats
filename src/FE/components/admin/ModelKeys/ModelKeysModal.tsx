@@ -154,11 +154,19 @@ const ModelKeysModal = (props: IProps) => {
   useEffect(() => {
     const subscription = form.watch((value, { name, type }) => {
       if (name === 'modelProviderId' && type === 'change') {
-        reloadInitialConfig(parseInt(form.getValues('modelProviderId') || '0'));
+        const id = parseInt(form.getValues('modelProviderId') || '0');
+        reloadInitialConfig(id);
+        // When creating a new key, always set name to the provider's name on change
+        if (!selected) {
+          const provider = feModelProviders.find((p) => p.id === id);
+          if (provider) {
+            form.setValue('name', t(provider.name));
+          }
+        }
       }
     });
     return () => subscription.unsubscribe();
-  }, [form.watch]);
+  }, [form.watch, selected, t]);
 
   useEffect(() => {
     if (isOpen) {
@@ -173,6 +181,13 @@ const ModelKeysModal = (props: IProps) => {
       } else if (defaultModelProviderId !== undefined) {
         // Preselect provider when creating a new key
         form.setValue('modelProviderId', defaultModelProviderId.toString());
+        // Always set name to provider's name
+        const provider = feModelProviders.find(
+          (p) => p.id === defaultModelProviderId,
+        );
+        if (provider) {
+          form.setValue('name', t(provider.name));
+        }
       }
       reloadInitialConfig(selected?.modelProviderId || defaultModelProviderId || 0);
     }
@@ -189,14 +204,6 @@ const ModelKeysModal = (props: IProps) => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSave)}>
             <FormField
-              key="name"
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormInput label={t('Name')} field={field} />
-              )}
-            />
-            <FormField
               key="modelProviderId"
               control={form.control}
               name="modelProviderId"
@@ -209,6 +216,14 @@ const ModelKeysModal = (props: IProps) => {
                     name: t(p.name),
                   }))}
                 />
+              )}
+            />
+            <FormField
+              key="name"
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormInput label={t('Name')} field={field} />
               )}
             />
             {initialConfig?.initialHost !== null && (

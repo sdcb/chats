@@ -3,6 +3,7 @@ import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import IconActionButton from '@/components/common/IconActionButton';
 import { IconPlus, IconChartHistogram } from '@/components/Icons';
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
@@ -25,6 +26,8 @@ interface ModelProviderProps {
   modelsByKey: Record<number, AdminModelDto[]>;
   expanded: boolean;
   expandedKeys: Record<number, boolean>;
+  loading?: boolean; // 是否正在加载 keys
+  loadingModels?: Record<number, boolean>; // 各个 key 的 models 加载状态
   onToggleExpand: () => void;
   onToggleKeyExpand: (keyId: number) => void;
   onAddKey: (providerId: number) => void;
@@ -46,6 +49,8 @@ export default function ModelProvider({
   modelsByKey,
   expanded,
   expandedKeys,
+  loading = false,
+  loadingModels = {},
   onToggleExpand,
   onToggleKeyExpand,
   onAddKey,
@@ -146,7 +151,26 @@ export default function ModelProvider({
           </div>
         </div>
         <CollapsiblePanel open={expanded} className="mt-1">
-          {provider.keys.length === 0 ? (
+          {loading ? (
+            // 显示骨架屏，根据 provider.keyCount 显示对应数量的骨架
+            <div className="pl-6 space-y-2 pb-3">
+              {Array.from({ length: provider.keyCount }).map((_, index) => (
+                <div key={`skeleton-${index}`} className="rounded-lg border bg-background p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-1">
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-8 w-8 rounded" />
+                      <Skeleton className="h-8 w-8 rounded" />
+                      <Skeleton className="h-8 w-8 rounded" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : provider.keys.length === 0 ? (
             <div className="text-sm text-muted-foreground px-3 pb-3">{t('No Model Keys')}</div>
           ) : (
             <div className="pl-6 space-y-2 pb-3">
@@ -157,6 +181,7 @@ export default function ModelProvider({
                     modelKey={key}
                     models={modelsByKey[key.id] || []}
                     expanded={!!expandedKeys[key.id]}
+                    loading={loadingModels[key.id]}
                     onToggleExpand={() => onToggleKeyExpand(key.id)}
                     onEdit={onEditKey}
                     onDelete={onDeleteKey}

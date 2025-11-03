@@ -207,9 +207,11 @@ export default function ModelManager() {
     for (const provider of providers) newExpandProviders[provider.providerId] = false;
     
     if (!isCurrentlyExpanded) {
+      // 先展开 UI
       newExpandProviders[providerId] = true;
+      setExpandProviders(newExpandProviders);
       
-      // 展开时加载该 provider 的 keys
+      // 然后异步加载该 provider 的 keys
       await loadProviderKeys(providerId);
       
       // 展开第一个 key
@@ -224,8 +226,8 @@ export default function ModelManager() {
       }
     } else {
       setExpandKeys({});
+      setExpandProviders(newExpandProviders);
     }
-    setExpandProviders(newExpandProviders);
   };
 
   const handleToggleKey = async (keyId: number) => {
@@ -241,11 +243,13 @@ export default function ModelManager() {
     
     // 切换当前 key
     newExpandKeys[keyId] = !wasExpanded;
-    setExpandKeys(newExpandKeys);
     
-    // 如果是展开操作，加载该 key 的 models
+    // 如果是展开操作，先展开 UI 再加载数据
     if (!wasExpanded) {
+      setExpandKeys(newExpandKeys);
       await loadKeyModels(keyId);
+    } else {
+      setExpandKeys(newExpandKeys);
     }
   };
 
@@ -337,8 +341,9 @@ export default function ModelManager() {
         }
       }
       if (key) {
+        const currentKeyId = key.id; // 保存 keyId 避免 TypeScript 类型检查问题
         setCurrentDragKey(key);
-        setExpandKeys((prev) => ({ ...prev, [key.id]: false }));
+        setExpandKeys((prev) => ({ ...prev, [currentKeyId]: false }));
       }
     }
   };
@@ -563,6 +568,8 @@ export default function ModelManager() {
               modelsByKey={modelsByKey}
               expanded={!!expandProviders[provider.providerId]}
               expandedKeys={expandKeys}
+              loading={loadingKeys[provider.providerId]}
+              loadingModels={loadingModels}
               onToggleExpand={() => handleToggleProvider(provider.providerId)}
               onToggleKeyExpand={handleToggleKey}
               onAddKey={openAddKey}
