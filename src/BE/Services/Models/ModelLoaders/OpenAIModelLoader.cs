@@ -1,4 +1,6 @@
 ﻿using Chats.BE.DB;
+using Chats.BE.DB.Enums;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
 using OpenAI;
 using OpenAI.Models;
 using System.ClientModel;
@@ -11,11 +13,12 @@ public class OpenAIModelLoader : ModelLoader
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
 
-        OpenAIClient api = new(new ApiKeyCredential(modelKey.Secret), new OpenAIClientOptions()
+        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(modelKey, ModelProviderInfo.GetInitialHost((DBModelProvider)modelKey.ModelProviderId) switch
         {
-            Endpoint = !string.IsNullOrWhiteSpace(modelKey.Host) ? new Uri(modelKey.Host) : null,
-        });
+            null => null, 
+            var x => new Uri(x)
+        }, []);
         ClientResult<OpenAIModelCollection> result = await api.GetOpenAIModelClient().GetModelsAsync(cancellationToken);
-        return result.Value.Select(m => m.Id).ToArray();
+        return [.. result.Value.Select(m => m.Id)];
     }
 }

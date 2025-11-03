@@ -208,8 +208,8 @@ const QuickAddModelModal = (props: IProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="min-w-[375px] w-3/5">
-        <DialogHeader>
+      <DialogContent className="min-w-[375px] w-3/5 max-h-[90vh] overflow-hidden grid-rows-[auto_minmax(0,1fr)]">
+        <DialogHeader className="flex-shrink-0">
           <div className="flex items-center gap-3">
             <DialogTitle className="flex-shrink-0">{t('Quick Add Models')}</DialogTitle>
             <Input
@@ -220,7 +220,7 @@ const QuickAddModelModal = (props: IProps) => {
             />
           </div>
         </DialogHeader>
-        <div className="h-[75vh] overflow-scroll flex justify-start gap-2 flex-wrap">
+  <div className="min-h-0 max-h-[65vh] overflow-y-auto pr-2 custom-scrollbar">
           {error ? (
             <div className="flex items-center justify-center w-full h-full text-muted-foreground">
               <div className="text-center">

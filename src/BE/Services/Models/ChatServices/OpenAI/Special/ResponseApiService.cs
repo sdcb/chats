@@ -21,7 +21,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
 
     static OpenAIResponseClient CreateResponseAPI(Model model, Uri? suggestedUri, PipelinePolicy[] pipelinePolicies)
     {
-        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model, suggestedUri, pipelinePolicies);
+        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model.ModelKey, suggestedUri, pipelinePolicies);
         OpenAIResponseClient cc = api.GetOpenAIResponseClient(model.DeploymentName);
         return cc;
     }

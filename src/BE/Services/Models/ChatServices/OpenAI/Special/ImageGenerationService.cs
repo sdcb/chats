@@ -26,7 +26,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
 
     private static ImageClient CreateImageGenerationAPI(Model model, Uri? suggestedUrl, PipelinePolicy[] perCallPolicies)
     {
-        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model, suggestedUrl, perCallPolicies);
+        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model.ModelKey, suggestedUrl, perCallPolicies);
         ImageClient cc = api.GetImageClient(model.DeploymentName);
         return cc;
     }

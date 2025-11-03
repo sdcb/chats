@@ -171,16 +171,19 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
         string[] models = await loader.ListModels(modelKey, cancellationToken);
         
         // 构建 deploymentName -> Model 的映射
-        Dictionary<string, Model> existingModelsMap = modelKey.Models
-            .ToDictionary(x => x.DeploymentName, StringComparer.Ordinal);
+        Dictionary<string, Model[]> existingModelsMap = modelKey.Models
+            .GroupBy(x => x.DeploymentName, StringComparer.Ordinal)
+            .ToDictionary(x => x.Key, v => v.ToArray());
         
         int? fileServiceId = await FileService.GetDefaultId(db, cancellationToken);
 
         PossibleModelDto[] result = [.. models.Select(model => 
         {
             AdminModelDto? existingModelDto = null;
-            if (existingModelsMap.TryGetValue(model, out Model? existingModel))
+            if (existingModelsMap.TryGetValue(model, out Model[]? existingModels))
             {
+                Model existingModel = existingModels[0];
+
                 existingModelDto = new AdminModelDto
                 {
                     ModelId = existingModel.Id,

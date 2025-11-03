@@ -20,23 +20,23 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
 
     private static ChatClient CreateChatClient(Model model, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
     {
-        OpenAIClient api = CreateOpenAIClient(model, suggestedApiUrl, perCallPolicies);
+        OpenAIClient api = CreateOpenAIClient(model.ModelKey, suggestedApiUrl, perCallPolicies);
         return api.GetChatClient(model.DeploymentName);
     }
 
-    internal static OpenAIClient CreateOpenAIClient(Model model, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
+    internal static OpenAIClient CreateOpenAIClient(ModelKey modelKey, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Secret, nameof(model.ModelKey.Secret));
+        ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
         OpenAIClientOptions oaic = new()
         {
-            Endpoint = !string.IsNullOrWhiteSpace(model.ModelKey.Host) ? new Uri(model.ModelKey.Host) : suggestedApiUrl,
+            Endpoint = !string.IsNullOrWhiteSpace(modelKey.Host) ? new Uri(modelKey.Host) : suggestedApiUrl,
             NetworkTimeout = NetworkTimeout,
         };
         foreach (PipelinePolicy policy in perCallPolicies)
         {
             oaic.AddPolicy(policy, PipelinePosition.PerCall);
         }
-        OpenAIClient api = new(new ApiKeyCredential(model.ModelKey.Secret!), oaic);
+        OpenAIClient api = new(new ApiKeyCredential(modelKey.Secret!), oaic);
         return api;
     }
 
