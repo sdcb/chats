@@ -7,7 +7,26 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.7.2](1.7.2.md) - 2025-10-27 ⭐ Latest Release
+## [1.8.0](1.8.0.md) - 2025-11-03 ⭐ Latest Release 🎉 Major Architecture Upgrade
+
+**Core Highlights**: Model Configuration Architecture Refactor · User-Customizable Config · No Migration for New Models
+
+- 🏗️ **Architecture Refactor**: Model config migrated from ModelReference static table to Model instance level
+- 🎯 **User Customization**: Each model instance has independent complete configuration (18 new fields)
+- 🚀 **Ready to Use**: Adding new models requires no database migration, users can freely configure
+- 🗑️ **Simplified Architecture**: Deleted 6 static reference tables (ModelReference, ModelProvider, etc.)
+- 🖼️ **Third API Type**: Added ImageGeneration type (ChatCompletion, Response, ImageGeneration)
+- 🔍 **Model Validation Framework**: Custom validation attributes + 436 lines of unit tests
+- ⚡ **Quick Add Models**: New batch add dialog, supports continuous additions
+- 📸 **Full-screen Image Preview**: Zoom animation + keyboard navigation + thumbnail strip
+- 🎨 **UI Optimizations**: Admin lazy loading (90% performance improvement), skeleton screens, separated preset configs
+- 🛠️ **Image Processing Refactor**: ImageSharp replaces hand-written parsers (-1,217 lines)
+
+[View Full Release Notes →](1.8.0.md) | [API Changes](../1.8.0-api-changes.md)
+
+---
+
+## [1.7.2](1.7.2.md) - 2025-10-27
 
 **Core Highlights**: Streaming Image Generation · Code Execution · API Test Framework
 
@@ -177,5 +196,5 @@ Starting from 1.0.0, Chats follows Semantic Versioning:
 ---
 
 <p align="center">
-  <sub>Last updated: 2025-10-27</sub>
+  <sub>Last updated: 2025-11-03</sub>
 </p>
