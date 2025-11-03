@@ -136,8 +136,8 @@ const ChatModelSettingModal = (props: Props) => {
     setSpan({ ...span!, reasoningEffort: Number(value) });
   };
 
-  const onChangeImageSize = (value: string) => {
-    setSpan({ ...span!, imageSize: Number(value) });
+  const onChangeImageSize = (value: string | null) => {
+    setSpan({ ...span!, imageSize: value });
   };
 
   const onChangeMcps = (mcps: ChatSpanMcp[]) => {

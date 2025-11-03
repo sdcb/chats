@@ -42,7 +42,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     CodeExecutionEnabled = x.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = x.ChatConfig.ReasoningEffort,
-                    ImageSize = (DBKnownImageSize)x.ChatConfig.ImageSizeId,
+                    ImageSize = x.ChatConfig.ImageSize,
                     Mcps = x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                     {
                         Id = mcp.McpServerId,
@@ -221,7 +221,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     CodeExecutionEnabled = x.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = x.ChatConfig.ReasoningEffort,
-                    ImageSizeId = x.ChatConfig.ImageSizeId,
+                    ImageSize = x.ChatConfig.ImageSize,
                     ChatConfigMcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatConfigMcp
                     {
                         McpServerId = mcp.McpServerId,
@@ -274,7 +274,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                 MaxOutputTokens = null,
                 ReasoningEffort = 0,
                 SystemPrompt = defaultPrompt.Content,
-                ImageSizeId = (short)DBKnownImageSize.Default,
+                ImageSize = null,
             }
         };
         preset.ChatPresetSpans.Add(span);

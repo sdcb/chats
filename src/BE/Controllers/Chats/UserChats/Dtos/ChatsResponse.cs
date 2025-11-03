@@ -94,7 +94,7 @@ public record ChatSpanDto
     public required int? ReasoningEffort { get; init; }
 
     [JsonPropertyName("imageSize")]
-    public required DBKnownImageSize ImageSize { get; init; }
+    public required string? ImageSize { get; init; }
 
     [JsonPropertyName("mcps")]
     public required ChatSpanMcp[] Mcps { get; init; }
@@ -112,7 +112,7 @@ public record ChatSpanDto
         CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
         MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
         ReasoningEffort = span.ChatConfig.ReasoningEffort,
-        ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+        ImageSize = span.ChatConfig.ImageSize,
         Mcps = [.. span.ChatConfig.ChatConfigMcps.Select(
             x => new ChatSpanMcp
             {
@@ -134,7 +134,7 @@ public record ChatSpanDto
         CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
         MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
         ReasoningEffort = span.ChatConfig.ReasoningEffort,
-        ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+        ImageSize = span.ChatConfig.ImageSize,
         Mcps = [.. span.ChatConfig.ChatConfigMcps.Select(
             x => new ChatSpanMcp
             {

@@ -18,7 +18,7 @@ public partial class ChatConfig
             CodeExecutionEnabled = CodeExecutionEnabled,
             MaxOutputTokens = MaxOutputTokens,
             ReasoningEffort = ReasoningEffort,
-            ImageSizeId = ImageSizeId,
+            ImageSize = ImageSize,
             ChatConfigMcps = [..ChatConfigMcps.Select(x => new ChatConfigMcp
             {
                 McpServerId = x.McpServerId,
@@ -100,11 +100,18 @@ public partial class ChatConfig
         flagBuffer[0] = ReasoningEffort;
         AppendField(flagBuffer);
 
-        // 7. ImageSizeId (short): 仅当非默认值(0)时才包含以保持向后兼容
-        if (ImageSizeId != 0)
+        // 7. ImageSize (string?): 仅当非空时才包含以保持向后兼容
+        if (!string.IsNullOrEmpty(ImageSize))
         {
-            BitConverter.TryWriteBytes(shortBuffer, ImageSizeId);
-            AppendField(shortBuffer);
+            // 先写入字符个数（int 4字节）
+            int imageSizeLength = ImageSize.Length;
+            BitConverter.TryWriteBytes(intBuffer, imageSizeLength);
+            AppendField(intBuffer);
+            
+            // 追加字符串的 UTF-16 字节数据
+            ReadOnlySpan<char> imageSizeSpan = ImageSize.AsSpan();
+            ReadOnlySpan<byte> imageSizeBytes = MemoryMarshal.AsBytes(imageSizeSpan);
+            AppendField(imageSizeBytes);
         }
 
         // 8. McpServers: 仅当存在关联时才包含以保持向后兼容

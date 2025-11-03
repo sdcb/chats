@@ -89,7 +89,7 @@ END
 
 IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'SupportedImageSizes' AND Object_ID = Object_ID(N'dbo.Model'))
 BEGIN
-    -- 存储支持的图片生成分辨率列表，如 "1024x1024,1792x1024,1024x1792"，空字符串表示不支持
+    -- 存储支持的图片生成分辨率列表，如 "1024x1024,1536x1024,1024x1536"，空字符串表示不支持
     ALTER TABLE dbo.Model ADD SupportedImageSizes NVARCHAR(200) NOT NULL CONSTRAINT DF_Model_SupportedImageSizes DEFAULT '';
     ALTER TABLE dbo.Model DROP CONSTRAINT DF_Model_SupportedImageSizes;
 END
@@ -264,7 +264,7 @@ BEGIN
     -- 迁移 SupportedImageSizes：根据模型名称判断是否为图片生成模型
     -- gpt-image-1 和 gpt-image-1-mini 支持特定的图片尺寸
     UPDATE m
-    SET m.SupportedImageSizes = '1024x1024,1792x1024,1024x1792',
+    SET m.SupportedImageSizes = '1024x1024,1536x1024,1024x1536',
         m.ApiType = 2  -- ImageGeneration
     FROM dbo.Model m
     INNER JOIN dbo.ModelReference mr ON m.ModelReferenceId = mr.Id
@@ -567,6 +567,97 @@ END
 ELSE
 BEGIN
     PRINT N'    -> 已跳过，FileServiceType 表不存在';
+END
+
+GO
+
+-- =============================================
+-- 第十五步：将 ChatConfig.ImageSizeId 改为字符串形式
+-- =============================================
+
+PRINT N'[Step 15] 将 ChatConfig.ImageSizeId 改为字符串形式 ImageSize';
+
+-- 添加新的 ImageSize 字符串字段（可为 null）
+IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'ImageSize' AND Object_ID = Object_ID(N'dbo.ChatConfig'))
+BEGIN
+    ALTER TABLE dbo.ChatConfig ADD ImageSize NVARCHAR(20) NULL;
+    PRINT N'    -> 已添加 ChatConfig.ImageSize 字段';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，ChatConfig.ImageSize 字段已存在';
+END
+
+GO
+
+PRINT N'[Step 16] 迁移 KnownImageSize 数据到 ChatConfig.ImageSize';
+
+-- 将 ImageSizeId 对应的尺寸转换为字符串格式（如 "1024x1024"）
+IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'ImageSizeId' AND Object_ID = Object_ID(N'dbo.ChatConfig'))
+    AND EXISTS(SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.KnownImageSize'))
+BEGIN
+    UPDATE cc
+    SET cc.ImageSize = CAST(kis.Width AS NVARCHAR(10)) + N'x' + CAST(kis.Height AS NVARCHAR(10))
+    FROM dbo.ChatConfig cc
+    INNER JOIN dbo.KnownImageSize kis ON cc.ImageSizeId = kis.Id;
+    
+    PRINT N'    -> 已将 ImageSizeId 转换为 ImageSize 字符串格式';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，ChatConfig.ImageSizeId 字段或 KnownImageSize 表不存在';
+END
+
+GO
+
+PRINT N'[Step 17] 删除 ChatConfig.ImageSizeId 外键和字段';
+
+IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'ImageSizeId' AND Object_ID = Object_ID(N'dbo.ChatConfig'))
+BEGIN
+    -- 删除外键约束：ChatConfig -> KnownImageSize
+    DECLARE @fkImageSize NVARCHAR(128);
+    SELECT TOP 1 @fkImageSize = fk.name
+    FROM sys.foreign_key_columns fkc
+    INNER JOIN sys.objects fk ON fk.object_id = fkc.constraint_object_id
+    INNER JOIN sys.tables t ON t.object_id = fkc.parent_object_id
+    WHERE t.object_id = OBJECT_ID(N'dbo.ChatConfig') 
+        AND fkc.referenced_object_id = OBJECT_ID(N'dbo.KnownImageSize');
+    
+    IF @fkImageSize IS NOT NULL
+    BEGIN
+        DECLARE @dropFkImageSizeSql NVARCHAR(MAX) = N'ALTER TABLE dbo.ChatConfig DROP CONSTRAINT ' + QUOTENAME(@fkImageSize);
+        EXEC sp_executesql @dropFkImageSizeSql;
+        PRINT N'    -> 已删除外键：ChatConfig -> KnownImageSize';
+    END
+
+    -- 删除索引
+    IF EXISTS(SELECT * FROM sys.indexes WHERE name = N'IX_ChatConfig_ImageSizeId' AND object_id = OBJECT_ID(N'dbo.ChatConfig'))
+    BEGIN
+        DROP INDEX IX_ChatConfig_ImageSizeId ON dbo.ChatConfig;
+        PRINT N'    -> 已删除索引 IX_ChatConfig_ImageSizeId';
+    END
+
+    -- 删除字段
+    ALTER TABLE dbo.ChatConfig DROP COLUMN ImageSizeId;
+    PRINT N'    -> 已删除 ChatConfig.ImageSizeId 字段';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，ChatConfig.ImageSizeId 字段不存在';
+END
+
+GO
+
+PRINT N'[Step 18] 删除 KnownImageSize 表';
+
+IF EXISTS(SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.KnownImageSize'))
+BEGIN
+    DROP TABLE dbo.KnownImageSize;
+    PRINT N'    -> 已删除表 KnownImageSize';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，KnownImageSize 表不存在';
 END
 
 GO

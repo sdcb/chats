@@ -17,7 +17,7 @@ public class ChatConfigService(ChatsDB db)
                 c.WebSearchEnabled == raw.WebSearchEnabled && 
                 c.ReasoningEffort == raw.ReasoningEffort && 
                 c.Temperature == raw.Temperature &&
-                c.ImageSizeId == raw.ImageSizeId)
+                c.ImageSize == raw.ImageSize)
             .OrderByDescending(x => x.Id)
             .FirstOrDefaultAsync(cancellationToken);
         if (matchingConfig is not null)

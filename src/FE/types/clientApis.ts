@@ -86,7 +86,7 @@ export interface ChatSpanDto {
   codeExecutionEnabled: boolean;
   reasoningEffort: number;
   maxOutputTokens: number | null;
-  imageSize: number;
+  imageSize: string | null;
   mcps: ChatSpanMcp[];
 }
 
@@ -150,7 +150,7 @@ export interface PostUserChatSpanResult {
   codeExecutionEnabled: boolean;
   reasoningEffort: number;
   maxOutputTokens: number;
-  imageSize: number;
+  imageSize: string | null;
   mcps: ChatSpanMcp[];
 }
 
@@ -248,7 +248,7 @@ export interface PutChatSpanParams {
   codeExecutionEnabled?: boolean;
   maxOutputTokens: number | null;
   reasoningEffort?: number | null;
-  imageSize?: number;
+  imageSize?: string | null;
   mcps?: ChatSpanMcp[];
 }
 
@@ -273,7 +273,7 @@ export interface PutChatPresetSpanParams {
   codeExecutionEnabled?: boolean;
   maxOutputTokens: number | null;
   reasoningEffort?: number | null;
-  imageSize?: number;
+  imageSize?: string | null;
   mcps?: ChatSpanMcp[];
 }
 

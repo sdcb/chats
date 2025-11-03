@@ -18,7 +18,7 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
 public class ImageGenerationService(Model model, ImageClient imageClient) : ChatService(model)
 {
-    private DBKnownImageSize _imageSize;
+    private string? _imageSize;
 
     public ImageGenerationService(Model model, Uri? suggestedUri = null, params PipelinePolicy[] perCallPolicies) : this(model, CreateImageGenerationAPI(model, suggestedUri, perCallPolicies))
     {
@@ -67,15 +67,9 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                 requestBody["quality"] = options.ReasoningEffortLevel.ToDBReasoningEffort().ToGeneratedImageQualityText();
             }
 
-            if (_imageSize != DBKnownImageSize.Default)
+            if (!string.IsNullOrEmpty(_imageSize))
             {
-                requestBody["size"] = _imageSize switch
-                {
-                    DBKnownImageSize.W1024xH1024 => "1024x1024",
-                    DBKnownImageSize.W1536xH1024 => "1536x1024",
-                    DBKnownImageSize.W1024xH1536 => "1024x1536",
-                    _ => throw new NotSupportedException($"Unsupported image size: {_imageSize}"),
-                };
+                requestBody["size"] = _imageSize;
             }
 
             if (options.EndUserId != null)
@@ -167,14 +161,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                 {
                     EndUserId = options.EndUserId,
                     Quality = options.ReasoningEffortLevel.ToDBReasoningEffort().ToGeneratedImageQuality(),
-                    Size = _imageSize switch
-                    {
-                        DBKnownImageSize.Default => null,
-                        DBKnownImageSize.W1024xH1024 => GeneratedImageSize.W1024xH1024,
-                        DBKnownImageSize.W1536xH1024 => GeneratedImageSize.W1536xH1024,
-                        DBKnownImageSize.W1024xH1536 => GeneratedImageSize.W1024xH1536,
-                        _ => throw new NotSupportedException($"Unsupported image size: {_imageSize}"),
-                    },
+                    Size = string.IsNullOrEmpty(_imageSize) ? null : GeneratedImageSizeFromString(_imageSize),
                     ModerationLevel = GeneratedImageModerationLevel.Low,
                 }, cancellationToken);
         }
@@ -190,7 +177,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
         }
 
         JsonObject rawJson = cr.GetRawResponse().Content
-                .ToObjectFromJson<JsonObject>() ?? throw new Exception("Unable to parse raw JSON from the response.");
+            .ToObjectFromJson<JsonObject>() ?? throw new Exception("Unable to parse raw JSON from the response.");
         GeneratedImageCollection gic = cr.Value ?? throw new Exception("Unable to parse generated image collection from the response.");
         JsonNode usage = rawJson["usage"] ?? throw new Exception("Unable to parse usage from the response.");
 
@@ -286,15 +273,9 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
         form.Add(options.MaxOutputTokenCount ?? 1, "n");
         form.Add(Model.DeploymentName, "model");
 
-        if (_imageSize != DBKnownImageSize.Default)
+        if (!string.IsNullOrEmpty(_imageSize))
         {
-            form.Add(_imageSize switch
-            {
-                DBKnownImageSize.W1024xH1024 => "1024x1024",
-                DBKnownImageSize.W1536xH1024 => "1536x1024",
-                DBKnownImageSize.W1024xH1536 => "1024x1536",
-                _ => throw new NotSupportedException($"Unsupported image size: {_imageSize}"),
-            }, "size");
+            form.Add(_imageSize, "size");
         }
 
         if (options.EndUserId != null)
@@ -432,6 +413,17 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                     Usage = usage,
                 };
             }
+            //event: error
+            //data: {"type":"error","error":{"type":"image_generation_server_error","code":"image_generation_failed","message":"Image generation failed","param":null}}
+            else if (eventType == "error")
+            {
+                Console.WriteLine($"[{sw.Elapsed.TotalSeconds:F3}s] {eventType} #{eventIndex}");
+                throw new Exception(root.ToString());
+            }
+            else
+            {
+                Console.WriteLine($"[{sw.Elapsed.TotalSeconds:F3}s] Unknown event type: {eventType} #{eventIndex}");
+            }
 
             eventIndex++;
         }
@@ -454,7 +446,10 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
     [UnsafeAccessor(UnsafeAccessorKind.StaticMethod, Name = "FromClientResult")]
     static extern GeneratedImageCollection FromClientResult(GeneratedImageCollection _, ClientResult result);
 
-    protected override void SetImageSize(ChatCompletionOptions options, DBKnownImageSize imageSize)
+    [UnsafeAccessor(UnsafeAccessorKind.Constructor)]
+    static extern GeneratedImageSize GeneratedImageSizeFromString(string value);
+
+    protected override void SetImageSize(ChatCompletionOptions options, string imageSize)
     {
         _imageSize = imageSize;
     }

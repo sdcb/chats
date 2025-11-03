@@ -272,13 +272,13 @@ public class ChatConfigHashTests
         Assert.Equal(hash1, hash2);
     }
 
-    // 新增的 ImageSizeId 字段测试
+    // 新增的 ImageSize 字段测试
     [Fact]
-    public void GenerateDBHashCode_ShouldGenerateDifferentHash_ForDifferentImageSizeId()
+    public void GenerateDBHashCode_ShouldGenerateDifferentHash_ForDifferentImageSize()
     {
         // Arrange
-        ChatConfig config1 = new() { ImageSizeId = (short)DBKnownImageSize.Default };
-        ChatConfig config2 = new() { ImageSizeId = (short)DBKnownImageSize.W1024xH1024 };
+        ChatConfig config1 = new() { ImageSize = null };
+        ChatConfig config2 = new() { ImageSize = "1024x1024" };
 
         // Act
         long hash1 = config1.GenerateDBHashCode();
@@ -289,28 +289,28 @@ public class ChatConfigHashTests
     }
 
     [Fact]
-    public void GenerateDBHashCode_ShouldMaintainCompatibility_ForDefaultImageSizeId()
+    public void GenerateDBHashCode_ShouldMaintainCompatibility_ForNullImageSize()
     {
-        // Arrange - 测试向后兼容性：默认值(0)不应影响哈希
+        // Arrange - 测试向后兼容性：null(默认值)不应影响哈希
         ChatConfig configWithoutImageSize = new() 
         { 
             ModelId = 1,
             SystemPrompt = "Test",
-            ImageSizeId = 0 // 默认值
+            ImageSize = null // 默认值
         };
         
-        ChatConfig configExplicitDefault = new() 
+        ChatConfig configExplicitNull = new() 
         { 
             ModelId = 1,
             SystemPrompt = "Test",
-            ImageSizeId = (short)DBKnownImageSize.Default
+            ImageSize = null
         };
 
         // Act
         long hash1 = configWithoutImageSize.GenerateDBHashCode();
-        long hash2 = configExplicitDefault.GenerateDBHashCode();
+        long hash2 = configExplicitNull.GenerateDBHashCode();
 
-        // Assert - 默认值应该产生相同的哈希以保持向后兼容
+        // Assert - null 值应该产生相同的哈希以保持向后兼容
         Assert.Equal(hash1, hash2);
     }
 
@@ -318,9 +318,9 @@ public class ChatConfigHashTests
     public void GenerateDBHashCode_ShouldGenerateDifferentHash_ForDifferentImageSizes()
     {
         // Arrange
-        ChatConfig config1 = new() { ImageSizeId = (short)DBKnownImageSize.W1024xH1024 };
-        ChatConfig config2 = new() { ImageSizeId = (short)DBKnownImageSize.W1536xH1024 };
-        ChatConfig config3 = new() { ImageSizeId = (short)DBKnownImageSize.W1024xH1536 };
+        ChatConfig config1 = new() { ImageSize = "1024x1024" };
+        ChatConfig config2 = new() { ImageSize = "1792x1024" };
+        ChatConfig config3 = new() { ImageSize = "1024x1792" };
 
         // Act
         long hash1 = config1.GenerateDBHashCode();
@@ -431,19 +431,19 @@ public class ChatConfigHashTests
         // Arrange - 测试两个新字段的组合
         ChatConfig config1 = new() 
         { 
-            ImageSizeId = (short)DBKnownImageSize.W1024xH1024
+            ImageSize = "1024x1024"
         };
         config1.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 1 });
 
         ChatConfig config2 = new() 
         { 
-            ImageSizeId = (short)DBKnownImageSize.W1536xH1024
+            ImageSize = "1792x1024"
         };
         config2.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 1 });
 
         ChatConfig config3 = new() 
         { 
-            ImageSizeId = (short)DBKnownImageSize.W1024xH1024
+            ImageSize = "1024x1024"
         };
         config3.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 2 });
 
@@ -453,7 +453,7 @@ public class ChatConfigHashTests
         long hash3 = config3.GenerateDBHashCode();
 
         // Assert
-        Assert.NotEqual(hash1, hash2); // 不同的 ImageSizeId
+        Assert.NotEqual(hash1, hash2); // 不同的 ImageSize
         Assert.NotEqual(hash1, hash3); // 不同的 McpServerId
         Assert.NotEqual(hash2, hash3); // 两者都不同
     }

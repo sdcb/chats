@@ -114,7 +114,7 @@ const ChatPresetModal = (props: Props) => {
             reasoningEffort: 0,
             webSearchEnabled: false,
             codeExecutionEnabled: false,
-            imageSize: 0,
+            imageSize: null,
             mcps: [],
           });
           return s;
@@ -197,7 +197,7 @@ const ChatPresetModal = (props: Props) => {
       reasoningEffort: 0,
       webSearchEnabled: false,
       codeExecutionEnabled: false,
-      imageSize: 0,
+      imageSize: null,
       mcps: [],
     };
     setSpans([...spans, span]);
@@ -333,13 +333,13 @@ const ChatPresetModal = (props: Props) => {
     });
   };
 
-  const onChangeImageSize = (value: string) => {
+  const onChangeImageSize = (value: string | null) => {
     setSpans((prev) => {
       return prev.map((span) => {
         if (selectedSpan?.spanId === span.spanId) {
           const s = {
             ...span!,
-            imageSize: Number(value),
+            imageSize: value,
           };
           setSelectedSpan({
             ...s,

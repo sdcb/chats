@@ -20,7 +20,7 @@ public partial class ChatPresetSpan
         config.WebSearchEnabled = ChatConfig.WebSearchEnabled;
         config.MaxOutputTokens = ChatConfig.MaxOutputTokens;
         config.ReasoningEffort = ChatConfig.ReasoningEffort;
-        config.ImageSizeId = ChatConfig.ImageSizeId;
+        config.ImageSize = ChatConfig.ImageSize;
 
         // Update ChatConfigMcp associations
         HashSet<int> existingMcpIds = [.. config.ChatConfigMcps.Select(x => x.McpServerId)];
@@ -56,7 +56,7 @@ public partial class ChatPresetSpan
             WebSearchEnabled = ChatConfig.WebSearchEnabled,
             MaxOutputTokens = ChatConfig.MaxOutputTokens,
             ReasoningEffort = ChatConfig.ReasoningEffort,
-            ImageSizeId = ChatConfig.ImageSizeId,
+            ImageSize = ChatConfig.ImageSize,
         };
 
         ChatSpan chatSpan = new()

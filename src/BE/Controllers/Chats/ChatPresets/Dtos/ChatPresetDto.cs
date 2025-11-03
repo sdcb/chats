@@ -40,7 +40,7 @@ public record ChatPresetDto
                 CodeExecutionEnabled = x.ChatConfig.CodeExecutionEnabled,
                 MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
                 ReasoningEffort = x.ChatConfig.ReasoningEffort,
-                ImageSize =  (DBKnownImageSize)x.ChatConfig.ImageSizeId,
+                ImageSize = x.ChatConfig.ImageSize,
                 Mcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                 {
                     Id = mcp.McpServerId,

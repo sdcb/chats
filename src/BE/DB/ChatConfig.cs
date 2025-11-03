@@ -25,9 +25,10 @@ public partial class ChatConfig
 
     public byte ReasoningEffort { get; set; }
 
-    public short ImageSizeId { get; set; }
-
     public bool CodeExecutionEnabled { get; set; }
+
+    [StringLength(20)]
+    public string? ImageSize { get; set; }
 
     [InverseProperty("ChatConfig")]
     public virtual ChatConfigArchived? ChatConfigArchived { get; set; }
@@ -43,10 +44,6 @@ public partial class ChatConfig
 
     [InverseProperty("ChatConfig")]
     public virtual ICollection<ChatTurn> ChatTurns { get; set; } = new List<ChatTurn>();
-
-    [ForeignKey("ImageSizeId")]
-    [InverseProperty("ChatConfigs")]
-    public virtual KnownImageSize ImageSize { get; set; } = null!;
 
     [ForeignKey("ModelId")]
     [InverseProperty("ChatConfigs")]

@@ -12,10 +12,10 @@ import ImageQualityRadio from '@/components/ImageQualityRadio/ImageQualityRadio'
 
 interface ImageGenerationPresetConfigProps {
   model: AdminModelDto;
-  imageSize: number;
+  imageSize: string | null;
   reasoningEffort: number;
   maxOutputTokens: number | null;
-  onChangeImageSize: (value: string) => void;
+  onChangeImageSize: (value: string | null) => void;
   onChangeImageQuality: (value: string) => void;
   onChangeMaxOutputTokens: (value: number | null) => void;
 }
@@ -39,8 +39,9 @@ const ImageGenerationPresetConfig: React.FC<ImageGenerationPresetConfigProps> = 
       {/* Image Size */}
       {model.supportedImageSizes?.length > 0 && (
         <ImageSizeRadio
-          value={`${imageSize}`}
+          value={imageSize}
           onValueChange={onChangeImageSize}
+          supportedSizes={model.supportedImageSizes}
         />
       )}
 

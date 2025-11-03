@@ -9,47 +9,36 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { cn } from '@/lib/utils';
 
 interface Props {
-  value?: string;
-  onValueChange: (value: string) => void;
+  value?: string | null;
+  onValueChange: (value: string | null) => void;
+  supportedSizes: string[]; // 支持的图片尺寸列表，如 ["1024x1024", "1792x1024"]
 }
 
 const ImageSizeRadio: FC<Props> = ({
-  value = '0',
+  value = null,
   onValueChange,
+  supportedSizes,
 }) => {
   const { t } = useTranslation();
   
-  // 判断是否为自定义模式（非默认值）
-  const isCustom = value !== '0';
+  // 判断是否为自定义模式（非 null 值）
+  const isCustom = value !== null && value !== '';
   const [isExpanded, setIsExpanded] = useState(isCustom);
 
   // 同步isExpanded状态与value
   useEffect(() => {
-    setIsExpanded(value !== '0');
+    setIsExpanded(value !== null && value !== '');
   }, [value]);
 
   const handleToggleMode = () => {
     if (isExpanded) {
       // 切换到默认模式
-      onValueChange('0');
+      onValueChange(null);
       setIsExpanded(false);
     } else {
       // 切换到自定义模式，默认选择第一个自定义选项
-      onValueChange('1');
+      onValueChange(supportedSizes[0] || null);
       setIsExpanded(true);
-    }
-  };
-
-  const getSizeLabel = (value: string) => {
-    switch (value) {
-      case '1':
-        return '1024×1024';
-      case '2':
-        return '1536×1024';
-      case '3':
-        return '1024×1536';
-      default:
-        return t('Default');
     }
   };
 
@@ -69,30 +58,20 @@ const ImageSizeRadio: FC<Props> = ({
           {isExpanded ? t('Custom') : t('Default')}
         </Button>
       </div>
-      <div className={cn('hidden', isExpanded && 'flex justify-between gap-2')}>
+      <div className={cn('hidden', isExpanded && 'flex justify-end gap-2')}>
         <RadioGroup
-          className="flex gap-4"
-          value={value}
-          onValueChange={onValueChange}
+          className="flex gap-3 flex-wrap"
+          value={value || ''}
+          onValueChange={(v) => onValueChange(v || null)}
         >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="1" id="size-1024x1024" />
-            <Label className="text-base cursor-pointer" htmlFor="size-1024x1024">
-              1024×1024
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="2" id="size-1536x1024" />
-            <Label className="text-base cursor-pointer" htmlFor="size-1536x1024">
-              1536×1024
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="3" id="size-1024x1536" />
-            <Label className="text-base cursor-pointer" htmlFor="size-1024x1536">
-              1024×1536
-            </Label>
-          </div>
+          {supportedSizes.map((size) => (
+            <div key={size} className="flex items-center space-x-1.5">
+              <RadioGroupItem value={size} id={`size-${size}`} />
+              <Label className="text-sm cursor-pointer" htmlFor={`size-${size}`}>
+                {size.replace('x', '×')}
+              </Label>
+            </div>
+          ))}
         </RadioGroup>
       </div>
     </div>

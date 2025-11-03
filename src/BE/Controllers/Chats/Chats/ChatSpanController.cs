@@ -91,7 +91,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
                 MaxOutputTokens = null,
                 ReasoningEffort = 0,
                 SystemPrompt = defaultPrompt.Content,
-                ImageSizeId = 0,
+                ImageSize = null,
                 ChatConfigMcps = [],
             };
         }
@@ -112,7 +112,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
                     MaxOutputTokens = null,
                     ReasoningEffort = 0,
                     SystemPrompt = defaultPrompt.Content,
-                    ImageSizeId = 0, // Default to 0 (DBKnownImageSize.Default)
+                    ImageSize = null,
                     ChatConfigMcps = [],
                 }
             };

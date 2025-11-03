@@ -59,8 +59,6 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<KeycloakAttempt> KeycloakAttempts { get; set; }
 
-    public virtual DbSet<KnownImageSize> KnownImageSizes { get; set; }
-
     public virtual DbSet<LoginService> LoginServices { get; set; }
 
     public virtual DbSet<McpServer> McpServers { get; set; }
@@ -177,10 +175,6 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<ChatConfig>(entity =>
         {
-            entity.HasOne(d => d.ImageSize).WithMany(p => p.ChatConfigs)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ChatConfig_ImageSize");
-
             entity.HasOne(d => d.Model).WithMany(p => p.ChatConfigs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ChatConfig_Model");
@@ -307,11 +301,6 @@ public partial class ChatsDB : DbContext
                 .HasConstraintName("FK_KeycloakAttempt_ClientInfo");
 
             entity.HasOne(d => d.User).WithMany(p => p.KeycloakAttempts).HasConstraintName("FK_KeycloakAttempt_User");
-        });
-
-        modelBuilder.Entity<KnownImageSize>(entity =>
-        {
-            entity.Property(e => e.Id).ValueGeneratedNever();
         });
 
         modelBuilder.Entity<LoginService>(entity =>

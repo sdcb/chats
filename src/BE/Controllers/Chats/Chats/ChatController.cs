@@ -443,7 +443,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             WebSearchEnabled = chatSpan.ChatConfig.WebSearchEnabled,
             CodeExecutionEnabled = chatSpan.ChatConfig.CodeExecutionEnabled,
             ReasoningEffort = (DBReasoningEffort)chatSpan.ChatConfig.ReasoningEffort,
-            ImageSize = (DBKnownImageSize)chatSpan.ChatConfig.ImageSizeId,
+            ImageSize = chatSpan.ChatConfig.ImageSize,
         };
 
         // Build a name mapping for tools to avoid collisions while keeping names clean

@@ -69,7 +69,7 @@ public abstract partial class ChatService : IDisposable
             SetReasoningEffort(options, feOptions.ReasoningEffort);
         }
 
-        if (feOptions.ImageSize != DBKnownImageSize.Default)
+        if (!string.IsNullOrEmpty(feOptions.ImageSize))
         {
             SetImageSize(options, feOptions.ImageSize);
         }
@@ -102,7 +102,7 @@ public abstract partial class ChatService : IDisposable
         return filteredMessage;
     }
 
-    protected virtual void SetImageSize(ChatCompletionOptions options, DBKnownImageSize imageSize)
+    protected virtual void SetImageSize(ChatCompletionOptions options, string imageSize)
     {
         // chat service not enable image size by default, prompt a warning
         Console.WriteLine($"{Model.DeploymentName} chat service not support image generation.");
