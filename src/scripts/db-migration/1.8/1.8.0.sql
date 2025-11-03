@@ -545,6 +545,31 @@ END
 
 GO
 
+PRINT N'[Step 13.1] 初始化 ModelProviderOrder 数据';
+
+-- 将原先最先出现的 ModelKey 对应的 ModelProviderId 按顺序插入到 ModelProviderOrder 表中
+IF EXISTS(SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.ModelProviderOrder'))
+    AND NOT EXISTS(SELECT * FROM dbo.ModelProviderOrder)
+BEGIN
+    -- 使用 ROW_NUMBER 为每个 ModelProviderId 的首次出现分配顺序号
+    INSERT INTO dbo.ModelProviderOrder (ModelProviderId, [Order])
+    SELECT 
+        ModelProviderId,
+        ROW_NUMBER() OVER (ORDER BY MIN([Order])) - 1 AS [Order]
+    FROM dbo.ModelKey
+    GROUP BY ModelProviderId
+    ORDER BY MIN([Order]);
+    
+    DECLARE @rowCount INT = @@ROWCOUNT;
+    PRINT N'    -> 已插入 ' + CAST(@rowCount AS NVARCHAR(10)) + N' 条 ModelProviderOrder 记录';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已跳过，ModelProviderOrder 表不存在或已有数据';
+END
+
+GO
+
 -- =============================================
 -- 第十四步：删除 FileServiceType 表
 -- =============================================

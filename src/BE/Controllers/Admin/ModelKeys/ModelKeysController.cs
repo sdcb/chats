@@ -174,8 +174,6 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
         Dictionary<string, Model[]> existingModelsMap = modelKey.Models
             .GroupBy(x => x.DeploymentName, StringComparer.Ordinal)
             .ToDictionary(x => x.Key, v => v.ToArray());
-        
-        int? fileServiceId = await FileService.GetDefaultId(db, cancellationToken);
 
         PossibleModelDto[] result = [.. models.Select(model => 
         {
@@ -189,7 +187,6 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
                     ModelId = existingModel.Id,
                     Name = existingModel.Name,
                     Enabled = !existingModel.IsDeleted,
-                    FileServiceId = fileServiceId,
                     ModelKeyId = existingModel.ModelKeyId,
                     ModelProviderId = existingModel.ModelKey.ModelProviderId,
                     InputTokenPrice1M = existingModel.InputTokenPrice1M,
@@ -309,123 +306,5 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
     private static void ReorderModelKeys(ModelKey[] existingModelKeys)
     {
         ReorderHelper.Default.ReorderEntities(existingModelKeys);
-    }
-
-    [HttpPut("reorder-model-providers")]
-    public async Task<ActionResult> ReorderModelProviders([FromBody] ReorderRequest<short> request, CancellationToken cancellationToken)
-    {
-        // 验证被移动的 ModelProvider 是否存在
-        if (!Enum.IsDefined(typeof(DBModelProvider), (int)request.SourceId))
-        {
-            return NotFound("Source model provider not found");
-        }
-
-        // 验证 previous 和 next 的 ModelProvider 是否存在（如果提供的话）
-        if (request.PreviousId != null && !Enum.IsDefined(typeof(DBModelProvider), (int)request.PreviousId))
-        {
-            return NotFound("Previous model provider not found");
-        }
-
-        if (request.NextId != null && !Enum.IsDefined(typeof(DBModelProvider), (int)request.NextId))
-        {
-            return NotFound("Next model provider not found");
-        }
-
-        // 验证 previous 和 next 不能同时为空
-        if (request.PreviousId == null && request.NextId == null)
-        {
-            return BadRequest("Both previous and next model providers cannot be null");
-        }
-
-        // 获取所有 ModelProviderOrder，如果没有则按 ModelProviderId 排序
-        var providerOrders = await db.ModelProviderOrders
-            .OrderBy(x => x.Order)
-            .ToListAsync(cancellationToken);
-
-        // 如果 ModelProviderOrder 表为空，初始化所有已定义的 Provider
-        if (providerOrders.Count == 0)
-        {
-            var allProviders = Enum.GetValues<DBModelProvider>()
-                .Select((p, index) => new ModelProviderOrder 
-                { 
-                    ModelProviderId = (short)p, 
-                    Order = (short)(index * 100) 
-                })
-                .ToList();
-            
-            db.ModelProviderOrders.AddRange(allProviders);
-            await db.SaveChangesAsync(cancellationToken);
-            providerOrders = allProviders.OrderBy(x => x.Order).ToList();
-        }
-
-        // 获取当前的排序列表
-        List<short> currentProviderOrder = providerOrders.Select(x => x.ModelProviderId).ToList();
-
-        // 验证 previous 和 next 的顺序（必须相邻）
-        if (request.PreviousId != null && request.NextId != null)
-        {
-            int previousIndex = currentProviderOrder.IndexOf(request.PreviousId.Value);
-            int nextIndex = currentProviderOrder.IndexOf(request.NextId.Value);
-            if (previousIndex == -1 || nextIndex == -1 || previousIndex + 1 != nextIndex)
-            {
-                return BadRequest("Previous and next model providers must be adjacent");
-            }
-        }
-
-        // 从当前列表中移除 source
-        List<short> newProviderOrder = new List<short>(currentProviderOrder);
-        newProviderOrder.Remove(request.SourceId);
-
-        // 计算插入位置
-        int insertIndex = 0;
-        if (request.PreviousId != null && request.NextId != null)
-        {
-            // 插入到 previous 和 next 之间
-            int previousIndex = newProviderOrder.IndexOf(request.PreviousId.Value);
-            insertIndex = previousIndex + 1;
-        }
-        else if (request.PreviousId != null)
-        {
-            // 插入到 previous 之后（末尾）
-            int previousIndex = newProviderOrder.IndexOf(request.PreviousId.Value);
-            insertIndex = previousIndex + 1;
-        }
-        else if (request.NextId != null)
-        {
-            // 插入到 next 之前（开头）
-            int nextIndex = newProviderOrder.IndexOf(request.NextId.Value);
-            insertIndex = nextIndex;
-        }
-
-        // 插入到新位置
-        newProviderOrder.Insert(insertIndex, request.SourceId);
-
-        // 更新所有 Provider 的 Order 值（使用100的间隔）
-        for (int i = 0; i < newProviderOrder.Count; i++)
-        {
-            short providerId = newProviderOrder[i];
-            var providerOrder = providerOrders.FirstOrDefault(x => x.ModelProviderId == providerId);
-            
-            if (providerOrder != null)
-            {
-                providerOrder.Order = (short)(i * 100);
-            }
-            else
-            {
-                // 如果不存在，创建新的记录
-                db.ModelProviderOrders.Add(new ModelProviderOrder
-                {
-                    ModelProviderId = providerId,
-                    Order = (short)(i * 100)
-                });
-            }
-        }
-
-        if (db.ChangeTracker.HasChanges())
-        {
-            await db.SaveChangesAsync(cancellationToken);
-        }
-
-        return NoContent();
     }
 }

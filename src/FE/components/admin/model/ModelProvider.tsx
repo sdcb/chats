@@ -16,12 +16,13 @@ export type ProviderGroup = {
   providerId: number;
   providerName: string;
   keys: GetModelKeysResult[];
+  keyCount: number;
+  modelCount: number;
 };
 
 interface ModelProviderProps {
   provider: ProviderGroup;
   modelsByKey: Record<number, AdminModelDto[]>;
-  modelCount: number;
   expanded: boolean;
   expandedKeys: Record<number, boolean>;
   onToggleExpand: () => void;
@@ -43,7 +44,6 @@ interface ModelProviderProps {
 export default function ModelProvider({
   provider,
   modelsByKey,
-  modelCount,
   expanded,
   expandedKeys,
   onToggleExpand,
@@ -58,7 +58,7 @@ export default function ModelProvider({
   onGoToUsage,
 }: ModelProviderProps) {
   const { t } = useTranslation();
-  const sortable = useSortable({ id: `provider-${provider.providerId}`, disabled: provider.keys.length === 0 });
+  const sortable = useSortable({ id: `provider-${provider.providerId}` });
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -85,14 +85,12 @@ export default function ModelProvider({
 
   // Provider 的拖拽由上层 dnd-kit 管理
 
-  const handleEnabled = provider.keys.length > 0;
-
   return (
     <div className="mb-3" ref={setNodeRef} style={style}>
       <div 
         className={cn(
           "rounded-xl border bg-card transition-all duration-200 touch-pan-y",
-          handleEnabled && isDragging && "opacity-60"
+          isDragging && "opacity-60"
         )}
         {...attributes}
       >
@@ -105,8 +103,8 @@ export default function ModelProvider({
             <button
               className={cn(
                 "p-0 m-0 bg-transparent border-0 inline-flex items-center gap-2 touch-none",
-                handleEnabled ? "cursor-grab active:cursor-grabbing" : "cursor-default",
-                handleEnabled && isDragging && "cursor-grabbing"
+                "cursor-grab active:cursor-grabbing",
+                isDragging && "cursor-grabbing"
               )}
               aria-label={t('Drag to reorder')}
               data-allow-toggle
@@ -117,17 +115,16 @@ export default function ModelProvider({
                   e.stopPropagation();
                 }
               }}
-              {...(handleEnabled ? listeners : {})}
-              disabled={!handleEnabled}
+              {...listeners}
             >
               <ModelProviderIcon className="h-6 w-6" providerId={provider.providerId} />
               {/* 小屏隐藏标题，仅显示图标；大屏显示提供商标题 */}
               <span className="font-semibold hidden sm:inline">{t(provider.providerName)}</span>
             </button>
-            {/* 计数信息：小屏仅显示“密钥: X”，大屏显示“密钥: X 模型: Y” */}
+            {/* 计数信息：小屏仅显示"密钥: X"，大屏显示"密钥: X 模型: Y" */}
             <span className="text-muted-foreground text-sm">
-              {t('Model Keys')}: {provider.keys.length}
-              <span className="hidden sm:inline"> {t('Models')}: {modelCount}</span>
+              {t('Model Keys')}: {provider.keyCount}
+              <span className="hidden sm:inline"> {t('Models')}: {provider.modelCount}</span>
             </span>
           </div>
           <div className="flex items-center gap-2">

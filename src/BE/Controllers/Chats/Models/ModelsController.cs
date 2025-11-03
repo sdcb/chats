@@ -16,17 +16,19 @@ public class ModelsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<AdminModelDto[]>> Get([FromServices] ChatsDB db, [FromServices] CurrentUser currentUser, CancellationToken cancellationToken)
     {
-        int? fileServiceId = await FileService.GetDefaultId(db, cancellationToken);
-        AdminModelDto[] data = await db.UserModels
-            .Where(x => x.UserId == currentUser.Id && !x.Model.IsDeleted)
-            .OrderBy(x => x.Model.ModelKey.Order).ThenBy(x => x.Model.Order)
-            .Select(x => x.Model)
-            .Select(x => new AdminModelDto
+        AdminModelDto[] data = await (
+            from um in db.UserModels
+            where um.UserId == currentUser.Id && !um.Model.IsDeleted
+            join mpo in db.ModelProviderOrders on um.Model.ModelKey.ModelProviderId equals mpo.ModelProviderId into mpoGroup
+            from mpo in mpoGroup.DefaultIfEmpty()
+            orderby mpo != null ? mpo.Order : int.MaxValue, um.Model.ModelKey.Order, um.Model.Order
+            select um.Model
+        )
+        .Select(x => new AdminModelDto
             {
                 ModelId = x.Id,
                 Name = x.Name,
                 Enabled = !x.IsDeleted,
-                FileServiceId = fileServiceId,
                 ModelKeyId = x.ModelKeyId,
                 ModelProviderId = x.ModelKey.ModelProviderId,
                 InputTokenPrice1M = x.InputTokenPrice1M,

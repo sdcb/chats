@@ -275,6 +275,12 @@ export interface PutPayServicesParams extends PostPayServicesParams {
   id: string;
 }
 
+export interface ModelProviderDto {
+  providerId: number;
+  keyCount: number;
+  modelCount: number;
+}
+
 export class GetModelKeysResult {
   id: number;
   modelProviderId: number;

@@ -20,9 +20,6 @@ public record AdminModelDto
     [JsonPropertyName("modelKeyId")]
     public required short ModelKeyId { get; init; }
 
-    [JsonPropertyName("fileServiceId")]
-    public required int? FileServiceId { get; init; }
-
     [JsonPropertyName("deploymentName")]
     public required string DeploymentName { get; init; }
 

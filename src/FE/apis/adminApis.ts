@@ -23,6 +23,7 @@ import {
   GetUserMessageParams,
   GetUsersParams,
   GetUsersResult,
+  ModelProviderDto,
   ModelProviderInitialConfig,
   PasswordAttemptLog,
   PossibleModelResult,
@@ -281,6 +282,22 @@ export const getModelKeys = async (): Promise<GetModelKeysResult[]> => {
   return data.map((x) => new GetModelKeysResult(x));
 };
 
+export const getModelProviders = async (): Promise<ModelProviderDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get('/api/admin/model-providers');
+};
+
+export const getModelKeysByProvider = async (providerId: number): Promise<GetModelKeysResult[]> => {
+  const fetchService = useFetch();
+  const data = await fetchService.get<Object[]>(`/api/admin/model-providers/${providerId}/model-keys`);
+  return data.map((x) => new GetModelKeysResult(x));
+};
+
+export const getModelsByKey = async (modelKeyId: number): Promise<AdminModelDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get(`/api/admin/model-providers/model-keys/${modelKeyId}/models`);
+};
+
 export const postModelKeys = (params: PostModelKeysParams) => {
   const fetchService = useFetch();
   return fetchService.post<number>('/api/admin/model-keys', {
@@ -302,7 +319,7 @@ export const deleteModelKeys = (id: number) => {
 
 export const reorderModelProviders = (params: ReorderRequest) => {
   const fetchService = useFetch();
-  return fetchService.put('/api/admin/model-keys/reorder-model-providers', {
+  return fetchService.put('/api/admin/model-providers/reorder', {
     body: params,
   });
 };

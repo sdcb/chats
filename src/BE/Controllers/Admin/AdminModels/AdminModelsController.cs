@@ -20,15 +20,18 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
         IQueryable<Model> query = db.Models;
         if (!all) query = query.Where(x => !x.IsDeleted);
 
-        int? fileServiceId = await FileService.GetDefaultId(db, cancellationToken);
-        AdminModelDto[] data = await query
-            .OrderBy(x => x.ModelKey.Order).ThenBy(x => x.Order)
-            .Select(x => new AdminModelDto
+        AdminModelDto[] data = await (
+            from m in query
+            join mpo in db.ModelProviderOrders on m.ModelKey.ModelProviderId equals mpo.ModelProviderId into mpoGroup
+            from mpo in mpoGroup.DefaultIfEmpty()
+            orderby mpo != null ? mpo.Order : int.MaxValue, m.ModelKey.Order, m.Order
+            select m
+        )
+        .Select(x => new AdminModelDto
             {
                 ModelId = x.Id,
                 Name = x.Name,
                 Enabled = !x.IsDeleted,
-                FileServiceId = fileServiceId,
                 ModelKeyId = x.ModelKeyId,
                 ModelProviderId = x.ModelKey.ModelProviderId,
                 InputTokenPrice1M = x.InputTokenPrice1M,
