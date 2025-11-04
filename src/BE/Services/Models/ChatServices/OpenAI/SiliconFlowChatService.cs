@@ -17,7 +17,7 @@ public class SiliconFlowChatService(Model model) : ChatCompletionService(model, 
     {
         if (reasoningEffort.IsLowOrMinimal())
         {
-            options.GetOrCreateSerializedAdditionalRawData()["enable_thinking"] = BinaryData.FromObjectAsJson(false);
+            options.Patch.Set("$.enable_thinking"u8, false);
         }
     }
 }

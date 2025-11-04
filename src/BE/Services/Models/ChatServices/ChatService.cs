@@ -9,21 +9,14 @@ using Chats.BE.DB.Enums;
 
 namespace Chats.BE.Services.Models;
 
-public abstract partial class ChatService : IDisposable
+public abstract partial class ChatService(Model model) : IDisposable
 {
-    internal protected Model Model { get; }
-    internal protected Tokenizer Tokenizer { get; }
+    internal protected Model Model { get; } = model;
+    internal protected Tokenizer Tokenizer { get; } = DefaultTokenizer;
 
     internal static Tokenizer DefaultTokenizer { get; } = TiktokenTokenizer.CreateForEncoding("o200k_base");
 
     protected static TimeSpan NetworkTimeout { get; } = TimeSpan.FromHours(24);
-
-    public ChatService(Model model)
-    {
-        Model = model;
-        // Tokenizer 现在统一使用 DefaultTokenizer 作为兜底
-        Tokenizer = DefaultTokenizer;
-    }
 
     public abstract IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, CancellationToken cancellationToken);
 

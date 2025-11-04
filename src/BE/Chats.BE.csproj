@@ -6,14 +6,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>d4aa34e2-6c5f-41b9-b61b-c1a48b1d1b44</UserSecretsId>
     <Version>1.8.0</Version>
-    <NoWarn>OPENAI001</NoWarn>
+    <NoWarn>OPENAI001;SCME0001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Aliyun.OSS.SDK.NetCore" Version="2.14.1" />
-    <PackageReference Include="AWSSDK.S3" Version="4.0.7.12" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.9.1" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.26.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+  <PackageReference Include="System.Net.ServerSentEvents" Version="10.0.0-preview.4.25258.110" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -23,9 +24,9 @@
     <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="1.0.3" />
     <PackageReference Include="MiniExcel" Version="1.41.4" />
     <PackageReference Include="ModelContextProtocol.Core" Version="0.4.0-preview.2" />
-    <PackageReference Include="Mscc.GenerativeAI" Version="2.8.18" />
+    <PackageReference Include="Mscc.GenerativeAI" Version="2.8.24" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
-    <PackageReference Include="OpenAI" Version="2.5.0" />
+    <PackageReference Include="OpenAI" Version="2.6.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />

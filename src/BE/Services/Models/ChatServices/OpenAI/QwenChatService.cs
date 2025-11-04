@@ -41,7 +41,7 @@ public class QwenChatService(Model model) : ChatCompletionService(model, new Uri
                 return JsonSerializer.SerializeToUtf8Bytes(jsonObj);
             }
             catch
-{
+            {
                 // 如果解析失败，返回原始字节
                 return bytes;
             }
@@ -49,14 +49,14 @@ public class QwenChatService(Model model) : ChatCompletionService(model, new Uri
     }
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {
-        options.GetOrCreateSerializedAdditionalRawData()["enable_search"] = BinaryData.FromObjectAsJson(enabled);
+        options.Patch.Set("$.enable_search"u8, enabled);
     }
 
     protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
     {
         if (reasoningEffort.IsLowOrMinimal())
         {
-            options.GetOrCreateSerializedAdditionalRawData()["enable_thinking"] = BinaryData.FromObjectAsJson(false);
+            options.Patch.Set("$.enable_thinking"u8, false);
         }
     }
 }

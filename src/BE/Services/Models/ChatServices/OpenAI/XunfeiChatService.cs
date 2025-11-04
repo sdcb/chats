@@ -1,5 +1,4 @@
 ﻿using Chats.BE.DB;
-using Chats.BE.Services.Models.Extensions;
 using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
@@ -8,7 +7,7 @@ public class XunfeiChatService(Model model) : ChatCompletionService(model, new U
 {
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {
-        options.GetOrCreateSerializedAdditionalRawData()["tools"] = BinaryData.FromObjectAsJson(new[]
+        options.Patch.Set("$.tools"u8, BinaryData.FromObjectAsJson(new[]
         {
             new
             {
@@ -19,6 +18,6 @@ public class XunfeiChatService(Model model) : ChatCompletionService(model, new U
                     show_ref_label = false,
                 }
             }
-        });
+        }));
     }
 }

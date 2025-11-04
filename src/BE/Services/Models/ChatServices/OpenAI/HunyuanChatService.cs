@@ -1,5 +1,4 @@
 ﻿using Chats.BE.DB;
-using Chats.BE.Services.Models.Extensions;
 using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
@@ -8,8 +7,7 @@ public class HunyuanChatService(Model model) : ChatCompletionService(model, new 
 {
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {
-        IDictionary<string, BinaryData> dict = options.GetOrCreateSerializedAdditionalRawData();
-        dict["enable_enhancement"] = BinaryData.FromObjectAsJson(enabled);
-        dict["force_search_enhancement"] = BinaryData.FromObjectAsJson(enabled);
+        options.Patch.Set("$.enable_enhancement"u8, enabled);
+        options.Patch.Set("$.force_search_enhancement"u8, enabled);
     }
 }

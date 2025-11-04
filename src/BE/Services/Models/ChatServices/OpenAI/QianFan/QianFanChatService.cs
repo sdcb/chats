@@ -5,7 +5,6 @@ using System.ClientModel.Primitives;
 using System.ClientModel;
 using Chats.BE.Services.Models.ChatServices.OpenAI.PipelinePolicies;
 using System.Text.Json;
-using Chats.BE.Services.Models.Extensions;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 
@@ -30,11 +29,11 @@ public class QianFanChatService(Model model) : ChatCompletionService(model, Crea
 
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {
-        options.GetOrCreateSerializedAdditionalRawData()["web_search"] = BinaryData.FromObjectAsJson(new Dictionary<string, object>()
+        options.Patch.Set("$.web_search"u8, BinaryData.FromObjectAsJson(new Dictionary<string, object>()
         {
             ["enable"] = enabled,
             ["enable_citation"] = false,
             ["enable_trace"] = false,
-        });
+        }));
     }
 }
