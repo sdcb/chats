@@ -1,11 +1,8 @@
 import { AdminModelDto } from '@/types/adminApis';
 
-export type SetModelsType = AdminModelDto[];
-export type SetModelMapType = Record<string, AdminModelDto>;
-
 interface ModelInitialState {
-  models: SetModelsType;
-  modelMap: SetModelMapType;
+  models: AdminModelDto[];
+  modelMap: Record<string, AdminModelDto>;
 }
 
 export const modelInitialState: ModelInitialState = {
@@ -19,8 +16,8 @@ export enum ModelActionTypes {
 }
 
 export type ModelAction =
-  | { type: ModelActionTypes.SET_MODELS; payload: SetModelsType }
-  | { type: ModelActionTypes.SET_MODEL_MAP; payload: SetModelMapType };
+  | { type: ModelActionTypes.SET_MODELS; payload: AdminModelDto[] }
+  | { type: ModelActionTypes.SET_MODEL_MAP; payload: Record<string, AdminModelDto> };
 
 export default function modelReducer(
   state: ModelInitialState,

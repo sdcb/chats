@@ -20,23 +20,23 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
 
     private static ChatClient CreateChatClient(Model model, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
     {
-        OpenAIClient api = CreateOpenAIClient(model, suggestedApiUrl, perCallPolicies);
-        return api.GetChatClient(model.ApiModelId);
+        OpenAIClient api = CreateOpenAIClient(model.ModelKey, suggestedApiUrl, perCallPolicies);
+        return api.GetChatClient(model.DeploymentName);
     }
 
-    internal static OpenAIClient CreateOpenAIClient(Model model, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
+    internal static OpenAIClient CreateOpenAIClient(ModelKey modelKey, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Secret, nameof(model.ModelKey.Secret));
+        ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
         OpenAIClientOptions oaic = new()
         {
-            Endpoint = !string.IsNullOrWhiteSpace(model.ModelKey.Host) ? new Uri(model.ModelKey.Host) : suggestedApiUrl,
+            Endpoint = !string.IsNullOrWhiteSpace(modelKey.Host) ? new Uri(modelKey.Host) : suggestedApiUrl,
             NetworkTimeout = NetworkTimeout,
         };
         foreach (PipelinePolicy policy in perCallPolicies)
         {
             oaic.AddPolicy(policy, PipelinePosition.PerCall);
         }
-        OpenAIClient api = new(new ApiKeyCredential(model.ModelKey.Secret!), oaic);
+        OpenAIClient api = new(new ApiKeyCredential(modelKey.Secret!), oaic);
         return api;
     }
 
@@ -70,21 +70,13 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
 
     public override async Task<ChatSegment> Chat(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, CancellationToken cancellationToken)
     {
-        if (ModelReference.SupportsDeveloperMessage(Model.ModelReference.Name))
-        {
-            // must use replace system chat message into developer chat message for unsupported model
-            messages = [.. messages.Select(m => m switch
-            {
-                SystemChatMessage sys => new DeveloperChatMessage(sys.Content[0].Text),
-                _ => m
-            })];
-        }
-
+        // SupportsDeveloperMessage 功能已移除，所有模型都不再支持 DeveloperMessage
+        
         ClientResult<ChatCompletion> cc = await chatClient.CompleteChatAsync(messages, options, cancellationToken);
         ChatCompletion delta = cc.Value;
         return new ChatSegment
         {
-            Items = ChatSegmentItem.FromTextThinkToolCall(delta.Content[0].Text, GetReasoningContent(delta), delta.ToolCalls),
+            Items = ChatSegmentItem.FromTextThinkToolCall(delta.Content.Count > 0 ? delta.Content[0].Text : null, GetReasoningContent(delta), delta.ToolCalls),
             FinishReason = delta.FinishReason,
             Usage = delta.Usage != null ? GetUsage(delta.Usage) : null,
         };
@@ -98,38 +90,5 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
             OutputTokens = usage.OutputTokenCount,
             ReasoningTokens = usage.OutputTokenDetails?.ReasoningTokenCount ?? 0,
         };
-    }
-
-    private class DeveloperChatMessage(string content) : SystemChatMessage(content), IJsonModel<DeveloperChatMessage>
-    {
-        public DeveloperChatMessage Create(ref Utf8JsonReader reader, ModelReaderWriterOptions options)
-        {
-            throw new NotImplementedException();
-        }
-
-        public DeveloperChatMessage Create(BinaryData data, ModelReaderWriterOptions options)
-        {
-            throw new NotImplementedException();
-        }
-
-        public string GetFormatFromOptions(ModelReaderWriterOptions options)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Write(Utf8JsonWriter writer, ModelReaderWriterOptions options)
-        {
-            writer.WriteStartObject();
-            writer.WritePropertyName("role"u8);
-            writer.WriteStringValue("developer");
-            writer.WritePropertyName("content"u8);
-            writer.WriteStringValue(Content[0].Text);
-            writer.WriteEndObject();
-        }
-
-        public BinaryData Write(ModelReaderWriterOptions options)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

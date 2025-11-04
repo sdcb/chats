@@ -58,7 +58,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
-                    ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+                    ImageSize = span.ChatConfig.ImageSize,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                     {
                         Id = mcp.McpServerId,
@@ -133,7 +133,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
-                    ImageSize = (DBKnownImageSize)span.ChatConfig.ImageSizeId,
+                    ImageSize = span.ChatConfig.ImageSize,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                     {
                         Id = mcp.McpServerId,

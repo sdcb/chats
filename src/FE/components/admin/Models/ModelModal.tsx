@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 
@@ -8,7 +8,6 @@ import {
   AdminModelDto,
   ErrorResult,
   GetModelKeysResult,
-  SimpleModelReferenceDto,
   UpdateModelDto,
   ValidateModelParams,
 } from '@/types/adminApis';
@@ -25,6 +24,10 @@ import { Form, FormField } from '@/components/ui/form';
 import FormInput from '@/components/ui/form/input';
 import FormSelect from '@/components/ui/form/select';
 import { LabelSwitch } from '@/components/ui/label-switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import ChatResponseConfig from './ChatResponseConfig';
+import ImageGenerationConfig from './ImageGenerationConfig';
 import {
   Popover,
   PopoverContent,
@@ -32,14 +35,28 @@ import {
 } from '@/components/ui/popover';
 
 import {
-  getModelProviderModels,
-  getModelReference,
   postModels,
   postModelValidate,
   putModels,
 } from '@/apis/adminApis';
+import { 
+  ApiType,
+  getDefaultConfigByApiType 
+} from '@/constants/modelDefaults';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+
+// 表单类型：基于 UpdateModelDto，但因 HTML 表单和自定义组件的限制，需要做以下调整：
+// 1. modelKeyId: number → string (FormSelect 组件要求 select value 必须是 string)
+// 2. reasoningEffortOptions: number[] → string (OptionButtonGroup 组件使用逗号分隔的字符串)
+// 3. supportedImageSizes: string[] → string (Input 组件接收用户输入的逗号分隔字符串)
+// 4. 添加 modelId?: string (仅编辑模式需要，用于标识要更新的模型)
+type ModelFormValues = Omit<UpdateModelDto, 'modelKeyId' | 'reasoningEffortOptions' | 'supportedImageSizes'> & {
+  modelId?: string;
+  modelKeyId: string;
+  reasoningEffortOptions: string;
+  supportedImageSizes: string;
+};
 
 interface IProps {
   isOpen: boolean;
@@ -49,67 +66,207 @@ interface IProps {
   saveLoading?: boolean;
   // For edit mode
   selected?: AdminModelDto;
-  // For add mode: preselect model key when creating a model
-  defaultModelKeyId?: number;
+  // For add mode: provide partial default values (e.g., from quick add)
+  // 使用 UpdateModelDto 作为默认值类型（更直接，自动转换在 useEffect 中处理）
+  defaultValues?: Partial<UpdateModelDto>;
 }
 
 const ModelModal = (props: IProps) => {
   const { t } = useTranslation();
-  const [modelVersions, setModelVersions] = useState<SimpleModelReferenceDto[]>(
-    [],
-  );
   const [validating, setValidating] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { 
     isOpen, 
     onClose, 
     onSuccessful, 
     modelKeys, 
-    defaultModelKeyId, 
+    defaultValues,
     selected 
   } = props;
 
   // Determine if this is edit mode
   const isEditMode = !!selected;
 
-  const formSchema = z.object({
-    modelReferenceId: z.string().default('0'),
-    name: z.string().min(1, `${t('This field is require')}`),
+  // 创建 form schema
+  const formSchema = useMemo(() => z.object({
+    // 基础字段
+    name: z.string().min(1, t('This field is require')),
     enabled: z.boolean(),
-    deploymentName: z.string().optional(),
-    modelKeyId: z
-      .string()
-      .min(1, `${t('This field is require')}`)
-      .default('0'),
-    inputPrice1M: z.coerce.number(),
-    outputPrice1M: z.coerce.number(),
+    deploymentName: z.string().min(1, t('This field is require')),
+    modelKeyId: z.string().min(1, t('This field is require')).default('0'),
+    inputTokenPrice1M: z.coerce.number(),
+    outputTokenPrice1M: z.coerce.number(),
     modelId: z.string().optional(),
-  });
+    
+    // === 功能开关 ===
+    allowSearch: z.boolean(),
+    allowVision: z.boolean(),
+    allowSystemPrompt: z.boolean(),
+    allowStreaming: z.boolean(),
+    allowCodeExecution: z.boolean(),
+    allowToolCall: z.boolean(),
+    thinkTagParserEnabled: z.boolean(),
+    
+    // === 温度范围 ===
+    minTemperature: z.coerce.number().min(0).max(2),
+    maxTemperature: z.coerce.number().min(0).max(2),
+    
+    // === Token 配置 ===
+    contextWindow: z.coerce.number().min(0),
+    maxResponseTokens: z.coerce.number().min(0),
+    
+    // === 数组字段（表单中用字符串） ===
+    reasoningEffortOptions: z.string(),
+    supportedImageSizes: z.string(),
+    
+    // === API 配置 ===
+    apiType: z.coerce.number(),
+    useAsyncApi: z.boolean(),
+    useMaxCompletionTokens: z.boolean(),
+    isLegacy: z.boolean(),
+  } satisfies Record<keyof ModelFormValues, z.ZodTypeAny>)
+  .refine((data) => {
+    // ChatCompletion/Response: 温度验证
+    if (data.apiType === 0 || data.apiType === 1) {
+      return data.minTemperature <= data.maxTemperature;
+    }
+    return true;
+  }, {
+    message: t('minTemperature must be less than or equal to maxTemperature'),
+    path: ['maxTemperature'],
+  })
+  .refine((data) => {
+    // ChatCompletion/Response: 上下文窗口必须有值
+    if (data.apiType === 0 || data.apiType === 1) {
+      return data.contextWindow > 0;
+    }
+    return true;
+  }, {
+    message: t('Context window is required'),
+    path: ['contextWindow'],
+  })
+  .refine((data) => {
+    // ChatCompletion/Response: 最大响应token数必须有值
+    if (data.apiType === 0 || data.apiType === 1) {
+      return data.maxResponseTokens > 0;
+    }
+    return true;
+  }, {
+    message: t('Max response tokens is required'),
+    path: ['maxResponseTokens'],
+  })
+  .refine((data) => {
+    // ChatCompletion/Response: 最大响应token数要小于上下文窗口
+    if (data.apiType === 0 || data.apiType === 1) {
+      return data.maxResponseTokens < data.contextWindow;
+    }
+    return true;
+  }, {
+    message: t('Max response tokens must be less than context window'),
+    path: ['maxResponseTokens'],
+  })
+  .refine((data) => {
+    // ImageGeneration: 支持的图片尺寸必须有值
+    if (data.apiType === 2) {
+      return data.supportedImageSizes.trim().length > 0;
+    }
+    return true;
+  }, {
+    message: t('Supported image sizes is required'),
+    path: ['supportedImageSizes'],
+  })
+  .refine((data) => {
+    // ImageGeneration: 支持的图片尺寸格式验证 (宽x高)
+    if (data.apiType === 2 && data.supportedImageSizes.trim().length > 0) {
+      const sizes = data.supportedImageSizes.split(',').map(s => s.trim()).filter(s => s !== '');
+      const sizeRegex = /^\d+x\d+$/;
+      return sizes.every(size => sizeRegex.test(size));
+    }
+    return true;
+  }, {
+    message: t('Invalid image size format, use format like: 1024x1024'),
+    path: ['supportedImageSizes'],
+  })
+  .refine((data) => {
+    // ImageGeneration: 最大批量生成图片数量必须有值且小于128
+    if (data.apiType === 2) {
+      return data.maxResponseTokens > 0 && data.maxResponseTokens <= 128;
+    }
+    return true;
+  }, {
+    message: t('Max batch count must be between 1 and 128'),
+    path: ['maxResponseTokens'],
+  }), [t]);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<ModelFormValues>({
     resolver: zodResolver(formSchema),
+    mode: 'onChange',
     defaultValues: {
-      modelReferenceId: '0',
       name: '',
       enabled: true,
       deploymentName: '',
-      modelKeyId: '',
-      inputPrice1M: 0,
-      outputPrice1M: 0,
+      modelKeyId: '0',
+      inputTokenPrice1M: 0,
+      outputTokenPrice1M: 0,
       modelId: '',
+      apiType: ApiType.ChatCompletion,
+      allowSearch: false,
+      allowVision: false,
+      allowSystemPrompt: false,
+      allowStreaming: false,
+      allowCodeExecution: false,
+      allowToolCall: false,
+      thinkTagParserEnabled: false,
+      minTemperature: 0,
+      maxTemperature: 2,
+      contextWindow: 0,
+      maxResponseTokens: 0,
+      reasoningEffortOptions: '',
+      supportedImageSizes: '',
+      useAsyncApi: false,
+      useMaxCompletionTokens: false,
+      isLegacy: false,
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (!form.formState.isValid) return;
-    
+  const onSubmit = (values: ModelFormValues) => {
     const dto: UpdateModelDto = {
-      deploymentName: values.deploymentName || null,
-      enabled: values.enabled!,
-      inputTokenPrice1M: values.inputPrice1M,
-      outputTokenPrice1M: values.outputPrice1M,
-      modelKeyId: parseInt(values.modelKeyId!),
-      name: values.name!,
-      modelReferenceId: +values.modelReferenceId!,
+      deploymentName: values.deploymentName,
+      enabled: values.enabled,
+      inputTokenPrice1M: values.inputTokenPrice1M,
+      outputTokenPrice1M: values.outputTokenPrice1M,
+      modelKeyId: parseInt(values.modelKeyId),
+      name: values.name,
+      
+      // === 新增字段（直接映射，无需转换）===
+      allowSearch: values.allowSearch,
+      allowVision: values.allowVision,
+      allowSystemPrompt: values.allowSystemPrompt,
+      allowStreaming: values.allowStreaming,
+      allowCodeExecution: values.allowCodeExecution,
+      allowToolCall: values.allowToolCall,
+      thinkTagParserEnabled: values.thinkTagParserEnabled,
+      
+      minTemperature: values.minTemperature,
+      maxTemperature: values.maxTemperature,
+      
+      contextWindow: values.contextWindow,
+      maxResponseTokens: values.maxResponseTokens,
+      
+      // 数组字段：从逗号分隔的字符串转为数组
+      reasoningEffortOptions: values.reasoningEffortOptions
+        .split(',')
+        .map((x) => parseInt(x.trim()))
+        .filter((x) => !isNaN(x)),
+      supportedImageSizes: values.supportedImageSizes
+        .split(',')
+        .map((x) => x.trim())
+        .filter((x) => x !== ''),
+      
+      apiType: values.apiType,
+      useAsyncApi: values.useAsyncApi,
+      useMaxCompletionTokens: values.useMaxCompletionTokens,
+      isLegacy: values.isLegacy,
     };
 
     const apiCall = isEditMode 
@@ -119,6 +276,9 @@ const ModelModal = (props: IProps) => {
     apiCall.then(() => {
       onSuccessful();
       toast.success(t('Save successful'));
+    }).catch((error) => {
+      console.error('Save error:', error);
+      toast.error(t('Save failed'));
     });
   };
 
@@ -126,18 +286,55 @@ const ModelModal = (props: IProps) => {
     const values = form.getValues();
     
     // 检查必要字段是否已填写
-    if (!values.modelKeyId || values.modelKeyId === '0' || !values.modelReferenceId || values.modelReferenceId === '0') {
-      toast.error(t('Please select model key and model version first'));
+    if (!values.modelKeyId || values.modelKeyId === '0') {
+      toast.error(t('Please select model key first'));
+      return;
+    }
+
+    if (!values.deploymentName) {
+      toast.error(t('Please enter deployment name'));
       return;
     }
 
     setValidating(true);
     
     try {
+      // 构造完整的配置对象进行验证
       const params: ValidateModelParams = {
+        name: values.name,
+        enabled: values.enabled,
+        deploymentName: values.deploymentName,
         modelKeyId: parseInt(values.modelKeyId),
-        modelReferenceId: parseInt(values.modelReferenceId),
-        deploymentName: values.deploymentName || null,
+        inputTokenPrice1M: values.inputTokenPrice1M,
+        outputTokenPrice1M: values.outputTokenPrice1M,
+        
+        allowSearch: values.allowSearch,
+        allowVision: values.allowVision,
+        allowSystemPrompt: values.allowSystemPrompt,
+        allowStreaming: values.allowStreaming,
+        allowCodeExecution: values.allowCodeExecution,
+        allowToolCall: values.allowToolCall,
+        thinkTagParserEnabled: values.thinkTagParserEnabled,
+        
+        minTemperature: values.minTemperature,
+        maxTemperature: values.maxTemperature,
+        
+        contextWindow: values.contextWindow,
+        maxResponseTokens: values.maxResponseTokens,
+        
+        reasoningEffortOptions: values.reasoningEffortOptions
+          .split(',')
+          .map((x) => parseInt(x.trim()))
+          .filter((x) => !isNaN(x)),
+        supportedImageSizes: values.supportedImageSizes
+          .split(',')
+          .map((x) => x.trim())
+          .filter((x) => x !== ''),
+        
+        apiType: values.apiType,
+        useAsyncApi: values.useAsyncApi,
+        useMaxCompletionTokens: values.useMaxCompletionTokens,
+        isLegacy: values.isLegacy,
       };
 
       const result: ErrorResult = await postModelValidate(params);
@@ -162,85 +359,99 @@ const ModelModal = (props: IProps) => {
 
   useEffect(() => {
     if (isOpen) {
-      // Clear model versions first
-      setModelVersions([]);
       form.reset();
-      form.formState.isValid;
+      setIsInitialLoad(true); // 重置初始加载标记
       
       if (isEditMode && selected) {
         // Edit mode: populate form with existing data
         const {
           name,
           modelId,
-          modelReferenceId,
           enabled,
           modelKeyId,
           deploymentName,
           inputTokenPrice1M,
           outputTokenPrice1M,
+          allowSearch,
+          allowVision,
+          allowSystemPrompt,
+          allowStreaming,
+          allowCodeExecution,
+          allowToolCall,
+          thinkTagParserEnabled,
+          minTemperature,
+          maxTemperature,
+          contextWindow,
+          maxResponseTokens,
+          reasoningEffortOptions,
+          supportedImageSizes,
+          apiType,
+          useAsyncApi,
+          useMaxCompletionTokens,
+          isLegacy,
         } = selected;
         
         form.setValue('name', name);
         form.setValue('modelId', modelId.toString());
         form.setValue('enabled', enabled);
         form.setValue('modelKeyId', modelKeyId.toString());
-        form.setValue('deploymentName', deploymentName || '');
-        form.setValue('inputPrice1M', inputTokenPrice1M);
-        form.setValue('outputPrice1M', outputTokenPrice1M);
-        form.setValue('modelReferenceId', modelReferenceId.toString());
+        form.setValue('deploymentName', deploymentName);
+        form.setValue('inputTokenPrice1M', inputTokenPrice1M);
+        form.setValue('outputTokenPrice1M', outputTokenPrice1M);
+        
+        form.setValue('allowSearch', allowSearch);
+        form.setValue('allowVision', allowVision);
+        form.setValue('allowSystemPrompt', allowSystemPrompt);
+        form.setValue('allowStreaming', allowStreaming);
+        form.setValue('allowCodeExecution', allowCodeExecution);
+        form.setValue('allowToolCall', allowToolCall);
+        form.setValue('thinkTagParserEnabled', thinkTagParserEnabled);
+        
+        form.setValue('minTemperature', minTemperature);
+        form.setValue('maxTemperature', maxTemperature);
+        
+        form.setValue('contextWindow', contextWindow);
+        form.setValue('maxResponseTokens', maxResponseTokens);
+        
+        form.setValue('reasoningEffortOptions', reasoningEffortOptions.join(', '));
+        form.setValue('supportedImageSizes', supportedImageSizes.join(', '));
+        
+        form.setValue('apiType', apiType);
+        form.setValue('useAsyncApi', useAsyncApi);
+        form.setValue('useMaxCompletionTokens', useMaxCompletionTokens);
+        form.setValue('isLegacy', isLegacy);
       } else {
         // Add mode: set default values
-        if (defaultModelKeyId !== undefined) {
-          form.setValue('modelKeyId', defaultModelKeyId.toString());
-          const mk = modelKeys.find((x) => x.id === defaultModelKeyId);
-          if (mk) {
-            getModelProviderModels(mk.modelProviderId).then(setModelVersions);
+        // 先应用基础的 ChatCompletion 默认配置
+        const chatDefaults = getDefaultConfigByApiType(ApiType.ChatCompletion);
+        Object.entries(chatDefaults).forEach(([key, value]) => {
+          if (Array.isArray(value)) {
+            form.setValue(key as any, '');
+          } else {
+            form.setValue(key as any, value);
           }
-        }
-      }
-    } else {
-      // Clear model versions when modal is closed
-      setModelVersions([]);
-    }
-  }, [isOpen, selected, defaultModelKeyId, modelKeys, isEditMode]);
-
-  // Separate useEffect for loading model versions in edit mode
-  useEffect(() => {
-    if (isOpen && isEditMode && selected && modelKeys.length > 0) {
-      const { modelKeyId } = selected;
-      const modelProviderId = modelKeys.find((x) => x.id === modelKeyId)?.modelProviderId;
-      if (modelProviderId !== undefined) {
-        getModelProviderModels(modelProviderId).then((possibleModels) => {
-          setModelVersions(possibleModels);
         });
-      }
-    }
-  }, [isOpen, isEditMode, selected, modelKeys]);
-
-  const onModelReferenceChanged = async (modelReferenceId: number) => {
-    getModelReference(modelReferenceId).then((data) => {
-      form.setValue('inputPrice1M', data.promptTokenPrice1M);
-      form.setValue('outputPrice1M', data.responseTokenPrice1M);
-    });
-  };
-
-  useEffect(() => {
-    const subscription = form.watch(async (value, { name, type }) => {
-      if (name === 'modelKeyId' && type === 'change') {
-        const modelKeyId = value.modelKeyId;
-        const modelProvider = modelKeys.find((x) => x.id === +modelKeyId!);
-        if (modelProvider !== undefined) {
-          const possibleModels = await getModelProviderModels(modelProvider.modelProviderId);
-          setModelVersions(possibleModels);
+        
+        // 然后应用来自 props 的 defaultValues (可能来自快速添加)
+        // defaultValues 是 Partial<UpdateModelDto> 格式，数组需要转换为逗号分隔的字符串
+        if (defaultValues) {
+          Object.entries(defaultValues).forEach(([key, value]) => {
+            if (value !== undefined) {
+              // 如果是数组类型（reasoningEffortOptions 或 supportedImageSizes），转为字符串
+              if (Array.isArray(value)) {
+                form.setValue(key as any, value.join(', '));
+              } else if (key === 'modelKeyId' && typeof value === 'number') {
+                // modelKeyId 需要从 number 转为 string
+                form.setValue(key as any, value.toString());
+              } else {
+                form.setValue(key as any, value);
+              }
+            }
+          });
         }
       }
-      if (name === 'modelReferenceId' && type === 'change') {
-        const modelReferenceId = +value.modelReferenceId!;
-        onModelReferenceChanged(modelReferenceId);
-      }
-    });
-    return () => subscription?.unsubscribe();
-  }, [form.watch]);
+    }
+  }, [isOpen, selected, defaultValues, isEditMode]);
 
   const getAvailableModelKeys = () => {
     if (isEditMode && selected) {
@@ -254,9 +465,41 @@ const ModelModal = (props: IProps) => {
     }
   };
 
+  // 监听 apiType 变化
+  const apiType = form.watch('apiType');
+  
+  // 当 apiType 变化时，设置合理的默认值
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    // 跳过初始加载（避免覆盖编辑模式的数据）
+    if (isInitialLoad) {
+      setIsInitialLoad(false);
+      return;
+    }
+    
+    const currentApiType = typeof apiType === 'string' ? parseInt(apiType) : apiType;
+    
+    // 编辑模式下不自动更改
+    if (isEditMode && selected) {
+      return;
+    }
+    
+    // 根据 API 类型应用默认配置
+    const defaults = getDefaultConfigByApiType(currentApiType as ApiType);
+    Object.entries(defaults).forEach(([key, value]) => {
+      if (key === 'reasoningEffortOptions' || key === 'supportedImageSizes') {
+        // 数组字段需要转为逗号分隔的字符串
+        form.setValue(key as any, Array.isArray(value) ? value.join(', ') : '');
+      } else if (value !== undefined) {
+        form.setValue(key as any, value);
+      }
+    });
+  }, [apiType, isOpen, isEditMode, selected, isInitialLoad, form]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-3/4">
+      <DialogContent className="w-3/4 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditMode ? t('Edit Model') : t('Add Model')}
@@ -264,122 +507,181 @@ const ModelModal = (props: IProps) => {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                key="name"
-                control={form.control}
-                name="name"
-                render={({ field }) => {
-                  return (
-                    <FormInput field={field} label={t('Model Display Name')!} />
-                  );
-                }}
-              ></FormField>
-              <div className="flex justify-between">
+            <div className="space-y-4">
+              {/* ========== 1. 基础信息（所有模型都需要）========== */}
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  key="modelKeyId"
-                  control={form.control}
-                  name="modelKeyId"
-                  render={({ field }) => {
-                    return (
-                      <FormSelect
-                        className="w-full"
-                        field={field}
-                        label={t('Model Keys')!}
-                        items={getAvailableModelKeys().map((keys) => ({
-                          name: keys.name,
-                          value: keys.id.toString(),
-                        }))}
+                    key="name"
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => {
+                      return (
+                        <FormInput field={field} label={t('Model Display Name')!} />
+                      );
+                    }}
+                  ></FormField>
+                  <div className="flex justify-between">
+                    <FormField
+                      key="modelKeyId"
+                      control={form.control}
+                      name="modelKeyId"
+                      render={({ field }) => {
+                        return (
+                          <FormSelect
+                            className="w-full"
+                            field={field}
+                            label={t('Model Keys')!}
+                            items={getAvailableModelKeys().map((keys) => ({
+                              name: keys.name,
+                              value: keys.id.toString(),
+                            }))}
+                          />
+                        );
+                      }}
+                    ></FormField>
+                    <div
+                      hidden={!form.getValues('modelKeyId')}
+                      className="text-sm w-36 mt-12 text-right"
+                    >
+                      <Popover>
+                        <PopoverTrigger>
+                          <span className="text-primary invisible sm:visible">
+                            {t('Click View Configs')}
+                          </span>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full">
+                          {JSON.stringify(
+                            modelKeys
+                              .find((x) => x.id === +form.getValues('modelKeyId')!)
+                              ?.toConfigs(),
+                            null,
+                            2,
+                          )}
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                  
+                  {/* 部署名称 + 是否过时 */}
+                  <FormField
+                    key="deploymentName"
+                    control={form.control}
+                    name="deploymentName"
+                    render={({ field }) => {
+                      return (
+                        <FormInput label={t('Deployment Name')!} field={field} />
+                      );
+                    }}
+                  ></FormField>
+                  <FormField
+                    control={form.control}
+                    name="isLegacy"
+                    render={({ field }) => (
+                      <LabelSwitch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        label={t('Is Outdated')!}
                       />
-                    );
-                  }}
-                ></FormField>
-                <div
-                  hidden={!form.getValues('modelKeyId')}
-                  className="text-sm w-36 mt-12 text-right"
-                >
-                  <Popover>
-                    <PopoverTrigger>
-                      <span className="text-primary invisible sm:visible">
-                        {t('Click View Configs')}
-                      </span>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full">
-                      {JSON.stringify(
-                        modelKeys
-                          .find((x) => x.id === +form.getValues('modelKeyId')!)
-                          ?.toConfigs(),
-                        null,
-                        2,
+                    )}
+                  />
+                  
+                  {/* 模型价格 */}
+                  <FormField
+                    key="inputTokenPrice1M"
+                    control={form.control}
+                    name="inputTokenPrice1M"
+                    render={({ field }) => {
+                      return (
+                        <FormInput
+                          type="number"
+                          label={`${t('1M input tokens price')}(${t('Yuan')})`}
+                          field={field}
+                        />
+                      );
+                    }}
+                  ></FormField>
+                  <FormField
+                    key="outputTokenPrice1M"
+                    control={form.control}
+                    name="outputTokenPrice1M"
+                    render={({ field }) => {
+                      return (
+                        <FormInput
+                          type="number"
+                          label={`${t('1M output tokens price')}(${t('Yuan')})`}
+                          field={field}
+                        />
+                      );
+                    }}
+                  ></FormField>
+              </div>
+              
+              {/* ========== 2. API 类型选择 ========== */}
+              <div className="border-t pt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    key="apiType"
+                    control={form.control}
+                    name="apiType"
+                    render={({ field }) => (
+                      <div className="space-y-2">
+                        <Label>{t('API Type')}</Label>
+                        <RadioGroup
+                          value={field.value.toString()}
+                          onValueChange={(value) => field.onChange(Number(value))}
+                          className="flex flex-row gap-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="0" id="api-type-0" />
+                            <Label htmlFor="api-type-0" className="font-normal cursor-pointer">
+                              ChatCompletion
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="1" id="api-type-1" />
+                            <Label htmlFor="api-type-1" className="font-normal cursor-pointer">
+                              Response
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="2" id="api-type-2" />
+                            <Label htmlFor="api-type-2" className="font-normal cursor-pointer">
+                              ImageGeneration
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                    )}
+                  />
+                  
+                  {/* 仅 apiType=1 (Response) 显示 Use Async API */}
+                  {apiType === 1 && (
+                    <FormField
+                      control={form.control}
+                      name="useAsyncApi"
+                      render={({ field }) => (
+                        <LabelSwitch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          label={t('Use Async API')!}
+                        />
                       )}
-                    </PopoverContent>
-                  </Popover>
+                    />
+                  )}
                 </div>
               </div>
+              
+              {/* ========== 3. API 类型特定配置 ========== */}
+              {(apiType === 0 || apiType === 1) && (
+                <ChatResponseConfig control={form.control} setValue={form.setValue} />
+              )}
+              
+              {apiType === 2 && (
+                <ImageGenerationConfig control={form.control} />
+              )}
             </div>
-            <div
-              className="grid grid-cols-2 gap-4"
-              key={form.getValues('modelKeyId')! || 'modelVersionKey'}
-            >
-              <FormField
-                key="modelReferenceId"
-                control={form.control}
-                name="modelReferenceId"
-                render={({ field }) => {
-                  return (
-                    <FormSelect
-                      field={field}
-                      label={t('Model Version')!}
-                      items={modelVersions.map((key) => ({
-                        name: key.name,
-                        value: key.id.toString(),
-                      }))}
-                    />
-                  );
-                }}
-              ></FormField>
-              <FormField
-                key="deploymentName"
-                control={form.control}
-                name="deploymentName"
-                render={({ field }) => {
-                  return (
-                    <FormInput label={t('Deployment Name')!} field={field} />
-                  );
-                }}
-              ></FormField>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                key="inputPrice1M"
-                control={form.control}
-                name="inputPrice1M"
-                render={({ field }) => {
-                  return (
-                    <FormInput
-                      type="number"
-                      label={`${t('1M input tokens price')}(${t('Yuan')})`}
-                      field={field}
-                    />
-                  );
-                }}
-              ></FormField>
-              <FormField
-                key="outputPrice1M"
-                control={form.control}
-                name="outputPrice1M"
-                render={({ field }) => {
-                  return (
-                    <FormInput
-                      type="number"
-                      label={`${t('1M output tokens price')}(${t('Yuan')})`}
-                      field={field}
-                    />
-                  );
-                }}
-              ></FormField>
-            </div>
-            <DialogFooter className="pt-4">
+            
+            <DialogFooter className="pt-4 mt-4 border-t">
               <div className="flex items-center justify-between w-full">
                 <FormField
                   control={form.control}

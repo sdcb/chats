@@ -9,11 +9,7 @@ public class UserModelManager(ChatsDB db)
     {
         UserModel? balances = await db.UserModels
             .Include(x => x.Model)
-            .Include(x => x.Model.ModelReference)
-            .Include(x => x.Model.ModelReference.Tokenizer)
             .Include(x => x.Model.ModelKey)
-            .Include(x => x.Model.ModelKey.ModelProvider)
-            .Include(x => x.Model.ModelReference.CurrencyCodeNavigation)
             .Where(x => x.UserId == userId && !x.Model.IsDeleted && x.ModelId == modelId)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -24,11 +20,7 @@ public class UserModelManager(ChatsDB db)
     {
         Dictionary<short, UserModel> balances = await db.UserModels
             .Include(x => x.Model)
-            .Include(x => x.Model.ModelReference)
-            .Include(x => x.Model.ModelReference.Tokenizer)
             .Include(x => x.Model.ModelKey)
-            .Include(x => x.Model.ModelKey.ModelProvider)
-            .Include(x => x.Model.ModelReference.CurrencyCodeNavigation)
             .Where(x => x.UserId == userId && !x.Model.IsDeleted && modelIds.Contains(x.ModelId))
             .ToDictionaryAsync(k => k.ModelId, v => v, cancellationToken);
 
@@ -39,11 +31,7 @@ public class UserModelManager(ChatsDB db)
     {
         UserModel? balances = await db.UserModels
             .Include(x => x.Model)
-            .Include(x => x.Model.ModelReference)
-            .Include(x => x.Model.ModelReference.Tokenizer)
             .Include(x => x.Model.ModelKey)
-            .Include(x => x.Model.ModelKey.ModelProvider)
-            .Include(x => x.Model.ModelReference.CurrencyCodeNavigation)
             .Where(x => x.UserId == userId && !x.Model.IsDeleted && x.Model.Name == modelName)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -73,11 +61,7 @@ public class UserModelManager(ChatsDB db)
     {
         return db.UserModels
             .Include(x => x.Model)
-            .Include(x => x.Model.ModelReference)
-            .Include(x => x.Model.ModelReference.Tokenizer)
             .Include(x => x.Model.ModelKey)
-            .Include(x => x.Model.ModelKey.ModelProvider)
-            .Include(x => x.Model.ModelReference.CurrencyCodeNavigation)
             .Where(x => x.UserId == userId && !x.Model.IsDeleted)
             .OrderBy(x => x.Model.Order);
     }

@@ -3,15 +3,14 @@ import { AdminModelDto } from '@/types/adminApis';
 import {
   ModelAction,
   ModelActionTypes,
-  SetModelsType,
 } from '@/reducers/model.reducer';
 
-export const setModels = (models: SetModelsType): ModelAction => ({
+export const setModels = (models: AdminModelDto[]): ModelAction => ({
   type: ModelActionTypes.SET_MODELS,
   payload: models,
 });
 
-export const setModelMap = (models: SetModelsType): ModelAction => {
+export const setModelMap = (models: AdminModelDto[]): ModelAction => {
   const modelMap: Record<string, AdminModelDto> = {};
   models.forEach((x) => {
     modelMap[x.modelId] = x;

@@ -32,7 +32,7 @@ public record UpdateChatSpanRequest
     public DBReasoningEffort ReasoningEffort { get; init; }
 
     [JsonPropertyName("imageSize")]
-    public DBKnownImageSize ImageSize { get; init; }
+    public string? ImageSize { get; init; }
 
     [JsonPropertyName("mcps")]
     public ChatSpanMcp[] Mcps { get; init; } = [];
@@ -49,7 +49,7 @@ public record UpdateChatSpanRequest
         config.CodeExecutionEnabled = CodeExecutionEnabled;
         config.MaxOutputTokens = MaxOutputTokens;
         config.ReasoningEffort = (byte)ReasoningEffort;
-        config.ImageSizeId = (short)ImageSize;
+        config.ImageSize = ImageSize;
         
         // Update ChatConfigMcp associations
         UpdateMcpAssociations(config);
@@ -72,7 +72,7 @@ public record UpdateChatSpanRequest
         config.CodeExecutionEnabled = CodeExecutionEnabled;
         config.MaxOutputTokens = MaxOutputTokens;
         config.ReasoningEffort = (byte)ReasoningEffort;
-        config.ImageSizeId = (short)ImageSize;
+        config.ImageSize = ImageSize;
         
         // Update ChatConfigMcp associations
         UpdateMcpAssociations(config);
@@ -95,7 +95,7 @@ public record UpdateChatSpanRequest
             CodeExecutionEnabled = CodeExecutionEnabled,
             MaxOutputTokens = MaxOutputTokens,
             ReasoningEffort = (byte)ReasoningEffort,
-            ImageSizeId = (short)ImageSize,
+            ImageSize = ImageSize,
         };
 
         ChatPresetSpan presetSpan = new ChatPresetSpan()

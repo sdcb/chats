@@ -1,6 +1,7 @@
 import React from 'react';
 import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import IconActionButton from '@/components/common/IconActionButton';
 import { IconPlus, IconPencil, IconBolt, IconChartHistogram } from '@/components/Icons';
 import DeletePopover from '@/components/Popover/DeletePopover';
@@ -16,6 +17,7 @@ interface ModelKeyProps {
   modelKey: GetModelKeysResult;
   models: AdminModelDto[];
   expanded: boolean;
+  loading?: boolean; // 是否正在加载 models
   onToggleExpand: () => void;
   onEdit: (key: GetModelKeysResult) => void;
   onDelete: (keyId: number) => void;
@@ -34,6 +36,7 @@ export default function ModelKey({
   modelKey,
   models,
   expanded,
+  loading = false,
   onToggleExpand,
   onEdit,
   onDelete,
@@ -123,7 +126,7 @@ export default function ModelKey({
             icon={<IconPencil size={18} />}
             onClick={() => onEdit(modelKey)}
           />
-          {models.length === 0 && (
+          {modelKey.totalModelCount === 0 && (
             <div onClick={(e) => e.stopPropagation()} title={t('Delete')}>
               <DeletePopover onDelete={() => onDelete(modelKey.id)} />
             </div>
@@ -132,7 +135,26 @@ export default function ModelKey({
       </div>
       <CollapsiblePanel open={expanded}>
         <div className="pr-3 pb-3 pl-4 space-y-1">
-          {models.length === 0 ? (
+          {loading ? (
+            // 显示骨架屏，根据 modelKey.totalModelCount 显示对应数量的骨架
+            <div className="space-y-1 py-2">
+              {Array.from({ length: modelKey.totalModelCount }).map((_, index) => (
+                <div key={`skeleton-${index}`} className="rounded border bg-background px-2 py-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-1">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Skeleton className="h-6 w-6 rounded" />
+                      <Skeleton className="h-6 w-6 rounded" />
+                      <Skeleton className="h-6 w-6 rounded" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : models.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-6 text-center">
               <div className="text-sm text-muted-foreground">{t('No models under this key')}</div>
               <div className="text-xs text-muted-foreground mt-1">{t('Add models to start using this key')}</div>

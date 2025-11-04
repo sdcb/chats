@@ -8,7 +8,6 @@ namespace Chats.BE.DB;
 
 [Table("Model")]
 [Index("ModelKeyId", Name = "IX_Model_ModelKeyId")]
-[Index("ModelReferenceId", Name = "IX_Model_ModelReferenceId")]
 [Index("Name", Name = "IX_Model_Name")]
 public partial class Model
 {
@@ -17,13 +16,11 @@ public partial class Model
 
     public short ModelKeyId { get; set; }
 
-    public short ModelReferenceId { get; set; }
-
     [StringLength(50)]
     public string Name { get; set; } = null!;
 
     [StringLength(50)]
-    public string? DeploymentName { get; set; }
+    public string DeploymentName { get; set; } = null!;
 
     public short Order { get; set; }
 
@@ -39,16 +36,50 @@ public partial class Model
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool AllowSearch { get; set; }
+
+    public bool AllowVision { get; set; }
+
+    public bool AllowSystemPrompt { get; set; }
+
+    public bool AllowStreaming { get; set; }
+
+    public bool ThinkTagParserEnabled { get; set; }
+
+    [Column(TypeName = "decimal(3, 2)")]
+    public decimal MinTemperature { get; set; }
+
+    [Column(TypeName = "decimal(3, 2)")]
+    public decimal MaxTemperature { get; set; }
+
+    public int ContextWindow { get; set; }
+
+    public int MaxResponseTokens { get; set; }
+
+    public bool AllowCodeExecution { get; set; }
+
+    [StringLength(50)]
+    public string ReasoningEffortOptions { get; set; } = null!;
+
+    public bool AllowToolCall { get; set; }
+
+    [StringLength(200)]
+    public string SupportedImageSizes { get; set; } = null!;
+
+    public byte ApiType { get; set; }
+
+    public bool UseAsyncApi { get; set; }
+
+    public bool UseMaxCompletionTokens { get; set; }
+
+    public bool IsLegacy { get; set; }
+
     [InverseProperty("Model")]
     public virtual ICollection<ChatConfig> ChatConfigs { get; set; } = new List<ChatConfig>();
 
     [ForeignKey("ModelKeyId")]
     [InverseProperty("Models")]
     public virtual ModelKey ModelKey { get; set; } = null!;
-
-    [ForeignKey("ModelReferenceId")]
-    [InverseProperty("Models")]
-    public virtual ModelReference ModelReference { get; set; } = null!;
 
     [InverseProperty("Model")]
     public virtual ICollection<UsageTransaction> UsageTransactions { get; set; } = new List<UsageTransaction>();

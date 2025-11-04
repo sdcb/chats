@@ -18,7 +18,6 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             .Where(x => x.UserId == userId)
             .Include(x => x.Model)
             .Include(x => x.Model.ModelKey)
-            .Include(x => x.Model.ModelKey.ModelProvider)
             .OrderByDescending(x => x.Id)
             .Select(x => new UserModelDto()
             {
@@ -46,36 +45,39 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             .ToListAsync(cancellationToken);
 
         // 获取未分配给用户的模型
-        int? fileServiceId = await FileService.GetDefaultId(db, cancellationToken);
-        var unassignedModels = await db.Models
-            .Where(x => !x.IsDeleted && !assignedModelIds.Contains(x.Id))
-            .Include(x => x.ModelKey)
-            .Include(x => x.ModelReference)
-            .OrderBy(x => x.ModelKey.Order).ThenBy(x => x.Order)
-            .Select(x => new AdminModelDto
+        var unassignedModels = await (
+            from m in db.Models
+            where !m.IsDeleted && !assignedModelIds.Contains(m.Id)
+            join mpo in db.ModelProviderOrders on m.ModelKey.ModelProviderId equals mpo.ModelProviderId into mpoGroup
+            from mpo in mpoGroup.DefaultIfEmpty()
+            orderby mpo != null ? mpo.Order : int.MaxValue, m.ModelKey.Order, m.Order
+            select new AdminModelDto
             {
-                ModelId = x.Id,
-                Name = x.Name,
-                Enabled = !x.IsDeleted,
-                FileServiceId = fileServiceId,
-                ModelKeyId = x.ModelKeyId,
-                ModelProviderId = x.ModelKey.ModelProviderId,
-                ModelReferenceId = x.ModelReferenceId,
-                ModelReferenceName = x.ModelReference.Name,
-                ModelReferenceShortName = x.ModelReference.DisplayName,
-                InputTokenPrice1M = x.InputTokenPrice1M,
-                OutputTokenPrice1M = x.OutputTokenPrice1M,
-                DeploymentName = x.DeploymentName,
-                AllowSearch = x.ModelReference.AllowSearch,
-                AllowVision = x.ModelReference.AllowVision,
-                AllowStreaming = x.ModelReference.AllowStreaming,
-                AllowSystemPrompt = x.ModelReference.AllowSystemPrompt,
-                AllowCodeExecution = ModelReference.SupportsCodeExecution(x.ModelReference.Name),
-                ReasoningEffortOptions = ModelReference.ReasoningEffortOptionsAsInt32(x.ModelReference.Name),
-                MinTemperature = x.ModelReference.MinTemperature,
-                MaxTemperature = x.ModelReference.MaxTemperature,
-                ContextWindow = x.ModelReference.ContextWindow,
-                MaxResponseTokens = x.ModelReference.MaxResponseTokens,
+                ModelId = m.Id,
+                Name = m.Name,
+                Enabled = !m.IsDeleted,
+                ModelKeyId = m.ModelKeyId,
+                ModelProviderId = m.ModelKey.ModelProviderId,
+                InputTokenPrice1M = m.InputTokenPrice1M,
+                OutputTokenPrice1M = m.OutputTokenPrice1M,
+                DeploymentName = m.DeploymentName,
+                AllowSearch = m.AllowSearch,
+                AllowVision = m.AllowVision,
+                AllowStreaming = m.AllowStreaming,
+                AllowSystemPrompt = m.AllowSystemPrompt,
+                AllowCodeExecution = m.AllowCodeExecution,
+                ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(m.ReasoningEffortOptions),
+                MinTemperature = m.MinTemperature,
+                MaxTemperature = m.MaxTemperature,
+                ContextWindow = m.ContextWindow,
+                MaxResponseTokens = m.MaxResponseTokens,
+                AllowToolCall = m.AllowToolCall,
+                SupportedImageSizes = Model.GetSupportedImageSizesAsArray(m.SupportedImageSizes),
+                ApiType = (DBApiType)m.ApiType,
+                UseAsyncApi = m.UseAsyncApi,
+                UseMaxCompletionTokens = m.UseMaxCompletionTokens,
+                IsLegacy = m.IsLegacy,
+                ThinkTagParserEnabled = m.ThinkTagParserEnabled,
             })
             .ToArrayAsync(cancellationToken);
 

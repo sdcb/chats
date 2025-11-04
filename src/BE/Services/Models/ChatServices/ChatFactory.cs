@@ -15,84 +15,79 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
     public ChatService CreateChatService(Model model)
     {
         DBModelProvider modelProvider = (DBModelProvider)model.ModelKey.ModelProviderId;
-        ChatService cs = modelProvider switch
+        if (modelProvider == DBModelProvider.Test)
         {
-            DBModelProvider.Test => new TestChatService(model),
-            DBModelProvider.OpenAI => model.ModelReference.Name switch
+            // Special case for Test model provider
+            return new TestChatService(model);
+        }
+
+        DBApiType apiType = (DBApiType)model.ApiType;
+
+        // 先按 API 类型分类，再按 ModelProvider 分类
+        return apiType switch
+        {
+            DBApiType.ImageGeneration => modelProvider switch
             {
-                "o3" or "o3-pro" or "o4-mini" or "codex-mini" or "gpt-5" or "gpt-5-mini" or "gpt-5-nano" or "gpt-5-codex" or "gpt-5-pro" => new ResponseApiService(model, logger),
-                "gpt-image-1" or "gpt-image-1-mini" => new ImageGenerationService(model),
-                _ => new ChatCompletionService(model),
+                DBModelProvider.OpenAI => new ImageGenerationService(model),
+                DBModelProvider.AzureOpenAI => new AzureImageGenerationService(model),
+                _ => new ImageGenerationService(model) // Fallback to OpenAI-compatible
             },
-            DBModelProvider.AzureOpenAI => model.ModelReference.Name switch
+            
+            DBApiType.Response => modelProvider switch
             {
-                "o3" or "o3-pro" or "o4-mini" or "codex-mini" or "gpt-5" or "gpt-5-mini" or "gpt-5-nano" or "gpt-5-codex" or "gpt-5-pro" => new AzureResponseApiService(model, logger), 
-                "gpt-image-1" or "gpt-image-1-mini" => new AzureImageGenerationService(model),
-                _ => new AzureChatCompletionService(model),
+                DBModelProvider.OpenAI => new ResponseApiService(model, logger),
+                DBModelProvider.AzureOpenAI => new AzureResponseApiService(model, logger),
+                _ => new ResponseApiService(model, logger) // Fallback to OpenAI-compatible
             },
-            DBModelProvider.WenXinQianFan => new QianFanChatService(model),
-            DBModelProvider.AliyunDashscope => new QwenChatService(model),
-            DBModelProvider.ZhiPuAI => new GLMChatService(model),
-            DBModelProvider.Moonshot => new KimiChatService(model),
-            DBModelProvider.HunYuan => new HunyuanChatService(model),
-            DBModelProvider.Sparkdesk => new XunfeiChatService(model),
-            DBModelProvider.LingYi => new LingYiChatService(model),
-            DBModelProvider.DeepSeek => new DeepSeekChatService(model),
-            DBModelProvider.xAI => new XAIChatService(model),
-            DBModelProvider.GithubModels => new GithubModelsChatService(model),
-            DBModelProvider.GoogleAI => new GoogleAI2ChatService(model),
-            DBModelProvider.Ollama => new OllamaChatService(model),
-            DBModelProvider.MiniMax => new MiniMaxChatService(model),
-            DBModelProvider.Doubao => new DoubaoChatService(model),
-            DBModelProvider.SiliconFlow => new SiliconFlowChatService(model),
-            DBModelProvider.OpenRouter => new OpenRouterChatService(model, hostUrlService),
-            _ => throw new NotSupportedException($"Unknown model provider: {modelProvider}")
+            
+            DBApiType.ChatCompletion => modelProvider switch
+            {
+                DBModelProvider.OpenAI => new ChatCompletionService(model),
+                DBModelProvider.AzureOpenAI => new AzureChatCompletionService(model),
+                DBModelProvider.WenXinQianFan => new QianFanChatService(model),
+                DBModelProvider.AliyunDashscope => new QwenChatService(model),
+                DBModelProvider.ZhiPuAI => new GLMChatService(model),
+                DBModelProvider.Moonshot => new KimiChatService(model),
+                DBModelProvider.HunYuan => new HunyuanChatService(model),
+                DBModelProvider.Sparkdesk => new XunfeiChatService(model),
+                DBModelProvider.LingYi => new LingYiChatService(model),
+                DBModelProvider.DeepSeek => new DeepSeekChatService(model),
+                DBModelProvider.xAI => new XAIChatService(model),
+                DBModelProvider.GithubModels => new GithubModelsChatService(model),
+                DBModelProvider.GoogleAI => new GoogleAI2ChatService(model),
+                DBModelProvider.Ollama => new OllamaChatService(model),
+                DBModelProvider.MiniMax => new MiniMaxChatService(model),
+                DBModelProvider.Doubao => new DoubaoChatService(model),
+                DBModelProvider.SiliconFlow => new SiliconFlowChatService(model),
+                DBModelProvider.OpenRouter => new OpenRouterChatService(model, hostUrlService),
+                _ => throw new NotSupportedException($"Unknown model provider: {modelProvider}")
+            },
+            
+            _ => throw new NotSupportedException($"Unknown API type: {apiType}")
         };
-        return cs;
     }
 
-    public ModelLoader? CreateModelLoader(DBModelProvider modelProvider)
+    public ModelLoader CreateModelLoader(DBModelProvider modelProvider)
     {
-        ModelLoader? ml = modelProvider switch
-        {
-            DBModelProvider.Test => null,
-            DBModelProvider.OpenAI => null,
-            DBModelProvider.AzureOpenAI => null,
-            DBModelProvider.WenXinQianFan => null,
-            DBModelProvider.AliyunDashscope => null,
-            DBModelProvider.ZhiPuAI => null,
-            DBModelProvider.Moonshot => null,
-            DBModelProvider.HunYuan => null,
-            DBModelProvider.Sparkdesk => null,
-            DBModelProvider.LingYi => null,
-            DBModelProvider.DeepSeek => null,
-            DBModelProvider.xAI => null,
-            DBModelProvider.GithubModels => null,
-            DBModelProvider.GoogleAI => null,
-            DBModelProvider.Ollama => new OpenAIModelLoader(),
-            DBModelProvider.MiniMax => null,
-            DBModelProvider.Doubao => null,
-            DBModelProvider.SiliconFlow => null,
-            DBModelProvider.OpenRouter => new OpenAIModelLoader(),
-            _ => throw new NotSupportedException($"Unknown model provider: {modelProvider}")
-        };
+        ModelLoader ml = new OpenAIModelLoader();
         return ml;
     }
 
-    public async Task<ModelValidateResult> ValidateModel(ModelKey modelKey, ModelReference modelReference, string? deploymentName, CancellationToken cancellationToken)
+    public async Task<ModelValidateResult> ValidateModel(Model model, CancellationToken cancellationToken)
     {
-        using ChatService cs = CreateChatService(new Model
-        {
-            ModelKey = modelKey, 
-            ModelReference = modelReference,
-            DeploymentName = deploymentName
-        });
+        using ChatService cs = CreateChatService(model);
         try
         {
             ChatCompletionOptions cco = new();
-            if (ModelReference.TryGetLowestSupportedReasoningEffort(modelReference.Name, out DBReasoningEffort reasoningEffort))
+            
+            // 如果模型支持 ReasoningEffort，使用最低级别进行测试
+            if (!string.IsNullOrEmpty(model.ReasoningEffortOptions))
             {
-                cco.ReasoningEffortLevel = reasoningEffort.ToReasoningEffort();
+                int[] efforts = Model.GetReasoningEffortOptionsAsInt32(model.ReasoningEffortOptions);
+                if (efforts.Length > 0)
+                {
+                    cco.ReasoningEffortLevel = ((DBReasoningEffort)efforts.Min()).ToReasoningEffort();
+                }
             }
 
             await foreach (Dtos.InternalChatSegment seg in cs.ChatStreamedFEProcessed([new UserChatMessage("1+1=?")], cco, ChatExtraDetails.Default, cancellationToken))
@@ -106,7 +101,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
         }
         catch (Exception e)
         {
-            logger.LogInformation(e, "TestModel failed");
+            logger.LogInformation(e, "ValidateModel failed");
             return ModelValidateResult.Fail(e.Message);
         }
     }

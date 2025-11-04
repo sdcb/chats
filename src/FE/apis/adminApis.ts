@@ -23,9 +23,8 @@ import {
   GetUserMessageParams,
   GetUsersParams,
   GetUsersResult,
-  ModelFastCreateParams,
+  ModelProviderDto,
   ModelProviderInitialConfig,
-  ModelReferenceDto,
   PasswordAttemptLog,
   PossibleModelResult,
   PostAndPutConfigParams,
@@ -41,10 +40,9 @@ import {
   PutUserBalanceParams,
   PutUserInitialConfigParams,
   PutUserParams,
-  SecurityLogExportParams,
   SecurityLogQueryParams,
+  SecurityLogExportParams,
   ReorderRequest,
-  SimpleModelReferenceDto,
   StatisticsTimeParams,
   TokenStatisticsByDateResult,
   UpdateModelDto,
@@ -284,6 +282,22 @@ export const getModelKeys = async (): Promise<GetModelKeysResult[]> => {
   return data.map((x) => new GetModelKeysResult(x));
 };
 
+export const getModelProviders = async (): Promise<ModelProviderDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get('/api/admin/model-providers');
+};
+
+export const getModelKeysByProvider = async (providerId: number): Promise<GetModelKeysResult[]> => {
+  const fetchService = useFetch();
+  const data = await fetchService.get<Object[]>(`/api/admin/model-providers/${providerId}/model-keys`);
+  return data.map((x) => new GetModelKeysResult(x));
+};
+
+export const getModelsByKey = async (modelKeyId: number): Promise<AdminModelDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get(`/api/admin/model-providers/model-keys/${modelKeyId}/models`);
+};
+
 export const postModelKeys = (params: PostModelKeysParams) => {
   const fetchService = useFetch();
   return fetchService.post<number>('/api/admin/model-keys', {
@@ -305,7 +319,7 @@ export const deleteModelKeys = (id: number) => {
 
 export const reorderModelProviders = (params: ReorderRequest) => {
   const fetchService = useFetch();
-  return fetchService.put('/api/admin/model-keys/reorder-model-providers', {
+  return fetchService.put('/api/admin/model-providers/reorder', {
     body: params,
   });
 };
@@ -402,19 +416,8 @@ export const getModelProviderInitialConfig = (
   );
 };
 
-export const getModelProviderModels = (modelProviderId: DBModelProvider) => {
-  const fetchServer = useFetch();
-  return fetchServer.get<SimpleModelReferenceDto[]>(
-    `/api/model-provider/${modelProviderId}/models`,
-  );
-};
-
-export const getModelReference = (modelReferenceId: number) => {
-  const fetchServer = useFetch();
-  return fetchServer.get<ModelReferenceDto>(
-    `/api/model-reference/${modelReferenceId}`,
-  );
-};
+// getModelProviderModels 已删除 - 不再需要
+// getModelReference 已删除 - 不再需要
 
 export const getModelKeyPossibleModels = (modelKeyId: number) => {
   const fetchServer = useFetch();
@@ -430,12 +433,7 @@ export const postModelValidate = (params: ValidateModelParams) => {
   });
 };
 
-export const postModelFastCreate = (params: ModelFastCreateParams) => {
-  const fetchServer = useFetch();
-  return fetchServer.post<ErrorResult>(`/api/admin/models/fast-create`, {
-    body: params,
-  });
-};
+// postModelFastCreate 已删除 - 使用 postModels 代替
 
 export const getAdminMessage = (chatId: string) => {
   const fetchServer = useFetch();

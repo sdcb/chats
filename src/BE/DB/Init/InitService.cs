@@ -32,7 +32,7 @@ public class InitService(IServiceScopeFactory scopeFactory)
             Name = "Hello-World Model",
             UpdatedAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,
-            ModelReferenceId = 0,
+            DeploymentName = "hello-world",
         };
         ModelKey modelKey = new()
         {

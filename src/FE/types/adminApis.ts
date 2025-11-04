@@ -28,36 +28,68 @@ export interface EditUserModelParams {
 export interface AdminModelDto {
   modelId: number;
   modelProviderId: number;
-  modelReferenceId: number;
-  modelReferenceName: string;
-  modelReferenceShortName: string | null;
   name: string;
   rank: number | null;
   enabled: boolean;
   modelKeyId: number;
-  deploymentName: string | null;
+  deploymentName: string;
   inputTokenPrice1M: number;
   outputTokenPrice1M: number;
+  
+  // === 1.8.0 新增字段（全部必填）===
   allowSearch: boolean;
   allowVision: boolean;
   allowSystemPrompt: boolean;
-  allowCodeExecution: boolean;
-  reasoningEffortOptions: number[];
   allowStreaming: boolean;
+  allowCodeExecution: boolean;
+  allowToolCall: boolean;
+  thinkTagParserEnabled: boolean;
+  
   minTemperature: number;
   maxTemperature: number;
+  
   contextWindow: number;
   maxResponseTokens: number;
+  
+  reasoningEffortOptions: number[];
+  supportedImageSizes: string[];
+  
+  apiType: number;
+  useAsyncApi: boolean;
+  useMaxCompletionTokens: boolean;
+  isLegacy: boolean;
 }
 
 export interface UpdateModelDto {
   name: string;
-  modelReferenceId: number;
   enabled: boolean;
-  deploymentName: string | null;
+  deploymentName: string;
   modelKeyId: number;
   inputTokenPrice1M: number;
   outputTokenPrice1M: number;
+  
+  // === 1.8.0 新增字段（全部必填）===
+  allowSearch: boolean;
+  allowVision: boolean;
+  allowSystemPrompt: boolean;
+  allowStreaming: boolean;
+  allowCodeExecution: boolean;
+  allowToolCall: boolean;
+  thinkTagParserEnabled: boolean;
+  
+  minTemperature: number;
+  maxTemperature: number;
+  
+  contextWindow: number;
+  maxResponseTokens: number;
+  
+  reasoningEffortOptions: number[];
+  supportedImageSizes: string[];
+  
+  apiType: number;
+  useAsyncApi: boolean;
+  useMaxCompletionTokens: boolean;
+  isLegacy: boolean;
 }
 
 export interface PostUserParams {
@@ -243,6 +275,12 @@ export interface PutPayServicesParams extends PostPayServicesParams {
   id: string;
 }
 
+export interface ModelProviderDto {
+  providerId: number;
+  keyCount: number;
+  modelCount: number;
+}
+
 export class GetModelKeysResult {
   id: number;
   modelProviderId: number;
@@ -412,32 +450,16 @@ export interface ModelReferenceDto extends SimpleModelReferenceDto {
   exchangeRate: number;
 }
 
-export interface AutoCreateModelResult {
-  modelName: string;
-  isCreated: boolean;
-  error: string | null;
-}
-
 export interface PossibleModelResult {
-  referenceName: string;
-  modelReferenceId: number;
-  isExists: boolean;
-  isLegacy: boolean;
-
-  deploymentName: string | null;
+  deploymentName: string;
+  existingModel: AdminModelDto | null;
 }
 
-export interface ValidateModelParams {
-  modelReferenceId: number;
-  modelKeyId: number;
-  deploymentName: string | null;
+export interface ValidateModelParams extends UpdateModelDto {
+  // ValidateModelParams 使用完整的 UpdateModelDto
 }
 
-export interface ModelFastCreateParams {
-  modelReferenceId: number;
-  modelKeyId: number;
-  deploymentName: string | null;
-}
+// 删除 ModelFastCreateParams，改用普通创建接口
 
 export interface ErrorResult {
   isSuccess: boolean;

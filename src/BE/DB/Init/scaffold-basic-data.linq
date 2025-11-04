@@ -14,18 +14,10 @@ void Main()
 	Environment.CurrentDirectory = Path.GetDirectoryName(Util.CurrentQueryPath)!;
 	TableDef[] tableDefs = new string[]
 	{
-		//"FileContentType",
-		"FileServiceType",
 		"ChatRole",
-		"CurrencyRate",
 		"FinishReason",
 		"StepContentType",
-		"Tokenizer",
-		"KnownImageSize",
 		"TransactionType",
-		"ReasoningResponseKind",
-		"ModelProvider",
-		"ModelReference",
 	}
 	.Select(tableName => TableDef.FromContextTableDef(this, tableName))
 	.ToArray();

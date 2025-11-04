@@ -1,23 +1,15 @@
 import { CHATS_SELECT_TYPE, IChat, IChatPaging } from '@/types/chat';
 import { IChatGroup } from '@/types/group';
 
-export type SetChatsType = IChat[];
-export type SetSelectedChatIdType = string | undefined;
-export type SetChatStatusType = boolean;
-export type SetChatsPagingType = IChatPaging[];
-export type SetIsChatsLoadingType = boolean;
-export type SetStopIdsType = string[];
-export type SetChatGroupType = IChatGroup[];
-export type SetChatsSelectType = CHATS_SELECT_TYPE;
-
 interface ChatInitialState {
-  chats: SetChatsType;
-  selectedChatId?: SetSelectedChatIdType;
-  chatPaging: SetChatsPagingType;
-  isChatsLoading: SetIsChatsLoadingType;
-  stopIds: SetStopIdsType;
-  chatGroups: SetChatGroupType;
-  chatsSelectType: SetChatsSelectType;
+  chats: IChat[];
+  selectedChatId?: string;
+  chatPaging: IChatPaging[];
+  isChatsLoading: boolean;
+  isMessagesLoading: boolean;
+  stopIds: string[];
+  chatGroups: IChatGroup[];
+  chatsSelectType: CHATS_SELECT_TYPE;
 }
 
 export const chatInitialState: ChatInitialState = {
@@ -25,6 +17,7 @@ export const chatInitialState: ChatInitialState = {
   selectedChatId: undefined,
   chatPaging: [],
   isChatsLoading: false,
+  isMessagesLoading: false,
   stopIds: [],
   chatGroups: [],
   chatsSelectType: CHATS_SELECT_TYPE.NONE,
@@ -37,25 +30,30 @@ export enum ChatActionTypes {
   SET_SELECTED_CHAT_ID = 'SET_SELECTED_CHAT_ID',
   SET_CHAT_PAGING = 'SET_CHAT_PAGING',
   SET_IS_CHATS_LOADING = 'SET_IS_CHATS_LOADING',
+  SET_IS_MESSAGES_LOADING = 'SET_IS_MESSAGES_LOADING',
   SET_STOP_IDS = 'SET_STOP_IDS',
   SET_CHAT_GROUP = 'SET_CHAT_GROUP',
   SET_IS_CHATS_DELETE_MODE = 'SET_IS_CHATS_DELETE_MODE',
 }
 
 export type ChatAction =
-  | { type: ChatActionTypes.SET_CHATS; payload: SetChatsType }
-  | { type: ChatActionTypes.SET_CHATS_INCR; payload: SetChatsType }
-  | { type: ChatActionTypes.SET_SELECTED_CHAT_ID; payload: SetSelectedChatIdType }
-  | { type: ChatActionTypes.SET_CHAT_PAGING; payload: SetChatsPagingType }
+  | { type: ChatActionTypes.SET_CHATS; payload: IChat[] }
+  | { type: ChatActionTypes.SET_CHATS_INCR; payload: IChat[] }
+  | { type: ChatActionTypes.SET_SELECTED_CHAT_ID; payload: string | undefined }
+  | { type: ChatActionTypes.SET_CHAT_PAGING; payload: IChatPaging[] }
   | {
       type: ChatActionTypes.SET_IS_CHATS_LOADING;
-      payload: SetIsChatsLoadingType;
+      payload: boolean;
     }
-  | { type: ChatActionTypes.SET_STOP_IDS; payload: SetStopIdsType }
-  | { type: ChatActionTypes.SET_CHAT_GROUP; payload: SetChatGroupType }
+  | {
+      type: ChatActionTypes.SET_IS_MESSAGES_LOADING;
+      payload: boolean;
+    }
+  | { type: ChatActionTypes.SET_STOP_IDS; payload: string[] }
+  | { type: ChatActionTypes.SET_CHAT_GROUP; payload: IChatGroup[] }
   | {
       type: ChatActionTypes.SET_IS_CHATS_DELETE_MODE;
-      payload: SetChatsSelectType;
+      payload: CHATS_SELECT_TYPE;
     };
 
 export default function chatReducer(
@@ -71,6 +69,8 @@ export default function chatReducer(
       return { ...state, chatPaging: action.payload };
     case ChatActionTypes.SET_IS_CHATS_LOADING:
       return { ...state, isChatsLoading: action.payload };
+    case ChatActionTypes.SET_IS_MESSAGES_LOADING:
+      return { ...state, isMessagesLoading: action.payload };
     case ChatActionTypes.SET_STOP_IDS:
       return { ...state, stopIds: action.payload };
     case ChatActionTypes.SET_CHAT_GROUP:

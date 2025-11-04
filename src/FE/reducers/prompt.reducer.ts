@@ -1,11 +1,8 @@
 import { Prompt, PromptSlim } from '@/types/prompt';
 
-export type SetDefaultPromptType = Prompt;
-export type SetPromptsType = PromptSlim[];
-
 interface PromptInitialState {
-  defaultPrompt: SetDefaultPromptType | null;
-  prompts: SetPromptsType;
+  defaultPrompt: Prompt | null;
+  prompts: PromptSlim[];
 }
 
 export const promptInitialState: PromptInitialState = {
@@ -21,11 +18,11 @@ export enum PromptActionTypes {
 export type PromptAction =
   | {
       type: PromptActionTypes.SET_DEFAULT_PROMPT;
-      payload: SetDefaultPromptType;
+      payload: Prompt;
     }
   | {
       type: PromptActionTypes.SET_PROMPTS;
-      payload: SetPromptsType;
+      payload: PromptSlim[];
     };
 export default function promptReducer(
   state: PromptInitialState,

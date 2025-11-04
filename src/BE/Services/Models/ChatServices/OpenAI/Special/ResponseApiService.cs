@@ -21,8 +21,8 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
 
     static OpenAIResponseClient CreateResponseAPI(Model model, Uri? suggestedUri, PipelinePolicy[] pipelinePolicies)
     {
-        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model, suggestedUri, pipelinePolicies);
-        OpenAIResponseClient cc = api.GetOpenAIResponseClient(model.ApiModelId);
+        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model.ModelKey, suggestedUri, pipelinePolicies);
+        OpenAIResponseClient cc = api.GetOpenAIResponseClient(model.DeploymentName);
         return cc;
     }
 
@@ -30,7 +30,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         bool hasTools = false;
-        if (Model.ModelReference.Name == "o3-pro")
+        if (Model.UseAsyncApi)
         {
             Stopwatch sw = Stopwatch.StartNew();
             OpenAIResponse response = await responseClient.CreateResponseAsync(ToResponse(messages), ToResponse(options, background: true), cancellationToken);

@@ -10,27 +10,18 @@ import { Prompt } from '@/types/prompt';
 
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
 import {
-  IconCode,
   IconPlus,
-  IconTemperature,
-  IconTokens,
-  IconWorld
 } from '@/components/Icons';
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
-import ImageSizeRadio from '@/components/ImageSizeRadio/ImageSizeRadio';
-import McpSelector from '@/components/McpSelector/McpSelector';
-import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 
 import HomeContext from '@/contexts/home.context';
-import { isImageGenerationModel } from '@/utils/model';
 import ChatModelInfo from './ChatModelInfo';
-import FeatureToggle from './FeatureToggle';
-import SystemPrompt from './SystemPrompt';
+import ChatResponsePresetConfig from './ChatResponsePresetConfig';
+import ImageGenerationPresetConfig from './ImageGenerationPresetConfig';
 
 import { postChatPreset, putChatPreset } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
@@ -123,7 +114,7 @@ const ChatPresetModal = (props: Props) => {
             reasoningEffort: 0,
             webSearchEnabled: false,
             codeExecutionEnabled: false,
-            imageSize: 0,
+            imageSize: null,
             mcps: [],
           });
           return s;
@@ -206,7 +197,7 @@ const ChatPresetModal = (props: Props) => {
       reasoningEffort: 0,
       webSearchEnabled: false,
       codeExecutionEnabled: false,
-      imageSize: 0,
+      imageSize: null,
       mcps: [],
     };
     setSpans([...spans, span]);
@@ -324,13 +315,31 @@ const ChatPresetModal = (props: Props) => {
     });
   };
 
-  const onChangeImageSize = (value: string) => {
+  const onChangeImageQuality = (value: string) => {
     setSpans((prev) => {
       return prev.map((span) => {
         if (selectedSpan?.spanId === span.spanId) {
           const s = {
             ...span!,
-            imageSize: Number(value),
+            reasoningEffort: Number(value),
+          };
+          setSelectedSpan({
+            ...s,
+          });
+          return s;
+        }
+        return span;
+      });
+    });
+  };
+
+  const onChangeImageSize = (value: string | null) => {
+    setSpans((prev) => {
+      return prev.map((span) => {
+        if (selectedSpan?.spanId === span.spanId) {
+          const s = {
+            ...span!,
+            imageSize: value,
           };
           setSelectedSpan({
             ...s,
@@ -522,151 +531,50 @@ const ChatPresetModal = (props: Props) => {
                         <ChatModelInfo modelId={selectedSpan.modelId} />
                       </div>
                     </div>
-                    {modelMap[selectedSpan.modelId]?.allowSystemPrompt && (
-                      <SystemPrompt
-                        currentPrompt={selectedSpan.systemPrompt || null}
-                        prompts={prompts}
-                        model={modelMap[selectedSpan.modelId]}
-                        onChangePromptText={(value) => {
-                          onChangePromptText(value);
-                        }}
-                        onChangePrompt={(prompt) => {
-                          onChangePrompt(prompt);
-                        }}
-                      />
-                    )}
-                    {modelMap[selectedSpan.modelId]?.allowSearch && (
-                      <FeatureToggle
-                        label={t('Internet Search')}
-                        enable={selectedSpan.webSearchEnabled}
-                        icon={<IconWorld size={16} />}
-                        onChange={(value) => {
-                          onChangeEnableSearch(value);
-                        }}
-                      />
-                    )}
-                    {modelMap[selectedSpan.modelId]?.allowCodeExecution && (
-                      <FeatureToggle
-                        label={t('Code Execution')}
-                        enable={selectedSpan.codeExecutionEnabled}
-                        icon={<IconCode size={16} />}
-                        onChange={(value) => {
-                          onChangeCodeExecution(value);
-                        }}
-                      />
-                    )}
-                    {modelMap[selectedSpan.modelId]?.reasoningEffortOptions && 
-                     modelMap[selectedSpan.modelId]?.reasoningEffortOptions.length > 0 && (
-                      <ReasoningEffortRadio
-                        value={`${selectedSpan?.reasoningEffort}`}
-                        availableOptions={modelMap[selectedSpan.modelId]?.reasoningEffortOptions || []}
-                        onValueChange={(value) => {
-                          onChangeReasoningEffort(value);
-                        }}
-                      />
-                    )}
-                    {isImageGenerationModel(modelMap[selectedSpan.modelId]?.modelReferenceName) && (
-                      <ImageSizeRadio
-                        value={`${selectedSpan?.imageSize}`}
-                        onValueChange={(value) => {
-                          onChangeImageSize(value);
-                        }}
-                      />
-                    )}
-                    {!isImageGenerationModel(modelMap[selectedSpan.modelId]?.modelReferenceName) && (
-                      <McpSelector
-                        value={selectedSpan?.mcps || []}
-                        onValueChange={(mcps) => {
-                          onChangeMcps(mcps);
-                        }}
-                        onRequestMcpLoad={loadMcpServers}
-                        mcpServersLoaded={mcpServersLoaded}
-                      />
-                    )}
                     
-                    {/* Temperature */}
-                    {modelMap[selectedSpan.modelId]?.minTemperature !== modelMap[selectedSpan.modelId]?.maxTemperature && (
-                      <div className="flex flex-col gap-4">
-                        <div className="flex justify-between">
-                          <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
-                            <IconTemperature size={16} />
-                            {t('Temperature')}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              if (selectedSpan.temperature === null) {
-                                onChangeTemperature(DEFAULT_TEMPERATURE);
-                              } else {
-                                onChangeTemperature(null);
-                              }
-                            }}
-                            className="h-6 px-2 text-xs"
-                          >
-                            {selectedSpan.temperature === null ? t('Default') : t('Custom')}
-                          </Button>
-                        </div>
-                        {selectedSpan.temperature !== null && (
-                          <div className="px-2">
-                            <Slider
-                              className="cursor-pointer"
-                              min={modelMap[selectedSpan.modelId]?.minTemperature}
-                              max={modelMap[selectedSpan.modelId]?.maxTemperature}
-                              step={0.01}
-                              value={[selectedSpan.temperature || DEFAULT_TEMPERATURE]}
-                              onValueChange={(values) => {
-                                onChangeTemperature(values[0]);
-                              }}
-                            />
-                            <div className="text-xs text-gray-500 mt-1">
-                              {selectedSpan.temperature || DEFAULT_TEMPERATURE}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Max Tokens */}
-                    <div className="flex flex-col gap-4">
-                      <div className="flex justify-between">
-                        <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
-                          <IconTokens size={16} />
-                          {t('Max Output Tokens')}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (selectedSpan.maxOutputTokens === null) {
-                              onChangeMaxOutputTokens(modelMap[selectedSpan.modelId].maxResponseTokens);
-                            } else {
-                              onChangeMaxOutputTokens(null);
-                            }
-                          }}
-                          className="h-6 px-2 text-xs"
-                        >
-                          {selectedSpan.maxOutputTokens === null ? t('Default') : t('Custom')}
-                        </Button>
-                      </div>
-                      {selectedSpan.maxOutputTokens !== null && (
-                        <div className="px-2">
-                          <Slider
-                            className="cursor-pointer"
-                            min={0}
-                            max={modelMap[selectedSpan.modelId]?.maxResponseTokens}
-                            step={1}
-                            value={[selectedSpan.maxOutputTokens || modelMap[selectedSpan.modelId]?.maxResponseTokens]}
-                            onValueChange={(values) => {
-                              onChangeMaxOutputTokens(values[0]);
-                            }}
+                    {/* 根据模型的 API 类型显示不同的配置组件 */}
+                    {modelMap[selectedSpan.modelId] && (
+                      <>
+                        {/* Chat/Response API 配置 (apiType=0/1) */}
+                        {(modelMap[selectedSpan.modelId].apiType === 0 || 
+                          modelMap[selectedSpan.modelId].apiType === 1) && (
+                          <ChatResponsePresetConfig
+                            model={modelMap[selectedSpan.modelId]}
+                            systemPrompt={selectedSpan.systemPrompt}
+                            prompts={prompts}
+                            webSearchEnabled={selectedSpan.webSearchEnabled}
+                            codeExecutionEnabled={selectedSpan.codeExecutionEnabled}
+                            reasoningEffort={selectedSpan.reasoningEffort}
+                            mcps={selectedSpan.mcps || []}
+                            temperature={selectedSpan.temperature}
+                            maxOutputTokens={selectedSpan.maxOutputTokens}
+                            mcpServersLoaded={mcpServersLoaded}
+                            onChangePromptText={onChangePromptText}
+                            onChangePrompt={onChangePrompt}
+                            onChangeEnableSearch={onChangeEnableSearch}
+                            onChangeCodeExecution={onChangeCodeExecution}
+                            onChangeReasoningEffort={onChangeReasoningEffort}
+                            onChangeMcps={onChangeMcps}
+                            onChangeTemperature={onChangeTemperature}
+                            onChangeMaxOutputTokens={onChangeMaxOutputTokens}
+                            onRequestMcpLoad={loadMcpServers}
                           />
-                          <div className="text-xs text-gray-500 mt-1">
-                            {selectedSpan.maxOutputTokens || modelMap[selectedSpan.modelId]?.maxResponseTokens}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                        
+                        {/* ImageGeneration API 配置 (apiType=2) */}
+                        {modelMap[selectedSpan.modelId].apiType === 2 && (
+                          <ImageGenerationPresetConfig
+                            model={modelMap[selectedSpan.modelId]}
+                            imageSize={selectedSpan.imageSize}
+                            reasoningEffort={selectedSpan.reasoningEffort}
+                            maxOutputTokens={selectedSpan.maxOutputTokens}
+                            onChangeImageSize={onChangeImageSize}
+                            onChangeImageQuality={onChangeImageQuality}
+                            onChangeMaxOutputTokens={onChangeMaxOutputTokens}
+                          />
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
               </div>

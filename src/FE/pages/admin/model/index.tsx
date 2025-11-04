@@ -5,7 +5,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/router';
 import useTranslation from '@/hooks/useTranslation';
-import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
+import { AdminModelDto, GetModelKeysResult, ModelProviderDto } from '@/types/adminApis';
 import { feModelProviders } from '@/types/model';
 import { formatNumberAsMoney } from '@/utils/common';
 import { Button } from '@/components/ui/button';
@@ -13,21 +13,36 @@ import IconActionButton from '@/components/common/IconActionButton';
 import { LabelSwitch } from '@/components/ui/label-switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { IconPlus } from '@/components/Icons';
-import { getModelKeys, getModels, deleteModelKeys, deleteModels, reorderModelProviders, reorderModelKeys, reorderModels } from '@/apis/adminApis';
+import { 
+  getModelProviders, 
+  getModelKeysByProvider, 
+  getModelsByKey,
+  deleteModelKeys, 
+  deleteModels, 
+  reorderModelProviders, 
+  reorderModelKeys, 
+  reorderModels 
+} from '@/apis/adminApis';
 import ModelKeysModal from '@/components/admin/ModelKeys/ModelKeysModal';
-import ConfigModelModal from '@/components/admin/ModelKeys/ConfigModelModal';
+import QuickAddModelModal from '@/components/admin/ModelKeys/QuickAddModelModal';
 import ModelModal from '@/components/admin/Models/ModelModal';
 import ModelProvider, { ProviderGroup } from '@/components/admin/model/ModelProvider';
+import { 
+  ApiType,
+  getDefaultConfigByApiType 
+} from '@/constants/modelDefaults';
 
 export default function ModelManager() {
   const { t } = useTranslation();
   const router = useRouter();
 
   // data state
-  const [modelKeys, setModelKeys] = useState<GetModelKeysResult[]>([]);
-  const [models, setModels] = useState<AdminModelDto[]>([]);
+  const [providers, setProviders] = useState<ModelProviderDto[]>([]);
+  const [keysByProvider, setKeysByProvider] = useState<Record<number, GetModelKeysResult[]>>({});
+  const [modelsByKey, setModelsByKey] = useState<Record<number, AdminModelDto[]>>({});
   const [loading, setLoading] = useState(true);
-  const [initialLoading, setInitialLoading] = useState(true); // 区分初始加载和后续更新
+  const [loadingKeys, setLoadingKeys] = useState<Record<number, boolean>>({});
+  const [loadingModels, setLoadingModels] = useState<Record<number, boolean>>({});
 
   // UI state
   const [expandProviders, setExpandProviders] = useState<Record<number, boolean>>({});
@@ -54,7 +69,7 @@ export default function ModelManager() {
 
   // dialogs
   const [isOpenKeyModal, setIsOpenKeyModal] = useState(false);
-  const [isOpenConfigModels, setIsOpenConfigModels] = useState(false);
+  const [isOpenQuickAddModels, setIsOpenQuickAddModels] = useState(false);
   const [isOpenAddModel, setIsOpenAddModel] = useState(false);
   const [isOpenEditModel, setIsOpenEditModel] = useState(false);
 
@@ -63,105 +78,93 @@ export default function ModelManager() {
   const [currentModelKeyId, setCurrentModelKeyId] = useState<number | undefined>(undefined);
   const [selectedModel, setSelectedModel] = useState<AdminModelDto | undefined>(undefined);
   const [selectedKey, setSelectedKey] = useState<GetModelKeysResult | undefined>(undefined);
+  const [addModelDefaults, setAddModelDefaults] = useState<any>(undefined);
 
   useEffect(() => {
     init();
   }, []);
 
-  const init = async (preserveExpandState = false) => {
-    // 只有在非保持展开状态的情况下才设置loading为true（即初始加载）
-    if (!preserveExpandState) {
-      setLoading(true);
-    }
-    const [keys, ms] = await Promise.all([getModelKeys(), getModels(true)]);
-    setModelKeys(keys);
-    setModels(ms);
-    if (!preserveExpandState) {
-      const providerExpand: Record<number, boolean> = {};
-      const keyExpand: Record<number, boolean> = {};
-      for (const p of feModelProviders) providerExpand[p.id] = false;
-      for (const k of keys) keyExpand[k.id] = false;
-      setExpandProviders(providerExpand);
-      setExpandKeys(keyExpand);
-    }
+  const init = async () => {
+    setLoading(true);
+    const providersData = await getModelProviders();
+    setProviders(providersData);
+    
+    // 初始化展开状态
+    const providerExpand: Record<number, boolean> = {};
+    for (const p of providersData) providerExpand[p.providerId] = false;
+    setExpandProviders(providerExpand);
+    setExpandKeys({});
+    
     setLoading(false);
-    setInitialLoading(false); // 初始加载完成后设置为false
+  };
+
+  // 刷新 provider 列表
+  const refreshProviders = async () => {
+    const providersData = await getModelProviders();
+    setProviders(providersData);
+  };
+
+  // 加载指定 provider 的 keys
+  const loadProviderKeys = async (providerId: number) => {
+    if (keysByProvider[providerId]) return; // 已加载
+    
+    setLoadingKeys(prev => ({ ...prev, [providerId]: true }));
+    try {
+      const keys = await getModelKeysByProvider(providerId);
+      setKeysByProvider(prev => ({ ...prev, [providerId]: keys }));
+    } finally {
+      setLoadingKeys(prev => ({ ...prev, [providerId]: false }));
+    }
+  };
+
+  // 刷新指定 provider 的 keys
+  const refreshProviderKeys = async (providerId: number) => {
+    const keys = await getModelKeysByProvider(providerId);
+    setKeysByProvider(prev => ({ ...prev, [providerId]: keys }));
+  };
+
+  // 加载指定 key 的 models
+  const loadKeyModels = async (keyId: number) => {
+    if (modelsByKey[keyId]) return; // 已加载
+    
+    setLoadingModels(prev => ({ ...prev, [keyId]: true }));
+    try {
+      const models = await getModelsByKey(keyId);
+      setModelsByKey(prev => ({ ...prev, [keyId]: models }));
+    } finally {
+      setLoadingModels(prev => ({ ...prev, [keyId]: false }));
+    }
+  };
+
+  // 刷新指定 key 的 models
+  const refreshKeyModels = async (keyId: number) => {
+    const models = await getModelsByKey(keyId);
+    setModelsByKey(prev => ({ ...prev, [keyId]: models }));
   };
 
   const grouped: ProviderGroup[] = useMemo(() => {
-    // 创建一个 Map 来存储每个 provider 的 group
-    const groupsMap = new Map<number, ProviderGroup>();
-    
-    // 初始化所有 provider 的 group
-    for (const p of feModelProviders) {
-      groupsMap.set(p.id, {
-        providerId: p.id,
-        providerName: p.name,
-        keys: [],
-      });
-    }
-    
-    // 按照 modelKeys 中 modelProviderId 第一次出现的顺序收集 provider
-    const orderedProviderIds: number[] = [];
-    const seenProviderIds = new Set<number>();
-    
-    for (const k of modelKeys) {
-      if (!seenProviderIds.has(k.modelProviderId)) {
-        orderedProviderIds.push(k.modelProviderId);
-        seenProviderIds.add(k.modelProviderId);
-      }
-      
-      const group = groupsMap.get(k.modelProviderId);
-      if (group) {
-        group.keys.push(k);
-      }
-    }
-    
-    // 按顺序构建最终的 groups 数组
-    const orderedGroups: ProviderGroup[] = [];
-    
-    // 首先添加有 keys 的 provider（按 modelKeys 中出现的顺序）
-    for (const providerId of orderedProviderIds) {
-      const group = groupsMap.get(providerId);
-      if (group) {
-        orderedGroups.push(group);
-      }
-    }
-    
-    // 然后添加没有 keys 的 provider（保持原有顺序）
-    for (const p of feModelProviders) {
-      if (!seenProviderIds.has(p.id)) {
-        const group = groupsMap.get(p.id);
-        if (group) {
-          orderedGroups.push(group);
-        }
-      }
-    }
-    
-    return orderedGroups;
-  }, [modelKeys]);
-
-  const modelsByKey = useMemo(() => {
-    const map: Record<number, AdminModelDto[]> = {};
-    for (const m of models) {
-      if (!map[m.modelKeyId]) map[m.modelKeyId] = [];
-      map[m.modelKeyId].push(m);
-    }
-    return map;
-  }, [models]);
-
-  const modelCountByProvider = useMemo(() => {
-    const countMap: Record<number, number> = {};
-    for (const g of grouped) {
-      const count = g.keys.reduce((sum, k) => sum + (modelsByKey[k.id]?.length || 0), 0);
-      countMap[g.providerId] = count;
-    }
-    return countMap;
-  }, [grouped, modelsByKey]);
+    return providers.map(p => {
+      const providerInfo = feModelProviders.find(fp => fp.id === p.providerId);
+      return {
+        providerId: p.providerId,
+        providerName: providerInfo?.name || `Provider ${p.providerId}`,
+        keys: keysByProvider[p.providerId] || [],
+        keyCount: p.keyCount,
+        modelCount: p.modelCount,
+      };
+    });
+  }, [providers, keysByProvider]);
 
   const filteredProviders = useMemo(() => {
-    return grouped.filter((g) => showAllProviders || g.keys.length > 0);
-  }, [grouped, showAllProviders]);
+    if (showAllProviders) {
+      return grouped;
+    }
+    // 过滤出有 keys 的 provider（基于后端返回的 keyCount）
+    return grouped.filter((g) => {
+      const provider = providers.find(p => p.providerId === g.providerId);
+      return provider && provider.keyCount > 0;
+    });
+  }, [grouped, showAllProviders, providers]);
 
   // 统一计算拖拽放置的 previousId/nextId，避免重复逻辑
   const computePrevNext = <T,>(ids: T[], sourceIndex: number, targetIndex: number) => {
@@ -185,7 +188,7 @@ export default function ModelManager() {
   const openConfigModels = (keyId: number, providerId: number) => {
     setCurrentModelKeyId(keyId);
     setCurrentProviderId(providerId);
-    setIsOpenConfigModels(true);
+    setIsOpenQuickAddModels(true);
   };
 
   const openAddModel = (keyId: number) => {
@@ -198,32 +201,56 @@ export default function ModelManager() {
     setIsOpenEditModel(true);
   };
 
-  const handleToggleProvider = (providerId: number) => {
+  const handleToggleProvider = async (providerId: number) => {
     const isCurrentlyExpanded = expandProviders[providerId];
     const newExpandProviders: Record<number, boolean> = {};
-    for (const provider of feModelProviders) newExpandProviders[provider.id] = false;
+    for (const provider of providers) newExpandProviders[provider.providerId] = false;
+    
     if (!isCurrentlyExpanded) {
+      // 先展开 UI
       newExpandProviders[providerId] = true;
-      const newExpandKeys: Record<number, boolean> = {};
-      for (const k of modelKeys) newExpandKeys[k.id] = false;
-      const providerGroup = grouped.find(g => g.providerId === providerId);
-      if (providerGroup && providerGroup.keys.length > 0) {
-        newExpandKeys[providerGroup.keys[0].id] = true;
+      setExpandProviders(newExpandProviders);
+      
+      // 然后异步加载该 provider 的 keys
+      await loadProviderKeys(providerId);
+      
+      // 展开第一个 key
+      const keys = keysByProvider[providerId];
+      if (keys && keys.length > 0) {
+        const newExpandKeys: Record<number, boolean> = {};
+        newExpandKeys[keys[0].id] = true;
+        setExpandKeys(newExpandKeys);
+        
+        // 加载第一个 key 的 models
+        await loadKeyModels(keys[0].id);
       }
-      setExpandKeys(newExpandKeys);
     } else {
-      const newExpandKeys: Record<number, boolean> = {};
-      for (const k of modelKeys) newExpandKeys[k.id] = false;
-      setExpandKeys(newExpandKeys);
+      setExpandKeys({});
+      setExpandProviders(newExpandProviders);
     }
-    setExpandProviders(newExpandProviders);
   };
 
-  const handleToggleKey = (keyId: number) => {
+  const handleToggleKey = async (keyId: number) => {
     const newExpandKeys: Record<number, boolean> = {};
-    for (const key of modelKeys) newExpandKeys[key.id] = false;
-    newExpandKeys[keyId] = !expandKeys[keyId];
-    setExpandKeys(newExpandKeys);
+    const wasExpanded = expandKeys[keyId];
+    
+    // 收起所有其他 keys
+    for (const keys of Object.values(keysByProvider)) {
+      for (const key of keys) {
+        newExpandKeys[key.id] = false;
+      }
+    }
+    
+    // 切换当前 key
+    newExpandKeys[keyId] = !wasExpanded;
+    
+    // 如果是展开操作，先展开 UI 再加载数据
+    if (!wasExpanded) {
+      setExpandKeys(newExpandKeys);
+      await loadKeyModels(keyId);
+    } else {
+      setExpandKeys(newExpandKeys);
+    }
   };
 
   const handleEditKey = (key: GetModelKeysResult) => {
@@ -243,13 +270,33 @@ export default function ModelManager() {
     }
     await deleteModelKeys(keyId);
     toast.success(t('Deleted successful'));
-    init(true);
+    
+    // 找到该 key 所属的 provider 并刷新
+    for (const [providerId, keys] of Object.entries(keysByProvider)) {
+      if (keys.some(k => k.id === keyId)) {
+        await Promise.all([
+          refreshProviders(),
+          refreshProviderKeys(Number(providerId))
+        ]);
+        break;
+      }
+    }
   };
 
   const handleDeleteModel = async (modelId: number) => {
     await deleteModels(modelId);
     toast.success(t('Deleted successful'));
-    init(true);
+    
+    // 找到该 model 所属的 key 并刷新
+    for (const [keyId, models] of Object.entries(modelsByKey)) {
+      if (models.some(m => m.modelId === modelId)) {
+        await Promise.all([
+          refreshProviders(),
+          refreshKeyModels(Number(keyId))
+        ]);
+        break;
+      }
+    }
   };
 
   const handleGoToUsage = (params: {
@@ -279,19 +326,24 @@ export default function ModelManager() {
       setCurrentDragProvider(provider);
       // 收起所有 provider 与 key
       const newExpandProviders: Record<number, boolean> = {};
-      for (const p of feModelProviders) newExpandProviders[p.id] = false;
+      for (const p of providers) newExpandProviders[p.providerId] = false;
       setExpandProviders(newExpandProviders);
-      setExpandKeys((prev) => {
-        const next: Record<number, boolean> = { ...prev };
-        for (const k of modelKeys) next[k.id] = false;
-        return next;
-      });
+      setExpandKeys({});
     } else if (id.startsWith('key-')) {
       const keyId = Number(id.replace('key-', ''));
-      const key = modelKeys.find(k => k.id === keyId) || null;
+      // 从 keysByProvider 中查找 key
+      let key: GetModelKeysResult | null = null;
+      for (const keys of Object.values(keysByProvider)) {
+        const found = keys.find(k => k.id === keyId);
+        if (found) {
+          key = found;
+          break;
+        }
+      }
       if (key) {
+        const currentKeyId = key.id; // 保存 keyId 避免 TypeScript 类型检查问题
         setCurrentDragKey(key);
-        setExpandKeys((prev) => ({ ...prev, [key.id]: false }));
+        setExpandKeys((prev) => ({ ...prev, [currentKeyId]: false }));
       }
     }
   };
@@ -311,31 +363,23 @@ export default function ModelManager() {
       const overPid = pid(overId);
       if (activePid === overPid) return;
 
-      // 乐观更新 provider 顺序：通过 modelKeys 的 provider 首次出现顺序实现
       const ids = filteredProviders.map(p => p.providerId);
       const sourceIndex = ids.indexOf(activePid);
       const targetIndex = ids.indexOf(overPid);
       const { previousId, nextId } = computePrevNext(ids, sourceIndex, targetIndex);
 
-      // 先本地乐观更新，避免松手后弹回
+      // 乐观更新 provider 顺序
       const orderMoved = arrayMove(ids, sourceIndex, targetIndex);
-      setModelKeys(prev => {
-        // 重建 modelKeys：按新 provider 顺序拼接各自 keys
-        const groupedMap = new Map<number, GetModelKeysResult[]>();
-        for (const mk of prev) {
-          const arr = groupedMap.get(mk.modelProviderId) || [];
-          arr.push(mk);
-          groupedMap.set(mk.modelProviderId, arr);
-        }
-        const result: GetModelKeysResult[] = [];
-        for (const id of orderMoved) result.push(...(groupedMap.get(id) || []));
-        return result;
-      });
+      const reorderedProviders = orderMoved.map(id => providers.find(p => p.providerId === id)!);
+      setProviders(reorderedProviders);
+      
       try {
         await reorderModelProviders({ sourceId: activePid, previousId, nextId });
-      } finally {
-        // 无论成功失败都刷新一次，确保与后端一致；失败时可考虑提示并回滚
-        init(true);
+        await refreshProviders();
+      } catch (error) {
+        // 失败时恢复
+        await refreshProviders();
+        toast.error(t('Reorder failed'));
       }
       setActiveId(null);
       setCurrentDragProvider(null);
@@ -349,38 +393,44 @@ export default function ModelManager() {
       const overKid = kid(overId);
       if (activeKid === overKid) return;
 
+      // 找到 active 和 over key 所属的 provider
+      let activeProviderId: number | null = null;
+      let activeKey: GetModelKeysResult | null = null;
+      let overKey: GetModelKeysResult | null = null;
+
+      for (const [providerId, keys] of Object.entries(keysByProvider)) {
+        const active = keys.find(k => k.id === activeKid);
+        const over = keys.find(k => k.id === overKid);
+        if (active) {
+          activeProviderId = Number(providerId);
+          activeKey = active;
+        }
+        if (over) {
+          overKey = over;
+        }
+      }
+
       // 限制在同一 provider 内
-      const activeKey = modelKeys.find(k => k.id === activeKid);
-      const overKey = modelKeys.find(k => k.id === overKid);
       if (!activeKey || !overKey || activeKey.modelProviderId !== overKey.modelProviderId) return;
 
-      const providerGroup = grouped.find(g => g.providerId === activeKey.modelProviderId);
-      if (!providerGroup) return;
-      const ids = providerGroup.keys.map(k => k.id);
+      const keys = keysByProvider[activeProviderId!] || [];
+      const ids = keys.map(k => k.id);
       const sourceIndex = ids.indexOf(activeKid);
       const targetIndex = ids.indexOf(overKid);
       const { previousId, nextId } = computePrevNext(ids, sourceIndex, targetIndex);
 
-      // 先本地顺序调整（乐观更新）
-      const moved = arrayMove(ids, sourceIndex, targetIndex);
-      setModelKeys(prev => {
-        const idToKey = new Map(prev.map(k => [k.id, k] as const));
-        const result: GetModelKeysResult[] = [];
-        for (const mk of prev) {
-          if (mk.modelProviderId !== activeKey.modelProviderId) {
-            result.push(mk);
-          } else {
-            // 依照 moved 的顺序输出该 provider 的 keys（逐个匹配）
-            const nextId = moved.shift()!;
-            result.push(idToKey.get(nextId)!);
-          }
-        }
-        return result;
-      });
+      // 乐观更新 key 顺序
+      const movedIds = arrayMove(ids, sourceIndex, targetIndex);
+      const reorderedKeys = movedIds.map(id => keys.find(k => k.id === id)!);
+      setKeysByProvider(prev => ({ ...prev, [activeProviderId!]: reorderedKeys }));
+      
       try {
         await reorderModelKeys({ sourceId: activeKid, previousId, nextId });
-      } finally {
-        init(true);
+        await refreshProviderKeys(activeProviderId!);
+      } catch (error) {
+        // 失败时恢复
+        await refreshProviderKeys(activeProviderId!);
+        toast.error(t('Reorder failed'));
       }
       setActiveId(null);
       setCurrentDragKey(null);
@@ -394,37 +444,44 @@ export default function ModelManager() {
       const overMid = mid(overId);
       if (activeMid === overMid) return;
 
+      // 找到 active 和 over model 所属的 key
+      let activeKeyId: number | null = null;
+      let activeModel: AdminModelDto | null = null;
+      let overModel: AdminModelDto | null = null;
+
+      for (const [keyId, models] of Object.entries(modelsByKey)) {
+        const active = models.find(m => m.modelId === activeMid);
+        const over = models.find(m => m.modelId === overMid);
+        if (active) {
+          activeKeyId = Number(keyId);
+          activeModel = active;
+        }
+        if (over) {
+          overModel = over;
+        }
+      }
+
       // 限制在同一 key 内
-      const activeModel = models.find(m => m.modelId === activeMid);
-      const overModel = models.find(m => m.modelId === overMid);
       if (!activeModel || !overModel || activeModel.modelKeyId !== overModel.modelKeyId) return;
 
-      const keyModels = modelsByKey[activeModel.modelKeyId] || [];
-      const ids = keyModels.map(m => m.modelId);
+      const models = modelsByKey[activeKeyId!] || [];
+      const ids = models.map(m => m.modelId);
       const sourceIndex = ids.indexOf(activeMid);
       const targetIndex = ids.indexOf(overMid);
       const { previousId, nextId } = computePrevNext(ids, sourceIndex, targetIndex);
 
-      // 先本地顺序调整（乐观更新）
-      const moved = arrayMove(ids, sourceIndex, targetIndex);
-      setModels(prev => {
-        const idToModel = new Map(prev.map(m => [m.modelId, m] as const));
-        const result: AdminModelDto[] = [];
-        for (const m of prev) {
-          if (m.modelKeyId !== activeModel.modelKeyId) {
-            result.push(m);
-          } else {
-            // 依照 moved 的顺序输出该 key 的 models
-            const nextId = moved.shift()!;
-            result.push(idToModel.get(nextId)!);
-          }
-        }
-        return result;
-      });
+      // 乐观更新 model 顺序
+      const movedIds = arrayMove(ids, sourceIndex, targetIndex);
+      const reorderedModels = movedIds.map(id => models.find(m => m.modelId === id)!);
+      setModelsByKey(prev => ({ ...prev, [activeKeyId!]: reorderedModels }));
+      
       try {
         await reorderModels({ sourceId: activeMid, previousId, nextId });
-      } finally {
-        init(true);
+        await refreshKeyModels(activeKeyId!);
+      } catch (error) {
+        // 失败时恢复
+        await refreshKeyModels(activeKeyId!);
+        toast.error(t('Reorder failed'));
       }
       setActiveId(null);
       return;
@@ -467,7 +524,7 @@ export default function ModelManager() {
         strategy={verticalListSortingStrategy}
       >
       <div className="space-y-2">
-        {initialLoading ? (
+        {loading ? (
           <div className="space-y-3">
             {/* 模拟3个Provider卡片的骨架屏 */}
             {[1, 2, 3].map((index) => (
@@ -509,9 +566,10 @@ export default function ModelManager() {
               key={`provider-${provider.providerId}`}
               provider={provider}
               modelsByKey={modelsByKey}
-              modelCount={modelCountByProvider[provider.providerId] || 0}
               expanded={!!expandProviders[provider.providerId]}
               expandedKeys={expandKeys}
+              loading={loadingKeys[provider.providerId]}
+              loadingModels={loadingModels}
               onToggleExpand={() => handleToggleProvider(provider.providerId)}
               onToggleKeyExpand={handleToggleKey}
               onAddKey={openAddKey}
@@ -539,8 +597,8 @@ export default function ModelManager() {
                   {/* 简化的 Overlay 头部，避免在 Overlay 中再次使用 useSortable */}
                   <span className="font-semibold">{t(p.providerName)}</span>
                   <span className="text-muted-foreground text-sm">
-                    {t('Model Keys')}: {p.keys.length}
-                    <span className="hidden sm:inline"> {t('Models')}: {p.keys.reduce((sum, k) => sum + (modelsByKey[k.id]?.length || 0), 0)}</span>
+                    {t('Model Keys')}: {p.keyCount}
+                    <span className="hidden sm:inline"> {t('Models')}: {p.modelCount}</span>
                   </span>
                 </div>
               </div>
@@ -549,7 +607,14 @@ export default function ModelManager() {
         })()}
         {activeId?.startsWith('key-') && (() => {
           const kid = Number(activeId.replace('key-', ''));
-          const k = modelKeys.find(x => x.id === kid);
+          let k: GetModelKeysResult | null = null;
+          for (const keys of Object.values(keysByProvider)) {
+            const found = keys.find(x => x.id === kid);
+            if (found) {
+              k = found;
+              break;
+            }
+          }
           if (!k) return null;
           return (
             <div className="rounded-md border bg-background/90 shadow-md">
@@ -563,7 +628,14 @@ export default function ModelManager() {
         })()}
         {activeId?.startsWith('model-') && (() => {
           const mid = Number(activeId.replace('model-', ''));
-          const m = models.find(x => x.modelId === mid);
+          let m: AdminModelDto | null = null;
+          for (const models of Object.values(modelsByKey)) {
+            const found = models.find(x => x.modelId === mid);
+            if (found) {
+              m = found;
+              break;
+            }
+          }
           if (!m) return null;
           return (
             <div className="rounded border bg-background/90 shadow-md px-2 py-1">
@@ -589,29 +661,72 @@ export default function ModelManager() {
             setIsOpenKeyModal(false);
             setSelectedKey(undefined);
           }}
-          onSaveSuccessful={() => {
+          onSaveSuccessful={async () => {
             setIsOpenKeyModal(false);
             setSelectedKey(undefined);
-            init(true);
+            await refreshProviders();
+            // 如果有展开的 provider，刷新其 keys
+            const expandedProviderId = Object.keys(expandProviders).find(
+              k => expandProviders[Number(k)]
+            );
+            if (expandedProviderId) {
+              await refreshProviderKeys(Number(expandedProviderId));
+            }
           }}
-          onDeleteSuccessful={() => {
+          onDeleteSuccessful={async () => {
             setIsOpenKeyModal(false);
             setSelectedKey(undefined);
-            init(true);
+            await refreshProviders();
+            // 如果有展开的 provider，刷新其 keys
+            const expandedProviderId = Object.keys(expandProviders).find(
+              k => expandProviders[Number(k)]
+            );
+            if (expandedProviderId) {
+              await refreshProviderKeys(Number(expandedProviderId));
+            }
           }}
           defaultModelProviderId={currentProviderId}
         />
       )}
 
-      {isOpenConfigModels && currentModelKeyId !== undefined && (
-        <ConfigModelModal
+      {isOpenQuickAddModels && currentModelKeyId !== undefined && (
+        <QuickAddModelModal
           modelKeyId={currentModelKeyId}
           modelProverId={currentProviderId!}
-          isOpen={isOpenConfigModels}
-          onClose={() => setIsOpenConfigModels(false)}
-          onSuccessful={() => {
-            setIsOpenConfigModels(false);
-            init(true);
+          isOpen={isOpenQuickAddModels}
+          onClose={() => setIsOpenQuickAddModels(false)}
+          onSuccessful={async () => {
+            // 不关闭对话框，只刷新数据，让用户可以继续添加
+            await Promise.all([
+              refreshProviders(),
+              refreshKeyModels(currentModelKeyId)
+            ]);
+          }}
+          onOpenEditModel={(deploymentName, apiType) => {
+            // 根据 deploymentName 和 currentModelKeyId 找到对应的模型
+            const models = modelsByKey[currentModelKeyId] || [];
+            const model = models.find(
+              m => m.deploymentName === deploymentName && m.modelKeyId === currentModelKeyId
+            );
+            if (model) {
+              // 编辑已存在的模型
+              setSelectedModel(model);
+              setIsOpenEditModel(true);
+            } else {
+              // 创建新模型，根据 apiType 设置默认配置
+              const defaultConfig = getDefaultConfigByApiType(apiType as ApiType);
+              
+              // 打开添加模型对话框，并传递默认值
+              setIsOpenAddModel(true);
+              // defaultValues 按照后端 UpdateModelDto 格式传递
+              setAddModelDefaults({
+                name: deploymentName, // 使用部署名称作为模型显示名称的默认值
+                deploymentName: deploymentName,
+                modelKeyId: currentModelKeyId, // 保持 number 类型，让 ModelModal 自动转换
+                ...defaultConfig,
+              });
+            }
+            // 保持 ConfigModelModal 打开，用户可以继续操作其他模型
           }}
         />
       )}
@@ -619,13 +734,24 @@ export default function ModelManager() {
       {isOpenAddModel && (
         <ModelModal
           isOpen={isOpenAddModel}
-          onClose={() => setIsOpenAddModel(false)}
-          onSuccessful={() => {
+          onClose={() => {
             setIsOpenAddModel(false);
-            init(true);
+            setAddModelDefaults(undefined); // 清除默认值
           }}
-          modelKeys={modelKeys}
-          defaultModelKeyId={currentModelKeyId}
+          onSuccessful={async () => {
+            setIsOpenAddModel(false);
+            setAddModelDefaults(undefined); // 清除默认值
+            if (currentModelKeyId) {
+              await Promise.all([
+                refreshProviders(),
+                refreshKeyModels(currentModelKeyId)
+              ]);
+            }
+          }}
+          modelKeys={Object.values(keysByProvider).flat()}
+          defaultValues={addModelDefaults || {
+            modelKeyId: currentModelKeyId // number 类型
+          }}
         />
       )}
 
@@ -633,12 +759,17 @@ export default function ModelManager() {
         <ModelModal
           isOpen={isOpenEditModel}
           onClose={() => setIsOpenEditModel(false)}
-          onSuccessful={() => {
+          onSuccessful={async () => {
             setIsOpenEditModel(false);
-            init(true);
+            if (selectedModel) {
+              await Promise.all([
+                refreshProviders(),
+                refreshKeyModels(selectedModel.modelKeyId)
+              ]);
+            }
           }}
           selected={selectedModel}
-          modelKeys={modelKeys}
+          modelKeys={Object.values(keysByProvider).flat()}
         />
       )}
     </div>

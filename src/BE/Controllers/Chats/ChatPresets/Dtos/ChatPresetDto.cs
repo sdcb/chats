@@ -34,13 +34,13 @@ public record ChatPresetDto
                 SystemPrompt = x.ChatConfig.SystemPrompt,
                 ModelId = x.ChatConfig.ModelId,
                 ModelName = x.ChatConfig.Model.Name,
-                ModelProviderId = x.ChatConfig.Model.ModelReference.ProviderId,
+                ModelProviderId = x.ChatConfig.Model.ModelKey.ModelProviderId,
                 Temperature = x.ChatConfig.Temperature,
                 WebSearchEnabled = x.ChatConfig.WebSearchEnabled,
                 CodeExecutionEnabled = x.ChatConfig.CodeExecutionEnabled,
                 MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
                 ReasoningEffort = x.ChatConfig.ReasoningEffort,
-                ImageSize =  (DBKnownImageSize)x.ChatConfig.ImageSizeId,
+                ImageSize = x.ChatConfig.ImageSize,
                 Mcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                 {
                     Id = mcp.McpServerId,

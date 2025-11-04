@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using Chats.BE.DB.Enums;
+using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Admin.AdminModels.Dtos;
 
@@ -10,15 +11,6 @@ public record AdminModelDto
     [JsonPropertyName("modelProviderId")]
     public required short ModelProviderId { get; init; }
 
-    [JsonPropertyName("modelReferenceId")]
-    public required short ModelReferenceId { get; init; }
-
-    [JsonPropertyName("modelReferenceName")]
-    public required string ModelReferenceName { get; init; }
-
-    [JsonPropertyName("modelReferenceShortName")]
-    public required string? ModelReferenceShortName { get; init; }
-
     [JsonPropertyName("name")]
     public required string Name { get; init; }
 
@@ -28,11 +20,8 @@ public record AdminModelDto
     [JsonPropertyName("modelKeyId")]
     public required short ModelKeyId { get; init; }
 
-    [JsonPropertyName("fileServiceId")]
-    public required int? FileServiceId { get; init; }
-
     [JsonPropertyName("deploymentName")]
-    public required string? DeploymentName { get; init; }
+    public required string DeploymentName { get; init; }
 
     [JsonPropertyName("allowSearch")]
     public required bool AllowSearch { get; init; }
@@ -69,4 +58,25 @@ public record AdminModelDto
 
     [JsonPropertyName("maxResponseTokens")]
     public required int MaxResponseTokens { get; init; }
+
+    [JsonPropertyName("allowToolCall")]
+    public required bool AllowToolCall { get; init; }
+
+    [JsonPropertyName("supportedImageSizes")]
+    public required string[] SupportedImageSizes { get; init; }
+
+    [JsonPropertyName("apiType")]
+    public required DBApiType ApiType { get; init; }
+
+    [JsonPropertyName("useAsyncApi")]
+    public required bool UseAsyncApi { get; init; }
+
+    [JsonPropertyName("useMaxCompletionTokens")]
+    public required bool UseMaxCompletionTokens { get; init; }
+
+    [JsonPropertyName("isLegacy")]
+    public required bool IsLegacy { get; init; }
+
+    [JsonPropertyName("thinkTagParserEnabled")]
+    public required bool ThinkTagParserEnabled { get; init; }
 }

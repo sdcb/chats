@@ -37,6 +37,7 @@ export { default as IconLoader } from './IconLoader';
 export { default as IconLogout } from './IconLogout';
 export { default as IconMessage } from './IconMessage';
 export { default as IconMessageChatbot } from './IconMessageChatbot';
+export { default as IconMessageStar } from './IconMessageStar';
 export { default as IconMessages } from './IconMessages';
 export { default as IconModelSearch } from './IconModelSearch';
 export { default as IconMoneybag } from './IconMoneybag';

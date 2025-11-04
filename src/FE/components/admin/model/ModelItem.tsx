@@ -3,7 +3,7 @@ import { AdminModelDto } from '@/types/adminApis';
 import { formatNumberAsMoney } from '@/utils/common';
 import { Button } from '@/components/ui/button';
 import IconActionButton from '@/components/common/IconActionButton';
-import { IconPencil, IconChartHistogram, IconEyeOff } from '@/components/Icons';
+import { IconPencil, IconChartHistogram, IconEyeOff, IconMessage, IconMessageStar, IconPhoto } from '@/components/Icons';
 import DeletePopover from '@/components/Popover/DeletePopover';
 import useTranslation from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,34 @@ interface ModelItemProps {
   onDelete: (modelId: number) => void;
   onGoToUsage: (params: { model: string }) => void;
 }
+
+// API 类型图标映射
+const getApiTypeIcon = (apiType: number) => {
+  switch (apiType) {
+    case 0: // ChatCompletion
+      return <IconMessage size={14} className="flex-shrink-0" />;
+    case 1: // Response
+      return <IconMessageStar size={14} className="flex-shrink-0" />;
+    case 2: // ImageGeneration
+      return <IconPhoto size={14} className="flex-shrink-0" />;
+    default:
+      return <IconMessage size={14} className="flex-shrink-0" />;
+  }
+};
+
+// API 类型名称映射
+const getApiTypeName = (apiType: number) => {
+  switch (apiType) {
+    case 0:
+      return 'ChatCompletion';
+    case 1:
+      return 'Response';
+    case 2:
+      return 'ImageGeneration';
+    default:
+      return 'Unknown';
+  }
+};
 
 export default function ModelItem({ model, onEdit, onDelete, onGoToUsage }: ModelItemProps) {
   const { t } = useTranslation();
@@ -88,7 +116,10 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage }: Mode
             {...(model.enabled ? listeners : {})}
             disabled={!model.enabled}
           >
-            <span className={cn('truncate', !model.enabled && 'line-through')}>{model.name}</span>
+            <span className="truncate flex items-center gap-1.5" title={getApiTypeName(model.apiType)}>
+              {getApiTypeIcon(model.apiType)}
+              <span className={cn('truncate', !model.enabled && 'line-through')}>{model.name}</span>
+            </span>
           </button>
         </div>
         <div

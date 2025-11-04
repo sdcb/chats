@@ -30,7 +30,12 @@ const FilesPopover = ({ onSelect, selectedFiles }: FilesPopoverProps) => {
     page: 1,
     pageSize: 9,
   });
+  const [isOpen, setIsOpen] = useState(false);
+
+  // 只在 popover 打开时加载数据
   useEffect(() => {
+    if (!isOpen) return;
+    
     getUserFiles({
       page: pagination.page,
       pageSize: pagination.pageSize,
@@ -38,7 +43,7 @@ const FilesPopover = ({ onSelect, selectedFiles }: FilesPopoverProps) => {
       setFiles(res.rows);
       setTotalCount(res.count);
     });
-  }, [pagination.page, pagination.pageSize]);
+  }, [isOpen, pagination.page, pagination.pageSize]);
 
   const handlePageChange = (page: number) => {
     setPagination({ ...pagination, page });
@@ -46,7 +51,7 @@ const FilesPopover = ({ onSelect, selectedFiles }: FilesPopoverProps) => {
 
   const { t } = useTranslation();
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <Tips
         trigger={
           <PopoverTrigger asChild>

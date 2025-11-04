@@ -3,6 +3,7 @@ import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import IconActionButton from '@/components/common/IconActionButton';
 import { IconPlus, IconChartHistogram } from '@/components/Icons';
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
@@ -16,14 +17,17 @@ export type ProviderGroup = {
   providerId: number;
   providerName: string;
   keys: GetModelKeysResult[];
+  keyCount: number;
+  modelCount: number;
 };
 
 interface ModelProviderProps {
   provider: ProviderGroup;
   modelsByKey: Record<number, AdminModelDto[]>;
-  modelCount: number;
   expanded: boolean;
   expandedKeys: Record<number, boolean>;
+  loading?: boolean; // 是否正在加载 keys
+  loadingModels?: Record<number, boolean>; // 各个 key 的 models 加载状态
   onToggleExpand: () => void;
   onToggleKeyExpand: (keyId: number) => void;
   onAddKey: (providerId: number) => void;
@@ -43,9 +47,10 @@ interface ModelProviderProps {
 export default function ModelProvider({
   provider,
   modelsByKey,
-  modelCount,
   expanded,
   expandedKeys,
+  loading = false,
+  loadingModels = {},
   onToggleExpand,
   onToggleKeyExpand,
   onAddKey,
@@ -58,7 +63,7 @@ export default function ModelProvider({
   onGoToUsage,
 }: ModelProviderProps) {
   const { t } = useTranslation();
-  const sortable = useSortable({ id: `provider-${provider.providerId}`, disabled: provider.keys.length === 0 });
+  const sortable = useSortable({ id: `provider-${provider.providerId}` });
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -85,14 +90,12 @@ export default function ModelProvider({
 
   // Provider 的拖拽由上层 dnd-kit 管理
 
-  const handleEnabled = provider.keys.length > 0;
-
   return (
     <div className="mb-3" ref={setNodeRef} style={style}>
       <div 
         className={cn(
           "rounded-xl border bg-card transition-all duration-200 touch-pan-y",
-          handleEnabled && isDragging && "opacity-60"
+          isDragging && "opacity-60"
         )}
         {...attributes}
       >
@@ -105,8 +108,8 @@ export default function ModelProvider({
             <button
               className={cn(
                 "p-0 m-0 bg-transparent border-0 inline-flex items-center gap-2 touch-none",
-                handleEnabled ? "cursor-grab active:cursor-grabbing" : "cursor-default",
-                handleEnabled && isDragging && "cursor-grabbing"
+                "cursor-grab active:cursor-grabbing",
+                isDragging && "cursor-grabbing"
               )}
               aria-label={t('Drag to reorder')}
               data-allow-toggle
@@ -117,17 +120,16 @@ export default function ModelProvider({
                   e.stopPropagation();
                 }
               }}
-              {...(handleEnabled ? listeners : {})}
-              disabled={!handleEnabled}
+              {...listeners}
             >
               <ModelProviderIcon className="h-6 w-6" providerId={provider.providerId} />
               {/* 小屏隐藏标题，仅显示图标；大屏显示提供商标题 */}
               <span className="font-semibold hidden sm:inline">{t(provider.providerName)}</span>
             </button>
-            {/* 计数信息：小屏仅显示“密钥: X”，大屏显示“密钥: X 模型: Y” */}
+            {/* 计数信息：小屏仅显示"密钥: X"，大屏显示"密钥: X 模型: Y" */}
             <span className="text-muted-foreground text-sm">
-              {t('Model Keys')}: {provider.keys.length}
-              <span className="hidden sm:inline"> {t('Models')}: {modelCount}</span>
+              {t('Model Keys')}: {provider.keyCount}
+              <span className="hidden sm:inline"> {t('Models')}: {provider.modelCount}</span>
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -149,7 +151,26 @@ export default function ModelProvider({
           </div>
         </div>
         <CollapsiblePanel open={expanded} className="mt-1">
-          {provider.keys.length === 0 ? (
+          {loading ? (
+            // 显示骨架屏，根据 provider.keyCount 显示对应数量的骨架
+            <div className="pl-6 space-y-2 pb-3">
+              {Array.from({ length: provider.keyCount }).map((_, index) => (
+                <div key={`skeleton-${index}`} className="rounded-lg border bg-background p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-1">
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-8 w-8 rounded" />
+                      <Skeleton className="h-8 w-8 rounded" />
+                      <Skeleton className="h-8 w-8 rounded" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : provider.keys.length === 0 ? (
             <div className="text-sm text-muted-foreground px-3 pb-3">{t('No Model Keys')}</div>
           ) : (
             <div className="pl-6 space-y-2 pb-3">
@@ -160,6 +181,7 @@ export default function ModelProvider({
                     modelKey={key}
                     models={modelsByKey[key.id] || []}
                     expanded={!!expandedKeys[key.id]}
+                    loading={loadingModels[key.id]}
                     onToggleExpand={() => onToggleKeyExpand(key.id)}
                     onEdit={onEditKey}
                     onDelete={onDeleteKey}

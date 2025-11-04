@@ -32,7 +32,7 @@ public class GoogleAI2ChatService : ChatService
         _generativeModel = new()
         {
             ApiKey = model.ModelKey.Secret,
-            Model = model.ApiModelId,
+            Model = model.DeploymentName,
         };
         if (_generativeModel.Timeout != NetworkTimeout)
         {
@@ -40,8 +40,9 @@ public class GoogleAI2ChatService : ChatService
         }
     }
 
-    public bool AllowImageGeneration => Model.ModelReference.Name == "gemini-2.0-flash-exp" ||
-                                        Model.ModelReference.Name == "gemini-2.0-flash-exp-image-generation";
+    public bool AllowImageGeneration => Model.DeploymentName == "gemini-2.0-flash-exp" ||
+                                        Model.DeploymentName == "gemini-2.0-flash-exp-image-generation" ||
+                                        Model.DeploymentName == "gemini-2.5-flash-image";
 
     private bool _codeExecutionEnabled = false;
 
@@ -51,9 +52,12 @@ public class GoogleAI2ChatService : ChatService
         {
             Temperature = options.Temperature,
             ResponseModalities = AllowImageGeneration ? [ResponseModality.Text, ResponseModality.Image] : [ResponseModality.Text],
-            EnableEnhancedCivicAnswers = true,
         };
-        if (ModelReference.ReasoningEffortOptions(Model.ModelReference.Name).Length > 0)
+        if (!AllowImageGeneration)
+        {
+            gc.EnableEnhancedCivicAnswers = true;
+        }
+        if (Model.GetReasoningEffortOptionsAsInt32(Model.ReasoningEffortOptions).Length > 0)
         {
             gc.ThinkingConfig = new ThinkingConfig
             {
@@ -90,7 +94,16 @@ public class GoogleAI2ChatService : ChatService
         };
         Stopwatch codeExecutionSw = new();
         string? codeExecutionId = null;
-        await foreach (GenerateContentResponse response in _generativeModel.GenerateContentStream(gcr, new RequestOptions(null, NetworkTimeout), cancellationToken))
+        await foreach (GenerateContentResponse response in _generativeModel.GenerateContentStream(gcr, new RequestOptions()
+        {
+            Retry = new Retry()
+            {
+                Maximum = 3,
+                Initial = 1,
+                Multiplies = 2,
+            },
+            Timeout = NetworkTimeout,
+        }, cancellationToken))
         {
             if (response.Candidates != null && response.Candidates.Count > 0)
             {

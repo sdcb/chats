@@ -27,6 +27,7 @@ import {
   setChatPaging,
   setChats,
   setIsChatsLoading,
+  setIsMessagesLoading,
   setSelectedChatId,
   setStopIds,
 } from '@/actions/chat.actions';
@@ -55,7 +56,7 @@ import promptReducer, {
 import settingReducer, {
   settingInitialState,
 } from '@/reducers/setting.reducer';
-import Chat from '../Chat/Chat';
+import Chat from '../Chat/ChatView';
 import Chatbar from '../Chatbar/Chatbar';
 
 import {
@@ -187,6 +188,9 @@ const HomeContent = () => {
     const chat = findChat(chatList, chatId);
     if (chat) {
       chatDispatch(setSelectedChatId(chat.id));
+      chatDispatch(setIsMessagesLoading(true));
+      messageDispatch(setMessages([]));
+      messageDispatch(setSelectedMessages([]));
 
       getUserMessages(chat.id).then((data) => {
         if (data.length > 0) {
@@ -195,6 +199,9 @@ const HomeContent = () => {
           messageDispatch(setMessages([]));
           messageDispatch(setSelectedMessages([]));
         }
+        chatDispatch(setIsMessagesLoading(false));
+      }).catch(() => {
+        chatDispatch(setIsMessagesLoading(false));
       });
     }
     return chat;
@@ -224,6 +231,9 @@ const HomeContent = () => {
 
   const handleSelectChat = (chat: IChat) => {
     chatDispatch(setSelectedChatId(chat.id));
+    chatDispatch(setIsMessagesLoading(true));
+    messageDispatch(setMessages([]));
+    messageDispatch(setSelectedMessages([]));
     getUserMessages(chat.id).then((data) => {
       if (data.length > 0) {
         selectChatMessage(data, chat.leafMessageId);
@@ -231,6 +241,9 @@ const HomeContent = () => {
         messageDispatch(setMessages([]));
         messageDispatch(setSelectedMessages([]));
       }
+      chatDispatch(setIsMessagesLoading(false));
+    }).catch(() => {
+      chatDispatch(setIsMessagesLoading(false));
     });
     router.push('#/' + chat.id);
   };

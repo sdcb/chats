@@ -6,7 +6,3 @@ export function mergeConfigs(obj1: any, obj2: any) {
   return JSON.stringify(config, null, 2);
 }
 
-export function isImageGenerationModel(modelReferenceName: string | undefined): boolean {
-  if (!modelReferenceName) return false;
-  return modelReferenceName === 'gpt-image-1' || modelReferenceName === 'gpt-image-1-mini';
-}

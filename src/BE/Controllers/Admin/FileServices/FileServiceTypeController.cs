@@ -1,21 +1,22 @@
 ﻿using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Chats.BE.Controllers.Admin.FileServices;
 
 [Route("api/admin/file-service-type"), AuthorizeAdmin]
-public class FileServiceTypeController(ChatsDB db) : ControllerBase
+public class FileServiceTypeController : ControllerBase
 {
     [HttpGet("{fileServiceTypeId:int}/initial-config")]
-    public async Task<ActionResult<string>> GetFileServiceTypeInitialConfig(byte fileServiceTypeId, CancellationToken cancellationToken)
+    public ActionResult<string> GetFileServiceTypeInitialConfig(byte fileServiceTypeId)
     {
-        FileServiceType? fileServiceType = await db.FileServiceTypes.FindAsync([fileServiceTypeId], cancellationToken);
-        if (fileServiceType == null)
+        var serviceType = (DBFileServiceType)fileServiceTypeId;
+        if (!FileServiceTypeInfo.IsValidServiceTypeId(serviceType))
         {
             return NotFound();
         }
 
-        return Ok(fileServiceType.InitialConfig);
+        return Ok(FileServiceTypeInfo.GetInitialConfig(serviceType));
     }
 }

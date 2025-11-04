@@ -2,32 +2,27 @@ import { Dispatch, createContext } from 'react';
 
 import { ActionType } from '@/hooks/useCreateReducer';
 
-import { CHATS_SELECT_TYPE, IChat } from '@/types/chat';
+import { CHATS_SELECT_TYPE, IChat, IChatPaging } from '@/types/chat';
 import { GetChatsParams } from '@/types/clientApis';
+import { IChatGroup } from '@/types/group';
 import { getSettings } from '@/utils/settings';
 
 import {
   ChatAction,
-  SetChatGroupType,
-  SetChatsPagingType,
-  SetChatsType,
-  SetSelectedChatIdType,
 } from '@/reducers/chat.reducer';
 import {
   MessageAction,
 } from '@/reducers/message.reducer';
 import {
   ModelAction,
-  SetModelMapType,
-  SetModelsType,
 } from '@/reducers/model.reducer';
 import {
   PromptAction,
-  SetDefaultPromptType,
-  SetPromptsType,
 } from '@/reducers/prompt.reducer';
 import { SettingsAction } from '@/reducers/setting.reducer';
+import { AdminModelDto } from '@/types/adminApis';
 import { IChatMessage } from '@/types/chatMessage';
+import { Prompt, PromptSlim } from '@/types/prompt';
 
 export interface HandleUpdateChatParams {
   isShared?: boolean;
@@ -39,18 +34,19 @@ export interface HomeInitialState {
   messages: IChatMessage[];
   selectedMessages: IChatMessage[][];
 
-  chats: SetChatsType;
-  chatGroups: SetChatGroupType;
-  selectedChatId: SetSelectedChatIdType;
-  chatPaging: SetChatsPagingType;
+  chats: IChat[];
+  chatGroups: IChatGroup[];
+  selectedChatId: string | undefined;
+  chatPaging: IChatPaging[];
   isChatsLoading: boolean;
+  isMessagesLoading: boolean;
   chatsSelectType: CHATS_SELECT_TYPE;
 
-  models: SetModelsType;
-  modelMap: SetModelMapType;
+  models: AdminModelDto[];
+  modelMap: Record<string, AdminModelDto>;
 
-  defaultPrompt: SetDefaultPromptType | null;
-  prompts: SetPromptsType;
+  defaultPrompt: Prompt | null;
+  prompts: PromptSlim[];
 
   showChatBar: boolean;
   showChatInput: boolean;
@@ -65,6 +61,7 @@ export const initialState: HomeInitialState = {
   selectedChatId: undefined,
   chatPaging: [],
   isChatsLoading: false,
+  isMessagesLoading: false,
   chatsSelectType: CHATS_SELECT_TYPE.NONE,
 
   models: [],

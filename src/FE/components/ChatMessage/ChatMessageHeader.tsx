@@ -27,7 +27,7 @@ const ChatMessageHeader = ({
           providerId={message.modelProviderId}
           className="w-4 h-4 hidden sm:block"
         />
-        {message.modelName}
+        <span className="font-mono">{message.modelName}</span>
         <span className="text-xs text-muted-foreground hidden sm:block invisible group-hover/item:visible">
           {message.createdAt && formatRelativeTime(message.createdAt)}
         </span>

@@ -1,6 +1,7 @@
 ﻿using Chats.BE.Controllers.Admin.AdminModels.Dtos;
 using Chats.BE.Controllers.Chats.Models.Dtos;
 using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Chats.BE.Infrastructure;
 using Chats.BE.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -15,35 +16,41 @@ public class ModelsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<AdminModelDto[]>> Get([FromServices] ChatsDB db, [FromServices] CurrentUser currentUser, CancellationToken cancellationToken)
     {
-        int? fileServiceId = await FileService.GetDefaultId(db, cancellationToken);
-        AdminModelDto[] data = await db.UserModels
-            .Where(x => x.UserId == currentUser.Id && !x.Model.IsDeleted)
-            .OrderBy(x => x.Model.ModelKey.Order).ThenBy(x => x.Model.Order)
-            .Select(x => x.Model)
-            .Select(x => new AdminModelDto
+        AdminModelDto[] data = await (
+            from um in db.UserModels
+            where um.UserId == currentUser.Id && !um.Model.IsDeleted
+            join mpo in db.ModelProviderOrders on um.Model.ModelKey.ModelProviderId equals mpo.ModelProviderId into mpoGroup
+            from mpo in mpoGroup.DefaultIfEmpty()
+            orderby mpo != null ? mpo.Order : int.MaxValue, um.Model.ModelKey.Order, um.Model.Order
+            select um.Model
+        )
+        .Select(x => new AdminModelDto
             {
                 ModelId = x.Id,
                 Name = x.Name,
                 Enabled = !x.IsDeleted,
-                FileServiceId = fileServiceId,
                 ModelKeyId = x.ModelKeyId,
                 ModelProviderId = x.ModelKey.ModelProviderId,
-                ModelReferenceId = x.ModelReferenceId,
-                ModelReferenceName = x.ModelReference.Name,
-                ModelReferenceShortName = x.ModelReference.DisplayName,
                 InputTokenPrice1M = x.InputTokenPrice1M,
                 OutputTokenPrice1M = x.OutputTokenPrice1M,
                 DeploymentName = x.DeploymentName,
-                AllowSearch = x.ModelReference.AllowSearch,
-                AllowVision = x.ModelReference.AllowVision,
-                AllowStreaming = x.ModelReference.AllowStreaming,
-                AllowSystemPrompt = x.ModelReference.AllowSystemPrompt,
-                AllowCodeExecution = ModelReference.SupportsCodeExecution(x.ModelReference.Name),
-                ReasoningEffortOptions = ModelReference.ReasoningEffortOptionsAsInt32(x.ModelReference.Name),
-                MinTemperature = x.ModelReference.MinTemperature,
-                MaxTemperature = x.ModelReference.MaxTemperature,
-                ContextWindow = x.ModelReference.ContextWindow,
-                MaxResponseTokens = x.ModelReference.MaxResponseTokens,
+                AllowSearch = x.AllowSearch,
+                AllowVision = x.AllowVision,
+                AllowStreaming = x.AllowStreaming,
+                AllowSystemPrompt = x.AllowSystemPrompt,
+                AllowCodeExecution = x.AllowCodeExecution,
+                ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(x.ReasoningEffortOptions),
+                MinTemperature = x.MinTemperature,
+                MaxTemperature = x.MaxTemperature,
+                ContextWindow = x.ContextWindow,
+                MaxResponseTokens = x.MaxResponseTokens,
+                AllowToolCall = x.AllowToolCall,
+                SupportedImageSizes = Model.GetSupportedImageSizesAsArray(x.SupportedImageSizes),
+                ApiType = (DBApiType)x.ApiType,
+                UseAsyncApi = x.UseAsyncApi,
+                UseMaxCompletionTokens = x.UseMaxCompletionTokens,
+                IsLegacy = x.IsLegacy,
+                ThinkTagParserEnabled = x.ThinkTagParserEnabled,
             })
             .ToArrayAsync(cancellationToken);
         return data;

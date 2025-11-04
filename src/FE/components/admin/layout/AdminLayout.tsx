@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 
 import { useToast } from '@/hooks/useToast';
@@ -64,15 +65,23 @@ const AdminMenu = ({
       {menus.map((menu, index) => (
         <SidebarMenuItem key={index}>
           <SidebarMenuButton
+            asChild
             isActive={isActive(menu.url)}
             tooltip={menu.title}
-            onClick={() => router.push(menu.url)}
             className="flex items-center"
           >
-            <span className="flex items-center justify-center w-5 h-5 min-w-5 min-h-5">
-              {menu.icon(isActive(menu.url) ? '' : '')}
-            </span>
-            <span>{menu.title}</span>
+            <Link
+              href={menu.url}
+              onClick={(e) => {
+                e.preventDefault();
+                router.push(menu.url);
+              }}
+            >
+              <span className="flex items-center justify-center w-5 h-5 min-w-5 min-h-5">
+                {menu.icon(isActive(menu.url) ? '' : '')}
+              </span>
+              <span>{menu.title}</span>
+            </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
       ))}
@@ -218,24 +227,32 @@ const AdminLayout = ({
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
+                  asChild
                   className="flex w-full items-center gap-2 px-2 py-3 rounded-md hover:bg-transparent active:bg-transparent"
-                  onClick={() => router.push('/')}
                 >
-                  <div className="flex items-center gap-2">
-                    <img
-                      className="h-8 w-8 rounded-sm"
-                      alt="Chats Logo"
-                      src="/icons/logo.png"
-                    />
-                    <span className="text-base font-semibold">
-                      Chats
-                      {version?.currentVersion && (
-                        <Badge variant="outline" className="ml-2 text-xs">
-                          {version?.currentVersion}
-                        </Badge>
-                      )}
-                    </span>
-                  </div>
+                  <Link
+                    href="/"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      router.push('/');
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <img
+                        className="h-8 w-8 rounded-sm"
+                        alt="Chats Logo"
+                        src="/icons/logo.png"
+                      />
+                      <span className="text-base font-semibold">
+                        Chats
+                        {version?.currentVersion && (
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            {version?.currentVersion}
+                          </Badge>
+                        )}
+                      </span>
+                    </div>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

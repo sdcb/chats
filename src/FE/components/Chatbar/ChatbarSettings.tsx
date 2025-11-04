@@ -23,6 +23,7 @@ import { Separator } from '@/components/ui/separator';
 
 import HomeContext from '@/contexts/home.context';
 import SidebarButton from '../Sidebar/SidebarButton';
+import SidebarLink from '../Sidebar/SidebarLink';
 
 import { getUserBalanceOnly } from '@/apis/clientApis';
 import { useUserInfo } from '@/providers/UserProvider';
@@ -65,18 +66,22 @@ const ChatBarSettings = () => {
           </PopoverTrigger>
           <PopoverContent className="w-[244px]">
             {user?.role === UserRole.admin && (
-              <SidebarButton
+              <SidebarLink
                 text={t('Admin Panel')}
+                href="/admin/dashboard"
                 icon={<IconSettingsCog />}
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
                   router.push('/admin/dashboard');
                 }}
               />
             )}
-            <SidebarButton
+            <SidebarLink
               text={t('Settings')}
+              href="/settings"
               icon={<IconSettings />}
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
                 router.push('/settings');
               }}
             />

@@ -45,8 +45,6 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<Config> Configs { get; set; }
 
-    public virtual DbSet<CurrencyRate> CurrencyRates { get; set; }
-
     public virtual DbSet<File> Files { get; set; }
 
     public virtual DbSet<FileContentType> FileContentTypes { get; set; }
@@ -55,15 +53,11 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<FileService> FileServices { get; set; }
 
-    public virtual DbSet<FileServiceType> FileServiceTypes { get; set; }
-
     public virtual DbSet<FinishReason> FinishReasons { get; set; }
 
     public virtual DbSet<InvitationCode> InvitationCodes { get; set; }
 
     public virtual DbSet<KeycloakAttempt> KeycloakAttempts { get; set; }
-
-    public virtual DbSet<KnownImageSize> KnownImageSizes { get; set; }
 
     public virtual DbSet<LoginService> LoginServices { get; set; }
 
@@ -75,15 +69,11 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<ModelKey> ModelKeys { get; set; }
 
-    public virtual DbSet<ModelProvider> ModelProviders { get; set; }
-
-    public virtual DbSet<ModelReference> ModelReferences { get; set; }
+    public virtual DbSet<ModelProviderOrder> ModelProviderOrders { get; set; }
 
     public virtual DbSet<PasswordAttempt> PasswordAttempts { get; set; }
 
     public virtual DbSet<Prompt> Prompts { get; set; }
-
-    public virtual DbSet<ReasoningResponseKind> ReasoningResponseKinds { get; set; }
 
     public virtual DbSet<SmsAttempt> SmsAttempts { get; set; }
 
@@ -108,8 +98,6 @@ public partial class ChatsDB : DbContext
     public virtual DbSet<StepContentToolCallResponse> StepContentToolCallResponses { get; set; }
 
     public virtual DbSet<StepContentType> StepContentTypes { get; set; }
-
-    public virtual DbSet<Tokenizer> Tokenizers { get; set; }
 
     public virtual DbSet<TransactionType> TransactionTypes { get; set; }
 
@@ -187,10 +175,6 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<ChatConfig>(entity =>
         {
-            entity.HasOne(d => d.ImageSize).WithMany(p => p.ChatConfigs)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ChatConfig_ImageSize");
-
             entity.HasOne(d => d.Model).WithMany(p => p.ChatConfigs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ChatConfig_Model");
@@ -274,11 +258,6 @@ public partial class ChatsDB : DbContext
             entity.HasKey(e => e.Key).HasName("PK_Configs");
         });
 
-        modelBuilder.Entity<CurrencyRate>(entity =>
-        {
-            entity.Property(e => e.Code).IsFixedLength();
-        });
-
         modelBuilder.Entity<File>(entity =>
         {
             entity.HasOne(d => d.ClientInfo).WithMany(p => p.Files)
@@ -308,10 +287,6 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<FileService>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_FileServices2");
-
-            entity.HasOne(d => d.FileServiceType).WithMany(p => p.FileServices)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_FileService_FileServiceType");
         });
 
         modelBuilder.Entity<InvitationCode>(entity =>
@@ -326,11 +301,6 @@ public partial class ChatsDB : DbContext
                 .HasConstraintName("FK_KeycloakAttempt_ClientInfo");
 
             entity.HasOne(d => d.User).WithMany(p => p.KeycloakAttempts).HasConstraintName("FK_KeycloakAttempt_User");
-        });
-
-        modelBuilder.Entity<KnownImageSize>(entity =>
-        {
-            entity.Property(e => e.Id).ValueGeneratedNever();
         });
 
         modelBuilder.Entity<LoginService>(entity =>
@@ -355,48 +325,16 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.ModelKey).WithMany(p => p.Models)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Model_ModelKey2");
-
-            entity.HasOne(d => d.ModelReference).WithMany(p => p.Models)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Model_ModelReference");
         });
 
         modelBuilder.Entity<ModelKey>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_ModelKey2");
-
-            entity.HasOne(d => d.ModelProvider).WithMany(p => p.ModelKeys)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ModelKey2_ModelProvider");
         });
 
-        modelBuilder.Entity<ModelProvider>(entity =>
+        modelBuilder.Entity<ModelProviderOrder>(entity =>
         {
-            entity.ToTable("ModelProvider", tb => tb.HasComment("JSON"));
-
-            entity.Property(e => e.Id).ValueGeneratedNever();
-        });
-
-        modelBuilder.Entity<ModelReference>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK_ModelSetting");
-
-            entity.Property(e => e.Id).ValueGeneratedNever();
-            entity.Property(e => e.CurrencyCode).IsFixedLength();
-
-            entity.HasOne(d => d.CurrencyCodeNavigation).WithMany(p => p.ModelReferences)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ModelReference_CurrencyRate");
-
-            entity.HasOne(d => d.Provider).WithMany(p => p.ModelReferences)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ModelSetting_ModelProvider");
-
-            entity.HasOne(d => d.ReasoningResponseKind).WithMany(p => p.ModelReferences)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ModelReference_ReasoningResponseKind");
-
-            entity.HasOne(d => d.Tokenizer).WithMany(p => p.ModelReferences).HasConstraintName("FK_ModelReference_Tokenizer");
+            entity.Property(e => e.ModelProviderId).ValueGeneratedNever();
         });
 
         modelBuilder.Entity<PasswordAttempt>(entity =>
@@ -513,11 +451,6 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<StepContentType>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__MessageC__3214EC07D7BA864A");
-        });
-
-        modelBuilder.Entity<Tokenizer>(entity =>
-        {
-            entity.Property(e => e.Id).ValueGeneratedNever();
         });
 
         modelBuilder.Entity<TransactionType>(entity =>

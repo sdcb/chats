@@ -1,6 +1,7 @@
 ﻿using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Chats.BE.Infrastructure;
 using Chats.BE.Services.Common;
 using Chats.BE.Services.UrlEncryption;
@@ -79,7 +80,12 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
 
         if (!string.IsNullOrEmpty(query.Provider))
         {
-            usagesQuery = usagesQuery.Where(u => u.Model.ModelKey.ModelProvider.Name == query.Provider);
+            // 通过 ModelProviderInfo 查找匹配的 ProviderId
+            var matchingProviderId = ModelProviderInfo.GetIdByName(query.Provider);
+            if (matchingProviderId != null)
+            {
+                usagesQuery = usagesQuery.Where(u => u.Model.ModelKey.ModelProviderId == (short)matchingProviderId);
+            }
         }
 
         if (!string.IsNullOrEmpty(query.ModelKey))
@@ -124,8 +130,8 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
                 UserName = u.User.UserName,
                 ApiKeyId = idEncryption.EncryptApiKeyId((int?)u.UserApiUsage!.ApiKey.Id),
                 ApiKey = u.UserApiUsage!.ApiKey.Key.ToMaskedNull(),
-                ModelProviderName = u.Model.ModelReference.Provider.Name,
-                ModelReferenceName = u.Model.ModelReference.Name,
+                ModelProviderName = ModelProviderInfo.GetName((DBModelProvider)u.Model.ModelKey.ModelProviderId),
+                ModelReferenceName = u.Model.DeploymentName,
                 ModelName = u.Model.Name,
                 PreprocessDurationMs = u.PreprocessDurationMs,
                 FirstResponseDurationMs = u.FirstResponseDurationMs,
