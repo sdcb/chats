@@ -7,7 +7,7 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.8.0](1.8.0.md) - 2025-11-03 ⭐ Latest Release 🎉 Major Architecture Upgrade
+## [1.8.0](1.8.0.md) - 2025-11-04 ⭐ Latest Release 🎉 Major Architecture Upgrade
 
 **Core Highlights**: Model Configuration Architecture Refactor · User-Customizable Config · No Migration for New Models
 
@@ -19,7 +19,7 @@ This page indexes all major version release notes for the Chats project, from th
 - 🔍 **Model Validation Framework**: Custom validation attributes + 436 lines of unit tests
 - ⚡ **Quick Add Models**: New batch add dialog, supports continuous additions
 - 📸 **Full-screen Image Preview**: Zoom animation + keyboard navigation + thumbnail strip
-- 🎨 **UI Optimizations**: Admin lazy loading (90% performance improvement), skeleton screens, separated preset configs
+- 🎨 **UI Optimizations**: Admin on-demand lazy loading, skeleton screens, separated preset configs
 - 🛠️ **Image Processing Refactor**: ImageSharp replaces hand-written parsers (-1,217 lines)
 
 [View Full Release Notes →](1.8.0.md) | [API Changes](../1.8.0-api-changes.md)
@@ -196,5 +196,5 @@ Starting from 1.0.0, Chats follows Semantic Versioning:
 ---
 
 <p align="center">
-  <sub>Last updated: 2025-11-03</sub>
+  <sub>Last updated: 2025-11-04</sub>
 </p>
