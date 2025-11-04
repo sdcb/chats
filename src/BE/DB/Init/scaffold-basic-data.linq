@@ -17,7 +17,6 @@ void Main()
 		"ChatRole",
 		"FinishReason",
 		"StepContentType",
-		"KnownImageSize",
 		"TransactionType",
 	}
 	.Select(tableName => TableDef.FromContextTableDef(this, tableName))
