@@ -1,11 +1,35 @@
 ﻿using System.ClientModel.Primitives;
+using System.Buffers;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Net.ServerSentEvents;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.PipelinePolicies;
 
-public class ReplaceSseContentPolicy(string SearchText, string ReplaceText) : PipelinePolicy
+public class ReplaceSseContentPolicy(Func<byte[], byte[]> Replacer) : PipelinePolicy
 {
+    // 副构造函数：支持字符串级别的替换
+    public ReplaceSseContentPolicy(Func<string, string> stringReplacer, Encoding? encoding = null) 
+        : this(CreateByteReplacer(stringReplacer, encoding ?? Encoding.UTF8))
+    {
+    }
+
+    // 副构造函数：支持简单的字符串搜索和替换
+    public ReplaceSseContentPolicy(string searchText, string replaceText, Encoding? encoding = null) 
+        : this(line => line.Replace(searchText, replaceText), encoding)
+    {
+    }
+
+    private static Func<byte[], byte[]> CreateByteReplacer(Func<string, string> stringReplacer, Encoding encoding)
+    {
+        return bytes =>
+        {
+            string text = encoding.GetString(bytes);
+            string replaced = stringReplacer(text);
+            return encoding.GetBytes(replaced);
+        };
+    }
+
     public override void Process(PipelineMessage message, IReadOnlyList<PipelinePolicy> pipeline, int currentIndex)
     {
         // 同步封装异步
@@ -27,25 +51,19 @@ public class ReplaceSseContentPolicy(string SearchText, string ReplaceText) : Pi
             // 用包装流替换原始流，实现流式边读边改
             message.Response.ContentStream = new ReplacingStream(
                 message.Response.ContentStream,
-                SearchText,
-                ReplaceText,
-                Encoding.UTF8
+                Replacer
             );
         }
     }
 
     class ReplacingStream(
         Stream innerStream,
-        string searchText,
-        string replaceText,
-        Encoding encoding,
-        int bufferSize = 4096) : Stream
+        Func<byte[], byte[]> replacer) : Stream
     {
-        private readonly byte[] _readBuffer = new byte[bufferSize];          // 每次从内层流中读取的临时缓冲
-        private int _readBufferPos = 0;                   // 当前缓冲区中已经处理到的位置
-        private int _readBufferLen = 0;                   // 当前缓冲区中实际可用数据长度
-
         private readonly Queue<byte> _pendingBuffer = new();  // 替换后待输出的数据队列
+
+        // 使用 .NET 的 SSE 解析器逐事件解析底层流，避免粘包/拆包问题
+        private IAsyncEnumerator<SseItem<byte[]>>? _sseEnumerator;
 
         #region 必要的属性和方法重写
         public override bool CanRead => innerStream.CanRead;
@@ -108,6 +126,12 @@ public class ReplaceSseContentPolicy(string SearchText, string ReplaceText) : Pi
 
             int totalBytesRead = 0;
 
+            // 懒初始化 SSE 解析器（使用本次 ReadAsync 的取消令牌），仅创建一次
+            _sseEnumerator ??= SseParser
+                .Create(innerStream, (string eventType, ReadOnlySpan<byte> bytes) => replacer(bytes.ToArray()))
+                .EnumerateAsync()
+                .GetAsyncEnumerator(cancellationToken);
+
             while (totalBytesRead < count)
             {
                 // 如果待输出队列还有数据，先吐给调用方
@@ -118,11 +142,27 @@ public class ReplaceSseContentPolicy(string SearchText, string ReplaceText) : Pi
                 }
                 else
                 {
-                    // 如果队列空了，就从内层流再读一块数据、替换
-                    if (!await ReadAndReplaceOnceAsync(cancellationToken).ConfigureAwait(false))
+                    // 如果队列空了，则拉取下一个 SSE 事件并填充待输出队列
+                    if (!await _sseEnumerator.MoveNextAsync().ConfigureAwait(false))
                     {
-                        // 如果读不到更多数据了，就结束
+                        // 底层流已结束且无更多事件
                         break;
+                    }
+
+                    SseItem<byte[]> item = _sseEnumerator.Current;
+
+                    using MemoryStream ms = new();
+                    await SseFormatter.WriteAsync(
+                        YieldOnceAsync(item, cancellationToken),
+                        ms,
+                        static (evt, writer) => WriteBytes(evt.Data, writer),
+                        cancellationToken
+                    ).ConfigureAwait(false);
+
+                    byte[] formatted = ms.ToArray();
+                    foreach (byte b in formatted)
+                    {
+                        _pendingBuffer.Enqueue(b);
                     }
                 }
             }
@@ -130,42 +170,45 @@ public class ReplaceSseContentPolicy(string SearchText, string ReplaceText) : Pi
             return totalBytesRead;
         }
 
-        /// <summary>
-        /// 从 innerStream 中读取一块数据(_readBuffer)，执行字符串替换后，
-        /// 把替换结果按照字节写入 _pendingBuffer。
-        /// 
-        /// 返回值表示是否真的读到新数据(true=读到新数据，false=流已结束)。
-        /// </summary>
-        private async Task<bool> ReadAndReplaceOnceAsync(CancellationToken cancellationToken)
+        
+
+        private static async IAsyncEnumerable<SseItem<byte[]>> YieldOnceAsync(
+            SseItem<byte[]> item,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            if (_readBufferPos >= _readBufferLen)
+            // 立即产出一个事件；保持 async enumerable 形态以便复用 SseFormatter API
+            yield return item;
+            await Task.CompletedTask;
+        }
+
+        private static void WriteBytes(byte[] data, IBufferWriter<byte> writer)
+        {
+            Span<byte> span = writer.GetSpan(data.Length);
+            data.AsSpan().CopyTo(span);
+            writer.Advance(data.Length);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
             {
-                // 当前缓冲用完，需要重新读
-                _readBufferLen = await innerStream.ReadAsync(_readBuffer, 0, _readBuffer.Length, cancellationToken)
-                                                   .ConfigureAwait(false);
-                _readBufferPos = 0;
-                if (_readBufferLen == 0)
+                if (_sseEnumerator is not null)
                 {
-                    // 没有更多数据可读了
-                    return false;
+                    _sseEnumerator.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                    _sseEnumerator = null;
                 }
             }
+            base.Dispose(disposing);
+        }
 
-            // 把本次可读的所有字节拿来做替换（简化处理，未考虑跨缓冲区的分割）
-            string chunkString = encoding.GetString(_readBuffer, _readBufferPos, _readBufferLen - _readBufferPos);
-            _readBufferPos = _readBufferLen; // 模拟一次性读完
-
-            // 做字符串替换
-            string replacedString = chunkString.Replace(searchText, replaceText);
-
-            // 将替换结果转回字节塞到队列中
-            byte[] replacedBytes = encoding.GetBytes(replacedString);
-            foreach (byte b in replacedBytes)
+        public override async ValueTask DisposeAsync()
+        {
+            if (_sseEnumerator is not null)
             {
-                _pendingBuffer.Enqueue(b);
+                await _sseEnumerator.DisposeAsync().ConfigureAwait(false);
+                _sseEnumerator = null;
             }
-
-            return true;
+            await base.DisposeAsync().ConfigureAwait(false);
         }
     }
 }
