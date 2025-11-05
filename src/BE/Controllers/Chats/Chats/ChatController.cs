@@ -19,6 +19,7 @@ using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using OpenAI.Chat;
 using System.ClientModel;
+using System.ClientModel.Primitives;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -707,7 +708,15 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             catch (ClientResultException e)
             {
                 icc.FinishReason = DBFinishReason.UpstreamError;
-                errorText = e.Message;
+                PipelineResponse? pr = e.GetRawResponse();
+                if (pr != null)
+                {
+                    errorText = pr.Content.ToString();
+                }
+                else
+                {
+                    errorText = e.Message;
+                }
                 logger.LogError(e, "Upstream error: {userMessageId}", req.LastMessageId);
             }
             catch (AggregateException e) when (e.InnerException is TaskCanceledException)
