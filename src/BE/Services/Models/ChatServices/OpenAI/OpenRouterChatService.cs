@@ -1,6 +1,5 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.Services.Models.ChatServices.OpenAI.PipelinePolicies;
-using Chats.BE.Services.Models.ChatServices.OpenAI.ReasoningContents;
 using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
@@ -11,11 +10,7 @@ public class OpenRouterChatService(Model model, HostUrlService hostUrlService) :
         new AddHeaderPolicy("HTTP-Referer", hostUrlService.GetFEUrl())
     ])
 {
-    static Func<ChatCompletion, string?> ReasoningContentAccessor { get; } = ReasoningContentFactory.CreateReasoningContentAccessor("reasoning");
-    static Func<StreamingChatCompletionUpdate, string?> StreamingReasoningContentAccessor { get; } = ReasoningContentFactory.CreateStreamingReasoningContentAccessor("reasoning");
-
-    protected override string? GetReasoningContent(ChatCompletion delta) => ReasoningContentAccessor(delta);
-    protected override string? GetReasoningContent(StreamingChatCompletionUpdate delta) => StreamingReasoningContentAccessor(delta);
+    protected override ReadOnlySpan<byte> ReasoningEffortPropName => "reasoning"u8;
 
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {

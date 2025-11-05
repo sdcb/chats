@@ -5,10 +5,6 @@ using System.Runtime.CompilerServices;
 using System.ClientModel;
 using Chats.BE.DB;
 using System.ClientModel.Primitives;
-using System.Text.Json;
-using Chats.BE.Services.Models.ChatServices.OpenAI.ReasoningContents;
-using Chats.BE.DB.Enums;
-using Chats.BE.Services.Models.Extensions;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
@@ -40,11 +36,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
         return api;
     }
 
-    static Func<StreamingChatCompletionUpdate, string?> StreamingReasoningContentAccessor { get; } = ReasoningContentFactory.CreateStreamingReasoningContentAccessor();
-    static Func<ChatCompletion, string?> ReasoningContentAccessor { get; } = ReasoningContentFactory.CreateReasoningContentAccessor();
-
-    protected virtual string? GetReasoningContent(ChatCompletion delta) => ReasoningContentAccessor(delta);
-    protected virtual string? GetReasoningContent(StreamingChatCompletionUpdate delta) => StreamingReasoningContentAccessor(delta);
+    protected virtual ReadOnlySpan<byte> ReasoningEffortPropName => "$.reasoning_content"u8;
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -66,6 +58,15 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
                 Usage = delta.Usage != null ? GetUsage(delta.Usage) : null,
             };
         }
+
+        string? GetReasoningContent(StreamingChatCompletionUpdate delta)
+        {
+            if (delta.Choices[0].Delta.Patch.TryGetValue(ReasoningEffortPropName, out string? val))
+            {
+                return val;
+            }
+            return null;
+        }
     }
 
     public override async Task<ChatSegment> Chat(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, CancellationToken cancellationToken)
@@ -80,6 +81,15 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
             FinishReason = delta.FinishReason,
             Usage = delta.Usage != null ? GetUsage(delta.Usage) : null,
         };
+
+        string? GetReasoningContent(ChatCompletion delta)
+        {
+            if (delta.Choices[0].Patch.TryGetValue(ReasoningEffortPropName, out string? val))
+            {
+                return val;
+            }
+            return null;
+        }
     }
 
     protected virtual Dtos.ChatTokenUsage GetUsage(global::OpenAI.Chat.ChatTokenUsage usage)
