@@ -1,6 +1,7 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.ChatServices.OpenAI.PipelinePolicies;
+using Chats.BE.Services.Models.Extensions;
 using OpenAI.Chat;
 using System.ClientModel.Primitives;
 using System.Text.Json;
