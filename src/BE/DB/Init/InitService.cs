@@ -33,6 +33,8 @@ public class InitService(IServiceScopeFactory scopeFactory)
             UpdatedAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,
             DeploymentName = "hello-world",
+            ReasoningEffortOptions = "",
+            SupportedImageSizes = "",
         };
         ModelKey modelKey = new()
         {
