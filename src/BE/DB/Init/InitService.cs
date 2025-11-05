@@ -35,6 +35,7 @@ public class InitService(IServiceScopeFactory scopeFactory)
             DeploymentName = "hello-world",
             ReasoningEffortOptions = "",
             SupportedImageSizes = "",
+            AllowStreaming = true, 
         };
         ModelKey modelKey = new()
         {
