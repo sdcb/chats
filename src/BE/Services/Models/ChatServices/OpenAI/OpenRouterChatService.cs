@@ -10,7 +10,7 @@ public class OpenRouterChatService(Model model, HostUrlService hostUrlService) :
         new AddHeaderPolicy("HTTP-Referer", hostUrlService.GetFEUrl())
     ])
 {
-    protected override ReadOnlySpan<byte> ReasoningEffortPropName => "reasoning"u8;
+    protected override ReadOnlySpan<byte> ReasoningEffortPropName => "$.reasoning"u8;
 
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {

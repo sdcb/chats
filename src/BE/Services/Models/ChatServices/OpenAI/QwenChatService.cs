@@ -14,7 +14,7 @@ public class QwenChatService(Model model) : ChatCompletionService(model, new Uri
     private static PipelinePolicy[] CreateQwenPolicies()
     {
         // 创建一个 Policy 来将 Qwen 的毫秒时间戳转换为 OpenAI SDK 需要的秒时间戳
-        return [new ReplaceSseContentPolicy(static bytes =>
+        return [new ReplaceSseContentPolicy(static bytes => 
         {
             try
             {
@@ -22,7 +22,7 @@ public class QwenChatService(Model model) : ChatCompletionService(model, new Uri
                 JsonObject? jsonObj = JsonNode.Parse(bytes)?.AsObject();
                 if (jsonObj == null)
                 {
-                    return bytes;
+                    return bytes.ToArray();
                 }
                 
                 // 检查是否有 created 字段
@@ -35,17 +35,15 @@ public class QwenChatService(Model model) : ChatCompletionService(model, new Uri
                         // Qwen 返回的时间戳是毫秒级别，转换为秒
                         long createdSec = createdMs / 1000;
                         jsonObj["created"] = createdSec;
+                        return JSON.SerializeToUtf8Bytes(jsonObj);
                     }
                 }
-                
-                // 直接序列化为 UTF-8 字节
-                return JsonSerializer.SerializeToUtf8Bytes(jsonObj);
             }
             catch
             {
                 // 如果解析失败，返回原始字节
-                return bytes;
             }
+            return bytes.ToArray();
         })];
     }
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)

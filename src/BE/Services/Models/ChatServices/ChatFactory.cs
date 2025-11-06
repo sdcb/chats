@@ -67,7 +67,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
         };
     }
 
-    public ModelLoader CreateModelLoader(DBModelProvider modelProvider)
+    public ModelLoader CreateModelLoader(DBModelProvider _)
     {
         ModelLoader ml = new OpenAIModelLoader();
         return ml;

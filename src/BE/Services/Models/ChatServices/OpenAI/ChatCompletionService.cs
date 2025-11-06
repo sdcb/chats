@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.ClientModel;
 using Chats.BE.DB;
 using System.ClientModel.Primitives;
+using System.Text.Json;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
@@ -38,6 +39,43 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
 
     protected virtual ReadOnlySpan<byte> ReasoningEffortPropName => "$.reasoning_content"u8;
 
+    /// <summary>
+    /// 从 JsonPatch 中安全地提取并解码字符串值
+    /// Workaround for Azure SDK issues:
+    /// - #53716: TryGetValue throws InvalidOperationException when path doesn't exist
+    /// - #53718: TryGetValue doesn't decode JSON escape sequences (\n, \t, etc.)
+    /// </summary>
+    /// <param name="patch">要查询的 JsonPatch 对象</param>
+    /// <param name="path">JSON 路径</param>
+    /// <returns>解码后的字符串值，如果路径不存在或值为 null 则返回 null</returns>
+    private static string? TryGetDecodedValue(JsonPatch patch, ReadOnlySpan<byte> path)
+    {
+        // Workaround for #53716: Contains() 方法不会抛出异常，用于检查路径是否存在
+        if (!patch.Contains(path))
+        {
+            return null;
+        }
+
+        // 尝试获取原始值
+        if (!patch.TryGetValue(path, out string? val) || val == null)
+        {
+            return null;
+        }
+
+        // Workaround for #53718: TryGetValue 不会自动解码 JSON 转义序列
+        // 使用 JsonSerializer.Deserialize 来正确处理 \n, \t, \", \\, \uXXXX 等转义字符
+        try
+        {
+            return JsonSerializer.Deserialize<string>($"\"{val}\"");
+        }
+        catch
+        {
+            // 如果反序列化失败（例如值已经被正确解码，或包含无效的转义序列），
+            // 则返回原始值作为后备方案
+            return val;
+        }
+    }
+
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ChatFinishReason? finishReason = null;
@@ -61,11 +99,8 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
 
         string? GetReasoningContent(StreamingChatCompletionUpdate delta)
         {
-            if (delta.Choices[0].Delta.Patch.TryGetValue(ReasoningEffortPropName, out string? val))
-            {
-                return val;
-            }
-            return null;
+            if (delta.Choices.Count == 0) return null;
+            return TryGetDecodedValue(delta.Choices[0].Delta.Patch, ReasoningEffortPropName);
         }
     }
 
@@ -84,11 +119,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
 
         string? GetReasoningContent(ChatCompletion delta)
         {
-            if (delta.Choices[0].Patch.TryGetValue(ReasoningEffortPropName, out string? val))
-            {
-                return val;
-            }
-            return null;
+            return TryGetDecodedValue(delta.Choices[0].Patch, ReasoningEffortPropName);
         }
     }
 
