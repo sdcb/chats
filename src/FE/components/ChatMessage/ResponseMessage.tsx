@@ -21,6 +21,7 @@ import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
 import ToolCallBlock from '@/components/Markdown/ToolCallBlock';
 import ImagePreview from '@/components/ImagePreview/ImagePreview';
+import FilePreview from '@/components/FilePreview/FilePreview';
 
 import ChatError from '../ChatError/ChatError';
 import { IconCopy, IconDots, IconEdit } from '../Icons';
@@ -261,62 +262,75 @@ const ResponseMessage = (props: Props) => {
 
       {/* Render content in original order */}
       {groupedContent.map((item, groupIndex) => {
-        // 如果是图片数组，用容器包裹并横向排列
+        // 如果是文件数组，用容器包裹并横向排列
         if (Array.isArray(item)) {
           return (
-            <div key={`image-group-${groupIndex}`} className="flex flex-wrap gap-2">
+            <div key={`file-group-${groupIndex}`} className="flex flex-wrap gap-2">
               {item.map((c, index) => {
                 if (c.$type === MessageContentType.fileId) {
-                  const imageUrl = getFileUrl(c.c as FileDef);
                   return (
-                    <img
-                      alt={t('Loading...')}
+                    <FilePreview
                       key={'file-' + groupIndex + '-' + index}
-                      className="rounded-md cursor-pointer hover:opacity-90 transition-opacity"
-                      style={{ maxWidth: 300, maxHeight: 300 }}
-                      src={imageUrl}
-                      onClick={(e) => handleImageClick(imageUrl, allImageUrls, e)}
+                      file={c.c as FileDef}
+                      onImageClick={handleImageClick}
                     />
                   );
                 } else if (c.$type === MessageContentType.tempFileId) {
+                  // 临时文件显示加载效果
                   const imageUrl = getFileUrl(c.c as FileDef);
-                  return (
-                    <div key={'temp-file-' + groupIndex + '-' + index} className="relative rounded-md overflow-hidden" style={{ maxWidth: 300, maxHeight: 300 }}>
-                      <img
-                        alt={t('Loading...')}
-                        className="w-full h-full object-cover rounded-md cursor-pointer hover:opacity-90 transition-opacity"
-                        src={imageUrl}
-                        onClick={(e) => handleImageClick(imageUrl, allImageUrls, e)}
-                      />
-                      {/* 蓝色激光扫描效果 */}
-                      <div className="absolute inset-0 pointer-events-none">
-                        <div 
-                          className="absolute w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent shadow-[0_0_20px_rgba(59,130,246,0.8)]"
-                          style={{
-                            animation: 'scan 2s linear infinite',
-                          }}
+                  const fileDef = c.c as FileDef;
+                  const isImage = fileDef.contentType.startsWith('image/');
+                  
+                  if (isImage) {
+                    return (
+                      <div key={'temp-file-' + groupIndex + '-' + index} className="relative rounded-md overflow-hidden" style={{ maxWidth: 300, maxHeight: 300 }}>
+                        <img
+                          alt={t('Loading...')}
+                          className="w-full h-full object-cover rounded-md cursor-pointer hover:opacity-90 transition-opacity"
+                          src={imageUrl}
+                          onClick={(e) => handleImageClick(imageUrl, allImageUrls, e)}
+                        />
+                        {/* 蓝色激光扫描效果 */}
+                        <div className="absolute inset-0 pointer-events-none">
+                          <div 
+                            className="absolute w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent shadow-[0_0_20px_rgba(59,130,246,0.8)]"
+                            style={{
+                              animation: 'scan 2s linear infinite',
+                            }}
+                          />
+                        </div>
+                        <style jsx>{`
+                          @keyframes scan {
+                            0% {
+                              top: -4px;
+                              opacity: 0;
+                            }
+                            10% {
+                              opacity: 1;
+                            }
+                            90% {
+                              opacity: 1;
+                            }
+                            100% {
+                              top: 100%;
+                              opacity: 0;
+                            }
+                          }
+                        `}</style>
+                      </div>
+                    );
+                  } else {
+                    // 非图片临时文件显示普通加载状态
+                    return (
+                      <div key={'temp-file-' + groupIndex + '-' + index} className="relative">
+                        <FilePreview
+                          file={fileDef}
+                          onImageClick={handleImageClick}
+                          className="opacity-60 animate-pulse"
                         />
                       </div>
-                      <style jsx>{`
-                        @keyframes scan {
-                          0% {
-                            top: -4px;
-                            opacity: 0;
-                          }
-                          10% {
-                            opacity: 1;
-                          }
-                          90% {
-                            opacity: 1;
-                          }
-                          100% {
-                            top: 100%;
-                            opacity: 0;
-                          }
-                        }
-                      `}</style>
-                    </div>
-                  );
+                    );
+                  }
                 }
                 return null;
               })}

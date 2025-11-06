@@ -47,6 +47,7 @@ import HomeContext from '@/contexts/home.context';
 import UploadButton from '../Button/UploadButton';
 import PasteUpload from '../PasteUpload/PasteUpload';
 import FilesPopover from '../Popover/FilesPopover';
+import FilePreview from '@/components/FilePreview/FilePreview';
 import PromptList from './PromptList';
 import VariableModal from './VariableModal';
 
@@ -195,15 +196,16 @@ const ChatInput = ({
       toast.error(t('Please enter a message'));
       return;
     }
-    const fileIds = contentFiles.map((f) => ({
+    // 传递完整的 FileDef 对象，而不是只传 id
+    const fileContents = contentFiles.map((f) => ({
       i: '',
       $type: MessageContentType.fileId as const,
-      c: f.id,
+      c: f, // 传递整个 FileDef 对象
     }));
     onSend({
       role: ChatRole.User,
       content: [
-        ...fileIds,
+        ...fileContents,
         { i: '', $type: MessageContentType.text as const, c: contentText },
       ],
     });
@@ -417,27 +419,16 @@ const ChatInput = ({
               <div className="absolute mb-1 bottom-full mx-auto flex w-full justify-start z-10">
                 {!isFullWriting &&
                   contentFiles.map((file, index) => (
-                    <div className="relative group shadow-sm" key={index}>
-                      <div className="mr-1 w-[4rem] h-[4rem] rounded overflow-hidden">
-                        <img
-                          src={getFileUrl(file)}
-                          alt=""
-                          className="w-full h-full object-cover shadow-sm"
-                        />
-                        <button
-                          onClick={() => {
-                            setContentFiles((prev) => {
-                              return prev.filter((f) => f !== file);
-                            });
-                          }}
-                          className="absolute top-[-4px] right-[0px]"
-                        >
-                          <IconCircleX
-                            className="bg-background rounded-full text-black/50 dark:text-white/50"
-                            size={20}
-                          />
-                        </button>
-                      </div>
+                    <div className="mr-2" key={index}>
+                      <FilePreview
+                        file={file}
+                        maxWidth={80}
+                        maxHeight={80}
+                        showDelete={true}
+                        onDelete={() => {
+                          setContentFiles((prev) => prev.filter((f) => f !== file));
+                        }}
+                      />
                     </div>
                   ))}
               </div>
@@ -655,30 +646,18 @@ const ChatInput = ({
 
                 {/* 全屏模式下的文件展示 */}
                 {isFullWriting && contentFiles.length > 0 && (
-                  <div className="flex flex-row px-3 pb-2 gap-1">
+                  <div className="flex flex-row px-3 pb-2 gap-2">
                     {contentFiles.map((file, index) => (
-                      <div className="relative group shadow-sm" key={index}>
-                        <div className="mr-1 w-[4rem] h-[4rem] rounded overflow-hidden">
-                          <img
-                            src={getFileUrl(file)}
-                            alt=""
-                            className="w-full h-full object-cover shadow-sm"
-                          />
-                          <button
-                            onClick={() => {
-                              setContentFiles((prev) => {
-                                return prev.filter((f) => f !== file);
-                              });
-                            }}
-                            className="absolute top-[-4px] right-[0px]"
-                          >
-                            <IconCircleX
-                              className="bg-background rounded-full text-black/50 dark:text-white/50"
-                              size={20}
-                            />
-                          </button>
-                        </div>
-                      </div>
+                      <FilePreview
+                        key={index}
+                        file={file}
+                        maxWidth={80}
+                        maxHeight={80}
+                        showDelete={true}
+                        onDelete={() => {
+                          setContentFiles((prev) => prev.filter((f) => f !== file));
+                        }}
+                      />
                     ))}
                   </div>
                 )}

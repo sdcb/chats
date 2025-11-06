@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { SendButton, useSendKeyHandler } from '@/components/ui/send-button';
 import ImagePreview from '@/components/ImagePreview/ImagePreview';
+import FilePreview from '@/components/FilePreview/FilePreview';
 
 import { Textarea } from '../ui/textarea';
 import CopyAction from './CopyAction';
@@ -214,16 +215,12 @@ const UserMessage = (props: Props) => {
             <div className="flex flex-wrap justify-end text-right gap-2">
               {content
                 .filter((x) => x.$type === MessageContentType.fileId)
-                .map((img: any, index) => {
-                  const imageUrl = getFileUrl(img.c);
+                .map((file: any, index) => {
                   return (
-                    <img
-                      className="rounded-md not-prose cursor-pointer hover:opacity-90 transition-opacity"
-                      key={'user-img-' + index}
-                      style={{ maxWidth: 300, maxHeight: 300 }}
-                      src={imageUrl}
-                      alt=""
-                      onClick={(e) => handleImageClick(imageUrl, allImageUrls, e)}
+                    <FilePreview
+                      key={'user-file-' + index}
+                      file={file.c}
+                      onImageClick={handleImageClick}
                     />
                   );
                 })}
