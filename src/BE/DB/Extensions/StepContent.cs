@@ -16,7 +16,7 @@ public partial class StepContent
         return (DBMessageContentType)ContentTypeId switch
         {
             DBMessageContentType.Text => ChatMessageContentPart.CreateTextPart(StepContentText!.Content),
-            DBMessageContentType.FileId => await fup.CreateOpenAIPart(StepContentFile, cancellationToken),
+            DBMessageContentType.FileId => await fup.CreateOpenAIImagePart(StepContentFile, cancellationToken),
             DBMessageContentType.Error => ChatMessageContentPart.CreateTextPart(StepContentText!.Content),
             _ => throw new NotImplementedException()
         };
