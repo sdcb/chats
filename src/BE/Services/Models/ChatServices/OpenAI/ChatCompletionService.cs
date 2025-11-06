@@ -15,6 +15,14 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
     {
     }
 
+    protected override HashSet<string> SupportedContentTypes =>
+    [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+    ];
+
     private static ChatClient CreateChatClient(Model model, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
     {
         OpenAIClient api = CreateOpenAIClient(model.ModelKey, suggestedApiUrl, perCallPolicies);

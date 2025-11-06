@@ -76,10 +76,7 @@ public abstract partial class ChatService
     protected virtual bool SupportsVisionLink => true;
     protected virtual HashSet<string> SupportedContentTypes =>
     [
-        "image/jpeg",
-        "image/png",
-        "image/gif",
-        "image/webp",
+        "*"
     ];
 
     protected virtual async Task<ChatMessage> FilterVision(bool allowVision, ChatMessage message, FileUrlProvider fup, CancellationToken cancellationToken)
@@ -95,7 +92,7 @@ public abstract partial class ChatService
                 {
                     true => scfp.File.FileContentType.ContentType switch
                     {
-                        var x when SupportedContentTypes.Contains(x) => SupportsVisionLink switch
+                        var x when SupportedContentTypes.Contains("*") || SupportedContentTypes.Contains(x) => SupportsVisionLink switch
                         {
                             true => await fup.CreateOpenAIImagePart(scfp.File, cancellationToken),
                             false => await fup.CreateOpenAIImagePartForceDownload(scfp.File, cancellationToken),

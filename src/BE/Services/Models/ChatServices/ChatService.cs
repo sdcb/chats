@@ -64,7 +64,7 @@ public abstract partial class ChatService(Model model) : IDisposable
             SetReasoningEffort(options, feOptions.ReasoningEffort);
         }
 
-        if (!string.IsNullOrEmpty(feOptions.ImageSize))
+        if (!string.IsNullOrEmpty(feOptions.ImageSize) && Model.GetSupportedImageSizesAsArray(Model.SupportedImageSizes).Any())
         {
             SetImageSize(options, feOptions.ImageSize);
         }
