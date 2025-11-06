@@ -7,20 +7,17 @@ namespace Chats.BE.DB;
 
 public partial class Step
 {
-    public async Task<ChatMessage> ToOpenAI(FileUrlProvider fup, CancellationToken cancellationToken)
+    public ChatMessage ToOpenAI()
     {
         return (DBChatRole)ChatRoleId switch
         {
-            DBChatRole.User => new UserChatMessage(await StepContents
-                .ToAsyncEnumerable()
-                .SelectAwait(async c => await c.ToOpenAI(fup, cancellationToken))
-                .ToArrayAsync(cancellationToken)),
-            DBChatRole.Assistant => await ToAssistantMessage(StepContents, fup, cancellationToken),
+            DBChatRole.User => new UserChatMessage([.. StepContents.Select(c => c.ToTempOpenAI())]),
+            DBChatRole.Assistant => ToAssistantMessage(StepContents),
             DBChatRole.ToolCall => new ToolChatMessage(StepContents.First().StepContentToolCallResponse!.ToolCallId, StepContents.First().StepContentToolCallResponse!.Response),
             _ => throw new NotImplementedException()
         };
 
-        static async Task<AssistantChatMessage> ToAssistantMessage(ICollection<StepContent> stepContents, FileUrlProvider fup, CancellationToken cancellationToken)
+        static AssistantChatMessage ToAssistantMessage(ICollection<StepContent> stepContents)
         {
             bool hasContent = false, hasToolCall = false;
             foreach (StepContent stepContent in stepContents)
@@ -43,11 +40,10 @@ public partial class Step
 
             if (hasContent)
             {
-                AssistantChatMessage msg = new(await stepContents
+                AssistantChatMessage msg = new(stepContents
                     .Where(x => (DBMessageContentType)x.ContentTypeId is DBMessageContentType.FileId or DBMessageContentType.Text or DBMessageContentType.Error)
-                    .ToAsyncEnumerable()
-                    .SelectAwait(async c => await c.ToOpenAI(fup, cancellationToken))
-                    .ToArrayAsync(cancellationToken));
+                    .Select(c => c.ToTempOpenAI())
+                    .ToArray());
                 foreach (ChatToolCall toolCall in stepContents.Where(x => (DBMessageContentType)x.ContentTypeId is DBMessageContentType.ToolCall && x.StepContentToolCall != null)
                     .Select(content => ChatToolCall.CreateFunctionToolCall(
                         content.StepContentToolCall!.ToolCallId,

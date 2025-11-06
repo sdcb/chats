@@ -48,7 +48,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
     /// <param name="patch">要查询的 JsonPatch 对象</param>
     /// <param name="path">JSON 路径</param>
     /// <returns>解码后的字符串值，如果路径不存在或值为 null 则返回 null</returns>
-    private static string? TryGetDecodedValue(JsonPatch patch, ReadOnlySpan<byte> path)
+    internal static string? TryGetDecodedValue(ref JsonPatch patch, ReadOnlySpan<byte> path)
     {
         // Workaround for #53716: Contains() 方法不会抛出异常，用于检查路径是否存在
         if (!patch.Contains(path))
@@ -100,7 +100,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
         string? GetReasoningContent(StreamingChatCompletionUpdate delta)
         {
             if (delta.Choices.Count == 0) return null;
-            return TryGetDecodedValue(delta.Choices[0].Delta.Patch, ReasoningEffortPropName);
+            return TryGetDecodedValue(ref delta.Choices[0].Delta.Patch, ReasoningEffortPropName);
         }
     }
 
@@ -119,7 +119,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
 
         string? GetReasoningContent(ChatCompletion delta)
         {
-            return TryGetDecodedValue(delta.Choices[0].Patch, ReasoningEffortPropName);
+            return TryGetDecodedValue(ref delta.Choices[0].Patch, ReasoningEffortPropName);
         }
     }
 

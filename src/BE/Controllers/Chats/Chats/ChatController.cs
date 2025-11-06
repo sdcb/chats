@@ -424,14 +424,12 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         ChannelWriter<SseResponseLine> writer,
         CancellationToken cancellationToken)
     {
-        List<OpenAIChatMessage> messageToSend = await ((IEnumerable<Step>)
+        List<OpenAIChatMessage> messageToSend = [.. ((IEnumerable<Step>)
         [
             ..messageTree,
             ..dbUserMessage != null ? dbUserMessage.Steps : Array.Empty<Step>(),
         ])
-        .ToAsyncEnumerable()
-        .SelectAwait(async x => await x.ToOpenAI(fup, cancellationToken))
-        .ToListAsync(cancellationToken);
+        .Select(x => x.ToOpenAI())];
         if (!string.IsNullOrEmpty(chatSpan.ChatConfig.SystemPrompt))
         {
             messageToSend.Insert(0, OpenAIChatMessage.CreateSystemMessage(chatSpan.ChatConfig.SystemPrompt));
@@ -486,7 +484,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         while (true)
         {
             Step step = await RunOne(messageToSend);
-            await WriteStep(step);
+            WriteStep(step);
 
             if (TryGetUnfinishedToolCall(step, out List<StepContentToolCall> unfinishedToolCalls))
             {
@@ -525,7 +523,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     (bool isSuccess, string toolResult) = await CallMcp();
                     logger.LogInformation("Tool {call.Name} completed, success: {success}, result: {result}", call.Name, isSuccess, toolResult);
                     writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, true, call.ToolCallId!, toolResult));
-                    await WriteStep(new Step()
+                    WriteStep(new Step()
                     {
                         Turn = turn,
                         ChatRoleId = (byte)DBChatRole.ToolCall,
@@ -627,9 +625,9 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         writer.TryWrite(new EndTurn(chatSpan.SpanId, turn));
         writer.Complete();
 
-        async Task WriteStep(Step step)
+        void WriteStep(Step step)
         {
-            messageToSend.Add(await step.ToOpenAI(fup, cancellationToken));
+            messageToSend.Add(step.ToOpenAI());
             turn.Steps.Add(step);
             writer.TryWrite(new EndStep(chatSpan.SpanId, step));
         }
@@ -644,7 +642,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 using ChatService s = chatFactory.CreateChatService(userModel.Model);
 
                 bool responseStated = false, reasoningStarted = false;
-                await foreach (InternalChatSegment seg in icc.Run(calc, userModel, s.ChatStreamedFEProcessed(messageToSend, cco, ced, cancellationToken)))
+                await foreach (InternalChatSegment seg in icc.Run(calc, userModel, s.ChatStreamedFEProcessed(messageToSend, cco, ced, fup, cancellationToken)))
                 {
                     foreach (ChatSegmentItem item in seg.Items)
                     {

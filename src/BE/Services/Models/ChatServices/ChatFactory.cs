@@ -1,11 +1,13 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.DB.Enums;
+using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices.GoogleAI;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 using Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 using Chats.BE.Services.Models.ChatServices.Test;
 using Chats.BE.Services.Models.ModelLoaders;
+using Microsoft.AspNetCore.Mvc;
 using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices;
@@ -73,7 +75,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
         return ml;
     }
 
-    public async Task<ModelValidateResult> ValidateModel(Model model, CancellationToken cancellationToken)
+    public async Task<ModelValidateResult> ValidateModel(Model model, FileUrlProvider fup, CancellationToken cancellationToken)
     {
         using ChatService cs = CreateChatService(model);
         try
@@ -90,7 +92,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
                 }
             }
 
-            await foreach (Dtos.InternalChatSegment seg in cs.ChatStreamedFEProcessed([new UserChatMessage("1+1=?")], cco, ChatExtraDetails.Default, cancellationToken))
+            await foreach (Dtos.InternalChatSegment seg in cs.ChatStreamedFEProcessed([new UserChatMessage("1+1=?")], cco, ChatExtraDetails.Default, fup, cancellationToken))
             {
                 if (seg.IsFromUpstream)
                 {

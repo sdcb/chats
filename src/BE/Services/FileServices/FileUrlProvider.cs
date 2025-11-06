@@ -9,35 +9,37 @@ namespace Chats.BE.Services.FileServices;
 
 public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, IUrlEncryptionService urlEncryptionService)
 {
-    public async Task<ChatMessageContentPart> CreateOpenAIImagePart(StepContentFile? mcFile, CancellationToken cancellationToken)
+    public async Task<ChatMessageContentPart> CreateOpenAIImagePart(DB.File file, CancellationToken cancellationToken)
     {
-        if (mcFile == null)
-        {
-            if (mcFile?.File?.FileService == null || mcFile.File.FileContentType == null)
-            {
-                throw new ArgumentNullException(nameof(mcFile));
-            }
-            throw new ArgumentNullException(nameof(mcFile));
-        }
-
-        DB.File file = mcFile.File;
-
         IFileService fs = fileServiceFactory.Create(file.FileService);
         if (file.FileService.FileServiceTypeId == (byte)DBFileServiceType.Local)
         {
-            MemoryStream ms = new();
-            using Stream stream = await fs.Download(file.StorageKey, cancellationToken);
-            await stream.CopyToAsync(ms, cancellationToken);
-            ms.Position = 0;
-
-            BinaryData binaryData = BinaryData.FromStream(ms);
-            return ChatMessageContentPart.CreateImagePart(binaryData, file.FileContentType.ContentType);
+            return await CreateOpenAIImagePartForceDownload(file, cancellationToken);
         }
         else
         {
             Uri url = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
             return ChatMessageContentPart.CreateImagePart(url);
         }
+    }
+
+    public async Task<ChatMessageContentPart> CreateOpenAIImagePartForceDownload(DB.File file, CancellationToken cancellationToken)
+    {
+        MemoryStream ms = new();
+        IFileService fs = fileServiceFactory.Create(file.FileService);
+        using Stream stream = await fs.Download(file.StorageKey, cancellationToken);
+        await stream.CopyToAsync(ms, cancellationToken);
+        ms.Position = 0;
+
+        BinaryData binaryData = BinaryData.FromStream(ms);
+        return ChatMessageContentPart.CreateImagePart(binaryData, file.FileContentType.ContentType);
+    }
+
+    public ChatMessageContentPart CreateOpenAITextUrl(DB.File file)
+    {
+        IFileService fs = fileServiceFactory.Create(file.FileService);
+        Uri url = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
+        return ChatMessageContentPart.CreateTextPart(url.ToString());
     }
 
     public FileDto CreateFileDto(DB.File file, bool tryWithUrl = true)

@@ -6,6 +6,7 @@ using Microsoft.ML.Tokenizers;
 using Chats.BE.Services.Models.Extensions;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.DB.Enums;
+using Chats.BE.Services.FileServices;
 
 namespace Chats.BE.Services.Models;
 
@@ -45,7 +46,8 @@ public abstract partial class ChatService(Model model) : IDisposable
         return TokenPerConversation + messageTokens;
     }
 
-    protected virtual async Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, CancellationToken cancellationToken)
+    protected virtual async Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, FileUrlProvider fup,
+        CancellationToken cancellationToken)
     {
         if (Model.AllowSearch)
         {
@@ -88,7 +90,7 @@ public abstract partial class ChatService(Model model) : IDisposable
 
         ChatMessage[] filteredMessage = await messages
             .ToAsyncEnumerable()
-            .SelectAwait(async m => await FilterVision(Model.AllowVision, m, cancellationToken))
+            .SelectAwait(async m => await FilterVision(Model.AllowVision, m, fup, cancellationToken))
             .ToArrayAsync(cancellationToken);
         options.Temperature = Model.ClampTemperature(options.Temperature);
 
