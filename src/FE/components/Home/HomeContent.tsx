@@ -206,7 +206,7 @@ const HomeContent = () => {
   };
 
   const handleNewChat = (groupId: string | null = null) => {
-    postChats({
+    return postChats({
       title: t('New Conversation'),
       groupId,
     }).then((data) => {
