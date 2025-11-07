@@ -36,6 +36,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
         {
             Endpoint = !string.IsNullOrWhiteSpace(modelKey.Host) ? new Uri(modelKey.Host) : suggestedApiUrl,
             NetworkTimeout = NetworkTimeout,
+            RetryPolicy = new ClientRetryPolicy(maxRetries: 0), 
         };
         foreach (PipelinePolicy policy in perCallPolicies)
         {
