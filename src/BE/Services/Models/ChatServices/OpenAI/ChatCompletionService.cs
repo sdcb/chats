@@ -11,7 +11,7 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 public partial class ChatCompletionService(Model model, ChatClient chatClient) : ChatService(model)
 {
-    public ChatCompletionService(Model model, Uri? suggestedApiUrl = null, params PipelinePolicy[] perCallPolicies) : this(model, CreateChatClient(model, suggestedApiUrl, perCallPolicies))
+    public ChatCompletionService(Model model, params PipelinePolicy[] perCallPolicies) : this(model, CreateChatClient(model, perCallPolicies))
     {
     }
 
@@ -23,18 +23,28 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
         "image/webp",
     ];
 
-    private static ChatClient CreateChatClient(Model model, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
+    private static ChatClient CreateChatClient(Model model, PipelinePolicy[] perCallPolicies)
     {
-        OpenAIClient api = CreateOpenAIClient(model.ModelKey, suggestedApiUrl, perCallPolicies);
+        OpenAIClient api = CreateOpenAIClient(model.ModelKey, perCallPolicies);
         return api.GetChatClient(model.DeploymentName);
     }
 
-    internal static OpenAIClient CreateOpenAIClient(ModelKey modelKey, Uri? suggestedApiUrl, PipelinePolicy[] perCallPolicies)
+    internal static OpenAIClient CreateOpenAIClient(ModelKey modelKey, PipelinePolicy[] perCallPolicies)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
+        
+        // Fallback logic: ModelKey.Host -> ModelProviderInfo.GetInitialHost
+        Uri? endpoint = !string.IsNullOrWhiteSpace(modelKey.Host) 
+            ? new Uri(modelKey.Host) 
+            : (ModelProviderInfo.GetInitialHost((DB.Enums.DBModelProvider)modelKey.ModelProviderId) switch
+                {
+                    null => null,
+                    var x => new Uri(x)
+                });
+        
         OpenAIClientOptions oaic = new()
         {
-            Endpoint = !string.IsNullOrWhiteSpace(modelKey.Host) ? new Uri(modelKey.Host) : suggestedApiUrl,
+            Endpoint = endpoint,
             NetworkTimeout = NetworkTimeout,
             RetryPolicy = new ClientRetryPolicy(maxRetries: 0), 
         };

@@ -8,14 +8,24 @@ using System.Text.Json;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 
-public class QianFanChatService(Model model) : ChatCompletionService(model, CreateChatClient(model, new Uri("https://qianfan.baidubce.com/v2")))
+public class QianFanChatService(Model model) : ChatCompletionService(model, CreateChatClient(model))
 {
-    private static ChatClient CreateChatClient(Model model, Uri? suggestedApiUrl)
+    private static ChatClient CreateChatClient(Model model)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Secret, nameof(model.ModelKey.Secret));
+        
+        // Fallback logic: ModelKey.Host -> ModelProviderInfo.GetInitialHost
+        Uri? endpoint = !string.IsNullOrWhiteSpace(model.ModelKey.Host) 
+            ? new Uri(model.ModelKey.Host) 
+            : (ModelProviderInfo.GetInitialHost((DB.Enums.DBModelProvider)model.ModelKey.ModelProviderId) switch
+                {
+                    null => null,
+                    var x => new Uri(x)
+                });
+        
         OpenAIClientOptions oaic = new()
         {
-            Endpoint = !string.IsNullOrWhiteSpace(model.ModelKey.Host) ? new Uri(model.ModelKey.Host) : suggestedApiUrl,
+            Endpoint = endpoint,
         };
 
         JsonQianFanApiConfig? cfg = JsonSerializer.Deserialize<JsonQianFanApiConfig>(model.ModelKey.Secret)

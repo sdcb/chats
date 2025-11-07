@@ -22,10 +22,10 @@ public static class ModelProviderInfo
             null,
             null
         ),
-        [DBModelProvider.AzureOpenAI] = new(
-            DBModelProvider.AzureOpenAI,
-            "Azure OpenAI",
-            "https://<resource-name>.openai.azure.com/",
+        [DBModelProvider.AzureAIFoundry] = new(
+            DBModelProvider.AzureAIFoundry,
+            "Azure AI Foundry",
+            "https://yourresource.openai.azure.com/openai/v1/",
             ""
         ),
         [DBModelProvider.HunYuan] = new(
@@ -129,6 +129,12 @@ public static class ModelProviderInfo
             "OpenRouter",
             "https://openrouter.ai/api/v1",
             "sk-or-v1-***"
+        ),
+        [DBModelProvider.TokenPony] = new(
+            DBModelProvider.TokenPony,
+            "Token Pony",
+            "https://api.tokenpony.cn/v1",
+            "sk-"
         ),
     };
 

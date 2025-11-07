@@ -6,7 +6,7 @@ export interface UserModelConfig {
 
 export enum DBModelProvider {
   Test = 0,
-  AzureOpenAI = 1,
+  AzureAIFoundry = 1,
   HunYuan = 2,
   LingYi = 3,
   Moonshot = 4,
@@ -24,6 +24,7 @@ export enum DBModelProvider {
   Doubao = 16,
   SiliconFlow = 17,
   OpenRouter = 18,
+  TokenPony = 19,
 }
 
 export type FEModelProvider = {
@@ -35,9 +36,9 @@ export type FEModelProvider = {
 export const feModelProviders: FEModelProvider[] = [
   { id: DBModelProvider.Test, name: 'Test', icon: '/icons/logo.png' },
   {
-    id: DBModelProvider.AzureOpenAI,
-    name: 'Azure OpenAI',
-    icon: '/logos/azure-openai.svg',
+    id: DBModelProvider.AzureAIFoundry,
+    name: 'Azure AI Foundry',
+    icon: '/logos/azure-ai-foundry.svg',
   },
   {
     id: DBModelProvider.HunYuan,
@@ -95,6 +96,11 @@ export const feModelProviders: FEModelProvider[] = [
     id: DBModelProvider.OpenRouter,
     name: 'OpenRouter',
     icon: '/logos/openrouter.svg',
+  },
+  {
+    id: DBModelProvider.TokenPony,
+    name: 'Token Pony',
+    icon: '/logos/tokenpony.svg',
   },
 ];
 

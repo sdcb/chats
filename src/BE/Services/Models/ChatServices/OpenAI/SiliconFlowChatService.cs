@@ -9,7 +9,7 @@ using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class SiliconFlowChatService(Model model) : ChatCompletionService(model, new Uri("https://api.siliconflow.cn/v1"), CreateSiliconflowPolicies())
+public class SiliconFlowChatService(Model model) : ChatCompletionService(model, CreateSiliconflowPolicies())
 {
     private static PipelinePolicy[] CreateSiliconflowPolicies()
     {

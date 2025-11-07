@@ -5,7 +5,7 @@ using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class OpenRouterChatService(Model model, HostUrlService hostUrlService) : ChatCompletionService(model, new Uri("https://openrouter.ai/api/v1"),
+public class OpenRouterChatService(Model model, HostUrlService hostUrlService) : ChatCompletionService(model,
     [
         new AddHeaderPolicy("X-Title", "Sdcb Chats"), 
         new AddHeaderPolicy("HTTP-Referer", hostUrlService.GetFEUrl())

@@ -9,7 +9,7 @@ using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class QwenChatService(Model model) : ChatCompletionService(model, new Uri("https://dashscope.aliyuncs.com/compatible-mode/v1"), CreateQwenPolicies())
+public class QwenChatService(Model model) : ChatCompletionService(model, CreateQwenPolicies())
 {
     private static PipelinePolicy[] CreateQwenPolicies()
     {

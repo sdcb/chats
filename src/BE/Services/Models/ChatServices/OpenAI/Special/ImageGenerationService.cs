@@ -20,13 +20,13 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
 {
     private string? _imageSize;
 
-    public ImageGenerationService(Model model, Uri? suggestedUri = null, params PipelinePolicy[] perCallPolicies) : this(model, CreateImageGenerationAPI(model, suggestedUri, perCallPolicies))
+    public ImageGenerationService(Model model, params PipelinePolicy[] perCallPolicies) : this(model, CreateImageGenerationAPI(model, perCallPolicies))
     {
     }
 
-    private static ImageClient CreateImageGenerationAPI(Model model, Uri? suggestedUrl, PipelinePolicy[] perCallPolicies)
+    private static ImageClient CreateImageGenerationAPI(Model model, PipelinePolicy[] perCallPolicies)
     {
-        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model.ModelKey, suggestedUrl, perCallPolicies);
+        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model.ModelKey, perCallPolicies);
         ImageClient cc = api.GetImageClient(model.DeploymentName);
         return cc;
     }

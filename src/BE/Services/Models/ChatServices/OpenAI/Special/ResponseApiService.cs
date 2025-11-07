@@ -13,14 +13,14 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
 public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClient responseClient) : ChatService(model)
 {
-    public ResponseApiService(Model model, ILogger logger, Uri? suggestedUri = null, params PipelinePolicy[] perCallPolicies)
-        : this(model, logger, CreateResponseAPI(model, suggestedUri, perCallPolicies))
+    public ResponseApiService(Model model, ILogger logger, params PipelinePolicy[] perCallPolicies)
+        : this(model, logger, CreateResponseAPI(model, perCallPolicies))
     {
     }
 
-    static OpenAIResponseClient CreateResponseAPI(Model model, Uri? suggestedUri, PipelinePolicy[] pipelinePolicies)
+    static OpenAIResponseClient CreateResponseAPI(Model model, PipelinePolicy[] pipelinePolicies)
     {
-        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model.ModelKey, suggestedUri, pipelinePolicies);
+        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model.ModelKey, pipelinePolicies);
         OpenAIResponseClient cc = api.GetOpenAIResponseClient(model.DeploymentName);
         return cc;
     }

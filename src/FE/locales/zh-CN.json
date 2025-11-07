@@ -384,6 +384,7 @@
   "Google AI": "谷歌AI",
   "Doubao": "火山方舟",
   "SiliconFlow": "硅基流动",
+  "Token Pony": "小马算力",
   "Headers must be empty or a valid JSON object": "请求头必须为空或合法的 JSON 对象",
   "Invalid JSON config": "无效的JSON配置",
   "Invalid host": "无效的host",
