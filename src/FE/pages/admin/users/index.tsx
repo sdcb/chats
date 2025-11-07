@@ -276,12 +276,12 @@ export default function Users() {
                     <div 
                       className={`overflow-hidden transition-all duration-300 ease-in-out ${
                         expandedUserId === item.id 
-                          ? 'max-h-screen opacity-100' 
+                          ? 'max-h-96 opacity-100' 
                           : 'max-h-0 opacity-0'
                       }`}
                     >
                       <div className={`bg-muted/30 transition-all duration-300 ease-in-out ${
-                        expandedUserId === item.id ? 'p-4' : 'p-0'
+                        expandedUserId === item.id ? 'p-4 overflow-y-auto max-h-96' : 'p-0'
                       }`}>
                         {(expandedUserId === item.id || loadingModels.has(item.id)) && (
                           <>
@@ -343,12 +343,12 @@ export default function Users() {
                     <div 
                       className={`overflow-hidden transition-all duration-300 ease-in-out ${
                         expandedUserId === item.id 
-                          ? 'max-h-screen opacity-100' 
+                          ? 'max-h-96 opacity-100' 
                           : 'max-h-0 opacity-0'
                       }`}
                     >
                       <div className={`bg-muted/30 transition-all duration-300 ease-in-out ${
-                        expandedUserId === item.id ? 'p-4' : 'p-0'
+                        expandedUserId === item.id ? 'p-4 overflow-y-auto max-h-96' : 'p-0'
                       }`}>
                         {(expandedUserId === item.id || loadingModels.has(item.id)) && (
                           <>
