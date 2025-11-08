@@ -131,6 +131,13 @@ const AdminLayout = ({
       title: t('User Management'),
     },
     {
+      url: '/admin/user-models',
+      icon: (stroke?: string) => (
+        <IconUserCog strokeWidth={1.2} stroke={stroke} />
+      ),
+      title: t('User Model Permissions'),
+    },
+    {
       url: '/admin/messages',
       icon: (stroke?: string) => (
         <IconMessages strokeWidth={1.2} stroke={stroke} />

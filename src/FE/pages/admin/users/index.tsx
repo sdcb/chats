@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import Link from 'next/link';
 
 import useDebounce from '@/hooks/useDebounce';
 import useTranslation from '@/hooks/useTranslation';
@@ -253,6 +254,15 @@ export default function Users() {
                         )}
                         {item.userModelCount}
                       </Button>
+                      {item.userModelCount > 10 && (
+                        <Link 
+                          href={`/admin/user-models?tab=by-user&userId=${item.id}`}
+                          className="text-xs text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {t('Manage →')}
+                        </Link>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>

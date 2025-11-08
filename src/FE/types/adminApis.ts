@@ -424,6 +424,16 @@ export class UserModelDisplay implements UserModelDisplayDto {
   }
 }
 
+export interface UserModelUserDto {
+  id: number;
+  userId: number;
+  username: string;
+  displayName: string;
+  tokens: number;
+  counts: number;
+  expires: string;
+}
+
 export interface SimpleModelReferenceDto {
   id: number;
   name: string;

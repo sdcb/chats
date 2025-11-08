@@ -35,6 +35,28 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         return Ok(userModels);
     }
 
+    [HttpGet("model/{modelId:int}")]
+    public async Task<ActionResult<UserModelUserDto[]>> GetUsersByModel(int modelId, CancellationToken cancellationToken)
+    {
+        UserModelUserDto[] users = await db.UserModels
+            .Where(x => x.ModelId == modelId)
+            .Include(x => x.User)
+            .OrderByDescending(x => x.Id)
+            .Select(x => new UserModelUserDto()
+            {
+                Id = x.Id,
+                UserId = x.UserId,
+                Username = x.User.UserName,
+                DisplayName = x.User.DisplayName,
+                Counts = x.CountBalance,
+                Expires = x.ExpiresAt,
+                Tokens = x.TokenBalance,
+            })
+            .ToArrayAsync(cancellationToken);
+
+        return Ok(users);
+    }
+
     [HttpGet("user/{userId:int}/unassigned")]
     public async Task<ActionResult<AdminModelDto[]>> GetUserUnassignedModels(int userId, CancellationToken cancellationToken)
     {

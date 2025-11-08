@@ -48,6 +48,7 @@ import {
   UpdateModelDto,
   UserModelDisplay,
   UserModelDisplayDto,
+  UserModelUserDto,
   ValidateModelParams,
   SmsAttemptLog,
 } from '@/types/adminApis';
@@ -65,6 +66,15 @@ export const getModelsByUserId = async (
     `/api/admin/user-models/user/${userId}`,
   );
   return data.map((x) => new UserModelDisplay(x));
+};
+
+export const getUsersByModelId = async (
+  modelId: number,
+): Promise<UserModelUserDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get<UserModelUserDto[]>(
+    `/api/admin/user-models/model/${modelId}`,
+  );
 };
 
 export const getUserUnassignedModels = async (
