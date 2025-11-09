@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import useTranslation from '@/hooks/useTranslation';
 import { GetUsersResult } from '@/types/adminApis';
@@ -27,6 +27,15 @@ export default function ByUserTab({ focusUserId }: IProps) {
   const [query, setQuery] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [expandedUserId, setExpandedUserId] = useState<string | null>(focusUserId || null);
+
+  const handleUserModelCountChange = useCallback((userId: string, modelCount: number) => {
+    setUsers((prev) => ({
+      ...prev,
+      rows: prev.rows.map((user) =>
+        user.id === userId ? { ...user, userModelCount: modelCount } : user,
+      ),
+    }));
+  }, []);
 
   useEffect(() => {
     loadUsers();
@@ -94,7 +103,7 @@ export default function ByUserTab({ focusUserId }: IProps) {
                 user={user}
                 isExpanded={expandedUserId === user.id.toString()}
                 onToggle={() => handleToggleUser(user.id.toString())}
-                onUpdate={() => loadUsers()}
+                onUserModelCountChange={handleUserModelCountChange}
               />
             ))}
           </div>

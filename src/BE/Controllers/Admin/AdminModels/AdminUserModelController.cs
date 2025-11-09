@@ -107,7 +107,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult> AddUserModel([FromBody] AddUserModelRequest request,
+    public async Task<ActionResult<UserModelDto>> AddUserModel([FromBody] AddUserModelRequest request,
         [FromServices] BalanceService balanceService,
         CancellationToken cancellationToken)
     {
@@ -137,6 +137,17 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         {
             return BadRequest("User model already exists");
         }
+
+        // 先查询模型信息用于返回
+        var modelInfo = await db.Models
+            .Where(m => m.Id == request.ModelId)
+            .Select(m => new
+            {
+                ModelName = m.Name,
+                ModelKeyName = m.ModelKey.Name,
+                ModelProviderId = m.ModelKey.ModelProviderId
+            })
+            .FirstAsync(cancellationToken);
 
         UserModel newUserModel = new()
         {
@@ -170,7 +181,19 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             .Where(x => x.Id == request.UserId)
             .ExecuteUpdateAsync(u => u.SetProperty(p => p.UpdatedAt, _ => DateTime.UtcNow), CancellationToken.None);
 
-        return Ok();
+        UserModelDto createdUserModel = new()
+        {
+            Id = newUserModel.Id,
+            ModelId = request.ModelId,
+            DisplayName = modelInfo.ModelName,
+            ModelKeyName = modelInfo.ModelKeyName,
+            ModelProviderId = modelInfo.ModelProviderId,
+            Counts = request.Counts,
+            Tokens = request.Tokens,
+            Expires = request.Expires,
+        };
+
+        return Ok(createdUserModel);
     }
 
     [HttpPut("{userModelId:int}")]

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import useTranslation from '@/hooks/useTranslation';
 import { GetUsersResult, ModelProviderDto, GetModelKeysResult, AdminModelDto, UserModelDisplay } from '@/types/adminApis';
@@ -9,22 +9,20 @@ import {
   getModelsByKey,
   getModelsByUserId,
   addUserModel,
-  editUserModel,
   deleteUserModel,
 } from '@/apis/adminApis';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { IconChevronDown, IconChevronRight, IconLoader, IconPlus, IconTrash } from '@/components/Icons';
+import { IconChevronDown, IconChevronRight, IconLoader } from '@/components/Icons';
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatDate } from '@/utils/date';
 import { cn } from '@/lib/utils';
 
 interface IProps {
   user: GetUsersResult;
   isExpanded: boolean;
   onToggle: () => void;
-  onUpdate: () => void;
+  onUserModelCountChange?: (userId: string, modelCount: number) => void;
 }
 
 interface ProviderNode {
@@ -51,8 +49,9 @@ interface ModelNode {
   expires?: string;
 }
 
-export default function UserModelTree({ user, isExpanded, onToggle, onUpdate }: IProps) {
+export default function UserModelTree({ user, isExpanded, onToggle, onUserModelCountChange }: IProps) {
   const { t } = useTranslation();
+  const userId = user.id.toString();
   const [loading, setLoading] = useState(false);
   const [providers, setProviders] = useState<ModelProviderDto[]>([]);
   const [expandedProviders, setExpandedProviders] = useState<Set<number>>(new Set());
@@ -60,6 +59,18 @@ export default function UserModelTree({ user, isExpanded, onToggle, onUpdate }: 
   const [keysByProvider, setKeysByProvider] = useState<Record<number, GetModelKeysResult[]>>({});
   const [modelsByKey, setModelsByKey] = useState<Record<number, AdminModelDto[]>>({});
   const [userModels, setUserModels] = useState<UserModelDisplay[]>([]);
+  const [pendingStates, setPendingStates] = useState<Record<number, 'adding' | 'removing'>>({});
+
+  const applyUserModels = useCallback(
+    (updater: (prev: UserModelDisplay[]) => UserModelDisplay[]) => {
+      setUserModels((prev) => {
+        const next = updater(prev);
+        onUserModelCountChange?.(userId, next.length);
+        return next;
+      });
+    },
+    [onUserModelCountChange, userId],
+  );
 
   useEffect(() => {
     if (isExpanded) {
@@ -67,20 +78,32 @@ export default function UserModelTree({ user, isExpanded, onToggle, onUpdate }: 
     }
   }, [isExpanded]);
 
+  const refreshUserModels = useCallback(async () => {
+    const userModelsData = await getModelsByUserId(userId);
+    setUserModels(userModelsData);
+    onUserModelCountChange?.(userId, userModelsData.length);
+  }, [onUserModelCountChange, userId]);
+
   const loadData = async () => {
+    const shouldShowLoading = providers.length === 0 && userModels.length === 0;
     try {
-      setLoading(true);
-      const [providersData, userModelsData] = await Promise.all([
-        getModelProviders(),
-        getModelsByUserId(user.id.toString()),
-      ]);
-      setProviders(providersData);
-      setUserModels(userModelsData);
+      if (providers.length === 0) {
+        if (shouldShowLoading) {
+          setLoading(true);
+        }
+        const providersData = await getModelProviders();
+        setProviders(providersData);
+      } else if (shouldShowLoading) {
+        setLoading(true);
+      }
+      await refreshUserModels();
     } catch (error) {
       console.error('Failed to load data:', error);
       toast.error(t('Failed to load data'));
     } finally {
-      setLoading(false);
+      if (shouldShowLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -132,38 +155,68 @@ export default function UserModelTree({ user, isExpanded, onToggle, onUpdate }: 
     }
   };
 
-  const handleAddModel = async (modelId: number) => {
+  const handleAddModel = async (model: AdminModelDto) => {
+    const modelId = model.modelId;
+    if (pendingStates[modelId]) {
+      return;
+    }
+
+    const alreadyAssigned = userModels.some((item) => item.modelId === modelId);
+    if (alreadyAssigned) {
+      return;
+    }
+
+    setPendingStates((prev) => ({ ...prev, [modelId]: 'adding' }));
+
+    const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+
     try {
-      await addUserModel({
-        userId: parseInt(user.id.toString(), 10),
-        modelId: modelId,
+      const createdUserModel = await addUserModel({
+        userId: parseInt(userId, 10),
+        modelId,
         tokens: 0,
         counts: 100,
-        expires: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+        expires: expiresAt,
       });
-      toast.success(t('Model added successfully'));
-      await loadData();
-      onUpdate();
+
+      applyUserModels((prev) => {
+        const filtered = prev.filter((item) => item.modelId !== createdUserModel.modelId);
+        return [createdUserModel, ...filtered];
+      });
     } catch (error) {
       console.error('Failed to add model:', error);
       toast.error(t('Failed to add model'));
+    } finally {
+      setPendingStates((prev) => {
+        const { [modelId]: _, ...rest } = prev;
+        return rest;
+      });
     }
   };
 
-  const handleDeleteModel = async (userModelId: number) => {
+  const handleDeleteModel = async (userModel: UserModelDisplay) => {
+    const modelId = userModel.modelId;
+    if (pendingStates[modelId]) {
+      return;
+    }
+
+    setPendingStates((prev) => ({ ...prev, [modelId]: 'removing' }));
+
     try {
-      await deleteUserModel(userModelId);
-      toast.success(t('Model removed successfully'));
-      await loadData();
-      onUpdate();
+      await deleteUserModel(userModel.id);
+      applyUserModels((prev) => prev.filter((item) => item.modelId !== modelId));
     } catch (error) {
       console.error('Failed to remove model:', error);
       toast.error(t('Failed to remove model'));
+    } finally {
+      setPendingStates((prev) => {
+        const { [modelId]: _, ...rest } = prev;
+        return rest;
+      });
     }
   };
 
   const userModelCount = userModels.length;
-  const totalModels = Object.values(modelsByKey).reduce((sum, models) => sum + models.length, 0);
 
   return (
     <div className="border-b last:border-0">
@@ -254,6 +307,8 @@ export default function UserModelTree({ user, isExpanded, onToggle, onUpdate }: 
                                   {models.map(model => {
                                     const userModel = userModels.find(um => um.modelId === model.modelId);
                                     const isAssigned = !!userModel;
+                                    const pendingState = pendingStates[model.modelId];
+                                    const isPending = !!pendingState;
 
                                     return (
                                       <div
@@ -264,12 +319,36 @@ export default function UserModelTree({ user, isExpanded, onToggle, onUpdate }: 
                                         )}
                                       >
                                         <div className="flex items-center gap-2">
-                                          {isAssigned ? (
-                                            <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
-                                              <span className="text-white text-xs">✓</span>
-                                            </div>
+                                          {isPending ? (
+                                            <IconLoader size={14} className="animate-spin text-muted-foreground" />
+                                          ) : isAssigned ? (
+                                            <button
+                                              type="button"
+                                              className="flex items-center justify-center"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                userModel && handleDeleteModel(userModel);
+                                              }}
+                                              disabled={isPending}
+                                            >
+                                              <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center hover:bg-green-600 transition-colors">
+                                                <span className="text-white text-xs">✓</span>
+                                              </div>
+                                              <span className="sr-only">{t('Remove Model')}</span>
+                                            </button>
                                           ) : (
-                                            <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30" />
+                                            <button
+                                              type="button"
+                                              className="flex items-center justify-center"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleAddModel(model);
+                                              }}
+                                              disabled={isPending}
+                                            >
+                                              <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30 hover:border-primary transition-colors" />
+                                              <span className="sr-only">{t('Add Model')}</span>
+                                            </button>
                                           )}
                                           <span className={isAssigned ? "font-medium" : "text-muted-foreground"}>
                                             {model.name}
@@ -281,25 +360,6 @@ export default function UserModelTree({ user, isExpanded, onToggle, onUpdate }: 
                                             </span>
                                           )}
                                         </div>
-                                        {isAssigned && userModel ? (
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-6 px-2"
-                                            onClick={() => handleDeleteModel(userModel.id)}
-                                          >
-                                            <IconTrash size={12} />
-                                          </Button>
-                                        ) : (
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-6 px-2"
-                                            onClick={() => handleAddModel(model.modelId)}
-                                          >
-                                            <IconPlus size={12} />
-                                          </Button>
-                                        )}
                                       </div>
                                     );
                                   })}

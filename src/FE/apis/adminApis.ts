@@ -86,11 +86,12 @@ export const getUserUnassignedModels = async (
   );
 };
 
-export const addUserModel = (params: AddUserModelParams): Promise<any> => {
+export const addUserModel = async (params: AddUserModelParams): Promise<UserModelDisplay> => {
   const fetchService = useFetch();
-  return fetchService.post('/api/admin/user-models', {
+  const data = await fetchService.post<UserModelDisplayDto>('/api/admin/user-models', {
     body: params,
   });
+  return new UserModelDisplay(data);
 };
 
 export const editUserModel = (userModelId: number, params: EditUserModelParams): Promise<any> => {
