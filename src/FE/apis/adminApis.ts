@@ -4,6 +4,9 @@ import {
   AdminChatsDto,
   AdminModelDto,
   AddUserModelParams,
+  BatchUserModelsParams,
+  BatchUserModelsByProviderParams,
+  BatchUserModelsByKeyParams,
   ChatCountStatisticsByDateResult,
   CostStatisticsByDateResult,
   EditUserModelParams,
@@ -23,6 +26,11 @@ import {
   GetUserMessageParams,
   GetUsersParams,
   GetUsersResult,
+  UserModelPermissionUserDto,
+  UserModelProviderDto,
+  UserModelOperationResponse,
+  UserModelKeyDto,
+  UserModelPermissionModelDto,
   ModelProviderDto,
   ModelProviderInitialConfig,
   PasswordAttemptLog,
@@ -86,24 +94,51 @@ export const getUserUnassignedModels = async (
   );
 };
 
-export const addUserModel = async (params: AddUserModelParams): Promise<UserModelDisplay> => {
+export const addUserModel = async (params: AddUserModelParams): Promise<UserModelOperationResponse> => {
   const fetchService = useFetch();
-  const data = await fetchService.post<UserModelDisplayDto>('/api/admin/user-models', {
-    body: params,
-  });
-  return new UserModelDisplay(data);
-};
-
-export const editUserModel = (userModelId: number, params: EditUserModelParams): Promise<any> => {
-  const fetchService = useFetch();
-  return fetchService.put(`/api/admin/user-models/${userModelId}`, {
+  return fetchService.post<UserModelOperationResponse>('/api/admin/user-models', {
     body: params,
   });
 };
 
-export const deleteUserModel = (userModelId: number): Promise<any> => {
+export const batchAddUserModelsByProvider = async (params: BatchUserModelsByProviderParams): Promise<UserModelOperationResponse> => {
   const fetchService = useFetch();
-  return fetchService.delete(`/api/admin/user-models/${userModelId}`);
+  return fetchService.post<UserModelOperationResponse>('/api/admin/user-models/batch-by-provider', {
+    body: params,
+  });
+};
+
+export const batchDeleteUserModelsByProvider = async (params: BatchUserModelsByProviderParams): Promise<UserModelOperationResponse> => {
+  const fetchService = useFetch();
+  return fetchService.post<UserModelOperationResponse>('/api/admin/user-models/batch-delete-by-provider', {
+    body: params,
+  });
+};
+
+export const batchAddUserModelsByKey = async (params: BatchUserModelsByKeyParams): Promise<UserModelOperationResponse> => {
+  const fetchService = useFetch();
+  return fetchService.post<UserModelOperationResponse>('/api/admin/user-models/batch-by-key', {
+    body: params,
+  });
+};
+
+export const batchDeleteUserModelsByKey = async (params: BatchUserModelsByKeyParams): Promise<UserModelOperationResponse> => {
+  const fetchService = useFetch();
+  return fetchService.post<UserModelOperationResponse>('/api/admin/user-models/batch-delete-by-key', {
+    body: params,
+  });
+};
+
+export const editUserModel = (userModelId: number, params: EditUserModelParams): Promise<UserModelOperationResponse> => {
+  const fetchService = useFetch();
+  return fetchService.put<UserModelOperationResponse>(`/api/admin/user-models/${userModelId}`, {
+    body: params,
+  });
+};
+
+export const deleteUserModel = (userModelId: number): Promise<UserModelOperationResponse> => {
+  const fetchService = useFetch();
+  return fetchService.delete<UserModelOperationResponse>(`/api/admin/user-models/${userModelId}`);
 };
 
 export const getModels = (all: boolean = true): Promise<AdminModelDto[]> => {
@@ -141,6 +176,46 @@ export const getUsers = (
     `/api/admin/users?page=${params.page}&pageSize=${params.pageSize}&query=${
       params?.query || ''
     }`,
+  );
+};
+
+export const getUsersForPermission = (
+  params: GetUsersParams,
+): Promise<PageResult<UserModelPermissionUserDto[]>> => {
+  const fetchService = useFetch();
+  return fetchService.get(
+    `/api/admin/user-models/users?page=${params.page}&pageSize=${params.pageSize}&query=${
+      params?.query || ''
+    }`,
+  );
+};
+
+export const getModelProvidersForUser = async (
+  userId: string,
+): Promise<UserModelProviderDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get<UserModelProviderDto[]>(
+    `/api/admin/user-models/user/${userId}/providers`,
+  );
+};
+
+export const getModelKeysByProviderForUser = async (
+  userId: string,
+  providerId: number,
+): Promise<UserModelKeyDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get<UserModelKeyDto[]>(
+    `/api/admin/user-models/user/${userId}/provider/${providerId}/keys`,
+  );
+};
+
+export const getModelsByKeyForUser = async (
+  userId: string,
+  keyId: number,
+): Promise<UserModelPermissionModelDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get<UserModelPermissionModelDto[]>(
+    `/api/admin/user-models/user/${userId}/key/${keyId}/models`,
   );
 };
 
