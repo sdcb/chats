@@ -86,12 +86,13 @@ export default function ByModelTab({ focusModelId }: IProps) {
       }
 
       if (keyInfo && providerInfo) {
-        const feProvider = feModelProviders.find(fp => fp.id === providerInfo.providerId);
+        const currentProviderInfo = providerInfo;
+        const feProvider = feModelProviders.find(fp => fp.id === currentProviderInfo.providerId);
         keyModels.forEach(model => {
           models.push({
             ...model,
             keyName: keyInfo!.name,
-            providerName: feProvider?.name || `Provider ${providerInfo!.providerId}`,
+            providerName: feProvider?.name || `Provider ${currentProviderInfo.providerId}`,
           });
         });
       }
