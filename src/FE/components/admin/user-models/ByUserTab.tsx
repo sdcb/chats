@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/router';
 import useTranslation from '@/hooks/useTranslation';
 import { UserModelPermissionUserDto } from '@/types/adminApis';
 import { PageResult, Paging } from '@/types/page';
@@ -11,12 +12,13 @@ import useDebounce from '@/hooks/useDebounce';
 import UserModelTree from './UserModelTree';
 
 interface IProps {
-  focusUserId?: string;
   focusUsername?: string;
+  queryParam?: string;
 }
 
-export default function ByUserTab({ focusUserId, focusUsername }: IProps) {
+export default function ByUserTab({ focusUsername, queryParam }: IProps) {
   const { t } = useTranslation();
+  const router = useRouter();
   const [users, setUsers] = useState<PageResult<UserModelPermissionUserDto[]>>({
     count: 0,
     rows: [],
@@ -25,9 +27,10 @@ export default function ByUserTab({ focusUserId, focusUsername }: IProps) {
     page: 1,
     pageSize: 20,
   });
-  const [query, setQuery] = useState<string>(focusUsername || '');
+  // 使用 focusUsername 或 queryParam 作为初始查询值
+  const [query, setQuery] = useState<string>(focusUsername || queryParam || '');
   const [loading, setLoading] = useState(true);
-  const [expandedUserId, setExpandedUserId] = useState<string | null>(focusUserId || null);
+  const [expandedUsername, setExpandedUsername] = useState<string | null>(focusUsername || null);
 
   /**
    * 用户模型数量的状态管理策略：
@@ -72,22 +75,55 @@ export default function ByUserTab({ focusUserId, focusUsername }: IProps) {
 
   useEffect(() => {
     loadUsers();
-  }, [pagination]);
+  }, [pagination, query]);
 
+  // focusUsername 变化时更新 expandedUsername
   useEffect(() => {
-    if (focusUserId && users.rows.length > 0) {
-      setExpandedUserId(focusUserId);
+    if (focusUsername) {
+      setExpandedUsername(focusUsername);
     }
-  }, [focusUserId, users.rows]);
+  }, [focusUsername]);
+
+  // 更新 URL 中的 query 参数
+  const updateQueryInUrl = useCallback((newQuery: string) => {
+    if (!router.isReady) return;
+
+    const nextQuery: Record<string, string> = {};
+    
+    Object.entries(router.query).forEach(([key, value]) => {
+      if (key === 'query') return; // 跳过旧的 query，稍后会添加新的
+      
+      if (typeof value === 'string' && value) {
+        nextQuery[key] = value;
+      } else if (Array.isArray(value) && value.length > 0) {
+        nextQuery[key] = value[0];
+      }
+    });
+
+    // 如果有查询内容，添加到 URL
+    if (newQuery) {
+      nextQuery.query = newQuery;
+    }
+
+    router.push(
+      {
+        pathname: router.pathname,
+        query: nextQuery,
+      },
+      undefined,
+      { shallow: true }
+    );
+  }, [router]);
 
   const updateQueryWithDebounce = useDebounce((query: string) => {
-    loadUsers(query);
+    updateQueryInUrl(query);
   }, 1000);
 
-  const loadUsers = async (searchQuery: string = query) => {
+  const loadUsers = async () => {
     try {
       setLoading(true);
-      const data = await getUsersForPermission({ query: searchQuery, ...pagination });
+      // 使用本地 query 状态作为查询条件
+      const data = await getUsersForPermission({ query, ...pagination });
       setUsers(data);
     } catch (error) {
       console.error('Failed to load users:', error);
@@ -97,11 +133,11 @@ export default function ByUserTab({ focusUserId, focusUsername }: IProps) {
     }
   };
 
-  const handleToggleUser = (userId: string) => {
-    if (expandedUserId === userId) {
-      setExpandedUserId(null);
+  const handleToggleUser = (username: string) => {
+    if (expandedUsername === username) {
+      setExpandedUsername(null);
     } else {
-      setExpandedUserId(userId);
+      setExpandedUsername(username);
     }
   };
 
@@ -134,8 +170,8 @@ export default function ByUserTab({ focusUserId, focusUsername }: IProps) {
               <UserModelTree
                 key={user.id}
                 user={user}
-                isExpanded={expandedUserId === user.id.toString()}
-                onToggle={() => handleToggleUser(user.id.toString())}
+                isExpanded={expandedUsername === user.username}
+                onToggle={() => handleToggleUser(user.username)}
                 onUserModelCountChange={handleUserModelCountChange}
               />
             ))}

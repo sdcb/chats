@@ -174,7 +174,7 @@ export default function Users() {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Link 
-                            href={`/admin/user-models?tab=by-user&username=${encodeURIComponent(item.username)}`}
+                            href={`/admin/user-models?username=${encodeURIComponent(item.username)}`}
                             className="text-primary hover:text-primary/80 underline cursor-pointer"
                             onClick={(e) => e.stopPropagation()}
                           >
