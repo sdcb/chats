@@ -23,13 +23,19 @@ const UserModelsPage = () => {
   const { t } = useTranslation();
   const router = useRouter();
 
-  const { tab: tabQueryParam, userId, modelId } = router.query;
+  const { tab: tabQueryParam, userId, username, modelId } = router.query;
   const tabQueryValue = Array.isArray(tabQueryParam)
     ? tabQueryParam[0]
     : tabQueryParam;
   const resolvedTabFromQuery = isValidTab(tabQueryValue) ? tabQueryValue : 'by-user';
 
-  // 从 URL 中提取参数
+  // 从 URL 中提取参数 - 优先使用 username，兼容旧的 userId
+  const focusUsername = useMemo(() => {
+    if (typeof username === 'string') return username;
+    if (Array.isArray(username)) return username[0];
+    return undefined;
+  }, [username]);
+
   const focusUserId = useMemo(() => {
     if (typeof userId === 'string') return userId;
     if (Array.isArray(userId)) return userId[0];
@@ -125,7 +131,7 @@ const UserModelsPage = () => {
 
         {resolvedTabFromQuery === 'by-user' && (
           <TabsContent value="by-user" className="ml-0 mt-2">
-            <ByUserTab focusUserId={focusUserId} />
+            <ByUserTab focusUserId={focusUserId} focusUsername={focusUsername} />
           </TabsContent>
         )}
         {resolvedTabFromQuery === 'by-model' && (

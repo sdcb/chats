@@ -12,9 +12,10 @@ import UserModelTree from './UserModelTree';
 
 interface IProps {
   focusUserId?: string;
+  focusUsername?: string;
 }
 
-export default function ByUserTab({ focusUserId }: IProps) {
+export default function ByUserTab({ focusUserId, focusUsername }: IProps) {
   const { t } = useTranslation();
   const [users, setUsers] = useState<PageResult<UserModelPermissionUserDto[]>>({
     count: 0,
@@ -24,7 +25,7 @@ export default function ByUserTab({ focusUserId }: IProps) {
     page: 1,
     pageSize: 20,
   });
-  const [query, setQuery] = useState<string>('');
+  const [query, setQuery] = useState<string>(focusUsername || '');
   const [loading, setLoading] = useState(true);
   const [expandedUserId, setExpandedUserId] = useState<string | null>(focusUserId || null);
 
