@@ -1,4 +1,5 @@
 import { useContext, useState } from 'react';
+import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -58,6 +59,11 @@ const ChatHeader = () => {
       chat.id === selectedChat.id ? updatedChat : chat
     );
     chatDispatch(setChats(updatedChats));
+  };
+
+  // 检查模型是否可用
+  const isModelAvailable = (modelId: number) => {
+    return models.some((model) => model.modelId === modelId);
   };
 
   const handleAddChatModel = async (modelId: number) => {
@@ -230,7 +236,9 @@ const ChatHeader = () => {
                       'pointer-events-none',
                   )}
                 >
-                  {selectedChat.spans.map((span) => (
+                  {selectedChat.spans.map((span) => {
+                    const modelAvailable = isModelAvailable(span.modelId);
+                    return (
                     <div
                       className="flex bg-card rounded-md h-10 flex-shrink-0"
                       key={'chat-header-' + span.spanId}
@@ -240,9 +248,13 @@ const ChatHeader = () => {
                           variant="ghost"
                           className={cn(
                             'h-auto p-1 m-0 gap-1',
-                            !span.enabled && 'opacity-50',
+                            (!span.enabled || !modelAvailable) && 'opacity-50',
                           )}
                           onClick={() => {
+                            if (!modelAvailable) {
+                              toast.error(t('Model not available'));
+                              return;
+                            }
                             setSelectedSpanId(span.spanId);
                           }}
                         >
@@ -271,7 +283,7 @@ const ChatHeader = () => {
                               <div
                                 className={cn(
                                   'flex items-center gap-1',
-                                  !span.enabled && 'opacity-50',
+                                  (!span.enabled || !modelAvailable) && 'opacity-50',
                                 )}
                               >
                                 <ModelProviderIcon providerId={span.modelProviderId} />
@@ -294,6 +306,10 @@ const ChatHeader = () => {
                                 !span.enabled && 'opacity-50',
                               )}
                               onClick={() => {
+                                if (!modelAvailable) {
+                                  toast.error(t('Model not available'));
+                                  return;
+                                }
                                 setSelectedSpanId(span.spanId);
                               }}
                             >
@@ -324,7 +340,8 @@ const ChatHeader = () => {
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                   <AddBtnRender />
                   <ResetBtnRender />
                 </div>
