@@ -187,6 +187,7 @@ const ResponseMessage = (props: Props) => {
         key={`tool-group-${index}`}
         toolCall={toolCall}
         toolResponse={toolResponse}
+        chatStatus={messageStatus}
       />
     );
   };

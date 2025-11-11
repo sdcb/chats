@@ -164,7 +164,13 @@ const ThinkingMessage = (props: Props) => {
           <IconChevronRight size={18} stroke="#6b7280" />
         )}
       </div>
-      {isOpen && (
+      <div 
+        className="overflow-hidden transition-all duration-300 ease-in-out"
+        style={{
+          maxHeight: isOpen ? '2000px' : '0',
+          opacity: isOpen ? 1 : 0,
+        }}
+      >
         <div className="px-2 text-gray-400 text-sm mt-2">
           <MemoizedReactMarkdown
             remarkPlugins={[remarkMath, remarkGfm]}
@@ -227,7 +233,7 @@ const ThinkingMessage = (props: Props) => {
             }`}
           </MemoizedReactMarkdown>
         </div>
-      )}
+      </div>
     </div>
   );
 };
