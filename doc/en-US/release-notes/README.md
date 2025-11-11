@@ -1,5 +1,5 @@
 <!-- Language: en-US -->
-<p align="right"><b>English</b> | <a href="../../zh-CN/release-notes/index.md">简体中文</a></p>
+<p align="right"><b>English</b> | <a href="../../zh-CN/release-notes/README.md">简体中文</a></p>
 
 # Chats Release History
 
@@ -7,7 +7,24 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.8.0](1.8.0.md) - 2025-11-04 ⭐ Latest Release 🎉 Major Architecture Upgrade
+## [1.8.1](1.8.1.md) - 2025-11-11 ⭐ Latest Release
+
+**Core Highlights**: User Model Permission Management · Reasoning Lifecycle Tracking · File Preview Refactor · Chat Cache Optimization
+
+- 👥 **User Model Permission Management**: New permission management system with dual perspective (by user and by model)
+- 🧠 **Reasoning Lifecycle Tracking**: Auto-track reasoning state, smart expand/collapse reasoning content
+- 📎 **File Preview Refactor**: Unified file preview component supporting images, videos, audio, documents, and more
+- ⚡ **Chat List Caching**: localStorage cache + parallel loading, significantly improved first-screen load speed
+- 🐴 **TokenPony Provider**: Added TokenPony provider support (ID=19)
+- 🔄 **Azure Branding Upgrade**: Azure OpenAI → Azure AI Foundry
+- 🛠️ **ChatService Simplification**: Architecture simplified, removed redundant code
+- 🐛 **OpenAI 2.6.0 Fix**: Switched to self-compiled Sdcb.OpenAI package, fixed reasoning content parsing issue
+
+[View Full Release Notes →](1.8.1.md)
+
+---
+
+## [1.8.0](1.8.0.md) - 2025-11-04 🎉 Major Architecture Upgrade
 
 **Core Highlights**: Model Configuration Architecture Refactor · User-Customizable Config · No Migration for New Models
 
@@ -196,5 +213,5 @@ Starting from 1.0.0, Chats follows Semantic Versioning:
 ---
 
 <p align="center">
-  <sub>Last updated: 2025-11-04</sub>
+  <sub>Last updated: 2025-11-11</sub>
 </p>
