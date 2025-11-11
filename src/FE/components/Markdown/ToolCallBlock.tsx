@@ -1,4 +1,4 @@
-import { FC, memo, useState, useEffect } from 'react';
+import { FC, memo, useState, useEffect, useRef } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
@@ -19,17 +19,26 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
     const [isParamsCopied, setIsParamsCopied] = useState<boolean>(false);
     const [isResponseCopied, setIsResponseCopied] = useState<boolean>(false);
     const [isOpen, setIsOpen] = useState<boolean>(true);
+    const [isManuallyToggled, setIsManuallyToggled] = useState<boolean>(false);
 
-    // 根据 chatStatus 控制展开/收起状态
+    // 自动控制逻辑（不覆盖用户手动操作）：
+    // 1) 当该工具调用的响应出现时，自动收起
+    // 2) 流式中（chatting 且无响应）默认展开；结束后（none/failed）默认收起
     useEffect(() => {
+        if (isManuallyToggled) return;
+        if (toolResponse) {
+            setIsOpen(false);
+            return;
+        }
         if (chatStatus === ChatSpanStatus.Chatting) {
-            // 流式输出时，保持展开
             setIsOpen(true);
-        } else if (chatStatus === ChatSpanStatus.None || chatStatus === ChatSpanStatus.Failed) {
-            // 流式输出完毕后，默认收起
+        } else if (
+            chatStatus === ChatSpanStatus.None ||
+            chatStatus === ChatSpanStatus.Failed
+        ) {
             setIsOpen(false);
         }
-    }, [chatStatus]);
+    }, [chatStatus, toolResponse, isManuallyToggled]);
 
     // 检查是否应该只显示code，并返回code内容
     const getCodeIfAvailable = (): string | null => {
@@ -69,6 +78,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
 
     const toggleOpen = () => {
         setIsOpen(!isOpen);
+        setIsManuallyToggled(true);
     };
 
     return (

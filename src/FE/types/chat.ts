@@ -66,6 +66,8 @@ export type ReasoningContent = {
   i: string;
   $type: MessageContentType.reasoning;
   c: string;
+  // 标记该段推理是否已完整结束；未定义的历史数据视为已结束
+  finished?: boolean;
 };
 
 export type TextContent = {

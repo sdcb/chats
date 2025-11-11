@@ -481,9 +481,9 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         }
         chat.ChatTurns.Add(turn);
 
-        while (true)
+        while (!cancellationToken.IsCancellationRequested)
         {
-            Step step = await RunOne(messageToSend);
+            Step step = await RunOne(messageToSend, cancellationToken);
             WriteStep(step);
 
             if (TryGetUnfinishedToolCall(step, out List<StepContentToolCall> unfinishedToolCalls))
@@ -520,7 +520,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     logger.LogInformation("{mcpServer.Label} connected, elapsed={elapsed}ms, Calling tool: {toolName}, parameters: {call.Parameters}",
                         mcpServer.Label, sw.ElapsedMilliseconds, toolName, call.Parameters);
 
-                    (bool isSuccess, string toolResult) = await CallMcp();
+                    (bool isSuccess, string toolResult) = await CallMcp(cancellationToken);
                     logger.LogInformation("Tool {call.Name} completed, success: {success}, result: {result}", call.Name, isSuccess, toolResult);
                     writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, true, call.ToolCallId!, toolResult));
                     WriteStep(new Step()
@@ -545,7 +545,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                         ],
                     });
 
-                    async Task<(bool success, string result)> CallMcp()
+                    async Task<(bool success, string result)> CallMcp(CancellationToken cancellationToken)
                     {
                         try
                         {
@@ -632,7 +632,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             writer.TryWrite(new EndStep(chatSpan.SpanId, step));
         }
 
-        async Task<Step> RunOne(List<OpenAIChatMessage> messageToSend)
+        async Task<Step> RunOne(List<OpenAIChatMessage> messageToSend, CancellationToken cancellationToken)
         {
             InChatContext icc = new(firstTick);
 

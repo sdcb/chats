@@ -12,8 +12,8 @@ import {
   requestGenerateInfo,
 } from '@/utils/generateInfoCache';
 
-import { ChatSpanStatus } from '@/types/chat';
-import { IStepGenerateInfo } from '@/types/chatMessage';
+import { ChatStatus } from '@/types/chat';
+import { IStepGenerateInfo, ResponseMessageTempId } from '@/types/chatMessage';
 
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
@@ -27,15 +27,16 @@ import remarkMath from 'remark-math';
 interface Props {
   readonly?: boolean;
   content: string;
-  chatStatus: ChatSpanStatus;
+  finished?: boolean; // 是否已结束推理
   reasoningDuration?: number;
   messageId: string;
   chatId?: string;
   chatShareId?: string;
+  chatStatus: ChatStatus;
 }
 
 const ThinkingMessage = (props: Props) => {
-  const { content, chatStatus, reasoningDuration, messageId, chatId, chatShareId } = props;
+  const { content, finished, reasoningDuration, messageId, chatId, chatShareId, chatStatus } = props;
   const { t } = useTranslation();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -45,19 +46,32 @@ const ThinkingMessage = (props: Props) => {
       : null,
   );
   const [loading, setLoading] = useState(false);
+  const [isManuallyToggled, setIsManuallyToggled] = useState(false);
 
   const cacheKey = useMemo<GenerateInfoCacheKey>(
     () => ({ turnId: messageId, chatId, chatShareId }),
     [messageId, chatId, chatShareId],
   );
 
-  useEffect(() => {
-    if (chatStatus === ChatSpanStatus.Reasoning) {
-      setIsOpen(true);
-    } else if (chatStatus === ChatSpanStatus.Chatting) {
-      setIsOpen(false);
+  const canLoadDuration = useMemo(() => {
+    if (chatStatus === ChatStatus.Chatting) {
+      return false;
     }
-  }, [chatStatus]);
+    if (finished === false) {
+      return false;
+    }
+    if (!messageId || messageId.startsWith(ResponseMessageTempId)) {
+      return false;
+    }
+    return true;
+  }, [chatStatus, finished, messageId]);
+
+  // 自动开合逻辑（不覆盖用户手动动作）
+  useEffect(() => {
+    if (isManuallyToggled) return;
+    const isFinished = finished ?? true;
+    setIsOpen(!isFinished);
+  }, [finished, isManuallyToggled]);
 
   useEffect(() => {
     if (typeof reasoningDuration === 'number' && reasoningDuration > 0) {
@@ -80,6 +94,9 @@ const ThinkingMessage = (props: Props) => {
   }, []);
 
   const ensureDurationLoaded = useCallback(async () => {
+    if (!canLoadDuration) {
+      return;
+    }
     if (loading) return;
     if ((displayDurationMs ?? 0) > 0) return;
     const cached = getCachedGenerateInfo(cacheKey);
@@ -98,6 +115,7 @@ const ThinkingMessage = (props: Props) => {
       setLoading(false);
     }
   }, [
+    canLoadDuration,
     cacheKey,
     chatId,
     chatShareId,
@@ -126,14 +144,19 @@ const ThinkingMessage = (props: Props) => {
   const toggleOpen = useCallback(() => {
     const nextState = !isOpen;
     setIsOpen(nextState);
+    setIsManuallyToggled(true);
     if (!nextState) {
       return;
     }
+    if (!canLoadDuration) {
+      return;
+    }
     void ensureDurationLoaded();
-  }, [ensureDurationLoaded, isOpen]);
+  }, [canLoadDuration, ensureDurationLoaded, isOpen]);
 
   const headerLabel = useMemo(() => {
-    if (chatStatus === ChatSpanStatus.Reasoning) {
+    const isFinished = finished ?? true;
+    if (!isFinished) {
       return t('Thinking...');
     }
     if ((displayDurationMs ?? 0) > 0) {
@@ -141,7 +164,14 @@ const ThinkingMessage = (props: Props) => {
       return t('Deeply thought (took {{time}} seconds)', { time: seconds });
     }
     return t('Deeply thought');
-  }, [chatStatus, displayDurationMs, t]);
+  }, [finished, displayDurationMs, t]);
+
+  useEffect(() => {
+    if (!isOpen || !canLoadDuration) {
+      return;
+    }
+    void ensureDurationLoaded();
+  }, [canLoadDuration, ensureDurationLoaded, isOpen]);
 
   return (
     <div className="my-4">
@@ -149,14 +179,14 @@ const ThinkingMessage = (props: Props) => {
         className="inline-flex items-center px-3 py-1 bg-muted dark:bg-gray-700 text-xs gap-1 rounded-sm"
         onClick={toggleOpen}
       >
-        {chatStatus === ChatSpanStatus.Reasoning ? (
-          headerLabel
-        ) : (
+        {(finished ?? true) ? (
           <div className="flex items-center h-6 gap-1">
             <IconThink size={16} />
             <span>{headerLabel}</span>
             {isOpen && loading && <span className="text-muted-foreground">{t('Loading...')}</span>}
           </div>
+        ) : (
+          headerLabel
         )}
         {isOpen ? (
           <IconChevronDown size={18} stroke="#6b7280" />
@@ -228,9 +258,7 @@ const ThinkingMessage = (props: Props) => {
               },
             }}
           >
-            {`${preprocessLaTeX(content!)}${
-              chatStatus === ChatSpanStatus.Reasoning ? '▍' : ''
-            }`}
+            {`${preprocessLaTeX(content!)}${finished === false ? '▍' : ''}`}
           </MemoizedReactMarkdown>
         </div>
       </div>

@@ -346,15 +346,17 @@ const ResponseMessage = (props: Props) => {
         if (c.$type === 'toolGroup') {
           return renderToolGroup(c, index);
         } else if (c.$type === MessageContentType.reasoning) {
+          const finished = (c as any).finished as boolean | undefined;
           return (
             <ThinkingMessage
               key={'reasoning-' + index}
               content={c.c}
-              chatStatus={message.status}
+              finished={finished}
               reasoningDuration={message.reasoningDuration}
               messageId={message.id}
               chatId={chatId}
               chatShareId={chatShareId}
+              chatStatus={chatStatus}
             />
           );
         } else if (c.$type === MessageContentType.text) {

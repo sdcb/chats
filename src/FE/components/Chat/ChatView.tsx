@@ -486,16 +486,19 @@ const ChatView = memo(() => {
           lastContentIndex >= 0 &&
           newContent[lastContentIndex].$type === MessageContentType.reasoning
         ) {
+          const last = newContent[lastContentIndex] as ReasoningContent;
           newContent[lastContentIndex] = {
-            ...newContent[lastContentIndex],
-            c: (newContent[lastContentIndex] as ReasoningContent).c + text
+            ...last,
+            c: (last.c || '') + text,
+            finished: false,
           } as ReasoningContent;
         } else {
           newContent.push({
             i: '',
             $type: MessageContentType.reasoning,
             c: text,
-          });
+            finished: false,
+          } as ReasoningContent);
         }
 
         return {
@@ -507,6 +510,44 @@ const ChatView = memo(() => {
       return x;
     });
     
+    const newSelectedMsgs = [...selectedMsgs];
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
+    messageDispatch(setSelectedMessages(newSelectedMsgs));
+    return newSelectedMsgs;
+  };
+
+  // 标记当前消息中最近的一段 reasoning 为已完成（离开 ReasoningSegment）
+  const changeSelectedResponseReasoningFinish = (
+    selectedMsgs: IChatMessage[][],
+    messageId: string,
+  ): IChatMessage[][] => {
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
+    const updatedMessageList = messageList.map((x) => {
+      if (x.id === messageId) {
+        const newContent = [...x.content];
+        for (let i = newContent.length - 1; i >= 0; i--) {
+          const c = newContent[i];
+          if (c.$type === MessageContentType.reasoning) {
+            const r = c as ReasoningContent;
+            // 只在尚未标记完成时进行更新
+            if (r.finished !== true) {
+              newContent[i] = {
+                ...r,
+                finished: true,
+              } as ReasoningContent;
+            }
+            break;
+          }
+        }
+        return {
+          ...x,
+          content: newContent,
+        };
+      }
+      return x;
+    });
+
     const newSelectedMsgs = [...selectedMsgs];
     newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
@@ -845,6 +886,8 @@ const ChatView = memo(() => {
       } else if (value.k === SseResponseKind.Segment) {
         const { r: msg, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
+        // 离开 ReasoningSegment，完成上一段 reasoning
+        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
         selectedMessageList = changeSelectedResponseMessage(
           selectedMessageList,
           msgId,
@@ -854,6 +897,8 @@ const ChatView = memo(() => {
       } else if (value.k === SseResponseKind.Error) {
         const { r: msg, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
+        // 离开 ReasoningSegment，完成上一段 reasoning
+        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
         selectedMessageList = changeSelectedResponseMessage(
           selectedMessageList,
           msgId,
@@ -865,6 +910,8 @@ const ChatView = memo(() => {
       } else if (value.k === SseResponseKind.ResponseMessage) {
         const { r: msg, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
+        // 离开 ReasoningSegment，完成上一段 reasoning
+        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
         selectedMessageList = changeSelectedResponseMessage(
           selectedMessageList,
           msgId,
@@ -876,6 +923,8 @@ const ChatView = memo(() => {
       } else if (value.k === SseResponseKind.StartResponse) {
         const { r: time, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
+        // 离开 ReasoningSegment，完成上一段 reasoning
+        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
         selectedMessageList = changeSelectedResponseReasoningDuration(
           selectedMessageList,
           msgId,
@@ -884,10 +933,14 @@ const ChatView = memo(() => {
       } else if (value.k === SseResponseKind.ImageGenerating) {
         const { r, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
+        // 离开 ReasoningSegment，完成上一段 reasoning
+        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
         selectedMessageList = changeSelectedResponseFilePreview(selectedMessageList, msgId, r);
       } else if (value.k === SseResponseKind.ImageGenerated) {
         const { r, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
+        // 离开 ReasoningSegment，完成上一段 reasoning
+        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
         selectedMessageList = changeSelectedResponseFileFinal(selectedMessageList, msgId, r);
       } else if (value.k === SseResponseKind.CallingTool) {
         // 13 事件：u 仅在首个片段非空，后续片段 u/r 可能为 null，只携带 p（参数增量）
@@ -901,6 +954,8 @@ const ChatView = memo(() => {
           continue;
         }
         const msgId = `${ResponseMessageTempId}-${spanId}`;
+        // 离开 ReasoningSegment，完成上一段 reasoning
+        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
         selectedMessageList = changeSelectedResponseToolCall(
           selectedMessageList,
           msgId,
@@ -911,6 +966,8 @@ const ChatView = memo(() => {
       } else if (value.k === SseResponseKind.ToolCompleted) {
         const { u: toolCallId, r: result, i: spanId } = value as any;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
+        // 离开 ReasoningSegment，完成上一段 reasoning
+        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
         selectedMessageList = changeSelectedResponseToolResult(
           selectedMessageList,
           msgId,
