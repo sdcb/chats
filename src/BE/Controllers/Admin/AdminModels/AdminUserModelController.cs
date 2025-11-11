@@ -133,7 +133,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             x => new { x.Id, x.CountBalance, x.TokenBalance, x.ExpiresAt }
         );
 
-        // 获取该密钥下的所有模型（包括已删除的）
+        // 获取该密钥下的所有模型
         var models = await db.Models
             .Where(x => x.ModelKeyId == keyId)
             .OrderBy(x => x.Order)
@@ -146,23 +146,27 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             })
             .ToArrayAsync(cancellationToken);
 
-        UserModelPermissionModelDto[] result = models.Select(x =>
-        {
-            bool isAssigned = userModelDict.ContainsKey(x.Id);
-            var userModelInfo = isAssigned ? userModelDict[x.Id] : null;
-
-            return new UserModelPermissionModelDto
+        UserModelPermissionModelDto[] result = models
+            .Select(x =>
             {
-                ModelId = x.Id,
-                Name = x.Name,
-                IsAssigned = isAssigned,
-                UserModelId = userModelInfo?.Id,
-                Counts = userModelInfo?.CountBalance,
-                Tokens = userModelInfo?.TokenBalance,
-                Expires = userModelInfo?.ExpiresAt,
-                IsDeleted = x.IsDeleted
-            };
-        }).ToArray();
+                bool isAssigned = userModelDict.ContainsKey(x.Id);
+                var userModelInfo = isAssigned ? userModelDict[x.Id] : null;
+
+                return new UserModelPermissionModelDto
+                {
+                    ModelId = x.Id,
+                    Name = x.Name,
+                    IsAssigned = isAssigned,
+                    UserModelId = userModelInfo?.Id,
+                    Counts = userModelInfo?.CountBalance,
+                    Tokens = userModelInfo?.TokenBalance,
+                    Expires = userModelInfo?.ExpiresAt,
+                    IsDeleted = x.IsDeleted
+                };
+            })
+            // 过滤：如果用户没有权限且模型已被禁用（IsDeleted=true），则不显示
+            .Where(x => x.IsAssigned || !x.IsDeleted)
+            .ToArray();
 
         return Ok(result);
     }
