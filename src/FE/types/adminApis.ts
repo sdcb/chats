@@ -185,6 +185,24 @@ export interface UserModelOperationResponse {
   model: UserModelPermissionModelDto | null;
 }
 
+export interface ModelUserPermissionDto {
+  userId: number;
+  username: string;
+  email: string | null;
+  phone: string | null;
+  enabled: boolean;
+  isAssigned: boolean;
+  userModelId: number | null;
+  counts: number | null;
+  tokens: number | null;
+  expires: string | null;
+}
+
+export interface BatchUserModelsByModelParams {
+  modelId: number;
+  userIds: number[];
+}
+
 export interface GetUserMessageParams extends Paging {
   user?: string;
   content?: string;

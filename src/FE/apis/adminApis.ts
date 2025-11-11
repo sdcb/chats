@@ -7,6 +7,7 @@ import {
   BatchUserModelsParams,
   BatchUserModelsByProviderParams,
   BatchUserModelsByKeyParams,
+  BatchUserModelsByModelParams,
   ChatCountStatisticsByDateResult,
   CostStatisticsByDateResult,
   EditUserModelParams,
@@ -31,6 +32,7 @@ import {
   UserModelOperationResponse,
   UserModelKeyDto,
   UserModelPermissionModelDto,
+  ModelUserPermissionDto,
   ModelProviderDto,
   ModelProviderInitialConfig,
   PasswordAttemptLog,
@@ -217,6 +219,30 @@ export const getModelsByKeyForUser = async (
   return fetchService.get<UserModelPermissionModelDto[]>(
     `/api/admin/user-models/user/${userId}/key/${keyId}/models`,
   );
+};
+
+export const getUsersByModel = async (
+  modelId: number,
+  params: { page: number; pageSize: number; query?: string },
+): Promise<PageResult<ModelUserPermissionDto[]>> => {
+  const fetchService = useFetch();
+  return fetchService.get<PageResult<ModelUserPermissionDto[]>>(
+    `/api/admin/user-models/model/${modelId}/users?page=${params.page}&pageSize=${params.pageSize}&query=${params.query || ''}`,
+  );
+};
+
+export const batchAddUserModelsByModel = async (params: BatchUserModelsByModelParams): Promise<void> => {
+  const fetchService = useFetch();
+  return fetchService.post<void>('/api/admin/user-models/batch-by-model', {
+    body: params,
+  });
+};
+
+export const batchDeleteUserModelsByModel = async (params: BatchUserModelsByModelParams): Promise<void> => {
+  const fetchService = useFetch();
+  return fetchService.post<void>('/api/admin/user-models/batch-delete-by-model', {
+    body: params,
+  });
 };
 
 export const postUser = (params: PostUserParams) => {

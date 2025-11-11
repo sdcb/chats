@@ -1,156 +1,505 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import toast from 'react-hot-toast';
 import useTranslation from '@/hooks/useTranslation';
-import { AdminModelDto, UserModelUserDto } from '@/types/adminApis';
-import { getUsersByModelId, deleteUserModel } from '@/apis/adminApis';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { IconChevronDown, IconChevronRight, IconTrash, IconPlus } from '@/components/Icons';
-import ModelProviderIcon from '@/components/common/ModelProviderIcon';
+import { ModelUserPermissionDto, AdminModelDto } from '@/types/adminApis';
+import { PageResult, Paging } from '@/types/page';
+import { 
+  getUsersByModel, 
+  addUserModel, 
+  deleteUserModel, 
+  editUserModel,
+  batchAddUserModelsByModel,
+  batchDeleteUserModelsByModel
+} from '@/apis/adminApis';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { IconLoader, IconPencil } from '@/components/Icons';
+import PaginationContainer from '@/components/Pagination/Pagination';
+import EditUserModelDialog from './EditUserModelDialog';
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface IProps {
   model: AdminModelDto;
-  providerName: string;
-  keyName: string;
   isExpanded: boolean;
   onToggle: () => void;
-  onUpdate: () => void;
+  onAssignedUserCountChange?: (modelId: number, assignedUserCount: number) => void;
+  onCheckStateChange?: (state: 'checked' | 'unchecked' | 'indeterminate' | 'hidden') => void;
+  onBatchToggleComplete?: () => void;
+  batchPending?: boolean;
+  triggerBatchToggle?: number;
 }
 
-export default function ModelUserList({ model, providerName, keyName, isExpanded, onToggle, onUpdate }: IProps) {
+export default function ModelUserList({ model, isExpanded, onToggle, onAssignedUserCountChange, onCheckStateChange, onBatchToggleComplete, batchPending: externalBatchPending, triggerBatchToggle }: IProps) {
   const { t } = useTranslation();
+  const modelId = model.modelId;
+
   const [loading, setLoading] = useState(false);
-  const [users, setUsers] = useState<UserModelUserDto[]>([]);
+  const [users, setUsers] = useState<PageResult<ModelUserPermissionDto[]>>({
+    count: 0,
+    rows: [],
+  });
+  const [pagination, setPagination] = useState<Paging>({
+    page: 1,
+    pageSize: 20,
+  });
+  const [pendingUsers, setPendingUsers] = useState<Set<number>>(new Set());
+  const [internalBatchPending, setInternalBatchPending] = useState(false);
+  const [editingUser, setEditingUser] = useState<ModelUserPermissionDto | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  const batchPending = externalBatchPending ?? internalBatchPending;
 
   useEffect(() => {
     if (isExpanded) {
       loadUsers();
     }
-  }, [isExpanded]);
+  }, [isExpanded, pagination]);
 
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const data = await getUsersByModelId(model.modelId);
+      const data = await getUsersByModel(modelId, {
+        page: pagination.page,
+        pageSize: pagination.pageSize,
+      });
       setUsers(data);
     } catch (error) {
       console.error('Failed to load users:', error);
-      toast.error(t('Failed to load users'));
+      toast.error(t('Failed to load data'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (userModelId: number) => {
+  // 计算当前页已分配用户数
+  const assignedUserCount = users.rows.filter(u => u.isAssigned).length;
+  const currentPageUserCount = users.rows.length;
+
+  // 添加单个用户
+  const handleAddUser = async (user: ModelUserPermissionDto) => {
+    if (pendingUsers.has(user.userId) || user.isAssigned) return;
+
+    setPendingUsers(prev => new Set(prev).add(user.userId));
+
     try {
-      await deleteUserModel(userModelId);
-      toast.success(t('User removed successfully'));
-      await loadUsers();
-      onUpdate();
+      const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+      const result = await addUserModel({
+        userId: user.userId,
+        modelId: modelId,
+        tokens: 0,
+        counts: 0,
+        expires: expiresAt,
+      });
+
+      // 更新本地用户状态
+      if (result.model) {
+        setUsers(prev => ({
+          ...prev,
+          rows: prev.rows.map(u =>
+            u.userId === user.userId
+              ? {
+                  ...u,
+                  isAssigned: true,
+                  userModelId: result.model!.userModelId,
+                  counts: result.model!.counts,
+                  tokens: result.model!.tokens,
+                  expires: result.model!.expires,
+                }
+              : u
+          ),
+        }));
+      }
+
+      onAssignedUserCountChange?.(modelId, result.userModelCount);
     } catch (error) {
-      console.error('Failed to remove user:', error);
-      toast.error(t('Failed to remove user'));
+      console.error('Failed to add user:', error);
+      toast.error(t('Failed to add user'));
+    } finally {
+      setPendingUsers(prev => {
+        const next = new Set(prev);
+        next.delete(user.userId);
+        return next;
+      });
     }
   };
 
-  const isOrphan = users.length === 0 && !loading && isExpanded;
+  // 删除单个用户
+  const handleDeleteUser = async (user: ModelUserPermissionDto) => {
+    if (pendingUsers.has(user.userId) || !user.isAssigned || !user.userModelId) return;
+
+    setPendingUsers(prev => new Set(prev).add(user.userId));
+
+    const userModelId = user.userModelId;
+
+    try {
+      const result = await deleteUserModel(userModelId);
+
+      // 更新本地用户状态
+      if (result.model) {
+        setUsers(prev => ({
+          ...prev,
+          rows: prev.rows.map(u =>
+            u.userId === user.userId
+              ? {
+                  ...u,
+                  isAssigned: false,
+                  userModelId: null,
+                  counts: null,
+                  tokens: null,
+                  expires: null,
+                }
+              : u
+          ),
+        }));
+      }
+
+      onAssignedUserCountChange?.(modelId, result.userModelCount);
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      toast.error(t('Failed to remove user'));
+    } finally {
+      setPendingUsers(prev => {
+        const next = new Set(prev);
+        next.delete(user.userId);
+        return next;
+      });
+    }
+  };
+
+  // 使用 ref 来跟踪上次的 triggerBatchToggle 值
+  const prevTriggerRef = useRef(0);
+
+  // 批量操作：基于当前页的用户列表
+  const handleBatchToggle = async () => {
+    // 当前页全部已分配，则批量删除；否则批量添加
+    const isFullyAssigned = assignedUserCount === currentPageUserCount;
+    const userIds = users.rows.map(u => u.userId);
+
+    if (userIds.length === 0) {
+      onBatchToggleComplete?.();
+      return;
+    }
+
+    setInternalBatchPending(true);
+
+    try {
+      if (isFullyAssigned) {
+        await batchDeleteUserModelsByModel({ modelId, userIds });
+      } else {
+        await batchAddUserModelsByModel({ modelId, userIds });
+      }
+
+      // 重新加载用户列表以获取最新的分配状态
+      await loadUsers();
+
+      // 通知父组件更新用户数量（使用重新加载后的数据）
+      const updatedAssignedCount = users.rows.filter(u => u.isAssigned).length;
+      onAssignedUserCountChange?.(modelId, updatedAssignedCount);
+    } catch (error) {
+      console.error('Batch operation failed:', error);
+      toast.error(isFullyAssigned ? t('Failed to remove users') : t('Failed to add users'));
+    } finally {
+      setInternalBatchPending(false);
+      onBatchToggleComplete?.();
+    }
+  };
+
+  // 监听外部触发的批量操作
+  useEffect(() => {
+    if (triggerBatchToggle && triggerBatchToggle > 0 && triggerBatchToggle !== prevTriggerRef.current) {
+      prevTriggerRef.current = triggerBatchToggle;
+      handleBatchToggle();
+    }
+  }, [triggerBatchToggle]);
+
+  const getCheckState = (): 'checked' | 'unchecked' | 'indeterminate' | 'hidden' => {
+    // 如果用户列表还未加载，返回hidden状态
+    if (loading || currentPageUserCount === 0) return 'hidden';
+    if (assignedUserCount === 0) return 'unchecked';
+    if (assignedUserCount === currentPageUserCount) return 'checked';
+    return 'indeterminate';
+  };
+
+  const checkState = getCheckState();
+
+  // 通知父组件 checkState 的变化
+  useEffect(() => {
+    onCheckStateChange?.(checkState);
+  }, [checkState, onCheckStateChange]);
+
+  // 计算过期时间显示
+  const getExpiresDisplay = (expires: string | null | undefined) => {
+    if (!expires) return { 
+      text: t('No expiration'), 
+      shortText: '-', 
+      color: 'text-muted-foreground', 
+      isExpired: false 
+    };
+    
+    const expireDate = new Date(expires);
+    const now = new Date();
+    const diffMs = expireDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return { 
+        text: t('Expired'), 
+        shortText: t('Expired'), 
+        color: 'text-red-500', 
+        isExpired: true 
+      };
+    } else if (diffDays === 0) {
+      return { 
+        text: t('Expires today'), 
+        shortText: '0d', 
+        color: 'text-orange-500', 
+        isExpired: false 
+      };
+    } else if (diffDays === 1) {
+      return { 
+        text: t('1 day left'), 
+        shortText: '1d', 
+        color: 'text-orange-500', 
+        isExpired: false 
+      };
+    } else {
+      return { 
+        text: `${diffDays} ${t('days left')}`, 
+        shortText: `${diffDays}d`, 
+        color: 'text-muted-foreground', 
+        isExpired: false 
+      };
+    }
+  };
+
+  // 格式化过期时间用于tooltip
+  const formatExpiresForTooltip = (expires: string | null | undefined) => {
+    if (!expires) return '';
+    return new Date(expires).toLocaleString();
+  };
+
+  // 编辑用户模型
+  const handleEditUser = (user: ModelUserPermissionDto) => {
+    setEditingUser(user);
+    setEditDialogOpen(true);
+  };
+
+  // 保存编辑
+  const handleSaveEdit = async (tokensDelta: number, countsDelta: number, expires: string) => {
+    if (!editingUser || !editingUser.userModelId) return;
+
+    try {
+      const result = await editUserModel(editingUser.userModelId, {
+        tokensDelta,
+        countsDelta,
+        expires,
+      });
+
+      // 更新本地用户状态
+      if (result.model) {
+        setUsers(prev => ({
+          ...prev,
+          rows: prev.rows.map(u =>
+            u.userId === editingUser.userId
+              ? {
+                  ...u,
+                  counts: result.model!.counts,
+                  tokens: result.model!.tokens,
+                  expires: result.model!.expires,
+                }
+              : u
+          ),
+        }));
+      }
+
+      onAssignedUserCountChange?.(modelId, result.userModelCount);
+    } catch (error) {
+      console.error('Failed to update user model:', error);
+      toast.error(t('Failed to update user model'));
+      throw error;
+    }
+  };
 
   return (
-    <div className="border-b last:border-0">
-      <div
+    <div className="border-t mt-2">
+      <div 
         className={cn(
-          "flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer",
-          isOrphan && "bg-yellow-50 dark:bg-yellow-950/20"
+          "grid transition-all duration-300 ease-in-out",
+          isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         )}
-        onClick={onToggle}
       >
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            {isExpanded ? (
-              <IconChevronDown size={16} />
+        <div className="overflow-hidden">
+          <div className="pl-6 pr-3 pt-2 pb-2">
+            {loading ? (
+              <div className="space-y-1">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <div key={`skeleton-${idx}`} className="flex items-center justify-between p-2 rounded bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-4 rounded-full" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : users.rows.length === 0 ? (
+              <div className="text-sm text-muted-foreground text-center py-4">
+                {t('No users found')}
+              </div>
             ) : (
-              <IconChevronRight size={16} />
+              <>
+                <div className="space-y-1">
+                  {users.rows.map(user => {
+                    const isPending = pendingUsers.has(user.userId);
+                    const isDisabled = isPending || batchPending;
+                    const expiresDisplay = getExpiresDisplay(user.expires);
+
+                    return (
+                      <div
+                        key={user.userId}
+                        className={cn(
+                          "flex items-center justify-between p-2 rounded text-xs transition-colors",
+                          user.isAssigned && "bg-green-50 dark:bg-green-950/20",
+                          !user.isAssigned && "bg-muted/30",
+                          isDisabled && "opacity-50"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {isPending ? (
+                            <IconLoader size={14} className="animate-spin text-muted-foreground" />
+                          ) : user.isAssigned ? (
+                            <button
+                              type="button"
+                              className="flex items-center justify-center flex-shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isDisabled) {
+                                  handleDeleteUser(user);
+                                }
+                              }}
+                              disabled={isDisabled}
+                            >
+                              <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center hover:bg-red-500 transition-colors">
+                                <span className="text-white text-[10px]">✓</span>
+                              </div>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="flex items-center justify-center flex-shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isDisabled) {
+                                  handleAddUser(user);
+                                }
+                              }}
+                              disabled={isDisabled}
+                            >
+                              <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30 hover:border-primary transition-colors" />
+                            </button>
+                          )}
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className={cn(
+                              "truncate",
+                              user.isAssigned ? "font-medium" : "text-muted-foreground"
+                            )}>
+                              {user.username}
+                            </span>
+                            {!user.enabled && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0">
+                                {t('Disabled')}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        {user.isAssigned && (
+                          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-1 text-[10px] sm:text-xs">
+                                    <span className="hidden sm:inline text-muted-foreground">{t('Counts')}:</span>
+                                    <span className="font-mono">{user.counts ?? 0}</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>{t('Usage count')}: {user.counts ?? 0}</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-1 text-[10px] sm:text-xs">
+                                    <span className="hidden sm:inline text-muted-foreground">{t('Tokens')}:</span>
+                                    <span className="font-mono">{user.tokens ?? 0}</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>{t('Token count')}: {user.tokens ?? 0}</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className={cn("text-[10px] sm:text-xs", expiresDisplay.color)}>
+                                    <span className="hidden sm:inline">{expiresDisplay.text}</span>
+                                    <span className="sm:hidden">{expiresDisplay.shortText}</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {formatExpiresForTooltip(user.expires) || t('No expiration')}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <button
+                              type="button"
+                              className="flex items-center justify-center p-1 hover:bg-muted rounded transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isDisabled) {
+                                  handleEditUser(user);
+                                }
+                              }}
+                              disabled={isDisabled}
+                            >
+                              <IconPencil size={14} className="text-muted-foreground hover:text-foreground" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {users.count > pagination.pageSize && (
+                  <div className="mt-3">
+                    <PaginationContainer
+                      page={pagination.page}
+                      pageSize={pagination.pageSize}
+                      currentCount={users.rows.length}
+                      totalCount={users.count}
+                      onPagingChange={(page: number, pageSize: number) => {
+                        setPagination({ page, pageSize });
+                      }}
+                    />
+                  </div>
+                )}
+              </>
             )}
-            <ModelProviderIcon providerId={model.modelProviderId} className="w-5 h-5" />
           </div>
-          <div>
-            <div className="font-medium">{model.name}</div>
-            <div className="text-sm text-muted-foreground">
-              {providerName} / {keyName}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {isOrphan && (
-            <Badge variant="destructive" className="text-xs">
-              ⚠️ {t('Orphan Model')}
-            </Badge>
-          )}
-          {!isExpanded && users.length > 0 && (
-            <Badge variant="secondary">
-              {users.length} {t('users')}
-            </Badge>
-          )}
         </div>
       </div>
 
-      {isExpanded && (
-        <div className="pl-8 pr-4 pb-4">
-          {loading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : users.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center bg-yellow-50 dark:bg-yellow-950/20">
-              <div className="text-lg mb-2">⚠️</div>
-              <div className="text-sm font-medium mb-1">{t('No users assigned to this model')}</div>
-              <div className="text-xs text-muted-foreground mb-3">
-                {t('This model is not available to any users')}
-              </div>
-              <Button size="sm" variant="default">
-                <IconPlus size={14} className="mr-1" />
-                {t('Assign to Users')}
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {users.map(user => (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-sm font-medium">{user.username[0].toUpperCase()}</span>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium">{user.displayName}</div>
-                      <div className="text-xs text-muted-foreground">@{user.username}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-xs text-muted-foreground">
-                      <span>
-                        {user.counts === -1 ? '∞' : user.counts} {t('counts')},
-                        {user.tokens === -1 ? ' ∞' : ` ${user.tokens}`} {t('tokens')}
-                      </span>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleDelete(user.id)}
-                    >
-                      <IconTrash size={14} />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      {editingUser && (
+        <EditUserModelDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          model={{
+            modelId: modelId,
+            name: model.name,
+            isAssigned: editingUser.isAssigned,
+            userModelId: editingUser.userModelId,
+            counts: editingUser.counts,
+            tokens: editingUser.tokens,
+            expires: editingUser.expires,
+            isDeleted: false,
+          }}
+          onSave={handleSaveEdit}
+        />
       )}
     </div>
   );

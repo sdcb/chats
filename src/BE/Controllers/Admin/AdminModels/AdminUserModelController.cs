@@ -17,8 +17,8 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
     {
         IQueryable<User> query = db.Users
             .OrderByDescending(x => x.UpdatedAt);
-        
-        var totalModelProviderCount = await db.ModelProviderOrders
+
+        int totalModelProviderCount = await db.ModelProviderOrders
             .CountAsync(cancellationToken);
 
         if (totalModelProviderCount == 0)
@@ -36,7 +36,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                                   || (x.Phone != null && x.Phone.Contains(pagingRequest.Query)));
         }
 
-        var result = await PagedResult.FromQuery(
+        PagedResult<UserModelPermissionUserDto> result = await PagedResult.FromQuery(
             query.Select(x => new UserModelPermissionUserDto
             {
                 Id = x.Id,
@@ -58,13 +58,13 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
     public async Task<ActionResult<UserModelProviderDto[]>> GetModelProvidersForUser(int userId, CancellationToken cancellationToken)
     {
         // 获取用户已分配的模型ID
-        var assignedModelIds = await db.UserModels
+        List<short> assignedModelIds = await db.UserModels
             .Where(x => x.UserId == userId)
             .Select(x => x.ModelId)
             .ToListAsync(cancellationToken);
 
         // 获取所有提供商的统计信息
-        var providers = await (
+        UserModelProviderDto[] providers = await (
             from mk in db.ModelKeys
             join m in db.Models on mk.Id equals m.ModelKeyId into models
             from m in models.DefaultIfEmpty()
@@ -87,13 +87,13 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
     public async Task<ActionResult<UserModelKeyDto[]>> GetModelKeysByProviderForUser(int userId, int providerId, CancellationToken cancellationToken)
     {
         // 获取用户已分配的模型ID
-        var assignedModelIds = await db.UserModels
+        List<short> assignedModelIds = await db.UserModels
             .Where(x => x.UserId == userId)
             .Select(x => x.ModelId)
             .ToListAsync(cancellationToken);
 
         // 获取该提供商下所有密钥的统计信息
-        var keys = await (
+        UserModelKeyDto[] keys = await (
             from mk in db.ModelKeys
             where mk.ModelProviderId == providerId
             join m in db.Models on mk.Id equals m.ModelKeyId into models
@@ -146,9 +146,9 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             })
             .ToArrayAsync(cancellationToken);
 
-        var result = models.Select(x =>
+        UserModelPermissionModelDto[] result = models.Select(x =>
         {
-            var isAssigned = userModelDict.ContainsKey(x.Id);
+            bool isAssigned = userModelDict.ContainsKey(x.Id);
             var userModelInfo = isAssigned ? userModelDict[x.Id] : null;
 
             return new UserModelPermissionModelDto
@@ -217,13 +217,13 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
     public async Task<ActionResult<AdminModelDto[]>> GetUserUnassignedModels(int userId, CancellationToken cancellationToken)
     {
         // 获取用户已分配的模型ID列表
-        var assignedModelIds = await db.UserModels
+        List<short> assignedModelIds = await db.UserModels
             .Where(x => x.UserId == userId)
             .Select(x => x.ModelId)
             .ToListAsync(cancellationToken);
 
         // 获取未分配给用户的模型
-        var unassignedModels = await (
+        AdminModelDto[] unassignedModels = await (
             from m in db.Models
             where !m.IsDeleted && !assignedModelIds.Contains(m.Id)
             join mpo in db.ModelProviderOrders on m.ModelKey.ModelProviderId equals mpo.ModelProviderId into mpoGroup
@@ -340,11 +340,11 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             .ExecuteUpdateAsync(u => u.SetProperty(p => p.UpdatedAt, _ => DateTime.UtcNow), CancellationToken.None);
 
         // 获取更新后的统计信息
-        var userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
-        var providerStats = await GetProviderStats(request.UserId, modelInfo.ModelProviderId, cancellationToken);
-        var keyStats = await GetKeyStats(request.UserId, modelInfo.ModelKeyId, cancellationToken);
+        int userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
+        UserModelProviderDto? providerStats = await GetProviderStats(request.UserId, modelInfo.ModelProviderId, cancellationToken);
+        UserModelKeyDto? keyStats = await GetKeyStats(request.UserId, modelInfo.ModelKeyId, cancellationToken);
 
-        var response = new UserModelOperationResponse
+        UserModelOperationResponse response = new UserModelOperationResponse
         {
             AffectedCount = 1,
             UserModelCount = userModelCount,
@@ -415,17 +415,17 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                 .ExecuteUpdateAsync(u => u.SetProperty(p => p.UpdatedAt, _ => DateTime.UtcNow), CancellationToken.None);
         }
 
-        var userId = userModel.UserId;
-        var modelId = userModel.ModelId;
-        var modelKeyId = userModel.Model.ModelKeyId;
-        var modelProviderId = userModel.Model.ModelKey.ModelProviderId;
+        int userId = userModel.UserId;
+        short modelId = userModel.ModelId;
+        short modelKeyId = userModel.Model.ModelKeyId;
+        short modelProviderId = userModel.Model.ModelKey.ModelProviderId;
 
         // 获取更新后的统计信息
-        var userModelCount = await GetUserModelCount(userId, cancellationToken);
-        var providerStats = await GetProviderStats(userId, modelProviderId, cancellationToken);
-        var keyStats = await GetKeyStats(userId, modelKeyId, cancellationToken);
+        int userModelCount = await GetUserModelCount(userId, cancellationToken);
+        UserModelProviderDto? providerStats = await GetProviderStats(userId, modelProviderId, cancellationToken);
+        UserModelKeyDto? keyStats = await GetKeyStats(userId, modelKeyId, cancellationToken);
 
-        var response = new UserModelOperationResponse
+        UserModelOperationResponse response = new UserModelOperationResponse
         {
             AffectedCount = hasDifference ? 1 : 0,
             UserModelCount = userModelCount,
@@ -462,12 +462,12 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             return NotFound("User model not found");
         }
 
-        var userId = userModel.UserId;
-        var modelId = userModel.ModelId;
-        var modelKeyId = userModel.Model.ModelKeyId;
-        var modelProviderId = userModel.Model.ModelKey.ModelProviderId;
-        var modelName = userModel.Model.Name;
-        var modelIsDeleted = userModel.Model.IsDeleted;
+        int userId = userModel.UserId;
+        short modelId = userModel.ModelId;
+        short modelKeyId = userModel.Model.ModelKeyId;
+        short modelProviderId = userModel.Model.ModelKey.ModelProviderId;
+        string modelName = userModel.Model.Name;
+        bool modelIsDeleted = userModel.Model.IsDeleted;
 
         db.UserModels.Remove(userModel);
 
@@ -492,11 +492,11 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             .ExecuteUpdateAsync(u => u.SetProperty(p => p.UpdatedAt, _ => DateTime.UtcNow), CancellationToken.None);
 
         // 获取更新后的统计信息
-        var userModelCount = await GetUserModelCount(userId, cancellationToken);
-        var providerStats = await GetProviderStats(userId, modelProviderId, cancellationToken);
-        var keyStats = await GetKeyStats(userId, modelKeyId, cancellationToken);
+        int userModelCount = await GetUserModelCount(userId, cancellationToken);
+        UserModelProviderDto? providerStats = await GetProviderStats(userId, modelProviderId, cancellationToken);
+        UserModelKeyDto? keyStats = await GetKeyStats(userId, modelKeyId, cancellationToken);
 
-        var response = new UserModelOperationResponse
+        UserModelOperationResponse response = new UserModelOperationResponse
         {
             AffectedCount = 1,
             UserModelCount = userModelCount,
@@ -529,7 +529,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
     // 辅助方法：获取 Provider 统计信息
     private async Task<UserModelProviderDto?> GetProviderStats(int userId, int providerId, CancellationToken cancellationToken)
     {
-        var assignedModelIds = await db.UserModels
+        List<short> assignedModelIds = await db.UserModels
             .Where(x => x.UserId == userId)
             .Select(x => x.ModelId)
             .ToListAsync(cancellationToken);
@@ -554,7 +554,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
     // 辅助方法：获取 Key 统计信息
     private async Task<UserModelKeyDto?> GetKeyStats(int userId, int keyId, CancellationToken cancellationToken)
     {
-        var assignedModelIds = await db.UserModels
+        List<short> assignedModelIds = await db.UserModels
             .Where(x => x.UserId == userId)
             .Select(x => x.ModelId)
             .ToListAsync(cancellationToken);
@@ -594,15 +594,15 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         }
 
         // 获取该Provider下所有模型ID
-        var modelIds = await db.Models
+        List<short> modelIds = await db.Models
             .Where(m => m.ModelKey.ModelProviderId == request.ProviderId && !m.IsDeleted)
             .Select(m => m.Id)
             .ToListAsync(cancellationToken);
 
         if (modelIds.Count == 0)
         {
-            var userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
-            var providerStats = await GetProviderStats(request.UserId, request.ProviderId, cancellationToken);
+            int userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
+            UserModelProviderDto? providerStats = await GetProviderStats(request.UserId, request.ProviderId, cancellationToken);
             return Ok(new UserModelOperationResponse
             {
                 AffectedCount = 0,
@@ -614,18 +614,18 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         }
 
         // 获取用户已有的模型
-        var existingUserModelIds = await db.UserModels
+        List<short> existingUserModelIds = await db.UserModels
             .Where(um => um.UserId == request.UserId && modelIds.Contains(um.ModelId))
             .Select(um => um.ModelId)
             .ToListAsync(cancellationToken);
 
         // 过滤出需要添加的新模型
-        var modelIdsToAdd = modelIds.Except(existingUserModelIds).ToList();
+        List<short> modelIdsToAdd = modelIds.Except(existingUserModelIds).ToList();
 
         if (modelIdsToAdd.Count == 0)
         {
-            var userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
-            var providerStats = await GetProviderStats(request.UserId, request.ProviderId, cancellationToken);
+            int userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
+            UserModelProviderDto? providerStats = await GetProviderStats(request.UserId, request.ProviderId, cancellationToken);
             return Ok(new UserModelOperationResponse
             {
                 AffectedCount = 0,
@@ -636,13 +636,13 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             });
         }
 
-        var newUserModels = new List<UserModel>();
-        var createdTime = DateTime.UtcNow;
-        var defaultExpiresAt = createdTime.AddYears(1);
+        List<UserModel> newUserModels = new List<UserModel>();
+        DateTime createdTime = DateTime.UtcNow;
+        DateTime defaultExpiresAt = createdTime.AddYears(1);
 
-        foreach (var modelId in modelIdsToAdd)
+        foreach (short modelId in modelIdsToAdd)
         {
-            var userModel = new UserModel
+            UserModel userModel = new UserModel
             {
                 UserId = request.UserId,
                 ModelId = (short)modelId,
@@ -658,8 +658,8 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         await db.SaveChangesAsync(cancellationToken);
 
         // 获取更新后的统计信息
-        var updatedUserModelCount = await GetUserModelCount(request.UserId, cancellationToken);
-        var updatedProviderStats = await GetProviderStats(request.UserId, request.ProviderId, cancellationToken);
+        int updatedUserModelCount = await GetUserModelCount(request.UserId, cancellationToken);
+        UserModelProviderDto? updatedProviderStats = await GetProviderStats(request.UserId, request.ProviderId, cancellationToken);
 
         return Ok(new UserModelOperationResponse
         {
@@ -682,15 +682,15 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         }
 
         // 获取该Provider下所有未删除的模型ID
-        var modelIds = await db.Models
+        List<short> modelIds = await db.Models
             .Where(m => m.ModelKey.ModelProviderId == request.ProviderId && !m.IsDeleted)
             .Select(m => m.Id)
             .ToListAsync(cancellationToken);
 
         if (modelIds.Count == 0)
         {
-            var userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
-            var providerStats = await GetProviderStats(request.UserId, request.ProviderId, cancellationToken);
+            int userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
+            UserModelProviderDto? providerStats = await GetProviderStats(request.UserId, request.ProviderId, cancellationToken);
             return Ok(new UserModelOperationResponse
             {
                 AffectedCount = 0,
@@ -702,15 +702,15 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         }
 
         // 查找需要删除的用户模型
-        var userModels = await db.UserModels
+        List<UserModel> userModels = await db.UserModels
             .Include(x => x.Model.UsageTransactions)
             .Where(um => um.UserId == request.UserId && modelIds.Contains(um.ModelId))
             .ToListAsync(cancellationToken);
 
         if (userModels.Count == 0)
         {
-            var userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
-            var providerStats = await GetProviderStats(request.UserId, request.ProviderId, cancellationToken);
+            int userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
+            UserModelProviderDto? providerStats = await GetProviderStats(request.UserId, request.ProviderId, cancellationToken);
             return Ok(new UserModelOperationResponse
             {
                 AffectedCount = 0,
@@ -721,10 +721,10 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             });
         }
 
-        var userModelIds = new List<int>();
-        var createdTime = DateTime.UtcNow;
+        List<int> userModelIds = new List<int>();
+        DateTime createdTime = DateTime.UtcNow;
 
-        foreach (var userModel in userModels)
+        foreach (UserModel? userModel in userModels)
         {
             userModelIds.Add(userModel.Id);
             db.UserModels.Remove(userModel);
@@ -747,8 +747,8 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         await db.SaveChangesAsync(cancellationToken);
 
         // 获取更新后的统计信息
-        var updatedUserModelCount = await GetUserModelCount(request.UserId, cancellationToken);
-        var updatedProviderStats = await GetProviderStats(request.UserId, request.ProviderId, cancellationToken);
+        int updatedUserModelCount = await GetUserModelCount(request.UserId, cancellationToken);
+        UserModelProviderDto? updatedProviderStats = await GetProviderStats(request.UserId, request.ProviderId, cancellationToken);
 
         return Ok(new UserModelOperationResponse
         {
@@ -789,16 +789,16 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         }
 
         // 获取该Key下所有模型ID
-        var modelIds = await db.Models
+        List<short> modelIds = await db.Models
             .Where(m => m.ModelKeyId == request.KeyId && !m.IsDeleted)
             .Select(m => m.Id)
             .ToListAsync(cancellationToken);
 
         if (modelIds.Count == 0)
         {
-            var userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
-            var providerStats = await GetProviderStats(request.UserId, keyInfo.ModelProviderId, cancellationToken);
-            var keyStats = await GetKeyStats(request.UserId, request.KeyId, cancellationToken);
+            int userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
+            UserModelProviderDto? providerStats = await GetProviderStats(request.UserId, keyInfo.ModelProviderId, cancellationToken);
+            UserModelKeyDto? keyStats = await GetKeyStats(request.UserId, request.KeyId, cancellationToken);
             return Ok(new UserModelOperationResponse
             {
                 AffectedCount = 0,
@@ -810,19 +810,19 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         }
 
         // 获取用户已有的模型
-        var existingUserModelIds = await db.UserModels
+        List<short> existingUserModelIds = await db.UserModels
             .Where(um => um.UserId == request.UserId && modelIds.Contains(um.ModelId))
             .Select(um => um.ModelId)
             .ToListAsync(cancellationToken);
 
         // 过滤出需要添加的新模型
-        var modelIdsToAdd = modelIds.Except(existingUserModelIds).ToList();
+        List<short> modelIdsToAdd = modelIds.Except(existingUserModelIds).ToList();
 
         if (modelIdsToAdd.Count == 0)
         {
-            var userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
-            var providerStats = await GetProviderStats(request.UserId, keyInfo.ModelProviderId, cancellationToken);
-            var keyStats = await GetKeyStats(request.UserId, request.KeyId, cancellationToken);
+            int userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
+            UserModelProviderDto? providerStats = await GetProviderStats(request.UserId, keyInfo.ModelProviderId, cancellationToken);
+            UserModelKeyDto? keyStats = await GetKeyStats(request.UserId, request.KeyId, cancellationToken);
             return Ok(new UserModelOperationResponse
             {
                 AffectedCount = 0,
@@ -833,13 +833,13 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             });
         }
 
-        var newUserModels = new List<UserModel>();
-        var createdTime = DateTime.UtcNow;
-        var defaultExpiresAt = createdTime.AddYears(1);
+        List<UserModel> newUserModels = new List<UserModel>();
+        DateTime createdTime = DateTime.UtcNow;
+        DateTime defaultExpiresAt = createdTime.AddYears(1);
 
-        foreach (var modelId in modelIdsToAdd)
+        foreach (short modelId in modelIdsToAdd)
         {
-            var userModel = new UserModel
+            UserModel userModel = new UserModel
             {
                 UserId = request.UserId,
                 ModelId = (short)modelId,
@@ -855,9 +855,9 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         await db.SaveChangesAsync(cancellationToken);
 
         // 获取更新后的统计信息
-        var updatedUserModelCount = await GetUserModelCount(request.UserId, cancellationToken);
-        var updatedProviderStats = await GetProviderStats(request.UserId, keyInfo.ModelProviderId, cancellationToken);
-        var updatedKeyStats = await GetKeyStats(request.UserId, request.KeyId, cancellationToken);
+        int updatedUserModelCount = await GetUserModelCount(request.UserId, cancellationToken);
+        UserModelProviderDto? updatedProviderStats = await GetProviderStats(request.UserId, keyInfo.ModelProviderId, cancellationToken);
+        UserModelKeyDto? updatedKeyStats = await GetKeyStats(request.UserId, request.KeyId, cancellationToken);
 
         return Ok(new UserModelOperationResponse
         {
@@ -891,16 +891,16 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         }
 
         // 获取该Key下所有未删除的模型ID
-        var modelIds = await db.Models
+        List<short> modelIds = await db.Models
             .Where(m => m.ModelKeyId == request.KeyId && !m.IsDeleted)
             .Select(m => m.Id)
             .ToListAsync(cancellationToken);
 
         if (modelIds.Count == 0)
         {
-            var userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
-            var providerStats = await GetProviderStats(request.UserId, keyInfo.ModelProviderId, cancellationToken);
-            var keyStats = await GetKeyStats(request.UserId, request.KeyId, cancellationToken);
+            int userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
+            UserModelProviderDto? providerStats = await GetProviderStats(request.UserId, keyInfo.ModelProviderId, cancellationToken);
+            UserModelKeyDto? keyStats = await GetKeyStats(request.UserId, request.KeyId, cancellationToken);
             return Ok(new UserModelOperationResponse
             {
                 AffectedCount = 0,
@@ -912,16 +912,16 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         }
 
         // 查找需要删除的用户模型
-        var userModels = await db.UserModels
+        List<UserModel> userModels = await db.UserModels
             .Include(x => x.Model.UsageTransactions)
             .Where(um => um.UserId == request.UserId && modelIds.Contains(um.ModelId))
             .ToListAsync(cancellationToken);
 
         if (userModels.Count == 0)
         {
-            var userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
-            var providerStats = await GetProviderStats(request.UserId, keyInfo.ModelProviderId, cancellationToken);
-            var keyStats = await GetKeyStats(request.UserId, request.KeyId, cancellationToken);
+            int userModelCount = await GetUserModelCount(request.UserId, cancellationToken);
+            UserModelProviderDto? providerStats = await GetProviderStats(request.UserId, keyInfo.ModelProviderId, cancellationToken);
+            UserModelKeyDto? keyStats = await GetKeyStats(request.UserId, request.KeyId, cancellationToken);
             return Ok(new UserModelOperationResponse
             {
                 AffectedCount = 0,
@@ -932,10 +932,10 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             });
         }
 
-        var userModelIds = new List<int>();
-        var createdTime = DateTime.UtcNow;
+        List<int> userModelIds = new List<int>();
+        DateTime createdTime = DateTime.UtcNow;
 
-        foreach (var userModel in userModels)
+        foreach (UserModel? userModel in userModels)
         {
             userModelIds.Add(userModel.Id);
             db.UserModels.Remove(userModel);
@@ -958,9 +958,9 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         await db.SaveChangesAsync(cancellationToken);
 
         // 获取更新后的统计信息
-        var updatedUserModelCount = await GetUserModelCount(request.UserId, cancellationToken);
-        var updatedProviderStats = await GetProviderStats(request.UserId, keyInfo.ModelProviderId, cancellationToken);
-        var updatedKeyStats = await GetKeyStats(request.UserId, request.KeyId, cancellationToken);
+        int updatedUserModelCount = await GetUserModelCount(request.UserId, cancellationToken);
+        UserModelProviderDto? updatedProviderStats = await GetProviderStats(request.UserId, keyInfo.ModelProviderId, cancellationToken);
+        UserModelKeyDto? updatedKeyStats = await GetKeyStats(request.UserId, request.KeyId, cancellationToken);
 
         return Ok(new UserModelOperationResponse
         {
@@ -970,5 +970,210 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             KeyStats = updatedKeyStats,
             Model = null
         });
+    }
+
+    [HttpGet("model/{modelId:int}/users")]
+    public async Task<ActionResult<PagedResult<ModelUserPermissionDto>>> GetUsersByModel(int modelId, QueryPagingRequest pagingRequest, CancellationToken cancellationToken)
+    {
+        // 检查模型是否存在
+        bool modelExists = await db.Models.AnyAsync(m => m.Id == modelId, cancellationToken);
+        if (!modelExists)
+        {
+            return NotFound($"Model with ID {modelId} not found");
+        }
+
+        // 获取该模型的用户模型映射（用于快速查询已分配状态）
+        // 如果同一个用户有多个记录，只取最新的一个（按ID降序）
+        var userModelMappings = await db.UserModels
+            .Where(um => um.ModelId == modelId)
+            .Select(um => new
+            {
+                um.UserId,
+                um.Id,
+                um.CountBalance,
+                um.TokenBalance,
+                um.ExpiresAt
+            })
+            .ToListAsync(cancellationToken);
+
+        var userModelDict = userModelMappings
+            .GroupBy(x => x.UserId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(x => x.Id).First()
+            )
+            .ToDictionary(
+                x => x.Key,
+                x => new { x.Value.Id, x.Value.CountBalance, x.Value.TokenBalance, x.Value.ExpiresAt }
+            );
+
+        // 获取已分配该模型的用户ID列表
+        HashSet<int> assignedUserIds = userModelDict.Keys.ToHashSet();
+
+        // 构建用户查询：只返回启用的用户，或者已分配该模型的用户（即使被禁用）
+        IQueryable<User> query = db.Users
+            .Where(x => x.Enabled || assignedUserIds.Contains(x.Id))
+            .OrderByDescending(x => x.UpdatedAt);
+
+        if (!string.IsNullOrEmpty(pagingRequest.Query))
+        {
+            query = query.Where(x => x.UserName.Contains(pagingRequest.Query)
+                                  || (x.Email != null && x.Email.Contains(pagingRequest.Query))
+                                  || (x.Phone != null && x.Phone.Contains(pagingRequest.Query)));
+        }
+
+        PagedResult<ModelUserPermissionDto> result = await PagedResult.FromQuery(
+            query.Select(x => new ModelUserPermissionDto
+            {
+                UserId = x.Id,
+                Username = x.UserName,
+                Email = x.Email,
+                Phone = x.Phone,
+                Enabled = x.Enabled,
+                IsAssigned = userModelDict.ContainsKey(x.Id),
+                UserModelId = userModelDict.ContainsKey(x.Id) ? userModelDict[x.Id].Id : null,
+                Counts = userModelDict.ContainsKey(x.Id) ? userModelDict[x.Id].CountBalance : null,
+                Tokens = userModelDict.ContainsKey(x.Id) ? userModelDict[x.Id].TokenBalance : null,
+                Expires = userModelDict.ContainsKey(x.Id) ? userModelDict[x.Id].ExpiresAt : null
+            }),
+            pagingRequest,
+            cancellationToken
+        );
+
+        return Ok(result);
+    }
+
+    [HttpPost("batch-by-model")]
+    public async Task<ActionResult> BatchAddUserModelsByModel([FromBody] BatchUserModelsByModelRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        // 检查模型是否存在并获取相关信息
+        var modelInfo = await db.Models
+            .Where(m => m.Id == request.ModelId)
+            .Select(m => new
+            {
+                m.Id,
+                m.IsDeleted,
+                m.ModelKeyId,
+                ModelProviderId = m.ModelKey.ModelProviderId
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (modelInfo == null)
+        {
+            return BadRequest($"Model with ID {request.ModelId} not found");
+        }
+
+        if (modelInfo.IsDeleted)
+        {
+            return BadRequest("Cannot add a deleted model to users");
+        }
+
+        // 验证所有用户ID是否存在
+        List<int> validUserIds = await db.Users
+            .Where(u => request.UserIds.Contains(u.Id))
+            .Select(u => u.Id)
+            .ToListAsync(cancellationToken);
+
+        if (validUserIds.Count == 0)
+        {
+            return Ok();
+        }
+
+        // 获取已经分配了该模型的用户ID
+        List<int> existingUserIds = await db.UserModels
+            .Where(um => um.ModelId == request.ModelId && validUserIds.Contains(um.UserId))
+            .Select(um => um.UserId)
+            .ToListAsync(cancellationToken);
+
+        // 过滤出需要添加的新用户
+        List<int> userIdsToAdd = validUserIds.Except(existingUserIds).ToList();
+
+        if (userIdsToAdd.Count == 0)
+        {
+            return Ok();
+        }
+
+        List<UserModel> newUserModels = new List<UserModel>();
+        DateTime createdTime = DateTime.UtcNow;
+        DateTime defaultExpiresAt = createdTime.AddYears(1);
+
+        foreach (int userId in userIdsToAdd)
+        {
+            UserModel userModel = new UserModel
+            {
+                UserId = userId,
+                ModelId = (short)request.ModelId,
+                TokenBalance = 0,
+                CountBalance = 0,
+                ExpiresAt = defaultExpiresAt,
+                CreatedAt = createdTime,
+            };
+            newUserModels.Add(userModel);
+            db.UserModels.Add(userModel);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Ok();
+    }
+
+    [HttpPost("batch-delete-by-model")]
+    public async Task<ActionResult> BatchDeleteUserModelsByModel([FromBody] BatchUserModelsByModelRequest request,
+        [FromServices] BalanceService balanceService,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        // 检查模型是否存在
+        bool modelExists = await db.Models.AnyAsync(m => m.Id == request.ModelId, cancellationToken);
+        if (!modelExists)
+        {
+            return BadRequest($"Model with ID {request.ModelId} not found");
+        }
+
+        // 查找需要删除的用户模型（仅删除指定的用户ID）
+        List<UserModel> userModels = await db.UserModels
+            .Include(x => x.Model.UsageTransactions)
+            .Where(um => um.ModelId == request.ModelId && request.UserIds.Contains(um.UserId))
+            .ToListAsync(cancellationToken);
+
+        if (userModels.Count == 0)
+        {
+            return Ok();
+        }
+
+        DateTime createdTime = DateTime.UtcNow;
+
+        foreach (UserModel? userModel in userModels)
+        {
+            db.UserModels.Remove(userModel);
+
+            // 如果有余额，需要创建退款记录
+            if (userModel.TokenBalance != 0 || userModel.CountBalance != 0)
+            {
+                userModel.Model.UsageTransactions.Add(new UsageTransaction
+                {
+                    CreditUserId = userModel.UserId,
+                    CreatedAt = createdTime,
+                    ModelId = userModel.ModelId,
+                    CountAmount = -userModel.CountBalance,
+                    TokenAmount = -userModel.TokenBalance,
+                    TransactionTypeId = (byte)DBTransactionType.Charge,
+                });
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Ok();
     }
 }
