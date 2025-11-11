@@ -664,7 +664,7 @@ export default function UserModelTree({ user, isExpanded, onToggle, onUserModelC
                         </button>
                         <ModelProviderIcon providerId={provider.providerId} className="w-5 h-5" />
                         <span className="text-sm font-medium">
-                          {feProvider?.name || `Provider ${provider.providerId}`}
+                          {feProvider ? t(feProvider.name) : `Provider ${provider.providerId}`}
                         </span>
                         <Badge variant="outline" className="text-xs">
                           {t('{{keyCount}} keys, {{assigned}}/{{total}} models', { 

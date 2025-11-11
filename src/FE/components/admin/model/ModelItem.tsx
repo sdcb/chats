@@ -87,7 +87,7 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage, onAssi
       <div
         className={cn(
           'flex items-center gap-2 px-2 py-1 rounded hover:bg-muted/40 transition-all duration-200 relative touch-pan-y cursor-pointer',
-          isDragging ? 'opacity-60 cursor-grabbing' : '',
+          isDragging ? 'opacity-60' : '',
           !model.enabled && 'opacity-60'
         )}
         ref={setNodeRef}
@@ -138,19 +138,20 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage, onAssi
           </div>
         </div>
 
-        {/* 拖拽把手区域 */}
+        {/* 拖拽把手区域 - 增大尺寸使其更明显 */}
         <div
+          data-no-expand
           className={cn(
-            'flex-shrink-0 touch-none',
-            model.enabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
+            'flex-shrink-0 touch-none px-1 rounded hover:bg-muted/60 transition-colors',
+            model.enabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-default opacity-40'
           )}
           {...(model.enabled ? listeners : {})}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="w-1 h-4 flex flex-col justify-center gap-0.5">
-            <div className="w-full h-0.5 bg-muted-foreground/40 rounded-full" />
-            <div className="w-full h-0.5 bg-muted-foreground/40 rounded-full" />
-            <div className="w-full h-0.5 bg-muted-foreground/40 rounded-full" />
+          <div className="w-2.5 h-5 flex flex-col justify-center gap-0.5">
+            <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+            <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+            <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
           </div>
         </div>
 

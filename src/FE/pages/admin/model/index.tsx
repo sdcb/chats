@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import IconActionButton from '@/components/common/IconActionButton';
 import { LabelSwitch } from '@/components/ui/label-switch';
 import { Skeleton } from '@/components/ui/skeleton';
-import { IconPlus } from '@/components/Icons';
+import { IconPlus, IconKey } from '@/components/Icons';
 import { 
   getModelProviders, 
   getModelKeysByProvider, 
@@ -27,6 +27,7 @@ import ModelKeysModal from '@/components/admin/ModelKeys/ModelKeysModal';
 import QuickAddModelModal from '@/components/admin/ModelKeys/QuickAddModelModal';
 import ModelModal from '@/components/admin/Models/ModelModal';
 import ModelProvider, { ProviderGroup } from '@/components/admin/model/ModelProvider';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import { 
   ApiType,
   getDefaultConfigByApiType 
@@ -591,12 +592,23 @@ export default function ModelManager() {
           const p = grouped.find(g => g.providerId === pid);
           if (!p) return null;
           return (
-            <div className="rounded-xl border bg-card shadow-md">
+            <div className="rounded-lg border bg-card shadow-md">
               <div className="flex items-center justify-between p-3">
                 <div className="flex items-center gap-2">
-                  {/* 简化的 Overlay 头部，避免在 Overlay 中再次使用 useSortable */}
-                  <span className="font-semibold">{t(p.providerName)}</span>
-                  <span className="text-muted-foreground text-sm">
+                  {/* 拖拽把手 */}
+                  <div className="flex-shrink-0 px-1 rounded">
+                    <div className="w-2.5 h-5 flex flex-col justify-center gap-0.5">
+                      <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+                      <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+                      <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+                    </div>
+                  </div>
+                  
+                  {/* Provider 图标和标题 */}
+                  <ModelProviderIcon className="w-5 h-5 flex-shrink-0" providerId={p.providerId} />
+                  <span className="text-sm font-medium hidden sm:inline">{t(p.providerName)}</span>
+                  
+                  <span className="text-muted-foreground text-xs">
                     {t('Model Keys')}: {p.keyCount}
                     <span className="hidden sm:inline"> {t('Models')}: {p.modelCount}</span>
                   </span>
@@ -620,6 +632,19 @@ export default function ModelManager() {
             <div className="rounded-md border bg-background/90 shadow-md">
               <div className="flex items-center justify-between p-3">
                 <div className="flex items-center gap-2">
+                  {/* 拖拽把手 */}
+                  <div className="flex-shrink-0 px-1 rounded">
+                    <div className="w-2.5 h-5 flex flex-col justify-center gap-0.5">
+                      <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+                      <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+                      <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+                    </div>
+                  </div>
+                  
+                  {/* 钥匙图标 */}
+                  <IconKey size={18} className="text-muted-foreground flex-shrink-0" />
+                  
+                  {/* 标题 */}
                   <span className="font-medium">{k.name}</span>
                 </div>
               </div>
@@ -639,7 +664,16 @@ export default function ModelManager() {
           if (!m) return null;
           return (
             <div className="rounded border bg-background/90 shadow-md px-2 py-1">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {/* 拖拽把手 */}
+                <div className="flex-shrink-0 px-1 rounded">
+                  <div className="w-2.5 h-5 flex flex-col justify-center gap-0.5">
+                    <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+                    <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+                    <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+                  </div>
+                </div>
+                
                 <div className="flex-1 min-w-0">
                   <div className="truncate font-medium">{m.name}</div>
                   <div className="text-xs text-blue-600 truncate">
