@@ -223,31 +223,31 @@ dotnet Chats.BE.dll
 
 | Id  | Name             | Host                                                     |
 | --- | ---------------- | -------------------------------------------------------- |
-| 0   | Test             | null                                                     |
-| 1   | Azure OpenAI     | https://<resource-name>.openai.azure.com/                |
-| 2   | Tencent Hunyuan  | https://api.hunyuan.cloud.tencent.com/v1                 |
-| 3   | 01.ai            | https://api.lingyiwanwu.com/v1                           |
-| 4   | Moonshot         | https://api.moonshot.cn/v1                               |
+| 0   | 测试             | null                                                     |
+| 1   | Azure AI Foundry | https://<resource-name>.openai.azure.com/                |
+| 2   | 腾讯混元         | https://api.hunyuan.cloud.tencent.com/v1                 |
+| 3   | 零一万物         | https://api.lingyiwanwu.com/v1                           |
+| 4   | 月之暗面         | https://api.moonshot.cn/v1                               |
 | 5   | OpenAI           | https://api.openai.com/v1                                |
-| 6   | Wenxin Qianfan   | https://qianfan.baidubce.com/v2                          |
-| 7   | DashScope        | https://dashscope.aliyuncs.com/compatible-mode/v1        |
-| 8   | Xunfei SparkDesk | https://spark-api-open.xf-yun.com/v1                     |
-| 9   | Zhipu AI         | https://open.bigmodel.cn/api/paas/v4/                    |
+| 6   | 文心一言         | https://qianfan.baidubce.com/v2                          |
+| 7   | 通义千问         | https://dashscope.aliyuncs.com/compatible-mode/v1        |
+| 8   | 讯飞星火         | https://spark-api-open.xf-yun.com/v1                     |
+| 9   | 智谱AI           | https://open.bigmodel.cn/api/paas/v4/                    |
 | 10  | DeepSeek         | https://api.deepseek.com/v1                              |
 | 11  | x.ai             | https://api.x.ai/v1                                      |
 | 12  | Github Models    | https://models.inference.ai.azure.com                    |
-| 13  | Google AI        | https://generativelanguage.googleapis.com/v1beta/openai/ |
+| 13  | 谷歌AI           | https://generativelanguage.googleapis.com/v1beta/openai |
 | 14  | Ollama           | http://localhost:11434/v1                                |
 | 15  | MiniMax          | https://api.minimax.chat/v1                              |
-| 16  | Doubao           | https://ark.cn-beijing.volces.com/api/v3/                |
-| 17  | SiliconFlow      | https://api.siliconflow.cn/v1                            |
+| 16  | 火山方舟         | https://ark.cn-beijing.volces.com/api/v3                |
+| 17  | 硅基流动         | https://api.siliconflow.cn/v1                            |
 | 18  | OpenRouter       | https://openrouter.ai/api/v1                             |
-| 19  | Token Pony       | https://api.tokenpony.cn/v1                              |
+| 19  | 小马算力         | https://api.tokenpony.cn/v1                              |
 
 **注意事项：**
 
 - ✅ 任何符合 OpenAI Chat Completion API 协议的模型提供商都可以通过 Chats 进行访问
-- 🤖 Azure OpenAI 的 o3/o4-mini/gpt-5 系列模型使用 Response API 协议（非 Chat Completion API），支持思考概要和思考过程功能
+- 🤖 OpenAI/Azure AI Foundry 的 o3/o4-mini/gpt-5 系列模型使用 Response API 协议（非 Chat Completion API），支持思考概要和思考过程功能
 - 🌐 Google AI 的 Gemini 模型使用 Google Gemini 原生 API 协议
 
 ---
