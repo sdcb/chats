@@ -255,9 +255,8 @@ Download .NET Runtime: [https://dotnet.microsoft.com/download](https://dotnet.mi
 
 Chats is developed using `C#`/`TypeScript`. For information on how to compile and develop Chats, please refer to:
 
-- [Chinese Development Documentation](./doc/zh-CN/build.md)
-- [English Development Guide](./doc/en-US/build.md)
-- [Changelog](./doc/zh-CN/release-notes/README.md)
+- [Development Guide](./doc/en-US/build.md)
+- [Changelog](./doc/en-US/release-notes/README.md)
 
 ---
 
