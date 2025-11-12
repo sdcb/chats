@@ -63,11 +63,12 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 19+ 主流 
 mkdir -p ./AppData && chmod 755 ./AppData && docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
 ```
 
-#### Windows PowerShell 快速启动
+#### Windows PowerShell/cmd 快速启动
 
 ```powershell
-New-Item -ItemType Directory -Force -Path .\AppData
-docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ${PWD}\AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
+mkdir AppData
+icacls .\AppData /grant "Users:(OI)(CI)(M)" /T
+docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:C:/app/AppData -p 8080:8080 sdcb/chats:latest
 ```
 
 #### 配置说明

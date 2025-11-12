@@ -62,11 +62,12 @@ For most users, Docker provides the simplest and fastest way to deploy.
 mkdir -p ./AppData && chmod 755 ./AppData && docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
 ```
 
-#### Windows PowerShell Quick Start
+#### Windows PowerShell/cmd Quick Start
 
 ```powershell
-New-Item -ItemType Directory -Force -Path .\AppData
-docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ${PWD}\AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
+mkdir AppData
+icacls .\AppData /grant "Users:(OI)(CI)(M)" /T
+docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:C:/app/AppData -p 8080:8080 sdcb/chats:latest
 ```
 
 #### Configuration Instructions
