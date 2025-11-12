@@ -4,6 +4,7 @@ using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Infrastructure;
+using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
 using Microsoft.AspNetCore.Mvc;
@@ -138,6 +139,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
     public async Task<ActionResult<ModelValidateResult>> ValidateModel(
         [FromBody] UpdateModelRequest req,
         [FromServices] ChatFactory chatFactory,
+        [FromServices] FileUrlProvider fup,
         CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -176,7 +178,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
             ThinkTagParserEnabled = req.ThinkTagParserEnabled,
         };
 
-        ModelValidateResult result = await chatFactory.ValidateModel(tempModel, cancellationToken);
+        ModelValidateResult result = await chatFactory.ValidateModel(tempModel, fup, cancellationToken);
         return Ok(result);
     }
 

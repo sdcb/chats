@@ -1,29 +1,15 @@
-﻿using Chats.BE.Services.Models.Extensions;
-using OpenAI.Chat;
-using System.Runtime.CompilerServices;
+﻿using OpenAI.Chat;
 
 namespace Chats.BE.Tests.Services.Conversations;
 
 public class ChatCompletionOptionsTests
 {
-    private static ChatCompletionOptions CreateCCOWithDictionary(Dictionary<string, BinaryData> data)
-    {
-        ChatCompletionOptions options = new();
-        SetSerializedAdditionalRawData(options, data);
-        return options;
-    }
-
-    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "set_SerializedAdditionalRawData")]
-    extern static void SetSerializedAdditionalRawData(ChatCompletionOptions @this, IDictionary<string, BinaryData> data);
-
     [Fact]
     public void IsSearchEnabled_ReturnsTrue_WhenEnableSearchIsTrue()
     {
         // Arrange
-        ChatCompletionOptions options = CreateCCOWithDictionary(new Dictionary<string, BinaryData>
-        {
-            { "enable_search", BinaryData.FromObjectAsJson(true) }
-        });
+        ChatCompletionOptions options = new();
+        options.Patch.Set("$.enable_search"u8, true);
 
         // Act
         bool result = IsSearchEnabled(options);
@@ -36,10 +22,8 @@ public class ChatCompletionOptionsTests
     public void IsSearchEnabled_ReturnsFalse_WhenEnableSearchIsFalse()
     {
         // Arrange
-        ChatCompletionOptions options = CreateCCOWithDictionary(new Dictionary<string, BinaryData>
-        {
-            { "enable_search", BinaryData.FromObjectAsJson(false) }
-        });
+        ChatCompletionOptions options = new();
+        options.Patch.Set("$.enable_search"u8, false);
 
         // Act
         bool result = IsSearchEnabled(options);
@@ -52,7 +36,7 @@ public class ChatCompletionOptionsTests
     public void IsSearchEnabled_ReturnsFalse_WhenEnableSearchIsNotPresent()
     {
         // Arrange
-        ChatCompletionOptions options = CreateCCOWithDictionary([]);
+        ChatCompletionOptions options = new();
 
         // Act
         bool result = IsSearchEnabled(options);
@@ -63,11 +47,6 @@ public class ChatCompletionOptionsTests
 
     static bool IsSearchEnabled(ChatCompletionOptions options)
     {
-        IDictionary<string, BinaryData>? rawData = options.GetOrCreateSerializedAdditionalRawData();
-        if (rawData != null && rawData.TryGetValue("enable_search", out BinaryData? binaryData))
-        {
-            return binaryData.ToObjectFromJson<bool>();
-        }
-        return false;
+        return options.Patch.TryGetValue("$.enable_search"u8, out bool enableSearch) && enableSearch;
     }
 }

@@ -19,9 +19,24 @@ export interface AddUserModelParams {
   expires: string;
 }
 
+export interface BatchUserModelsParams {
+  userId: number;
+  modelIds: number[];
+}
+
+export interface BatchUserModelsByProviderParams {
+  userId: number;
+  providerId: number;
+}
+
+export interface BatchUserModelsByKeyParams {
+  userId: number;
+  keyId: number;
+}
+
 export interface EditUserModelParams {
-  tokens: number;
-  counts: number;
+  tokensDelta: number;
+  countsDelta: number;
   expires: string;
 }
 
@@ -125,6 +140,67 @@ export interface GetUsersResult {
   updatedAt: string;
   enabled: boolean;
   userModelCount: number;
+}
+
+export interface UserModelPermissionUserDto {
+  id: number;
+  username: string;
+  email: string | null;
+  phone: string | null;
+  enabled: boolean;
+  userModelCount: number;
+  modelProviderCount: number;
+}
+
+export interface UserModelProviderDto {
+  providerId: number;
+  keyCount: number;
+  modelCount: number;
+  assignedModelCount: number;
+}
+
+export interface UserModelKeyDto {
+  id: number;
+  name: string;
+  modelCount: number;
+  assignedModelCount: number;
+}
+
+export interface UserModelPermissionModelDto {
+  modelId: number;
+  name: string;
+  isAssigned: boolean;
+  userModelId: number | null;
+  counts: number | null;
+  tokens: number | null;
+  expires: string | null;
+  isDeleted: boolean;
+}
+
+export interface UserModelOperationResponse {
+  affectedCount: number;
+  userModelCount: number;
+  providerStats: UserModelProviderDto | null;
+  keyStats: UserModelKeyDto | null;
+  model: UserModelPermissionModelDto | null;
+}
+
+export interface ModelUserPermissionDto {
+  userId: number;
+  username: string;
+  email: string | null;
+  phone: string | null;
+  enabled: boolean;
+  isAssigned: boolean;
+  userModelId: number | null;
+  counts: number | null;
+  tokens: number | null;
+  expires: string | null;
+}
+
+export interface BatchUserModelsByModelParams {
+  modelId: number;
+  userIds: number[];
 }
 
 export interface GetUserMessageParams extends Paging {
@@ -422,6 +498,16 @@ export class UserModelDisplay implements UserModelDisplayDto {
     this.modelKeyName = dto.modelKeyName;
     this.modelProviderId = dto.modelProviderId;
   }
+}
+
+export interface UserModelUserDto {
+  id: number;
+  userId: number;
+  username: string;
+  displayName: string;
+  tokens: number;
+  counts: number;
+  expires: string;
 }
 
 export interface SimpleModelReferenceDto {

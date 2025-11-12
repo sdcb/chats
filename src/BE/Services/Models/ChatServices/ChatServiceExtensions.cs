@@ -1,16 +1,18 @@
-﻿using Chats.BE.DB.Enums;
+﻿using Chats.BE.DB;
+using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
 using OpenAI.Chat;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 namespace Chats.BE.Services.Models;
 
 public abstract partial class ChatService
 {
-    public async IAsyncEnumerable<InternalChatSegment> ChatStreamedFEProcessed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<InternalChatSegment> ChatStreamedFEProcessed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, FileUrlProvider fup, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        ChatMessage[] filteredMessage = await FEPreprocess(messages, options, feOptions, cancellationToken);
+        ChatMessage[] filteredMessage = await FEPreprocess(messages, options, feOptions, fup, cancellationToken);
 
         if (Model.ThinkTagParserEnabled)
         {
@@ -43,7 +45,7 @@ public abstract partial class ChatService
     }
 
     public async IAsyncEnumerable<InternalChatSegment> ChatStreamedSimulated(bool suggestedStreaming, IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
-    {        
+    {
         // notify inputTokenCount first to better support price calculation
         int inputTokens = GetPromptTokenCount(messages);
         int outputTokens = 0;
@@ -72,67 +74,61 @@ public abstract partial class ChatService
     }
 
     protected virtual bool SupportsVisionLink => true;
+    protected virtual HashSet<string> SupportedContentTypes =>
+    [
+        "*"
+    ];
 
-    protected virtual async Task<ChatMessage> FilterVision(bool allowVision, ChatMessage message, CancellationToken cancellationToken)
+    protected virtual async Task<ChatMessage> FilterVision(bool allowVision, ChatMessage message, FileUrlProvider fup, CancellationToken cancellationToken)
     {
-        if (!allowVision)
-        {
-            return ReplaceUserMessageImageIntoLinkText(message);
-        }
-        else if (SupportsVisionLink)
-        {
-            return message;
-        }
-        else
-        {
-            return await DownloadVision(message, cancellationToken);
-        }
+        List<ChatMessageContentPart> previousContents = [.. message.Content];
+        message.Content.Clear();
 
-        static ChatMessage ReplaceUserMessageImageIntoLinkText(ChatMessage message)
+        foreach (ChatMessageContentPart part in previousContents)
         {
-            return message switch
+            ChatMessageContentPart? toAdd = part switch
             {
-                UserChatMessage userChatMessage => new UserChatMessage(userChatMessage.Content.Select(c => c.Kind switch
+                StepContentFilePart scfp => allowVision switch
                 {
-                    var x when x == ChatMessageContentPartKind.Image => ChatMessageContentPart.CreateTextPart(c.ImageUri.ToString()),
-                    _ => c,
-                })),
-                _ => message,
-            };
-        }
-
-        static async Task<ChatMessage> DownloadVision(ChatMessage message, CancellationToken cancellationToken)
-        {
-            return message switch
-            {
-                UserChatMessage or AssistantChatMessage => await HandleMessage(http, message, cancellationToken),
-                _ => message,
-            };
-
-            static async Task<ChatMessageContentPart> DownloadImagePart(HttpClient http, Uri url, CancellationToken cancellationToken)
-            {
-                HttpResponseMessage resp = await http.GetAsync(url, cancellationToken);
-                if (!resp.IsSuccessStatusCode)
+                    true => scfp.File.FileContentType.ContentType switch
+                    {
+                        var x when SupportedContentTypes.Contains("*") || SupportedContentTypes.Contains(x) => SupportsVisionLink switch
+                        {
+                            true => await fup.CreateOpenAIImagePart(scfp.File, cancellationToken),
+                            false => await fup.CreateOpenAIImagePartForceDownload(scfp.File, cancellationToken),
+                        },
+                        _ => null
+                    },
+                    false => fup.CreateOpenAITextUrl(scfp.File),
+                },
+                { Kind: ChatMessageContentPartKind.Image, ImageUri: not null } => allowVision switch
                 {
-                    throw new Exception($"Failed to download image from {url}");
-                }
+                    true => SupportsVisionLink switch
+                    {
+                        true => part,
+                        false => await DownloadImagePart(http, part.ImageUri, cancellationToken),
+                    },
+                    false => ChatMessageContentPart.CreateTextPart(part.ImageUri.ToString()),
+                },
+                _ => part
+            };
+            if (toAdd != null)
+            {
+                message.Content.Add(toAdd);
+            }
+        }
+        return message;
 
-                string contentType = resp.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
-                return ChatMessageContentPart.CreateImagePart(await BinaryData.FromStreamAsync(await resp.Content.ReadAsStreamAsync(cancellationToken), cancellationToken), contentType, null);
+        static async Task<ChatMessageContentPart> DownloadImagePart(HttpClient http, Uri url, CancellationToken cancellationToken)
+        {
+            HttpResponseMessage resp = await http.GetAsync(url, cancellationToken);
+            if (!resp.IsSuccessStatusCode)
+            {
+                throw new Exception($"Failed to download image from {url}");
             }
 
-            static async Task<T> HandleMessage<T>(HttpClient http, T message, CancellationToken cancellationToken) where T : ChatMessage
-            {
-                List<ChatMessageContentPart> previousContents = [.. message.Content];
-                message.Content.Clear();
-                foreach (ChatMessageContentPart part in previousContents)
-                {
-                    message.Content.Add(part is { Kind: ChatMessageContentPartKind.Image, ImageUri: not null } ?
-                        await DownloadImagePart(http, part.ImageUri, cancellationToken) :
-                        part);
-                }
-                return message;
-            }
+            string contentType = resp.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+            return ChatMessageContentPart.CreateImagePart(await BinaryData.FromStreamAsync(await resp.Content.ReadAsStreamAsync(cancellationToken), cancellationToken), contentType, null);
         }
     }
 

@@ -5,18 +5,27 @@ using System.ClientModel.Primitives;
 using System.ClientModel;
 using Chats.BE.Services.Models.ChatServices.OpenAI.PipelinePolicies;
 using System.Text.Json;
-using Chats.BE.Services.Models.Extensions;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 
-public class QianFanChatService(Model model) : ChatCompletionService(model, CreateChatClient(model, new Uri("https://qianfan.baidubce.com/v2")))
+public class QianFanChatService(Model model) : ChatCompletionService(model, CreateChatClient(model))
 {
-    private static ChatClient CreateChatClient(Model model, Uri? suggestedApiUrl)
+    private static ChatClient CreateChatClient(Model model)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Secret, nameof(model.ModelKey.Secret));
+        
+        // Fallback logic: ModelKey.Host -> ModelProviderInfo.GetInitialHost
+        Uri? endpoint = !string.IsNullOrWhiteSpace(model.ModelKey.Host) 
+            ? new Uri(model.ModelKey.Host) 
+            : (ModelProviderInfo.GetInitialHost((DB.Enums.DBModelProvider)model.ModelKey.ModelProviderId) switch
+                {
+                    null => null,
+                    var x => new Uri(x)
+                });
+        
         OpenAIClientOptions oaic = new()
         {
-            Endpoint = !string.IsNullOrWhiteSpace(model.ModelKey.Host) ? new Uri(model.ModelKey.Host) : suggestedApiUrl,
+            Endpoint = endpoint,
         };
 
         JsonQianFanApiConfig? cfg = JsonSerializer.Deserialize<JsonQianFanApiConfig>(model.ModelKey.Secret)
@@ -30,11 +39,11 @@ public class QianFanChatService(Model model) : ChatCompletionService(model, Crea
 
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {
-        options.GetOrCreateSerializedAdditionalRawData()["web_search"] = BinaryData.FromObjectAsJson(new Dictionary<string, object>()
+        options.Patch.Set("$.web_search"u8, BinaryData.FromObjectAsJson(new Dictionary<string, object>()
         {
             ["enable"] = enabled,
             ["enable_citation"] = false,
             ["enable_trace"] = false,
-        });
+        }));
     }
 }

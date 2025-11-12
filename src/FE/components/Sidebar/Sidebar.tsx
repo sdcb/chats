@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -6,6 +6,7 @@ import {
   IconCheck,
   IconLayoutSidebar,
   IconLayoutSidebarRight,
+  IconLoader,
   IconSearch,
   IconSquarePlus,
   IconX,
@@ -33,7 +34,7 @@ interface Props<T> {
   messageIsStreaming?: boolean;
   handleSearchTerm: (searchTerm: string) => void;
   toggleOpen: () => void;
-  handleCreateItem: () => void;
+  handleCreateItem: () => void | Promise<void>;
   hasModel: () => boolean;
 }
 
@@ -57,6 +58,21 @@ const Sidebar = <T,>({
   hasModel,
 }: Props<T>) => {
   const { t } = useTranslation();
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreate = async () => {
+    console.log('handleCreate called, isCreating before:', isCreating);
+    setIsCreating(true);
+    console.log('isCreating set to true');
+    try {
+      await handleCreateItem();
+      console.log('handleCreateItem completed');
+    } finally {
+      setIsCreating(false);
+      console.log('isCreating set to false');
+    }
+  };
+
   const NoDataRender = () =>
     isLoading === false &&
     items.length === 0 && (
@@ -100,13 +116,17 @@ const Sidebar = <T,>({
                 trigger={
                   <Button
                     onClick={() => {
-                      handleCreateItem();
+                      handleCreate();
                     }}
-                    disabled={messageIsStreaming}
+                    disabled={messageIsStreaming || isCreating}
                     variant="ghost"
                     className="p-1 m-0 h-auto"
                   >
-                    <IconSquarePlus size={26} />
+                    {isCreating ? (
+                      <IconLoader size={26} className="animate-spin" />
+                    ) : (
+                      <IconSquarePlus size={26} />
+                    )}
                   </Button>
                 }
                 content={addItemButtonTitle}
@@ -177,13 +197,17 @@ const Sidebar = <T,>({
               trigger={
                 <Button
                   onClick={() => {
-                    handleCreateItem();
+                    handleCreate();
                   }}
-                  disabled={messageIsStreaming}
+                  disabled={messageIsStreaming || isCreating}
                   variant="ghost"
                   className="p-1 m-0 h-auto"
                 >
-                  <IconSquarePlus size={26} />
+                  {isCreating ? (
+                    <IconLoader size={26} className="animate-spin" />
+                  ) : (
+                    <IconSquarePlus size={26} />
+                  )}
                 </Button>
               }
               content={addItemButtonTitle}

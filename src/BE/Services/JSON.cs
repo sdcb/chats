@@ -7,11 +7,16 @@ public static class JSON
 {
     public static JsonSerializerOptions JsonSerializerOptions { get; } = new()
     {
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    public static string Serialize<T>(T obj)
+    public static string Serialize(object? obj)
     {
         return JsonSerializer.Serialize(obj, JsonSerializerOptions);
+    }
+
+    public static byte[] SerializeToUtf8Bytes(object obj)
+    {
+        return JsonSerializer.SerializeToUtf8Bytes(obj, JsonSerializerOptions);
     }
 }

@@ -1,39 +1,33 @@
 ﻿using Chats.BE.DB;
+using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices.OpenAI.PipelinePolicies;
-using Chats.BE.Services.Models.ChatServices.OpenAI.ReasoningContents;
-using Chats.BE.Services.Models.Extensions;
 using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class OpenRouterChatService(Model model, HostUrlService hostUrlService) : ChatCompletionService(model, new Uri("https://openrouter.ai/api/v1"),
+public class OpenRouterChatService(Model model, HostUrlService hostUrlService) : ChatCompletionService(model,
     [
         new AddHeaderPolicy("X-Title", "Sdcb Chats"), 
         new AddHeaderPolicy("HTTP-Referer", hostUrlService.GetFEUrl())
     ])
 {
-    static Func<ChatCompletion, string?> ReasoningContentAccessor { get; } = ReasoningContentFactory.CreateReasoningContentAccessor("reasoning");
-    static Func<StreamingChatCompletionUpdate, string?> StreamingReasoningContentAccessor { get; } = ReasoningContentFactory.CreateStreamingReasoningContentAccessor("reasoning");
-
-    protected override string? GetReasoningContent(ChatCompletion delta) => ReasoningContentAccessor(delta);
-    protected override string? GetReasoningContent(StreamingChatCompletionUpdate delta) => StreamingReasoningContentAccessor(delta);
+    protected override ReadOnlySpan<byte> ReasoningEffortPropName => "$.reasoning"u8;
 
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {
         if (enabled)
         {
-            options.GetOrCreateSerializedAdditionalRawData()["plugins"] = BinaryData.FromObjectAsJson(new[]
+            options.Patch.Set("$.plugins"u8, BinaryData.FromObjectAsJson(new[]
             {
                 new { id = "web" }
-            });
+            }));
         }
     }
 
-    protected override Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, CancellationToken cancellationToken)
+    protected override Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, FileUrlProvider fup, CancellationToken cancellationToken)
     {
-        IDictionary<string, BinaryData> sard = options.GetOrCreateSerializedAdditionalRawData();
-        sard["reasoning"] = BinaryData.FromObjectAsJson(new { });
-        sard["provider"] = BinaryData.FromObjectAsJson(new { sort = "throughput" });
-        return base.FEPreprocess(messages, options, feOptions, cancellationToken);
+        options.Patch.Set("$.reasoning"u8, BinaryData.FromObjectAsJson(new { }));
+        options.Patch.Set("$.provider"u8, BinaryData.FromObjectAsJson(new { sort = "throughput" }));
+        return base.FEPreprocess(messages, options, feOptions, fup, cancellationToken);
     }
 }

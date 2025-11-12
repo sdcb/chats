@@ -6,24 +6,18 @@ using Microsoft.ML.Tokenizers;
 using Chats.BE.Services.Models.Extensions;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.DB.Enums;
+using Chats.BE.Services.FileServices;
 
 namespace Chats.BE.Services.Models;
 
-public abstract partial class ChatService : IDisposable
+public abstract partial class ChatService(Model model) : IDisposable
 {
-    internal protected Model Model { get; }
-    internal protected Tokenizer Tokenizer { get; }
+    internal protected Model Model { get; } = model;
+    internal protected Tokenizer Tokenizer { get; } = DefaultTokenizer;
 
     internal static Tokenizer DefaultTokenizer { get; } = TiktokenTokenizer.CreateForEncoding("o200k_base");
 
     protected static TimeSpan NetworkTimeout { get; } = TimeSpan.FromHours(24);
-
-    public ChatService(Model model)
-    {
-        Model = model;
-        // Tokenizer 现在统一使用 DefaultTokenizer 作为兜底
-        Tokenizer = DefaultTokenizer;
-    }
 
     public abstract IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, CancellationToken cancellationToken);
 
@@ -52,7 +46,8 @@ public abstract partial class ChatService : IDisposable
         return TokenPerConversation + messageTokens;
     }
 
-    protected virtual async Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, CancellationToken cancellationToken)
+    protected virtual async Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, FileUrlProvider fup,
+        CancellationToken cancellationToken)
     {
         if (Model.AllowSearch)
         {
@@ -69,7 +64,7 @@ public abstract partial class ChatService : IDisposable
             SetReasoningEffort(options, feOptions.ReasoningEffort);
         }
 
-        if (!string.IsNullOrEmpty(feOptions.ImageSize))
+        if (!string.IsNullOrEmpty(feOptions.ImageSize) && Model.GetSupportedImageSizesAsArray(Model.SupportedImageSizes).Any())
         {
             SetImageSize(options, feOptions.ImageSize);
         }
@@ -95,7 +90,7 @@ public abstract partial class ChatService : IDisposable
 
         ChatMessage[] filteredMessage = await messages
             .ToAsyncEnumerable()
-            .SelectAwait(async m => await FilterVision(Model.AllowVision, m, cancellationToken))
+            .SelectAwait(async m => await FilterVision(Model.AllowVision, m, fup, cancellationToken))
             .ToArrayAsync(cancellationToken);
         options.Temperature = Model.ClampTemperature(options.Temperature);
 

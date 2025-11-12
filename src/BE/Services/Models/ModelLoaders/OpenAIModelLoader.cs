@@ -13,11 +13,7 @@ public class OpenAIModelLoader : ModelLoader
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
 
-        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(modelKey, ModelProviderInfo.GetInitialHost((DBModelProvider)modelKey.ModelProviderId) switch
-        {
-            null => null, 
-            var x => new Uri(x)
-        }, []);
+        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(modelKey, []);
         ClientResult<OpenAIModelCollection> result = await api.GetOpenAIModelClient().GetModelsAsync(cancellationToken);
         return [.. result.Value.Select(m => m.Id)];
     }

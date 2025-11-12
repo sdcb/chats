@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 import useTranslation from '@/hooks/useTranslation';
 import { clearUserInfo, clearUserSession, getLoginUrl } from '@/utils/user';
+import { clearChatCache } from '@/utils/chatCache';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -76,6 +77,7 @@ const AccountTab = () => {
         toast.success(t('Modified successfully'));
         clearUserSession();
         clearUserInfo();
+        clearChatCache(); // 清除聊天缓存
         router.push(getLoginUrl());
         setLoading(false);
       })

@@ -1,10 +1,9 @@
 ﻿using Chats.BE.DB;
-using Chats.BE.Services.Models.Extensions;
 using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class XAIChatService(Model model) : ChatCompletionService(model, new Uri("https://api.x.ai/v1"))
+public class XAIChatService(Model model) : ChatCompletionService(model)
 {
     protected override Dtos.ChatTokenUsage GetUsage(ChatTokenUsage usage)
     {
@@ -18,12 +17,11 @@ public class XAIChatService(Model model) : ChatCompletionService(model, new Uri(
 
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {
-        IDictionary<string, BinaryData> said = options.GetOrCreateSerializedAdditionalRawData();
-        said["search_parameters"] = BinaryData.FromObjectAsJson(new
+        options.Patch.Set("$.search_parameters"u8, BinaryData.FromObjectAsJson(new
         {
             mode = enabled ? "on" : "off", // also supports "auto"
             // return_citations, from_date, to_date, max_search_results, sources is also supported but not used
             // https://docs.x.ai/docs/guides/live-search
-        });
+        }));
     }
 }

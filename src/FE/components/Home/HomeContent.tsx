@@ -9,6 +9,7 @@ import { currentISODateString } from '@/utils/date';
 import { findSelectedMessageByLeafId } from '@/utils/message';
 import { getSettings } from '@/utils/settings';
 import { getUserSession, redirectToLoginPage } from '@/utils/user';
+import { getChatCache, setChatCache } from '@/utils/chatCache';
 
 import {
   ChatStatus,
@@ -19,8 +20,6 @@ import {
 import { IChatMessage } from '@/types/chatMessage';
 import { ChatResult, GetChatsParams } from '@/types/clientApis';
 import { IChatGroup } from '@/types/group';
-
-import Spinner from '@/components/Spinner/Spinner';
 
 import {
   setChatGroup,
@@ -93,7 +92,6 @@ const HomeContent = () => {
 
   const { chats, chatPaging, stopIds, selectedChatId } = chatState;
   const { models } = modelState;
-  const [isPageLoading, setIsPageLoading] = useState(true);
 
   // 解析 hash 中的 chatId，例如 "#/abc" -> "abc"
   const getHashChatId = (): string | undefined => {
@@ -208,7 +206,7 @@ const HomeContent = () => {
   };
 
   const handleNewChat = (groupId: string | null = null) => {
-    postChats({
+    return postChats({
       title: t('New Conversation'),
       groupId,
     }).then((data) => {
@@ -331,28 +329,62 @@ const HomeContent = () => {
     });
   };
 
-  const getChats = async (query: string = '') => {
-    const data = await getUserChatGroupWithMessages({
-      ...DefaultChatPaging,
-      query,
-    });
-    const chatList: IChat[] = [];
-    let chatGroupList: IChatGroup[] = [];
-    const chatPagingList: IChatPaging[] = [];
-    data.forEach((d) => {
-      if (query && d.chats.count === 0) return;
-      chatPagingList.push({
-        ...DefaultChatPaging,
-        groupId: d.id,
-        count: d.chats.count,
+  const getChats = async (query: string = ''): Promise<{ usedCache: boolean }> => {
+    // 处理缓存数据的通用函数
+    const processChatData = (data: any[]) => {
+      const chatList: IChat[] = [];
+      let chatGroupList: IChatGroup[] = [];
+      const chatPagingList: IChatPaging[] = [];
+      data.forEach((d) => {
+        if (query && d.chats.count === 0) return;
+        chatPagingList.push({
+          ...DefaultChatPaging,
+          groupId: d.id,
+          count: d.chats.count,
+        });
+        chatGroupList.push({ ...d, isExpanded: query ? true : d.isExpanded });
+        chatList.push(...d.chats.rows);
       });
-      chatGroupList.push({ ...d, isExpanded: query ? true : d.isExpanded });
-      chatList.push(...d.chats.rows);
-    });
+      
+      chatDispatch(setChats(chatList));
+      chatDispatch(setChatGroup(chatGroupList));
+      chatDispatch(setChatPaging(chatPagingList));
+    };
+
+    // 1. 先尝试从缓存读取（仅在没有搜索条件时）
+    let hasCacheData = false;
+    if (!query) {
+      const cachedData = getChatCache(query);
+      if (cachedData && cachedData.length > 0) {
+        // 立即显示缓存数据
+        processChatData(cachedData);
+        hasCacheData = true;
+        // 有缓存数据时，立即关闭骨骼屏
+        chatDispatch(setIsChatsLoading(false));
+      }
+    }
+
+    // 2. 异步请求最新数据
+    try {
+      const data = await getUserChatGroupWithMessages({
+        ...DefaultChatPaging,
+        query,
+      });
+      
+      // 更新缓存（仅在没有搜索条件时）
+      if (!query) {
+        setChatCache(data, query);
+      }
+      
+      // 更新UI
+      processChatData(data);
+    } catch (error) {
+      console.error('Failed to fetch chat groups:', error);
+      // 如果有缓存数据，错误时就继续使用缓存数据，不做额外处理
+      // 如果没有缓存数据，可以考虑显示错误提示
+    }
     
-    chatDispatch(setChats(chatList));
-    chatDispatch(setChatGroup(chatGroupList));
-    chatDispatch(setChatPaging(chatPagingList));
+    return { usedCache: hasCacheData };
   };
 
   const getChatsByGroup = (params: GetChatsParams) => {
@@ -372,7 +404,7 @@ const HomeContent = () => {
   };
 
   useEffect(() => {
-    setIsPageLoading(true);
+    // 加载设置
     const { showChatBar } = getSettings();
     settingDispatch(setShowChatBar(showChatBar));
   }, []);
@@ -383,24 +415,34 @@ const HomeContent = () => {
       redirectToLoginPage();
       return;
     }
+    
+    // 所有请求并行发起，不互相依赖
     chatDispatch(setIsChatsLoading(true));
-    getUserModels().then(async (modelList) => {
+    
+    // 1. 加载模型列表
+    getUserModels().then((modelList) => {
       modelDispatch(setModels(modelList));
       modelDispatch(setModelMap(modelList));
-
-      if (modelList && modelList.length > 0) {
-        getDefaultPrompt().then((data) => {
-          promptDispatch(setDefaultPrompt(data));
-        });
-      }
-      await getChats();
-      chatDispatch(setIsChatsLoading(false));
     });
 
+    // 2. 加载默认提示词
+    getDefaultPrompt().then((data) => {
+      promptDispatch(setDefaultPrompt(data));
+    });
+
+    // 3. 加载聊天列表
+    getChats().then(({ usedCache }) => {
+      // 如果没有使用缓存，在 API 返回后关闭骨骼屏
+      if (!usedCache) {
+        chatDispatch(setIsChatsLoading(false));
+      }
+      // 如果使用了缓存，骨骼屏已经在 getChats 内部关闭了
+    });
+
+    // 4. 加载提示词简要列表
     getUserPromptBrief().then((data) => {
       promptDispatch(setPrompts(data));
     });
-    setTimeout(() => setIsPageLoading(false), 800);
   }, []);
 
   // useEffect(() => {
@@ -415,18 +457,6 @@ const HomeContent = () => {
   //     window.removeEventListener('popstate', handlePopState);
   //   };
   // }, [chats]);
-
-  const PageLoadingRender = () => (
-    <div
-      className={`fixed top-0 left-0 bottom-0 right-0 bg-background z-50 text-center text-[12.5px]`}
-    >
-      <div className="fixed w-screen h-screen top-1/2">
-        <div className="flex justify-center">
-          <Spinner className="text-gray-500 dark:text-gray-50" />
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <HomeContext.Provider
@@ -457,16 +487,12 @@ const HomeContent = () => {
         getChatsByGroup,
       }}
     >
-      {isPageLoading ? (
-        <PageLoadingRender />
-      ) : (
-        <div className="flex h-screen w-screen flex-col text-sm">
-          <div className="flex h-full w-full bg-background">
-            <Chatbar />
-            <Chat />
-          </div>
+      <div className="flex h-screen w-screen flex-col text-sm">
+        <div className="flex h-full w-full bg-background">
+          <Chatbar />
+          <Chat />
         </div>
-      )}
+      </div>
     </HomeContext.Provider>
   );
 };

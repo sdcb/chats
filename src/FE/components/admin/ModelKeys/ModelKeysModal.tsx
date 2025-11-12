@@ -22,8 +22,8 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormField } from '@/components/ui/form';
 import FormInput from '@/components/ui/form/input';
-import FormSelect from '@/components/ui/form/select';
 import FormTextarea from '@/components/ui/form/textarea';
+import { cn } from '@/lib/utils';
 
 import {
   deleteModelKeys,
@@ -208,14 +208,51 @@ const ModelKeysModal = (props: IProps) => {
               control={form.control}
               name="modelProviderId"
               render={({ field }) => (
-                <FormSelect
-                  label={t('Model Provider')}
-                  field={field}
-                  items={feModelProviders.map((p) => ({
-                    value: p.id.toString(),
-                    name: t(p.name),
-                  }))}
-                />
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">
+                    {t('Model Provider')}
+                  </label>
+                  <div className="max-h-[280px] overflow-y-auto pr-1">
+                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-2">
+                      {feModelProviders.map((provider) => (
+                        <button
+                          key={provider.id}
+                          type="button"
+                          onClick={() => {
+                            form.setValue('modelProviderId', provider.id.toString());
+                            form.trigger('modelProviderId');
+                            // In create mode, auto-fill the name and reload initial config
+                            if (!selected) {
+                              form.setValue('name', t(provider.name));
+                              reloadInitialConfig(provider.id);
+                            }
+                          }}
+                          className={cn(
+                            'flex flex-col items-center justify-center p-1.5 sm:p-2 md:p-3 rounded-lg border-2 transition-all hover:border-primary/50',
+                            field.value === provider.id.toString()
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border bg-background'
+                          )}
+                          title={t(provider.name)}
+                        >
+                          <img
+                            src={provider.icon}
+                            alt={t(provider.name)}
+                            className="w-8 h-8 mb-1 object-contain"
+                          />
+                          <span className="text-xs text-center line-clamp-1">
+                            {t(provider.name)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {form.formState.errors.modelProviderId && (
+                    <p className="text-sm text-destructive mt-1">
+                      {form.formState.errors.modelProviderId.message}
+                    </p>
+                  )}
+                </div>
               )}
             />
             <FormField

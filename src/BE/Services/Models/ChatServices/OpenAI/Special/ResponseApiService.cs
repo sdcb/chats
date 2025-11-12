@@ -1,6 +1,5 @@
 ﻿using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
-using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
 using OpenAI;
 using OpenAI.Chat;
@@ -14,14 +13,14 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
 public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClient responseClient) : ChatService(model)
 {
-    public ResponseApiService(Model model, ILogger logger, Uri? suggestedUri = null, params PipelinePolicy[] perCallPolicies)
-        : this(model, logger, CreateResponseAPI(model, suggestedUri, perCallPolicies))
+    public ResponseApiService(Model model, ILogger logger, params PipelinePolicy[] perCallPolicies)
+        : this(model, logger, CreateResponseAPI(model, perCallPolicies))
     {
     }
 
-    static OpenAIResponseClient CreateResponseAPI(Model model, Uri? suggestedUri, PipelinePolicy[] pipelinePolicies)
+    static OpenAIResponseClient CreateResponseAPI(Model model, PipelinePolicy[] pipelinePolicies)
     {
-        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model.ModelKey, suggestedUri, pipelinePolicies);
+        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model.ModelKey, pipelinePolicies);
         OpenAIResponseClient cc = api.GetOpenAIResponseClient(model.DeploymentName);
         return cc;
     }
@@ -157,8 +156,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
             {
                 if (delta is StreamingResponseErrorUpdate error)
                 {
-                    IDictionary<string, BinaryData>? dict = GetSerializedAdditionalRawData(error);
-                    string? errorMessage = dict?["error"].ToString() ?? error.Message ?? "Unknown error";
+                    string? errorMessage = ChatCompletionService.TryGetDecodedValue(ref error.Patch, "error"u8) ?? error.Message ?? "Unknown error";
                     throw new CustomChatServiceException(DBFinishReason.UpstreamError, errorMessage);
                 }
                 if (delta is StreamingResponseOutputTextDeltaUpdate textDelta)
@@ -194,59 +192,32 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
                 {
                     yield return ChatSegment.FromToolCallDelta(fcDelta);
                 }
+                else if (delta is InternalResponseReasoningSummaryTextDeltaEvent rsDelta)
+                {
+                    yield return ChatSegment.FromThinkOnly(rsDelta.Delta.ToString());
+                }
+                else if (delta is InternalResponseReasoningSummaryTextDoneEvent rsDone)
+                {
+                    yield return ChatSegment.FromThinkOnly("\n\n");
+                }
                 else
                 {
-                    string type = DeltaTypeAccessor(delta);
-                    IDictionary<string, BinaryData>? said = GetSerializedAdditionalRawData(delta);
+                    Console.WriteLine(delta.Kind.ToString());
+                    //string type = DeltaTypeAccessor(delta);
+                    //IDictionary<string, BinaryData>? said = GetSerializedAdditionalRawData(delta);
 
-                    if (type == "response.reasoning_summary_text.delta")
-                    {
-                        string think = DeltaAccessor(delta);
-                        yield return ChatSegment.FromThinkOnly(think);
-                    }
-                    else if (type == "response.reasoning_summary_text.done")
-                    {
-                        yield return ChatSegment.FromThinkOnly("\n\n");
-                    }
+                    //if (type == "response.reasoning_summary_text.delta")
+                    //{
+                    //    string think = DeltaAccessor(delta);
+                    //    yield return ChatSegment.FromThinkOnly(think);
+                    //}
+                    //else if (type == "response.reasoning_summary_text.done")
+                    //{
+                    //    yield return ChatSegment.FromThinkOnly("\n\n");
+                    //}
                 }
             }
         }
-    }
-
-    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_additionalBinaryDataProperties")]
-    private extern static ref IDictionary<string, BinaryData>? GetSerializedAdditionalRawData(StreamingResponseUpdate @this);
-
-    private readonly static Func<StreamingResponseUpdate, string> DeltaTypeAccessor = CreateDeltaTypeAccessor();
-    private readonly static Func<StreamingResponseUpdate, string> DeltaAccessor = CreateDeltaAccessor();
-
-    static Func<StreamingResponseUpdate, string> CreateDeltaAccessor()
-    {
-        Type type = typeof(StreamingResponseUpdate).Assembly.GetType("OpenAI.Responses.InternalResponseReasoningSummaryTextDeltaEvent") ??
-            throw new InvalidOperationException("Unable to find the InternalResponseReasoningSummaryTextDeltaEvent type.");
-        PropertyInfo prop = type.GetProperty("Delta", BindingFlags.Public | BindingFlags.Instance)
-            ?? throw new InvalidOperationException("Unable to access the Delta property.");
-        return (delta) => (string)prop.GetValue(delta)!;
-    }
-
-
-    static Func<StreamingResponseUpdate, string> CreateDeltaTypeAccessor()
-    {
-        Type type = typeof(StreamingResponseUpdate);
-        PropertyInfo? deltaTypeProperty = type.GetProperty("Kind", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new InvalidOperationException("Unable to access the Type property.");
-        FieldInfo field = deltaTypeProperty.PropertyType.GetField("_value", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Unable to access the _value field.");
-        if (field.FieldType != typeof(string))
-        {
-            throw new InvalidOperationException($"The field type is not string: {field.FieldType}");
-        }
-
-        return (delta) =>
-        {
-            object prop = deltaTypeProperty.GetValue(delta) ?? throw new InvalidOperationException("The Type property is null.");
-            string type = field.GetValue(prop) as string ?? throw new InvalidOperationException("The _value field is null.");
-            return type;
-        };
     }
 
     static List<ResponseItem> ToResponse(IReadOnlyList<ChatMessage> messages)

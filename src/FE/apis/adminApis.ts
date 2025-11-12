@@ -4,6 +4,10 @@ import {
   AdminChatsDto,
   AdminModelDto,
   AddUserModelParams,
+  BatchUserModelsParams,
+  BatchUserModelsByProviderParams,
+  BatchUserModelsByKeyParams,
+  BatchUserModelsByModelParams,
   ChatCountStatisticsByDateResult,
   CostStatisticsByDateResult,
   EditUserModelParams,
@@ -23,6 +27,12 @@ import {
   GetUserMessageParams,
   GetUsersParams,
   GetUsersResult,
+  UserModelPermissionUserDto,
+  UserModelProviderDto,
+  UserModelOperationResponse,
+  UserModelKeyDto,
+  UserModelPermissionModelDto,
+  ModelUserPermissionDto,
   ModelProviderDto,
   ModelProviderInitialConfig,
   PasswordAttemptLog,
@@ -48,6 +58,7 @@ import {
   UpdateModelDto,
   UserModelDisplay,
   UserModelDisplayDto,
+  UserModelUserDto,
   ValidateModelParams,
   SmsAttemptLog,
 } from '@/types/adminApis';
@@ -67,6 +78,15 @@ export const getModelsByUserId = async (
   return data.map((x) => new UserModelDisplay(x));
 };
 
+export const getUsersByModelId = async (
+  modelId: number,
+): Promise<UserModelUserDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get<UserModelUserDto[]>(
+    `/api/admin/user-models/model/${modelId}`,
+  );
+};
+
 export const getUserUnassignedModels = async (
   userId: string,
 ): Promise<AdminModelDto[]> => {
@@ -76,23 +96,51 @@ export const getUserUnassignedModels = async (
   );
 };
 
-export const addUserModel = (params: AddUserModelParams): Promise<any> => {
+export const addUserModel = async (params: AddUserModelParams): Promise<UserModelOperationResponse> => {
   const fetchService = useFetch();
-  return fetchService.post('/api/admin/user-models', {
+  return fetchService.post<UserModelOperationResponse>('/api/admin/user-models', {
     body: params,
   });
 };
 
-export const editUserModel = (userModelId: number, params: EditUserModelParams): Promise<any> => {
+export const batchAddUserModelsByProvider = async (params: BatchUserModelsByProviderParams): Promise<UserModelOperationResponse> => {
   const fetchService = useFetch();
-  return fetchService.put(`/api/admin/user-models/${userModelId}`, {
+  return fetchService.post<UserModelOperationResponse>('/api/admin/user-models/batch-by-provider', {
     body: params,
   });
 };
 
-export const deleteUserModel = (userModelId: number): Promise<any> => {
+export const batchDeleteUserModelsByProvider = async (params: BatchUserModelsByProviderParams): Promise<UserModelOperationResponse> => {
   const fetchService = useFetch();
-  return fetchService.delete(`/api/admin/user-models/${userModelId}`);
+  return fetchService.post<UserModelOperationResponse>('/api/admin/user-models/batch-delete-by-provider', {
+    body: params,
+  });
+};
+
+export const batchAddUserModelsByKey = async (params: BatchUserModelsByKeyParams): Promise<UserModelOperationResponse> => {
+  const fetchService = useFetch();
+  return fetchService.post<UserModelOperationResponse>('/api/admin/user-models/batch-by-key', {
+    body: params,
+  });
+};
+
+export const batchDeleteUserModelsByKey = async (params: BatchUserModelsByKeyParams): Promise<UserModelOperationResponse> => {
+  const fetchService = useFetch();
+  return fetchService.post<UserModelOperationResponse>('/api/admin/user-models/batch-delete-by-key', {
+    body: params,
+  });
+};
+
+export const editUserModel = (userModelId: number, params: EditUserModelParams): Promise<UserModelOperationResponse> => {
+  const fetchService = useFetch();
+  return fetchService.put<UserModelOperationResponse>(`/api/admin/user-models/${userModelId}`, {
+    body: params,
+  });
+};
+
+export const deleteUserModel = (userModelId: number): Promise<UserModelOperationResponse> => {
+  const fetchService = useFetch();
+  return fetchService.delete<UserModelOperationResponse>(`/api/admin/user-models/${userModelId}`);
 };
 
 export const getModels = (all: boolean = true): Promise<AdminModelDto[]> => {
@@ -131,6 +179,70 @@ export const getUsers = (
       params?.query || ''
     }`,
   );
+};
+
+export const getUsersForPermission = (
+  params: GetUsersParams,
+): Promise<PageResult<UserModelPermissionUserDto[]>> => {
+  const fetchService = useFetch();
+  return fetchService.get(
+    `/api/admin/user-models/users?page=${params.page}&pageSize=${params.pageSize}&query=${
+      params?.query || ''
+    }`,
+  );
+};
+
+export const getModelProvidersForUser = async (
+  userId: string,
+): Promise<UserModelProviderDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get<UserModelProviderDto[]>(
+    `/api/admin/user-models/user/${userId}/providers`,
+  );
+};
+
+export const getModelKeysByProviderForUser = async (
+  userId: string,
+  providerId: number,
+): Promise<UserModelKeyDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get<UserModelKeyDto[]>(
+    `/api/admin/user-models/user/${userId}/provider/${providerId}/keys`,
+  );
+};
+
+export const getModelsByKeyForUser = async (
+  userId: string,
+  keyId: number,
+): Promise<UserModelPermissionModelDto[]> => {
+  const fetchService = useFetch();
+  return fetchService.get<UserModelPermissionModelDto[]>(
+    `/api/admin/user-models/user/${userId}/key/${keyId}/models`,
+  );
+};
+
+export const getUsersByModel = async (
+  modelId: number,
+  params: { page: number; pageSize: number; query?: string },
+): Promise<PageResult<ModelUserPermissionDto[]>> => {
+  const fetchService = useFetch();
+  return fetchService.get<PageResult<ModelUserPermissionDto[]>>(
+    `/api/admin/user-models/model/${modelId}/users?page=${params.page}&pageSize=${params.pageSize}&query=${params.query || ''}`,
+  );
+};
+
+export const batchAddUserModelsByModel = async (params: BatchUserModelsByModelParams): Promise<void> => {
+  const fetchService = useFetch();
+  return fetchService.post<void>('/api/admin/user-models/batch-by-model', {
+    body: params,
+  });
+};
+
+export const batchDeleteUserModelsByModel = async (params: BatchUserModelsByModelParams): Promise<void> => {
+  const fetchService = useFetch();
+  return fetchService.post<void>('/api/admin/user-models/batch-delete-by-model', {
+    body: params,
+  });
 };
 
 export const postUser = (params: PostUserParams) => {

@@ -23,7 +23,6 @@ public class GoogleAI2ChatService : ChatService
         new SafetySetting { Category = HarmCategory.HarmCategoryDangerousContent, Threshold = HarmBlockThreshold.BlockNone },
         new SafetySetting { Category = HarmCategory.HarmCategoryHarassment, Threshold = HarmBlockThreshold.BlockNone },
     ];
-    private DBReasoningEffort _reasoningEffort = default;
 
     protected override bool SupportsVisionLink => false;
 
@@ -61,9 +60,9 @@ public class GoogleAI2ChatService : ChatService
         {
             gc.ThinkingConfig = new ThinkingConfig
             {
-                ThinkingBudget = _reasoningEffort switch
+                ThinkingBudget = options.ReasoningEffortLevel switch
                 {
-                    var x when x.IsLowOrMinimal() => 1024,
+                    var x when x == ChatReasoningEffortLevel.Minimal || x == ChatReasoningEffortLevel.Low => 1024,
                     _ => null,
                 },
                 IncludeThoughts = true,
@@ -90,7 +89,7 @@ public class GoogleAI2ChatService : ChatService
             SystemInstruction = OpenAIChatMessageToGoogleContent(messages.Where(x => x is SystemChatMessage)) switch { [] => null, var x => x[0] },
             GenerationConfig = gc,
             SafetySettings = _safetySettings,
-            Tools = tool == null ? null : [tool],
+            Tools = Model.AllowToolCall && tool != null ? [tool] : null,
         };
         Stopwatch codeExecutionSw = new();
         string? codeExecutionId = null;

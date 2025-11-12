@@ -1,15 +1,14 @@
 ﻿using Chats.BE.DB;
-using Chats.BE.Services.Models.Extensions;
 using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class GLMChatService(Model model) : ChatCompletionService(model, new Uri("https://open.bigmodel.cn/api/paas/v4/"))
+public class GLMChatService(Model model) : ChatCompletionService(model)
 {
     protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
     {
         // https://bigmodel.cn/dev/howuse/websearch
-        options.GetOrCreateSerializedAdditionalRawData()["tools"] = BinaryData.FromObjectAsJson(new[]
+        options.Patch.Set("$.tools"u8, BinaryData.FromObjectAsJson(new[]
         {
             new
             {
@@ -19,6 +18,6 @@ public class GLMChatService(Model model) : ChatCompletionService(model, new Uri(
                     enable = enabled,
                 },
             }
-        });
+        }));
     }
 }

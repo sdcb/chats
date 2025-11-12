@@ -4,19 +4,18 @@ using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
-using Mscc.GenerativeAI;
 using OpenAI.Chat;
 
 namespace Chats.BE.DB;
 
 public partial class StepContent
 {
-    public async Task<ChatMessageContentPart> ToOpenAI(FileUrlProvider fup, CancellationToken cancellationToken)
+    public ChatMessageContentPart ToTempOpenAI()
     {
         return (DBMessageContentType)ContentTypeId switch
         {
             DBMessageContentType.Text => ChatMessageContentPart.CreateTextPart(StepContentText!.Content),
-            DBMessageContentType.FileId => await fup.CreateOpenAIPart(StepContentFile, cancellationToken),
+            DBMessageContentType.FileId => new StepContentFilePart(StepContentFile!.File),
             DBMessageContentType.Error => ChatMessageContentPart.CreateTextPart(StepContentText!.Content),
             _ => throw new NotImplementedException()
         };

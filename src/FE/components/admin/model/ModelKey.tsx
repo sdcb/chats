@@ -3,7 +3,7 @@ import { AdminModelDto, GetModelKeysResult } from '@/types/adminApis';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import IconActionButton from '@/components/common/IconActionButton';
-import { IconPlus, IconPencil, IconBolt, IconChartHistogram } from '@/components/Icons';
+import { IconPlus, IconPencil, IconBolt, IconChartHistogram, IconKey } from '@/components/Icons';
 import DeletePopover from '@/components/Popover/DeletePopover';
 import useTranslation from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
@@ -89,41 +89,50 @@ export default function ModelKey({
         {...attributes}
       >
         <div className="flex items-center gap-2">
-          {/* 标题作为拖拽把手：只在标题上绑定 listeners，避免与滚动冲突；点击非拖拽时允许展开 */}
-          <button
-            className="p-0 m-0 bg-transparent border-0 inline-flex items-center font-medium touch-none cursor-grab active:cursor-grabbing"
-            aria-label={t('Drag to reorder')}
-            data-allow-toggle
-            onClick={(e) => {
-              if (isDragging) {
-                e.preventDefault();
-                e.stopPropagation();
-              }
-            }}
+          {/* 拖拽把手区域 */}
+          <div
+            className={cn(
+              'flex-shrink-0 touch-none px-1 rounded hover:bg-muted/60 transition-colors cursor-grab active:cursor-grabbing'
+            )}
             {...listeners}
+            onClick={(e) => e.stopPropagation()}
           >
-            {modelKey.name}
-          </button>
+            <div className="w-2.5 h-5 flex flex-col justify-center gap-0.5">
+              <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+              <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+              <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+            </div>
+          </div>
+          
+          {/* 钥匙图标 */}
+          <IconKey size={18} className="text-muted-foreground flex-shrink-0" />
+          
+          {/* 标题 */}
+          <span className="font-medium">{modelKey.name}</span>
         </div>
         <div className="flex gap-2">
           <IconActionButton
             label={t('View Usage Records')}
-            icon={<IconChartHistogram size={18} />}
+            icon={<IconChartHistogram size={16} />}
+            className="h-5 w-5"
             onClick={() => onGoToUsage({ modelKey: modelKey.name })}
           />
           <IconActionButton
             label={t('Fast Add Models')}
-            icon={<IconBolt size={18} />}
+            icon={<IconBolt size={16} />}
+            className="h-5 w-5"
             onClick={() => onConfigModels(modelKey.id)}
           />
           <IconActionButton
             label={t('Add Model')}
-            icon={<IconPlus size={18} />}
+            icon={<IconPlus size={16} />}
+            className="h-5 w-5"
             onClick={() => onAddModel(modelKey.id)}
           />
           <IconActionButton
             label={t('Edit')}
-            icon={<IconPencil size={18} />}
+            icon={<IconPencil size={16} />}
+            className="h-5 w-5"
             onClick={() => onEdit(modelKey)}
           />
           {modelKey.totalModelCount === 0 && (

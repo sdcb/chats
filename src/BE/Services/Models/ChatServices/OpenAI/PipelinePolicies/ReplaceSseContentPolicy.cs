@@ -1,12 +1,14 @@
-﻿using System.ClientModel.Primitives;
-using System.Buffers;
+﻿using System.Buffers;
+using System.ClientModel.Primitives;
+using System.Net.ServerSentEvents;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Net.ServerSentEvents;
+using static Chats.BE.Services.Models.ChatServices.OpenAI.PipelinePolicies.ReplaceSseContentPolicy;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.PipelinePolicies;
 
-public class ReplaceSseContentPolicy(Func<byte[], byte[]> Replacer) : PipelinePolicy
+public class ReplaceSseContentPolicy(SseContentReplacer Replacer) : PipelinePolicy
 {
     // 副构造函数：支持字符串级别的替换
     public ReplaceSseContentPolicy(Func<string, string> stringReplacer, Encoding? encoding = null) 
@@ -20,7 +22,7 @@ public class ReplaceSseContentPolicy(Func<byte[], byte[]> Replacer) : PipelinePo
     {
     }
 
-    private static Func<byte[], byte[]> CreateByteReplacer(Func<string, string> stringReplacer, Encoding encoding)
+    private static SseContentReplacer CreateByteReplacer(Func<string, string> stringReplacer, Encoding encoding)
     {
         return bytes =>
         {
@@ -58,7 +60,7 @@ public class ReplaceSseContentPolicy(Func<byte[], byte[]> Replacer) : PipelinePo
 
     class ReplacingStream(
         Stream innerStream,
-        Func<byte[], byte[]> replacer) : Stream
+        SseContentReplacer replacer) : Stream
     {
         private readonly Queue<byte> _pendingBuffer = new();  // 替换后待输出的数据队列
 
@@ -128,8 +130,15 @@ public class ReplaceSseContentPolicy(Func<byte[], byte[]> Replacer) : PipelinePo
 
             // 懒初始化 SSE 解析器（使用本次 ReadAsync 的取消令牌），仅创建一次
             _sseEnumerator ??= SseParser
-                .Create(innerStream, (string eventType, ReadOnlySpan<byte> bytes) => replacer(bytes.ToArray()))
-                .EnumerateAsync()
+                .Create(innerStream, (eventType, bytes) =>
+                {
+                    if (eventType == "message" && !bytes.SequenceEqual("[DONE]"u8))
+                    {
+                        return replacer(bytes);
+                    }
+                    return bytes.ToArray();
+                })
+                .EnumerateAsync(cancellationToken)
                 .GetAsyncEnumerator(cancellationToken);
 
             while (totalBytesRead < count)
@@ -174,11 +183,11 @@ public class ReplaceSseContentPolicy(Func<byte[], byte[]> Replacer) : PipelinePo
 
         private static async IAsyncEnumerable<SseItem<byte[]>> YieldOnceAsync(
             SseItem<byte[]> item,
-            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+            [EnumeratorCancellation] CancellationToken _)
         {
             // 立即产出一个事件；保持 async enumerable 形态以便复用 SseFormatter API
             yield return item;
-            await Task.CompletedTask;
+            await ValueTask.CompletedTask;
         }
 
         private static void WriteBytes(byte[] data, IBufferWriter<byte> writer)
@@ -211,4 +220,6 @@ public class ReplaceSseContentPolicy(Func<byte[], byte[]> Replacer) : PipelinePo
             await base.DisposeAsync().ConfigureAwait(false);
         }
     }
+
+    public delegate byte[] SseContentReplacer(ReadOnlySpan<byte> input);
 }

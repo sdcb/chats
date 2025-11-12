@@ -91,10 +91,10 @@ export default function ModelProvider({
   // Provider 的拖拽由上层 dnd-kit 管理
 
   return (
-    <div className="mb-3" ref={setNodeRef} style={style}>
+    <div className="mb-2" ref={setNodeRef} style={style}>
       <div 
         className={cn(
-          "rounded-xl border bg-card transition-all duration-200 touch-pan-y",
+          "rounded-lg border bg-card transition-all duration-200 touch-pan-y",
           isDragging && "opacity-60"
         )}
         {...attributes}
@@ -104,30 +104,28 @@ export default function ModelProvider({
           onClick={handleHeaderClick}
         >
           <div className="flex items-center gap-2">
-            {/* 拖拽把手：图标 + 名称 都作为把手，避免与页面滚动冲突 */}
-            <button
+            {/* 拖拽把手区域 */}
+            <div
               className={cn(
-                "p-0 m-0 bg-transparent border-0 inline-flex items-center gap-2 touch-none",
-                "cursor-grab active:cursor-grabbing",
-                isDragging && "cursor-grabbing"
+                'flex-shrink-0 touch-none px-1 rounded hover:bg-muted/60 transition-colors cursor-grab active:cursor-grabbing'
               )}
-              aria-label={t('Drag to reorder')}
-              data-allow-toggle
-              // 点击把手：若非拖拽，允许冒泡到 header 触发展开；拖拽中则拦截
-              onClick={(e) => {
-                if (isDragging) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }
-              }}
               {...listeners}
+              onClick={(e) => e.stopPropagation()}
             >
-              <ModelProviderIcon className="h-6 w-6" providerId={provider.providerId} />
-              {/* 小屏隐藏标题，仅显示图标；大屏显示提供商标题 */}
-              <span className="font-semibold hidden sm:inline">{t(provider.providerName)}</span>
-            </button>
+              <div className="w-2.5 h-5 flex flex-col justify-center gap-0.5">
+                <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+                <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+                <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
+              </div>
+            </div>
+            
+            {/* Provider 图标和标题 */}
+            <ModelProviderIcon className="w-5 h-5 flex-shrink-0" providerId={provider.providerId} />
+            {/* 小屏隐藏标题，仅显示图标；大屏显示提供商标题 */}
+            <span className="text-sm font-medium hidden sm:inline">{t(provider.providerName)}</span>
+            
             {/* 计数信息：小屏仅显示"密钥: X"，大屏显示"密钥: X 模型: Y" */}
-            <span className="text-muted-foreground text-sm">
+            <span className="text-muted-foreground text-xs">
               {t('Model Keys')}: {provider.keyCount}
               <span className="hidden sm:inline"> {t('Models')}: {provider.modelCount}</span>
             </span>
@@ -135,7 +133,8 @@ export default function ModelProvider({
           <div className="flex items-center gap-2">
             <IconActionButton
               label={t('View Usage Records')}
-              icon={<IconChartHistogram size={18} />}
+              icon={<IconChartHistogram size={16} />}
+              className="h-5 w-5"
               onClick={() => {
                 const providerData = feModelProviders.find(p => p.id === provider.providerId);
                 if (providerData) {
@@ -145,7 +144,8 @@ export default function ModelProvider({
             />
             <IconActionButton
               label={t('Add Model Key')}
-              icon={<IconPlus size={18} />}
+              icon={<IconPlus size={16} />}
+              className="h-5 w-5"
               onClick={() => onAddKey(provider.providerId)}
             />
           </div>

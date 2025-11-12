@@ -3,7 +3,7 @@
 public enum DBModelProvider
 {
     Test = 0, 
-    AzureOpenAI = 1,
+    AzureAIFoundry = 1,
     HunYuan = 2,
     LingYi = 3, 
     Moonshot = 4,
@@ -21,4 +21,5 @@ public enum DBModelProvider
     Doubao = 16, 
     SiliconFlow = 17, 
     OpenRouter = 18,
+    TokenPony = 19,
 }
