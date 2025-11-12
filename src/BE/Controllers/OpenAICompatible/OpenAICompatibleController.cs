@@ -138,7 +138,9 @@ public partial class OpenAICompatibleController(
                             }
                             await YieldResponse(fullResponse.Choices[0].ToFinalChunk(fullResponse.Model, fullResponse.Id, fullResponse.SystemFingerprint), cancellationToken);
                         }
-                        await YieldResponse(fullResponse.ToFinalChunk(), cancellationToken);
+                        // 发送 [DONE] 标记
+                        await Response.Body.WriteAsync("data: [DONE]\n\n"u8.ToArray(), cancellationToken);
+                        await Response.Body.FlushAsync(cancellationToken);
                         isSuccess = true;
                         return Empty;
                     }
@@ -234,6 +236,48 @@ public partial class OpenAICompatibleController(
                 {
                     throw new TaskCanceledException();
                 }
+            }
+
+            // 流式响应完成后，发送最终的 finish_reason chunk
+            if (cco.Stream && hasSuccessYield && icc.FinishReason != DBFinishReason.Cancelled)
+            {
+                string? finishReasonText = icc.FinishReason.ToOpenAIFinishReason();
+
+                ChatCompletionChunk finalChunk = new()
+                {
+                    Id = HttpContext.TraceIdentifier,
+                    Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    Model = cco.Model,
+                    Choices =
+                    [
+                        new DeltaChoice
+                        {
+                            Index = 0,
+                            Delta = new OpenAIDelta(),
+                            FinishReason = finishReasonText,
+                            Logprobs = null
+                        }
+                    ],
+                    SystemFingerprint = null,
+                    Usage = new Usage
+                    {
+                        PromptTokens = icc.FullResponse.Usage.InputTokens,
+                        CompletionTokens = icc.FullResponse.Usage.OutputTokens,
+                        TotalTokens = icc.FullResponse.Usage.InputTokens + icc.FullResponse.Usage.OutputTokens,
+                        CompletionTokensDetails = new CompletionTokensDetails
+                        {
+                            ReasoningTokens = icc.FullResponse.Usage.ReasoningTokens,
+                            AudioTokens = 0,
+                            AcceptedPredictionTokens = 0,
+                            RejectedPredictionTokens = 0
+                        }
+                    }
+                };
+                await YieldResponse(finalChunk, cancellationToken);
+                
+                // 发送 [DONE] 标记
+                await Response.Body.WriteAsync("data: [DONE]\n\n"u8.ToArray(), cancellationToken);
+                await Response.Body.FlushAsync(cancellationToken);
             }
         }
         catch (ChatServiceException cse)
