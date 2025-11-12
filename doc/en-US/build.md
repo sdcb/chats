@@ -2,19 +2,33 @@
 
 Welcome to Chats! This guide will help you quickly get started with development and understand how to use and configure the Chats project during the development phase. In the development phase, Chats adopts a front-end and back-end separation model, but in production, they will be combined into a single deployment package.
 
+## 📑 Table of Contents
+
+- [Technology Stack](#technology-stack)
+- [Environment Requirements](#environment-requirements)
+- [Obtaining the Code](#obtaining-the-code)
+- [Joint Frontend and Backend Development](#joint-frontend-and-backend-development)
+  - [Backend Development Guide](#backend-development-guide)
+  - [Frontend Development Guide](#frontend-development-guide)
+- [Frontend Only Development](#frontend-only-development)
+- [Backend Only Development](#backend-only-development)
+- [FAQ](#faq)
+
 ## Technology Stack
 
-- **Backend:** Developed using C#/ASP.NET Core.
-- **Frontend:** Developed using Next.js/React/TypeScript.
-- **CSS:** Utilizes Tailwind CSS.
+- **Backend**: C# / ASP.NET Core 9.0
+- **Frontend**: Next.js / React / TypeScript
+- **Styling**: Tailwind CSS
+- **Database**: SQLite (default) / SQL Server / PostgreSQL
+- **Storage**: Local files / AWS S3 / Minio / Aliyun OSS / Azure Blob Storage
 
 ## Environment Requirements
 
-- Git
-- .NET SDK 8.0
-- Node.js >= 20
-- Visual Studio Code
-- Visual Studio 2022 (optional but recommended)
+- **Git**: For code version management
+- **[.NET SDK 9.0](https://dotnet.microsoft.com/download/dotnet/9.0)**: Required for backend development
+- **[Node.js](https://nodejs.org/) >= 20**: Required for frontend development
+- **Visual Studio Code**: Lightweight code editor
+- **Visual Studio 2022** (optional but recommended): Full-featured IDE with better debugging experience
 
 ## Obtaining the Code
 
@@ -28,182 +42,327 @@ git clone https://github.com/sdcb/chats.git
 
 ### Backend Development Guide
 
-1. Use Visual Studio to open the solution:
+#### 1. Open the Solution with Visual Studio
 
-    Locate the `chats/Chats.sln` solution file in the root directory and open it. In Visual Studio, you'll see a website project named `Chats.BE`.
+Locate the `Chats.sln` solution file in the root directory and open it. In Visual Studio, you'll see a website project named `Chats.BE`.
 
-2. Run the project:
+#### 2. Run the Project
 
-    - Press F5 to run the project. The default configuration will check if the SQLite database file `chats.db` exists, and if not, it will automatically create it in the `./AppData` directory and initialize the database.
-    - The service will run on `http://localhost:5146`, providing API services. If running in development mode (`ASPNETCORE_ENVIRONMENT=Development`), Swagger UI will be available at `http://localhost:5146/swagger`.
+- **Method 1 (Visual Studio)**: Press `F5` or click the "Start Debugging" button to run the project
+- **Method 2 (Command Line)**: Execute `dotnet run` in the project directory
 
-3. Configuration file explanation:
+**Running Notes**:
 
-   The default configuration is located in `appsettings.json`, but it is strongly recommended to manage sensitive information using `userSecrets.json`. This can prevent accidental exposure of sensitive development configurations in the code base.
+- The default configuration will check if the SQLite database file `chats.db` exists, and if not, it will automatically create it in the `./AppData` directory and initialize the database
+- The service will run on `http://localhost:5146`, providing API services
+- In development mode (`ASPNETCORE_ENVIRONMENT=Development`), Swagger UI will be available at `http://localhost:5146/swagger` for convenient API testing
 
-   **Default configuration structure:**
+#### 3. Configuration File Explanation
 
-   ```json
-   {
-     "Logging": {
-       "LogLevel": {
-         "Default": "Information",
-         "Microsoft.AspNetCore": "Warning"
-       }
-     },
-     "AllowedHosts": "*",
-     "FE_URL": "http://localhost:3001",
-     "ENCRYPTION_PASSWORD": "this is used for encrypt auto increment int id, please set as a random string.",
-     "DBType": "sqlite",
-     "ConnectionStrings": {
-       "ChatsDB": "Data Source=./AppData/chats.db"
-     }
-   }
-   ```
+The default configuration is located in `appsettings.json`, but **it is strongly recommended to manage sensitive information using `userSecrets.json`** to prevent accidental exposure of sensitive development configurations in the codebase.
 
-   **Configuration options explanation:**
+**Default Configuration Structure:**
 
-   - `Logging`: Manages log level; defaults to recording information level logs.
-   - `AllowedHosts`: Configures allowed host names; `*` accepts all hosts.
-   - `FE_URL`: Frontend URL, defaults to `http://localhost:3001`. The frontend can access the backend via CORS, with no extra configuration required for port 3000.
-   - `DBType`: Database type, supporting `sqlite` (default), `mssql`, and `postgresql`.
-   - `ConnectionStrings:ChatsDB`: Database `ADO.NET` connection string, varying based on `DBType`.
-   - `ENCRYPTION_PASSWORD`: Used for encrypting auto-increment integer IDs. In a production environment, it should be set to a random string to avoid direct exposure of IDs.
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "FE_URL": "http://localhost:3001",
+  "ENCRYPTION_PASSWORD": "this is used for encrypt auto increment int id, please set as a random string.",
+  "DBType": "sqlite",
+  "ConnectionStrings": {
+    "ChatsDB": "Data Source=./AppData/chats.db"
+  }
+}
+```
 
-   **Why use integer + encryption instead of GUID?**
-   
-   Initially, the Chats project used GUIDs, but due to the following two reasons and careful consideration, it was switched to auto-increment integer IDs:
-   - GUID fields are larger, taking up more space;
-   - GUIDs as clustered indexes can lead to index fragmentation, affecting performance;
-   
+**Configuration Options Details:**
 
-   **Managing sensitive configurations:**
+| Configuration | Description | Default Value |
+|--------------|-------------|---------------|
+| `Logging` | Log level configuration | Information |
+| `AllowedHosts` | Allowed host names | `*` (accepts all) |
+| `FE_URL` | Frontend URL for CORS configuration | `http://localhost:3001` |
+| `DBType` | Database type | `sqlite` (supports `mssql`, `postgresql`) |
+| `ConnectionStrings:ChatsDB` | Database ADO.NET connection string | `Data Source=./AppData/chats.db` |
+| `ENCRYPTION_PASSWORD` | Key for encrypting auto-increment IDs | Recommended to set as random string |
 
-   It's not recommended to directly modify configuration items in `appsettings.json`. Instead, use `userSecrets.json` via Visual Studio:
+> **💡 Why use integer + encryption instead of GUID?**
+> 
+> Initially, the Chats project used GUIDs, but after careful consideration, it was switched to auto-increment integer IDs:
+> - ✅ GUID fields are larger, taking up more storage space
+> - ✅ GUIDs as clustered indexes can lead to index fragmentation, affecting performance
+> - ✅ Integer IDs are more efficient, and encryption can avoid direct exposure of IDs
 
-   - Visual Studio: Right-click the `Chats.BE` project -> `Manage User Secrets`.
-   - CLI: Manage user secrets with the following commands.
 
-     ```bash
-     dotnet user-secrets init
-     dotnet user-secrets set "key" "value"
-     dotnet user-secrets list
-     ```
+#### 4. Managing Sensitive Configuration (Recommended)
 
-   This helps avoid accidentally uploading sensitive information when committing code.
+⚠️ **It's not recommended to directly modify sensitive configuration items in `appsettings.json`**. Use `userSecrets.json` instead.
 
-4. Running without Visual Studio:
+**Using Visual Studio:**
 
-   Navigate to the backend directory:
+1. Right-click the `Chats.BE` project
+2. Select "Manage User Secrets"
+3. Add configuration in the opened `secrets.json` file
 
-   ```bash
-   cd ./chats/src/BE
-   dotnet run
-   ```
+**Using Command Line:**
+
+```bash
+# Initialize user secrets
+dotnet user-secrets init --project src/BE
+
+# Set configuration items
+dotnet user-secrets set "ENCRYPTION_PASSWORD" "your-random-string" --project src/BE
+dotnet user-secrets set "ConnectionStrings:ChatsDB" "your-connection-string" --project src/BE
+
+# View all configurations
+dotnet user-secrets list --project src/BE
+```
+
+This helps avoid accidentally uploading sensitive information when committing code to the repository.
+
+#### 5. Command Line Running Method
+
+If not using Visual Studio, you can run via command line:
+
+```bash
+# Navigate to backend directory
+cd ./src/BE
+
+# Run project
+dotnet run
+
+# Or specify listening address
+dotnet run --urls "http://localhost:5146"
+```
 
 ### Frontend Development Guide
 
-1. Navigate to the frontend directory:
+#### 1. Navigate to Frontend Directory
 
-    ```bash
-    cd ./chats/src/FE
-    ```
+```bash
+cd ./src/FE
+```
 
-2. Create a `.env.local` file and specify the backend URL:
+#### 2. Create Environment Configuration File
 
-    ```bash
-    echo "API_URL=http://localhost:5146" > .env.local
-    ```
+Create `.env.local` file and specify the backend API address:
 
-3. Install dependencies and run the development server:
+**Linux/macOS:**
 
-    ```bash
-    npm i
-    npm run dev
-    ```
+```bash
+echo "API_URL=http://localhost:5146" > .env.local
+```
 
-After running, the frontend service will listen on `http://localhost:3000`. The backend already supports CORS configuration with no extra setup needed.
+**Windows PowerShell:**
+
+```powershell
+"API_URL=http://localhost:5146" | Out-File -FilePath .env.local -Encoding utf8
+```
+
+#### 3. Install Dependencies and Run
+
+```bash
+# Install dependencies
+npm install
+
+# Or use pnpm (recommended, faster)
+# pnpm install
+
+# Start development server
+npm run dev
+```
+
+**Running Notes**:
+
+- Frontend service will listen on `http://localhost:3000`
+- Backend already configured with CORS support, no extra configuration needed
+- Code changes will automatically hot reload without manual browser refresh
 
 ## Frontend Only Development
 
-For frontend-focused development scenarios, we provide a pre-deployed backend development environment:
+For frontend-focused development scenarios, we provide a pre-deployed backend development environment, no need to start the backend locally.
 
-1. Clone the repository:
+### Quick Start
 
-    ```bash
-    git clone https://github.com/sdcb/chats.git
-    ```
+#### 1. Clone Repository
 
-2. Enter the frontend directory and specify the remote backend:
+```bash
+git clone https://github.com/sdcb/chats.git
+cd chats/src/FE
+```
 
-    ```bash
-    cd ./chats/src/FE
-    echo "API_URL=https://chats-dev.starworks.cc:88" > .env.local
-    ```
+#### 2. Configure Remote Backend
 
-    This environment already allows cross-origin access behavior from http://localhost:3000.
+Create `.env.local` file and specify the remote backend address:
 
-3. Install dependencies and run:
+**Linux/macOS:**
 
-    ```bash
-    npm i
-    npm run dev
-    ```
+```bash
+echo "API_URL=https://chats-dev.starworks.cc:88" > .env.local
+```
 
-### Notes
+**Windows PowerShell:**
+
+```powershell
+"API_URL=https://chats-dev.starworks.cc:88" | Out-File -FilePath .env.local -Encoding utf8
+```
+
+> **💡 Tip**: This development environment has been configured with CORS to allow cross-origin access from `http://localhost:3000`.
+
+#### 3. Install Dependencies and Run
+
+```bash
+npm install
+npm run dev
+```
+
+### Production Build Testing
 
 To simulate a production build process, execute:
 
 ```bash
+# Build production version
 npm run build
+
+# Preview build result
+npm run start
 ```
 
-This command will generate an `./out` folder in the current directory containing all necessary static files.
+After building, an `./out` folder will be generated in the current directory containing all static files.
 
 ## Backend Only Development
 
-For backend-focused development scenarios, you can use packaged frontend files:
+For backend-focused development scenarios, you can use pre-built frontend static files without compiling the frontend locally.
 
-1. Clone the repository and navigate to the backend directory:
+### Quick Start
 
-    ```bash
-    git clone https://github.com/sdcb/chats.git
-    cd ./chats/src/BE
-    ```
+#### 1. Clone Repository and Navigate to Backend Directory
 
-2. Download and extract frontend static files into `wwwroot`:
+```bash
+git clone https://github.com/sdcb/chats.git
+cd chats/src/BE
+```
 
-   **On Linux:**
+#### 2. Download and Deploy Frontend Static Files
 
-   ```bash
-   curl -O https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip
-   unzip chats-fe.zip
-   cp -r chats-fe/* wwwroot/
-   ```
+**Linux/macOS:**
 
-   **On Windows:**
+```bash
+# Download frontend files
+curl -L -O https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip
 
-   ```powershell
-   Invoke-WebRequest -Uri "https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip" -OutFile "chats-fe.zip"
-   Expand-Archive -Path "chats-fe.zip" -DestinationPath "."
-   Copy-Item -Path ".\chats-fe\*" -Destination ".\wwwroot" -Recurse -Force
-   ```
+# Extract to wwwroot directory
+unzip -o chats-fe.zip
+cp -r chats-fe/* wwwroot/
+rm -rf chats-fe chats-fe.zip
+```
 
-   ### Note
-   1. I have also uploaded the above https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip to my personal Minio file server at: http://io.starworks.cc:88/chats/latest/chats-fe.zip
-   
-      If downloading directly from GitHub is too slow, you can use this address instead.
-   
-   2. The attached `chats-fe.zip` is automatically generated by GitHub Actions when code is merged into the `main` branch, not triggered for `dev` branch merges.
+**Windows PowerShell:**
 
-3. Run the backend:
+```powershell
+# Download frontend files
+Invoke-WebRequest -Uri "https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip" -OutFile "chats-fe.zip"
 
-    ```bash
-    dotnet run
-    ```
+# Extract to wwwroot directory
+Expand-Archive -Path "chats-fe.zip" -DestinationPath "." -Force
+Copy-Item -Path ".\chats-fe\*" -Destination ".\wwwroot" -Recurse -Force
+Remove-Item -Path "chats-fe" -Recurse -Force
+Remove-Item -Path "chats-fe.zip"
+```
 
-    Alternatively, open `Chats.sln` in Visual Studio and run the `Chats.BE` project.
+**Alternative Mirror (Recommended):**
 
-Once running, visiting `http://localhost:5146/login` will directly take you to the Chats login page, realizing a deployment mode where front-end and back-end are not separated.
+If downloading from GitHub is slow, use the domestic mirror:
 
-I hope this guide will assist you in successfully developing the Chats project. If you have any questions, please refer to the documentation in the source code or create an issue at https://github.com/sdcb/chats to receive support.
+```bash
+# Linux/macOS
+curl -L -O https://chats.sdcb.pub/release/latest/chats-fe.zip
+
+# Windows PowerShell
+Invoke-WebRequest -Uri "https://chats.sdcb.pub/release/latest/chats-fe.zip" -OutFile "chats-fe.zip"
+```
+
+> **📌 Notes**:
+> 
+> 1. `chats-fe.zip` is automatically generated by GitHub Actions when code is merged into the `main` branch
+> 2. Merges to the `dev` branch do not trigger updates
+> 3. For the latest development version, please use frontend development mode
+
+#### 3. Run Backend
+
+**Using Command Line:**
+
+```bash
+dotnet run
+```
+
+**Using Visual Studio:**
+
+1. Open `Chats.sln` solution
+2. Select `Chats.BE` project
+3. Press `F5` to start debugging
+
+#### 4. Access Application
+
+Once running successfully, visit `http://localhost:5146/login` to access the Chats login page, implementing a unified front-end and back-end deployment mode.
+
+---
+
+## FAQ
+
+### 1. How to switch database type?
+
+Modify `appsettings.json` or use user secrets settings:
+
+```json
+{
+  "DBType": "mssql",  // or "postgresql", "sqlite"
+  "ConnectionStrings": {
+    "ChatsDB": "Server=localhost;Database=ChatsDB;User Id=sa;Password=YourPassword;"
+  }
+}
+```
+
+### 2. Frontend requests to backend API fail?
+
+Check the following configurations:
+
+- Ensure backend is started and listening on `http://localhost:5146`
+- Check `API_URL` configuration in frontend `.env.local` file
+- Check if backend `FE_URL` configuration is correct
+- Check browser console for CORS errors
+
+### 3. How to reset database?
+
+Delete database file and run again:
+
+```bash
+# SQLite
+rm ./AppData/chats.db
+
+# Then run project again
+dotnet run
+```
+
+### 4. Visual Studio cannot recognize .NET 9.0?
+
+Ensure you have Visual Studio 2022 version 17.8 or higher installed, along with .NET 9.0 SDK.
+
+---
+
+## Related Resources
+
+- **GitHub Repository**: [https://github.com/sdcb/chats](https://github.com/sdcb/chats)
+- **Issue Reporting**: [Create Issue](https://github.com/sdcb/chats/issues)
+- **QQ Group**: 498452653
+- **Changelog**: [Release Notes](./release-notes/README.md)
+
+---
+
+We hope this guide helps you successfully develop the Chats project. If you have any questions, feel free to get support via GitHub Issues or QQ Group!

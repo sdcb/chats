@@ -1,45 +1,83 @@
-﻿**English** | **[简体中文](README.md)** [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS)
+﻿# Sdcb Chats
 
-Sdcb Chats is a powerful and flexible frontend for large language models that supports various features and platforms. Whether you want to manage multiple model interfaces or need a simple deployment process, Sdcb Chats can meet your needs.
+**English** | **[简体中文](README.md)**
 
-[![image](https://github.com/user-attachments/assets/30658e52-1537-4b79-b711-1c43d3307c40)](https://github.com/user-attachments/assets/2d9d609e-142e-4dbf-bdba-87477d7753fb)
+[![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE)
+
+Sdcb Chats is a powerful and flexible frontend for large language models, supporting 19+ mainstream AI model providers. Whether you want to unify the management of multiple model interfaces or need a simple and easy-to-use deployment solution, Sdcb Chats can meet your needs.
+
+![](https://github.com/user-attachments/assets/2d9d609e-142e-4dbf-bdba-87477d7753fb)
+
+## 📑 Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+  - [Docker Deployment](#docker-deployment)
+  - [Executable Deployment](#executable-deployment-guide)
+- [Supported LLM Services](#supported-llm-services)
+- [Development Documentation](#development-documentation)
+- [Contributing](#contributing)
+- [License](#license)
+
+## ✨ Why Choose Sdcb Chats
+
+- 🚀 **All-in-One Management**: Unified management of 19+ mainstream AI model providers
+- 🎯 **Ready to Use**: Supports Docker one-click deployment, also provides native executables for 8 platforms
+- 💾 **Flexible Storage**: Supports SQLite/SQL Server/PostgreSQL, local files/S3/OSS/Azure Blob and other storage options
+- 🔐 **Enterprise-Grade Security**: Comprehensive user permission management and account balance control, supports Keycloak SSO
+- 🌐 **Standard Protocol**: API gateway based on OpenAI protocol, compatible with existing ecosystem
+- 🎨 **Modern Interface**: Beautiful and easy-to-use frontend interface, supports visual model interaction
 
 ## Features
 
-- **Multi-model support**: Dynamically manage multiple large language model interfaces.
-- **Visual model support**: Integrate visual models to enhance user interaction experience.
-- **User permission management**: Provide fine-grained user permission settings to ensure security.
-- **Account balance management**: Track and manage user account balances in real-time.
-- **Model management**: Easily add, delete, and configure models.
-- **API gateway functionality**: Transparently forward user chat requests based on the OpenAI protocol.
-- **Simple deployment**: Support Docker images for 4 operating system/platform architectures. Additionally, provide executables for 8 different operating systems for users who do not use Docker for one-click deployment.
-- **Multi-database support**: Compatible with SQLite, SQL Server, and PostgreSQL databases, with no dependence on other components besides the database.
-- **Multi-file service support**: Compatible with local files, AWS S3, Minio, Aliyun OSS, Azure Blob Storage, etc., with runtime configuration modifications.
-- **Multiple login method support**: Supports Keycloak SSO and phone SMS code login.
+- **Multi-model support**: Dynamically manage multiple large language model interfaces
+- **Visual model support**: Integrate visual models to enhance user interaction experience
+- **User permission management**: Provide fine-grained user permission settings to ensure security
+- **Account balance management**: Track and manage user account balances in real-time
+- **Model management**: Easily add, delete, and configure models
+- **API gateway functionality**: Transparently forward user chat requests based on the OpenAI protocol
+- **Simple deployment**: Support Docker images for 4 operating system/platform architectures, additionally provide executables for 8 different operating systems for users who do not use Docker for one-click deployment
+- **Multi-database support**: Compatible with SQLite, SQL Server, and PostgreSQL databases, with no dependence on other components besides the database
+- **Multi-file service support**: Compatible with local files, AWS S3, Minio, Aliyun OSS, Azure Blob Storage, etc., with runtime configuration modifications
+- **Multiple login method support**: Supports Keycloak SSO and phone SMS code login
 
 ## Quick Start
 
-### Development Documentation
+### System Requirements
 
-Chats is developed using `C#`/`TypeScript`. For information on how to compile Chats, please refer to the [development documentation link](./doc/en-US/build.md).
+- **Docker Deployment**: Any system that supports Docker (Linux/Windows/macOS)
+- **Executable Deployment**:
+  - Windows: Windows 10 or higher
+  - Linux: glibc 2.17+ or musl libc
+  - macOS: macOS 10.15 or higher
+- **Database**: SQLite (default, no installation required) / SQL Server / PostgreSQL
 
 ### Docker Deployment
 
-For most users, Docker provides the simplest and fastest way to deploy. Here is an all-in-one deployment command:
+For most users, Docker provides the simplest and fastest way to deploy.
+
+#### Linux/macOS Quick Start
 
 ```bash
-mkdir ./AppData && chmod 777 ./AppData && docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
+mkdir -p ./AppData && chmod 755 ./AppData && docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
 ```
 
-#### Explanation:
+#### Windows PowerShell Quick Start
 
-- **Database storage location**: By default, the SQLite database for Chats will be created in the `./AppData` directory. To avoid accidental clearing of the database each time the Docker container is restarted, we first create an `AppData` folder and set its permissions to writable (`chmod 777`).
+```powershell
+New-Item -ItemType Directory -Force -Path .\AppData
+docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ${PWD}\AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
+```
+
+#### Configuration Instructions
+
+- **Database storage location**: By default, the SQLite database for Chats will be created in the `./AppData` directory. To avoid accidental clearing of the database each time the Docker container is restarted, we first create an `AppData` folder and set its permissions to writable (`chmod 755`, using 777 is not recommended for security reasons)
   
-- **Port mapping**: This command maps port 8080 of the container to port 8080 of the host, allowing you to access the application via `http://localhost:8080`.
+- **Port mapping**: This command maps port 8080 of the container to port 8080 of the host, allowing you to access the application via `http://localhost:8080`
 
-- **Database type configuration**: The `DBType` environment variable specifies the database type, with the default value being `sqlite`. Besides SQLite, the application also supports using `mssql` (or `sqlserver`) and `postgresql` (or `pgsql`) as database options.
+- **Database type configuration**: The `DBType` environment variable specifies the database type, with the default value being `sqlite`. Besides SQLite, the application also supports using `mssql` (or `sqlserver`) and `postgresql` (or `pgsql`) as database options
 
-- **Connection string**: The default value of `ConnectionStrings__ChatsDB` is `Data Source=./AppData/chats.db`, which is the ADO.NET connection string for connecting to the database.
+- **Connection string**: The default value of `ConnectionStrings__ChatsDB` is `Data Source=./AppData/chats.db`, which is the ADO.NET connection string for connecting to the database
 
 - **Non-first-time run**: If your `AppData` directory is already created and Docker has write permission to it, you can simplify the start command as follows:
 
@@ -47,61 +85,100 @@ mkdir ./AppData && chmod 777 ./AppData && docker run --restart unless-stopped --
     docker run --restart unless-stopped --name sdcb-chats -v ./AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
     ```
 
-- **Database initialization**: After the container starts, if the database file does not exist, it will be automatically created and initial data inserted. The initial admin username is `chats`, and the default password is `RESET!!!`. It is strongly recommended that you immediately set a new password in the user management interface at the bottom left after logging in for the first time to ensure security.
+- **Database initialization**: After the container starts, if the database file does not exist, it will be automatically created and initial data inserted
+  - Initial admin username: `chats`
+  - Initial default password: `RESET!!!`
+  - ⚠️ **Important**: Please change the password immediately after the first login by going to the user management interface in the bottom left corner to ensure system security
 
-By following the above steps, you will be able to use Docker to successfully deploy and run the application. If you encounter any problems during deployment, feel free to contact us.
+By following the above steps, you will be able to use Docker to successfully deploy and run the application. If you encounter any problems during deployment, please contact us via [Issues](https://github.com/sdcb/chats/issues) or [QQ Group](https://qm.qq.com/q/AM8tY9cAsS).
+
+#### Docker Image List
 
 Chats provides the following images:
 
-| Description                     | Docker Image                                    |
-| ------------------------------- | ------------------------------------------------|
-| Latest                          | docker.io/sdcb/chats:latest                     |
-| r{version}                      | docker.io/sdcb/chats:r{version}                 |
-| Linux x64                       | docker.io/sdcb/chats:r{version}-linux-x64       |
-| Linux ARM64                     | docker.io/sdcb/chats:r{version}-linux-arm64     |
-| Windows Nano Server 1809        | docker.io/sdcb/chats:r{version}-nanoserver-1809 |
-| Windows Nano Server LTSC 2022   | docker.io/sdcb/chats:r{version}-nanoserver-ltsc2022 |
+| Description                     | Docker Image                                             |
+| ------------------------------- | --------------------------------------------------------|
+| Latest (Recommended)            | `docker.io/sdcb/chats:latest`                           |
+| Specific Full Version           | `docker.io/sdcb/chats:{version}`                        |
+| Specific Major Version          | `docker.io/sdcb/chats:{major}`                          |
+| Specific Minor Version          | `docker.io/sdcb/chats:{major.minor}`                    |
+| Linux x64                       | `docker.io/sdcb/chats:{version}-linux-x64`              |
+| Linux ARM64                     | `docker.io/sdcb/chats:{version}-linux-arm64`            |
+| Windows Nano Server 1809        | `docker.io/sdcb/chats:{version}-nanoserver-1809`        |
+| Windows Nano Server LTSC 2022   | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2022`    |
+| Windows Nano Server LTSC 2025   | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2025`    |
 
-**Note:**
+**Version Information:**
 
-- The `Latest` and `r{version}` images already include support for the following four operating system versions:
+- **Version Format**: Uses semantic versioning, e.g., `1.8.1`
+  - `{major}`: Major version number, e.g., `1`
+  - `{major.minor}`: Major.minor version number, e.g., `1.8`
+  - `{version}`: Full version number, e.g., `1.8.1`
+
+- **Multi-platform Support**: `latest` and version tags (like `1.8.1`, `1.8`, `1`) are multi-platform images containing:
   - Linux x64
   - Linux ARM64
-  - Windows Nano Server 1809 (suitable for Windows Server 2019)
-  - Windows Nano Server LTSC 2022 (suitable for Windows Server 2022)
+  - Windows Nano Server 1809 (for Windows Server 2019)
+  - Windows Nano Server LTSC 2022 (for Windows Server 2022)
+  - Windows Nano Server LTSC 2025 (for Windows Server 2025)
 
-Therefore, when using `docker pull`, users do not need to specify a particular operating system version, as Docker will automatically choose the correct version suitable for your system. This functionality is achieved through Docker's manifest creation, ensuring that users can easily obtain the image compatible with their environment.
+- **Automatic Platform Selection**: When using `docker pull`, you don't need to specify the operating system version. Docker will automatically select the correct version for your system through manifest
 
-Please note, in `r{version}`, `{version}` represents the specific version number, such as `r141` (the latest version number at the time of writing this document).
+**Examples:**
+
+```bash
+# Use latest version (recommended)
+docker pull sdcb/chats:latest
+
+# Use specific version
+docker pull sdcb/chats:1.8.1
+
+# Use major version (automatically gets latest 1.x.x)
+docker pull sdcb/chats:1
+
+# Use minor version (automatically gets latest 1.8.x)
+docker pull sdcb/chats:1.8
+
+# Specify particular platform (usually not needed)
+docker pull sdcb/chats:1.8.1-linux-x64
+```
 
 ### Executable Deployment Guide
 
-For environments where using Docker is inconvenient, Chats provides direct deployment options for 8 types of operating systems or architectures. You can obtain the corresponding compiled package from the following links:
+For environments where using Docker is inconvenient, Chats provides native executable files for 8 operating systems or architectures, which can be run directly without installing any runtime environment.
 
-| Platform              | GitHub Download Link                                                                                              | Alternative Download Link                                                                                   |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Windows 64-bit        | [chats-win-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-win-x64.zip)                     | [chats-win-x64.zip](https://chats.sdcb.pub/release/latest/chats-win-x64.zip)                               |
-| Linux 64-bit          | [chats-linux-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-x64.zip)                 | [chats-linux-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-x64.zip)                           |
-| Linux ARM64           | [chats-linux-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-arm64.zip)             | [chats-linux-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-arm64.zip)                       |
-| Linux musl x64        | [chats-linux-musl-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-x64.zip)       | [chats-linux-musl-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-x64.zip)                 |
-| Linux musl ARM64      | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip)   | [chats-linux-musl-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-arm64.zip)             |
-| macOS ARM64           | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)                 | [chats-osx-arm64.zip](https://chats.sdcb.pub/release/latest/chats-osx-arm64.zip)                           |
-| macOS x64             | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)                     | [chats-osx-x64.zip](https://chats.sdcb.pub/release/latest/chats-osx-x64.zip)                               |
-| Generic package dependent on .NET | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                                      | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                                  |
-| Pure front-end files  | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                               | [chats-fe.zip](https://chats.sdcb.pub/release/latest/chats-fe.zip)                                         |
+#### Download Links
 
-### Version and Download Instructions
+| Platform                          | GitHub Download (All Releases)                                                                           | Mirror Download (Latest Stable)                                           |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Windows 64-bit                    | [chats-win-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-win-x64.zip)           | [chats-win-x64.zip](https://chats.sdcb.pub/release/latest/chats-win-x64.zip)           |
+| Linux 64-bit                      | [chats-linux-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-x64.zip)       | [chats-linux-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-x64.zip)       |
+| Linux ARM64                       | [chats-linux-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-arm64.zip)   | [chats-linux-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-arm64.zip)   |
+| Linux musl x64                    | [chats-linux-musl-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-x64.zip) | [chats-linux-musl-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-x64.zip) |
+| Linux musl ARM64                  | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip) | [chats-linux-musl-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-arm64.zip) |
+| macOS ARM64                       | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)       | [chats-osx-arm64.zip](https://chats.sdcb.pub/release/latest/chats-osx-arm64.zip)       |
+| macOS x64                         | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)           | [chats-osx-x64.zip](https://chats.sdcb.pub/release/latest/chats-osx-x64.zip)           |
+| Generic (requires .NET 9.0)       | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                           | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                           |
+| Frontend files only               | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                     | [chats-fe.zip](https://chats.sdcb.pub/release/latest/chats-fe.zip)                     |
 
-   - In case of access issues, you can use the alternative download address:
-     ```
-     https://chats.sdcb.pub/release/r{version}/{artifact-id}.zip
-     ```
-   - For example, to directly download the latest Windows 64-bit version via the alternative download:
-     ```
-     https://chats.sdcb.pub/release/latest/chats-win-x64.zip
-     ```
+> **💡 Download Tips**:
+> - **Mirror Download** (powered by Cloudflare R2): Recommended for users in China for faster speed
+> - **Latest Development Build**: For bleeding-edge features, development builds provide the following files
+>   - Generic package: [chats.zip](https://chats.sdcb.pub/latest/chats.zip) (requires .NET 9.0)
+>   - Frontend files: [chats-fe.zip](https://chats.sdcb.pub/latest/chats-fe.zip)
+>   - ⚠️ Note: Development builds are automatically updated from `dev`/`feature` branches and may be unstable
+> - All platforms (except Generic) provide AOT-compiled native executables with fast startup and low memory footprint
 
-### Executable Directory Structure and Running Instructions
+#### Version Information
+
+- **Latest Version**: Visit the [Releases](https://github.com/sdcb/chats/releases) page to view the latest version and changelog
+- **Alternative Download**: When GitHub access is inconvenient, use the following format for the domestic mirror address:
+  ```
+  https://chats.sdcb.pub/release/latest/{artifact-id}.zip
+  ```
+  For example: `https://chats.sdcb.pub/release/latest/chats-win-x64.zip`
+
+#### Running Instructions
 
 The directory structure after extracting the AOT executable files is as follows:
 
@@ -129,11 +206,19 @@ C:\Users\ZhouJie\Downloads\chats-win-x64>dir
   - Parameter `DBType`: Options are `sqlite`, `mssql`, or `pgsql`.
   - Parameter `--ConnectionStrings:ChatsDB`: For specifying the ADO.NET connection string for the database.
 
-#### Special Note
+#### .NET Runtime Dependent Version
 
-- For the downloaded `chats.zip`, .NET SDK support will be required. Install the .NET runtime, then use `dotnet Chats.BE.dll` to start the program.
+For the downloaded `chats.zip`, you need to install .NET 9.0 runtime. After installation, use the following command to start:
 
-### Supported LLMs
+```bash
+dotnet Chats.BE.dll
+```
+
+Download .NET Runtime: [https://dotnet.microsoft.com/download](https://dotnet.microsoft.com/download)
+
+---
+
+## Supported LLM Services
 
 | Id  | Name             | Host                                                     |
 | --- | ---------------- | -------------------------------------------------------- |
@@ -156,9 +241,107 @@ C:\Users\ZhouJie\Downloads\chats-win-x64>dir
 | 16  | Doubao           | https://ark.cn-beijing.volces.com/api/v3/                |
 | 17  | SiliconFlow      | https://api.siliconflow.cn/v1                            |
 | 18  | OpenRouter       | https://openrouter.ai/api/v1                             |
+| 19  | Token Pony       | https://api.tokenpony.cn/v1                              |
 
-注意：
-Note:
-- Any other model providers not listed above can also be accessed through Chats as long as they comply with the OpenAI Chat Completion API protocol.
-- Azure OpenAI's o3/o4-mini/gpt-5 series models use the Response API protocol instead of the Chat Completion API protocol, and support features such as thought summary and thought process.
-- Google AI's Gemini model uses the native Google Gemini API protocol.
+**Note:**
+
+- ✅ Any model provider that complies with the OpenAI Chat Completion API protocol can be accessed through Chats
+- 🤖 Azure OpenAI's o3/o4-mini/gpt-5 series models use the Response API protocol (not Chat Completion API), supporting thought summary and thought process features
+- 🌐 Google AI's Gemini model uses the native Google Gemini API protocol
+
+---
+
+## Development Documentation
+
+Chats is developed using `C#`/`TypeScript`. For information on how to compile and develop Chats, please refer to:
+
+- [Chinese Development Documentation](./doc/zh-CN/build.md)
+- [English Development Guide](./doc/en-US/build.md)
+- [Changelog](./doc/zh-CN/release-notes/README.md)
+
+---
+
+## FAQ
+
+<details>
+<summary><b>How to change the default port?</b></summary>
+
+Use the `--urls` parameter when starting:
+
+```bash
+# Docker
+docker run -e ASPNETCORE_URLS="http://+:5000" -p 5000:5000 sdcb/chats:latest
+
+# Executable
+./Chats.BE.exe --urls http://+:5000
+```
+</details>
+
+<details>
+<summary><b>How to switch to SQL Server or PostgreSQL?</b></summary>
+
+Use the `--DBType` and `--ConnectionStrings:ChatsDB` parameters:
+
+```bash
+# SQL Server
+./Chats.BE.exe --DBType=mssql --ConnectionStrings:ChatsDB="Server=localhost;Database=ChatsDB;User Id=sa;Password=YourPassword"
+
+# PostgreSQL
+./Chats.BE.exe --DBType=pgsql --ConnectionStrings:ChatsDB="Host=localhost;Database=chatsdb;Username=postgres;Password=YourPassword"
+```
+</details>
+
+<details>
+<summary><b>How to configure file storage services?</b></summary>
+
+Chats supports multiple file storage services, which can be configured in the system settings of the management interface:
+- Local file system
+- AWS S3
+- Minio
+- Aliyun OSS
+- Azure Blob Storage
+
+Configuration takes effect without restart.
+</details>
+
+<details>
+<summary><b>What if I forget the administrator password?</b></summary>
+
+You can reset the password directly through the database, or delete the database file and reinitialize (remember to backup data).
+</details>
+
+---
+
+## Contributing
+
+We welcome contributions of all kinds, including but not limited to:
+
+- 🐛 Report bugs
+- 💡 Suggest new features
+- 📝 Improve documentation
+- 🔧 Submit code
+
+Please submit issues or suggestions via [GitHub Issues](https://github.com/sdcb/chats/issues).
+
+---
+
+## Contact
+
+- **GitHub Issues**: [https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
+- **QQ Group**: 498452653 [![Join QQ Group](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=flat&logo=tencent-qq)](https://qm.qq.com/q/AM8tY9cAsS)
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=sdcb/chats&type=Date)](https://star-history.com/#sdcb/chats&Date)
+
+---
+
+**If this project helps you, please give it a ⭐ Star!**
