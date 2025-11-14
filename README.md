@@ -57,19 +57,21 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 19+ 主流 
 
 对于大多数用户而言，Docker 提供了最简单快速的部署方式。
 
-#### Linux/macOS 快速启动
+#### SQLite 快速启动
 
 ```bash
 mkdir -p ./AppData && chmod 755 ./AppData && docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
 ```
 
-#### Windows PowerShell/cmd 快速启动
+> **说明**：SQLite 需要映射 `./AppData` 文件夹用于存储数据库文件和上传文件（如图床服务使用本地文件提供商时）。
 
-```powershell
-mkdir AppData
-icacls .\AppData /grant "Users:(OI)(CI)(M)" /T
-docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:C:/app/AppData -p 8080:8080 sdcb/chats:latest
+#### PostgreSQL 快速启动
+
+```bash
+docker run --restart unless-stopped --name sdcb-chats -e DBType=postgresql -e ConnectionStrings__ChatsDB="Host=host.docker.internal;Port=5432;Username=postgres;Password=mysecretpassword;Database=postgres" -p 8080:8080 sdcb/chats:latest
 ```
+
+> **说明**：PostgreSQL 不依赖 `./AppData` 文件夹存储数据库，但如果使用本地文件提供商作为图床服务，仍需映射该文件夹：`-v ./AppData:/app/AppData`（用户可在管理界面配置其他文件存储方式）。
 
 #### 配置说明
 
@@ -308,7 +310,29 @@ Chats 支持多种文件存储服务，可在管理界面的系统设置中配�
 <details>
 <summary><b>忘记管理员密码怎么办？</b></summary>
 
-可以通过数据库直接重置密码，或删除数据库文件重新初始化（注意备份数据）。
+可以通过数据库直接重置密码,或删除数据库文件重新初始化（注意备份数据）。
+</details>
+
+<details>
+<summary><b>如何在纯 Windows 环境使用 Docker 部署？</b></summary>
+
+纯 Windows 环境下使用 SQLite 数据库：
+
+```powershell
+mkdir AppData
+icacls .\AppData /grant "Users:(OI)(CI)(M)" /T
+docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:C:/app/AppData -p 8080:8080 sdcb/chats:latest
+```
+
+纯 Windows 环境下使用 PostgreSQL 数据库：
+
+```powershell
+mkdir AppData
+icacls .\AppData /grant "Users:(OI)(CI)(M)" /T
+docker run --restart unless-stopped --name sdcb-chats -e DBType=postgresql -e ConnectionStrings__ChatsDB="Host=host.docker.internal;Port=5432;Username=postgres;Password=YourPassword;Database=postgres" -v ./AppData:C:/app/AppData -p 8080:8080 sdcb/chats:latest
+```
+
+**注意**：从容器访问宿主机服务时，使用 `host.docker.internal` 而不是 `localhost`。
 </details>
 
 ---

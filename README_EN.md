@@ -56,19 +56,21 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 
 For most users, Docker provides the simplest and fastest way to deploy.
 
-#### Linux/macOS Quick Start
+#### SQLite Quick Start
 
 ```bash
 mkdir -p ./AppData && chmod 755 ./AppData && docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
 ```
 
-#### Windows PowerShell/cmd Quick Start
+> **Note**: SQLite requires mapping the `./AppData` folder to store the database file and uploaded files (when using local file provider for image hosting service).
 
-```powershell
-mkdir AppData
-icacls .\AppData /grant "Users:(OI)(CI)(M)" /T
-docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:C:/app/AppData -p 8080:8080 sdcb/chats:latest
+#### PostgreSQL Quick Start
+
+```bash
+docker run --restart unless-stopped --name sdcb-chats -e DBType=postgresql -e ConnectionStrings__ChatsDB="Host=host.docker.internal;Port=5432;Username=postgres;Password=mysecretpassword;Database=postgres" -p 8080:8080 sdcb/chats:latest
 ```
+
+> **Note**: PostgreSQL does not depend on the `./AppData` folder for database storage, but if using local file provider for image hosting service, you still need to map the folder: `-v ./AppData:/app/AppData` (users can configure other file storage methods in the admin interface).
 
 #### Configuration Instructions
 
@@ -308,6 +310,28 @@ Configuration takes effect without restart.
 <summary><b>What if I forget the administrator password?</b></summary>
 
 You can reset the password directly through the database, or delete the database file and reinitialize (remember to backup data).
+</details>
+
+<details>
+<summary><b>How to use Docker deployment on pure Windows environment?</b></summary>
+
+Pure Windows environment with SQLite database:
+
+```powershell
+mkdir AppData
+icacls .\AppData /grant "Users:(OI)(CI)(M)" /T
+docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:C:/app/AppData -p 8080:8080 sdcb/chats:latest
+```
+
+Pure Windows environment with PostgreSQL database:
+
+```powershell
+mkdir AppData
+icacls .\AppData /grant "Users:(OI)(CI)(M)" /T
+docker run --restart unless-stopped --name sdcb-chats -e DBType=postgresql -e ConnectionStrings__ChatsDB="Host=host.docker.internal;Port=5432;Username=postgres;Password=YourPassword;Database=postgres" -v ./AppData:C:/app/AppData -p 8080:8080 sdcb/chats:latest
+```
+
+**Note**: When accessing host services from container, use `host.docker.internal` instead of `localhost`.
 </details>
 
 ---
