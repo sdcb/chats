@@ -148,17 +148,17 @@ jobs:
             runs-on: windows-latest
             os: win
             arch: x64
-            args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:9.0-nanoserver-1809
+            args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:10.0-nanoserver-1809
           - tag: nanoserver-ltsc2022
             runs-on: windows-latest
             os: win
             arch: x64
-            args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:9.0-nanoserver-ltsc2022
+            args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:10.0-nanoserver-ltsc2022
           - tag: nanoserver-ltsc2025
             runs-on: windows-latest
             os: win
             arch: x64
-            args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:9.0-nanoserver-ltsc2025
+            args: /p:ContainerBaseImage=mcr.microsoft.com/dotnet/aspnet:10.0-nanoserver-ltsc2025
           - tag: linux-arm64
             runs-on: ubuntu-22.04
             os: linux

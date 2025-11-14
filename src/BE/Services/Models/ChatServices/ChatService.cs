@@ -90,7 +90,7 @@ public abstract partial class ChatService(Model model) : IDisposable
 
         ChatMessage[] filteredMessage = await messages
             .ToAsyncEnumerable()
-            .SelectAwait(async m => await FilterVision(Model.AllowVision, m, fup, cancellationToken))
+            .Select(async (m, ct) => await FilterVision(Model.AllowVision, m, fup, ct))
             .ToArrayAsync(cancellationToken);
         options.Temperature = Model.ClampTemperature(options.Temperature);
 

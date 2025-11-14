@@ -49,7 +49,7 @@ public class SessionManager(JwtKeyManager jwtKeyManager, IConfiguration configur
     internal static byte[] Pdkdf2StringToByte32(string input)
     {
         byte[] salt = new byte[16];
-        return new Rfc2898DeriveBytes(input, salt, 10000, HashAlgorithmName.SHA256).GetBytes(32);
+        return Rfc2898DeriveBytes.Pbkdf2(input, salt, 10000, HashAlgorithmName.SHA256, 32);
     }
 
     private SymmetricSecurityKey GetSecurityKey() => new(Pdkdf2StringToByte32(jwtKeyManager.GetOrCreateSecretKey()));

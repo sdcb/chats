@@ -9,8 +9,7 @@ internal class Utils
     {
         // Parameters for PBKDF2
         byte[] salt = new byte[16];
-        using Rfc2898DeriveBytes rfc2898DeriveBytes = new(idHasherPassword, salt, iterations, HashAlgorithmName.SHA256);
-        return rfc2898DeriveBytes.GetBytes(keyLength);
+        return Rfc2898DeriveBytes.Pbkdf2(idHasherPassword, salt, iterations, HashAlgorithmName.SHA256, keyLength);
     }
 
     internal static string SignData(byte[] cleanBytes, byte[] key)

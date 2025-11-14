@@ -79,7 +79,7 @@ public partial class StepContent
     {
         return await items
             .ToAsyncEnumerable()
-            .SelectAwait(async item => await item.ToMessageContent(fup, cancellationToken))
+            .Select(async (item, ct) => await item.ToMessageContent(fup, ct))
             .ToArrayAsync(cancellationToken);
     }
 

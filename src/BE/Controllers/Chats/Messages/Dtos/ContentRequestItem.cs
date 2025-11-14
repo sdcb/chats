@@ -18,7 +18,7 @@ public abstract record ContentRequestItem
     {
         return await items
             .ToAsyncEnumerable()
-            .SelectAwait(async item => await item.ToMessageContent(fup, cancellationToken))
+            .Select(async (item, ct) => await item.ToMessageContent(fup, ct))
             .ToArrayAsync(cancellationToken);
     }
 
@@ -95,7 +95,7 @@ public record MessageContentRequest
             StepContent.FromText(Text),
             ..(await (FileIds ?? [])
                 .ToAsyncEnumerable()
-                .SelectAwait(async fileId => await fup.CreateFileContent(fileId, cancellationToken))
+                .Select(async (fileId, ct) => await fup.CreateFileContent(fileId, ct))
                 .ToArrayAsync(cancellationToken)),
         ];
     }

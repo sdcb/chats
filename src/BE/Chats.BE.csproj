@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>d4aa34e2-6c5f-41b9-b61b-c1a48b1d1b44</UserSecretsId>
-    <Version>1.8.1</Version>
+    <Version>1.9.0</Version>
     <NoWarn>OPENAI001;OPENAI002;SCME0001</NoWarn>
   </PropertyGroup>
 
@@ -29,7 +29,6 @@
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
-    <PackageReference Include="System.Linq.Async" Version="6.0.3" />
     <PackageReference Include="System.Runtime.Caching" Version="9.0.10" />
     <PackageReference Include="TencentCloudSDK.Sms" Version="3.0.1330" />
   </ItemGroup>
