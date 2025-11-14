@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build-fe:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       is_release: ${{ github.ref_name == 'main' && 'true' || 'false' }}
       full_ver: ${{ steps.get_version.outputs.full_ver }}
