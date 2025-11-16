@@ -162,19 +162,19 @@ interface GetUserChatResult {
   spans: ChatSpanDto[];
   leafMessageId?: string;
   isTopMost: boolean;
-  groupId: string;
+  groupId: string | null;
   tags: string[];
   updatedAt: string;
 }
 
 export interface GetUserChatGroupWithMessagesResult {
-  id: string;
+  id: string | null;
   name: string;
-  rank: 0;
+  rank: number;
   isExpanded: boolean;
   chats: {
     rows: GetUserChatResult[];
-    count: 0;
+    count: number;
   };
 }
 

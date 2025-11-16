@@ -16,9 +16,10 @@ import {
   DefaultChatPaging,
   IChat,
   IChatPaging,
+  UngroupedChatName,
 } from '@/types/chat';
 import { IChatMessage } from '@/types/chatMessage';
-import { ChatResult, GetChatsParams } from '@/types/clientApis';
+import { ChatResult, GetChatsParams, GetUserChatGroupWithMessagesResult } from '@/types/clientApis';
 import { IChatGroup } from '@/types/group';
 
 import {
@@ -90,7 +91,7 @@ const HomeContent = () => {
     promptInitialState,
   );
 
-  const { chats, chatPaging, stopIds, selectedChatId } = chatState;
+  const { chats, chatPaging, stopIds, selectedChatId, chatGroups } = chatState;
   const { models } = modelState;
 
   // 解析 hash 中的 chatId，例如 "#/abc" -> "abc"
@@ -205,6 +206,104 @@ const HomeContent = () => {
     return chat;
   };
 
+  const getGroupSnapshotForCache = (groupId: string | null) => {
+    if (groupId === null) {
+      return {
+        id: null,
+        name: UngroupedChatName,
+        rank: 0,
+        isExpanded: true,
+      } as const;
+    }
+
+    const matchedGroup = chatGroups.find((group) => group.id === groupId);
+    if (matchedGroup) {
+      return matchedGroup;
+    }
+
+    return {
+      id: groupId,
+      name: '',
+      rank: 0,
+      isExpanded: true,
+    } as const;
+  };
+
+  const persistNewChatToCache = (chat: IChat) => {
+    const cachedData = getChatCache();
+    if (!cachedData?.length) return;
+
+    const targetGroupId = chat.groupId ?? null;
+    let updated = false;
+
+    const updatedGroups = cachedData.map((group) => {
+      const groupId = group.id ?? null;
+      if (groupId !== targetGroupId) {
+        return group;
+      }
+
+      updated = true;
+      const filteredRows = group.chats.rows.filter((row) => row.id !== chat.id);
+      const existed = filteredRows.length !== group.chats.rows.length;
+
+      return {
+        ...group,
+        chats: {
+          ...group.chats,
+          rows: [{ ...chat }, ...filteredRows],
+          count: existed ? group.chats.count : group.chats.count + 1,
+        },
+      };
+    });
+
+    if (!updated) {
+      const snapshot = getGroupSnapshotForCache(targetGroupId);
+      updatedGroups.push({
+        id: snapshot.id,
+        name: snapshot.name,
+        rank: snapshot.rank,
+        isExpanded: snapshot.isExpanded,
+        chats: {
+          rows: [{ ...chat }],
+          count: 1,
+        },
+      } as GetUserChatGroupWithMessagesResult);
+    }
+
+    setChatCache(updatedGroups, '');
+  };
+
+  const removeChatsFromCache = (chatIds: string[]) => {
+    if (!chatIds.length) return;
+    const cachedData = getChatCache();
+    if (!cachedData?.length) return;
+
+    const idSet = new Set(chatIds);
+    let changed = false;
+
+    const updatedGroups = cachedData.map((group) => {
+      const rows = group.chats.rows.filter((row) => !idSet.has(row.id));
+      if (rows.length === group.chats.rows.length) {
+        return group;
+      }
+
+      changed = true;
+      const removedCount = group.chats.rows.length - rows.length;
+      return {
+        ...group,
+        chats: {
+          ...group.chats,
+          rows,
+          count: Math.max(0, group.chats.count - removedCount),
+        },
+      };
+    });
+
+    if (changed) {
+      setChatCache(updatedGroups, '');
+    }
+  };
+
   const handleNewChat = (groupId: string | null = null) => {
     return postChats({
       title: t('New Conversation'),
@@ -220,6 +319,7 @@ const HomeContent = () => {
 
       const chatId = data.id;
       router.push('#/' + chatId);
+      persistNewChatToCache(chat);
     });
   };
 
@@ -266,6 +366,7 @@ const HomeContent = () => {
       return !ids.includes(x.id);
     });
     chatDispatch(setChats(chatList));
+    removeChatsFromCache(ids);
 
     if (chatList.length > 0) {
       let chatIdToSelect: string | undefined;
