@@ -21,6 +21,7 @@ import {
   IconArchive,
   IconCheck,
   IconDots,
+  IconLoader,
   IconPencil,
   IconPin,
   IconPinnedOff,
@@ -74,6 +75,7 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
   const [isChanging, setTitleChanging] = useState(false);
   const [isShare, setIsShare] = useState(false);
   const [isArchive, setIsArchive] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const handleEnterDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter') {
@@ -97,22 +99,25 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
     onDragItemStart && onDragItemStart(e, chat);
   };
 
-  const handleConfirm: MouseEventHandler<HTMLButtonElement> = (e) => {
+  const handleConfirm: MouseEventHandler<HTMLButtonElement> = async (e) => {
     e.stopPropagation();
-    if (isDeleting) {
-      deleteChats(chat.id).then(() => {
+    setIsConfirming(true);
+    try {
+      if (isDeleting) {
+        await deleteChats(chat.id);
         handleDeleteChat([chat.id]);
-      });
-    } else if (isChanging) {
-      handleChangeTitle(chat.id);
-    } else if (isArchive) {
-      putChats(chat.id, { isArchived: true }).then(() => {
+      } else if (isChanging) {
+        handleChangeTitle(chat.id);
+      } else if (isArchive) {
+        await putChats(chat.id, { isArchived: true });
         handleDeleteChat([chat.id]);
-      });
+      }
+    } finally {
+      setIsConfirming(false);
+      setIsDeleting(false);
+      setTitleChanging(false);
+      setIsArchive(false);
     }
-    setIsDeleting(false);
-    setTitleChanging(false);
-    setIsArchive(false);
   };
 
   const handleCancel: MouseEventHandler<HTMLButtonElement> = (e) => {
@@ -263,10 +268,14 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
 
       {(isDeleting || isChanging || isArchive) && selectChatId === chat.id && (
         <div className="absolute right-1 z-10 flex text-gray-300">
-          <SidebarActionButton handleClick={handleConfirm}>
-            <IconCheck size={18} />
+          <SidebarActionButton handleClick={handleConfirm} disabled={isConfirming}>
+            {isConfirming ? (
+              <IconLoader size={18} className="animate-spin" />
+            ) : (
+              <IconCheck size={18} />
+            )}
           </SidebarActionButton>
-          <SidebarActionButton handleClick={handleCancel}>
+          <SidebarActionButton handleClick={handleCancel} disabled={isConfirming}>
             <IconX size={18} />
           </SidebarActionButton>
         </div>
