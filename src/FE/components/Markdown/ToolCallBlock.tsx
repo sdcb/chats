@@ -1,11 +1,11 @@
-import { FC, memo, useState, useEffect, useRef } from 'react';
+import { FC, memo, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 import useTranslation from '@/hooks/useTranslation';
 import CopyButton from '@/components/Button/CopyButton';
 import { ChatSpanStatus, ToolCallContent, ToolResponseContent } from '@/types/chat';
-import { IconCheck, IconChevronDown, IconChevronRight, IconClipboard } from '@/components/Icons/index';
+import { IconCheck, IconChevronRight, IconClipboard } from '@/components/Icons/index';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ToolCallBlockProps {
@@ -20,10 +20,25 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
     const [isResponseCopied, setIsResponseCopied] = useState<boolean>(false);
     const [isOpen, setIsOpen] = useState<boolean>(true);
     const [isManuallyToggled, setIsManuallyToggled] = useState<boolean>(false);
+    const headerMeasureRef = useRef<HTMLDivElement>(null);
+    const [collapsedWidth, setCollapsedWidth] = useState<number | null>(null);
 
-    // 自动控制逻辑（不覆盖用户手动操作）：
-    // 1) 当该工具调用的响应出现时，自动收起
-    // 2) 流式中（chatting 且无响应）默认展开；结束后（none/failed）默认收起
+    useLayoutEffect(() => {
+        if (typeof ResizeObserver === 'undefined' || !headerMeasureRef.current) {
+            return;
+        }
+
+        const observer = new ResizeObserver((entries) => {
+            const entry = entries[0];
+            if (!entry) return;
+            const width = entry.borderBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+            setCollapsedWidth(Math.ceil(width));
+        });
+
+        observer.observe(headerMeasureRef.current);
+        return () => observer.disconnect();
+    }, []);
+
     useEffect(() => {
         if (isManuallyToggled) return;
         if (toolResponse) {
@@ -85,8 +100,11 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         <div className="codeblock relative font-sans text-[16px]">
             {/* Tool header - 统一的标题栏 */}
             <div 
-                className={`flex items-center gap-2 py-[6px] px-3 bg-[#3d3d3d] cursor-pointer hover:bg-[#454545] transition-colors ${isOpen ? 'w-full justify-between' : 'inline-flex'}`}
+                className="flex items-center gap-2 py-[6px] px-3 bg-[#3d3d3d] cursor-pointer hover:bg-[#454545] transition-all duration-200 ease-in-out"
                 style={{ 
+                    width: isOpen ? '100%' : collapsedWidth ? `${collapsedWidth}px` : 'fit-content',
+                    maxWidth: '100%',
+                    justifyContent: isOpen ? 'space-between' : 'flex-start',
                     borderTopLeftRadius: 12, 
                     borderTopRightRadius: 12,
                     borderBottomLeftRadius: isOpen ? 0 : 12,
@@ -98,12 +116,11 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                     <span className="text-blue-400">🔧</span>
                     <span className="text-sm text-white">{toolCall.n}</span>
                 </div>
-                <div className="flex items-center">
-                    {isOpen ? (
-                        <IconChevronDown size={18} stroke="#9ca3af" />
-                    ) : (
-                        <IconChevronRight size={18} stroke="#9ca3af" />
-                    )}
+                <div 
+                    className="flex items-center transition-transform duration-300 ease-in-out"
+                    style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
+                >
+                    <IconChevronRight size={18} stroke="#9ca3af" />
                 </div>
             </div>
 
@@ -240,6 +257,16 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                     </div>
                 </div>
             )}
+            <div
+                ref={headerMeasureRef}
+                aria-hidden="true"
+                className="absolute -z-10 inline-flex items-center gap-2 py-[6px] px-3"
+                style={{ visibility: 'hidden', pointerEvents: 'none', whiteSpace: 'nowrap' }}
+            >
+                <span className="text-blue-400">🔧</span>
+                <span className="text-sm text-white">{toolCall.n}</span>
+                <IconChevronRight size={18} stroke="#9ca3af" />
+            </div>
         </div>
     );
 });

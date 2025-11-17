@@ -14,7 +14,7 @@ import { IChatGroup } from '@/types/group';
 import SidebarActionButton from '../Button/SidebarActionButton';
 import {
   IconCheck,
-  IconChevronDown,
+
   IconChevronRight,
   IconDots,
   IconPencil,
@@ -117,11 +117,12 @@ const Folder = ({
             className="flex w-full gap-3 rounded-lg p-2 pr-11"
             onClick={handleClickFolder}
           >
-            {isOpen ? (
-              <IconChevronDown size={18} stroke="#6b7280" />
-            ) : (
+            <div 
+              className="transition-transform duration-300 ease-in-out"
+              style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
+            >
               <IconChevronRight size={18} stroke="#6b7280" />
-            )}
+            </div>
 
             <div className="relative flex-1 overflow-hidden text-ellipsis whitespace-nowrap break-all text-left text-[12.5px] text-gray-500">
               {currentFolder.name === UngroupedChatName

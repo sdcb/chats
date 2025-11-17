@@ -18,7 +18,7 @@ import { IStepGenerateInfo, ResponseMessageTempId } from '@/types/chatMessage';
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
 
-import { IconChevronDown, IconChevronRight, IconThink } from '../Icons';
+import { IconChevronRight, IconThink } from '../Icons';
 
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
@@ -188,11 +188,12 @@ const ThinkingMessage = (props: Props) => {
         ) : (
           headerLabel
         )}
-        {isOpen ? (
-          <IconChevronDown size={18} stroke="#6b7280" />
-        ) : (
+        <div 
+          className="transition-transform duration-300 ease-in-out"
+          style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
+        >
           <IconChevronRight size={18} stroke="#6b7280" />
-        )}
+        </div>
       </div>
       <div 
         className="overflow-hidden transition-all duration-300 ease-in-out"
