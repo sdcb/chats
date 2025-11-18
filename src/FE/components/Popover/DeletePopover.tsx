@@ -4,6 +4,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { IconTrash } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 // (暂时移除复杂 Tooltip 组合，避免与 Popover ref 冲突)
 import {
   Popover,
@@ -15,11 +16,13 @@ interface Props {
   onDelete: (() => void) | (() => Promise<void>);
   onCancel?: () => void;
   tooltip?: string; // 提示文本，可选
+  className?: string; // 按钮自定义样式
+  iconSize?: number; // 图标尺寸，默认 18
 }
 
 export default function DeletePopover(props: Props) {
   const { t } = useTranslation();
-  const { onDelete, onCancel, tooltip } = props;
+  const { onDelete, onCancel, tooltip, className, iconSize = 18 } = props;
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -53,13 +56,13 @@ export default function DeletePopover(props: Props) {
     <Button
       variant="ghost"
       size="icon"
-      className="h-9 w-9 text-destructive"
+      className={cn("text-destructive", className || "h-9 w-9")}
       disabled={isDeleting}
       onClick={() => !isDeleting && setIsOpen(true)}
       title={tooltip}
       aria-label={tooltip || t('Delete') || 'Delete'}
     >
-      <IconTrash size={18} />
+      <IconTrash size={iconSize} />
     </Button>
   );
 

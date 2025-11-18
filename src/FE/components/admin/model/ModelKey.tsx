@@ -84,7 +84,7 @@ export default function ModelKey({
       style={style}
     >
       <div
-        className="flex items-center justify-between p-3 select-none"
+        className="flex items-center justify-between p-2 select-none"
         onClick={handleClick}
         {...attributes}
       >
@@ -108,7 +108,7 @@ export default function ModelKey({
           <IconKey size={18} className="text-muted-foreground flex-shrink-0" />
           
           {/* 标题 */}
-          <span className="font-medium">{modelKey.name}</span>
+          <span className="text-sm font-medium">{modelKey.name}</span>
         </div>
         <div className="flex gap-2">
           <IconActionButton

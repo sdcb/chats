@@ -122,17 +122,17 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage, onAssi
               disabled={!model.enabled || batchPending}
             >
               {batchPending ? (
-                <IconLoader size={20} className="animate-spin text-muted-foreground" />
+                <IconLoader size={18} className="animate-spin text-muted-foreground" />
               ) : checkState === 'checked' ? (
-                <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center hover:bg-green-600 transition-colors">
-                  <span className="text-white text-xs">✓</span>
+                <div className="w-[18px] h-[18px] rounded-full bg-green-500 flex items-center justify-center hover:bg-green-600 transition-colors">
+                  <span className="text-white text-[10px]">✓</span>
                 </div>
               ) : checkState === 'indeterminate' ? (
-                <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center hover:bg-blue-600 transition-colors">
-                  <span className="text-white text-xs">−</span>
+                <div className="w-[18px] h-[18px] rounded-full bg-blue-500 flex items-center justify-center hover:bg-blue-600 transition-colors">
+                  <span className="text-white text-[10px]">−</span>
                 </div>
               ) : (
-                <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 hover:border-primary transition-colors" />
+                <div className="w-[18px] h-[18px] rounded-full border-2 border-muted-foreground/30 hover:border-primary transition-colors" />
               )}
             </button>
           </div>
@@ -148,7 +148,7 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage, onAssi
           {...(model.enabled ? listeners : {})}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="w-2.5 h-5 flex flex-col justify-center gap-0.5">
+          <div className="w-2.5 h-4 flex flex-col justify-center gap-0.5">
             <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
             <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
             <div className="w-full h-0.5 bg-muted-foreground/60 rounded-full" />
@@ -157,44 +157,44 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage, onAssi
 
         <div
           className={cn(
-            'flex-1 min-w-0',
+            'flex-1 min-w-0 flex items-center gap-2',
             !model.enabled && 'text-muted-foreground'
           )}
         >
-          <div className="truncate flex items-center gap-2">
-            {!model.enabled && <IconEyeOff size={14} className="text-muted-foreground flex-shrink-0" />}
-            <span className="truncate flex items-center gap-1.5" title={getApiTypeName(model.apiType)}>
-              {getApiTypeIcon(model.apiType)}
-              <span className={cn('truncate', !model.enabled && 'line-through')}>{model.name}</span>
-            </span>
-          </div>
-          <div
+          {!model.enabled && <IconEyeOff size={14} className="text-muted-foreground flex-shrink-0" />}
+          <span className="truncate flex items-center gap-1.5 text-sm" title={getApiTypeName(model.apiType)}>
+            {getApiTypeIcon(model.apiType)}
+            <span className={cn('truncate font-mono', !model.enabled && 'line-through')}>{model.name}</span>
+          </span>
+          <span
             className={cn(
-              'text-xs truncate',
+              'text-xs truncate hidden sm:inline',
               model.enabled ? 'text-blue-600' : 'text-muted-foreground'
             )}
           >
             {'￥' + formatNumberAsMoney(model.inputTokenPrice1M) + '/' + formatNumberAsMoney(model.outputTokenPrice1M)}
-          </div>
+          </span>
         </div>
         <div className="flex gap-2 ml-3" data-no-expand>
           <IconActionButton
             label={t('View Usage Records')}
-            icon={<IconChartHistogram size={18} />}
+            icon={<IconChartHistogram size={16} />}
+            className="h-5 w-5"
             onClick={() => onGoToUsage({ model: model.name })}
             disabled={!model.enabled}
           />
           <IconActionButton
             label={t('Edit Model')}
-            icon={<IconPencil size={18} />}
+            icon={<IconPencil size={16} />}
+            className="h-5 w-5"
             onClick={() => onEdit(model)}
           />
-          <div
-            title={t('Delete Model')}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <DeletePopover onDelete={() => onDelete(model.modelId)} />
-          </div>
+          <DeletePopover 
+            onDelete={() => onDelete(model.modelId)}
+            tooltip={t('Delete Model')}
+            className="h-5 w-5"
+            iconSize={16}
+          />
         </div>
       </div>
       
