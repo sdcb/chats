@@ -56,7 +56,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
                 {
                     logger.LogInformation("{response.Id} status: {response.Status}, elapsed: {sw.ElapsedMilliseconds:N0}ms", response.Id, response.Status, sw.ElapsedMilliseconds);
                     await Task.Delay(2000, cancellationToken);
-                    response = await responseClient.GetResponseAsync(response.Id, cancellationToken);
+                    response = await responseClient.GetResponseAsync(response.Id, cancellationToken: cancellationToken);
                 }
             }
             catch (TaskCanceledException)
@@ -192,11 +192,11 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
                 {
                     yield return ChatSegment.FromToolCallDelta(fcDelta);
                 }
-                else if (delta is InternalResponseReasoningSummaryTextDeltaEvent rsDelta)
+                else if (delta is StreamingResponseReasoningSummaryTextDeltaUpdate rsDelta)
                 {
                     yield return ChatSegment.FromThinkOnly(rsDelta.Delta.ToString());
                 }
-                else if (delta is InternalResponseReasoningSummaryTextDoneEvent rsDone)
+                else if (delta is StreamingResponseReasoningSummaryTextDoneUpdate rsDone)
                 {
                     yield return ChatSegment.FromThinkOnly("\n\n");
                 }
