@@ -13,6 +13,9 @@ const withPWA = require('next-pwa')({
 const nextConfig = {
   output: 'export',
   reactStrictMode: false,
+  images: {
+    unoptimized: true,
+  },
   webpack(config) {
     config.experiments = {
       asyncWebAssembly: true,
