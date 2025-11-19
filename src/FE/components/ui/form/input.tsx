@@ -20,7 +20,7 @@ const FormInput = ({
   autocomplete,
 }: {
   label?: string;
-  options?: IFormFieldOption;
+  options?: Partial<IFormFieldOption>;
   field: FormFieldType;
   type?: HTMLInputTypeAttribute;
   hidden?: boolean;

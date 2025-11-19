@@ -8,7 +8,7 @@ const FormSwitch = ({
   field,
 }: {
   label?: string;
-  options?: IFormFieldOption;
+  options?: Partial<IFormFieldOption>;
   field: FormFieldType;
 }) => {
   return (

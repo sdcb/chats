@@ -10,7 +10,7 @@ const FormTextarea = ({
   rows,
 }: {
   label?: string;
-  options?: IFormFieldOption;
+  options?: Partial<IFormFieldOption>;
   field: FormFieldType;
   hidden?: boolean;
   rows?: number;

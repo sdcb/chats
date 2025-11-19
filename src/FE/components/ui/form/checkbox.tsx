@@ -10,7 +10,7 @@ const FormCheckbox = ({
 }: {
   label?: string;
   disabled?: boolean;
-  options?: IFormFieldOption;
+  options?: Partial<IFormFieldOption>;
   field: FormFieldType;
 }) => {
   return (

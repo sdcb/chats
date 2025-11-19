@@ -20,7 +20,7 @@ const FormPasswordInput = ({
   autocomplete,
 }: {
   label?: string;
-  options?: IFormFieldOption;
+  options?: Partial<IFormFieldOption>;
   field: FormFieldType;
   hidden?: boolean;
   disabled?: boolean;

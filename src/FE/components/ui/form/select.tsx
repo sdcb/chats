@@ -18,7 +18,7 @@ const FormSelect = ({
   className,
 }: {
   items: { name: string; value: string }[];
-  options?: IFormFieldOption;
+  options?: Partial<IFormFieldOption>;
   label?: string;
   field: FormFieldType;
   hidden?: boolean;
