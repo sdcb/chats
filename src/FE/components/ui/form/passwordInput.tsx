@@ -29,7 +29,7 @@ const FormPasswordInput = ({
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <FormItem className="py-2" hidden={hidden}>
+    <FormItem className="py-1" hidden={hidden}>
       <FormLabel>{options?.label || label}</FormLabel>
       <FormControl>
         <div className="relative">

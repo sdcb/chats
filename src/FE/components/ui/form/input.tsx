@@ -28,7 +28,7 @@ const FormInput = ({
   autocomplete?: string;
 }) => {
   return (
-    <FormItem className="py-2" hidden={hidden}>
+    <FormItem className="py-1" hidden={hidden}>
       <FormLabel>{options?.label || label}</FormLabel>
       <FormControl>
         <Input

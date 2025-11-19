@@ -16,7 +16,7 @@ const FormTextarea = ({
   rows?: number;
 }) => {
   return (
-    <FormItem className="py-2" hidden={hidden}>
+    <FormItem className="py-1" hidden={hidden}>
       <FormLabel>{options?.label || label}</FormLabel>
       <FormControl>
         <Textarea rows={rows} placeholder={options?.placeholder} {...field} />

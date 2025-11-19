@@ -499,7 +499,7 @@ const ModelModal = (props: IProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-3/4 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:w-3/4 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditMode ? t('Edit Model') : t('Add Model')}
@@ -541,11 +541,11 @@ const ModelModal = (props: IProps) => {
                     ></FormField>
                     <div
                       hidden={!form.getValues('modelKeyId')}
-                      className="text-sm w-36 mt-12 text-right"
+                      className="text-sm w-36 mt-12 text-right hidden sm:block"
                     >
                       <Popover>
                         <PopoverTrigger>
-                          <span className="text-primary invisible sm:visible">
+                          <span className="text-primary">
                             {t('Click View Configs')}
                           </span>
                         </PopoverTrigger>
@@ -594,7 +594,7 @@ const ModelModal = (props: IProps) => {
                       return (
                         <FormInput
                           type="number"
-                          label={`${t('1M input tokens price')}(${t('Yuan')})`}
+                          label={t('1M input tokens price')!}
                           field={field}
                         />
                       );
@@ -608,7 +608,7 @@ const ModelModal = (props: IProps) => {
                       return (
                         <FormInput
                           type="number"
-                          label={`${t('1M output tokens price')}(${t('Yuan')})`}
+                          label={t('1M output tokens price')!}
                           field={field}
                         />
                       );
@@ -624,33 +624,19 @@ const ModelModal = (props: IProps) => {
                     control={form.control}
                     name="apiType"
                     render={({ field }) => (
-                      <div className="space-y-2">
-                        <Label>{t('API Type')}</Label>
-                        <RadioGroup
-                          value={field.value.toString()}
-                          onValueChange={(value) => field.onChange(Number(value))}
-                          className="flex flex-row gap-4"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="0" id="api-type-0" />
-                            <Label htmlFor="api-type-0" className="font-normal cursor-pointer">
-                              ChatCompletion
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="1" id="api-type-1" />
-                            <Label htmlFor="api-type-1" className="font-normal cursor-pointer">
-                              Response
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="2" id="api-type-2" />
-                            <Label htmlFor="api-type-2" className="font-normal cursor-pointer">
-                              ImageGeneration
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </div>
+                      <FormSelect
+                        field={{
+                          ...field,
+                          value: field.value.toString(),
+                          onChange: (value) => field.onChange(Number(value))
+                        }}
+                        label={t('API Type')!}
+                        items={[
+                          { name: 'ChatCompletion', value: '0' },
+                          { name: 'Response', value: '1' },
+                          { name: 'ImageGeneration', value: '2' }
+                        ]}
+                      />
                     )}
                   />
                   

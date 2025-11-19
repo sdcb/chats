@@ -14,7 +14,7 @@ const FormCheckbox = ({
   field: FormFieldType;
 }) => {
   return (
-    <FormItem className="py-2 flex items-center gap-2">
+    <FormItem className="py-1 flex items-center gap-2">
       <FormControl className="flex">
         <Checkbox
           checked={field.value}

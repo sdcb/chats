@@ -111,8 +111,9 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
             render={({ field }) => (
               <FormInput
                 type="number"
-                label={t('Min Temperature (0-2)')!}
+                label={t('Min Temperature')!}
                 field={field}
+                options={{ placeholder: '0-2' }}
               />
             )}
           />
@@ -122,8 +123,9 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
             render={({ field }) => (
               <FormInput
                 type="number"
-                label={t('Max Temperature (0-2)')!}
+                label={t('Max Temperature')!}
                 field={field}
+                options={{ placeholder: '0-2' }}
               />
             )}
           />

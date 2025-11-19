@@ -18,7 +18,7 @@ const FormCalendar = ({
   field: FormFieldType;
 }) => {
   return (
-    <FormItem className="py-2">
+    <FormItem className="py-1">
       <FormLabel>{options.label}</FormLabel>
       <Popover>
         <PopoverTrigger asChild>

@@ -26,7 +26,7 @@ const FormSelect = ({
   className?: string;
 }) => {
   return (
-    <FormItem className={`py-2 ${className}`} hidden={hidden}>
+    <FormItem className={`py-1 ${className}`} hidden={hidden}>
       <FormLabel>{options?.label || label}</FormLabel>
       <Select onValueChange={field.onChange} defaultValue={field.value}>
         <FormControl>
