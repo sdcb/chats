@@ -577,9 +577,18 @@ export default function ModelManager() {
               onEditKey={handleEditKey}
               onDeleteKey={handleDeleteKey}
               onConfigModels={(keyId) => openConfigModels(keyId, provider.providerId)}
-              onAddModel={openAddModel}
-              onEditModel={openEditModel}
-              onDeleteModel={handleDeleteModel}
+              onAddModelClick={openAddModel}
+              onEditModelClick={openEditModel}
+              onDeleteModelClick={handleDeleteModel}
+              onModelUpdated={async () => {
+                // 刷新 providers 和当前展开的 keys
+                await refreshProviders();
+                for (const [keyId, isExpanded] of Object.entries(expandKeys)) {
+                  if (isExpanded) {
+                    await refreshKeyModels(Number(keyId));
+                  }
+                }
+              }}
               onGoToUsage={handleGoToUsage}
             />
           ))

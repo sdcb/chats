@@ -2,21 +2,24 @@ import React, { useState } from 'react';
 import { AdminModelDto } from '@/types/adminApis';
 import { formatNumberAsMoney } from '@/utils/common';
 import IconActionButton from '@/components/common/IconActionButton';
-import { IconPencil, IconChartHistogram, IconEyeOff, IconMessage, IconMessageStar, IconPhoto, IconLoader } from '@/components/Icons';
+import { IconPencil, IconChartHistogram, IconMessage, IconMessageStar, IconPhoto, IconLoader } from '@/components/Icons';
 import DeletePopover from '@/components/Popover/DeletePopover';
 import useTranslation from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import ModelUserList from '@/components/admin/user-models/ModelUserList';
+import { putModels } from '@/apis/adminApis';
+import toast from 'react-hot-toast';
 // dnd-kit
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 interface ModelItemProps {
   model: AdminModelDto;
-  onEdit: (model: AdminModelDto) => void;
-  onDelete: (modelId: number) => void;
+  onEditClick: (model: AdminModelDto) => void;
+  onDeleteClick: (modelId: number) => void;
   onGoToUsage: (params: { model: string }) => void;
   onAssignedUserCountChange?: (modelId: number, count: number) => void;
+  onUpdated?: () => void | Promise<void>;
 }
 
 // API 类型图标映射
@@ -47,13 +50,14 @@ const getApiTypeName = (apiType: number) => {
   }
 };
 
-export default function ModelItem({ model, onEdit, onDelete, onGoToUsage, onAssignedUserCountChange }: ModelItemProps) {
+export default function ModelItem({ model, onEditClick, onDeleteClick, onGoToUsage, onAssignedUserCountChange, onUpdated }: ModelItemProps) {
   const { t } = useTranslation();
   const [userListExpanded, setUserListExpanded] = useState(false);
   const [checkState, setCheckState] = useState<'checked' | 'unchecked' | 'indeterminate' | 'hidden'>('hidden');
   const [batchPending, setBatchPending] = useState(false);
   const [triggerBatchToggle, setTriggerBatchToggle] = useState(0);
-  
+  const [isToggling, setIsToggling] = useState(false);
+
   const sortable = useSortable({ id: `model-${model.modelId}` });
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
   const style: React.CSSProperties = {
@@ -82,36 +86,44 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage, onAssi
     setTriggerBatchToggle(prev => prev + 1);
   };
 
+  const handleToggleEnabled = async (checked: boolean) => {
+    setIsToggling(true);
+    try {
+      await putModels(String(model.modelId), {
+        ...model,
+        enabled: checked,
+      });
+      // 更新成功后触发父组件回调来刷新数据（与编辑对话框保存逻辑一致）
+      if (onUpdated) {
+        await onUpdated();
+      }
+    } catch (error) {
+      toast.error(t('Update failed'));
+      console.error('Failed to toggle model enabled status:', error);
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
   return (
     <div>
       <div
         className={cn(
           'flex items-center gap-2 px-2 py-1 rounded hover:bg-muted/40 transition-all duration-200 relative touch-pan-y cursor-pointer',
-          isDragging ? 'opacity-60' : '',
-          !model.enabled && 'opacity-60'
+          isDragging ? 'opacity-60' : ''
         )}
         ref={setNodeRef}
         style={style}
         {...attributes}
         onClick={handleRowClick}
       >
-        {/* 禁用状态蒙版 */}
-        {!model.enabled && (
-          <div className="absolute inset-0 bg-muted/20 rounded flex items-center justify-center pointer-events-none">
-            <div className="flex items-center gap-1 bg-muted/80 px-2 py-1 rounded text-xs text-muted-foreground">
-              <IconEyeOff size={12} />
-              <span>{t('Disabled')}</span>
-            </div>
-          </div>
-        )}
-
         {/* 批量选择图标 - 在最前面（hidden状态时不显示，带动画展开）*/}
-        <div 
-          data-no-expand 
+        <div
+          data-no-expand
           className={cn(
             "overflow-hidden transition-all duration-300 ease-in-out",
             checkState !== 'hidden' ? "w-5 opacity-100" : "w-0 opacity-0"
-          )} 
+          )}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex-shrink-0">
@@ -161,7 +173,6 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage, onAssi
             !model.enabled && 'text-muted-foreground'
           )}
         >
-          {!model.enabled && <IconEyeOff size={14} className="text-muted-foreground flex-shrink-0" />}
           <span className="truncate flex items-center gap-1.5 text-sm" title={getApiTypeName(model.apiType)}>
             {getApiTypeIcon(model.apiType)}
             <span className={cn('truncate font-mono', !model.enabled && 'line-through')}>{model.name}</span>
@@ -175,7 +186,36 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage, onAssi
             {'￥' + formatNumberAsMoney(model.inputTokenPrice1M) + '/' + formatNumberAsMoney(model.outputTokenPrice1M)}
           </span>
         </div>
-        <div className="flex gap-2 ml-3" data-no-expand>
+        <div className="flex items-center gap-2 ml-3" data-no-expand>
+          {/* Toggle switch with loading state */}
+          <div className="flex items-center gap-1.5">
+            {isToggling && <IconLoader size={14} className="animate-spin text-muted-foreground" />}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={model.enabled}
+              disabled={isToggling}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleEnabled(!model.enabled);
+              }}
+              className={cn(
+                'relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer items-center rounded-full transition-colors',
+                'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1',
+                model.enabled 
+                  ? 'bg-green-600/80 dark:bg-green-700/70' 
+                  : 'bg-gray-400/60 dark:bg-gray-600/50',
+                isToggling && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              <span
+                className={cn(
+                  'pointer-events-none block h-2.5 w-2.5 rounded-full bg-white dark:bg-gray-100 shadow-sm transition-transform',
+                  model.enabled ? 'translate-x-[16px]' : 'translate-x-[2px]'
+                )}
+              />
+            </button>
+          </div>
           <IconActionButton
             label={t('View Usage Records')}
             icon={<IconChartHistogram size={16} />}
@@ -187,17 +227,17 @@ export default function ModelItem({ model, onEdit, onDelete, onGoToUsage, onAssi
             label={t('Edit Model')}
             icon={<IconPencil size={16} />}
             className="h-5 w-5"
-            onClick={() => onEdit(model)}
+            onClick={() => onEditClick(model)}
           />
           <DeletePopover 
-            onDelete={() => onDelete(model.modelId)}
+            onDelete={() => onDeleteClick(model.modelId)}
             tooltip={t('Delete Model')}
             className="h-5 w-5"
             iconSize={16}
           />
         </div>
       </div>
-      
+
       {model.enabled && (
         <ModelUserList
           model={model}

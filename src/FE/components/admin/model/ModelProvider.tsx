@@ -34,9 +34,10 @@ interface ModelProviderProps {
   onEditKey: (key: GetModelKeysResult) => void;
   onDeleteKey: (keyId: number) => void;
   onConfigModels: (keyId: number) => void;
-  onAddModel: (keyId: number) => void;
-  onEditModel: (model: AdminModelDto) => void;
-  onDeleteModel: (modelId: number) => void;
+  onAddModelClick: (keyId: number) => void;
+  onEditModelClick: (model: AdminModelDto) => void;
+  onDeleteModelClick: (modelId: number) => void;
+  onModelUpdated?: () => void | Promise<void>;
   onGoToUsage: (params: {
     provider?: string;
     modelKey?: string;
@@ -57,9 +58,10 @@ export default function ModelProvider({
   onEditKey,
   onDeleteKey,
   onConfigModels,
-  onAddModel,
-  onEditModel,
-  onDeleteModel,
+  onAddModelClick,
+  onEditModelClick,
+  onDeleteModelClick,
+  onModelUpdated,
   onGoToUsage,
 }: ModelProviderProps) {
   const { t } = useTranslation();
@@ -186,9 +188,10 @@ export default function ModelProvider({
                     onEdit={onEditKey}
                     onDelete={onDeleteKey}
                     onConfigModels={onConfigModels}
-                    onAddModel={onAddModel}
-                    onEditModel={onEditModel}
-                    onDeleteModel={onDeleteModel}
+                    onAddModelClick={onAddModelClick}
+                    onEditModelClick={onEditModelClick}
+                    onDeleteModelClick={onDeleteModelClick}
+                    onModelUpdated={onModelUpdated}
                     onGoToUsage={onGoToUsage}
                   />
                 ))}

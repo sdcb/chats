@@ -22,9 +22,10 @@ interface ModelKeyProps {
   onEdit: (key: GetModelKeysResult) => void;
   onDelete: (keyId: number) => void;
   onConfigModels: (keyId: number) => void;
-  onAddModel: (keyId: number) => void;
-  onEditModel: (model: AdminModelDto) => void;
-  onDeleteModel: (modelId: number) => void;
+  onAddModelClick: (keyId: number) => void;
+  onEditModelClick: (model: AdminModelDto) => void;
+  onDeleteModelClick: (modelId: number) => void;
+  onModelUpdated?: () => void | Promise<void>;
   onGoToUsage: (params: {
     provider?: string;
     modelKey?: string;
@@ -41,9 +42,10 @@ export default function ModelKey({
   onEdit,
   onDelete,
   onConfigModels,
-  onAddModel,
-  onEditModel,
-  onDeleteModel,
+  onAddModelClick,
+  onEditModelClick,
+  onDeleteModelClick,
+  onModelUpdated,
   onGoToUsage,
 }: ModelKeyProps) {
   const { t } = useTranslation();
@@ -127,7 +129,7 @@ export default function ModelKey({
             label={t('Add Model')}
             icon={<IconPlus size={16} />}
             className="h-5 w-5"
-            onClick={() => onAddModel(modelKey.id)}
+            onClick={() => onAddModelClick(modelKey.id)}
           />
           <IconActionButton
             label={t('Edit')}
@@ -174,8 +176,9 @@ export default function ModelKey({
                 <ModelItem
                   key={model.modelId}
                   model={model}
-                  onEdit={onEditModel}
-                  onDelete={onDeleteModel}
+                  onEditClick={onEditModelClick}
+                  onDeleteClick={onDeleteModelClick}
+                  onUpdated={onModelUpdated}
                   onGoToUsage={onGoToUsage}
                 />
               ))}

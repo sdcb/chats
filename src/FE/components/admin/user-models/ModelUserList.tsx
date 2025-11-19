@@ -322,7 +322,7 @@ export default function ModelUserList({ model, isExpanded, onToggle, onAssignedU
   };
 
   return (
-    <div className="border-t mt-2">
+    <>
       <div 
         className={cn(
           "grid transition-all duration-300 ease-in-out",
@@ -501,6 +501,6 @@ export default function ModelUserList({ model, isExpanded, onToggle, onAssignedU
           onSave={handleSaveEdit}
         />
       )}
-    </div>
+    </>
   );
 }
