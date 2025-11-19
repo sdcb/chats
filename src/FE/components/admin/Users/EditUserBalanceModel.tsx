@@ -37,7 +37,7 @@ const EditUserBalanceModal = (props: IProps) => {
   const formFields: IFormFieldOption[] = [
     {
       name: 'value',
-      label: `${t('Recharge Amount')}(${t('Yuan')})`,
+      label: `${t('Recharge Amount')}`,
       defaultValue: 0,
       render: (options: IFormFieldOption, field: FormFieldType) => (
         <FormInput type="number" options={options} field={field} />
@@ -94,7 +94,7 @@ const EditUserBalanceModal = (props: IProps) => {
             <DialogTitle>{t('User recharge')}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            {t('Current Balance')}: {toFixed(+userBalance!)} {t('Yuan')}
+            {t('Current Balance')}: {toFixed(+userBalance!)}
           </p>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
