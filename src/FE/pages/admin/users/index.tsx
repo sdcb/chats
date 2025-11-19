@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import Image from 'next/image';
 
 import useDebounce from '@/hooks/useDebounce';
 import useTranslation from '@/hooks/useTranslation';
@@ -29,7 +30,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { IconPencil } from '@/components/Icons';
+import { IconPencil, IconKey } from '@/components/Icons';
 
 import EditUserBalanceModal from '@/components/admin/Users/EditUserBalanceModel';
 import UserModal from '@/components/admin/Users/UserModal';
@@ -133,7 +134,7 @@ export default function Users() {
               <TableHead className="hidden sm:table-cell">{t('Phone')}</TableHead>
               <TableHead className="hidden sm:table-cell">{t('E-Mail')}</TableHead>
               <TableHead>
-                {t('Balance')}({t('Yuan')})
+                {t('Balance')}
               </TableHead>
               <TableHead>{t('Model Count')}</TableHead>
               <TableHead>{t('Actions')}</TableHead>
@@ -152,7 +153,22 @@ export default function Users() {
                       ></div>
                       {item.username}
                       {item.provider && (
-                        <Badge className="capitalize">{item.provider}</Badge>
+                        <>
+                          {/* Desktop: show text badge */}
+                          <Badge className="capitalize hidden sm:inline-flex">{item.provider}</Badge>
+                          {/* Mobile: show icon */}
+                          <div className="sm:hidden flex items-center">
+                            {item.provider.toLowerCase() === 'keycloak' && (
+                              <Image src="/logos/keycloak.svg" alt="Keycloak" width={16} height={16} className="opacity-70" />
+                            )}
+                            {item.provider.toLowerCase() === 'phone' && (
+                              <span className="text-base" title="Phone">📱</span>
+                            )}
+                            {item.provider.toLowerCase() === 'wechat' && (
+                              <Image src="/logos/wechat.svg" alt="WeChat" width={16} height={16} className="opacity-70" />
+                            )}
+                          </div>
+                        </>
                       )}
                     </div>
                   </TableCell>
