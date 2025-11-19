@@ -1,6 +1,4 @@
-﻿using Chats.BE.DB;
-using Chats.BE.DB.Enums;
-using Chats.BE.Services.Models.Dtos;
+﻿using Chats.BE.Services.Models.Dtos;
 using Mscc.GenerativeAI;
 using OpenAI.Chat;
 using System.Diagnostics;
