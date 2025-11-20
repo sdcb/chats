@@ -392,6 +392,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             .Include(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File.FileImageInfo)
             .Include(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File.FileContentType)
             .Include(x => x.StepContents).ThenInclude(x => x.StepContentText)
+            .Include(x => x.StepContents).ThenInclude(x => x.StepContentThink)
             .Include(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
             .Include(x => x.StepContents).ThenInclude(x => x.StepContentToolCallResponse)
             .OrderBy(x => x.Id)

@@ -93,6 +93,8 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<StepContentText> StepContentTexts { get; set; }
 
+    public virtual DbSet<StepContentThink> StepContentThinks { get; set; }
+
     public virtual DbSet<StepContentToolCall> StepContentToolCalls { get; set; }
 
     public virtual DbSet<StepContentToolCallResponse> StepContentToolCallResponses { get; set; }
@@ -428,6 +430,15 @@ public partial class ChatsDB : DbContext
             entity.Property(e => e.Id).ValueGeneratedNever();
 
             entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentText).HasConstraintName("FK_MessageContentUTF16_MessageContent");
+        });
+
+        modelBuilder.Entity<StepContentThink>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentThink)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StepContentThink_StepContent");
         });
 
         modelBuilder.Entity<StepContentToolCall>(entity =>

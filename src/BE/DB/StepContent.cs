@@ -35,6 +35,9 @@ public partial class StepContent
     public virtual StepContentText? StepContentText { get; set; }
 
     [InverseProperty("IdNavigation")]
+    public virtual StepContentThink? StepContentThink { get; set; }
+
+    [InverseProperty("IdNavigation")]
     public virtual StepContentToolCall? StepContentToolCall { get; set; }
 
     [InverseProperty("IdNavigation")]

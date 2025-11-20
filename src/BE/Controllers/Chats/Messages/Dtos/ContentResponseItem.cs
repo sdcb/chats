@@ -36,7 +36,7 @@ public abstract record ContentResponseItem
             DBMessageContentType.Reasoning => new ReasoningResponseItem()
             {
                 Id = encryptedMessageContentId,
-                Content = content.StepContentText!.Content
+                Content = content.StepContentThink!.Content
             },
             DBMessageContentType.FileId => new FileResponseItem()
             {

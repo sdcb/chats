@@ -21,7 +21,7 @@ public enum DBMessageContentType : byte
     FileId = 2,
 
     /// <summary>
-    /// Reasoning content type, stored in MessageContentText table
+    /// Reasoning content(think) type, stored in StepContentThink table
     /// </summary>
     Reasoning = 3,
 

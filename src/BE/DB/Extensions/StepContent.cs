@@ -1,7 +1,6 @@
 ﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
-using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
 using OpenAI.Chat;
@@ -27,7 +26,7 @@ public partial class StepContent
         {
             DBMessageContentType.Text => StepContentText!.Content,
             DBMessageContentType.Error => StepContentText!.Content,
-            DBMessageContentType.Reasoning => StepContentText!.Content,
+            DBMessageContentType.Reasoning => StepContentThink!.Content,
             //DBMessageContentType.FileId => MessageContentUtil.ReadFileId(Content).ToString(), // not supported
             DBMessageContentType.ToolCall => $"ToolCall: {StepContentToolCall!.Name}({StepContentToolCall.Parameters})",
             DBMessageContentType.ToolCallResponse => $"ToolCallResponse: {StepContentToolCallResponse!.Response}",
@@ -42,7 +41,7 @@ public partial class StepContent
 
     public static StepContent FromThink(string text)
     {
-        return new StepContent { StepContentText = new() { Content = text }, ContentTypeId = (byte)DBMessageContentType.Reasoning };
+        return new StepContent { StepContentThink = new() { Content = text }, ContentTypeId = (byte)DBMessageContentType.Reasoning };
     }
 
     public static StepContent FromFile(File file)
