@@ -1,13 +1,15 @@
-﻿using Anthropic;
+﻿using Aliyun.OSS;
+using Anthropic;
 using Anthropic.Core;
 using Anthropic.Models.Messages;
 using Chats.BE.DB;
 using Chats.BE.Services.Models.Dtos;
 using OpenAI.Chat;
 using System.Buffers.Text;
+using System.Text.Json;
 using Model = Chats.BE.DB.Model;
 
-namespace Chats.BE.Services.Models.ChatServices.Anthropic;
+//namespace Chats.BE.Services.Models.ChatServices.Anthropic;
 
 //public class AnthropicChatService(Model model) : ChatService(model)
 //{
@@ -32,7 +34,7 @@ namespace Chats.BE.Services.Models.ChatServices.Anthropic;
 //        };
 //    }
 
-//    private List<MessageParam> ToAnthropicMessages(IEnumerable<ChatMessage> messages)
+//    static List<MessageParam> ToAnthropicMessages(IEnumerable<ChatMessage> messages)
 //    {
 //        List<ChatMessage> mergedToolMessages = MergeToolMessages(messages);
 
@@ -83,25 +85,57 @@ namespace Chats.BE.Services.Models.ChatServices.Anthropic;
 //                _ => throw new InvalidOperationException($"Unknown message type: {message.GetType().FullName}"),
 //            };
 
+//            List<ContentBlockParam> contents = new(capacity: message.Content.Count + 1);
+//            contents.AddRange([.. message.Content.Select(ToAnthropicMessageContent)]);
+
+
 //            return new MessageParam()
 //            {
 //                Role = anthropicRole,
-//                Content = new MessageParamContent(message.Content.Select(ToAnthropicMessageContent).ToList())
+//                Content = new MessageParamContent([.. message.Content.Select(ToAnthropicMessageContent)])
 //            };
 
 //            static ContentBlockParam ToAnthropicMessageContent(ChatMessageContentPart part)
 //            {
 //                return part switch
 //                {
-//                    { Kind: ChatMessageContentPartKind.Text } textPart => new TextBlockParam(part.Text),
+
+//                    { Kind: ChatMessageContentPartKind.Text, Text: not null } textPart => new TextBlockParam(part.Text),
+//                    { Kind: ChatMessageContentPartKind.Text, Text: null } textPart => ProcessThinking(part),
 //                    { Kind: ChatMessageContentPartKind.Image, ImageUri: not null } => new ImageBlockParam(new URLImageSource(part.ImageUri.ToString())),
-//                    { Kind: ChatMessageContentPartKind.Image, ImageBytes.Length: > 0 } => new ImageBlockParam(new Base64ImageSource() 
-//                    { 
+//                    { Kind: ChatMessageContentPartKind.Image, ImageBytes.Length: > 0 } => new ImageBlockParam(new Base64ImageSource()
+//                    {
 //                        Data = Convert.ToBase64String(part.ImageBytes.ToArray()),
 //                        MediaType = part.ImageBytesMediaType,
 //                    }),
 //                    _ => throw new InvalidOperationException($"Unknown message content part type: {part.GetType().FullName}"),
 //                };
+
+//                static ContentBlockParam ProcessThinking(ChatMessageContentPart part)
+//                {
+//                    if (part.Patch.TryGetJson("thinking_signature"u8, out ReadOnlyMemory<byte> thinkingSignature))
+//                    {
+//                        if (thinkingSignature.Length > 0)
+//                        {
+//                            string signature = JsonSerializer.Deserialize<string>(thinkingSignature.Span)!;
+//                            if (part.Patch.TryGetJson("thinking_content"u8, out ReadOnlyMemory<byte> thinkingContent))
+//                            {
+//                                string thinking = JsonSerializer.Deserialize<string>(thinkingContent.Span)!;
+//                                return new ThinkingBlockParam()
+//                                {
+//                                    Signature = signature,
+//                                    Thinking = thinking
+//                                };
+//                            }
+//                            else
+//                            {
+//                                // only signature present, probably redacted thinking
+//                                return new RedactedThinkingBlockParam(signature);
+//                            }
+//                        }
+//                    }
+//                    throw new Exception("Thinking content part is missing required thinking_signature field for Anthropic message api.");
+//                }
 //            }
 //        }
 //    }
