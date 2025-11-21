@@ -74,17 +74,21 @@ const ChatPresetModal = (props: Props) => {
 
   useEffect(() => {
     if (chatPreset) {
+      const normalizedSpans = chatPreset.spans.map((span) => ({
+        ...span,
+        mcps: span.mcps || [],
+        thinkingBudget: span.thinkingBudget ?? null,
+      }));
       setName(chatPreset.name);
-      setSpans(chatPreset.spans);
-      if (chatPreset.spans.length > 0) {
-        setSelectedSpan(chatPreset.spans[0]);
-      }
+      setSpans(normalizedSpans);
+      setSelectedSpan(normalizedSpans.length > 0 ? normalizedSpans[0] : undefined);
+      setPresetSpanCount(normalizedSpans.length);
     } else {
       setName(t('New preset model group'));
       setSpans([]);
       setSelectedSpan(undefined);
+      setPresetSpanCount(0);
     }
-    setPresetSpanCount(chatPreset?.spans.length || 0);
     setMcpServersLoaded(false);
     setMcpLoadingTriggered(false);
     
@@ -106,6 +110,7 @@ const ChatPresetModal = (props: Props) => {
             modelId: model.modelId,
             modelName: model.name,
             modelProviderId: model.modelProviderId,
+            thinkingBudget: null,
           };
           setSelectedSpan({
             ...s,
@@ -116,6 +121,7 @@ const ChatPresetModal = (props: Props) => {
             codeExecutionEnabled: false,
             imageSize: null,
             mcps: [],
+            thinkingBudget: null,
           });
           return s;
         }
@@ -161,7 +167,8 @@ const ChatPresetModal = (props: Props) => {
         webSearchEnabled: !!span.webSearchEnabled,
         codeExecutionEnabled: !!span.codeExecutionEnabled,
         imageSize: span.imageSize,
-        mcps: span.mcps,
+        thinkingBudget: span.thinkingBudget,
+        mcps: span.mcps || [],
       })),
     };
 
@@ -199,6 +206,7 @@ const ChatPresetModal = (props: Props) => {
       codeExecutionEnabled: false,
       imageSize: null,
       mcps: [],
+      thinkingBudget: null,
     };
     setSpans([...spans, span]);
     setSelectedSpan(span);
@@ -387,6 +395,24 @@ const ChatPresetModal = (props: Props) => {
     });
   };
 
+  const onChangeThinkingBudget = (value: number | null) => {
+    setSpans((prev) => {
+      return prev.map((span) => {
+        if (selectedSpan?.spanId === span.spanId) {
+          const s = {
+            ...span!,
+            thinkingBudget: value,
+          };
+          setSelectedSpan({
+            ...s,
+          });
+          return s;
+        }
+        return span;
+      });
+    });
+  };
+
   const onChangeSpanEnable = (value: boolean) => {
     setSpans((prev) => {
       return prev.map((span) => {
@@ -535,9 +561,10 @@ const ChatPresetModal = (props: Props) => {
                     {/* 根据模型的 API 类型显示不同的配置组件 */}
                     {modelMap[selectedSpan.modelId] && (
                       <>
-                        {/* Chat/Response API 配置 (apiType=0/1) */}
+                        {/* Chat/Response/AnthropicMessages API 配置 (apiType=0/1/3) */}
                         {(modelMap[selectedSpan.modelId].apiType === 0 || 
-                          modelMap[selectedSpan.modelId].apiType === 1) && (
+                          modelMap[selectedSpan.modelId].apiType === 1 ||
+                          modelMap[selectedSpan.modelId].apiType === 3) && (
                           <ChatResponsePresetConfig
                             model={modelMap[selectedSpan.modelId]}
                             systemPrompt={selectedSpan.systemPrompt}
@@ -545,6 +572,7 @@ const ChatPresetModal = (props: Props) => {
                             webSearchEnabled={selectedSpan.webSearchEnabled}
                             codeExecutionEnabled={selectedSpan.codeExecutionEnabled}
                             reasoningEffort={selectedSpan.reasoningEffort}
+                            thinkingBudget={selectedSpan.thinkingBudget}
                             mcps={selectedSpan.mcps || []}
                             temperature={selectedSpan.temperature}
                             maxOutputTokens={selectedSpan.maxOutputTokens}
@@ -554,6 +582,7 @@ const ChatPresetModal = (props: Props) => {
                             onChangeEnableSearch={onChangeEnableSearch}
                             onChangeCodeExecution={onChangeCodeExecution}
                             onChangeReasoningEffort={onChangeReasoningEffort}
+                            onChangeThinkingBudget={onChangeThinkingBudget}
                             onChangeMcps={onChangeMcps}
                             onChangeTemperature={onChangeTemperature}
                             onChangeMaxOutputTokens={onChangeMaxOutputTokens}

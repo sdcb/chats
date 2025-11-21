@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 
-public abstract record EncryptedChatRequest
+public abstract record EncryptedWebChatRequest
 {
     [JsonPropertyName("chatId")]
     public required string EncryptedChatId { get; init; }
@@ -12,10 +12,10 @@ public abstract record EncryptedChatRequest
     [JsonPropertyName("timezoneOffset")]
     public required short TimezoneOffset { get; init; }
 
-    public abstract ChatRequest Decrypt(IUrlEncryptionService urlEncryption);
+    public abstract WebChatRequest Decrypt(IUrlEncryptionService urlEncryption);
 }
 
-public record EncryptedRegenerateAssistantMessageRequest : EncryptedChatRequest
+public record EncryptedRegenerateAssistantMessageRequest : EncryptedWebChatRequest
 {
     [JsonPropertyName("parentUserMessageId")]
     public required string ParentUserMessageId { get; init; }
@@ -26,7 +26,7 @@ public record EncryptedRegenerateAssistantMessageRequest : EncryptedChatRequest
     [JsonPropertyName("modelId")]
     public required short ModelId { get; init; }
 
-    public override ChatRequest Decrypt(IUrlEncryptionService urlEncryption)
+    public override WebChatRequest Decrypt(IUrlEncryptionService urlEncryption)
     {
         return new RegenerateAssistantMessageRequest
         {
@@ -39,7 +39,7 @@ public record EncryptedRegenerateAssistantMessageRequest : EncryptedChatRequest
     }
 }
 
-public record EncryptedRegenerateAllAssistantMessageRequest : EncryptedChatRequest
+public record EncryptedRegenerateAllAssistantMessageRequest : EncryptedWebChatRequest
 {
     [JsonPropertyName("parentUserMessageId")]
     public required string ParentUserMessageId { get; init; }
@@ -47,7 +47,7 @@ public record EncryptedRegenerateAllAssistantMessageRequest : EncryptedChatReque
     [JsonPropertyName("modelId")]
     public required short ModelId { get; init; }
 
-    public override ChatRequest Decrypt(IUrlEncryptionService urlEncryption)
+    public override WebChatRequest Decrypt(IUrlEncryptionService urlEncryption)
     {
         return new RegenerateAllAssistantMessageRequest
         {
@@ -59,7 +59,7 @@ public record EncryptedRegenerateAllAssistantMessageRequest : EncryptedChatReque
     }
 }
 
-public record EncryptedGeneralChatRequest : EncryptedChatRequest
+public record EncryptedGeneralChatRequest : EncryptedWebChatRequest
 {
     [JsonPropertyName("userMessage")]
     public required ContentRequestItem[] UserMessage { get; init; }
@@ -67,7 +67,7 @@ public record EncryptedGeneralChatRequest : EncryptedChatRequest
     [JsonPropertyName("parentAssistantMessageId")]
     public required string? ParentAssistantMessageId { get; init; }
 
-    public override ChatRequest Decrypt(IUrlEncryptionService urlEncryption)
+    public override WebChatRequest Decrypt(IUrlEncryptionService urlEncryption)
     {
         return new GeneralChatRequest
         {
@@ -79,7 +79,7 @@ public record EncryptedGeneralChatRequest : EncryptedChatRequest
     }
 }
 
-public abstract record ChatRequest
+public abstract record WebChatRequest
 {
     public required int ChatId { get; init; }
 
@@ -93,7 +93,7 @@ public record RegenerateAssistantMessageRequest : RegenerateAllAssistantMessageR
     public required byte SpanId { get; init; }
 }
 
-public record RegenerateAllAssistantMessageRequest : ChatRequest
+public record RegenerateAllAssistantMessageRequest : WebChatRequest
 {
     public required long ParentUserMessageId { get; init; }
 
@@ -102,7 +102,7 @@ public record RegenerateAllAssistantMessageRequest : ChatRequest
     public override long? LastMessageId => ParentUserMessageId;
 }
 
-public record GeneralChatRequest : ChatRequest
+public record GeneralChatRequest : WebChatRequest
 {
     public required ContentRequestItem[] UserMessage { get; init; }
 

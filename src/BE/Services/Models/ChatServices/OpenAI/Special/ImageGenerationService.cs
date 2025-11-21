@@ -29,7 +29,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
         return cc;
     }
 
-    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatServiceRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         string prompt = GetPromptStatic(request.Steps);
         StepContent[] images = GetImagesStatic(request.Steps);
@@ -145,7 +145,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
         yield break;
     }
 
-    public override async Task<ChatSegment> Chat(ChatServiceRequest request, CancellationToken cancellationToken)
+    public override async Task<ChatSegment> Chat(ChatRequest request, CancellationToken cancellationToken)
     {
         string prompt = GetPromptStatic(request.Steps);
         StepContent[] images = GetImagesStatic(request.Steps);
@@ -234,7 +234,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
     private async Task<MultiPartFormDataBinaryContent> BuildImageEditFormAsync(
         StepContent[] images,
         string prompt,
-        ChatServiceRequest request,
+        ChatRequest request,
         CancellationToken cancellationToken)
     {
         using HttpClient http = new();

@@ -162,7 +162,7 @@ public record FullToolCall
     public required string Id { get; init; }
 
     [JsonPropertyName("type")]
-    public required string Type { get; init; }   // OpenAI 目前恒为 "function"
+    public string Type { get; } = "function";
 
     [JsonPropertyName("function")]
     public required FullToolCallFunction Function { get; init; }

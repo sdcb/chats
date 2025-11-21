@@ -117,7 +117,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
     }
 
     private async Task<IActionResult> ChatPrivate(
-        ChatRequest req,
+        WebChatRequest req,
         ChatsDB db,
         CurrentUser currentUser,
         ILogger<ChatController> logger,
@@ -413,7 +413,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         FileUrlProvider fup,
         ChatSpan chatSpan,
         long firstTick,
-        ChatRequest req,
+        WebChatRequest req,
         Chat chat,
         UserModel userModel,
         UserMcp[] userMcps,
@@ -425,7 +425,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         ChannelWriter<SseResponseLine> writer,
         CancellationToken cancellationToken)
     {
-        ChatServiceRequest csr = new()
+        ChatRequest csr = new()
         {
             EndUserId = currentUser.Id.ToString(),
             Steps = [.. (IEnumerable<Step>)
@@ -624,7 +624,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             writer.TryWrite(new EndStep(chatSpan.SpanId, step));
         }
 
-        async Task<Step> RunOne(ChatServiceRequest request, CancellationToken cancellationToken)
+        async Task<Step> RunOne(ChatRequest request, CancellationToken cancellationToken)
         {
             InChatContext icc = new(firstTick);
 

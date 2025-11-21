@@ -2,6 +2,7 @@
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models.ChatServices.Anthropic;
 using Chats.BE.Services.Models.ChatServices.GoogleAI;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
@@ -28,21 +29,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
         // 先按 API 类型分类，再按 ModelProvider 分类
         return apiType switch
         {
-            DBApiType.ImageGeneration => modelProvider switch
-            {
-                DBModelProvider.OpenAI => new ImageGenerationService(model),
-                DBModelProvider.AzureAIFoundry => new AzureImageGenerationService(model),
-                _ => new ImageGenerationService(model) // Fallback to OpenAI-compatible
-            },
-            
-            DBApiType.Response => modelProvider switch
-            {
-                DBModelProvider.OpenAI => new ResponseApiService(model, logger),
-                DBModelProvider.AzureAIFoundry => new AzureResponseApiService(model, logger),
-                _ => new ResponseApiService(model, logger) // Fallback to OpenAI-compatible
-            },
-            
-            DBApiType.ChatCompletion => modelProvider switch
+            DBApiType.OpenAIChatCompletion => modelProvider switch
             {
                 DBModelProvider.AzureAIFoundry => new AzureAIFoundryChatService(model),
                 DBModelProvider.WenXinQianFan => new QianFanChatService(model),
@@ -56,6 +43,22 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
                 DBModelProvider.SiliconFlow => new SiliconFlowChatService(model),
                 DBModelProvider.OpenRouter => new OpenRouterChatService(model, hostUrlService),
                 _ => new ChatCompletionService(model) // Fallback to OpenAI-compatible
+            },
+
+            DBApiType.OpenAIResponse => modelProvider switch
+            {
+                DBModelProvider.OpenAI => new ResponseApiService(model, logger),
+                DBModelProvider.AzureAIFoundry => new AzureResponseApiService(model, logger),
+                _ => new ResponseApiService(model, logger) // Fallback to OpenAI-compatible
+            },
+
+            DBApiType.AnthropicMessages => new AnthropicChatService(model),
+
+            DBApiType.OpenAIImageGeneration => modelProvider switch
+            {
+                DBModelProvider.OpenAI => new ImageGenerationService(model),
+                DBModelProvider.AzureAIFoundry => new AzureImageGenerationService(model),
+                _ => new ImageGenerationService(model) // Fallback to OpenAI-compatible
             },
             
             _ => throw new NotSupportedException($"Unknown API type: {apiType}")
@@ -85,7 +88,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
                 }
             }
 
-            await foreach (Dtos.InternalChatSegment seg in cs.ChatEntry(ChatServiceRequest.Simple("1+1=?"), fup, UsageSource.Validate, cancellationToken))
+            await foreach (Dtos.InternalChatSegment seg in cs.ChatEntry(ChatRequest.Simple("1+1=?"), fup, UsageSource.Validate, cancellationToken))
             {
                 if (seg.IsFromUpstream)
                 {

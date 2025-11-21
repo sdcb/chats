@@ -29,9 +29,6 @@ public record AdminModelDto
     [JsonPropertyName("allowVision")]
     public required bool AllowVision { get; init; }
 
-    [JsonPropertyName("allowSystemPrompt")]
-    public required bool AllowSystemPrompt { get; init; }
-
     [JsonPropertyName("allowCodeExecution")]
     public required bool AllowCodeExecution { get; init; }
 
@@ -79,4 +76,7 @@ public record AdminModelDto
 
     [JsonPropertyName("thinkTagParserEnabled")]
     public required bool ThinkTagParserEnabled { get; init; }
+
+    [JsonPropertyName("maxThinkingBudget")]
+    public required int? MaxThinkingBudget { get; init; }
 }

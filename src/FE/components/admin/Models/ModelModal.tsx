@@ -101,7 +101,6 @@ const ModelModal = (props: IProps) => {
     // === 功能开关 ===
     allowSearch: z.boolean(),
     allowVision: z.boolean(),
-    allowSystemPrompt: z.boolean(),
     allowStreaming: z.boolean(),
     allowCodeExecution: z.boolean(),
     allowToolCall: z.boolean(),
@@ -114,6 +113,7 @@ const ModelModal = (props: IProps) => {
     // === Token 配置 ===
     contextWindow: z.coerce.number().min(0),
     maxResponseTokens: z.coerce.number().min(0),
+    maxThinkingBudget: z.number().min(0).nullable(),
     
     // === 数组字段（表单中用字符串） ===
     reasoningEffortOptions: z.string(),
@@ -126,8 +126,8 @@ const ModelModal = (props: IProps) => {
     isLegacy: z.boolean(),
   } satisfies Record<keyof ModelFormValues, z.ZodTypeAny>)
   .refine((data) => {
-    // ChatCompletion/Response: 温度验证
-    if (data.apiType === 0 || data.apiType === 1) {
+    // ChatCompletion/Response/AnthropicMessages: 温度验证
+    if (data.apiType === 0 || data.apiType === 1 || data.apiType === 3) {
       return data.minTemperature <= data.maxTemperature;
     }
     return true;
@@ -136,8 +136,8 @@ const ModelModal = (props: IProps) => {
     path: ['maxTemperature'],
   })
   .refine((data) => {
-    // ChatCompletion/Response: 上下文窗口必须有值
-    if (data.apiType === 0 || data.apiType === 1) {
+    // ChatCompletion/Response/AnthropicMessages: 上下文窗口必须有值
+    if (data.apiType === 0 || data.apiType === 1 || data.apiType === 3) {
       return data.contextWindow > 0;
     }
     return true;
@@ -146,8 +146,8 @@ const ModelModal = (props: IProps) => {
     path: ['contextWindow'],
   })
   .refine((data) => {
-    // ChatCompletion/Response: 最大响应token数必须有值
-    if (data.apiType === 0 || data.apiType === 1) {
+    // ChatCompletion/Response/AnthropicMessages: 最大响应token数必须有值
+    if (data.apiType === 0 || data.apiType === 1 || data.apiType === 3) {
       return data.maxResponseTokens > 0;
     }
     return true;
@@ -156,8 +156,8 @@ const ModelModal = (props: IProps) => {
     path: ['maxResponseTokens'],
   })
   .refine((data) => {
-    // ChatCompletion/Response: 最大响应token数要小于上下文窗口
-    if (data.apiType === 0 || data.apiType === 1) {
+    // ChatCompletion/Response/AnthropicMessages: 最大响应token数要小于上下文窗口
+    if (data.apiType === 0 || data.apiType === 1 || data.apiType === 3) {
       return data.maxResponseTokens < data.contextWindow;
     }
     return true;
@@ -196,6 +196,16 @@ const ModelModal = (props: IProps) => {
   }, {
     message: t('Max batch count must be between 1 and 128'),
     path: ['maxResponseTokens'],
+  })
+  .refine((data) => {
+    // ChatCompletion/Response/AnthropicMessages: maxThinkingBudget 如果有值，必须小于 maxResponseTokens
+    if ((data.apiType === 0 || data.apiType === 1 || data.apiType === 3) && data.maxThinkingBudget !== null && data.maxThinkingBudget !== undefined) {
+      return data.maxThinkingBudget < data.maxResponseTokens;
+    }
+    return true;
+  }, {
+    message: t('Max thinking budget must be less than max response tokens'),
+    path: ['maxThinkingBudget'],
   }), [t]);
 
   const form = useForm<ModelFormValues>({
@@ -212,7 +222,6 @@ const ModelModal = (props: IProps) => {
       apiType: ApiType.ChatCompletion,
       allowSearch: false,
       allowVision: false,
-      allowSystemPrompt: false,
       allowStreaming: false,
       allowCodeExecution: false,
       allowToolCall: false,
@@ -221,6 +230,7 @@ const ModelModal = (props: IProps) => {
       maxTemperature: 2,
       contextWindow: 0,
       maxResponseTokens: 0,
+      maxThinkingBudget: null,
       reasoningEffortOptions: '',
       supportedImageSizes: '',
       useAsyncApi: false,
@@ -241,7 +251,6 @@ const ModelModal = (props: IProps) => {
       // === 新增字段（直接映射，无需转换）===
       allowSearch: values.allowSearch,
       allowVision: values.allowVision,
-      allowSystemPrompt: values.allowSystemPrompt,
       allowStreaming: values.allowStreaming,
       allowCodeExecution: values.allowCodeExecution,
       allowToolCall: values.allowToolCall,
@@ -252,16 +261,23 @@ const ModelModal = (props: IProps) => {
       
       contextWindow: values.contextWindow,
       maxResponseTokens: values.maxResponseTokens,
+      maxThinkingBudget: values.maxThinkingBudget,
       
       // 数组字段：从逗号分隔的字符串转为数组
-      reasoningEffortOptions: values.reasoningEffortOptions
-        .split(',')
-        .map((x) => parseInt(x.trim()))
-        .filter((x) => !isNaN(x)),
-      supportedImageSizes: values.supportedImageSizes
-        .split(',')
-        .map((x) => x.trim())
-        .filter((x) => x !== ''),
+      reasoningEffortOptions: (() => {
+        const items = values.reasoningEffortOptions
+          .split(',')
+          .map((x) => parseInt(x.trim()))
+          .filter((x) => !isNaN(x));
+        return items.length > 0 ? items : null;
+      })(),
+      supportedImageSizes: (() => {
+        const items = values.supportedImageSizes
+          .split(',')
+          .map((x) => x.trim())
+          .filter((x) => x !== '');
+        return items.length > 0 ? items : null;
+      })(),
       
       apiType: values.apiType,
       useAsyncApi: values.useAsyncApi,
@@ -310,7 +326,6 @@ const ModelModal = (props: IProps) => {
         
         allowSearch: values.allowSearch,
         allowVision: values.allowVision,
-        allowSystemPrompt: values.allowSystemPrompt,
         allowStreaming: values.allowStreaming,
         allowCodeExecution: values.allowCodeExecution,
         allowToolCall: values.allowToolCall,
@@ -321,15 +336,22 @@ const ModelModal = (props: IProps) => {
         
         contextWindow: values.contextWindow,
         maxResponseTokens: values.maxResponseTokens,
+        maxThinkingBudget: values.maxThinkingBudget,
         
-        reasoningEffortOptions: values.reasoningEffortOptions
-          .split(',')
-          .map((x) => parseInt(x.trim()))
-          .filter((x) => !isNaN(x)),
-        supportedImageSizes: values.supportedImageSizes
-          .split(',')
-          .map((x) => x.trim())
-          .filter((x) => x !== ''),
+        reasoningEffortOptions: (() => {
+          const items = values.reasoningEffortOptions
+            .split(',')
+            .map((x) => parseInt(x.trim()))
+            .filter((x) => !isNaN(x));
+          return items.length > 0 ? items : null;
+        })(),
+        supportedImageSizes: (() => {
+          const items = values.supportedImageSizes
+            .split(',')
+            .map((x) => x.trim())
+            .filter((x) => x !== '');
+          return items.length > 0 ? items : null;
+        })(),
         
         apiType: values.apiType,
         useAsyncApi: values.useAsyncApi,
@@ -374,7 +396,6 @@ const ModelModal = (props: IProps) => {
           outputTokenPrice1M,
           allowSearch,
           allowVision,
-          allowSystemPrompt,
           allowStreaming,
           allowCodeExecution,
           allowToolCall,
@@ -383,6 +404,7 @@ const ModelModal = (props: IProps) => {
           maxTemperature,
           contextWindow,
           maxResponseTokens,
+          maxThinkingBudget,
           reasoningEffortOptions,
           supportedImageSizes,
           apiType,
@@ -401,7 +423,6 @@ const ModelModal = (props: IProps) => {
         
         form.setValue('allowSearch', allowSearch);
         form.setValue('allowVision', allowVision);
-        form.setValue('allowSystemPrompt', allowSystemPrompt);
         form.setValue('allowStreaming', allowStreaming);
         form.setValue('allowCodeExecution', allowCodeExecution);
         form.setValue('allowToolCall', allowToolCall);
@@ -412,9 +433,16 @@ const ModelModal = (props: IProps) => {
         
         form.setValue('contextWindow', contextWindow);
         form.setValue('maxResponseTokens', maxResponseTokens);
+        form.setValue('maxThinkingBudget', maxThinkingBudget);
         
-        form.setValue('reasoningEffortOptions', reasoningEffortOptions.join(', '));
-        form.setValue('supportedImageSizes', supportedImageSizes.join(', '));
+        form.setValue(
+          'reasoningEffortOptions',
+          reasoningEffortOptions ? reasoningEffortOptions.join(', ') : '',
+        );
+        form.setValue(
+          'supportedImageSizes',
+          supportedImageSizes ? supportedImageSizes.join(', ') : '',
+        );
         
         form.setValue('apiType', apiType);
         form.setValue('useAsyncApi', useAsyncApi);
@@ -437,11 +465,14 @@ const ModelModal = (props: IProps) => {
         if (defaultValues) {
           Object.entries(defaultValues).forEach(([key, value]) => {
             if (value !== undefined) {
-              // 如果是数组类型（reasoningEffortOptions 或 supportedImageSizes），转为字符串
               if (Array.isArray(value)) {
                 form.setValue(key as any, value.join(', '));
+              } else if (
+                value === null &&
+                (key === 'reasoningEffortOptions' || key === 'supportedImageSizes')
+              ) {
+                form.setValue(key as any, '');
               } else if (key === 'modelKeyId' && typeof value === 'number') {
-                // modelKeyId 需要从 number 转为 string
                 form.setValue(key as any, value.toString());
               } else {
                 form.setValue(key as any, value);
@@ -489,8 +520,11 @@ const ModelModal = (props: IProps) => {
     const defaults = getDefaultConfigByApiType(currentApiType as ApiType);
     Object.entries(defaults).forEach(([key, value]) => {
       if (key === 'reasoningEffortOptions' || key === 'supportedImageSizes') {
-        // 数组字段需要转为逗号分隔的字符串
-        form.setValue(key as any, Array.isArray(value) ? value.join(', ') : '');
+        if (Array.isArray(value)) {
+          form.setValue(key as any, value.join(', '));
+        } else {
+          form.setValue(key as any, '');
+        }
       } else if (value !== undefined) {
         form.setValue(key as any, value);
       }
@@ -499,7 +533,7 @@ const ModelModal = (props: IProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[calc(100vw-2rem)] sm:w-3/4 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditMode ? t('Edit Model') : t('Add Model')}
@@ -634,7 +668,8 @@ const ModelModal = (props: IProps) => {
                         items={[
                           { name: 'ChatCompletion', value: '0' },
                           { name: 'Response', value: '1' },
-                          { name: 'ImageGeneration', value: '2' }
+                          { name: 'ImageGeneration', value: '2' },
+                          { name: 'AnthropicMessages', value: '3' }
                         ]}
                       />
                     )}
@@ -658,8 +693,8 @@ const ModelModal = (props: IProps) => {
               </div>
               
               {/* ========== 3. API 类型特定配置 ========== */}
-              {(apiType === 0 || apiType === 1) && (
-                <ChatResponseConfig control={form.control} setValue={form.setValue} />
+              {(apiType === 0 || apiType === 1 || apiType === 3) && (
+                <ChatResponseConfig control={form.control} setValue={form.setValue} watch={form.watch} apiType={apiType} />
               )}
               
               {apiType === 2 && (

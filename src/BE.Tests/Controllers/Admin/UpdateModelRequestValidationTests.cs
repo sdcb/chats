@@ -125,8 +125,8 @@ public class UpdateModelRequestValidationTests
     #region ChatCompletion/Response API 验证测试
 
     [Theory]
-    [InlineData(DBApiType.ChatCompletion)]
-    [InlineData(DBApiType.Response)]
+    [InlineData(DBApiType.OpenAIChatCompletion)]
+    [InlineData(DBApiType.OpenAIResponse)]
     public void ChatAPI_ContextWindowZero_ShouldFail(DBApiType apiType)
     {
         // Arrange
@@ -143,8 +143,8 @@ public class UpdateModelRequestValidationTests
     }
 
     [Theory]
-    [InlineData(DBApiType.ChatCompletion)]
-    [InlineData(DBApiType.Response)]
+    [InlineData(DBApiType.OpenAIChatCompletion)]
+    [InlineData(DBApiType.OpenAIResponse)]
     public void ChatAPI_MaxResponseTokensZero_ShouldFail(DBApiType apiType)
     {
         // Arrange
@@ -161,8 +161,8 @@ public class UpdateModelRequestValidationTests
     }
 
     [Theory]
-    [InlineData(DBApiType.ChatCompletion)]
-    [InlineData(DBApiType.Response)]
+    [InlineData(DBApiType.OpenAIChatCompletion)]
+    [InlineData(DBApiType.OpenAIResponse)]
     public void ChatAPI_MaxResponseTokensGreaterThanContextWindow_ShouldFail(DBApiType apiType)
     {
         // Arrange
@@ -184,8 +184,8 @@ public class UpdateModelRequestValidationTests
     }
 
     [Theory]
-    [InlineData(DBApiType.ChatCompletion)]
-    [InlineData(DBApiType.Response)]
+    [InlineData(DBApiType.OpenAIChatCompletion)]
+    [InlineData(DBApiType.OpenAIResponse)]
     public void ChatAPI_ValidTokenConfiguration_ShouldPass(DBApiType apiType)
     {
         // Arrange
@@ -346,7 +346,7 @@ public class UpdateModelRequestValidationTests
     {
         // Arrange
         var request = CreateValidChatRequest();
-        request = request with { ApiType = DBApiType.Response };
+        request = request with { ApiType = DBApiType.OpenAIResponse };
 
         // Act
         var results = ValidateModel(request);
@@ -389,16 +389,17 @@ public class UpdateModelRequestValidationTests
             AllowCodeExecution = false,
             AllowToolCall = true,
             ThinkTagParserEnabled = false,
-            ReasoningEffortOptions = new[] { 1, 2, 3, 4 },
+            ReasoningEffortOptions = [1, 2, 3, 4],
             MinTemperature = 0.0m,
             MaxTemperature = 2.0m,
             ContextWindow = 128000,
             MaxResponseTokens = 4096,
             SupportedImageSizes = Array.Empty<string>(),
-            ApiType = DBApiType.ChatCompletion,
+            ApiType = DBApiType.OpenAIChatCompletion,
             UseAsyncApi = false,
             UseMaxCompletionTokens = false,
-            IsLegacy = false
+            IsLegacy = false,
+            MaxThinkingBudget = null,
         };
     }
 
@@ -419,16 +420,17 @@ public class UpdateModelRequestValidationTests
             AllowCodeExecution = false,
             AllowToolCall = false,
             ThinkTagParserEnabled = false,
-            ReasoningEffortOptions = new[] { 2, 3, 4 },
+            ReasoningEffortOptions = [2, 3, 4],
             MinTemperature = 0.0m,
             MaxTemperature = 2.0m,
             ContextWindow = 0,
             MaxResponseTokens = 10,
-            SupportedImageSizes = new[] { "1024x1024", "1792x1024", "1024x1792" },
-            ApiType = DBApiType.ImageGeneration,
+            SupportedImageSizes = ["1024x1024", "1792x1024", "1024x1792"],
+            ApiType = DBApiType.OpenAIImageGeneration,
             UseAsyncApi = false,
             UseMaxCompletionTokens = false,
-            IsLegacy = false
+            IsLegacy = false,
+            MaxThinkingBudget = null,
         };
     }
 

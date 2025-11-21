@@ -30,6 +30,8 @@ public partial class ChatConfig
     [StringLength(20)]
     public string? ImageSize { get; set; }
 
+    public int? ThinkingBudget { get; set; }
+
     [InverseProperty("ChatConfig")]
     public virtual ChatConfigArchived? ChatConfigArchived { get; set; }
 

@@ -7,12 +7,14 @@ import useTranslation from '@/hooks/useTranslation';
 
 import {
   IconCode,
+  IconReasoning,
   IconTemperature,
   IconTokens,
   IconWorld
 } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
 import SystemPrompt from './SystemPrompt';
 import FeatureToggle from './FeatureToggle';
 import ReasoningEffortRadio from '@/components/ReasoningEffortRadio/ReasoningEffortRadio';
@@ -25,6 +27,7 @@ interface ChatResponsePresetConfigProps {
   webSearchEnabled: boolean;
   codeExecutionEnabled: boolean;
   reasoningEffort: number;
+  thinkingBudget: number | null;
   mcps: ChatSpanMcp[];
   temperature: number | null;
   maxOutputTokens: number | null;
@@ -34,6 +37,7 @@ interface ChatResponsePresetConfigProps {
   onChangeEnableSearch: (value: boolean) => void;
   onChangeCodeExecution: (value: boolean) => void;
   onChangeReasoningEffort: (value: string) => void;
+  onChangeThinkingBudget: (value: number | null) => void;
   onChangeMcps: (mcps: ChatSpanMcp[]) => void;
   onChangeTemperature: (value: number | null) => void;
   onChangeMaxOutputTokens: (value: number | null) => void;
@@ -50,6 +54,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
   webSearchEnabled,
   codeExecutionEnabled,
   reasoningEffort,
+  thinkingBudget,
   mcps,
   temperature,
   maxOutputTokens,
@@ -59,6 +64,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
   onChangeEnableSearch,
   onChangeCodeExecution,
   onChangeReasoningEffort,
+  onChangeThinkingBudget,
   onChangeMcps,
   onChangeTemperature,
   onChangeMaxOutputTokens,
@@ -66,18 +72,47 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
 }) => {
   const { t } = useTranslation();
 
+  const clampThinkingBudget = (value: number): number => {
+    if (model.maxThinkingBudget == null) {
+      return Math.max(0, value);
+    }
+    return Math.max(0, Math.min(value, model.maxThinkingBudget));
+  };
+
+  const handleThinkingBudgetInput = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = event.target.value;
+    if (rawValue === '') {
+      onChangeThinkingBudget(null);
+      return;
+    }
+    const numericValue = Number(rawValue);
+    if (Number.isNaN(numericValue)) {
+      return;
+    }
+    onChangeThinkingBudget(clampThinkingBudget(numericValue));
+  };
+
+  const toggleThinkingBudgetMode = () => {
+    if (model.maxThinkingBudget == null) {
+      return;
+    }
+    if (thinkingBudget === null) {
+      onChangeThinkingBudget(model.maxThinkingBudget);
+    } else {
+      onChangeThinkingBudget(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-2">
       {/* System Prompt */}
-      {model.allowSystemPrompt && (
-        <SystemPrompt
-          currentPrompt={systemPrompt}
-          prompts={prompts}
-          model={model}
-          onChangePromptText={onChangePromptText}
-          onChangePrompt={onChangePrompt}
-        />
-      )}
+      <SystemPrompt
+        currentPrompt={systemPrompt}
+        prompts={prompts}
+        model={model}
+        onChangePromptText={onChangePromptText}
+        onChangePrompt={onChangePrompt}
+      />
 
       {/* Internet Search */}
       {model.allowSearch && (
@@ -100,8 +135,8 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
       )}
 
       {/* Reasoning Effort */}
-      {model.reasoningEffortOptions && 
-       model.reasoningEffortOptions.length > 0 && (
+      {Array.isArray(model.reasoningEffortOptions) &&
+        model.reasoningEffortOptions.length > 0 && (
         <ReasoningEffortRadio
           value={`${reasoningEffort}`}
           availableOptions={model.reasoningEffortOptions}
@@ -202,6 +237,36 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
           </div>
         )}
       </div>
+
+      {/* Thinking Budget */}
+      {model.maxThinkingBudget != null && (
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between items-center">
+            <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
+              <IconReasoning size={16} />
+              {t('Thinking Budget')}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleThinkingBudgetMode}
+              className="h-6 px-2 text-xs"
+            >
+              {thinkingBudget === null ? t('Default') : t('Custom')}
+            </Button>
+          </div>
+          <Input
+            type="number"
+            min={0}
+            max={model.maxThinkingBudget ?? undefined}
+            value={thinkingBudget ?? ''}
+            onChange={handleThinkingBudgetInput}
+          />
+          <div className="text-xs text-muted-foreground">
+            {t('Thinking budget hint', { max: model.maxThinkingBudget })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

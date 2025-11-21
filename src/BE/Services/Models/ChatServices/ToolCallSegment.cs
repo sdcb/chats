@@ -18,16 +18,16 @@ public sealed record ToolCallSegment : ChatSegmentItem
     [JsonPropertyName("id")]
     public string? Id { get; init; }
 
-    [JsonPropertyName("type")]
-    public string? Type { get; init; }
-
     // 原 function.name
     [JsonPropertyName("name")]
     public string? Name { get; init; }
 
     // 原 function.arguments（此处往往是 JSON 片段）
     [JsonPropertyName("arguments")]
-    public required string Arguments { get; init; }
+    public string? Arguments { get; init; }
+
+    [JsonPropertyName("signature")]
+    public string? Signature { get; init; }
 }
 
 public sealed record ToolCallResponseSegment : ChatSegmentItem
@@ -58,9 +58,9 @@ public sealed record ToolCallResponseSegment : ChatSegmentItem
 public sealed record ToolCall
 {
     public required string Id { get; init; }
-    public required string Type { get; init; } // 一般恒为 "function"
     public required string Name { get; init; }
     public required string Arguments { get; init; } // 完整 JSON 字符串
+    public string? Signature { get; init; }
 
     /// <summary>
     /// 把连续的 FunctionCallSegment 按 Index 聚合为 FunctionCall。
@@ -72,8 +72,8 @@ public sealed record ToolCall
     {
         int? currentIndex = null;
         string? id = null;
-        string? type = null;
         string? name = null;
+        string? signature = null;
         StringBuilder argsBuilder = new();
 
         await foreach (ToolCallSegment s in segments.WithCancellation(cancellationToken))
@@ -90,8 +90,8 @@ public sealed record ToolCall
 
             // 逐字段补全
             if (s.Id is not null) id = s.Id;
-            if (s.Type is not null) type = s.Type;
             if (s.Name is not null) name = s.Name;
+            if (s.Signature is not null) signature = s.Signature;
             if (s.Arguments is not null) argsBuilder.Append(s.Arguments);
         }
 
@@ -105,23 +105,23 @@ public sealed record ToolCall
             try
             {
                 // 校验必填字段已补齐；若缺失直接抛异常更易排查
-                if (id is null || type is null || name is null)
+                if (id is null || name is null)
                     throw new InvalidOperationException(
                         $"Incomplete function call for index {currentIndex}");
 
                 return new ToolCall
                 {
                     Id = id,
-                    Type = type,
                     Name = name,
-                    Arguments = argsBuilder.ToString()
+                    Arguments = argsBuilder.ToString(),
+                    Signature = signature,
                 };
             }
             finally
             {
                 // 清空状态，准备下一组
                 currentIndex = null;
-                id = type = name = null;
+                id = name = null;
                 argsBuilder.Clear();
             }
         }
@@ -142,7 +142,6 @@ public sealed record ToolCall
         return new FullToolCall
         {
             Id = Id,
-            Type = Type,
             Function = new FullToolCallFunction()
             {
                 Name = Name,

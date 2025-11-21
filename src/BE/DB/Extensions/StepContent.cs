@@ -4,13 +4,14 @@ using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
 using OpenAI.Chat;
-using System.Buffers.Text;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Chats.BE.DB;
 
 public partial class StepContent
 {
+    public DBStepContentType ContentType => (DBStepContentType)ContentTypeId;
+
     public StepContent Clone()
     {
         return new StepContent

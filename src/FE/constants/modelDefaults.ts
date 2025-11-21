@@ -7,6 +7,7 @@ export enum ApiType {
   ChatCompletion = 0,
   Response = 1,
   ImageGeneration = 2,
+  AnthropicMessages = 3,
 }
 
 /**
@@ -16,7 +17,6 @@ export enum ApiType {
 const DEFAULT_CHAT_MODEL_CONFIG: Partial<UpdateModelDto> = {
   allowVision: false,
   allowSearch: false,
-  allowSystemPrompt: true,
   allowStreaming: true,
   allowCodeExecution: false,
   allowToolCall: true,
@@ -25,6 +25,7 @@ const DEFAULT_CHAT_MODEL_CONFIG: Partial<UpdateModelDto> = {
   maxTemperature: 2.0,
   contextWindow: 128000,
   maxResponseTokens: 8192,
+  maxThinkingBudget: null,
   reasoningEffortOptions: [] as number[],
   supportedImageSizes: [] as string[],
   apiType: ApiType.ChatCompletion,
@@ -42,7 +43,6 @@ const DEFAULT_CHAT_MODEL_CONFIG: Partial<UpdateModelDto> = {
 const DEFAULT_RESPONSE_MODEL_CONFIG: Partial<UpdateModelDto> = {
   allowVision: true,
   allowSearch: false,
-  allowSystemPrompt: true,
   allowStreaming: true,
   allowCodeExecution: false,
   allowToolCall: true,
@@ -51,11 +51,38 @@ const DEFAULT_RESPONSE_MODEL_CONFIG: Partial<UpdateModelDto> = {
   maxTemperature: 2.0,
   contextWindow: 128000,
   maxResponseTokens: 16384,
+  maxThinkingBudget: null,
   reasoningEffortOptions: [2, 3, 4], // 推理努力程度：低、中、高
   supportedImageSizes: [] as string[],
   apiType: ApiType.Response,
   useAsyncApi: false,
   useMaxCompletionTokens: true,
+  isLegacy: false,
+  inputTokenPrice1M: 0,
+  outputTokenPrice1M: 0,
+};
+
+/**
+ * AnthropicMessages API 默认模型配置
+ * 用于创建新的 Anthropic Messages 模型时的初始配置
+ */
+const DEFAULT_ANTHROPIC_MESSAGES_CONFIG: Partial<UpdateModelDto> = {
+  allowVision: true,
+  allowSearch: false,
+  allowStreaming: true,
+  allowCodeExecution: false,
+  allowToolCall: true,
+  thinkTagParserEnabled: false,
+  minTemperature: 0.0,
+  maxTemperature: 2.0,
+  contextWindow: 200000,
+  maxResponseTokens: 8192,
+  maxThinkingBudget: 8191, // 默认为 maxResponseTokens - 1
+  reasoningEffortOptions: [] as number[],
+  supportedImageSizes: [] as string[],
+  apiType: ApiType.AnthropicMessages,
+  useAsyncApi: false,
+  useMaxCompletionTokens: false,
   isLegacy: false,
   inputTokenPrice1M: 0,
   outputTokenPrice1M: 0,
@@ -68,7 +95,6 @@ const DEFAULT_RESPONSE_MODEL_CONFIG: Partial<UpdateModelDto> = {
 const DEFAULT_IMAGE_MODEL_CONFIG: Partial<UpdateModelDto> = {
   allowVision: false,
   allowSearch: false,
-  allowSystemPrompt: false,
   allowStreaming: true, // 返回中间状态预览图片
   allowCodeExecution: false,
   allowToolCall: false,
@@ -77,6 +103,7 @@ const DEFAULT_IMAGE_MODEL_CONFIG: Partial<UpdateModelDto> = {
   maxTemperature: 2.0,
   contextWindow: 0,
   maxResponseTokens: 10, // 最大批量生成图片数量
+  maxThinkingBudget: null,
   reasoningEffortOptions: [2, 3, 4], // 图片质量：低、中、高
   supportedImageSizes: ['1024x1024', '1792x1024', '1024x1792'],
   apiType: ApiType.ImageGeneration,
@@ -100,6 +127,8 @@ export function getDefaultConfigByApiType(apiType: ApiType): Partial<UpdateModel
       return { ...DEFAULT_RESPONSE_MODEL_CONFIG };
     case ApiType.ImageGeneration:
       return { ...DEFAULT_IMAGE_MODEL_CONFIG };
+    case ApiType.AnthropicMessages:
+      return { ...DEFAULT_ANTHROPIC_MESSAGES_CONFIG };
     default:
       return { ...DEFAULT_CHAT_MODEL_CONFIG };
   }

@@ -37,7 +37,7 @@ public class QianFanChatService(Model model) : ChatCompletionService(model, Crea
         return api.GetChatClient(model.DeploymentName);
     }
 
-    protected override ChatCompletionOptions ExtractOptions(ChatServiceRequest request)
+    protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
     {
         ChatCompletionOptions cco = base.ExtractOptions(request);
         if (Model.AllowSearch && request.ChatConfig.WebSearchEnabled)

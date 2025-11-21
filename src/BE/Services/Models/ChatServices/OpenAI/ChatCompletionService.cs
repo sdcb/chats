@@ -71,7 +71,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
         return null;
     }
 
-    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatServiceRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ChatFinishReason? finishReason = null;
         await foreach (StreamingChatCompletionUpdate delta in chatClient.CompleteChatStreamingAsync(ExtractMessages(request), ExtractOptions(request), cancellationToken))
@@ -99,7 +99,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
         }
     }
 
-    public override async Task<ChatSegment> Chat(ChatServiceRequest request, CancellationToken cancellationToken)
+    public override async Task<ChatSegment> Chat(ChatRequest request, CancellationToken cancellationToken)
     {
         ClientResult<ChatCompletion> cc = await chatClient.CompleteChatAsync(ExtractMessages(request), ExtractOptions(request), cancellationToken);
         ChatCompletion delta = cc.Value;
@@ -116,7 +116,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
         }
     }
 
-    protected virtual IEnumerable<ChatMessage> ExtractMessages(ChatServiceRequest request)
+    protected virtual IEnumerable<ChatMessage> ExtractMessages(ChatRequest request)
     {
         if (request.ChatConfig.SystemPrompt != null)
         {
@@ -206,7 +206,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
         }
     }
 
-    protected virtual ChatCompletionOptions ExtractOptions(ChatServiceRequest request)
+    protected virtual ChatCompletionOptions ExtractOptions(ChatRequest request)
     {
         ChatCompletionOptions cco = new()
         {

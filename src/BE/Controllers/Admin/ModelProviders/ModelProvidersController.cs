@@ -99,7 +99,6 @@ public class ModelProvidersController(ChatsDB db) : ControllerBase
                 DeploymentName = x.DeploymentName,
                 AllowSearch = x.AllowSearch,
                 AllowVision = x.AllowVision,
-                AllowSystemPrompt = x.AllowSystemPrompt,
                 AllowCodeExecution = x.AllowCodeExecution,
                 ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(x.ReasoningEffortOptions),
                 AllowStreaming = x.AllowStreaming,
@@ -116,6 +115,7 @@ public class ModelProvidersController(ChatsDB db) : ControllerBase
                 UseMaxCompletionTokens = x.UseMaxCompletionTokens,
                 IsLegacy = x.IsLegacy,
                 ThinkTagParserEnabled = x.ThinkTagParserEnabled,
+                MaxThinkingBudget = x.MaxThinkingBudget
             })
             .ToArrayAsync(cancellationToken);
 

@@ -84,6 +84,7 @@ const ChatHeader = () => {
           systemPrompt: defaultPrompt?.content!,
           imageSize: span?.imageSize || null,
           mcps: span?.mcps || [],
+          thinkingBudget: span?.thinkingBudget ?? null,
         }))
       };
       updateChatInChats(updatedChat);
@@ -116,6 +117,7 @@ const ChatHeader = () => {
                 temperature: data.temperature,
                 webSearchEnabled: data.webSearchEnabled,
                 codeExecutionEnabled: data.codeExecutionEnabled,
+                thinkingBudget: data.thinkingBudget,
               };
             }
             return s;

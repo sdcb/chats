@@ -246,7 +246,6 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                 AllowSearch = m.AllowSearch,
                 AllowVision = m.AllowVision,
                 AllowStreaming = m.AllowStreaming,
-                AllowSystemPrompt = m.AllowSystemPrompt,
                 AllowCodeExecution = m.AllowCodeExecution,
                 ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(m.ReasoningEffortOptions),
                 MinTemperature = m.MinTemperature,
@@ -260,6 +259,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                 UseMaxCompletionTokens = m.UseMaxCompletionTokens,
                 IsLegacy = m.IsLegacy,
                 ThinkTagParserEnabled = m.ThinkTagParserEnabled,
+                MaxThinkingBudget = m.MaxThinkingBudget,
             })
             .ToArrayAsync(cancellationToken);
 

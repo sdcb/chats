@@ -18,9 +18,9 @@ public abstract partial class ChatService(Model model) : IDisposable
 
     protected static TimeSpan NetworkTimeout { get; } = TimeSpan.FromHours(24);
 
-    public abstract IAsyncEnumerable<ChatSegment> ChatStreamed(ChatServiceRequest request, CancellationToken cancellationToken);
+    public abstract IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, CancellationToken cancellationToken);
 
-    public virtual async Task<ChatSegment> Chat(ChatServiceRequest request, CancellationToken cancellationToken)
+    public virtual async Task<ChatSegment> Chat(ChatRequest request, CancellationToken cancellationToken)
     {
         List<ChatSegmentItem> segments = [];
         ChatSegment? lastSegment = null;
@@ -38,9 +38,9 @@ public abstract partial class ChatService(Model model) : IDisposable
         };
     }
 
-    public async IAsyncEnumerable<InternalChatSegment> ChatEntry(ChatServiceRequest request, FileUrlProvider fup, UsageSource source, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<InternalChatSegment> ChatEntry(ChatRequest request, FileUrlProvider fup, UsageSource source, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        ChatServiceRequest newRequest = await PreProcess(request, fup, source, cancellationToken);
+        ChatRequest newRequest = await PreProcess(request, fup, source, cancellationToken);
 
         if (Model.ThinkTagParserEnabled)
         {
@@ -72,7 +72,7 @@ public abstract partial class ChatService(Model model) : IDisposable
         }
     }
 
-    private async IAsyncEnumerable<InternalChatSegment> ChatPrivate(ChatServiceRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    private async IAsyncEnumerable<InternalChatSegment> ChatPrivate(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // notify inputTokenCount first to better support price calculation
         int inputTokens = request.EstimatePromptTokens(Tokenizer);
@@ -107,31 +107,20 @@ public abstract partial class ChatService(Model model) : IDisposable
         "*"
     ];
 
-    protected virtual async Task<ChatServiceRequest> PreProcess(ChatServiceRequest request, FileUrlProvider fup, UsageSource source, CancellationToken cancellationToken)
+    protected virtual async Task<ChatRequest> PreProcess(ChatRequest request, FileUrlProvider fup, UsageSource source, CancellationToken cancellationToken)
     {
-        ChatServiceRequest final = request;
+        ChatRequest final = request;
 
-        if (!Model.AllowSystemPrompt)
+        if (final.ChatConfig.SystemPrompt != null && source == UsageSource.Chat)
         {
-            // Remove system prompt
+            // Apply system prompt
             final = final with
             {
-                ChatConfig = final.ChatConfig.WithSystemPrompt(null)
+                ChatConfig = final.ChatConfig.WithSystemPrompt(final.ChatConfig.SystemPrompt
+                    .Replace("{{MODEL_NAME}}", Model.Name)
+                    .Replace("{{CURRENT_DATE}}", DateTime.UtcNow.ToString("yyyy/MM/dd"))
+                    .Replace("{{CURRENT_TIME}}", DateTime.UtcNow.ToString("HH:mm:ss")))
             };
-        }
-        else
-        {
-            if (final.ChatConfig.SystemPrompt != null && source == UsageSource.Chat)
-            {
-                // Apply system prompt
-                final = final with
-                {
-                    ChatConfig = final.ChatConfig.WithSystemPrompt(final.ChatConfig.SystemPrompt
-                        .Replace("{{MODEL_NAME}}", Model.Name)
-                        .Replace("{{CURRENT_DATE}}", DateTime.UtcNow.ToString("yyyy/MM/dd"))
-                        .Replace("{{CURRENT_TIME}}", DateTime.UtcNow.ToString("HH:mm:ss")))
-                };
-            }
         }
 
         final = final with

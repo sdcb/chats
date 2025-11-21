@@ -276,5 +276,108 @@ BEGIN
     PRINT N'    -> ChatRole 表不存在，跳过';
 END
 
+GO
+
+-- =============================================
+-- 第七步：Model/ChatConfig 表结构调整
+-- =============================================
+PRINT N'[Step 7.1] 删除 Model.AllowSystemPrompt 列';
+
+IF COL_LENGTH(N'dbo.[Model]', N'AllowSystemPrompt') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.[Model] DROP COLUMN AllowSystemPrompt;
+    PRINT N'    -> 已删除 Model.AllowSystemPrompt 列';
+END
+ELSE
+BEGIN
+    PRINT N'    -> Model.AllowSystemPrompt 列不存在，跳过';
+END
+
+GO
+
+PRINT N'[Step 7.2] 新增 Model.MaxThinkingBudget 列';
+
+IF COL_LENGTH(N'dbo.[Model]', N'MaxThinkingBudget') IS NULL
+BEGIN
+    ALTER TABLE dbo.[Model] ADD MaxThinkingBudget INT NULL;
+    PRINT N'    -> 已新增 Model.MaxThinkingBudget 列';
+END
+ELSE
+BEGIN
+    PRINT N'    -> Model.MaxThinkingBudget 已存在，跳过';
+END
+
+GO
+
+PRINT N'[Step 7.3] 新增 ChatConfig.ThinkingBudget 列';
+
+IF COL_LENGTH(N'dbo.ChatConfig', N'ThinkingBudget') IS NULL
+BEGIN
+    ALTER TABLE dbo.ChatConfig ADD ThinkingBudget INT NULL;
+    PRINT N'    -> 已新增 ChatConfig.ThinkingBudget 列';
+END
+ELSE
+BEGIN
+    PRINT N'    -> ChatConfig.ThinkingBudget 已存在，跳过';
+END
+
+GO
+
+PRINT N'[Step 7.4] 调整 Model.ReasoningEffortOptions 与 SupportedImageSizes 可空设置';
+
+IF COL_LENGTH(N'dbo.[Model]', N'ReasoningEffortOptions') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM sys.columns
+        WHERE object_id = OBJECT_ID(N'dbo.[Model]')
+          AND name = N'ReasoningEffortOptions'
+          AND is_nullable = 0)
+    BEGIN
+        ALTER TABLE dbo.[Model] ALTER COLUMN ReasoningEffortOptions NVARCHAR(50) NULL;
+        PRINT N'    -> 已将 Model.ReasoningEffortOptions 改为可空';
+    END
+    ELSE
+    BEGIN
+        PRINT N'    -> Model.ReasoningEffortOptions 已经为可空，跳过';
+    END
+
+    UPDATE dbo.[Model]
+    SET ReasoningEffortOptions = NULL
+    WHERE LTRIM(RTRIM(ISNULL(ReasoningEffortOptions, N''))) = N'';
+END
+ELSE
+BEGIN
+    PRINT N'    -> Model.ReasoningEffortOptions 列不存在，跳过';
+END
+
+IF COL_LENGTH(N'dbo.[Model]', N'SupportedImageSizes') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM sys.columns
+        WHERE object_id = OBJECT_ID(N'dbo.[Model]')
+          AND name = N'SupportedImageSizes'
+          AND is_nullable = 0)
+    BEGIN
+        ALTER TABLE dbo.[Model] ALTER COLUMN SupportedImageSizes NVARCHAR(200) NULL;
+        PRINT N'    -> 已将 Model.SupportedImageSizes 改为可空';
+    END
+    ELSE
+    BEGIN
+        PRINT N'    -> Model.SupportedImageSizes 已经为可空，跳过';
+    END
+
+    UPDATE dbo.[Model]
+    SET SupportedImageSizes = NULL
+    WHERE LTRIM(RTRIM(ISNULL(SupportedImageSizes, N''))) = N'';
+END
+ELSE
+BEGIN
+    PRINT N'    -> Model.SupportedImageSizes 列不存在，跳过';
+END
+
+GO
+
 PRINT N'[1.9.0] 所有迁移步骤已完成';
 GO

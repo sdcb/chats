@@ -16,7 +16,7 @@ public partial class Model
         return (float)Math.Clamp(temperature.Value, (float)MinTemperature, (float)MaxTemperature);
     }
 
-    public static int[] GetReasoningEffortOptionsAsInt32(string reasoningEffortOptionsInDB)
+    public static int[] GetReasoningEffortOptionsAsInt32(string? reasoningEffortOptionsInDB)
     {
         if (string.IsNullOrEmpty(reasoningEffortOptionsInDB))
         {
@@ -25,7 +25,7 @@ public partial class Model
         return [.. reasoningEffortOptionsInDB.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse)];
     }
 
-    public static string[] GetSupportedImageSizesAsArray(string supportedImageSizesInDB)
+    public static string[] GetSupportedImageSizesAsArray(string? supportedImageSizesInDB)
     {
         if (string.IsNullOrEmpty(supportedImageSizesInDB))
         {

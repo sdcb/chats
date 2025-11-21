@@ -32,7 +32,7 @@ public class Test2ChatService(Model model) : ChatService(model)
         "https://io.starworks.cc:88/cv-public/2025/welcome3.jpg",
     ];
 
-    public override IAsyncEnumerable<ChatSegment> ChatStreamed(ChatServiceRequest request, CancellationToken cancellationToken)
+    public override IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, CancellationToken cancellationToken)
     {
         Step lastUserMessage = request.Steps.LastUserMessage ?? throw new InvalidOperationException("No user message in the request.");
         string messageText = lastUserMessage.StepContents

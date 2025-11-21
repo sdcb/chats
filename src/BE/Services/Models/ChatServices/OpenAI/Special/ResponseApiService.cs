@@ -26,7 +26,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
         return cc;
     }
 
-    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatServiceRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         bool hasTools = false;
         if (Model.UseAsyncApi)
@@ -221,7 +221,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
         }
     }
 
-    static List<ResponseItem> ExtractMessages(ChatServiceRequest request)
+    static List<ResponseItem> ExtractMessages(ChatRequest request)
     {
         List<ResponseItem> responseItems = new(request.Steps.Count + request.ChatConfig.SystemPrompt != null ? 1 : 0);
         if (request.ChatConfig.SystemPrompt != null)
@@ -311,7 +311,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
         }
     }
 
-    static ResponseCreationOptions ExtractOptions(ChatServiceRequest request, bool background = false)
+    static ResponseCreationOptions ExtractOptions(ChatRequest request, bool background = false)
     {
         ResponseCreationOptions responseCreationOptions = new()
         {

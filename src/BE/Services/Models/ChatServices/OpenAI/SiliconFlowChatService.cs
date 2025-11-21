@@ -41,7 +41,7 @@ public class SiliconFlowChatService(Model model) : ChatCompletionService(model, 
         })];
     }
 
-    protected override ChatCompletionOptions ExtractOptions(ChatServiceRequest request)
+    protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
     {
         ChatCompletionOptions cco = base.ExtractOptions(request);
 

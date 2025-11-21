@@ -54,7 +54,6 @@ export interface AdminModelDto {
   // === 1.8.0 新增字段（全部必填）===
   allowSearch: boolean;
   allowVision: boolean;
-  allowSystemPrompt: boolean;
   allowStreaming: boolean;
   allowCodeExecution: boolean;
   allowToolCall: boolean;
@@ -65,9 +64,10 @@ export interface AdminModelDto {
   
   contextWindow: number;
   maxResponseTokens: number;
+  maxThinkingBudget: number | null;
   
-  reasoningEffortOptions: number[];
-  supportedImageSizes: string[];
+  reasoningEffortOptions: number[] | null;
+  supportedImageSizes: string[] | null;
   
   apiType: number;
   useAsyncApi: boolean;
@@ -86,7 +86,6 @@ export interface UpdateModelDto {
   // === 1.8.0 新增字段（全部必填）===
   allowSearch: boolean;
   allowVision: boolean;
-  allowSystemPrompt: boolean;
   allowStreaming: boolean;
   allowCodeExecution: boolean;
   allowToolCall: boolean;
@@ -97,9 +96,10 @@ export interface UpdateModelDto {
   
   contextWindow: number;
   maxResponseTokens: number;
+  maxThinkingBudget: number | null;
   
-  reasoningEffortOptions: number[];
-  supportedImageSizes: string[];
+  reasoningEffortOptions: number[] | null;
+  supportedImageSizes: string[] | null;
   
   apiType: number;
   useAsyncApi: boolean;

@@ -45,7 +45,7 @@ public class QwenChatService(Model model) : ChatCompletionService(model, CreateQ
         })];
     }
 
-    protected override ChatCompletionOptions ExtractOptions(ChatServiceRequest request)
+    protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
     {
         ChatCompletionOptions cco = base.ExtractOptions(request);
         if (Model.AllowSearch && request.ChatConfig.WebSearchEnabled)

@@ -87,6 +87,7 @@ export interface ChatSpanDto {
   reasoningEffort: number;
   maxOutputTokens: number | null;
   imageSize: string | null;
+  thinkingBudget: number | null;
   mcps: ChatSpanMcp[];
 }
 
@@ -137,6 +138,7 @@ export interface PostUserChatSpanParams {
   temperature?: number | null;
   webSearchEnabled?: boolean;
   codeExecutionEnabled?: boolean;
+  thinkingBudget?: number | null;
 }
 
 export interface PostUserChatSpanResult {
@@ -151,6 +153,7 @@ export interface PostUserChatSpanResult {
   reasoningEffort: number;
   maxOutputTokens: number;
   imageSize: string | null;
+  thinkingBudget: number | null;
   mcps: ChatSpanMcp[];
 }
 
@@ -249,6 +252,7 @@ export interface PutChatSpanParams {
   maxOutputTokens: number | null;
   reasoningEffort?: number | null;
   imageSize?: string | null;
+  thinkingBudget?: number | null;
   mcps?: ChatSpanMcp[];
 }
 
@@ -274,6 +278,7 @@ export interface PutChatPresetSpanParams {
   maxOutputTokens: number | null;
   reasoningEffort?: number | null;
   imageSize?: string | null;
+  thinkingBudget?: number | null;
   mcps?: ChatSpanMcp[];
 }
 

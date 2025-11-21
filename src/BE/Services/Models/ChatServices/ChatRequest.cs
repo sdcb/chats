@@ -5,7 +5,7 @@ using Tokenizer = Microsoft.ML.Tokenizers.Tokenizer;
 
 namespace Chats.BE.Services.Models;
 
-public record ChatServiceRequest
+public record ChatRequest
 {
     public required IList<Step> Steps { get; init; }
 
@@ -40,9 +40,9 @@ public record ChatServiceRequest
         return totalTokens;
     }
 
-    public static ChatServiceRequest Simple(string prompt)
+    public static ChatRequest Simple(string prompt)
     {
-        return new ChatServiceRequest
+        return new ChatRequest
         {
             Steps =
             [
@@ -65,7 +65,7 @@ public record ChatServiceRequest
         };
     }
 
-    public static ChatServiceRequest FromOpenAI(string userId, Model model, bool streamed, IList<ChatMessage> messages, ChatCompletionOptions cco)
+    public static ChatRequest FromOpenAI(string userId, Model model, bool streamed, IList<ChatMessage> messages, ChatCompletionOptions cco)
     {
         ChatConfig config = new()
         {
@@ -99,7 +99,7 @@ public record ChatServiceRequest
             config.CodeExecutionEnabled = enableCodeExecution;
         }
 
-        return new ChatServiceRequest()
+        return new ChatRequest()
         {
             ChatConfig = config,
             AllowParallelToolCalls = cco.AllowParallelToolCalls,

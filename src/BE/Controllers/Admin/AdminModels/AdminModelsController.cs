@@ -41,7 +41,6 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
                 AllowSearch = x.AllowSearch,
                 AllowVision = x.AllowVision,
                 AllowStreaming = x.AllowStreaming,
-                AllowSystemPrompt = x.AllowSystemPrompt,
                 AllowCodeExecution = x.AllowCodeExecution,
                 ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(x.ReasoningEffortOptions),
                 MinTemperature = x.MinTemperature,
@@ -55,6 +54,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
                 UseMaxCompletionTokens = x.UseMaxCompletionTokens,
                 IsLegacy = x.IsLegacy,
                 ThinkTagParserEnabled = x.ThinkTagParserEnabled,
+                MaxThinkingBudget = x.MaxThinkingBudget,
             })
             .ToArrayAsync(cancellationToken);
         return data;
@@ -163,7 +163,6 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
             DeploymentName = req.DeploymentName,
             AllowSearch = req.AllowSearch,
             AllowVision = req.AllowVision,
-            AllowSystemPrompt = req.AllowSystemPrompt,
             AllowStreaming = req.AllowStreaming,
             AllowCodeExecution = req.AllowCodeExecution,
             ReasoningEffortOptions = string.Join(',', req.ReasoningEffortOptions),
@@ -176,6 +175,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
             ApiType = (byte)req.ApiType,
             UseAsyncApi = req.UseAsyncApi,
             ThinkTagParserEnabled = req.ThinkTagParserEnabled,
+            MaxThinkingBudget = req.MaxThinkingBudget,
         };
 
         ModelValidateResult result = await chatFactory.ValidateModel(tempModel, fup, cancellationToken);

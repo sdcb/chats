@@ -37,7 +37,6 @@ public class ModelsController : ControllerBase
                 AllowSearch = x.AllowSearch,
                 AllowVision = x.AllowVision,
                 AllowStreaming = x.AllowStreaming,
-                AllowSystemPrompt = x.AllowSystemPrompt,
                 AllowCodeExecution = x.AllowCodeExecution,
                 ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(x.ReasoningEffortOptions),
                 MinTemperature = x.MinTemperature,
@@ -51,7 +50,8 @@ public class ModelsController : ControllerBase
                 UseMaxCompletionTokens = x.UseMaxCompletionTokens,
                 IsLegacy = x.IsLegacy,
                 ThinkTagParserEnabled = x.ThinkTagParserEnabled,
-            })
+                MaxThinkingBudget = x.MaxThinkingBudget
+        })
             .ToArrayAsync(cancellationToken);
         return data;
     }

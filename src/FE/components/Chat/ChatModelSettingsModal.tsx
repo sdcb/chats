@@ -77,15 +77,23 @@ const ChatModelSettingModal = (props: Props) => {
   useEffect(() => {
     if (!selectedChat) return;
     
-    const sp = selectedChat.spans.find((x) => x.spanId === spanId)!;
-    setSpan(sp);
-    setModel(modelMap[sp?.modelId]);
+    const originalSpan = selectedChat.spans.find((x) => x.spanId === spanId);
+    if (!originalSpan) {
+      return;
+    }
+    const normalizedSpan: ChatSpanDto = {
+      ...originalSpan,
+      mcps: originalSpan.mcps || [],
+      thinkingBudget: originalSpan.thinkingBudget ?? null,
+    };
+    setSpan(normalizedSpan);
+    setModel(modelMap[normalizedSpan.modelId]);
     setMcpServersLoaded(false);
     setMcpLoadingTriggered(false);
     
     // 只在以下情况加载MCP服务器数据：
     // A. 当前span拥有至少一个MCP时
-    if (isOpen && shouldLoadMcpOnInit(sp)) {
+    if (isOpen && shouldLoadMcpOnInit(normalizedSpan)) {
       loadMcpServers();
     }
   }, [isOpen, selectedChat]);
@@ -94,11 +102,22 @@ const ChatModelSettingModal = (props: Props) => {
 
   const onChangeModel = (model: AdminModelDto) => {
     setModel(modelMap[model?.modelId]);
+    const nextThinkingBudget = (() => {
+      if (!span) return null;
+      if (model.maxThinkingBudget === null) {
+        return null;
+      }
+      if (span.thinkingBudget === null) {
+        return null;
+      }
+      return Math.min(span.thinkingBudget, model.maxThinkingBudget);
+    })();
     setSpan({
       ...span!,
       modelId: model.modelId,
       modelName: model.name,
       modelProviderId: model.modelProviderId,
+      thinkingBudget: nextThinkingBudget,
     });
   };
 
@@ -138,6 +157,10 @@ const ChatModelSettingModal = (props: Props) => {
 
   const onChangeImageSize = (value: string | null) => {
     setSpan({ ...span!, imageSize: value });
+  };
+
+  const onChangeThinkingBudget = (value: number | null) => {
+    setSpan({ ...span!, thinkingBudget: value });
   };
 
   const onChangeMcps = (mcps: ChatSpanMcp[]) => {
@@ -187,6 +210,7 @@ const ChatModelSettingModal = (props: Props) => {
         webSearchEnabled: !!span.webSearchEnabled,
         codeExecutionEnabled: !!span.codeExecutionEnabled,
         imageSize: span.imageSize,
+        thinkingBudget: span.thinkingBudget,
         mcps: span.mcps,
       });
       
@@ -240,8 +264,8 @@ const ChatModelSettingModal = (props: Props) => {
               {/* 根据模型的 API 类型显示不同的配置组件 */}
               {model && (
                 <>
-                  {/* Chat/Response API 配置 (apiType=0/1) */}
-                  {(model.apiType === 0 || model.apiType === 1) && (
+                  {/* Chat/Response/AnthropicMessages API 配置 (apiType=0/1/3) */}
+                  {(model.apiType === 0 || model.apiType === 1 || model.apiType === 3) && (
                     <ChatResponsePresetConfig
                       model={model}
                       systemPrompt={span.systemPrompt}
@@ -249,6 +273,7 @@ const ChatModelSettingModal = (props: Props) => {
                       webSearchEnabled={span.webSearchEnabled}
                       codeExecutionEnabled={span.codeExecutionEnabled}
                       reasoningEffort={span.reasoningEffort}
+                      thinkingBudget={span.thinkingBudget}
                       mcps={span.mcps || []}
                       temperature={span.temperature}
                       maxOutputTokens={span.maxOutputTokens}
@@ -258,6 +283,7 @@ const ChatModelSettingModal = (props: Props) => {
                       onChangeEnableSearch={onChangeEnableSearch}
                       onChangeCodeExecution={onChangeCodeExecution}
                       onChangeReasoningEffort={onChangeReasoningEffort}
+                      onChangeThinkingBudget={onChangeThinkingBudget}
                       onChangeMcps={onChangeMcps}
                       onChangeTemperature={onChangeTemperature}
                       onChangeMaxOutputTokens={onChangeMaxOutputTokens}

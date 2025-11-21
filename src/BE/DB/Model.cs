@@ -40,8 +40,6 @@ public partial class Model
 
     public bool AllowVision { get; set; }
 
-    public bool AllowSystemPrompt { get; set; }
-
     public bool AllowStreaming { get; set; }
 
     public bool ThinkTagParserEnabled { get; set; }
@@ -59,12 +57,12 @@ public partial class Model
     public bool AllowCodeExecution { get; set; }
 
     [StringLength(50)]
-    public string ReasoningEffortOptions { get; set; } = null!;
+    public string? ReasoningEffortOptions { get; set; }
 
     public bool AllowToolCall { get; set; }
 
     [StringLength(200)]
-    public string SupportedImageSizes { get; set; } = null!;
+    public string? SupportedImageSizes { get; set; }
 
     public byte ApiType { get; set; }
 
@@ -73,6 +71,8 @@ public partial class Model
     public bool UseMaxCompletionTokens { get; set; }
 
     public bool IsLegacy { get; set; }
+
+    public int? MaxThinkingBudget { get; set; }
 
     [InverseProperty("Model")]
     public virtual ICollection<ChatConfig> ChatConfigs { get; set; } = new List<ChatConfig>();

@@ -39,8 +39,8 @@ public class ValidateChatResponseTokensAttribute : ValidationAttribute
             return new ValidationResult("Invalid object type for chat response tokens validation");
         }
 
-        // 只对 ChatCompletion 和 Response API 进行验证
-        if (request.ApiType == DBApiType.ChatCompletion || request.ApiType == DBApiType.Response)
+        // 只对 ChatCompletion、Response 和 AnthropicMessages API 进行验证
+        if (request.ApiType == DBApiType.OpenAIChatCompletion || request.ApiType == DBApiType.OpenAIResponse || request.ApiType == DBApiType.AnthropicMessages)
         {
             if (request.ContextWindow <= 0)
             {
@@ -80,7 +80,7 @@ public class ValidateImageSizesAttribute : ValidationAttribute
         }
 
         // 只对 ImageGeneration API 进行验证
-        if (request.ApiType == DBApiType.ImageGeneration)
+        if (request.ApiType == DBApiType.OpenAIImageGeneration)
         {
             if (request.SupportedImageSizes == null || request.SupportedImageSizes.Length == 0)
             {
@@ -116,12 +116,47 @@ public class ValidateImageBatchCountAttribute : ValidationAttribute
         }
 
         // 只对 ImageGeneration API 进行验证
-        if (request.ApiType == DBApiType.ImageGeneration)
+        if (request.ApiType == DBApiType.OpenAIImageGeneration)
         {
             if (request.MaxResponseTokens <= 0 || request.MaxResponseTokens > 128)
             {
                 return new ValidationResult("Max batch count must be between 1 and 128 for ImageGeneration API", 
                     new[] { nameof(UpdateModelRequest.MaxResponseTokens) });
+            }
+        }
+
+        return ValidationResult.Success;
+    }
+}
+
+/// <summary>
+/// 验证 MaxThinkingBudget：如果有值，必须小于 MaxResponseTokens
+/// </summary>
+public class ValidateMaxThinkingBudgetAttribute : ValidationAttribute
+{
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
+    {
+        if (validationContext.ObjectInstance is not UpdateModelRequest request)
+        {
+            return new ValidationResult("Invalid object type for max thinking budget validation");
+        }
+
+        // 只对 ChatCompletion、Response 和 AnthropicMessages API 进行验证
+        if (request.ApiType == DBApiType.OpenAIChatCompletion || request.ApiType == DBApiType.OpenAIResponse || request.ApiType == DBApiType.AnthropicMessages)
+        {
+            if (request.MaxThinkingBudget.HasValue)
+            {
+                if (request.MaxThinkingBudget.Value <= 0)
+                {
+                    return new ValidationResult("Max thinking budget must be greater than 0", 
+                        new[] { nameof(UpdateModelRequest.MaxThinkingBudget) });
+                }
+
+                if (request.MaxThinkingBudget.Value >= request.MaxResponseTokens)
+                {
+                    return new ValidationResult("Max thinking budget must be less than max response tokens", 
+                        new[] { nameof(UpdateModelRequest.MaxThinkingBudget) });
+                }
             }
         }
 

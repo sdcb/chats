@@ -234,7 +234,7 @@ public partial class OpenAICompatibleController(
         bool hasSuccessYield = false;
         try
         {
-            ChatServiceRequest csr = ChatServiceRequest.FromOpenAI(currentApiKey.User.Id.ToString(), cm, cco.Streamed, cco.Messages!, cco.ToCleanCco());
+            ChatRequest csr = ChatRequest.FromOpenAI(currentApiKey.User.Id.ToString(), cm, cco.Streamed, cco.Messages!, cco.ToCleanCco());
             await foreach (InternalChatSegment seg in icc.Run(scopedCalc, userModel, s.ChatEntry(csr, fup, UsageSource.Api, cancellationToken)))
             {
                 if (seg.Items.Count == 0) continue;

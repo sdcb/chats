@@ -28,7 +28,7 @@ public class GoogleAI2ChatService(Model model) : ChatService(model)
                                         Model.DeploymentName == "gemini-2.0-flash-exp-image-generation" ||
                                         Model.DeploymentName == "gemini-2.5-flash-image";
 
-    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatServiceRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         GenerationConfig gc = new()
         {
@@ -257,7 +257,7 @@ public class GoogleAI2ChatService(Model model) : ChatService(model)
         }
     }
 
-    static Tool? ToGoogleAIToolCallTool(ChatServiceRequest cco)
+    static Tool? ToGoogleAIToolCallTool(ChatRequest cco)
     {
         if (cco.Tools == null || cco.Tools.Count == 0)
         {

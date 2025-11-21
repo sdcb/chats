@@ -46,4 +46,6 @@ public partial class Step
             StepContents = StepContent.FromOpenAI(message),
         };
     }
+
+    public DBChatRole ChatRole => (DBChatRole)ChatRoleId;
 }

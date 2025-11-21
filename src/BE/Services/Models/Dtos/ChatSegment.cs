@@ -1,4 +1,5 @@
-﻿using OpenAI.Chat;
+﻿using Chats.BE.Services.Models.ChatServices;
+using OpenAI.Chat;
 using OpenAI.Responses;
 
 namespace Chats.BE.Services.Models.Dtos;
@@ -10,6 +11,21 @@ public record ChatSegment
     public required ICollection<ChatSegmentItem> Items { get; init; }
 
     public required ChatTokenUsage? Usage { get; init; }
+
+    public static ChatSegment FromUsageOnly(int inputToken, int outputToken, int reasoningToken = 0)
+    {
+        return new ChatSegment
+        {
+            FinishReason = null,
+            Items = [],
+            Usage = new ()
+            {
+                InputTokens = inputToken,
+                OutputTokens = outputToken,
+                ReasoningTokens = reasoningToken,
+            },
+        };
+    }
 
     public static ChatSegment FromTextOnly(string text)
     {
@@ -39,6 +55,16 @@ public record ChatSegment
         {
             FinishReason = null,
             Items = [ChatSegmentItem.FromToolCall(delta, fc)],
+            Usage = null,
+        };
+    }
+
+    public static ChatSegment FromToolCall(ToolCallSegment toolCallSegment)
+    {
+        return new ChatSegment
+        {
+            FinishReason = null,
+            Items = [toolCallSegment],
             Usage = null,
         };
     }

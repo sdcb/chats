@@ -122,9 +122,8 @@ public abstract record ChatSegmentItem
         {
             Index = delta.OutputIndex,
             Id = toolCall.Id,
-            Type = ChatToolCallKind.Function.ToString(),
             Name = toolCall.FunctionName,
-            Arguments = GetBinaryData(toolCall.FunctionArguments).Length == 0 ? "" : toolCall.FunctionArguments.ToString(),
+            Arguments = GetBinaryData(toolCall.FunctionArguments).Length == 0 ? null : toolCall.FunctionArguments.ToString(),
         };
     }
 
@@ -134,9 +133,8 @@ public abstract record ChatSegmentItem
         {
             Index = fcIndex,
             Id = toolCall.Id,
-            Type = ChatToolCallKind.Function.ToString(),
             Name = toolCall.FunctionName,
-            Arguments = GetBinaryData(toolCall.FunctionArguments).Length == 0 ? "" : toolCall.FunctionArguments.ToString(),
+            Arguments = GetBinaryData(toolCall.FunctionArguments).Length == 0 ? null : toolCall.FunctionArguments.ToString(),
         };
     }
 
@@ -146,7 +144,6 @@ public abstract record ChatSegmentItem
         {
             Index = fcIndex,
             Id = toolCall.Id ?? fcIndex.ToString(),
-            Type = ChatToolCallKind.Function.ToString(),
             Name = toolCall.Name,
             Arguments = JSON.Serialize(toolCall.Args)
         };
@@ -158,7 +155,6 @@ public abstract record ChatSegmentItem
         {
             Index = delta.OutputIndex,
             Id = delta.ItemId,
-            Type = ChatToolCallKind.Function.ToString(),
             Name = null,
             Arguments = delta.Delta switch
             {
@@ -178,7 +174,6 @@ public abstract record ChatSegmentItem
                 null or "" => null,
                 _ => toolCall.ToolCallId
             },
-            Type = toolCall.Kind.ToString(),
             Name = toolCall.FunctionName,
             Arguments = (toolCall.FunctionArgumentsUpdate == null || GetBinaryData(toolCall.FunctionArgumentsUpdate).Length == 0) ? "" : toolCall.FunctionArgumentsUpdate.ToString(),
         };
@@ -201,7 +196,6 @@ public abstract record ChatSegmentItem
         {
             Index = i,
             Id = x.Id,
-            Type = x.Kind.ToString(),
             Name = x.FunctionName,
             Arguments = GetBinaryData(x.FunctionArguments).Length == 0 ? "" : x.FunctionArguments.ToString(),
         });
@@ -255,7 +249,6 @@ public static class ChatSegmentItemExtensions
             ToolCalls = items.OfType<ToolCallSegment>().Select(x => new OpenAIToolCallSegment
             {
                 Id = x.Id,
-                Type = x.Type,
                 Function = new OpenAIToolCallSegmentFunction()
                 {
                     Arguments = x.Arguments,
@@ -299,7 +292,6 @@ public static class ChatSegmentItemExtensions
                     Arguments = lastTool.Arguments + curTool.Arguments,
                     // 如果前一段缺字段，用当前段补全
                     Id = lastTool.Id ?? curTool.Id,
-                    Type = lastTool.Type ?? curTool.Type,
                     Name = lastTool.Name ?? curTool.Name
                 };
             }

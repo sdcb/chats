@@ -12,7 +12,7 @@ public class OpenRouterChatService(Model model, HostUrlService hostUrlService) :
 {
     protected override ReadOnlySpan<byte> ReasoningEffortPropName => "$.reasoning"u8;
 
-    protected override ChatCompletionOptions ExtractOptions(ChatServiceRequest request)
+    protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
     {
         ChatCompletionOptions cco = base.ExtractOptions(request);
         cco.Patch.Set("$.reasoning"u8, BinaryData.FromObjectAsJson(new { }));

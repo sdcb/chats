@@ -195,7 +195,6 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
                     AllowSearch = existingModel.AllowSearch,
                     AllowVision = existingModel.AllowVision,
                     AllowStreaming = existingModel.AllowStreaming,
-                    AllowSystemPrompt = existingModel.AllowSystemPrompt,
                     AllowCodeExecution = existingModel.AllowCodeExecution,
                     ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(existingModel.ReasoningEffortOptions),
                     MinTemperature = existingModel.MinTemperature,
@@ -209,6 +208,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
                     UseMaxCompletionTokens = existingModel.UseMaxCompletionTokens,
                     IsLegacy = existingModel.IsLegacy,
                     ThinkTagParserEnabled = existingModel.ThinkTagParserEnabled,
+                    MaxThinkingBudget = existingModel.MaxThinkingBudget,
                 };
             }
             

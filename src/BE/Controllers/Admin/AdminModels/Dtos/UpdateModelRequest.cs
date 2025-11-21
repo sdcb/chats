@@ -10,6 +10,7 @@ namespace Chats.BE.Controllers.Admin.AdminModels.Dtos;
 [ValidateChatResponseTokens]
 [ValidateImageSizes]
 [ValidateImageBatchCount]
+[ValidateMaxThinkingBudget]
 public record UpdateModelRequest
 {
     [JsonPropertyName("name")]
@@ -53,7 +54,7 @@ public record UpdateModelRequest
     public required bool AllowCodeExecution { get; init; }
 
     [JsonPropertyName("reasoningEffortOptions")]
-    public required int[] ReasoningEffortOptions { get; init; }
+    public int[]? ReasoningEffortOptions { get; init; }
 
     [JsonPropertyName("minTemperature")]
     [Range(0, 2, ErrorMessage = "Minimum temperature must be between 0 and 2")]
@@ -75,7 +76,7 @@ public record UpdateModelRequest
     public required bool AllowToolCall { get; init; }
 
     [JsonPropertyName("supportedImageSizes")]
-    public required string[] SupportedImageSizes { get; init; }
+    public string[]? SupportedImageSizes { get; init; }
 
     [JsonPropertyName("apiType")]
     public required DBApiType ApiType { get; init; }
@@ -92,6 +93,9 @@ public record UpdateModelRequest
     [JsonPropertyName("thinkTagParserEnabled")]
     public required bool ThinkTagParserEnabled { get; init; }
 
+    [JsonPropertyName("maxThinkingBudget")]
+    public int? MaxThinkingBudget { get; init; }
+
     public void ApplyTo(Model cm)
     {
         cm.Name = Name;
@@ -102,7 +106,6 @@ public record UpdateModelRequest
         cm.DeploymentName = DeploymentName;
         cm.AllowSearch = AllowSearch;
         cm.AllowVision = AllowVision;
-        cm.AllowSystemPrompt = AllowSystemPrompt;
         cm.AllowStreaming = AllowStreaming;
         cm.AllowCodeExecution = AllowCodeExecution;
         cm.ReasoningEffortOptions = string.Join(',', ReasoningEffortOptions);
@@ -117,5 +120,6 @@ public record UpdateModelRequest
         cm.UseMaxCompletionTokens = UseMaxCompletionTokens;
         cm.IsLegacy = IsLegacy;
         cm.ThinkTagParserEnabled = ThinkTagParserEnabled;
+        cm.MaxThinkingBudget = MaxThinkingBudget;
     }
 }
