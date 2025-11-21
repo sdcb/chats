@@ -23,7 +23,6 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         [FromServices] ClientInfoManager clientInfoManager,
         [FromServices] FileUrlProvider fdup,
         [FromServices] CurrentUser currentUser,
-        [FromServices] FileContentTypeService fileContentTypeService,
         [FromServices] FileImageInfoService fileImageInfoService,
         CancellationToken cancellationToken)
     {
@@ -33,7 +32,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
             return NotFound("File service config not found.");
         }
 
-        return await UploadPrivate(db, file, fileServiceFactory, logger, clientInfoManager, fdup, currentUser, fileService, fileContentTypeService, fileImageInfoService, cancellationToken);
+        return await UploadPrivate(db, file, fileServiceFactory, logger, clientInfoManager, fdup, currentUser, fileService, fileImageInfoService, cancellationToken);
     }
 
     [Route("file-service/{fileServiceId:int}/upload"), HttpPut]
@@ -41,7 +40,6 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         [FromServices] ClientInfoManager clientInfoManager,
         [FromServices] FileUrlProvider fdup,
         [FromServices] CurrentUser currentUser,
-        [FromServices] FileContentTypeService fileContentTypeService,
         [FromServices] FileImageInfoService fileImageInfoService,
         CancellationToken cancellationToken)
     {
@@ -51,7 +49,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
             return NotFound("File server config not found.");
         }
 
-        return await UploadPrivate(db, file, fileServiceFactory, logger, clientInfoManager, fdup, currentUser, fileService, fileContentTypeService, fileImageInfoService, cancellationToken);
+        return await UploadPrivate(db, file, fileServiceFactory, logger, clientInfoManager, fdup, currentUser, fileService, fileImageInfoService, cancellationToken);
     }
 
     private async Task<ActionResult<FileDto>> UploadPrivate(ChatsDB db, IFormFile file,
@@ -61,7 +59,6 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         FileUrlProvider fdup,
         CurrentUser currentUser,
         DB.FileService fileService,
-        FileContentTypeService fileContentTypeService,
         FileImageInfoService fileImageInfoService,
         CancellationToken cancellationToken)
     {
@@ -116,7 +113,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         DB.File dbFile = new()
         {
             FileName = file.FileName,
-            FileContentType = await fileContentTypeService.GetOrCreate(file.ContentType, cancellationToken),
+            MediaType = file.ContentType,
             FileServiceId = fileService.Id,
             StorageKey = storageKey,
             Size = (int)file.Length,
@@ -140,7 +137,6 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         int fileId = urlEncryption.DecryptFileId(encryptedFileId);
         DB.File? file = await db.Files
             .Include(x => x.FileService)
-            .Include(x => x.FileContentType)
             .FirstOrDefaultAsync(x => x.Id == fileId, cancellationToken);
         if (file == null)
         {
@@ -167,7 +163,6 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         int fileId = decodeResult.Value;
         DB.File? file = await db.Files
             .Include(x => x.FileService)
-            .Include(x => x.FileContentType)
             .FirstOrDefaultAsync(x => x.Id == fileId, cancellationToken);
         if (file == null)
         {
@@ -193,7 +188,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
 
             DateTimeOffset lastModified = fileInfo.LastWriteTimeUtc;
             EntityTagHeaderValue etag = new('"' + lastModified.Ticks.ToString("x") + '"', isWeak: true);
-            return PhysicalFile(fileInfo.FullName, file.FileContentType.ContentType, lastModified, etag, enableRangeProcessing: true);
+            return PhysicalFile(fileInfo.FullName, file.MediaType, lastModified, etag, enableRangeProcessing: true);
         }
         else
         {
@@ -204,8 +199,8 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
             else
             {
                 CreateDownloadUrlRequest request = CreateDownloadUrlRequest.FromFile(file);
-                Uri downloadUrl = fs.CreateDownloadUrl(request);
-                _fileUrlCache.Set(file.Id.ToString(), downloadUrl.ToString(), new CacheItemPolicy { AbsoluteExpiration = request.ValidEnd });
+                string downloadUrl = fs.CreateDownloadUrl(request);
+                _fileUrlCache.Set(file.Id.ToString(), downloadUrl, new CacheItemPolicy { AbsoluteExpiration = request.ValidEnd });
                 return Redirect(downloadUrl.ToString());
             }
         }
@@ -218,7 +213,6 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         CancellationToken cancellationToken)
     {
         IQueryable<DB.File> queryable = db.Files
-            .Include(x => x.FileContentType)
             .Where(x => x.CreateUserId == currentUser.Id)
             .OrderByDescending(x => x.Id);
         PagedResult<FileDto> pagedResult = await PagedResult.FromTempQuery(queryable, query, f => fdup.CreateFileDto(f), cancellationToken);

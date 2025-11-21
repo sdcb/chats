@@ -1,6 +1,4 @@
-﻿using Chats.BE.DB.Enums;
-
-namespace Chats.BE.Services.FileServices;
+﻿namespace Chats.BE.Services.FileServices;
 
 /// <summary>
 /// Abstract for file service operations such as upload, download, and creating download URLs.
@@ -34,7 +32,7 @@ public interface IFileService
     /// </summary>
     /// <param name="request">The request containing details for creating the download URL.</param>
     /// <returns>The URI of the created download URL.</returns>
-    public abstract Uri CreateDownloadUrl(CreateDownloadUrlRequest request);
+    public abstract string CreateDownloadUrl(CreateDownloadUrlRequest request);
 
     /// <summary>
     /// Deletes a file from the storage.

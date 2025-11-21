@@ -1,5 +1,4 @@
 ﻿using Aliyun.OSS;
-using Chats.BE.DB.Enums;
 using System.Net;
 
 namespace Chats.BE.Services.FileServices.Implementations.AliyunOSS;
@@ -8,9 +7,9 @@ public class AliyunOSSFileService(AliyunOssConfig config) : IFileService
 {
     private readonly OssClient _oss = new(config.Endpoint, config.AccessKeyId, config.AccessKeySecret);
 
-    public Uri CreateDownloadUrl(CreateDownloadUrlRequest req)
+    public string CreateDownloadUrl(CreateDownloadUrlRequest req)
     {
-        return _oss.GeneratePresignedUri(config.Bucket, req.StorageKey, req.ValidEnd.UtcDateTime, SignHttpMethod.Get);
+        return _oss.GeneratePresignedUri(config.Bucket, req.StorageKey, req.ValidEnd.UtcDateTime, SignHttpMethod.Get).ToString();
     }
 
     public Task<Stream> Download(string storageKey, CancellationToken cancellationToken)

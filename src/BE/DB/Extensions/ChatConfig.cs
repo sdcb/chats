@@ -141,4 +141,18 @@ public partial class ChatConfig
         long hashCode = BinaryPrimitives.ReadInt64LittleEndian(fullHash);
         return hashCode;
     }
+
+    public ChatConfig WithTemperature(float? temperature)
+    {
+        ChatConfig cloned = Clone();
+        cloned.Temperature = temperature;
+        return cloned;
+    }
+
+    public ChatConfig WithSystemPrompt(string? systemPrompt)
+    {
+        ChatConfig cloned = Clone();
+        cloned.SystemPrompt = systemPrompt;
+        return cloned;
+    }
 }

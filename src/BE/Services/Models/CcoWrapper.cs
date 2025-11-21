@@ -8,7 +8,7 @@ namespace Chats.BE.Services.Models;
 
 public class CcoWrapper(JsonObject json)
 {
-    public bool Stream
+    public bool Streamed
     {
         get => (bool?)json["stream"] ?? false;
         set => SetOrRemove("stream", value);
@@ -27,7 +27,7 @@ public class CcoWrapper(JsonObject json)
             .Select(x => ModelReaderWriter.Read<ChatMessage>(BinaryData.FromBytes(JsonSerializer.SerializeToUtf8Bytes(x)))!)
             .ToArray();
         set => SetOrRemove("messages", value != null
-            ? new JsonArray(value.Select(x => JsonNode.Parse(ModelReaderWriter.Write(x).ToArray())).ToArray())
+            ? new JsonArray([.. value.Select(x => JsonNode.Parse(ModelReaderWriter.Write(x).ToArray()))])
             : null);
     }
 

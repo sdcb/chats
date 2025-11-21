@@ -14,6 +14,12 @@ public partial class StepContentBlob
 
     public byte[] Content { get; set; } = null!;
 
+    [StringLength(100)]
+    public string MediaType { get; set; } = null!;
+
+    [StringLength(200)]
+    public string? FileName { get; set; }
+
     [ForeignKey("Id")]
     [InverseProperty("StepContentBlob")]
     public virtual StepContent IdNavigation { get; set; } = null!;

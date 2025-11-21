@@ -26,7 +26,7 @@ public class UsageQueryNoPagination : IUsageQuery
     public DateOnly? End { get; init; }
 
     [FromQuery(Name = "source")]
-    public UsageQueryType? Source { get; init; }
+    public UsageSource? Source { get; init; }
 
     [FromQuery(Name = "tz")]
     public required short TimezoneOffset { get; init; }

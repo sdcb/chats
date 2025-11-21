@@ -14,9 +14,7 @@ void Main()
 	Environment.CurrentDirectory = Path.GetDirectoryName(Util.CurrentQueryPath)!;
 	TableDef[] tableDefs = new string[]
 	{
-		"ChatRole",
 		"FinishReason",
-		"StepContentType",
 		"TransactionType",
 	}
 	.Select(tableName => TableDef.FromContextTableDef(this, tableName))
@@ -37,7 +35,7 @@ static CompilationUnitSyntax GenerateCompilationUnit(TableDef[] tableDefs)
 		default, default, default, Token(SyntaxKind.OpenBraceToken).WS("\n"), default, Token(SyntaxKind.CloseBraceToken), Token(SyntaxKind.SemicolonToken));
 	CompilationUnitSyntax cu = CompilationUnit()
 		.AddUsings(
-			usingDef("Chats.BE.DB").WS("\n\n")
+			//usingDef("Chats.BE.DB").WS("\n\n")
 		)
 		.AddMembers(
 			fileScopedNamespaceDef("Chats.BE.DB.Init").AddMembers(

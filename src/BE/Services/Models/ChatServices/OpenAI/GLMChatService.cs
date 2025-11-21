@@ -5,19 +5,24 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 public class GLMChatService(Model model) : ChatCompletionService(model)
 {
-    protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
+    protected override ChatCompletionOptions ExtractOptions(ChatServiceRequest request)
     {
+        ChatCompletionOptions cco = base.ExtractOptions(request);
         // https://bigmodel.cn/dev/howuse/websearch
-        options.Patch.Set("$.tools"u8, BinaryData.FromObjectAsJson(new[]
+        if (request.ChatConfig.WebSearchEnabled)
         {
-            new
+            cco.Patch.Set("$.tools"u8, BinaryData.FromObjectAsJson(new[]
             {
-                type = "web_search",
-                web_search = new
+                new
                 {
-                    enable = enabled,
-                },
-            }
-        }));
+                    type = "web_search",
+                    web_search = new
+                    {
+                        enable = true,
+                    },
+                }
+            }));
+        }
+        return cco;
     }
 }

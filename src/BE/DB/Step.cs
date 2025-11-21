@@ -23,10 +23,6 @@ public partial class Step
 
     public long? UsageId { get; set; }
 
-    [ForeignKey("ChatRoleId")]
-    [InverseProperty("Steps")]
-    public virtual ChatRole ChatRole { get; set; } = null!;
-
     [InverseProperty("Step")]
     public virtual ICollection<StepContent> StepContents { get; set; } = new List<StepContent>();
 

@@ -37,13 +37,18 @@ public class QianFanChatService(Model model) : ChatCompletionService(model, Crea
         return api.GetChatClient(model.DeploymentName);
     }
 
-    protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
+    protected override ChatCompletionOptions ExtractOptions(ChatServiceRequest request)
     {
-        options.Patch.Set("$.web_search"u8, BinaryData.FromObjectAsJson(new Dictionary<string, object>()
+        ChatCompletionOptions cco = base.ExtractOptions(request);
+        if (Model.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
-            ["enable"] = enabled,
-            ["enable_citation"] = false,
-            ["enable_trace"] = false,
-        }));
+            cco.Patch.Set("$.web_search"u8, BinaryData.FromObjectAsJson(new Dictionary<string, object>()
+            {
+                ["enable"] = true,
+                ["enable_citation"] = false,
+                ["enable_trace"] = false,
+            }));
+        }
+        return cco;
     }
 }

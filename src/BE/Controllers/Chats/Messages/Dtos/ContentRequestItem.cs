@@ -8,8 +8,8 @@ using System.Text.Json.Serialization;
 namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 
 [JsonPolymorphic]
-[JsonDerivedType(typeof(TextContentRequestItem), typeDiscriminator: (int)DBMessageContentType.Text)]
-[JsonDerivedType(typeof(FileContentRequestItem), typeDiscriminator: (int)DBMessageContentType.FileId)]
+[JsonDerivedType(typeof(TextContentRequestItem), typeDiscriminator: (int)DBStepContentType.Text)]
+[JsonDerivedType(typeof(FileContentRequestItem), typeDiscriminator: (int)DBStepContentType.FileId)]
 public abstract record ContentRequestItem
 {
     public abstract Task<StepContent> ToMessageContent(FileUrlProvider fup, CancellationToken cancellationToken);
@@ -24,31 +24,31 @@ public abstract record ContentRequestItem
 
     public static ContentRequestItem FromDB(StepContent mc, IUrlEncryptionService idEncryption)
     {
-        return (DBMessageContentType)mc.ContentTypeId switch
+        return (DBStepContentType)mc.ContentTypeId switch
         {
-            DBMessageContentType.Text => new TextContentRequestItem { Text = mc.StepContentText!.Content },
-            DBMessageContentType.FileId => new FileContentRequestItem { FileId = idEncryption.EncryptFileId(mc.StepContentFile!.FileId) },
+            DBStepContentType.Text => new TextContentRequestItem { Text = mc.StepContentText!.Content },
+            DBStepContentType.FileId => new FileContentRequestItem { FileId = idEncryption.EncryptFileId(mc.StepContentFile!.FileId) },
             _ => throw new NotSupportedException(),
         };
     }
 
-    private readonly static DBMessageContentType[] AllowedContentTypes = 
+    private readonly static DBStepContentType[] AllowedContentTypes = 
     [
-        DBMessageContentType.Text,
-        DBMessageContentType.FileId,
+        DBStepContentType.Text,
+        DBStepContentType.FileId,
     ];
 
     public static ContentRequestItem[] FromDB(ICollection<StepContent> mcs, IUrlEncryptionService idEncryption)
     {
         return [.. mcs
-            .Where(x => AllowedContentTypes.Contains((DBMessageContentType)x.ContentTypeId))
+            .Where(x => AllowedContentTypes.Contains((DBStepContentType)x.ContentTypeId))
             .Select(mc => FromDB(mc, idEncryption))];
     }
 
     public static ContentRequestItem[] FromDB(ICollection<StepContent> mcs, IUrlEncryptionService idEncryption, long patchContentId, TextContentRequestItem patchText)
     {
         return [.. mcs
-            .Where(x => AllowedContentTypes.Contains((DBMessageContentType)x.ContentTypeId))
+            .Where(x => AllowedContentTypes.Contains((DBStepContentType)x.ContentTypeId))
             .Select(mc => mc.Id switch 
             {
                 var x when x == patchContentId => patchText,

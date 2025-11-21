@@ -1,5 +1,6 @@
 ﻿using OpenAI.Chat;
 using OpenAI.Images;
+using OpenAI.Responses;
 
 namespace Chats.BE.DB.Enums;
 
@@ -14,13 +15,23 @@ public enum DBReasoningEffort : byte
 
 public static class DBReasoningEffortExtensions
 {
-    public static ChatReasoningEffortLevel? ToReasoningEffort(this DBReasoningEffort effort) => effort switch
+    public static ChatReasoningEffortLevel? ToChatCompletionReasoningEffort(this DBReasoningEffort effort) => effort switch
     {
         DBReasoningEffort.Default => null,
-        DBReasoningEffort.Minimal => new ChatReasoningEffortLevel("minimal"),
+        DBReasoningEffort.Minimal => ChatReasoningEffortLevel.Minimal,
         DBReasoningEffort.Low =>  ChatReasoningEffortLevel.Low,
         DBReasoningEffort.Medium => ChatReasoningEffortLevel.Medium,
         DBReasoningEffort.High => ChatReasoningEffortLevel.High,
+        _ => throw new Exception($"Unknown DBReasoningEffort value: {effort}"),
+    };
+
+    public static ResponseReasoningEffortLevel? ToResponseReasoningEffort(this DBReasoningEffort effort) => effort switch
+    {
+        DBReasoningEffort.Default => new ResponseReasoningEffortLevel?(),
+        DBReasoningEffort.Minimal => ResponseReasoningEffortLevel.Minimal,
+        DBReasoningEffort.Low => ResponseReasoningEffortLevel.Low,
+        DBReasoningEffort.Medium => ResponseReasoningEffortLevel.Medium,
+        DBReasoningEffort.High => ResponseReasoningEffortLevel.High,
         _ => throw new Exception($"Unknown DBReasoningEffort value: {effort}"),
     };
 

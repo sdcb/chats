@@ -1,26 +1,11 @@
-using Chats.BE.DB;
-
 namespace Chats.BE.DB.Init;
 
 internal static class BasicData
 {
     public static void InsertAll(ChatsDB db)
     {
-        InsertChatRoles(db);
         InsertFinishReasons(db);
-        InsertStepContentTypes(db);
         InsertTransactionTypes(db);
-    }
-
-    private static void InsertChatRoles(ChatsDB db)
-    {
-        // Generated from data, hash: 4450a3cbc75fbdf25b4af7ed5c400a0f1bc10b873b19b5db6c19f1fbdd7c635e
-        db.ChatRoles.AddRange(
-        [
-            new(){ Id=2, Name="user",      },
-            new(){ Id=3, Name="assistant", },
-            new(){ Id=4, Name="tool",      }
-        ]);
     }
 
     private static void InsertFinishReasons(ChatsDB db)
@@ -42,20 +27,6 @@ internal static class BasicData
             new(){ Id=105, Name="BadParameter",        },
             new(){ Id=106, Name="Cancelled",           },
             new(){ Id=107, Name="InternalConfigIssue", }
-        ]);
-    }
-
-    private static void InsertStepContentTypes(ChatsDB db)
-    {
-        // Generated from data, hash: 766981cc3e16b456244e4580942ca36c81696dcc2e5463594cb29cf96fc83a4a
-        db.StepContentTypes.AddRange(
-        [
-            new(){ Id=0, ContentType="error",            },
-            new(){ Id=1, ContentType="text",             },
-            new(){ Id=2, ContentType="fileId",           },
-            new(){ Id=3, ContentType="reasoning",        },
-            new(){ Id=4, ContentType="toolCall",         },
-            new(){ Id=5, ContentType="toolCallResponse", }
         ]);
     }
 

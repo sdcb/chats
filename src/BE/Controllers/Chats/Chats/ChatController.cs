@@ -1,5 +1,6 @@
 ﻿using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
+using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Infrastructure;
@@ -390,7 +391,6 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             .Include(x => x.StepContents).ThenInclude(x => x.StepContentBlob)
             .Include(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File.FileService)
             .Include(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File.FileImageInfo)
-            .Include(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File.FileContentType)
             .Include(x => x.StepContents).ThenInclude(x => x.StepContentText)
             .Include(x => x.StepContents).ThenInclude(x => x.StepContentThink)
             .Include(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
@@ -425,25 +425,16 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         ChannelWriter<SseResponseLine> writer,
         CancellationToken cancellationToken)
     {
-        List<OpenAIChatMessage> messageToSend = [.. ((IEnumerable<Step>)
-        [
-            ..messageTree,
-            ..dbUserMessage != null ? dbUserMessage.Steps : Array.Empty<Step>(),
-        ])
-        .Select(x => x.ToOpenAI())];
-        if (!string.IsNullOrEmpty(chatSpan.ChatConfig.SystemPrompt))
+        ChatServiceRequest csr = new()
         {
-            messageToSend.Insert(0, OpenAIChatMessage.CreateSystemMessage(chatSpan.ChatConfig.SystemPrompt));
-        }
-
-        ChatCompletionOptions cco = chatSpan.ToChatCompletionOptions(currentUser.Id, chatSpan, userModel);
-        ChatExtraDetails ced = new()
-        {
-            TimezoneOffset = req.TimezoneOffset,
-            WebSearchEnabled = chatSpan.ChatConfig.WebSearchEnabled,
-            CodeExecutionEnabled = chatSpan.ChatConfig.CodeExecutionEnabled,
-            ReasoningEffort = (DBReasoningEffort)chatSpan.ChatConfig.ReasoningEffort,
-            ImageSize = chatSpan.ChatConfig.ImageSize,
+            EndUserId = currentUser.Id.ToString(),
+            Steps = [.. (IEnumerable<Step>)
+            [
+                ..messageTree,
+                ..dbUserMessage != null ? dbUserMessage.Steps : Array.Empty<Step>(),
+            ]],
+            ChatConfig = chatSpan.ChatConfig,
+            Tools = [],
         };
 
         // Build a name mapping for tools to avoid collisions while keeping names clean
@@ -464,7 +455,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             }
 
             toolNameMap[finalName] = (tool.McpServerId, tool.ToolName);
-            cco.Tools.Add(ChatTool.CreateFunctionTool(finalName, tool.Description, tool.Parameters == null ? null : BinaryData.FromString(tool.Parameters)));
+            csr.Tools.Add(ChatTool.CreateFunctionTool(finalName, tool.Description, tool.Parameters == null ? null : BinaryData.FromString(tool.Parameters)));
         }
 
         ChatTurn turn = new()
@@ -484,7 +475,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
         while (!cancellationToken.IsCancellationRequested)
         {
-            Step step = await RunOne(messageToSend, cancellationToken);
+            Step step = await RunOne(csr, cancellationToken);
             WriteStep(step);
 
             if (TryGetUnfinishedToolCall(step, out List<StepContentToolCall> unfinishedToolCalls))
@@ -541,7 +532,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                                     DurationMs = (int)sw.ElapsedMilliseconds,
                                     IsSuccess = isSuccess,
                                 },
-                                ContentTypeId = (byte)DBMessageContentType.ToolCallResponse,
+                                ContentTypeId = (byte)DBStepContentType.ToolCallResponse,
                             }
                         ],
                     });
@@ -606,11 +597,11 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             toolCall = [];
             foreach (StepContent content in step.StepContents!)
             {
-                if (content.ContentTypeId == (byte)DBMessageContentType.ToolCall && content.StepContentToolCall != null)
+                if (content.ContentTypeId == (byte)DBStepContentType.ToolCall && content.StepContentToolCall != null)
                 {
                     string toolCallId = content.StepContentToolCall.ToolCallId!;
                     bool hasResponse = step.StepContents.Any(x => 
-                        x.ContentTypeId == (byte)DBMessageContentType.ToolCallResponse 
+                        x.ContentTypeId == (byte)DBStepContentType.ToolCallResponse 
                         && x.StepContentToolCallResponse != null
                         && x.StepContentToolCallResponse.ToolCallId == toolCallId);
                     if (!hasResponse)
@@ -628,12 +619,12 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
         void WriteStep(Step step)
         {
-            messageToSend.Add(step.ToOpenAI());
+            csr.Steps.Add(step);
             turn.Steps.Add(step);
             writer.TryWrite(new EndStep(chatSpan.SpanId, step));
         }
 
-        async Task<Step> RunOne(List<OpenAIChatMessage> messageToSend, CancellationToken cancellationToken)
+        async Task<Step> RunOne(ChatServiceRequest request, CancellationToken cancellationToken)
         {
             InChatContext icc = new(firstTick);
 
@@ -643,7 +634,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 using ChatService s = chatFactory.CreateChatService(userModel.Model);
 
                 bool responseStated = false, reasoningStarted = false;
-                await foreach (InternalChatSegment seg in icc.Run(calc, userModel, s.ChatStreamedFEProcessed(messageToSend, cco, ced, fup, cancellationToken)))
+                await foreach (InternalChatSegment seg in icc.Run(calc, userModel, s.ChatEntry(request, fup, UsageSource.Chat, cancellationToken)))
                 {
                     foreach (ChatSegmentItem item in seg.Items)
                     {
@@ -805,7 +796,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
     private async Task YieldTitle(string title)
     {
         await YieldResponse(new UpdateTitleLine(""));
-        foreach (string segment in TestChatService.UnicodeCharacterSplit(title))
+        foreach (string segment in Test2ChatService.UnicodeCharacterSplit(title))
         {
             await YieldResponse(new TitleSegmentLine(segment));
             await Task.Delay(10);

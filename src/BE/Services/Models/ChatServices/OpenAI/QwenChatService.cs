@@ -1,10 +1,8 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.ChatServices.OpenAI.PipelinePolicies;
-using Chats.BE.Services.Models.Extensions;
 using OpenAI.Chat;
 using System.ClientModel.Primitives;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
@@ -46,16 +44,22 @@ public class QwenChatService(Model model) : ChatCompletionService(model, CreateQ
             return bytes.ToArray();
         })];
     }
-    protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
-    {
-        options.Patch.Set("$.enable_search"u8, enabled);
-    }
 
-    protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
+    protected override ChatCompletionOptions ExtractOptions(ChatServiceRequest request)
     {
-        if (reasoningEffort.IsLowOrMinimal())
+        ChatCompletionOptions cco = base.ExtractOptions(request);
+        if (Model.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
-            options.Patch.Set("$.enable_thinking"u8, false);
+            cco.Patch.Set("$.enable_search"u8, true);
         }
+
+        if (Model.GetReasoningEffortOptionsAsInt32(Model.ReasoningEffortOptions).Length != 0)
+        {
+            if (((DBReasoningEffort)request.ChatConfig.ReasoningEffort).IsLowOrMinimal())
+            {
+                cco.Patch.Set("$.enable_thinking"u8, false);
+            }
+        }
+        return cco;
     }
 }

@@ -7,12 +7,12 @@ using System.Text.Json.Serialization;
 namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 
 [JsonPolymorphic]
-[JsonDerivedType(typeof(ErrorContentResponseItem), typeDiscriminator: (int)DBMessageContentType.Error)]
-[JsonDerivedType(typeof(TextContentResponseItem), typeDiscriminator: (int)DBMessageContentType.Text)]
-[JsonDerivedType(typeof(FileResponseItem), typeDiscriminator: (int)DBMessageContentType.FileId)]
-[JsonDerivedType(typeof(ReasoningResponseItem), typeDiscriminator: (int)DBMessageContentType.Reasoning)]
-[JsonDerivedType(typeof(ToolCallingResponseItem), typeDiscriminator: (int)DBMessageContentType.ToolCall)]
-[JsonDerivedType(typeof(ToolCallResponseItem), typeDiscriminator: (int)DBMessageContentType.ToolCallResponse)]
+[JsonDerivedType(typeof(ErrorContentResponseItem), typeDiscriminator: (int)DBStepContentType.Error)]
+[JsonDerivedType(typeof(TextContentResponseItem), typeDiscriminator: (int)DBStepContentType.Text)]
+[JsonDerivedType(typeof(FileResponseItem), typeDiscriminator: (int)DBStepContentType.FileId)]
+[JsonDerivedType(typeof(ReasoningResponseItem), typeDiscriminator: (int)DBStepContentType.Think)]
+[JsonDerivedType(typeof(ToolCallingResponseItem), typeDiscriminator: (int)DBStepContentType.ToolCall)]
+[JsonDerivedType(typeof(ToolCallResponseItem), typeDiscriminator: (int)DBStepContentType.ToolCallResponse)]
 public abstract record ContentResponseItem
 {
     [JsonPropertyName("i")]
@@ -21,36 +21,36 @@ public abstract record ContentResponseItem
     public static ContentResponseItem FromContent(StepContent content, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
     {
         string encryptedMessageContentId = urlEncryption.EncryptMessageContentId(content.Id);
-        return (DBMessageContentType)content.ContentTypeId switch
+        return (DBStepContentType)content.ContentTypeId switch
         {
-            DBMessageContentType.Text => new TextContentResponseItem()
+            DBStepContentType.Text => new TextContentResponseItem()
             {
                 Id = encryptedMessageContentId, 
                 Content = content.StepContentText!.Content
             },
-            DBMessageContentType.Error => new ErrorContentResponseItem()
+            DBStepContentType.Error => new ErrorContentResponseItem()
             {
                 Id = encryptedMessageContentId,
                 Content = content.StepContentText!.Content
             },
-            DBMessageContentType.Reasoning => new ReasoningResponseItem()
+            DBStepContentType.Think => new ReasoningResponseItem()
             {
                 Id = encryptedMessageContentId,
                 Content = content.StepContentThink!.Content
             },
-            DBMessageContentType.FileId => new FileResponseItem()
+            DBStepContentType.FileId => new FileResponseItem()
             {
                 Id = encryptedMessageContentId,
                 Content = fup.CreateFileDto(content.StepContentFile!.File)
             },
-            DBMessageContentType.ToolCall => new ToolCallingResponseItem()
+            DBStepContentType.ToolCall => new ToolCallingResponseItem()
             {
                 Id = encryptedMessageContentId,
                 Name = content.StepContentToolCall!.Name,
                 ToolCallId = content.StepContentToolCall!.ToolCallId!,
                 Parameters = content.StepContentToolCall!.Parameters,
             },
-            DBMessageContentType.ToolCallResponse => new ToolCallResponseItem()
+            DBStepContentType.ToolCallResponse => new ToolCallResponseItem()
             {
                 Id = encryptedMessageContentId,
                 ToolCallId = content.StepContentToolCallResponse!.ToolCallId!,

@@ -18,6 +18,13 @@ public abstract record ImageChatSegment : ChatSegmentItem
     protected abstract string ToContentType();
 }
 
+public record BlobImage
+{
+    public required string ContentType { get; init; }
+
+    public required byte[] Data { get; init; }
+}
+
 public record Base64Image : ImageChatSegment
 {
     [JsonPropertyName("contentType")]

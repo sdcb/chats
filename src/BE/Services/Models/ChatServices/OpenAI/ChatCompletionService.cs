@@ -1,10 +1,13 @@
-﻿using Chats.BE.Services.Models.Dtos;
-using OpenAI.Chat;
+﻿using Chats.BE.DB;
+using Chats.BE.DB.Enums;
+using Chats.BE.Services.Models.ChatServices.OpenAI.Extensions;
+using Chats.BE.Services.Models.Dtos;
 using OpenAI;
-using System.Runtime.CompilerServices;
+using OpenAI.Chat;
 using System.ClientModel;
-using Chats.BE.DB;
 using System.ClientModel.Primitives;
+using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
@@ -32,21 +35,21 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
     internal static OpenAIClient CreateOpenAIClient(ModelKey modelKey, PipelinePolicy[] perCallPolicies)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
-        
+
         // Fallback logic: ModelKey.Host -> ModelProviderInfo.GetInitialHost
-        Uri? endpoint = !string.IsNullOrWhiteSpace(modelKey.Host) 
-            ? new Uri(modelKey.Host) 
+        Uri? endpoint = !string.IsNullOrWhiteSpace(modelKey.Host)
+            ? new Uri(modelKey.Host)
             : (ModelProviderInfo.GetInitialHost((DB.Enums.DBModelProvider)modelKey.ModelProviderId) switch
-                {
-                    null => null,
-                    var x => new Uri(x)
-                });
-        
+            {
+                null => null,
+                var x => new Uri(x)
+            });
+
         OpenAIClientOptions oaic = new()
         {
             Endpoint = endpoint,
             NetworkTimeout = NetworkTimeout,
-            RetryPolicy = new ClientRetryPolicy(maxRetries: 0), 
+            RetryPolicy = new ClientRetryPolicy(maxRetries: 0),
         };
         foreach (PipelinePolicy policy in perCallPolicies)
         {
@@ -58,47 +61,20 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
 
     protected virtual ReadOnlySpan<byte> ReasoningEffortPropName => "$.reasoning_content"u8;
 
-    /// <summary>
-    /// 从 JsonPatch 中安全地提取并解码字符串值
-    /// Workaround for Azure SDK issues:
-    /// - #53716: TryGetValue throws InvalidOperationException when path doesn't exist
-    /// - #53718: TryGetValue doesn't decode JSON escape sequences (\n, \t, etc.)
-    /// </summary>
-    /// <param name="patch">要查询的 JsonPatch 对象</param>
-    /// <param name="path">JSON 路径</param>
-    /// <returns>解码后的字符串值，如果路径不存在或值为 null 则返回 null</returns>
     internal static string? TryGetDecodedValue(ref JsonPatch patch, ReadOnlySpan<byte> path)
     {
-        // Workaround for #53716: Contains() 方法不会抛出异常，用于检查路径是否存在
-        if (!patch.Contains(path))
+        if (patch.TryGetValue(path, out string? val))
         {
-            return null;
-        }
-
-        // 尝试获取原始值
-        if (!patch.TryGetValue(path, out string? val) || val == null)
-        {
-            return null;
-        }
-
-        // Workaround for #53718: TryGetValue 不会自动解码 JSON 转义序列
-        // 使用 JsonSerializer.Deserialize 来正确处理 \n, \t, \", \\, \uXXXX 等转义字符
-        try
-        {
-            return JsonSerializer.Deserialize<string>($"\"{val}\"");
-        }
-        catch
-        {
-            // 如果反序列化失败（例如值已经被正确解码，或包含无效的转义序列），
-            // 则返回原始值作为后备方案
             return val;
         }
+
+        return null;
     }
 
-    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatServiceRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ChatFinishReason? finishReason = null;
-        await foreach (StreamingChatCompletionUpdate delta in chatClient.CompleteChatStreamingAsync(messages, options, cancellationToken))
+        await foreach (StreamingChatCompletionUpdate delta in chatClient.CompleteChatStreamingAsync(ExtractMessages(request), ExtractOptions(request), cancellationToken))
         {
             string? segment = delta.ContentUpdate.FirstOrDefault()?.Text;
             string? reasoningSegment = GetReasoningContent(delta);
@@ -123,11 +99,9 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
         }
     }
 
-    public override async Task<ChatSegment> Chat(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, CancellationToken cancellationToken)
+    public override async Task<ChatSegment> Chat(ChatServiceRequest request, CancellationToken cancellationToken)
     {
-        // SupportsDeveloperMessage 功能已移除，所有模型都不再支持 DeveloperMessage
-        
-        ClientResult<ChatCompletion> cc = await chatClient.CompleteChatAsync(messages, options, cancellationToken);
+        ClientResult<ChatCompletion> cc = await chatClient.CompleteChatAsync(ExtractMessages(request), ExtractOptions(request), cancellationToken);
         ChatCompletion delta = cc.Value;
         return new ChatSegment
         {
@@ -140,6 +114,112 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
         {
             return TryGetDecodedValue(ref delta.Choices[0].Patch, ReasoningEffortPropName);
         }
+    }
+
+    protected virtual IEnumerable<ChatMessage> ExtractMessages(ChatServiceRequest request)
+    {
+        if (request.ChatConfig.SystemPrompt != null)
+        {
+            yield return ChatMessage.CreateSystemMessage(request.ChatConfig.SystemPrompt);
+        }
+
+        foreach (ChatMessage msg in request.Steps.Select(ToOpenAI))
+        {
+            yield return msg;
+        }
+    }
+
+    public ChatMessage ToOpenAI(Step step)
+    {
+        return (DBChatRole)step.ChatRoleId switch
+        {
+            DBChatRole.User => new UserChatMessage([.. step.StepContents.Select(ToOpenAI).Where(x => x != null)]),
+            DBChatRole.Assistant => ToAssistantMessage(step.StepContents),
+            DBChatRole.ToolCall => new ToolChatMessage(step.StepContents.First().StepContentToolCallResponse!.ToolCallId, step.StepContents.First().StepContentToolCallResponse!.Response),
+            _ => throw new NotImplementedException()
+        };
+
+        static ChatMessageContentPart? ToOpenAI(StepContent stepContent)
+        {
+            return (DBStepContentType)stepContent.ContentTypeId switch
+            {
+                DBStepContentType.Text => ChatMessageContentPart.CreateTextPart(stepContent.StepContentText!.Content),
+                DBStepContentType.FileId => throw new Exception($"FileId content type should supposed to converted to FileUrl or FileBlob before sending to OpenAI API in FEPreprocess."),
+                DBStepContentType.FileUrl => ChatMessageContentPart.CreateImagePart(new Uri(stepContent.StepContentText!.Content)),
+                DBStepContentType.FileBlob => ChatMessageContentPart.CreateImagePart(BinaryData.FromBytes(stepContent.StepContentBlob!.Content), stepContent.StepContentBlob.MediaType),
+                DBStepContentType.Error => ChatMessageContentPart.CreateTextPart(stepContent.StepContentText!.Content),
+                DBStepContentType.Think => null, // ChatCompletion api does not support "think" content type
+                _ => throw new NotImplementedException()
+            };
+        }
+
+        static AssistantChatMessage ToAssistantMessage(ICollection<StepContent> stepContents)
+        {
+            bool hasContent = false, hasToolCall = false;
+            foreach (StepContent stepContent in stepContents)
+            {
+                if (stepContent.ContentTypeId == (byte)DBStepContentType.FileId ||
+                    stepContent.ContentTypeId == (byte)DBStepContentType.Text ||
+                    stepContent.ContentTypeId == (byte)DBStepContentType.Error)
+                {
+                    hasContent = true;
+                }
+                if (stepContent.ContentTypeId == (byte)DBStepContentType.ToolCall && stepContent.StepContentToolCall != null)
+                {
+                    hasToolCall = true;
+                }
+                if (hasContent && hasToolCall)
+                {
+                    break; // No need to check further if both are found
+                }
+            }
+
+            if (hasContent)
+            {
+                AssistantChatMessage msg = new(stepContents
+                    .Where(x => (DBStepContentType)x.ContentTypeId is DBStepContentType.FileId or DBStepContentType.Text or DBStepContentType.Error)
+                    .Select(ToOpenAI)
+                    .Where(x => x != null)
+                    .ToArray());
+                foreach (ChatToolCall toolCall in stepContents.Where(x => (DBStepContentType)x.ContentTypeId is DBStepContentType.ToolCall && x.StepContentToolCall != null)
+                    .Select(content => ChatToolCall.CreateFunctionToolCall(
+                        content.StepContentToolCall!.ToolCallId,
+                        content.StepContentToolCall!.Name,
+                        BinaryData.FromString(content.StepContentToolCall.Parameters))))
+                {
+                    msg.ToolCalls.Add(toolCall);
+                }
+                return msg;
+            }
+            else if (hasToolCall) // onlyToolCall
+            {
+                return new(stepContents.Where(x => (DBStepContentType)x.ContentTypeId is DBStepContentType.ToolCall && x.StepContentToolCall != null)
+                    .Select(content => ChatToolCall.CreateFunctionToolCall(
+                        content.StepContentToolCall!.ToolCallId,
+                        content.StepContentToolCall!.Name,
+                        BinaryData.FromString(content.StepContentToolCall.Parameters))));
+            }
+            else
+            {
+                throw new Exception("Assistant chat message must either have at least one content or tool call");
+            }
+        }
+    }
+
+    protected virtual ChatCompletionOptions ExtractOptions(ChatServiceRequest request)
+    {
+        ChatCompletionOptions cco = new()
+        {
+            Temperature = request.ChatConfig.Temperature,
+            EndUserId = request.EndUserId,
+        };
+        if (request.ChatConfig.MaxOutputTokens.HasValue)
+        {
+            cco.SetMaxTokens(request.ChatConfig.MaxOutputTokens.Value, Model.UseMaxCompletionTokens);
+        }
+        cco.TopP = request.TopP;
+        cco.Seed = request.Seed;
+        return cco;
     }
 
     protected virtual Dtos.ChatTokenUsage GetUsage(global::OpenAI.Chat.ChatTokenUsage usage)

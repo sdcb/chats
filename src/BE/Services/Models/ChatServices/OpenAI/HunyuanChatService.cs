@@ -5,9 +5,14 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 public class HunyuanChatService(Model model) : ChatCompletionService(model)
 {
-    protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
+    protected override ChatCompletionOptions ExtractOptions(ChatServiceRequest request)
     {
-        options.Patch.Set("$.enable_enhancement"u8, enabled);
-        options.Patch.Set("$.force_search_enhancement"u8, enabled);
+        ChatCompletionOptions cco = base.ExtractOptions(request);
+        if (Model.AllowSearch && request.ChatConfig.WebSearchEnabled)
+        {
+            cco.Patch.Set("$.enable_enhancement"u8, true);
+            cco.Patch.Set("$.force_search_enhancement"u8, true);
+        }
+        return cco;
     }
 }

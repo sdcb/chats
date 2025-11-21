@@ -1,5 +1,6 @@
 ﻿using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
 using OpenAI;
 using OpenAI.Chat;
@@ -25,14 +26,13 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
         return cc;
     }
 
-    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatServiceRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         bool hasTools = false;
         if (Model.UseAsyncApi)
         {
             Stopwatch sw = Stopwatch.StartNew();
-            OpenAIResponse response = await responseClient.CreateResponseAsync(ToResponse(messages), ToResponse(options, background: true), cancellationToken);
+            OpenAIResponse response = await responseClient.CreateResponseAsync(ExtractMessages(request), ExtractOptions(request, background: true), cancellationToken);
 
             cancellationToken.Register(async () =>
             {
@@ -95,7 +95,8 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
                         OutputTokens = response.Usage.OutputTokenCount,
                         ReasoningTokens = response.Usage.OutputTokenDetails.ReasoningTokenCount,
                     },
-                    FinishReason = null, Items = [],
+                    FinishReason = null,
+                    Items = [],
                 };
                 throw new TaskCanceledException();
             }
@@ -152,7 +153,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
         }
         else
         {
-            await foreach (StreamingResponseUpdate delta in responseClient.CreateResponseStreamingAsync(ToResponse(messages), ToResponse(options), cancellationToken))
+            await foreach (StreamingResponseUpdate delta in responseClient.CreateResponseStreamingAsync(ExtractMessages(request), ExtractOptions(request), cancellationToken))
             {
                 if (delta is StreamingResponseErrorUpdate error)
                 {
@@ -220,118 +221,114 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
         }
     }
 
-    static List<ResponseItem> ToResponse(IReadOnlyList<ChatMessage> messages)
+    static List<ResponseItem> ExtractMessages(ChatServiceRequest request)
     {
-        List<ResponseItem> responseItems = [];
-        foreach (ChatMessage message in messages)
+        List<ResponseItem> responseItems = new(request.Steps.Count + request.ChatConfig.SystemPrompt != null ? 1 : 0);
+        if (request.ChatConfig.SystemPrompt != null)
         {
-            responseItems.AddRange(message switch
+            responseItems.Add(ResponseItem.CreateSystemMessageItem(request.ChatConfig.SystemPrompt));
+        }
+
+        foreach (Step message in request.Steps)
+        {
+            responseItems.AddRange((DBChatRole)message.ChatRoleId switch
             {
-                SystemChatMessage sys => [ResponseItem.CreateSystemMessageItem(MessageContentPartToResponse(sys.Content, input: true))],
-                UserChatMessage user => [ResponseItem.CreateUserMessageItem(MessageContentPartToResponse(user.Content, input: true))],
-                AssistantChatMessage assistant => AssistantChatMessageToResponse(assistant),
-                DeveloperChatMessage developer => [ResponseItem.CreateDeveloperMessageItem(MessageContentPartToResponse(developer.Content, input: true))],
-                ToolChatMessage tool => [ResponseItem.CreateFunctionCallOutputItem(tool.ToolCallId, string.Join("\r\n", tool.Content.Select(x => x.Text)))],
+                DBChatRole.User => [ResponseItem.CreateUserMessageItem(MessageContentPartToResponse(message.StepContents, input: true))],
+                DBChatRole.Assistant => AssistantChatMessageToResponse(message),
+                DBChatRole.ToolCall => [ResponseItem.CreateFunctionCallOutputItem(message.StepContents.First().StepContentToolCallResponse!.ToolCallId, message.StepContents.First().StepContentToolCallResponse!.Response)],
                 _ => throw new NotSupportedException($"Unsupported message type: {message.GetType()}"),
             });
         }
         return responseItems;
 
-        static IEnumerable<ResponseItem> AssistantChatMessageToResponse(AssistantChatMessage assistantChatMessage)
+        static IEnumerable<ResponseItem> AssistantChatMessageToResponse(Step assistantChatMessage)
         {
-            if (assistantChatMessage.ToolCalls != null && assistantChatMessage.ToolCalls.Count > 0)
+            foreach (StepContent sc in assistantChatMessage.StepContents.Where(x => x.StepContentToolCall != null))
             {
-                foreach (ChatToolCall? toolCall in assistantChatMessage.ToolCalls)
-                {
-                    yield return ResponseItem.CreateFunctionCallItem(toolCall.Id, toolCall.FunctionName, toolCall.FunctionArguments);
-                }
+                StepContentToolCall tc = sc.StepContentToolCall!;
+                yield return ResponseItem.CreateFunctionCallItem(tc.ToolCallId, tc.Name, BinaryData.FromString(tc.Parameters));
             }
-            if (assistantChatMessage.Content != null && assistantChatMessage.Content.Count > 0)
+            List<StepContent> generalContents = [.. assistantChatMessage.StepContents.Where(x => x.StepContentToolCall == null)];
+            if (generalContents.Count > 0)
             {
-                yield return ResponseItem.CreateAssistantMessageItem(MessageContentPartToResponse(assistantChatMessage.Content, input: false));
+                yield return ResponseItem.CreateAssistantMessageItem(MessageContentPartToResponse(generalContents, input: false));
             }
         }
 
-        static IReadOnlyList<ResponseContentPart> MessageContentPartToResponse(IReadOnlyList<ChatMessageContentPart> parts, bool input)
+        static IReadOnlyList<ResponseContentPart> MessageContentPartToResponse(ICollection<StepContent> parts, bool input)
         {
-            List<ResponseContentPart> responseParts = [];
-            foreach (ChatMessageContentPart part in parts)
-            {
-                if (!input && part.Kind == ChatMessageContentPartKind.Image)
-                {
-                    // Response API does not support image content part in assistant message
-                    responseParts.Add(ResponseContentPart.CreateOutputTextPart(part.ImageUri?.ToString() ?? "", []));
-                    continue;
-                }
-
-                responseParts.Add(part.Kind switch
-                {
-                    ChatMessageContentPartKind.Text => input ? ResponseContentPart.CreateInputTextPart(part.Text) : ResponseContentPart.CreateOutputTextPart(part.Text, []),
-                    ChatMessageContentPartKind.Image => part switch
-                    {
-                        { FileId: not null } => ResponseContentPart.CreateInputImagePart(part.FileId, ImageDetailLevelToResponse(part.ImageDetailLevel)),
-                        { ImageUri: not null } => ResponseContentPart.CreateInputImagePart(part.ImageUri, ImageDetailLevelToResponse(part.ImageDetailLevel)),
-                        { ImageBytes: not null } => ResponseContentPart.CreateInputImagePart(part.ImageBytes, part.ImageBytesMediaType, ImageDetailLevelToResponse(part.ImageDetailLevel)),
-                        _ => throw new NotSupportedException($"Unsupported image content part: {part}"),
-                    },
-                    _ => throw new NotSupportedException($"Unsupported content part kind: {part.Kind}"),
-                });
-            }
-            return responseParts;
+            return parts
+                .Select(x => StepContentPartToResponsePart(x, input))
+                .Where(x => x != null)
+                .ToList()!;
         }
 
-        static ResponseImageDetailLevel? ImageDetailLevelToResponse(ChatImageDetailLevel? level)
+        static ResponseContentPart? StepContentPartToResponsePart(StepContent stepContent, bool input)
         {
-            if (level == null)
+            DBStepContentType contentType = (DBStepContentType)stepContent.ContentTypeId;
+            if (input)
             {
-                return null;
-            }
-
-            if (level == ChatImageDetailLevel.Auto)
-            {
-                return ResponseImageDetailLevel.Auto;
-            }
-            else if (level == ChatImageDetailLevel.Low)
-            {
-                return ResponseImageDetailLevel.Low;
-            }
-            else if (level == ChatImageDetailLevel.High)
-            {
-                return ResponseImageDetailLevel.High;
+                if (stepContent.TryGetTextPart(out string? text))
+                {
+                    return ResponseContentPart.CreateInputTextPart(text);
+                }
+                else if (stepContent.TryGetFileUrl(out string? url))
+                {
+                    return ResponseContentPart.CreateInputImagePart(url);
+                }
+                else if (stepContent.TryGetFileBlob(out StepContentBlob? blob))
+                {
+                    return ResponseContentPart.CreateInputImagePart(BinaryData.FromBytes(blob.Content), blob.MediaType);
+                }
+                else
+                {
+                    throw new NotSupportedException($"Unsupported input step content type: {contentType}");
+                }
             }
             else
             {
-                throw new NotSupportedException($"Unsupported image detail level: {level}");
+                if (stepContent.TryGetTextPart(out string? text))
+                {
+                    return ResponseContentPart.CreateOutputTextPart(text, []);
+                }
+                else if (stepContent.TryGetFileUrl(out string? url))
+                {
+                    return ResponseContentPart.CreateOutputTextPart(url, []);
+                }
+                else if (stepContent.TryGetThink(out _, out _))
+                {
+                    return null; // Response api does not support think parts in output
+                }
+                else if (stepContent.TryGetFileBlob(out _))
+                {
+                    throw new NotSupportedException("File blob is not supported for output content");
+                }
+                else
+                {
+                    throw new NotSupportedException($"Unsupported output step content type: {contentType}");
+                }
             }
         }
     }
 
-    static ResponseCreationOptions ToResponse(ChatCompletionOptions options, bool background = false)
+    static ResponseCreationOptions ExtractOptions(ChatServiceRequest request, bool background = false)
     {
         ResponseCreationOptions responseCreationOptions = new()
         {
-            Temperature = options.Temperature,
-            TopP = options.TopP,
-            MaxOutputTokenCount = options.MaxOutputTokenCount,
+            Temperature = request.ChatConfig.Temperature,
+            //TopP = options.TopP, // Not supported in ChatConfig for now
+            MaxOutputTokenCount = request.ChatConfig.MaxOutputTokens,
             ReasoningOptions = new ResponseReasoningOptions()
             {
-                ReasoningEffortLevel = options.ReasoningEffortLevel switch
-                {
-                    null => (ResponseReasoningEffortLevel?)null,
-                    var x when x == "minimal" => new ResponseReasoningEffortLevel("minimal"),
-                    var x when x == ChatReasoningEffortLevel.Low => ResponseReasoningEffortLevel.Low,
-                    var x when x == ChatReasoningEffortLevel.Medium => ResponseReasoningEffortLevel.Medium,
-                    var x when x == ChatReasoningEffortLevel.High => ResponseReasoningEffortLevel.High,
-                    _ => throw new NotSupportedException($"Unsupported reasoning effort level: {options.ReasoningEffortLevel}"),
-                },
+                ReasoningEffortLevel = ((DBReasoningEffort)request.ChatConfig.ReasoningEffort).ToResponseReasoningEffort(),
                 ReasoningSummaryVerbosity = ResponseReasoningSummaryVerbosity.Detailed,
             },
-            EndUserId = options.EndUserId,
+            EndUserId = request.EndUserId,
             TextOptions = new ResponseTextOptions()
             {
-                TextFormat = ToResponse(options.ResponseFormat)
+                TextFormat = ToResponse(request.TextFormat)
             },
-            ParallelToolCallsEnabled = options.AllowParallelToolCalls,
+            ParallelToolCallsEnabled = request.AllowParallelToolCalls,
         };
 
         if (background)
@@ -339,7 +336,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
             responseCreationOptions.BackgroundModeEnabled = background;
         }
 
-        foreach (ChatTool tool in options.Tools)
+        foreach (ChatTool tool in request.Tools)
         {
             responseCreationOptions.Tools.Add(ResponseTool.CreateFunctionTool(
                 tool.FunctionName,

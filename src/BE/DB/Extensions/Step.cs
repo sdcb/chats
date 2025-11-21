@@ -1,71 +1,49 @@
 ﻿using Chats.BE.DB.Enums;
-using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models;
+using Microsoft.ML.Tokenizers;
 using OpenAI.Chat;
 
 namespace Chats.BE.DB;
 
 public partial class Step
 {
-    public ChatMessage ToOpenAI()
+    public Step Clone()
     {
-        return (DBChatRole)ChatRoleId switch
+        return new Step
         {
-            DBChatRole.User => new UserChatMessage([.. StepContents.Select(c => c.ToTempOpenAI())]),
-            DBChatRole.Assistant => ToAssistantMessage(StepContents),
-            DBChatRole.ToolCall => new ToolChatMessage(StepContents.First().StepContentToolCallResponse!.ToolCallId, StepContents.First().StepContentToolCallResponse!.Response),
-            _ => throw new NotImplementedException()
+            TurnId = TurnId,
+            ChatRoleId = ChatRoleId,
+            Edited = Edited,
+            CreatedAt = CreatedAt,
+            UsageId = UsageId,
+            StepContents = [.. StepContents.Select(c => c.Clone())]
         };
+    }
 
-        static AssistantChatMessage ToAssistantMessage(ICollection<StepContent> stepContents)
+    public int EstimatePromptTokens(Tokenizer tokenizer)
+    {
+        const int TokenPerToolCall = 3;
+        return StepContents.Sum(c => (DBStepContentType)c.ContentTypeId switch
         {
-            bool hasContent = false, hasToolCall = false;
-            foreach (StepContent stepContent in stepContents)
-            {
-                if (stepContent.ContentTypeId == (byte)DBMessageContentType.FileId || 
-                    stepContent.ContentTypeId == (byte)DBMessageContentType.Text || 
-                    stepContent.ContentTypeId == (byte)DBMessageContentType.Error)
-                {
-                    hasContent = true;
-                }
-                if (stepContent.ContentTypeId == (byte)DBMessageContentType.ToolCall && stepContent.StepContentToolCall != null)
-                {
-                    hasToolCall = true;
-                }
-                if (hasContent && hasToolCall)
-                {
-                    break; // No need to check further if both are found
-                }
-            }
+            DBStepContentType.FileId => 1105, // https://platform.openai.com/docs/guides/vision/calculating-costs, assume image is ~2048x4096 in detail: high, mosts 1105 tokens
+            DBStepContentType.Text or DBStepContentType.Error => tokenizer.CountTokens(c.StepContentText!.Content),
+            DBStepContentType.ToolCall => tokenizer.CountTokens(c.StepContentToolCall!.ToolCallId) + tokenizer.CountTokens(c.StepContentToolCall.Name) + tokenizer.CountTokens(c.StepContentToolCall.Parameters) + TokenPerToolCall,
+            _ => 0
+        });
+    }
 
-            if (hasContent)
+    public static Step FromOpenAI(ChatMessage message)
+    {
+        return new Step
+        {
+            ChatRoleId = message switch
             {
-                AssistantChatMessage msg = new(stepContents
-                    .Where(x => (DBMessageContentType)x.ContentTypeId is DBMessageContentType.FileId or DBMessageContentType.Text or DBMessageContentType.Error)
-                    .Select(c => c.ToTempOpenAI())
-                    .ToArray());
-                foreach (ChatToolCall toolCall in stepContents.Where(x => (DBMessageContentType)x.ContentTypeId is DBMessageContentType.ToolCall && x.StepContentToolCall != null)
-                    .Select(content => ChatToolCall.CreateFunctionToolCall(
-                        content.StepContentToolCall!.ToolCallId,
-                        content.StepContentToolCall!.Name,
-                        BinaryData.FromString(content.StepContentToolCall.Parameters))))
-                {
-                    msg.ToolCalls.Add(toolCall);
-                }
-                return msg;
-            }
-            else if (hasToolCall) // onlyToolCall
-            {
-                return new(stepContents.Where(x => (DBMessageContentType)x.ContentTypeId is DBMessageContentType.ToolCall && x.StepContentToolCall != null)
-                    .Select(content => ChatToolCall.CreateFunctionToolCall(
-                        content.StepContentToolCall!.ToolCallId,
-                        content.StepContentToolCall!.Name,
-                        BinaryData.FromString(content.StepContentToolCall.Parameters))));
-            }
-            else
-            {
-                throw new Exception("Assistant chat message must either have at least one content or tool call");
-            }
-        }
+                UserChatMessage => (byte)DBChatRole.User,
+                AssistantChatMessage => (byte)DBChatRole.Assistant,
+                ToolChatMessage => (byte)DBChatRole.ToolCall,
+                _ => throw new NotSupportedException($"Chat message type {message.GetType().Name} is not supported.")
+            },
+            StepContents = StepContent.FromOpenAI(message),
+        };
     }
 }

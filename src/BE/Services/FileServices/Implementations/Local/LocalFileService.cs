@@ -5,11 +5,11 @@ namespace Chats.BE.Services.FileServices.Implementations.Local;
 
 public class LocalFileService(string localFolder, HostUrlService hostUrlservice, IUrlEncryptionService urlEncryption) : IFileService
 {
-    public Uri CreateDownloadUrl(CreateDownloadUrlRequest request)
+    public string CreateDownloadUrl(CreateDownloadUrlRequest request)
     {
         TimedId timedId = TimedId.CreateFor(request.FileId, request.ValidPeriod);
         string path = urlEncryption.CreateFileIdPath(timedId);
-        return new Uri($"{hostUrlservice.GetBEUrl()}/api/file/{path}");
+        return $"{hostUrlservice.GetBEUrl()}/api/file/{path}";
     }
 
     public Task<bool> Delete(string storageKey, CancellationToken cancellationToken)

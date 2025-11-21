@@ -114,11 +114,11 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
             usagesQuery = usagesQuery.Where(u => u.CreatedAt < localEnd);
         }
 
-        if (query.Source == UsageQueryType.Web)
+        if (query.Source == UsageSource.Chat)
         {
             usagesQuery = usagesQuery.Where(u => u.UserApiUsage == null);
         }
-        if (query.Source == UsageQueryType.Api)
+        if (query.Source == UsageSource.Api)
         {
             usagesQuery = usagesQuery.Where(u => u.UserApiUsage != null);
         }

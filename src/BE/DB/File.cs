@@ -18,8 +18,6 @@ public partial class File
     [StringLength(200)]
     public string FileName { get; set; } = null!;
 
-    public short FileContentTypeId { get; set; }
-
     public int FileServiceId { get; set; }
 
     [StringLength(300)]
@@ -33,6 +31,9 @@ public partial class File
 
     public DateTime CreatedAt { get; set; }
 
+    [StringLength(100)]
+    public string MediaType { get; set; } = null!;
+
     [ForeignKey("ClientInfoId")]
     [InverseProperty("Files")]
     public virtual ClientInfo ClientInfo { get; set; } = null!;
@@ -40,10 +41,6 @@ public partial class File
     [ForeignKey("CreateUserId")]
     [InverseProperty("Files")]
     public virtual User CreateUser { get; set; } = null!;
-
-    [ForeignKey("FileContentTypeId")]
-    [InverseProperty("Files")]
-    public virtual FileContentType FileContentType { get; set; } = null!;
 
     [InverseProperty("File")]
     public virtual FileImageInfo? FileImageInfo { get; set; }

@@ -15,13 +15,18 @@ public class XAIChatService(Model model) : ChatCompletionService(model)
         };
     }
 
-    protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
+    protected override ChatCompletionOptions ExtractOptions(ChatServiceRequest request)
     {
-        options.Patch.Set("$.search_parameters"u8, BinaryData.FromObjectAsJson(new
+        ChatCompletionOptions cco = base.ExtractOptions(request);
+        if (Model.AllowSearch)
         {
-            mode = enabled ? "on" : "off", // also supports "auto"
-            // return_citations, from_date, to_date, max_search_results, sources is also supported but not used
-            // https://docs.x.ai/docs/guides/live-search
-        }));
+            cco.Patch.Set("$.search_parameters"u8, BinaryData.FromObjectAsJson(new
+            {
+                mode = request.ChatConfig.WebSearchEnabled ? "on" : "off", // also supports "auto"
+                // return_citations, from_date, to_date, max_search_results, sources is also supported but not used
+                // https://docs.x.ai/docs/guides/live-search
+            }));
+        }
+        return cco;
     }
 }

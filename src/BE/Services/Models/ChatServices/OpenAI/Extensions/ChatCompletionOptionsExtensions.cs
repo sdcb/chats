@@ -1,6 +1,6 @@
 ﻿using OpenAI.Chat;
 
-namespace Chats.BE.Services.Models.Extensions;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI.Extensions;
 
 public static class ChatCompletionOptionsExtensions
 {

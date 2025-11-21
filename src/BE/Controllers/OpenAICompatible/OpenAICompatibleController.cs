@@ -17,6 +17,8 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Http.Extensions;
+using Chats.BE.Services.FileServices;
+using Chats.BE.Controllers.Users.Usages.Dtos;
 
 namespace Chats.BE.Controllers.OpenAICompatible;
 
@@ -28,6 +30,7 @@ public partial class OpenAICompatibleController(
     UserModelManager userModelManager, 
     ILogger<OpenAICompatibleController> logger, 
     BalanceService balanceService, 
+    FileUrlProvider fup,
     AsyncCacheUsageManager asyncCacheUsageService) : ControllerBase
 {
     [HttpPost("v1/chat/completions")]
@@ -65,7 +68,10 @@ public partial class OpenAICompatibleController(
         InChatContext icc = new(Stopwatch.GetTimestamp());
         try
         {
-            logger.LogInformation("{RequestId} [{Elapsed}], Started", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("{RequestId} [{Elapsed}], Started", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
+            }
             CcoWrapper cco = new(json);
             if (!cco.SeemsValid())
             {
@@ -78,7 +84,10 @@ public partial class OpenAICompatibleController(
 
             Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
             UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
-            logger.LogInformation("{RequestId} [{Elapsed}], GetUserModel", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("{RequestId} [{Elapsed}], GetUserModel", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
+            }
             if (userModel == null) return InvalidModel(cco.Model);
 
             CcoCacheControl ccoCacheControl = cco.CacheControl ?? CcoCacheControl.StaticCached with
@@ -90,7 +99,10 @@ public partial class OpenAICompatibleController(
         }
         finally
         {
-            logger.LogInformation("{RequestId} [{Elapsed}], Finish Reason: {FinishReason}", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds, icc.FinishReason.ToString());
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("{RequestId} [{Elapsed}], Finish Reason: {FinishReason}", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds, icc.FinishReason.ToString());
+            }
         }
     }
 
@@ -114,7 +126,10 @@ public partial class OpenAICompatibleController(
                 .Where(x => x.UserApiKeyId == currentApiKey.ApiKeyId && x.RequestHashCode == requestHashCode && x.Expires > DateTime.UtcNow && x.UserApiCacheBody!.Request == requestBody)
                 .OrderByDescending(x => x.Id)
                 .FirstOrDefaultAsync(cancellationToken);
-            logger.LogInformation("{RequestId} [{Elapsed}], Cache Found: {CacheFound}", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds, cache != null);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("{RequestId} [{Elapsed}], Cache Found: {CacheFound}", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds, cache != null);
+            }
 
             if (cache != null)
             {
@@ -122,9 +137,12 @@ public partial class OpenAICompatibleController(
                 try
                 {
                     FullChatCompletion fullResponse = JsonSerializer.Deserialize<FullChatCompletion>(cache.UserApiCacheBody!.Response)!;
-                    logger.LogInformation("{RequestId} [{Elapsed}], Cache Deserialized", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
+                    if (logger.IsEnabled(LogLevel.Information))
+                    {
+                        logger.LogInformation("{RequestId} [{Elapsed}], Cache Deserialized", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
+                    }
 
-                    if (cco.Stream)
+                    if (cco.Streamed)
                     {
                         Response.StatusCode = 200;
                         Response.Headers.ContentType = "text/event-stream; charset=utf-8";
@@ -156,7 +174,10 @@ public partial class OpenAICompatibleController(
                 }
                 finally
                 {
-                    logger.LogInformation("{RequestId} [{Elapsed}], Response completed", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
+                    if (logger.IsEnabled(LogLevel.Information))
+                    {
+                        logger.LogInformation("{RequestId} [{Elapsed}], Response completed", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
+                    }
                     if (isSuccess)
                     {
                         _ = asyncCacheUsageService.SaveCacheUsage(new UserApiCacheUsage()
@@ -213,11 +234,12 @@ public partial class OpenAICompatibleController(
         bool hasSuccessYield = false;
         try
         {
-            await foreach (InternalChatSegment seg in icc.Run(scopedCalc, userModel, s.ChatStreamedSimulated(cco.Stream, [.. cco.Messages!], cco.ToCleanCco(), cancellationToken)))
+            ChatServiceRequest csr = ChatServiceRequest.FromOpenAI(currentApiKey.User.Id.ToString(), cm, cco.Streamed, cco.Messages!, cco.ToCleanCco());
+            await foreach (InternalChatSegment seg in icc.Run(scopedCalc, userModel, s.ChatEntry(csr, fup, UsageSource.Api, cancellationToken)))
             {
                 if (seg.Items.Count == 0) continue;
 
-                if (cco.Stream)
+                if (cco.Streamed)
                 {
                     if (!hasSuccessYield)
                     {
@@ -239,7 +261,7 @@ public partial class OpenAICompatibleController(
             }
 
             // 流式响应完成后，发送最终的 finish_reason chunk
-            if (cco.Stream && hasSuccessYield && icc.FinishReason != DBFinishReason.Cancelled)
+            if (cco.Streamed && hasSuccessYield && icc.FinishReason != DBFinishReason.Cancelled)
             {
                 string? finishReasonText = icc.FinishReason.ToOpenAIFinishReason();
 
@@ -283,13 +305,13 @@ public partial class OpenAICompatibleController(
         catch (ChatServiceException cse)
         {
             icc.FinishReason = cse.ErrorCode;
-            errorToReturn = await YieldError(hasSuccessYield && cco.Stream, cse.ErrorCode, cse.Message, cancellationToken);
+            errorToReturn = await YieldError(hasSuccessYield && cco.Streamed, cse.ErrorCode, cse.Message, cancellationToken);
         }
         catch (ClientResultException e)
         {
             icc.FinishReason = DBFinishReason.UpstreamError;
             logger.LogError(e, "Upstream error");
-            errorToReturn = await YieldError(hasSuccessYield && cco.Stream, icc.FinishReason, e.Message, cancellationToken);
+            errorToReturn = await YieldError(hasSuccessYield && cco.Streamed, icc.FinishReason, e.Message, cancellationToken);
         }
         catch (TaskCanceledException)
         {
@@ -299,19 +321,19 @@ public partial class OpenAICompatibleController(
         {
             icc.FinishReason = DBFinishReason.InternalConfigIssue;
             logger.LogError(e, "Invalid API host URL");
-            errorToReturn = await YieldError(hasSuccessYield && cco.Stream, icc.FinishReason, e.Message, cancellationToken);
+            errorToReturn = await YieldError(hasSuccessYield && cco.Streamed, icc.FinishReason, e.Message, cancellationToken);
         }
         catch (JsonException e)
         {
             icc.FinishReason = DBFinishReason.InternalConfigIssue;
             logger.LogError(e, "Invalid JSON config");
-            errorToReturn = await YieldError(hasSuccessYield && cco.Stream, icc.FinishReason, e.Message, cancellationToken);
+            errorToReturn = await YieldError(hasSuccessYield && cco.Streamed, icc.FinishReason, e.Message, cancellationToken);
         }
         catch (Exception e)
         {
             icc.FinishReason = DBFinishReason.UnknownError;
             logger.LogError(e, "Unknown error");
-            errorToReturn = await YieldError(hasSuccessYield && cco.Stream, icc.FinishReason, "", cancellationToken);
+            errorToReturn = await YieldError(hasSuccessYield && cco.Streamed, icc.FinishReason, "", cancellationToken);
         }
         finally
         {
@@ -335,7 +357,7 @@ public partial class OpenAICompatibleController(
             _ = balanceService.AsyncUpdateUsage([userModel!.Id], CancellationToken.None);
         }
 
-        if (hasSuccessYield && cco.Stream)
+        if (hasSuccessYield && cco.Streamed)
         {
             return new EmptyResult();
         }

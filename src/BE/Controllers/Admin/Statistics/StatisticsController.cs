@@ -83,7 +83,7 @@ public class StatisticsController(ChatsDB db) : ControllerBase
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
         SingleValueStatisticsEntry[] r = await q
-            .GroupBy(x => x.UserApiUsage != null ? UsageQueryType.Api : UsageQueryType.Web)
+            .GroupBy(x => x.UserApiUsage != null ? UsageSource.Api : UsageSource.Chat)
             .Select(x => new SingleValueStatisticsEntry(x.Key.ToString(), x.Count()))
             .ToArrayAsync(cancellationToken);
         return Ok(r);

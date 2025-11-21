@@ -9,7 +9,7 @@ namespace Chats.BE.Services.FileServices;
 
 public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, IUrlEncryptionService urlEncryptionService)
 {
-    public async Task<ChatMessageContentPart> CreateOpenAIImagePart(DB.File file, CancellationToken cancellationToken)
+    public async Task<StepContent> CreateOpenAIImagePart(DB.File file, CancellationToken cancellationToken)
     {
         IFileService fs = fileServiceFactory.Create(file.FileService);
         if (file.FileService.FileServiceTypeId == (byte)DBFileServiceType.Local)
@@ -18,12 +18,12 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
         }
         else
         {
-            Uri url = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
-            return ChatMessageContentPart.CreateImagePart(url);
+            string url = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
+            return StepContent.FromFileUrl(url);
         }
     }
 
-    public async Task<ChatMessageContentPart> CreateOpenAIImagePartForceDownload(DB.File file, CancellationToken cancellationToken)
+    public async Task<StepContent> CreateOpenAIImagePartForceDownload(DB.File file, CancellationToken cancellationToken)
     {
         MemoryStream ms = new();
         IFileService fs = fileServiceFactory.Create(file.FileService);
@@ -32,23 +32,18 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
         ms.Position = 0;
 
         BinaryData binaryData = BinaryData.FromStream(ms);
-        return ChatMessageContentPart.CreateImagePart(binaryData, file.FileContentType.ContentType);
+        return StepContent.FromFileBlob(binaryData.ToArray(), file.MediaType);
     }
 
-    public ChatMessageContentPart CreateOpenAITextUrl(DB.File file)
+    public StepContent CreateOpenAITextUrl(DB.File file)
     {
         IFileService fs = fileServiceFactory.Create(file.FileService);
-        Uri url = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
-        return ChatMessageContentPart.CreateTextPart(url.ToString());
+        string url = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
+        return StepContent.FromFileUrl(url);
     }
 
     public FileDto CreateFileDto(DB.File file, bool tryWithUrl = true)
     {
-        if (file.FileContentType == null)
-        {
-            throw new InvalidOperationException("Unable to convert file to DTO: FileContentType is null.");
-        }
-
         string? downloadUrl = null;
         if (tryWithUrl && file.FileService != null)
         {
@@ -60,7 +55,7 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
         {
             Id = urlEncryptionService.EncryptFileId(file.Id),
             FileName = file.FileName,
-            ContentType = file.FileContentType.ContentType,
+            ContentType = file.MediaType,
             Url = downloadUrl,
         };
     }
@@ -69,7 +64,6 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
     {
         int fileId = urlEncryptionService.DecryptFileId(encryptedFileId);
         DB.File file = await db.Files
-            .Include(x => x.FileContentType)
             .Include(x => x.FileService)
             .Include(x => x.FileImageInfo)
             .FirstAsync(x => x.Id == fileId, cancellationToken);

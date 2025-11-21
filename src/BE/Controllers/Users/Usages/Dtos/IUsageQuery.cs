@@ -16,7 +16,7 @@ public interface IUsageQuery
 
     public DateOnly? End { get; }
 
-    public UsageQueryType? Source { get; }
+    public UsageSource? Source { get; }
 
     public short TimezoneOffset { get; }
 }

@@ -27,8 +27,6 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<ChatPresetSpan> ChatPresetSpans { get; set; }
 
-    public virtual DbSet<ChatRole> ChatRoles { get; set; }
-
     public virtual DbSet<ChatShare> ChatShares { get; set; }
 
     public virtual DbSet<ChatSpan> ChatSpans { get; set; }
@@ -46,8 +44,6 @@ public partial class ChatsDB : DbContext
     public virtual DbSet<Config> Configs { get; set; }
 
     public virtual DbSet<File> Files { get; set; }
-
-    public virtual DbSet<FileContentType> FileContentTypes { get; set; }
 
     public virtual DbSet<FileImageInfo> FileImageInfos { get; set; }
 
@@ -98,8 +94,6 @@ public partial class ChatsDB : DbContext
     public virtual DbSet<StepContentToolCall> StepContentToolCalls { get; set; }
 
     public virtual DbSet<StepContentToolCallResponse> StepContentToolCallResponses { get; set; }
-
-    public virtual DbSet<StepContentType> StepContentTypes { get; set; }
 
     public virtual DbSet<TransactionType> TransactionTypes { get; set; }
 
@@ -270,10 +264,6 @@ public partial class ChatsDB : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_File_User");
 
-            entity.HasOne(d => d.FileContentType).WithMany(p => p.Files)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_File_FileContentType");
-
             entity.HasOne(d => d.FileService).WithMany(p => p.Files)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_File_FileService");
@@ -383,10 +373,6 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<Step>(entity =>
         {
-            entity.HasOne(d => d.ChatRole).WithMany(p => p.Steps)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Step_ChatRole");
-
             entity.HasOne(d => d.Turn).WithMany(p => p.Steps).HasConstraintName("FK_Step_Turn");
 
             entity.HasOne(d => d.Usage).WithMany(p => p.Steps).HasConstraintName("FK_Step_Usage");
@@ -395,10 +381,6 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<StepContent>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_MessageContent2");
-
-            entity.HasOne(d => d.ContentType).WithMany(p => p.StepContents)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_MessageContent2_MessageContentType");
 
             entity.HasOne(d => d.Step).WithMany(p => p.StepContents).HasConstraintName("FK_StepContent_Step");
         });
@@ -457,11 +439,6 @@ public partial class ChatsDB : DbContext
             entity.Property(e => e.Id).ValueGeneratedNever();
 
             entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentToolCallResponse).HasConstraintName("FK_MessageContentToolCallResponse_MessageContent");
-        });
-
-        modelBuilder.Entity<StepContentType>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__MessageC__3214EC07D7BA864A");
         });
 
         modelBuilder.Entity<TransactionType>(entity =>

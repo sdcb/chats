@@ -8,10 +8,11 @@ public class AzureBlobStorageFileService(AzureBlobStorageConfig config) : IFileS
 {
     private readonly BlobContainerClient _containerClient = new(config.ConnectionString, config.ContainerName);
 
-    public Uri CreateDownloadUrl(CreateDownloadUrlRequest req)
+    public string CreateDownloadUrl(CreateDownloadUrlRequest req)
     {
         BlobClient blobClient = _containerClient.GetBlobClient(req.StorageKey);
-        return blobClient.GenerateSasUri(BlobSasPermissions.Read, req.ValidEnd);
+        Uri url = blobClient.GenerateSasUri(BlobSasPermissions.Read, req.ValidEnd);
+        return url.ToString();
     }
 
     public async Task<bool> Delete(string storageKey, CancellationToken cancellationToken)

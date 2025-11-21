@@ -1,25 +1,23 @@
-﻿using OpenAI;
-using System.ClientModel;
-using Chats.BE.DB;
-using OpenAI.Images;
-using Chats.BE.Services.Models.Dtos;
-using OpenAI.Chat;
+﻿using Chats.BE.DB;
 using Chats.BE.DB.Enums;
-using System.Text.Json.Nodes;
-using System.ClientModel.Primitives;
 using Chats.BE.Services.FileServices;
-using System.Runtime.CompilerServices;
-using GeneratedImageSize = OpenAI.Images.GeneratedImageSize;
-using System.Net.ServerSentEvents;
+using Chats.BE.Services.Models.Dtos;
+using OpenAI;
+using OpenAI.Chat;
+using OpenAI.Images;
+using System.ClientModel;
+using System.ClientModel.Primitives;
 using System.Diagnostics;
+using System.Net.ServerSentEvents;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using GeneratedImageSize = OpenAI.Images.GeneratedImageSize;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
 public class ImageGenerationService(Model model, ImageClient imageClient) : ChatService(model)
 {
-    private string? _imageSize;
-
     public ImageGenerationService(Model model, params PipelinePolicy[] perCallPolicies) : this(model, CreateImageGenerationAPI(model, perCallPolicies))
     {
     }
@@ -31,18 +29,18 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
         return cc;
     }
 
-    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatServiceRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        string prompt = GetPromptStatic(messages);
-        ChatMessageContentPart[] images = GetImagesStatic(messages);
+        string prompt = GetPromptStatic(request.Steps);
+        StepContent[] images = GetImagesStatic(request.Steps);
 
         // 兼容 n>1 时不走 stream
-        int n = options.MaxOutputTokenCount ?? 1;
+        int n = request.ChatConfig.MaxOutputTokens ?? 1;
         if (n > 1)
         {
             // fallback 到 Chat 方法
             Console.WriteLine("ImageGenerationService.ChatStreamed: n > 1, fallback to non-streaming Chat method.");
-            ChatSegment result = await Chat(messages, options, cancellationToken);
+            ChatSegment result = await Chat(request, cancellationToken);
             yield return result;
             yield break;
         }
@@ -62,19 +60,19 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                 ["moderation"] = "low"
             };
 
-            if (options.ReasoningEffortLevel != null)
+            if ((DBReasoningEffort)request.ChatConfig.ReasoningEffort != DBReasoningEffort.Default)
             {
-                requestBody["quality"] = options.ReasoningEffortLevel.ToDBReasoningEffort().ToGeneratedImageQualityText();
+                requestBody["quality"] = ((DBReasoningEffort)request.ChatConfig.ReasoningEffort).ToGeneratedImageQualityText();
             }
 
-            if (!string.IsNullOrEmpty(_imageSize))
+            if (!string.IsNullOrEmpty(request.ChatConfig.ImageSize))
             {
-                requestBody["size"] = _imageSize;
+                requestBody["size"] = request.ChatConfig.ImageSize;
             }
 
-            if (options.EndUserId != null)
+            if (request.EndUserId != null)
             {
-                requestBody["user"] = options.EndUserId;
+                requestBody["user"] = request.EndUserId;
             }
 
             BinaryContent content = BinaryContent.Create(BinaryData.FromString(requestBody.ToJsonString()));
@@ -110,7 +108,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
         else
         {
             // Image edits API with streaming
-            MultiPartFormDataBinaryContent form = await BuildImageEditFormAsync(images, prompt, options, cancellationToken);
+            MultiPartFormDataBinaryContent form = await BuildImageEditFormAsync(images, prompt, request, cancellationToken);
             form.Add("true", "stream");
             form.Add("3", "partial_images");
 
@@ -147,27 +145,27 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
         yield break;
     }
 
-    public override async Task<ChatSegment> Chat(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, CancellationToken cancellationToken)
+    public override async Task<ChatSegment> Chat(ChatServiceRequest request, CancellationToken cancellationToken)
     {
-        string prompt = GetPromptStatic(messages);
-        ChatMessageContentPart[] images = GetImagesStatic(messages);
+        string prompt = GetPromptStatic(request.Steps);
+        StepContent[] images = GetImagesStatic(request.Steps);
         ClientResult<GeneratedImageCollection> cr = null!;
         if (images.Length == 0)
         {
             cr = await imageClient.GenerateImagesAsync(
                 prompt,
-                options.MaxOutputTokenCount ?? 1,
+                request.ChatConfig.MaxOutputTokens ?? 1,
                 new ImageGenerationOptions()
                 {
-                    EndUserId = options.EndUserId,
-                    Quality = options.ReasoningEffortLevel.ToDBReasoningEffort().ToGeneratedImageQuality(),
-                    Size = string.IsNullOrEmpty(_imageSize) ? null : GeneratedImageSizeFromString(_imageSize),
+                    EndUserId = request.EndUserId,
+                    Quality = ((DBReasoningEffort)request.ChatConfig.ReasoningEffort).ToGeneratedImageQuality(),
+                    Size = string.IsNullOrEmpty(request.ChatConfig.ImageSize) ? null : new GeneratedImageSize(request.ChatConfig.ImageSize),
                     ModerationLevel = GeneratedImageModerationLevel.Low,
                 }, cancellationToken);
         }
         else
         {
-            MultiPartFormDataBinaryContent form = await BuildImageEditFormAsync(images, prompt, options, cancellationToken);
+            MultiPartFormDataBinaryContent form = await BuildImageEditFormAsync(images, prompt, request, cancellationToken);
 
             ClientResult clientResult = await imageClient.GenerateImageEditsAsync(form, form.ContentType, new RequestOptions()
             {
@@ -194,29 +192,32 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
         };
     }
 
-    private static string GetPromptStatic(IReadOnlyList<ChatMessage> messages)
+    private static string GetPromptStatic(IEnumerable<Step> steps)
     {
-        UserChatMessage? userMessage = messages.OfType<UserChatMessage>().LastOrDefault();
+        Step? userMessage = steps.LastUserMessage;
+
         if (userMessage != null)
         {
-            ChatMessageContentPart? textPart = userMessage.Content
-                .Where(x => x.Kind == ChatMessageContentPartKind.Text)
-                .LastOrDefault();
-            if (textPart != null)
-            {
-                return textPart.Text;
-            }
+            string textPart = userMessage.StepContents
+                .Where(x => (DBStepContentType)x.ContentTypeId == DBStepContentType.Text && x.StepContentText != null)
+                .Select(x => x.StepContentText!.Content)
+                .LastOrDefault() ?? throw new InvalidOperationException($"Unable to find a text part in the user message.");
+            return textPart;
         }
-        throw new InvalidOperationException($"Unable to find a text part in the user message.");
+        else
+        {
+            throw new InvalidOperationException("Unable to find the user message in the steps.");
+        }
     }
 
-    private static ChatMessageContentPart[] GetImagesStatic(IReadOnlyList<ChatMessage> messages)
+    private static StepContent[] GetImagesStatic(ICollection<Step> steps)
     {
+        // latest message is always the user message
         // if user message contains image, we need to use all images in the message as input
-        UserChatMessage? userChatMessage = messages.OfType<UserChatMessage>().LastOrDefault();
-        if (userChatMessage != null)
+        Step? userMessage = steps.LastUserMessage;
+        if (userMessage != null)
         {
-            ChatMessageContentPart[] userMessageImages = [.. userChatMessage.Content.Where(x => x.Kind == ChatMessageContentPartKind.Image)];
+            StepContent[] userMessageImages = [.. userMessage.StepContents.Where(x => x.IsFile())];
             if (userMessageImages.Length > 0)
             {
                 return userMessageImages;
@@ -224,36 +225,37 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
         }
 
         // otherwise, we need to use the last image in the message as input
-        return [.. messages.SelectMany(x => x.Content)
-            .Where(x => x.Kind == ChatMessageContentPartKind.Image)
+        return [.. steps.SelectMany(x => x.StepContents)
+            .Where(x => x.IsFile())
             .Reverse()
             .Take(1)];
     }
 
     private async Task<MultiPartFormDataBinaryContent> BuildImageEditFormAsync(
-        ChatMessageContentPart[] images,
+        StepContent[] images,
         string prompt,
-        ChatCompletionOptions options,
+        ChatServiceRequest request,
         CancellationToken cancellationToken)
     {
         using HttpClient http = new();
         MultiPartFormDataBinaryContent form = new();
 
-        Dictionary<Uri, HttpResponseMessage> downloadedFiles = (await Task.WhenAll(images
-            .Where(x => x.ImageUri != null)
-            .GroupBy(x => x.ImageUri).Select(async image =>
+        Dictionary<string, HttpResponseMessage> downloadedFiles = (await Task.WhenAll(images
+            .Select(x => x.TryGetFileUrl(out string? url) ? url : null)
+            .Where(x => x != null)
+            .Select(async imageUrl =>
             {
-                HttpResponseMessage resp = await http.GetAsync(image.Key, cancellationToken);
-                return (url: image.Key, resp);
+                HttpResponseMessage resp = await http.GetAsync(imageUrl, cancellationToken);
+                return (url: imageUrl!, resp);
             })))
         .ToDictionary(k => k.url, v => v.resp);
 
-        foreach (ChatMessageContentPart image in images)
+        foreach (StepContent image in images)
         {
-            if (image.ImageUri != null)
+            if (image.TryGetFileUrl(out string? url))
             {
-                HttpResponseMessage file = downloadedFiles[image.ImageUri];
-                string fileName = Path.GetFileName(image.ImageUri.LocalPath);
+                HttpResponseMessage file = downloadedFiles[url];
+                string fileName = Path.GetFileName(new Uri(url).LocalPath);
                 if (fileName.Contains("mask.png"))
                 {
                     form.Add(await file.Content.ReadAsStreamAsync(cancellationToken), "mask", fileName, file.Content.Headers.ContentType?.ToString());
@@ -263,31 +265,31 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
                     form.Add(await file.Content.ReadAsStreamAsync(cancellationToken), "image", fileName, file.Content.Headers.ContentType?.ToString());
                 }
             }
-            else
+            else if (image.TryGetFileBlob(out StepContentBlob? blob))
             {
-                form.Add(image.ImageBytes, "image", image.Filename ?? DBFileDef.MakeFileNameByContentType(image.ImageBytesMediaType), image.ImageBytesMediaType);
+                form.Add(blob.Content, "image", DBFileDef.MakeFileNameByContentType(blob.MediaType), blob.MediaType);
             }
         }
 
         form.Add(prompt, "prompt");
-        form.Add(options.MaxOutputTokenCount ?? 1, "n");
+        form.Add(request.ChatConfig.MaxOutputTokens ?? 1, "n");
         form.Add(Model.DeploymentName, "model");
 
-        if (!string.IsNullOrEmpty(_imageSize))
+        if (!string.IsNullOrEmpty(request.ChatConfig.ImageSize))
         {
-            form.Add(_imageSize, "size");
+            form.Add(request.ChatConfig.ImageSize, "size");
         }
 
-        if (options.EndUserId != null)
+        if (request.EndUserId != null)
         {
-            form.Add(options.EndUserId, "user");
+            form.Add(request.EndUserId, "user");
         }
 
         form.Add("low", "moderation");
 
-        if (options.ReasoningEffortLevel != null)
+        if ((DBReasoningEffort)request.ChatConfig.ReasoningEffort != DBReasoningEffort.Default)
         {
-            form.Add(options.ReasoningEffortLevel.ToDBReasoningEffort().ToGeneratedImageQualityText()!, "quality");
+            form.Add(((DBReasoningEffort)request.ChatConfig.ReasoningEffort).ToGeneratedImageQualityText()!, "quality");
         }
 
         return form;
@@ -441,16 +443,5 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
         {
             throw new Exception($"Request failed with status {response.Status}: {response.ReasonPhrase}");
         }
-    }
-
-    [UnsafeAccessor(UnsafeAccessorKind.StaticMethod, Name = "FromClientResult")]
-    static extern GeneratedImageCollection FromClientResult(GeneratedImageCollection _, ClientResult result);
-
-    [UnsafeAccessor(UnsafeAccessorKind.Constructor)]
-    static extern GeneratedImageSize GeneratedImageSizeFromString(string value);
-
-    protected override void SetImageSize(ChatCompletionOptions options, string imageSize)
-    {
-        _imageSize = imageSize;
     }
 }

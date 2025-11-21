@@ -41,7 +41,6 @@ IFileService minioFileService = fileServiceFactory.Create(minioConfig);
 
 List<File> files = db.Files
     .Include(x => x.FileService)
-    .Include(x => x.FileContentType)
     .Where(x => x.FileService.FileServiceTypeId == (byte)DBFileServiceType.AzureBlobStorage)
     .OrderByDescending(x => x.Id)
     .ToList();
@@ -52,7 +51,7 @@ for (int i = 0; i < files.Count; i++)
     using Stream stream = await azureFileService.Download(file.StorageKey);
     string newStorageKey = await minioFileService.Upload(new FileUploadRequest()
     {
-        ContentType = file.FileContentType.ContentType,
+        ContentType = file.MediaType,
         FileName = file.FileName,
         Stream = stream
     }, default);

@@ -1,19 +1,19 @@
-﻿using Chats.BE.Services.Models.Dtos;
+﻿using Chats.BE.DB;
+using Chats.BE.DB.Enums;
+using Chats.BE.Services.Models.Dtos;
 using Mscc.GenerativeAI;
 using OpenAI.Chat;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Text.Json.Nodes;
-using ChatMessage = OpenAI.Chat.ChatMessage;
 using FinishReason = Mscc.GenerativeAI.FinishReason;
 using Model = Chats.BE.DB.Model;
 
 namespace Chats.BE.Services.Models.ChatServices.GoogleAI;
 
-public class GoogleAI2ChatService : ChatService
+public class GoogleAI2ChatService(Model model) : ChatService(model)
 {
-    private readonly GenerativeModel _generativeModel;
-
     private readonly List<SafetySetting> _safetySettings =
     [
         new SafetySetting { Category = HarmCategory.HarmCategoryHateSpeech, Threshold = HarmBlockThreshold.BlockNone },
@@ -24,30 +24,15 @@ public class GoogleAI2ChatService : ChatService
 
     protected override bool SupportsVisionLink => false;
 
-    public GoogleAI2ChatService(Model model) : base(model)
-    {
-        _generativeModel = new()
-        {
-            ApiKey = model.ModelKey.Secret,
-            Model = model.DeploymentName,
-        };
-        if (_generativeModel.Timeout != NetworkTimeout)
-        {
-            _generativeModel.Timeout = NetworkTimeout;
-        }
-    }
-
     public bool AllowImageGeneration => Model.DeploymentName == "gemini-2.0-flash-exp" ||
                                         Model.DeploymentName == "gemini-2.0-flash-exp-image-generation" ||
                                         Model.DeploymentName == "gemini-2.5-flash-image";
 
-    private bool _codeExecutionEnabled = false;
-
-    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatServiceRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         GenerationConfig gc = new()
         {
-            Temperature = options.Temperature,
+            Temperature = request.ChatConfig.Temperature,
             ResponseModalities = AllowImageGeneration ? [ResponseModality.Text, ResponseModality.Image] : [ResponseModality.Text],
         };
         if (!AllowImageGeneration)
@@ -58,40 +43,54 @@ public class GoogleAI2ChatService : ChatService
         {
             gc.ThinkingConfig = new ThinkingConfig
             {
-                ThinkingBudget = options.ReasoningEffortLevel switch
+                ThinkingBudget = (DBReasoningEffort)request.ChatConfig.ReasoningEffort switch
                 {
-                    var x when x == ChatReasoningEffortLevel.Minimal || x == ChatReasoningEffortLevel.Low => 1024,
+                    DBReasoningEffort.Minimal or DBReasoningEffort.Low => 1024,
                     _ => null,
                 },
                 IncludeThoughts = true,
             };
         }
 
-        Tool? tool = ToGoogleAIToolCallTool(options);
-        if (tool == null && _codeExecutionEnabled)
+        GenerativeModel client = new()
         {
-            tool = new Tool()
-            {
-                CodeExecution = new()
-            };
+            ApiKey = Model.ModelKey.Secret,
+            Model = Model.DeploymentName,
+        };
+        if (client.Timeout != NetworkTimeout)
+        {
+            client.Timeout = NetworkTimeout;
         }
-        if (tool != null && _generativeModel.UseGoogleSearch)
+
+        Tool? tool = ToGoogleAIToolCallTool(request);
+        if (tool == null)
         {
-            _generativeModel.UseGoogleSearch = false;
+            if (request.ChatConfig.CodeExecutionEnabled)
+            {
+                tool = new Tool()
+                {
+                    CodeExecution = new()
+                };
+            }
+            
+            if (request.ChatConfig.WebSearchEnabled)
+            {
+                client.UseGoogleSearch = true;
+            }
         }
 
         int fcIndex = 0;
         GenerateContentRequest gcr = new()
         {
-            Contents = OpenAIChatMessageToGoogleContent(messages.Where(x => x is not SystemChatMessage)),
-            SystemInstruction = OpenAIChatMessageToGoogleContent(messages.Where(x => x is SystemChatMessage)) switch { [] => null, var x => x[0] },
+            Contents = OpenAIChatMessageToGoogleContent(request.Steps),
+            SystemInstruction = request.ChatConfig.SystemPrompt != null ? new Content() { Role = Role.System, Parts = [new TextData() { Text = request.ChatConfig.SystemPrompt }] } : null,
             GenerationConfig = gc,
             SafetySettings = _safetySettings,
             Tools = Model.AllowToolCall && tool != null ? [tool] : null,
         };
         Stopwatch codeExecutionSw = new();
         string? codeExecutionId = null;
-        await foreach (GenerateContentResponse response in _generativeModel.GenerateContentStream(gcr, new RequestOptions()
+        await foreach (GenerateContentResponse response in client.GenerateContentStream(gcr, new RequestOptions()
         {
             Retry = new Retry()
             {
@@ -177,11 +176,6 @@ public class GoogleAI2ChatService : ChatService
         return usage;
     }
 
-    protected override void SetCodeExecutionEnabled(ChatCompletionOptions options, bool enabled)
-    {
-        _codeExecutionEnabled = enabled;
-    }
-
     static ChatFinishReason? ToChatFinishReason(FinishReason? finishReason)
     {
         if (finishReason == null)
@@ -207,58 +201,63 @@ public class GoogleAI2ChatService : ChatService
         };
     }
 
-    static List<Content> OpenAIChatMessageToGoogleContent(IEnumerable<ChatMessage> chatMessages)
+    static List<Content> OpenAIChatMessageToGoogleContent(IEnumerable<Step> chatMessages)
     {
         return [.. chatMessages
-            .Select(msg => msg switch
+            .Select(msg => (DBChatRole)msg.ChatRoleId switch
             {
-                SystemChatMessage s => new Content("") { Role = Role.System, Parts = [.. msg.Content.Select(x => OpenAIPartToGooglePart(x))] },
-                UserChatMessage u => new Content("") { Role = Role.User, Parts = [.. msg.Content.Select(x => OpenAIPartToGooglePart(x))] },
-                AssistantChatMessage a => new Content("") { Role = Role.Model, Parts = AssistantMessageToParts(a) },
-                ToolChatMessage t => new Content("") { Role = Role.Function, Parts = [ToolCallMessageToPart(t)] },
+                DBChatRole.User => new Content("") { Role = Role.User, Parts = [.. msg.StepContents.Select(x => DBPartToGooglePart(x))] },
+                DBChatRole.Assistant => new Content("") { Role = Role.Model, Parts = AssistantMessageToParts(msg) },
+                DBChatRole.ToolCall => new Content("") { Role = Role.Function, Parts = [ToolCallMessageToPart(msg)] },
                 _ => throw new NotSupportedException($"Unsupported message type: {msg.GetType()} in {nameof(GoogleAI2ChatService)}"),
             })];
 
-        static IPart ToolCallMessageToPart(ToolChatMessage message)
+        static IPart ToolCallMessageToPart(Step message)
         {
-            return Part.FromFunctionResponse(message.ToolCallId, new
+            StepContent? toolCallContent = message.StepContents.FirstOrDefault();
+            if (toolCallContent == null || (DBStepContentType)toolCallContent.ContentTypeId != DBStepContentType.ToolCallResponse || toolCallContent.StepContentToolCallResponse == null)
             {
-                result = string.Join("\r\n", message.Content.Select(x => x.Text))
+                throw new Exception($"{nameof(ToolCallMessageToPart)} expected tool call content but none found.");
+            }
+
+            return Part.FromFunctionResponse(toolCallContent.StepContentToolCallResponse.ToolCallId, new
+            {
+                result = toolCallContent.StepContentToolCallResponse.Response
             });
         }
 
-        static List<IPart> AssistantMessageToParts(AssistantChatMessage assistantChatMessage)
+        static List<IPart> AssistantMessageToParts(Step assistantChatMessage)
         {
             List<IPart> results = [];
-            if (assistantChatMessage.ToolCalls != null && assistantChatMessage.ToolCalls.Count > 0)
+            foreach (StepContentToolCall? toolCall in assistantChatMessage.StepContents.Select(x => x.StepContentToolCall))
             {
-                foreach (ChatToolCall toolCall in assistantChatMessage.ToolCalls)
+                if (toolCall != null)
                 {
                     results.Add(new FunctionCall()
                     {
-                        Id = toolCall.Id,
-                        Name = toolCall.FunctionName,
-                        Args = toolCall.FunctionArguments.ToObjectFromJson<JsonObject>(),
+                        Id = toolCall.ToolCallId,
+                        Name = toolCall.Name,
+                        Args = JsonSerializer.Deserialize<JsonObject>(toolCall.Parameters),
                     });
                 }
             }
 
-            results.AddRange(assistantChatMessage.Content.Select(OpenAIPartToGooglePart));
+            results.AddRange(assistantChatMessage.StepContents.Select(DBPartToGooglePart));
             return results;
         }
 
-        static IPart OpenAIPartToGooglePart(ChatMessageContentPart part)
+        static IPart DBPartToGooglePart(StepContent part)
         {
-            return part.Kind switch
+            return (DBStepContentType)part.ContentTypeId switch
             {
-                ChatMessageContentPartKind.Text => new TextData() { Text = part.Text },
-                ChatMessageContentPartKind.Image => new InlineData() { Data = Convert.ToBase64String(part.ImageBytes.ToArray()), MimeType = part.ImageBytesMediaType },
-                _ => throw new NotSupportedException($"Unsupported part kind: {part.Kind}"),
+                DBStepContentType.Text => new TextData() { Text = part.StepContentText!.Content },
+                DBStepContentType.FileBlob => new InlineData() { Data = Convert.ToBase64String(part.StepContentBlob!.Content), MimeType = part.StepContentBlob!.MediaType },
+                var x => throw new NotSupportedException($"Unsupported part kind: {x}"),
             };
         }
     }
 
-    static Tool? ToGoogleAIToolCallTool(ChatCompletionOptions cco)
+    static Tool? ToGoogleAIToolCallTool(ChatServiceRequest cco)
     {
         if (cco.Tools == null || cco.Tools.Count == 0)
         {
@@ -300,10 +299,5 @@ public class GoogleAI2ChatService : ChatService
                 Required = jsonObject["required"]?.AsArray().Select(x => (string)x!).ToList(),
             };
         }
-    }
-
-    protected override void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
-    {
-        _generativeModel.UseGoogleSearch = enabled;
     }
 }

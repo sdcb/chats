@@ -1,10 +1,8 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.ChatServices.OpenAI.PipelinePolicies;
-using Chats.BE.Services.Models.Extensions;
 using OpenAI.Chat;
 using System.ClientModel.Primitives;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
@@ -43,11 +41,17 @@ public class SiliconFlowChatService(Model model) : ChatCompletionService(model, 
         })];
     }
 
-    protected override void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
+    protected override ChatCompletionOptions ExtractOptions(ChatServiceRequest request)
     {
-        if (reasoningEffort.IsLowOrMinimal())
+        ChatCompletionOptions cco = base.ExtractOptions(request);
+
+        if (Model.GetReasoningEffortOptionsAsInt32(Model.ReasoningEffortOptions).Length != 0)
         {
-            options.Patch.Set("$.enable_thinking"u8, false);
+            if (((DBReasoningEffort)request.ChatConfig.ReasoningEffort).IsLowOrMinimal())
+            {
+                cco.Patch.Set("$.enable_thinking"u8, false);
+            }
         }
+        return cco;
     }
 }

@@ -20,8 +20,8 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
     {
         TurnDto[] messages = await db.ChatTurns
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentBlob)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileContentType)
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileImageInfo)
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentText)
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentThink)
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
@@ -218,7 +218,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                     FinishReasonId = (byte)DBFinishReason.Success,
                     SegmentCount = 1,
                     InputTokens = message.Steps.First().Usage!.InputTokens,
-                    OutputTokens = ChatService.DefaultTokenizer.CountTokens(content.Text),
+                    OutputTokens = ChatService.Tokenizer.CountTokens(content.Text),
                     ClientInfo = clientInfo,
                     ReasoningTokens = 0,
                     IsUsageReliable = false,

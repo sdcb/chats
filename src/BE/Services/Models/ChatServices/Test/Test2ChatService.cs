@@ -32,33 +32,30 @@ public class Test2ChatService(Model model) : ChatService(model)
         "https://io.starworks.cc:88/cv-public/2025/welcome3.jpg",
     ];
 
-    public override IAsyncEnumerable<ChatSegment> ChatStreamed(
-        IReadOnlyList<ChatMessage> messages, 
-        ChatCompletionOptions options, 
-        CancellationToken cancellationToken)
+    public override IAsyncEnumerable<ChatSegment> ChatStreamed(ChatServiceRequest request, CancellationToken cancellationToken)
     {
-        string messageText = messages[messages.Count - 1].Content[0].Text;
-        if (messageText.Contains('1'))
+        Step lastUserMessage = request.Steps.LastUserMessage ?? throw new InvalidOperationException("No user message in the request.");
+        string messageText = lastUserMessage.StepContents
+            .Select(x => x.TryGetTextPart(out string? text) ? text : null)
+            .Where(x => x != null)
+            .FirstOrDefault() ?? string.Empty;
+
+        if (messageText == "test-1")
         {
-            return UrlOnly(messages, options, cancellationToken);
+            return UrlOnly(cancellationToken);
         }
-        else if (messageText.Contains('2'))
+        else if (messageText == "test-2")
         {
-            return TextAndUrl(messages, options, cancellationToken);
+            return TextAndUrl(cancellationToken);
         }
         else
         {
-            return TextOnly(messages, options, cancellationToken);
+            return TextOnly(cancellationToken);
         }
     }
 
-    async IAsyncEnumerable<ChatSegment> UrlOnly(
-        IReadOnlyList<ChatMessage> messages,
-        ChatCompletionOptions options,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
+    async IAsyncEnumerable<ChatSegment> UrlOnly([EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        int inputTokens = GetPromptTokenCount(messages);
-
         StringBuilder outputed = new();
         for (int i = 0; i < outputs.Length; i++)
         {
@@ -67,23 +64,14 @@ public class Test2ChatService(Model model) : ChatService(model)
             {
                 Items = [ChatSegmentItem.FromUrlImage(url)],
                 FinishReason = null,
-                Usage = new Dtos.ChatTokenUsage()
-                {
-                    InputTokens = inputTokens,
-                    OutputTokens = Tokenizer.CountTokens(outputed.ToString()),
-                }
+                Usage = null,
             };
             await Task.Delay(1, cancellationToken);
         }
     }
 
-    async IAsyncEnumerable<ChatSegment> TextAndUrl(
-        IReadOnlyList<ChatMessage> messages,
-        ChatCompletionOptions options,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
+    async IAsyncEnumerable<ChatSegment> TextAndUrl([EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        int inputTokens = GetPromptTokenCount(messages);
-
         StringBuilder outputed = new();
         for (int i = 0; i < outputs.Length; i++)
         {
@@ -97,11 +85,7 @@ public class Test2ChatService(Model model) : ChatService(model)
                 yield return new ChatSegment()
                 {
                     Items = ChatSegmentItem.FromTextAndThink(combined, null),
-                    Usage = new Dtos.ChatTokenUsage()
-                    {
-                        InputTokens = inputTokens,
-                        OutputTokens = outputTokens,
-                    },
+                    Usage = null,
                     FinishReason = null,
                 };
                 await Task.Delay(1, cancellationToken);
@@ -110,22 +94,14 @@ public class Test2ChatService(Model model) : ChatService(model)
             yield return new ChatSegment()
             {
                 Items = [ChatSegmentItem.FromUrlImage(url)],
-                FinishReason = null,
-                Usage = new Dtos.ChatTokenUsage()
-                {
-                    InputTokens = inputTokens,
-                    OutputTokens = Tokenizer.CountTokens(outputed.ToString()),
-                }
+                FinishReason = ChatFinishReason.Stop,
+                Usage = null,
             };
         }
     }
 
-    async IAsyncEnumerable<ChatSegment> TextOnly(IReadOnlyList<ChatMessage> messages,
-        ChatCompletionOptions options,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
+    async IAsyncEnumerable<ChatSegment> TextOnly([EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        int inputTokens = GetPromptTokenCount(messages);
-
         StringBuilder outputed = new();
         for (int i = 0; i < outputs.Length; i++)
         {
@@ -138,27 +114,18 @@ public class Test2ChatService(Model model) : ChatService(model)
                 yield return new ChatSegment()
                 {
                     Items = ChatSegmentItem.FromTextAndThink(combined, null),
-                    Usage = new Dtos.ChatTokenUsage()
-                    {
-                        InputTokens = inputTokens,
-                        OutputTokens = outputTokens,
-                    },
+                    Usage = null,
                     FinishReason = null,
                 };
                 await Task.Delay(1, cancellationToken);
             }
             {
                 outputed.Append('\n');
-                int outputTokens = Tokenizer.CountTokens(outputed.ToString());
                 yield return new ChatSegment()
                 {
                     Items = ChatSegmentItem.FromTextAndThink("\n", null),
-                    Usage = new Dtos.ChatTokenUsage()
-                    {
-                        InputTokens = inputTokens,
-                        OutputTokens = outputTokens,
-                    },
-                    FinishReason = null,
+                    Usage = null,
+                    FinishReason = ChatFinishReason.Stop,
                 };
             }
         }

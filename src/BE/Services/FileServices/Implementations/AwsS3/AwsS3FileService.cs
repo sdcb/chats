@@ -21,7 +21,7 @@ public class AwsS3FileService : IFileService
         _s3 = s3;
     }
 
-    public Uri CreateDownloadUrl(CreateDownloadUrlRequest req)
+    public string CreateDownloadUrl(CreateDownloadUrlRequest req)
     {
         string url = _s3.GetPreSignedURL(new GetPreSignedUrlRequest
         {
@@ -30,7 +30,7 @@ public class AwsS3FileService : IFileService
             Expires = req.ValidEnd.UtcDateTime,
             Verb = HttpVerb.GET
         });
-        return new Uri(url);
+        return url;
     }
 
     public async Task<Stream> Download(string storageKey, CancellationToken cancellationToken)

@@ -1,4 +1,5 @@
-﻿using Chats.BE.DB;
+﻿using Chats.BE.Controllers.Users.Usages.Dtos;
+using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices.GoogleAI;
@@ -7,7 +8,6 @@ using Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 using Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 using Chats.BE.Services.Models.ChatServices.Test;
 using Chats.BE.Services.Models.ModelLoaders;
-using Microsoft.AspNetCore.Mvc;
 using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices;
@@ -20,7 +20,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
         if (modelProvider == DBModelProvider.Test)
         {
             // Special case for Test model provider
-            return new TestChatService(model);
+            return new Test2ChatService(model);
         }
 
         DBApiType apiType = (DBApiType)model.ApiType;
@@ -81,11 +81,11 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
                 int[] efforts = Model.GetReasoningEffortOptionsAsInt32(model.ReasoningEffortOptions);
                 if (efforts.Length > 0)
                 {
-                    cco.ReasoningEffortLevel = ((DBReasoningEffort)efforts.Min()).ToReasoningEffort();
+                    cco.ReasoningEffortLevel = ((DBReasoningEffort)efforts.Min()).ToChatCompletionReasoningEffort();
                 }
             }
 
-            await foreach (Dtos.InternalChatSegment seg in cs.ChatStreamedFEProcessed([new UserChatMessage("1+1=?")], cco, ChatExtraDetails.Default, fup, cancellationToken))
+            await foreach (Dtos.InternalChatSegment seg in cs.ChatEntry(ChatServiceRequest.Simple("1+1=?"), fup, UsageSource.Validate, cancellationToken))
             {
                 if (seg.IsFromUpstream)
                 {

@@ -1,31 +1,30 @@
-﻿using Chats.BE.DB;
-using Chats.BE.Services.Models.Dtos;
-using Tokenizer = Microsoft.ML.Tokenizers.Tokenizer;
-using OpenAI.Chat;
-using Microsoft.ML.Tokenizers;
-using Chats.BE.Services.Models.Extensions;
-using Chats.BE.Services.Models.ChatServices;
+﻿using Chats.BE.Controllers.Users.Usages.Dtos;
+using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.Services.Models.Dtos;
+using Microsoft.ML.Tokenizers;
+using System.Runtime.CompilerServices;
+using Tokenizer = Microsoft.ML.Tokenizers.Tokenizer;
 
 namespace Chats.BE.Services.Models;
 
 public abstract partial class ChatService(Model model) : IDisposable
 {
     internal protected Model Model { get; } = model;
-    internal protected Tokenizer Tokenizer { get; } = DefaultTokenizer;
 
-    internal static Tokenizer DefaultTokenizer { get; } = TiktokenTokenizer.CreateForEncoding("o200k_base");
+    internal static Tokenizer Tokenizer { get; } = TiktokenTokenizer.CreateForEncoding("o200k_base");
 
     protected static TimeSpan NetworkTimeout { get; } = TimeSpan.FromHours(24);
 
-    public abstract IAsyncEnumerable<ChatSegment> ChatStreamed(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, CancellationToken cancellationToken);
+    public abstract IAsyncEnumerable<ChatSegment> ChatStreamed(ChatServiceRequest request, CancellationToken cancellationToken);
 
-    public virtual async Task<ChatSegment> Chat(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, CancellationToken cancellationToken)
+    public virtual async Task<ChatSegment> Chat(ChatServiceRequest request, CancellationToken cancellationToken)
     {
         List<ChatSegmentItem> segments = [];
         ChatSegment? lastSegment = null;
-        await foreach (ChatSegment seg in ChatStreamed(messages, options, cancellationToken))
+        await foreach (ChatSegment seg in ChatStreamed(request, cancellationToken))
         {
             lastSegment = seg;
             segments.AddRange(seg.Items);
@@ -39,86 +38,167 @@ public abstract partial class ChatService(Model model) : IDisposable
         };
     }
 
-    internal protected int GetPromptTokenCount(IReadOnlyList<ChatMessage> messages)
+    public async IAsyncEnumerable<InternalChatSegment> ChatEntry(ChatServiceRequest request, FileUrlProvider fup, UsageSource source, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        const int TokenPerConversation = 3;
-        int messageTokens = messages.Sum(m => m.CountTokens(Tokenizer));
-        return TokenPerConversation + messageTokens;
+        ChatServiceRequest newRequest = await PreProcess(request, fup, source, cancellationToken);
+
+        if (Model.ThinkTagParserEnabled)
+        {
+            InternalChatSegment current = null!;
+            async IAsyncEnumerable<string> TokenYielder()
+            {
+                await foreach (InternalChatSegment seg in ChatPrivate(newRequest, cancellationToken))
+                {
+                    current = seg;
+                    string? text = seg.Items.GetText();
+                    if (text != null)
+                    {
+                        yield return text;
+                    }
+                }
+            }
+
+            await foreach (ThinkAndResponseSegment seg in ThinkTagParser.Parse(TokenYielder(), cancellationToken))
+            {
+                yield return current with { Items = ChatSegmentItem.FromTextAndThink(seg.Response, seg.Think) };
+            }
+        }
+        else
+        {
+            await foreach (InternalChatSegment seg in ChatPrivate(newRequest, cancellationToken))
+            {
+                yield return seg;
+            }
+        }
     }
 
-    protected virtual async Task<ChatMessage[]> FEPreprocess(IReadOnlyList<ChatMessage> messages, ChatCompletionOptions options, ChatExtraDetails feOptions, FileUrlProvider fup,
-        CancellationToken cancellationToken)
+    private async IAsyncEnumerable<InternalChatSegment> ChatPrivate(ChatServiceRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        if (Model.AllowSearch)
-        {
-            SetWebSearchEnabled(options, feOptions.WebSearchEnabled);
-        }
+        // notify inputTokenCount first to better support price calculation
+        int inputTokens = request.EstimatePromptTokens(Tokenizer);
+        int outputTokens = 0;
+        int reasoningTokens = 0;
+        yield return InternalChatSegment.InputOnly(inputTokens);
 
-        if (Model.AllowCodeExecution)
+        ChatTokenUsage usageAccessor(ChatSegment seg) => new()
         {
-            SetCodeExecutionEnabled(options, feOptions.CodeExecutionEnabled);
-        }
+            InputTokens = inputTokens,
+            OutputTokens = outputTokens += seg.Items.GetText() switch { null => 0, var x => Tokenizer.CountTokens(x) },
+            ReasoningTokens = reasoningTokens += seg.Items.GetThink() switch { null => 0, var x => Tokenizer.CountTokens(x) },
+        };
 
-        if (Model.ReasoningEffortOptions != null && Model.ReasoningEffortOptions.Length > 0 && feOptions.ReasoningEffort != DBReasoningEffort.Default)
+        if (Model.AllowStreaming && request.Streamed)
         {
-            SetReasoningEffort(options, feOptions.ReasoningEffort);
+            await foreach (ChatSegment seg in ChatStreamed(request, cancellationToken))
+            {
+                yield return seg.ToInternal(() => usageAccessor(seg));
+            }
         }
+        else
+        {
+            ChatSegment seg = await Chat(request, cancellationToken);
+            yield return seg.ToInternal(() => usageAccessor(seg));
+        }
+    }
 
-        if (!string.IsNullOrEmpty(feOptions.ImageSize) && Model.GetSupportedImageSizesAsArray(Model.SupportedImageSizes).Any())
-        {
-            SetImageSize(options, feOptions.ImageSize);
-        }
+    protected virtual bool SupportsVisionLink => true;
+    protected virtual HashSet<string> SupportedContentTypes =>
+    [
+        "*"
+    ];
+
+    protected virtual async Task<ChatServiceRequest> PreProcess(ChatServiceRequest request, FileUrlProvider fup, UsageSource source, CancellationToken cancellationToken)
+    {
+        ChatServiceRequest final = request;
 
         if (!Model.AllowSystemPrompt)
         {
             // Remove system prompt
-            messages = [.. messages.Where(m => m is not SystemChatMessage)];
+            final = final with
+            {
+                ChatConfig = final.ChatConfig.WithSystemPrompt(null)
+            };
         }
         else
         {
-            // system message transform
-            SystemChatMessage? existingSystemPrompt = messages.OfType<SystemChatMessage>().FirstOrDefault();
-            DateTime now = feOptions.Now;
-            if (existingSystemPrompt is not null)
+            if (final.ChatConfig.SystemPrompt != null && source == UsageSource.Chat)
             {
-                existingSystemPrompt.Content[0] = existingSystemPrompt.Content[0].Text
-                    .Replace("{{CURRENT_DATE}}", now.ToString("yyyy/MM/dd"))
-                    .Replace("{{MODEL_NAME}}", Model.Name)
-                    .Replace("{{CURRENT_TIME}}", now.ToString("HH:mm:ss"));
+                // Apply system prompt
+                final = final with
+                {
+                    ChatConfig = final.ChatConfig.WithSystemPrompt(final.ChatConfig.SystemPrompt
+                        .Replace("{{MODEL_NAME}}", Model.Name)
+                        .Replace("{{CURRENT_DATE}}", DateTime.UtcNow.ToString("yyyy/MM/dd"))
+                        .Replace("{{CURRENT_TIME}}", DateTime.UtcNow.ToString("HH:mm:ss")))
+                };
             }
         }
 
-        ChatMessage[] filteredMessage = await messages
-            .ToAsyncEnumerable()
-            .Select(async (m, ct) => await FilterVision(Model.AllowVision, m, fup, ct))
-            .ToArrayAsync(cancellationToken);
-        options.Temperature = Model.ClampTemperature(options.Temperature);
+        final = final with
+        {
+            ChatConfig = final.ChatConfig.WithTemperature(Model.ClampTemperature(final.ChatConfig.Temperature)),
+            Steps = await final.Steps
+                .ToAsyncEnumerable()
+                .Select(async (m, ct) => await FilterVision(Model.AllowVision, m, fup, ct))
+                .ToListAsync(cancellationToken)
+        };
 
-        return filteredMessage;
+        return final;
     }
 
-    protected virtual void SetImageSize(ChatCompletionOptions options, string imageSize)
+    protected virtual async Task<Step> FilterVision(bool allowVision, Step message, FileUrlProvider fup, CancellationToken cancellationToken)
     {
-        // chat service not enable image size by default, prompt a warning
-        Console.WriteLine($"{Model.DeploymentName} chat service not support image generation.");
+        Step final = message.Clone();
+
+        foreach (StepContent part in message.StepContents)
+        {
+            StepContent? toAdd = (DBStepContentType)part.ContentTypeId switch
+            {
+                DBStepContentType.FileId => allowVision switch
+                {
+                    true => part.StepContentFile!.File.MediaType switch
+                    {
+                        var x when SupportedContentTypes.Contains("*") || SupportedContentTypes.Contains(x) => SupportsVisionLink switch
+                        {
+                            true => await fup.CreateOpenAIImagePart(part.StepContentFile!.File, cancellationToken),
+                            false => await fup.CreateOpenAIImagePartForceDownload(part.StepContentFile!.File, cancellationToken),
+                        },
+                        _ => null
+                    },
+                    false => fup.CreateOpenAITextUrl(part.StepContentFile!.File),
+                },
+                DBStepContentType.FileUrl => allowVision switch
+                {
+                    true => SupportsVisionLink switch
+                    {
+                        true => part,
+                        false => await DownloadImagePart(http, part.StepContentText!.Content, cancellationToken),
+                    },
+                    false => StepContent.FromText(part.StepContentText!.Content),
+                },
+                _ => part
+            };
+            if (toAdd != null)
+            {
+                final.StepContents.Add(toAdd);
+            }
+        }
+        return final;
+
+        static async Task<StepContent> DownloadImagePart(HttpClient http, string url, CancellationToken cancellationToken)
+        {
+            HttpResponseMessage resp = await http.GetAsync(url, cancellationToken);
+            if (!resp.IsSuccessStatusCode)
+            {
+                throw new Exception($"Failed to download image from {url}");
+            }
+
+            string contentType = resp.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+            return StepContent.FromFileBlob(await resp.Content.ReadAsByteArrayAsync(cancellationToken), contentType);
+        }
     }
 
-    protected virtual void SetWebSearchEnabled(ChatCompletionOptions options, bool enabled)
-    {
-        // chat service not enable search by default, prompt a warning
-        Console.WriteLine($"{Model.DeploymentName} chat service not support web search.");
-    }
-
-    protected virtual void SetCodeExecutionEnabled(ChatCompletionOptions options, bool enabled)
-    {
-        // chat service not enable code execution by default, prompt a warning
-        Console.WriteLine($"{Model.DeploymentName} chat service not support code execution.");
-    }
-
-    protected virtual void SetReasoningEffort(ChatCompletionOptions options, DBReasoningEffort reasoningEffort)
-    {
-        options.ReasoningEffortLevel = reasoningEffort.ToReasoningEffort();
-    }
+    private static readonly HttpClient http = new();
 
     public void Dispose()
     {

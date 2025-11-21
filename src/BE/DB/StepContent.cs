@@ -17,10 +17,6 @@ public partial class StepContent
 
     public long StepId { get; set; }
 
-    [ForeignKey("ContentTypeId")]
-    [InverseProperty("StepContents")]
-    public virtual StepContentType ContentType { get; set; } = null!;
-
     [ForeignKey("StepId")]
     [InverseProperty("StepContents")]
     public virtual Step Step { get; set; } = null!;
