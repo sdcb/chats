@@ -66,8 +66,8 @@ export interface AdminModelDto {
   maxResponseTokens: number;
   maxThinkingBudget: number | null;
   
-  reasoningEffortOptions: number[] | null;
-  supportedImageSizes: string[] | null;
+  reasoningEffortOptions: number[];
+  supportedImageSizes: string[];
   
   apiType: number;
   useAsyncApi: boolean;
@@ -98,8 +98,8 @@ export interface UpdateModelDto {
   maxResponseTokens: number;
   maxThinkingBudget: number | null;
   
-  reasoningEffortOptions: number[] | null;
-  supportedImageSizes: string[] | null;
+  reasoningEffortOptions: number[];
+  supportedImageSizes: string[];
   
   apiType: number;
   useAsyncApi: boolean;

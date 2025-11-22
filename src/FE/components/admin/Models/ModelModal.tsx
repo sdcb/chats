@@ -269,14 +269,14 @@ const ModelModal = (props: IProps) => {
           .split(',')
           .map((x) => parseInt(x.trim()))
           .filter((x) => !isNaN(x));
-        return items.length > 0 ? items : null;
+        return items;
       })(),
       supportedImageSizes: (() => {
         const items = values.supportedImageSizes
           .split(',')
           .map((x) => x.trim())
           .filter((x) => x !== '');
-        return items.length > 0 ? items : null;
+        return items;
       })(),
       
       apiType: values.apiType,
@@ -343,14 +343,14 @@ const ModelModal = (props: IProps) => {
             .split(',')
             .map((x) => parseInt(x.trim()))
             .filter((x) => !isNaN(x));
-          return items.length > 0 ? items : null;
+          return items;
         })(),
         supportedImageSizes: (() => {
           const items = values.supportedImageSizes
             .split(',')
             .map((x) => x.trim())
             .filter((x) => x !== '');
-          return items.length > 0 ? items : null;
+          return items;
         })(),
         
         apiType: values.apiType,

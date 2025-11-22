@@ -54,7 +54,7 @@ public record UpdateModelRequest
     public required bool AllowCodeExecution { get; init; }
 
     [JsonPropertyName("reasoningEffortOptions")]
-    public int[]? ReasoningEffortOptions { get; init; }
+    public required int[] ReasoningEffortOptions { get; init; }
 
     [JsonPropertyName("minTemperature")]
     [Range(0, 2, ErrorMessage = "Minimum temperature must be between 0 and 2")]
@@ -76,7 +76,7 @@ public record UpdateModelRequest
     public required bool AllowToolCall { get; init; }
 
     [JsonPropertyName("supportedImageSizes")]
-    public string[]? SupportedImageSizes { get; init; }
+    public required string[] SupportedImageSizes { get; init; }
 
     [JsonPropertyName("apiType")]
     public required DBApiType ApiType { get; init; }
@@ -108,13 +108,13 @@ public record UpdateModelRequest
         cm.AllowVision = AllowVision;
         cm.AllowStreaming = AllowStreaming;
         cm.AllowCodeExecution = AllowCodeExecution;
-        cm.ReasoningEffortOptions = string.Join(',', ReasoningEffortOptions);
+        cm.ReasoningEffortOptions = ReasoningEffortOptions.Length > 0 ? string.Join(',', ReasoningEffortOptions) : null;
         cm.MinTemperature = MinTemperature;
         cm.MaxTemperature = MaxTemperature;
         cm.ContextWindow = ContextWindow;
         cm.MaxResponseTokens = MaxResponseTokens;
         cm.AllowToolCall = AllowToolCall;
-        cm.SupportedImageSizes = string.Join(',', SupportedImageSizes);
+        cm.SupportedImageSizes = SupportedImageSizes.Length > 0 ? string.Join(',', SupportedImageSizes) : null;
         cm.ApiType = (byte)ApiType;
         cm.UseAsyncApi = UseAsyncApi;
         cm.UseMaxCompletionTokens = UseMaxCompletionTokens;
