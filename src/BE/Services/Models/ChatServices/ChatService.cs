@@ -137,7 +137,7 @@ public abstract partial class ChatService(Model model) : IDisposable
 
     protected virtual async Task<Step> FilterVision(bool allowVision, Step message, FileUrlProvider fup, CancellationToken cancellationToken)
     {
-        Step final = message.Clone();
+        Step final = message.WithNoMessage();
 
         foreach (StepContent part in message.StepContents)
         {

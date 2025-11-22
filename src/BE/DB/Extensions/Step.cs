@@ -7,7 +7,7 @@ namespace Chats.BE.DB;
 
 public partial class Step
 {
-    public Step Clone()
+    public Step WithNoMessage()
     {
         return new Step
         {
@@ -16,7 +16,7 @@ public partial class Step
             Edited = Edited,
             CreatedAt = CreatedAt,
             UsageId = UsageId,
-            StepContents = [.. StepContents.Select(c => c.Clone())]
+            StepContents = new List<StepContent>(capacity: StepContents.Count),
         };
     }
 

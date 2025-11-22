@@ -35,7 +35,7 @@ public class GoogleAI2ChatService(Model model) : ChatService(model)
             Temperature = request.ChatConfig.Temperature,
             ResponseModalities = AllowImageGeneration ? [ResponseModality.Text, ResponseModality.Image] : [ResponseModality.Text],
         };
-        if (!AllowImageGeneration)
+        if (!AllowImageGeneration && !Model.DeploymentName.Contains("2.5-pro"))
         {
             gc.EnableEnhancedCivicAnswers = true;
         }
@@ -82,7 +82,7 @@ public class GoogleAI2ChatService(Model model) : ChatService(model)
         int fcIndex = 0;
         GenerateContentRequest gcr = new()
         {
-            Contents = OpenAIChatMessageToGoogleContent(request.Steps),
+            Contents = ConvertMessages(request.Steps),
             SystemInstruction = request.ChatConfig.SystemPrompt != null ? new Content() { Role = Role.System, Parts = [new TextData() { Text = request.ChatConfig.SystemPrompt }] } : null,
             GenerationConfig = gc,
             SafetySettings = _safetySettings,
@@ -201,9 +201,9 @@ public class GoogleAI2ChatService(Model model) : ChatService(model)
         };
     }
 
-    static List<Content> OpenAIChatMessageToGoogleContent(IEnumerable<Step> chatMessages)
+    static List<Content> ConvertMessages(IEnumerable<Step> steps)
     {
-        return [.. chatMessages
+        return [.. steps
             .Select(msg => (DBChatRole)msg.ChatRoleId switch
             {
                 DBChatRole.User => new Content("") { Role = Role.User, Parts = [.. msg.StepContents.Select(x => DBPartToGooglePart(x))] },
