@@ -7,8 +7,15 @@ using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class SiliconFlowChatService(Model model) : ChatCompletionService(model, CreateSiliconflowPolicies())
+public class SiliconFlowChatService : ChatCompletionService
 {
+    protected override ChatClient CreateChatClient(Model model, PipelinePolicy[] perCallPolicies)
+    {
+        List<PipelinePolicy> policies = perCallPolicies.ToList();
+        policies.AddRange(CreateSiliconflowPolicies());
+        return base.CreateChatClient(model, policies.ToArray());
+    }
+
     private static PipelinePolicy[] CreateSiliconflowPolicies()
     {
         // 创建一个 Policy 来将 Qwen 的毫秒时间戳转换为 OpenAI SDK 需要的秒时间戳
@@ -45,7 +52,7 @@ public class SiliconFlowChatService(Model model) : ChatCompletionService(model, 
     {
         ChatCompletionOptions cco = base.ExtractOptions(request);
 
-        if (Model.GetReasoningEffortOptionsAsInt32(Model.ReasoningEffortOptions).Length != 0)
+        if (Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.ReasoningEffortOptions).Length != 0)
         {
             if (((DBReasoningEffort)request.ChatConfig.ReasoningEffort).IsLowOrMinimal())
             {

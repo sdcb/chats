@@ -5,15 +5,15 @@ using System.ClientModel.Primitives;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class AzureAIFoundryChatService(Model model) : ChatCompletionService(model, CreateAzureAIFoundryChatClient(model))
+public class AzureAIFoundryChatService : ChatCompletionService
 {
-    private static ChatClient CreateAzureAIFoundryChatClient(Model model)
+    protected override ChatClient CreateChatClient(Model model, PipelinePolicy[] perCallPolicies)
     {
-        OpenAIClient api = CreateOpenAIClient(model.ModelKey, []);
+        OpenAIClient api = CreateAzureAIFoundryOpenAIClient(model.ModelKey, perCallPolicies);
         return api.GetChatClient(model.DeploymentName);
     }
 
-    private new static OpenAIClient CreateOpenAIClient(ModelKey modelKey, PipelinePolicy[] perCallPolicies)
+    private static OpenAIClient CreateAzureAIFoundryOpenAIClient(ModelKey modelKey, PipelinePolicy[] perCallPolicies)
     {
         ModelKey transformedKey = CreateTransformedModelKey(modelKey);
         return ChatCompletionService.CreateOpenAIClient(transformedKey, perCallPolicies);

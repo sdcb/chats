@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Net.ServerSentEvents;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -61,9 +61,9 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
 
         _output.WriteLine($"Status: {response.StatusCode}");
         _output.WriteLine($"Full Response Keys: {string.Join(", ", result.Select(kv => kv.Key))}");
-        
+
         // 输出完整响应结构但不包含过长的 base64 数据
-        var debugResult = result.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        string debugResult = result.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
         if (debugResult.Length > 2000)
         {
             _output.WriteLine($"Response (first 2000 chars): {debugResult.Substring(0, 2000)}...");
@@ -90,7 +90,7 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
             _output.WriteLine($"Segments array length: {segmentsArray.Count}");
             bool hasImage = false;
             
-            foreach (var item in segmentsArray)
+            foreach (JsonNode? item in segmentsArray)
             {
                 if (item is JsonObject obj)
                 {
@@ -159,7 +159,7 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
         };
 
         // Act
-        var requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{_fixture.Config.OpenAICompatibleEndpoint}/chat/completions")
+        HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{_fixture.Config.OpenAICompatibleEndpoint}/chat/completions")
         {
             Content = JsonContent.Create(request, options: _jsonOptions)
         };
@@ -217,7 +217,7 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
                         if (delta?["image"] != null)
                         {
                             chunkCount++;
-                            var image = delta["image"];
+                            JsonNode? image = delta["image"];
                             
                             if (image is JsonObject imageObj)
                             {
@@ -290,7 +290,7 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
 
     public static IEnumerable<object[]> GetImageGenerationModels()
     {
-        var fixture = new ApiTestFixture();
+        ApiTestFixture fixture = new ApiTestFixture();
         return fixture.Config.Tests.ImageGenerationModels.Select(m => new object[] { m });
     }
 }

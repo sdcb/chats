@@ -8,8 +8,8 @@ public class UpdateModelRequestValidationTests
 {
     private static List<ValidationResult> ValidateModel(UpdateModelRequest request)
     {
-        var context = new ValidationContext(request);
-        var results = new List<ValidationResult>();
+        ValidationContext context = new ValidationContext(request);
+        List<ValidationResult> results = new List<ValidationResult>();
         Validator.TryValidateObject(request, context, results, validateAllProperties: true);
         return results;
     }
@@ -20,11 +20,11 @@ public class UpdateModelRequestValidationTests
     public void Name_Required_ShouldFail()
     {
         // Arrange
-        var request = CreateValidChatRequest();
+        UpdateModelRequest request = CreateValidChatRequest();
         request = request with { Name = "" };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.Name)));
@@ -34,11 +34,11 @@ public class UpdateModelRequestValidationTests
     public void DeploymentName_Required_ShouldFail()
     {
         // Arrange
-        var request = CreateValidChatRequest();
+        UpdateModelRequest request = CreateValidChatRequest();
         request = request with { DeploymentName = "" };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.DeploymentName)));
@@ -48,11 +48,11 @@ public class UpdateModelRequestValidationTests
     public void ModelKeyId_Zero_ShouldFail()
     {
         // Arrange
-        var request = CreateValidChatRequest();
+        UpdateModelRequest request = CreateValidChatRequest();
         request = request with { ModelKeyId = 0 };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.ModelKeyId)));
@@ -62,11 +62,11 @@ public class UpdateModelRequestValidationTests
     public void InputTokenPrice_Negative_ShouldFail()
     {
         // Arrange
-        var request = CreateValidChatRequest();
+        UpdateModelRequest request = CreateValidChatRequest();
         request = request with { InputTokenPrice1M = -1 };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.InputTokenPrice1M)));
@@ -76,11 +76,11 @@ public class UpdateModelRequestValidationTests
     public void OutputTokenPrice_Negative_ShouldFail()
     {
         // Arrange
-        var request = CreateValidChatRequest();
+        UpdateModelRequest request = CreateValidChatRequest();
         request = request with { OutputTokenPrice1M = -1 };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.OutputTokenPrice1M)));
@@ -94,11 +94,11 @@ public class UpdateModelRequestValidationTests
     public void Temperature_MinGreaterThanMax_ShouldFail()
     {
         // Arrange
-        var request = CreateValidChatRequest();
+        UpdateModelRequest request = CreateValidChatRequest();
         request = request with { MinTemperature = 1.5m, MaxTemperature = 1.0m };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.Contains(results, r => 
@@ -110,11 +110,11 @@ public class UpdateModelRequestValidationTests
     public void Temperature_MinEqualsMax_ShouldPass()
     {
         // Arrange
-        var request = CreateValidChatRequest();
+        UpdateModelRequest request = CreateValidChatRequest();
         request = request with { MinTemperature = 1.0m, MaxTemperature = 1.0m };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.DoesNotContain(results, r => r.ErrorMessage!.Contains("temperature"));
@@ -130,11 +130,11 @@ public class UpdateModelRequestValidationTests
     public void ChatAPI_ContextWindowZero_ShouldFail(DBApiType apiType)
     {
         // Arrange
-        var request = CreateValidChatRequest();
+        UpdateModelRequest request = CreateValidChatRequest();
         request = request with { ApiType = apiType, ContextWindow = 0 };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.Contains(results, r => 
@@ -148,11 +148,11 @@ public class UpdateModelRequestValidationTests
     public void ChatAPI_MaxResponseTokensZero_ShouldFail(DBApiType apiType)
     {
         // Arrange
-        var request = CreateValidChatRequest();
+        UpdateModelRequest request = CreateValidChatRequest();
         request = request with { ApiType = apiType, MaxResponseTokens = 0 };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.Contains(results, r => 
@@ -166,7 +166,7 @@ public class UpdateModelRequestValidationTests
     public void ChatAPI_MaxResponseTokensGreaterThanContextWindow_ShouldFail(DBApiType apiType)
     {
         // Arrange
-        var request = CreateValidChatRequest();
+        UpdateModelRequest request = CreateValidChatRequest();
         request = request with 
         { 
             ApiType = apiType, 
@@ -175,7 +175,7 @@ public class UpdateModelRequestValidationTests
         };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.Contains(results, r => 
@@ -189,7 +189,7 @@ public class UpdateModelRequestValidationTests
     public void ChatAPI_ValidTokenConfiguration_ShouldPass(DBApiType apiType)
     {
         // Arrange
-        var request = CreateValidChatRequest();
+        UpdateModelRequest request = CreateValidChatRequest();
         request = request with 
         { 
             ApiType = apiType, 
@@ -198,7 +198,7 @@ public class UpdateModelRequestValidationTests
         };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.DoesNotContain(results, r => 
@@ -214,11 +214,11 @@ public class UpdateModelRequestValidationTests
     public void ImageAPI_SupportedImageSizesEmpty_ShouldFail()
     {
         // Arrange
-        var request = CreateValidImageRequest();
+        UpdateModelRequest request = CreateValidImageRequest();
         request = request with { SupportedImageSizes = Array.Empty<string>() };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.Contains(results, r => 
@@ -237,11 +237,11 @@ public class UpdateModelRequestValidationTests
     public void ImageAPI_InvalidImageSizeFormat_ShouldFail(string invalidSize)
     {
         // Arrange
-        var request = CreateValidImageRequest();
+        UpdateModelRequest request = CreateValidImageRequest();
         request = request with { SupportedImageSizes = new[] { invalidSize } };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.Contains(results, r => 
@@ -258,11 +258,11 @@ public class UpdateModelRequestValidationTests
     public void ImageAPI_ValidImageSizeFormat_ShouldPass(string validSize)
     {
         // Arrange
-        var request = CreateValidImageRequest();
+        UpdateModelRequest request = CreateValidImageRequest();
         request = request with { SupportedImageSizes = new[] { validSize } };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.DoesNotContain(results, r => r.ErrorMessage!.Contains("image size"));
@@ -272,14 +272,14 @@ public class UpdateModelRequestValidationTests
     public void ImageAPI_MultipleValidImageSizes_ShouldPass()
     {
         // Arrange
-        var request = CreateValidImageRequest();
+        UpdateModelRequest request = CreateValidImageRequest();
         request = request with 
         { 
             SupportedImageSizes = new[] { "1024x1024", "1792x1024", "1024x1792" } 
         };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.DoesNotContain(results, r => r.ErrorMessage!.Contains("image size"));
@@ -292,11 +292,11 @@ public class UpdateModelRequestValidationTests
     public void ImageAPI_MaxBatchCountOutOfRange_ShouldFail(int batchCount)
     {
         // Arrange
-        var request = CreateValidImageRequest();
+        UpdateModelRequest request = CreateValidImageRequest();
         request = request with { MaxResponseTokens = batchCount };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.Contains(results, r => 
@@ -312,11 +312,11 @@ public class UpdateModelRequestValidationTests
     public void ImageAPI_ValidMaxBatchCount_ShouldPass(int batchCount)
     {
         // Arrange
-        var request = CreateValidImageRequest();
+        UpdateModelRequest request = CreateValidImageRequest();
         request = request with { MaxResponseTokens = batchCount };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.DoesNotContain(results, r => 
@@ -332,10 +332,10 @@ public class UpdateModelRequestValidationTests
     public void ValidChatCompletionRequest_ShouldPass()
     {
         // Arrange
-        var request = CreateValidChatRequest();
+        UpdateModelRequest request = CreateValidChatRequest();
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.Empty(results);
@@ -345,11 +345,11 @@ public class UpdateModelRequestValidationTests
     public void ValidResponseRequest_ShouldPass()
     {
         // Arrange
-        var request = CreateValidChatRequest();
+        UpdateModelRequest request = CreateValidChatRequest();
         request = request with { ApiType = DBApiType.OpenAIResponse };
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.Empty(results);
@@ -359,10 +359,10 @@ public class UpdateModelRequestValidationTests
     public void ValidImageGenerationRequest_ShouldPass()
     {
         // Arrange
-        var request = CreateValidImageRequest();
+        UpdateModelRequest request = CreateValidImageRequest();
 
         // Act
-        var results = ValidateModel(request);
+        List<ValidationResult> results = ValidateModel(request);
 
         // Assert
         Assert.Empty(results);

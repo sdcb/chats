@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Xunit;
@@ -66,7 +66,7 @@ public class ReasoningModelTests : IClassFixture<ApiTestFixture>
 
     public static IEnumerable<object[]> GetReasoningModels()
     {
-        var fixture = new ApiTestFixture();
+        ApiTestFixture fixture = new ApiTestFixture();
         return fixture.Config.Tests.ReasoningModels.Select(m => new object[] { m });
     }
 }

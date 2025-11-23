@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Chats.BE.Services.Models.ChatServices.Test;
 
-public class Test2ChatService(Model model) : ChatService(model)
+public class Test2ChatService : ChatService
 {
     string[] outputs =
     [
@@ -129,6 +129,11 @@ public class Test2ChatService(Model model) : ChatService(model)
                 };
             }
         }
+    }
+
+    public override Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(new[] { "test-model" });
     }
 
     internal static IEnumerable<string> UnicodeCharacterSplit(string input)

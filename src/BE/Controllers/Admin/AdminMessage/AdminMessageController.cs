@@ -82,8 +82,8 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
     public async Task<ActionResult<StepGenerateInfoDto[]>> GetAdminTurnGenerateInfo(int chatId, string encryptedTurnId, CancellationToken cancellationToken)
     {
         long turnId = urlEncryption.DecryptTurnId(encryptedTurnId);
-        
-        var stepInfos = await db.ChatTurns
+
+        StepGenerateInfoDto[] stepInfos = await db.ChatTurns
             .Where(x => x.Id == turnId && x.ChatId == chatId)
             .SelectMany(x => x.Steps
                 .Where(s => s.Usage != null)

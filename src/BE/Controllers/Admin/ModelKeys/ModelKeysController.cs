@@ -1,4 +1,4 @@
-using Chats.BE.Controllers.Admin.Common;
+﻿using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Admin.AdminModels.Dtos;
 using Chats.BE.Controllers.Admin.ModelKeys.Dtos;
 using Chats.BE.Controllers.Common.Dtos;
@@ -165,10 +165,17 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
         }
 
         DBModelProvider modelProvider = (DBModelProvider)modelKey.ModelProviderId;
-        
-        // 所有provider都走loader，不支持的会抛出异常
-        ModelLoader loader = cf.CreateModelLoader(modelProvider);
-        string[] models = await loader.ListModels(modelKey, cancellationToken);
+
+        Model dummyModel = new()
+        {
+            ModelKey = modelKey,
+            ModelKeyId = modelKey.Id,
+            ApiType = (byte)DBApiType.OpenAIChatCompletion,
+            Name = "dummy",
+            DeploymentName = "dummy",
+        };
+        ChatService service = cf.CreateChatService(dummyModel);
+        string[] models = await service.ListModels(modelKey, cancellationToken);
         
         // 构建 deploymentName -> Model 的映射
         Dictionary<string, Model[]> existingModelsMap = modelKey.Models

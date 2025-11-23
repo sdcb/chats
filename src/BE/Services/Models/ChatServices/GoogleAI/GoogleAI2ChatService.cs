@@ -12,7 +12,7 @@ using Model = Chats.BE.DB.Model;
 
 namespace Chats.BE.Services.Models.ChatServices.GoogleAI;
 
-public class GoogleAI2ChatService(Model model) : ChatService(model)
+public class GoogleAI2ChatService : ChatService
 {
     private readonly List<SafetySetting> _safetySettings =
     [
@@ -24,22 +24,23 @@ public class GoogleAI2ChatService(Model model) : ChatService(model)
 
     protected override bool SupportsVisionLink => false;
 
-    public bool AllowImageGeneration => Model.DeploymentName == "gemini-2.0-flash-exp" ||
-                                        Model.DeploymentName == "gemini-2.0-flash-exp-image-generation" ||
-                                        Model.DeploymentName == "gemini-2.5-flash-image";
+    public bool AllowImageGeneration(Model model) => model.DeploymentName == "gemini-2.0-flash-exp" ||
+                                        model.DeploymentName == "gemini-2.0-flash-exp-image-generation" ||
+                                        model.DeploymentName == "gemini-2.5-flash-image";
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        bool allowImageGeneration = AllowImageGeneration(request.ChatConfig.Model);
         GenerationConfig gc = new()
         {
             Temperature = request.ChatConfig.Temperature,
-            ResponseModalities = AllowImageGeneration ? [ResponseModality.Text, ResponseModality.Image] : [ResponseModality.Text],
+            ResponseModalities = allowImageGeneration ? [ResponseModality.Text, ResponseModality.Image] : [ResponseModality.Text],
         };
-        if (!AllowImageGeneration && !Model.DeploymentName.Contains("2.5-pro"))
+        if (!allowImageGeneration && !request.ChatConfig.Model.DeploymentName.Contains("2.5-pro"))
         {
             gc.EnableEnhancedCivicAnswers = true;
         }
-        if (Model.GetReasoningEffortOptionsAsInt32(Model.ReasoningEffortOptions).Length > 0)
+        if (Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.ReasoningEffortOptions).Length > 0)
         {
             gc.ThinkingConfig = new ThinkingConfig
             {
@@ -54,8 +55,8 @@ public class GoogleAI2ChatService(Model model) : ChatService(model)
 
         GenerativeModel client = new()
         {
-            ApiKey = Model.ModelKey.Secret,
-            Model = Model.DeploymentName,
+            ApiKey = request.ChatConfig.Model.ModelKey.Secret,
+            Model = request.ChatConfig.Model.DeploymentName,
         };
         if (client.Timeout != NetworkTimeout)
         {
@@ -86,7 +87,7 @@ public class GoogleAI2ChatService(Model model) : ChatService(model)
             SystemInstruction = request.ChatConfig.SystemPrompt != null ? new Content() { Role = Role.System, Parts = [new TextData() { Text = request.ChatConfig.SystemPrompt }] } : null,
             GenerationConfig = gc,
             SafetySettings = _safetySettings,
-            Tools = Model.AllowToolCall && tool != null ? [tool] : null,
+            Tools = request.ChatConfig.Model.AllowToolCall && tool != null ? [tool] : null,
         };
         Stopwatch codeExecutionSw = new();
         string? codeExecutionId = null;

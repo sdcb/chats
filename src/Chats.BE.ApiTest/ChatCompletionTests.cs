@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Net.ServerSentEvents;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -98,7 +98,7 @@ public class ChatCompletionTests : IClassFixture<ApiTestFixture>
 
         Stream sseStream = await response.Content.ReadAsStreamAsync();
         int chunkCount = 0;
-        var contentBuilder = new System.Text.StringBuilder();
+        System.Text.StringBuilder contentBuilder = new System.Text.StringBuilder();
         
         await foreach (SseItem<string> sse in SseParser.Create(sseStream).EnumerateAsync())
         {
@@ -134,13 +134,13 @@ public class ChatCompletionTests : IClassFixture<ApiTestFixture>
 
     public static IEnumerable<object[]> GetNonStreamingModels()
     {
-        var fixture = new ApiTestFixture();
+        ApiTestFixture fixture = new ApiTestFixture();
         return fixture.Config.Tests.NonStreamingModels.Select(m => new object[] { m });
     }
 
     public static IEnumerable<object[]> GetStreamingModels()
     {
-        var fixture = new ApiTestFixture();
+        ApiTestFixture fixture = new ApiTestFixture();
         return fixture.Config.Tests.StreamingModels.Select(m => new object[] { m });
     }
 }

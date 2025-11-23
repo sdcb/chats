@@ -46,7 +46,7 @@ public class SharedChatController(ChatsDB db) : ControllerBase
             return NotFound();
         }
 
-        var stepInfos = await db.ChatTurns
+        StepGenerateInfoDto[] stepInfos = await db.ChatTurns
             .Where(x => x.Id == turnId && x.ChatId == chatShare.ChatId && x.Steps.First().CreatedAt <= chatShare.SnapshotTime)
             .SelectMany(x => x.Steps
                 .Where(s => s.Usage != null)

@@ -41,7 +41,7 @@ public record AccessTokenInfo
         // 使用 email 前缀
         if (!string.IsNullOrWhiteSpace(Email))
         {
-            var emailParts = Email.Split('@');
+            string[] emailParts = Email.Split('@');
             if (emailParts.Length > 0)
                 return emailParts[0];
         }

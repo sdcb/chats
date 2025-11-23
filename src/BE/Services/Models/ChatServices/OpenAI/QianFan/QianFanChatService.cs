@@ -8,9 +8,9 @@ using System.Text.Json;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 
-public class QianFanChatService(Model model) : ChatCompletionService(model, CreateChatClient(model))
+public class QianFanChatService : ChatCompletionService
 {
-    private static ChatClient CreateChatClient(Model model)
+    protected override ChatClient CreateChatClient(Model model, PipelinePolicy[] perCallPolicies)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(model.ModelKey.Secret, nameof(model.ModelKey.Secret));
         
@@ -33,6 +33,10 @@ public class QianFanChatService(Model model) : ChatCompletionService(model, Crea
 
         oaic.AddPolicy(new AddHeaderPolicy("appid", cfg.AppId), PipelinePosition.PerCall);
         oaic.AddPolicy(new ReplaceSseContentPolicy("\"finish_reason\":\"normal\"", "\"finish_reason\":null"), PipelinePosition.PerCall);
+        foreach (PipelinePolicy policy in perCallPolicies)
+        {
+            oaic.AddPolicy(policy, PipelinePosition.PerCall);
+        }
         OpenAIClient api = new(new ApiKeyCredential(cfg.ApiKey), oaic);
         return api.GetChatClient(model.DeploymentName);
     }
@@ -40,7 +44,7 @@ public class QianFanChatService(Model model) : ChatCompletionService(model, Crea
     protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
     {
         ChatCompletionOptions cco = base.ExtractOptions(request);
-        if (Model.AllowSearch && request.ChatConfig.WebSearchEnabled)
+        if (request.ChatConfig.Model.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
             cco.Patch.Set("$.web_search"u8, BinaryData.FromObjectAsJson(new Dictionary<string, object>()
             {

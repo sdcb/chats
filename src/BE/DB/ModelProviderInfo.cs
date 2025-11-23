@@ -1,4 +1,4 @@
-using Chats.BE.DB.Enums;
+﻿using Chats.BE.DB.Enums;
 
 namespace Chats.BE.DB;
 
@@ -143,22 +143,22 @@ public static class ModelProviderInfo
 
     public static string GetName(DBModelProvider providerId)
     {
-        return _providers.TryGetValue(providerId, out var info) ? info.Name : providerId.ToString();
+        return _providers.TryGetValue(providerId, out ProviderInfo? info) ? info.Name : providerId.ToString();
     }
 
     public static string? GetInitialHost(DBModelProvider providerId)
     {
-        return _providers.TryGetValue(providerId, out var info) ? info.InitialHost : null;
+        return _providers.TryGetValue(providerId, out ProviderInfo? info) ? info.InitialHost : null;
     }
 
     public static string? GetInitialSecret(DBModelProvider providerId)
     {
-        return _providers.TryGetValue(providerId, out var info) ? info.InitialSecret : null;
+        return _providers.TryGetValue(providerId, out ProviderInfo? info) ? info.InitialSecret : null;
     }
 
     public static DBModelProvider? GetIdByName(string name)
     {
-        return _nameToIdMap.TryGetValue(name, out var id) ? id : null;
+        return _nameToIdMap.TryGetValue(name, out DBModelProvider id) ? id : null;
     }
 
     public static bool TryGetIdByName(string name, out DBModelProvider providerId)

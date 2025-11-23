@@ -81,7 +81,7 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
         if (!string.IsNullOrEmpty(query.Provider))
         {
             // 通过 ModelProviderInfo 查找匹配的 ProviderId
-            var matchingProviderId = ModelProviderInfo.GetIdByName(query.Provider);
+            DBModelProvider? matchingProviderId = ModelProviderInfo.GetIdByName(query.Provider);
             if (matchingProviderId != null)
             {
                 usagesQuery = usagesQuery.Where(u => u.Model.ModelKey.ModelProviderId == (short)matchingProviderId);

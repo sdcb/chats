@@ -4,20 +4,15 @@ using Chats.BE.Services.Models.ChatServices.OpenAI.Extensions;
 using Chats.BE.Services.Models.Dtos;
 using OpenAI;
 using OpenAI.Chat;
+using OpenAI.Models;
 using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Text.Json;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public partial class ChatCompletionService(Model model, ChatClient chatClient) : ChatService(model)
+public partial class ChatCompletionService : ChatService
 {
-    public ChatCompletionService(Model model, params PipelinePolicy[] perCallPolicies) : this(model, CreateChatClient(model, perCallPolicies))
-    {
-    }
-
     protected override HashSet<string> SupportedContentTypes =>
     [
         "image/jpeg",
@@ -26,7 +21,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
         "image/webp",
     ];
 
-    private static ChatClient CreateChatClient(Model model, PipelinePolicy[] perCallPolicies)
+    protected virtual ChatClient CreateChatClient(Model model, PipelinePolicy[] perCallPolicies)
     {
         OpenAIClient api = CreateOpenAIClient(model.ModelKey, perCallPolicies);
         return api.GetChatClient(model.DeploymentName);
@@ -73,6 +68,8 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        ChatClient chatClient = CreateChatClient(request.ChatConfig.Model, []);
+
         ChatFinishReason? finishReason = null;
         await foreach (StreamingChatCompletionUpdate delta in chatClient.CompleteChatStreamingAsync(ExtractMessages(request), ExtractOptions(request), cancellationToken))
         {
@@ -101,6 +98,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
 
     public override async Task<ChatSegment> Chat(ChatRequest request, CancellationToken cancellationToken)
     {
+        ChatClient chatClient = CreateChatClient(request.ChatConfig.Model, []);
         ClientResult<ChatCompletion> cc = await chatClient.CompleteChatAsync(ExtractMessages(request), ExtractOptions(request), cancellationToken);
         ChatCompletion delta = cc.Value;
         return new ChatSegment
@@ -215,7 +213,7 @@ public partial class ChatCompletionService(Model model, ChatClient chatClient) :
         };
         if (request.ChatConfig.MaxOutputTokens.HasValue)
         {
-            cco.SetMaxTokens(request.ChatConfig.MaxOutputTokens.Value, Model.UseMaxCompletionTokens);
+            cco.SetMaxTokens(request.ChatConfig.MaxOutputTokens.Value, request.ChatConfig.Model.UseMaxCompletionTokens);
         }
         cco.TopP = request.TopP;
         cco.Seed = request.Seed;

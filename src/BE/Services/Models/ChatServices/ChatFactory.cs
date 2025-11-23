@@ -8,12 +8,11 @@ using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 using Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 using Chats.BE.Services.Models.ChatServices.Test;
-using Chats.BE.Services.Models.ModelLoaders;
 using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices;
 
-public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlService)
+public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
 {
     public ChatService CreateChatService(Model model)
     {
@@ -21,7 +20,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
         if (modelProvider == DBModelProvider.Test)
         {
             // Special case for Test model provider
-            return new Test2ChatService(model);
+            return sp.GetRequiredService<Test2ChatService>();
         }
 
         DBApiType apiType = (DBApiType)model.ApiType;
@@ -31,49 +30,44 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
         {
             DBApiType.OpenAIChatCompletion => modelProvider switch
             {
-                DBModelProvider.AzureAIFoundry => new AzureAIFoundryChatService(model),
-                DBModelProvider.WenXinQianFan => new QianFanChatService(model),
-                DBModelProvider.AliyunDashscope => new QwenChatService(model),
-                DBModelProvider.ZhiPuAI => new GLMChatService(model),
-                DBModelProvider.HunYuan => new HunyuanChatService(model),
-                DBModelProvider.LingYi => new LingYiChatService(model),
-                DBModelProvider.xAI => new XAIChatService(model),
-                DBModelProvider.GithubModels => new GithubModelsChatService(model),
-                DBModelProvider.GoogleAI => new GoogleAI2ChatService(model),
-                DBModelProvider.SiliconFlow => new SiliconFlowChatService(model),
-                DBModelProvider.OpenRouter => new OpenRouterChatService(model, hostUrlService),
-                _ => new ChatCompletionService(model) // Fallback to OpenAI-compatible
+                DBModelProvider.AzureAIFoundry => sp.GetRequiredService<AzureAIFoundryChatService>(),
+                DBModelProvider.WenXinQianFan => sp.GetRequiredService<QianFanChatService>(),
+                DBModelProvider.AliyunDashscope => sp.GetRequiredService<QwenChatService>(),
+                DBModelProvider.ZhiPuAI => sp.GetRequiredService<GLMChatService>(),
+                DBModelProvider.HunYuan => sp.GetRequiredService<HunyuanChatService>(),
+                DBModelProvider.LingYi => sp.GetRequiredService<LingYiChatService>(),
+                DBModelProvider.xAI => sp.GetRequiredService<XAIChatService>(),
+                DBModelProvider.GithubModels => sp.GetRequiredService<GithubModelsChatService>(),
+                DBModelProvider.GoogleAI => sp.GetRequiredService<GoogleAI2ChatService>(),
+                DBModelProvider.SiliconFlow => sp.GetRequiredService<SiliconFlowChatService>(),
+                DBModelProvider.OpenRouter => sp.GetRequiredService<OpenRouterChatService>(),
+                _ => sp.GetRequiredService<ChatCompletionService>() // Fallback to OpenAI-compatible
             },
 
             DBApiType.OpenAIResponse => modelProvider switch
             {
-                DBModelProvider.OpenAI => new ResponseApiService(model, logger),
-                DBModelProvider.AzureAIFoundry => new AzureResponseApiService(model, logger),
-                _ => new ResponseApiService(model, logger) // Fallback to OpenAI-compatible
+                DBModelProvider.OpenAI => sp.GetRequiredService<ResponseApiService>(),
+                DBModelProvider.AzureAIFoundry => sp.GetRequiredService<AzureResponseApiService>(),
+                _ => sp.GetRequiredService<ResponseApiService>() // Fallback to OpenAI-compatible
             },
 
-            DBApiType.AnthropicMessages => new AnthropicChatService(model),
+            DBApiType.AnthropicMessages => sp.GetRequiredService<AnthropicChatService>(),
 
             DBApiType.OpenAIImageGeneration => modelProvider switch
             {
-                DBModelProvider.OpenAI => new ImageGenerationService(model),
-                DBModelProvider.AzureAIFoundry => new AzureImageGenerationService(model),
-                _ => new ImageGenerationService(model) // Fallback to OpenAI-compatible
+                DBModelProvider.OpenAI => sp.GetRequiredService<ImageGenerationService>(),
+                DBModelProvider.AzureAIFoundry => sp.GetRequiredService<AzureImageGenerationService>(),
+                _ => sp.GetRequiredService<ImageGenerationService>() // Fallback to OpenAI-compatible
             },
             
             _ => throw new NotSupportedException($"Unknown API type: {apiType}")
         };
     }
 
-    public ModelLoader CreateModelLoader(DBModelProvider _)
-    {
-        ModelLoader ml = new OpenAIModelLoader();
-        return ml;
-    }
 
     public async Task<ModelValidateResult> ValidateModel(Model model, FileUrlProvider fup, CancellationToken cancellationToken)
     {
-        using ChatService cs = CreateChatService(model);
+        ChatService cs = CreateChatService(model);
         try
         {
             ChatCompletionOptions cco = new();

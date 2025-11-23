@@ -3,22 +3,33 @@ using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Microsoft.ML.Tokenizers;
+using OpenAI;
+using OpenAI.Models;
+using System.ClientModel;
 using System.Runtime.CompilerServices;
 using Tokenizer = Microsoft.ML.Tokenizers.Tokenizer;
 
 namespace Chats.BE.Services.Models;
 
-public abstract partial class ChatService(Model model) : IDisposable
+public abstract partial class ChatService : IDisposable
 {
-    internal protected Model Model { get; } = model;
-
     internal static Tokenizer Tokenizer { get; } = TiktokenTokenizer.CreateForEncoding("o200k_base");
 
     protected static TimeSpan NetworkTimeout { get; } = TimeSpan.FromHours(24);
 
     public abstract IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, CancellationToken cancellationToken);
+
+    public virtual async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
+
+        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(modelKey, []);
+        ClientResult<OpenAIModelCollection> result = await api.GetOpenAIModelClient().GetModelsAsync(cancellationToken);
+        return [.. result.Value.Select(m => m.Id)];
+    }
 
     public virtual async Task<ChatSegment> Chat(ChatRequest request, CancellationToken cancellationToken)
     {
@@ -42,7 +53,7 @@ public abstract partial class ChatService(Model model) : IDisposable
     {
         ChatRequest newRequest = await PreProcess(request, fup, source, cancellationToken);
 
-        if (Model.ThinkTagParserEnabled)
+        if (request.ChatConfig.Model.ThinkTagParserEnabled)
         {
             InternalChatSegment current = null!;
             async IAsyncEnumerable<string> TokenYielder()
@@ -87,7 +98,7 @@ public abstract partial class ChatService(Model model) : IDisposable
             ReasoningTokens = reasoningTokens += seg.Items.GetThink() switch { null => 0, var x => Tokenizer.CountTokens(x) },
         };
 
-        if (Model.AllowStreaming && request.Streamed)
+        if (request.ChatConfig.Model.AllowStreaming && request.Streamed)
         {
             await foreach (ChatSegment seg in ChatStreamed(request, cancellationToken))
             {
@@ -117,7 +128,7 @@ public abstract partial class ChatService(Model model) : IDisposable
             final = final with
             {
                 ChatConfig = final.ChatConfig.WithSystemPrompt(final.ChatConfig.SystemPrompt
-                    .Replace("{{MODEL_NAME}}", Model.Name)
+                    .Replace("{{MODEL_NAME}}", request.ChatConfig.Model.Name)
                     .Replace("{{CURRENT_DATE}}", DateTime.UtcNow.ToString("yyyy/MM/dd"))
                     .Replace("{{CURRENT_TIME}}", DateTime.UtcNow.ToString("HH:mm:ss")))
             };
@@ -126,8 +137,8 @@ public abstract partial class ChatService(Model model) : IDisposable
         float? temperature = final.ChatConfig.Temperature;
         if (source == UsageSource.WebChat)
         {
-            temperature = Model.ClampTemperature(temperature);
-            if ((DBApiType)Model.ApiType == DBApiType.AnthropicMessages && final.ChatConfig.ThinkingBudget != null)
+            temperature = request.ChatConfig.Model.ClampTemperature(temperature);
+            if ((DBApiType)request.ChatConfig.Model.ApiType == DBApiType.AnthropicMessages && final.ChatConfig.ThinkingBudget != null)
             {
                 // invalid_request_error
                 // `temperature` may only be set to 1 when thinking is enabled.
@@ -141,7 +152,7 @@ public abstract partial class ChatService(Model model) : IDisposable
             ChatConfig = final.ChatConfig.WithTemperature(temperature),
             Steps = await final.Steps
                 .ToAsyncEnumerable()
-                .Select(async (m, ct) => await FilterVision(Model.AllowVision, m, fup, ct))
+                .Select(async (m, ct) => await FilterVision(request.ChatConfig.Model.AllowVision, m, fup, ct))
                 .ToListAsync(cancellationToken)
         };
 

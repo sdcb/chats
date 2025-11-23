@@ -3,7 +3,7 @@ using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class GLMChatService(Model model) : ChatCompletionService(model)
+public class GLMChatService : ChatCompletionService
 {
     protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
     {

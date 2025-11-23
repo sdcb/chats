@@ -1,4 +1,4 @@
-using Chats.BE.Controllers.Admin.Common;
+﻿using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Admin.ModelKeys.Dtos;
 using Chats.BE.Controllers.Admin.AdminModels.Dtos;
 using Chats.BE.Controllers.Admin.ModelProviders.Dtos;
@@ -126,14 +126,14 @@ public class ModelProvidersController(ChatsDB db) : ControllerBase
     public async Task<ActionResult> ReorderModelProviders([FromBody] ReorderRequest<short> request, CancellationToken cancellationToken)
     {
         // 获取所有 ModelProviderOrder
-        var providerOrders = await db.ModelProviderOrders
+        List<ModelProviderOrder> providerOrders = await db.ModelProviderOrders
             .OrderBy(x => x.Order)
             .ToListAsync(cancellationToken);
 
         // 如果 ModelProviderOrder 表为空，按 enum 值顺序初始化所有已定义的 Provider
         if (providerOrders.Count == 0)
         {
-            var allProviders = Enum.GetValues<DBModelProvider>()
+            List<ModelProviderOrder> allProviders = Enum.GetValues<DBModelProvider>()
                 .Select((p, index) => new ModelProviderOrder 
                 { 
                     ModelProviderId = (short)p, 
@@ -181,7 +181,7 @@ public class ModelProvidersController(ChatsDB db) : ControllerBase
         for (int i = 0; i < newProviderOrder.Count; i++)
         {
             short providerId = newProviderOrder[i];
-            var providerOrder = providerOrders.FirstOrDefault(x => x.ModelProviderId == providerId);
+            ModelProviderOrder? providerOrder = providerOrders.FirstOrDefault(x => x.ModelProviderId == providerId);
             
             if (providerOrder != null)
             {

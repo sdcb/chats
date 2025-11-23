@@ -11,7 +11,7 @@ public class FileServiceTypeController : ControllerBase
     [HttpGet("{fileServiceTypeId:int}/initial-config")]
     public ActionResult<string> GetFileServiceTypeInitialConfig(byte fileServiceTypeId)
     {
-        var serviceType = (DBFileServiceType)fileServiceTypeId;
+        DBFileServiceType serviceType = (DBFileServiceType)fileServiceTypeId;
         if (!FileServiceTypeInfo.IsValidServiceTypeId(serviceType))
         {
             return NotFound();

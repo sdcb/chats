@@ -7,8 +7,15 @@ using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class QwenChatService(Model model) : ChatCompletionService(model, CreateQwenPolicies())
+public class QwenChatService : ChatCompletionService
 {
+    protected override ChatClient CreateChatClient(Model model, PipelinePolicy[] perCallPolicies)
+    {
+        List<PipelinePolicy> policies = perCallPolicies.ToList();
+        policies.AddRange(CreateQwenPolicies());
+        return base.CreateChatClient(model, policies.ToArray());
+    }
+
     private static PipelinePolicy[] CreateQwenPolicies()
     {
         // 创建一个 Policy 来将 Qwen 的毫秒时间戳转换为 OpenAI SDK 需要的秒时间戳
@@ -48,12 +55,12 @@ public class QwenChatService(Model model) : ChatCompletionService(model, CreateQ
     protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
     {
         ChatCompletionOptions cco = base.ExtractOptions(request);
-        if (Model.AllowSearch && request.ChatConfig.WebSearchEnabled)
+        if (request.ChatConfig.Model.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
             cco.Patch.Set("$.enable_search"u8, true);
         }
 
-        if (Model.GetReasoningEffortOptionsAsInt32(Model.ReasoningEffortOptions).Length != 0)
+        if (Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.ReasoningEffortOptions).Length != 0)
         {
             if (((DBReasoningEffort)request.ChatConfig.ReasoningEffort).IsLowOrMinimal())
             {

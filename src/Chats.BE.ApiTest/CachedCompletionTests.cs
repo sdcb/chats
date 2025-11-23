@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Xunit;
@@ -84,7 +84,7 @@ public class CachedCompletionTests : IClassFixture<ApiTestFixture>
 
     public static IEnumerable<object[]> GetCachedModels()
     {
-        var fixture = new ApiTestFixture();
+        ApiTestFixture fixture = new ApiTestFixture();
         return fixture.Config.Tests.CachedModels.Select(m => new object[] { m });
     }
 }

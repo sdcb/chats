@@ -20,13 +20,13 @@ public class ModelInfoController : ControllerBase
     [HttpGet, Route("api/model-provider/{modelProviderId:int}/initial-config")]
     public ActionResult<InitialModelKeyConfigDto> GetInitialConfig(short modelProviderId)
     {
-        var provider = (DBModelProvider)modelProviderId;
+        DBModelProvider provider = (DBModelProvider)modelProviderId;
         if (!ModelProviderInfo.IsValidProviderId(provider))
         {
             return NotFound();
         }
-        
-        var data = new InitialModelKeyConfigDto
+
+        InitialModelKeyConfigDto data = new InitialModelKeyConfigDto
         {
             InitialHost = ModelProviderInfo.GetInitialHost(provider),
             InitialSecret = ModelProviderInfo.GetInitialSecret(provider),

@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Xunit;
@@ -108,7 +108,7 @@ public class ToolCallTests : IClassFixture<ApiTestFixture>
 
     public static IEnumerable<object[]> GetToolCallModels()
     {
-        var fixture = new ApiTestFixture();
+        ApiTestFixture fixture = new ApiTestFixture();
         return fixture.Config.Tests.ToolCallModels.Select(m => new object[] { m });
     }
 }

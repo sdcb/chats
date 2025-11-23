@@ -1,6 +1,7 @@
 ﻿using Anthropic;
 using Anthropic.Core;
 using Anthropic.Models.Messages;
+using Anthropic.Models.Models;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
@@ -8,18 +9,17 @@ using OpenAI.Chat;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Model = Chats.BE.DB.Model;
 
 namespace Chats.BE.Services.Models.ChatServices.Anthropic;
 
-public class AnthropicChatService(Model model) : ChatService(model)
+public class AnthropicChatService : ChatService
 {
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         AnthropicClient anthropicClient = new(new ClientOptions()
         {
-            BaseUrl = new Uri(Model.ModelKey.Host ?? "https://api.anthropic.com/"),
-            APIKey = Model.ModelKey.Secret,
+            BaseUrl = new Uri(request.ChatConfig.Model.ModelKey.Host ?? "https://api.anthropic.com/"),
+            APIKey = request.ChatConfig.Model.ModelKey.Secret,
         });
 
         MessageCreateParams message = ConvertOptions(request);
@@ -122,6 +122,19 @@ public class AnthropicChatService(Model model) : ChatService(model)
                 Console.WriteLine($"Unknown stream event: {stream}");
             }
         }
+    }
+
+    public override async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
+    {
+        AnthropicClient anthropicClient = new(new ClientOptions()
+        {
+            BaseUrl = new Uri(modelKey.Host ?? "https://api.anthropic.com/"),
+            APIKey = modelKey.Secret,
+        });
+        ModelListPageResponse result = await anthropicClient.Models.List(new ModelListParams()
+        {
+        }, cancellationToken);
+        return [.. result.Data.Select(x => x.ID)];
     }
 
     static MessageCreateParams ConvertOptions(ChatRequest request)

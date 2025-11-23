@@ -12,14 +12,9 @@ using System.Runtime.CompilerServices;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
-public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClient responseClient) : ChatService(model)
+public class ResponseApiService(ILogger<ResponseApiService> logger) : ChatService
 {
-    public ResponseApiService(Model model, ILogger logger, params PipelinePolicy[] perCallPolicies)
-        : this(model, logger, CreateResponseAPI(model, perCallPolicies))
-    {
-    }
-
-    static OpenAIResponseClient CreateResponseAPI(Model model, PipelinePolicy[] pipelinePolicies)
+    protected virtual OpenAIResponseClient CreateResponseAPI(Model model, PipelinePolicy[] pipelinePolicies)
     {
         OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model.ModelKey, pipelinePolicies);
         OpenAIResponseClient cc = api.GetOpenAIResponseClient(model.DeploymentName);
@@ -28,8 +23,10 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        OpenAIResponseClient responseClient = CreateResponseAPI(request.ChatConfig.Model, []);
+
         bool hasTools = false;
-        if (Model.UseAsyncApi)
+        if (request.ChatConfig.Model.UseAsyncApi)
         {
             Stopwatch sw = Stopwatch.StartNew();
             OpenAIResponse response = await responseClient.CreateResponseAsync(ExtractMessages(request), ExtractOptions(request, background: true), cancellationToken);
@@ -373,5 +370,10 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
                 return ResponseTextFormat.CreateJsonSchemaFormat(name, binaryData, description, strict);
             }
         }
+    }
+
+    public override Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
+    {
+        return new ChatCompletionService().ListModels(modelKey, cancellationToken);
     }
 }

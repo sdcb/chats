@@ -1,9 +1,8 @@
-﻿using Chats.BE.DB;
-using OpenAI.Chat;
+﻿using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class GoogleAIChatService(Model model) : ChatCompletionService(model)
+public class GoogleAIChatService : ChatCompletionService
 {
     protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
     {

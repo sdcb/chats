@@ -3,12 +3,12 @@ using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class GithubModelsChatService(Model model) : ChatCompletionService(model)
+public class GithubModelsChatService : ChatCompletionService
 {
     protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
     {
         ChatCompletionOptions options = base.ExtractOptions(request);
-        if (Model.Name.Contains("Mistral", StringComparison.OrdinalIgnoreCase))
+        if (request.ChatConfig.Model.Name.Contains("Mistral", StringComparison.OrdinalIgnoreCase))
         {
             // Mistral model does not support tool calls
             options.EndUserId = null;

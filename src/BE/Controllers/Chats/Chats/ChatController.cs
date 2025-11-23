@@ -483,7 +483,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             {
                 foreach (StepContentToolCall call in unfinishedToolCalls)
                 {
-                    if (!toolNameMap.TryGetValue(call.Name!, out var mapped))
+                    if (!toolNameMap.TryGetValue(call.Name!, out (int serverId, string originalToolName) mapped))
                     {
                         throw new InvalidOperationException($"Tool name not found in map: {call.Name}");
                     }

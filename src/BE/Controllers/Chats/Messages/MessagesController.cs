@@ -59,8 +59,8 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
     {
         long turnId = urlEncryption.DecryptTurnId(encryptedTurnId);
         int decryptedChatId = urlEncryption.DecryptChatId(chatId);
-        
-        var stepInfos = await db.ChatTurns
+
+        StepGenerateInfoDto[] stepInfos = await db.ChatTurns
             .Where(x => x.Id == turnId && x.ChatId == decryptedChatId && x.Chat.UserId == currentUser.Id)
             .SelectMany(x => x.Steps
                 .Where(s => s.Usage != null)

@@ -1,4 +1,4 @@
-using Chats.BE.DB.Enums;
+﻿using Chats.BE.DB.Enums;
 
 namespace Chats.BE.DB;
 
@@ -44,12 +44,12 @@ public static class FileServiceTypeInfo
 
     public static string GetName(DBFileServiceType serviceTypeId)
     {
-        return _serviceTypes.TryGetValue(serviceTypeId, out var info) ? info.Name : serviceTypeId.ToString();
+        return _serviceTypes.TryGetValue(serviceTypeId, out ServiceTypeInfo? info) ? info.Name : serviceTypeId.ToString();
     }
 
     public static string GetInitialConfig(DBFileServiceType serviceTypeId)
     {
-        return _serviceTypes.TryGetValue(serviceTypeId, out var info) ? info.InitialConfig : string.Empty;
+        return _serviceTypes.TryGetValue(serviceTypeId, out ServiceTypeInfo? info) ? info.InitialConfig : string.Empty;
     }
 
     public static IEnumerable<DBFileServiceType> GetAllServiceTypeIds()

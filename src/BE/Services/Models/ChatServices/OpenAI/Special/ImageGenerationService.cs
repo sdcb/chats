@@ -16,13 +16,9 @@ using GeneratedImageSize = OpenAI.Images.GeneratedImageSize;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
-public class ImageGenerationService(Model model, ImageClient imageClient) : ChatService(model)
+public class ImageGenerationService : ChatService
 {
-    public ImageGenerationService(Model model, params PipelinePolicy[] perCallPolicies) : this(model, CreateImageGenerationAPI(model, perCallPolicies))
-    {
-    }
-
-    private static ImageClient CreateImageGenerationAPI(Model model, PipelinePolicy[] perCallPolicies)
+    protected virtual ImageClient CreateImageGenerationAPI(Model model, PipelinePolicy[] perCallPolicies)
     {
         OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model.ModelKey, perCallPolicies);
         ImageClient cc = api.GetImageClient(model.DeploymentName);
@@ -31,6 +27,8 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        ImageClient imageClient = CreateImageGenerationAPI(request.ChatConfig.Model, []);
+
         string prompt = GetPromptStatic(request.Steps);
         StepContent[] images = GetImagesStatic(request.Steps);
 
@@ -53,7 +51,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
             JsonObject requestBody = new()
             {
                 ["prompt"] = prompt,
-                ["model"] = Model.DeploymentName,
+                ["model"] = request.ChatConfig.Model.DeploymentName,
                 ["n"] = n,
                 ["stream"] = true,
                 ["partial_images"] = 3,
@@ -147,6 +145,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
 
     public override async Task<ChatSegment> Chat(ChatRequest request, CancellationToken cancellationToken)
     {
+        ImageClient imageClient = CreateImageGenerationAPI(request.ChatConfig.Model, []);
         string prompt = GetPromptStatic(request.Steps);
         StepContent[] images = GetImagesStatic(request.Steps);
         ClientResult<GeneratedImageCollection> cr = null!;
@@ -273,7 +272,7 @@ public class ImageGenerationService(Model model, ImageClient imageClient) : Chat
 
         form.Add(prompt, "prompt");
         form.Add(request.ChatConfig.MaxOutputTokens ?? 1, "n");
-        form.Add(Model.DeploymentName, "model");
+        form.Add(request.ChatConfig.Model.DeploymentName, "model");
 
         if (!string.IsNullOrEmpty(request.ChatConfig.ImageSize))
         {

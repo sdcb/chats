@@ -1,9 +1,8 @@
-﻿using Chats.BE.DB;
-using OpenAI.Chat;
+﻿using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class XAIChatService(Model model) : ChatCompletionService(model)
+public class XAIChatService : ChatCompletionService
 {
     protected override Dtos.ChatTokenUsage GetUsage(ChatTokenUsage usage)
     {
@@ -18,7 +17,7 @@ public class XAIChatService(Model model) : ChatCompletionService(model)
     protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
     {
         ChatCompletionOptions cco = base.ExtractOptions(request);
-        if (Model.AllowSearch)
+        if (request.ChatConfig.Model.AllowSearch)
         {
             cco.Patch.Set("$.search_parameters"u8, BinaryData.FromObjectAsJson(new
             {

@@ -1,4 +1,4 @@
-using Chats.BE.Controllers.Admin.AdminModels.Dtos;
+﻿using Chats.BE.Controllers.Admin.AdminModels.Dtos;
 using Chats.BE.DB.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
@@ -89,7 +89,7 @@ public class ValidateImageSizesAttribute : ValidationAttribute
             }
 
             // 验证每个尺寸格式
-            foreach (var size in request.SupportedImageSizes)
+            foreach (string size in request.SupportedImageSizes)
             {
                 if (string.IsNullOrWhiteSpace(size) || !SizeRegex.IsMatch(size))
                 {
