@@ -19,6 +19,7 @@ public partial class ChatConfig
             MaxOutputTokens = MaxOutputTokens,
             ReasoningEffort = ReasoningEffort,
             ImageSize = ImageSize,
+            ThinkingBudget = ThinkingBudget,
             ChatConfigMcps = [..ChatConfigMcps.Select(x => new ChatConfigMcp
             {
                 McpServerId = x.McpServerId,
@@ -145,6 +146,7 @@ public partial class ChatConfig
     public ChatConfig WithTemperature(float? temperature)
     {
         ChatConfig cloned = Clone();
+        cloned.Model = Model;
         cloned.Temperature = temperature;
         return cloned;
     }
@@ -152,6 +154,7 @@ public partial class ChatConfig
     public ChatConfig WithSystemPrompt(string? systemPrompt)
     {
         ChatConfig cloned = Clone();
+        cloned.Model = Model;
         cloned.SystemPrompt = systemPrompt;
         return cloned;
     }

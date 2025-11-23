@@ -25,9 +25,6 @@ public sealed record ToolCallSegment : ChatSegmentItem
     // 原 function.arguments（此处往往是 JSON 片段）
     [JsonPropertyName("arguments")]
     public string? Arguments { get; init; }
-
-    [JsonPropertyName("signature")]
-    public string? Signature { get; init; }
 }
 
 public sealed record ToolCallResponseSegment : ChatSegmentItem
@@ -60,7 +57,6 @@ public sealed record ToolCall
     public required string Id { get; init; }
     public required string Name { get; init; }
     public required string Arguments { get; init; } // 完整 JSON 字符串
-    public string? Signature { get; init; }
 
     /// <summary>
     /// 把连续的 FunctionCallSegment 按 Index 聚合为 FunctionCall。
@@ -73,7 +69,6 @@ public sealed record ToolCall
         int? currentIndex = null;
         string? id = null;
         string? name = null;
-        string? signature = null;
         StringBuilder argsBuilder = new();
 
         await foreach (ToolCallSegment s in segments.WithCancellation(cancellationToken))
@@ -91,7 +86,6 @@ public sealed record ToolCall
             // 逐字段补全
             if (s.Id is not null) id = s.Id;
             if (s.Name is not null) name = s.Name;
-            if (s.Signature is not null) signature = s.Signature;
             if (s.Arguments is not null) argsBuilder.Append(s.Arguments);
         }
 
@@ -114,7 +108,6 @@ public sealed record ToolCall
                     Id = id,
                     Name = name,
                     Arguments = argsBuilder.ToString(),
-                    Signature = signature,
                 };
             }
             finally

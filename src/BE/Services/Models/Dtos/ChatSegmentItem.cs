@@ -28,6 +28,12 @@ public abstract record ChatSegmentItem
         return new ThinkChatSegment { Think = think };
     }
 
+    public static ChatSegmentItem FromThinkingSegment(string signature)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(signature, nameof(signature));
+        return new ThinkChatSegment { Think = "", Signature = signature };
+    }
+
     public static ImageChatSegment FromBase64Image(string base64, string contentType)
     {
         return new Base64Image
@@ -235,6 +241,8 @@ public record TextChatSegment : ChatSegmentItem
 public record ThinkChatSegment : ChatSegmentItem
 {
     public required string Think { get; init; }
+
+    public string? Signature { get; init; }
 }
 
 public static class ChatSegmentItemExtensions
@@ -281,7 +289,11 @@ public static class ChatSegmentItemExtensions
             // ───── 思考片段合并 ─────────────────────────────────
             else if (last is ThinkChatSegment lastThink && item is ThinkChatSegment curThink)
             {
-                items[^1] = lastThink with { Think = lastThink.Think + curThink.Think };
+                items[^1] = lastThink with 
+                { 
+                    Think = lastThink.Think + curThink.Think, 
+                    Signature = (lastThink.Signature ?? "") + curThink.Signature 
+                };
             }
             // ───── Tool‑Call 片段合并 ───────────────────────────
             else if (last is ToolCallSegment lastTool && item is ToolCallSegment curTool

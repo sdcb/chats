@@ -72,37 +72,6 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const clampThinkingBudget = (value: number): number => {
-    if (model.maxThinkingBudget == null) {
-      return Math.max(0, value);
-    }
-    return Math.max(0, Math.min(value, model.maxThinkingBudget));
-  };
-
-  const handleThinkingBudgetInput = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = event.target.value;
-    if (rawValue === '') {
-      onChangeThinkingBudget(null);
-      return;
-    }
-    const numericValue = Number(rawValue);
-    if (Number.isNaN(numericValue)) {
-      return;
-    }
-    onChangeThinkingBudget(clampThinkingBudget(numericValue));
-  };
-
-  const toggleThinkingBudgetMode = () => {
-    if (model.maxThinkingBudget == null) {
-      return;
-    }
-    if (thinkingBudget === null) {
-      onChangeThinkingBudget(model.maxThinkingBudget);
-    } else {
-      onChangeThinkingBudget(null);
-    }
-  };
-
   return (
     <div className="flex flex-col gap-2">
       {/* System Prompt */}
@@ -240,8 +209,8 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
 
       {/* Thinking Budget */}
       {model.maxThinkingBudget != null && (
-        <div className="flex flex-col gap-2">
-          <div className="flex justify-between items-center">
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-between">
             <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
               <IconReasoning size={16} />
               {t('Thinking Budget')}
@@ -249,22 +218,35 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={toggleThinkingBudgetMode}
+              onClick={() => {
+                if (thinkingBudget === null) {
+                  onChangeThinkingBudget(model.maxThinkingBudget!);
+                } else {
+                  onChangeThinkingBudget(null);
+                }
+              }}
               className="h-6 px-2 text-xs"
             >
-              {thinkingBudget === null ? t('Default') : t('Custom')}
+              {thinkingBudget === null ? t('No Thinking') : t('Custom')}
             </Button>
           </div>
-          <Input
-            type="number"
-            min={0}
-            max={model.maxThinkingBudget ?? undefined}
-            value={thinkingBudget ?? ''}
-            onChange={handleThinkingBudgetInput}
-          />
-          <div className="text-xs text-muted-foreground">
-            {t('Thinking budget hint', { max: model.maxThinkingBudget })}
-          </div>
+          {thinkingBudget !== null && (
+            <div className="px-2">
+              <Slider
+                className="cursor-pointer"
+                min={0}
+                max={model.maxThinkingBudget}
+                step={1}
+                value={[thinkingBudget || 0]}
+                onValueChange={(values) => {
+                  onChangeThinkingBudget(values[0]);
+                }}
+              />
+              <div className="text-xs text-gray-500 mt-1">
+                {thinkingBudget || 0}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

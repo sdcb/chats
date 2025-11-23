@@ -2,7 +2,7 @@
 
 public enum UsageSource
 {
-    Chat = 1,
+    WebChat = 1,
     Api = 2,
     Validate = 3, 
 }

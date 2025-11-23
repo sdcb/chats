@@ -88,7 +88,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, HostUrlService hostUrlServ
                 }
             }
 
-            await foreach (Dtos.InternalChatSegment seg in cs.ChatEntry(ChatRequest.Simple("1+1=?"), fup, UsageSource.Validate, cancellationToken))
+            await foreach (Dtos.InternalChatSegment seg in cs.ChatEntry(ChatRequest.Simple("1+1=?", model), fup, UsageSource.Validate, cancellationToken))
             {
                 if (seg.IsFromUpstream)
                 {

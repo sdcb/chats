@@ -43,6 +43,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                     ImageSize = span.ChatConfig.ImageSize,
+                    ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps
                         .Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders })
                         .ToArray()
@@ -94,6 +95,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                     ImageSize = span.ChatConfig.ImageSize,
+                    ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders }).ToArray(),
                 }).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
@@ -138,6 +140,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                     ImageSize = span.ChatConfig.ImageSize,
+                    ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders }).ToArray()
                 }).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),

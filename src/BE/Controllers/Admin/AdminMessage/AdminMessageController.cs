@@ -59,6 +59,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                     ImageSize = span.ChatConfig.ImageSize,
+                    ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                     {
                         Id = mcp.McpServerId,
@@ -134,6 +135,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.ReasoningEffort,
                     ImageSize = span.ChatConfig.ImageSize,
+                    ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                     {
                         Id = mcp.McpServerId,

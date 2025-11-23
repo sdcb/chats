@@ -114,7 +114,7 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
             usagesQuery = usagesQuery.Where(u => u.CreatedAt < localEnd);
         }
 
-        if (query.Source == UsageSource.Chat)
+        if (query.Source == UsageSource.WebChat)
         {
             usagesQuery = usagesQuery.Where(u => u.UserApiUsage == null);
         }

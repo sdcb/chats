@@ -238,4 +238,15 @@ public partial class StepContent
         signature = null;
         return false;
     }
+
+    public bool TryGetError([NotNullWhen(true)] out string? error)
+    {
+        if ((DBStepContentType)ContentTypeId == DBStepContentType.Error && StepContentText != null)
+        {
+            error = StepContentText.Content;
+            return true;
+        }
+        error = null;
+        return false;
+    }
 }

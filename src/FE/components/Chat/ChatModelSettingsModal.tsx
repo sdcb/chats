@@ -204,13 +204,13 @@ const ChatModelSettingModal = (props: Props) => {
         enabled: span.enabled,
         modelId: span.modelId,
         systemPrompt: span.systemPrompt,
-        maxOutputTokens: span?.maxOutputTokens || null,
-        temperature: span?.temperature || null,
+        maxOutputTokens: span?.maxOutputTokens ?? null,
+        temperature: span?.temperature ?? null,
         reasoningEffort: span.reasoningEffort,
         webSearchEnabled: !!span.webSearchEnabled,
         codeExecutionEnabled: !!span.codeExecutionEnabled,
-        imageSize: span.imageSize,
-        thinkingBudget: span.thinkingBudget,
+        imageSize: span.imageSize ?? null,
+        thinkingBudget: span.thinkingBudget ?? null,
         mcps: span.mcps,
       });
       

@@ -41,6 +41,7 @@ public record ChatPresetDto
                 MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
                 ReasoningEffort = x.ChatConfig.ReasoningEffort,
                 ImageSize = x.ChatConfig.ImageSize,
+                ThinkingBudget = x.ChatConfig.ThinkingBudget,
                 Mcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                 {
                     Id = mcp.McpServerId,

@@ -27,7 +27,7 @@ public record ChatSegment
         };
     }
 
-    public static ChatSegment FromTextOnly(string text)
+    public static ChatSegment FromText(string text)
     {
         ArgumentException.ThrowIfNullOrEmpty(text, nameof(text));
         return new ChatSegment
@@ -38,13 +38,24 @@ public record ChatSegment
         };
     }
 
-    public static ChatSegment FromThinkOnly(string text)
+    public static ChatSegment FromThinking(string thinking)
     {
-        ArgumentException.ThrowIfNullOrEmpty(text, nameof(text));
+        ArgumentException.ThrowIfNullOrEmpty(thinking, nameof(thinking));
         return new ChatSegment
         {
             FinishReason = null,
-            Items = [ChatSegmentItem.FromThink(text)],
+            Items = [ChatSegmentItem.FromThink(thinking)],
+            Usage = null,
+        };
+    }
+
+    public static ChatSegment FromThinkingSignature(string signature)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(signature, nameof(signature));
+        return new ChatSegment
+        {
+            FinishReason = null,
+            Items = [ChatSegmentItem.FromThinkingSegment(signature)],
             Usage = null,
         };
     }

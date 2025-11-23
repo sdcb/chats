@@ -425,6 +425,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         ChannelWriter<SseResponseLine> writer,
         CancellationToken cancellationToken)
     {
+        chatSpan.ChatConfig.Model = userModel.Model;
         ChatRequest csr = new()
         {
             EndUserId = currentUser.Id.ToString(),
@@ -634,7 +635,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 using ChatService s = chatFactory.CreateChatService(userModel.Model);
 
                 bool responseStated = false, reasoningStarted = false;
-                await foreach (InternalChatSegment seg in icc.Run(calc, userModel, s.ChatEntry(request, fup, UsageSource.Chat, cancellationToken)))
+                await foreach (InternalChatSegment seg in icc.Run(calc, userModel, s.ChatEntry(request, fup, UsageSource.WebChat, cancellationToken)))
                 {
                     foreach (ChatSegmentItem item in seg.Items)
                     {
@@ -662,7 +663,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                             {
                                 responseStated = true;
                             }
-                            writer.TryWrite(new CallingToolLine(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolCall.Arguments));
+                            writer.TryWrite(new CallingToolLine(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolCall.Arguments!));
                         }
                         else if (item is ToolCallResponseSegment toolCallResponse)
                         {

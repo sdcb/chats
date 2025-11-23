@@ -56,11 +56,14 @@ public class AnthropicChatService(Model model) : ChatService(model)
             {
                 if (contentDelta.Delta.TryPickThinking(out ThinkingDelta? think))
                 {
-                    yield return ChatSegment.FromThinkOnly(think.Thinking);
+                    if (think.Thinking != "")
+                    {
+                        yield return ChatSegment.FromThinking(think.Thinking);
+                    }
                 }
                 else if (contentDelta.Delta.TryPickText(out TextDelta? value))
                 {
-                    yield return ChatSegment.FromTextOnly(value.Text);
+                    yield return ChatSegment.FromText(value.Text);
                 }
                 else if (contentDelta.Delta.TryPickInputJSON(out InputJSONDelta? inputJSONDelta))
                 {
@@ -77,11 +80,7 @@ public class AnthropicChatService(Model model) : ChatService(model)
                 }
                 else if (contentDelta.Delta.TryPickSignature(out SignatureDelta? signatureDelta))
                 {
-                    yield return ChatSegment.FromToolCall(new ToolCallSegment()
-                    {
-                        Index = toolCallIndex,
-                        Signature = signatureDelta.Signature,
-                    });
+                    yield return ChatSegment.FromThinkingSignature(signatureDelta.Signature);
                 }
                 else
                 {
@@ -179,7 +178,7 @@ public class AnthropicChatService(Model model) : ChatService(model)
             Thinking = (allowThinking && request.ChatConfig.ThinkingBudget is not null) ?
                 new ThinkingConfigParam(new ThinkingConfigEnabled(request.ChatConfig.ThinkingBudget.Value))
                 : null,
-            Tools = [..request.Tools.Select(ConvertTool)]
+            Tools = [.. request.Tools.Select(ConvertTool)]
         };
 
         static ToolUnion ConvertTool(ChatTool tool)
@@ -197,13 +196,27 @@ public class AnthropicChatService(Model model) : ChatService(model)
                 return new InputSchema()
                 {
                     Type = JsonSerializer.SerializeToElement("object"),
-                    Properties1 = jsonObject["properties"]?.AsObject().ToDictionary(x => x.Key, x => JsonSerializer.SerializeToElement(new
-                    {
-                        type = x.Value!["type"]?.GetValue<string>(),
-                        description = x.Value!["description"]?.GetValue<string>(),
-                    })),
+                    Properties1 = jsonObject["properties"]?.AsObject().ToDictionary(x => x.Key, x => JsonSerializer.SerializeToElement(MakeFieldDefObject(x.Value))),
                     Required = jsonObject["required"]?.AsArray().Select(x => (string)x!).ToList(),
                 };
+
+                static object MakeFieldDefObject(JsonNode? node)
+                {
+                    if (node == null)
+                    {
+                        throw new ArgumentNullException(nameof(node), "tool call field property must be not null.");
+                    }
+
+                    string? type = node["type"]?.GetValue<string>();
+                    string? description = node["description"]?.GetValue<string>();
+                    if (string.IsNullOrEmpty(type))
+                    {
+                        throw new InvalidOperationException("Tool parameter field must have a type.");
+                    }
+
+                    if (description == null) return new { type };
+                    return new { type, description };
+                }
             }
         }
 
@@ -310,6 +323,30 @@ public class AnthropicChatService(Model model) : ChatService(model)
                         {
                             return null; // drop invalid/unsigned or disallowed thinking blocks
                         }
+                    }
+                    else if (part.TryGetError(out string? error))
+                    {
+                        return new TextBlockParam(error); // map error to text
+                    }
+                    else if (part.StepContentToolCall is not null)
+                    {
+                        StepContentToolCall toolCall = part.StepContentToolCall;
+                        return new ToolUseBlockParam()
+                        {
+                            ID = toolCall.ToolCallId,
+                            Name = toolCall.Name,
+                            Input = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(toolCall.Parameters)!,
+                        };
+                    }
+                    else if (part.StepContentToolCallResponse is not null)
+                    {
+                        StepContentToolCallResponse toolResponse = part.StepContentToolCallResponse;
+                        return new ToolResultBlockParam()
+                        {
+                            ToolUseID = toolResponse.ToolCallId,
+                            Content = new ToolResultBlockParamContent(toolResponse.Response),
+                            IsError = !toolResponse.IsSuccess,
+                        };
                     }
                     else
                     {

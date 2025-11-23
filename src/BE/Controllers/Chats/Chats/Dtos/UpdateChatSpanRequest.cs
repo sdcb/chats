@@ -31,6 +31,9 @@ public record UpdateChatSpanRequest
     [JsonPropertyName("reasoningEffort")]
     public DBReasoningEffort ReasoningEffort { get; init; }
 
+    [JsonPropertyName("thinkingBudget")]
+    public int? ThinkingBudget { get; init; }
+
     [JsonPropertyName("imageSize")]
     public string? ImageSize { get; init; }
 
@@ -49,6 +52,7 @@ public record UpdateChatSpanRequest
         config.CodeExecutionEnabled = CodeExecutionEnabled;
         config.MaxOutputTokens = MaxOutputTokens;
         config.ReasoningEffort = (byte)ReasoningEffort;
+        config.ThinkingBudget = ThinkingBudget;
         config.ImageSize = ImageSize;
         
         // Update ChatConfigMcp associations
@@ -72,6 +76,7 @@ public record UpdateChatSpanRequest
         config.CodeExecutionEnabled = CodeExecutionEnabled;
         config.MaxOutputTokens = MaxOutputTokens;
         config.ReasoningEffort = (byte)ReasoningEffort;
+        config.ThinkingBudget = ThinkingBudget;
         config.ImageSize = ImageSize;
         
         // Update ChatConfigMcp associations
@@ -95,6 +100,7 @@ public record UpdateChatSpanRequest
             CodeExecutionEnabled = CodeExecutionEnabled,
             MaxOutputTokens = MaxOutputTokens,
             ReasoningEffort = (byte)ReasoningEffort,
+            ThinkingBudget = ThinkingBudget,
             ImageSize = ImageSize,
         };
 

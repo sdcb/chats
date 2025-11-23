@@ -111,7 +111,7 @@ public abstract partial class ChatService(Model model) : IDisposable
     {
         ChatRequest final = request;
 
-        if (final.ChatConfig.SystemPrompt != null && source == UsageSource.Chat)
+        if (final.ChatConfig.SystemPrompt != null && source == UsageSource.WebChat)
         {
             // Apply system prompt
             final = final with
@@ -123,9 +123,22 @@ public abstract partial class ChatService(Model model) : IDisposable
             };
         }
 
+        float? temperature = final.ChatConfig.Temperature;
+        if (source == UsageSource.WebChat)
+        {
+            temperature = Model.ClampTemperature(temperature);
+            if ((DBApiType)Model.ApiType == DBApiType.AnthropicMessages && final.ChatConfig.ThinkingBudget != null)
+            {
+                // invalid_request_error
+                // `temperature` may only be set to 1 when thinking is enabled.
+                // Please consult our documentation at https://docs.claude.com/en/docs/build-with-claude/extended-thinking#important-considerations-when-using-extended-thinking
+                temperature = null;
+            }
+        }
+
         final = final with
         {
-            ChatConfig = final.ChatConfig.WithTemperature(Model.ClampTemperature(final.ChatConfig.Temperature)),
+            ChatConfig = final.ChatConfig.WithTemperature(temperature),
             Steps = await final.Steps
                 .ToAsyncEnumerable()
                 .Select(async (m, ct) => await FilterVision(Model.AllowVision, m, fup, ct))

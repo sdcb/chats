@@ -40,7 +40,7 @@ public record ChatRequest
         return totalTokens;
     }
 
-    public static ChatRequest Simple(string prompt)
+    public static ChatRequest Simple(string prompt, Model model)
     {
         return new ChatRequest
         {
@@ -61,7 +61,10 @@ public record ChatRequest
                     ]
                 }
             ],
-            ChatConfig = new ChatConfig(),
+            ChatConfig = new ChatConfig()
+            {
+                Model = model, 
+            }
         };
     }
 

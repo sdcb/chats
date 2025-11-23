@@ -1,4 +1,4 @@
-using Chats.BE.Controllers.Admin.AdminModels.Dtos;
+﻿using Chats.BE.Controllers.Admin.AdminModels.Dtos;
 using Chats.BE.DB.Enums;
 using System.ComponentModel.DataAnnotations;
 
@@ -384,7 +384,6 @@ public class UpdateModelRequestValidationTests
             OutputTokenPrice1M = 2.0m,
             AllowSearch = true,
             AllowVision = false,
-            AllowSystemPrompt = true,
             AllowStreaming = true,
             AllowCodeExecution = false,
             AllowToolCall = true,
@@ -415,7 +414,6 @@ public class UpdateModelRequestValidationTests
             OutputTokenPrice1M = 2.0m,
             AllowSearch = false,
             AllowVision = false,
-            AllowSystemPrompt = false,
             AllowStreaming = true,
             AllowCodeExecution = false,
             AllowToolCall = false,

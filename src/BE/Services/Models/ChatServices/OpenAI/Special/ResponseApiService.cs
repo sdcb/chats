@@ -114,7 +114,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
                     {
                         if (thinkItem.SummaryParts.Count > 0)
                         {
-                            yield return ChatSegment.FromThinkOnly(string.Join(
+                            yield return ChatSegment.FromThinking(string.Join(
                                 separator: "\n\n",
                                 thinkItem.SummaryParts.Select(part => (part as ReasoningSummaryTextPart)?.Text ?? string.Empty)));
                         }
@@ -130,7 +130,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
                         {
                             if (part.Kind == ResponseContentPartKind.OutputText)
                             {
-                                yield return ChatSegment.FromTextOnly(part.Text);
+                                yield return ChatSegment.FromText(part.Text);
                             }
                             else if (part.Kind == ResponseContentPartKind.Refusal)
                             {
@@ -162,7 +162,7 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
                 }
                 if (delta is StreamingResponseOutputTextDeltaUpdate textDelta)
                 {
-                    yield return ChatSegment.FromTextOnly(textDelta.Delta);
+                    yield return ChatSegment.FromText(textDelta.Delta);
                 }
                 else if (delta is StreamingResponseCompletedUpdate completedDelta)
                 {
@@ -195,11 +195,11 @@ public class ResponseApiService(Model model, ILogger logger, OpenAIResponseClien
                 }
                 else if (delta is StreamingResponseReasoningSummaryTextDeltaUpdate rsDelta)
                 {
-                    yield return ChatSegment.FromThinkOnly(rsDelta.Delta.ToString());
+                    yield return ChatSegment.FromThinking(rsDelta.Delta.ToString());
                 }
                 else if (delta is StreamingResponseReasoningSummaryTextDoneUpdate rsDone)
                 {
-                    yield return ChatSegment.FromThinkOnly("\n\n");
+                    yield return ChatSegment.FromThinking("\n\n");
                 }
                 else
                 {
