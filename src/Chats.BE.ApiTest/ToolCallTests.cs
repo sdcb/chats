@@ -75,7 +75,7 @@ public class ToolCallTests : IClassFixture<ApiTestFixture>
             _jsonOptions);
 
         // Assert
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessStatusCodeWithDetailsAsync();
 
         JsonObject? result = await response.Content.ReadFromJsonAsync<JsonObject>();
         Assert.NotNull(result);

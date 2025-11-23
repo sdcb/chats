@@ -37,7 +37,7 @@ public class ModelsTests : IClassFixture<ApiTestFixture>
             $"{_fixture.Config.OpenAICompatibleEndpoint}/models");
         
         // Assert
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessStatusCodeWithDetailsAsync();
 
         string content = await response.Content.ReadAsStringAsync();
         JsonObject? json = JsonSerializer.Deserialize<JsonObject>(content);

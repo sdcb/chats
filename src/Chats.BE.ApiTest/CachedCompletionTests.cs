@@ -55,7 +55,7 @@ public class CachedCompletionTests : IClassFixture<ApiTestFixture>
         {
             _output.WriteLine($"Resp: {await response1.Content.ReadAsStringAsync()}");
         }
-        response1.EnsureSuccessStatusCode();
+        await response1.EnsureSuccessStatusCodeWithDetailsAsync();
         JsonObject? result1 = await response1.Content.ReadFromJsonAsync<JsonObject>();
         Assert.NotNull(result1);
         
@@ -71,7 +71,7 @@ public class CachedCompletionTests : IClassFixture<ApiTestFixture>
             request, 
             _jsonOptions);
         
-        response2.EnsureSuccessStatusCode();
+        await response2.EnsureSuccessStatusCodeWithDetailsAsync();
         JsonObject? result2 = await response2.Content.ReadFromJsonAsync<JsonObject>();
         Assert.NotNull(result2);
         

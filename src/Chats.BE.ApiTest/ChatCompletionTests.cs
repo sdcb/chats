@@ -42,7 +42,7 @@ public class ChatCompletionTests : IClassFixture<ApiTestFixture>
                 new { role = "user", content = "1 + 1 = ?" }
             },
             stream = false,
-            temperature = 0.7
+            temperature = 1.0
         };
 
         // Act
@@ -52,7 +52,7 @@ public class ChatCompletionTests : IClassFixture<ApiTestFixture>
             _jsonOptions);
 
         // Assert
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessStatusCodeWithDetailsAsync();
 
         JsonObject? result = await response.Content.ReadFromJsonAsync<JsonObject>();
         Assert.NotNull(result);
@@ -82,7 +82,7 @@ public class ChatCompletionTests : IClassFixture<ApiTestFixture>
                 new { role = "user", content = "1 + 1 = ?" }
             },
             stream = true,
-            temperature = 0.7
+            temperature = 1.0
         };
 
         // Act
@@ -92,7 +92,7 @@ public class ChatCompletionTests : IClassFixture<ApiTestFixture>
             _jsonOptions);
 
         // Assert
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessStatusCodeWithDetailsAsync();
         _output.WriteLine($"Status: {response.StatusCode}");
         _output.WriteLine("Streaming response:");
 

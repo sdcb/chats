@@ -54,7 +54,7 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
             _jsonOptions);
 
         // Assert
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessStatusCodeWithDetailsAsync();
 
         JsonObject? result = await response.Content.ReadFromJsonAsync<JsonObject>();
         Assert.NotNull(result);
@@ -167,7 +167,7 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
         HttpResponseMessage response = await _fixture.Client.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead);
 
         // Assert
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessStatusCodeWithDetailsAsync();
         _output.WriteLine($"Status: {response.StatusCode}");
         _output.WriteLine("Streaming response:");
 
