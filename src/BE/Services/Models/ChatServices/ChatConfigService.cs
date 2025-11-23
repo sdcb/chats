@@ -15,7 +15,7 @@ public class ChatConfigService(ChatsDB db)
                 c.ModelId == raw.ModelId && 
                 c.SystemPrompt == raw.SystemPrompt && 
                 c.WebSearchEnabled == raw.WebSearchEnabled && 
-                c.ReasoningEffort == raw.ReasoningEffort && 
+                c.ReasoningEffortId == raw.ReasoningEffortId && 
                 c.Temperature == raw.Temperature &&
                 c.ImageSize == raw.ImageSize)
             .OrderByDescending(x => x.Id)

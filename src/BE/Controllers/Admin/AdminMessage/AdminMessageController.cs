@@ -57,7 +57,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = span.ChatConfig.ReasoningEffort,
+                    ReasoningEffort = (DBReasoningEffort)span.ChatConfig.ReasoningEffortId,
                     ImageSize = span.ChatConfig.ImageSize,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
@@ -133,7 +133,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = span.ChatConfig.ReasoningEffort,
+                    ReasoningEffort = (DBReasoningEffort)span.ChatConfig.ReasoningEffortId,
                     ImageSize = span.ChatConfig.ImageSize,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp

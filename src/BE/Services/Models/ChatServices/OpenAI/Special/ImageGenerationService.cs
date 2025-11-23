@@ -58,9 +58,9 @@ public class ImageGenerationService : ChatService
                 ["moderation"] = "low"
             };
 
-            if ((DBReasoningEffort)request.ChatConfig.ReasoningEffort != DBReasoningEffort.Default)
+            if (request.ChatConfig.ReasoningEffort != DBReasoningEffort.Default)
             {
-                requestBody["quality"] = ((DBReasoningEffort)request.ChatConfig.ReasoningEffort).ToGeneratedImageQualityText();
+                requestBody["quality"] = request.ChatConfig.ReasoningEffort.ToGeneratedImageQualityText();
             }
 
             if (!string.IsNullOrEmpty(request.ChatConfig.ImageSize))
@@ -157,7 +157,7 @@ public class ImageGenerationService : ChatService
                 new ImageGenerationOptions()
                 {
                     EndUserId = request.EndUserId,
-                    Quality = ((DBReasoningEffort)request.ChatConfig.ReasoningEffort).ToGeneratedImageQuality(),
+                    Quality = request.ChatConfig.ReasoningEffort.ToGeneratedImageQuality(),
                     Size = string.IsNullOrEmpty(request.ChatConfig.ImageSize) ? null : new GeneratedImageSize(request.ChatConfig.ImageSize),
                     ModerationLevel = GeneratedImageModerationLevel.Low,
                 }, cancellationToken);
@@ -286,9 +286,9 @@ public class ImageGenerationService : ChatService
 
         form.Add("low", "moderation");
 
-        if ((DBReasoningEffort)request.ChatConfig.ReasoningEffort != DBReasoningEffort.Default)
+        if (request.ChatConfig.ReasoningEffort != DBReasoningEffort.Default)
         {
-            form.Add(((DBReasoningEffort)request.ChatConfig.ReasoningEffort).ToGeneratedImageQualityText()!, "quality");
+            form.Add(request.ChatConfig.ReasoningEffort.ToGeneratedImageQualityText()!, "quality");
         }
 
         return form;

@@ -41,7 +41,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = span.ChatConfig.ReasoningEffort,
+                    ReasoningEffort = (DBReasoningEffort)span.ChatConfig.ReasoningEffortId,
                     ImageSize = span.ChatConfig.ImageSize,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps
@@ -93,7 +93,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = span.ChatConfig.ReasoningEffort,
+                    ReasoningEffort = (DBReasoningEffort)span.ChatConfig.ReasoningEffortId,
                     ImageSize = span.ChatConfig.ImageSize,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders }).ToArray(),
@@ -138,7 +138,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = span.ChatConfig.ReasoningEffort,
+                    ReasoningEffort = (DBReasoningEffort)span.ChatConfig.ReasoningEffortId,
                     ImageSize = span.ChatConfig.ImageSize,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders }).ToArray()
@@ -220,7 +220,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                         WebSearchEnabled = false,
                         CodeExecutionEnabled = false,
                         MaxOutputTokens = null,
-                        ReasoningEffort = 0,
+                        ReasoningEffortId = 0,
                         SystemPrompt = defaultPrompt.Content,
                     }
                 }

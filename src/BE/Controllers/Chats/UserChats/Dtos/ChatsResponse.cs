@@ -91,7 +91,7 @@ public record ChatSpanDto
     public required int? MaxOutputTokens { get; init; }
 
     [JsonPropertyName("reasoningEffort")]
-    public required int? ReasoningEffort { get; init; }
+    public required DBReasoningEffort? ReasoningEffort { get; init; }
 
     [JsonPropertyName("imageSize")]
     public required string? ImageSize { get; init; }

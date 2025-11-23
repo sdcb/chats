@@ -23,7 +23,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
             return sp.GetRequiredService<Test2ChatService>();
         }
 
-        DBApiType apiType = (DBApiType)model.ApiType;
+        DBApiType apiType = model.ApiType;
 
         // 先按 API 类型分类，再按 ModelProvider 分类
         return apiType switch

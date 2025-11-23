@@ -64,7 +64,7 @@ public partial class Model
     [StringLength(200)]
     public string? SupportedImageSizes { get; set; }
 
-    public byte ApiType { get; set; }
+    public byte ApiTypeId { get; set; }
 
     public bool UseAsyncApi { get; set; }
 

@@ -44,9 +44,9 @@ public class GoogleAI2ChatService : ChatService
         {
             gc.ThinkingConfig = new ThinkingConfig
             {
-                ThinkingBudget = (DBReasoningEffort)request.ChatConfig.ReasoningEffort switch
-                {
-                    DBReasoningEffort.Minimal or DBReasoningEffort.Low => 1024,
+                ThinkingBudget = request.ChatConfig.ReasoningEffort switch
+            {
+                var x when x.IsLowOrMinimal() => 1024,
                     _ => null,
                 },
                 IncludeThoughts = true,

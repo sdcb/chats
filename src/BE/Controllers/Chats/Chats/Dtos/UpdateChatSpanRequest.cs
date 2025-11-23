@@ -51,7 +51,7 @@ public record UpdateChatSpanRequest
         config.WebSearchEnabled = WebSearchEnabled;
         config.CodeExecutionEnabled = CodeExecutionEnabled;
         config.MaxOutputTokens = MaxOutputTokens;
-        config.ReasoningEffort = (byte)ReasoningEffort;
+        config.ReasoningEffortId = (byte)ReasoningEffort;
         config.ThinkingBudget = ThinkingBudget;
         config.ImageSize = ImageSize;
         
@@ -75,7 +75,7 @@ public record UpdateChatSpanRequest
         config.WebSearchEnabled = WebSearchEnabled;
         config.CodeExecutionEnabled = CodeExecutionEnabled;
         config.MaxOutputTokens = MaxOutputTokens;
-        config.ReasoningEffort = (byte)ReasoningEffort;
+        config.ReasoningEffortId = (byte)ReasoningEffort;
         config.ThinkingBudget = ThinkingBudget;
         config.ImageSize = ImageSize;
         
@@ -99,7 +99,7 @@ public record UpdateChatSpanRequest
             WebSearchEnabled = WebSearchEnabled,
             CodeExecutionEnabled = CodeExecutionEnabled,
             MaxOutputTokens = MaxOutputTokens,
-            ReasoningEffort = (byte)ReasoningEffort,
+            ReasoningEffortId = (byte)ReasoningEffort,
             ThinkingBudget = ThinkingBudget,
             ImageSize = ImageSize,
         };

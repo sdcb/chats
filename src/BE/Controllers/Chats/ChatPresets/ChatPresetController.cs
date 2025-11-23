@@ -41,7 +41,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     WebSearchEnabled = x.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = x.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = x.ChatConfig.ReasoningEffort,
+                    ReasoningEffort = (DBReasoningEffort)x.ChatConfig.ReasoningEffortId,
                     ImageSize = x.ChatConfig.ImageSize,
                     ThinkingBudget = x.ChatConfig.ThinkingBudget,
                     Mcps = x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
@@ -221,7 +221,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     WebSearchEnabled = x.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = x.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = x.ChatConfig.ReasoningEffort,
+                    ReasoningEffortId = x.ChatConfig.ReasoningEffortId,
                     ImageSize = x.ChatConfig.ImageSize,
                     ChatConfigMcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatConfigMcp
                     {
@@ -273,7 +273,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                 WebSearchEnabled = false,
                 CodeExecutionEnabled = false,
                 MaxOutputTokens = null,
-                ReasoningEffort = 0,
+                ReasoningEffortId = 0,
                 SystemPrompt = defaultPrompt.Content,
                 ImageSize = null,
             }

@@ -16,7 +16,7 @@ public class ChatConfigHashTests
             Temperature = 0.5f,
             WebSearchEnabled = true,
             MaxOutputTokens = 100,
-            ReasoningEffort = 2
+            ReasoningEffortId = 2
         };
 
         ChatConfig config2 = new()
@@ -26,7 +26,7 @@ public class ChatConfigHashTests
             Temperature = 0.5f,
             WebSearchEnabled = true,
             MaxOutputTokens = 100,
-            ReasoningEffort = 2
+            ReasoningEffortId = 2
         };
 
         // Act
@@ -232,8 +232,8 @@ public class ChatConfigHashTests
     public void GenerateDBHashCode_ShouldGenerateDifferentHash_ForDifferentReasoningEffort()
     {
         // Arrange
-        ChatConfig config1 = new() { ReasoningEffort = 1 };
-        ChatConfig config2 = new() { ReasoningEffort = 2 };
+        ChatConfig config1 = new() { ReasoningEffortId = 1 };
+        ChatConfig config2 = new() { ReasoningEffortId = 2 };
 
         // Act
         long hash1 = config1.GenerateDBHashCode();
@@ -247,8 +247,8 @@ public class ChatConfigHashTests
     public void GenerateDBHashCode_ShouldHandleNullReasoningEffort()
     {
         // Arrange
-        ChatConfig config1 = new() { ReasoningEffort = 0 };
-        ChatConfig config2 = new() { ReasoningEffort = 1 };
+        ChatConfig config1 = new() { ReasoningEffortId = 0 };
+        ChatConfig config2 = new() { ReasoningEffortId = 1 };
 
         // Act
         long hash1 = config1.GenerateDBHashCode();

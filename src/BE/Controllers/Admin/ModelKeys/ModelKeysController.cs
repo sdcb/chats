@@ -170,7 +170,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
         {
             ModelKey = modelKey,
             ModelKeyId = modelKey.Id,
-            ApiType = (byte)DBApiType.OpenAIChatCompletion,
+            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
             Name = "dummy",
             DeploymentName = "dummy",
         };
@@ -210,7 +210,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
                     MaxResponseTokens = existingModel.MaxResponseTokens,
                     AllowToolCall = existingModel.AllowToolCall,
                     SupportedImageSizes = Model.GetSupportedImageSizesAsArray(existingModel.SupportedImageSizes),
-                    ApiType = (DBApiType)existingModel.ApiType,
+                    ApiType = existingModel.ApiType,
                     UseAsyncApi = existingModel.UseAsyncApi,
                     UseMaxCompletionTokens = existingModel.UseMaxCompletionTokens,
                     IsLegacy = existingModel.IsLegacy,

@@ -45,7 +45,7 @@ public class ModelsController : ControllerBase
                 MaxResponseTokens = x.MaxResponseTokens,
                 AllowToolCall = x.AllowToolCall,
                 SupportedImageSizes = Model.GetSupportedImageSizesAsArray(x.SupportedImageSizes),
-                ApiType = (DBApiType)x.ApiType,
+                ApiType = (DBApiType)x.ApiTypeId,
                 UseAsyncApi = x.UseAsyncApi,
                 UseMaxCompletionTokens = x.UseMaxCompletionTokens,
                 IsLegacy = x.IsLegacy,

@@ -138,7 +138,7 @@ public abstract partial class ChatService : IDisposable
         if (source == UsageSource.WebChat)
         {
             temperature = request.ChatConfig.Model.ClampTemperature(temperature);
-            if ((DBApiType)request.ChatConfig.Model.ApiType == DBApiType.AnthropicMessages && final.ChatConfig.ThinkingBudget != null)
+            if (request.ChatConfig.Model.ApiType == DBApiType.AnthropicMessages && final.ChatConfig.ThinkingBudget != null)
             {
                 // invalid_request_error
                 // `temperature` may only be set to 1 when thinking is enabled.

@@ -1,9 +1,12 @@
-﻿using Chats.BE.DB.Jsons;
+﻿using Chats.BE.DB.Enums;
+using Chats.BE.DB.Jsons;
 
 namespace Chats.BE.DB;
 
 public partial class Model
 {
+    public DBApiType ApiType => (DBApiType)ApiTypeId;
+
     public JsonPriceConfig ToPriceConfig() => new()
     {
         InputTokenPrice = InputTokenPrice1M / 100_0000,

@@ -254,7 +254,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                 MaxResponseTokens = m.MaxResponseTokens,
                 AllowToolCall = m.AllowToolCall,
                 SupportedImageSizes = Model.GetSupportedImageSizesAsArray(m.SupportedImageSizes),
-                ApiType = (DBApiType)m.ApiType,
+                ApiType = (DBApiType)m.ApiTypeId,
                 UseAsyncApi = m.UseAsyncApi,
                 UseMaxCompletionTokens = m.UseMaxCompletionTokens,
                 IsLegacy = m.IsLegacy,

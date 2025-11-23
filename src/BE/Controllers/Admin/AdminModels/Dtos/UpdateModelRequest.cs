@@ -112,7 +112,7 @@ public record UpdateModelRequest
         cm.MaxResponseTokens = MaxResponseTokens;
         cm.AllowToolCall = AllowToolCall;
         cm.SupportedImageSizes = SupportedImageSizes.Length > 0 ? string.Join(',', SupportedImageSizes) : null;
-        cm.ApiType = (byte)ApiType;
+        cm.ApiTypeId = (byte)ApiType;
         cm.UseAsyncApi = UseAsyncApi;
         cm.UseMaxCompletionTokens = UseMaxCompletionTokens;
         cm.IsLegacy = IsLegacy;

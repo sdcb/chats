@@ -317,7 +317,7 @@ public class ResponseApiService(ILogger<ResponseApiService> logger) : ChatServic
             MaxOutputTokenCount = request.ChatConfig.MaxOutputTokens,
             ReasoningOptions = new ResponseReasoningOptions()
             {
-                ReasoningEffortLevel = ((DBReasoningEffort)request.ChatConfig.ReasoningEffort).ToResponseReasoningEffort(),
+                ReasoningEffortLevel = request.ChatConfig.ReasoningEffort.ToResponseReasoningEffort(),
                 ReasoningSummaryVerbosity = ResponseReasoningSummaryVerbosity.Detailed,
             },
             EndUserId = request.EndUserId,

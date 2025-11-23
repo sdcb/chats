@@ -110,7 +110,7 @@ public class ModelProvidersController(ChatsDB db) : ControllerBase
                 SupportedImageSizes = Model.GetSupportedImageSizesAsArray(x.SupportedImageSizes),
                 InputTokenPrice1M = x.InputTokenPrice1M,
                 OutputTokenPrice1M = x.OutputTokenPrice1M,
-                ApiType = (DBApiType)x.ApiType,
+                ApiType = (DBApiType)x.ApiTypeId,
                 UseAsyncApi = x.UseAsyncApi,
                 UseMaxCompletionTokens = x.UseMaxCompletionTokens,
                 IsLegacy = x.IsLegacy,

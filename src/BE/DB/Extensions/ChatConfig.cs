@@ -1,4 +1,5 @@
-﻿using System.Buffers.Binary;
+﻿using Chats.BE.DB.Enums;
+using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
@@ -6,6 +7,8 @@ namespace Chats.BE.DB;
 
 public partial class ChatConfig
 {
+    public DBReasoningEffort ReasoningEffort => (DBReasoningEffort)ReasoningEffortId;
+
     public ChatConfig Clone()
     {
         return new ChatConfig
@@ -17,7 +20,7 @@ public partial class ChatConfig
             WebSearchEnabled = WebSearchEnabled,
             CodeExecutionEnabled = CodeExecutionEnabled,
             MaxOutputTokens = MaxOutputTokens,
-            ReasoningEffort = ReasoningEffort,
+            ReasoningEffortId = ReasoningEffortId,
             ImageSize = ImageSize,
             ThinkingBudget = ThinkingBudget,
             ChatConfigMcps = [..ChatConfigMcps.Select(x => new ChatConfigMcp
@@ -98,7 +101,7 @@ public partial class ChatConfig
         }
 
         // 6. ReasoningEffort (byte): 用 1 字节表示
-        flagBuffer[0] = ReasoningEffort;
+        flagBuffer[0] = ReasoningEffortId;
         AppendField(flagBuffer);
 
         // 7. ImageSize (string?): 仅当非空时才包含以保持向后兼容

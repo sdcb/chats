@@ -83,7 +83,7 @@ public record ChatRequest
                 },
             Temperature = cco.Temperature,
             MaxOutputTokens = cco.MaxOutputTokenCount ?? cco._deprecatedMaxTokens,
-            ReasoningEffort = (byte)cco.ReasoningEffortLevel.ToDBReasoningEffort(),
+            ReasoningEffortId = (byte)cco.ReasoningEffortLevel.ToDBReasoningEffort(),
         };
         List<Step> steps = [.. messages
             .Where(x => x is not SystemChatMessage)

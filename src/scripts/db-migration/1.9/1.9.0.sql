@@ -379,5 +379,25 @@ END
 
 GO
 
+PRINT N'[Step 8] 重命名枚举字段为 Id 结尾';
+
+-- =============================================
+-- 重命名 ChatConfig.ReasoningEffort -> ReasoningEffortId
+-- =============================================
+IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'ReasoningEffort' AND Object_ID = Object_ID(N'dbo.ChatConfig'))
+BEGIN
+    PRINT N'Renaming ChatConfig.ReasoningEffort to ReasoningEffortId';
+    EXEC sp_rename 'dbo.ChatConfig.ReasoningEffort', 'ReasoningEffortId', 'COLUMN';
+END
+
+-- =============================================
+-- 重命名 Model.ApiType -> ApiTypeId
+-- =============================================
+IF EXISTS(SELECT * FROM sys.columns WHERE Name = N'ApiType' AND Object_ID = Object_ID(N'dbo.Model'))
+BEGIN
+    PRINT N'Renaming Model.ApiType to ApiTypeId';
+    EXEC sp_rename 'dbo.Model.ApiType', 'ApiTypeId', 'COLUMN';
+END
+
 PRINT N'[1.9.0] 所有迁移步骤已完成';
 GO

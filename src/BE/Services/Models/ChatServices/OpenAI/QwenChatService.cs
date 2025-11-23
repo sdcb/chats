@@ -62,7 +62,7 @@ public class QwenChatService : ChatCompletionService
 
         if (Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.ReasoningEffortOptions).Length != 0)
         {
-            if (((DBReasoningEffort)request.ChatConfig.ReasoningEffort).IsLowOrMinimal())
+            if (request.ChatConfig.ReasoningEffort.IsLowOrMinimal())
             {
                 cco.Patch.Set("$.enable_thinking"u8, false);
             }

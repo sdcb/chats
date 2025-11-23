@@ -259,7 +259,7 @@ public static class ChatSegmentItemExtensions
                 Id = x.Id,
                 Function = new OpenAIToolCallSegmentFunction()
                 {
-                    Arguments = x.Arguments,
+                    Arguments = x.Arguments!,
                     Name = x.Name,
                 },
                 Index = x.Index,
