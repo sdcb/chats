@@ -208,10 +208,10 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                                 onClick={() => handleModeChange('none')}
                                 className="flex-1"
                               >
-                                {t('No Thinking')}
+                                {t('Automatic')}
                               </Button>
                             }
-                            content={t('Suitable for models like DeepSeek-V3 that require quick responses')}
+                            content={t('Suitable for models that handle reasoning automatically (e.g. DeepSeek-R1) or standard models')}
                           />
                           <Tips
                             trigger={
@@ -224,7 +224,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                                 {t('Reasoning Effort')}
                               </Button>
                             }
-                            content={t('Suitable for models like OpenAI gpt-5')}
+                            content={t('Suitable for OpenAI models (e.g. gpt-5)')}
                           />
                           <Tips
                             trigger={
@@ -237,7 +237,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                                 {t('Thinking Budget')}
                               </Button>
                             }
-                            content={t('Suitable for models from Anthropic and Gemini')}
+                            content={t('Suitable for models from Anthropic, Gemini and Qwen')}
                           />
                         </div>
                       </div>
