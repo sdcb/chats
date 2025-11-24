@@ -38,6 +38,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                 checked={field.value}
                 onCheckedChange={field.onChange}
                 label={t('Allow Vision')!}
+                tooltip={t('Enable this option to allow the model to accept images as input.')}
               />
             )}
           />
@@ -49,7 +50,8 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                 <LabelSwitch
                   checked={field.value}
                   onCheckedChange={field.onChange}
-                  label={t('Supports Vision Link')!}
+                  label={t('Prefer Image URL')!}
+                  tooltip={t('When enabled, image URLs are sent directly to the model, saving server bandwidth and optimize latency. If the model cannot access image URLs (e.g., due to timeouts), disable this to use Base64 transmission.')}
                 />
               )}
             />
@@ -62,6 +64,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                 checked={field.value}
                 onCheckedChange={field.onChange}
                 label={t('Allow Search')!}
+                tooltip={t("Enables the model provider's built-in internet search capability (e.g., Qwen, Gemini, OpenRouter). This indicates the model possesses this tool and the system will invoke it. It is NOT a system-provided search tool.")}
               />
             )}
           />
@@ -73,6 +76,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                 checked={field.value}
                 onCheckedChange={field.onChange}
                 label={t('Allow Streaming')!}
+                tooltip={t('Allows the model to stream responses token by token. Usually enabled by default.')}
               />
             )}
           />
@@ -84,6 +88,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                 checked={field.value}
                 onCheckedChange={field.onChange}
                 label={t('Allow Code Execution')!}
+                tooltip={t("Enables the model provider's built-in code execution capability (e.g., Gemini). It is NOT a system-provided tool.")}
               />
             )}
           />
@@ -95,6 +100,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                 checked={field.value}
                 onCheckedChange={field.onChange}
                 label={t('Allow Tool Call')!}
+                tooltip={t('Enables the model to call external tools. Chats provides MCP tools; only models with this enabled will show the MCP options list.')}
               />
             )}
           />
@@ -106,9 +112,24 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                 checked={field.value}
                 onCheckedChange={field.onChange}
                 label={t('<think> Tag Parser Enabled')!}
+                tooltip={t("Previously, many DeepSeek models returned thinking content mixed with non-thinking content using <think>...</think> tags. Enabling this parser extracts the thinking content into a <ThinkingMessage> for a better user experience. This also affects the API response, outputting via 'reasoning_content' instead of direct output. While many providers now handle this natively, this option is retained for exceptions.")}
               />
             )}
           />
+          {apiType === 1 && (
+            <FormField
+              control={control}
+              name="useAsyncApi"
+              render={({ field }) => (
+                <LabelSwitch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  label={t('Use Async API')!}
+                  tooltip={t('Designed for heavy reasoning models (e.g., gpt-5-pro) to prevent gateway timeouts. It sends a request and polls for status, avoiding long-held connections. Note that this increases first-token latency. Enable only if necessary.')}
+                />
+              )}
+            />
+          )}
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Switch } from './switch';
 import { cn } from '@/lib/utils';
+import Tips from '@/components/Tips/Tips';
 
 interface LabelSwitchProps {
   checked: boolean;
@@ -10,6 +11,7 @@ interface LabelSwitchProps {
   className?: string;
   labelClassName?: string;
   switchClassName?: string;
+  tooltip?: string;
 }
 
 export function LabelSwitch({
@@ -20,6 +22,7 @@ export function LabelSwitch({
   className,
   labelClassName,
   switchClassName,
+  tooltip,
 }: LabelSwitchProps) {
   const handleLabelClick = () => {
     if (!disabled) {
@@ -27,7 +30,7 @@ export function LabelSwitch({
     }
   };
 
-  return (
+  const content = (
     <div
       className={cn(
         'flex items-center gap-2 select-none',
@@ -53,4 +56,10 @@ export function LabelSwitch({
       </span>
     </div>
   );
+
+  if (tooltip) {
+    return <Tips trigger={content} content={tooltip} />;
+  }
+
+  return content;
 }

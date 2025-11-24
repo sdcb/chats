@@ -619,6 +619,7 @@
   "Is Outdated": "是否过时",
   "API Type": "API 类型",
   "Use Async API": "使用异步 API",
+  "Designed for heavy reasoning models (e.g., gpt-5-pro) to prevent gateway timeouts. It sends a request and polls for status, avoiding long-held connections. Note that this increases first-token latency. Enable only if necessary.": "专为重推理模型（如 gpt-5-pro）设计，用于防止网关超时。它发送请求后通过轮询检查状态，避免长时间占用连接。注意这会增加首 Token 延迟。仅在必要时启用。",
   "Allow Vision": "允许视觉识别",
   "Supports Vision Link": "支持视觉链接",
   "Allow Search": "允许联网搜索",
@@ -691,5 +692,17 @@
   "Remove Model": "删除模型",
   "User Model Permissions": "用户模型权限",
   "By User": "按用户",
-  "By Model": "按模型"
+  "By Model": "按模型",
+  "Default choice for most compatibility considerations, it is OpenAI's original protocol": "大多数兼容性考虑的默认选择，它是OpenAI的原始协议",
+  "Generally only applicable to new models like OpenAI GPT-5": "通常仅适用于像OpenAI GPT-5这样的新模型",
+  "Applicable to image generation models, such as gpt-image-1": "适用于图像生成模型，例如gpt-image-1",
+  "Applicable to Anthropic Claude models": "适用于Anthropic Claude模型",
+  "Enable this option to allow the model to accept images as input.": "启用此选项以允许模型接收图片作为输入。",
+  "Prefer Image URL": "优先使用图片链接",
+  "When enabled, image URLs are sent directly to the model, saving server bandwidth and optimize latency. If the model cannot access image URLs (e.g., due to timeouts), disable this to use Base64 transmission.": "开启后将直接发送图片链接给模型，可节省服务器带宽并改善延迟。若模型无法访问图片链接（如超时），请关闭此项以使用 Base64 传输。",
+  "Enables the model provider's built-in internet search capability (e.g., Qwen, Gemini, OpenRouter). This indicates the model possesses this tool and the system will invoke it. It is NOT a system-provided search tool.": "启用模型提供商内置的联网搜索能力（如 Qwen、Gemini、OpenRouter）。勾选此项表示模型具备该工具，系统将相应调用。这不是系统内置的联网搜索工具。",
+  "Allows the model to stream responses token by token. Usually enabled by default.": "允许模型逐个 Token 流式输出响应。通常默认开启。",
+  "Enables the model provider's built-in code execution capability (e.g., Gemini). It is NOT a system-provided tool.": "启用模型提供商内置的代码执行能力（如 Gemini）。这不是系统内置的工具。",
+  "Enables the model to call external tools. Chats provides MCP tools; only models with this enabled will show the MCP options list.": "允许模型调用外部工具。Chats 提供 MCP 工具；只有启用此选项的模型才会显示 MCP 选项列表。",
+  "Previously, many DeepSeek models returned thinking content mixed with non-thinking content using <think>...</think> tags. Enabling this parser extracts the thinking content into a <ThinkingMessage> for a better user experience. This also affects the API response, outputting via 'reasoning_content' instead of direct output. While many providers now handle this natively, this option is retained for exceptions.": "早期 DeepSeek 模型常将思考过程包含在 <think> 标签中与正文混杂返回。启用此选项可将思考内容单独提取展示，优化阅读体验，同时 API 响应也会通过 reasoning_content 字段输出。虽然目前多数服务商已原生支持分离思考内容，但此选项仍保留以兼容特殊情况。"
 }

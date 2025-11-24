@@ -45,6 +45,7 @@ import {
 } from '@/constants/modelDefaults';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import Tips from '@/components/Tips/Tips';
 
 // 表单类型：基于 UpdateModelDto，但因 HTML 表单和自定义组件的限制，需要做以下调整：
 // 1. modelKeyId: number → string (FormSelect 组件要求 select value 必须是 string)
@@ -658,43 +659,62 @@ const ModelModal = (props: IProps) => {
               
               {/* ========== 2. API 类型选择 ========== */}
               <div className="border-t pt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    key="apiType"
-                    control={form.control}
-                    name="apiType"
-                    render={({ field }) => (
-                      <FormSelect
-                        field={{
-                          ...field,
-                          value: field.value.toString(),
-                          onChange: (value) => field.onChange(Number(value))
-                        }}
-                        label={t('API Type')!}
-                        items={[
-                          { name: 'ChatCompletion', value: '0' },
-                          { name: 'Response', value: '1' },
-                          { name: 'ImageGeneration', value: '2' },
-                          { name: 'AnthropicMessages', value: '3' }
-                        ]}
-                      />
-                    )}
-                  />
-                  
-                  {/* 仅 apiType=1 (Response) 显示 Use Async API */}
-                  {apiType === 1 && (
-                    <FormField
-                      control={form.control}
-                      name="useAsyncApi"
-                      render={({ field }) => (
-                        <LabelSwitch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          label={t('Use Async API')!}
-                        />
-                      )}
+                <div className="space-y-2">
+                  <Label>{t('API Type')}</Label>
+                  <div className="flex gap-2">
+                    <Tips
+                      trigger={
+                        <Button
+                          type="button"
+                          variant={apiType === 0 ? 'default' : 'outline'}
+                          onClick={() => form.setValue('apiType', 0)}
+                          className="flex-1"
+                        >
+                          Chat Completions
+                        </Button>
+                      }
+                      content={t('Default choice for most compatibility considerations, it is OpenAI\'s original protocol')}
                     />
-                  )}
+                    <Tips
+                      trigger={
+                        <Button
+                          type="button"
+                          variant={apiType === 1 ? 'default' : 'outline'}
+                          onClick={() => form.setValue('apiType', 1)}
+                          className="flex-1"
+                        >
+                          Responses
+                        </Button>
+                      }
+                      content={t('Generally only applicable to new models like OpenAI GPT-5')}
+                    />
+                    <Tips
+                      trigger={
+                        <Button
+                          type="button"
+                          variant={apiType === 3 ? 'default' : 'outline'}
+                          onClick={() => form.setValue('apiType', 3)}
+                          className="flex-1"
+                        >
+                          Messages
+                        </Button>
+                      }
+                      content={t('Applicable to Anthropic Claude models')}
+                    />
+                    <Tips
+                      trigger={
+                        <Button
+                          type="button"
+                          variant={apiType === 2 ? 'default' : 'outline'}
+                          onClick={() => form.setValue('apiType', 2)}
+                          className="flex-1"
+                        >
+                          Images
+                        </Button>
+                      }
+                      content={t('Applicable to image generation models, such as gpt-image-1')}
+                    />
+                  </div>
                 </div>
               </div>
               

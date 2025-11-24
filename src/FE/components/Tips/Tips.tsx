@@ -29,7 +29,11 @@ const Tips = ({
         >
           {trigger}
         </TooltipTrigger>
-        {content && <TooltipContent side={side}>{content}</TooltipContent>}
+        {content && (
+          <TooltipContent side={side} className="max-w-xs">
+            {content}
+          </TooltipContent>
+        )}
       </Tooltip>
     </TooltipProvider>
   );
