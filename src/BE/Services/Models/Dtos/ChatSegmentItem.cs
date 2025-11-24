@@ -289,10 +289,11 @@ public static class ChatSegmentItemExtensions
             // ───── 思考片段合并 ─────────────────────────────────
             else if (last is ThinkChatSegment lastThink && item is ThinkChatSegment curThink)
             {
+                string? signature = lastThink.Signature != null ? lastThink.Signature + curThink.Signature : curThink.Signature;
                 items[^1] = lastThink with 
                 { 
                     Think = lastThink.Think + curThink.Think, 
-                    Signature = (lastThink.Signature ?? "") + curThink.Signature 
+                    Signature = signature
                 };
             }
             // ───── Tool‑Call 片段合并 ───────────────────────────

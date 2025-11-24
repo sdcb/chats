@@ -264,16 +264,86 @@ public class AnthropicChatService : ChatService
 
         static List<MessageParam> ConvertMessages(IEnumerable<Step> messages, bool allowThinkingBlocks)
         {
-            List<Step> mergedToolMessages = MergeToolMessages(messages);
+            List<Step> mergedToolMessages = [..SwitchServerToolResponsesAsUser(MergeToolMessages(messages))];
             return [.. mergedToolMessages.Select(x => ToAnthropicMessage(x, allowThinkingBlocks))];
 
-            static List<Step> MergeToolMessages(IEnumerable<Step> messages)
+            static IEnumerable<Step> SwitchServerToolResponsesAsUser(IEnumerable<Step> steps)
+            {
+                // Anthropic requires tool responses to be in user messages
+                // When response like web_search_tool_response comes back from server, we need to switch them to user role from assistant
+                // For example: [user, assistant(think, tool, tool_response, text), user] -> [user, assistant(think, tool), user(tool_response), assistant(text), user]
+                foreach (Step step in steps)
+                {
+                    if (step.ChatRole != DBChatRole.Assistant)
+                    {
+                        yield return step;
+                        continue;
+                    }
+
+                    List<StepContent> assistantBuffer = new();
+                    List<StepContent> userBuffer = new();
+
+                    foreach (StepContent part in step.StepContents)
+                    {
+                        if (part.StepContentToolCallResponse is not null)
+                        {
+                            // flush any accumulated assistant parts before emitting user tool responses
+                            if (assistantBuffer.Count > 0)
+                            {
+                                yield return new Step()
+                                {
+                                    ChatRoleId = (byte)DBChatRole.Assistant,
+                                    StepContents = [.. assistantBuffer],
+                                };
+                                assistantBuffer.Clear();
+                            }
+
+                            userBuffer.Add(part);
+                        }
+                        else
+                        {
+                            // if we have accumulated user tool responses, emit them first
+                            if (userBuffer.Count > 0)
+                            {
+                                yield return new Step()
+                                {
+                                    ChatRoleId = (byte)DBChatRole.User,
+                                    StepContents = [.. userBuffer],
+                                };
+                                userBuffer.Clear();
+                            }
+
+                            assistantBuffer.Add(part);
+                        }
+                    }
+
+                    // flush remaining buffers in the original order
+                    if (assistantBuffer.Count > 0)
+                    {
+                        yield return new Step()
+                        {
+                            ChatRoleId = (byte)DBChatRole.Assistant,
+                            StepContents = [.. assistantBuffer],
+                        };
+                    }
+
+                    if (userBuffer.Count > 0)
+                    {
+                        yield return new Step()
+                        {
+                            ChatRoleId = (byte)DBChatRole.User,
+                            StepContents = [.. userBuffer],
+                        };
+                    }
+                }
+            }
+
+            static IEnumerable<Step> MergeToolMessages(IEnumerable<Step> messages)
             {
                 // openai will omit tool messages, but anthropic needs them merged into the user message
                 // for example:
                 // openai: [user, assistant(request tool call, probably multiple), tool(tool response 1), tool(tool response 2), assistant]
                 // anthropic: [user, assistant(request tool call, probably multiple), user(tool response 1 + 2), assistant]
-                List<Step> result = [];
                 List<StepContent> toolBuffer = [];
 
                 foreach (Step message in messages)
@@ -286,27 +356,25 @@ public class AnthropicChatService : ChatService
                         {
                             if (toolBuffer.Count > 0)
                             {
-                                result.Add(new Step()
+                                yield return new Step()
                                 {
                                     ChatRoleId = (byte)DBChatRole.User,
                                     StepContents = [.. toolBuffer],
-                                });
+                                };
                                 toolBuffer.Clear();
                             }
-                            result.Add(message);
+                            yield return message;
                         }
                     }
 
                 if (toolBuffer.Count > 0)
                 {
-                    result.Add(new Step()
+                    yield return new Step()
                     {
                         ChatRoleId = (byte)DBChatRole.User,
                         StepContents = [.. toolBuffer],
-                    });
+                    };
                 }
-
-                return result;
             }
 
             static MessageParam ToAnthropicMessage(Step message, bool allowThinkingBlocks)
