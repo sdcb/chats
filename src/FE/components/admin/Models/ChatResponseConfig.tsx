@@ -378,19 +378,21 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
       </div>
 
       {/* Token 字段命名 */}
-      <div className="border-t pt-4">
-        <FormField
-          control={control}
-          name="useMaxCompletionTokens"
-          render={({ field }) => (
-            <LabelSwitch
-              checked={field.value}
-              onCheckedChange={field.onChange}
-              label={t('Use Max Completion Tokens')!}
-            />
-          )}
-        />
-      </div>
+      {apiType === 0 && (
+        <div className="border-t pt-4">
+          <FormField
+            control={control}
+            name="useMaxCompletionTokens"
+            render={({ field }) => (
+              <LabelSwitch
+                checked={field.value}
+                onCheckedChange={field.onChange}
+                label={t('Use Max Completion Tokens')!}
+              />
+            )}
+          />
+        </div>
+      )}
     </div>
   );
 };
