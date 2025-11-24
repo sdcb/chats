@@ -22,4 +22,5 @@ public enum DBModelProvider
     SiliconFlow = 17, 
     OpenRouter = 18,
     TokenPony = 19,
+    Anthropic = 20,
 }

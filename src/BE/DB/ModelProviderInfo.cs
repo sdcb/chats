@@ -136,6 +136,12 @@ public static class ModelProviderInfo
             "https://api.tokenpony.cn/v1",
             "sk-"
         ),
+        [DBModelProvider.Anthropic] = new(
+            DBModelProvider.Anthropic,
+            "Anthropic",
+            "https://api.anthropic.com/v1",
+            "sk-ant-"
+        ),
     };
 
     private static readonly Dictionary<string, DBModelProvider> _nameToIdMap = _providers

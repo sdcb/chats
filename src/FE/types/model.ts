@@ -25,6 +25,7 @@ export enum DBModelProvider {
   SiliconFlow = 17,
   OpenRouter = 18,
   TokenPony = 19,
+  Anthropic = 20,
 }
 
 export type FEModelProvider = {
@@ -101,6 +102,11 @@ export const feModelProviders: FEModelProvider[] = [
     id: DBModelProvider.TokenPony,
     name: 'Token Pony',
     icon: '/logos/tokenpony.svg',
+  },
+  {
+    id: DBModelProvider.Anthropic,
+    name: 'Anthropic',
+    icon: '/logos/anthropic.svg',
   },
 ];
 

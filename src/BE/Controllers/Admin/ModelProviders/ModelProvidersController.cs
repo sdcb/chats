@@ -131,20 +131,29 @@ public class ModelProvidersController(ChatsDB db) : ControllerBase
             .OrderBy(x => x.Order)
             .ToListAsync(cancellationToken);
 
-        // 如果 ModelProviderOrder 表为空，按 enum 值顺序初始化所有已定义的 Provider
-        if (providerOrders.Count == 0)
+        // 检查是否有新的 Provider 未在数据库中（包括初始化情况）
+        List<short> allProviderIds = Enum.GetValues<DBModelProvider>().Select(p => (short)p).ToList();
+        HashSet<short> existingProviderIds = providerOrders.Select(p => p.ModelProviderId).ToHashSet();
+        List<short> missingProviderIds = allProviderIds.Where(id => !existingProviderIds.Contains(id)).ToList();
+
+        if (missingProviderIds.Count > 0)
         {
-            List<ModelProviderOrder> allProviders = Enum.GetValues<DBModelProvider>()
-                .Select((p, index) => new ModelProviderOrder 
+            short currentMaxOrder = providerOrders.Count > 0 ? providerOrders.Max(x => x.Order) : (short)-100;
+
+            foreach (var missingId in missingProviderIds)
+            {
+                currentMaxOrder += 100;
+                var newProvider = new ModelProviderOrder 
                 { 
-                    ModelProviderId = (short)p, 
-                    Order = (short)(index * 100) 
-                })
-                .ToList();
+                    ModelProviderId = missingId, 
+                    Order = currentMaxOrder 
+                };
+                providerOrders.Add(newProvider);
+                db.ModelProviderOrders.Add(newProvider);
+            }
             
-            db.ModelProviderOrders.AddRange(allProviders);
-            await db.SaveChangesAsync(cancellationToken);
-            providerOrders = allProviders.OrderBy(x => x.Order).ToList();
+            // 确保列表按 Order 排序
+            providerOrders = providerOrders.OrderBy(x => x.Order).ToList();
         }
 
         // 获取当前的排序列表
