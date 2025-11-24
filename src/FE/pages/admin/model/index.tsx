@@ -144,28 +144,36 @@ export default function ModelManager() {
   };
 
   const grouped: ProviderGroup[] = useMemo(() => {
-    return providers.map(p => {
-      const providerInfo = feModelProviders.find(fp => fp.id === p.providerId);
-      return {
-        providerId: p.providerId,
-        providerName: providerInfo?.name || `Provider ${p.providerId}`,
-        keys: keysByProvider[p.providerId] || [],
-        keyCount: p.keyCount,
-        modelCount: p.modelCount,
-      };
-    });
-  }, [providers, keysByProvider]);
+    if (showAllProviders) {
+      // 显示所有提供商时，基于 feModelProviders 生成完整列表
+      return feModelProviders.map(fp => {
+        const provider = providers.find(p => p.providerId === fp.id);
+        return {
+          providerId: fp.id,
+          providerName: fp.name,
+          keys: keysByProvider[fp.id] || [],
+          keyCount: provider?.keyCount || 0,
+          modelCount: provider?.modelCount || 0,
+        };
+      });
+    } else {
+      // 只显示有密钥的提供商
+      return providers.map(p => {
+        const providerInfo = feModelProviders.find(fp => fp.id === p.providerId);
+        return {
+          providerId: p.providerId,
+          providerName: providerInfo?.name || `Provider ${p.providerId}`,
+          keys: keysByProvider[p.providerId] || [],
+          keyCount: p.keyCount,
+          modelCount: p.modelCount,
+        };
+      });
+    }
+  }, [providers, keysByProvider, showAllProviders]);
 
   const filteredProviders = useMemo(() => {
-    if (showAllProviders) {
-      return grouped;
-    }
-    // 过滤出有 keys 的 provider（基于后端返回的 keyCount）
-    return grouped.filter((g) => {
-      const provider = providers.find(p => p.providerId === g.providerId);
-      return provider && provider.keyCount > 0;
-    });
-  }, [grouped, showAllProviders, providers]);
+    return grouped;
+  }, [grouped]);
 
   // 统一计算拖拽放置的 previousId/nextId，避免重复逻辑
   const computePrevNext = <T,>(ids: T[], sourceIndex: number, targetIndex: number) => {
