@@ -13,6 +13,7 @@ export type RequestModel = {
   params?: object;
   headers?: object;
   signal?: AbortSignal;
+  suppressDefaultToast?: boolean;
 };
 
 export type RequestWithBodyModel = RequestModel & {
@@ -42,7 +43,7 @@ const readResponse = async (response: Response) => {
   }
 };
 
-const handleErrorResponse = async (err: Response) => {
+const handleErrorResponse = async (err: Response, suppressDefaultToast?: boolean) => {
   const { t } = useTranslation();
   const error = await readResponse(err);
   let message = error?.message || error?.errMessage || error;
@@ -69,8 +70,10 @@ const handleErrorResponse = async (err: Response) => {
           ? message
           : 'Operation failed, Please try again later, or contact technical personnel';
   }
-  const tMsg = t(message);
-  tMsg && toast.error(tMsg);
+  if (!suppressDefaultToast) {
+    const tMsg = t(message);
+    tMsg && toast.error(tMsg);
+  }
   throw error;
 };
 
@@ -112,7 +115,7 @@ export const useFetch = () => {
         return result;
       })
       .catch(async (err: Response) => {
-        await handleErrorResponse(err);
+        await handleErrorResponse(err, request?.suppressDefaultToast);
       });
   };
 

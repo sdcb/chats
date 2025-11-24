@@ -68,12 +68,14 @@ const QuickAddModelModal = (props: IProps) => {
   const [models, setModels] = useState<PossibleModel[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = React.useState<string | null>(null);
   const [searchQuery, setSearchQuery] = React.useState<string>('');
 
   // 加载可用模型列表
   const loadModels = () => {
     setLoading(true);
     setError(null);
+    setErrorDetail(null);
     
     getModelKeyPossibleModels(modelKeyId).then((data) => {
       const processedModels = data.map((x) => ({
@@ -98,6 +100,12 @@ const QuickAddModelModal = (props: IProps) => {
     }).catch((error) => {
       console.error('Failed to fetch models:', error);
       setError(t('This model provider does not support quick model creation'));
+      // 捕获后端返回的详细错误信息
+      if (typeof error === 'string') {
+        setErrorDetail(error);
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        setErrorDetail(error.message);
+      }
       setLoading(false);
     });
   };
@@ -106,6 +114,7 @@ const QuickAddModelModal = (props: IProps) => {
     if (isOpen) {
       setModels([]);
       setSearchQuery(''); // 重置搜索
+      setErrorDetail(null); // 重置错误详情
       loadModels();
     }
   }, [isOpen]);
@@ -223,9 +232,14 @@ const QuickAddModelModal = (props: IProps) => {
   <div className="min-h-0 max-h-[65vh] overflow-y-auto pr-2 custom-scrollbar">
           {error ? (
             <div className="flex items-center justify-center w-full h-full text-muted-foreground">
-              <div className="text-center">
+              <div className="text-center max-w-2xl">
                 <p className="text-lg">{error}</p>
                 <p className="text-sm mt-2">{t('Please use the regular add model method')}</p>
+                {errorDetail && (
+                  <div className="mt-4 p-4 bg-muted rounded-md text-left">
+                    <p className="text-xs font-mono whitespace-pre-wrap break-all">{errorDetail}</p>
+                  </div>
+                )}
               </div>
             </div>
           ) : loading ? (

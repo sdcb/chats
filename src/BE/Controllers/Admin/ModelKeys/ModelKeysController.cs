@@ -153,80 +153,94 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
     [HttpGet("{modelKeyId:int}/possible-models")]
     public async Task<ActionResult<PossibleModelDto[]>> ListModelKeyPossibleModels(short modelKeyId, [FromServices] ChatFactory cf, CancellationToken cancellationToken)
     {
-        ModelKey? modelKey = await db
-           .ModelKeys
-           .Include(x => x.Models)
-           .AsSplitQuery()
-           .FirstOrDefaultAsync(x => x.Id == modelKeyId, cancellationToken);
-
-        if (modelKey == null)
+        try
         {
-            return NotFound();
-        }
+            ModelKey? modelKey = await db
+               .ModelKeys
+               .Include(x => x.Models)
+               .AsSplitQuery()
+               .FirstOrDefaultAsync(x => x.Id == modelKeyId, cancellationToken);
 
-        DBModelProvider modelProvider = (DBModelProvider)modelKey.ModelProviderId;
-
-        Model dummyModel = new()
-        {
-            ModelKey = modelKey,
-            ModelKeyId = modelKey.Id,
-            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
-            Name = "dummy",
-            DeploymentName = "dummy",
-        };
-        ChatService service = cf.CreateChatService(dummyModel);
-        string[] models = await service.ListModels(modelKey, cancellationToken);
-        
-        // 构建 deploymentName -> Model 的映射
-        Dictionary<string, Model[]> existingModelsMap = modelKey.Models
-            .GroupBy(x => x.DeploymentName, StringComparer.Ordinal)
-            .ToDictionary(x => x.Key, v => v.ToArray());
-
-        PossibleModelDto[] result = [.. models.Select(model => 
-        {
-            AdminModelDto? existingModelDto = null;
-            if (existingModelsMap.TryGetValue(model, out Model[]? existingModels))
+            if (modelKey == null)
             {
-                Model existingModel = existingModels[0];
-
-                existingModelDto = new AdminModelDto
-                {
-                    ModelId = existingModel.Id,
-                    Name = existingModel.Name,
-                    Enabled = !existingModel.IsDeleted,
-                    ModelKeyId = existingModel.ModelKeyId,
-                    ModelProviderId = existingModel.ModelKey.ModelProviderId,
-                    InputTokenPrice1M = existingModel.InputTokenPrice1M,
-                    OutputTokenPrice1M = existingModel.OutputTokenPrice1M,
-                    DeploymentName = existingModel.DeploymentName,
-                    AllowSearch = existingModel.AllowSearch,
-                    AllowVision = existingModel.AllowVision,
-                    AllowStreaming = existingModel.AllowStreaming,
-                    AllowCodeExecution = existingModel.AllowCodeExecution,
-                    ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(existingModel.ReasoningEffortOptions),
-                    MinTemperature = existingModel.MinTemperature,
-                    MaxTemperature = existingModel.MaxTemperature,
-                    ContextWindow = existingModel.ContextWindow,
-                    MaxResponseTokens = existingModel.MaxResponseTokens,
-                    AllowToolCall = existingModel.AllowToolCall,
-                    SupportedImageSizes = Model.GetSupportedImageSizesAsArray(existingModel.SupportedImageSizes),
-                    ApiType = existingModel.ApiType,
-                    UseAsyncApi = existingModel.UseAsyncApi,
-                    UseMaxCompletionTokens = existingModel.UseMaxCompletionTokens,
-                    IsLegacy = existingModel.IsLegacy,
-                    ThinkTagParserEnabled = existingModel.ThinkTagParserEnabled,
-                    MaxThinkingBudget = existingModel.MaxThinkingBudget,
-                };
+                return NotFound();
             }
-            
-            return new PossibleModelDto
-            {
-                DeploymentName = model,
-                ExistingModel = existingModelDto,
-            };
-        })];
 
-        return Ok(result);
+            DBModelProvider modelProvider = (DBModelProvider)modelKey.ModelProviderId;
+
+            DBApiType apiType = modelKey.Host switch
+            {
+                null => DBApiType.OpenAIChatCompletion,
+                var x when x.Contains("anthropic", StringComparison.OrdinalIgnoreCase) => DBApiType.AnthropicMessages,
+                var x when x.Contains("claude", StringComparison.OrdinalIgnoreCase) => DBApiType.AnthropicMessages,
+                _ => DBApiType.OpenAIChatCompletion,
+            };
+            Model dummyModel = new()
+            {
+                ModelKey = modelKey,
+                ModelKeyId = modelKey.Id,
+                ApiTypeId = (byte)apiType,
+                Name = "dummy",
+                DeploymentName = "dummy",
+            };
+            ChatService service = cf.CreateChatService(dummyModel);
+            string[] models = await service.ListModels(modelKey, cancellationToken);
+            
+            // 构建 deploymentName -> Model 的映射
+            Dictionary<string, Model[]> existingModelsMap = modelKey.Models
+                .GroupBy(x => x.DeploymentName, StringComparer.Ordinal)
+                .ToDictionary(x => x.Key, v => v.ToArray());
+
+            PossibleModelDto[] result = [.. models.Select(model => 
+            {
+                AdminModelDto? existingModelDto = null;
+                if (existingModelsMap.TryGetValue(model, out Model[]? existingModels))
+                {
+                    Model existingModel = existingModels[0];
+
+                    existingModelDto = new AdminModelDto
+                    {
+                        ModelId = existingModel.Id,
+                        Name = existingModel.Name,
+                        Enabled = !existingModel.IsDeleted,
+                        ModelKeyId = existingModel.ModelKeyId,
+                        ModelProviderId = existingModel.ModelKey.ModelProviderId,
+                        InputTokenPrice1M = existingModel.InputTokenPrice1M,
+                        OutputTokenPrice1M = existingModel.OutputTokenPrice1M,
+                        DeploymentName = existingModel.DeploymentName,
+                        AllowSearch = existingModel.AllowSearch,
+                        AllowVision = existingModel.AllowVision,
+                        AllowStreaming = existingModel.AllowStreaming,
+                        AllowCodeExecution = existingModel.AllowCodeExecution,
+                        ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(existingModel.ReasoningEffortOptions),
+                        MinTemperature = existingModel.MinTemperature,
+                        MaxTemperature = existingModel.MaxTemperature,
+                        ContextWindow = existingModel.ContextWindow,
+                        MaxResponseTokens = existingModel.MaxResponseTokens,
+                        AllowToolCall = existingModel.AllowToolCall,
+                        SupportedImageSizes = Model.GetSupportedImageSizesAsArray(existingModel.SupportedImageSizes),
+                        ApiType = existingModel.ApiType,
+                        UseAsyncApi = existingModel.UseAsyncApi,
+                        UseMaxCompletionTokens = existingModel.UseMaxCompletionTokens,
+                        IsLegacy = existingModel.IsLegacy,
+                        ThinkTagParserEnabled = existingModel.ThinkTagParserEnabled,
+                        MaxThinkingBudget = existingModel.MaxThinkingBudget,
+                    };
+                }
+                
+                return new PossibleModelDto
+                {
+                    DeploymentName = model,
+                    ExistingModel = existingModelDto,
+                };
+            })];
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.ToString());
+        }
     }
 
     [HttpPut("reorder")]

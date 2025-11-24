@@ -535,6 +535,7 @@ export const getModelKeyPossibleModels = (modelKeyId: number) => {
   const fetchServer = useFetch();
   return fetchServer.get<PossibleModelResult[]>(
     `/api/admin/model-keys/${modelKeyId}/possible-models`,
+    { suppressDefaultToast: true },
   );
 };
 
