@@ -38,6 +38,22 @@ public class AnthropicChatService : ChatService
                         Name = toolCall.Name,
                     });
                 }
+                else if (contentStart.ContentBlock.Value is ServerToolUseBlock serverToolUse)
+                {
+                    ++toolCallIndex;
+                    yield return ChatSegment.FromToolCall(new ToolCallSegment()
+                    {
+                        Arguments = "",
+                        Index = toolCallIndex,
+                        Id = serverToolUse.ID,
+                        Name = serverToolUse.Name.ToString(),
+                    });
+                }
+                else if (contentStart.ContentBlock.Value is WebSearchToolResultBlock toolResult)
+                {
+                    string response = toolResult.Content.Json.ToString();
+                    yield return ChatSegment.FromToolCallResponse(toolResult.ToolUseID, response);
+                }
                 else if (contentStart.ContentBlock.Value is TextBlock textBlock)
                 {
                     // do nothing
@@ -200,7 +216,11 @@ public class AnthropicChatService : ChatService
             Thinking = (allowThinking && request.ChatConfig.ThinkingBudget is not null) ?
                 new ThinkingConfigParam(new ThinkingConfigEnabled(request.ChatConfig.ThinkingBudget.Value))
                 : null,
-            Tools = [.. request.Tools.Select(ConvertTool)]
+            Tools = 
+            [
+                .. request.Tools.Select(ConvertTool),
+                .. request.ChatConfig.WebSearchEnabled ? [new ToolUnion(new WebSearchTool20250305())] : Array.Empty<ToolUnion>(),
+            ]
         };
 
         static ToolUnion ConvertTool(ChatTool tool)
@@ -261,21 +281,21 @@ public class AnthropicChatService : ChatService
                     if (message.ChatRole == DBChatRole.ToolCall)
                     {
                         toolBuffer.AddRange(message.StepContents);
-                    }
-                    else
-                    {
-                        if (toolBuffer.Count > 0)
-                        {
-                            result.Add(new Step()
-                            {
-                                ChatRoleId = (byte)DBChatRole.User,
-                                StepContents = [.. toolBuffer],
-                            });
-                            toolBuffer.Clear();
                         }
-                        result.Add(message);
+                        else
+                        {
+                            if (toolBuffer.Count > 0)
+                            {
+                                result.Add(new Step()
+                                {
+                                    ChatRoleId = (byte)DBChatRole.User,
+                                    StepContents = [.. toolBuffer],
+                                });
+                                toolBuffer.Clear();
+                            }
+                            result.Add(message);
+                        }
                     }
-                }
 
                 if (toolBuffer.Count > 0)
                 {

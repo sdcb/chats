@@ -100,6 +100,16 @@ public record ChatSegment
         };
     }
 
+    public static ChatSegment FromToolCallResponse(string toolCallId, string? response, int durationMs = 0, bool isSuccess = true)
+    {
+        return new ChatSegment()
+        {
+            FinishReason = null,
+            Items = [ChatSegmentItem.FromToolCallResponse(toolCallId, response, durationMs, isSuccess)],
+            Usage = null
+        };
+    }
+
     public static ChatSegment Completed(ChatTokenUsage usage, ChatFinishReason? finishReason)
     {
         ArgumentNullException.ThrowIfNull(usage, nameof(usage));
