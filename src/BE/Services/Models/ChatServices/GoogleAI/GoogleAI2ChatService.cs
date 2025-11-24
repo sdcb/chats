@@ -206,7 +206,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
         return [.. steps
             .Select(msg => (DBChatRole)msg.ChatRoleId switch
             {
-                DBChatRole.User => new Content("") { Role = Role.User, Parts = [.. msg.StepContents.Select(x => DBPartToGooglePart(x))] },
+                DBChatRole.User => new Content("") { Role = Role.User, Parts = [.. msg.StepContents.Select(DBPartToGooglePart).Where(x => x != null).Select(x => x!)] },
                 DBChatRole.Assistant => new Content("") { Role = Role.Model, Parts = AssistantMessageToParts(msg) },
                 DBChatRole.ToolCall => new Content("") { Role = Role.Function, Parts = [ToolCallMessageToPart(msg)] },
                 _ => throw new NotSupportedException($"Unsupported message type: {msg.GetType()} in {nameof(GoogleAI2ChatService)}"),
@@ -242,16 +242,19 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
                 }
             }
 
-            results.AddRange(assistantChatMessage.StepContents.Select(DBPartToGooglePart));
+            results.AddRange(assistantChatMessage.StepContents
+                .Select(DBPartToGooglePart)
+                .Where(x => x != null).Select(x => x!));
             return results;
         }
 
-        static IPart DBPartToGooglePart(StepContent part)
+        static IPart? DBPartToGooglePart(StepContent part)
         {
             return (DBStepContentType)part.ContentTypeId switch
             {
                 DBStepContentType.Text => new TextData() { Text = part.StepContentText!.Content },
                 DBStepContentType.FileBlob => new InlineData() { Data = Convert.ToBase64String(part.StepContentBlob!.Content), MimeType = part.StepContentBlob!.MediaType },
+                DBStepContentType.Think => null, // Skip thinking parts for Google AI
                 var x => throw new NotSupportedException($"Unsupported part kind: {x}"),
             };
         }
