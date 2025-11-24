@@ -16,9 +16,15 @@ public class AnthropicChatService : ChatService
 {
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        string url = (request.ChatConfig.Model.ModelKey.Host ?? "https://api.anthropic.com").TrimEnd('/');
+        if (url.EndsWith(".ai.azure.com")) // Azure AI Foundry Anthropic
+        {
+            url += "/anthropic";
+        }
+
         AnthropicClient anthropicClient = new(new ClientOptions()
         {
-            BaseUrl = new Uri(request.ChatConfig.Model.ModelKey.Host ?? "https://api.anthropic.com/"),
+            BaseUrl = new Uri(url),
             APIKey = request.ChatConfig.Model.ModelKey.Secret,
         });
 

@@ -46,7 +46,6 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
 
             DBApiType.OpenAIResponse => modelProvider switch
             {
-                DBModelProvider.OpenAI => sp.GetRequiredService<ResponseApiService>(),
                 DBModelProvider.AzureAIFoundry => sp.GetRequiredService<AzureResponseApiService>(),
                 _ => sp.GetRequiredService<ResponseApiService>() // Fallback to OpenAI-compatible
             },
@@ -55,7 +54,6 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
 
             DBApiType.OpenAIImageGeneration => modelProvider switch
             {
-                DBModelProvider.OpenAI => sp.GetRequiredService<ImageGenerationService>(),
                 DBModelProvider.AzureAIFoundry => sp.GetRequiredService<AzureImageGenerationService>(),
                 _ => sp.GetRequiredService<ImageGenerationService>() // Fallback to OpenAI-compatible
             },
