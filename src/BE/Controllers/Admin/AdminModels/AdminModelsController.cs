@@ -102,7 +102,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
     }
 
     [HttpDelete("{modelId:int}")]
-    public async Task<ActionResult> DeleteModel(short modelId, CancellationToken cancellationToken)
+    public async Task<ActionResult<DeleteModelResponse>> DeleteModel(short modelId, CancellationToken cancellationToken)
     {
         Model? cm = await db.Models.FindAsync([modelId], cancellationToken);
         if (cm == null) return NotFound();
@@ -118,20 +118,20 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
             })
             .SingleAsync(cancellationToken);
 
-        if (refInfo.ChatConfigs || refInfo.UserModels || refInfo.ApiKeys)
+        if (refInfo.ChatConfigs || refInfo.UserModels || refInfo.ApiKeys || refInfo.UserApiCache)
         {
-            string message = "Cannot delete model because it is referenced by: ";
-            if (refInfo.ChatConfigs) message += "ChatConfigs, ";
-            if (refInfo.UserModels) message += "UserModels, ";
-            if (refInfo.ApiKeys) message += "ApiKeys, ";
-            if (refInfo.UserApiCache) message += "UserApiCache, ";
-            return BadRequest(message);
+            // 如果模型被引用，则标记为已删除（软删除）
+            cm.IsDeleted = true;
+            await db.SaveChangesAsync(cancellationToken);
+            
+            return Ok(DeleteModelResponse.CreateSoftDeleted());
         }
         else
         {
+            // 如果没有被引用，则直接删除
             db.Models.Remove(cm);
             await db.SaveChangesAsync(cancellationToken);
-            return NoContent();
+            return Ok(DeleteModelResponse.CreateHardDeleted());
         }
     }
 
