@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AdminModelDto } from '@/types/adminApis';
 import { formatNumberAsMoney } from '@/utils/common';
 import IconActionButton from '@/components/common/IconActionButton';
-import { IconPencil, IconChartHistogram, IconMessage, IconMessageStar, IconPhoto, IconLoader } from '@/components/Icons';
+import { IconPencil, IconChartHistogram, IconMessage, IconMessageStar, IconPhoto, IconLoader, IconDots, IconTrash } from '@/components/Icons';
 import DeletePopover from '@/components/Popover/DeletePopover';
 import useTranslation from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,13 @@ import toast from 'react-hot-toast';
 // dnd-kit
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
 interface ModelItemProps {
   model: AdminModelDto;
@@ -174,7 +181,7 @@ export default function ModelItem({ model, onEditClick, onDeleteClick, onGoToUsa
           )}
         >
           <span className="truncate flex items-center gap-1.5 text-sm" title={getApiTypeName(model.apiType)}>
-            {getApiTypeIcon(model.apiType)}
+            <span className="hidden sm:inline">{getApiTypeIcon(model.apiType)}</span>
             <span className={cn('truncate font-mono', !model.enabled && 'line-through')}>{model.name}</span>
           </span>
           <span
@@ -216,25 +223,78 @@ export default function ModelItem({ model, onEditClick, onDeleteClick, onGoToUsa
               />
             </button>
           </div>
-          <IconActionButton
-            label={t('View Usage Records')}
-            icon={<IconChartHistogram size={16} />}
-            className="h-5 w-5"
-            onClick={() => onGoToUsage({ model: model.name })}
-            disabled={!model.enabled}
-          />
-          <IconActionButton
-            label={t('Edit Model')}
-            icon={<IconPencil size={16} />}
-            className="h-5 w-5"
-            onClick={() => onEditClick(model)}
-          />
-          <DeletePopover 
-            onDelete={() => onDeleteClick(model.modelId)}
-            tooltip={t('Delete Model')}
-            className="h-5 w-5"
-            iconSize={16}
-          />
+          
+          {/* 桌面端：显示独立按钮 */}
+          <div className="hidden sm:flex items-center gap-2">
+            <IconActionButton
+              label={t('View Usage Records')}
+              icon={<IconChartHistogram size={16} />}
+              className="h-5 w-5"
+              onClick={() => onGoToUsage({ model: model.name })}
+              disabled={!model.enabled}
+            />
+            <IconActionButton
+              label={t('Edit Model')}
+              icon={<IconPencil size={16} />}
+              className="h-5 w-5"
+              onClick={() => onEditClick(model)}
+            />
+            <DeletePopover 
+              onDelete={() => onDeleteClick(model.modelId)}
+              tooltip={t('Delete Model')}
+              className="h-5 w-5"
+              iconSize={16}
+            />
+          </div>
+
+          {/* 移动端：下拉菜单 */}
+          <div className="sm:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <IconDots size={16} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onGoToUsage({ model: model.name });
+                  }}
+                  disabled={!model.enabled}
+                  className="gap-2"
+                >
+                  <IconChartHistogram size={16} />
+                  <span>{t('View Usage Records')}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditClick(model);
+                  }}
+                  className="gap-2"
+                >
+                  <IconPencil size={16} />
+                  <span>{t('Edit Model')}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteClick(model.modelId);
+                  }}
+                  className="gap-2 text-destructive focus:text-destructive"
+                >
+                  <IconTrash size={16} />
+                  <span>{t('Delete')}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 

@@ -285,8 +285,14 @@ export default function ModelManager() {
   };
 
   const handleDeleteModel = async (modelId: number) => {
-    await deleteModels(modelId);
-    toast.success(t('Deleted successful'));
+    const result = await deleteModels(modelId);
+    
+    // 检查是否为软删除
+    if (result?.softDeleted) {
+      toast.success(t('Model is in use and has been disabled'));
+    } else {
+      toast.success(t('Deleted successful'));
+    }
     
     // 找到该 model 所属的 key 并刷新
     for (const [keyId, models] of Object.entries(modelsByKey)) {

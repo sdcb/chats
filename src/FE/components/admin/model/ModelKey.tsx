@@ -145,7 +145,7 @@ export default function ModelKey({
         </div>
       </div>
       <CollapsiblePanel open={expanded}>
-        <div className="pr-3 pb-3 pl-4 space-y-1">
+        <div className="pb-3 space-y-1">
           {loading ? (
             // 显示骨架屏，根据 modelKey.totalModelCount 显示对应数量的骨架
             <div className="space-y-1 py-2">
