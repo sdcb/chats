@@ -11,10 +11,11 @@
 
   <ItemGroup>
     <PackageReference Include="Aliyun.OSS.SDK.NetCore" Version="2.14.1" />
-    <PackageReference Include="Anthropic" Version="10.1.2" />
-    <PackageReference Include="AWSSDK.S3" Version="4.0.11.3" />
+    <PackageReference Include="Anthropic" Version="10.2.1" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.13.1" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.26.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     <PackageReference Include="Sdcb.OpenAI" Version="2.7.0-alpha.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
       <PrivateAssets>all</PrivateAssets>
@@ -29,7 +30,7 @@
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.0.1" />
     <PackageReference Include="System.Runtime.Caching" Version="10.0.0" />
-    <PackageReference Include="TencentCloudSDK.Sms" Version="3.0.1346" />
+    <PackageReference Include="TencentCloudSDK.Sms" Version="3.0.1350" />
   </ItemGroup>
 
 </Project>

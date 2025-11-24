@@ -24,7 +24,7 @@ public static class DBConfigure
         }
         else if (dbType.Equals("postgresql", StringComparison.OrdinalIgnoreCase) || dbType.Equals("pgsql", StringComparison.OrdinalIgnoreCase))
         {
-            //dbContextOptionsBuilder.UseNpgsql(connectionString); // To do: Enable Npgsql when EF Core 10 supports it
+            dbContextOptionsBuilder.UseNpgsql(connectionString);
         }
         else
         {
