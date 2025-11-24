@@ -23,8 +23,6 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
         new SafetySetting { Category = HarmCategory.HarmCategoryHarassment, Threshold = HarmBlockThreshold.BlockNone },
     ];
 
-    protected override bool SupportsVisionLink => false;
-
     public bool AllowImageGeneration(Model model) => model.DeploymentName == "gemini-2.0-flash-exp" ||
                                         model.DeploymentName == "gemini-2.0-flash-exp-image-generation" ||
                                         model.DeploymentName == "gemini-2.5-flash-image";

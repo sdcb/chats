@@ -278,7 +278,7 @@ public class ResponseApiService(ILogger<ResponseApiService> logger) : ChatServic
                 }
                 else if (stepContent.TryGetFileUrl(out string? url))
                 {
-                    return ResponseContentPart.CreateInputImagePart(url);
+                    return ResponseContentPart.CreateInputImagePart(new Uri(url));
                 }
                 else if (stepContent.TryGetFileBlob(out StepContentBlob? blob))
                 {

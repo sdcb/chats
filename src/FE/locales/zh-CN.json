@@ -620,6 +620,7 @@
   "API Type": "API 类型",
   "Use Async API": "使用异步 API",
   "Allow Vision": "允许视觉识别",
+  "Supports Vision Link": "支持视觉链接",
   "Allow Search": "允许联网搜索",
   "Allow System Prompt": "允许系统提示词",
   "Allow Streaming": "允许流式输出",

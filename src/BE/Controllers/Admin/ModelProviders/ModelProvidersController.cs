@@ -115,7 +115,8 @@ public class ModelProvidersController(ChatsDB db) : ControllerBase
                 UseMaxCompletionTokens = x.UseMaxCompletionTokens,
                 IsLegacy = x.IsLegacy,
                 ThinkTagParserEnabled = x.ThinkTagParserEnabled,
-                MaxThinkingBudget = x.MaxThinkingBudget
+                MaxThinkingBudget = x.MaxThinkingBudget,
+                SupportsVisionLink = x.SupportsVisionLink,
             })
             .ToArrayAsync(cancellationToken);
 

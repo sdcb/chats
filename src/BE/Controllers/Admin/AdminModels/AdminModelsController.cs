@@ -55,7 +55,8 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
                 IsLegacy = x.IsLegacy,
                 ThinkTagParserEnabled = x.ThinkTagParserEnabled,
                 MaxThinkingBudget = x.MaxThinkingBudget,
-            })
+                SupportsVisionLink = x.SupportsVisionLink,
+        })
             .ToArrayAsync(cancellationToken);
         return data;
     }

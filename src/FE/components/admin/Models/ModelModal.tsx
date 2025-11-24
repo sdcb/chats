@@ -101,6 +101,7 @@ const ModelModal = (props: IProps) => {
     // === 功能开关 ===
     allowSearch: z.boolean(),
     allowVision: z.boolean(),
+    supportsVisionLink: z.boolean(),
     allowStreaming: z.boolean(),
     allowCodeExecution: z.boolean(),
     allowToolCall: z.boolean(),
@@ -222,6 +223,7 @@ const ModelModal = (props: IProps) => {
       apiType: ApiType.ChatCompletion,
       allowSearch: false,
       allowVision: false,
+      supportsVisionLink: false,
       allowStreaming: false,
       allowCodeExecution: false,
       allowToolCall: false,
@@ -251,6 +253,7 @@ const ModelModal = (props: IProps) => {
       // === 新增字段（直接映射，无需转换）===
       allowSearch: values.allowSearch,
       allowVision: values.allowVision,
+      supportsVisionLink: values.supportsVisionLink,
       allowStreaming: values.allowStreaming,
       allowCodeExecution: values.allowCodeExecution,
       allowToolCall: values.allowToolCall,
@@ -326,6 +329,7 @@ const ModelModal = (props: IProps) => {
         
         allowSearch: values.allowSearch,
         allowVision: values.allowVision,
+        supportsVisionLink: values.supportsVisionLink,
         allowStreaming: values.allowStreaming,
         allowCodeExecution: values.allowCodeExecution,
         allowToolCall: values.allowToolCall,
@@ -396,6 +400,7 @@ const ModelModal = (props: IProps) => {
           outputTokenPrice1M,
           allowSearch,
           allowVision,
+          supportsVisionLink,
           allowStreaming,
           allowCodeExecution,
           allowToolCall,
@@ -423,6 +428,7 @@ const ModelModal = (props: IProps) => {
         
         form.setValue('allowSearch', allowSearch);
         form.setValue('allowVision', allowVision);
+        form.setValue('supportsVisionLink', supportsVisionLink);
         form.setValue('allowStreaming', allowStreaming);
         form.setValue('allowCodeExecution', allowCodeExecution);
         form.setValue('allowToolCall', allowToolCall);

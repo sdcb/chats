@@ -399,5 +399,23 @@ BEGIN
     EXEC sp_rename 'dbo.Model.ApiType', 'ApiTypeId', 'COLUMN';
 END
 
+GO
+
+PRINT N'[Step 9] 新增 Model.SupportsVisionLink 列';
+
+IF COL_LENGTH(N'dbo.[Model]', N'SupportsVisionLink') IS NULL
+BEGIN
+    -- 默认值为 0 (false)，表示默认使用 base64 方式传图，兼容性更好
+    ALTER TABLE dbo.[Model] ADD SupportsVisionLink BIT NOT NULL CONSTRAINT DF_Model_SupportsVisionLink DEFAULT(0);
+    ALTER TABLE dbo.[Model] DROP CONSTRAINT DF_Model_SupportsVisionLink;
+    PRINT N'    -> 已新增 Model.SupportsVisionLink 列（默认为 false，使用 base64 传图）';
+END
+ELSE
+BEGIN
+    PRINT N'    -> Model.SupportsVisionLink 已存在，跳过';
+END
+
+GO
+
 PRINT N'[1.9.0] 所有迁移步骤已完成';
 GO

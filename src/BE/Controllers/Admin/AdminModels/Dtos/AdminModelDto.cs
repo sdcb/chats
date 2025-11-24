@@ -79,4 +79,7 @@ public record AdminModelDto
 
     [JsonPropertyName("maxThinkingBudget")]
     public required int? MaxThinkingBudget { get; init; }
+
+    [JsonPropertyName("supportsVisionLink")]
+    public required bool SupportsVisionLink { get; init; }
 }

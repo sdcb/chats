@@ -23,6 +23,7 @@ interface ChatResponseConfigProps {
 const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setValue, watch, apiType }) => {
   const { t } = useTranslation();
   const maxResponseTokens = watch('maxResponseTokens');
+  const allowVision = watch('allowVision');
 
   return (
     <div className="space-y-4">
@@ -40,6 +41,19 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
               />
             )}
           />
+          {allowVision && (
+            <FormField
+              control={control}
+              name="supportsVisionLink"
+              render={({ field }) => (
+                <LabelSwitch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  label={t('Supports Vision Link')!}
+                />
+              )}
+            />
+          )}
           <FormField
             control={control}
             name="allowSearch"

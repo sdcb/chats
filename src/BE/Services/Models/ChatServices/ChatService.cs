@@ -105,7 +105,6 @@ public abstract partial class ChatService : IDisposable
         }
     }
 
-    protected virtual bool SupportsVisionLink => true;
     protected virtual HashSet<string> SupportedContentTypes =>
     [
         "*"
@@ -145,14 +144,14 @@ public abstract partial class ChatService : IDisposable
             ChatConfig = final.ChatConfig.WithTemperature(temperature),
             Steps = await final.Steps
                 .ToAsyncEnumerable()
-                .Select(async (m, ct) => await FilterVision(request.ChatConfig.Model.AllowVision, m, fup, ct))
+                .Select(async (m, ct) => await FilterVision(request.ChatConfig.Model.SupportsVisionLink, request.ChatConfig.Model.AllowVision, m, fup, ct))
                 .ToListAsync(cancellationToken)
         };
 
         return final;
     }
 
-    protected virtual async Task<Step> FilterVision(bool allowVision, Step message, FileUrlProvider fup, CancellationToken cancellationToken)
+    protected virtual async Task<Step> FilterVision(bool supportsVisionLink, bool allowVision, Step message, FileUrlProvider fup, CancellationToken cancellationToken)
     {
         Step final = message.WithNoMessage();
 
@@ -164,7 +163,7 @@ public abstract partial class ChatService : IDisposable
                 {
                     true => part.StepContentFile!.File.MediaType switch
                     {
-                        var x when SupportedContentTypes.Contains("*") || SupportedContentTypes.Contains(x) => SupportsVisionLink switch
+                        var x when SupportedContentTypes.Contains("*") || SupportedContentTypes.Contains(x) => supportsVisionLink switch
                         {
                             true => await fup.CreateOpenAIImagePart(part.StepContentFile!.File, cancellationToken),
                             false => await fup.CreateOpenAIImagePartForceDownload(part.StepContentFile!.File, cancellationToken),
@@ -175,7 +174,7 @@ public abstract partial class ChatService : IDisposable
                 },
                 DBStepContentType.FileUrl => allowVision switch
                 {
-                    true => SupportsVisionLink switch
+                    true => supportsVisionLink switch
                     {
                         true => part,
                         false => await DownloadImagePart(http, part.StepContentText!.Content, cancellationToken),

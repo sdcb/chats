@@ -9,6 +9,6 @@ public class AzureResponseApiService(ILogger<AzureResponseApiService> logger) : 
     protected override OpenAIClient CreateOpenAIClient(ModelKey modelKey, params PipelinePolicy[] perCallPolicies)
     {
         ModelKey transformedKey = AzureAIFoundryChatService.CreateTransformedModelKey(modelKey);
-        return base.CreateOpenAIClient(modelKey, perCallPolicies);
+        return base.CreateOpenAIClient(transformedKey, perCallPolicies);
     }
 }

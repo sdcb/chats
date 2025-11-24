@@ -10,6 +10,4 @@ public class GoogleAIChatService : ChatCompletionService
         cco.EndUserId = null;
         return cco;
     }
-
-    protected override bool SupportsVisionLink => false;
 }

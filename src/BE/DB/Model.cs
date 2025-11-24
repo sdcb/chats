@@ -74,6 +74,8 @@ public partial class Model
 
     public int? MaxThinkingBudget { get; set; }
 
+    public bool SupportsVisionLink { get; set; }
+
     [InverseProperty("Model")]
     public virtual ICollection<ChatConfig> ChatConfigs { get; set; } = new List<ChatConfig>();
 

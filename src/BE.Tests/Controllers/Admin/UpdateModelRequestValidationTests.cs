@@ -399,6 +399,7 @@ public class UpdateModelRequestValidationTests
             UseMaxCompletionTokens = false,
             IsLegacy = false,
             MaxThinkingBudget = null,
+            SupportsVisionLink = false,
         };
     }
 
@@ -429,6 +430,7 @@ public class UpdateModelRequestValidationTests
             UseMaxCompletionTokens = false,
             IsLegacy = false,
             MaxThinkingBudget = null,
+            SupportsVisionLink = false,
         };
     }
 

@@ -54,6 +54,7 @@ export interface AdminModelDto {
   // === 1.8.0 新增字段（全部必填）===
   allowSearch: boolean;
   allowVision: boolean;
+  supportsVisionLink: boolean;
   allowStreaming: boolean;
   allowCodeExecution: boolean;
   allowToolCall: boolean;
@@ -86,6 +87,7 @@ export interface UpdateModelDto {
   // === 1.8.0 新增字段（全部必填）===
   allowSearch: boolean;
   allowVision: boolean;
+  supportsVisionLink: boolean;
   allowStreaming: boolean;
   allowCodeExecution: boolean;
   allowToolCall: boolean;

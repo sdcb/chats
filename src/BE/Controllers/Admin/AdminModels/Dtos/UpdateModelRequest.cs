@@ -44,6 +44,9 @@ public record UpdateModelRequest
     [JsonPropertyName("allowVision")]
     public required bool AllowVision { get; init; }
 
+    [JsonPropertyName("supportsVisionLink")]
+    public required bool SupportsVisionLink { get; init; }
+
     [JsonPropertyName("allowStreaming")]
     public required bool AllowStreaming { get; init; }
 
@@ -103,6 +106,7 @@ public record UpdateModelRequest
         cm.DeploymentName = DeploymentName;
         cm.AllowSearch = AllowSearch;
         cm.AllowVision = AllowVision;
+        cm.SupportsVisionLink = SupportsVisionLink;
         cm.AllowStreaming = AllowStreaming;
         cm.AllowCodeExecution = AllowCodeExecution;
         cm.ReasoningEffortOptions = ReasoningEffortOptions.Length > 0 ? string.Join(',', ReasoningEffortOptions) : null;

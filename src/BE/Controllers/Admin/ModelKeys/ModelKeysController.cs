@@ -225,6 +225,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
                         IsLegacy = existingModel.IsLegacy,
                         ThinkTagParserEnabled = existingModel.ThinkTagParserEnabled,
                         MaxThinkingBudget = existingModel.MaxThinkingBudget,
+                        SupportsVisionLink = existingModel.SupportsVisionLink,
                     };
                 }
                 

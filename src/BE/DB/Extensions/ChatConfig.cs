@@ -140,6 +140,15 @@ public partial class ChatConfig
             }
         }
 
+        // 9. ThinkingBudget (int?): 先写存在标志，再写 4 字节 int（如有值）
+        flagBuffer[0] = (byte)(ThinkingBudget.HasValue ? 1 : 0);
+        AppendField(flagBuffer, withSeparator: false);
+        if (ThinkingBudget.HasValue)
+        {
+            BitConverter.TryWriteBytes(intBuffer, ThinkingBudget.Value);
+            AppendField(intBuffer);
+        }
+
         // 计算 SHA256 哈希，取前 8 字节转换为 long 类型
         byte[] fullHash = incrementalHash.GetHashAndReset();
         long hashCode = BinaryPrimitives.ReadInt64LittleEndian(fullHash);
