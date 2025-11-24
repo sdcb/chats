@@ -20,9 +20,14 @@ public class ImageGenerationService : ChatService
 {
     protected virtual ImageClient CreateImageGenerationAPI(Model model, PipelinePolicy[] perCallPolicies)
     {
-        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model.ModelKey, perCallPolicies);
+        OpenAIClient api = CreateOpenAIClient(model.ModelKey, perCallPolicies);
         ImageClient cc = api.GetImageClient(model.DeploymentName);
         return cc;
+    }
+
+    protected virtual OpenAIClient CreateOpenAIClient(ModelKey modelKey, params PipelinePolicy[] perCallPolicies)
+    {
+        return OpenAIHelper.BuildOpenAIClient(modelKey, perCallPolicies);
     }
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)

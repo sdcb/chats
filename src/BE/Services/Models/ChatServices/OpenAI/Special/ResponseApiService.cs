@@ -4,7 +4,9 @@ using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
 using OpenAI;
 using OpenAI.Chat;
+using OpenAI.Models;
 using OpenAI.Responses;
+using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Diagnostics;
 using System.Reflection;
@@ -16,9 +18,14 @@ public class ResponseApiService(ILogger<ResponseApiService> logger) : ChatServic
 {
     protected virtual OpenAIResponseClient CreateResponseAPI(Model model, PipelinePolicy[] pipelinePolicies)
     {
-        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(model.ModelKey, pipelinePolicies);
+        OpenAIClient api = CreateOpenAIClient(model.ModelKey, pipelinePolicies);
         OpenAIResponseClient cc = api.GetOpenAIResponseClient(model.DeploymentName);
         return cc;
+    }
+
+    protected virtual OpenAIClient CreateOpenAIClient(ModelKey modelKey, params PipelinePolicy[] perCallPolicies)
+    {
+        return OpenAIHelper.BuildOpenAIClient(modelKey, perCallPolicies);
     }
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -372,8 +379,12 @@ public class ResponseApiService(ILogger<ResponseApiService> logger) : ChatServic
         }
     }
 
-    public override Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
+    public override async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
     {
-        return new ChatCompletionService().ListModels(modelKey, cancellationToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
+
+        OpenAIClient api = CreateOpenAIClient(modelKey, []);
+        ClientResult<OpenAIModelCollection> result = await api.GetOpenAIModelClient().GetModelsAsync(cancellationToken);
+        return [.. result.Value.Select(m => m.Id)];
     }
 }

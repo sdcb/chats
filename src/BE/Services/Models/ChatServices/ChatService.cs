@@ -18,18 +18,11 @@ public abstract partial class ChatService : IDisposable
 {
     internal static Tokenizer Tokenizer { get; } = TiktokenTokenizer.CreateForEncoding("o200k_base");
 
-    protected static TimeSpan NetworkTimeout { get; } = TimeSpan.FromHours(24);
+    internal static TimeSpan NetworkTimeout { get; } = TimeSpan.FromHours(24);
 
     public abstract IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, CancellationToken cancellationToken);
 
-    public virtual async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
-
-        OpenAIClient api = ChatCompletionService.CreateOpenAIClient(modelKey, []);
-        ClientResult<OpenAIModelCollection> result = await api.GetOpenAIModelClient().GetModelsAsync(cancellationToken);
-        return [.. result.Value.Select(m => m.Id)];
-    }
+    public virtual Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken) => Task.FromResult(Array.Empty<string>());
 
     public virtual async Task<ChatSegment> Chat(ChatRequest request, CancellationToken cancellationToken)
     {

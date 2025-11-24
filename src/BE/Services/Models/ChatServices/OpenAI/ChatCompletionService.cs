@@ -21,37 +21,24 @@ public partial class ChatCompletionService : ChatService
         "image/webp",
     ];
 
-    protected virtual ChatClient CreateChatClient(Model model, PipelinePolicy[] perCallPolicies)
+    public override async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
+
+        OpenAIClient api = CreateOpenAIClient(modelKey, []);
+        ClientResult<OpenAIModelCollection> result = await api.GetOpenAIModelClient().GetModelsAsync(cancellationToken);
+        return [.. result.Value.Select(m => m.Id)];
+    }
+
+    protected virtual ChatClient CreateChatClient(Model model, params PipelinePolicy[] perCallPolicies)
     {
         OpenAIClient api = CreateOpenAIClient(model.ModelKey, perCallPolicies);
         return api.GetChatClient(model.DeploymentName);
     }
 
-    internal static OpenAIClient CreateOpenAIClient(ModelKey modelKey, PipelinePolicy[] perCallPolicies)
+    protected virtual OpenAIClient CreateOpenAIClient(ModelKey modelKey, params PipelinePolicy[] perCallPolicies)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
-
-        // Fallback logic: ModelKey.Host -> ModelProviderInfo.GetInitialHost
-        Uri? endpoint = !string.IsNullOrWhiteSpace(modelKey.Host)
-            ? new Uri(modelKey.Host)
-            : (ModelProviderInfo.GetInitialHost((DB.Enums.DBModelProvider)modelKey.ModelProviderId) switch
-            {
-                null => null,
-                var x => new Uri(x)
-            });
-
-        OpenAIClientOptions oaic = new()
-        {
-            Endpoint = endpoint,
-            NetworkTimeout = NetworkTimeout,
-            RetryPolicy = new ClientRetryPolicy(maxRetries: 0),
-        };
-        foreach (PipelinePolicy policy in perCallPolicies)
-        {
-            oaic.AddPolicy(policy, PipelinePosition.PerCall);
-        }
-        OpenAIClient api = new(new ApiKeyCredential(modelKey.Secret!), oaic);
-        return api;
+        return OpenAIHelper.BuildOpenAIClient(modelKey, perCallPolicies);
     }
 
     protected virtual ReadOnlySpan<byte> ReasoningEffortPropName => "$.reasoning_content"u8;

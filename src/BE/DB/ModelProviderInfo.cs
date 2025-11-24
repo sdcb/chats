@@ -91,7 +91,7 @@ public static class ModelProviderInfo
         [DBModelProvider.GithubModels] = new(
             DBModelProvider.GithubModels,
             "Github Models",
-            "https://models.inference.ai.azure.com",
+            "https://models.github.ai/inference",
             "ghp_yourkey"
         ),
         [DBModelProvider.GoogleAI] = new(

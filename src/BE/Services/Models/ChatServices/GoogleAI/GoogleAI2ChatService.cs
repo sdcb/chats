@@ -1,5 +1,6 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.DB.Enums;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Mscc.GenerativeAI;
 using OpenAI.Chat;
@@ -12,7 +13,7 @@ using Model = Chats.BE.DB.Model;
 
 namespace Chats.BE.Services.Models.ChatServices.GoogleAI;
 
-public class GoogleAI2ChatService : ChatService
+public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) : ChatService
 {
     private readonly List<SafetySetting> _safetySettings =
     [
@@ -300,5 +301,10 @@ public class GoogleAI2ChatService : ChatService
                 Required = jsonObject["required"]?.AsArray().Select(x => (string)x!).ToList(),
             };
         }
+    }
+
+    public override Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
+    {
+        return chatCompletionService.ListModels(modelKey, cancellationToken);
     }
 }

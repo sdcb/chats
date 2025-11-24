@@ -9,14 +9,14 @@ public class AzureAIFoundryChatService : ChatCompletionService
 {
     protected override ChatClient CreateChatClient(Model model, PipelinePolicy[] perCallPolicies)
     {
-        OpenAIClient api = CreateAzureAIFoundryOpenAIClient(model.ModelKey, perCallPolicies);
+        OpenAIClient api = CreateOpenAIClient(model.ModelKey, perCallPolicies);
         return api.GetChatClient(model.DeploymentName);
     }
 
-    private static OpenAIClient CreateAzureAIFoundryOpenAIClient(ModelKey modelKey, PipelinePolicy[] perCallPolicies)
+    protected override OpenAIClient CreateOpenAIClient(ModelKey modelKey, params PipelinePolicy[] perCallPolicies)
     {
         ModelKey transformedKey = CreateTransformedModelKey(modelKey);
-        return ChatCompletionService.CreateOpenAIClient(transformedKey, perCallPolicies);
+        return base.CreateOpenAIClient(transformedKey, perCallPolicies);
     }
 
     internal static ModelKey CreateTransformedModelKey(ModelKey modelKey)
