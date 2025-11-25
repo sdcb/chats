@@ -56,12 +56,11 @@ import { getUserPromptDetail } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
 // 文本框配置
- const TEXTAREA_LINE_HEIGHT = 24;
+const TEXTAREA_LINE_HEIGHT = 24;
 const TEXTAREA_MIN_ROWS = 3;
 const TEXTAREA_MAX_ROWS = 10;
 const TEXTAREA_MIN_HEIGHT = TEXTAREA_LINE_HEIGHT * TEXTAREA_MIN_ROWS; // 72px
 const TEXTAREA_MAX_HEIGHT = TEXTAREA_LINE_HEIGHT * TEXTAREA_MAX_ROWS; // 240px
-const TEXTAREA_ANIMATION_MS = 150; // 动画时长
 
 interface Props {
   onSend: (message: Message) => void;
