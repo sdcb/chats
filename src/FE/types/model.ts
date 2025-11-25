@@ -32,6 +32,8 @@ export type FEModelProvider = {
   id: number;
   name: string;
   icon: string;
+  allowCodeExecute?: boolean;
+  allowWebSearch?: boolean;
 };
 
 export const feModelProviders: FEModelProvider[] = [
@@ -45,6 +47,7 @@ export const feModelProviders: FEModelProvider[] = [
     id: DBModelProvider.HunYuan,
     name: 'Tencent Hunyuan',
     icon: '/logos/hunyuan.svg',
+    allowWebSearch: true,
   },
   { id: DBModelProvider.LingYi, name: '01.ai', icon: '/logos/lingyi.svg' },
   {
@@ -62,19 +65,30 @@ export const feModelProviders: FEModelProvider[] = [
     id: DBModelProvider.QianWen,
     name: 'DashScope',
     icon: '/logos/qianwen.svg',
+    allowWebSearch: true,
   },
   {
     id: DBModelProvider.Spark,
     name: 'Xunfei SparkDesk',
     icon: '/logos/spark.svg',
   },
-  { id: DBModelProvider.ZhiPuAI, name: 'Zhipu AI', icon: '/logos/zhipuai.svg' },
+  {
+    id: DBModelProvider.ZhiPuAI,
+    name: 'Zhipu AI',
+    icon: '/logos/zhipuai.svg',
+    allowWebSearch: true,
+  },
   {
     id: DBModelProvider.DeepSeek,
     name: 'DeepSeek',
     icon: '/logos/deepseek.svg',
   },
-  { id: DBModelProvider.X_AI, name: 'x.ai', icon: '/logos/xai.svg' },
+  {
+    id: DBModelProvider.X_AI,
+    name: 'x.ai',
+    icon: '/logos/xai.svg',
+    allowWebSearch: true,
+  },
   {
     id: DBModelProvider.GithubModels,
     name: 'Github Models',
@@ -84,6 +98,8 @@ export const feModelProviders: FEModelProvider[] = [
     id: DBModelProvider.GoogleAI,
     name: 'Google AI',
     icon: '/logos/google-ai.svg',
+    allowCodeExecute: true,
+    allowWebSearch: true,
   },
   { id: DBModelProvider.Ollama, name: 'Ollama', icon: '/logos/ollama.svg' },
   { id: DBModelProvider.MiniMax, name: 'MiniMax', icon: '/logos/minimax.svg' },
@@ -97,6 +113,7 @@ export const feModelProviders: FEModelProvider[] = [
     id: DBModelProvider.OpenRouter,
     name: 'OpenRouter',
     icon: '/logos/openrouter.svg',
+    allowWebSearch: true,
   },
   {
     id: DBModelProvider.TokenPony,
@@ -107,6 +124,7 @@ export const feModelProviders: FEModelProvider[] = [
     id: DBModelProvider.Anthropic,
     name: 'Anthropic',
     icon: '/logos/anthropic.svg',
+    allowWebSearch: true,
   },
 ];
 

@@ -506,6 +506,20 @@ const ModelModal = (props: IProps) => {
   // 监听 apiType 变化
   const apiType = form.watch('apiType');
   
+  // 监听 modelKeyId 变化，获取对应的 modelProviderId
+  const modelKeyId = form.watch('modelKeyId');
+  const currentModelProviderId = useMemo(() => {
+    if (isEditMode && selected) {
+      return selected.modelProviderId;
+    }
+    const keyId = parseInt(modelKeyId);
+    if (!isNaN(keyId)) {
+      const modelKey = modelKeys.find(mk => mk.id === keyId);
+      return modelKey?.modelProviderId;
+    }
+    return undefined;
+  }, [isEditMode, selected, modelKeyId, modelKeys]);
+  
   // 当 apiType 变化时，设置合理的默认值
   useEffect(() => {
     if (!isOpen) return;
@@ -720,7 +734,7 @@ const ModelModal = (props: IProps) => {
               
               {/* ========== 3. API 类型特定配置 ========== */}
               {(apiType === 0 || apiType === 1 || apiType === 3) && (
-                <ChatResponseConfig control={form.control} setValue={form.setValue} watch={form.watch} apiType={apiType} />
+                <ChatResponseConfig control={form.control} setValue={form.setValue} watch={form.watch} apiType={apiType} modelProviderId={currentModelProviderId} />
               )}
               
               {apiType === 2 && (

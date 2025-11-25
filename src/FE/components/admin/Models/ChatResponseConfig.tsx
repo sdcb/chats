@@ -9,21 +9,30 @@ import { Input } from '@/components/ui/input';
 import Tips from '@/components/Tips/Tips';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { feModelProviders } from '@/types/model';
 
 interface ChatResponseConfigProps {
   control: Control<any>;
   setValue: UseFormSetValue<any>;
   watch: UseFormWatch<any>;
   apiType: number; // 0: ChatCompletion, 1: Response, 3: AnthropicMessages
+  modelProviderId?: number;
 }
 
 /**
  * Chat/Response/AnthropicMessages API 配置组件 (apiType=0/1/3)
  */
-const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setValue, watch, apiType }) => {
+const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setValue, watch, apiType, modelProviderId }) => {
   const { t } = useTranslation();
   const maxResponseTokens = watch('maxResponseTokens');
   const allowVision = watch('allowVision');
+
+  // 根据 modelProviderId 获取是否支持 WebSearch 和 CodeExecute
+  const provider = feModelProviders.find(p => p.id === modelProviderId);
+  const providerCapabilities = {
+    allowWebSearch: provider?.allowWebSearch ?? false,
+    allowCodeExecute: provider?.allowCodeExecute ?? false,
+  };
 
   return (
     <div className="space-y-4">
@@ -56,18 +65,34 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
               )}
             />
           )}
-          <FormField
-            control={control}
-            name="allowSearch"
-            render={({ field }) => (
-              <LabelSwitch
-                checked={field.value}
-                onCheckedChange={field.onChange}
-                label={t('Allow Search')!}
-                tooltip={t("Enables the model provider's built-in internet search capability (e.g., Qwen, Gemini, OpenRouter). This indicates the model possesses this tool and the system will invoke it. It is NOT a system-provided search tool.")}
-              />
-            )}
-          />
+          {providerCapabilities.allowWebSearch && (
+            <FormField
+              control={control}
+              name="allowSearch"
+              render={({ field }) => (
+                <LabelSwitch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  label={t('Allow Search')!}
+                  tooltip={t("Enables the model provider's built-in internet search capability (e.g., Qwen, Gemini, OpenRouter). This indicates the model possesses this tool and the system will invoke it. It is NOT a system-provided search tool.")}
+                />
+              )}
+            />
+          )}
+          {providerCapabilities.allowCodeExecute && (
+            <FormField
+              control={control}
+              name="allowCodeExecution"
+              render={({ field }) => (
+                <LabelSwitch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  label={t('Allow Code Execution')!}
+                  tooltip={t("Enables the model provider's built-in code execution capability (e.g., Gemini). It is NOT a system-provided tool.")}
+                />
+              )}
+            />
+          )}
           <FormField
             control={control}
             name="allowStreaming"
@@ -77,18 +102,6 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                 onCheckedChange={field.onChange}
                 label={t('Allow Streaming')!}
                 tooltip={t('Allows the model to stream responses token by token. Usually enabled by default.')}
-              />
-            )}
-          />
-          <FormField
-            control={control}
-            name="allowCodeExecution"
-            render={({ field }) => (
-              <LabelSwitch
-                checked={field.value}
-                onCheckedChange={field.onChange}
-                label={t('Allow Code Execution')!}
-                tooltip={t("Enables the model provider's built-in code execution capability (e.g., Gemini). It is NOT a system-provided tool.")}
               />
             )}
           />
@@ -104,18 +117,20 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
               />
             )}
           />
-          <FormField
-            control={control}
-            name="thinkTagParserEnabled"
-            render={({ field }) => (
-              <LabelSwitch
-                checked={field.value}
-                onCheckedChange={field.onChange}
-                label={t('<think> Tag Parser Enabled')!}
-                tooltip={t("Previously, many DeepSeek models returned thinking content mixed with non-thinking content using <think>...</think> tags. Enabling this parser extracts the thinking content into a <ThinkingMessage> for a better user experience. This also affects the API response, outputting via 'reasoning_content' instead of direct output. While many providers now handle this natively, this option is retained for exceptions.")}
-              />
-            )}
-          />
+          {apiType === 0 && (
+            <FormField
+              control={control}
+              name="thinkTagParserEnabled"
+              render={({ field }) => (
+                <LabelSwitch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  label={t('<think> Tag Parser Enabled')!}
+                  tooltip={t("Previously, many DeepSeek models returned thinking content mixed with non-thinking content using <think>...</think> tags. Enabling this parser extracts the thinking content into a <ThinkingMessage> for a better user experience. This also affects the API response, outputting via 'reasoning_content' instead of direct output. While many providers now handle this natively, this option is retained for exceptions.")}
+                />
+              )}
+            />
+          )}
           {apiType === 1 && (
             <FormField
               control={control}
