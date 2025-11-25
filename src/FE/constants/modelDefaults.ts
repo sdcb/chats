@@ -32,8 +32,6 @@ const DEFAULT_CHAT_MODEL_CONFIG: Partial<UpdateModelDto> = {
   useAsyncApi: false,
   useMaxCompletionTokens: false,
   isLegacy: false,
-  inputTokenPrice1M: 0,
-  outputTokenPrice1M: 0,
 };
 
 /**
@@ -58,8 +56,6 @@ const DEFAULT_RESPONSE_MODEL_CONFIG: Partial<UpdateModelDto> = {
   useAsyncApi: false,
   useMaxCompletionTokens: true,
   isLegacy: false,
-  inputTokenPrice1M: 0,
-  outputTokenPrice1M: 0,
 };
 
 /**
@@ -85,8 +81,6 @@ const DEFAULT_ANTHROPIC_MESSAGES_CONFIG: Partial<UpdateModelDto> = {
   useAsyncApi: false,
   useMaxCompletionTokens: false,
   isLegacy: false,
-  inputTokenPrice1M: 0,
-  outputTokenPrice1M: 0,
 };
 
 /**
@@ -111,8 +105,6 @@ const DEFAULT_IMAGE_MODEL_CONFIG: Partial<UpdateModelDto> = {
   useAsyncApi: false,
   useMaxCompletionTokens: false,
   isLegacy: false,
-  inputTokenPrice1M: 0,
-  outputTokenPrice1M: 0,
 };
 
 /**
