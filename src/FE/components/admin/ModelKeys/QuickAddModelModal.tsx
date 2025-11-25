@@ -136,6 +136,7 @@ const QuickAddModelModal = (props: IProps) => {
       enabled: true,
       inputTokenPrice1M: 0,
       outputTokenPrice1M: 0,
+      supportsVisionLink: false,
       ...defaultConfig,
     } as UpdateModelDto;
     
@@ -171,6 +172,7 @@ const QuickAddModelModal = (props: IProps) => {
       enabled: true,
       inputTokenPrice1M: 0,
       outputTokenPrice1M: 0,
+      supportsVisionLink: false,
       ...defaultConfig,
     } as UpdateModelDto;
     
