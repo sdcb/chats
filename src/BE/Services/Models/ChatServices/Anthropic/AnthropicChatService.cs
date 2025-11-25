@@ -21,9 +21,26 @@ public class AnthropicChatService : ChatService
         int toolCallIndex = -1;
         await foreach (RawMessageStreamEvent stream in anthropicClient.Messages.CreateStreaming(message, cancellationToken))
         {
-            if (stream.TryPickStart(out RawMessageStartEvent? start))
+            string? type = stream.Json.GetProperty("type").GetString();
+            if (type == "message_start")
             {
-                yield return ChatSegment.FromUsageOnly((int)start.Message.Usage.InputTokens, (int)start.Message.Usage.OutputTokens);
+                if (stream.TryPickStart(out RawMessageStartEvent? start))
+                {
+                    yield return ExtractUsageFromStart(start);
+                }
+                else
+                {
+                    RawMessageStartEvent? start2 = stream.Json.Deserialize<RawMessageStartEvent>();
+                    if (start2 != null)
+                    {
+                        yield return ExtractUsageFromStart(start2);
+                    }
+                }
+
+                static ChatSegment ExtractUsageFromStart(RawMessageStartEvent start)
+                {
+                    return ChatSegment.FromUsageOnly((int)start.Message.Usage.InputTokens, (int)start.Message.Usage.OutputTokens);
+                }
             }
             else if (stream.TryPickContentBlockStart(out RawContentBlockStartEvent? contentStart))
             {
@@ -220,7 +237,7 @@ public class AnthropicChatService : ChatService
             [
                 .. request.Tools.Select(ConvertTool),
                 .. request.ChatConfig.WebSearchEnabled ? [new ToolUnion(new WebSearchTool20250305())] : Array.Empty<ToolUnion>(),
-            ]
+            ],
         };
 
         static ToolUnion ConvertTool(ChatTool tool)
