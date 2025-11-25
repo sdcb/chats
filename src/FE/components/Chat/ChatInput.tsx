@@ -687,8 +687,8 @@ const ChatInput = ({
           </div>
         </div>
       ) : (
-        <div className="absolute bottom-0 left-0 w-full border-transparent bg-background">
-          <div className="absolute right-2 md:right-4 -top-8 flex gap-1 md:gap-2 items-center z-10">
+        <div className="absolute bottom-0 left-0 w-full h-0 border-transparent bg-background overflow-visible">
+          <div className="absolute right-2 md:right-4 bottom-0 flex gap-1 md:gap-2 items-center z-10">
             {/* 滚动到顶部按钮 */}
             {showScrollToTopButton && (
               <Tips
