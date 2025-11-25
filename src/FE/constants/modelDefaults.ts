@@ -68,6 +68,7 @@ const DEFAULT_RESPONSE_MODEL_CONFIG: Partial<UpdateModelDto> = {
  */
 const DEFAULT_ANTHROPIC_MESSAGES_CONFIG: Partial<UpdateModelDto> = {
   allowVision: true,
+  supportsVisionLink: true,
   allowSearch: true,
   allowStreaming: true,
   allowCodeExecution: false,
