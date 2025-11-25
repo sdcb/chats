@@ -131,9 +131,10 @@ public class Test2ChatService : ChatService
         }
     }
 
+    internal const string ModelName = "test-model";
     public override Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
     {
-        return Task.FromResult(new[] { "test-model" });
+        return Task.FromResult(new[] { ModelName });
     }
 
     internal static IEnumerable<string> UnicodeCharacterSplit(string input)

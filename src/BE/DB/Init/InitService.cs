@@ -1,6 +1,7 @@
 ﻿using Chats.BE.DB.Enums;
 using Chats.BE.Services;
 using Chats.BE.Services.Configs;
+using Chats.BE.Services.Models.ChatServices.Test;
 using System.Text.Json;
 
 namespace Chats.BE.DB.Init;
@@ -32,10 +33,10 @@ public class InitService(IServiceScopeFactory scopeFactory)
             Name = "Hello-World Model",
             UpdatedAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,
-            DeploymentName = "hello-world",
-            ReasoningEffortOptions = "",
-            SupportedImageSizes = "",
+            DeploymentName = Test2ChatService.ModelName,
             AllowStreaming = true, 
+            ContextWindow = 64000,
+            MaxResponseTokens = 16000,
         };
         ModelKey modelKey = new()
         {
