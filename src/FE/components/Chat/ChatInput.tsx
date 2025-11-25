@@ -55,12 +55,13 @@ import { defaultFileConfig } from '@/apis/adminApis';
 import { getUserPromptDetail } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
-// 文本框行高配置
-const TEXTAREA_LINE_HEIGHT = 24; // 每行高度 (px)
-const TEXTAREA_MIN_ROWS = 3; // 最小行数
-const TEXTAREA_MAX_ROWS = 10; // 最大行数
+// 文本框配置
+ const TEXTAREA_LINE_HEIGHT = 24;
+const TEXTAREA_MIN_ROWS = 3;
+const TEXTAREA_MAX_ROWS = 10;
 const TEXTAREA_MIN_HEIGHT = TEXTAREA_LINE_HEIGHT * TEXTAREA_MIN_ROWS; // 72px
 const TEXTAREA_MAX_HEIGHT = TEXTAREA_LINE_HEIGHT * TEXTAREA_MAX_ROWS; // 240px
+const TEXTAREA_ANIMATION_MS = 150; // 动画时长
 
 interface Props {
   onSend: (message: Message) => void;
@@ -107,6 +108,7 @@ const ChatInput = ({
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isFullWriting, setIsFullWriting] = useState(false);
   const [isCollapsedByChat, setIsCollapsedByChat] = useState(false);
+  const [textareaHeight, setTextareaHeight] = useState<number | 'full'>(TEXTAREA_MIN_HEIGHT);
 
   // 使用发送模式 hook (确保 hook 在组件顶层调用)
   const { sendMode } = useSendMode();
@@ -126,16 +128,26 @@ const ChatInput = ({
     }
   }, []);
 
+  // 计算内容所需高度
+  const getContentHeight = useCallback(() => {
+    if (!textareaRef.current) return TEXTAREA_MIN_HEIGHT;
+    const el = textareaRef.current;
+    const original = el.style.height;
+    el.style.height = 'auto';
+    const height = Math.min(Math.max(el.scrollHeight, TEXTAREA_MIN_HEIGHT), TEXTAREA_MAX_HEIGHT);
+    el.style.height = original;
+    return height;
+  }, []);
+
+  // 非全屏模式下，根据内容更新高度
   useEffect(() => {
     if (isFullWriting) return;
-    if (textareaRef && textareaRef.current) {
-      textareaRef.current.style.height = 'inherit';
-      textareaRef.current.style.height = `${textareaRef.current?.scrollHeight}px`;
-      textareaRef.current.style.overflow = `${
-        textareaRef?.current?.scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden'
-      }`;
+    setTextareaHeight(getContentHeight());
+    if (textareaRef.current) {
+      textareaRef.current.style.overflow = 
+        textareaRef.current.scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden';
     }
-  }, [contentText, contentFiles, isFullWriting]);
+  }, [contentText, contentFiles, isFullWriting, getContentHeight]);
 
   // 监听聊天状态变化，实现自动收起/展开抽屉
   useEffect(() => {
@@ -278,22 +290,19 @@ const ChatInput = ({
   };
 
   const handleFullWriting = (value: boolean) => {
-    if (!textareaRef.current) return;
     if (value) {
-      // 全屏模式 - 工具栏仍显示但只有退出按钮，减去工具栏高度(~76px) + 容器边距(~32px) = ~108px
-      textareaRef.current.style.minHeight = 'calc(100vh - 108px)';
-      textareaRef.current.style.maxHeight = 'calc(100vh - 108px)';
-      textareaRef.current.style.height = 'calc(100vh - 108px)';
-      textareaRef.current.style.overflow = 'auto';
-    } else {
-      // 普通模式
-      textareaRef.current.style.minHeight = `${TEXTAREA_MIN_HEIGHT}px`;
-      textareaRef.current.style.maxHeight = `${TEXTAREA_MAX_HEIGHT}px`;
-      textareaRef.current.style.height = `${TEXTAREA_MIN_HEIGHT}px`;
-      textareaRef.current.style.overflow = 'hidden';
-      textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+      setIsFullWriting(true);
+      setTextareaHeight('full');
+    } else if (textareaRef.current) {
+      // 退出全屏：先设置为当前像素高度，然后动画到目标高度
+      const fullHeight = textareaRef.current.offsetHeight;
+      const targetHeight = getContentHeight();
+      setTextareaHeight(fullHeight);
+      setIsFullWriting(false);
+      requestAnimationFrame(() => {
+        setTextareaHeight(targetHeight);
+      });
     }
-    setIsFullWriting(value);
   };
 
   const parseVariables = (content: string) => {
@@ -603,11 +612,13 @@ const ChatInput = ({
               <div className="relative w-full">
                 <Textarea
                   ref={textareaRef}
-                  className="m-0 w-full resize-none border-none outline-none rounded-md bg-transparent leading-6"
-                  style={{
-                    bottom: `${textareaRef?.current?.scrollHeight}px`,
-                    minHeight: `${TEXTAREA_MIN_HEIGHT}px`,
-                    maxHeight: `${TEXTAREA_MAX_HEIGHT}px`,
+                  className={cn(
+                    'm-0 w-full resize-none border-none outline-none rounded-md bg-transparent leading-6',
+                    `transition-[height] duration-150 ease-out`,
+                    isFullWriting && 'overflow-auto'
+                  )}
+                  style={{ 
+                    height: textareaHeight === 'full' ? 'calc(100vh - 108px)' : `${textareaHeight}px` 
                   }}
                   placeholder={
                     t('Type a message or type "/" to select a prompt...') || ''
