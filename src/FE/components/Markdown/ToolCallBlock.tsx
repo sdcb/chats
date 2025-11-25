@@ -18,7 +18,10 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
     const { t } = useTranslation();
     const [isParamsCopied, setIsParamsCopied] = useState<boolean>(false);
     const [isResponseCopied, setIsResponseCopied] = useState<boolean>(false);
-    const [isOpen, setIsOpen] = useState<boolean>(true);
+    // 计算 finished 状态：有 toolResponse 或者 聊天状态不是 Chatting (即已结束或失败)
+    const finished = !!toolResponse || (chatStatus !== ChatSpanStatus.Chatting);
+
+    const [isOpen, setIsOpen] = useState<boolean>(!finished);
     const [isManuallyToggled, setIsManuallyToggled] = useState<boolean>(false);
     const headerMeasureRef = useRef<HTMLDivElement>(null);
     const [collapsedWidth, setCollapsedWidth] = useState<number | null>(null);
@@ -39,21 +42,11 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         return () => observer.disconnect();
     }, []);
 
+    // 自动开合逻辑（不覆盖用户手动动作）- 仅依赖 finished，类似 ThinkingMessage
     useEffect(() => {
         if (isManuallyToggled) return;
-        if (toolResponse) {
-            setIsOpen(false);
-            return;
-        }
-        if (chatStatus === ChatSpanStatus.Chatting) {
-            setIsOpen(true);
-        } else if (
-            chatStatus === ChatSpanStatus.None ||
-            chatStatus === ChatSpanStatus.Failed
-        ) {
-            setIsOpen(false);
-        }
-    }, [chatStatus, toolResponse, isManuallyToggled]);
+        setIsOpen(!finished);
+    }, [finished, isManuallyToggled]);
 
     // 检查是否应该只显示code，并返回code内容
     const getCodeIfAvailable = (): string | null => {
