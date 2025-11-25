@@ -68,7 +68,7 @@ const DEFAULT_RESPONSE_MODEL_CONFIG: Partial<UpdateModelDto> = {
  */
 const DEFAULT_ANTHROPIC_MESSAGES_CONFIG: Partial<UpdateModelDto> = {
   allowVision: true,
-  allowSearch: false,
+  allowSearch: true,
   allowStreaming: true,
   allowCodeExecution: false,
   allowToolCall: true,
@@ -76,8 +76,8 @@ const DEFAULT_ANTHROPIC_MESSAGES_CONFIG: Partial<UpdateModelDto> = {
   minTemperature: 0.0,
   maxTemperature: 2.0,
   contextWindow: 200000,
-  maxResponseTokens: 8192,
-  maxThinkingBudget: 8191, // 默认为 maxResponseTokens - 1
+  maxResponseTokens: 32000,
+  maxThinkingBudget: 31999, // 默认为 maxResponseTokens - 1
   reasoningEffortOptions: [] as number[],
   supportedImageSizes: [] as string[],
   apiType: ApiType.AnthropicMessages,
