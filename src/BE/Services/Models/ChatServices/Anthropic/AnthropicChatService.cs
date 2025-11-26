@@ -68,7 +68,7 @@ public class AnthropicChatService : ChatService
                 }
                 else if (contentStart.ContentBlock.Value is WebSearchToolResultBlock toolResult)
                 {
-                    string response = toolResult.Content.Json.ToString();
+                    string response = RemoveEncryptedContent(toolResult.Content.Json);
                     yield return ChatSegment.FromToolCallResponse(toolResult.ToolUseID, response);
                 }
                 else if (contentStart.ContentBlock.Value is TextBlock textBlock)
@@ -150,6 +150,39 @@ public class AnthropicChatService : ChatService
                 Console.WriteLine($"Unknown stream event: {stream}");
             }
         }
+    }
+
+    /// <summary>
+    /// Removes the encrypted_content field from web search results as it's very long,
+    /// cannot be understood by the model, and wastes storage/bandwidth.
+    /// </summary>
+    private static string RemoveEncryptedContent(JsonElement json)
+    {
+        if (json.ValueKind == JsonValueKind.Array)
+        {
+            JsonArray results = [];
+            foreach (JsonElement item in json.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.Object)
+                {
+                    JsonObject obj = [];
+                    foreach (JsonProperty prop in item.EnumerateObject())
+                    {
+                        if (prop.Name != "encrypted_content")
+                        {
+                            obj[prop.Name] = JsonNode.Parse(prop.Value.GetRawText());
+                        }
+                    }
+                    results.Add(obj);
+                }
+                else
+                {
+                    results.Add(JsonNode.Parse(item.GetRawText()));
+                }
+            }
+            return results.ToJsonString(JSON.JsonSerializerOptions);
+        }
+        return json.ToString();
     }
 
     protected virtual AnthropicClient CreateAnthropicClient(ModelKey modelKey)
