@@ -8,6 +8,7 @@ public static class AnthropicSegmentExtensions
 {
     /// <summary>
     /// Converts DBFinishReason to Anthropic stop_reason
+    /// Anthropic supports: end_turn, max_tokens, stop_sequence, tool_use, pause_turn, refusal
     /// </summary>
     public static string? ToAnthropicStopReason(this DBFinishReason finishReason)
     {
@@ -15,8 +16,8 @@ public static class AnthropicSegmentExtensions
         {
             DBFinishReason.Stop or DBFinishReason.Success => "end_turn",
             DBFinishReason.Length => "max_tokens",
-            DBFinishReason.ToolCalls => "tool_use",
-            DBFinishReason.ContentFilter => "end_turn", // Anthropic doesn't have content_filter
+            DBFinishReason.ToolCalls or DBFinishReason.FunctionCall => "tool_use",
+            DBFinishReason.ContentFilter => "refusal",
             _ => "end_turn"
         };
     }
