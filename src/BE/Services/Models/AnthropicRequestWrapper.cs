@@ -13,7 +13,7 @@ public class AnthropicRequestWrapper(JsonObject json)
 
     public int? MaxTokens => (int?)json["max_tokens"];
 
-    public string? System => (string?)json["system"];
+    public string? System => ParseSystemPrompt();
 
     public float? Temperature => (float?)json["temperature"];
 
@@ -145,7 +145,7 @@ public class AnthropicRequestWrapper(JsonObject json)
         return steps;
     }
 
-    private List<StepContent> ParseContent(JsonNode content, DBChatRole role)
+    private static List<StepContent> ParseContent(JsonNode content, DBChatRole role)
     {
         List<StepContent> stepContents = [];
 
@@ -265,6 +265,43 @@ public class AnthropicRequestWrapper(JsonObject json)
             return (string?)node["text"];
         }
         return node.ToJsonString();
+    }
+
+    /// <summary>
+    /// Parses system prompt which can be a string or an array of content blocks
+    /// </summary>
+    private string? ParseSystemPrompt()
+    {
+        JsonNode? systemNode = json["system"];
+        if (systemNode == null) return null;
+
+        // Case 1: Simple string
+        if (systemNode is JsonValue stringValue && stringValue.TryGetValue<string>(out string? text))
+        {
+            return text;
+        }
+
+        // Case 2: Array of content blocks [{"type": "text", "text": "..."}]
+        if (systemNode is JsonArray systemArray)
+        {
+            List<string> parts = [];
+            foreach (JsonNode? block in systemArray)
+            {
+                if (block == null) continue;
+                string? type = (string?)block["type"];
+                if (type == "text")
+                {
+                    string? blockText = (string?)block["text"];
+                    if (!string.IsNullOrEmpty(blockText))
+                    {
+                        parts.Add(blockText);
+                    }
+                }
+            }
+            return parts.Count > 0 ? string.Join("\n\n", parts) : null;
+        }
+
+        return null;
     }
 
     private List<ChatTool> ParseTools()
