@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using System.Net.ServerSentEvents;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -8,7 +8,7 @@ using Xunit.Abstractions;
 namespace Chats.BE.ApiTest;
 
 /// <summary>
-/// 图片生成测试
+/// 图片生成测试 - 使用 OpenAI 兼容的 v1/images API
 /// </summary>
 public class ImageGenerationTests : IClassFixture<ApiTestFixture>
 {
@@ -27,30 +27,34 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
         };
     }
 
+    /// <summary>
+    /// 测试非流式图片生成
+    /// 验证点：
+    /// - 返回状态码 200
+    /// - 响应包含 created, data, usage 字段
+    /// - data 数组中包含 b64_json 图片数据
+    /// - usage 包含 input_tokens, output_tokens, total_tokens
+    /// </summary>
     [Theory]
     [MemberData(nameof(GetImageGenerationModels))]
     public async Task ImageGeneration_NonStreaming_ShouldReturnImage(string model)
     {
-        _output.WriteLine($"Testing: Image Generation (model: {model}, stream: false)");
+        _output.WriteLine($"Testing: v1/images/generations (model: {model}, stream: false)");
 
         // Arrange
-        // 注意: reasoning_effort 在图片生成中会被映射为 quality 参数
-        // low -> quality: "low", medium -> quality: "medium", high -> quality: "high"
         var request = new
         {
+            prompt = "Generate an image of a cute cat",
             model,
-            messages = new[]
-            {
-                new { role = "user", content = "Generate an image of a cute cat" }
-            },
-            stream = false,
-            reasoning_effort = "low"  // 使用 low 来加快生成速度
+            n = 1,
+            quality = "low",  // 使用 low 来加快生成速度
+            size = "1024x1024"
         };
 
         // Act
         HttpResponseMessage response = await _fixture.Client.PostAsJsonAsync(
-            $"{_fixture.Config.OpenAICompatibleEndpoint}/chat/completions", 
-            request, 
+            $"{_fixture.Config.OpenAICompatibleEndpoint}/images/generations",
+            request,
             _jsonOptions);
 
         // Assert
@@ -60,110 +64,112 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
         Assert.NotNull(result);
 
         _output.WriteLine($"Status: {response.StatusCode}");
-        _output.WriteLine($"Full Response Keys: {string.Join(", ", result.Select(kv => kv.Key))}");
+        _output.WriteLine($"Response Keys: {string.Join(", ", result.Select(kv => kv.Key))}");
 
         // 输出完整响应结构但不包含过长的 base64 数据
         string debugResult = result.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
         if (debugResult.Length > 2000)
         {
-            _output.WriteLine($"Response (first 2000 chars): {debugResult.Substring(0, 2000)}...");
+            _output.WriteLine($"Response (first 2000 chars): {debugResult[..2000]}...");
         }
         else
         {
             _output.WriteLine($"Full Response: {debugResult}");
         }
-        
-        _output.WriteLine($"Model: {result["model"]}");
 
-        // 获取 choices[0].message
-        JsonNode? message = result["choices"]?[0]?["message"];
-        _output.WriteLine($"Message is null: {message == null}");
-        Assert.NotNull(message);
-        
-        // 图片在 segments 数组中，而不是 content
-        JsonNode? segments = message["segments"];
-        Assert.NotNull(segments);
-        _output.WriteLine($"Segments type: {segments.GetType().Name}");
-        
-        if (segments is JsonArray segmentsArray)
+        // 验证 created 字段
+        long? created = result["created"]?.GetValue<long>();
+        Assert.NotNull(created);
+        Assert.True(created > 0, "created should be a valid Unix timestamp");
+        _output.WriteLine($"Created: {created}");
+
+        // 验证 data 数组
+        JsonNode? data = result["data"];
+        Assert.NotNull(data);
+        Assert.True(data is JsonArray, "data should be an array");
+
+        JsonArray dataArray = (JsonArray)data;
+        Assert.True(dataArray.Count > 0, "data array should contain at least one image");
+        _output.WriteLine($"Data array length: {dataArray.Count}");
+
+        // 验证每个图片数据
+        foreach (JsonNode? item in dataArray)
         {
-            _output.WriteLine($"Segments array length: {segmentsArray.Count}");
-            bool hasImage = false;
-            
-            foreach (JsonNode? item in segmentsArray)
+            Assert.NotNull(item);
+            string? b64Json = item["b64_json"]?.GetValue<string>();
+            Assert.NotNull(b64Json);
+            Assert.NotEmpty(b64Json);
+            _output.WriteLine($"Image b64_json length: {b64Json.Length} characters");
+
+            // 可选：验证是否为有效的 base64
+            try
             {
-                if (item is JsonObject obj)
-                {
-                    string? type = obj["$type"]?.GetValue<string>();
-                    _output.WriteLine($"  Segment type: {type}");
-                    
-                    if (type == "base64")
-                    {
-                        hasImage = true;
-                        string? contentType = obj["contentType"]?.GetValue<string>();
-                        string? base64 = obj["base64"]?.GetValue<string>();
-                        
-                        Assert.NotNull(contentType);
-                        Assert.NotNull(base64);
-                        Assert.NotEmpty(base64);
-                        Assert.StartsWith("image/", contentType);
-                        
-                        _output.WriteLine($"  Image Content-Type: {contentType}");
-                        _output.WriteLine($"  Base64 length: {base64.Length} characters");
-                    }
-                }
+                byte[] imageBytes = Convert.FromBase64String(b64Json);
+                Assert.True(imageBytes.Length > 0, "Decoded image should have content");
+                _output.WriteLine($"Decoded image size: {imageBytes.Length} bytes");
             }
-            
-            Assert.True(hasImage, "Response should contain at least one base64 image in segments");
+            catch (FormatException)
+            {
+                Assert.Fail("b64_json should be valid base64 encoded data");
+            }
         }
 
-        // 验证 finish_reason (可能为空)
-        string? finishReason = result["choices"]?[0]?["finish_reason"]?.GetValue<string>();
-        _output.WriteLine($"Finish Reason: {finishReason ?? "(null)"}");
-
-        // 验证 usage - 非流式必须有 usage
+        // 验证 usage
         JsonNode? usage = result["usage"];
         Assert.NotNull(usage);
-        
-        int? promptTokens = usage["prompt_tokens"]?.GetValue<int>();
-        int? completionTokens = usage["completion_tokens"]?.GetValue<int>();
+
+        int? inputTokens = usage["input_tokens"]?.GetValue<int>();
+        int? outputTokens = usage["output_tokens"]?.GetValue<int>();
         int? totalTokens = usage["total_tokens"]?.GetValue<int>();
-        
-        Assert.NotNull(promptTokens);
-        Assert.NotNull(completionTokens);
+
+        Assert.NotNull(inputTokens);
+        Assert.NotNull(outputTokens);
         Assert.NotNull(totalTokens);
-        Assert.True(promptTokens > 0, "Prompt tokens should be greater than 0");
-        Assert.True(completionTokens > 0, "Completion tokens should be greater than 0");
-        Assert.Equal(promptTokens + completionTokens, totalTokens);
-        
-        _output.WriteLine($"Usage: prompt_tokens={promptTokens}, completion_tokens={completionTokens}, total_tokens={totalTokens}");
+        Assert.True(inputTokens > 0, "input_tokens should be greater than 0");
+        Assert.True(outputTokens > 0, "output_tokens should be greater than 0");
+        Assert.Equal(inputTokens + outputTokens, totalTokens);
+
+        _output.WriteLine($"Usage: input_tokens={inputTokens}, output_tokens={outputTokens}, total_tokens={totalTokens}");
+
+        // 验证可选字段
+        string? outputFormat = result["output_format"]?.GetValue<string>();
+        string? quality = result["quality"]?.GetValue<string>();
+        string? size = result["size"]?.GetValue<string>();
+        _output.WriteLine($"Optional fields: output_format={outputFormat}, quality={quality}, size={size}");
     }
 
+    /// <summary>
+    /// 测试流式图片生成
+    /// 验证点：
+    /// - 返回 SSE 流
+    /// - 包含 partial_image 事件（预览图）
+    /// - 包含 completed 事件（最终图片）
+    /// - completed 事件包含 usage 信息
+    /// </summary>
     [Theory]
     [MemberData(nameof(GetImageGenerationModels))]
     public async Task ImageGeneration_Streaming_ShouldReturnImage(string model)
     {
-        _output.WriteLine($"Testing: Image Generation (model: {model}, stream: true)");
+        _output.WriteLine($"Testing: v1/images/generations (model: {model}, stream: true)");
 
         // Arrange
-        // 注意: reasoning_effort 在图片生成中会被映射为 quality 参数
         var request = new
         {
+            prompt = "Generate an image of a beautiful sunset",
             model,
-            messages = new[]
-            {
-                new { role = "user", content = "Generate an image of a beautiful sunset" }
-            },
+            n = 1,
+            quality = "low",  // 使用 low 来加快生成速度
+            size = "1024x1024",
             stream = true,
-            reasoning_effort = "low"  // 使用 low 来加快生成速度
+            partial_images = 3
         };
 
         // Act
-        HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{_fixture.Config.OpenAICompatibleEndpoint}/chat/completions")
+        HttpRequestMessage requestMessage = new(HttpMethod.Post, $"{_fixture.Config.OpenAICompatibleEndpoint}/images/generations")
         {
             Content = JsonContent.Create(request, options: _jsonOptions)
         };
-        
+
         HttpResponseMessage response = await _fixture.Client.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead);
 
         // Assert
@@ -172,11 +178,10 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
         _output.WriteLine("Streaming response:");
 
         Stream sseStream = await response.Content.ReadAsStreamAsync();
-        int chunkCount = 0;
-        bool hasImageContent = false;
-        string? finishReason = null;
+        int partialImageCount = 0;
+        bool hasCompletedImage = false;
         JsonNode? finalUsage = null;
-        
+
         try
         {
             await foreach (SseItem<string> sse in SseParser.Create(sseStream).EnumerateAsync())
@@ -186,75 +191,80 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
                     _output.WriteLine("\n[DONE]");
                     break;
                 }
-                
+
                 if (!string.IsNullOrEmpty(sse.Data))
                 {
                     try
                     {
                         JsonObject? chunk = JsonSerializer.Deserialize<JsonObject>(sse.Data);
-                        JsonNode? delta = chunk?["choices"]?[0]?["delta"];
-                        
-                        // 检查 finish_reason
-                        JsonNode? currentFinishReason = chunk?["choices"]?[0]?["finish_reason"];
-                        if (currentFinishReason != null)
+                        Assert.NotNull(chunk);
+
+                        string? eventType = chunk["type"]?.GetValue<string>();
+                        _output.WriteLine($"Event type: {eventType}");
+
+                        if (eventType == "image_generation.partial_image")
                         {
-                            finishReason = currentFinishReason.GetValue<string>();
-                            _output.WriteLine($"Finish Reason: {finishReason}");
+                            // 验证 partial_image 事件
+                            partialImageCount++;
+                            int? partialImageIndex = chunk["partial_image_index"]?.GetValue<int>();
+                            string? b64Json = chunk["b64_json"]?.GetValue<string>();
+                            string? outputFormat = chunk["output_format"]?.GetValue<string>();
+
+                            Assert.NotNull(partialImageIndex);
+                            Assert.NotNull(b64Json);
+                            Assert.NotEmpty(b64Json);
+
+                            _output.WriteLine($"  Partial image #{partialImageCount}: index={partialImageIndex}, b64_json length={b64Json.Length}, format={outputFormat}");
                         }
-                        
-                        // 检查 usage - 流式的最后一个 chunk 应该包含 usage
-                        JsonNode? usage = chunk?["usage"];
-                        if (usage != null)
+                        else if (eventType == "image_generation.completed")
                         {
-                            finalUsage = usage;
-                            int? pt = usage["prompt_tokens"]?.GetValue<int>();
-                            int? ct = usage["completion_tokens"]?.GetValue<int>();
-                            int? tt = usage["total_tokens"]?.GetValue<int>();
-                            _output.WriteLine($"Usage: prompt_tokens={pt}, completion_tokens={ct}, total_tokens={tt}");
-                        }
-                        
-                        // 检查是否有图片内容
-                        if (delta?["image"] != null)
-                        {
-                            chunkCount++;
-                            JsonNode? image = delta["image"];
-                            
-                            if (image is JsonObject imageObj)
+                            // 验证 completed 事件
+                            hasCompletedImage = true;
+                            string? b64Json = chunk["b64_json"]?.GetValue<string>();
+                            string? outputFormat = chunk["output_format"]?.GetValue<string>();
+                            JsonNode? usage = chunk["usage"];
+
+                            Assert.NotNull(b64Json);
+                            Assert.NotEmpty(b64Json);
+
+                            _output.WriteLine($"  Completed image: b64_json length={b64Json.Length}, format={outputFormat}");
+
+                            // 验证 usage
+                            if (usage != null)
                             {
-                                string? type = imageObj["$type"]?.GetValue<string>();
-                                string? contentType = imageObj["contentType"]?.GetValue<string>();
-                                string? base64 = imageObj["base64"]?.GetValue<string>();
-                                
-                                // 支持 base64_preview (预览图) 和 base64 (最终图片)
-                                if ((type == "base64" || type == "base64_preview") && !string.IsNullOrEmpty(base64))
-                                {
-                                    if (type == "base64")
-                                    {
-                                        hasImageContent = true;
-                                        _output.WriteLine($"Chunk {chunkCount}: Received FINAL image (type={type}, contentType={contentType}, base64 length={base64.Length})");
-                                    }
-                                    else
-                                    {
-                                        _output.WriteLine($"Chunk {chunkCount}: Received preview image (type={type}, contentType={contentType}, base64 length={base64.Length})");
-                                    }
-                                }
+                                finalUsage = usage;
+                                int? inputTokens = usage["input_tokens"]?.GetValue<int>();
+                                int? outputTokens = usage["output_tokens"]?.GetValue<int>();
+                                int? totalTokens = usage["total_tokens"]?.GetValue<int>();
+                                _output.WriteLine($"  Usage: input_tokens={inputTokens}, output_tokens={outputTokens}, total_tokens={totalTokens}");
+                            }
+
+                            // 验证是否为有效的 base64
+                            try
+                            {
+                                byte[] imageBytes = Convert.FromBase64String(b64Json);
+                                Assert.True(imageBytes.Length > 0, "Decoded image should have content");
+                                _output.WriteLine($"  Decoded image size: {imageBytes.Length} bytes");
+                            }
+                            catch (FormatException)
+                            {
+                                Assert.Fail("b64_json should be valid base64 encoded data");
                             }
                         }
-                        
-                        // 检查文本内容
-                        if (delta?["content"] != null)
+                        else if (eventType == "error")
                         {
-                            string? content = delta["content"]?.GetValue<string>();
-                            if (!string.IsNullOrEmpty(content))
-                            {
-                                _output.WriteLine($"Chunk {chunkCount}: Text content: {content.Substring(0, Math.Min(50, content.Length))}...");
-                            }
+                            // 错误事件
+                            JsonNode? error = chunk["error"];
+                            string? errorMessage = error?["message"]?.GetValue<string>();
+                            string? errorCode = error?["code"]?.GetValue<string>();
+                            _output.WriteLine($"  Error: code={errorCode}, message={errorMessage}");
+                            Assert.Fail($"Received error event: {errorMessage}");
                         }
                     }
                     catch (JsonException ex)
                     {
                         _output.WriteLine($"Failed to parse SSE data: {ex.Message}");
-                        _output.WriteLine($"Data: {sse.Data.Substring(0, Math.Min(200, sse.Data.Length))}...");
+                        _output.WriteLine($"Data: {sse.Data[..Math.Min(200, sse.Data.Length)]}...");
                     }
                 }
             }
@@ -262,35 +272,164 @@ public class ImageGenerationTests : IClassFixture<ApiTestFixture>
         catch (Exception ex)
         {
             _output.WriteLine($"Stream error: {ex.GetType().Name}: {ex.Message}");
-            // 如果已经收到图片内容，即使连接提前结束也认为测试通过
-            if (!hasImageContent)
+            // 如果已经收到完成的图片内容，即使连接提前结束也认为测试通过
+            if (!hasCompletedImage)
             {
                 throw;
             }
-            _output.WriteLine("Stream ended prematurely but we already received image content, test passes");
+            _output.WriteLine("Stream ended prematurely but we already received completed image, test passes");
         }
 
-        Assert.True(hasImageContent, "Stream should contain at least one image chunk");
+        Assert.True(hasCompletedImage, "Stream should contain a completed image event");
+        _output.WriteLine($"Total partial images received: {partialImageCount}");
+
+        // 验证 usage
         Assert.NotNull(finalUsage);
-        
-        // 验证 usage 的值
-        int? promptTokens = finalUsage["prompt_tokens"]?.GetValue<int>();
-        int? completionTokens = finalUsage["completion_tokens"]?.GetValue<int>();
-        int? totalTokens = finalUsage["total_tokens"]?.GetValue<int>();
-        
-        Assert.NotNull(promptTokens);
-        Assert.NotNull(completionTokens);
-        Assert.NotNull(totalTokens);
-        Assert.True(promptTokens > 0, "Prompt tokens should be greater than 0");
-        Assert.True(completionTokens > 0, "Completion tokens should be greater than 0");
-        Assert.Equal(promptTokens + completionTokens, totalTokens);
-        
-        _output.WriteLine($"Total chunks received: {chunkCount}");
+        int? finalInputTokens = finalUsage["input_tokens"]?.GetValue<int>();
+        int? finalOutputTokens = finalUsage["output_tokens"]?.GetValue<int>();
+        int? finalTotalTokens = finalUsage["total_tokens"]?.GetValue<int>();
+
+        Assert.NotNull(finalInputTokens);
+        Assert.NotNull(finalOutputTokens);
+        Assert.NotNull(finalTotalTokens);
+        Assert.True(finalInputTokens > 0, "input_tokens should be greater than 0");
+        Assert.True(finalOutputTokens > 0, "output_tokens should be greater than 0");
+        Assert.Equal(finalInputTokens + finalOutputTokens, finalTotalTokens);
+    }
+
+    /// <summary>
+    /// 测试多张图片生成（n > 1）
+    /// 验证点：
+    /// - 当 n > 1 时，应返回多张图片
+    /// - data 数组长度应等于 n
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(GetImageGenerationModels))]
+    public async Task ImageGeneration_MultipleImages_ShouldReturnNImages(string model)
+    {
+        const int imageCount = 2;
+        _output.WriteLine($"Testing: v1/images/generations with n={imageCount} (model: {model})");
+
+        // Arrange
+        var request = new
+        {
+            prompt = "Generate an image of a mountain landscape",
+            model,
+            n = imageCount,
+            quality = "low",
+            size = "1024x1024"
+        };
+
+        // Act
+        HttpResponseMessage response = await _fixture.Client.PostAsJsonAsync(
+            $"{_fixture.Config.OpenAICompatibleEndpoint}/images/generations",
+            request,
+            _jsonOptions);
+
+        // Assert
+        await response.EnsureSuccessStatusCodeWithDetailsAsync();
+
+        JsonObject? result = await response.Content.ReadFromJsonAsync<JsonObject>();
+        Assert.NotNull(result);
+
+        _output.WriteLine($"Status: {response.StatusCode}");
+
+        // 验证 data 数组长度
+        JsonNode? data = result["data"];
+        Assert.NotNull(data);
+        Assert.True(data is JsonArray, "data should be an array");
+
+        JsonArray dataArray = (JsonArray)data;
+        Assert.Equal(imageCount, dataArray.Count);
+        _output.WriteLine($"Data array length: {dataArray.Count} (expected: {imageCount})");
+
+        // 验证每张图片
+        for (int i = 0; i < dataArray.Count; i++)
+        {
+            JsonNode? item = dataArray[i];
+            Assert.NotNull(item);
+            string? b64Json = item["b64_json"]?.GetValue<string>();
+            Assert.NotNull(b64Json);
+            Assert.NotEmpty(b64Json);
+            _output.WriteLine($"Image {i + 1}: b64_json length={b64Json.Length} characters");
+        }
+    }
+
+    /// <summary>
+    /// 测试错误情况：缺少 prompt
+    /// </summary>
+    [Fact]
+    public async Task ImageGeneration_MissingPrompt_ShouldReturnError()
+    {
+        string[] models = [.. _fixture.Config.Tests.ImageGenerationModels];
+        if (models.Length == 0)
+        {
+            _output.WriteLine("No image generation models configured, skipping test");
+            return;
+        }
+
+        string model = models[0];
+        _output.WriteLine($"Testing: v1/images/generations without prompt (model: {model})");
+
+        // Arrange - 故意不提供 prompt
+        var request = new
+        {
+            model,
+            n = 1
+        };
+
+        // Act
+        HttpResponseMessage response = await _fixture.Client.PostAsJsonAsync(
+            $"{_fixture.Config.OpenAICompatibleEndpoint}/images/generations",
+            request,
+            _jsonOptions);
+
+        // Assert - 应返回 400 Bad Request
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        _output.WriteLine($"Status: {response.StatusCode} (expected: BadRequest)");
+
+        string content = await response.Content.ReadAsStringAsync();
+        _output.WriteLine($"Response: {content}");
+
+        // 验证错误响应格式
+        JsonObject? errorResponse = JsonSerializer.Deserialize<JsonObject>(content);
+        Assert.NotNull(errorResponse);
+        Assert.NotNull(errorResponse["error"]);
+    }
+
+    /// <summary>
+    /// 测试错误情况：无效的模型
+    /// </summary>
+    [Fact]
+    public async Task ImageGeneration_InvalidModel_ShouldReturnError()
+    {
+        _output.WriteLine("Testing: v1/images/generations with invalid model");
+
+        // Arrange
+        var request = new
+        {
+            prompt = "Generate an image",
+            model = "non-existent-model-12345",
+            n = 1
+        };
+
+        // Act
+        HttpResponseMessage response = await _fixture.Client.PostAsJsonAsync(
+            $"{_fixture.Config.OpenAICompatibleEndpoint}/images/generations",
+            request,
+            _jsonOptions);
+
+        // Assert - 应返回 400 Bad Request
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        _output.WriteLine($"Status: {response.StatusCode} (expected: BadRequest)");
+
+        string content = await response.Content.ReadAsStringAsync();
+        _output.WriteLine($"Response: {content}");
     }
 
     public static IEnumerable<object[]> GetImageGenerationModels()
     {
-        ApiTestFixture fixture = new ApiTestFixture();
+        ApiTestFixture fixture = new();
         return fixture.Config.Tests.ImageGenerationModels.Select(m => new object[] { m });
     }
 }
