@@ -179,6 +179,26 @@ public class AnthropicChatService : ChatService
         return [.. result.Data.Select(x => x.ID)];
     }
 
+    public override async Task<int> CountTokenAsync(ChatRequest request, CancellationToken cancellationToken)
+    {
+        AnthropicClient anthropicClient = CreateAnthropicClient(request.ChatConfig.Model.ModelKey);
+        MessageCreateParams messageParams = ConvertOptions(request);
+
+        MessageCountTokensParams countParams = new()
+        {
+            Messages = messageParams.Messages,
+            Model = messageParams.Model,
+            System = request.ChatConfig.SystemPrompt is { } systemPrompt ? systemPrompt : null!,
+            Thinking = messageParams.Thinking,
+            Tools = messageParams.Tools != null
+                ? [.. messageParams.Tools.Select(x => new MessageCountTokensTool(x.Json))]
+                : null,
+        };
+
+        MessageTokensCount result = await anthropicClient.Messages.CountTokens(countParams, cancellationToken);
+        return (int)result.InputTokens;
+    }
+
     static MessageCreateParams ConvertOptions(ChatRequest request)
     {
         // Anthropic has a very strict policy on thinking blocks - they need pass back thinking AND signature together

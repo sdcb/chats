@@ -103,3 +103,9 @@ public record AnthropicUsage
     [JsonPropertyName("cache_read_input_tokens"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? CacheReadInputTokens { get; init; }
 }
+
+public record AnthropicCountTokenResponse
+{
+    [JsonPropertyName("input_tokens")]
+    public required int InputTokens { get; init; }
+}

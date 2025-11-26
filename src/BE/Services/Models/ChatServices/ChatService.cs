@@ -3,12 +3,9 @@ using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices;
-using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Microsoft.ML.Tokenizers;
 using OpenAI;
-using OpenAI.Models;
-using System.ClientModel;
 using System.Runtime.CompilerServices;
 using Tokenizer = Microsoft.ML.Tokenizers.Tokenizer;
 
@@ -23,6 +20,11 @@ public abstract partial class ChatService : IDisposable
     public abstract IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, CancellationToken cancellationToken);
 
     public virtual Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken) => Task.FromResult(Array.Empty<string>());
+
+    public virtual Task<int> CountTokenAsync(ChatRequest request, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(request.EstimatePromptTokens(Tokenizer));
+    }
 
     public virtual async Task<ChatSegment> Chat(ChatRequest request, CancellationToken cancellationToken)
     {
