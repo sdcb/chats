@@ -55,6 +55,9 @@ import { defaultFileConfig } from '@/apis/adminApis';
 import { getUserPromptDetail } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
+// 动画时长配置（与全屏动画一致）
+const ANIMATION_DURATION_MS = 200;
+
 // 文本框配置
 const TEXTAREA_LINE_HEIGHT = 24;
 const TEXTAREA_MIN_ROWS = 3;
@@ -108,6 +111,15 @@ const ChatInput = ({
   const [isFullWriting, setIsFullWriting] = useState(false);
   const [isCollapsedByChat, setIsCollapsedByChat] = useState(false);
   const [textareaHeight, setTextareaHeight] = useState<number | 'full'>(TEXTAREA_MIN_HEIGHT);
+  // 动画状态：
+  // 'idle' - 无动画
+  // 'pre-expanding' - 准备展开（ChatInput在屏幕外，按钮可见）
+  // 'expanding' - 展开中（ChatInput飞入，按钮飞出）
+  // 'pre-collapsing' - 准备收起（ChatInput可见，按钮在屏幕外）
+  // 'collapsing' - 收起中（ChatInput飞出，按钮飞入）
+  const [animationState, setAnimationState] = useState<'idle' | 'pre-expanding' | 'expanding' | 'pre-collapsing' | 'collapsing'>('idle');
+  // 用于控制实际渲染状态（动画结束后才真正隐藏）
+  const [renderExpanded, setRenderExpanded] = useState(showChatInput);
 
   // 使用发送模式 hook (确保 hook 在组件顶层调用)
   const { sendMode } = useSendMode();
@@ -155,7 +167,7 @@ const ChatInput = ({
     const prevStatus = prevChatStatusRef.current;
     const currentStatus = selectedChat.status;
 
-    // 从“非聊天” -> “聊天” 开始：标记本轮会话需要在结束时自动展开；如当前是展开，则先自动收起
+    // 从"非聊天" -> "聊天" 开始：标记本轮会话需要在结束时自动展开；如当前是展开，则先自动收起
     if (
       prevStatus !== ChatStatus.Chatting &&
       currentStatus === ChatStatus.Chatting
@@ -167,7 +179,7 @@ const ChatInput = ({
       }
     }
 
-    // 从“聊天” -> “非聊天”（完成/失败）结束：若本轮是因聊天自动收起，且期间未被用户修改，则自动展开
+    // 从"聊天" -> "非聊天"（完成/失败）结束：若本轮是因聊天自动收起，且期间未被用户修改，则自动展开
     if (
       prevStatus === ChatStatus.Chatting &&
       currentStatus !== ChatStatus.Chatting
@@ -182,6 +194,47 @@ const ChatInput = ({
     // 更新上一次的状态
     prevChatStatusRef.current = currentStatus;
   }, [selectedChat?.status, showChatInput, settingDispatch, isCollapsedByChat]);
+
+  // 监听 showChatInput 变化，触发动画
+  useEffect(() => {
+    let animationTimer: ReturnType<typeof setTimeout> | null = null;
+    let rafId: number | null = null;
+
+    if (showChatInput) {
+      // 展开：先设置 pre-expanding 状态，让元素在正确的初始位置渲染
+      setAnimationState('pre-expanding');
+      setRenderExpanded(true);
+      // 双重 rAF 确保 DOM 已经渲染了初始位置
+      rafId = requestAnimationFrame(() => {
+        rafId = requestAnimationFrame(() => {
+          setAnimationState('expanding');
+          // 动画结束后重置状态
+          animationTimer = setTimeout(() => {
+            setAnimationState('idle');
+          }, ANIMATION_DURATION_MS);
+        });
+      });
+    } else {
+      // 收起：先设置 pre-collapsing 状态，让按钮在屏幕外渲染
+      setAnimationState('pre-collapsing');
+      // 双重 rAF 确保 DOM 已经渲染了初始位置
+      rafId = requestAnimationFrame(() => {
+        rafId = requestAnimationFrame(() => {
+          setAnimationState('collapsing');
+          // 动画结束后隐藏 ChatInput
+          animationTimer = setTimeout(() => {
+            setRenderExpanded(false);
+            setAnimationState('idle');
+          }, ANIMATION_DURATION_MS);
+        });
+      });
+    }
+
+    return () => {
+      if (animationTimer) clearTimeout(animationTimer);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [showChatInput]);
 
   // 如果没有选中的聊天，不渲染ChatInput
   if (!selectedChat) {
@@ -410,13 +463,37 @@ const ChatInput = ({
     settingDispatch(setShowChatInput(!showChatInput));
   };
 
+  // 计算动画状态对应的 transform
+  // ChatInput:
+  //   - translateY(0): idle+展开, expanding(目标), pre-collapsing(起始)
+  //   - translateY(100%): idle+收起, pre-expanding(起始), collapsing(目标)
+  const inputTransform =
+    (animationState === 'idle' && showChatInput) ||
+    animationState === 'expanding' ||
+    animationState === 'pre-collapsing'
+      ? 'translateY(0)'
+      : 'translateY(100%)';
+
+  // 浮动按钮:
+  //   - translateY(0): idle+收起, collapsing(目标), pre-expanding(起始)
+  //   - translateY(100%): idle+展开, pre-collapsing(起始), expanding(目标)
+  const buttonsTransform =
+    (animationState === 'idle' && !showChatInput) ||
+    animationState === 'collapsing' ||
+    animationState === 'pre-expanding'
+      ? 'translateY(0)'
+      : 'translateY(100%)';
+
   return (
-    <div>
-      {showChatInput ? (
+    <div className="absolute bottom-0 left-0 w-full z-20 overflow-hidden pointer-events-none min-h-[48px]">
+      {/* 展开状态的 ChatInput */}
+      {(renderExpanded || animationState !== 'idle') && (
         <div
-          className={cn(
-            'absolute bottom-0 left-0 w-full border-transparent bg-background z-20',
-          )}
+          className="w-full border-transparent bg-background pointer-events-auto transition-transform ease-out"
+          style={{
+            transform: inputTransform,
+            transitionDuration: `${ANIMATION_DURATION_MS}ms`,
+          }}
         >
           <div
             className={cn(
@@ -613,11 +690,12 @@ const ChatInput = ({
                   ref={textareaRef}
                   className={cn(
                     'm-0 w-full resize-none border-none outline-none rounded-md bg-transparent leading-6',
-                    `transition-[height] duration-150 ease-out`,
+                    `transition-[height] ease-out`,
                     isFullWriting && 'overflow-auto'
                   )}
-                  style={{ 
-                    height: textareaHeight === 'full' ? 'calc(100vh - 108px)' : `${textareaHeight}px` 
+                  style={{
+                    height: textareaHeight === 'full' ? 'calc(100vh - 108px)' : `${textareaHeight}px`,
+                    transitionDuration: `${ANIMATION_DURATION_MS}ms`
                   }}
                   placeholder={
                     t('Type a message or type "/" to select a prompt...') || ''
@@ -696,92 +774,99 @@ const ChatInput = ({
             </div>
           </div>
         </div>
-      ) : (
-        <div className="absolute bottom-0 left-0 w-full h-0 border-transparent bg-background overflow-visible">
-          <div className="absolute right-2 md:right-4 bottom-0 flex gap-1 md:gap-2 items-center z-10">
-            {/* 滚动到顶部按钮 */}
-            {showScrollToTopButton && (
-              <Tips
-                trigger={
-                  <Button
-                    size="xs"
-                    className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                    onClick={onScrollToTopClick}
-                  >
-                    <IconArrowDoubleUp size={22} className="text-foreground/80" />
-                  </Button>
-                }
-                side="bottom"
-                content={t('Scroll to top')}
-              />
-            )}
-            
-            {/* 滚动到上一条用户消息按钮 */}
-            {showScrollToPrevUserMessageButton && (
-              <Tips
-                trigger={
-                  <Button
-                    size="xs"
-                    className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                    onClick={onScrollToPrevUserMessageClick}
-                  >
-                    <IconArrowUp size={22} className="text-foreground/80" />
-                  </Button>
-                }
-                side="bottom"
-                content={t('Scroll to previous user message')}
-              />
-            )}
-            
-            {/* 滚动到底部按钮 */}
-            {showScrollDownButton && (
-              <Tips
-                trigger={
-                  <Button
-                    size="xs"
-                    className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                    onClick={onScrollDownClick}
-                  >
-                    <IconArrowDown size={22} className="text-foreground/80" />
-                  </Button>
-                }
-                side="bottom"
-                content={t('Scroll to bottom')}
-              />
-            )}
-            
-            {/* 展开抽屉按钮 */}
+      )}
+
+      {/* 收起状态的浮动按钮组 */}
+      {(!renderExpanded || animationState !== 'idle') && (
+        <div
+          className="absolute bottom-0 right-2 md:right-4 flex gap-1 md:gap-2 items-center pointer-events-auto transition-transform ease-out"
+          style={{
+            transform: buttonsTransform,
+            transitionDuration: `${ANIMATION_DURATION_MS}ms`,
+          }}
+        >
+          {/* 滚动到顶部按钮 */}
+          {showScrollToTopButton && (
             <Tips
               trigger={
                 <Button
                   size="xs"
                   className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                  onClick={handleToggleVisibility}
+                  onClick={onScrollToTopClick}
                 >
-                  <IconArrowCompactDown size={22} className={'rotate-180 text-foreground/70'} />
+                  <IconArrowDoubleUp size={22} className="text-foreground/80" />
                 </Button>
               }
               side="bottom"
-              content={t('Expand input')}
+              content={t('Scroll to top')}
             />
+          )}
 
-            {selectedChat.status === ChatStatus.Chatting && (
-              <Tips
-                trigger={
-                  <Button
-                    variant="destructive"
-                    size="xs"
-                    className="m-0.5 sm:m-1 h-8 w-8 rounded-sm"
-                    onClick={handleStopChats}
-                  >
-                    <IconStopFilled size={16} />
-                  </Button>
-                }
-                side="bottom"
-                content={t('Stop Generating')}
-              />
-            )}
-          </div>
+          {/* 滚动到上一条用户消息按钮 */}
+          {showScrollToPrevUserMessageButton && (
+            <Tips
+              trigger={
+                <Button
+                  size="xs"
+                  className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
+                  onClick={onScrollToPrevUserMessageClick}
+                >
+                  <IconArrowUp size={22} className="text-foreground/80" />
+                </Button>
+              }
+              side="bottom"
+              content={t('Scroll to previous user message')}
+            />
+          )}
+
+          {/* 滚动到底部按钮 */}
+          {showScrollDownButton && (
+            <Tips
+              trigger={
+                <Button
+                  size="xs"
+                  className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
+                  onClick={onScrollDownClick}
+                >
+                  <IconArrowDown size={22} className="text-foreground/80" />
+                </Button>
+              }
+              side="bottom"
+              content={t('Scroll to bottom')}
+            />
+          )}
+
+          {/* 展开抽屉按钮 */}
+          <Tips
+            trigger={
+              <Button
+                size="xs"
+                className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
+                onClick={handleToggleVisibility}
+              >
+                <IconArrowCompactDown size={22} className={'rotate-180 text-foreground/70'} />
+              </Button>
+            }
+            side="bottom"
+            content={t('Expand input')}
+          />
+
+          {selectedChat.status === ChatStatus.Chatting && (
+            <Tips
+              trigger={
+                <Button
+                  variant="destructive"
+                  size="xs"
+                  className="m-0.5 sm:m-1 h-8 w-8 rounded-sm"
+                  onClick={handleStopChats}
+                >
+                  <IconStopFilled size={16} />
+                </Button>
+              }
+              side="bottom"
+              content={t('Stop Generating')}
+            />
+          )}
         </div>
       )}
     </div>
