@@ -211,7 +211,7 @@ const UserMessage = (props: Props) => {
             </div>
           </div>
         ) : (
-          <div className="bg-card py-2 px-3 rounded-md overflow-x-auto">
+          <div className="bg-card py-2 px-3 rounded-md overflow-hidden">
             <div className="flex flex-wrap justify-end text-right gap-2">
               {content
                 .filter((x) => x.$type === MessageContentType.fileId)
@@ -226,7 +226,7 @@ const UserMessage = (props: Props) => {
                 })}
             </div>
             <div
-              className={`prose whitespace-pre-wrap dark:prose-invert text-base overflow-x-auto ${
+              className={`prose whitespace-pre-wrap dark:prose-invert text-base ${
                 content.filter((x) => x.$type === MessageContentType.fileId)
                   .length > 0
                   ? 'mt-2'
