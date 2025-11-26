@@ -501,23 +501,6 @@ const ChatInput = ({
             )}
           >
             <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] pl-0 pt-0 pr-0 pb-1">
-              <div className="absolute mb-1 bottom-full mx-auto flex w-full justify-start z-10">
-                {!isFullWriting &&
-                  contentFiles.map((file, index) => (
-                    <div className="mr-2" key={index}>
-                      <FilePreview
-                        file={file}
-                        maxWidth={80}
-                        maxHeight={80}
-                        showDelete={true}
-                        onDelete={() => {
-                          setContentFiles((prev) => prev.filter((f) => f !== file));
-                        }}
-                      />
-                    </div>
-                  ))}
-              </div>
-
               {/* 滚动按钮组 - 水平排列 */}
               {/* 移除原来的位置，现在放到收起按钮同一排 */}
               <div className="flex px-1 items-center gap-1 md:gap-2 bg-muted/60 md:bg-muted rounded-t-md border-b border-border/40">
@@ -684,6 +667,23 @@ const ChatInput = ({
                   )}
                 </div>
               </div>
+              {/* 非全屏模式下的文件预览 */}
+              {!isFullWriting && contentFiles.length > 0 && (
+                <div className="flex flex-row px-3 py-2 gap-2 border-b border-border/40">
+                  {contentFiles.map((file, index) => (
+                    <FilePreview
+                      key={index}
+                      file={file}
+                      maxWidth={80}
+                      maxHeight={80}
+                      showDelete={true}
+                      onDelete={() => {
+                        setContentFiles((prev) => prev.filter((f) => f !== file));
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
               {/* Textarea容器 - 相对定位 */}
               <div className="relative w-full">
                 <Textarea
