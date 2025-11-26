@@ -70,7 +70,7 @@ public class AnthropicMessagesController(
         CancellationToken cancellationToken)
     {
         Model cm = userModel.Model;
-        using ChatService s = cf.CreateChatService(cm);
+        ChatService s = cf.CreateChatService(cm);
         UserBalance userBalance = await db.UserBalances
             .Where(x => x.UserId == currentApiKey.User.Id)
             .FirstOrDefaultAsync(cancellationToken) ?? throw new InvalidOperationException("User balance not found.");

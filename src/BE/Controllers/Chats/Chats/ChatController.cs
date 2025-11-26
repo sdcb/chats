@@ -632,7 +632,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             string? errorText = null;
             try
             {
-                using ChatService s = chatFactory.CreateChatService(userModel.Model);
+                ChatService s = chatFactory.CreateChatService(userModel.Model);
 
                 bool responseStated = false, reasoningStarted = false;
                 await foreach (InternalChatSegment seg in icc.Run(calc, userModel, s.ChatEntry(request, fup, UsageSource.WebChat, cancellationToken)))

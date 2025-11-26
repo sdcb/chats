@@ -11,7 +11,7 @@ using Tokenizer = Microsoft.ML.Tokenizers.Tokenizer;
 
 namespace Chats.BE.Services.Models;
 
-public abstract partial class ChatService : IDisposable
+public abstract partial class ChatService
 {
     internal static Tokenizer Tokenizer { get; } = TiktokenTokenizer.CreateForEncoding("o200k_base");
 
@@ -206,12 +206,4 @@ public abstract partial class ChatService : IDisposable
     }
 
     private static readonly HttpClient http = new();
-
-    public void Dispose()
-    {
-        Disposing();
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual void Disposing() { }
 }

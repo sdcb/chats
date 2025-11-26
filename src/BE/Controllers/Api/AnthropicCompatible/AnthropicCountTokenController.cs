@@ -49,7 +49,7 @@ public class AnthropicCountTokenController(
         try
         {
             Model cm = userModel.Model;
-            using ChatService s = cf.CreateChatService(cm);
+            ChatService s = cf.CreateChatService(cm);
             ChatRequest chatRequest = request.ToChatRequest(currentApiKey.User.Id.ToString(), cm);
             int inputTokens = await s.CountTokenAsync(chatRequest, cancellationToken);
 
