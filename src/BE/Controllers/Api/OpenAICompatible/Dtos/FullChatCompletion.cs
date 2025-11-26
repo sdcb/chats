@@ -3,7 +3,7 @@ using Chats.BE.Services.Models.Dtos;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Chats.BE.Controllers.OpenAICompatible.Dtos;
+namespace Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 
 public record FullChatCompletion
 {

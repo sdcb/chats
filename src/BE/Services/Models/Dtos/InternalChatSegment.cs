@@ -1,4 +1,4 @@
-﻿using Chats.BE.Controllers.OpenAICompatible.Dtos;
+﻿using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.Dtos;

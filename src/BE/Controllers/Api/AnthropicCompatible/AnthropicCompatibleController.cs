@@ -1,4 +1,4 @@
-using Chats.BE.Controllers.AnthropicCompatible.Dtos;
+using Chats.BE.Controllers.Api.AnthropicCompatible.Dtos;
 using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
@@ -16,7 +16,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace Chats.BE.Controllers.AnthropicCompatible;
+namespace Chats.BE.Controllers.Api.AnthropicCompatible;
 
 [Authorize(AuthenticationSchemes = "OpenAIApiKey")]
 public class AnthropicCompatibleController(

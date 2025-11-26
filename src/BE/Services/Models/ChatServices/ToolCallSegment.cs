@@ -1,4 +1,4 @@
-﻿using Chats.BE.Controllers.OpenAICompatible.Dtos;
+﻿using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Services.Models.Dtos;
 using System.Runtime.CompilerServices;

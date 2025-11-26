@@ -19,8 +19,9 @@ using System.Text;
 using Microsoft.AspNetCore.Http.Extensions;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Controllers.Users.Usages.Dtos;
+using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 
-namespace Chats.BE.Controllers.OpenAICompatible;
+namespace Chats.BE.Controllers.Api.OpenAICompatible;
 
 [Authorize(AuthenticationSchemes = "OpenAIApiKey")]
 public partial class OpenAICompatibleController(

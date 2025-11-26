@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Chats.BE.Controllers.AnthropicCompatible.Dtos;
+namespace Chats.BE.Controllers.Api.AnthropicCompatible.Dtos;
 
 /// <summary>
 /// Anthropic Messages API v1 response format (non-streaming)

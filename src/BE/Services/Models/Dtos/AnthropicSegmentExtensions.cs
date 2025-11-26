@@ -1,4 +1,4 @@
-using Chats.BE.Controllers.AnthropicCompatible.Dtos;
+using Chats.BE.Controllers.Api.AnthropicCompatible.Dtos;
 using Chats.BE.Services.Models.ChatServices;
 using System.Text.Json;
 

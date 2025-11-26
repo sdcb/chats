@@ -1,4 +1,4 @@
-﻿using Chats.BE.Controllers.OpenAICompatible.Dtos;
+﻿using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 using Chats.BE.Services.Models.ChatServices;
 using Mscc.GenerativeAI;
 using OpenAI.Chat;

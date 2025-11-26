@@ -1,7 +1,7 @@
 ﻿using Chats.BE.Services.Models.ChatServices;
 using System.Text.Json.Serialization;
 
-namespace Chats.BE.Controllers.OpenAICompatible.Dtos;
+namespace Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 
 public record OpenAIDelta
 {
