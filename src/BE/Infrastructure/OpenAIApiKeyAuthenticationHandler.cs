@@ -17,13 +17,24 @@ public class OpenAIApiKeyAuthenticationHandler(
 {
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        if (!Request.Headers.TryGetValue("Authorization", out Microsoft.Extensions.Primitives.StringValues authorizationHeader))
+        string? apiKey = null;
+
+        // Try OpenAI format: Authorization: Bearer <apikey>
+        if (Request.Headers.TryGetValue("Authorization", out Microsoft.Extensions.Primitives.StringValues authorizationHeader))
+        {
+            string authorizationHeaderString = authorizationHeader.ToString();
+            apiKey = authorizationHeaderString.Split(' ').Last();
+        }
+        // Try Anthropic format: X-Api-Key: <apikey>
+        else if (Request.Headers.TryGetValue("X-Api-Key", out Microsoft.Extensions.Primitives.StringValues xApiKeyHeader))
+        {
+            apiKey = xApiKeyHeader.ToString();
+        }
+
+        if (string.IsNullOrEmpty(apiKey))
         {
             return AuthenticateResult.NoResult();
         }
-
-        string authorizationHeaderString = authorizationHeader.ToString();
-        string apiKey = authorizationHeaderString.Split(' ').Last();
 
         ApiKeyEntry? apiKeyInfo = await sessionManager.GetCachedUserInfoByOpenAIApiKey(apiKey);
 

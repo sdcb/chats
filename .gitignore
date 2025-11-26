@@ -63,3 +63,4 @@ logs.txt
 /eng/ReleaseWebhook/obj
 /AzureFileMigrator/bin
 /AzureFileMigrator/obj
+.claude
