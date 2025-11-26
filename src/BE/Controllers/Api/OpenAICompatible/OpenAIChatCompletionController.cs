@@ -1,5 +1,6 @@
-﻿using Chats.BE.Controllers.Chats.Chats;
+using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Chats.BE.Services;
 using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.Dtos;
@@ -9,7 +10,6 @@ using Microsoft.AspNetCore.Mvc;
 using System.ClientModel;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Chats.BE.Controllers.OpenAICompatible.Dtos;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using Chats.BE.Services.Models.ChatServices;
@@ -24,16 +24,18 @@ using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 namespace Chats.BE.Controllers.Api.OpenAICompatible;
 
 [Authorize(AuthenticationSchemes = "OpenAIApiKey")]
-public partial class OpenAICompatibleController(
-    ChatsDB db, 
-    CurrentApiKey currentApiKey, 
-    ChatFactory cf, 
-    UserModelManager userModelManager, 
-    ILogger<OpenAICompatibleController> logger, 
-    BalanceService balanceService, 
+public partial class OpenAIChatCompletionController(
+    ChatsDB db,
+    CurrentApiKey currentApiKey,
+    ChatFactory cf,
+    UserModelManager userModelManager,
+    ILogger<OpenAIChatCompletionController> logger,
+    BalanceService balanceService,
     FileUrlProvider fup,
     AsyncCacheUsageManager asyncCacheUsageService) : ControllerBase
 {
+    private static readonly DBApiType[] AllowedApiTypes = [DBApiType.OpenAIChatCompletion, DBApiType.OpenAIResponse, DBApiType.AnthropicMessages];
+
     [HttpPost("v1/chat/completions")]
     public async Task<ActionResult> ChatCompletion([FromBody] JsonObject json, [FromServices] AsyncClientInfoManager clientInfoManager, CancellationToken cancellationToken)
     {
@@ -51,6 +53,11 @@ public partial class OpenAICompatibleController(
         Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
         UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
         if (userModel == null) return InvalidModel(cco.Model);
+
+        if (!AllowedApiTypes.Contains(userModel.Model.ApiType))
+        {
+            return ErrorMessage(DBFinishReason.BadParameter, $"The model `{cco.Model}` does not support chat completions API.");
+        }
 
         CcoCacheControl? ccoCacheControl = cco.CacheControl;
         if (ccoCacheControl != null)
@@ -91,6 +98,11 @@ public partial class OpenAICompatibleController(
             }
             if (userModel == null) return InvalidModel(cco.Model);
 
+            if (!AllowedApiTypes.Contains(userModel.Model.ApiType))
+            {
+                return ErrorMessage(DBFinishReason.BadParameter, $"The model `{cco.Model}` does not support chat completions API.");
+            }
+
             CcoCacheControl ccoCacheControl = cco.CacheControl ?? CcoCacheControl.StaticCached with
             {
                 CreateOnly = Request.GetDisplayUrl().Contains("v1-cached-createOnly", StringComparison.OrdinalIgnoreCase),
@@ -108,11 +120,11 @@ public partial class OpenAICompatibleController(
     }
 
     private async Task<ActionResult> ChatCompletionUseCache(
-        CcoCacheControl cacheControl, 
-        CcoWrapper cco, 
-        UserModel userModel, 
-        InChatContext icc, 
-        Task<int> clientInfoIdTask, 
+        CcoCacheControl cacheControl,
+        CcoWrapper cco,
+        UserModel userModel,
+        InChatContext icc,
+        Task<int> clientInfoIdTask,
         CancellationToken cancellationToken)
     {
         string requestBody = cco.Serialize();
@@ -297,7 +309,7 @@ public partial class OpenAICompatibleController(
                     }
                 };
                 await YieldResponse(finalChunk, cancellationToken);
-                
+
                 // 发送 [DONE] 标记
                 await Response.Body.WriteAsync("data: [DONE]\n\n"u8.ToArray(), cancellationToken);
                 await Response.Body.FlushAsync(cancellationToken);
@@ -424,22 +436,5 @@ public partial class OpenAICompatibleController(
     private BadRequestObjectResult InvalidModel(string? modelName)
     {
         return ErrorMessage(DBFinishReason.InvalidModel, $"The model `{modelName}` does not exist or you do not have access to it.");
-    }
-
-    [HttpGet("v1/models")]
-    public async Task<ActionResult<ModelListDto>> GetModels(CancellationToken cancellationToken)
-    {
-        UserModel[] models = await userModelManager.GetValidModelsByApiKey(currentApiKey.ApiKey, cancellationToken);
-        return Ok(new ModelListDto
-        {
-            Object = "list",
-            Data = [.. models.Select(x => new ModelListItemDto
-            {
-                Id = x.Model.Name,
-                Created = new DateTimeOffset(x.CreatedAt, TimeSpan.Zero).ToUnixTimeSeconds(),
-                Object = "model",
-                OwnedBy = x.Model.ModelKey.Name
-            })]
-        });
     }
 }

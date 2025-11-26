@@ -2,6 +2,7 @@ using Chats.BE.Controllers.Api.AnthropicCompatible.Dtos;
 using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Chats.BE.Services;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models;
@@ -19,15 +20,17 @@ using System.Text.Json.Nodes;
 namespace Chats.BE.Controllers.Api.AnthropicCompatible;
 
 [Authorize(AuthenticationSchemes = "OpenAIApiKey")]
-public class AnthropicCompatibleController(
+public class AnthropicMessagesController(
     ChatsDB db,
     CurrentApiKey currentApiKey,
     ChatFactory cf,
     UserModelManager userModelManager,
-    ILogger<AnthropicCompatibleController> logger,
+    ILogger<AnthropicMessagesController> logger,
     BalanceService balanceService,
     FileUrlProvider fup) : ControllerBase
 {
+    private static readonly DBApiType[] AllowedApiTypes = [DBApiType.OpenAIChatCompletion, DBApiType.OpenAIResponse, DBApiType.AnthropicMessages];
+
     [HttpPost("v1/messages")]
     public async Task<ActionResult> CreateMessage([FromBody] JsonObject json, [FromServices] AsyncClientInfoManager clientInfoManager, CancellationToken cancellationToken)
     {
@@ -49,6 +52,11 @@ public class AnthropicCompatibleController(
         if (userModel == null)
         {
             return ErrorMessage(AnthropicErrorTypes.NotFoundError, $"The model `{request.Model}` does not exist or you do not have access to it.");
+        }
+
+        if (!AllowedApiTypes.Contains(userModel.Model.ApiType))
+        {
+            return ErrorMessage(AnthropicErrorTypes.InvalidRequestError, $"The model `{request.Model}` does not support messages API.");
         }
 
         return await ProcessMessage(request, userModel, icc, clientInfoIdTask, cancellationToken);

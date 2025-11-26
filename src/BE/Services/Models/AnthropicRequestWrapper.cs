@@ -1,19 +1,12 @@
-using Chats.BE.Controllers.AnthropicCompatible.Dtos;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using OpenAI.Chat;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models;
 
 public class AnthropicRequestWrapper(JsonObject json)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
-
     public bool Streamed => (bool?)json["stream"] ?? false;
 
     public string? Model => (string?)json["model"];
