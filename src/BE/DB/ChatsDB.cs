@@ -418,9 +418,7 @@ public partial class ChatsDB : DbContext
         {
             entity.Property(e => e.Id).ValueGeneratedNever();
 
-            entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentThink)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_StepContentThink_StepContent");
+            entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentThink).HasConstraintName("FK_StepContentThink_StepContent");
         });
 
         modelBuilder.Entity<StepContentToolCall>(entity =>

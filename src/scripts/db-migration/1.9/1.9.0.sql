@@ -417,5 +417,23 @@ END
 
 GO
 
+-- =============================================
+-- 修正 StepContentThink 外键级联删除
+-- =============================================
+PRINT N'[Step Final] 修正 StepContentThink 外键级联删除';
+
+IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_StepContentThink_StepContent' AND parent_object_id = OBJECT_ID(N'dbo.StepContentThink') AND delete_referential_action = 0)
+BEGIN
+    ALTER TABLE dbo.StepContentThink DROP CONSTRAINT FK_StepContentThink_StepContent;
+    ALTER TABLE dbo.StepContentThink ADD CONSTRAINT FK_StepContentThink_StepContent FOREIGN KEY (Id) REFERENCES dbo.StepContent (Id) ON DELETE CASCADE;
+    PRINT N'    -> 已修正 FK_StepContentThink_StepContent 为级联删除';
+END
+ELSE
+BEGIN
+    PRINT N'    -> FK_StepContentThink_StepContent 已是级联删除或不存在';
+END
+
+GO
+
 PRINT N'[1.9.0] 所有迁移步骤已完成';
 GO
