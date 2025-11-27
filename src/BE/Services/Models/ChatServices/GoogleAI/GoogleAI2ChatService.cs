@@ -94,9 +94,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
         {
             Retry = new Retry()
             {
-                Maximum = 3,
-                Initial = 1,
-                Multiplies = 2,
+                Maximum = 1,
             },
             Timeout = NetworkTimeout,
         }, cancellationToken))
