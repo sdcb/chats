@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { getApiUrl } from '@/utils/common';
+import { getApiUrl, maskApiKey } from '@/utils/common';
 import { formatDate } from '@/utils/date';
 
 import { UsageSource } from '@/types/chat';
@@ -151,7 +151,7 @@ const ApiKeysTab = () => {
                       className="max-w-[180px] truncate cursor-pointer text-blue-600 hover:underline"
                       onClick={() => viewApiKeyUsage(x.id)}
                     >
-                      {x.key}
+                      {maskApiKey(x.key)}
                     </span>
                     <CopyButton value={x.key} />
                   </div>
@@ -220,7 +220,7 @@ const ApiKeysTab = () => {
                           className="overflow-hidden text-ellipsis whitespace-nowrap text-blue-600 hover:underline cursor-pointer"
                           onClick={() => viewApiKeyUsage(x.id)}
                         >
-                          {x.key}
+                          {maskApiKey(x.key)}
                         </div>
                         <CopyButton value={x.key} />
                       </div>

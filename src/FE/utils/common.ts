@@ -80,3 +80,24 @@ export function resolveTheme(theme?: string): 'dark' | 'light' {
   }
   return theme === 'dark' ? 'dark' : 'light';
 }
+
+/**
+ * 遮蔽API密钥，显示前缀和后缀，隐藏中间部分
+ * @param key API密钥
+ * @param prefixLength 前缀长度，默认6
+ * @param suffixLength 后缀长度，默认4
+ * @returns 遮蔽后的密钥，例如 "sk-abc1***xyz9"
+ */
+export function maskApiKey(
+  key: string,
+  prefixLength: number = 6,
+  suffixLength: number = 4,
+): string {
+  if (!key) return '';
+  if (key.length <= prefixLength + suffixLength) {
+    return key;
+  }
+  const prefix = key.slice(0, prefixLength);
+  const suffix = key.slice(-suffixLength);
+  return `${prefix}***${suffix}`;
+}
