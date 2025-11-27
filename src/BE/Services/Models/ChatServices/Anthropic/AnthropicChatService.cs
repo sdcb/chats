@@ -1,153 +1,228 @@
-﻿using Anthropic;
-using Anthropic.Core;
-using Anthropic.Models.Messages;
-using Anthropic.Models.Models;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
 using OpenAI.Chat;
+using System.Net.Http.Headers;
+using ChatTokenUsage = Chats.BE.Services.Models.Dtos.ChatTokenUsage;
+using System.Net.ServerSentEvents;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.Anthropic;
 
-public class AnthropicChatService : ChatService
+public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatService
 {
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        AnthropicClient anthropicClient = CreateAnthropicClient(request.ChatConfig.Model.ModelKey);
-        MessageCreateParams message = ConvertOptions(request);
-        int toolCallIndex = -1;
-        await foreach (RawMessageStreamEvent stream in anthropicClient.Messages.CreateStreaming(message, cancellationToken))
-        {
-            string? type = stream.Json.GetProperty("type").GetString();
-            if (type == "message_start")
-            {
-                if (stream.TryPickStart(out RawMessageStartEvent? start))
-                {
-                    yield return ExtractUsageFromStart(start);
-                }
-                else
-                {
-                    RawMessageStartEvent? start2 = stream.Json.Deserialize<RawMessageStartEvent>();
-                    if (start2 != null)
-                    {
-                        yield return ExtractUsageFromStart(start2);
-                    }
-                }
+        (string url, string apiKey) = GetEndpointAndKey(request.ChatConfig.Model.ModelKey);
+        JsonObject requestBody = BuildRequestBody(request);
 
-                static ChatSegment ExtractUsageFromStart(RawMessageStartEvent start)
-                {
-                    return ChatSegment.FromUsageOnly((int)start.Message.Usage.InputTokens, (int)start.Message.Usage.OutputTokens);
-                }
-            }
-            else if (stream.TryPickContentBlockStart(out RawContentBlockStartEvent? contentStart))
+        using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/v1/messages");
+        httpRequest.Headers.Add("x-api-key", apiKey);
+        httpRequest.Headers.Add("anthropic-version", "2023-06-01");
+        httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+        httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+
+        using HttpClient httpClient = httpClientFactory.CreateClient();
+        httpClient.Timeout = NetworkTimeout;
+        using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new HttpRequestException($"Anthropic API error: {response.StatusCode} - {errorBody}");
+        }
+
+        using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+
+        int toolCallIndex = -1;
+        await foreach (SseItem<string> sseItem in SseParser.Create(stream, (_, bytes) => Encoding.UTF8.GetString(bytes)).EnumerateAsync(cancellationToken))
+        {
+            if (string.IsNullOrEmpty(sseItem.Data) || sseItem.Data == "[DONE]")
             {
-                if (contentStart.ContentBlock.Value is ToolUseBlock toolCall)
-                {
-                    ++toolCallIndex;
-                    yield return ChatSegment.FromToolCall(new ToolCallSegment()
-                    {
-                        Arguments = "",
-                        Index = toolCallIndex,
-                        Id = toolCall.ID,
-                        Name = toolCall.Name,
-                    });
-                }
-                else if (contentStart.ContentBlock.Value is ServerToolUseBlock serverToolUse)
-                {
-                    ++toolCallIndex;
-                    yield return ChatSegment.FromToolCall(new ToolCallSegment()
-                    {
-                        Arguments = "",
-                        Index = toolCallIndex,
-                        Id = serverToolUse.ID,
-                        Name = serverToolUse.Name.ToString(),
-                    });
-                }
-                else if (contentStart.ContentBlock.Value is WebSearchToolResultBlock toolResult)
-                {
-                    string response = RemoveEncryptedContent(toolResult.Content.Json);
-                    yield return ChatSegment.FromToolCallResponse(toolResult.ToolUseID, response);
-                }
-                else if (contentStart.ContentBlock.Value is TextBlock textBlock)
-                {
-                    // do nothing
-                }
-                else
-                {
-                    Console.WriteLine($"Unknown content block start: {contentStart.ContentBlock.ID}");
-                }
+                continue;
             }
-            else if (stream.TryPickContentBlockDelta(out RawContentBlockDeltaEvent? contentDelta))
+
+            JsonElement json;
+            try
             {
-                if (contentDelta.Delta.TryPickThinking(out ThinkingDelta? think))
-                {
-                    if (think.Thinking != "")
+                json = JsonDocument.Parse(sseItem.Data).RootElement;
+            }
+            catch (JsonException)
+            {
+                continue;
+            }
+
+            string? type = json.TryGetProperty("type", out JsonElement typeElement) ? typeElement.GetString() : null;
+
+            switch (type)
+            {
+                case "message_start":
                     {
-                        yield return ChatSegment.FromThinking(think.Thinking);
+                        if (json.TryGetProperty("message", out JsonElement message) &&
+                            message.TryGetProperty("usage", out JsonElement usage))
+                        {
+                            int inputTokens = usage.TryGetProperty("input_tokens", out JsonElement it) ? it.GetInt32() : 0;
+                            int outputTokens = usage.TryGetProperty("output_tokens", out JsonElement ot) ? ot.GetInt32() : 0;
+                            yield return ChatSegment.FromUsageOnly(inputTokens, outputTokens);
+                        }
+                        break;
                     }
-                }
-                else if (contentDelta.Delta.TryPickText(out TextDelta? value))
-                {
-                    yield return ChatSegment.FromText(value.Text);
-                }
-                else if (contentDelta.Delta.TryPickInputJSON(out InputJSONDelta? inputJSONDelta))
-                {
-                    yield return ChatSegment.FromToolCall(new ToolCallSegment()
+
+                case "content_block_start":
                     {
-                        Arguments = inputJSONDelta.PartialJSON,
-                        Index = toolCallIndex,
-                    });
-                }
-                else if (contentDelta.Delta.TryPickCitations(out CitationsDelta? citation))
-                {
-                    // ignore for now
-                    //new { citation.Citation.CitedText, citation.Citation.Title, Citation = citation.Properties["citation"].ToString() }.Dump();
-                }
-                else if (contentDelta.Delta.TryPickSignature(out SignatureDelta? signatureDelta))
-                {
-                    yield return ChatSegment.FromThinkingSignature(signatureDelta.Signature);
-                }
-                else
-                {
-                    Console.WriteLine($"Unknown content delta: {contentDelta.Delta}");
-                }
-            }
-            else if (stream.TryPickContentBlockStop(out RawContentBlockStopEvent? contentStop))
-            {
-                // no data, just another indicator of content stop
-            }
-            else if (stream.TryPickDelta(out RawMessageDeltaEvent? delta))
-            {
-                yield return new ChatSegment()
-                {
-                    FinishReason = delta.Delta.StopReason != null ? delta.Delta.StopReason.Value.Value() switch
-                    {
-                        StopReason.EndTurn => ChatFinishReason.Stop,
-                        StopReason.MaxTokens => ChatFinishReason.Length,
-                        StopReason.StopSequence => ChatFinishReason.Stop,
-                        StopReason.ToolUse => ChatFinishReason.ToolCalls,
-                        StopReason.PauseTurn => ChatFinishReason.Stop, // map pause to stop
-                        StopReason.Refusal => ChatFinishReason.ContentFilter,
-                        _ => throw new InvalidOperationException($"Unknown stop reason: {delta.Delta.StopReason.Value.Value()}"),
-                    } : null,
-                    Items = [],
-                    Usage = new Dtos.ChatTokenUsage()
-                    {
-                        InputTokens = (int)delta.Usage.InputTokens!,
-                        OutputTokens = (int)delta.Usage.OutputTokens,
+                        if (json.TryGetProperty("content_block", out JsonElement contentBlock))
+                        {
+                            string? blockType = contentBlock.TryGetProperty("type", out JsonElement bt) ? bt.GetString() : null;
+
+                            if (blockType == "tool_use")
+                            {
+                                ++toolCallIndex;
+                                string? id = contentBlock.TryGetProperty("id", out JsonElement idEl) ? idEl.GetString() : null;
+                                string? name = contentBlock.TryGetProperty("name", out JsonElement nameEl) ? nameEl.GetString() : null;
+                                yield return ChatSegment.FromToolCall(new ToolCallSegment
+                                {
+                                    Arguments = "",
+                                    Index = toolCallIndex,
+                                    Id = id,
+                                    Name = name,
+                                });
+                            }
+                            else if (blockType == "server_tool_use")
+                            {
+                                ++toolCallIndex;
+                                string? id = contentBlock.TryGetProperty("id", out JsonElement idEl) ? idEl.GetString() : null;
+                                string? name = contentBlock.TryGetProperty("name", out JsonElement nameEl) ? nameEl.GetString() : null;
+                                yield return ChatSegment.FromToolCall(new ToolCallSegment
+                                {
+                                    Arguments = "",
+                                    Index = toolCallIndex,
+                                    Id = id,
+                                    Name = name,
+                                });
+                            }
+                            else if (blockType == "web_search_tool_result")
+                            {
+                                string? toolUseId = contentBlock.TryGetProperty("tool_use_id", out JsonElement tuidEl) ? tuidEl.GetString() : null;
+                                if (contentBlock.TryGetProperty("content", out JsonElement content) && toolUseId != null)
+                                {
+                                    string responseText = RemoveEncryptedContent(content);
+                                    yield return ChatSegment.FromToolCallResponse(toolUseId, responseText);
+                                }
+                            }
+                            // text block start - do nothing, wait for delta
+                            // thinking block start - do nothing, wait for delta
+                        }
+                        break;
                     }
-                };
-            }
-            else if (stream.TryPickStop(out RawMessageStopEvent? stop))
-            {
-                // ignore
-            }
-            else
-            {
-                Console.WriteLine($"Unknown stream event: {stream}");
+
+                case "content_block_delta":
+                    {
+                        if (json.TryGetProperty("delta", out JsonElement delta))
+                        {
+                            string? deltaType = delta.TryGetProperty("type", out JsonElement dt) ? dt.GetString() : null;
+
+                            if (deltaType == "thinking_delta")
+                            {
+                                string? thinking = delta.TryGetProperty("thinking", out JsonElement th) ? th.GetString() : null;
+                                if (!string.IsNullOrEmpty(thinking))
+                                {
+                                    yield return ChatSegment.FromThinking(thinking);
+                                }
+                            }
+                            else if (deltaType == "text_delta")
+                            {
+                                string? text = delta.TryGetProperty("text", out JsonElement tx) ? tx.GetString() : null;
+                                if (!string.IsNullOrEmpty(text))
+                                {
+                                    yield return ChatSegment.FromText(text);
+                                }
+                            }
+                            else if (deltaType == "input_json_delta")
+                            {
+                                string? partialJson = delta.TryGetProperty("partial_json", out JsonElement pj) ? pj.GetString() : null;
+                                yield return ChatSegment.FromToolCall(new ToolCallSegment
+                                {
+                                    Arguments = partialJson ?? "",
+                                    Index = toolCallIndex,
+                                });
+                            }
+                            else if (deltaType == "signature_delta")
+                            {
+                                string? signature = delta.TryGetProperty("signature", out JsonElement sig) ? sig.GetString() : null;
+                                if (!string.IsNullOrEmpty(signature))
+                                {
+                                    yield return ChatSegment.FromThinkingSignature(signature);
+                                }
+                            }
+                            // citations_delta - ignore for now
+                        }
+                        break;
+                    }
+
+                case "content_block_stop":
+                    // no additional data needed
+                    break;
+
+                case "message_delta":
+                    {
+                        ChatFinishReason? finishReason = null;
+                        if (json.TryGetProperty("delta", out JsonElement delta) &&
+                            delta.TryGetProperty("stop_reason", out JsonElement stopReasonEl))
+                        {
+                            string? stopReason = stopReasonEl.GetString();
+                            finishReason = stopReason switch
+                            {
+                                "end_turn" => ChatFinishReason.Stop,
+                                "max_tokens" => ChatFinishReason.Length,
+                                "stop_sequence" => ChatFinishReason.Stop,
+                                "tool_use" => ChatFinishReason.ToolCalls,
+                                "pause_turn" => ChatFinishReason.Stop,
+                                "refusal" => ChatFinishReason.ContentFilter,
+                                _ => null,
+                            };
+                        }
+
+                        int inputTokens = 0;
+                        int outputTokens = 0;
+                        if (json.TryGetProperty("usage", out JsonElement usage))
+                        {
+                            inputTokens = usage.TryGetProperty("input_tokens", out JsonElement it) ? it.GetInt32() : 0;
+                            outputTokens = usage.TryGetProperty("output_tokens", out JsonElement ot) ? ot.GetInt32() : 0;
+                        }
+
+                        yield return new ChatSegment
+                        {
+                            FinishReason = finishReason,
+                            Items = [],
+                            Usage = new ChatTokenUsage
+                            {
+                                InputTokens = inputTokens,
+                                OutputTokens = outputTokens,
+                            }
+                        };
+                        break;
+                    }
+
+                case "message_stop":
+                    // ignore
+                    break;
+
+                case "ping":
+                    // ignore
+                    break;
+
+                case "error":
+                    {
+                        string? errorMessage = "Unknown error";
+                        if (json.TryGetProperty("error", out JsonElement error))
+                        {
+                            errorMessage = error.TryGetProperty("message", out JsonElement msg) ? msg.GetString() : "Unknown error";
+                        }
+                        throw new HttpRequestException($"Anthropic API error: {errorMessage}");
+                    }
             }
         }
     }
@@ -185,54 +260,77 @@ public class AnthropicChatService : ChatService
         return json.ToString();
     }
 
-    protected virtual AnthropicClient CreateAnthropicClient(ModelKey modelKey)
+    protected virtual (string url, string apiKey) GetEndpointAndKey(ModelKey modelKey)
     {
         string url = (modelKey.Host ?? "https://api.anthropic.com").TrimEnd('/');
         if (url.EndsWith(".ai.azure.com")) // Azure AI Foundry Anthropic
         {
             url += "/anthropic";
         }
-
-        AnthropicClient anthropicClient = new(new ClientOptions()
-        {
-            BaseUrl = new Uri(url),
-            APIKey = modelKey.Secret,
-            MaxRetries = 0,
-            Timeout = NetworkTimeout,
-        });
-        return anthropicClient;
+        return (url, modelKey.Secret ?? throw new InvalidOperationException("API key is required for Anthropic"));
     }
 
     public override async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
     {
-        AnthropicClient anthropicClient = CreateAnthropicClient(modelKey);
-        ModelListPageResponse result = await anthropicClient.Models.List(new ModelListParams()
+        (string url, string apiKey) = GetEndpointAndKey(modelKey);
+
+        using HttpRequestMessage request = new(HttpMethod.Get, url + "/v1/models");
+        request.Headers.Add("x-api-key", apiKey);
+        request.Headers.Add("anthropic-version", "2023-06-01");
+
+        using HttpClient httpClient = httpClientFactory.CreateClient();
+        httpClient.Timeout = NetworkTimeout;
+        using HttpResponseMessage response = await httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        string json = await response.Content.ReadAsStringAsync(cancellationToken);
+        using JsonDocument doc = JsonDocument.Parse(json);
+
+        List<string> models = [];
+        if (doc.RootElement.TryGetProperty("data", out JsonElement data) && data.ValueKind == JsonValueKind.Array)
         {
-        }, cancellationToken);
-        return [.. result.Data.Select(x => x.ID)];
+            foreach (JsonElement model in data.EnumerateArray())
+            {
+                if (model.TryGetProperty("id", out JsonElement id))
+                {
+                    string? modelId = id.GetString();
+                    if (modelId != null)
+                    {
+                        models.Add(modelId);
+                    }
+                }
+            }
+        }
+        return [.. models];
     }
 
     public override async Task<int> CountTokenAsync(ChatRequest request, CancellationToken cancellationToken)
     {
-        AnthropicClient anthropicClient = CreateAnthropicClient(request.ChatConfig.Model.ModelKey);
-        MessageCreateParams messageParams = ConvertOptions(request);
+        (string url, string apiKey) = GetEndpointAndKey(request.ChatConfig.Model.ModelKey);
+        JsonObject requestBody = BuildCountTokensRequestBody(request);
 
-        MessageCountTokensParams countParams = new()
+        using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/v1/messages/count_tokens");
+        httpRequest.Headers.Add("x-api-key", apiKey);
+        httpRequest.Headers.Add("anthropic-version", "2023-06-01");
+        httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+
+        using HttpClient httpClient = httpClientFactory.CreateClient();
+        httpClient.Timeout = NetworkTimeout;
+        using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        string json = await response.Content.ReadAsStringAsync(cancellationToken);
+        using JsonDocument doc = JsonDocument.Parse(json);
+
+        if (doc.RootElement.TryGetProperty("input_tokens", out JsonElement inputTokens))
         {
-            Messages = messageParams.Messages,
-            Model = messageParams.Model,
-            System = request.ChatConfig.SystemPrompt is { } systemPrompt ? systemPrompt : null!,
-            Thinking = messageParams.Thinking,
-            Tools = messageParams.Tools != null
-                ? [.. messageParams.Tools.Select(x => new MessageCountTokensTool(x.Json))]
-                : null,
-        };
+            return inputTokens.GetInt32();
+        }
 
-        MessageTokensCount result = await anthropicClient.Messages.CountTokens(countParams, cancellationToken);
-        return (int)result.InputTokens;
+        return 0;
     }
 
-    static MessageCreateParams ConvertOptions(ChatRequest request)
+    private static JsonObject BuildRequestBody(ChatRequest request)
     {
         // Anthropic has a very strict policy on thinking blocks - they need pass back thinking AND signature together
         // if you only passed back thinking without signature, it would be rejected:
@@ -271,269 +369,430 @@ public class AnthropicChatService : ChatService
         // Other cases: enable thinking (may drop invalid/unsigned blocks when no tool calls present).
         bool allowThinking = !hasToolCall || allowThinkingBlocks;
 
-        return new MessageCreateParams()
+        JsonObject body = new()
         {
-            MaxTokens = request.ChatConfig.Model.MaxResponseTokens,
-            Model = request.ChatConfig.Model.DeploymentName,
-            Messages = ConvertMessages(request.Steps, allowThinkingBlocks),
-            System = request.ChatConfig.SystemPrompt switch
-            {
-                not null => new SystemModel(request.ChatConfig.SystemPrompt),
-                null => null
-            },
-            Temperature = request.ChatConfig.Temperature,
-            TopP = request.TopP,
-            Thinking = (allowThinking && request.ChatConfig.ThinkingBudget is not null) ?
-                new ThinkingConfigParam(new ThinkingConfigEnabled(request.ChatConfig.ThinkingBudget.Value))
-                : null,
-            Tools = 
-            [
-                .. request.Tools.Select(ConvertTool),
-                .. request.ChatConfig.WebSearchEnabled ? [new ToolUnion(new WebSearchTool20250305())] : Array.Empty<ToolUnion>(),
-            ],
+            ["max_tokens"] = request.ChatConfig.Model.MaxResponseTokens,
+            ["model"] = request.ChatConfig.Model.DeploymentName,
+            ["messages"] = ConvertMessages(request.Steps, allowThinkingBlocks),
+            ["stream"] = true,
         };
 
-        static ToolUnion ConvertTool(ChatTool tool)
+        if (request.ChatConfig.SystemPrompt != null)
         {
-            return new ToolUnion(new Tool()
+            body["system"] = request.ChatConfig.SystemPrompt;
+        }
+
+        if (request.ChatConfig.Temperature != null)
+        {
+            body["temperature"] = request.ChatConfig.Temperature.Value;
+        }
+
+        if (request.TopP != null)
+        {
+            body["top_p"] = request.TopP.Value;
+        }
+
+        if (allowThinking && request.ChatConfig.ThinkingBudget != null)
+        {
+            body["thinking"] = new JsonObject
             {
-                InputSchema = ToAnthropicSchema(tool.FunctionParameters),
-                Name = tool.FunctionName,
-                Description = tool.FunctionDescription,
+                ["type"] = "enabled",
+                ["budget_tokens"] = request.ChatConfig.ThinkingBudget.Value
+            };
+        }
+
+        JsonArray tools = BuildToolsArray(request);
+        if (tools.Count > 0)
+        {
+            body["tools"] = tools;
+        }
+
+        return body;
+    }
+
+    private static JsonArray BuildToolsArray(ChatRequest request)
+    {
+        JsonArray tools = [];
+        bool hasWebSearchTool = false;
+
+        // Process tools from API
+        foreach (ChatTool tool in request.Tools)
+        {
+            // Detect built-in web_search tool: name matches and no real parameters defined
+            if (tool.FunctionName == "web_search" && !HasRealParameters(tool))
+            {
+                hasWebSearchTool = true;
+                continue; // Will be added with correct format below
+            }
+            tools.Add(ConvertTool(tool));
+        }
+
+        // Add built-in web_search tool with correct format
+        // Sources: API (hasWebSearchTool) or App config (WebSearchEnabled)
+        if (hasWebSearchTool || request.ChatConfig.WebSearchEnabled)
+        {
+            tools.Add(new JsonObject
+            {
+                ["name"] = "web_search",
+                ["type"] = "web_search_20250305"
             });
+        }
 
-            static InputSchema ToAnthropicSchema(BinaryData binaryData)
+        return tools;
+    }
+
+    private static bool HasRealParameters(ChatTool tool)
+    {
+        // Check if the tool has actual parameter definitions (not just empty schema)
+        try
+        {
+            JsonObject? parameters = tool.FunctionParameters.ToObjectFromJson<JsonObject>();
+            if (parameters == null) return false;
+
+            // Has real parameters if "properties" exists and is non-empty
+            if (parameters.TryGetPropertyValue("properties", out JsonNode? props) &&
+                props is JsonObject propsObj && propsObj.Count > 0)
             {
-                JsonObject jsonObject = binaryData.ToObjectFromJson<JsonObject>()!;
-                return new InputSchema()
-                {
-                    Type = JsonSerializer.SerializeToElement("object"),
-                    Properties1 = jsonObject["properties"]?.AsObject().ToDictionary(x => x.Key, x => JsonSerializer.SerializeToElement(MakeFieldDefObject(x.Value))),
-                    Required = jsonObject["required"]?.AsArray().Select(x => (string)x!).ToList(),
-                };
+                return true;
+            }
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
-                static object MakeFieldDefObject(JsonNode? node)
-                {
-                    if (node == null)
-                    {
-                        throw new ArgumentNullException(nameof(node), "tool call field property must be not null.");
-                    }
+    private static JsonObject BuildCountTokensRequestBody(ChatRequest request)
+    {
+        bool hasThinkingBlocks = request.Steps
+            .Where(s => s.ChatRole == DBChatRole.Assistant)
+            .SelectMany(s => s.StepContents)
+            .Any(sc => sc.ContentType == DBStepContentType.Think);
 
-                    string? type = node["type"]?.GetValue<string>();
-                    string? description = node["description"]?.GetValue<string>();
-                    if (string.IsNullOrEmpty(type))
-                    {
-                        throw new InvalidOperationException("Tool parameter field must have a type.");
-                    }
+        bool allThinkingHaveSignature = !hasThinkingBlocks || request.Steps
+            .Where(s => s.ChatRole == DBChatRole.Assistant)
+            .SelectMany(s => s.StepContents)
+            .Where(sc => sc.ContentType == DBStepContentType.Think)
+            .All(sc => sc.StepContentThink?.Signature != null);
 
-                    if (description == null) return new { type };
-                    return new { type, description };
-                }
+        bool allowThinkingBlocks = hasThinkingBlocks && allThinkingHaveSignature;
+        bool hasToolCall = request.Steps.Any(m => m.ChatRole == DBChatRole.Assistant && m.StepContents.Any(sc => sc.ContentType == DBStepContentType.ToolCall));
+        bool allowThinking = !hasToolCall || allowThinkingBlocks;
+
+        JsonObject body = new()
+        {
+            ["model"] = request.ChatConfig.Model.DeploymentName,
+            ["messages"] = ConvertMessages(request.Steps, allowThinkingBlocks),
+        };
+
+        if (request.ChatConfig.SystemPrompt != null)
+        {
+            body["system"] = request.ChatConfig.SystemPrompt;
+        }
+
+        if (allowThinking && request.ChatConfig.ThinkingBudget != null)
+        {
+            body["thinking"] = new JsonObject
+            {
+                ["type"] = "enabled",
+                ["budget_tokens"] = request.ChatConfig.ThinkingBudget.Value
+            };
+        }
+
+        JsonArray tools = BuildToolsArray(request);
+        if (tools.Count > 0)
+        {
+            body["tools"] = tools;
+        }
+
+        return body;
+    }
+
+    private static JsonObject ConvertTool(ChatTool tool)
+    {
+        JsonObject inputSchema = new()
+        {
+            ["type"] = "object"
+        };
+
+        JsonObject? parameters = tool.FunctionParameters.ToObjectFromJson<JsonObject>();
+        if (parameters != null)
+        {
+            if (parameters.TryGetPropertyValue("properties", out JsonNode? props) && props != null)
+            {
+                inputSchema["properties"] = JsonNode.Parse(props.ToJsonString());
+            }
+            if (parameters.TryGetPropertyValue("required", out JsonNode? req) && req != null)
+            {
+                inputSchema["required"] = JsonNode.Parse(req.ToJsonString());
             }
         }
 
-        static List<MessageParam> ConvertMessages(IEnumerable<Step> messages, bool allowThinkingBlocks)
+        JsonObject result = new()
         {
-            List<Step> mergedToolMessages = [..SwitchServerToolResponsesAsUser(MergeToolMessages(messages))];
-            return [.. mergedToolMessages.Select(x => ToAnthropicMessage(x, allowThinkingBlocks))];
+            ["name"] = tool.FunctionName,
+            ["input_schema"] = inputSchema
+        };
 
-            static IEnumerable<Step> SwitchServerToolResponsesAsUser(IEnumerable<Step> steps)
+        // description must be a valid string if present, cannot be null
+        if (!string.IsNullOrEmpty(tool.FunctionDescription))
+        {
+            result["description"] = tool.FunctionDescription;
+        }
+
+        return result;
+    }
+
+    private static JsonArray ConvertMessages(IEnumerable<Step> messages, bool allowThinkingBlocks)
+    {
+        List<Step> mergedToolMessages = [.. SwitchServerToolResponsesAsUser(MergeToolMessages(messages))];
+        JsonArray result = [];
+        foreach (Step step in mergedToolMessages)
+        {
+            result.Add(ToAnthropicMessage(step, allowThinkingBlocks));
+        }
+        return result;
+    }
+
+    private static IEnumerable<Step> SwitchServerToolResponsesAsUser(IEnumerable<Step> steps)
+    {
+        // Anthropic requires tool responses to be in user messages
+        // When response like web_search_tool_response comes back from server, we need to switch them to user role from assistant
+        // For example: [user, assistant(think, tool, tool_response, text), user] -> [user, assistant(think, tool), user(tool_response), assistant(text), user]
+        foreach (Step step in steps)
+        {
+            if (step.ChatRole != DBChatRole.Assistant)
             {
-                // Anthropic requires tool responses to be in user messages
-                // When response like web_search_tool_response comes back from server, we need to switch them to user role from assistant
-                // For example: [user, assistant(think, tool, tool_response, text), user] -> [user, assistant(think, tool), user(tool_response), assistant(text), user]
-                foreach (Step step in steps)
+                yield return step;
+                continue;
+            }
+
+            List<StepContent> assistantBuffer = [];
+            List<StepContent> userBuffer = [];
+
+            foreach (StepContent part in step.StepContents)
+            {
+                if (part.StepContentToolCallResponse is not null)
                 {
-                    if (step.ChatRole != DBChatRole.Assistant)
-                    {
-                        yield return step;
-                        continue;
-                    }
-
-                    List<StepContent> assistantBuffer = new();
-                    List<StepContent> userBuffer = new();
-
-                    foreach (StepContent part in step.StepContents)
-                    {
-                        if (part.StepContentToolCallResponse is not null)
-                        {
-                            // flush any accumulated assistant parts before emitting user tool responses
-                            if (assistantBuffer.Count > 0)
-                            {
-                                yield return new Step()
-                                {
-                                    ChatRoleId = (byte)DBChatRole.Assistant,
-                                    StepContents = [.. assistantBuffer],
-                                };
-                                assistantBuffer.Clear();
-                            }
-
-                            userBuffer.Add(part);
-                        }
-                        else
-                        {
-                            // if we have accumulated user tool responses, emit them first
-                            if (userBuffer.Count > 0)
-                            {
-                                yield return new Step()
-                                {
-                                    ChatRoleId = (byte)DBChatRole.User,
-                                    StepContents = [.. userBuffer],
-                                };
-                                userBuffer.Clear();
-                            }
-
-                            assistantBuffer.Add(part);
-                        }
-                    }
-
-                    // flush remaining buffers in the original order
+                    // flush any accumulated assistant parts before emitting user tool responses
                     if (assistantBuffer.Count > 0)
                     {
-                        yield return new Step()
+                        yield return new Step
                         {
                             ChatRoleId = (byte)DBChatRole.Assistant,
                             StepContents = [.. assistantBuffer],
                         };
+                        assistantBuffer.Clear();
                     }
 
+                    userBuffer.Add(part);
+                }
+                else
+                {
+                    // if we have accumulated user tool responses, emit them first
                     if (userBuffer.Count > 0)
                     {
-                        yield return new Step()
+                        yield return new Step
                         {
                             ChatRoleId = (byte)DBChatRole.User,
                             StepContents = [.. userBuffer],
                         };
+                        userBuffer.Clear();
                     }
+
+                    assistantBuffer.Add(part);
                 }
             }
 
-            static IEnumerable<Step> MergeToolMessages(IEnumerable<Step> messages)
+            // flush remaining buffers in the original order
+            if (assistantBuffer.Count > 0)
             {
-                // openai will omit tool messages, but anthropic needs them merged into the user message
-                // for example:
-                // openai: [user, assistant(request tool call, probably multiple), tool(tool response 1), tool(tool response 2), assistant]
-                // anthropic: [user, assistant(request tool call, probably multiple), user(tool response 1 + 2), assistant]
-                List<StepContent> toolBuffer = [];
-
-                foreach (Step message in messages)
+                yield return new Step
                 {
-                    if (message.ChatRole == DBChatRole.ToolCall)
-                    {
-                        toolBuffer.AddRange(message.StepContents);
-                        }
-                        else
-                        {
-                            if (toolBuffer.Count > 0)
-                            {
-                                yield return new Step()
-                                {
-                                    ChatRoleId = (byte)DBChatRole.User,
-                                    StepContents = [.. toolBuffer],
-                                };
-                                toolBuffer.Clear();
-                            }
-                            yield return message;
-                        }
-                    }
+                    ChatRoleId = (byte)DBChatRole.Assistant,
+                    StepContents = [.. assistantBuffer],
+                };
+            }
 
+            if (userBuffer.Count > 0)
+            {
+                yield return new Step
+                {
+                    ChatRoleId = (byte)DBChatRole.User,
+                    StepContents = [.. userBuffer],
+                };
+            }
+        }
+    }
+
+    private static IEnumerable<Step> MergeToolMessages(IEnumerable<Step> messages)
+    {
+        // openai will omit tool messages, but anthropic needs them merged into the user message
+        // for example:
+        // openai: [user, assistant(request tool call, probably multiple), tool(tool response 1), tool(tool response 2), assistant]
+        // anthropic: [user, assistant(request tool call, probably multiple), user(tool response 1 + 2), assistant]
+        List<StepContent> toolBuffer = [];
+
+        foreach (Step message in messages)
+        {
+            if (message.ChatRole == DBChatRole.ToolCall)
+            {
+                toolBuffer.AddRange(message.StepContents);
+            }
+            else
+            {
                 if (toolBuffer.Count > 0)
                 {
-                    yield return new Step()
+                    yield return new Step
                     {
                         ChatRoleId = (byte)DBChatRole.User,
                         StepContents = [.. toolBuffer],
                     };
+                    toolBuffer.Clear();
                 }
+                yield return message;
             }
+        }
 
-            static MessageParam ToAnthropicMessage(Step message, bool allowThinkingBlocks)
+        if (toolBuffer.Count > 0)
+        {
+            yield return new Step
             {
-                Role anthropicRole = message.ChatRole switch
-                {
-                    DBChatRole.User => Role.User,
-                    DBChatRole.Assistant => Role.Assistant,
-                    DBChatRole.ToolCall => throw new InvalidOperationException("Tool messages should be merged into user messages before conversion."),
-                    _ => throw new InvalidOperationException($"Unknown message type: {message.GetType().FullName}"),
-                };
+                ChatRoleId = (byte)DBChatRole.User,
+                StepContents = [.. toolBuffer],
+            };
+        }
+    }
 
-                return new MessageParam()
-                {
-                    Role = anthropicRole,
-                    Content = new MessageParamContent([.. message.StepContents
-                    .Select(x => ToAnthropicMessageContent(x, allowThinkingBlocks))
-                    .Where(x => x != null).Select(x => x!)
-                        ])
-                };
+    private static JsonObject ToAnthropicMessage(Step message, bool allowThinkingBlocks)
+    {
+        string anthropicRole = message.ChatRole switch
+        {
+            DBChatRole.User => "user",
+            DBChatRole.Assistant => "assistant",
+            DBChatRole.ToolCall => throw new InvalidOperationException("Tool messages should be merged into user messages before conversion."),
+            _ => throw new InvalidOperationException($"Unknown message type: {message.GetType().FullName}"),
+        };
 
-                static ContentBlockParam? ToAnthropicMessageContent(StepContent part, bool allowThinkingBlocks)
-                {
-                    if (part.TryGetTextPart(out string? text))
-                    {
-                        return new TextBlockParam(text);
-                    }
-                    else if (part.TryGetFileUrl(out string? url))
-                    {
-                        return new ImageBlockParam(new URLImageSource(url));
-                    }
-                    else if (part.TryGetFileBlob(out StepContentBlob? blob))
-                    {
-                        return new ImageBlockParam(new Base64ImageSource()
-                        {
-                            Data = Convert.ToBase64String(blob.Content),
-                            MediaType = blob.MediaType,
-                        });
-                    }
-                    else if (part.TryGetThink(out string? thinkText, out byte[]? signature))
-                    {
-                        if (allowThinkingBlocks)
-                        {
-                            string? signatureBase64 = signature != null ? Convert.ToBase64String(signature) : null;
+        JsonArray content = [];
+        foreach (StepContent sc in message.StepContents)
+        {
+            JsonObject? contentBlock = ToAnthropicMessageContent(sc, allowThinkingBlocks);
+            if (contentBlock != null)
+            {
+                content.Add(contentBlock);
+            }
+        }
 
-                            if (thinkText == null)
-                            {
-                                return new RedactedThinkingBlockParam(signatureBase64!);
-                            }
-                            else
-                            {
-                                return new ThinkingBlockParam() { Thinking = thinkText, Signature = signatureBase64! };
-                            }
-                        }
-                        else
-                        {
-                            return null; // drop invalid/unsigned or disallowed thinking blocks
-                        }
-                    }
-                    else if (part.TryGetError(out string? error))
+        return new JsonObject
+        {
+            ["role"] = anthropicRole,
+            ["content"] = content
+        };
+    }
+
+    private static JsonObject? ToAnthropicMessageContent(StepContent part, bool allowThinkingBlocks)
+    {
+        if (part.TryGetTextPart(out string? text))
+        {
+            return new JsonObject
+            {
+                ["type"] = "text",
+                ["text"] = text
+            };
+        }
+        else if (part.TryGetFileUrl(out string? url))
+        {
+            return new JsonObject
+            {
+                ["type"] = "image",
+                ["source"] = new JsonObject
+                {
+                    ["type"] = "url",
+                    ["url"] = url
+                }
+            };
+        }
+        else if (part.TryGetFileBlob(out StepContentBlob? blob))
+        {
+            return new JsonObject
+            {
+                ["type"] = "image",
+                ["source"] = new JsonObject
+                {
+                    ["type"] = "base64",
+                    ["media_type"] = blob.MediaType,
+                    ["data"] = Convert.ToBase64String(blob.Content)
+                }
+            };
+        }
+        else if (part.TryGetThink(out string? thinkText, out byte[]? signature))
+        {
+            if (allowThinkingBlocks)
+            {
+                string? signatureBase64 = signature != null ? Convert.ToBase64String(signature) : null;
+
+                if (thinkText == null)
+                {
+                    return new JsonObject
                     {
-                        return new TextBlockParam(error); // map error to text
-                    }
-                    else if (part.StepContentToolCall is not null)
+                        ["type"] = "redacted_thinking",
+                        ["data"] = signatureBase64
+                    };
+                }
+                else
+                {
+                    return new JsonObject
                     {
-                        StepContentToolCall toolCall = part.StepContentToolCall;
-                        return new ToolUseBlockParam()
-                        {
-                            ID = toolCall.ToolCallId,
-                            Name = toolCall.Name,
-                            Input = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(toolCall.Parameters)!,
-                        };
-                    }
-                    else if (part.StepContentToolCallResponse is not null)
-                    {
-                        StepContentToolCallResponse toolResponse = part.StepContentToolCallResponse;
-                        return new ToolResultBlockParam()
-                        {
-                            ToolUseID = toolResponse.ToolCallId,
-                            Content = new ToolResultBlockParamContent(toolResponse.Response),
-                            IsError = !toolResponse.IsSuccess,
-                        };
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException($"Unsupported StepContent type for Anthropic conversion: {(DBStepContentType)part.ContentTypeId}");
-                    }
+                        ["type"] = "thinking",
+                        ["thinking"] = thinkText,
+                        ["signature"] = signatureBase64!
+                    };
                 }
             }
+            else
+            {
+                return null; // drop invalid/unsigned or disallowed thinking blocks
+            }
+        }
+        else if (part.TryGetError(out string? error))
+        {
+            return new JsonObject
+            {
+                ["type"] = "text",
+                ["text"] = error
+            };
+        }
+        else if (part.StepContentToolCall is not null)
+        {
+            StepContentToolCall toolCall = part.StepContentToolCall;
+            return new JsonObject
+            {
+                ["type"] = "tool_use",
+                ["id"] = toolCall.ToolCallId,
+                ["name"] = toolCall.Name,
+                ["input"] = JsonNode.Parse(toolCall.Parameters)
+            };
+        }
+        else if (part.StepContentToolCallResponse is not null)
+        {
+            StepContentToolCallResponse toolResponse = part.StepContentToolCallResponse;
+            JsonObject result = new()
+            {
+                ["type"] = "tool_result",
+                ["tool_use_id"] = toolResponse.ToolCallId,
+                ["content"] = toolResponse.Response
+            };
+            if (!toolResponse.IsSuccess)
+            {
+                result["is_error"] = true;
+            }
+            return result;
+        }
+        else
+        {
+            throw new InvalidOperationException($"Unsupported StepContent type for Anthropic conversion: {(DBStepContentType)part.ContentTypeId}");
         }
     }
 }
