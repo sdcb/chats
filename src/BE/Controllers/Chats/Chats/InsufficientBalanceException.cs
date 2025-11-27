@@ -32,3 +32,12 @@ public class SubscriptionExpiredException(DateTime expiresAt) : ChatServiceExcep
 
     public override string Message => "Subscription has expired";
 }
+
+public class RawChatServiceException(int statusCode, string body) : ChatServiceException(DBFinishReason.UpstreamError)
+{
+    public int StatusCode => statusCode;
+
+    public string Body => body;
+
+    public override string Message => Body;
+}

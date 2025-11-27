@@ -691,6 +691,12 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     }
                 }
             }
+            catch (RawChatServiceException rawEx)
+            {
+                icc.FinishReason = rawEx.ErrorCode;
+                errorText = rawEx.Body;
+                logger.LogError(rawEx, "Upstream error: {StatusCode}", rawEx.StatusCode);
+            }
             catch (ChatServiceException cse)
             {
                 icc.FinishReason = cse.ErrorCode;

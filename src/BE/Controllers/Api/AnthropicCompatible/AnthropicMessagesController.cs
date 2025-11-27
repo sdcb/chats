@@ -76,7 +76,7 @@ public class AnthropicMessagesController(
             .FirstOrDefaultAsync(cancellationToken) ?? throw new InvalidOperationException("User balance not found.");
         UserModelBalanceCalculator calc = new(BalanceInitialInfo.FromDB([userModel], userBalance.Balance), []);
         ScopedBalanceCalculator scopedCalc = calc.WithScoped("0");
-        BadRequestObjectResult? errorToReturn = null;
+        ActionResult? errorToReturn = null;
         bool hasSuccessYield = false;
         string messageId = $"msg_{Guid.NewGuid():N}";
 
@@ -139,6 +139,12 @@ public class AnthropicMessagesController(
                 // Send message_stop
                 await YieldEvent("message_stop", new MessageStopEvent(), cancellationToken);
             }
+        }
+        catch (RawChatServiceException rawEx)
+        {
+            icc.FinishReason = rawEx.ErrorCode;
+            logger.LogError(rawEx, "Upstream error: {StatusCode}", rawEx.StatusCode);
+            errorToReturn = await YieldRawError(hasSuccessYield && request.Streamed, rawEx.Body, cancellationToken);
         }
         catch (ChatServiceException cse)
         {
@@ -370,6 +376,28 @@ public class AnthropicMessagesController(
         }
 
         return ErrorMessage(errorType, message);
+    }
+
+    private async Task<ContentResult> YieldRawError(bool shouldStreamed, string rawBody, CancellationToken cancellationToken)
+    {
+        if (shouldStreamed)
+        {
+            // Send raw error as SSE event
+            await Response.Body.WriteAsync(eventU8, cancellationToken);
+            await Response.Body.WriteAsync("error"u8.ToArray(), cancellationToken);
+            await Response.Body.WriteAsync(lfU8, cancellationToken);
+            await Response.Body.WriteAsync(dataU8, cancellationToken);
+            await Response.Body.WriteAsync(System.Text.Encoding.UTF8.GetBytes(rawBody), cancellationToken);
+            await Response.Body.WriteAsync(lflfU8, cancellationToken);
+            await Response.Body.FlushAsync(cancellationToken);
+        }
+
+        return new ContentResult
+        {
+            Content = rawBody,
+            ContentType = "application/json",
+            StatusCode = 400
+        };
     }
 
     private static string MapFinishReasonToErrorType(DBFinishReason finishReason)

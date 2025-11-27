@@ -1,3 +1,4 @@
+using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
@@ -32,7 +33,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         if (!response.IsSuccessStatusCode)
         {
             string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new HttpRequestException($"Anthropic API error: {response.StatusCode} - {errorBody}");
+            throw new RawChatServiceException((int)response.StatusCode, errorBody);
         }
 
         using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -216,12 +217,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
                 case "error":
                     {
-                        string? errorMessage = "Unknown error";
-                        if (json.TryGetProperty("error", out JsonElement error))
-                        {
-                            errorMessage = error.TryGetProperty("message", out JsonElement msg) ? msg.GetString() : "Unknown error";
-                        }
-                        throw new HttpRequestException($"Anthropic API error: {errorMessage}");
+                        throw new RawChatServiceException(200, sseItem.Data);
                     }
             }
         }
