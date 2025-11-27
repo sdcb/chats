@@ -30,7 +30,6 @@ import {
   IconArrowUp,
   IconArrowsDiagonal,
   IconArrowsDiagonalMinimize,
-  IconCircleX,
   IconCamera,
   IconLoader,
   IconPaperclip,
@@ -275,6 +274,7 @@ const ChatInput = ({
     });
     setContentText('');
     setContentFiles([]);
+    setTextareaHeight(TEXTAREA_MIN_HEIGHT);
 
     if (window.innerWidth < 640 && textareaRef && textareaRef.current) {
       textareaRef.current.blur();
@@ -345,8 +345,8 @@ const ChatInput = ({
     if (value) {
       setIsFullWriting(true);
       setTextareaHeight('full');
-    } else if (textareaRef.current) {
-      // 退出全屏：先设置为当前像素高度，然后动画到目标高度
+    } else if (isFullWriting && textareaRef.current) {
+      // 只有从全屏退出时才执行动画逻辑
       const fullHeight = textareaRef.current.offsetHeight;
       const targetHeight = getContentHeight();
       setTextareaHeight(fullHeight);

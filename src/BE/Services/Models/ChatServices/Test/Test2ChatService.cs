@@ -40,23 +40,22 @@ public class Test2ChatService : ChatService
             .Where(x => x != null)
             .FirstOrDefault() ?? string.Empty;
 
-        if (messageText == "test-1")
+        if (messageText == "test-url")
         {
             return UrlOnly(cancellationToken);
         }
-        else if (messageText == "test-2")
+        else if (messageText == "test-both")
         {
             return TextAndUrl(cancellationToken);
         }
         else
         {
-            return TextOnly(cancellationToken);
+            return TextOnly(messageText, cancellationToken);
         }
     }
 
     async IAsyncEnumerable<ChatSegment> UrlOnly([EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        StringBuilder outputed = new();
         for (int i = 0; i < outputs.Length; i++)
         {
             string url = urls[i];
@@ -100,8 +99,9 @@ public class Test2ChatService : ChatService
         }
     }
 
-    async IAsyncEnumerable<ChatSegment> TextOnly([EnumeratorCancellation] CancellationToken cancellationToken)
+    async IAsyncEnumerable<ChatSegment> TextOnly(string inputText, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        int duration = inputText == "test-slow" ? 200 : 1;
         StringBuilder outputed = new();
         for (int i = 0; i < outputs.Length; i++)
         {
@@ -117,7 +117,7 @@ public class Test2ChatService : ChatService
                     Usage = null,
                     FinishReason = null,
                 };
-                await Task.Delay(1, cancellationToken);
+                await Task.Delay(duration, cancellationToken);
             }
             {
                 outputed.Append('\n');
