@@ -141,7 +141,7 @@
   "Are you sure?": "确定吗？",
   "Sorry, we couldn't find the page you were looking for.": "抱歉，我们找不到您要找的页面。",
   "Back to home page": "返回首页",
-  "API documentation URL": "API 文档 URL",
+  "API documentation URL": "API文档 URL",
   "Add Prompt": "添加提示词",
   "Edit Prompt": "编辑提示词",
   "Create Prompt": "新建提示词",
@@ -158,7 +158,7 @@
   "Prompt": "提示词",
   "Prompt content. Use {{}} to denote a variable. Ex: {{name}} is a {{adjective}} {{noun}}": "提示内容。使用 {{}} 表示一个变量。例如：{{name}} 是一个 {{adjective}} {{noun}}",
   "System Variables": "系统变量",
-  "Settings": "设置",
+  "User Settings": "用户设置",
   "Theme": "主题",
   "zh": "简体中文",
   "en": "英语",
@@ -706,5 +706,13 @@
   "Allows the model to stream responses token by token. Usually enabled by default.": "允许模型逐个 Token 流式输出响应。通常默认开启。",
   "Enables the model provider's built-in code execution capability (e.g., Gemini). It is NOT a system-provided tool.": "启用模型提供商内置的代码执行能力（如 Gemini）。这不是系统内置的工具。",
   "Enables the model to call external tools. Chats provides MCP tools; only models with this enabled will show the MCP options list.": "允许模型调用外部工具。Chats 提供 MCP 工具；只有启用此选项的模型才会显示 MCP 选项列表。",
-  "Previously, many DeepSeek models returned thinking content mixed with non-thinking content using <think>...</think> tags. Enabling this parser extracts the thinking content into a <ThinkingMessage> for a better user experience. This also affects the API response, outputting via 'reasoning_content' instead of direct output. While many providers now handle this natively, this option is retained for exceptions.": "早期 DeepSeek 模型常将思考过程包含在 <think> 标签中与正文混杂返回。启用此选项可将思考内容单独提取展示，优化阅读体验，同时 API 响应也会通过 reasoning_content 字段输出。虽然目前多数服务商已原生支持分离思考内容，但此选项仍保留以兼容特殊情况。"
+  "Previously, many DeepSeek models returned thinking content mixed with non-thinking content using <think>...</think> tags. Enabling this parser extracts the thinking content into a <ThinkingMessage> for a better user experience. This also affects the API response, outputting via 'reasoning_content' instead of direct output. While many providers now handle this natively, this option is retained for exceptions.": "早期 DeepSeek 模型常将思考过程包含在 <think> 标签中与正文混杂返回。启用此选项可将思考内容单独提取展示，优化阅读体验，同时 API 响应也会通过 reasoning_content 字段输出。虽然目前多数服务商已原生支持分离思考内容，但此选项仍保留以兼容特殊情况。",
+    "API Docs": "API文档",
+  "API Usage Records": "API使用记录",
+  "API Name": "API 名称",
+  "Endpoint": "端点",
+  "Documentation": "文档",
+  "View Documentation": "查看文档",
+  "API documentation for supported endpoints. Click on the documentation link for detailed usage instructions.": "支持的 API 端点文档。点击文档链接查看详细使用说明。",
+  "API keys are credentials for accessing Chats API with full account permissions. Please keep them secure.": "API 密钥是您访问 Chats 接口的凭证，具有该账户的完整权限，请您妥善保管。"
 }

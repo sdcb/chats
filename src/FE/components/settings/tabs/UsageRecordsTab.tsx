@@ -65,7 +65,12 @@ interface QueryParams {
   provider?: string;
 }
 
-const UsageRecordsTab = () => {
+interface UsageRecordsTabProps {
+  fixedSource?: UsageSource;
+  basePath?: string;
+}
+
+const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) => {
   const { t } = useTranslation();
   const router = useRouter();
   const user = useUserInfo();
@@ -94,8 +99,11 @@ const UsageRecordsTab = () => {
   const [startDate, setStartDate] = useState<string>((start as string) || '');
   const [endDate, setEndDate] = useState<string>((end as string) || '');
   const [selectedSource, setSelectedSource] = useState<string>(
-    (source as string) || '',
+    fixedSource !== undefined ? String(fixedSource) : (source as string) || '',
   );
+
+  const getQueryTab = () => basePath ? undefined : 'usage';
+  const getPathname = () => basePath || router.pathname;
 
   useEffect(() => {
     getUserModels().then((data) => {
@@ -122,7 +130,9 @@ const UsageRecordsTab = () => {
       setEndDate((end as string) || '');
       setSelectedProvider((provider as string) || '');
       setSelectedApiKey((kid as string) || '');
-      setSelectedSource((source as string) || '');
+      if (fixedSource === undefined) {
+        setSelectedSource((source as string) || '');
+      }
       fetchUsageData();
     }
   }, [
@@ -202,24 +212,35 @@ const UsageRecordsTab = () => {
     });
   };
 
-  const handlePageChange = (page: number) => {
-    setPagination({ ...pagination, page });
+  const buildQuery = (updates: Record<string, string | undefined> = {}) => {
+    const query: Record<string, string> = {};
+    const tab = getQueryTab();
+    if (tab) query.tab = tab;
 
-    const query: Record<string, string> = {
-      tab: 'usage',
-      page: page.toString(),
-    };
-
-    if (selectedSource) query.source = selectedSource;
+    if (fixedSource === undefined && selectedSource) query.source = selectedSource;
     if (selectedApiKey) query.kid = selectedApiKey;
     if (startDate) query.start = startDate;
     if (endDate) query.end = endDate;
     if (selectedProvider) query.provider = selectedProvider;
 
+    // Apply updates
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value !== undefined) {
+        query[key] = value;
+      } else {
+        delete query[key];
+      }
+    });
+
+    return query;
+  };
+
+  const handlePageChange = (page: number) => {
+    setPagination({ ...pagination, page });
     router.push(
       {
-        pathname: router.pathname,
-        query,
+        pathname: getPathname(),
+        query: buildQuery({ page: page.toString() }),
       },
       undefined,
       { shallow: true },
@@ -231,73 +252,60 @@ const UsageRecordsTab = () => {
       <Card className="p-3 mb-4 border-none">
         <div className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="w-full flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Select
-                value={selectedSource}
-                onValueChange={(value) => {
-                  setSelectedSource(value);
-                  const query: Record<string, string> = {
-                    ...(router.query as Record<string, string>),
-                    source: value,
-                    tab: 'usage',
-                  };
-                  router.push(
-                    {
-                      pathname: router.pathname,
-                      query,
-                    },
-                    undefined,
-                    { shallow: true },
-                  );
-                }}
-              >
-                <SelectTrigger
-                  className="w-48"
+            {fixedSource === undefined && (
+              <div className="flex items-center gap-2">
+                <Select
                   value={selectedSource}
-                  onReset={() => {
-                    setSelectedSource('');
-                    const query: Record<string, string> = {
-                      ...(router.query as Record<string, string>),
-                      tab: 'usage',
-                    };
-                    delete query.source;
+                  onValueChange={(value) => {
+                    setSelectedSource(value);
                     router.push(
                       {
-                        pathname: router.pathname,
-                        query,
+                        pathname: getPathname(),
+                        query: buildQuery({ source: value }),
                       },
                       undefined,
                       { shallow: true },
                     );
                   }}
                 >
-                  <SelectValue placeholder={t('Select Source')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={String(UsageSource.Web)}>
-                    {t('Web')}
-                  </SelectItem>
-                  <SelectItem value={String(UsageSource.API)}>
-                    {t('API')}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                  <SelectTrigger
+                    className="w-48"
+                    value={selectedSource}
+                    onReset={() => {
+                      setSelectedSource('');
+                      router.push(
+                        {
+                          pathname: getPathname(),
+                          query: buildQuery({ source: undefined }),
+                        },
+                        undefined,
+                        { shallow: true },
+                      );
+                    }}
+                  >
+                    <SelectValue placeholder={t('Select Source')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={String(UsageSource.Web)}>
+                      {t('Web')}
+                    </SelectItem>
+                    <SelectItem value={String(UsageSource.API)}>
+                      {t('API')}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="flex items-center gap-2">
               <Select
                 value={selectedApiKey}
                 onValueChange={(value) => {
                   setSelectedApiKey(value);
-                  const query: Record<string, string> = {
-                    ...(router.query as Record<string, string>),
-                    kid: value,
-                    tab: 'usage',
-                  };
                   router.push(
                     {
-                      pathname: router.pathname,
-                      query,
+                      pathname: getPathname(),
+                      query: buildQuery({ kid: value }),
                     },
                     undefined,
                     { shallow: true },
@@ -309,15 +317,10 @@ const UsageRecordsTab = () => {
                   value={selectedApiKey}
                   onReset={() => {
                     setSelectedApiKey('');
-                    const query: Record<string, string> = {
-                      ...(router.query as Record<string, string>),
-                      tab: 'usage',
-                    };
-                    delete query.kid;
                     router.push(
                       {
-                        pathname: router.pathname,
-                        query,
+                        pathname: getPathname(),
+                        query: buildQuery({ kid: undefined }),
                       },
                       undefined,
                       { shallow: true },
@@ -344,15 +347,10 @@ const UsageRecordsTab = () => {
                 value={selectedProvider}
                 onValueChange={(value) => {
                   setSelectedProvider(value);
-                  const query: Record<string, string> = {
-                    ...(router.query as Record<string, string>),
-                    provider: value,
-                    tab: 'usage',
-                  };
                   router.push(
                     {
-                      pathname: router.pathname,
-                      query,
+                      pathname: getPathname(),
+                      query: buildQuery({ provider: value }),
                     },
                     undefined,
                     { shallow: true },
@@ -364,15 +362,10 @@ const UsageRecordsTab = () => {
                   value={selectedProvider}
                   onReset={() => {
                     setSelectedProvider('');
-                    const query: Record<string, string> = {
-                      ...(router.query as Record<string, string>),
-                      tab: 'usage',
-                    };
-                    delete query.provider;
                     router.push(
                       {
-                        pathname: router.pathname,
-                        query,
+                        pathname: getPathname(),
+                        query: buildQuery({ provider: undefined }),
                       },
                       undefined,
                       { shallow: true },
@@ -399,15 +392,10 @@ const UsageRecordsTab = () => {
                 onSelect={(date: Date) => {
                   const formattedDate = formatDate(date.toLocaleDateString());
                   setStartDate(formattedDate);
-                  const query: Record<string, string> = {
-                    ...(router.query as Record<string, string>),
-                    start: formattedDate,
-                    tab: 'usage',
-                  };
                   router.push(
                     {
-                      pathname: router.pathname,
-                      query,
+                      pathname: getPathname(),
+                      query: buildQuery({ start: formattedDate }),
                     },
                     undefined,
                     { shallow: true },
@@ -415,15 +403,10 @@ const UsageRecordsTab = () => {
                 }}
                 onReset={() => {
                   setStartDate('');
-                  const query: Record<string, string> = {
-                    ...(router.query as Record<string, string>),
-                    tab: 'usage',
-                  };
-                  delete query.start;
                   router.push(
                     {
-                      pathname: router.pathname,
-                      query,
+                      pathname: getPathname(),
+                      query: buildQuery({ start: undefined }),
                     },
                     undefined,
                     { shallow: true },
@@ -440,15 +423,10 @@ const UsageRecordsTab = () => {
                 onSelect={(date: Date) => {
                   const formattedDate = formatDate(date.toLocaleDateString());
                   setEndDate(formattedDate);
-                  const query: Record<string, string> = {
-                    ...(router.query as Record<string, string>),
-                    end: formattedDate,
-                    tab: 'usage',
-                  };
                   router.push(
                     {
-                      pathname: router.pathname,
-                      query,
+                      pathname: getPathname(),
+                      query: buildQuery({ end: formattedDate }),
                     },
                     undefined,
                     { shallow: true },
@@ -456,15 +434,10 @@ const UsageRecordsTab = () => {
                 }}
                 onReset={() => {
                   setEndDate('');
-                  const query: Record<string, string> = {
-                    ...(router.query as Record<string, string>),
-                    tab: 'usage',
-                  };
-                  delete query.end;
                   router.push(
                     {
-                      pathname: router.pathname,
-                      query,
+                      pathname: getPathname(),
+                      query: buildQuery({ end: undefined }),
                     },
                     undefined,
                     { shallow: true },

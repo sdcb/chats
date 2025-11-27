@@ -11,6 +11,7 @@ import { UserRole } from '@/types/adminApis';
 
 import ErrorPage from './_error';
 import AdminLayout from '@/components/admin/layout/AdminLayout';
+import BuildLayout from '@/components/build/layout/BuildLayout';
 import './globals.css';
 
 import { ThemeProvider } from '@/providers/ThemeProvider';
@@ -49,6 +50,10 @@ function App({ Component, pageProps }: AppProps<{}> | any) {
             ) : (
               <ErrorPage statusCode={404} />
             )
+          ) : route.pathname.includes('/build') ? (
+            <BuildLayout>
+              <Component {...pageProps} />
+            </BuildLayout>
           ) : route.pathname.includes('/authorizing') ? (
             <Component {...pageProps} />
           ) : (

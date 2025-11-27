@@ -8,10 +8,11 @@ import { clearChatCache } from '@/utils/chatCache';
 import { UserRole } from '@/types/adminApis';
 
 import {
+  IconCode,
   IconLogout,
   IconMessage,
   IconSettings,
-  IconSettingsCog,
+  IconUserCog,
 } from '@/components/Icons/index';
 import {
   Popover,
@@ -25,14 +26,20 @@ import SidebarLink from '../Sidebar/SidebarLink';
 
 import { useUserInfo } from '@/providers/UserProvider';
 
+export enum PageType {
+  Chat = 'chat',
+  Admin = 'admin',
+  Build = 'build',
+}
+
 interface UserMenuPopoverProps {
-  isAdminPage?: boolean;
+  pageType: PageType;
   trigger: React.ReactNode;
   onOpen?: () => void;
 }
 
 const UserMenuPopover = ({
-  isAdminPage = false,
+  pageType,
   trigger,
   onOpen,
 }: UserMenuPopoverProps) => {
@@ -62,9 +69,9 @@ const UserMenuPopover = ({
         side="top"
         align="start"
         sideOffset={8}
-        className="w-[168px] p-2 data-[state=open]:animate-slide-up-in data-[state=closed]:animate-slide-up-out"
+        className="w-[200px] p-2 data-[state=open]:animate-slide-up-in data-[state=closed]:animate-slide-up-out"
       >
-        {isAdminPage ? (
+        {pageType !== PageType.Chat && (
           <SidebarLink
             text={t('Back to Chat')}
             href="/"
@@ -74,21 +81,31 @@ const UserMenuPopover = ({
               router.push('/');
             }}
           />
-        ) : (
-          user?.role === UserRole.admin && (
-            <SidebarLink
-              text={t('Admin Panel')}
-              href="/admin/dashboard"
-              icon={<IconSettingsCog />}
-              onClick={(e) => {
-                e.preventDefault();
-                router.push('/admin/dashboard');
-              }}
-            />
-          )
+        )}
+        {pageType !== PageType.Admin && user?.role === UserRole.admin && (
+          <SidebarLink
+            text={t('Admin Panel')}
+            href="/admin/dashboard"
+            icon={<IconUserCog />}
+            onClick={(e) => {
+              e.preventDefault();
+              router.push('/admin/dashboard');
+            }}
+          />
+        )}
+        {pageType !== PageType.Build && (
+          <SidebarLink
+            text="API"
+            href="/build/api-key"
+            icon={<IconCode />}
+            onClick={(e) => {
+              e.preventDefault();
+              router.push('/build/api-key');
+            }}
+          />
         )}
         <SidebarLink
-          text={t('Settings')}
+          text={t('User Settings')}
           href="/settings"
           icon={<IconSettings />}
           onClick={(e) => {

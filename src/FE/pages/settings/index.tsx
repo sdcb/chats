@@ -8,7 +8,6 @@ import useTranslation from '@/hooks/useTranslation';
 import {
   IconArrowDown,
   IconBulb,
-  IconKey,
   IconMoneybag,
   IconSettings,
   IconUser,
@@ -17,7 +16,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import AccountTab from '@/components/settings/tabs/AccountTab';
-import ApiKeysTab from '@/components/settings/tabs/ApiKeysTab';
 import GeneralTab from '@/components/settings/tabs/GeneralTab';
 import PromptsTab from '@/components/settings/tabs/PromptsTab';
 import McpTab from '@/components/settings/tabs/McpTab';
@@ -52,7 +50,7 @@ const SettingsPage = () => {
         >
           <IconArrowDown className="rotate-90" size={20} />
         </Link>
-        {t('Settings')}
+        {t('User Settings')}
       </h1>
 
       <Tabs
@@ -80,13 +78,6 @@ const SettingsPage = () => {
             <IconRobot /> {t('MCP')}
           </TabsTrigger>
           <TabsTrigger
-            value="api-keys"
-            className="flex-1 items-center sm:flex-none gap-1"
-          >
-            <IconKey size={18} />
-            {t('API Key')}
-          </TabsTrigger>
-          <TabsTrigger
             value="usage"
             className="flex-1 items-center sm:flex-none gap-1"
           >
@@ -110,9 +101,6 @@ const SettingsPage = () => {
           </TabsContent>
           <TabsContent value="mcp" className="m-0 h-full">
             <McpTab />
-          </TabsContent>
-          <TabsContent value="api-keys" className="m-0 h-full">
-            <ApiKeysTab />
           </TabsContent>
           <TabsContent value="usage" className="m-0 h-full">
             <UsageRecordsTab />

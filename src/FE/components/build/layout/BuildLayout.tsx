@@ -6,27 +6,16 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
-import { useToast } from '@/hooks/useToast';
 import useTranslation from '@/hooks/useTranslation';
 
-import { GetChatVersionResult } from '@/types/clientApis';
-
 import {
-  IconChartPie,
-  IconFiles,
-  IconIdBadge,
+  IconChartHistogram,
+  IconKey,
   IconLayoutSidebar,
-  IconMessages,
-  IconMoneybag,
-  IconSettings,
-  IconSettingsCog,
-  IconShieldLock,
-  IconUserCog,
-  IconUsers,
+  IconNotes,
 } from '@/components/Icons/index';
 import UserMenuPopover, { PageType } from '@/components/UserMenuPopover/UserMenuPopover';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import {
   Sidebar,
   SidebarContent,
@@ -38,10 +27,8 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { ToastAction } from '@/components/ui/toast';
 import { Toaster } from '@/components/ui/toaster';
 
-import { postChatsVersion } from '@/apis/adminApis';
 import { useUserInfo } from '@/providers/UserProvider';
 
 interface MenuItem {
@@ -50,7 +37,7 @@ interface MenuItem {
   title: string;
 }
 
-const AdminMenu = ({
+const BuildMenu = ({
   menus,
   isActive,
 }: {
@@ -88,7 +75,7 @@ const AdminMenu = ({
   );
 };
 
-const AdminLayout = ({
+const BuildLayout = ({
   children,
 }: {
   children: React.ReactNode;
@@ -96,133 +83,41 @@ const AdminLayout = ({
 }) => {
   const router = useRouter();
   const { t } = useTranslation();
-  const { toast } = useToast();
-  const [version, setVersion] = useState<GetChatVersionResult>();
   const [selectedMenu, setSelectedMenu] = useState<MenuItem>();
   const user = useUserInfo();
 
   const isActive = (url: string) => url === router.pathname;
 
-  useEffect(() => {
-    setSelectedMenu(menus.find((menu) => isActive(menu.url)));
-  }, [router.pathname]);
-
   const menus: MenuItem[] = [
     {
-      url: '/admin/dashboard',
+      url: '/build/api-key',
       icon: (stroke?: string) => (
-        <IconChartPie strokeWidth={1.2} stroke={stroke} />
+        <IconKey strokeWidth={1.2} stroke={stroke} />
       ),
-      title: t('Dashboard'),
+      title: t('API Key'),
     },
     {
-      url: '/admin/model',
+      url: '/build/docs',
       icon: (stroke?: string) => (
-        <IconSettingsCog strokeWidth={1.2} stroke={stroke} />
+        <IconNotes strokeWidth={1.2} stroke={stroke} />
       ),
-      title: t('Model Configs'),
+      title: t('API Docs'),
     },
     {
-      url: '/admin/users',
+      url: '/build/usage',
       icon: (stroke?: string) => (
-        <IconUsers strokeWidth={1.2} stroke={stroke} />
+        <IconChartHistogram strokeWidth={1.2} stroke={stroke} />
       ),
-      title: t('User Management'),
-    },
-    {
-      url: '/admin/user-models',
-      icon: (stroke?: string) => (
-        <IconUserCog strokeWidth={1.2} stroke={stroke} />
-      ),
-      title: t('User Model Permissions'),
-    },
-    {
-      url: '/admin/messages',
-      icon: (stroke?: string) => (
-        <IconMessages strokeWidth={1.2} stroke={stroke} />
-      ),
-      title: t('User Messages'),
-    },
-    {
-      url: '/admin/file-service',
-      icon: (stroke?: string) => (
-        <IconFiles strokeWidth={1.2} stroke={stroke} />
-      ),
-      title: t('File Service'),
-    },
-    {
-      url: '/admin/login-service',
-      icon: (stroke?: string) => (
-        <IconShieldLock strokeWidth={1.2} stroke={stroke} />
-      ),
-      title: t('Login Service'),
-    },
-    {
-      url: '/admin/usage',
-      icon: (stroke?: string) => (
-        <IconMoneybag strokeWidth={1.2} stroke={stroke} />
-      ),
-      title: t('Usage Records'),
-    },
-    {
-      url: '/admin/security-logs',
-      icon: (stroke?: string) => (
-        <IconShieldLock strokeWidth={1.2} stroke={stroke} />
-      ),
-      title: t('Security Logs'),
-    },
-    /**{
-      url: '/admin/request-logs',
-      icon: (stroke?: string) => <IconNotes strokeWidth={1.2} stroke={stroke} />,
-      title: t('Request Logs'),
-    },**/
-    {
-      url: '/admin/user-config',
-      icon: (stroke?: string) => (
-        <IconUserCog strokeWidth={1.2} stroke={stroke} />
-      ),
-      title: t('Account Initial Config'),
-    },
-    {
-      url: '/admin/global-configs',
-      icon: (stroke?: string) => (
-        <IconSettings strokeWidth={1.2} stroke={stroke} />
-      ),
-      title: t('Global Configs'),
-    },
-    {
-      url: '/admin/invitation-code',
-      icon: (stroke?: string) => (
-        <IconIdBadge strokeWidth={1.2} stroke={stroke} />
-      ),
-      title: t('Invitation Code Management'),
+      title: t('API Usage Records'),
     },
   ];
 
   useEffect(() => {
-    document.title = t('Chats Admin Panel');
+    setSelectedMenu(menus.find((menu) => isActive(menu.url)));
+  }, [router.pathname]);
 
-    postChatsVersion().then((v) => {
-      setVersion(v);
-      if (v.hasNewVersion) {
-        toast({
-          description: t(
-            'A new version is now available. Update for the latest features and improvements.',
-          ),
-          duration: 10000,
-          action: (
-            <ToastAction
-              altText={t('Go to upgrade')}
-              onClick={() => {
-                location.href = 'https://github.com/sdcb/chats/releases';
-              }}
-            >
-              {t('Go to upgrade')}
-            </ToastAction>
-          ),
-        });
-      }
-    });
+  useEffect(() => {
+    document.title = 'Chats API';
   }, []);
 
   return (
@@ -250,12 +145,7 @@ const AdminLayout = ({
                         src="/icons/logo.png"
                       />
                       <span className="text-base font-semibold">
-                        Chats
-                        {version?.currentVersion && (
-                          <Badge variant="outline" className="ml-2 text-xs">
-                            {version?.currentVersion}
-                          </Badge>
-                        )}
+                        Chats API
                       </span>
                     </div>
                   </Link>
@@ -264,13 +154,13 @@ const AdminLayout = ({
             </SidebarMenu>
           </SidebarHeader>
           <SidebarContent className="mt-5">
-            <AdminMenu menus={menus} isActive={isActive} />
+            <BuildMenu menus={menus} isActive={isActive} />
           </SidebarContent>
           <SidebarFooter>
             <SidebarMenu className="px-1">
               <SidebarMenuItem>
                 <UserMenuPopover
-                  pageType={PageType.Admin}
+                  pageType={PageType.Build}
                   trigger={
                     <SidebarMenuButton className="h-10">
                       <Avatar className="h-6 w-6 rounded-lg">
@@ -297,7 +187,7 @@ const AdminLayout = ({
               icon={<IconLayoutSidebar size={26} strokeWidth={1} />}
             />
             <h1 className="font-medium">
-              {selectedMenu?.title || t('Chats Admin Panel')}
+              {selectedMenu?.title || t('Chats Build')}
             </h1>
           </div>
           <div className="flex-1 overflow-auto p-4">{children}</div>
@@ -308,4 +198,4 @@ const AdminLayout = ({
   );
 };
 
-export default AdminLayout;
+export default BuildLayout;
