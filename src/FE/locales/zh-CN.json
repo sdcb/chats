@@ -714,5 +714,7 @@
   "Documentation": "文档",
   "View Documentation": "查看文档",
   "API documentation for supported endpoints. Click on the documentation link for detailed usage instructions.": "支持的 API 端点文档。点击文档链接查看详细使用说明。",
-  "API keys are credentials for accessing Chats API with full account permissions. Please keep them secure.": "API 密钥是您访问 Chats 接口的凭证，具有该账户的完整权限，请您妥善保管。"
+  "API keys are credentials for accessing Chats API with full account permissions. Please keep them secure.": "API 密钥是您访问 Chats 接口的凭证，具有该账户的完整权限，请您妥善保管。",
+  "OpenAI Compatible APIs": "OpenAI 兼容 API",
+  "Anthropic Compatible APIs": "Anthropic 兼容 API"
 }
