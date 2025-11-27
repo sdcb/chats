@@ -7,7 +7,24 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.8.1](1.8.1.md) - 2025-11-11 ⭐ Latest Release
+## [1.9.0](1.9.0.md) - 2025-11-27 ⭐ Latest Release
+
+**Core Highlights**: Anthropic Provider Support · Anthropic Messages API · OpenAI Image API · Build Developer Pages · .NET 10 Upgrade
+
+- 🤖 **Anthropic Support**: Full support for Claude model series (ID=20), including thinking+signature flow
+- 📡 **Anthropic Messages API**: Compatible with Anthropic API spec (/v1/messages)
+- 🖼️ **OpenAI Image API**: Image generation (/v1/images/generations) and edit (/v1/images/edits)
+- 🛠️ **Build Pages**: Developer-facing API Keys / Docs / Usage management pages
+- 🎬 **UI Animations**: ChatInput expand/fullscreen, UserMenuPopover, ToolCallBlock animations
+- ⬆️ **.NET 10 Upgrade**: Framework upgraded to .NET 10
+- 🏗️ **Architecture Refactor**: ChatService changed to DB Steps driven, supporting multiple message formats
+- 🐛 **Bug Fixes**: Thinking Budget, Gemini Thinking, UI flashing issues
+
+[View Full Release Notes →](1.9.0.md)
+
+---
+
+## [1.8.1](1.8.1.md) - 2025-11-11
 
 **Core Highlights**: User Model Permission Management · Reasoning Lifecycle Tracking · File Preview Refactor · Chat Cache Optimization
 
@@ -213,5 +230,5 @@ Starting from 1.0.0, Chats follows Semantic Versioning:
 ---
 
 <p align="center">
-  <sub>Last updated: 2025-11-11</sub>
+  <sub>Last updated: 2025-11-27</sub>
 </p>

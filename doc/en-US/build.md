@@ -10,13 +10,12 @@ Welcome to Chats! This guide will help you quickly get started with development 
 - [Joint Frontend and Backend Development](#joint-frontend-and-backend-development)
   - [Backend Development Guide](#backend-development-guide)
   - [Frontend Development Guide](#frontend-development-guide)
-- [Frontend Only Development](#frontend-only-development)
 - [Backend Only Development](#backend-only-development)
 - [FAQ](#faq)
 
 ## Technology Stack
 
-- **Backend**: C# / ASP.NET Core 9.0
+- **Backend**: C# / ASP.NET Core 10
 - **Frontend**: Next.js / React / TypeScript
 - **Styling**: Tailwind CSS
 - **Database**: SQLite (default) / SQL Server / PostgreSQL
@@ -25,10 +24,10 @@ Welcome to Chats! This guide will help you quickly get started with development 
 ## Environment Requirements
 
 - **Git**: For code version management
-- **[.NET SDK 9.0](https://dotnet.microsoft.com/download/dotnet/9.0)**: Required for backend development
+- **[.NET SDK 10](https://dotnet.microsoft.com/download/dotnet/10.0)**: Required for backend development
 - **[Node.js](https://nodejs.org/) >= 20**: Required for frontend development
 - **Visual Studio Code**: Lightweight code editor
-- **Visual Studio 2022** (optional but recommended): Full-featured IDE with better debugging experience
+- **Visual Studio 2026** (optional but recommended): Full-featured IDE with better debugging experience
 
 ## Obtaining the Code
 
@@ -184,58 +183,6 @@ npm run dev
 - Backend already configured with CORS support, no extra configuration needed
 - Code changes will automatically hot reload without manual browser refresh
 
-## Frontend Only Development
-
-For frontend-focused development scenarios, we provide a pre-deployed backend development environment, no need to start the backend locally.
-
-### Quick Start
-
-#### 1. Clone Repository
-
-```bash
-git clone https://github.com/sdcb/chats.git
-cd chats/src/FE
-```
-
-#### 2. Configure Remote Backend
-
-Create `.env.local` file and specify the remote backend address:
-
-**Linux/macOS:**
-
-```bash
-echo "API_URL=https://chats-dev.starworks.cc:88" > .env.local
-```
-
-**Windows PowerShell:**
-
-```powershell
-"API_URL=https://chats-dev.starworks.cc:88" | Out-File -FilePath .env.local -Encoding utf8
-```
-
-> **💡 Tip**: This development environment has been configured with CORS to allow cross-origin access from `http://localhost:3000`.
-
-#### 3. Install Dependencies and Run
-
-```bash
-npm install
-npm run dev
-```
-
-### Production Build Testing
-
-To simulate a production build process, execute:
-
-```bash
-# Build production version
-npm run build
-
-# Preview build result
-npm run start
-```
-
-After building, an `./out` folder will be generated in the current directory containing all static files.
-
 ## Backend Only Development
 
 For backend-focused development scenarios, you can use pre-built frontend static files without compiling the frontend locally.
@@ -350,9 +297,9 @@ rm ./AppData/chats.db
 dotnet run
 ```
 
-### 4. Visual Studio cannot recognize .NET 9.0?
+### 4. Visual Studio cannot recognize .NET 10?
 
-Ensure you have Visual Studio 2022 version 17.8 or higher installed, along with .NET 9.0 SDK.
+Ensure you have Visual Studio 2026 or higher installed, along with .NET 10 SDK.
 
 ---
 

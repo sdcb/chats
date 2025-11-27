@@ -4,7 +4,7 @@
 
 [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE) [![问DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sdcb/chats)
 
-Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 19+ 主流 AI 模型服务商。无论您是希望统一管理多种模型接口，还是需要一个简单易用的部署方案，Sdcb Chats 都能满足您的需求。
+Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 20+ 主流 AI 模型服务商。无论您是希望统一管理多种模型接口，还是需要一个简单易用的部署方案，Sdcb Chats 都能满足您的需求。
 
 ![](https://github.com/user-attachments/assets/2d9d609e-142e-4dbf-bdba-87477d7753fb)
 
@@ -21,7 +21,7 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 19+ 主流 
 
 ## ✨ 为什么选择 Sdcb Chats
 
-- 🚀 **一站式管理**：统一管理 19+ 主流 AI 模型服务商
+- 🚀 **一站式管理**：统一管理 20+ 主流 AI 模型服务商
 - 🎯 **开箱即用**：支持 Docker 一键部署，也提供 8 种平台的原生可执行文件
 - 💾 **灵活存储**：支持 SQLite/SQL Server/PostgreSQL，支持本地文件/S3/OSS/Azure Blob 等多种存储
 - 🔐 **企业级安全**：完善的用户权限管理和账户余额控制，支持 Keycloak SSO
@@ -162,13 +162,13 @@ docker pull sdcb/chats:1.8.1-linux-x64
 | Linux musl ARM64        | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip) | [chats-linux-musl-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-arm64.zip) |
 | macOS ARM64             | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)     | [chats-osx-arm64.zip](https://chats.sdcb.pub/release/latest/chats-osx-arm64.zip)     |
 | macOS x64               | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)         | [chats-osx-x64.zip](https://chats.sdcb.pub/release/latest/chats-osx-x64.zip)         |
-| 通用包（需要 .NET 9.0） | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                         | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                         |
+| 通用包（需要 .NET 10） | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                         | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                         |
 | 纯前端文件              | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                   | [chats-fe.zip](https://chats.sdcb.pub/release/latest/chats-fe.zip)                   |
 
 > **💡 下载说明**：
 > - **国内镜像下载**（基于 Cloudflare R2）：推荐国内用户使用，速度更快
 > - **最新开发版下载**：如需体验最新功能，开发版提供以下文件
->   - 通用包：[chats.zip](https://chats.sdcb.pub/latest/chats.zip)（需要 .NET 9.0）
+>   - 通用包：[chats.zip](https://chats.sdcb.pub/latest/chats.zip)（需要 .NET 10）
 >   - 前端文件：[chats-fe.zip](https://chats.sdcb.pub/latest/chats-fe.zip)
 >   - ⚠️ 注意：开发版会从 `dev`/`feature` 分支自动更新，可能不稳定
 > - 除通用包外，所有平台都提供 AOT 编译的原生可执行文件，启动速度快，内存占用低
@@ -212,7 +212,7 @@ C:\Users\ZhouJie\Downloads\chats-win-x64>dir
 
 #### 依赖 .NET 运行时的版本说明
 
-对于下载的 `chats.zip`，需要安装 .NET 9.0 运行时。安装后，使用以下命令启动：
+对于下载的 `chats.zip`，需要安装 .NET 10 运行时。安装后，使用以下命令启动：
 
 ```bash
 dotnet Chats.BE.dll
@@ -246,6 +246,7 @@ dotnet Chats.BE.dll
 | 17  | 硅基流动         | https://api.siliconflow.cn/v1                            |
 | 18  | OpenRouter       | https://openrouter.ai/api/v1                             |
 | 19  | 小马算力         | https://api.tokenpony.cn/v1                              |
+| 20  | Anthropic        | https://api.anthropic.com                                |
 
 **注意事项：**
 

@@ -10,13 +10,12 @@
 - [前后端共同开发](#前后端共同开发)
   - [后端开发指南](#后端开发指南)
   - [前端开发指南](#前端开发指南)
-- [仅前端开发](#仅前端开发)
 - [仅后端开发](#仅后端开发)
 - [常见问题](#常见问题)
 
 ## 技术栈
 
-- **后端**：C# / ASP.NET Core 9.0
+- **后端**：C# / ASP.NET Core 10
 - **前端**：Next.js / React / TypeScript
 - **样式**：Tailwind CSS
 - **数据库**：SQLite（默认）/ SQL Server / PostgreSQL
@@ -25,10 +24,10 @@
 ## 环境需求
 
 - **Git**：用于代码版本管理
-- **[.NET SDK 9.0](https://dotnet.microsoft.com/download/dotnet/9.0)**：后端开发必需
+- **[.NET SDK 10](https://dotnet.microsoft.com/download/dotnet/10.0)**：后端开发必需
 - **[Node.js](https://nodejs.org/) >= 20**：前端开发必需
 - **Visual Studio Code**：轻量级代码编辑器
-- **Visual Studio 2022**（可选但推荐）：完整的 IDE，调试体验更好
+- **Visual Studio 2026**（可选但推荐）：完整的 IDE，调试体验更好
 
 ## 获取代码
 
@@ -184,58 +183,6 @@ npm run dev
 - 后端已配置 CORS 支持，无需额外配置
 - 修改代码后会自动热重载，无需手动刷新浏览器
 
-## 仅前端开发
-
-对于专注于前端开发的场景，我们提供了一个已部署的后端开发环境，无需本地启动后端。
-
-### 快速开始
-
-#### 1. 克隆仓库
-
-```bash
-git clone https://github.com/sdcb/chats.git
-cd chats/src/FE
-```
-
-#### 2. 配置远程后端
-
-创建 `.env.local` 文件并指定远程后端地址：
-
-**Linux/macOS：**
-
-```bash
-echo "API_URL=https://chats-dev.starworks.cc:88" > .env.local
-```
-
-**Windows PowerShell：**
-
-```powershell
-"API_URL=https://chats-dev.starworks.cc:88" | Out-File -FilePath .env.local -Encoding utf8
-```
-
-> **💡 提示**：这个开发环境已经配置了 CORS，允许 `http://localhost:3000` 的跨域访问。
-
-#### 3. 安装依赖并运行
-
-```bash
-npm install
-npm run dev
-```
-
-### 生产构建测试
-
-如果想模拟生产打包过程，可以执行：
-
-```bash
-# 构建生产版本
-npm run build
-
-# 预览构建结果
-npm run start
-```
-
-构建完成后，会在当前目录生成 `./out` 文件夹，包含所有静态文件。
-
 ## 仅后端开发
 
 对于专注于后端开发的场景，可以使用预构建的前端静态文件，无需本地编译前端。
@@ -350,9 +297,9 @@ rm ./AppData/chats.db
 dotnet run
 ```
 
-### 4. Visual Studio 无法识别 .NET 9.0？
+### 4. Visual Studio 无法识别 .NET 10？
 
-确保已安装 Visual Studio 2022 17.8 或更高版本，并安装了 .NET 9.0 SDK。
+确保已安装 Visual Studio 2026 或更高版本，并安装了 .NET 10 SDK。
 
 ---
 

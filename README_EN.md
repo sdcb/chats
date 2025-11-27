@@ -4,7 +4,7 @@
 
 [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sdcb/chats)
 
-Sdcb Chats is a powerful and flexible frontend for large language models, supporting 19+ mainstream AI model providers. Whether you want to unify the management of multiple model interfaces or need a simple and easy-to-use deployment solution, Sdcb Chats can meet your needs.
+Sdcb Chats is a powerful and flexible frontend for large language models, supporting 20+ mainstream AI model providers. Whether you want to unify the management of multiple model interfaces or need a simple and easy-to-use deployment solution, Sdcb Chats can meet your needs.
 
 ![](https://github.com/user-attachments/assets/2d9d609e-142e-4dbf-bdba-87477d7753fb)
 
@@ -21,7 +21,7 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 
 ## ✨ Why Choose Sdcb Chats
 
-- 🚀 **All-in-One Management**: Unified management of 19+ mainstream AI model providers
+- 🚀 **All-in-One Management**: Unified management of 20+ mainstream AI model providers
 - 🎯 **Ready to Use**: Supports Docker one-click deployment, also provides native executables for 8 platforms
 - 💾 **Flexible Storage**: Supports SQLite/SQL Server/PostgreSQL, local files/S3/OSS/Azure Blob and other storage options
 - 🔐 **Enterprise-Grade Security**: Comprehensive user permission management and account balance control, supports Keycloak SSO
@@ -161,13 +161,13 @@ For environments where using Docker is inconvenient, Chats provides native execu
 | Linux musl ARM64                  | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip) | [chats-linux-musl-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-arm64.zip) |
 | macOS ARM64                       | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)       | [chats-osx-arm64.zip](https://chats.sdcb.pub/release/latest/chats-osx-arm64.zip)       |
 | macOS x64                         | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)           | [chats-osx-x64.zip](https://chats.sdcb.pub/release/latest/chats-osx-x64.zip)           |
-| Generic (requires .NET 9.0)       | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                           | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                           |
+| Generic (requires .NET 10)        | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                           | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                           |
 | Frontend files only               | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                     | [chats-fe.zip](https://chats.sdcb.pub/release/latest/chats-fe.zip)                     |
 
 > **💡 Download Tips**:
 > - **Mirror Download** (powered by Cloudflare R2): Recommended for users in China for faster speed
 > - **Latest Development Build**: For bleeding-edge features, development builds provide the following files
->   - Generic package: [chats.zip](https://chats.sdcb.pub/latest/chats.zip) (requires .NET 9.0)
+>   - Generic package: [chats.zip](https://chats.sdcb.pub/latest/chats.zip) (requires .NET 10)
 >   - Frontend files: [chats-fe.zip](https://chats.sdcb.pub/latest/chats-fe.zip)
 >   - ⚠️ Note: Development builds are automatically updated from `dev`/`feature` branches and may be unstable
 > - All platforms (except Generic) provide AOT-compiled native executables with fast startup and low memory footprint
@@ -211,7 +211,7 @@ C:\Users\ZhouJie\Downloads\chats-win-x64>dir
 
 #### .NET Runtime Dependent Version
 
-For the downloaded `chats.zip`, you need to install .NET 9.0 runtime. After installation, use the following command to start:
+For the downloaded `chats.zip`, you need to install .NET 10 runtime. After installation, use the following command to start:
 
 ```bash
 dotnet Chats.BE.dll
@@ -226,7 +226,7 @@ Download .NET Runtime: [https://dotnet.microsoft.com/download](https://dotnet.mi
 | Id  | Name             | Host                                                     |
 | --- | ---------------- | -------------------------------------------------------- |
 | 0   | Test             | null                                                     |
-| 1   | Azure OpenAI     | https://<resource-name>.openai.azure.com/                |
+| 1   | Azure AI Foundry | https://<resource-name>.openai.azure.com/                |
 | 2   | Tencent Hunyuan  | https://api.hunyuan.cloud.tencent.com/v1                 |
 | 3   | 01.ai            | https://api.lingyiwanwu.com/v1                           |
 | 4   | Moonshot         | https://api.moonshot.cn/v1                               |
@@ -245,11 +245,12 @@ Download .NET Runtime: [https://dotnet.microsoft.com/download](https://dotnet.mi
 | 17  | SiliconFlow      | https://api.siliconflow.cn/v1                            |
 | 18  | OpenRouter       | https://openrouter.ai/api/v1                             |
 | 19  | Token Pony       | https://api.tokenpony.cn/v1                              |
+| 20  | Anthropic        | https://api.anthropic.com                                |
 
 **Note:**
 
 - ✅ Any model provider that complies with the OpenAI Chat Completion API protocol can be accessed through Chats
-- 🤖 Azure OpenAI's o3/o4-mini/gpt-5 series models use the Response API protocol (not Chat Completion API), supporting thought summary and thought process features
+- 🤖 OpenAI/Azure AI Foundry's o3/o4-mini/gpt-5 series models use the Response API protocol (not Chat Completion API), supporting thought summary and thought process features
 - 🌐 Google AI's Gemini model uses the native Google Gemini API protocol
 
 ---
