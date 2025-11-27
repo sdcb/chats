@@ -15,7 +15,6 @@ import {
   IconChartPie,
   IconFiles,
   IconIdBadge,
-  IconKey,
   IconLayoutSidebar,
   IconMessages,
   IconMoneybag,
@@ -25,9 +24,9 @@ import {
   IconUserCog,
   IconUsers,
 } from '@/components/Icons/index';
+import UserMenuPopover from '@/components/UserMenuPopover/UserMenuPopover';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Sidebar,
   SidebarContent,
@@ -270,18 +269,23 @@ const AdminLayout = ({
           <SidebarFooter>
             <SidebarMenu className="px-1">
               <SidebarMenuItem>
-                <SidebarMenuButton className="h-10">
-                  <Avatar className="h-6 w-6 rounded-lg">
-                    <AvatarFallback className="rounded-lg w-6 h-6 bg-foreground text-background">
-                      {user?.username?.substring(0, 1)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">
-                      {user?.username}
-                    </span>
-                  </div>
-                </SidebarMenuButton>
+                <UserMenuPopover
+                  isAdminPage={true}
+                  trigger={
+                    <SidebarMenuButton className="h-10">
+                      <Avatar className="h-6 w-6 rounded-lg">
+                        <AvatarFallback className="rounded-lg w-6 h-6 bg-foreground text-background">
+                          {user?.username?.substring(0, 1)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="grid flex-1 text-left text-sm leading-tight">
+                        <span className="truncate font-semibold">
+                          {user?.username}
+                        </span>
+                      </div>
+                    </SidebarMenuButton>
+                  }
+                />
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>

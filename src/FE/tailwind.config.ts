@@ -70,6 +70,20 @@ const config = {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      keyframes: {
+        'slide-up-in': {
+          '0%': { opacity: '0', transform: 'translateY(8px) scaleY(0.95)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scaleY(1)' },
+        },
+        'slide-up-out': {
+          '0%': { opacity: '1', transform: 'translateY(0) scaleY(1)' },
+          '100%': { opacity: '0', transform: 'translateY(8px) scaleY(0.95)' },
+        },
+      },
+      animation: {
+        'slide-up-in': 'slide-up-in 0.2s ease-out',
+        'slide-up-out': 'slide-up-out 0.15s ease-in',
+      },
     },
   },
   plugins: [require('@tailwindcss/typography')],

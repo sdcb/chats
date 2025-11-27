@@ -1,50 +1,16 @@
-import { useContext, useState } from 'react';
+import { useState } from 'react';
 
-import { useRouter } from 'next/router';
+import { IconUser } from '@/components/Icons/index';
+import UserMenuPopover from '@/components/UserMenuPopover/UserMenuPopover';
 
-import useTranslation from '@/hooks/useTranslation';
-
-import { clearUserInfo, clearUserSession, getLoginUrl } from '@/utils/user';
-import { clearChatCache } from '@/utils/chatCache';
-
-import { UserRole } from '@/types/adminApis';
-
-import {
-  IconLogout,
-  IconSettings,
-  IconSettingsCog,
-  IconUser,
-} from '@/components/Icons/index';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Separator } from '@/components/ui/separator';
-
-import HomeContext from '@/contexts/home.context';
 import SidebarButton from '../Sidebar/SidebarButton';
-import SidebarLink from '../Sidebar/SidebarLink';
 
 import { getUserBalanceOnly } from '@/apis/clientApis';
 import { useUserInfo } from '@/providers/UserProvider';
 
 const ChatBarSettings = () => {
-  const router = useRouter();
-  const { t } = useTranslation();
-
-  const {
-    settingDispatch,
-  } = useContext(HomeContext);
   const user = useUserInfo();
-
   const [userBalance, setUserBalance] = useState<number>(0);
-  const logout = () => {
-    clearUserSession();
-    clearUserInfo();
-    clearChatCache(); // 清除聊天缓存
-    router.push(getLoginUrl());
-  };
 
   const getUserBalance = () => {
     getUserBalanceOnly().then((data) => setUserBalance(data));
@@ -57,44 +23,18 @@ const ChatBarSettings = () => {
   return (
     <div className="flex flex-col items-center space-y-1 border-t border-black/5 dark:border-white/10 pt-2 text-sm">
       {user?.username && (
-        <Popover>
-          <PopoverTrigger className="w-full hover:bg-muted rounded-md">
+        <UserMenuPopover
+          isAdminPage={false}
+          trigger={
             <SidebarButton
               className="capitalize"
               text={user?.username}
               icon={<IconUser />}
               onClick={handleClickUserMore}
             />
-          </PopoverTrigger>
-          <PopoverContent className="w-[244px]">
-            {user?.role === UserRole.admin && (
-              <SidebarLink
-                text={t('Admin Panel')}
-                href="/admin/dashboard"
-                icon={<IconSettingsCog />}
-                onClick={(e) => {
-                  e.preventDefault();
-                  router.push('/admin/dashboard');
-                }}
-              />
-            )}
-            <SidebarLink
-              text={t('Settings')}
-              href="/settings"
-              icon={<IconSettings />}
-              onClick={(e) => {
-                e.preventDefault();
-                router.push('/settings');
-              }}
-            />
-            <Separator className="my-2" />
-            <SidebarButton
-              text={t('Log out')}
-              icon={<IconLogout />}
-              onClick={logout}
-            />
-          </PopoverContent>
-        </Popover>
+          }
+          onOpen={handleClickUserMore}
+        />
       )}
     </div>
   );
