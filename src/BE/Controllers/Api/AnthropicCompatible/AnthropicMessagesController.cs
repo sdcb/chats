@@ -338,13 +338,14 @@ public class AnthropicMessagesController(
     private static readonly ReadOnlyMemory<byte> lfU8 = "\n"u8.ToArray();
     private static readonly ReadOnlyMemory<byte> lflfU8 = "\n\n"u8.ToArray();
 
-    private async Task YieldEvent<T>(string eventType, T data, CancellationToken cancellationToken) where T : class
+    private async Task YieldEvent<T>(string eventType, T data, CancellationToken cancellationToken) where T : AnthropicStreamEvent
     {
         await Response.Body.WriteAsync(eventU8, cancellationToken);
         await Response.Body.WriteAsync(System.Text.Encoding.UTF8.GetBytes(eventType), cancellationToken);
         await Response.Body.WriteAsync(lfU8, cancellationToken);
         await Response.Body.WriteAsync(dataU8, cancellationToken);
-        await JsonSerializer.SerializeAsync(Response.Body, data, JSON.JsonSerializerOptions, cancellationToken);
+        // Serialize as base type to include the type discriminator
+        await JsonSerializer.SerializeAsync(Response.Body, (AnthropicStreamEvent)data, JSON.JsonSerializerOptions, cancellationToken);
         await Response.Body.WriteAsync(lflfU8, cancellationToken);
         await Response.Body.FlushAsync(cancellationToken);
     }

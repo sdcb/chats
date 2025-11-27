@@ -5,19 +5,22 @@ namespace Chats.BE.Controllers.Api.AnthropicCompatible.Dtos;
 /// <summary>
 /// Anthropic Messages API v1 streaming event types
 /// </summary>
-public abstract record AnthropicStreamEvent
-{
-    [JsonPropertyName("type")]
-    public abstract string Type { get; }
-}
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(MessageStartEvent), "message_start")]
+[JsonDerivedType(typeof(ContentBlockStartEvent), "content_block_start")]
+[JsonDerivedType(typeof(ContentBlockDeltaEvent), "content_block_delta")]
+[JsonDerivedType(typeof(ContentBlockStopEvent), "content_block_stop")]
+[JsonDerivedType(typeof(MessageDeltaEvent), "message_delta")]
+[JsonDerivedType(typeof(MessageStopEvent), "message_stop")]
+[JsonDerivedType(typeof(PingEvent), "ping")]
+[JsonDerivedType(typeof(ErrorEvent), "error")]
+public abstract record AnthropicStreamEvent;
 
 /// <summary>
 /// event: message_start
 /// </summary>
 public record MessageStartEvent : AnthropicStreamEvent
 {
-    public override string Type => "message_start";
-
     [JsonPropertyName("message")]
     public required MessageStartData Message { get; init; }
 }
@@ -69,8 +72,6 @@ public record MessageStartUsage
 /// </summary>
 public record ContentBlockStartEvent : AnthropicStreamEvent
 {
-    public override string Type => "content_block_start";
-
     [JsonPropertyName("index")]
     public required int Index { get; init; }
 
@@ -114,8 +115,6 @@ public record ContentBlockStartData
 /// </summary>
 public record ContentBlockDeltaEvent : AnthropicStreamEvent
 {
-    public override string Type => "content_block_delta";
-
     [JsonPropertyName("index")]
     public required int Index { get; init; }
 
@@ -155,8 +154,6 @@ public record ContentBlockDelta
 /// </summary>
 public record ContentBlockStopEvent : AnthropicStreamEvent
 {
-    public override string Type => "content_block_stop";
-
     [JsonPropertyName("index")]
     public required int Index { get; init; }
 }
@@ -166,8 +163,6 @@ public record ContentBlockStopEvent : AnthropicStreamEvent
 /// </summary>
 public record MessageDeltaEvent : AnthropicStreamEvent
 {
-    public override string Type => "message_delta";
-
     [JsonPropertyName("delta")]
     public required MessageDelta Delta { get; init; }
 
@@ -202,26 +197,18 @@ public record MessageDeltaUsage
 /// <summary>
 /// event: message_stop
 /// </summary>
-public record MessageStopEvent : AnthropicStreamEvent
-{
-    public override string Type => "message_stop";
-}
+public record MessageStopEvent : AnthropicStreamEvent;
 
 /// <summary>
 /// event: ping
 /// </summary>
-public record PingEvent : AnthropicStreamEvent
-{
-    public override string Type => "ping";
-}
+public record PingEvent : AnthropicStreamEvent;
 
 /// <summary>
 /// event: error
 /// </summary>
 public record ErrorEvent : AnthropicStreamEvent
 {
-    public override string Type => "error";
-
     [JsonPropertyName("error")]
     public required AnthropicErrorDetail Error { get; init; }
 }
