@@ -21,6 +21,7 @@ public partial class ChatPresetSpan
         config.MaxOutputTokens = ChatConfig.MaxOutputTokens;
         config.ReasoningEffortId = ChatConfig.ReasoningEffortId;
         config.ImageSize = ChatConfig.ImageSize;
+        config.ThinkingBudget = ChatConfig.ThinkingBudget;
 
         // Update ChatConfigMcp associations
         HashSet<int> existingMcpIds = [.. config.ChatConfigMcps.Select(x => x.McpServerId)];
@@ -57,6 +58,7 @@ public partial class ChatPresetSpan
             MaxOutputTokens = ChatConfig.MaxOutputTokens,
             ReasoningEffortId = ChatConfig.ReasoningEffortId,
             ImageSize = ChatConfig.ImageSize,
+            ThinkingBudget = ChatConfig.ThinkingBudget,
         };
 
         ChatSpan chatSpan = new()
