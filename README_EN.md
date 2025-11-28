@@ -1,12 +1,8 @@
-﻿# Sdcb Chats
+﻿# Sdcb Chats [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sdcb/chats)
 
 **English** | **[简体中文](README.md)**
 
-[![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sdcb/chats)
-
 Sdcb Chats is a powerful and flexible frontend for large language models, supporting 20+ mainstream AI model providers. Whether you want to unify the management of multiple model interfaces or need a simple and easy-to-use deployment solution, Sdcb Chats can meet your needs.
-
-![](https://github.com/user-attachments/assets/2d9d609e-142e-4dbf-bdba-87477d7753fb)
 
 ## 📑 Table of Contents
 
@@ -40,6 +36,8 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 - **Multi-database support**: Compatible with SQLite, SQL Server, and PostgreSQL databases, with no dependence on other components besides the database
 - **Multi-file service support**: Compatible with local files, AWS S3, Minio, Aliyun OSS, Azure Blob Storage, etc., with runtime configuration modifications
 - **Multiple login method support**: Supports Keycloak SSO and phone SMS code login
+
+<img width="2191" height="1372" alt="chats-en" src="https://github.com/user-attachments/assets/001bb841-01b8-4868-b1cb-d2f916bab237" />
 
 ## Quick Start
 
