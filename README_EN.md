@@ -4,17 +4,6 @@
 
 Sdcb Chats is a powerful and flexible frontend for large language models, supporting 20+ mainstream AI model providers. Whether you want to unify the management of multiple model interfaces or need a simple and easy-to-use deployment solution, Sdcb Chats can meet your needs.
 
-## 📑 Table of Contents
-
-- [Features](#features)
-- [Quick Start](#quick-start)
-  - [Docker Deployment](#docker-deployment)
-  - [Executable Deployment](#executable-deployment-guide)
-- [Supported LLM Services](#supported-llm-services)
-- [Development Documentation](#development-documentation)
-- [Contributing](#contributing)
-- [License](#license)
-
 ## ✨ Why Choose Sdcb Chats
 
 - 🚀 **All-in-One Management**: Unified management of 20+ mainstream AI model providers
@@ -37,7 +26,7 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 - **Multi-file service support**: Compatible with local files, AWS S3, Minio, Aliyun OSS, Azure Blob Storage, etc., with runtime configuration modifications
 - **Multiple login method support**: Supports Keycloak SSO and phone SMS code login
 
-<img width="2191" height="1372" alt="chats-en" src="https://github.com/user-attachments/assets/001bb841-01b8-4868-b1cb-d2f916bab237" />
+<img alt="chats-en" src="https://github.com/user-attachments/assets/001bb841-01b8-4868-b1cb-d2f916bab237" />
 
 ## Quick Start
 
@@ -257,8 +246,8 @@ Download .NET Runtime: [https://dotnet.microsoft.com/download](https://dotnet.mi
 
 Chats is developed using `C#`/`TypeScript`. For information on how to compile and develop Chats, please refer to:
 
-- [Development Guide](./doc/en-US/build.md)
-- [Changelog](./doc/en-US/release-notes/README.md)
+- [🛠️ Development Guide](./doc/en-US/build.md)
+- [📋 Release Notes (Complete Release History)](./doc/en-US/release-notes/README.md)
 
 ---
 

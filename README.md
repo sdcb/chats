@@ -4,17 +4,6 @@
 
 Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 20+ 主流 AI 模型服务商。无论您是希望统一管理多种模型接口，还是需要一个简单易用的部署方案，Sdcb Chats 都能满足您的需求。
 
-## 📑 目录
-
-- [功能特性](#功能特性)
-- [快速开始](#快速开始)
-  - [Docker 部署](#docker-部署)
-  - [可执行文件部署](#可执行文件部署指南)
-- [支持的大模型服务](#支持的大模型服务)
-- [开发文档](#开发文档)
-- [贡献指南](#贡献指南)
-- [许可证](#许可证)
-
 ## ✨ 为什么选择 Sdcb Chats
 
 - 🚀 **一站式管理**：统一管理 20+ 主流 AI 模型服务商
@@ -37,7 +26,7 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 20+ 主流 
 - **多文件服务支持**：兼容本地文件、AWS S3、Minio、Aliyun OSS、Azure Blob Storage 等文件服务，可运行时配置修改
 - **多种登录方式支持**：支持 Keycloak SSO，支持手机短信验证码登录
 
-<img width="2245" height="1372" alt="chats" src="https://github.com/user-attachments/assets/64a8f9ac-3ac0-4e3e-8903-2a2cf0b111a5" />
+<img alt="chats" src="https://github.com/user-attachments/assets/64a8f9ac-3ac0-4e3e-8903-2a2cf0b111a5" />
 
 ## 快速开始
 
@@ -257,8 +246,8 @@ dotnet Chats.BE.dll
 
 Chats 使用 `C#`/`TypeScript` 开发，有关如何编译和开发 Chats，请查看：
 
-- [开发文档](./doc/zh-CN/build.md)
-- [版本更新日志](./doc/zh-CN/release-notes/README.md)
+- [🛠️ 开发文档](./doc/zh-CN/build.md)
+- [📋 版本更新日志（完整发布历史）](./doc/zh-CN/release-notes/README.md)
 
 ---
 
