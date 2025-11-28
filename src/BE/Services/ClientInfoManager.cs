@@ -23,26 +23,48 @@ public class ClientInfoManager(IHttpContextAccessor httpContextAccessor, ChatsDB
     {
         string ip = ClientIP;
         ClientIp? clientIp = await db.ClientIps.FirstOrDefaultAsync(x => x.Ipaddress == ip, cancellationToken);
-        if (clientIp == null)
+        if (clientIp != null)
         {
-            clientIp = new ClientIp { Ipaddress = ip };
-            db.ClientIps.Add(clientIp);
-            await db.SaveChangesAsync(cancellationToken);
+            return clientIp;
         }
-        return clientIp;
+
+        clientIp = new ClientIp { Ipaddress = ip };
+        db.ClientIps.Add(clientIp);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            return clientIp;
+        }
+        catch (DbUpdateException)
+        {
+            // 唯一约束冲突，说明其他并发请求已经插入成功
+            db.Entry(clientIp).State = EntityState.Detached;
+            return await db.ClientIps.FirstAsync(x => x.Ipaddress == ip, cancellationToken);
+        }
     }
 
     public async Task<ClientUserAgent> GetDBUserAgent(CancellationToken cancellationToken)
     {
         string userAgent = UserAgent;
         ClientUserAgent? clientUserAgent = await db.ClientUserAgents.FirstOrDefaultAsync(x => x.UserAgent == userAgent, cancellationToken);
-        if (clientUserAgent == null)
+        if (clientUserAgent != null)
         {
-            clientUserAgent = new ClientUserAgent { UserAgent = userAgent };
-            db.ClientUserAgents.Add(clientUserAgent);
-            await db.SaveChangesAsync(cancellationToken);
+            return clientUserAgent;
         }
-        return clientUserAgent;
+
+        clientUserAgent = new ClientUserAgent { UserAgent = userAgent };
+        db.ClientUserAgents.Add(clientUserAgent);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            return clientUserAgent;
+        }
+        catch (DbUpdateException)
+        {
+            // 唯一约束冲突，说明其他并发请求已经插入成功
+            db.Entry(clientUserAgent).State = EntityState.Detached;
+            return await db.ClientUserAgents.FirstAsync(x => x.UserAgent == userAgent, cancellationToken);
+        }
     }
 
     public async Task<ClientInfo> GetClientInfo(CancellationToken cancellationToken)
@@ -50,24 +72,35 @@ public class ClientInfoManager(IHttpContextAccessor httpContextAccessor, ChatsDB
         ClientIp ip = await GetDBClientIP(cancellationToken);
         ClientUserAgent userAgent = await GetDBUserAgent(cancellationToken);
         ClientInfo? clientInfo = await db.ClientInfos.FirstOrDefaultAsync(x => x.ClientIpId == ip.Id && x.ClientUserAgentId == userAgent.Id, cancellationToken);
-        if (clientInfo == null)
-        {
-            clientInfo = new ClientInfo
-            {
-                ClientIpId = ip.Id,
-                ClientUserAgentId = userAgent.Id,
-                ClientIp = ip,
-                ClientUserAgent = userAgent,
-            };
-            db.ClientInfos.Add(clientInfo);
-            await db.SaveChangesAsync(cancellationToken);
-        }
-        else
+        if (clientInfo != null)
         {
             clientInfo.ClientIp = ip;
             clientInfo.ClientUserAgent = userAgent;
+            return clientInfo;
         }
-        return clientInfo;
+
+        clientInfo = new ClientInfo
+        {
+            ClientIpId = ip.Id,
+            ClientUserAgentId = userAgent.Id,
+            ClientIp = ip,
+            ClientUserAgent = userAgent,
+        };
+        db.ClientInfos.Add(clientInfo);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            return clientInfo;
+        }
+        catch (DbUpdateException)
+        {
+            // 唯一约束冲突，说明其他并发请求已经插入成功
+            db.Entry(clientInfo).State = EntityState.Detached;
+            clientInfo = await db.ClientInfos.FirstAsync(x => x.ClientIpId == ip.Id && x.ClientUserAgentId == userAgent.Id, cancellationToken);
+            clientInfo.ClientIp = ip;
+            clientInfo.ClientUserAgent = userAgent;
+            return clientInfo;
+        }
     }
 }
 
