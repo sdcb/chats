@@ -1,12 +1,8 @@
-﻿# Sdcb Chats
+﻿# Sdcb Chats [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE) [![问DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sdcb/chats)
 
 **[English](README_EN.md)** | **简体中文** 
 
-[![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE) [![问DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sdcb/chats)
-
 Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 20+ 主流 AI 模型服务商。无论您是希望统一管理多种模型接口，还是需要一个简单易用的部署方案，Sdcb Chats 都能满足您的需求。
-
-![](https://github.com/user-attachments/assets/2d9d609e-142e-4dbf-bdba-87477d7753fb)
 
 ## 📑 目录
 
@@ -41,6 +37,7 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 20+ 主流 
 - **多文件服务支持**：兼容本地文件、AWS S3、Minio、Aliyun OSS、Azure Blob Storage 等文件服务，可运行时配置修改
 - **多种登录方式支持**：支持 Keycloak SSO，支持手机短信验证码登录
 
+<img width="2245" height="1372" alt="chats" src="https://github.com/user-attachments/assets/64a8f9ac-3ac0-4e3e-8903-2a2cf0b111a5" />
 
 ## 快速开始
 
