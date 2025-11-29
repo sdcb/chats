@@ -2,6 +2,7 @@
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.Models.Neutral;
 using OpenAI;
 using OpenAI.Chat;
 using OpenAI.Images;
@@ -34,8 +35,8 @@ public class ImageGenerationService : ChatService
     {
         ImageClient imageClient = CreateImageGenerationAPI(request.ChatConfig.Model, []);
 
-        string prompt = GetPromptStatic(request.Steps);
-        StepContent[] images = GetImagesStatic(request.Steps);
+        string prompt = GetPromptStatic(request.Messages);
+        NeutralContent[] images = GetImagesStatic(request.Messages);
 
         // 兼容 n>1 时不走 stream
         int n = request.ChatConfig.MaxOutputTokens ?? 1;
@@ -151,8 +152,8 @@ public class ImageGenerationService : ChatService
     public override async Task<ChatSegment> Chat(ChatRequest request, CancellationToken cancellationToken)
     {
         ImageClient imageClient = CreateImageGenerationAPI(request.ChatConfig.Model, []);
-        string prompt = GetPromptStatic(request.Steps);
-        StepContent[] images = GetImagesStatic(request.Steps);
+        string prompt = GetPromptStatic(request.Messages);
+        NeutralContent[] images = GetImagesStatic(request.Messages);
         ClientResult<GeneratedImageCollection> cr = null!;
         if (images.Length == 0)
         {
@@ -196,32 +197,32 @@ public class ImageGenerationService : ChatService
         };
     }
 
-    private static string GetPromptStatic(IEnumerable<Step> steps)
+    private static string GetPromptStatic(IList<NeutralMessage> messages)
     {
-        Step? userMessage = steps.LastUserMessage;
+        NeutralMessage? userMessage = messages.LastUserMessage();
 
         if (userMessage != null)
         {
-            string textPart = userMessage.StepContents
-                .Where(x => (DBStepContentType)x.ContentTypeId == DBStepContentType.Text && x.StepContentText != null)
-                .Select(x => x.StepContentText!.Content)
+            string textPart = userMessage.Contents
+                .OfType<NeutralTextContent>()
+                .Select(x => x.Content)
                 .LastOrDefault() ?? throw new InvalidOperationException($"Unable to find a text part in the user message.");
             return textPart;
         }
         else
         {
-            throw new InvalidOperationException("Unable to find the user message in the steps.");
+            throw new InvalidOperationException("Unable to find the user message in the messages.");
         }
     }
 
-    private static StepContent[] GetImagesStatic(ICollection<Step> steps)
+    private static NeutralContent[] GetImagesStatic(IList<NeutralMessage> messages)
     {
         // latest message is always the user message
         // if user message contains image, we need to use all images in the message as input
-        Step? userMessage = steps.LastUserMessage;
+        NeutralMessage? userMessage = messages.LastUserMessage();
         if (userMessage != null)
         {
-            StepContent[] userMessageImages = [.. userMessage.StepContents.Where(x => x.IsFile())];
+            NeutralContent[] userMessageImages = [.. userMessage.Contents.Where(x => x.IsFile)];
             if (userMessageImages.Length > 0)
             {
                 return userMessageImages;
@@ -229,14 +230,14 @@ public class ImageGenerationService : ChatService
         }
 
         // otherwise, we need to use the last image in the message as input
-        return [.. steps.SelectMany(x => x.StepContents)
-            .Where(x => x.IsFile())
+        return [.. messages.SelectMany(x => x.Contents)
+            .Where(x => x.IsFile)
             .Reverse()
             .Take(1)];
     }
 
     private async Task<MultiPartFormDataBinaryContent> BuildImageEditFormAsync(
-        StepContent[] images,
+        NeutralContent[] images,
         string prompt,
         ChatRequest request,
         CancellationToken cancellationToken)
@@ -245,21 +246,20 @@ public class ImageGenerationService : ChatService
         MultiPartFormDataBinaryContent form = new();
 
         Dictionary<string, HttpResponseMessage> downloadedFiles = (await Task.WhenAll(images
-            .Select(x => x.TryGetFileUrl(out string? url) ? url : null)
-            .Where(x => x != null)
+            .OfType<NeutralFileUrlContent>()
             .Select(async imageUrl =>
             {
-                HttpResponseMessage resp = await http.GetAsync(imageUrl, cancellationToken);
-                return (url: imageUrl!, resp);
+                HttpResponseMessage resp = await http.GetAsync(imageUrl.Url, cancellationToken);
+                return (url: imageUrl.Url, resp);
             })))
         .ToDictionary(k => k.url, v => v.resp);
 
-        foreach (StepContent image in images)
+        foreach (NeutralContent image in images)
         {
-            if (image.TryGetFileUrl(out string? url))
+            if (image is NeutralFileUrlContent fileUrl)
             {
-                HttpResponseMessage file = downloadedFiles[url];
-                string fileName = Path.GetFileName(new Uri(url).LocalPath);
+                HttpResponseMessage file = downloadedFiles[fileUrl.Url];
+                string fileName = Path.GetFileName(new Uri(fileUrl.Url).LocalPath);
                 if (fileName.Contains("mask.png"))
                 {
                     form.Add(await file.Content.ReadAsStreamAsync(cancellationToken), "mask", fileName, file.Content.Headers.ContentType?.ToString());
@@ -269,9 +269,9 @@ public class ImageGenerationService : ChatService
                     form.Add(await file.Content.ReadAsStreamAsync(cancellationToken), "image", fileName, file.Content.Headers.ContentType?.ToString());
                 }
             }
-            else if (image.TryGetFileBlob(out StepContentBlob? blob))
+            else if (image is NeutralFileBlobContent blob)
             {
-                form.Add(blob.Content, "image", DBFileDef.MakeFileNameByContentType(blob.MediaType), blob.MediaType);
+                form.Add(blob.Data, "image", DBFileDef.MakeFileNameByContentType(blob.MediaType), blob.MediaType);
             }
         }
 
@@ -326,20 +326,6 @@ public class ImageGenerationService : ChatService
             JsonElement root = doc.RootElement;
             string eventType = root.GetProperty("type").GetString()!;
 
-            // Partial image event
-            // Format: 
-            // {"type":"image_generation.partial_image","partial_image_index":0,"b64_json":"...","created_at":1761112880,"size":"1024x1024","quality":"high","background":"opaque","output_format":"png"}
-            // Format: 
-            // {
-            //   "type": "image_edit.partial_image",
-            //   "partial_image_index": 0,
-            //   "b64_json": "...",
-            //   "created_at": 1761116613,
-            //   "size": "1024x1024",
-            //   "quality": "high",
-            //   "background": "opaque",
-            //   "output_format": "png"
-            // }
             if (eventType == "image_generation.partial_image" || eventType == "image_edit.partial_image")
             {
                 string b64Json = root.GetProperty("b64_json").GetString()!;
@@ -348,7 +334,6 @@ public class ImageGenerationService : ChatService
 
                 Console.WriteLine($"[{sw.Elapsed.TotalSeconds:F3}s] {eventType} #{eventIndex}");
 
-                // Yield partial image
                 yield return new ChatSegment()
                 {
                     FinishReason = null,
@@ -356,45 +341,6 @@ public class ImageGenerationService : ChatService
                     Usage = null,
                 };
             }
-            // Completed image event
-            // image_generation.completed:
-            // {
-            //   "type":"image_generation.completed",
-            //   "b64_json":"...",
-            //   "created_at":1761105722,
-            //   "usage": {
-            //     "input_tokens": 7,
-            //     "output_tokens": 4460,
-            //     "total_tokens": 4467,
-            //     "input_tokens_details":{
-            //       "text_tokens": 7,
-            //       "image_tokens": 0
-            //     }
-            //   },
-            //   "size":"1024x1024",
-            //   "quality":"high",
-            //   "background":"opaque",
-            //   "output_format":"png"
-            // }
-            // image_edit.completed:
-            // {
-            //     "type": "image_edit.completed",
-            //     "b64_json": "...",
-            //     "created_at": 1761116646,
-            //     "usage": {
-            //         "input_tokens": 227,
-            //         "output_tokens": 4460,
-            //         "total_tokens": 4687,
-            //         "input_tokens_details": {
-            //             "text_tokens": 33,
-            //             "image_tokens": 194
-            //         }
-            //     },
-            //     "size": "1024x1024",
-            //     "quality": "high",
-            //     "background": "opaque",
-            //     "output_format": "png"
-            // }
             else if (eventType == "image_generation.completed" || eventType == "image_edit.completed")
             {
                 string b64Json = root.GetProperty("b64_json").GetString()!;
@@ -411,7 +357,6 @@ public class ImageGenerationService : ChatService
 
                 Console.WriteLine($"[{sw.Elapsed.TotalSeconds:F3}s] {eventType} #{eventIndex}, input={usage.InputTokens}, output={usage.OutputTokens}");
 
-                // Yield final complete image with usage
                 yield return new ChatSegment()
                 {
                     FinishReason = ChatFinishReason.Stop,
@@ -419,8 +364,6 @@ public class ImageGenerationService : ChatService
                     Usage = usage,
                 };
             }
-            //event: error
-            //data: {"type":"error","error":{"type":"image_generation_server_error","code":"image_generation_failed","message":"Image generation failed","param":null}}
             else if (eventType == "error")
             {
                 Console.WriteLine($"[{sw.Elapsed.TotalSeconds:F3}s] {eventType} #{eventIndex}");

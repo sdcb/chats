@@ -11,6 +11,8 @@ using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.ChatServices.Test;
 using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.Models.Neutral;
+using Chats.BE.Services.Models.Neutral.Conversions;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -426,14 +428,12 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         CancellationToken cancellationToken)
     {
         chatSpan.ChatConfig.Model = userModel.Model;
+        // Combine message tree and user message steps, then convert to neutral format
+        IEnumerable<Step> allSteps = [.. messageTree, .. (dbUserMessage?.Steps ?? [])];
         ChatRequest csr = new()
         {
             EndUserId = currentUser.Id.ToString(),
-            Steps = [.. (IEnumerable<Step>)
-            [
-                ..messageTree,
-                ..dbUserMessage != null ? dbUserMessage.Steps : Array.Empty<Step>(),
-            ]],
+            Messages = allSteps.ToNeutral(),
             ChatConfig = chatSpan.ChatConfig,
             Tools = [],
         };
@@ -620,7 +620,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
         void WriteStep(Step step)
         {
-            csr.Steps.Add(step);
+            csr.Messages.Add(step.ToNeutral());
             turn.Steps.Add(step);
             writer.TryWrite(new EndStep(chatSpan.SpanId, step));
         }

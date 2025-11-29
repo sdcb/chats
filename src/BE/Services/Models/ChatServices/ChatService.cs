@@ -4,6 +4,7 @@ using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.Models.Neutral;
 using Microsoft.ML.Tokenizers;
 using OpenAI;
 using System.Runtime.CompilerServices;
@@ -116,22 +117,43 @@ public abstract partial class ChatService
     {
         ChatRequest final = request;
 
-        if (final.ChatConfig.SystemPrompt != null && source == UsageSource.WebChat)
+        // Apply system prompt template replacements
+        if (source == UsageSource.WebChat)
         {
-            // Apply system prompt
-            final = final with
+            string? effectiveSystemPrompt = final.GetEffectiveSystemPrompt();
+            if (effectiveSystemPrompt != null)
             {
-                ChatConfig = final.ChatConfig.WithSystemPrompt(final.ChatConfig.SystemPrompt
+                string processedPrompt = effectiveSystemPrompt
                     .Replace("{{MODEL_NAME}}", request.ChatConfig.Model.Name)
                     .Replace("{{CURRENT_DATE}}", DateTime.UtcNow.ToString("yyyy/MM/dd"))
-                    .Replace("{{CURRENT_TIME}}", DateTime.UtcNow.ToString("HH:mm:ss")))
-            };
+                    .Replace("{{CURRENT_TIME}}", DateTime.UtcNow.ToString("HH:mm:ss"));
+
+                // If we have a System property, update it; otherwise update ChatConfig.SystemPrompt
+                if (final.System != null)
+                {
+                    // For now, just update the first content block with the processed prompt
+                    // A more sophisticated approach could preserve cache control settings
+                    final = final with
+                    {
+                        System = NeutralSystemMessage.FromText(processedPrompt)
+                    };
+                }
+                else
+                {
+                    final = final with
+                    {
+                        ChatConfig = final.ChatConfig.WithSystemPrompt(processedPrompt)
+                    };
+                }
+            }
         }
 
         float? temperature = final.ChatConfig.Temperature;
+        byte reasoningEffortId = final.ChatConfig.ReasoningEffortId;
         if (source == UsageSource.WebChat)
         {
             temperature = request.ChatConfig.Model.ClampTemperature(temperature);
+            reasoningEffortId = request.ChatConfig.Model.ClampReasoningEffortId(reasoningEffortId);
             if (request.ChatConfig.Model.ApiType == DBApiType.AnthropicMessages && final.ChatConfig.ThinkingBudget != null)
             {
                 // invalid_request_error
@@ -139,12 +161,13 @@ public abstract partial class ChatService
                 // Please consult our documentation at https://docs.claude.com/en/docs/build-with-claude/extended-thinking#important-considerations-when-using-extended-thinking
                 temperature = null;
             }
+
         }
 
         final = final with
         {
-            ChatConfig = final.ChatConfig.WithTemperature(temperature),
-            Steps = await final.Steps
+            ChatConfig = final.ChatConfig.WithClamps(temperature, reasoningEffortId),
+            Messages = await final.Messages
                 .ToAsyncEnumerable()
                 .Select(async (m, ct) => await FilterVision(request.ChatConfig.Model.SupportsVisionLink, request.ChatConfig.Model.AllowVision, m, fup, ct))
                 .ToListAsync(cancellationToken)
@@ -153,46 +176,48 @@ public abstract partial class ChatService
         return final;
     }
 
-    protected virtual async Task<Step> FilterVision(bool supportsVisionLink, bool allowVision, Step message, FileUrlProvider fup, CancellationToken cancellationToken)
+    protected virtual async Task<NeutralMessage> FilterVision(bool supportsVisionLink, bool allowVision, NeutralMessage message, FileUrlProvider fup, CancellationToken cancellationToken)
     {
-        Step final = message.WithNoMessage();
+        List<NeutralContent> processedContents = [];
 
-        foreach (StepContent part in message.StepContents)
+        foreach (NeutralContent content in message.Contents)
         {
-            StepContent? toAdd = (DBStepContentType)part.ContentTypeId switch
+            NeutralContent? toAdd = content switch
             {
-                DBStepContentType.FileId => allowVision switch
+                NeutralFileContent file => allowVision switch
                 {
-                    true => part.StepContentFile!.File.MediaType switch
+                    true => file.File.MediaType switch
                     {
-                        var x when SupportedContentTypes.Contains("*") || SupportedContentTypes.Contains(x) => supportsVisionLink switch
+                        var x when SupportedContentTypes.Contains("*") || SupportedContentTypes.Contains(x ?? "") => supportsVisionLink switch
                         {
-                            true => await fup.CreateOpenAIImagePart(part.StepContentFile!.File, cancellationToken),
-                            false => await fup.CreateOpenAIImagePartForceDownload(part.StepContentFile!.File, cancellationToken),
+                            true => fup.CreateNeutralImagePart(file.File),
+                            false => fup.CreateNeutralImagePartForceDownload(file.File),
                         },
                         _ => null
                     },
-                    false => fup.CreateOpenAITextUrl(part.StepContentFile!.File),
+                    false => fup.CreateNeutralTextUrl(file.File),
                 },
-                DBStepContentType.FileUrl => allowVision switch
+                NeutralFileUrlContent fileUrl => allowVision switch
                 {
                     true => supportsVisionLink switch
                     {
-                        true => part,
-                        false => await DownloadImagePart(http, part.StepContentText!.Content, cancellationToken),
+                        true => content,
+                        false => await DownloadImagePart(http, fileUrl.Url, cancellationToken),
                     },
-                    false => StepContent.FromText(part.StepContentText!.Content),
+                    false => NeutralTextContent.Create(fileUrl.Url),
                 },
-                _ => part
+                _ => content
             };
+
             if (toAdd != null)
             {
-                final.StepContents.Add(toAdd);
+                processedContents.Add(toAdd);
             }
         }
-        return final;
 
-        static async Task<StepContent> DownloadImagePart(HttpClient http, string url, CancellationToken cancellationToken)
+        return message with { Contents = processedContents };
+
+        static async Task<NeutralContent> DownloadImagePart(HttpClient http, string url, CancellationToken cancellationToken)
         {
             HttpResponseMessage resp = await http.GetAsync(url, cancellationToken);
             if (!resp.IsSuccessStatusCode)
@@ -201,7 +226,7 @@ public abstract partial class ChatService
             }
 
             string contentType = resp.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
-            return StepContent.FromFileBlob(await resp.Content.ReadAsByteArrayAsync(cancellationToken), contentType);
+            return NeutralFileBlobContent.Create(await resp.Content.ReadAsByteArrayAsync(cancellationToken), contentType);
         }
     }
 

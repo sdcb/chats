@@ -1,7 +1,7 @@
 ﻿using Chats.BE.DB;
-using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.ChatServices.OpenAI.Extensions;
 using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.Models.Neutral;
 using OpenAI;
 using OpenAI.Chat;
 using OpenAI.Models;
@@ -103,91 +103,97 @@ public partial class ChatCompletionService : ChatService
 
     protected virtual IEnumerable<ChatMessage> ExtractMessages(ChatRequest request)
     {
-        if (request.ChatConfig.SystemPrompt != null)
+        // Use System property if available, otherwise fall back to ChatConfig.SystemPrompt
+        string? systemPrompt = request.GetEffectiveSystemPrompt();
+        if (systemPrompt != null)
         {
-            yield return ChatMessage.CreateSystemMessage(request.ChatConfig.SystemPrompt);
+            yield return ChatMessage.CreateSystemMessage(systemPrompt);
         }
 
-        foreach (ChatMessage msg in request.Steps.Select(ToOpenAI))
+        foreach (ChatMessage msg in request.Messages.Select(ToOpenAI))
         {
             yield return msg;
         }
     }
 
-    public ChatMessage ToOpenAI(Step step)
+    public ChatMessage ToOpenAI(NeutralMessage message)
     {
-        return (DBChatRole)step.ChatRoleId switch
+        return message.Role switch
         {
-            DBChatRole.User => new UserChatMessage([.. step.StepContents.Select(ToOpenAI).Where(x => x != null)]),
-            DBChatRole.Assistant => ToAssistantMessage(step.StepContents),
-            DBChatRole.ToolCall => new ToolChatMessage(step.StepContents.First().StepContentToolCallResponse!.ToolCallId, step.StepContents.First().StepContentToolCallResponse!.Response),
+            NeutralChatRole.User => new UserChatMessage([.. message.Contents.Select(ToOpenAIContentPart).Where(x => x != null)]),
+            NeutralChatRole.Assistant => ToAssistantMessage(message.Contents),
+            NeutralChatRole.Tool => new ToolChatMessage(
+                ((NeutralToolCallResponseContent)message.Contents.First()).ToolCallId,
+                ((NeutralToolCallResponseContent)message.Contents.First()).Response),
             _ => throw new NotImplementedException()
         };
+    }
 
-        static ChatMessageContentPart? ToOpenAI(StepContent stepContent)
+    static ChatMessageContentPart? ToOpenAIContentPart(NeutralContent content)
+    {
+        return content switch
         {
-            return (DBStepContentType)stepContent.ContentTypeId switch
+            NeutralTextContent text => ChatMessageContentPart.CreateTextPart(text.Content),
+            NeutralFileUrlContent fileUrl => ChatMessageContentPart.CreateImagePart(new Uri(fileUrl.Url)),
+            NeutralFileBlobContent fileBlob => ChatMessageContentPart.CreateImagePart(BinaryData.FromBytes(fileBlob.Data), fileBlob.MediaType),
+            NeutralErrorContent error => ChatMessageContentPart.CreateTextPart(error.Content),
+            NeutralFileContent => throw new Exception("FileId content type should be converted to FileUrl or FileBlob before sending to OpenAI API in PreProcess."),
+            NeutralThinkContent => null, // ChatCompletion API does not support "think" content type
+            NeutralToolCallContent => null, // Tool calls are handled separately in ToAssistantMessage
+            NeutralToolCallResponseContent => null, // Tool responses are handled separately
+            _ => throw new NotImplementedException($"Content type {content.GetType().Name} is not supported.")
+        };
+    }
+
+    static AssistantChatMessage ToAssistantMessage(IList<NeutralContent> contents)
+    {
+        bool hasContent = false, hasToolCall = false;
+        foreach (NeutralContent content in contents)
+        {
+            if (content is NeutralTextContent or NeutralErrorContent or NeutralFileUrlContent or NeutralFileBlobContent)
             {
-                DBStepContentType.Text => ChatMessageContentPart.CreateTextPart(stepContent.StepContentText!.Content),
-                DBStepContentType.FileId => throw new Exception($"FileId content type should supposed to converted to FileUrl or FileBlob before sending to OpenAI API in FEPreprocess."),
-                DBStepContentType.FileUrl => ChatMessageContentPart.CreateImagePart(new Uri(stepContent.StepContentText!.Content)),
-                DBStepContentType.FileBlob => ChatMessageContentPart.CreateImagePart(BinaryData.FromBytes(stepContent.StepContentBlob!.Content), stepContent.StepContentBlob.MediaType),
-                DBStepContentType.Error => ChatMessageContentPart.CreateTextPart(stepContent.StepContentText!.Content),
-                DBStepContentType.Think => null, // ChatCompletion api does not support "think" content type
-                _ => throw new NotImplementedException()
-            };
+                hasContent = true;
+            }
+            if (content is NeutralToolCallContent)
+            {
+                hasToolCall = true;
+            }
+            if (hasContent && hasToolCall)
+            {
+                break; // No need to check further if both are found
+            }
         }
 
-        static AssistantChatMessage ToAssistantMessage(ICollection<StepContent> stepContents)
+        if (hasContent)
         {
-            bool hasContent = false, hasToolCall = false;
-            foreach (StepContent stepContent in stepContents)
+            AssistantChatMessage msg = new(contents
+                .Where(x => x is NeutralTextContent or NeutralErrorContent or NeutralFileUrlContent or NeutralFileBlobContent)
+                .Select(ToOpenAIContentPart)
+                .Where(x => x != null)
+                .ToArray());
+            foreach (ChatToolCall toolCall in contents
+                .OfType<NeutralToolCallContent>()
+                .Select(tc => ChatToolCall.CreateFunctionToolCall(
+                    tc.Id,
+                    tc.Name,
+                    BinaryData.FromString(tc.Parameters))))
             {
-                if (stepContent.ContentTypeId == (byte)DBStepContentType.FileId ||
-                    stepContent.ContentTypeId == (byte)DBStepContentType.Text ||
-                    stepContent.ContentTypeId == (byte)DBStepContentType.Error)
-                {
-                    hasContent = true;
-                }
-                if (stepContent.ContentTypeId == (byte)DBStepContentType.ToolCall && stepContent.StepContentToolCall != null)
-                {
-                    hasToolCall = true;
-                }
-                if (hasContent && hasToolCall)
-                {
-                    break; // No need to check further if both are found
-                }
+                msg.ToolCalls.Add(toolCall);
             }
-
-            if (hasContent)
-            {
-                AssistantChatMessage msg = new(stepContents
-                    .Where(x => (DBStepContentType)x.ContentTypeId is DBStepContentType.FileId or DBStepContentType.Text or DBStepContentType.Error)
-                    .Select(ToOpenAI)
-                    .Where(x => x != null)
-                    .ToArray());
-                foreach (ChatToolCall toolCall in stepContents.Where(x => (DBStepContentType)x.ContentTypeId is DBStepContentType.ToolCall && x.StepContentToolCall != null)
-                    .Select(content => ChatToolCall.CreateFunctionToolCall(
-                        content.StepContentToolCall!.ToolCallId,
-                        content.StepContentToolCall!.Name,
-                        BinaryData.FromString(content.StepContentToolCall.Parameters))))
-                {
-                    msg.ToolCalls.Add(toolCall);
-                }
-                return msg;
-            }
-            else if (hasToolCall) // onlyToolCall
-            {
-                return new(stepContents.Where(x => (DBStepContentType)x.ContentTypeId is DBStepContentType.ToolCall && x.StepContentToolCall != null)
-                    .Select(content => ChatToolCall.CreateFunctionToolCall(
-                        content.StepContentToolCall!.ToolCallId,
-                        content.StepContentToolCall!.Name,
-                        BinaryData.FromString(content.StepContentToolCall.Parameters))));
-            }
-            else
-            {
-                throw new Exception("Assistant chat message must either have at least one content or tool call");
-            }
+            return msg;
+        }
+        else if (hasToolCall)
+        {
+            return new(contents
+                .OfType<NeutralToolCallContent>()
+                .Select(tc => ChatToolCall.CreateFunctionToolCall(
+                    tc.Id,
+                    tc.Name,
+                    BinaryData.FromString(tc.Parameters))));
+        }
+        else
+        {
+            throw new Exception("Assistant chat message must either have at least one content or tool call");
         }
     }
 

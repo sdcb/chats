@@ -1,7 +1,7 @@
 using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
-using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.Models.Neutral;
 using OpenAI.Chat;
 using System.Net.Http.Headers;
 using ChatTokenUsage = Chats.BE.Services.Models.Dtos.ChatTokenUsage;
@@ -328,55 +328,19 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
     private static JsonObject BuildRequestBody(ChatRequest request)
     {
-        // Anthropic has a very strict policy on thinking blocks - they need pass back thinking AND signature together
-        // if you only passed back thinking without signature, it would be rejected:
-        // invalid_request_error
-        // messages.1.content.0: Invalid `signature` in `thinking` block"
-
-        // so you would say I can just drop the thinking blocks, this is what we do for openai
-        // Yes we can drop the thinking block if there're no tool_use
-
-        // But if there're tool_use in the same message with thinking enabled, Anthropic will reject the request:
-        // invalid_request_error
-        // messages.1.content.0.type: Expected `thinking` or `redacted_thinking`, but found `tool_use`. When `thinking` is enabled,
-        // a final `assistant` message must start with a thinking block (preceeding the lastmost set of `tool_use` and `tool_result` blocks).
-        // We recommend you include thinking blocks from previous turns. To avoid this requirement, disable `thinking`.
-        // Please consult our documentation at https://docs.claude.com/en/docs/build-with-claude/extended-thinking
-
-        // allowThinkingBlocks: only when there exists at least one thinking block AND all thinking blocks have signature
-        bool hasThinkingBlocks = request.Steps
-            .Where(s => s.ChatRole == DBChatRole.Assistant)
-            .SelectMany(s => s.StepContents)
-            .Any(sc => sc.ContentType == DBStepContentType.Think);
-
-        bool allThinkingHaveSignature = !hasThinkingBlocks || request.Steps
-            .Where(s => s.ChatRole == DBChatRole.Assistant)
-            .SelectMany(s => s.StepContents)
-            .Where(sc => sc.ContentType == DBStepContentType.Think)
-            .All(sc => sc.StepContentThink?.Signature != null);
-
-        bool allowThinkingBlocks = hasThinkingBlocks && allThinkingHaveSignature; // must have blocks and all signed
-
-        // hasToolCall: assistant messages contain tool calls
-        bool hasToolCall = request.Steps.Any(m => m.ChatRole == DBChatRole.Assistant && m.StepContents.Any(sc => sc.ContentType == DBStepContentType.ToolCall));
-
-        // allowThinking: disable only when there are tool calls AND we do not have valid (signed) thinking blocks.
-        // This covers both: (1) no thinking blocks + tool calls, (2) unsigned thinking blocks + tool calls.
-        // Other cases: enable thinking (may drop invalid/unsigned blocks when no tool calls present).
-        bool allowThinking = !hasToolCall || allowThinkingBlocks;
+        // Determine thinking block handling
+        var (allowThinkingBlocks, allowThinking) = DetermineThinkingSettings(request);
 
         JsonObject body = new()
         {
             ["max_tokens"] = request.ChatConfig.Model.MaxResponseTokens,
             ["model"] = request.ChatConfig.Model.DeploymentName,
-            ["messages"] = ConvertMessages(request.Steps, allowThinkingBlocks),
+            ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks),
             ["stream"] = true,
         };
 
-        if (request.ChatConfig.SystemPrompt != null)
-        {
-            body["system"] = request.ChatConfig.SystemPrompt;
-        }
+        // Handle system prompt with cache control support
+        AddSystemPrompt(body, request);
 
         if (request.ChatConfig.Temperature != null)
         {
@@ -406,25 +370,90 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         return body;
     }
 
+    private static void AddSystemPrompt(JsonObject body, ChatRequest request)
+    {
+        // If we have a NeutralSystemMessage with cache control, use structured format
+        if (request.System != null)
+        {
+            // Check if any content has cache control
+            bool hasCacheControl = request.System.Contents.Any(c => c.CacheControl != null);
+
+            if (hasCacheControl)
+            {
+                // Use structured array format for cache control support
+                JsonArray systemArray = [];
+                foreach (NeutralSystemContent content in request.System.Contents)
+                {
+                    JsonObject block = new()
+                    {
+                        ["type"] = "text",
+                        ["text"] = content.Text
+                    };
+                    if (content.CacheControl != null)
+                    {
+                        block["cache_control"] = new JsonObject { ["type"] = content.CacheControl.Type };
+                    }
+                    systemArray.Add(block);
+                }
+                body["system"] = systemArray;
+            }
+            else
+            {
+                // Simple string format
+                string? combined = request.System.GetCombinedText();
+                if (combined != null)
+                {
+                    body["system"] = combined;
+                }
+            }
+        }
+        else if (request.ChatConfig.SystemPrompt != null)
+        {
+            // Fall back to simple string from ChatConfig
+            body["system"] = request.ChatConfig.SystemPrompt;
+        }
+    }
+
+    private static (bool allowThinkingBlocks, bool allowThinking) DetermineThinkingSettings(ChatRequest request)
+    {
+        // Anthropic has strict policies on thinking blocks
+        bool hasThinkingBlocks = request.Messages
+            .Where(m => m.Role == NeutralChatRole.Assistant)
+            .SelectMany(m => m.Contents)
+            .Any(c => c is NeutralThinkContent);
+
+        bool allThinkingHaveSignature = !hasThinkingBlocks || request.Messages
+            .Where(m => m.Role == NeutralChatRole.Assistant)
+            .SelectMany(m => m.Contents)
+            .OfType<NeutralThinkContent>()
+            .All(tc => tc.Signature != null);
+
+        bool allowThinkingBlocks = hasThinkingBlocks && allThinkingHaveSignature;
+
+        bool hasToolCall = request.Messages.Any(m =>
+            m.Role == NeutralChatRole.Assistant &&
+            m.Contents.Any(c => c is NeutralToolCallContent));
+
+        bool allowThinking = !hasToolCall || allowThinkingBlocks;
+
+        return (allowThinkingBlocks, allowThinking);
+    }
+
     private static JsonArray BuildToolsArray(ChatRequest request)
     {
         JsonArray tools = [];
         bool hasWebSearchTool = false;
 
-        // Process tools from API
         foreach (ChatTool tool in request.Tools)
         {
-            // Detect built-in web_search tool: name matches and no real parameters defined
             if (tool.FunctionName == "web_search" && !HasRealParameters(tool))
             {
                 hasWebSearchTool = true;
-                continue; // Will be added with correct format below
+                continue;
             }
             tools.Add(ConvertTool(tool));
         }
 
-        // Add built-in web_search tool with correct format
-        // Sources: API (hasWebSearchTool) or App config (WebSearchEnabled)
         if (hasWebSearchTool || request.ChatConfig.WebSearchEnabled)
         {
             tools.Add(new JsonObject
@@ -439,13 +468,11 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
     private static bool HasRealParameters(ChatTool tool)
     {
-        // Check if the tool has actual parameter definitions (not just empty schema)
         try
         {
             JsonObject? parameters = tool.FunctionParameters.ToObjectFromJson<JsonObject>();
             if (parameters == null) return false;
 
-            // Has real parameters if "properties" exists and is non-empty
             if (parameters.TryGetPropertyValue("properties", out JsonNode? props) &&
                 props is JsonObject propsObj && propsObj.Count > 0)
             {
@@ -461,31 +488,15 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
     private static JsonObject BuildCountTokensRequestBody(ChatRequest request)
     {
-        bool hasThinkingBlocks = request.Steps
-            .Where(s => s.ChatRole == DBChatRole.Assistant)
-            .SelectMany(s => s.StepContents)
-            .Any(sc => sc.ContentType == DBStepContentType.Think);
-
-        bool allThinkingHaveSignature = !hasThinkingBlocks || request.Steps
-            .Where(s => s.ChatRole == DBChatRole.Assistant)
-            .SelectMany(s => s.StepContents)
-            .Where(sc => sc.ContentType == DBStepContentType.Think)
-            .All(sc => sc.StepContentThink?.Signature != null);
-
-        bool allowThinkingBlocks = hasThinkingBlocks && allThinkingHaveSignature;
-        bool hasToolCall = request.Steps.Any(m => m.ChatRole == DBChatRole.Assistant && m.StepContents.Any(sc => sc.ContentType == DBStepContentType.ToolCall));
-        bool allowThinking = !hasToolCall || allowThinkingBlocks;
+        var (allowThinkingBlocks, allowThinking) = DetermineThinkingSettings(request);
 
         JsonObject body = new()
         {
             ["model"] = request.ChatConfig.Model.DeploymentName,
-            ["messages"] = ConvertMessages(request.Steps, allowThinkingBlocks),
+            ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks),
         };
 
-        if (request.ChatConfig.SystemPrompt != null)
-        {
-            body["system"] = request.ChatConfig.SystemPrompt;
-        }
+        AddSystemPrompt(body, request);
 
         if (allowThinking && request.ChatConfig.ThinkingBudget != null)
         {
@@ -507,10 +518,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
     private static JsonObject ConvertTool(ChatTool tool)
     {
-        JsonObject inputSchema = new()
-        {
-            ["type"] = "object"
-        };
+        JsonObject inputSchema = new() { ["type"] = "object" };
 
         JsonObject? parameters = tool.FunctionParameters.ToObjectFromJson<JsonObject>();
         if (parameters != null)
@@ -531,7 +539,6 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             ["input_schema"] = inputSchema
         };
 
-        // description must be a valid string if present, cannot be null
         if (!string.IsNullOrEmpty(tool.FunctionDescription))
         {
             result["description"] = tool.FunctionDescription;
@@ -540,141 +547,129 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         return result;
     }
 
-    private static JsonArray ConvertMessages(IEnumerable<Step> messages, bool allowThinkingBlocks)
+    private static JsonArray ConvertMessages(IList<NeutralMessage> messages, bool allowThinkingBlocks)
     {
-        List<Step> mergedToolMessages = [.. SwitchServerToolResponsesAsUser(MergeToolMessages(messages))];
+        List<NeutralMessage> mergedMessages = [.. SwitchServerToolResponsesAsUser(MergeToolMessages(messages))];
         JsonArray result = [];
-        foreach (Step step in mergedToolMessages)
+        foreach (NeutralMessage msg in mergedMessages)
         {
-            result.Add(ToAnthropicMessage(step, allowThinkingBlocks));
+            result.Add(ToAnthropicMessage(msg, allowThinkingBlocks));
         }
         return result;
     }
 
-    private static IEnumerable<Step> SwitchServerToolResponsesAsUser(IEnumerable<Step> steps)
+    private static IEnumerable<NeutralMessage> SwitchServerToolResponsesAsUser(IEnumerable<NeutralMessage> messages)
     {
-        // Anthropic requires tool responses to be in user messages
-        // When response like web_search_tool_response comes back from server, we need to switch them to user role from assistant
-        // For example: [user, assistant(think, tool, tool_response, text), user] -> [user, assistant(think, tool), user(tool_response), assistant(text), user]
-        foreach (Step step in steps)
+        foreach (NeutralMessage msg in messages)
         {
-            if (step.ChatRole != DBChatRole.Assistant)
+            if (msg.Role != NeutralChatRole.Assistant)
             {
-                yield return step;
+                yield return msg;
                 continue;
             }
 
-            List<StepContent> assistantBuffer = [];
-            List<StepContent> userBuffer = [];
+            List<NeutralContent> assistantBuffer = [];
+            List<NeutralContent> userBuffer = [];
 
-            foreach (StepContent part in step.StepContents)
+            foreach (NeutralContent content in msg.Contents)
             {
-                if (part.StepContentToolCallResponse is not null)
+                if (content is NeutralToolCallResponseContent)
                 {
-                    // flush any accumulated assistant parts before emitting user tool responses
                     if (assistantBuffer.Count > 0)
                     {
-                        yield return new Step
+                        yield return new NeutralMessage
                         {
-                            ChatRoleId = (byte)DBChatRole.Assistant,
-                            StepContents = [.. assistantBuffer],
+                            Role = NeutralChatRole.Assistant,
+                            Contents = [.. assistantBuffer],
                         };
                         assistantBuffer.Clear();
                     }
-
-                    userBuffer.Add(part);
+                    userBuffer.Add(content);
                 }
                 else
                 {
-                    // if we have accumulated user tool responses, emit them first
                     if (userBuffer.Count > 0)
                     {
-                        yield return new Step
+                        yield return new NeutralMessage
                         {
-                            ChatRoleId = (byte)DBChatRole.User,
-                            StepContents = [.. userBuffer],
+                            Role = NeutralChatRole.User,
+                            Contents = [.. userBuffer],
                         };
                         userBuffer.Clear();
                     }
-
-                    assistantBuffer.Add(part);
+                    assistantBuffer.Add(content);
                 }
             }
 
-            // flush remaining buffers in the original order
             if (assistantBuffer.Count > 0)
             {
-                yield return new Step
+                yield return new NeutralMessage
                 {
-                    ChatRoleId = (byte)DBChatRole.Assistant,
-                    StepContents = [.. assistantBuffer],
+                    Role = NeutralChatRole.Assistant,
+                    Contents = [.. assistantBuffer],
                 };
             }
 
             if (userBuffer.Count > 0)
             {
-                yield return new Step
+                yield return new NeutralMessage
                 {
-                    ChatRoleId = (byte)DBChatRole.User,
-                    StepContents = [.. userBuffer],
+                    Role = NeutralChatRole.User,
+                    Contents = [.. userBuffer],
                 };
             }
         }
     }
 
-    private static IEnumerable<Step> MergeToolMessages(IEnumerable<Step> messages)
+    private static IEnumerable<NeutralMessage> MergeToolMessages(IEnumerable<NeutralMessage> messages)
     {
-        // openai will omit tool messages, but anthropic needs them merged into the user message
-        // for example:
-        // openai: [user, assistant(request tool call, probably multiple), tool(tool response 1), tool(tool response 2), assistant]
-        // anthropic: [user, assistant(request tool call, probably multiple), user(tool response 1 + 2), assistant]
-        List<StepContent> toolBuffer = [];
+        List<NeutralContent> toolBuffer = [];
 
-        foreach (Step message in messages)
+        foreach (NeutralMessage msg in messages)
         {
-            if (message.ChatRole == DBChatRole.ToolCall)
+            if (msg.Role == NeutralChatRole.Tool)
             {
-                toolBuffer.AddRange(message.StepContents);
+                toolBuffer.AddRange(msg.Contents);
             }
             else
             {
                 if (toolBuffer.Count > 0)
                 {
-                    yield return new Step
+                    yield return new NeutralMessage
                     {
-                        ChatRoleId = (byte)DBChatRole.User,
-                        StepContents = [.. toolBuffer],
+                        Role = NeutralChatRole.User,
+                        Contents = [.. toolBuffer],
                     };
                     toolBuffer.Clear();
                 }
-                yield return message;
+                yield return msg;
             }
         }
 
         if (toolBuffer.Count > 0)
         {
-            yield return new Step
+            yield return new NeutralMessage
             {
-                ChatRoleId = (byte)DBChatRole.User,
-                StepContents = [.. toolBuffer],
+                Role = NeutralChatRole.User,
+                Contents = [.. toolBuffer],
             };
         }
     }
 
-    private static JsonObject ToAnthropicMessage(Step message, bool allowThinkingBlocks)
+    private static JsonObject ToAnthropicMessage(NeutralMessage message, bool allowThinkingBlocks)
     {
-        string anthropicRole = message.ChatRole switch
+        string anthropicRole = message.Role switch
         {
-            DBChatRole.User => "user",
-            DBChatRole.Assistant => "assistant",
-            DBChatRole.ToolCall => throw new InvalidOperationException("Tool messages should be merged into user messages before conversion."),
-            _ => throw new InvalidOperationException($"Unknown message type: {message.GetType().FullName}"),
+            NeutralChatRole.User => "user",
+            NeutralChatRole.Assistant => "assistant",
+            NeutralChatRole.Tool => throw new InvalidOperationException("Tool messages should be merged into user messages before conversion."),
+            _ => throw new InvalidOperationException($"Unknown message role: {message.Role}"),
         };
 
         JsonArray content = [];
-        foreach (StepContent sc in message.StepContents)
+        foreach (NeutralContent c in message.Contents)
         {
-            JsonObject? contentBlock = ToAnthropicMessageContent(sc, allowThinkingBlocks);
+            JsonObject? contentBlock = ToAnthropicContent(c, allowThinkingBlocks);
             if (contentBlock != null)
             {
                 content.Add(contentBlock);
@@ -688,107 +683,85 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         };
     }
 
-    private static JsonObject? ToAnthropicMessageContent(StepContent part, bool allowThinkingBlocks)
+    private static JsonObject? ToAnthropicContent(NeutralContent content, bool allowThinkingBlocks)
     {
-        if (part.TryGetTextPart(out string? text))
+        JsonObject? result = content switch
         {
-            return new JsonObject
-            {
-                ["type"] = "text",
-                ["text"] = text
-            };
-        }
-        else if (part.TryGetFileUrl(out string? url))
-        {
-            return new JsonObject
+            NeutralTextContent text => new JsonObject { ["type"] = "text", ["text"] = text.Content },
+            NeutralErrorContent error => new JsonObject { ["type"] = "text", ["text"] = error.Content },
+            NeutralFileUrlContent fileUrl => new JsonObject
             {
                 ["type"] = "image",
-                ["source"] = new JsonObject
-                {
-                    ["type"] = "url",
-                    ["url"] = url
-                }
-            };
-        }
-        else if (part.TryGetFileBlob(out StepContentBlob? blob))
-        {
-            return new JsonObject
+                ["source"] = new JsonObject { ["type"] = "url", ["url"] = fileUrl.Url }
+            },
+            NeutralFileBlobContent fileBlob => new JsonObject
             {
                 ["type"] = "image",
                 ["source"] = new JsonObject
                 {
                     ["type"] = "base64",
-                    ["media_type"] = blob.MediaType,
-                    ["data"] = Convert.ToBase64String(blob.Content)
+                    ["media_type"] = fileBlob.MediaType,
+                    ["data"] = Convert.ToBase64String(fileBlob.Data)
                 }
-            };
-        }
-        else if (part.TryGetThink(out string? thinkText, out byte[]? signature))
-        {
-            if (allowThinkingBlocks)
-            {
-                string? signatureBase64 = signature != null ? Convert.ToBase64String(signature) : null;
-
-                if (thinkText == null)
-                {
-                    return new JsonObject
-                    {
-                        ["type"] = "redacted_thinking",
-                        ["data"] = signatureBase64
-                    };
-                }
-                else
-                {
-                    return new JsonObject
-                    {
-                        ["type"] = "thinking",
-                        ["thinking"] = thinkText,
-                        ["signature"] = signatureBase64!
-                    };
-                }
-            }
-            else
-            {
-                return null; // drop invalid/unsigned or disallowed thinking blocks
-            }
-        }
-        else if (part.TryGetError(out string? error))
-        {
-            return new JsonObject
-            {
-                ["type"] = "text",
-                ["text"] = error
-            };
-        }
-        else if (part.StepContentToolCall is not null)
-        {
-            StepContentToolCall toolCall = part.StepContentToolCall;
-            return new JsonObject
+            },
+            NeutralThinkContent think when allowThinkingBlocks => CreateThinkingBlock(think),
+            NeutralThinkContent => null, // Drop thinking blocks when not allowed
+            NeutralToolCallContent toolCall => new JsonObject
             {
                 ["type"] = "tool_use",
-                ["id"] = toolCall.ToolCallId,
+                ["id"] = toolCall.Id,
                 ["name"] = toolCall.Name,
                 ["input"] = JsonNode.Parse(toolCall.Parameters)
-            };
-        }
-        else if (part.StepContentToolCallResponse is not null)
+            },
+            NeutralToolCallResponseContent toolResp => CreateToolResultBlock(toolResp),
+            NeutralFileContent => throw new InvalidOperationException("FileId should be converted to FileUrl/FileBlob before conversion."),
+            _ => throw new InvalidOperationException($"Unsupported content type: {content.GetType().Name}")
+        };
+
+        // Add cache control if present
+        if (result != null && content.CacheControl != null)
         {
-            StepContentToolCallResponse toolResponse = part.StepContentToolCallResponse;
-            JsonObject result = new()
+            result["cache_control"] = new JsonObject { ["type"] = content.CacheControl.Type };
+        }
+
+        return result;
+    }
+
+    private static JsonObject CreateThinkingBlock(NeutralThinkContent think)
+    {
+        string? signatureBase64 = think.Signature != null ? Convert.ToBase64String(think.Signature) : null;
+
+        if (string.IsNullOrEmpty(think.Content))
+        {
+            return new JsonObject
             {
-                ["type"] = "tool_result",
-                ["tool_use_id"] = toolResponse.ToolCallId,
-                ["content"] = toolResponse.Response
+                ["type"] = "redacted_thinking",
+                ["data"] = signatureBase64
             };
-            if (!toolResponse.IsSuccess)
-            {
-                result["is_error"] = true;
-            }
-            return result;
         }
         else
         {
-            throw new InvalidOperationException($"Unsupported StepContent type for Anthropic conversion: {(DBStepContentType)part.ContentTypeId}");
+            return new JsonObject
+            {
+                ["type"] = "thinking",
+                ["thinking"] = think.Content,
+                ["signature"] = signatureBase64!
+            };
         }
+    }
+
+    private static JsonObject CreateToolResultBlock(NeutralToolCallResponseContent toolResp)
+    {
+        JsonObject result = new()
+        {
+            ["type"] = "tool_result",
+            ["tool_use_id"] = toolResp.ToolCallId,
+            ["content"] = toolResp.Response
+        };
+        if (!toolResp.IsSuccess)
+        {
+            result["is_error"] = true;
+        }
+        return result;
     }
 }

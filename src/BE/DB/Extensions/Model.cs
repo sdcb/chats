@@ -36,4 +36,21 @@ public partial class Model
         }
         return supportedImageSizesInDB.Split(',', StringSplitOptions.RemoveEmptyEntries);
     }
+
+    internal byte ClampReasoningEffortId(byte reasoningEffortId)
+    {
+        byte[] options = [.. GetReasoningEffortOptionsAsInt32(ReasoningEffortOptions).Select(x => (byte)x)];
+
+        if (options.Length == 0)
+        {
+            return 0;
+        }
+
+        if (options.Contains(reasoningEffortId))
+        {
+            return reasoningEffortId;
+        }
+
+        return options[0];
+    }
 }

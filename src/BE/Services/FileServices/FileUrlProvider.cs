@@ -1,6 +1,7 @@
 ﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
+using Chats.BE.Services.Models.Neutral;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.EntityFrameworkCore;
 using OpenAI.Chat;
@@ -69,4 +70,77 @@ public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, 
             .FirstAsync(x => x.Id == fileId, cancellationToken);
         return StepContent.FromFile(file);
     }
+
+    #region Neutral Content Methods
+
+    public NeutralContent CreateNeutralImagePart(DB.File file)
+    {
+        IFileService fs = fileServiceFactory.Create(file.FileService);
+        if (file.FileService.FileServiceTypeId == (byte)DBFileServiceType.Local)
+        {
+            return CreateNeutralImagePartForceDownloadInternal(file, fs);
+        }
+        else
+        {
+            string url = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
+            return NeutralFileUrlContent.Create(url);
+        }
+    }
+
+    public async Task<NeutralContent> CreateNeutralImagePartAsync(DB.File file, CancellationToken cancellationToken)
+    {
+        IFileService fs = fileServiceFactory.Create(file.FileService);
+        if (file.FileService.FileServiceTypeId == (byte)DBFileServiceType.Local)
+        {
+            return await CreateNeutralImagePartForceDownloadInternalAsync(file, fs, cancellationToken);
+        }
+        else
+        {
+            string url = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
+            return NeutralFileUrlContent.Create(url);
+        }
+    }
+
+    public NeutralContent CreateNeutralImagePartForceDownload(DB.File file)
+    {
+        IFileService fs = fileServiceFactory.Create(file.FileService);
+        return CreateNeutralImagePartForceDownloadInternal(file, fs);
+    }
+
+    public async Task<NeutralContent> CreateNeutralImagePartForceDownloadAsync(DB.File file, CancellationToken cancellationToken)
+    {
+        IFileService fs = fileServiceFactory.Create(file.FileService);
+        return await CreateNeutralImagePartForceDownloadInternalAsync(file, fs, cancellationToken);
+    }
+
+    private static NeutralContent CreateNeutralImagePartForceDownloadInternal(DB.File file, IFileService fs)
+    {
+        using Stream stream = fs.Download(file.StorageKey, CancellationToken.None).Result;
+        MemoryStream ms = new();
+        stream.CopyTo(ms);
+        ms.Position = 0;
+
+        BinaryData binaryData = BinaryData.FromStream(ms);
+        return NeutralFileBlobContent.Create(binaryData.ToArray(), file.MediaType);
+    }
+
+    private static async Task<NeutralContent> CreateNeutralImagePartForceDownloadInternalAsync(DB.File file, IFileService fs, CancellationToken cancellationToken)
+    {
+        MemoryStream ms = new();
+        using Stream stream = await fs.Download(file.StorageKey, cancellationToken);
+        await stream.CopyToAsync(ms, cancellationToken);
+        ms.Position = 0;
+
+        BinaryData binaryData = BinaryData.FromStream(ms);
+        return NeutralFileBlobContent.Create(binaryData.ToArray(), file.MediaType);
+    }
+
+    public NeutralContent CreateNeutralTextUrl(DB.File file)
+    {
+        IFileService fs = fileServiceFactory.Create(file.FileService);
+        string url = fs.CreateDownloadUrl(CreateDownloadUrlRequest.FromFile(file));
+        return NeutralTextContent.Create(url);
+    }
+
+    #endregion
 }

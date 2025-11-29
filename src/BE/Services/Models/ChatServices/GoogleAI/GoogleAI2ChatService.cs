@@ -2,6 +2,7 @@
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.Models.Neutral;
 using Mscc.GenerativeAI;
 using OpenAI.Chat;
 using System.Diagnostics;
@@ -80,10 +81,11 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
         }
 
         int fcIndex = 0;
+        string? effectiveSystemPrompt = request.GetEffectiveSystemPrompt();
         GenerateContentRequest gcr = new()
         {
-            Contents = ConvertMessages(request.Steps),
-            SystemInstruction = request.ChatConfig.SystemPrompt != null ? new Content() { Role = Role.System, Parts = [new TextData() { Text = request.ChatConfig.SystemPrompt }] } : null,
+            Contents = ConvertMessages(request.Messages),
+            SystemInstruction = effectiveSystemPrompt != null ? new Content() { Role = Role.System, Parts = [new TextData() { Text = effectiveSystemPrompt }] } : null,
             GenerationConfig = gc,
             SafetySettings = _safetySettings,
             Tools = request.ChatConfig.Model.AllowToolCall && tool != null ? [tool] : null,
@@ -199,61 +201,61 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
         };
     }
 
-    static List<Content> ConvertMessages(IEnumerable<Step> steps)
+    static List<Content> ConvertMessages(IList<NeutralMessage> messages)
     {
-        return [.. steps
-            .Select(msg => (DBChatRole)msg.ChatRoleId switch
+        return [.. messages
+            .Select(msg => msg.Role switch
             {
-                DBChatRole.User => new Content("") { Role = Role.User, Parts = [.. msg.StepContents.Select(DBPartToGooglePart).Where(x => x != null).Select(x => x!)] },
-                DBChatRole.Assistant => new Content("") { Role = Role.Model, Parts = AssistantMessageToParts(msg) },
-                DBChatRole.ToolCall => new Content("") { Role = Role.Function, Parts = [ToolCallMessageToPart(msg)] },
-                _ => throw new NotSupportedException($"Unsupported message type: {msg.GetType()} in {nameof(GoogleAI2ChatService)}"),
+                NeutralChatRole.User => new Content("") { Role = Role.User, Parts = [.. msg.Contents.Select(NeutralContentToGooglePart).Where(x => x != null).Select(x => x!)] },
+                NeutralChatRole.Assistant => new Content("") { Role = Role.Model, Parts = AssistantMessageToParts(msg) },
+                NeutralChatRole.Tool => new Content("") { Role = Role.Function, Parts = [ToolCallMessageToPart(msg)] },
+                _ => throw new NotSupportedException($"Unsupported message role: {msg.Role} in {nameof(GoogleAI2ChatService)}"),
             })];
 
-        static IPart ToolCallMessageToPart(Step message)
+        static IPart ToolCallMessageToPart(NeutralMessage message)
         {
-            StepContent? toolCallContent = message.StepContents.FirstOrDefault();
-            if (toolCallContent == null || (DBStepContentType)toolCallContent.ContentTypeId != DBStepContentType.ToolCallResponse || toolCallContent.StepContentToolCallResponse == null)
+            NeutralContent? toolCallContent = message.Contents.FirstOrDefault();
+            if (toolCallContent is not NeutralToolCallResponseContent tcr)
             {
-                throw new Exception($"{nameof(ToolCallMessageToPart)} expected tool call content but none found.");
+                throw new Exception($"{nameof(ToolCallMessageToPart)} expected tool call response content but none found.");
             }
 
-            return Part.FromFunctionResponse(toolCallContent.StepContentToolCallResponse.ToolCallId, new
+            return Part.FromFunctionResponse(tcr.ToolCallId, new
             {
-                result = toolCallContent.StepContentToolCallResponse.Response
+                result = tcr.Response
             });
         }
 
-        static List<IPart> AssistantMessageToParts(Step assistantChatMessage)
+        static List<IPart> AssistantMessageToParts(NeutralMessage assistantMessage)
         {
             List<IPart> results = [];
-            foreach (StepContentToolCall? toolCall in assistantChatMessage.StepContents.Select(x => x.StepContentToolCall))
+            foreach (NeutralToolCallContent toolCall in assistantMessage.Contents.OfType<NeutralToolCallContent>())
             {
-                if (toolCall != null)
+                results.Add(new FunctionCall()
                 {
-                    results.Add(new FunctionCall()
-                    {
-                        Id = toolCall.ToolCallId,
-                        Name = toolCall.Name,
-                        Args = JsonSerializer.Deserialize<JsonObject>(toolCall.Parameters),
-                    });
-                }
+                    Id = toolCall.Id,
+                    Name = toolCall.Name,
+                    Args = JsonSerializer.Deserialize<JsonObject>(toolCall.Parameters),
+                });
             }
 
-            results.AddRange(assistantChatMessage.StepContents
-                .Select(DBPartToGooglePart)
+            results.AddRange(assistantMessage.Contents
+                .Select(NeutralContentToGooglePart)
                 .Where(x => x != null).Select(x => x!));
             return results;
         }
 
-        static IPart? DBPartToGooglePart(StepContent part)
+        static IPart? NeutralContentToGooglePart(NeutralContent content)
         {
-            return (DBStepContentType)part.ContentTypeId switch
+            return content switch
             {
-                DBStepContentType.Text => new TextData() { Text = part.StepContentText!.Content },
-                DBStepContentType.FileBlob => new InlineData() { Data = Convert.ToBase64String(part.StepContentBlob!.Content), MimeType = part.StepContentBlob!.MediaType },
-                DBStepContentType.Think => null, // Skip thinking parts for Google AI
-                var x => throw new NotSupportedException($"Unsupported part kind: {x}"),
+                NeutralTextContent text => new TextData() { Text = text.Content },
+                NeutralFileBlobContent blob => new InlineData() { Data = Convert.ToBase64String(blob.Data), MimeType = blob.MediaType },
+                NeutralThinkContent => null, // Skip thinking parts for Google AI
+                NeutralToolCallContent => null, // Tool calls are handled separately in AssistantMessageToParts
+                NeutralToolCallResponseContent => null, // Tool call responses are handled separately
+                NeutralErrorContent error => new TextData() { Text = error.Content },
+                _ => throw new NotSupportedException($"Unsupported content type: {content.GetType().Name}"),
             };
         }
     }

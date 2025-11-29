@@ -1,5 +1,6 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.Models.Neutral;
 using OpenAI.Chat;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -34,11 +35,8 @@ public class Test2ChatService : ChatService
 
     public override IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, CancellationToken cancellationToken)
     {
-        Step lastUserMessage = request.Steps.LastUserMessage ?? throw new InvalidOperationException("No user message in the request.");
-        string messageText = lastUserMessage.StepContents
-            .Select(x => x.TryGetTextPart(out string? text) ? text : null)
-            .Where(x => x != null)
-            .FirstOrDefault() ?? string.Empty;
+        NeutralMessage lastUserMessage = request.Messages.LastUserMessage() ?? throw new InvalidOperationException("No user message in the request.");
+        string messageText = lastUserMessage.GetFirstTextContent() ?? string.Empty;
 
         if (messageText == "test-url")
         {

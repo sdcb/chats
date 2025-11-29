@@ -8,6 +8,7 @@ using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.Models.Neutral;
 using Chats.BE.Services.OpenAIApiKeySession;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -353,10 +354,10 @@ public class OpenAIImageController(
         Model model,
         List<(byte[] Data, string ContentType, string FileName, bool IsMask)>? images)
     {
-        List<StepContent> stepContents = [];
+        List<NeutralContent> contents = [];
 
         // Add text prompt (Prompt is validated as non-null at controller entry)
-        stepContents.Add(StepContent.FromText(request.Prompt!));
+        contents.Add(NeutralTextContent.Create(request.Prompt!));
 
         // Add images if provided (for image edits)
         if (images != null)
@@ -366,19 +367,19 @@ public class OpenAIImageController(
                 // For mask images, we need to indicate it's a mask in the file name
                 if (isMask)
                 {
-                    stepContents.Add(StepContent.FromFileBlob(data, contentType));
+                    contents.Add(NeutralFileBlobContent.Create(data, contentType));
                 }
                 else
                 {
-                    stepContents.Add(StepContent.FromFileBlob(data, contentType));
+                    contents.Add(NeutralFileBlobContent.Create(data, contentType));
                 }
             }
         }
 
-        Step userStep = new()
+        NeutralMessage userMessage = new()
         {
-            ChatRoleId = (byte)DBChatRole.User,
-            StepContents = stepContents
+            Role = NeutralChatRole.User,
+            Contents = contents
         };
 
         ChatConfig chatConfig = new()
@@ -397,7 +398,7 @@ public class OpenAIImageController(
             ChatConfig = chatConfig,
             EndUserId = request.User ?? currentApiKey.User.Id.ToString(),
             Streamed = isStreamed,
-            Steps = [userStep],
+            Messages = [userMessage],
         };
     }
 

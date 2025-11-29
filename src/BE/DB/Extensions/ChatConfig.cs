@@ -155,11 +155,12 @@ public partial class ChatConfig
         return hashCode;
     }
 
-    public ChatConfig WithTemperature(float? temperature)
+    public ChatConfig WithClamps(float? temperature, byte reasoningEffortId)
     {
         ChatConfig cloned = Clone();
         cloned.Model = Model;
         cloned.Temperature = temperature;
+        cloned.ReasoningEffortId = reasoningEffortId;
         return cloned;
     }
 

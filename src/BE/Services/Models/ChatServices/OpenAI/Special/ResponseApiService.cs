@@ -2,6 +2,7 @@
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.Models.Neutral;
 using OpenAI;
 using OpenAI.Chat;
 using OpenAI.Models;
@@ -227,90 +228,74 @@ public class ResponseApiService(ILogger<ResponseApiService> logger) : ChatServic
 
     static List<ResponseItem> ExtractMessages(ChatRequest request)
     {
-        List<ResponseItem> responseItems = new(request.Steps.Count + request.ChatConfig.SystemPrompt != null ? 1 : 0);
-        if (request.ChatConfig.SystemPrompt != null)
+        string? effectiveSystemPrompt = request.GetEffectiveSystemPrompt();
+        List<ResponseItem> responseItems = new(request.Messages.Count + (effectiveSystemPrompt != null ? 1 : 0));
+        if (effectiveSystemPrompt != null)
         {
-            responseItems.Add(ResponseItem.CreateSystemMessageItem(request.ChatConfig.SystemPrompt));
+            responseItems.Add(ResponseItem.CreateSystemMessageItem(effectiveSystemPrompt));
         }
 
-        foreach (Step message in request.Steps)
+        foreach (NeutralMessage message in request.Messages)
         {
-            responseItems.AddRange((DBChatRole)message.ChatRoleId switch
+            responseItems.AddRange(message.Role switch
             {
-                DBChatRole.User => [ResponseItem.CreateUserMessageItem(MessageContentPartToResponse(message.StepContents, input: true))],
-                DBChatRole.Assistant => AssistantChatMessageToResponse(message),
-                DBChatRole.ToolCall => [ResponseItem.CreateFunctionCallOutputItem(message.StepContents.First().StepContentToolCallResponse!.ToolCallId, message.StepContents.First().StepContentToolCallResponse!.Response)],
-                _ => throw new NotSupportedException($"Unsupported message type: {message.GetType()}"),
+                NeutralChatRole.User => [ResponseItem.CreateUserMessageItem(MessageContentPartToResponse(message.Contents, input: true))],
+                NeutralChatRole.Assistant => AssistantMessageToResponse(message),
+                NeutralChatRole.Tool => [ResponseItem.CreateFunctionCallOutputItem(
+                    ((NeutralToolCallResponseContent)message.Contents.First()).ToolCallId,
+                    ((NeutralToolCallResponseContent)message.Contents.First()).Response)],
+                _ => throw new NotSupportedException($"Unsupported message role: {message.Role}"),
             });
         }
         return responseItems;
 
-        static IEnumerable<ResponseItem> AssistantChatMessageToResponse(Step assistantChatMessage)
+        static IEnumerable<ResponseItem> AssistantMessageToResponse(NeutralMessage assistantMessage)
         {
-            foreach (StepContent sc in assistantChatMessage.StepContents.Where(x => x.StepContentToolCall != null))
+            foreach (NeutralToolCallContent tc in assistantMessage.Contents.OfType<NeutralToolCallContent>())
             {
-                StepContentToolCall tc = sc.StepContentToolCall!;
-                yield return ResponseItem.CreateFunctionCallItem(tc.ToolCallId, tc.Name, BinaryData.FromString(tc.Parameters));
+                yield return ResponseItem.CreateFunctionCallItem(tc.Id, tc.Name, BinaryData.FromString(tc.Parameters));
             }
-            List<StepContent> generalContents = [.. assistantChatMessage.StepContents.Where(x => x.StepContentToolCall == null)];
+            List<NeutralContent> generalContents = [.. assistantMessage.Contents.Where(x => x is not NeutralToolCallContent)];
             if (generalContents.Count > 0)
             {
                 yield return ResponseItem.CreateAssistantMessageItem(MessageContentPartToResponse(generalContents, input: false));
             }
         }
 
-        static IReadOnlyList<ResponseContentPart> MessageContentPartToResponse(ICollection<StepContent> parts, bool input)
+        static IReadOnlyList<ResponseContentPart> MessageContentPartToResponse(IList<NeutralContent> contents, bool input)
         {
-            return parts
-                .Select(x => StepContentPartToResponsePart(x, input))
+            return contents
+                .Select(x => NeutralContentToResponsePart(x, input))
                 .Where(x => x != null)
                 .ToList()!;
         }
 
-        static ResponseContentPart? StepContentPartToResponsePart(StepContent stepContent, bool input)
+        static ResponseContentPart? NeutralContentToResponsePart(NeutralContent content, bool input)
         {
-            DBStepContentType contentType = (DBStepContentType)stepContent.ContentTypeId;
             if (input)
             {
-                if (stepContent.TryGetTextPart(out string? text))
+                return content switch
                 {
-                    return ResponseContentPart.CreateInputTextPart(text);
-                }
-                else if (stepContent.TryGetFileUrl(out string? url))
-                {
-                    return ResponseContentPart.CreateInputImagePart(new Uri(url));
-                }
-                else if (stepContent.TryGetFileBlob(out StepContentBlob? blob))
-                {
-                    return ResponseContentPart.CreateInputImagePart(BinaryData.FromBytes(blob.Content), blob.MediaType);
-                }
-                else
-                {
-                    throw new NotSupportedException($"Unsupported input step content type: {contentType}");
-                }
+                    NeutralTextContent text => ResponseContentPart.CreateInputTextPart(text.Content),
+                    NeutralFileUrlContent fileUrl => ResponseContentPart.CreateInputImagePart(new Uri(fileUrl.Url)),
+                    NeutralFileBlobContent blob => ResponseContentPart.CreateInputImagePart(BinaryData.FromBytes(blob.Data), blob.MediaType),
+                    NeutralErrorContent error => ResponseContentPart.CreateInputTextPart(error.Content),
+                    _ => throw new NotSupportedException($"Unsupported input content type: {content.GetType().Name}"),
+                };
             }
             else
             {
-                if (stepContent.TryGetTextPart(out string? text))
+                return content switch
                 {
-                    return ResponseContentPart.CreateOutputTextPart(text, []);
-                }
-                else if (stepContent.TryGetFileUrl(out string? url))
-                {
-                    return ResponseContentPart.CreateOutputTextPart(url, []);
-                }
-                else if (stepContent.TryGetThink(out _, out _))
-                {
-                    return null; // Response api does not support think parts in output
-                }
-                else if (stepContent.TryGetFileBlob(out _))
-                {
-                    throw new NotSupportedException("File blob is not supported for output content");
-                }
-                else
-                {
-                    throw new NotSupportedException($"Unsupported output step content type: {contentType}");
-                }
+                    NeutralTextContent text => ResponseContentPart.CreateOutputTextPart(text.Content, []),
+                    NeutralFileUrlContent fileUrl => ResponseContentPart.CreateOutputTextPart(fileUrl.Url, []),
+                    NeutralThinkContent => null, // Response API does not support think parts in output
+                    NeutralFileBlobContent => throw new NotSupportedException("File blob is not supported for output content"),
+                    NeutralErrorContent error => ResponseContentPart.CreateOutputTextPart(error.Content, []),
+                    NeutralToolCallContent => null, // Tool calls are handled separately
+                    NeutralToolCallResponseContent => null, // Tool call responses are handled separately
+                    _ => throw new NotSupportedException($"Unsupported output content type: {content.GetType().Name}"),
+                };
             }
         }
     }

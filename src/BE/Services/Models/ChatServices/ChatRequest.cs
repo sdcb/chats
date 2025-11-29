@@ -1,5 +1,7 @@
 ﻿using Chats.BE.DB;
 using Chats.BE.DB.Enums;
+using Chats.BE.Services.Models.Neutral;
+using Chats.BE.Services.Models.Neutral.Conversions;
 using OpenAI.Chat;
 using Tokenizer = Microsoft.ML.Tokenizers.Tokenizer;
 
@@ -7,7 +9,16 @@ namespace Chats.BE.Services.Models;
 
 public record ChatRequest
 {
-    public required IList<Step> Steps { get; init; }
+    /// <summary>
+    /// Chat messages in neutral format (independent of any third-party SDK or database model).
+    /// </summary>
+    public required IList<NeutralMessage> Messages { get; init; }
+
+    /// <summary>
+    /// Optional system message with cache control support.
+    /// When set, this takes precedence over ChatConfig.SystemPrompt.
+    /// </summary>
+    public NeutralSystemMessage? System { get; init; }
 
     public required ChatConfig ChatConfig { get; init; }
 
@@ -25,45 +36,60 @@ public record ChatRequest
 
     public long? Seed { get; init; }
 
+    /// <summary>
+    /// Gets the effective system prompt, prioritizing System over ChatConfig.SystemPrompt.
+    /// </summary>
+    public string? GetEffectiveSystemPrompt()
+    {
+        return System?.GetCombinedText() ?? ChatConfig.SystemPrompt;
+    }
+
     public int EstimatePromptTokens(Tokenizer tokenizer)
     {
         const int TokenPerConversation = 3;
         const int TokenPerMessage = 4;
         int systemTokens = 0;
-        if (ChatConfig.SystemPrompt != null)
+        string? systemPrompt = GetEffectiveSystemPrompt();
+        if (systemPrompt != null)
         {
-            systemTokens = TokenPerMessage + tokenizer.CountTokens(ChatConfig.SystemPrompt);
+            systemTokens = TokenPerMessage + tokenizer.CountTokens(systemPrompt);
         }
 
-        int stepsTokens = Steps.Select(x => x.EstimatePromptTokens(tokenizer) + TokenPerMessage).Sum();
-        int totalTokens = TokenPerConversation + systemTokens + stepsTokens;
+        int messagesTokens = Messages.Select(m => EstimateMessageTokens(m, tokenizer) + TokenPerMessage).Sum();
+        int totalTokens = TokenPerConversation + systemTokens + messagesTokens;
         return totalTokens;
+    }
+
+    private static int EstimateMessageTokens(NeutralMessage message, Tokenizer tokenizer)
+    {
+        const int TokenPerToolCall = 3;
+        const int TokensPerImage = 1105; // https://platform.openai.com/docs/guides/vision/calculating-costs
+
+        int tokens = 0;
+        foreach (NeutralContent content in message.Contents)
+        {
+            tokens += content switch
+            {
+                NeutralTextContent text => tokenizer.CountTokens(text.Content),
+                NeutralErrorContent error => tokenizer.CountTokens(error.Content),
+                NeutralThinkContent think => tokenizer.CountTokens(think.Content),
+                NeutralFileUrlContent or NeutralFileBlobContent or NeutralFileContent => TokensPerImage,
+                NeutralToolCallContent toolCall => tokenizer.CountTokens(toolCall.Id) + tokenizer.CountTokens(toolCall.Name) + tokenizer.CountTokens(toolCall.Parameters) + TokenPerToolCall,
+                NeutralToolCallResponseContent toolResp => tokenizer.CountTokens(toolResp.Response),
+                _ => 0
+            };
+        }
+        return tokens;
     }
 
     public static ChatRequest Simple(string prompt, Model model)
     {
         return new ChatRequest
         {
-            Steps =
-            [
-                new Step()
-                {
-                    ChatRoleId = (byte)DBChatRole.User,
-                    StepContents =
-                    [
-                        new StepContent()
-                        {
-                            StepContentText = new StepContentText()
-                            {
-                                Content = prompt
-                            }
-                        }
-                    ]
-                }
-            ],
+            Messages = [NeutralMessage.FromUserText(prompt)],
             ChatConfig = new ChatConfig()
             {
-                Model = model, 
+                Model = model,
             }
         };
     }
@@ -72,23 +98,16 @@ public record ChatRequest
     {
         ChatConfig config = new()
         {
-            Model = model, 
+            Model = model,
             ModelId = model.Id,
-            SystemPrompt = string.Join("\r\n", messages
-                .Where(x => x is SystemChatMessage or DeveloperChatMessage)
-                .Select(x => string.Join("\r\n", x.Content.Select(x => x.Text)))) switch
-                {
-                    var x when !string.IsNullOrWhiteSpace(x) => x,
-                    _ => null
-                },
+            SystemPrompt = messages.ExtractSystemPrompt(),
             Temperature = cco.Temperature,
             MaxOutputTokens = cco.MaxOutputTokenCount ?? cco._deprecatedMaxTokens,
             ReasoningEffortId = (byte)cco.ReasoningEffortLevel.ToDBReasoningEffort(),
         };
-        List<Step> steps = [.. messages
-            .Where(x => x is not SystemChatMessage)
-            .Select(Step.FromOpenAI)];
-        
+
+        IList<NeutralMessage> neutralMessages = messages.ToNeutralExcludingSystem();
+
         if (cco.Patch.TryGetValue("$.enable_search"u8, out bool enableSearch))
         {
             config.WebSearchEnabled = enableSearch;
@@ -110,7 +129,7 @@ public record ChatRequest
             Streamed = streamed,
             TextFormat = cco.ResponseFormat,
             Tools = cco.Tools,
-            Steps = steps,
+            Messages = neutralMessages,
             TopP = cco.TopP,
             Seed = cco.Seed,
         };
