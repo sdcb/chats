@@ -197,10 +197,16 @@ public partial class ChatCompletionService : ChatService
         {
             Temperature = request.ChatConfig.Temperature,
             EndUserId = request.EndUserId,
+            AllowParallelToolCalls = request.AllowParallelToolCalls,
+            ResponseFormat = request.TextFormat,
         };
         if (request.ChatConfig.MaxOutputTokens.HasValue)
         {
             cco.SetMaxTokens(request.ChatConfig.MaxOutputTokens.Value, request.ChatConfig.Model.UseMaxCompletionTokens);
+        }
+        foreach (ChatTool tool in request.Tools)
+        {
+            cco.Tools.Add(tool);
         }
         cco.TopP = request.TopP;
         cco.Seed = request.Seed;
