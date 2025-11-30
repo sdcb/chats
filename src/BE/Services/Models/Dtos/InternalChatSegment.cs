@@ -1,11 +1,11 @@
-﻿using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
-using OpenAI.Chat;
+using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
+using Chats.BE.Services.Models.ChatServices;
 
 namespace Chats.BE.Services.Models.Dtos;
 
 public record InternalChatSegment
 {
-    public required ChatFinishReason? FinishReason { get; init; }
+    public required DBFinishReason? FinishReason { get; init; }
 
     public required ICollection<ChatSegmentItem> Items { get; init; }
 
@@ -20,27 +20,9 @@ public record InternalChatSegment
         Usage = ChatTokenUsage.Zero,
         FinishReason = null,
         Items = [],
-        IsUsageReliable = false, 
+        IsUsageReliable = false,
         IsFromUpstream = false,
     };
-
-    public DBFinishReason? ToDBFinishReason()
-    {
-        if (FinishReason is null)
-        {
-            return null;
-        }
-
-        return FinishReason switch
-        {
-            ChatFinishReason.Stop => DBFinishReason.Stop,
-            ChatFinishReason.Length => DBFinishReason.Length,
-            ChatFinishReason.ToolCalls => DBFinishReason.ToolCalls,
-            ChatFinishReason.ContentFilter => DBFinishReason.ContentFilter,
-            ChatFinishReason.FunctionCall => DBFinishReason.FunctionCall,
-            _ => throw new ArgumentOutOfRangeException(nameof(FinishReason), FinishReason, "Unknown ChatFinishReason value.")
-        };
-    }
 
     public static InternalChatSegment InputOnly(int inputTokens) => Empty with { Usage = ChatTokenUsage.Zero with { InputTokens = inputTokens } };
 
@@ -48,13 +30,13 @@ public record InternalChatSegment
     {
         return FinishReason switch
         {
-            ChatFinishReason.Stop => "stop",
-            ChatFinishReason.Length => "length",
-            ChatFinishReason.ToolCalls => "tool_calls",
-            ChatFinishReason.ContentFilter => "content_filter",
-            ChatFinishReason.FunctionCall => "function_call",
+            DBFinishReason.Stop => "stop",
+            DBFinishReason.Length => "length",
+            DBFinishReason.ToolCalls => "tool_calls",
+            DBFinishReason.ContentFilter => "content_filter",
+            DBFinishReason.FunctionCall => "function_call",
             null => null,
-            _ => throw new ArgumentOutOfRangeException(nameof(FinishReason), FinishReason, "Unknown ChatFinishReason value.")
+            _ => null // For error codes, return null
         };
     }
 

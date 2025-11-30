@@ -1,12 +1,10 @@
-﻿using Chats.BE.Services.Models.ChatServices;
-using OpenAI.Chat;
-using OpenAI.Responses;
+using Chats.BE.Services.Models.ChatServices;
 
 namespace Chats.BE.Services.Models.Dtos;
 
 public record ChatSegment
 {
-    public required ChatFinishReason? FinishReason { get; init; }
+    public required DBFinishReason? FinishReason { get; init; }
 
     public required ICollection<ChatSegmentItem> Items { get; init; }
 
@@ -60,42 +58,12 @@ public record ChatSegment
         };
     }
 
-    public static ChatSegment FromStartToolCall(StreamingResponseOutputItemAddedUpdate delta, FunctionCallResponseItem fc)
-    {
-        return new ChatSegment
-        {
-            FinishReason = null,
-            Items = [ChatSegmentItem.FromToolCall(delta, fc)],
-            Usage = null,
-        };
-    }
-
     public static ChatSegment FromToolCall(ToolCallSegment toolCallSegment)
     {
         return new ChatSegment
         {
             FinishReason = null,
             Items = [toolCallSegment],
-            Usage = null,
-        };
-    }
-
-    public static ChatSegment FromToolCall(int fcIndex, FunctionCallResponseItem fc)
-    {
-        return new ChatSegment
-        {
-            FinishReason = null,
-            Items = [ChatSegmentItem.FromToolCall(fcIndex, fc)],
-            Usage = null,
-        };
-    }
-
-    public static ChatSegment FromToolCallDelta(StreamingResponseFunctionCallArgumentsDeltaUpdate delta)
-    {
-        return new ChatSegment
-        {
-            FinishReason = null,
-            Items = [ChatSegmentItem.FromToolCallDelta(delta)],
             Usage = null,
         };
     }
@@ -110,7 +78,7 @@ public record ChatSegment
         };
     }
 
-    public static ChatSegment Completed(ChatTokenUsage usage, ChatFinishReason? finishReason)
+    public static ChatSegment Completed(ChatTokenUsage usage, DBFinishReason? finishReason)
     {
         ArgumentNullException.ThrowIfNull(usage, nameof(usage));
         return new ChatSegment

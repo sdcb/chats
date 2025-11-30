@@ -1,7 +1,7 @@
 ﻿using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
-using OpenAI.Chat;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -91,7 +91,7 @@ public class Test2ChatService : ChatService
             yield return new ChatSegment()
             {
                 Items = [ChatSegmentItem.FromUrlImage(url)],
-                FinishReason = ChatFinishReason.Stop,
+                FinishReason = DBFinishReason.Success,
                 Usage = null,
             };
         }
@@ -123,7 +123,7 @@ public class Test2ChatService : ChatService
                 {
                     Items = ChatSegmentItem.FromTextAndThink("\n", null),
                     Usage = null,
-                    FinishReason = ChatFinishReason.Stop,
+                    FinishReason = DBFinishReason.Success,
                 };
             }
         }

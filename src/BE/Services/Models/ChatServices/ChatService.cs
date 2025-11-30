@@ -1,4 +1,4 @@
-﻿using Chats.BE.Controllers.Users.Usages.Dtos;
+using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
@@ -6,7 +6,6 @@ using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
 using Microsoft.ML.Tokenizers;
-using OpenAI;
 using System.Runtime.CompilerServices;
 using Tokenizer = Microsoft.ML.Tokenizers.Tokenizer;
 

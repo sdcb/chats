@@ -1,28 +1,29 @@
-﻿using Chats.BE.DB;
-using OpenAI.Chat;
+using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class GLMChatService : ChatCompletionService
+public class GLMChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {
-    protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
+    protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
-        ChatCompletionOptions cco = base.ExtractOptions(request);
+        JsonObject body = base.BuildRequestBody(request, stream);
+
         // https://bigmodel.cn/dev/howuse/websearch
         if (request.ChatConfig.WebSearchEnabled)
         {
-            cco.Patch.Set("$.tools"u8, BinaryData.FromObjectAsJson(new[]
+            body["tools"] = new JsonArray
             {
-                new
+                new JsonObject
                 {
-                    type = "web_search",
-                    web_search = new
+                    ["type"] = "web_search",
+                    ["web_search"] = new JsonObject
                     {
-                        enable = true,
-                    },
+                        ["enable"] = true
+                    }
                 }
-            }));
+            };
         }
-        return cco;
+
+        return body;
     }
 }

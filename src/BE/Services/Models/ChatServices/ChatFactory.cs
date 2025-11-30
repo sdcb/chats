@@ -1,4 +1,4 @@
-﻿using Chats.BE.Controllers.Users.Usages.Dtos;
+using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
@@ -8,7 +8,6 @@ using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 using Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 using Chats.BE.Services.Models.ChatServices.Test;
-using OpenAI.Chat;
 
 namespace Chats.BE.Services.Models.ChatServices;
 
@@ -57,7 +56,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
                 DBModelProvider.AzureAIFoundry => sp.GetRequiredService<AzureImageGenerationService>(),
                 _ => sp.GetRequiredService<ImageGenerationService>() // Fallback to OpenAI-compatible
             },
-            
+
             _ => throw new NotSupportedException($"Unknown API type: {apiType}")
         };
     }
@@ -68,18 +67,6 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
         ChatService cs = CreateChatService(model);
         try
         {
-            ChatCompletionOptions cco = new();
-            
-            // 如果模型支持 ReasoningEffort，使用最低级别进行测试
-            if (!string.IsNullOrEmpty(model.ReasoningEffortOptions))
-            {
-                int[] efforts = Model.GetReasoningEffortOptionsAsInt32(model.ReasoningEffortOptions);
-                if (efforts.Length > 0)
-                {
-                    cco.ReasoningEffortLevel = ((DBReasoningEffort)efforts.Min()).ToChatCompletionReasoningEffort();
-                }
-            }
-
             await foreach (Dtos.InternalChatSegment seg in cs.ChatEntry(ChatRequest.Simple("1+1=?", model), fup, UsageSource.Validate, cancellationToken))
             {
                 if (seg.IsFromUpstream)

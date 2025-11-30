@@ -1,9 +1,8 @@
-﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
+using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
-using OpenAI.Chat;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Chats.BE.DB;
@@ -73,16 +72,16 @@ public partial class StepContent
 
     public static StepContent FromToolResponse(string toolCallId, string? response, int durationMs = 0, bool isSuccess = true)
     {
-        return new StepContent 
-        { 
-            StepContentToolCallResponse = new() 
-            { 
-                ToolCallId = toolCallId, 
-                Response = response!, 
-                DurationMs = durationMs, 
-                IsSuccess = isSuccess 
-            }, 
-            ContentTypeId = (byte)DBStepContentType.ToolCallResponse 
+        return new StepContent
+        {
+            StepContentToolCallResponse = new()
+            {
+                ToolCallId = toolCallId,
+                Response = response!,
+                DurationMs = durationMs,
+                IsSuccess = isSuccess
+            },
+            ContentTypeId = (byte)DBStepContentType.ToolCallResponse
         };
     }
 
@@ -124,50 +123,6 @@ public partial class StepContent
             {
                 yield return item;
             }
-        }
-    }
-
-    public static IList<StepContent> FromOpenAI(ChatMessage message)
-    {
-        List<StepContent> result = new(message.Content.Count);
-
-        if (message is ToolChatMessage tool)
-        {
-            result.Add(FromToolResponse(tool.ToolCallId, tool.Content[0].Text));
-        }
-        else
-        {
-            foreach (ChatMessageContentPart part in message.Content)
-            {
-                result.AddRange(part switch
-                {
-                    { Kind: ChatMessageContentPartKind.Image, ImageUri: not null } => [FromFileUrl(part.ImageUri.ToString())],
-                    { Kind: ChatMessageContentPartKind.Image, ImageBytes.IsEmpty: false } => [FromFileBlob(part.ImageBytes.ToArray(), part.ImageBytesMediaType)],
-                    { Kind: ChatMessageContentPartKind.Text } => ParseText(part),
-                    _ => throw new Exception($"Kind: {part.Kind} is not supported."),
-                });
-            }
-        }
-        return result;
-    }
-
-    private static IEnumerable<StepContent> ParseText(ChatMessageContentPart part)
-    {
-        if (part.Patch.TryGetValue("reasoning_content"u8, out string? reasoningContent) && !string.IsNullOrEmpty(reasoningContent))
-        {
-            if (part.Patch.TryGetValue("signature"u8, out string? signature) && !string.IsNullOrEmpty(signature))
-            {
-                yield return FromThink(reasoningContent, Convert.FromBase64String(signature!));
-            }
-            else
-            {
-                yield return FromThink(reasoningContent);
-            }
-        }
-
-        if (!string.IsNullOrEmpty(part.Text))
-        {
-            yield return FromText(part.Text);
         }
     }
 

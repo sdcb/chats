@@ -1,8 +1,9 @@
 using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
+using Chats.BE.DB.Enums;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
-using OpenAI.Chat;
 using System.Net.Http.Headers;
 using ChatTokenUsage = Chats.BE.Services.Models.Dtos.ChatTokenUsage;
 using System.Net.ServerSentEvents;
@@ -169,19 +170,19 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
                 case "message_delta":
                     {
-                        ChatFinishReason? finishReason = null;
+                        DBFinishReason? finishReason = null;
                         if (json.TryGetProperty("delta", out JsonElement delta) &&
                             delta.TryGetProperty("stop_reason", out JsonElement stopReasonEl))
                         {
                             string? stopReason = stopReasonEl.GetString();
                             finishReason = stopReason switch
                             {
-                                "end_turn" => ChatFinishReason.Stop,
-                                "max_tokens" => ChatFinishReason.Length,
-                                "stop_sequence" => ChatFinishReason.Stop,
-                                "tool_use" => ChatFinishReason.ToolCalls,
-                                "pause_turn" => ChatFinishReason.Stop,
-                                "refusal" => ChatFinishReason.ContentFilter,
+                                "end_turn" => DBFinishReason.Success,
+                                "max_tokens" => DBFinishReason.Length,
+                                "stop_sequence" => DBFinishReason.Success,
+                                "tool_use" => DBFinishReason.ToolCalls,
+                                "pause_turn" => DBFinishReason.Success,
+                                "refusal" => DBFinishReason.ContentFilter,
                                 _ => null,
                             };
                         }
@@ -470,7 +471,8 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
     {
         try
         {
-            JsonObject? parameters = tool.FunctionParameters.ToObjectFromJson<JsonObject>();
+            if (string.IsNullOrEmpty(tool.FunctionParameters)) return false;
+            JsonObject? parameters = JsonSerializer.Deserialize<JsonObject>(tool.FunctionParameters);
             if (parameters == null) return false;
 
             if (parameters.TryGetPropertyValue("properties", out JsonNode? props) &&
@@ -520,7 +522,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
     {
         JsonObject inputSchema = new() { ["type"] = "object" };
 
-        JsonObject? parameters = tool.FunctionParameters.ToObjectFromJson<JsonObject>();
+        JsonObject? parameters = string.IsNullOrEmpty(tool.FunctionParameters) ? null : JsonSerializer.Deserialize<JsonObject>(tool.FunctionParameters);
         if (parameters != null)
         {
             if (parameters.TryGetPropertyValue("properties", out JsonNode? props) && props != null)

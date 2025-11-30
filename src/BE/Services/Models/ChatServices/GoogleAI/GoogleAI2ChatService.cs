@@ -4,7 +4,6 @@ using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
 using Mscc.GenerativeAI;
-using OpenAI.Chat;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -156,7 +155,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
 
                 yield return new ChatSegment()
                 {
-                    FinishReason = ToChatFinishReason(finishReason),
+                    FinishReason = ToDBFinishReason(finishReason),
                     Items = items,
                     Usage = usage
                 };
@@ -176,7 +175,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
         return usage;
     }
 
-    static ChatFinishReason? ToChatFinishReason(FinishReason? finishReason)
+    static DBFinishReason? ToDBFinishReason(FinishReason? finishReason)
     {
         if (finishReason == null)
         {
@@ -186,17 +185,17 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
         return finishReason switch
         {
             FinishReason.FinishReasonUnspecified => null, // Assume unspecified maps to null
-            FinishReason.Stop => ChatFinishReason.Stop,
-            FinishReason.MaxTokens => ChatFinishReason.Length,
-            FinishReason.Safety => ChatFinishReason.ContentFilter,
-            FinishReason.Recitation => ChatFinishReason.ContentFilter,
-            FinishReason.Other => ChatFinishReason.ContentFilter,
-            FinishReason.Blocklist => ChatFinishReason.ContentFilter,
-            FinishReason.ProhibitedContent => ChatFinishReason.ContentFilter,
-            FinishReason.Spii => ChatFinishReason.ContentFilter,
-            FinishReason.MalformedFunctionCall => ChatFinishReason.FunctionCall,
-            FinishReason.Language => ChatFinishReason.ContentFilter, // Map to closest match
-            FinishReason.ImageSafety => ChatFinishReason.ContentFilter, // Map to closest match
+            FinishReason.Stop => DBFinishReason.Success,
+            FinishReason.MaxTokens => DBFinishReason.Length,
+            FinishReason.Safety => DBFinishReason.ContentFilter,
+            FinishReason.Recitation => DBFinishReason.ContentFilter,
+            FinishReason.Other => DBFinishReason.ContentFilter,
+            FinishReason.Blocklist => DBFinishReason.ContentFilter,
+            FinishReason.ProhibitedContent => DBFinishReason.ContentFilter,
+            FinishReason.Spii => DBFinishReason.ContentFilter,
+            FinishReason.MalformedFunctionCall => DBFinishReason.ToolCalls,
+            FinishReason.Language => DBFinishReason.ContentFilter, // Map to closest match
+            FinishReason.ImageSafety => DBFinishReason.ContentFilter, // Map to closest match
             _ => null // Handle any unknown values
         };
     }
@@ -278,9 +277,10 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
                 })],
         };
 
-        static Schema ToGoogleAIParameters(BinaryData binaryData)
+        static Schema ToGoogleAIParameters(string? parameters)
         {
-            JsonObject jsonObject = binaryData.ToObjectFromJson<JsonObject>()!;
+            if (string.IsNullOrEmpty(parameters)) return new Schema { Type = ParameterType.Object };
+            JsonObject jsonObject = JsonSerializer.Deserialize<JsonObject>(parameters)!;
             return new Schema()
             {
                 Type = ParameterType.Object,

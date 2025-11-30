@@ -1,20 +1,19 @@
-﻿using Chats.BE.DB;
-using OpenAI;
-using OpenAI.Chat;
-using System.ClientModel.Primitives;
+using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class GithubModelsChatService : ChatCompletionService
+public class GithubModelsChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {
-    protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
+    protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
-        ChatCompletionOptions options = base.ExtractOptions(request);
+        JsonObject body = base.BuildRequestBody(request, stream);
+
         if (request.ChatConfig.Model.DeploymentName.Contains("Mistral", StringComparison.OrdinalIgnoreCase))
         {
-            // Mistral model does not support tool calls
-            options.EndUserId = null;
+            // Mistral model does not support user field
+            body.Remove("user");
         }
-        return options;
+
+        return body;
     }
 }

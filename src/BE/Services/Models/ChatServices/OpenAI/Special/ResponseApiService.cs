@@ -1,55 +1,85 @@
-﻿using Chats.BE.Controllers.Chats.Chats;
+using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
-using OpenAI;
-using OpenAI.Chat;
-using OpenAI.Models;
-using OpenAI.Responses;
-using System.ClientModel;
-using System.ClientModel.Primitives;
 using System.Diagnostics;
-using System.Reflection;
+using System.Net.Http.Headers;
+using System.Net.ServerSentEvents;
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using ChatTokenUsage = Chats.BE.Services.Models.Dtos.ChatTokenUsage;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
-public class ResponseApiService(ILogger<ResponseApiService> logger) : ChatService
+public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<ResponseApiService> logger) : ChatService
 {
-    protected virtual OpenAIResponseClient CreateResponseAPI(Model model, PipelinePolicy[] pipelinePolicies)
+    protected virtual string GetEndpoint(ModelKey modelKey)
     {
-        OpenAIClient api = CreateOpenAIClient(model.ModelKey, pipelinePolicies);
-        OpenAIResponseClient cc = api.GetOpenAIResponseClient(model.DeploymentName);
-        return cc;
+        string? host = modelKey.Host;
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            host = ModelProviderInfo.GetInitialHost((DBModelProvider)modelKey.ModelProviderId);
+        }
+        return host?.TrimEnd('/') ?? "";
     }
 
-    protected virtual OpenAIClient CreateOpenAIClient(ModelKey modelKey, params PipelinePolicy[] perCallPolicies)
+    protected virtual void AddAuthorizationHeader(HttpRequestMessage request, ModelKey modelKey)
     {
-        return OpenAIHelper.BuildOpenAIClient(modelKey, perCallPolicies);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelKey.Secret);
     }
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        OpenAIResponseClient responseClient = CreateResponseAPI(request.ChatConfig.Model, []);
-
+        string endpoint = GetEndpoint(request.ChatConfig.Model.ModelKey);
         bool hasTools = false;
+
         if (request.ChatConfig.Model.UseAsyncApi)
         {
+            // Background mode
             Stopwatch sw = Stopwatch.StartNew();
-            OpenAIResponse response = await responseClient.CreateResponseAsync(ExtractMessages(request), ExtractOptions(request, background: true), cancellationToken);
+            JsonObject requestBody = BuildRequestBody(request, stream: false, background: true);
 
-            cancellationToken.Register(async () =>
+            using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/responses");
+            AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
+            httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+
+            using HttpClient httpClient = httpClientFactory.CreateClient();
+            httpClient.Timeout = NetworkTimeout;
+
+            using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken);
+            if (!response.IsSuccessStatusCode)
             {
-                if (response.Status == ResponseStatus.InProgress || response.Status == ResponseStatus.Queued)
+                string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                throw new RawChatServiceException((int)response.StatusCode, errorBody);
+            }
+
+            string responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
+            JsonObject? responseObj = JsonSerializer.Deserialize<JsonObject>(responseJson);
+            string? responseId = responseObj?["id"]?.GetValue<string>();
+            string? status = responseObj?["status"]?.GetValue<string>();
+
+            if (responseId == null)
+            {
+                throw new Exception("Response ID not found in the response.");
+            }
+
+            CancellationTokenRegistration? cancelRegistration = cancellationToken.Register(async () =>
+            {
+                if (status == "in_progress" || status == "queued")
                 {
                     try
                     {
-                        await responseClient.CancelResponseAsync(response.Id, default(CancellationToken));
+                        using HttpRequestMessage cancelRequest = new(HttpMethod.Post, $"{endpoint}/v1/responses/{responseId}/cancel");
+                        AddAuthorizationHeader(cancelRequest, request.ChatConfig.Model.ModelKey);
+                        using HttpClient cancelClient = httpClientFactory.CreateClient();
+                        await cancelClient.SendAsync(cancelRequest, default);
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError("Error cancelling response {response.Id}: {ex.Message}", response.Id, ex.Message);
+                        logger.LogError("Error cancelling response {responseId}: {ex.Message}", responseId, ex.Message);
                     }
                 }
             });
@@ -57,11 +87,18 @@ public class ResponseApiService(ILogger<ResponseApiService> logger) : ChatServic
             bool cancelled = false;
             try
             {
-                while (response.Status == ResponseStatus.InProgress || response.Status == ResponseStatus.Queued)
+                while (status == "in_progress" || status == "queued")
                 {
-                    logger.LogInformation("{response.Id} status: {response.Status}, elapsed: {sw.ElapsedMilliseconds:N0}ms", response.Id, response.Status, sw.ElapsedMilliseconds);
+                    logger.LogInformation("{responseId} status: {status}, elapsed: {sw.ElapsedMilliseconds:N0}ms", responseId, status, sw.ElapsedMilliseconds);
                     await Task.Delay(2000, cancellationToken);
-                    response = await responseClient.GetResponseAsync(response.Id, cancellationToken: cancellationToken);
+
+                    using HttpRequestMessage getRequest = new(HttpMethod.Get, $"{endpoint}/v1/responses/{responseId}");
+                    AddAuthorizationHeader(getRequest, request.ChatConfig.Model.ModelKey);
+
+                    using HttpResponseMessage getResponse = await httpClient.SendAsync(getRequest, cancellationToken);
+                    responseJson = await getResponse.Content.ReadAsStringAsync(cancellationToken);
+                    responseObj = JsonSerializer.Deserialize<JsonObject>(responseJson);
+                    status = responseObj?["status"]?.GetValue<string>();
                 }
             }
             catch (TaskCanceledException)
@@ -69,307 +106,500 @@ public class ResponseApiService(ILogger<ResponseApiService> logger) : ChatServic
                 cancelled = true;
             }
 
-            logger.LogInformation("Response {response.Id} completed with status: {response.Status}, elapsed={sw.ElapsedMilliseconds:N0}ms", response.Id, response.Status, sw.ElapsedMilliseconds);
+            cancelRegistration?.Dispose();
+            logger.LogInformation("Response {responseId} completed with status: {status}, elapsed={sw.ElapsedMilliseconds:N0}ms", responseId, status, sw.ElapsedMilliseconds);
 
-            if (response.Status == ResponseStatus.Incomplete)
+            ChatTokenUsage? usage = ParseUsage(responseObj?["usage"]);
+
+            if (status == "incomplete")
             {
-                yield return ChatSegment.Completed(new Dtos.ChatTokenUsage()
-                {
-                    InputTokens = response.Usage.InputTokenCount,
-                    OutputTokens = response.Usage.OutputTokenCount,
-                    ReasoningTokens = response.Usage.OutputTokenDetails.ReasoningTokenCount,
-                }, ChatFinishReason.Length);
+                yield return ChatSegment.Completed(usage ?? ChatTokenUsage.Zero, DBFinishReason.Length);
             }
-            else if (response.Status == ResponseStatus.Failed)
+            else if (status == "failed")
             {
-                yield return ChatSegment.Completed(new Dtos.ChatTokenUsage()
-                {
-                    InputTokens = response.Usage.InputTokenCount,
-                    OutputTokens = response.Usage.OutputTokenCount,
-                    ReasoningTokens = response.Usage.OutputTokenDetails.ReasoningTokenCount,
-                }, ChatFinishReason.Length);
-                throw new CustomChatServiceException(DBFinishReason.ContentFilter, response.Error.Message ?? "Response failed");
+                string? errorMessage = responseObj?["error"]?["message"]?.GetValue<string>() ?? "Response failed";
+                yield return ChatSegment.Completed(usage ?? ChatTokenUsage.Zero, DBFinishReason.ContentFilter);
+                throw new CustomChatServiceException(DBFinishReason.ContentFilter, errorMessage);
             }
-            else if (response.Status == ResponseStatus.Cancelled || cancelled)
+            else if (status == "cancelled" || cancelled)
             {
                 yield return new ChatSegment()
                 {
-                    Usage = new Dtos.ChatTokenUsage()
-                    {
-                        InputTokens = response.Usage.InputTokenCount,
-                        OutputTokens = response.Usage.OutputTokenCount,
-                        ReasoningTokens = response.Usage.OutputTokenDetails.ReasoningTokenCount,
-                    },
+                    Usage = usage ?? ChatTokenUsage.Zero,
                     FinishReason = null,
                     Items = [],
                 };
                 throw new TaskCanceledException();
             }
-            else if (response.Status != ResponseStatus.Completed)
+            else if (status != "completed")
             {
-                throw new NotSupportedException($"Unsupported response status: {response.Status}");
+                throw new NotSupportedException($"Unsupported response status: {status}");
             }
             else
             {
-                // Completed
+                // Completed - parse output items
                 int fcIndex = 0;
-                foreach (ResponseItem item in response.OutputItems)
+                JsonArray? outputItems = responseObj?["output"]?.AsArray();
+                if (outputItems != null)
                 {
-                    if (item is ReasoningResponseItem thinkItem)
+                    foreach (JsonNode? item in outputItems)
                     {
-                        if (thinkItem.SummaryParts.Count > 0)
+                        string? itemType = item?["type"]?.GetValue<string>();
+
+                        if (itemType == "reasoning")
                         {
-                            yield return ChatSegment.FromThinking(string.Join(
-                                separator: "\n\n",
-                                thinkItem.SummaryParts.Select(part => (part as ReasoningSummaryTextPart)?.Text ?? string.Empty)));
+                            JsonArray? summaryArray = item?["summary"]?.AsArray();
+                            if (summaryArray != null)
+                            {
+                                StringBuilder thinkText = new();
+                                foreach (JsonNode? summaryPart in summaryArray)
+                                {
+                                    string? partType = summaryPart?["type"]?.GetValue<string>();
+                                    if (partType == "summary_text")
+                                    {
+                                        string? text = summaryPart?["text"]?.GetValue<string>();
+                                        if (!string.IsNullOrEmpty(text))
+                                        {
+                                            if (thinkText.Length > 0) thinkText.Append("\n\n");
+                                            thinkText.Append(text);
+                                        }
+                                    }
+                                }
+                                if (thinkText.Length > 0)
+                                {
+                                    yield return ChatSegment.FromThinking(thinkText.ToString());
+                                }
+                            }
                         }
-                    }
-                    else if (item is FunctionCallResponseItem fc)
-                    {
-                        hasTools = true;
-                        yield return ChatSegment.FromToolCall(fcIndex++, fc);
-                    }
-                    else if (item is MessageResponseItem msg)
-                    {
-                        foreach (ResponseContentPart part in msg.Content)
+                        else if (itemType == "function_call")
                         {
-                            if (part.Kind == ResponseContentPartKind.OutputText)
+                            hasTools = true;
+                            string? callId = item?["call_id"]?.GetValue<string>();
+                            string? name = item?["name"]?.GetValue<string>();
+                            string? arguments = item?["arguments"]?.GetValue<string>();
+                            yield return ChatSegment.FromToolCall(new ToolCallSegment
                             {
-                                yield return ChatSegment.FromText(part.Text);
-                            }
-                            else if (part.Kind == ResponseContentPartKind.Refusal)
+                                Index = fcIndex++,
+                                Id = callId,
+                                Name = name,
+                                Arguments = arguments ?? "",
+                            });
+                        }
+                        else if (itemType == "message")
+                        {
+                            JsonArray? contentArray = item?["content"]?.AsArray();
+                            if (contentArray != null)
                             {
-                                throw new CustomChatServiceException(DBFinishReason.ContentFilter, part.Refusal);
-                            }
-                            else
-                            {
-                                throw new Exception($"Unsupported content part kind: {part.Kind}");
+                                foreach (JsonNode? contentPart in contentArray)
+                                {
+                                    string? kind = contentPart?["type"]?.GetValue<string>();
+                                    if (kind == "output_text")
+                                    {
+                                        string? text = contentPart?["text"]?.GetValue<string>();
+                                        if (!string.IsNullOrEmpty(text))
+                                        {
+                                            yield return ChatSegment.FromText(text);
+                                        }
+                                    }
+                                    else if (kind == "refusal")
+                                    {
+                                        string? refusal = contentPart?["refusal"]?.GetValue<string>();
+                                        throw new CustomChatServiceException(DBFinishReason.ContentFilter, refusal ?? "Refusal");
+                                    }
+                                }
                             }
                         }
                     }
                 }
-                yield return ChatSegment.Completed(new Dtos.ChatTokenUsage()
-                {
-                    InputTokens = response.Usage.InputTokenCount,
-                    OutputTokens = response.Usage.OutputTokenCount,
-                    ReasoningTokens = response.Usage.OutputTokenDetails.ReasoningTokenCount,
-                }, hasTools ? ChatFinishReason.ToolCalls : ChatFinishReason.Stop);
+
+                yield return ChatSegment.Completed(usage ?? ChatTokenUsage.Zero, hasTools ? DBFinishReason.ToolCalls : DBFinishReason.Success);
             }
         }
         else
         {
-            await foreach (StreamingResponseUpdate delta in responseClient.CreateResponseStreamingAsync(ExtractMessages(request), ExtractOptions(request), cancellationToken))
+            // Streaming mode
+            JsonObject requestBody = BuildRequestBody(request, stream: true, background: false);
+
+            using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/responses");
+            AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
+            httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+            httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+
+            using HttpClient httpClient = httpClientFactory.CreateClient();
+            httpClient.Timeout = NetworkTimeout;
+
+            using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            if (!response.IsSuccessStatusCode)
             {
-                if (delta is StreamingResponseErrorUpdate error)
+                string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                throw new RawChatServiceException((int)response.StatusCode, errorBody);
+            }
+
+            await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            int fcIndex = 0;
+            string? currentFcId = null;
+            string? currentFcName = null;
+
+            await foreach (SseItem<string> sseItem in SseParser.Create(stream, (_, bytes) => Encoding.UTF8.GetString(bytes)).EnumerateAsync(cancellationToken))
+            {
+                if (string.IsNullOrEmpty(sseItem.Data) || sseItem.Data == "[DONE]")
                 {
-                    string? errorMessage = ChatCompletionService.TryGetDecodedValue(ref error.Patch, "error"u8) ?? error.Message ?? "Unknown error";
-                    throw new CustomChatServiceException(DBFinishReason.UpstreamError, errorMessage);
+                    continue;
                 }
-                if (delta is StreamingResponseOutputTextDeltaUpdate textDelta)
+
+                JsonElement json;
+                try
                 {
-                    yield return ChatSegment.FromText(textDelta.Delta);
+                    json = JsonDocument.Parse(sseItem.Data).RootElement;
                 }
-                else if (delta is StreamingResponseCompletedUpdate completedDelta)
+                catch (JsonException)
                 {
-                    yield return ChatSegment.Completed(new Dtos.ChatTokenUsage()
+                    continue;
+                }
+
+                string? eventType = json.TryGetProperty("type", out JsonElement typeEl) ? typeEl.GetString() : null;
+                if (eventType == null) continue;
+
+                if (eventType == "error")
+                {
+                    string? errorMessage = json.TryGetProperty("error", out JsonElement errorEl) && errorEl.TryGetProperty("message", out JsonElement msgEl) ? msgEl.GetString() : "Unknown error";
+                    throw new CustomChatServiceException(DBFinishReason.UpstreamError, errorMessage ?? "Unknown error");
+                }
+                else if (eventType == "response.output_text.delta")
+                {
+                    string? delta = json.TryGetProperty("delta", out JsonElement deltaEl) ? deltaEl.GetString() : null;
+                    if (!string.IsNullOrEmpty(delta))
                     {
-                        InputTokens = completedDelta.Response.Usage.InputTokenCount,
-                        OutputTokens = completedDelta.Response.Usage.OutputTokenCount,
-                        ReasoningTokens = completedDelta.Response.Usage.OutputTokenDetails.ReasoningTokenCount,
-                    }, completedDelta.Response.Status switch
+                        yield return ChatSegment.FromText(delta);
+                    }
+                }
+                else if (eventType == "response.completed")
+                {
+                    JsonElement? responseEl = json.TryGetProperty("response", out JsonElement respEl) ? respEl : null;
+                    ChatTokenUsage? usage = ParseUsage(responseEl?.GetProperty("usage"));
+                    string? status = responseEl?.GetProperty("status").GetString();
+
+                    DBFinishReason? finishReason = status switch
                     {
                         null => null,
-                        ResponseStatus.Failed => ChatFinishReason.ContentFilter,
-                        ResponseStatus.Completed => hasTools switch
+                        "failed" => DBFinishReason.ContentFilter,
+                        "completed" => hasTools ? DBFinishReason.ToolCalls : DBFinishReason.Success,
+                        "incomplete" => DBFinishReason.Length,
+                        _ => null,
+                    };
+
+                    yield return ChatSegment.Completed(usage ?? ChatTokenUsage.Zero, finishReason);
+                }
+                else if (eventType == "response.output_item.added")
+                {
+                    if (json.TryGetProperty("item", out JsonElement itemEl) && itemEl.TryGetProperty("type", out JsonElement itemTypeEl) && itemTypeEl.GetString() == "function_call")
+                    {
+                        hasTools = true;
+                        currentFcId = itemEl.TryGetProperty("call_id", out JsonElement callIdEl) ? callIdEl.GetString() : null;
+                        currentFcName = itemEl.TryGetProperty("name", out JsonElement nameEl) ? nameEl.GetString() : null;
+                        yield return ChatSegment.FromToolCall(new ToolCallSegment
                         {
-                            true => ChatFinishReason.ToolCalls,
-                            false => ChatFinishReason.Stop,
-                        },
-                        ResponseStatus.Incomplete => ChatFinishReason.Length,
-                        _ => throw new NotSupportedException($"Unsupported response status: {completedDelta.Response.Status}"),
+                            Index = fcIndex,
+                            Id = currentFcId,
+                            Name = currentFcName,
+                            Arguments = "",
+                        });
+                    }
+                }
+                else if (eventType == "response.function_call_arguments.delta")
+                {
+                    string? delta = json.TryGetProperty("delta", out JsonElement deltaEl) ? deltaEl.GetString() : null;
+                    yield return ChatSegment.FromToolCall(new ToolCallSegment
+                    {
+                        Index = fcIndex,
+                        Arguments = delta ?? "",
                     });
                 }
-                else if (delta is StreamingResponseOutputItemAddedUpdate addedDelta && addedDelta.Item is FunctionCallResponseItem fc)
+                else if (eventType == "response.output_item.done")
                 {
-                    hasTools = true;
-                    yield return ChatSegment.FromStartToolCall(addedDelta, fc);
+                    if (json.TryGetProperty("item", out JsonElement itemEl) && itemEl.TryGetProperty("type", out JsonElement itemTypeEl) && itemTypeEl.GetString() == "function_call")
+                    {
+                        fcIndex++;
+                    }
                 }
-                else if (delta is StreamingResponseFunctionCallArgumentsDeltaUpdate fcDelta)
+                else if (eventType == "response.reasoning_summary_text.delta")
                 {
-                    yield return ChatSegment.FromToolCallDelta(fcDelta);
+                    string? delta = json.TryGetProperty("delta", out JsonElement deltaEl) ? deltaEl.GetString() : null;
+                    if (!string.IsNullOrEmpty(delta))
+                    {
+                        yield return ChatSegment.FromThinking(delta);
+                    }
                 }
-                else if (delta is StreamingResponseReasoningSummaryTextDeltaUpdate rsDelta)
-                {
-                    yield return ChatSegment.FromThinking(rsDelta.Delta.ToString());
-                }
-                else if (delta is StreamingResponseReasoningSummaryTextDoneUpdate rsDone)
+                else if (eventType == "response.reasoning_summary_text.done")
                 {
                     yield return ChatSegment.FromThinking("\n\n");
-                }
-                else
-                {
-                    Console.WriteLine(delta.Kind.ToString());
-                    //string type = DeltaTypeAccessor(delta);
-                    //IDictionary<string, BinaryData>? said = GetSerializedAdditionalRawData(delta);
-
-                    //if (type == "response.reasoning_summary_text.delta")
-                    //{
-                    //    string think = DeltaAccessor(delta);
-                    //    yield return ChatSegment.FromThinkOnly(think);
-                    //}
-                    //else if (type == "response.reasoning_summary_text.done")
-                    //{
-                    //    yield return ChatSegment.FromThinkOnly("\n\n");
-                    //}
                 }
             }
         }
     }
 
-    static List<ResponseItem> ExtractMessages(ChatRequest request)
+    private static ChatTokenUsage? ParseUsage(JsonElement? usageEl)
     {
+        if (usageEl == null || usageEl.Value.ValueKind != JsonValueKind.Object) return null;
+        JsonElement usage = usageEl.Value;
+        int inputTokens = usage.TryGetProperty("input_tokens", out JsonElement inputEl) ? inputEl.GetInt32() : 0;
+        int outputTokens = usage.TryGetProperty("output_tokens", out JsonElement outputEl) ? outputEl.GetInt32() : 0;
+        int reasoningTokens = 0;
+        if (usage.TryGetProperty("output_tokens_details", out JsonElement detailsEl) && detailsEl.TryGetProperty("reasoning_tokens", out JsonElement reasoningEl))
+        {
+            reasoningTokens = reasoningEl.GetInt32();
+        }
+        return new ChatTokenUsage
+        {
+            InputTokens = inputTokens,
+            OutputTokens = outputTokens,
+            ReasoningTokens = reasoningTokens,
+        };
+    }
+
+    private static ChatTokenUsage? ParseUsage(JsonNode? usageNode)
+    {
+        if (usageNode == null) return null;
+        int inputTokens = usageNode["input_tokens"]?.GetValue<int>() ?? 0;
+        int outputTokens = usageNode["output_tokens"]?.GetValue<int>() ?? 0;
+        int reasoningTokens = usageNode["output_tokens_details"]?["reasoning_tokens"]?.GetValue<int>() ?? 0;
+        return new ChatTokenUsage
+        {
+            InputTokens = inputTokens,
+            OutputTokens = outputTokens,
+            ReasoningTokens = reasoningTokens,
+        };
+    }
+
+    private JsonObject BuildRequestBody(ChatRequest request, bool stream, bool background)
+    {
+        JsonObject body = new()
+        {
+            ["model"] = request.ChatConfig.Model.DeploymentName,
+            ["input"] = BuildInputArray(request),
+            ["stream"] = stream,
+        };
+
+        if (request.ChatConfig.Temperature != null)
+        {
+            body["temperature"] = request.ChatConfig.Temperature.Value;
+        }
+
+        if (request.EndUserId != null)
+        {
+            body["user"] = request.EndUserId;
+        }
+
+        if (request.ChatConfig.MaxOutputTokens != null)
+        {
+            body["max_output_tokens"] = request.ChatConfig.MaxOutputTokens.Value;
+        }
+
+        // Reasoning options - only add if explicitly specified
+        string? reasoningEffort = request.ChatConfig.ReasoningEffort.ToReasoningEffortString();
+        if (reasoningEffort != null)
+        {
+            body["reasoning"] = new JsonObject
+            {
+                ["effort"] = reasoningEffort,
+                ["summary"] = "detailed",
+            };
+        }
+
+        // Text format
+        if (request.TextFormat != null)
+        {
+            body["text"] = new JsonObject
+            {
+                ["format"] = request.TextFormat.ToJsonObject()
+            };
+        }
+
+        // Tools
+        if (request.Tools.Count > 0)
+        {
+            JsonArray tools = [];
+            foreach (ChatTool tool in request.Tools)
+            {
+                JsonObject toolObj = new()
+                {
+                    ["type"] = "function",
+                    ["name"] = tool.FunctionName,
+                };
+                if (tool.FunctionDescription != null)
+                {
+                    toolObj["description"] = tool.FunctionDescription;
+                }
+                if (tool.FunctionParameters != null)
+                {
+                    toolObj["parameters"] = JsonNode.Parse(tool.FunctionParameters);
+                }
+                if (tool.FunctionSchemaIsStrict == true)
+                {
+                    toolObj["strict"] = true;
+                }
+                tools.Add(toolObj);
+            }
+            body["tools"] = tools;
+        }
+
+        if (background)
+        {
+            body["background"] = true;
+        }
+
+        return body;
+    }
+
+    private static JsonArray BuildInputArray(ChatRequest request)
+    {
+        JsonArray input = [];
+
         string? effectiveSystemPrompt = request.GetEffectiveSystemPrompt();
-        List<ResponseItem> responseItems = new(request.Messages.Count + (effectiveSystemPrompt != null ? 1 : 0));
         if (effectiveSystemPrompt != null)
         {
-            responseItems.Add(ResponseItem.CreateSystemMessageItem(effectiveSystemPrompt));
+            input.Add(new JsonObject
+            {
+                ["type"] = "message",
+                ["role"] = "system",
+                ["content"] = new JsonArray { new JsonObject { ["type"] = "input_text", ["text"] = effectiveSystemPrompt } }
+            });
         }
 
         foreach (NeutralMessage message in request.Messages)
         {
-            responseItems.AddRange(message.Role switch
+            if (message.Role == NeutralChatRole.User)
             {
-                NeutralChatRole.User => [ResponseItem.CreateUserMessageItem(MessageContentPartToResponse(message.Contents, input: true))],
-                NeutralChatRole.Assistant => AssistantMessageToResponse(message),
-                NeutralChatRole.Tool => [ResponseItem.CreateFunctionCallOutputItem(
-                    ((NeutralToolCallResponseContent)message.Contents.First()).ToolCallId,
-                    ((NeutralToolCallResponseContent)message.Contents.First()).Response)],
-                _ => throw new NotSupportedException($"Unsupported message role: {message.Role}"),
-            });
-        }
-        return responseItems;
-
-        static IEnumerable<ResponseItem> AssistantMessageToResponse(NeutralMessage assistantMessage)
-        {
-            foreach (NeutralToolCallContent tc in assistantMessage.Contents.OfType<NeutralToolCallContent>())
-            {
-                yield return ResponseItem.CreateFunctionCallItem(tc.Id, tc.Name, BinaryData.FromString(tc.Parameters));
-            }
-            List<NeutralContent> generalContents = [.. assistantMessage.Contents.Where(x => x is not NeutralToolCallContent)];
-            if (generalContents.Count > 0)
-            {
-                yield return ResponseItem.CreateAssistantMessageItem(MessageContentPartToResponse(generalContents, input: false));
-            }
-        }
-
-        static IReadOnlyList<ResponseContentPart> MessageContentPartToResponse(IList<NeutralContent> contents, bool input)
-        {
-            return contents
-                .Select(x => NeutralContentToResponsePart(x, input))
-                .Where(x => x != null)
-                .ToList()!;
-        }
-
-        static ResponseContentPart? NeutralContentToResponsePart(NeutralContent content, bool input)
-        {
-            if (input)
-            {
-                return content switch
+                input.Add(new JsonObject
                 {
-                    NeutralTextContent text => ResponseContentPart.CreateInputTextPart(text.Content),
-                    NeutralFileUrlContent fileUrl => ResponseContentPart.CreateInputImagePart(new Uri(fileUrl.Url)),
-                    NeutralFileBlobContent blob => ResponseContentPart.CreateInputImagePart(BinaryData.FromBytes(blob.Data), blob.MediaType),
-                    NeutralErrorContent error => ResponseContentPart.CreateInputTextPart(error.Content),
-                    _ => throw new NotSupportedException($"Unsupported input content type: {content.GetType().Name}"),
-                };
+                    ["type"] = "message",
+                    ["role"] = "user",
+                    ["content"] = ContentToInputParts(message.Contents)
+                });
             }
-            else
+            else if (message.Role == NeutralChatRole.Assistant)
             {
-                return content switch
+                // Handle tool calls in assistant message
+                foreach (NeutralToolCallContent tc in message.Contents.OfType<NeutralToolCallContent>())
                 {
-                    NeutralTextContent text => ResponseContentPart.CreateOutputTextPart(text.Content, []),
-                    NeutralFileUrlContent fileUrl => ResponseContentPart.CreateOutputTextPart(fileUrl.Url, []),
-                    NeutralThinkContent => null, // Response API does not support think parts in output
-                    NeutralFileBlobContent => throw new NotSupportedException("File blob is not supported for output content"),
-                    NeutralErrorContent error => ResponseContentPart.CreateOutputTextPart(error.Content, []),
-                    NeutralToolCallContent => null, // Tool calls are handled separately
-                    NeutralToolCallResponseContent => null, // Tool call responses are handled separately
-                    _ => throw new NotSupportedException($"Unsupported output content type: {content.GetType().Name}"),
-                };
+                    input.Add(new JsonObject
+                    {
+                        ["type"] = "function_call",
+                        ["call_id"] = tc.Id,
+                        ["name"] = tc.Name,
+                        ["arguments"] = tc.Parameters
+                    });
+                }
+
+                // Handle text content
+                List<NeutralContent> nonToolCallContents = [.. message.Contents.Where(c => c is not NeutralToolCallContent && c is not NeutralThinkContent)];
+                if (nonToolCallContents.Count > 0)
+                {
+                    input.Add(new JsonObject
+                    {
+                        ["type"] = "message",
+                        ["role"] = "assistant",
+                        ["content"] = ContentToOutputParts(nonToolCallContents)
+                    });
+                }
+            }
+            else if (message.Role == NeutralChatRole.Tool)
+            {
+                NeutralToolCallResponseContent? tcr = message.Contents.OfType<NeutralToolCallResponseContent>().FirstOrDefault();
+                if (tcr != null)
+                {
+                    input.Add(new JsonObject
+                    {
+                        ["type"] = "function_call_output",
+                        ["call_id"] = tcr.ToolCallId,
+                        ["output"] = tcr.Response
+                    });
+                }
             }
         }
+
+        return input;
     }
 
-    static ResponseCreationOptions ExtractOptions(ChatRequest request, bool background = false)
+    private static JsonArray ContentToInputParts(IList<NeutralContent> contents)
     {
-        ResponseCreationOptions responseCreationOptions = new()
+        JsonArray parts = [];
+        foreach (NeutralContent content in contents)
         {
-            Temperature = request.ChatConfig.Temperature,
-            //TopP = options.TopP, // Not supported in ChatConfig for now
-            MaxOutputTokenCount = request.ChatConfig.MaxOutputTokens,
-            ReasoningOptions = new ResponseReasoningOptions()
+            if (content is NeutralTextContent text)
             {
-                ReasoningEffortLevel = request.ChatConfig.ReasoningEffort.ToResponseReasoningEffort(),
-                ReasoningSummaryVerbosity = ResponseReasoningSummaryVerbosity.Detailed,
-            },
-            EndUserId = request.EndUserId,
-            TextOptions = new ResponseTextOptions()
+                parts.Add(new JsonObject { ["type"] = "input_text", ["text"] = text.Content });
+            }
+            else if (content is NeutralFileUrlContent fileUrl)
             {
-                TextFormat = ToResponse(request.TextFormat)
-            },
-            ParallelToolCallsEnabled = request.AllowParallelToolCalls,
-        };
-
-        if (background)
-        {
-            responseCreationOptions.BackgroundModeEnabled = background;
-        }
-
-        foreach (ChatTool tool in request.Tools)
-        {
-            responseCreationOptions.Tools.Add(ResponseTool.CreateFunctionTool(
-                tool.FunctionName,
-                tool.FunctionParameters,
-                tool.FunctionSchemaIsStrict ?? false,
-                tool.FunctionDescription));
-        }
-
-        return responseCreationOptions;
-
-        static ResponseTextFormat ToResponse(ChatResponseFormat? format)
-        {
-            if (format == null) return ResponseTextFormat.CreateTextFormat();
-
-            return format.GetType().Name switch
+                parts.Add(new JsonObject { ["type"] = "input_image", ["image_url"] = fileUrl.Url });
+            }
+            else if (content is NeutralFileBlobContent blob)
             {
-                "InternalChatResponseFormatText" => ResponseTextFormat.CreateTextFormat(),
-                "InternalDotNetChatResponseFormatJsonObject" => ResponseTextFormat.CreateJsonObjectFormat(),
-                "InternalDotNetChatResponseFormatJsonSchema" => InternalChatResponseFormatJsonSchemaToResponse(format),
-                _ => throw new NotSupportedException($"Unsupported response format: {format.GetType().Name}"),
-            };
-
-            static ResponseTextFormat InternalChatResponseFormatJsonSchemaToResponse(ChatResponseFormat format)
+                parts.Add(new JsonObject
+                {
+                    ["type"] = "input_image",
+                    ["image_url"] = $"data:{blob.MediaType};base64,{Convert.ToBase64String(blob.Data)}"
+                });
+            }
+            else if (content is NeutralErrorContent error)
             {
-                Type type = format.GetType();
-                object? jsonSchema = (type.GetProperty("JsonSchema", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(format)) ?? throw new InvalidOperationException("JsonSchema property is null.");
-
-                Type jsonSchemaType = jsonSchema.GetType();
-                BinaryData binaryData = (BinaryData)jsonSchemaType.GetProperty("Schema")!.GetValue(jsonSchema)!;
-                string? description = (string?)jsonSchemaType.GetProperty("Description")!.GetValue(jsonSchema);
-                string name = (string)jsonSchemaType.GetProperty("Name")!.GetValue(jsonSchema)!;
-                bool? strict = (bool?)jsonSchemaType.GetProperty("Strict")!.GetValue(jsonSchema);
-
-                return ResponseTextFormat.CreateJsonSchemaFormat(name, binaryData, description, strict);
+                parts.Add(new JsonObject { ["type"] = "input_text", ["text"] = error.Content });
             }
         }
+        return parts;
+    }
+
+    private static JsonArray ContentToOutputParts(IList<NeutralContent> contents)
+    {
+        JsonArray parts = [];
+        foreach (NeutralContent content in contents)
+        {
+            if (content is NeutralTextContent text)
+            {
+                parts.Add(new JsonObject { ["type"] = "output_text", ["text"] = text.Content });
+            }
+            else if (content is NeutralErrorContent error)
+            {
+                parts.Add(new JsonObject { ["type"] = "output_text", ["text"] = error.Content });
+            }
+        }
+        return parts;
     }
 
     public override async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
 
-        OpenAIClient api = CreateOpenAIClient(modelKey, []);
-        ClientResult<OpenAIModelCollection> result = await api.GetOpenAIModelClient().GetModelsAsync(cancellationToken);
-        return [.. result.Value.Select(m => m.Id)];
+        string endpoint = GetEndpoint(modelKey);
+
+        using HttpRequestMessage request = new(HttpMethod.Get, $"{endpoint}/v1/models");
+        AddAuthorizationHeader(request, modelKey);
+
+        using HttpClient httpClient = httpClientFactory.CreateClient();
+        httpClient.Timeout = NetworkTimeout;
+
+        using HttpResponseMessage response = await httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        string json = await response.Content.ReadAsStringAsync(cancellationToken);
+        using JsonDocument doc = JsonDocument.Parse(json);
+
+        List<string> models = [];
+        if (doc.RootElement.TryGetProperty("data", out JsonElement data) && data.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement model in data.EnumerateArray())
+            {
+                if (model.TryGetProperty("id", out JsonElement id))
+                {
+                    string? modelId = id.GetString();
+                    if (modelId != null)
+                    {
+                        models.Add(modelId);
+                    }
+                }
+            }
+        }
+        return [.. models];
     }
 }

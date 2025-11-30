@@ -70,7 +70,7 @@ public class InChatContext(long firstTick)
                     FinishReason = DBFinishReason.InsufficientBalance;
                     throw new InsufficientBalanceException();
                 }
-                FinishReason = seg.ToDBFinishReason() ?? FinishReason;
+                FinishReason = seg.FinishReason ?? FinishReason;
 
                 yield return seg;
             }

@@ -1,5 +1,6 @@
-﻿using OpenAI.Chat;
-using System.ClientModel.Primitives;
+using Chats.BE.DB.Enums;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
+using Chats.BE.Services.Models.Neutral;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -20,15 +21,11 @@ public class CcoWrapper(JsonObject json)
         set => SetOrRemove("model", value);
     }
 
-    public IList<ChatMessage>? Messages
+    public JsonArray? MessagesJson => json["messages"]?.AsArray();
+
+    public IList<NeutralMessage> Messages
     {
-        get => json["messages"]
-            ?.AsArray()
-            .Select(x => ModelReaderWriter.Read<ChatMessage>(BinaryData.FromBytes(JsonSerializer.SerializeToUtf8Bytes(x)))!)
-            .ToArray();
-        set => SetOrRemove("messages", value != null
-            ? new JsonArray([.. value.Select(x => JsonNode.Parse(ModelReaderWriter.Write(x).ToArray()))])
-            : null);
+        get => NeutralConversions.ParseOpenAIMessages(MessagesJson);
     }
 
     public CcoCacheControl? CacheControl
@@ -49,17 +46,85 @@ public class CcoWrapper(JsonObject json)
 
     public bool SeemsValid()
     {
-        return Model != null && Messages != null;
+        return Model != null && MessagesJson != null;
     }
 
-    public ChatCompletionOptions ToCleanCco()
+    public string? SystemPrompt => NeutralConversions.ExtractSystemPrompt(MessagesJson);
+
+    public float? Temperature => (float?)json["temperature"];
+
+    public int? MaxOutputTokens => (int?)json["max_tokens"] ?? (int?)json["max_completion_tokens"];
+
+    public string? ReasoningEffort => (string?)json["reasoning_effort"];
+
+    public bool? AllowParallelToolCalls => (bool?)json["parallel_tool_calls"];
+
+    public ChatResponseFormat? ResponseFormat
     {
-        JsonObject newOne = (JsonObject)json.DeepClone();
-        newOne.Remove("stream");
-        newOne.Remove("model");
-        newOne.Remove("messages");
-        return ModelReaderWriter.Read<ChatCompletionOptions>(BinaryData.FromBytes(JsonSerializer.SerializeToUtf8Bytes(newOne)))!;
+        get
+        {
+            JsonNode? rf = json["response_format"];
+            if (rf == null) return null;
+
+            string? type = (string?)rf["type"];
+            if (type == null || type == "text") return ChatResponseFormat.Text;
+            if (type == "json_object") return ChatResponseFormat.JsonObject;
+            if (type == "json_schema")
+            {
+                JsonNode? schemaNode = rf["json_schema"];
+                if (schemaNode == null) return null;
+                string? name = (string?)schemaNode["name"];
+                JsonNode? schema = schemaNode["schema"];
+                bool? strict = (bool?)schemaNode["strict"];
+                if (name == null || schema == null) return null;
+                return ChatResponseFormat.CreateJsonSchema(name, schema.AsObject(), strict);
+            }
+            return null;
+        }
     }
+
+    public IList<ChatTool> Tools
+    {
+        get
+        {
+            List<ChatTool> tools = [];
+            JsonArray? toolsArray = json["tools"]?.AsArray();
+            if (toolsArray == null) return tools;
+
+            foreach (JsonNode? toolNode in toolsArray)
+            {
+                if (toolNode == null) continue;
+                string? type = (string?)toolNode["type"];
+                if (type != "function") continue;
+
+                JsonNode? function = toolNode["function"];
+                if (function == null) continue;
+
+                string? name = (string?)function["name"];
+                if (string.IsNullOrEmpty(name)) continue;
+
+                string? description = (string?)function["description"];
+                JsonNode? parameters = function["parameters"];
+
+                tools.Add(ChatTool.CreateFunctionTool(
+                    name,
+                    description,
+                    parameters?.ToJsonString()
+                ));
+            }
+            return tools;
+        }
+    }
+
+    public float? TopP => (float?)json["top_p"];
+
+    public long? Seed => (long?)json["seed"];
+
+    public bool? EnableSearch => (bool?)json["enable_search"];
+
+    public string? ImageSize => (string?)json["image_size"];
+
+    public bool? EnableCodeExecution => (bool?)json["enable_code_execution"];
 
     private void SetOrRemove(string key, JsonNode? value)
     {
@@ -77,6 +142,11 @@ public class CcoWrapper(JsonObject json)
     {
         return json.ToJsonString(JSON.JsonSerializerOptions);
     }
+
+    /// <summary>
+    /// Returns this wrapper - previously used for SDK-specific conversion but now just returns itself
+    /// </summary>
+    public CcoWrapper ToCleanCco() => this;
 }
 
 public record CcoCacheControl

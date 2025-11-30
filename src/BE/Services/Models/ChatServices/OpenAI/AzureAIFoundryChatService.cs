@@ -1,69 +1,49 @@
-﻿using Chats.BE.DB;
-using OpenAI;
-using OpenAI.Chat;
-using System.ClientModel.Primitives;
+using Chats.BE.DB;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class AzureAIFoundryChatService : ChatCompletionService
+public class AzureAIFoundryChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {
-    protected override ChatClient CreateChatClient(Model model, PipelinePolicy[] perCallPolicies)
+    protected override string GetEndpoint(ModelKey modelKey)
     {
-        OpenAIClient api = CreateOpenAIClient(model.ModelKey, perCallPolicies);
-        return api.GetChatClient(model.DeploymentName);
-    }
-
-    protected override OpenAIClient CreateOpenAIClient(ModelKey modelKey, params PipelinePolicy[] perCallPolicies)
-    {
-        ModelKey transformedKey = CreateTransformedModelKey(modelKey);
-        return base.CreateOpenAIClient(transformedKey, perCallPolicies);
-    }
-
-    internal static ModelKey CreateTransformedModelKey(ModelKey modelKey)
-    {
-        // 对于 Azure AI Foundry，先进行 Host 转换，确保 URL 以 /openai/v1/ 结尾
-        string? transformedHost = TransformAzureAIFoundryHost(modelKey.Host) 
-            ?? ModelProviderInfo.GetInitialHost((DB.Enums.DBModelProvider)modelKey.ModelProviderId);
-        
-        // 创建一个新的 ModelKey 副本，使用转换后的 Host
-        return new ModelKey()
+        string? host = modelKey.Host;
+        if (string.IsNullOrWhiteSpace(host))
         {
-            Id = modelKey.Id,
-            ModelProviderId = modelKey.ModelProviderId,
-            Name = modelKey.Name,
-            Host = transformedHost,
-            Secret = modelKey.Secret,
-            CreatedAt = modelKey.CreatedAt,
-            UpdatedAt = modelKey.UpdatedAt,
-            Order = modelKey.Order
-        };
-    }
-
-    internal static Uri? HostTransform(ModelKey key)
-    {
-        if (string.IsNullOrWhiteSpace(key.Host))
-        {
-            return null;
+            host = ModelProviderInfo.GetInitialHost((DB.Enums.DBModelProvider)modelKey.ModelProviderId);
         }
 
-        string transformed = TransformAzureAIFoundryHost(key.Host) ?? key.Host;
-        return new Uri(transformed);
+        return TransformAzureAIFoundryHost(host);
     }
 
-    internal static string? TransformAzureAIFoundryHost(string? host)
+    internal static string TransformAzureAIFoundryHost(string? host)
     {
         if (string.IsNullOrWhiteSpace(host))
         {
-            return null;
+            return "";
         }
 
         // 如果已经以 /openai/v1 或 /openai/v1/ 结尾，不做修改
         if (host.EndsWith("/openai/v1") || host.EndsWith("/openai/v1/"))
         {
-            return host;
+            return host.TrimEnd('/');
         }
 
-        // 否则添加 /openai/v1/
-        return host.TrimEnd('/') + "/openai/v1/";
+        // 否则添加 /openai/v1
+        return host.TrimEnd('/') + "/openai/v1";
+    }
+
+    public static ModelKey CreateTransformedModelKey(ModelKey modelKey)
+    {
+        return new ModelKey
+        {
+            Id = modelKey.Id,
+            ModelProviderId = modelKey.ModelProviderId,
+            Name = modelKey.Name,
+            Host = TransformAzureAIFoundryHost(modelKey.Host),
+            Secret = modelKey.Secret,
+            CreatedAt = modelKey.CreatedAt,
+            UpdatedAt = modelKey.UpdatedAt,
+            Order = modelKey.Order,
+        };
     }
 }

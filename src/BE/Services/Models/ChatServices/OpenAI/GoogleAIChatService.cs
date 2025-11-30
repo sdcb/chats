@@ -1,13 +1,38 @@
-﻿using OpenAI.Chat;
+using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class GoogleAIChatService : ChatCompletionService
+/// <summary>
+/// Google AI Chat Service using OpenAI-compatible API
+/// </summary>
+public class GoogleAIChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {
-    protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
+    protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
-        ChatCompletionOptions cco = base.ExtractOptions(request);
-        cco.EndUserId = null;
-        return cco;
+        JsonObject body = base.BuildRequestBody(request, stream);
+
+        if (request.ChatConfig.Model.AllowSearch && request.ChatConfig.WebSearchEnabled)
+        {
+            body["tools"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["google_search"] = new JsonObject()
+                }
+            };
+        }
+
+        if (request.ChatConfig.CodeExecutionEnabled)
+        {
+            body["tools"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["code_execution"] = new JsonObject()
+                }
+            };
+        }
+
+        return body;
     }
 }

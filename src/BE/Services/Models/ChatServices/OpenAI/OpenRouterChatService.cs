@@ -1,37 +1,32 @@
-﻿using Chats.BE.DB;
-using Chats.BE.Services.Models.ChatServices.OpenAI.PipelinePolicies;
-using OpenAI.Chat;
-using System.ClientModel.Primitives;
+using Chats.BE.DB;
+using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class OpenRouterChatService(HostUrlService hostUrlService) : ChatCompletionService
+public class OpenRouterChatService(IHttpClientFactory httpClientFactory, HostUrlService hostUrlService) : ChatCompletionService(httpClientFactory)
 {
-    protected override ChatClient CreateChatClient(Model model, PipelinePolicy[] perCallPolicies)
+    protected override void AddAuthorizationHeader(HttpRequestMessage request, ModelKey modelKey)
     {
-        List<PipelinePolicy> policies = [.. perCallPolicies];
-        policies.Add(new AddHeaderPolicy("X-Title", "Sdcb Chats"));
-        policies.Add(new AddHeaderPolicy("HTTP-Referer", hostUrlService.GetFEUrl()));
-        
-        return base.CreateChatClient(model, [.. policies]);
+        base.AddAuthorizationHeader(request, modelKey);
+        request.Headers.Add("X-Title", "Sdcb Chats");
+        request.Headers.Add("HTTP-Referer", hostUrlService.GetFEUrl());
     }
 
-    protected override ReadOnlySpan<byte> ReasoningEffortPropName => "$.reasoning"u8;
-
-    protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
+    protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
-        ChatCompletionOptions cco = base.ExtractOptions(request);
-        cco.Patch.Set("$.reasoning"u8, BinaryData.FromObjectAsJson(new { }));
-        cco.Patch.Set("$.provider"u8, BinaryData.FromObjectAsJson(new { sort = "throughput" }));
+        JsonObject body = base.BuildRequestBody(request, stream);
+
+        body["reasoning"] = new JsonObject();
+        body["provider"] = new JsonObject { ["sort"] = "throughput" };
 
         if (request.ChatConfig.Model.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
-            cco.Patch.Set("$.plugins"u8, BinaryData.FromObjectAsJson(new[]
+            body["plugins"] = new JsonArray
             {
-                new { id = "web" }
-            }));
+                new JsonObject { ["id"] = "web" }
+            };
         }
 
-        return cco;
+        return body;
     }
 }

@@ -1,17 +1,18 @@
-﻿using Chats.BE.DB;
-using Chats.BE.Services.Models.ChatServices.OpenAI.Extensions;
+using Chats.BE.Controllers.Chats.Chats;
+using Chats.BE.DB;
+using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
-using OpenAI;
-using OpenAI.Chat;
-using OpenAI.Models;
-using System.ClientModel;
-using System.ClientModel.Primitives;
+using System.Net.Http.Headers;
+using System.Net.ServerSentEvents;
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public partial class ChatCompletionService : ChatService
+public partial class ChatCompletionService(IHttpClientFactory httpClientFactory) : ChatService
 {
     protected override HashSet<string> SupportedContentTypes =>
     [
@@ -25,207 +26,508 @@ public partial class ChatCompletionService : ChatService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
 
-        OpenAIClient api = CreateOpenAIClient(modelKey, []);
-        ClientResult<OpenAIModelCollection> result = await api.GetOpenAIModelClient().GetModelsAsync(cancellationToken);
-        return [.. result.Value.Select(m => m.Id)];
-    }
+        string url = GetEndpoint(modelKey);
+        using HttpRequestMessage request = new(HttpMethod.Get, url + "/models");
+        AddAuthorizationHeader(request, modelKey);
 
-    protected virtual ChatClient CreateChatClient(Model model, params PipelinePolicy[] perCallPolicies)
-    {
-        OpenAIClient api = CreateOpenAIClient(model.ModelKey, perCallPolicies);
-        return api.GetChatClient(model.DeploymentName);
-    }
+        using HttpClient httpClient = httpClientFactory.CreateClient();
+        httpClient.Timeout = NetworkTimeout;
+        using HttpResponseMessage response = await httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
 
-    protected virtual OpenAIClient CreateOpenAIClient(ModelKey modelKey, params PipelinePolicy[] perCallPolicies)
-    {
-        return OpenAIHelper.BuildOpenAIClient(modelKey, perCallPolicies);
-    }
+        string json = await response.Content.ReadAsStringAsync(cancellationToken);
+        using JsonDocument doc = JsonDocument.Parse(json);
 
-    protected virtual ReadOnlySpan<byte> ReasoningEffortPropName => "$.reasoning_content"u8;
-
-    internal static string? TryGetDecodedValue(ref JsonPatch patch, ReadOnlySpan<byte> path)
-    {
-        if (patch.TryGetValue(path, out string? val))
+        List<string> models = [];
+        if (doc.RootElement.TryGetProperty("data", out JsonElement data) && data.ValueKind == JsonValueKind.Array)
         {
-            return val;
+            foreach (JsonElement model in data.EnumerateArray())
+            {
+                if (model.TryGetProperty("id", out JsonElement id))
+                {
+                    string? modelId = id.GetString();
+                    if (modelId != null)
+                    {
+                        models.Add(modelId);
+                    }
+                }
+            }
         }
-
-        return null;
+        return [.. models];
     }
+
+    protected virtual string GetEndpoint(ModelKey modelKey)
+    {
+        string? host = modelKey.Host;
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            host = ModelProviderInfo.GetInitialHost((DBModelProvider)modelKey.ModelProviderId);
+        }
+        return host?.TrimEnd('/') ?? "";
+    }
+
+    protected virtual void AddAuthorizationHeader(HttpRequestMessage request, ModelKey modelKey)
+    {
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelKey.Secret);
+    }
+
+    protected virtual string ReasoningContentPropertyName => "reasoning_content";
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        ChatClient chatClient = CreateChatClient(request.ChatConfig.Model, []);
+        string url = GetEndpoint(request.ChatConfig.Model.ModelKey);
+        JsonObject requestBody = BuildRequestBody(request, stream: true);
 
-        ChatFinishReason? finishReason = null;
-        await foreach (StreamingChatCompletionUpdate delta in chatClient.CompleteChatStreamingAsync(ExtractMessages(request), ExtractOptions(request), cancellationToken))
+        using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/chat/completions");
+        AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
+        httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+        httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+
+        using HttpClient httpClient = httpClientFactory.CreateClient();
+        httpClient.Timeout = NetworkTimeout;
+        using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
         {
-            string? segment = delta.ContentUpdate.FirstOrDefault()?.Text;
-            string? reasoningSegment = GetReasoningContent(delta);
+            string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new RawChatServiceException((int)response.StatusCode, errorBody);
+        }
 
-            if (segment == null && reasoningSegment == null && delta.Usage == null && (delta.ToolCallUpdates == null || delta.ToolCallUpdates.Count == 0) && delta.FinishReason == null)
+        using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+
+        DBFinishReason? finishReason = null;
+
+        await foreach (SseItem<string> sseItem in SseParser.Create(stream, (_, bytes) => Encoding.UTF8.GetString(bytes)).EnumerateAsync(cancellationToken))
+        {
+            if (string.IsNullOrEmpty(sseItem.Data) || sseItem.Data == "[DONE]")
             {
                 continue;
             }
 
+            JsonElement json;
+            try
+            {
+                json = JsonDocument.Parse(sseItem.Data).RootElement;
+            }
+            catch (JsonException)
+            {
+                continue;
+            }
+
+            // Parse choices
+            if (!json.TryGetProperty("choices", out JsonElement choices) || choices.GetArrayLength() == 0)
+            {
+                // Check for usage only update
+                if (json.TryGetProperty("usage", out JsonElement usageOnly))
+                {
+                    yield return ChatSegment.FromUsageOnly(
+                        usageOnly.TryGetProperty("prompt_tokens", out JsonElement pt) ? pt.GetInt32() : 0,
+                        usageOnly.TryGetProperty("completion_tokens", out JsonElement ct) ? ct.GetInt32() : 0,
+                        GetReasoningTokens(usageOnly)
+                    );
+                }
+                continue;
+            }
+
+            JsonElement choice = choices[0];
+            JsonElement delta = choice.TryGetProperty("delta", out JsonElement d) ? d : default;
+
+            // Parse content
+            string? content = delta.TryGetProperty("content", out JsonElement c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
+
+            // Parse reasoning content (for models like DeepSeek-R1)
+            string? reasoningContent = delta.TryGetProperty(ReasoningContentPropertyName, out JsonElement rc) && rc.ValueKind == JsonValueKind.String ? rc.GetString() : null;
+
+            // Parse tool calls
+            List<ToolCallSegment> toolCallSegments = [];
+            if (delta.TryGetProperty("tool_calls", out JsonElement toolCalls))
+            {
+                foreach (JsonElement tc in toolCalls.EnumerateArray())
+                {
+                    int index = tc.TryGetProperty("index", out JsonElement idx) ? idx.GetInt32() : 0;
+                    string? id = tc.TryGetProperty("id", out JsonElement tcId) ? tcId.GetString() : null;
+                    string? functionName = null;
+                    string? functionArgs = null;
+
+                    if (tc.TryGetProperty("function", out JsonElement func))
+                    {
+                        functionName = func.TryGetProperty("name", out JsonElement fn) ? fn.GetString() : null;
+                        functionArgs = func.TryGetProperty("arguments", out JsonElement fa) ? fa.GetString() : null;
+                    }
+
+                    toolCallSegments.Add(new ToolCallSegment
+                    {
+                        Index = index,
+                        Id = id,
+                        Name = functionName,
+                        Arguments = functionArgs ?? ""
+                    });
+                }
+            }
+
+            // Parse finish reason
+            if (choice.TryGetProperty("finish_reason", out JsonElement fr) && fr.ValueKind == JsonValueKind.String)
+            {
+                finishReason = DBFinishReasonParser.Parse(fr.GetString());
+            }
+
+            // Parse usage
+            Dtos.ChatTokenUsage? usage = null;
+            if (json.TryGetProperty("usage", out JsonElement u))
+            {
+                usage = new Dtos.ChatTokenUsage
+                {
+                    InputTokens = u.TryGetProperty("prompt_tokens", out JsonElement pit) ? pit.GetInt32() : 0,
+                    OutputTokens = u.TryGetProperty("completion_tokens", out JsonElement cot) ? cot.GetInt32() : 0,
+                    ReasoningTokens = GetReasoningTokens(u)
+                };
+            }
+
+            // Skip empty updates
+            if (string.IsNullOrEmpty(content) && string.IsNullOrEmpty(reasoningContent) && toolCallSegments.Count == 0 && usage == null && finishReason == null)
+            {
+                continue;
+            }
+
+            List<ChatSegmentItem> items = [];
+            if (!string.IsNullOrEmpty(content))
+            {
+                items.Add(ChatSegmentItem.FromText(content));
+            }
+            if (!string.IsNullOrEmpty(reasoningContent))
+            {
+                items.Add(ChatSegmentItem.FromThink(reasoningContent));
+            }
+            items.AddRange(toolCallSegments);
+
             yield return new ChatSegment
             {
-                Items = ChatSegmentItem.FromTextThinkToolCall(segment, reasoningSegment, delta.ToolCallUpdates),
-                FinishReason = (finishReason ??= delta.FinishReason),
-                Usage = delta.Usage != null ? GetUsage(delta.Usage) : null,
+                Items = items,
+                FinishReason = finishReason,
+                Usage = usage,
             };
         }
+    }
 
-        string? GetReasoningContent(StreamingChatCompletionUpdate delta)
+    private static int GetReasoningTokens(JsonElement usage)
+    {
+        if (usage.TryGetProperty("completion_tokens_details", out JsonElement ctd) &&
+            ctd.TryGetProperty("reasoning_tokens", out JsonElement rt))
         {
-            if (delta.Choices.Count == 0) return null;
-            return TryGetDecodedValue(ref delta.Choices[0].Delta.Patch, ReasoningEffortPropName);
+            return rt.GetInt32();
         }
+        return 0;
     }
 
     public override async Task<ChatSegment> Chat(ChatRequest request, CancellationToken cancellationToken)
     {
-        ChatClient chatClient = CreateChatClient(request.ChatConfig.Model, []);
-        ClientResult<ChatCompletion> cc = await chatClient.CompleteChatAsync(ExtractMessages(request), ExtractOptions(request), cancellationToken);
-        ChatCompletion delta = cc.Value;
+        string url = GetEndpoint(request.ChatConfig.Model.ModelKey);
+        JsonObject requestBody = BuildRequestBody(request, stream: false);
+
+        using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/chat/completions");
+        AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
+        httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+
+        using HttpClient httpClient = httpClientFactory.CreateClient();
+        httpClient.Timeout = NetworkTimeout;
+        using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new RawChatServiceException((int)response.StatusCode, errorBody);
+        }
+
+        string jsonResponse = await response.Content.ReadAsStringAsync(cancellationToken);
+        using JsonDocument doc = JsonDocument.Parse(jsonResponse);
+        JsonElement root = doc.RootElement;
+
+        List<ChatSegmentItem> items = [];
+        DBFinishReason? finishReason = null;
+        Dtos.ChatTokenUsage? usage = null;
+
+        if (root.TryGetProperty("choices", out JsonElement choices) && choices.GetArrayLength() > 0)
+        {
+            JsonElement choice = choices[0];
+            if (choice.TryGetProperty("message", out JsonElement message))
+            {
+                // Content
+                if (message.TryGetProperty("content", out JsonElement content) && content.ValueKind == JsonValueKind.String)
+                {
+                    string? text = content.GetString();
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        items.Add(ChatSegmentItem.FromText(text));
+                    }
+                }
+
+                // Reasoning content
+                if (message.TryGetProperty(ReasoningContentPropertyName, out JsonElement rc) && rc.ValueKind == JsonValueKind.String)
+                {
+                    string? reasoning = rc.GetString();
+                    if (!string.IsNullOrEmpty(reasoning))
+                    {
+                        items.Add(ChatSegmentItem.FromThink(reasoning));
+                    }
+                }
+
+                // Tool calls
+                if (message.TryGetProperty("tool_calls", out JsonElement toolCalls))
+                {
+                    int index = 0;
+                    foreach (JsonElement tc in toolCalls.EnumerateArray())
+                    {
+                        string? id = tc.TryGetProperty("id", out JsonElement tcId) ? tcId.GetString() : null;
+                        string? functionName = null;
+                        string? functionArgs = null;
+
+                        if (tc.TryGetProperty("function", out JsonElement func))
+                        {
+                            functionName = func.TryGetProperty("name", out JsonElement fn) ? fn.GetString() : null;
+                            functionArgs = func.TryGetProperty("arguments", out JsonElement fa) ? fa.GetString() : null;
+                        }
+
+                        items.Add(new ToolCallSegment
+                        {
+                            Index = index++,
+                            Id = id,
+                            Name = functionName,
+                            Arguments = functionArgs ?? ""
+                        });
+                    }
+                }
+            }
+
+            // Finish reason
+            if (choice.TryGetProperty("finish_reason", out JsonElement fr) && fr.ValueKind == JsonValueKind.String)
+            {
+                finishReason = DBFinishReasonParser.Parse(fr.GetString());
+            }
+        }
+
+        // Usage
+        if (root.TryGetProperty("usage", out JsonElement u))
+        {
+            usage = new Dtos.ChatTokenUsage
+            {
+                InputTokens = u.TryGetProperty("prompt_tokens", out JsonElement pit) ? pit.GetInt32() : 0,
+                OutputTokens = u.TryGetProperty("completion_tokens", out JsonElement cot) ? cot.GetInt32() : 0,
+                ReasoningTokens = GetReasoningTokens(u)
+            };
+        }
+
         return new ChatSegment
         {
-            Items = ChatSegmentItem.FromTextThinkToolCall(delta.Content.Count > 0 ? delta.Content[0].Text : null, GetReasoningContent(delta), delta.ToolCalls),
-            FinishReason = delta.FinishReason,
-            Usage = delta.Usage != null ? GetUsage(delta.Usage) : null,
+            Items = items,
+            FinishReason = finishReason,
+            Usage = usage,
         };
-
-        string? GetReasoningContent(ChatCompletion delta)
-        {
-            return TryGetDecodedValue(ref delta.Choices[0].Patch, ReasoningEffortPropName);
-        }
     }
 
-    protected virtual IEnumerable<ChatMessage> ExtractMessages(ChatRequest request)
+    protected virtual JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
-        // Use System property if available, otherwise fall back to ChatConfig.SystemPrompt
+        JsonObject body = new()
+        {
+            ["model"] = request.ChatConfig.Model.DeploymentName,
+            ["messages"] = BuildMessages(request),
+            ["stream"] = stream,
+        };
+
+        if (stream)
+        {
+            body["stream_options"] = new JsonObject { ["include_usage"] = true };
+        }
+
+        if (request.ChatConfig.Temperature.HasValue)
+        {
+            body["temperature"] = request.ChatConfig.Temperature.Value;
+        }
+
+        if (request.ChatConfig.MaxOutputTokens.HasValue)
+        {
+            if (request.ChatConfig.Model.UseMaxCompletionTokens)
+            {
+                body["max_completion_tokens"] = request.ChatConfig.MaxOutputTokens.Value;
+            }
+            else
+            {
+                body["max_tokens"] = request.ChatConfig.MaxOutputTokens.Value;
+            }
+        }
+
+        if (request.EndUserId != null)
+        {
+            body["user"] = request.EndUserId;
+        }
+
+        if (request.TopP.HasValue)
+        {
+            body["top_p"] = request.TopP.Value;
+        }
+
+        if (request.Seed.HasValue)
+        {
+            body["seed"] = request.Seed.Value;
+        }
+
+        if (request.AllowParallelToolCalls.HasValue)
+        {
+            body["parallel_tool_calls"] = request.AllowParallelToolCalls.Value;
+        }
+
+        if (request.TextFormat != null)
+        {
+            JsonNode? responseFormat = request.TextFormat.ToJsonNode();
+            if (responseFormat != null)
+            {
+                body["response_format"] = responseFormat;
+            }
+        }
+
+        // Tools
+        if (request.Tools.Count > 0)
+        {
+            JsonArray tools = [];
+            foreach (ChatTool tool in request.Tools)
+            {
+                tools.Add(tool.ToJsonObject());
+            }
+            body["tools"] = tools;
+        }
+
+        return body;
+    }
+
+    protected virtual JsonArray BuildMessages(ChatRequest request)
+    {
+        JsonArray messages = [];
+
+        // System prompt
         string? systemPrompt = request.GetEffectiveSystemPrompt();
         if (systemPrompt != null)
         {
-            yield return ChatMessage.CreateSystemMessage(systemPrompt);
+            messages.Add(new JsonObject
+            {
+                ["role"] = "system",
+                ["content"] = systemPrompt
+            });
         }
 
-        foreach (ChatMessage msg in request.Messages.Select(ToOpenAI))
+        // User/Assistant messages
+        foreach (NeutralMessage msg in request.Messages)
         {
-            yield return msg;
+            messages.Add(ToOpenAIMessage(msg));
         }
+
+        return messages;
     }
 
-    public ChatMessage ToOpenAI(NeutralMessage message)
+    protected virtual JsonObject ToOpenAIMessage(NeutralMessage message)
     {
-        return message.Role switch
+        string role = message.Role switch
         {
-            NeutralChatRole.User => new UserChatMessage([.. message.Contents.Select(ToOpenAIContentPart).Where(x => x != null)]),
-            NeutralChatRole.Assistant => ToAssistantMessage(message.Contents),
-            NeutralChatRole.Tool => new ToolChatMessage(
-                ((NeutralToolCallResponseContent)message.Contents.First()).ToolCallId,
-                ((NeutralToolCallResponseContent)message.Contents.First()).Response),
-            _ => throw new NotImplementedException()
+            NeutralChatRole.User => "user",
+            NeutralChatRole.Assistant => "assistant",
+            NeutralChatRole.Tool => "tool",
+            _ => throw new NotSupportedException($"Role {message.Role} is not supported")
         };
+
+        if (message.Role == NeutralChatRole.Tool)
+        {
+            NeutralToolCallResponseContent toolResp = (NeutralToolCallResponseContent)message.Contents.First();
+            return new JsonObject
+            {
+                ["role"] = "tool",
+                ["tool_call_id"] = toolResp.ToolCallId,
+                ["content"] = toolResp.Response
+            };
+        }
+
+        // Check if we have tool calls (assistant message)
+        List<NeutralToolCallContent> toolCalls = message.Contents.OfType<NeutralToolCallContent>().ToList();
+        List<NeutralContent> otherContents = message.Contents.Where(c => c is not NeutralToolCallContent and not NeutralThinkContent).ToList();
+
+        JsonObject msg = new() { ["role"] = role };
+
+        // Build content
+        if (otherContents.Count == 1 && otherContents[0] is NeutralTextContent textContent)
+        {
+            // Simple text content
+            msg["content"] = textContent.Content;
+        }
+        else if (otherContents.Count > 0)
+        {
+            // Multi-part content
+            JsonArray contentArray = [];
+            foreach (NeutralContent content in otherContents)
+            {
+                JsonObject? part = ToOpenAIContentPart(content);
+                if (part != null)
+                {
+                    contentArray.Add(part);
+                }
+            }
+            if (contentArray.Count > 0)
+            {
+                msg["content"] = contentArray;
+            }
+        }
+
+        // Tool calls for assistant messages
+        if (toolCalls.Count > 0 && role == "assistant")
+        {
+            JsonArray toolCallsArray = [];
+            foreach (NeutralToolCallContent tc in toolCalls)
+            {
+                toolCallsArray.Add(new JsonObject
+                {
+                    ["id"] = tc.Id,
+                    ["type"] = "function",
+                    ["function"] = new JsonObject
+                    {
+                        ["name"] = tc.Name,
+                        ["arguments"] = tc.Parameters
+                    }
+                });
+            }
+            msg["tool_calls"] = toolCallsArray;
+        }
+
+        return msg;
     }
 
-    static ChatMessageContentPart? ToOpenAIContentPart(NeutralContent content)
+    protected virtual JsonObject? ToOpenAIContentPart(NeutralContent content)
     {
         return content switch
         {
-            NeutralTextContent text => ChatMessageContentPart.CreateTextPart(text.Content),
-            NeutralFileUrlContent fileUrl => ChatMessageContentPart.CreateImagePart(new Uri(fileUrl.Url)),
-            NeutralFileBlobContent fileBlob => ChatMessageContentPart.CreateImagePart(BinaryData.FromBytes(fileBlob.Data), fileBlob.MediaType),
-            NeutralErrorContent error => ChatMessageContentPart.CreateTextPart(error.Content),
-            NeutralFileContent => throw new Exception("FileId content type should be converted to FileUrl or FileBlob before sending to OpenAI API in PreProcess."),
+            NeutralTextContent text => new JsonObject
+            {
+                ["type"] = "text",
+                ["text"] = text.Content
+            },
+            NeutralErrorContent error => new JsonObject
+            {
+                ["type"] = "text",
+                ["text"] = error.Content
+            },
+            NeutralFileUrlContent fileUrl => new JsonObject
+            {
+                ["type"] = "image_url",
+                ["image_url"] = new JsonObject { ["url"] = fileUrl.Url }
+            },
+            NeutralFileBlobContent fileBlob => new JsonObject
+            {
+                ["type"] = "image_url",
+                ["image_url"] = new JsonObject
+                {
+                    ["url"] = $"data:{fileBlob.MediaType};base64,{Convert.ToBase64String(fileBlob.Data)}"
+                }
+            },
             NeutralThinkContent => null, // ChatCompletion API does not support "think" content type
-            NeutralToolCallContent => null, // Tool calls are handled separately in ToAssistantMessage
+            NeutralToolCallContent => null, // Tool calls are handled separately
             NeutralToolCallResponseContent => null, // Tool responses are handled separately
-            _ => throw new NotImplementedException($"Content type {content.GetType().Name} is not supported.")
-        };
-    }
-
-    static AssistantChatMessage ToAssistantMessage(IList<NeutralContent> contents)
-    {
-        bool hasContent = false, hasToolCall = false;
-        foreach (NeutralContent content in contents)
-        {
-            if (content is NeutralTextContent or NeutralErrorContent or NeutralFileUrlContent or NeutralFileBlobContent)
-            {
-                hasContent = true;
-            }
-            if (content is NeutralToolCallContent)
-            {
-                hasToolCall = true;
-            }
-            if (hasContent && hasToolCall)
-            {
-                break; // No need to check further if both are found
-            }
-        }
-
-        if (hasContent)
-        {
-            AssistantChatMessage msg = new(contents
-                .Where(x => x is NeutralTextContent or NeutralErrorContent or NeutralFileUrlContent or NeutralFileBlobContent)
-                .Select(ToOpenAIContentPart)
-                .Where(x => x != null)
-                .ToArray());
-            foreach (ChatToolCall toolCall in contents
-                .OfType<NeutralToolCallContent>()
-                .Select(tc => ChatToolCall.CreateFunctionToolCall(
-                    tc.Id,
-                    tc.Name,
-                    BinaryData.FromString(tc.Parameters))))
-            {
-                msg.ToolCalls.Add(toolCall);
-            }
-            return msg;
-        }
-        else if (hasToolCall)
-        {
-            return new(contents
-                .OfType<NeutralToolCallContent>()
-                .Select(tc => ChatToolCall.CreateFunctionToolCall(
-                    tc.Id,
-                    tc.Name,
-                    BinaryData.FromString(tc.Parameters))));
-        }
-        else
-        {
-            throw new Exception("Assistant chat message must either have at least one content or tool call");
-        }
-    }
-
-    protected virtual ChatCompletionOptions ExtractOptions(ChatRequest request)
-    {
-        ChatCompletionOptions cco = new()
-        {
-            Temperature = request.ChatConfig.Temperature,
-            EndUserId = request.EndUserId,
-            AllowParallelToolCalls = request.AllowParallelToolCalls,
-            ResponseFormat = request.TextFormat,
-        };
-        if (request.ChatConfig.MaxOutputTokens.HasValue)
-        {
-            cco.SetMaxTokens(request.ChatConfig.MaxOutputTokens.Value, request.ChatConfig.Model.UseMaxCompletionTokens);
-        }
-        foreach (ChatTool tool in request.Tools)
-        {
-            cco.Tools.Add(tool);
-        }
-        cco.TopP = request.TopP;
-        cco.Seed = request.Seed;
-        return cco;
-    }
-
-    protected virtual Dtos.ChatTokenUsage GetUsage(global::OpenAI.Chat.ChatTokenUsage usage)
-    {
-        return new Dtos.ChatTokenUsage()
-        {
-            InputTokens = usage.InputTokenCount,
-            OutputTokens = usage.OutputTokenCount,
-            ReasoningTokens = usage.OutputTokenDetails?.ReasoningTokenCount ?? 0,
+            NeutralFileContent => throw new Exception("FileId content type should be converted to FileUrl or FileBlob before sending to OpenAI API in PreProcess."),
+            _ => throw new NotSupportedException($"Content type {content.GetType().Name} is not supported.")
         };
     }
 }

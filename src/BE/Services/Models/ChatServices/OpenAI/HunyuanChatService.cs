@@ -1,18 +1,19 @@
-﻿using Chats.BE.DB;
-using OpenAI.Chat;
+using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class HunyuanChatService : ChatCompletionService
+public class HunyuanChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {
-    protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
+    protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
-        ChatCompletionOptions cco = base.ExtractOptions(request);
+        JsonObject body = base.BuildRequestBody(request, stream);
+
         if (request.ChatConfig.Model.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
-            cco.Patch.Set("$.enable_enhancement"u8, true);
-            cco.Patch.Set("$.force_search_enhancement"u8, true);
+            body["enable_enhancement"] = true;
+            body["force_search_enhancement"] = true;
         }
-        return cco;
+
+        return body;
     }
 }

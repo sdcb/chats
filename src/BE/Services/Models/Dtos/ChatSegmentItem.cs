@@ -1,9 +1,6 @@
-﻿using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
+using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 using Chats.BE.Services.Models.ChatServices;
 using Mscc.GenerativeAI;
-using OpenAI.Chat;
-using OpenAI.Responses;
-using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Services.Models.Dtos;
@@ -52,11 +49,11 @@ public abstract record ChatSegmentItem
         };
     }
 
-    public static ImageChatSegment FromBinaryData(BinaryData binaryData, string contentType)
+    public static ImageChatSegment FromBinaryData(byte[] data, string contentType)
     {
         return new Base64Image
         {
-            Base64 = Convert.ToBase64String(binaryData.ToArray()),
+            Base64 = Convert.ToBase64String(data),
             ContentType = contentType
         };
     }
@@ -83,67 +80,6 @@ public abstract record ChatSegmentItem
         return segments;
     }
 
-    public static List<ChatSegmentItem> FromTextThinkToolCall(string? text, string? think, IReadOnlyList<StreamingChatToolCallUpdate>? toolCalls)
-    {
-        List<ChatSegmentItem> segments = new(capacity: 2);
-        if (!string.IsNullOrEmpty(text))
-        {
-            segments.Add(FromText(text));
-        }
-        if (!string.IsNullOrEmpty(think))
-        {
-            segments.Add(FromThink(think));
-        }
-        if (toolCalls != null && toolCalls.Count != 0)
-        {
-            foreach (StreamingChatToolCallUpdate toolCall in toolCalls)
-            {
-                segments.Add(FromToolCall(toolCall));
-            }
-        }
-        return segments;
-    }
-
-    public static List<ChatSegmentItem> FromTextThinkToolCall(string? text, string? think, IReadOnlyList<ChatToolCall>? toolCalls)
-    {
-        List<ChatSegmentItem> segments = new(capacity: 2);
-        if (!string.IsNullOrEmpty(text))
-        {
-            segments.Add(FromText(text));
-        }
-        if (!string.IsNullOrEmpty(think))
-        {
-            segments.Add(FromThink(think));
-        }
-        if (toolCalls != null && toolCalls.Count != 0)
-        {
-            segments.AddRange(FromToolCalls(toolCalls));
-        }
-        return segments;
-    }
-
-    public static ToolCallSegment FromToolCall(StreamingResponseOutputItemAddedUpdate delta, FunctionCallResponseItem toolCall)
-    {
-        return new ToolCallSegment
-        {
-            Index = delta.OutputIndex,
-            Id = toolCall.Id,
-            Name = toolCall.FunctionName,
-            Arguments = GetBinaryData(toolCall.FunctionArguments).Length == 0 ? null : toolCall.FunctionArguments.ToString(),
-        };
-    }
-
-    public static ToolCallSegment FromToolCall(int fcIndex, FunctionCallResponseItem toolCall)
-    {
-        return new ToolCallSegment
-        {
-            Index = fcIndex,
-            Id = toolCall.Id,
-            Name = toolCall.FunctionName,
-            Arguments = GetBinaryData(toolCall.FunctionArguments).Length == 0 ? null : toolCall.FunctionArguments.ToString(),
-        };
-    }
-
     public static ToolCallSegment FromToolCall(int fcIndex, FunctionCall toolCall)
     {
         return new ToolCallSegment
@@ -152,36 +88,6 @@ public abstract record ChatSegmentItem
             Id = toolCall.Id ?? fcIndex.ToString(),
             Name = toolCall.Name,
             Arguments = JSON.Serialize(toolCall.Args)
-        };
-    }
-
-    public static ToolCallSegment FromToolCallDelta(StreamingResponseFunctionCallArgumentsDeltaUpdate delta)
-    {
-        return new ToolCallSegment
-        {
-            Index = delta.OutputIndex,
-            Id = delta.ItemId,
-            Name = null,
-            Arguments = delta.Delta switch
-            {
-                { IsEmpty: true } => "",
-                _ => delta.Delta.ToString()
-            }
-        };
-    }
-
-    static ToolCallSegment FromToolCall(StreamingChatToolCallUpdate toolCall)
-    {
-        return new ToolCallSegment
-        {
-            Index = toolCall.Index,
-            Id = toolCall.ToolCallId switch
-            {
-                null or "" => null,
-                _ => toolCall.ToolCallId
-            },
-            Name = toolCall.FunctionName,
-            Arguments = (toolCall.FunctionArgumentsUpdate == null || GetBinaryData(toolCall.FunctionArgumentsUpdate).Length == 0) ? "" : toolCall.FunctionArgumentsUpdate.ToString(),
         };
     }
 
@@ -195,20 +101,6 @@ public abstract record ChatSegmentItem
             IsSuccess = isSuccess,
         };
     }
-
-    static IEnumerable<ChatSegmentItem> FromToolCalls(IReadOnlyList<ChatToolCall> toolCall)
-    {
-        return toolCall.Select((x, i) => new ToolCallSegment()
-        {
-            Index = i,
-            Id = x.Id,
-            Name = x.FunctionName,
-            Arguments = GetBinaryData(x.FunctionArguments).Length == 0 ? "" : x.FunctionArguments.ToString(),
-        });
-    }
-
-    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_bytes")]
-    static extern ref ReadOnlyMemory<byte> GetBinaryData(BinaryData binaryData);
 
     public ChatCompletionChunk ToOpenAIChatCompletionChunk(string modelName, string traceId, string? systemFingerprint)
     {
@@ -290,9 +182,9 @@ public static class ChatSegmentItemExtensions
             else if (last is ThinkChatSegment lastThink && item is ThinkChatSegment curThink)
             {
                 string? signature = lastThink.Signature != null ? lastThink.Signature + curThink.Signature : curThink.Signature;
-                items[^1] = lastThink with 
-                { 
-                    Think = lastThink.Think + curThink.Think, 
+                items[^1] = lastThink with
+                {
+                    Think = lastThink.Think + curThink.Think,
                     Signature = signature
                 };
             }

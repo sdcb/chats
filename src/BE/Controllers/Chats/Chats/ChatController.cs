@@ -20,15 +20,12 @@ using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
-using OpenAI.Chat;
-using System.ClientModel;
-using System.ClientModel.Primitives;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Channels;
 using EmptyResult = Microsoft.AspNetCore.Mvc.EmptyResult;
-using OpenAIChatMessage = OpenAI.Chat.ChatMessage;
 
 namespace Chats.BE.Controllers.Chats.Chats;
 
@@ -456,7 +453,12 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             }
 
             toolNameMap[finalName] = (tool.McpServerId, tool.ToolName);
-            csr.Tools.Add(ChatTool.CreateFunctionTool(finalName, tool.Description, tool.Parameters == null ? null : BinaryData.FromString(tool.Parameters)));
+            csr.Tools.Add(new ChatTool
+            {
+                FunctionName = finalName,
+                FunctionDescription = tool.Description,
+                FunctionParameters = tool.Parameters,
+            });
         }
 
         ChatTurn turn = new()
@@ -680,7 +682,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                         }
                     }
 
-                    if (seg.FinishReason == ChatFinishReason.ContentFilter)
+                    if (seg.FinishReason == DBFinishReason.ContentFilter)
                     {
                         errorText = "Content Filtered";
                     }
@@ -701,20 +703,6 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             {
                 icc.FinishReason = cse.ErrorCode;
                 errorText = cse.Message;
-            }
-            catch (ClientResultException e)
-            {
-                icc.FinishReason = DBFinishReason.UpstreamError;
-                PipelineResponse? pr = e.GetRawResponse();
-                if (pr != null)
-                {
-                    errorText = pr.Content.ToString();
-                }
-                else
-                {
-                    errorText = e.Message;
-                }
-                logger.LogError(e, "Upstream error: {userMessageId}", req.LastMessageId);
             }
             catch (AggregateException e) when (e.InnerException is TaskCanceledException)
             {

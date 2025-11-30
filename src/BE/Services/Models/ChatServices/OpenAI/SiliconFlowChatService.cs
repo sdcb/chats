@@ -1,64 +1,22 @@
-﻿using Chats.BE.DB;
 using Chats.BE.DB.Enums;
-using Chats.BE.Services.Models.ChatServices.OpenAI.PipelinePolicies;
-using OpenAI.Chat;
-using System.ClientModel.Primitives;
 using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public class SiliconFlowChatService : ChatCompletionService
+public class SiliconFlowChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {
-    protected override ChatClient CreateChatClient(Model model, PipelinePolicy[] perCallPolicies)
+    protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
-        List<PipelinePolicy> policies = perCallPolicies.ToList();
-        policies.AddRange(CreateSiliconflowPolicies());
-        return base.CreateChatClient(model, policies.ToArray());
-    }
+        JsonObject body = base.BuildRequestBody(request, stream);
 
-    private static PipelinePolicy[] CreateSiliconflowPolicies()
-    {
-        // 创建一个 Policy 来将 Qwen 的毫秒时间戳转换为 OpenAI SDK 需要的秒时间戳
-        return [new ReplaceSseContentPolicy(static bytes =>
-        {
-            try
-            {
-                // 直接从字节解析为 JsonObject
-                JsonObject? jsonObj = JsonNode.Parse(bytes)?.AsObject();
-                if (jsonObj == null)
-                {
-                    return bytes.ToArray();
-                }
-                
-                // 检查是否有 choices 字段
-                if (jsonObj.TryGetPropertyValue("choices", out JsonNode? choicesNode)
-                    && choicesNode is JsonArray choicesArray
-                    && choicesArray.Count == 0)
-                {
-                    jsonObj.Remove("choices");
-                    return JSON.SerializeToUtf8Bytes(jsonObj);
-                }
-            }
-            catch
-            {
-                // 如果解析失败，返回原始字节
-            }
-
-            return bytes.ToArray();
-        })];
-    }
-
-    protected override ChatCompletionOptions ExtractOptions(ChatRequest request)
-    {
-        ChatCompletionOptions cco = base.ExtractOptions(request);
-
-        if (Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.ReasoningEffortOptions).Length != 0)
+        if (DB.Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.ReasoningEffortOptions).Length != 0)
         {
             if (request.ChatConfig.ReasoningEffort.IsLowOrMinimal())
             {
-                cco.Patch.Set("$.enable_thinking"u8, false);
+                body["enable_thinking"] = false;
             }
         }
-        return cco;
+
+        return body;
     }
 }

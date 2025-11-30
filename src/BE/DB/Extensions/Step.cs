@@ -1,7 +1,6 @@
-﻿using Chats.BE.DB.Enums;
+using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models;
 using Microsoft.ML.Tokenizers;
-using OpenAI.Chat;
 
 namespace Chats.BE.DB;
 
@@ -30,21 +29,6 @@ public partial class Step
             DBStepContentType.ToolCall => tokenizer.CountTokens(c.StepContentToolCall!.ToolCallId) + tokenizer.CountTokens(c.StepContentToolCall.Name) + tokenizer.CountTokens(c.StepContentToolCall.Parameters) + TokenPerToolCall,
             _ => 0
         });
-    }
-
-    public static Step FromOpenAI(ChatMessage message)
-    {
-        return new Step
-        {
-            ChatRoleId = message switch
-            {
-                UserChatMessage => (byte)DBChatRole.User,
-                AssistantChatMessage => (byte)DBChatRole.Assistant,
-                ToolChatMessage => (byte)DBChatRole.ToolCall,
-                _ => throw new NotSupportedException($"Chat message type {message.GetType().Name} is not supported.")
-            },
-            StepContents = StepContent.FromOpenAI(message),
-        };
     }
 
     public DBChatRole ChatRole => (DBChatRole)ChatRoleId;

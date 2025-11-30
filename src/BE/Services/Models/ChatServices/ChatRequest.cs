@@ -1,8 +1,6 @@
-﻿using Chats.BE.DB;
-using Chats.BE.DB.Enums;
+using Chats.BE.DB;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Neutral;
-using Chats.BE.Services.Models.Neutral.Conversions;
-using OpenAI.Chat;
 using Tokenizer = Microsoft.ML.Tokenizers.Tokenizer;
 
 namespace Chats.BE.Services.Models;
@@ -94,44 +92,32 @@ public record ChatRequest
         };
     }
 
-    public static ChatRequest FromOpenAI(string userId, Model model, bool streamed, IList<ChatMessage> messages, ChatCompletionOptions cco)
+    /// <summary>
+    /// Creates a ChatRequest from OpenAI compatible API input
+    /// </summary>
+    public static ChatRequest FromOpenAI(string endUserId, Model model, bool streamed, IList<NeutralMessage> messages, CcoWrapper cco)
     {
-        ChatConfig config = new()
+        return new ChatRequest
         {
-            Model = model,
-            ModelId = model.Id,
-            SystemPrompt = messages.ExtractSystemPrompt(),
-            Temperature = cco.Temperature,
-            MaxOutputTokens = cco.MaxOutputTokenCount ?? cco._deprecatedMaxTokens,
-            ReasoningEffortId = (byte)cco.ReasoningEffortLevel.ToDBReasoningEffort(),
-        };
-
-        IList<NeutralMessage> neutralMessages = messages.ToNeutralExcludingSystem();
-
-        if (cco.Patch.TryGetValue("$.enable_search"u8, out bool enableSearch))
-        {
-            config.WebSearchEnabled = enableSearch;
-        }
-        if (cco.Patch.TryGetValue("$.image_size"u8, out string? imageSize))
-        {
-            config.ImageSize = imageSize;
-        }
-        if (cco.Patch.TryGetValue("$.enable_code_execution"u8, out bool enableCodeExecution))
-        {
-            config.CodeExecutionEnabled = enableCodeExecution;
-        }
-
-        return new ChatRequest()
-        {
-            ChatConfig = config,
-            AllowParallelToolCalls = cco.AllowParallelToolCalls,
-            EndUserId = userId,
+            EndUserId = endUserId,
+            Messages = messages,
             Streamed = streamed,
-            TextFormat = cco.ResponseFormat,
             Tools = cco.Tools,
-            Messages = neutralMessages,
+            TextFormat = cco.ResponseFormat,
+            AllowParallelToolCalls = cco.AllowParallelToolCalls,
             TopP = cco.TopP,
             Seed = cco.Seed,
+            ChatConfig = new ChatConfig
+            {
+                Model = model,
+                Temperature = cco.Temperature,
+                MaxOutputTokens = cco.MaxOutputTokens,
+                WebSearchEnabled = cco.EnableSearch ?? false,
+                CodeExecutionEnabled = cco.EnableCodeExecution ?? false,
+                SystemPrompt = cco.SystemPrompt,
+                ImageSize = cco.ImageSize,
+                ReasoningEffortId = (byte)DB.Enums.DBReasoningEffortExtensions.FromString(cco.ReasoningEffort),
+            }
         };
     }
 }

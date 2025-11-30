@@ -1,7 +1,7 @@
 using Chats.BE.DB;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Neutral;
 using Chats.BE.Services.Models.Neutral.Conversions;
-using OpenAI.Chat;
 using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models;
@@ -96,7 +96,7 @@ public class AnthropicRequestWrapper(JsonObject json)
             tools.Add(ChatTool.CreateFunctionTool(
                 name,
                 description,
-                inputSchema != null ? BinaryData.FromString(inputSchema.ToJsonString()) : BinaryData.FromString("{}")
+                inputSchema?.ToJsonString() ?? "{}"
             ));
         }
 

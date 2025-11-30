@@ -4,7 +4,6 @@ using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Neutral;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.EntityFrameworkCore;
-using OpenAI.Chat;
 
 namespace Chats.BE.Services.FileServices;
 
