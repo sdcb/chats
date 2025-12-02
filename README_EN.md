@@ -94,7 +94,6 @@ Chats provides the following images:
 | Specific Minor Version          | `docker.io/sdcb/chats:{major.minor}`                    |
 | Linux x64                       | `docker.io/sdcb/chats:{version}-linux-x64`              |
 | Linux ARM64                     | `docker.io/sdcb/chats:{version}-linux-arm64`            |
-| Windows Nano Server 1809        | `docker.io/sdcb/chats:{version}-nanoserver-1809`        |
 | Windows Nano Server LTSC 2022   | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2022`    |
 | Windows Nano Server LTSC 2025   | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2025`    |
 
@@ -108,7 +107,6 @@ Chats provides the following images:
 - **Multi-platform Support**: `latest` and version tags (like `1.8.1`, `1.8`, `1`) are multi-platform images containing:
   - Linux x64
   - Linux ARM64
-  - Windows Nano Server 1809 (for Windows Server 2019)
   - Windows Nano Server LTSC 2022 (for Windows Server 2022)
   - Windows Nano Server LTSC 2025 (for Windows Server 2025)
 
