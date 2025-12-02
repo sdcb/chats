@@ -84,25 +84,15 @@ public class ToolCallTests : IClassFixture<ApiTestFixture>
         _output.WriteLine($"Finish Reason: {result["choices"]?[0]?["finish_reason"]}");
 
         JsonNode? message = result["choices"]?[0]?["message"];
-        if (message?["tool_calls"] is JsonArray toolCalls && toolCalls.Count > 0)
-        {
-            _output.WriteLine($"Tool calls: {toolCalls.Count}");
-            foreach (JsonNode? toolCall in toolCalls)
-            {
-                _output.WriteLine($"  - Function: {toolCall?["function"]?["name"]}");
-                _output.WriteLine($"    Arguments: {toolCall?["function"]?["arguments"]}");
-            }
+        JsonArray? toolCalls = message?["tool_calls"] as JsonArray;
+        Assert.True(toolCalls != null && toolCalls.Count > 0,
+            $"Expected tool_calls but got content: {message?["content"]}");
 
-            // Verify that at least one tool call was made
-            Assert.True(toolCalls.Count > 0, "Should have at least one tool call");
-        }
-        else
+        _output.WriteLine($"Tool calls: {toolCalls.Count}");
+        foreach (JsonNode? toolCall in toolCalls)
         {
-            _output.WriteLine($"Content: {message?["content"]}");
-            _output.WriteLine("(Tool calls may not be supported by this model)");
-            
-            // We don't fail the test if tool calls are not supported
-            // Some models may just provide a text response instead
+            _output.WriteLine($"  - Function: {toolCall?["function"]?["name"]}");
+            _output.WriteLine($"    Arguments: {toolCall?["function"]?["arguments"]}");
         }
     }
 
