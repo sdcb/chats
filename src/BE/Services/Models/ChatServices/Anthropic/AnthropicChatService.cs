@@ -731,7 +731,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
     private static JsonObject CreateThinkingBlock(NeutralThinkContent think)
     {
-        string? signatureBase64 = think.Signature != null ? Convert.ToBase64String(think.Signature) : null;
+        string? signatureBase64 = think.Signature != null ? Encoding.UTF8.GetString(think.Signature) : null;
 
         if (string.IsNullOrEmpty(think.Content))
         {

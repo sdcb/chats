@@ -4,6 +4,7 @@ using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 
 namespace Chats.BE.DB;
 
@@ -111,7 +112,7 @@ public partial class StepContent
             {
                 Base64PreviewImage => null, // skip preview images
                 TextChatSegment text => FromText(text.Text),
-                ThinkChatSegment think => FromThink(think.Think, think.Signature != null ? Convert.FromBase64String(think.Signature) : null),
+                ThinkChatSegment think => FromThink(think.Think, think.Signature != null ? Encoding.UTF8.GetBytes(think.Signature) : null),
                 ImageChatSegment image => FromFile(imageMcCache[image].Task.GetAwaiter().GetResult()),
                 ToolCallSegment tool => FromTool(tool.Id ?? tool.Index.ToString(), tool.Name!, tool.Arguments!),
                 ToolCallResponseSegment toolResp => FromToolResponse(toolResp.ToolCallId, toolResp.Response, toolResp.DurationMs, toolResp.IsSuccess),
