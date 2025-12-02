@@ -94,7 +94,6 @@ Chats 提供了以下几个镜像：
 | 指定次版本                     | `docker.io/sdcb/chats:{major.minor}`                    |
 | Linux x64                     | `docker.io/sdcb/chats:{version}-linux-x64`              |
 | Linux ARM64                   | `docker.io/sdcb/chats:{version}-linux-arm64`            |
-| Windows Nano Server 1809      | `docker.io/sdcb/chats:{version}-nanoserver-1809`        |
 | Windows Nano Server LTSC 2022 | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2022`    |
 | Windows Nano Server LTSC 2025 | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2025`    |
 
@@ -108,7 +107,6 @@ Chats 提供了以下几个镜像：
 - **多平台支持**：`latest` 和版本号标签（如 `1.8.1`、`1.8`、`1`）都是多平台镜像，包含：
   - Linux x64
   - Linux ARM64
-  - Windows Nano Server 1809（适用于 Windows Server 2019）
   - Windows Nano Server LTSC 2022（适用于 Windows Server 2022）
   - Windows Nano Server LTSC 2025（适用于 Windows Server 2025）
 
