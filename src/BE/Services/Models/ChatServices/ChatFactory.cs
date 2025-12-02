@@ -49,7 +49,12 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
                 _ => sp.GetRequiredService<ResponseApiService>() // Fallback to OpenAI-compatible
             },
 
-            DBApiType.AnthropicMessages => sp.GetRequiredService<AnthropicChatService>(),
+            DBApiType.AnthropicMessages => modelProvider switch
+            {
+                DBModelProvider.DeepSeek => sp.GetRequiredService<DeepSeekAnthropicService>(),
+                DBModelProvider.MiniMax => sp.GetRequiredService<MiniMaxAnthropicService>(),
+                _ => sp.GetRequiredService<AnthropicChatService>(),
+            },
 
             DBApiType.OpenAIImageGeneration => modelProvider switch
             {

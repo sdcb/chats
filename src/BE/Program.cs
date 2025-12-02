@@ -62,6 +62,8 @@ public class Program
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.ResponseApiService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.AzureResponseApiService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.Anthropic.AnthropicChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.Anthropic.DeepSeekAnthropicService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.Anthropic.MiniMaxAnthropicService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.ImageGenerationService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.AzureImageGenerationService>();
         builder.Services.AddSingleton<BalanceService>();
