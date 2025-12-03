@@ -10,7 +10,7 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 20+ 主流 
 - 🎯 **开箱即用**：支持 Docker 一键部署，也提供 8 种平台的原生可执行文件
 - 💾 **灵活存储**：支持 SQLite/SQL Server/PostgreSQL，支持本地文件/S3/OSS/Azure Blob 等多种存储
 - 🔐 **企业级安全**：完善的用户权限管理和账户余额控制，支持 Keycloak SSO
-- 🌐 **标准协议**：基于 OpenAI 协议的 API 网关，兼容现有生态
+- 🌐 **标准协议**：支持 OpenAI/Anthropic 等主流 API 协议，包括对话、图像生成等功能，兼容 Claude Code
 - 🎨 **现代界面**：美观易用的前端界面，支持视觉模型交互
 
 ## 功能特性

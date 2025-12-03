@@ -10,7 +10,7 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 - 🎯 **Ready to Use**: Supports Docker one-click deployment, also provides native executables for 8 platforms
 - 💾 **Flexible Storage**: Supports SQLite/SQL Server/PostgreSQL, local files/S3/OSS/Azure Blob and other storage options
 - 🔐 **Enterprise-Grade Security**: Comprehensive user permission management and account balance control, supports Keycloak SSO
-- 🌐 **Standard Protocol**: API gateway based on OpenAI protocol, compatible with existing ecosystem
+- 🌐 **Standard Protocol**: Supports mainstream API protocols including OpenAI/Anthropic for chat, image generation, and more, compatible with Claude Code
 - 🎨 **Modern Interface**: Beautiful and easy-to-use frontend interface, supports visual model interaction
 
 ## Features
