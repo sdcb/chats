@@ -173,7 +173,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
             // Parse usage
             Dtos.ChatTokenUsage? usage = null;
-            if (json.TryGetProperty("usage", out JsonElement u))
+            if (json.TryGetProperty("usage", out JsonElement u) && u.ValueKind == JsonValueKind.Object)
             {
                 usage = new Dtos.ChatTokenUsage
                 {
