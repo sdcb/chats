@@ -1,4 +1,4 @@
-import { FC, memo, useEffect, useRef, useState, useMemo } from 'react';
+import { FC, memo, useEffect, useRef, useState, useMemo, useId } from 'react';
 import mermaid from 'mermaid';
 import { useTheme } from 'next-themes';
 // removed unused syntax highlighter imports
@@ -35,7 +35,8 @@ export const MermaidBlock: FC<Props> = memo(({ value }) => {
   const [svgCode, setSvgCode] = useState<string>(() => svgCache.get(initialCacheKey) ?? '');
   const [error, setError] = useState<string>('');
   const [isFullscreenOpen, setIsFullscreenOpen] = useState<boolean>(false);
-  const idRef = useRef<string>(`mermaid-${Math.random().toString(36).substr(2, 9)}`);
+  const reactId = useId();
+  const idRef = useRef<string>(`mermaid-${reactId.replace(/[:]/g, '')}`);
   const lastRenderedKeyRef = useRef<string | null>(null);
   // 组件挂载标记，用于避免卸载后 setState
   const isMountedRef = useRef<boolean>(true);
