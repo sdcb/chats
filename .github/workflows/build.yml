@@ -28,6 +28,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
+      - name: Get Version
+        id: get_version
+        run: |
+          cd ./src/BE
+          ver=$(grep -oPm1 "(?<=<Version>)[^<]+" Chats.BE.csproj) # 1.0.0
+          minor_ver=$(echo $ver | cut -d '.' -f 1-2) # 1.0
+          major_ver=$(echo $ver | cut -d '.' -f 1) # 1
+          full_ver=${ver}.${{ github.run_number }} # 1.0.0.587
+          
+          echo "full_ver=${full_ver}" >> $GITHUB_OUTPUT
+          echo "patch_full_ver=${ver}" >> $GITHUB_OUTPUT
+          echo "minor_full_ver=${minor_ver}" >> $GITHUB_OUTPUT
+          echo "major_ver=${major_ver}" >> $GITHUB_OUTPUT
+          echo "msbuild_args=/p:Version=${full_ver} /p:AssemblyVersion=${full_ver} /p:FileVersion=${full_ver} /p:InformationalVersion=${full_ver}" >> $GITHUB_OUTPUT
+          echo "FE_VERSION=${full_ver}" >> $GITHUB_ENV
+        
       - name: Cache FE build output
         id: fe_build_cache
         uses: actions/cache@v4
@@ -52,21 +68,6 @@ jobs:
         if: steps.fe_build_cache.outputs.cache-hit != 'true'
         working-directory: ./src/FE
         run: npm run build
-
-      - name: Get Version
-        id: get_version
-        run: |
-          cd ./src/BE
-          ver=$(grep -oPm1 "(?<=<Version>)[^<]+" Chats.BE.csproj) # 1.0.0
-          minor_ver=$(echo $ver | cut -d '.' -f 1-2) # 1.0
-          major_ver=$(echo $ver | cut -d '.' -f 1) # 1
-          full_ver=${ver}.${{ github.run_number }} # 1.0.0.587
-          
-          echo "full_ver=${full_ver}" >> $GITHUB_OUTPUT
-          echo "patch_full_ver=${ver}" >> $GITHUB_OUTPUT
-          echo "minor_full_ver=${minor_ver}" >> $GITHUB_OUTPUT
-          echo "major_ver=${major_ver}" >> $GITHUB_OUTPUT
-          echo "msbuild_args=/p:Version=${full_ver} /p:AssemblyVersion=${full_ver} /p:FileVersion=${full_ver} /p:InformationalVersion=${full_ver}" >> $GITHUB_OUTPUT
 
       - name: Copy FE build artifacts
         run: |

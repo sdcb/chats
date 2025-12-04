@@ -9,6 +9,7 @@ import Document, {
 
 type Props = DocumentProps & {
   apiUrl: string;
+  feVersion: string;
 };
 
 function ChatsDocument(props: Props) {
@@ -30,7 +31,7 @@ function ChatsDocument(props: Props) {
         <NextScript />
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.API_URL = "${props.apiUrl}";`,
+            __html: `window.API_URL = ${JSON.stringify(props.apiUrl)};window.FE_VERSION = ${JSON.stringify(props.feVersion)};`,
           }}
         />
       </body>
@@ -41,7 +42,8 @@ function ChatsDocument(props: Props) {
 (ChatsDocument as any).getInitialProps = async (ctx: DocumentContext) => {
   const initialProps = await Document.getInitialProps(ctx);
   const apiUrl = process.env.API_URL || '';
-  return { ...initialProps, apiUrl };
+  const feVersion = process.env.FE_VERSION || 'local';
+  return { ...initialProps, apiUrl, feVersion };
 };
 
 export default ChatsDocument;

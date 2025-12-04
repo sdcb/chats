@@ -29,10 +29,16 @@ type LoginHeader = {
   [key in TabKeys]: { title: string; description: string };
 };
 
+const getFeVersion = () =>
+  typeof window !== 'undefined'
+    ? (window as any).FE_VERSION as string
+    : process.env.FE_VERSION as string;
+
 export default function LoginPage() {
   const { t } = useTranslation();
   const [isClient, setIsClient] = useState(false);
   const [webSiteInfo, setWebSiteInfo] = useState<SiteInfoConfig>();
+  const [feVersion, setFeVersion] = useState<string>(getFeVersion);
   const LoginHeaders: LoginHeader = {
     phone: {
       title: t('Sign in to Chats'),
@@ -83,10 +89,11 @@ export default function LoginPage() {
         setLoginConfigs([]);
         setCurrentTab(TabKeys.ACCOUNT);
         setLoading(false);
-      });
+    });
     getSiteInfo().then((data) => {
       setWebSiteInfo(data);
     });
+    setFeVersion(getFeVersion());
   }, []);
 
   const openLoading = () => setLoginLoading(true);
@@ -239,16 +246,21 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="flex justify-center h-1/6 items-end text-sm text-muted-foreground">
-              © {new Date().getFullYear()}&nbsp;
-              <Button
-                className="p-0 m-0 h-auto font-semibold text-sm text-muted-foreground"
-                variant="link"
-                onClick={redirectToGithub}
-              >
-                Chats
-              </Button>
-              . All Rights Reserved.
+            <div className="flex justify-between items-end h-1/6 text-sm text-muted-foreground">
+              <div className="flex items-center text-center">
+                © {new Date().getFullYear()}&nbsp;
+                <Button
+                  className="p-0 m-0 h-auto font-semibold text-sm text-muted-foreground"
+                  variant="link"
+                  onClick={redirectToGithub}
+                >
+                  Sdcb Chats
+                </Button>
+                . All Rights Reserved.
+              </div>
+              <div className="text-xs text-muted-foreground text-right font-mono">
+                {feVersion}
+              </div>
             </div>
           </div>
         </div>
