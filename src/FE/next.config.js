@@ -16,6 +16,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  turbopack: {},
   webpack(config) {
     config.experiments = {
       asyncWebAssembly: true,
@@ -23,10 +24,6 @@ const nextConfig = {
     };
 
     return config;
-  },
-  publicRuntimeConfig: {
-    chattingIds: {},
-    globalConfigs: {},
   },
 };
 

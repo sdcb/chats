@@ -1,11 +1,11 @@
-import { FC } from 'react';
+import { FC, ReactNode } from 'react';
 
 interface Props {
   text: string;
   href: string;
-  icon?: JSX.Element;
+  icon?: ReactNode;
   className?: string;
-  action?: JSX.Element;
+  action?: ReactNode;
   onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 

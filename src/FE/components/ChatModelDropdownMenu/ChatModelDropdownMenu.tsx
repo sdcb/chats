@@ -1,4 +1,4 @@
-import { forwardRef, useState } from 'react';
+import { forwardRef, useState, ReactNode } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -42,7 +42,7 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
   modelName?: string;
   readonly?: boolean;
   showRegenerate?: boolean;
-  content?: string | React.JSX.Element;
+  content?: string | ReactNode;
   className?: string;
   triggerClassName?: string;
   groupClassName?: string;

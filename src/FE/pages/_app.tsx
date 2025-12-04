@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
-import { QueryClient, QueryClientProvider } from 'react-query';
 
 import type { AppProps } from 'next/app';
 import { useRouter } from 'next/router';
@@ -19,7 +18,6 @@ import 'katex/dist/katex.min.css';
 
 function App({ Component, pageProps }: AppProps<{}> | any) {
   const route = useRouter();
-  const queryClient = new QueryClient();
 
   const [isClient, setIsClient] = useState(false);
 
@@ -40,27 +38,22 @@ function App({ Component, pageProps }: AppProps<{}> | any) {
       disableTransitionOnChange
     >
       <Toaster />
-      {isClient && (
-        <QueryClientProvider client={queryClient}>
-          {route.pathname.includes('/admin') ? (
-            isAdmin() ? (
-              <AdminLayout>
-                <Component {...pageProps} />
-              </AdminLayout>
-            ) : (
-              <ErrorPage statusCode={404} />
-            )
-          ) : route.pathname.includes('/build') ? (
-            <BuildLayout>
+      {isClient &&
+        (route.pathname.includes('/admin') ? (
+          isAdmin() ? (
+            <AdminLayout>
               <Component {...pageProps} />
-            </BuildLayout>
-          ) : route.pathname.includes('/authorizing') ? (
-            <Component {...pageProps} />
+            </AdminLayout>
           ) : (
+            <ErrorPage statusCode={404} />
+          )
+        ) : route.pathname.includes('/build') ? (
+          <BuildLayout>
             <Component {...pageProps} />
-          )}
-        </QueryClientProvider>
-      )}
+          </BuildLayout>
+        ) : (
+          <Component {...pageProps} />
+        ))}
     </ThemeProvider>
   );
 }

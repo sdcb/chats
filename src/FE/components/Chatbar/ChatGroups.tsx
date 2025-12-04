@@ -191,9 +191,9 @@ const ChatGroups = ({ onShowMore }: Props) => {
           <div
             key={'chat-group-' + index}
             className="rounded-md"
-            ref={(el) =>
-              (groupRefs.current[group.id || UngroupedChatName] = el)
-            }
+            ref={(el) => {
+              groupRefs.current[group.id || UngroupedChatName] = el;
+            }}
             onDrop={(e) => handleDrop(e, group)}
             onDragOver={handleDragOver}
             onDragEnd={handleRemoveDragStyles}

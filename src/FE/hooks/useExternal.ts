@@ -95,7 +95,7 @@ const loadCss: LoadExternal = (path, props = {}) => {
 const useExternal = (path?: string, options?: Options) => {
   const [status, setStatus] = useState<Status>(path ? 'loading' : 'unset');
 
-  const ref = useRef<Element>();
+  const ref = useRef<Element | null>(null);
 
   useEffect(() => {
     if (!path) {
@@ -153,7 +153,7 @@ const useExternal = (path?: string, options?: Options) => {
         ref.current?.remove();
       }
 
-      ref.current = undefined;
+      ref.current = null;
     };
   }, [path]);
 

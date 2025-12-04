@@ -40,6 +40,13 @@ import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import remarkBreaks from 'remark-breaks';
+import type { Components as MarkdownComponents } from 'react-markdown';
+import type {
+  CodeProps,
+  ReactMarkdownProps,
+  TableDataCellProps,
+  TableHeaderCellProps,
+} from 'react-markdown/lib/ast-to-react';
 
 // 骨架动画组件
 const SkeletonLine = ({ width = '100%', height = '1rem', delay = '0s' }: { width?: string; height?: string; delay?: string }) => (
@@ -66,6 +73,59 @@ const MessageSkeleton = () => (
     <SkeletonLine width="40%" delay="0.3s" />
   </div>
 );
+
+const markdownComponents = {
+  code({ node, className, inline, children, ...props }: CodeProps) {
+    if (children.length) {
+      if (children[0] == '▍') {
+        return (
+          <span className="animate-pulse cursor-default mt-1">
+            ▍
+          </span>
+        );
+      }
+    }
+
+    const match = /language-(\w+)/.exec(className || '');
+
+    return !inline ? (
+      <CodeBlock
+        key={Math.random()}
+        language={(match && match[1]) || ''}
+        value={String(children).replace(/\n$/, '')}
+        {...props}
+      />
+    ) : (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
+  },
+  p({ children }: ReactMarkdownProps) {
+    return <p className="md-p">{children}</p>;
+  },
+  table({ children }: ReactMarkdownProps) {
+    return (
+      <table className="border-collapse border border-black px-3 py-1 dark:border-white">
+        {children}
+      </table>
+    );
+  },
+  th({ children }: TableHeaderCellProps) {
+    return (
+      <th className="break-words border border-black bg-gray-500 px-3 py-1 text-white dark:border-white">
+        {children}
+      </th>
+    );
+  },
+  td({ children }: TableDataCellProps) {
+    return (
+      <td className="break-words border border-black px-3 py-1 dark:border-white">
+        {children}
+      </td>
+    );
+  },
+} as unknown as MarkdownComponents;
 
 interface Props {
   message: IChatMessage;
@@ -427,58 +487,7 @@ const ResponseMessage = (props: Props) => {
                   // 顺序：math -> gfm -> breaks，确保数学与 GFM 处理后，再将 softbreak 转为 <br/>
                   remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
                   rehypePlugins={[rehypeKatex as any]}
-                  components={{
-                    code({ node, className, inline, children, ...props }) {
-                      if (children.length) {
-                        if (children[0] == '▍') {
-                          return (
-                            <span className="animate-pulse cursor-default mt-1">
-                              ▍
-                            </span>
-                          );
-                        }
-                      }
-
-                      const match = /language-(\w+)/.exec(className || '');
-
-                      return !inline ? (
-                        <CodeBlock
-                          key={Math.random()}
-                          language={(match && match[1]) || ''}
-                          value={String(children).replace(/\n$/, '')}
-                          {...props}
-                        />
-                      ) : (
-                        <code className={className} {...props}>
-                          {children}
-                        </code>
-                      );
-                    },
-                    p({ children }) {
-                      return <p className="md-p">{children}</p>;
-                    },
-                    table({ children }) {
-                      return (
-                        <table className="border-collapse border border-black px-3 py-1 dark:border-white">
-                          {children}
-                        </table>
-                      );
-                    },
-                    th({ children }) {
-                      return (
-                        <th className="break-words border border-black bg-gray-500 px-3 py-1 text-white dark:border-white">
-                          {children}
-                        </th>
-                      );
-                    },
-                    td({ children }) {
-                      return (
-                        <td className="break-words border border-black px-3 py-1 dark:border-white">
-                          {children}
-                        </td>
-                      );
-                    },
-                  }}
+                  components={markdownComponents}
                 >
                   {`${preprocessLaTeX(c.c!)}${
                     (messageStatus === ChatSpanStatus.Pending || messageStatus === ChatSpanStatus.Chatting) && 
