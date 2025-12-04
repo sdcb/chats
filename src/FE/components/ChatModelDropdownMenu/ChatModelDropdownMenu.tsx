@@ -89,12 +89,16 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
     setSearchTerm('');
   };
 
-  const NoModelRender = () =>
-    models.length === 0 && (
+  const renderNoModel = () => {
+    if (models.length > 0) {
+      return null;
+    }
+    return (
       <div className="p-2 mx-1 text-center text-muted-foreground text-sm">
         {t('No data')}
       </div>
     );
+  };
 
   return (
     <DropdownMenu onOpenChange={handleOpenMenu}>
@@ -129,7 +133,7 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
           searchTerm={searchTerm}
           onSearch={handleSearch}
         />
-        <NoModelRender />
+        {renderNoModel()}
         <DropdownMenuGroup className={groupClassName}>
           {modelGroup.map((m) => {
             return (

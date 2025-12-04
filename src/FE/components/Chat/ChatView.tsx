@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -127,53 +128,19 @@ const ChatView = memo(() => {
     autoScrollDisabledRef.current = autoScrollTemporarilyDisabled;
   }, [autoScrollTemporarilyDisabled]);
 
-  // 定义所有需要在hooks规则下的callback和effect
-  const handleSend = useCallback(
-    async (message: Message, messageId?: string) => {
-      if (!selectedChat) return;
-      if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
-      
-      // 检查是否存在任何助手回复
-      const hasAssistantResponse = selectedMessages.some(messageGroup => 
-        messageGroup.some(msg => msg.role === ChatRole.Assistant)
+  const checkSelectChatModelIsExist = useCallback((spans: ChatSpanDto[]) => {
+    const modelList = spans
+      .filter((x) => !models.find((m) => m.modelId === x.modelId))
+      .map((x) => x.modelName);
+    const count = modelList.length;
+    count > 0 &&
+      toast.error(
+        t('The model {{modelName}} does not exist', {
+          modelName: modelList.join(' '),
+        }),
       );
-      
-      // 如果有用户消息但没有助手回复，提示错误
-      if (selectedMessages.length > 0 && !hasAssistantResponse) {
-        toast.error(t('Cannot send message: No valid conversation context. Please start a new chat.'));
-        return;
-      }
-      
-      startChat();
-      let { id: chatId } = selectedChat;
-      let selectedMessageList = [...selectedMessages];
-      let userMessage = generateUserMessage(message.content, messageId);
-      selectedMessageList.push([userMessage]);
-      let responseMessages = generateResponseMessages(selectedChat, messageId);
-      selectedMessageList.push(responseMessages);
-      messageDispatch(setSelectedMessages(selectedMessageList));
-      const requestContent: RequestContent[] = responseContentToRequest(
-        message.content,
-      );
-      let chatBody = {
-        chatId,
-        timezoneOffset: getTz(),
-        parentAssistantMessageId: messageId || null,
-        userMessage: requestContent,
-      };
-
-      try {
-        const stream = streamGeneralChat(chatBody);
-        await handleChatMessage(stream, selectedMessageList);
-      } catch (e: any) {
-        handleChatError();
-        const err = e as ChatApiError;
-        const msg = err?.message || (typeof e === 'string' ? e : '');
-        toast.error(t(msg) || msg);
-      }
-    },
-    [chats, selectedChat, selectedMessages, t, messageDispatch],
-  );
+    return count === 0;
+  }, [models, t]);
 
   const autoScrollCallback = useCallback(() => {
     if (autoScrollEnabled) {
@@ -187,9 +154,9 @@ const ChatView = memo(() => {
     }
   }, [autoScrollEnabled]);
   
-  const throttledScrollDown = useCallback(
-    throttle(scrollDown, 250),
-    [scrollDown]
+  const throttledScrollDown = useMemo(
+    () => throttle(scrollDown, 250),
+    [scrollDown],
   );
 
   const handleScroll = useCallback(() => {
@@ -294,44 +261,50 @@ const ChatView = memo(() => {
     return lastMessage;
   };
 
-  const changeChatTitle = (title: string, append: boolean = false) => {
-    if (!selectedChat) return;
+  const changeChatTitle = useCallback(
+    (title: string, append: boolean = false) => {
+      if (!selectedChat) return;
 
-    updateChatsState((prevChats) =>
-      prevChats.map((chat) => {
-        if (chat.id !== selectedChat.id) {
-          return chat;
-        }
+      updateChatsState((prevChats) =>
+        prevChats.map((chat) => {
+          if (chat.id !== selectedChat.id) {
+            return chat;
+          }
 
-        const nextTitle = append
-          ? `${chat.title ?? ''}${title}`
-          : title;
+          const nextTitle = append
+            ? `${chat.title ?? ''}${title}`
+            : title;
 
-        return { ...chat, title: nextTitle };
-      }),
-    );
-  };
+          return { ...chat, title: nextTitle };
+        }),
+      );
+    },
+    [selectedChat, updateChatsState],
+  );
 
-  const changeSelectedChatStatus = (status: ChatStatus) => {
-    if (!selectedChat) return;
+  const changeSelectedChatStatus = useCallback(
+    (status: ChatStatus) => {
+      if (!selectedChat) return;
 
-    updateChatsState((prevChats) =>
-      prevChats.map((chat) =>
-        chat.id === selectedChat.id ? { ...chat, status } : chat,
-      ),
-    );
-  };
+      updateChatsState((prevChats) =>
+        prevChats.map((chat) =>
+          chat.id === selectedChat.id ? { ...chat, status } : chat,
+        ),
+      );
+    },
+    [selectedChat, updateChatsState],
+  );
 
-  const startChat = () => {
+  const startChat = useCallback(() => {
     changeSelectedChatStatus(ChatStatus.Chatting);
     autoScrollDisabledRef.current = false;
     setAutoScrollTemporarilyDisabled(false);
     setAutoScrollEnabled(true);
-  };
+  }, [changeSelectedChatStatus]);
 
-  const handleChatError = () => {
+  const handleChatError = useCallback(() => {
     changeSelectedChatStatus(ChatStatus.Failed);
-  };
+  }, [changeSelectedChatStatus]);
 
   const changeSelectedResponseMessage = (
     selectedMsgs: IChatMessage[][],
@@ -721,20 +694,6 @@ const ChatView = memo(() => {
     return newSelectedMsgs;
   };
 
-  const checkSelectChatModelIsExist = (spans: ChatSpanDto[]) => {
-    const modelList = spans
-      .filter((x) => !models.find((m) => m.modelId === x.modelId))
-      .map((x) => x.modelName);
-    const count = modelList.length;
-    count > 0 &&
-      toast.error(
-        t('The model {{modelName}} does not exist', {
-          modelName: modelList.join(' '),
-        }),
-      );
-    return count === 0;
-  };
-
   const handleRegenerate = async (
     spanId: number,
     messageId: string,
@@ -868,14 +827,15 @@ const ChatView = memo(() => {
     }
   };
 
-  const handleChatMessage = async (
-    stream: AsyncIterable<SseResponseLine>,
-    selectedMessageList: IChatMessage[][],
-  ) => {
-  if (!selectedChat) return;
-  let messageList = [...messages];
-  // 用于跟踪每个 span 最近一次非空的工具调用 ID，便于将 u 为 null 的参数片段归并
-  const currentToolCallIdBySpan = new Map<number, string>();
+  const handleChatMessage = useCallback(
+    async (
+      stream: AsyncIterable<SseResponseLine>,
+      selectedMessageList: IChatMessage[][],
+    ) => {
+      if (!selectedChat) return;
+      let messageList = [...messages];
+      // 用于跟踪每个 span 最近一次非空的工具调用 ID，便于将 u 为 null 的参数片段归并
+      const currentToolCallIdBySpan = new Map<number, string>();
     for await (const value of stream) {
       if (value.k === SseResponseKind.StopId) {
         chatDispatch(setStopIds([value.r]));
@@ -1005,7 +965,17 @@ const ChatView = memo(() => {
     changeSelectedChatStatus(ChatStatus.None);
     autoScrollDisabledRef.current = false;
     setAutoScrollTemporarilyDisabled(false);
-  };
+    },
+    [
+      changeChatTitle,
+      changeSelectedChatStatus,
+      chatDispatch,
+      messageDispatch,
+      messages,
+      selectedChat,
+      updateChatsState,
+    ],
+  );
 
   const handleScrollDown = () => {
     chatContainerRef.current?.scrollTo({
@@ -1364,6 +1334,64 @@ const ChatView = memo(() => {
     messageDispatch(setMessages(msgs));
     messageDispatch(setSelectedMessages(selectedMsgs));
   };
+
+  const handleSend = useCallback(
+    async (message: Message, messageId?: string) => {
+      if (!selectedChat) return;
+      if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
+
+      const hasAssistantResponse = selectedMessages.some((messageGroup) =>
+        messageGroup.some((msg) => msg.role === ChatRole.Assistant),
+      );
+
+      if (selectedMessages.length > 0 && !hasAssistantResponse) {
+        toast.error(
+          t(
+            'Cannot send message: No valid conversation context. Please start a new chat.',
+          ),
+        );
+        return;
+      }
+
+      startChat();
+      const { id: chatId } = selectedChat;
+      let selectedMessageList = [...selectedMessages];
+      const userMessage = generateUserMessage(message.content, messageId);
+      selectedMessageList.push([userMessage]);
+      const responseMessages = generateResponseMessages(selectedChat, messageId);
+      selectedMessageList.push(responseMessages);
+      messageDispatch(setSelectedMessages(selectedMessageList));
+      const requestContent: RequestContent[] = responseContentToRequest(
+        message.content,
+      );
+      const chatBody = {
+        chatId,
+        timezoneOffset: getTz(),
+        parentAssistantMessageId: messageId || null,
+        userMessage: requestContent,
+      };
+
+      try {
+        const stream = streamGeneralChat(chatBody);
+        await handleChatMessage(stream, selectedMessageList);
+      } catch (e: any) {
+        handleChatError();
+        const err = e as ChatApiError;
+        const msg = err?.message || (typeof e === 'string' ? e : '');
+        toast.error(t(msg) || msg);
+      }
+    },
+    [
+      checkSelectChatModelIsExist,
+      handleChatError,
+      handleChatMessage,
+      messageDispatch,
+      selectedChat,
+      selectedMessages,
+      startChat,
+      t,
+    ],
+  );
 
   // 如果没有选中的聊天，显示NoChat或NoModel组件
   if (!selectedChat) {

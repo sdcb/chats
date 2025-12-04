@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -345,10 +346,12 @@ const ResponseMessage = (props: Props) => {
                   if (isImage) {
                     return (
                       <div key={'temp-file-' + groupIndex + '-' + index} className="relative rounded-md overflow-hidden" style={{ maxWidth: 300, maxHeight: 300 }}>
-                        <img
+                        <Image
                           alt={t('Loading...')}
                           className="w-full h-full object-cover rounded-md cursor-pointer hover:opacity-90 transition-opacity"
                           src={imageUrl}
+                          width={300}
+                          height={300}
                           onClick={(e) => handleImageClick(imageUrl, allImageUrls, e)}
                         />
                         {/* 蓝色激光扫描效果 */}

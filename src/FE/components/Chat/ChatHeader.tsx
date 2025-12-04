@@ -152,7 +152,7 @@ const ChatHeader = () => {
     updateChatInChats(updatedChat);
   };
 
-  const AddBtnRender = () => {
+  const renderAddButton = () => {
     if (selectedChat.spans.length >= MAX_SELECT_MODEL_COUNT) {
       return null;
     }
@@ -184,7 +184,7 @@ const ChatHeader = () => {
     );
   };
 
-  const ResetBtnRender = () => {
+  const renderResetButton = () => {
     // 只在有消息时显示重设按钮
     const hasMessages = selectedChat.leafMessageId && selectedChat.leafMessageId.trim() !== '';
     
@@ -344,8 +344,8 @@ const ChatHeader = () => {
                     </div>
                     );
                   })}
-                  <AddBtnRender />
-                  <ResetBtnRender />
+                  {renderAddButton()}
+                  {renderResetButton()}
                 </div>
               </div>
             </div>

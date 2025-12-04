@@ -21,4 +21,3 @@ export const setModelMap = (models: AdminModelDto[]): ModelAction => {
   };
 };
 
-export default function () {}

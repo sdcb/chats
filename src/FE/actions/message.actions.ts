@@ -16,4 +16,3 @@ export const setSelectedMessages = (
   payload: selectedMessages,
 });
 
-export default function () {}

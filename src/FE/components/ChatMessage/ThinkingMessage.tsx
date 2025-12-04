@@ -174,17 +174,7 @@ const ThinkingMessage = (props: Props) => {
     } finally {
       setLoading(false);
     }
-  }, [
-    canLoadDuration,
-    cacheKey,
-    chatId,
-    chatShareId,
-    displayDurationMs,
-    loading,
-    messageId,
-    requestGenerateInfo,
-    resolveDurationFromSteps,
-  ]);
+  }, [canLoadDuration, cacheKey, displayDurationMs, loading, resolveDurationFromSteps]);
   
   useEffect(() => {
     const cached = getCachedGenerateInfo(cacheKey);

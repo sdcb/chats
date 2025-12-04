@@ -84,4 +84,3 @@ export const setChatsSelectType = (type: CHATS_SELECT_TYPE): ChatAction => ({
   payload: type,
 });
 
-export default function () {}

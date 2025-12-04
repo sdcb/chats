@@ -17,4 +17,3 @@ export const setPrompts = (prompts: PromptSlim[]): PromptAction => ({
   payload: prompts,
 });
 
-export default function () {}

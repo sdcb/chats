@@ -3,7 +3,6 @@ import {
   KeyboardEvent,
   MouseEventHandler,
   useContext,
-  useEffect,
   useState,
 } from 'react';
 import toast from 'react-hot-toast';
@@ -125,11 +124,15 @@ const ChatItem = ({ chat, onDragItemStart }: Props) => {
   const handleOpenChangeTitleModal: MouseEventHandler<HTMLDivElement> = (e) => {
     e.stopPropagation();
     setTitleChanging(true);
+    setIsDeleting(false);
+    setIsArchive(false);
     selectChatId && setTitle(chat.title);
   };
   const handleOpenDeleteModal: MouseEventHandler<HTMLDivElement> = (e) => {
     e.stopPropagation();
     setIsDeleting(true);
+    setTitleChanging(false);
+    setIsArchive(false);
   };
   const handleOpenShareModal: MouseEventHandler<HTMLDivElement> = (e) => {
     e.stopPropagation();
@@ -143,6 +146,8 @@ const ChatItem = ({ chat, onDragItemStart }: Props) => {
   const handleOpenArchiveModal: MouseEventHandler<HTMLDivElement> = (e) => {
     e.stopPropagation();
     setIsArchive(true);
+    setIsDeleting(false);
+    setTitleChanging(false);
   };
 
   const handleChangeChatPin = (chatId: string, isPin: boolean = false) => {
@@ -164,14 +169,6 @@ const ChatItem = ({ chat, onDragItemStart }: Props) => {
     );
     chatDispatch(setChats(chatList));
   };
-
-  useEffect(() => {
-    if (isChanging) {
-      setIsDeleting(false);
-    } else if (isDeleting) {
-      setTitleChanging(false);
-    }
-  }, [isChanging, isDeleting]);
 
   return (
     <div className="relative flex items-center rounded-lg">

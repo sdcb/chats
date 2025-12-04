@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import { useRouter } from 'next/router';
@@ -33,13 +33,12 @@ import {
   putUserApiKey,
 } from '@/apis/clientApis';
 
-let timer: NodeJS.Timeout;
-
 export default function BuildApiKeyPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [apiKeys, setApiKeys] = useState<GetUserApiKeyResult[]>([]);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
   type GetUserApiKeyType = keyof GetUserApiKeyResult;
 
   const initData = () => {
@@ -53,8 +52,15 @@ export default function BuildApiKeyPage() {
   };
 
   useEffect(() => {
-    setLoading(true);
     initData();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
   }, []);
 
   const createApiKey = () => {
@@ -74,8 +80,10 @@ export default function BuildApiKeyPage() {
       data[index][type] = value;
       return data;
     });
-    clearTimeout(timer);
-    timer = setTimeout(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
       putUserApiKey(apiKey.id, { [type]: value }).then(() => {
         toast.success(t('Save successful'));
       });

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -40,7 +40,7 @@ export default function UserInitialConfig() {
     setIsOpenModal(true);
   };
 
-  const getConfigs = () => {
+  const getConfigs = useCallback(() => {
     setLoading(true);
     getUserInitialConfig()
       .then((data) => {
@@ -53,10 +53,9 @@ export default function UserInitialConfig() {
       .finally(() => {
         setLoading(false);
       });
-  };
+  }, [t]);
 
-  useEffect(() => {
-    setLoading(true);
+  const loadModels = useCallback(() => {
     getModels()
       .then((data) => {
         setModels(data.filter((x) => x.enabled === true));
@@ -67,7 +66,11 @@ export default function UserInitialConfig() {
         toast.error(t('Failed to load models'));
         setLoading(false);
       });
-  }, []);
+  }, [getConfigs, t]);
+
+  useEffect(() => {
+    loadModels();
+  }, [loadModels]);
 
   const NameCell = (config: GetUserInitialConfigResult) => {
     return (

@@ -133,7 +133,7 @@ const Chatbar = () => {
         value: chats,
       });
     }
-  }, [searchTerm, chats]);
+  }, [chats, dispatch, searchTerm]);
 
   return (
     <ChatbarContext.Provider

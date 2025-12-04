@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -62,11 +63,11 @@ export default function LoginPage() {
   const [loginConfigs, setLoginConfigs] = useState<LoginConfigsResult[]>([]);
   const [loginLoading, setLoginLoading] = useState(false);
   const [currentTab, setCurrentTab] = useState<TabKeys>(TabKeys.ACCOUNT);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsClient(true);
-    setLoading(true);
     getLoginProviders()
       .then((data) => {
         let hasPhoneType = false;
@@ -102,7 +103,7 @@ export default function LoginPage() {
   const hasLoginType = (type: LoginType) =>
     !!loginConfigs.find((x) => x.type === type);
 
-  const TabsListRender = () => {
+  const renderTabsList = () => {
     return hasLoginType(LoginType.Phone) ? (
       <TabsList className="flex w-full flex-row justify-around">
         {hasLoginType(LoginType.Phone) && (
@@ -140,12 +141,13 @@ export default function LoginPage() {
           <div className="relative hidden h-full flex-col  p-10 text-white dark:text-black lg:flex dark:border-r">
             <div className="absolute inset-0 dark:bg-gray-50 bg-zinc-900 bg-[url('/images/login_bg.avif')] bg-cover" />
             <div className="relative z-20 flex items-center text-lg font-medium text-white">
-              <img
+              <Image
                 src="/icons/logo.png"
                 width={32}
                 height={32}
                 className="mr-2 h-8 w-8"
                 alt="logo"
+                priority
               />
               Chats
             </div>
@@ -174,7 +176,7 @@ export default function LoginPage() {
                         }}
                         className="flex-col"
                       >
-                        <TabsListRender />
+                        {renderTabsList()}
                         <TabsContent className="m-0 mt-4" value={TabKeys.PHONE}>
                           <PhoneLoginCard
                             openLoading={openLoading}

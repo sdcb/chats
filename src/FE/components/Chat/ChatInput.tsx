@@ -192,7 +192,7 @@ const ChatInput = ({
 
     // 更新上一次的状态
     prevChatStatusRef.current = currentStatus;
-  }, [selectedChat?.status, showChatInput, settingDispatch, isCollapsedByChat]);
+  }, [selectedChat, showChatInput, settingDispatch, isCollapsedByChat]);
 
   // 监听 showChatInput 变化，触发动画
   useEffect(() => {

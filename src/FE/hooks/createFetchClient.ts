@@ -1,6 +1,6 @@
 import toast from 'react-hot-toast';
 
-import useTranslation from '@/hooks/useTranslation';
+import { translate } from '@/hooks/useTranslation';
 
 import { getApiUrl } from '@/utils/common';
 import {
@@ -44,7 +44,6 @@ const readResponse = async (response: Response) => {
 };
 
 const handleErrorResponse = async (err: Response, suppressDefaultToast?: boolean) => {
-  const { t } = useTranslation();
   const error = await readResponse(err);
   let message = error?.message || error?.errMessage || error;
 
@@ -71,13 +70,13 @@ const handleErrorResponse = async (err: Response, suppressDefaultToast?: boolean
           : 'Operation failed, Please try again later, or contact technical personnel';
   }
   if (!suppressDefaultToast) {
-    const tMsg = t(message);
+    const tMsg = translate(message);
     tMsg && toast.error(tMsg);
   }
   throw error;
 };
 
-export const useFetch = () => {
+export const createFetchClient = () => {
   const handleFetch = async (
     url: string,
     request: any,

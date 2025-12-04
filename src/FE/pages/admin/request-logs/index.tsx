@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -43,20 +43,23 @@ export default function RequestLogs() {
   });
   const [query, setQuery] = useState('');
 
-  const updateQueryWithDebounce = useDebounce((query: string) => {
-    init(query);
-  }, 1000);
+  const init = useCallback(
+    (queryText: string = '') => {
+      getRequestLogs({ ...pagination, query: queryText }).then((data) => {
+        setRequestLogs(data);
+        setLoading(false);
+      });
+    },
+    [pagination],
+  );
 
-  const init = (query: string = '') => {
-    getRequestLogs({ ...pagination, query }).then((data) => {
-      setRequestLogs(data);
-      setLoading(false);
-    });
-  };
+  const updateQueryWithDebounce = useDebounce((searchQuery: string) => {
+    init(searchQuery);
+  }, 1000);
 
   useEffect(() => {
     init();
-  }, [pagination]);
+  }, [init]);
 
   return (
     <>

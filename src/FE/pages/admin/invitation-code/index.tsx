@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -28,17 +28,18 @@ export default function InvitationCode() {
   const [codes, setCodes] = useState<GetInvitationCodeResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
-  useEffect(() => {
-    init();
-  }, []);
 
-  const init = () => {
+  const init = useCallback(() => {
     getInvitationCode().then((data) => {
       setCodes(data);
       setIsOpen(false);
       setLoading(false);
     });
-  };
+  }, []);
+
+  useEffect(() => {
+    init();
+  }, [init]);
 
   const handleClose = () => {
     setIsOpen(false);

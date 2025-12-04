@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
@@ -66,16 +66,14 @@ const ChatModelSettingModal = (props: Props) => {
   };
 
   // 加载MCP服务器数据
-  const loadMcpServers = async () => {
+  const loadMcpServers = useCallback(() => {
     if (mcpServersLoaded || mcpLoadingTriggered) return;
-    
     setMcpLoadingTriggered(true);
-    // 仅标记需要加载，由子组件来执行实际请求
     setMcpServersLoaded(true);
-  };
+  }, [mcpLoadingTriggered, mcpServersLoaded]);
 
   useEffect(() => {
-    if (!selectedChat) return;
+    if (!selectedChat || !isOpen) return;
     
     const originalSpan = selectedChat.spans.find((x) => x.spanId === spanId);
     if (!originalSpan) {
@@ -88,15 +86,23 @@ const ChatModelSettingModal = (props: Props) => {
     };
     setSpan(normalizedSpan);
     setModel(modelMap[normalizedSpan.modelId]);
-    setMcpServersLoaded(false);
-    setMcpLoadingTriggered(false);
     
     // 只在以下情况加载MCP服务器数据：
     // A. 当前span拥有至少一个MCP时
-    if (isOpen && shouldLoadMcpOnInit(normalizedSpan)) {
+    if (shouldLoadMcpOnInit(normalizedSpan)) {
       loadMcpServers();
     }
-  }, [isOpen, selectedChat]);
+  }, [isOpen, loadMcpServers, modelMap, selectedChat, spanId]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setMcpServersLoaded(false);
+      setMcpLoadingTriggered(false);
+      return;
+    }
+    setMcpServersLoaded(false);
+    setMcpLoadingTriggered(false);
+  }, [isOpen, spanId]);
 
   const { t } = useTranslation();
 

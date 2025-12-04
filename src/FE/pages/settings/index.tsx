@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -25,19 +25,17 @@ const SettingsPage = () => {
   const { t } = useTranslation();
   const router = useRouter();
   const { t: tabParam, tab } = router.query;
-
-  const [activeTab, setActiveTab] = useState('general');
-
-  useEffect(() => {
-    if (tabParam && typeof tabParam === 'string') {
-      setActiveTab(tabParam);
-    } else if (tab && typeof tab === 'string') {
-      setActiveTab(tab);
+  const activeTab = useMemo(() => {
+    if (typeof tabParam === 'string') {
+      return tabParam;
     }
-  }, [tabParam, tab]);
+    if (typeof tab === 'string') {
+      return tab;
+    }
+    return 'general';
+  }, [tab, tabParam]);
 
   const handleTabChange = (value: string) => {
-    setActiveTab(value);
     router.push(`/settings?t=${value}`, undefined, { shallow: true });
   };
 

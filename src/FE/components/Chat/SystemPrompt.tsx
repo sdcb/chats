@@ -185,6 +185,9 @@ const SystemPrompt: FC<Props> = ({
 
   useEffect(() => {
     if (!isEditing || !textareaRef.current) {
+      if (isScrollable) {
+        setIsScrollable(false);
+      }
       return;
     }
 
@@ -195,19 +198,18 @@ const SystemPrompt: FC<Props> = ({
     const clampedHeight = Math.min(scrollHeight, TEXTAREA_MAX_HEIGHT);
     textarea.style.height = `${clampedHeight}px`;
 
-    setIsScrollable(scrollHeight > TEXTAREA_MAX_HEIGHT);
-  }, [rawValue, isEditing]);
-
-  useEffect(() => {
-    if (!isEditing) {
-      setIsScrollable(false);
+    const shouldScroll = scrollHeight > TEXTAREA_MAX_HEIGHT;
+    if (isScrollable !== shouldScroll) {
+      setIsScrollable(shouldScroll);
     }
-  }, [isEditing]);
+  }, [isEditing, isScrollable, rawValue]);
 
   useEffect(() => {
     const rawContent = currentPrompt || '';
-    setRawValue(rawContent);
-  }, [currentPrompt, model]);
+    if (rawValue !== rawContent) {
+      setRawValue(rawContent);
+    }
+  }, [currentPrompt, model, rawValue]);
 
   // 移除了模式切换的useEffect，因为displayValue现在是计算值
 

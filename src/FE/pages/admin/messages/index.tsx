@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import useDebounce from '@/hooks/useDebounce';
@@ -113,26 +113,30 @@ export default function Messages() {
     updateUrl({ content: searchContent, page: 1 }); // 搜索时重置到第一页
   }, 1000);
 
-  const init = () => {
+  const init = useCallback(() => {
     setLoading(true);
     getMessages({ page, pageSize, user, content }).then((data) => {
       setMessages(data);
       setLoading(false);
     });
-  };
+  }, [page, pageSize, user, content]);
 
   useEffect(() => {
     // 只有当 router 准备好时才执行
     if (router.isReady) {
       init();
     }
-  }, [router.isReady, router.query]);
+  }, [init, router.isReady]);
 
   // 同步 URL 中的参数到本地搜索输入状态
   useEffect(() => {
-    setUserInput(user);
-    setContentInput(content);
-  }, [user, content]);
+    if (userInput !== user) {
+      setUserInput(user);
+    }
+    if (contentInput !== content) {
+      setContentInput(content);
+    }
+  }, [content, contentInput, user, userInput]);
 
   return (
     <>

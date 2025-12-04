@@ -1,4 +1,4 @@
-import { useFetch } from '@/hooks/useFetch';
+import { createFetchClient } from '@/hooks/createFetchClient';
 
 import { AdminModelDto, PostPromptParams } from '@/types/adminApis';
 import {
@@ -60,14 +60,14 @@ import { SmsType } from '@/types/user';
 import { getTz } from '@/utils/date';
 
 export const changeUserPassword = (params: PostUserPassword) => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.put('/api/user/reset-password', {
     body: { ...params },
   });
 };
 
 export const getUserMessages = (chatId: string): Promise<IChatMessage[]> => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.get(`/api/messages/${chatId}`);
 };
 
@@ -75,7 +75,7 @@ export const getTurnGenerateInfo = (
   chatId: string,
   turnId: string,
 ): Promise<IStepGenerateInfo[]> => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.get(`/api/messages/${chatId}/${turnId}/generate-info`);
 };
 
@@ -83,7 +83,7 @@ export const getSharedTurnGenerateInfo = (
   chatShareId: string,
   turnId: string,
 ): Promise<IStepGenerateInfo[]> => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.get(
     `/api/public/chat-share/${chatShareId}/${turnId}/generate-info`,
   );
@@ -93,7 +93,7 @@ export const getChatsByPaging = (
   params: GetChatsParams,
 ): Promise<PageResult<ChatResult[]>> => {
   const { groupId, query, page, pageSize } = params;
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   const groupIdQuery = groupId ? `groupId=${groupId}` : '';
   return fetchService.get(
     `/api/user/chats?${groupIdQuery}&page=${page}&pageSize=${pageSize}&query=${query || ''}`,
@@ -101,99 +101,99 @@ export const getChatsByPaging = (
 };
 
 export const getChat = (id: string): Promise<ChatResult> => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.get('/api/user/chats/' + id);
 };
 
 export const postChats = (params: PostChatParams): Promise<ChatResult> => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.post('/api/user/chats', { body: params });
 };
 
 export const putChats = (chatId: string, params: PutChatParams) => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.put(`/api/user/chats/${chatId}`, { body: params });
 };
 
 export const deleteChats = (id: string) => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.delete(`/api/user/chats/${id}`);
 };
 
 export const stopChat = (id: string) => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.post(`/api/chats/stop/${id}`);
 };
 
 export const getCsrfToken = (): Promise<{ csrfToken: string }> => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get('/api/auth/csrf');
 };
 
 export const singIn = (params: SingInParams): Promise<SingInResult> => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.post('/api/public/account-login', { body: params });
 };
 
 export const getUserModels = () => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<AdminModelDto[]>(`/api/models`);
 };
 
 export const getUserBalance = () => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<GetUserBalanceResult>('/api/user/balance');
 };
 
 export const getUserBalanceOnly = () => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<number>('/api/user/balance-only');
 };
 
 export const getBalance7DaysUsage = () => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<GetBalance7DaysUsageResult[]>(
     `/api/user/7-days-usage?timezoneOffset=${getTz()}`,
   );
 };
 
 export const getLoginProvider = () => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<LoginConfigsResult[]>('/api/public/login-provider');
 };
 
 export const getUserPrompts = () => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<Prompt[]>('/api/prompts');
 };
 
 export const getUserPromptBrief = () => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<PromptSlim[]>('/api/prompts/brief');
 };
 
 export const getUserPromptDetail = (id: number) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<Prompt>('/api/prompts/' + id);
 };
 
 export const getDefaultPrompt = () => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<Prompt>('/api/prompts/default');
 };
 
 export const postUserPrompts = (params: PostPromptParams) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.post<Prompt>('/api/prompts', { body: params });
 };
 
 export const putUserPrompts = (promptId: number, params: PostPromptParams) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.put(`/api/prompts/${promptId}`, { body: params });
 };
 
 export const deleteUserPrompts = (id: number) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.delete('/api/prompts?id=' + id);
 };
 
@@ -202,7 +202,7 @@ const postSignCode = (
   type: SmsType,
   invitationCode: string | null = null,
 ) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.post('/api/public/sms', {
     body: { phone, type, invitationCode },
   });
@@ -224,7 +224,7 @@ export const registerByPhone = (
   smsCode: string,
   invitationCode: string,
 ): Promise<SingInResult> => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.post('/api/public/phone-register', {
     body: { phone, smsCode, invitationCode },
   });
@@ -234,53 +234,53 @@ export const signByPhone = (
   phone: string,
   smsCode: string,
 ): Promise<SingInResult> => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.post('/api/public/phone-login', {
     body: { phone, smsCode },
   });
 };
 
 export const getLoginProviders = () => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<GetLoginProvidersResult[]>(
     '/api/public/login-providers',
   );
 };
 
 export const getSiteInfo = () => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<SiteInfoConfig>('/api/public/siteInfo');
 };
 
 export const putUserChatModel = (chatId: string, modelId: number) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.put('/api/user/chats/' + chatId, {
     body: { modelId },
   });
 };
 
 export const getUserApiKey = () => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<GetUserApiKeyResult[]>('/api/user/api-key');
 };
 
 export const postUserApiKey = () => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.post<GetUserApiKeyResult>('/api/user/api-key');
 };
 
 export const putUserApiKey = (id: number, body: any) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.put<string>('/api/user/api-key/' + id, { body });
 };
 
 export const deleteUserApiKey = (id: number) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.delete('/api/user/api-key/' + id);
 };
 
 export const getModelUsage = (modelId: number) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<ModelUsageDto>('/api/models/' + modelId + '/usage');
 };
 
@@ -288,7 +288,7 @@ export const postUserChatSpan = (
   chatId: string,
   params?: PostUserChatSpanParams,
 ) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.post<PostUserChatSpanResult[]>(`/api/chat/${chatId}/span`, {
     body: params,
   });
@@ -299,7 +299,7 @@ export const putUserChatSpan = (
   spanId: number,
   params?: PostUserChatSpanParams,
 ) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.put<PostUserChatSpanResult>(
     `/api/chat/${chatId}/span/${spanId}`,
     {
@@ -313,7 +313,7 @@ export const switchUserChatSpanModel = (
   spanId: number,
   modelId: number,
 ) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.post<PostUserChatSpanResult>(
     `/api/chat/${chatId}/span/${spanId}/switch-model/${modelId}`,
     {},
@@ -321,7 +321,7 @@ export const switchUserChatSpanModel = (
 };
 
 export const deleteUserChatSpan = (chatId: string, spanId: number) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.delete(`/api/chat/${chatId}/span/${spanId}`);
 };
 
@@ -329,7 +329,7 @@ export const getUserChatGroupWithMessages = (
   params: GetChatsParams,
 ): Promise<GetUserChatGroupWithChatsResult[]> => {
   const { query, page, pageSize } = params;
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get(
     `/api/chat/group/with-chats?page=${page}&pageSize=${pageSize}&query=${
       query || ''
@@ -340,41 +340,41 @@ export const getUserChatGroupWithMessages = (
 export const postChatGroup = (
   params: PostChatGroupParams,
 ): Promise<IChatGroup> => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.post(`/api/chat/group`, {
     body: params,
   });
 };
 
 export const putChatGroup = (params: PutChatGroupParams) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.put(`/api/chat/group/${params.id}`, {
     body: params,
   });
 };
 
 export const deleteChatGroup = (id: string) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.delete(`/api/chat/group/${id}`);
 };
 
 export const putMoveChatGroup = (params: PutMoveChatGroupParams) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.put(`/api/chat/group/move`, {
     body: params,
   });
 };
 
 export const putMessageReactionUp = (messageId: string) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.put(`/api/messages/${messageId}/reaction/up`);
 };
 export const putMessageReactionDown = (messageId: string) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.put(`/api/messages/${messageId}/reaction/down`);
 };
 export const putMessageReactionClear = (messageId: string) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.put(`/api/messages/${messageId}/reaction/clear`);
 };
 
@@ -382,21 +382,21 @@ export const postUserChatShare = (
   encryptedChatId: string,
   validBefore: string,
 ) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.post<PostUserChatShareResult>(
     `/api/user/chats/${encryptedChatId}/share?validBefore=${validBefore}`,
   );
 };
 
 export const getUserChatShare = (encryptedChatId: string) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<PostUserChatShareResult[]>(
     `/api/user/chats/${encryptedChatId}/share`,
   );
 };
 
 export const deleteUserChatShare = (encryptedChatId: string) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.delete(`/api/user/chats/${encryptedChatId}/share`);
 };
 
@@ -404,14 +404,14 @@ export const putChatShare = (
   encryptedChatShareId: string,
   validBefore: string,
 ) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.put(`/api/public/chat-share`, {
     body: { encryptedChatShareId, validBefore },
   });
 };
 
 export const getChatShare = (encryptedChatShareId: string) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<GetChatShareResult>(
     `/api/public/chat-share/${encryptedChatShareId}`,
   );
@@ -420,7 +420,7 @@ export const getChatShare = (encryptedChatShareId: string) => {
 export const putResponseMessageEditAndSaveNew = (
   params: PutResponseMessageEditAndSaveNewParams,
 ) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.patch<IChatMessage>(
     `/api/messages/${params.messageId}/${params.contentId}/text-and-save-new`,
     {
@@ -431,7 +431,7 @@ export const putResponseMessageEditAndSaveNew = (
 export const putResponseMessageEditInPlace = (
   params: PutResponseMessageEditInPlaceParams,
 ) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.patch(
     `/api/messages/${params.messageId}/${params.contentId}/text`,
     {
@@ -441,7 +441,7 @@ export const putResponseMessageEditInPlace = (
 };
 
 export const deleteMessage = (messageId: string, leafId: string | null) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   const encryptedLeafMessageId = leafId || '';
   return fetchServer.delete(
     `/api/messages/${messageId}?encryptedLeafMessageId=${encryptedLeafMessageId}&recursive=true`,
@@ -449,7 +449,7 @@ export const deleteMessage = (messageId: string, leafId: string | null) => {
 };
 
 export const postChatEnableSpan = (spanId: number, encryptedChatId: string) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.post(`/api/chat/${encryptedChatId}/span/${spanId}/enable`);
 };
 
@@ -457,7 +457,7 @@ export const postChatDisableSpan = (
   spanId: number,
   encryptedChatId: string,
 ) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.post(
     `/api/chat/${encryptedChatId}/span/${spanId}/disable`,
   );
@@ -468,48 +468,48 @@ export const putChatSpan = (
   encryptedChatId: string,
   params: PutChatSpanParams,
 ) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.put(`/api/chat/${encryptedChatId}/span/${spanId}`, {
     body: params,
   });
 };
 
 export const getChatPreset = () => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<GetChatPresetResult[]>(`/api/chat-preset`);
 };
 
 export const postChatPreset = (params: PutChatPresetParams) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.post<GetChatPresetResult>(`/api/chat-preset`, {
     body: params,
   });
 };
 
 export const putChatPreset = (id: string, params: PutChatPresetParams) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.put<GetChatPresetResult>(`/api/chat-preset/${id}`, {
     body: params,
   });
 };
 
 export const deleteChatPreset = (id: string) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.delete<GetChatPresetResult>(`/api/chat-preset/${id}`);
 };
 
 export const postCloneChatPreset = (id: string) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.post(`/api/chat-preset/${id}/clone`);
 };
 
 export const postApplyChatPreset = (chatId: string, presetId: string) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.post(`/api/chat/${chatId}/span/apply-preset/${presetId}`);
 };
 
 export const reorderChatPresets = (params: ChatPresetReorderRequest) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.put('/api/chat-preset/reorder', {
     body: params,
   });
@@ -540,21 +540,21 @@ export const responseContentToRequest = (
 };
 
 export const getUsage = (params: GetUsageParams) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<PageResult<GetUsageResult[]>>('/api/usage', {
     params: params,
   });
 };
 
 export const getUsageStat = (params: GetUsageParams) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<GetUsageStatResult>('/api/usage/stat', {
     params: params,
   });
 };
 
 export const getUserFiles = (params: GetUserFilesParams) => {
-  const fetchServer = useFetch();
+  const fetchServer = createFetchClient();
   return fetchServer.get<PageResult<GetUserFilesResult[]>>('/api/file', {
     params: params,
   });
@@ -562,48 +562,48 @@ export const getUserFiles = (params: GetUserFilesParams) => {
 
 // MCP APIs
 export const getMcpServers = (): Promise<McpServerListItemDto[]> => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.get('/api/mcp');
 };
 
 export const getMcpServersForManagement = (): Promise<McpServerListManagementItemDto[]> => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.get('/api/mcp/management');
 };
 
 export const getMcpServerDetails = (mcpId: number): Promise<McpServerDetailsDto> => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.get(`/api/mcp/${mcpId}`);
 };
 
 export const createMcpServer = (params: UpdateMcpServerRequest): Promise<McpServerDetailsDto> => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.post('/api/mcp', { body: params });
 };
 
 export const updateMcpServer = (mcpId: number, params: UpdateMcpServerRequest): Promise<McpServerDetailsDto> => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.put(`/api/mcp/${mcpId}`, { body: params });
 };
 
 export const deleteMcpServer = (mcpId: number) => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.delete(`/api/mcp/${mcpId}`);
 };
 
 export const fetchMcpTools = (params: FetchToolsRequest): Promise<McpToolBasicInfo[]> => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.post('/api/mcp/fetch-tools', { body: params });
 };
 
 // MCP用户分配相关API
 export const assignUsersToMcp = (mcpId: number, params: AssignUsersToMcpRequest): Promise<void> => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.post(`/api/mcp/${mcpId}/assign-to-users`, { body: params });
 };
 
 export const getUnassignedUsers = (mcpId: number, search?: string, limit: number = 10): Promise<UnassignedUserDto[]> => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   const params = new URLSearchParams();
   if (search) {
     params.append('search', search);
@@ -614,12 +614,12 @@ export const getUnassignedUsers = (mcpId: number, search?: string, limit: number
 };
 
 export const getAssignedUserDetails = (mcpId: number): Promise<AssignedUserDetailsDto[]> => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.get(`/api/mcp/${mcpId}/assigned-user-details`);
 };
 
 export const getAssignedUserNames = (mcpId: number): Promise<AssignedUserNameDto[]> => {
-  const fetchService = useFetch();
+  const fetchService = createFetchClient();
   return fetchService.get(`/api/mcp/${mcpId}/assigned-user-names`);
 };
 

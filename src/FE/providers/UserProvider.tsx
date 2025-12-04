@@ -1,28 +1,20 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 import { UserInfo, getUserInfo, redirectToLoginPage } from '@/utils/user';
 
 const UserContext = createContext<UserInfo | null>(null);
 
-export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [user, setUser] = useState<UserInfo | null>(null);
-
-  const fetchUser = () => {
+export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user] = useState<UserInfo | null>(() => {
     const userInfo = getUserInfo();
     if (!userInfo) {
       redirectToLoginPage();
-      return;
+      return null;
     }
-    setUser(userInfo);
-  };
-
-  useEffect(() => {
-    fetchUser();
-  }, []);
+    return userInfo;
+  });
 
   return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
 };

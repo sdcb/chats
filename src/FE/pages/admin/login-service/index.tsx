@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -27,18 +27,19 @@ export default function LoginService() {
   const [selected, setSelected] = useState<GetLoginServicesResult | null>(null);
   const [services, setServices] = useState<GetLoginServicesResult[]>([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    init();
-  }, []);
 
-  const init = () => {
+  const init = useCallback(() => {
     getLoginServices().then((data) => {
       setServices(data);
       setIsOpen(false);
       setSelected(null);
       setLoading(false);
     });
-  };
+  }, []);
+
+  useEffect(() => {
+    init();
+  }, [init]);
 
   const handleShow = (item: GetLoginServicesResult) => {
     setSelected(item);

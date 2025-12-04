@@ -1,4 +1,4 @@
-import { DragEvent, useContext, useEffect, useState } from 'react';
+import { DragEvent, useContext } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -31,14 +31,11 @@ const ChatList = ({
     state: { chatPaging },
   } = useContext(HomeContext);
 
-  const [showMore, setShowMore] = useState(true);
-
-  useEffect(() => {
-    const { count, page, pageSize } = chatPaging.find(
-      (x) => x.groupId === groupId,
-    )!;
-    setShowMore(count <= page * pageSize);
-  }, [chatPaging]);
+  const currentPaging = chatPaging.find((x) => x.groupId === groupId);
+  const hasMore =
+    currentPaging !== undefined
+      ? currentPaging.count > currentPaging.page * currentPaging.pageSize
+      : false;
 
   const handleShowMore = () => {
     onShowMore && onShowMore(groupId);
@@ -65,7 +62,7 @@ const ChatList = ({
             ))}
           </div>
         ))}
-      {!showMore && (
+      {hasMore && (
         <Button onClick={handleShowMore} className="text-xs" variant="link">
           {t('Show more')}
         </Button>

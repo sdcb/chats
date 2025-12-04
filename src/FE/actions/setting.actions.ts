@@ -20,4 +20,3 @@ export const setShowChatInput = (showChatInput: boolean): SettingsAction => ({
   payload: showChatInput,
 });
 
-export default function () {}

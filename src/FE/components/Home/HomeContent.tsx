@@ -183,7 +183,7 @@ const HomeContent = () => {
     return { ...chat, status: ChatStatus.None } as any;
   };
 
-  const selectChat = (chatList: IChat[], chatId?: string) => {
+  function selectChat(chatList: IChat[], chatId?: string) {
     const chat = findChat(chatList, chatId);
     if (chat) {
       chatDispatch(setSelectedChatId(chat.id));
@@ -204,7 +204,7 @@ const HomeContent = () => {
       });
     }
     return chat;
-  };
+  }
 
   const getGroupSnapshotForCache = (groupId: string | null) => {
     if (groupId === null) {

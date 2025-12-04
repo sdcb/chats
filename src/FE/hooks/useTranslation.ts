@@ -14,28 +14,28 @@ let globalLanguage = getLanguage();
 
 let globalForceUpdate: (() => void) | null = null;
 
-const useTranslation = () => {
-  function t(message: string, params = {}) {
-    // For English, return the original message (no translation needed)
-    if (globalLanguage === 'en') {
-      let msg = message;
-      Object.keys(params).forEach((k) => {
-        const key = k as keyof typeof params;
-        msg = msg?.replaceAll(`{{${key}}}`, params[key]);
-      });
-      return msg;
-    }
-
-    // For other languages, use translation files
-    const translations = TRANSLATIONS[globalLanguage as keyof typeof TRANSLATIONS];
-    let msg = (translations as any)?.[message] || message;
-
+export const translate = (message: string, params: Record<string, any> = {}) => {
+  if (globalLanguage === 'en') {
+    let msg = message;
     Object.keys(params).forEach((k) => {
       const key = k as keyof typeof params;
       msg = msg?.replaceAll(`{{${key}}}`, params[key]);
     });
     return msg;
   }
+
+  const translations = TRANSLATIONS[globalLanguage as keyof typeof TRANSLATIONS];
+  let msg = (translations as any)?.[message] || message;
+
+  Object.keys(params).forEach((k) => {
+    const key = k as keyof typeof params;
+    msg = msg?.replaceAll(`{{${key}}}`, params[key]);
+  });
+  return msg;
+};
+
+const useTranslation = () => {
+  const t = (message: string, params = {}) => translate(message, params);
 
   const setForceUpdate = (forceUpdate: () => void) => {
     globalForceUpdate = forceUpdate;

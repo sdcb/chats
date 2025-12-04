@@ -29,7 +29,7 @@ interface IProps {
 const SharedMessageModal = (props: IProps) => {
   const { t } = useTranslation();
   const { chat, isOpen, onClose, onShareChange } = props;
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [shareUrl, setShareUrl] = useState<string>('');
   const baseUrl = `${location.origin}/share/`;
 
@@ -69,12 +69,11 @@ const SharedMessageModal = (props: IProps) => {
   };
 
   useEffect(() => {
-    setLoading(true);
     getUserChatShare(chat.id).then((data) => {
       if (data.length > 0) setShareUrl(baseUrl + data[0].shareId);
       setLoading(false);
     });
-  }, []);
+  }, [baseUrl, chat.id]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

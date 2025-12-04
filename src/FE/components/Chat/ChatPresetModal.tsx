@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
@@ -64,13 +64,11 @@ const ChatPresetModal = (props: Props) => {
   };
 
   // 加载MCP服务器数据
-  const loadMcpServers = async () => {
+  const loadMcpServers = useCallback(() => {
     if (mcpServersLoaded || mcpLoadingTriggered) return;
-    
     setMcpLoadingTriggered(true);
-    // 仅通知需要加载，由子组件实际发起请求
     setMcpServersLoaded(true);
-  };
+  }, [mcpLoadingTriggered, mcpServersLoaded]);
 
   useEffect(() => {
     if (chatPreset) {
@@ -97,7 +95,7 @@ const ChatPresetModal = (props: Props) => {
     if (isOpen && shouldLoadMcpOnInit(chatPreset)) {
       loadMcpServers();
     }
-  }, [isOpen]);
+  }, [chatPreset, isOpen, loadMcpServers, t]);
 
   const { t } = useTranslation();
 

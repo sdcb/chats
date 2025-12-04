@@ -1,3 +1,6 @@
+import React from 'react';
+import Image from 'next/image';
+
 import { FileDef, getFileUrl } from '@/types/chat';
 import { 
   IconDownload, 
@@ -10,7 +13,6 @@ import {
   IconFileText,
   IconCircleX
 } from '@/components/Icons';
-import ImagePreview from '@/components/ImagePreview/ImagePreview';
 
 interface FilePreviewProps {
   file: FileDef | string;  // 支持 FileDef 对象或文件ID字符串
@@ -122,11 +124,13 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', sh
   if (isImageType(contentType)) {
     return (
       <div className={`relative ${className}`}>
-        <img
+        <Image
           className="rounded-md cursor-pointer hover:opacity-90 transition-opacity"
           style={{ maxWidth, maxHeight }}
           src={fileUrl}
           alt={fileName || 'Image'}
+          width={maxWidth}
+          height={maxHeight}
           onClick={(e) => onImageClick?.(fileUrl, [fileUrl], e)}
         />
         {showDelete && onDelete && (
@@ -222,7 +226,7 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', sh
   }
 
   // 其他文件类型 - 显示文件卡片
-  const FileIcon = getFileIcon(contentType, fileName);
+  const fileIconComponent = getFileIcon(contentType, fileName);
   
   return (
     <div 
@@ -237,7 +241,7 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', sh
         className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors"
       >
         <div className="flex-shrink-0">
-          <FileIcon size={32} />
+          {React.createElement(fileIconComponent, { size: 32 })}
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium truncate">

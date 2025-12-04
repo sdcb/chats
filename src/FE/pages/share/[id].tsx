@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -28,7 +28,12 @@ export default function ShareMessage() {
   );
   const [loading, setLoading] = useState(true);
   const [showBottomBar, setShowBottomBar] = useState(true);
-  const [chatShareId, setChatShareId] = useState<string>('');
+  const chatShareId = useMemo(() => {
+    if (!router.isReady) {
+      return '';
+    }
+    return getQueryId(router) ?? '';
+  }, [router]);
 
   const handleToggleBottomBar = () => {
     setShowBottomBar(!showBottomBar);
@@ -42,10 +47,8 @@ export default function ShareMessage() {
 
 
   useEffect(() => {
-    setLoading(true);
     if (!router.isReady) return;
     const shareId = getQueryId(router)!;
-    setChatShareId(shareId);
     getChatShare(shareId).then((data) => {
       setSelectedChat({ ...data, status: ChatStatus.None });
       setMessages(data.messages);
@@ -63,7 +66,7 @@ export default function ShareMessage() {
       setSelectedMessages(selectedMsgs);
       setLoading(false);
     });
-  }, [router.isReady]);
+  }, [router]);
 
   const MessageRender = () => {
     return selectedChat ? (

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -57,21 +57,31 @@ export default function Users() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState<string>('');
 
-  useEffect(() => {
-    init();
-  }, [pagination]);
+  const handleClose = useCallback(() => {
+    setIsOpenModal({
+      edit: false,
+      create: false,
+      recharge: false,
+    });
+    setSelectedUser(null);
+  }, []);
 
-  const updateQueryWithDebounce = useDebounce((query: string) => {
-    init(query);
-  }, 1000);
-
-  const init = (query: string = '') => {
-    getUsers({ query, ...pagination }).then((data) => {
+  const init = useCallback((searchQuery: string = '') => {
+    setLoading(true);
+    getUsers({ query: searchQuery, ...pagination }).then((data) => {
       setUsers(data);
       handleClose();
       setLoading(false);
     });
-  };
+  }, [handleClose, pagination]);
+
+  const updateQueryWithDebounce = useDebounce((value: string) => {
+    init(value);
+  }, 1000);
+
+  useEffect(() => {
+    init();
+  }, [init]);
 
   const handleShowAddModal = () => {
     setIsOpenModal({
@@ -97,15 +107,6 @@ export default function Users() {
       create: false,
       recharge: true,
     });
-  };
-
-  const handleClose = () => {
-    setIsOpenModal({
-      edit: false,
-      create: false,
-      recharge: false,
-    });
-    setSelectedUser(null);
   };
 
   return (

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -63,12 +63,17 @@ const UserMessage = (props: Props) => {
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [contentText, setContentText] = useState('');
+  const { id: messageId, siblingIds, parentId, content } = message;
+  const defaultText = useMemo(() => {
+    const textContent = content.find((x) => x.$type === MessageContentType.text) as TextContent | undefined;
+    return textContent?.c || '';
+  }, [content]);
+  const [editedText, setEditedText] = useState<string | null>(null);
+  const contentText = editedText ?? defaultText;
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [sourceImageElement, setSourceImageElement] = useState<HTMLImageElement | null>(null);
-  const { id: messageId, siblingIds, parentId, content } = message;
   const { status: chatStatus } = selectedChat;
   const currentMessageIndex = siblingIds.findIndex((x) => x === messageId);
 
@@ -95,6 +100,7 @@ const UserMessage = (props: Props) => {
         );
       }
     }
+    setEditedText(null);
     setIsEditing(false);
   };
 
@@ -106,7 +112,7 @@ const UserMessage = (props: Props) => {
   );
 
   const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContentText(event.target.value);
+    setEditedText(event.target.value);
     if (textareaRef.current) {
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
@@ -118,7 +124,13 @@ const UserMessage = (props: Props) => {
   };
 
   const handleToggleEditing = () => {
-    setIsEditing(!isEditing);
+    if (isEditing) {
+      setEditedText(null);
+      setIsEditing(false);
+      return;
+    }
+    setEditedText(defaultText);
+    setIsEditing(true);
   };
 
   const handleImageClick = (imageUrl: string, allImages: string[], event: React.MouseEvent<HTMLImageElement>) => {
@@ -127,16 +139,6 @@ const UserMessage = (props: Props) => {
     setPreviewIndex(allImages.indexOf(imageUrl));
     setIsPreviewOpen(true);
   };
-
-  const init = () => {
-    const textContent = content.find((x) => x.$type === MessageContentType.text) as TextContent | undefined;
-    const text = textContent?.c || '';
-    setContentText(text as string);
-  };
-
-  useEffect(() => {
-    init();
-  }, [content]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -202,7 +204,7 @@ const UserMessage = (props: Props) => {
                 variant="outline"
                 className="rounded-md border border-neutral-300 px-4 py-1 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
                 onClick={() => {
-                  init();
+                  setEditedText(defaultText);
                   setIsEditing(false);
                 }}
               >

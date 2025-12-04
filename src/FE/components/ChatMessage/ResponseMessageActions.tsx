@@ -59,16 +59,17 @@ const ResponseMessageActions = (props: Props) => {
   // 根据"当前位置对应的 span（顶部设置）"确定重新生成所用模型；
   // 若无法对应（例如 span 被删），则禁用重新生成按钮。
   const { spanId } = message;
+  const spans = selectedChat?.spans;
   const spanModel = useMemo(() => {
-    if (!selectedChat?.spans) return null;
-    const s = selectedChat.spans.find((x: ChatSpanDto) => x.spanId === spanId);
+    if (!spans) return null;
+    const s = spans.find((x: ChatSpanDto) => x.spanId === spanId);
     if (!s) return null;
     const m = models.find((mm) => mm.modelId === s.modelId);
     return {
       modelId: s.modelId,
       modelName: s.modelName || m?.name || modelName,
     } as { modelId: number; modelName?: string };
-  }, [spanId, selectedChat?.spans, models, modelName]);
+  }, [spanId, spans, models, modelName]);
 
   // 如果对应的 span 被删除了，则禁用重新生成功能
   const isSpanDeleted = !spanModel;

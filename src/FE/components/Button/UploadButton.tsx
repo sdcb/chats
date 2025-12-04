@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { checkFileSizeCanUpload, uploadFile } from '@/utils/uploadFile';
 
@@ -37,7 +37,7 @@ const UploadButton: React.FunctionComponent<Props> = ({
 }: Props) => {
   const uploadRef = useRef<HTMLInputElement>(null);
   const { maxSize } = fileConfig || { maxSize: 0 };
-  const changeFile = async (event: any) => {
+  const changeFile = useCallback(async (event: any) => {
     const file = event?.target?.files[0];
     if (checkFileSizeCanUpload(maxSize, file.size)) {
       onFailed && onFailed('File is too large.');
@@ -51,7 +51,7 @@ const UploadButton: React.FunctionComponent<Props> = ({
     } catch (error) {
       console.error(error);
     }
-  };
+  }, [maxSize, onFailed, onSuccessful, onUploading]);
 
   useEffect(() => {
     const fileInput = uploadRef.current;
@@ -61,7 +61,7 @@ const UploadButton: React.FunctionComponent<Props> = ({
     return () => {
       fileInput.removeEventListener('change', changeFile as any);
     };
-  }, []);
+  }, [changeFile]);
 
   const Btn = (
     <Button

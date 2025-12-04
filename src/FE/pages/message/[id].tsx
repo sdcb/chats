@@ -21,7 +21,6 @@ export default function MessageDetails() {
     [],
   );
   const [loading, setLoading] = useState(true);
-  const [chatId, setChatId] = useState<number>(0);
 
   const handleChangeChatLeafMessageId = (messageId: string) => {
     const leafId = findLastLeafId(messages, messageId);
@@ -30,11 +29,8 @@ export default function MessageDetails() {
   };
 
   useEffect(() => {
-    setLoading(true);
     if (!router.isReady) return;
     const chatIdStr = getQueryId(router)!;
-    const id = parseInt(chatIdStr, 10);
-    setChatId(id);
     getAdminMessage(chatIdStr).then((data) => {
       setSelectedChat({ ...data, status: ChatStatus.None });
       setMessages(data.messages);
@@ -45,7 +41,7 @@ export default function MessageDetails() {
       setSelectedMessages(selectedMsgs);
       setLoading(false);
     });
-  }, [router.isReady]);
+  }, [router]);
 
   const MessageRender = () => {
     return selectedChat ? (

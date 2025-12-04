@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { useRouter } from 'next/router';
 
@@ -10,21 +10,18 @@ import { singIn } from '@/apis/clientApis';
 
 export default function Authorizing() {
   const { t } = useTranslation();
-  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
-  const [everStarted, setEverStarted] = useState(false);
+  const hasStartedRef = useRef(false);
 
   useEffect(() => {
+    if (!router.isReady || hasStartedRef.current) {
+      return;
+    }
+    hasStartedRef.current = true;
     const { code, provider } = router.query as {
       code: string;
       provider: string;
     };
-    if (!router.isReady || everStarted) {
-      return;
-    }
-
-    setEverStarted(true);
-    setIsClient(true);
     if (!code) {
       router.push('/login');
       return;
@@ -39,10 +36,10 @@ export default function Authorizing() {
       });
       router.push('/');
     });
-  }, [router.isReady]);
+  }, [router]);
   return (
     <>
-      {isClient && (
+      {router.isReady && (
         <div className="w-full text-center mt-8 text-gray-600 text-[12.5px]">
           {t('Logging in...')}
         </div>
