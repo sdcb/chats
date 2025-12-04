@@ -248,7 +248,7 @@ export default function LoginPage() {
               >
                 Chats
               </Button>
-              ™ . All Rights Reserved.
+              . All Rights Reserved.
             </div>
           </div>
         </div>
