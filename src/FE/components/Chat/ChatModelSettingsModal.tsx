@@ -98,11 +98,8 @@ const ChatModelSettingModal = (props: Props) => {
     if (!isOpen) {
       setMcpServersLoaded(false);
       setMcpLoadingTriggered(false);
-      return;
     }
-    setMcpServersLoaded(false);
-    setMcpLoadingTriggered(false);
-  }, [isOpen, spanId]);
+  }, [isOpen]);
 
   const { t } = useTranslation();
 
