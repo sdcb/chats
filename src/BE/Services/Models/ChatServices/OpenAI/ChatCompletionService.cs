@@ -141,7 +141,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
             // Parse tool calls
             List<ToolCallSegment> toolCallSegments = [];
-            if (delta.TryGetProperty("tool_calls", out JsonElement toolCalls))
+            if (delta.TryGetProperty("tool_calls", out JsonElement toolCalls) && toolCalls.ValueKind == JsonValueKind.Array)
             {
                 foreach (JsonElement tc in toolCalls.EnumerateArray())
                 {
@@ -223,7 +223,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
     private static int GetCachedTokens(JsonElement usage)
     {
-        if (usage.TryGetProperty("prompt_tokens_details", out JsonElement ptd) &&
+        if (usage.TryGetProperty("prompt_tokens_details", out JsonElement ptd) && ptd.ValueKind == JsonValueKind.Object &&
             ptd.TryGetProperty("cached_tokens", out JsonElement cached))
         {
             return cached.GetInt32();
