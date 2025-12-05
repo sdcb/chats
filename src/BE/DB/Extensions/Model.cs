@@ -9,8 +9,9 @@ public partial class Model
 
     public JsonPriceConfig ToPriceConfig() => new()
     {
-        InputTokenPrice = InputTokenPrice1M / 100_0000,
-        OutputTokenPrice = OutputTokenPrice1M / 100_0000
+        InputFreshTokenPrice = InputFreshTokenPrice1M / 100_0000,
+        OutputTokenPrice = OutputTokenPrice1M / 100_0000,
+        InputCachedTokenPrice = InputCachedTokenPrice1M / 100_0000,
     };
 
     public float? ClampTemperature(float? temperature)

@@ -527,29 +527,6 @@ const ChatView = memo(() => {
     return newSelectedMsgs;
   };
 
-  const changeSelectedResponseReasoningDuration = (
-    selectedMsgs: IChatMessage[][],
-    messageId: string,
-    time: number,
-  ): IChatMessage[][] => {
-    const lastMessageGroupIndex = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[lastMessageGroupIndex];
-    const updatedMessageList = messageList.map((x) => {
-      if (x.id === messageId) {
-        return {
-          ...x,
-          reasoningDuration: time,
-        };
-      }
-      return x;
-    });
-    
-    const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
-    messageDispatch(setSelectedMessages(newSelectedMsgs));
-    return newSelectedMsgs;
-  };
-
   const changeSelectedResponseToolCall = (
     selectedMsgs: IChatMessage[][],
     messageId: string,
@@ -677,12 +654,6 @@ const ChatView = memo(() => {
         return {
           ...x,
           id: message.id,
-          duration: message.duration,
-          firstTokenLatency: message.firstTokenLatency,
-          inputPrice: message.inputPrice,
-          outputPrice: message.outputPrice,
-          inputTokens: message.inputTokens,
-          outputTokens: message.outputTokens,
         };
       }
       return x;
@@ -881,15 +852,10 @@ const ChatView = memo(() => {
         selectedMessageList = changeSelectedResponseMessageInfo(selectedMessageList, spanId, msg);
         messageList.push(msg);
       } else if (value.k === SseResponseKind.StartResponse) {
-        const { r: time, i: spanId } = value;
+        const { i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
         // 离开 ReasoningSegment，完成上一段 reasoning
         selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
-        selectedMessageList = changeSelectedResponseReasoningDuration(
-          selectedMessageList,
-          msgId,
-          time,
-        );
       } else if (value.k === SseResponseKind.ImageGenerating) {
         const { r, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;

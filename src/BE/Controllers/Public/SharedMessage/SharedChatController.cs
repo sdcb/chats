@@ -53,9 +53,12 @@ public class SharedChatController(ChatsDB db) : ControllerBase
                 .OrderBy(s => s.CreatedAt)
                 .Select(s => new StepGenerateInfoDto
                 {
-                    InputTokens = s.Usage!.InputTokens,
+                    InputCachedTokens = s.Usage!.InputCachedTokens,
+                    InputOverallTokens = s.Usage!.InputFreshTokens + s.Usage!.InputCachedTokens,
                     OutputTokens = s.Usage!.OutputTokens,
-                    InputPrice = s.Usage!.InputCost,
+                    InputFreshPrice = s.Usage!.InputFreshCost,
+                    InputCachedPrice = s.Usage!.InputCachedCost,
+                    InputPrice = s.Usage!.InputFreshCost + s.Usage!.InputCachedCost,
                     OutputPrice = s.Usage!.OutputCost,
                     ReasoningTokens = s.Usage!.ReasoningTokens,
                     Duration = s.Usage!.TotalDurationMs,

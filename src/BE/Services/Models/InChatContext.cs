@@ -31,7 +31,7 @@ public class InChatContext(long firstTick)
             throw new InsufficientBalanceException();
         }
 
-        balance.SetCost(userModel.ModelId, 0, 0, priceConfig);
+        balance.SetCost(userModel.ModelId, 0, 0, 0, priceConfig);
         if (!balance.IsSufficient)
         {
             throw new InsufficientBalanceException();
@@ -64,7 +64,7 @@ public class InChatContext(long firstTick)
                 _lastSegment = seg;
                 _items.AddOne(seg.Items);
 
-                balance.SetCost(userModel.ModelId, seg.Usage.InputTokens, seg.Usage.OutputTokens, priceConfig);
+                balance.SetCost(userModel.ModelId, seg.Usage.InputTokens, seg.Usage.OutputTokens, seg.Usage.CacheTokens, priceConfig);
                 if (!balance.IsSufficient)
                 {
                     FinishReason = DBFinishReason.InsufficientBalance;
@@ -103,12 +103,14 @@ public class InChatContext(long firstTick)
             FirstResponseDurationMs = (int)Stopwatch.GetElapsedTime(_preprocessTick, _firstReasoningTick != _preprocessTick ? _firstReasoningTick : _firstResponseTick).TotalMilliseconds,
             PostprocessDurationMs = (int)Stopwatch.GetElapsedTime(_endResponseTick, _finishTick).TotalMilliseconds,
             TotalDurationMs = (int)Stopwatch.GetElapsedTime(firstTick, _finishTick).TotalMilliseconds,
-            InputTokens = _lastSegment.Usage.InputTokens,
+            InputFreshTokens = _lastSegment.Usage.InputFreshTokens,
             OutputTokens = _lastSegment.Usage.OutputTokens,
             ReasoningTokens = _lastSegment.Usage.ReasoningTokens,
+            InputCachedTokens = _lastSegment.Usage.CacheTokens,
             IsUsageReliable = _lastSegment.IsUsageReliable,
-            InputCost = calc.Cost.InputCost,
+            InputFreshCost = calc.Cost.InputFreshCost,
             OutputCost = calc.Cost.OutputCost,
+            InputCachedCost = calc.Cost.InputCachedCost,
             ClientInfoId = clientInfoId,
         };
 

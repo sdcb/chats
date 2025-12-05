@@ -354,6 +354,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             InputTokens = inputTokens,
             OutputTokens = outputTokens,
             ReasoningTokens = reasoningTokens,
+            CacheTokens = GetCachedTokens(usage),
         };
     }
 
@@ -368,7 +369,18 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             InputTokens = inputTokens,
             OutputTokens = outputTokens,
             ReasoningTokens = reasoningTokens,
+            CacheTokens = usageNode["input_tokens_details"]?["cached_tokens"]?.GetValue<int>() ?? 0,
         };
+    }
+
+    private static int GetCachedTokens(JsonElement usage)
+    {
+        if (usage.TryGetProperty("input_tokens_details", out JsonElement inputDetails) &&
+            inputDetails.TryGetProperty("cached_tokens", out JsonElement cachedInput))
+        {
+            return cachedInput.GetInt32();
+        }
+        return 0;
     }
 
     private JsonObject BuildRequestBody(ChatRequest request, bool stream, bool background)

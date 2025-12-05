@@ -28,13 +28,25 @@ const ChatModelInfo = (props: { modelId: number }) => {
     return <></>;
   }
 
+  const priceParts =
+    (modelUsage.inputCachedTokenPrice1M ?? 0) > 0
+      ? [
+          toFixed(modelUsage.inputFreshTokenPrice1M),
+          toFixed(modelUsage.inputCachedTokenPrice1M),
+          toFixed(modelUsage.outputTokenPrice1M),
+        ]
+      : [
+          toFixed(modelUsage.inputFreshTokenPrice1M),
+          toFixed(modelUsage.outputTokenPrice1M),
+        ];
+  const priceDisplay = `￥${priceParts.join('/')}`;
+
   return (
     <div className="flex flex-col text-gray-600 text-sm h-5">
       <div className="flex items-center">
         {modelUsage.tokens === 0 && modelUsage.counts === 0 ? (
           <span>
-            ￥{toFixed(modelUsage.inputTokenPrice1M)}/
-            {toFixed(modelUsage.outputTokenPrice1M)} (1M tokens)
+            {priceDisplay} (1M tokens)
           </span>
         ) : (
           <div className="flex justify-between text-muted-foreground">
@@ -45,8 +57,7 @@ const ChatModelInfo = (props: { modelId: number }) => {
                 <span>{formatNumberAsMoney(+modelUsage.tokens)}</span>
               ) : (
                 <span>
-                  ￥{toFixed(modelUsage.inputTokenPrice1M)}/
-                  {toFixed(modelUsage.outputTokenPrice1M)} (1M tokens)
+                  {priceDisplay} (1M tokens)
                 </span>
               )}
             </div>

@@ -23,7 +23,7 @@ public record UserModelBalanceCalculator(BalanceInitialInfo Initial, ConcurrentD
 
     public IEnumerable<BalanceInitialUsageInfo> UsageCosts => TotalCost.UsageInfo.Values.Where(x => x.Counts > 0 || x.Tokens > 0);
 
-    private BalanceCostInfo GetSpanCost(string scopeId, short modelId, int inputTokenCount, int outputTokenCount, JsonPriceConfig price)
+    private BalanceCostInfo GetSpanCost(string scopeId, short modelId, int inputTokenCount, int outputTokenCount, int cacheTokenCount, JsonPriceConfig price)
     {
         BalanceInitialInfo remaining = GetRemainingExcept(scopeId);
         BalanceInitialUsageInfo modelUsageInfo = remaining.GetModelUsageInfo(modelId);
@@ -54,16 +54,23 @@ public record UserModelBalanceCalculator(BalanceInitialInfo Initial, ConcurrentD
         int remainingTokens = modelUsageInfo.Tokens;
         int toBeDeductedOutputTokens = Math.Max(0, outputTokenCount - remainingTokens);
         remainingTokens = Math.Max(0, remainingTokens - outputTokenCount);
-        int toBeDeductedInputTokens = Math.Max(0, inputTokenCount - remainingTokens);
 
-        decimal inputCost = price.InputTokenPrice * toBeDeductedInputTokens;
+        cacheTokenCount = Math.Clamp(cacheTokenCount, 0, inputTokenCount);
+        int normalInputTokens = inputTokenCount - cacheTokenCount;
+
+        int normalTokensCharged = Math.Max(0, normalInputTokens - remainingTokens);
+        int allowanceAfterNormal = Math.Max(0, remainingTokens - normalInputTokens);
+        int cacheTokensCharged = Math.Max(0, cacheTokenCount - allowanceAfterNormal);
+
+        decimal inputCost = price.InputFreshTokenPrice * normalTokensCharged;
+        decimal cacheCost = price.InputCachedTokenPrice * cacheTokensCharged;
         decimal outputCost = price.OutputTokenPrice * toBeDeductedOutputTokens;
-        return new BalanceCostInfo(new BalanceInitialUsageInfo(modelId, Tokens: modelUsageInfo.Tokens - remainingTokens), inputCost, outputCost);
+        return new BalanceCostInfo(new BalanceInitialUsageInfo(modelId, Tokens: modelUsageInfo.Tokens - remainingTokens), inputCost, outputCost, cacheCost);
     }
 
-    public void SetSpanCost(string scopeId, short modelId, int inputTokenCount, int outputTokenCount, JsonPriceConfig price)
+    public void SetSpanCost(string scopeId, short modelId, int inputTokenCount, int outputTokenCount, int cacheTokenCount, JsonPriceConfig price)
     {
-        Costs[scopeId] = GetSpanCost(scopeId, modelId, inputTokenCount, outputTokenCount, price);
+        Costs[scopeId] = GetSpanCost(scopeId, modelId, inputTokenCount, outputTokenCount, cacheTokenCount, price);
     }
 
     public ScopedBalanceCalculator WithScoped(string scopeId) => new(this, scopeId);
@@ -75,9 +82,9 @@ public class ScopedBalanceCalculator(UserModelBalanceCalculator parent, string s
 
     public BalanceCostInfo Cost => parent.Costs[scopeId];
 
-    public void SetCost(short modelId, int inputTokenCount, int outputTokenCount, JsonPriceConfig price)
+    public void SetCost(short modelId, int inputTokenCount, int outputTokenCount, int cacheTokenCount, JsonPriceConfig price)
     {
-        parent.SetSpanCost(scopeId, modelId, inputTokenCount, outputTokenCount, price);
+        parent.SetSpanCost(scopeId, modelId, inputTokenCount, outputTokenCount, cacheTokenCount, price);
     }
 }
 
@@ -125,19 +132,21 @@ public record BalanceInitialUsageInfo(short ModelId, int Counts = 0, int Tokens 
     public bool IsSufficient => Counts >= 0 && Tokens >= 0;
 }
 
-public record BalanceCostInfo(Dictionary<short, BalanceInitialUsageInfo> UsageInfo, decimal InputCost = 0, decimal OutputCost = 0)
+public record BalanceCostInfo(Dictionary<short, BalanceInitialUsageInfo> UsageInfo, decimal InputFreshCost = 0, decimal OutputCost = 0, decimal InputCachedCost = 0)
 {
-    public BalanceCostInfo(BalanceInitialUsageInfo usageInfo, decimal inputCost = 0, decimal outputCost = 0) : this(new Dictionary<short, BalanceInitialUsageInfo>() { [usageInfo.ModelId] = usageInfo }, inputCost, outputCost)
+    public BalanceCostInfo(BalanceInitialUsageInfo usageInfo, decimal inputFreshCost = 0, decimal outputCost = 0, decimal inputCachedCost = 0)
+        : this(new Dictionary<short, BalanceInitialUsageInfo>() { [usageInfo.ModelId] = usageInfo }, inputFreshCost, outputCost, inputCachedCost)
     {
     }
 
-    public decimal TotalCost => InputCost + OutputCost;
+    public decimal TotalCost => InputFreshCost + OutputCost + InputCachedCost;
 
     public static BalanceCostInfo CombineAll(IEnumerable<BalanceCostInfo> costs)
     {
         Dictionary<short, BalanceInitialUsageInfo> usageInfo = [];
-        decimal inputTokenAmount = 0;
+        decimal inputFreshTokenAmount = 0;
         decimal outputTokenAmount = 0;
+        decimal inputCachedTokenAmount = 0;
         foreach (BalanceCostInfo cost in costs)
         {
             foreach (KeyValuePair<short, BalanceInitialUsageInfo> item in cost.UsageInfo)
@@ -151,9 +160,10 @@ public record BalanceCostInfo(Dictionary<short, BalanceInitialUsageInfo> UsageIn
                     usageInfo[item.Key] = item.Value;
                 }
             }
-            inputTokenAmount += cost.InputCost;
+            inputFreshTokenAmount += cost.InputFreshCost;
             outputTokenAmount += cost.OutputCost;
+            inputCachedTokenAmount += cost.InputCachedCost;
         }
-        return new BalanceCostInfo(usageInfo, inputTokenAmount, outputTokenAmount);
+        return new BalanceCostInfo(usageInfo, inputFreshTokenAmount, outputTokenAmount, inputCachedTokenAmount);
     }
 }

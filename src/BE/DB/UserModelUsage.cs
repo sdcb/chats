@@ -21,7 +21,7 @@ public partial class UserModelUsage
 
     public short SegmentCount { get; set; }
 
-    public int InputTokens { get; set; }
+    public int InputFreshTokens { get; set; }
 
     public int OutputTokens { get; set; }
 
@@ -40,7 +40,7 @@ public partial class UserModelUsage
     public int TotalDurationMs { get; set; }
 
     [Column(TypeName = "decimal(14, 8)")]
-    public decimal InputCost { get; set; }
+    public decimal InputFreshCost { get; set; }
 
     [Column(TypeName = "decimal(14, 8)")]
     public decimal OutputCost { get; set; }
@@ -56,6 +56,11 @@ public partial class UserModelUsage
     public int UserId { get; set; }
 
     public short ModelId { get; set; }
+
+    public int InputCachedTokens { get; set; }
+
+    [Column(TypeName = "decimal(14, 8)")]
+    public decimal InputCachedCost { get; set; }
 
     [ForeignKey("BalanceTransactionId")]
     [InverseProperty("UserModelUsage")]

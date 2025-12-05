@@ -10,7 +10,7 @@ public record ChatSegment
 
     public required ChatTokenUsage? Usage { get; init; }
 
-    public static ChatSegment FromUsageOnly(int inputToken, int outputToken, int reasoningToken = 0)
+    public static ChatSegment FromUsageOnly(int inputToken, int outputToken, int reasoningToken = 0, int cacheTokens = 0)
     {
         return new ChatSegment
         {
@@ -21,6 +21,7 @@ public record ChatSegment
                 InputTokens = inputToken,
                 OutputTokens = outputToken,
                 ReasoningTokens = reasoningToken,
+                CacheTokens = cacheTokens,
             },
         };
     }

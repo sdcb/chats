@@ -89,20 +89,20 @@ export const GenerateInformationAction = (props: Props) => {
     };
   }, [cacheKey]);
 
-  // 聚合步骤数据或使用消息中的旧数据
-  const aggregated = aggregateStepGenerateInfo(stepInfos);
-  const info = aggregated
-    ? aggregated
-    : {
-        inputTokens: message.inputTokens ?? 0,
-        outputTokens: message.outputTokens ?? 0,
-        inputPrice: message.inputPrice ?? 0,
-        outputPrice: message.outputPrice ?? 0,
-        reasoningTokens: message.reasoningTokens ?? 0,
-        duration: message.duration ?? 0,
-        reasoningDuration: message.reasoningDuration ?? 0,
-        firstTokenLatency: message.firstTokenLatency ?? 0,
-      };
+  // 聚合步骤数据
+  const info = aggregateStepGenerateInfo(stepInfos);
+
+  const inputCachedTokens = info?.inputCachedTokens ?? 0;
+  const totalInputTokens = info?.inputOverallTokens;
+
+  const inputCachedPrice = info?.inputCachedPrice ?? 0;
+  const totalInputPrice = info?.inputPrice ?? 0;
+  const outputPrice = info?.outputPrice ?? 0;
+
+  const showInputTotalCost = (!!info && totalInputPrice > 0) || loading;
+  const showInputCachedCost = (!!info && inputCachedPrice > 0) || loading;
+  const showOutputCost = (!!info && outputPrice > 0) || loading;
+  const totalCost = totalInputPrice + outputPrice;
 
   const GenerateInformation = (props: { 
     name: string; 
@@ -171,31 +171,49 @@ export const GenerateInformationAction = (props: Props) => {
             <div className="space-y-0.5">
               <GenerateInformation
                 name={'total duration'}
-                value={info.duration?.toLocaleString() + ' ms'}
+                value={
+                  info ? `${info.duration.toLocaleString()} ms` : '-'
+                }
                 icon="⏱️"
                 loading={loading}
               />
               <GenerateInformation
                 name={'first token latency'}
-                value={info.firstTokenLatency?.toLocaleString() + ' ms'}
+                value={
+                  info ? `${info.firstTokenLatency.toLocaleString()} ms` : '-'
+                }
                 icon="⚡"
                 loading={loading}
               />
               <GenerateInformation
                 name={'prompt tokens'}
-                value={`${info.inputTokens?.toLocaleString()}`}
+                value={
+                  totalInputTokens !== undefined
+                    ? `${totalInputTokens.toLocaleString()}`
+                    : '-'
+                }
                 icon="📥"
                 loading={loading}
               />
+              {(inputCachedTokens > 0 || loading) && (
+                <GenerateInformation
+                  name={'prompt tokens (cached)'}
+                  value={`${inputCachedTokens.toLocaleString()}`}
+                  icon="♻️"
+                  loading={loading}
+                />
+              )}
               <GenerateInformation
                 name={'response tokens'}
-                value={`${(
-                  (info.outputTokens ?? 0) - (info.reasoningTokens ?? 0)
-                ).toLocaleString()}`}
+                value={
+                  info
+                    ? `${(info.outputTokens - info.reasoningTokens).toLocaleString()}`
+                    : '-'
+                }
                 icon="📤"
                 loading={loading}
               />
-              {!!(info.reasoningTokens) && (
+              {info && info.reasoningTokens > 0 && (
                 <GenerateInformation
                   name={'reasoning tokens'}
                   value={`${info.reasoningTokens.toLocaleString()}`}
@@ -206,30 +224,47 @@ export const GenerateInformationAction = (props: Props) => {
               <GenerateInformation
                 name={'response speed'}
                 value={
-                  info.duration
-                    ? toFixed(
-                        ((info.outputTokens ?? 0) / (info.duration || 0)) *
-                          1000,
-                      ) + ' token/s'
+                  info && info.duration
+                    ? `${toFixed((info.outputTokens / info.duration) * 1000)} token/s`
                     : '-'
                 }
                 icon="🚀"
                 loading={loading}
               />
-              {((info.inputPrice ?? 0) > 0 || (info.outputPrice ?? 0) > 0 || loading) && (
+              {(showInputTotalCost || showInputCachedCost || showOutputCost) && (
                 <div className="pt-1.5 mt-1.5 border-t space-y-0.5">
-                  {((info.inputPrice ?? 0) > 0 || loading) && (
+                  {showInputTotalCost && (
                     <GenerateInformation
-                      name={'prompt cost'}
-                      value={'￥' + formatNumberAsMoney(+(info.inputPrice ?? 0), 6)}
+                      name={'Input cost'}
+                      value={
+                        info
+                          ? '￥' + formatNumberAsMoney(+totalInputPrice, 6)
+                          : '-'
+                      }
                       icon="💰"
                       loading={loading}
                     />
                   )}
-                  {((info.outputPrice ?? 0) > 0 || loading) && (
+                  {showInputCachedCost && (
                     <GenerateInformation
-                      name={'response cost'}
-                      value={'￥' + formatNumberAsMoney(+(info.outputPrice ?? 0), 6)}
+                      name={'Input cost (cached)'}
+                      value={
+                        info
+                          ? '￥' + formatNumberAsMoney(+inputCachedPrice, 6)
+                          : '-'
+                      }
+                      icon="♻️"
+                      loading={loading}
+                    />
+                  )}
+                  {showOutputCost && (
+                    <GenerateInformation
+                      name={'Response cost'}
+                      value={
+                        info
+                          ? '￥' + formatNumberAsMoney(+outputPrice, 6)
+                          : '-'
+                      }
                       icon="💵"
                       loading={loading}
                     />
@@ -237,11 +272,9 @@ export const GenerateInformationAction = (props: Props) => {
                   <GenerateInformation
                     name={'total cost'}
                     value={
-                      '￥' +
-                      formatNumberAsMoney(
-                        +(info.inputPrice ?? 0) + +(info.outputPrice ?? 0),
-                        6,
-                      )
+                      info
+                        ? '￥' + formatNumberAsMoney(totalCost, 6)
+                        : '-'
                     }
                     icon="💳"
                     loading={loading}

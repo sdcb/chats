@@ -66,7 +66,8 @@ public static class AnthropicSegmentExtensions
             Usage = new AnthropicUsage
             {
                 InputTokens = segment.Usage.InputTokens,
-                OutputTokens = segment.Usage.OutputTokens
+                OutputTokens = segment.Usage.OutputTokens,
+                CacheReadInputTokens = segment.Usage.CacheTokens
             }
         };
     }
@@ -106,7 +107,7 @@ public static class AnthropicSegmentExtensions
                 InputTokens = segment.Usage.InputTokens,
                 OutputTokens = segment.Usage.OutputTokens,
                 CacheCreationInputTokens = 0,
-                CacheReadInputTokens = 0
+                CacheReadInputTokens = segment.Usage.CacheTokens
             }
         };
     }

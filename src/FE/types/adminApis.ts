@@ -48,8 +48,9 @@ export interface AdminModelDto {
   enabled: boolean;
   modelKeyId: number;
   deploymentName: string;
-  inputTokenPrice1M: number;
+  inputFreshTokenPrice1M: number;
   outputTokenPrice1M: number;
+  inputCachedTokenPrice1M: number;
   
   // === 1.8.0 新增字段（全部必填）===
   allowSearch: boolean;
@@ -81,8 +82,9 @@ export interface UpdateModelDto {
   enabled: boolean;
   deploymentName: string;
   modelKeyId: number;
-  inputTokenPrice1M: number;
+  inputFreshTokenPrice1M: number;
   outputTokenPrice1M: number;
+  inputCachedTokenPrice1M: number;
   
   // === 1.8.0 新增字段（全部必填）===
   allowSearch: boolean;

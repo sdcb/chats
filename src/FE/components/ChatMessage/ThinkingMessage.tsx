@@ -88,7 +88,6 @@ interface Props {
   readonly?: boolean;
   content: string;
   finished?: boolean; // 是否已结束推理
-  reasoningDuration?: number;
   messageId: string;
   chatId?: string;
   chatShareId?: string;
@@ -96,15 +95,11 @@ interface Props {
 }
 
 const ThinkingMessage = (props: Props) => {
-  const { content, finished, reasoningDuration, messageId, chatId, chatShareId, chatStatus } = props;
+  const { content, finished, messageId, chatId, chatShareId, chatStatus } = props;
   const { t } = useTranslation();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [displayDurationMs, setDisplayDurationMs] = useState<number | null>(
-    typeof reasoningDuration === 'number' && reasoningDuration > 0
-      ? reasoningDuration
-      : null,
-  );
+  const [displayDurationMs, setDisplayDurationMs] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [isManuallyToggled, setIsManuallyToggled] = useState(false);
 
@@ -132,12 +127,6 @@ const ThinkingMessage = (props: Props) => {
     const isFinished = finished ?? true;
     setIsOpen(!isFinished);
   }, [finished, isManuallyToggled]);
-
-  useEffect(() => {
-    if (typeof reasoningDuration === 'number' && reasoningDuration > 0) {
-      setDisplayDurationMs(reasoningDuration);
-    }
-  }, [reasoningDuration]);
 
   const resolveDurationFromSteps = useCallback((stepInfos?: IStepGenerateInfo[]) => {
     if (!stepInfos || stepInfos.length === 0) {

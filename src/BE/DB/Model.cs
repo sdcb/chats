@@ -25,7 +25,7 @@ public partial class Model
     public short Order { get; set; }
 
     [Column(TypeName = "decimal(9, 5)")]
-    public decimal InputTokenPrice1M { get; set; }
+    public decimal InputFreshTokenPrice1M { get; set; }
 
     [Column(TypeName = "decimal(9, 5)")]
     public decimal OutputTokenPrice1M { get; set; }
@@ -75,6 +75,9 @@ public partial class Model
     public int? MaxThinkingBudget { get; set; }
 
     public bool SupportsVisionLink { get; set; }
+
+    [Column(TypeName = "decimal(9, 5)")]
+    public decimal InputCachedTokenPrice1M { get; set; }
 
     [InverseProperty("Model")]
     public virtual ICollection<ChatConfig> ChatConfigs { get; set; } = new List<ChatConfig>();

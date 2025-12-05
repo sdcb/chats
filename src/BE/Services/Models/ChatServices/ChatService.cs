@@ -91,6 +91,7 @@ public abstract partial class ChatService
             InputTokens = inputTokens,
             OutputTokens = outputTokens += seg.Items.GetText() switch { null => 0, var x => Tokenizer.CountTokens(x) },
             ReasoningTokens = reasoningTokens += seg.Items.GetThink() switch { null => 0, var x => Tokenizer.CountTokens(x) },
+            CacheTokens = 0,
         };
 
         if (request.ChatConfig.Model.AllowStreaming && request.Streamed)

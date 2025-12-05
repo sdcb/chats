@@ -685,6 +685,10 @@ export default function ModelManager() {
             }
           }
           if (!m) return null;
+          const overlayPriceParts = (m.inputCachedTokenPrice1M > 0
+            ? [m.inputFreshTokenPrice1M, m.inputCachedTokenPrice1M, m.outputTokenPrice1M]
+            : [m.inputFreshTokenPrice1M, m.outputTokenPrice1M]);
+          const overlayPrice = '￥' + overlayPriceParts.map(value => formatNumberAsMoney(value)).join('/');
           return (
             <div className="rounded border bg-background/90 shadow-md px-2 py-1">
               <div className="flex items-center gap-2">
@@ -700,7 +704,7 @@ export default function ModelManager() {
                 <div className="flex-1 min-w-0">
                   <div className="truncate font-medium">{m.name}</div>
                   <div className="text-xs text-blue-600 truncate">
-                    {'￥' + formatNumberAsMoney(m.inputTokenPrice1M) + '/' + formatNumberAsMoney(m.outputTokenPrice1M)}
+                    {overlayPrice}
                   </div>
                 </div>
               </div>

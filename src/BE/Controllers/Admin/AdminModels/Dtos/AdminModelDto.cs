@@ -44,11 +44,14 @@ public record AdminModelDto
     [JsonPropertyName("maxTemperature")]
     public required decimal MaxTemperature { get; init; }
 
-    [JsonPropertyName("inputTokenPrice1M")]
-    public required decimal InputTokenPrice1M { get; init; }
+    [JsonPropertyName("inputFreshTokenPrice1M")]
+    public required decimal InputFreshTokenPrice1M { get; init; }
 
     [JsonPropertyName("outputTokenPrice1M")]
     public required decimal OutputTokenPrice1M { get; init; }
+
+    [JsonPropertyName("inputCachedTokenPrice1M")]
+    public required decimal InputCachedTokenPrice1M { get; init; }
 
     [JsonPropertyName("contextWindow")]
     public required int ContextWindow { get; init; }

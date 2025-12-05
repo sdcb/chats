@@ -68,7 +68,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                         {
                             int inputTokens = usage.TryGetProperty("input_tokens", out JsonElement it) ? it.GetInt32() : 0;
                             int outputTokens = usage.TryGetProperty("output_tokens", out JsonElement ot) ? ot.GetInt32() : 0;
-                            yield return ChatSegment.FromUsageOnly(inputTokens, outputTokens);
+                            yield return ChatSegment.FromUsageOnly(inputTokens, outputTokens, cacheTokens: GetCacheReadTokens(usage));
                         }
                         break;
                     }
@@ -189,10 +189,12 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
                         int inputTokens = 0;
                         int outputTokens = 0;
-                        if (json.TryGetProperty("usage", out JsonElement usage))
+                        JsonElement usageElement = default;
+                        bool hasUsage = json.TryGetProperty("usage", out usageElement);
+                        if (hasUsage)
                         {
-                            inputTokens = usage.TryGetProperty("input_tokens", out JsonElement it) ? it.GetInt32() : 0;
-                            outputTokens = usage.TryGetProperty("output_tokens", out JsonElement ot) ? ot.GetInt32() : 0;
+                            inputTokens = usageElement.TryGetProperty("input_tokens", out JsonElement it) ? it.GetInt32() : 0;
+                            outputTokens = usageElement.TryGetProperty("output_tokens", out JsonElement ot) ? ot.GetInt32() : 0;
                         }
 
                         yield return new ChatSegment
@@ -203,6 +205,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                             {
                                 InputTokens = inputTokens,
                                 OutputTokens = outputTokens,
+                                CacheTokens = hasUsage ? GetCacheReadTokens(usageElement) : 0,
                             }
                         };
                         break;
@@ -255,6 +258,15 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             return results.ToJsonString(JSON.JsonSerializerOptions);
         }
         return json.ToString();
+    }
+
+    private static int GetCacheReadTokens(JsonElement usage)
+    {
+        if (usage.TryGetProperty("cache_read_input_tokens", out JsonElement cacheRead))
+        {
+            return cacheRead.GetInt32();
+        }
+        return 0;
     }
 
     protected virtual (string url, string apiKey) GetEndpointAndKey(ModelKey modelKey)

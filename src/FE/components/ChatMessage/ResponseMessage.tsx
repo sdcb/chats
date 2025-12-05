@@ -415,7 +415,6 @@ const ResponseMessage = (props: Props) => {
               key={'reasoning-' + index}
               content={c.c}
               finished={finished}
-              reasoningDuration={message.reasoningDuration}
               messageId={message.id}
               chatId={chatId}
               chatShareId={chatShareId}

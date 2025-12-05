@@ -17,11 +17,14 @@ public record ModelUsageDto
     [JsonPropertyName("isTerm")]
     public required bool IsTerm { get; init; }
 
-    [JsonPropertyName("inputTokenPrice1M")]
-    public required decimal InputTokenPrice1M { get; init; }
+    [JsonPropertyName("inputFreshTokenPrice1M")]
+    public required decimal InputFreshTokenPrice1M { get; init; }
 
     [JsonPropertyName("outputTokenPrice1M")]
     public required decimal OutputTokenPrice1M { get; init; }
+
+    [JsonPropertyName("inputCachedTokenPrice1M")]
+    public required decimal InputCachedTokenPrice1M { get; init; }
 
     public static ModelUsageDto FromDB(UserModel userModel)
     {
@@ -30,8 +33,9 @@ public record ModelUsageDto
             Counts = userModel.CountBalance,
             Expires = userModel.ExpiresAt,
             IsTerm = userModel.ExpiresAt - DateTime.UtcNow > TimeSpan.FromDays(365 * 2),
-            InputTokenPrice1M = userModel.Model.InputTokenPrice1M,
+            InputFreshTokenPrice1M = userModel.Model.InputFreshTokenPrice1M,
             OutputTokenPrice1M = userModel.Model.OutputTokenPrice1M,
+            InputCachedTokenPrice1M = userModel.Model.InputCachedTokenPrice1M,
             Tokens = userModel.TokenBalance,
         };
     }

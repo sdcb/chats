@@ -123,7 +123,8 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                     yield return ChatSegment.FromUsageOnly(
                         usageOnly.TryGetProperty("prompt_tokens", out JsonElement pt) ? pt.GetInt32() : 0,
                         usageOnly.TryGetProperty("completion_tokens", out JsonElement ct) ? ct.GetInt32() : 0,
-                        GetReasoningTokens(usageOnly)
+                        GetReasoningTokens(usageOnly),
+                        GetCachedTokens(usageOnly)
                     );
                 }
                 continue;
@@ -179,7 +180,8 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                 {
                     InputTokens = u.TryGetProperty("prompt_tokens", out JsonElement pit) ? pit.GetInt32() : 0,
                     OutputTokens = u.TryGetProperty("completion_tokens", out JsonElement cot) ? cot.GetInt32() : 0,
-                    ReasoningTokens = GetReasoningTokens(u)
+                    ReasoningTokens = GetReasoningTokens(u),
+                    CacheTokens = GetCachedTokens(u)
                 };
             }
 
@@ -215,6 +217,16 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             ctd.TryGetProperty("reasoning_tokens", out JsonElement rt))
         {
             return rt.GetInt32();
+        }
+        return 0;
+    }
+
+    private static int GetCachedTokens(JsonElement usage)
+    {
+        if (usage.TryGetProperty("prompt_tokens_details", out JsonElement ptd) &&
+            ptd.TryGetProperty("cached_tokens", out JsonElement cached))
+        {
+            return cached.GetInt32();
         }
         return 0;
     }
@@ -312,7 +324,8 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             {
                 InputTokens = u.TryGetProperty("prompt_tokens", out JsonElement pit) ? pit.GetInt32() : 0,
                 OutputTokens = u.TryGetProperty("completion_tokens", out JsonElement cot) ? cot.GetInt32() : 0,
-                ReasoningTokens = GetReasoningTokens(u)
+                ReasoningTokens = GetReasoningTokens(u),
+                CacheTokens = GetCachedTokens(u)
             };
         }
 

@@ -78,10 +78,13 @@ public required string DeploymentName { get; init; }
 public required short ModelKeyId { get; init; }
 
 [Range(0, double.MaxValue)]
-public required decimal InputTokenPrice1M { get; init; }
+public required decimal InputFreshTokenPrice1M { get; init; }
 
 [Range(0, double.MaxValue)]
 public required decimal OutputTokenPrice1M { get; init; }
+
+[Range(0, double.MaxValue)]
+public required decimal InputCachedTokenPrice1M { get; init; }
 
 [Range(0, 2)]
 public required decimal MinTemperature { get; init; }

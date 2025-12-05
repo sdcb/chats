@@ -225,6 +225,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
                 InputTokens = usage["input_tokens"]?.GetValue<int>() ?? 0,
                 OutputTokens = usage["output_tokens"]?.GetValue<int>() ?? 0,
                 ReasoningTokens = 0,
+                CacheTokens = 0,
             } : null,
         };
     }
@@ -397,6 +398,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
                     InputTokens = usageElement.GetProperty("input_tokens").GetInt32(),
                     OutputTokens = usageElement.GetProperty("output_tokens").GetInt32(),
                     ReasoningTokens = 0,
+                    CacheTokens = 0,
                 };
 
                 Console.WriteLine($"[{sw.Elapsed.TotalSeconds:F3}s] {eventType} #{eventIndex}, input={usage.InputTokens}, output={usage.OutputTokens}");

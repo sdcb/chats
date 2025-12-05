@@ -40,8 +40,9 @@ export interface ModelUsageDto {
   counts: number;
   expires: string;
   isTerm: boolean;
-  inputTokenPrice1M: number;
+  inputFreshTokenPrice1M: number;
   outputTokenPrice1M: number;
+  inputCachedTokenPrice1M: number;
 }
 
 export interface GetLoginProvidersResult {

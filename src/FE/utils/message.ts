@@ -187,16 +187,8 @@ export function generateResponseMessage(
     siblingIds: [],
     isActive: false,
     content: [],
-    inputTokens: 0,
-    outputTokens: 0,
-    inputPrice: 0,
-    outputPrice: 0,
     modelName: modelName,
     modelId: modelId,
-    reasoningTokens: 0,
-    reasoningDuration: 0,
-    duration: 0,
-    firstTokenLatency: 0,
   } as IChatMessage;
 }
 
@@ -214,13 +206,5 @@ export function generateUserMessage(
     siblingIds: [],
     isActive: false,
     content,
-    inputTokens: 0,
-    outputTokens: 0,
-    inputPrice: 0,
-    outputPrice: 0,
-    reasoningTokens: 0,
-    reasoningDuration: 0,
-    duration: 0,
-    firstTokenLatency: 0,
   } as IChatMessage;
 }

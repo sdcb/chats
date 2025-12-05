@@ -4,11 +4,20 @@ namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 
 public record StepGenerateInfoDto
 {
-    [JsonPropertyName("inputTokens")]
-    public required int InputTokens { get; init; }
+    [JsonPropertyName("inputCachedTokens")]
+    public required int InputCachedTokens { get; init; }
+
+    [JsonPropertyName("inputOverallTokens")]
+    public required int InputOverallTokens { get; init; }
 
     [JsonPropertyName("outputTokens")]
     public required int OutputTokens { get; init; }
+
+    [JsonPropertyName("inputFreshPrice")]
+    public required decimal InputFreshPrice { get; init; }
+
+    [JsonPropertyName("inputCachedPrice")]
+    public required decimal InputCachedPrice { get; init; }
 
     [JsonPropertyName("inputPrice")]
     public required decimal InputPrice { get; init; }

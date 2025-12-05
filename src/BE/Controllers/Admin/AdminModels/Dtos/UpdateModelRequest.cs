@@ -30,13 +30,17 @@ public record UpdateModelRequest
     [Range(1, short.MaxValue, ErrorMessage = "Model key ID must be greater than 0")]
     public required short ModelKeyId { get; init; }
 
-    [JsonPropertyName("inputTokenPrice1M")]
+    [JsonPropertyName("inputFreshTokenPrice1M")]
     [Range(0, double.MaxValue, ErrorMessage = "Input token price must be non-negative")]
-    public required decimal InputTokenPrice1M { get; init; }
+    public required decimal InputFreshTokenPrice1M { get; init; }
 
     [JsonPropertyName("outputTokenPrice1M")]
     [Range(0, double.MaxValue, ErrorMessage = "Output token price must be non-negative")]
     public required decimal OutputTokenPrice1M { get; init; }
+
+    [JsonPropertyName("inputCachedTokenPrice1M")]
+    [Range(0, double.MaxValue, ErrorMessage = "Cache token price must be non-negative")]
+    public required decimal InputCachedTokenPrice1M { get; init; }
 
     [JsonPropertyName("allowSearch")]
     public required bool AllowSearch { get; init; }
@@ -101,8 +105,9 @@ public record UpdateModelRequest
         cm.Name = Name;
         cm.IsDeleted = !Enabled;
         cm.ModelKeyId = ModelKeyId;
-        cm.InputTokenPrice1M = InputTokenPrice1M;
+        cm.InputFreshTokenPrice1M = InputFreshTokenPrice1M;
         cm.OutputTokenPrice1M = OutputTokenPrice1M;
+        cm.InputCachedTokenPrice1M = InputCachedTokenPrice1M;
         cm.DeploymentName = DeploymentName;
         cm.AllowSearch = AllowSearch;
         cm.AllowVision = AllowVision;

@@ -138,14 +138,6 @@ export interface IChatMessage {
   modelName?: string;
   modelId: number;
   modelProviderId?: number;
-  inputPrice?: number;
-  outputPrice?: number;
-  inputTokens?: number;
-  outputTokens?: number;
-  reasoningTokens?: number;
-  reasoningDuration?: number;
-  duration?: number;
-  firstTokenLatency?: number;
   reaction?: boolean | null;
   edited?: boolean;
   displayType?: MessageDisplayType;
@@ -153,8 +145,11 @@ export interface IChatMessage {
 }
 
 export interface IStepGenerateInfo {
-  inputTokens: number;
+  inputCachedTokens?: number;
+  inputOverallTokens?: number;
   outputTokens: number;
+  inputFreshPrice?: number;
+  inputCachedPrice?: number;
   inputPrice: number;
   outputPrice: number;
   reasoningTokens: number;

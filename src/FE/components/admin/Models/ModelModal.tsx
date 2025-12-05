@@ -95,7 +95,8 @@ const ModelModal = (props: IProps) => {
     enabled: z.boolean(),
     deploymentName: z.string().min(1, t('This field is require')),
     modelKeyId: z.string().min(1, t('This field is require')).default('0'),
-    inputTokenPrice1M: z.coerce.number(),
+    inputFreshTokenPrice1M: z.coerce.number(),
+    inputCachedTokenPrice1M: z.coerce.number(),
     outputTokenPrice1M: z.coerce.number(),
     modelId: z.string().optional(),
     
@@ -218,7 +219,8 @@ const ModelModal = (props: IProps) => {
       enabled: true,
       deploymentName: '',
       modelKeyId: '0',
-      inputTokenPrice1M: 0,
+      inputFreshTokenPrice1M: 0,
+      inputCachedTokenPrice1M: 0,
       outputTokenPrice1M: 0,
       modelId: '',
       apiType: ApiType.ChatCompletion,
@@ -246,7 +248,8 @@ const ModelModal = (props: IProps) => {
     const dto: UpdateModelDto = {
       deploymentName: values.deploymentName,
       enabled: values.enabled,
-      inputTokenPrice1M: values.inputTokenPrice1M,
+      inputFreshTokenPrice1M: values.inputFreshTokenPrice1M,
+      inputCachedTokenPrice1M: values.inputCachedTokenPrice1M,
       outputTokenPrice1M: values.outputTokenPrice1M,
       modelKeyId: parseInt(values.modelKeyId),
       name: values.name,
@@ -325,7 +328,8 @@ const ModelModal = (props: IProps) => {
         enabled: values.enabled,
         deploymentName: values.deploymentName,
         modelKeyId: parseInt(values.modelKeyId),
-        inputTokenPrice1M: values.inputTokenPrice1M,
+        inputFreshTokenPrice1M: values.inputFreshTokenPrice1M,
+        inputCachedTokenPrice1M: values.inputCachedTokenPrice1M,
         outputTokenPrice1M: values.outputTokenPrice1M,
         
         allowSearch: values.allowSearch,
@@ -397,8 +401,9 @@ const ModelModal = (props: IProps) => {
           enabled,
           modelKeyId,
           deploymentName,
-          inputTokenPrice1M,
+          inputFreshTokenPrice1M,
           outputTokenPrice1M,
+          inputCachedTokenPrice1M,
           allowSearch,
           allowVision,
           supportsVisionLink,
@@ -424,7 +429,8 @@ const ModelModal = (props: IProps) => {
         form.setValue('enabled', enabled);
         form.setValue('modelKeyId', modelKeyId.toString());
         form.setValue('deploymentName', deploymentName);
-        form.setValue('inputTokenPrice1M', inputTokenPrice1M);
+        form.setValue('inputFreshTokenPrice1M', inputFreshTokenPrice1M);
+        form.setValue('inputCachedTokenPrice1M', inputCachedTokenPrice1M);
         form.setValue('outputTokenPrice1M', outputTokenPrice1M);
         
         form.setValue('allowSearch', allowSearch);
@@ -641,34 +647,46 @@ const ModelModal = (props: IProps) => {
                   />
                   
                   {/* 模型价格 */}
-                  <FormField
-                    key="inputTokenPrice1M"
-                    control={form.control}
-                    name="inputTokenPrice1M"
-                    render={({ field }) => {
-                      return (
-                        <FormInput
-                          type="number"
-                          label={t('1M input tokens price')!}
-                          field={field}
-                        />
-                      );
-                    }}
-                  ></FormField>
-                  <FormField
-                    key="outputTokenPrice1M"
-                    control={form.control}
-                    name="outputTokenPrice1M"
-                    render={({ field }) => {
-                      return (
-                        <FormInput
-                          type="number"
-                          label={t('1M output tokens price')!}
-                          field={field}
-                        />
-                      );
-                    }}
-                  ></FormField>
+                  <div className="col-span-2">
+                    <div className="grid grid-cols-3 gap-4">
+                      <FormField
+                        key="inputFreshTokenPrice1M"
+                        control={form.control}
+                        name="inputFreshTokenPrice1M"
+                        render={({ field }) => (
+                          <FormInput
+                            type="number"
+                            label={t('1M input tokens price')!}
+                            field={field}
+                          />
+                        )}
+                      />
+                      <FormField
+                        key="inputCachedTokenPrice1M"
+                        control={form.control}
+                        name="inputCachedTokenPrice1M"
+                        render={({ field }) => (
+                          <FormInput
+                            type="number"
+                            label={t('1M input cached tokens price')!}
+                            field={field}
+                          />
+                        )}
+                      />
+                      <FormField
+                        key="outputTokenPrice1M"
+                        control={form.control}
+                        name="outputTokenPrice1M"
+                        render={({ field }) => (
+                          <FormInput
+                            type="number"
+                            label={t('1M output tokens price')!}
+                            field={field}
+                          />
+                        )}
+                      />
+                    </div>
+                  </div>
               </div>
               
               {/* ========== 2. API 类型选择 ========== */}

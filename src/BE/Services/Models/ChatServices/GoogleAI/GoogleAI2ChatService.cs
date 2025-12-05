@@ -171,6 +171,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
             InputTokens = usageMetadata.PromptTokenCount,
             OutputTokens = usageMetadata.TotalTokenCount - usageMetadata.PromptTokenCount,
             ReasoningTokens = usageMetadata.ThoughtsTokenCount,
+            CacheTokens = 0,
         };
         return usage;
     }

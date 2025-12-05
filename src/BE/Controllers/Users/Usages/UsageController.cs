@@ -140,10 +140,10 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
                 FinishReason = u.FinishReason.Name,
                 UserAgent = u.ClientInfo.ClientUserAgent.UserAgent,
                 IP = u.ClientInfo.ClientIp.Ipaddress,
-                InputTokens = u.InputTokens,
+                InputTokens = u.InputFreshTokens + u.InputCachedTokens,
                 OutputTokens = u.OutputTokens,
                 ReasoningTokens = u.ReasoningTokens,
-                InputCost = u.InputCost,
+                InputCost = u.InputFreshCost + u.InputCachedCost,
                 OutputCost = u.OutputCost,
                 UsagedCreatedAt = u.CreatedAt
             });

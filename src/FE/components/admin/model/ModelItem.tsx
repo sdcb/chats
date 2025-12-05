@@ -112,6 +112,13 @@ export default function ModelItem({ model, onEditClick, onDeleteClick, onGoToUsa
     }
   };
 
+  const freshPrice = model.inputFreshTokenPrice1M;
+  const cachedPrice = model.inputCachedTokenPrice1M;
+  const priceBreakdown = cachedPrice > 0
+    ? [freshPrice, cachedPrice, model.outputTokenPrice1M]
+    : [freshPrice, model.outputTokenPrice1M];
+  const formattedPrice = '￥' + priceBreakdown.map((value) => formatNumberAsMoney(value)).join('/');
+
   return (
     <div>
       <div
@@ -190,7 +197,7 @@ export default function ModelItem({ model, onEditClick, onDeleteClick, onGoToUsa
               model.enabled ? 'text-blue-600' : 'text-muted-foreground'
             )}
           >
-            {'￥' + formatNumberAsMoney(model.inputTokenPrice1M) + '/' + formatNumberAsMoney(model.outputTokenPrice1M)}
+            {formattedPrice}
           </span>
         </div>
         <div className="flex items-center gap-2 ml-3" data-no-expand>

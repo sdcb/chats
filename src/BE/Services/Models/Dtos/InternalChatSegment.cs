@@ -42,11 +42,20 @@ public record InternalChatSegment
 
     private Usage ToOpenAIUsage()
     {
+        PromptTokensDetails? promptDetails = Usage.CacheTokens > 0
+            ? new PromptTokensDetails
+            {
+                CachedTokens = Usage.CacheTokens,
+                AudioTokens = 0
+            }
+            : null;
+
         return new Usage
         {
             CompletionTokens = Usage.OutputTokens,
             PromptTokens = Usage.InputTokens,
             TotalTokens = Usage.InputTokens + Usage.OutputTokens,
+            PromptTokensDetails = promptDetails,
             CompletionTokensDetails = new CompletionTokensDetails()
             {
                 ReasoningTokens = Usage.ReasoningTokens

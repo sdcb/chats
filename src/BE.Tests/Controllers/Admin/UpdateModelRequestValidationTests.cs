@@ -59,17 +59,17 @@ public class UpdateModelRequestValidationTests
     }
 
     [Fact]
-    public void InputTokenPrice_Negative_ShouldFail()
+    public void InputFreshTokenPrice_Negative_ShouldFail()
     {
         // Arrange
         UpdateModelRequest request = CreateValidChatRequest();
-        request = request with { InputTokenPrice1M = -1 };
+        request = request with { InputFreshTokenPrice1M = -1 };
 
         // Act
         List<ValidationResult> results = ValidateModel(request);
 
         // Assert
-        Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.InputTokenPrice1M)));
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.InputFreshTokenPrice1M)));
     }
 
     [Fact]
@@ -84,6 +84,20 @@ public class UpdateModelRequestValidationTests
 
         // Assert
         Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.OutputTokenPrice1M)));
+    }
+
+    [Fact]
+    public void InputCachedTokenPrice_Negative_ShouldFail()
+    {
+        // Arrange
+        UpdateModelRequest request = CreateValidChatRequest();
+        request = request with { InputCachedTokenPrice1M = -1 };
+
+        // Act
+        List<ValidationResult> results = ValidateModel(request);
+
+        // Assert
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.InputCachedTokenPrice1M)));
     }
 
     #endregion
@@ -380,8 +394,9 @@ public class UpdateModelRequestValidationTests
             Enabled = true,
             DeploymentName = "test-deployment",
             ModelKeyId = 1,
-            InputTokenPrice1M = 1.0m,
+            InputFreshTokenPrice1M = 1.0m,
             OutputTokenPrice1M = 2.0m,
+            InputCachedTokenPrice1M = 1.0m,
             AllowSearch = true,
             AllowVision = false,
             AllowStreaming = true,
@@ -411,8 +426,9 @@ public class UpdateModelRequestValidationTests
             Enabled = true,
             DeploymentName = "test-image-deployment",
             ModelKeyId = 1,
-            InputTokenPrice1M = 1.0m,
+            InputFreshTokenPrice1M = 1.0m,
             OutputTokenPrice1M = 2.0m,
+            InputCachedTokenPrice1M = 1.0m,
             AllowSearch = false,
             AllowVision = false,
             AllowStreaming = true,

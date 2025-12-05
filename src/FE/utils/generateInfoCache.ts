@@ -104,9 +104,13 @@ export const subscribeGenerateInfoCache = (
 };
 
 export interface AggregatedGenerateInfo {
-  inputTokens: number;
+  inputOverallTokens: number;
+  inputFreshTokens: number;
+  inputCachedTokens: number;
   outputTokens: number;
   inputPrice: number;
+  inputFreshPrice: number;
+  inputCachedPrice: number;
   outputPrice: number;
   reasoningTokens: number;
   duration: number;
@@ -123,19 +127,37 @@ export const aggregateStepGenerateInfo = (
 
   const aggregated = stepInfos.reduce<AggregatedGenerateInfo>(
     (acc, info) => {
-      acc.inputTokens += info.inputTokens ?? 0;
+      const cachedTokens = info.inputCachedTokens ?? 0;
+      const overallTokens =
+        info.inputOverallTokens ?? cachedTokens;
+      const freshTokens = Math.max(0, overallTokens - cachedTokens);
+      const cachedPrice = info.inputCachedPrice ?? 0;
+      const freshPrice =
+        info.inputFreshPrice ?? Math.max(0, (info.inputPrice ?? 0) - cachedPrice);
+
+      acc.inputFreshTokens += freshTokens;
+      acc.inputCachedTokens += cachedTokens;
+      acc.inputOverallTokens += overallTokens;
       acc.outputTokens += info.outputTokens ?? 0;
-      acc.inputPrice += info.inputPrice ?? 0;
+
+      acc.inputFreshPrice += freshPrice;
+      acc.inputCachedPrice += cachedPrice;
+      acc.inputPrice += info.inputPrice ?? freshPrice + cachedPrice;
       acc.outputPrice += info.outputPrice ?? 0;
+
       acc.reasoningTokens += info.reasoningTokens ?? 0;
       acc.duration += info.duration ?? 0;
       acc.reasoningDuration += info.reasoningDuration ?? 0;
       return acc;
     },
     {
-      inputTokens: 0,
+      inputOverallTokens: 0,
+      inputFreshTokens: 0,
+      inputCachedTokens: 0,
       outputTokens: 0,
       inputPrice: 0,
+      inputFreshPrice: 0,
+      inputCachedPrice: 0,
       outputPrice: 0,
       reasoningTokens: 0,
       duration: 0,

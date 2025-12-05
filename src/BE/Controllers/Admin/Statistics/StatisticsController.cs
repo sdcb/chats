@@ -32,14 +32,14 @@ public class StatisticsController(ChatsDB db) : ControllerBase
     public async Task<long> GetTotalTokens([FromQuery] StartEndDate query, CancellationToken cancellationToken)
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
-        return await q.SumAsync(x => x.InputTokens + x.OutputTokens, cancellationToken);
+        return await q.SumAsync(x => (long)x.InputFreshTokens + x.InputCachedTokens + x.OutputTokens, cancellationToken);
     }
 
     [HttpGet("cost-during")]
     public async Task<decimal> GetTotalCost([FromQuery] StartEndDate query, CancellationToken cancellationToken)
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
-        return await q.SumAsync(x => x.InputCost + x.OutputCost, cancellationToken);
+        return await q.SumAsync(x => x.InputFreshCost + x.InputCachedCost + x.OutputCost, cancellationToken);
     }
 
     [HttpGet("model-provider-statistics")]
@@ -96,7 +96,7 @@ public class StatisticsController(ChatsDB db) : ControllerBase
         DateStatisticsEntry<TokenStatisticsEntry>[] r = await q
             .Select(x => new DateStatisticsEntry<TokenStatisticsEntry>(x.Key, new TokenStatisticsEntry
             {
-                InputTokens = x.Sum(y => y.InputTokens),
+                InputTokens = x.Sum(y => y.InputFreshTokens + y.InputCachedTokens),
                 OutputTokens = x.Sum(y => y.OutputTokens),
                 ReasoningTokens = x.Sum(y => y.ReasoningTokens)
             }))
@@ -111,7 +111,7 @@ public class StatisticsController(ChatsDB db) : ControllerBase
         DateStatisticsEntry<CostStatisticsEntry>[] r = await q
             .Select(x => new DateStatisticsEntry<CostStatisticsEntry>(x.Key, new CostStatisticsEntry
             {
-                InputCost = x.Sum(y => y.InputCost),
+                InputCost = x.Sum(y => y.InputFreshCost + y.InputCachedCost),
                 OutputCost = x.Sum(y => y.OutputCost),
             }))
             .ToArrayAsync(cancellationToken);
