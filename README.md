@@ -1,4 +1,4 @@
-﻿# Sdcb Chats [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE) [![问DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sdcb/chats) [![更新日志](https://img.shields.io/static/v1?label=&message=%E6%9B%B4%E6%96%B0%E6%97%A5%E5%BF%97&color=8A2BE2)](./doc/zh-CN/release-notes/README.md)
+﻿# Sdcb Chats [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE) [![问DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sdcb/chats) [![更新日志](https://img.shields.io/static/v1?label=%F0%9F%93%9D%20&message=更新日志&color=8A2BE2)](./doc/zh-CN/release-notes/README.md)
 
 **[English](README_EN.md)** | **简体中文** 
 
