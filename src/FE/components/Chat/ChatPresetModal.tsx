@@ -39,6 +39,7 @@ const ChatPresetModal = (props: Props) => {
     selectedChat,
   } = useContext(HomeContext);
   const { t } = useTranslation();
+  const newPresetGroupLabel = t('New preset model group');
   const [spans, setSpans] = useState<ChatSpanDto[]>([]);
   const [selectedSpan, setSelectedSpan] = useState<ChatSpanDto>();
   const [name, setName] = useState(chatPreset?.name);
@@ -66,10 +67,9 @@ const ChatPresetModal = (props: Props) => {
 
   // 加载MCP服务器数据
   const loadMcpServers = useCallback(async () => {
-    if (mcpServersLoaded || mcpLoadingTriggered) return;
-    setMcpLoadingTriggered(true);
-    setMcpServersLoaded(true);
-  }, [mcpLoadingTriggered, mcpServersLoaded]);
+    setMcpLoadingTriggered((prev) => (prev ? prev : true));
+    setMcpServersLoaded((prev) => (prev ? prev : true));
+  }, []);
 
   useEffect(() => {
     if (chatPreset) {
@@ -83,7 +83,7 @@ const ChatPresetModal = (props: Props) => {
       setSelectedSpan(normalizedSpans.length > 0 ? normalizedSpans[0] : undefined);
       setPresetSpanCount(normalizedSpans.length);
     } else {
-      setName(t('New preset model group'));
+      setName(newPresetGroupLabel);
       setSpans([]);
       setSelectedSpan(undefined);
       setPresetSpanCount(0);
@@ -96,7 +96,7 @@ const ChatPresetModal = (props: Props) => {
     if (isOpen && shouldLoadMcpOnInit(chatPreset)) {
       loadMcpServers();
     }
-  }, [chatPreset, isOpen, loadMcpServers, t]);
+  }, [chatPreset, isOpen, loadMcpServers, newPresetGroupLabel]);
 
   const onChangeModel = (model: AdminModelDto) => {
     setSpans((prev) => {
