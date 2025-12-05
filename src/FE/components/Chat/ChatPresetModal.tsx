@@ -38,6 +38,7 @@ const ChatPresetModal = (props: Props) => {
     state: { modelMap, prompts, models, defaultPrompt },
     selectedChat,
   } = useContext(HomeContext);
+  const { t } = useTranslation();
   const [spans, setSpans] = useState<ChatSpanDto[]>([]);
   const [selectedSpan, setSelectedSpan] = useState<ChatSpanDto>();
   const [name, setName] = useState(chatPreset?.name);
@@ -64,7 +65,7 @@ const ChatPresetModal = (props: Props) => {
   };
 
   // 加载MCP服务器数据
-  const loadMcpServers = useCallback(() => {
+  const loadMcpServers = useCallback(async () => {
     if (mcpServersLoaded || mcpLoadingTriggered) return;
     setMcpLoadingTriggered(true);
     setMcpServersLoaded(true);
@@ -96,8 +97,6 @@ const ChatPresetModal = (props: Props) => {
       loadMcpServers();
     }
   }, [chatPreset, isOpen, loadMcpServers, t]);
-
-  const { t } = useTranslation();
 
   const onChangeModel = (model: AdminModelDto) => {
     setSpans((prev) => {

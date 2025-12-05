@@ -66,7 +66,7 @@ const ChatModelSettingModal = (props: Props) => {
   };
 
   // 加载MCP服务器数据
-  const loadMcpServers = useCallback(() => {
+  const loadMcpServers = useCallback(async () => {
     if (mcpServersLoaded || mcpLoadingTriggered) return;
     setMcpLoadingTriggered(true);
     setMcpServersLoaded(true);

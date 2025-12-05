@@ -19,5 +19,22 @@ module.exports = [
       '@next/next/no-img-element': 'off',
       'import/no-anonymous-default-export': 'error',
     },
+    overrides: [
+      {
+        files: [
+          'src/FE/hooks/useThrottle.ts',
+          'src/FE/components/Markdown/MermaidBlock.tsx',
+        ],
+        rules: {
+          'react-hooks/purity': 'error',
+        },
+      },
+      {
+        files: ['src/FE/components/settings/tabs/ApiKeysTab.tsx'],
+        rules: {
+          'react-hooks/globals': 'error',
+        },
+      },
+    ],
   },
 ];
