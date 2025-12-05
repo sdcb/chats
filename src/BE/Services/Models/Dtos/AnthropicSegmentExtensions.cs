@@ -23,13 +23,13 @@ public static class AnthropicSegmentExtensions
     }
 
     /// <summary>
-    /// Converts InternalChatSegment to Anthropic response format (non-streaming)
+    /// Converts snapshot to Anthropic response format (non-streaming)
     /// </summary>
-    public static AnthropicResponse ToAnthropicResponse(this InternalChatSegment segment, string model, string messageId, DBFinishReason finishReason)
+    public static AnthropicResponse ToAnthropicResponse(this ChatCompletionSnapshot snapshot, string model, string messageId)
     {
         List<AnthropicResponseContentBlock> content = [];
 
-        foreach (ChatSegmentItem item in segment.Items)
+        foreach (ChatSegment item in snapshot.Segments)
         {
             switch (item)
             {
@@ -62,12 +62,12 @@ public static class AnthropicSegmentExtensions
             Id = messageId,
             Content = content,
             Model = model,
-            StopReason = finishReason.ToAnthropicStopReason(),
+            StopReason = snapshot.FinishReason.ToAnthropicStopReason(),
             Usage = new AnthropicUsage
             {
-                InputTokens = segment.Usage.InputTokens,
-                OutputTokens = segment.Usage.OutputTokens,
-                CacheReadInputTokens = segment.Usage.CacheTokens
+                InputTokens = snapshot.Usage.InputTokens,
+                OutputTokens = snapshot.Usage.OutputTokens,
+                CacheReadInputTokens = snapshot.Usage.CacheTokens
             }
         };
     }
@@ -75,7 +75,7 @@ public static class AnthropicSegmentExtensions
     /// <summary>
     /// Creates the message_start event
     /// </summary>
-    public static MessageStartEvent ToMessageStartEvent(this InternalChatSegment segment, string model, string messageId)
+    public static MessageStartEvent ToMessageStartEvent(this ChatCompletionSnapshot snapshot, string model, string messageId)
     {
         return new MessageStartEvent
         {
@@ -85,7 +85,7 @@ public static class AnthropicSegmentExtensions
                 Model = model,
                 Usage = new MessageStartUsage
                 {
-                    InputTokens = segment.Usage.InputTokens
+                    InputTokens = snapshot.Usage.InputTokens
                 }
             }
         };
@@ -94,20 +94,20 @@ public static class AnthropicSegmentExtensions
     /// <summary>
     /// Creates the message_delta event with final stop reason and usage
     /// </summary>
-    public static MessageDeltaEvent ToMessageDeltaEvent(this InternalChatSegment segment, DBFinishReason finishReason)
+    public static MessageDeltaEvent ToMessageDeltaEvent(this ChatCompletionSnapshot snapshot)
     {
         return new MessageDeltaEvent
         {
             Delta = new MessageDelta
             {
-                StopReason = finishReason.ToAnthropicStopReason()
+                StopReason = snapshot.FinishReason.ToAnthropicStopReason()
             },
             Usage = new MessageDeltaUsage
             {
-                InputTokens = segment.Usage.InputTokens,
-                OutputTokens = segment.Usage.OutputTokens,
+                InputTokens = snapshot.Usage.InputTokens,
+                OutputTokens = snapshot.Usage.OutputTokens,
                 CacheCreationInputTokens = 0,
-                CacheReadInputTokens = segment.Usage.CacheTokens
+                CacheReadInputTokens = snapshot.Usage.CacheTokens
             }
         };
     }

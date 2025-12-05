@@ -1,4 +1,4 @@
-﻿using Chats.BE.DB;
+using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
@@ -102,13 +102,13 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
         {
             if (response.Candidates != null && response.Candidates.Count > 0)
             {
-                List<ChatSegmentItem> items = [];
+                List<ChatSegment> items = [];
                 foreach (Part part in response.Candidates[0].Content?.Parts ?? [])
                 {
                     if (part.ExecutableCode != null)
                     {
                         codeExecutionId = "ce-" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                        items.Add(ChatSegmentItem.FromToolCall(0, new FunctionCall()
+                        items.Add(ChatSegment.FromToolCall(0, new FunctionCall()
                         {
                             Id = codeExecutionId,
                             Name = part.ExecutableCode.Language.ToString(),
@@ -125,7 +125,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
                         {
                             throw new InvalidOperationException("CodeExecutionResult received without prior ExecutableCode.");
                         }
-                        items.Add(ChatSegmentItem.FromToolCallResponse(codeExecutionId, part.CodeExecutionResult.Output,
+                        items.Add(ChatSegment.FromToolCallResponse(codeExecutionId, part.CodeExecutionResult.Output,
                             (int)codeExecutionSw.ElapsedMilliseconds,
                             isSuccess: part.CodeExecutionResult.Outcome == Outcome.OutcomeOk));
                     }
@@ -133,40 +133,48 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
                     {
                         if (part.Thought == true)
                         {
-                            items.Add(ChatSegmentItem.FromThink(part.Text));
+                            items.Add(ChatSegment.FromThink(part.Text));
                         }
                         else
                         {
-                            items.Add(ChatSegmentItem.FromText(part.Text));
+                            items.Add(ChatSegment.FromText(part.Text));
                         }
                     }
                     if (part.InlineData != null)
                     {
-                        items.Add(ChatSegmentItem.FromBase64Image(part.InlineData.Data, part.InlineData.MimeType));
+                        items.Add(ChatSegment.FromBase64Image(part.InlineData.Data, part.InlineData.MimeType));
                     }
                     if (part.FunctionCall != null)
                     {
-                        items.Add(ChatSegmentItem.FromToolCall(fcIndex++, part.FunctionCall));
+                        items.Add(ChatSegment.FromToolCall(fcIndex++, part.FunctionCall));
                     }
                 }
 
                 FinishReason? finishReason = response.Candidates[0].FinishReason;
-                Dtos.ChatTokenUsage? usage = GetUsage(response.UsageMetadata);
+                ChatTokenUsage? usage = GetUsage(response.UsageMetadata);
 
-                yield return new ChatSegment()
+                foreach (ChatSegment item in items)
                 {
-                    FinishReason = ToDBFinishReason(finishReason),
-                    Items = items,
-                    Usage = usage
-                };
+                    yield return item;
+                }
+
+                DBFinishReason? dbFinish = ToDBFinishReason(finishReason);
+                if (usage != null)
+                {
+                    yield return ChatSegment.FromUsage(usage);
+                }
+                if (dbFinish != null)
+                {
+                    yield return ChatSegment.FromFinishReason(dbFinish);
+                }
             }
         }
     }
 
-    private static Dtos.ChatTokenUsage? GetUsage(UsageMetadata? usageMetadata)
+    private static ChatTokenUsage? GetUsage(UsageMetadata? usageMetadata)
     {
         if (usageMetadata == null) return null;
-        Dtos.ChatTokenUsage? usage = new()
+        ChatTokenUsage usage = new()
         {
             InputTokens = usageMetadata.PromptTokenCount,
             OutputTokens = usageMetadata.TotalTokenCount - usageMetadata.PromptTokenCount,

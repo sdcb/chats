@@ -99,14 +99,13 @@ public partial class StepContent
             .ToArrayAsync(cancellationToken);
     }
 
-    public static IEnumerable<StepContent> FromFullResponse(InternalChatSegment lastSegment, string? errorText, Dictionary<ImageChatSegment, TaskCompletionSource<File>> imageMcCache)
+    public static IEnumerable<StepContent> FromFullResponse(ChatCompletionSnapshot snapshot, string? errorText, Dictionary<ImageChatSegment, TaskCompletionSource<File>> imageMcCache)
     {
         if (errorText is not null)
         {
             yield return FromError(errorText);
         }
-        // lastSegment.Items is merged now
-        foreach (StepContent? item in lastSegment.Items.Select(x =>
+        foreach (StepContent? item in snapshot.Segments.Select(x =>
         {
             return x switch
             {

@@ -1,4 +1,4 @@
-﻿using Chats.BE.Controllers.Chats.Chats.Dtos;
+using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
@@ -637,52 +637,46 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 ChatService s = chatFactory.CreateChatService(userModel.Model);
 
                 bool responseStated = false, reasoningStarted = false;
-                await foreach (InternalChatSegment seg in icc.Run(calc, userModel, s.ChatEntry(request, fup, UsageSource.WebChat, cancellationToken)))
+                await foreach (ChatSegment segment in icc.Run(calc, userModel, s.ChatEntry(request, fup, UsageSource.WebChat, cancellationToken)))
                 {
-                    foreach (ChatSegmentItem item in seg.Items)
+                    switch (segment)
                     {
-                        if (item is ThinkChatSegment thinkSeg)
-                        {
+                        case ThinkChatSegment thinkSeg:
                             if (!reasoningStarted)
                             {
                                 writer.TryWrite(new StartReasoningLine(chatSpan.SpanId));
                                 reasoningStarted = true;
                             }
                             writer.TryWrite(new ReasoningSegmentLine(chatSpan.SpanId, thinkSeg.Think));
-                        }
-                        else if (item is TextChatSegment textSeg)
-                        {
+                            break;
+                        case TextChatSegment textSeg:
                             if (!responseStated)
                             {
                                 writer.TryWrite(new StartResponseLine(chatSpan.SpanId, icc.ReasoningDurationMs));
                                 responseStated = true;
                             }
                             writer.TryWrite(new SegmentLine(chatSpan.SpanId, textSeg.Text));
-                        }
-                        else if (item is ToolCallSegment toolCall)
-                        {
+                            break;
+                        case ToolCallSegment toolCall:
                             if (!responseStated)
                             {
                                 responseStated = true;
                             }
                             writer.TryWrite(new CallingToolLine(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolCall.Arguments!));
-                        }
-                        else if (item is ToolCallResponseSegment toolCallResponse)
-                        {
+                            break;
+                        case ToolCallResponseSegment toolCallResponse:
                             writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, toolCallResponse.IsSuccess, toolCallResponse.ToolCallId!, toolCallResponse.Response!));
-                        }
-                        else if (item is Base64PreviewImage preview)
-                        {
+                            break;
+                        case Base64PreviewImage preview:
                             writer.TryWrite(new ImageGeneratingLine(chatSpan.SpanId, preview.ToTempFileDto()));
-                        }
-                        else if (item is ImageChatSegment imgSeg)
-                        {
+                            break;
+                        case ImageChatSegment imgSeg:
                             imageFileCache[imgSeg] = new TaskCompletionSource<DB.File>();
                             writer.TryWrite(new TempImageGeneratedLine(chatSpan.SpanId, imgSeg));
-                        }
+                            break;
                     }
 
-                    if (seg.FinishReason == DBFinishReason.ContentFilter)
+                    if (segment is FinishReasonChatSegment finish && finish.FinishReason == DBFinishReason.ContentFilter)
                     {
                         errorText = "Content Filtered";
                     }

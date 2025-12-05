@@ -1,4 +1,4 @@
-﻿using Chats.BE.Services;
+using Chats.BE.Services;
 using Chats.BE.Services.Models.Dtos;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -30,12 +30,22 @@ public record FullChatCompletion
 
     public ChatCompletionChunk ToFinalChunk()
     {
+        string? finishReason = Choices.Count > 0 ? Choices[0].FinishReason : null;
         return new ChatCompletionChunk
         {
             Id = Id,
             Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             Model = Model,
-            Choices = [],
+            Choices =
+            [
+                new DeltaChoice
+                {
+                    Index = 0,
+                    Delta = new OpenAIDelta(),
+                    FinishReason = finishReason,
+                    Logprobs = null
+                }
+            ],
             Usage = Usage,
             SystemFingerprint = SystemFingerprint,
         };
@@ -61,27 +71,7 @@ public record MessageChoice
     [JsonPropertyName("finish_reason")]
     public required string? FinishReason { get; init; }
 
-    public ChatCompletionChunk ToFinalChunk(string modelName, string traceId, string? systemFingerprint)
-    {
-        return new ChatCompletionChunk
-        {
-            Id = traceId,
-            Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-            Model = modelName,
-            Choices =
-            [
-                new DeltaChoice()
-                {
-                    Index = Index,
-                    Delta = new OpenAIDelta(){},
-                    Logprobs = Logprobs,
-                    FinishReason = FinishReason,
-                }
-            ],
-            Usage = null,
-            SystemFingerprint = systemFingerprint,
-        };
-    }
+    // Removed streaming final chunk helper in favor of FullChatCompletion.ToFinalChunk.
 }
 
 public record OpenAIFullResponse
@@ -99,7 +89,7 @@ public record OpenAIFullResponse
     public FullToolCall[]? ToolCalls { get; init; }
 
     [JsonPropertyName("segments"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public required ICollection<ChatSegmentItem> Segments { get; init; }
+    public required ICollection<ChatSegment> Segments { get; init; }
 
     [JsonPropertyName("refusal")]
     public object? Refusal { get; init; }

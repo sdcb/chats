@@ -163,11 +163,11 @@ public partial class OpenAIChatCompletionController(
                         Response.Headers.Connection = "keep-alive";
                         if (fullResponse.Choices != null && fullResponse.Choices.Count > 0)
                         {
-                            foreach (ChatSegmentItem seg in fullResponse.Choices[0].Message.Segments)
+                            foreach (ChatSegment seg in fullResponse.Choices[0].Message.Segments)
                             {
                                 await YieldResponse(seg.ToOpenAIChatCompletionChunk(fullResponse.Model, fullResponse.Id, fullResponse.SystemFingerprint), cancellationToken);
                             }
-                            await YieldResponse(fullResponse.Choices[0].ToFinalChunk(fullResponse.Model, fullResponse.Id, fullResponse.SystemFingerprint), cancellationToken);
+                            await YieldResponse(fullResponse.ToFinalChunk(), cancellationToken);
                         }
                         // 发送 [DONE] 标记
                         await Response.Body.WriteAsync("data: [DONE]\n\n"u8.ToArray(), cancellationToken);
@@ -245,13 +245,12 @@ public partial class OpenAIChatCompletionController(
         ScopedBalanceCalculator scopedCalc = calc.WithScoped("0");
         BadRequestObjectResult? errorToReturn = null;
         bool hasSuccessYield = false;
+        bool streamedFinishSegment = false;
         try
         {
             ChatRequest csr = ChatRequest.FromOpenAI(currentApiKey.User.Id.ToString(), cm, cco.Streamed, cco.Messages!, cco.ToCleanCco());
-            await foreach (InternalChatSegment seg in icc.Run(scopedCalc, userModel, s.ChatEntry(csr, fup, UsageSource.Api, cancellationToken)))
+            await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s.ChatEntry(csr, fup, UsageSource.Api, cancellationToken)))
             {
-                if (seg.Items.Count == 0) continue;
-
                 if (cco.Streamed)
                 {
                     if (!hasSuccessYield)
@@ -262,9 +261,10 @@ public partial class OpenAIChatCompletionController(
                         Response.Headers.Connection = "keep-alive";
                     }
 
-                    ChatCompletionChunk chunk = seg.ToOpenAIChunk(cco.Model, HttpContext.TraceIdentifier);
+                    ChatCompletionChunk chunk = segment.ToOpenAIChatCompletionChunk(cco.Model, HttpContext.TraceIdentifier, null);
                     await YieldResponse(chunk, cancellationToken);
                     hasSuccessYield = true;
+                    streamedFinishSegment |= segment is FinishReasonChatSegment;
                 }
 
                 if (cancellationToken.IsCancellationRequested)
@@ -276,39 +276,11 @@ public partial class OpenAIChatCompletionController(
             // 流式响应完成后，发送最终的 finish_reason chunk
             if (cco.Streamed && hasSuccessYield && icc.FinishReason != DBFinishReason.Cancelled)
             {
-                string? finishReasonText = icc.FinishReason.ToOpenAIFinishReason();
-
-                ChatCompletionChunk finalChunk = new()
+                if (!streamedFinishSegment)
                 {
-                    Id = HttpContext.TraceIdentifier,
-                    Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                    Model = cco.Model,
-                    Choices =
-                    [
-                        new DeltaChoice
-                        {
-                            Index = 0,
-                            Delta = new OpenAIDelta(),
-                            FinishReason = finishReasonText,
-                            Logprobs = null
-                        }
-                    ],
-                    SystemFingerprint = null,
-                    Usage = new Usage
-                    {
-                        PromptTokens = icc.FullResponse.Usage.InputTokens,
-                        CompletionTokens = icc.FullResponse.Usage.OutputTokens,
-                        TotalTokens = icc.FullResponse.Usage.InputTokens + icc.FullResponse.Usage.OutputTokens,
-                        CompletionTokensDetails = new CompletionTokensDetails
-                        {
-                            ReasoningTokens = icc.FullResponse.Usage.ReasoningTokens,
-                            AudioTokens = 0,
-                            AcceptedPredictionTokens = 0,
-                            RejectedPredictionTokens = 0
-                        }
-                    }
-                };
-                await YieldResponse(finalChunk, cancellationToken);
+                    ChatCompletionChunk finalChunk = icc.FullResponse.ToFinalChunk(cco.Model, HttpContext.TraceIdentifier);
+                    await YieldResponse(finalChunk, cancellationToken);
+                }
 
                 // 发送 [DONE] 标记
                 await Response.Body.WriteAsync("data: [DONE]\n\n"u8.ToArray(), cancellationToken);

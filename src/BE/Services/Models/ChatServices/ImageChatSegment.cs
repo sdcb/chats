@@ -1,4 +1,4 @@
-﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
+using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.Dtos;
 using System.Text.Json.Serialization;
@@ -9,7 +9,7 @@ namespace Chats.BE.Services.Models.ChatServices;
 [JsonDerivedType(typeof(Base64Image), typeDiscriminator: "base64")]
 [JsonDerivedType(typeof(Base64PreviewImage), typeDiscriminator: "base64_preview")]
 [JsonDerivedType(typeof(UrlImage), typeDiscriminator: "url")]
-public abstract record ImageChatSegment : ChatSegmentItem
+public abstract record ImageChatSegment : ChatSegment
 {
     public abstract Task<DBFileDef> Download(CancellationToken cancellationToken = default);
 

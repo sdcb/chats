@@ -87,11 +87,8 @@ public class AnthropicMessagesController(
         try
         {
             ChatRequest csr = request.ToChatRequest(currentApiKey.User.Id.ToString(), cm);
-
-            await foreach (InternalChatSegment seg in icc.Run(scopedCalc, userModel, s.ChatEntry(csr, fup, UsageSource.Api, cancellationToken)))
+            await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s.ChatEntry(csr, fup, UsageSource.Api, cancellationToken)))
             {
-                if (seg.Items.Count == 0 && !seg.IsFromUpstream) continue;
-
                 if (request.Streamed)
                 {
                     if (!hasSuccessYield)
@@ -100,22 +97,29 @@ public class AnthropicMessagesController(
                         Response.Headers.ContentType = "text/event-stream; charset=utf-8";
                         Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
                         Response.Headers.Connection = "keep-alive";
+                    }
 
-                        // Send message_start event
+                    if (segment is UsageChatSegment usageSegment)
+                    {
                         if (!messageStarted)
                         {
-                            await YieldEvent("message_start", seg.ToMessageStartEvent(request.Model!, messageId), cancellationToken);
+                            await YieldEvent("message_start", CreateMessageStartEvent(request.Model!, messageId, usageSegment.Usage.InputTokens), cancellationToken);
                             await YieldEvent("ping", new PingEvent(), cancellationToken);
                             messageStarted = true;
+                            hasSuccessYield = true;
                         }
+                        continue;
+                    }
+
+                    if (!messageStarted)
+                    {
+                        await YieldEvent("message_start", CreateMessageStartEvent(request.Model!, messageId, 0), cancellationToken);
+                        await YieldEvent("ping", new PingEvent(), cancellationToken);
+                        messageStarted = true;
                         hasSuccessYield = true;
                     }
 
-                    // Process each item in the segment
-                    foreach (ChatSegmentItem item in seg.Items)
-                    {
-                        await ProcessStreamingItem(item, streamingState, cancellationToken);
-                    }
+                    await ProcessStreamingItem(segment, streamingState, cancellationToken);
                 }
 
                 if (cancellationToken.IsCancellationRequested)
@@ -134,7 +138,7 @@ public class AnthropicMessagesController(
                 }
 
                 // Send message_delta with stop_reason
-                await YieldEvent("message_delta", icc.FullResponse.ToMessageDeltaEvent(icc.FinishReason), cancellationToken);
+                await YieldEvent("message_delta", icc.FullResponse.ToMessageDeltaEvent(), cancellationToken);
 
                 // Send message_stop
                 await YieldEvent("message_stop", new MessageStopEvent(), cancellationToken);
@@ -212,12 +216,12 @@ public class AnthropicMessagesController(
         else
         {
             // Non-streamed success response
-            AnthropicResponse response = icc.FullResponse.ToAnthropicResponse(request.Model!, messageId, icc.FinishReason);
+            AnthropicResponse response = icc.FullResponse.ToAnthropicResponse(request.Model!, messageId);
             return Ok(response);
         }
     }
 
-    private async Task ProcessStreamingItem(ChatSegmentItem item, StreamingState state, CancellationToken cancellationToken)
+    private async Task ProcessStreamingItem(ChatSegment item, StreamingState state, CancellationToken cancellationToken)
     {
         switch (item)
         {
@@ -325,6 +329,22 @@ public class AnthropicMessagesController(
                 }
                 break;
         }
+    }
+
+    private static MessageStartEvent CreateMessageStartEvent(string model, string messageId, int inputTokens)
+    {
+        return new MessageStartEvent
+        {
+            Message = new MessageStartData
+            {
+                Id = messageId,
+                Model = model,
+                Usage = new MessageStartUsage
+                {
+                    InputTokens = inputTokens
+                }
+            }
+        };
     }
 
     private class StreamingState

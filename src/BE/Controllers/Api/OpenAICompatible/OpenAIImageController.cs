@@ -163,24 +163,53 @@ public class OpenAIImageController(
             if (isStreamed)
             {
                 // Streaming response
-                await foreach (InternalChatSegment seg in icc.Run(scopedCalc, userModel, s.ChatEntry(chatRequest, fup, UsageSource.Api, cancellationToken)))
+                List<Base64Image> pendingFinalImages = [];
+                ChatTokenUsage? latestUsage = null;
+
+                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s.ChatEntry(chatRequest, fup, UsageSource.Api, cancellationToken)))
                 {
-                    if (seg.Items.Count == 0) continue;
-
-                    if (!hasSuccessYield)
+                    switch (segment)
                     {
-                        Response.StatusCode = 200;
-                        Response.Headers.ContentType = "text/event-stream; charset=utf-8";
-                        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
-                        Response.Headers.Connection = "keep-alive";
-                    }
+                        case UsageChatSegment usageSegment:
+                            latestUsage = usageSegment.Usage;
+                            if (pendingFinalImages.Count > 0)
+                            {
+                                if (!hasSuccessYield)
+                                {
+                                    Response.StatusCode = 200;
+                                    Response.Headers.ContentType = "text/event-stream; charset=utf-8";
+                                    Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
+                                    Response.Headers.Connection = "keep-alive";
+                                }
 
-                    // Process image segments
-                    foreach (ChatSegmentItem item in seg.Items)
-                    {
-                        if (item is Base64PreviewImage previewImage)
-                        {
-                            // Partial image event
+                                foreach (Base64Image image in pendingFinalImages)
+                                {
+                                    ImageStreamEvent completedEvent = new()
+                                    {
+                                        Type = images != null ? "image_edit.completed" : "image_generation.completed",
+                                        B64Json = image.Base64,
+                                        CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                                        Size = request.Size,
+                                        Quality = request.Quality,
+                                        Background = request.Background ?? "opaque",
+                                        OutputFormat = GetOutputFormatFromContentType(image.ContentType),
+                                        Usage = ConvertUsage(latestUsage)
+                                    };
+                                    await YieldStreamEvent(completedEvent, cancellationToken);
+                                    hasSuccessYield = true;
+                                }
+                                pendingFinalImages.Clear();
+                            }
+                            break;
+                        case Base64PreviewImage previewImage:
+                            if (!hasSuccessYield)
+                            {
+                                Response.StatusCode = 200;
+                                Response.Headers.ContentType = "text/event-stream; charset=utf-8";
+                                Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
+                                Response.Headers.Connection = "keep-alive";
+                            }
+
                             ImageStreamEvent streamEvent = new()
                             {
                                 Type = images != null ? "image_edit.partial_image" : "image_generation.partial_image",
@@ -194,34 +223,10 @@ public class OpenAIImageController(
                             };
                             await YieldStreamEvent(streamEvent, cancellationToken);
                             hasSuccessYield = true;
-                        }
-                        else if (item is Base64Image finalImage)
-                        {
-                            // Completed image event
-                            ImageStreamEvent streamEvent = new()
-                            {
-                                Type = images != null ? "image_edit.completed" : "image_generation.completed",
-                                B64Json = finalImage.Base64,
-                                CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                                Size = request.Size,
-                                Quality = request.Quality,
-                                Background = request.Background ?? "opaque",
-                                OutputFormat = GetOutputFormatFromContentType(finalImage.ContentType),
-                                Usage = seg.Usage != null ? new ImageUsage
-                                {
-                                    InputTokens = seg.Usage.InputTokens,
-                                    OutputTokens = seg.Usage.OutputTokens,
-                                    TotalTokens = seg.Usage.InputTokens + seg.Usage.OutputTokens,
-                                    InputTokensDetails = new ImageInputTokensDetails
-                                    {
-                                        TextTokens = seg.Usage.InputTokens,
-                                        ImageTokens = 0
-                                    }
-                                } : null
-                            };
-                            await YieldStreamEvent(streamEvent, cancellationToken);
-                            hasSuccessYield = true;
-                        }
+                            break;
+                        case Base64Image finalImage when segment is not Base64PreviewImage:
+                            pendingFinalImages.Add(finalImage);
+                            break;
                     }
 
                     if (cancellationToken.IsCancellationRequested)
@@ -229,30 +234,50 @@ public class OpenAIImageController(
                         throw new TaskCanceledException();
                     }
                 }
+
+                if (pendingFinalImages.Count > 0)
+                {
+                    ChatTokenUsage usageFallback = latestUsage ?? icc.FullResponse.Usage;
+                    if (!hasSuccessYield)
+                    {
+                        Response.StatusCode = 200;
+                        Response.Headers.ContentType = "text/event-stream; charset=utf-8";
+                        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
+                        Response.Headers.Connection = "keep-alive";
+                    }
+
+                    foreach (Base64Image image in pendingFinalImages)
+                    {
+                        ImageStreamEvent completedEvent = new()
+                        {
+                            Type = images != null ? "image_edit.completed" : "image_generation.completed",
+                            B64Json = image.Base64,
+                            CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                            Size = request.Size,
+                            Quality = request.Quality,
+                            Background = request.Background ?? "opaque",
+                            OutputFormat = GetOutputFormatFromContentType(image.ContentType),
+                            Usage = ConvertUsage(usageFallback)
+                        };
+                        await YieldStreamEvent(completedEvent, cancellationToken);
+                        hasSuccessYield = true;
+                    }
+                }
             }
             else
             {
                 // Non-streaming response
                 List<ImageData> imageDataList = [];
-                ChatTokenUsage? finalUsage = null;
 
-                await foreach (InternalChatSegment seg in icc.Run(scopedCalc, userModel, s.ChatEntry(chatRequest, fup, UsageSource.Api, cancellationToken)))
+                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s.ChatEntry(chatRequest, fup, UsageSource.Api, cancellationToken)))
                 {
-                    if (seg.Items.Count == 0) continue;
-
-                    foreach (ChatSegmentItem item in seg.Items)
+                    if (segment is Base64Image image && segment is not Base64PreviewImage)
                     {
-                        if (item is Base64Image image and not Base64PreviewImage)
-                        {
-                            imageDataList.Add(new ImageData { B64Json = image.Base64 });
-                        }
-                    }
-
-                    if (seg.Usage != null)
-                    {
-                        finalUsage = seg.Usage;
+                        imageDataList.Add(new ImageData { B64Json = image.Base64 });
                     }
                 }
+
+                ChatTokenUsage finalUsage = icc.FullResponse.Usage;
 
                 ImageGenerationResponse response = new()
                 {
@@ -262,17 +287,7 @@ public class OpenAIImageController(
                     OutputFormat = request.OutputFormat ?? "png",
                     Quality = request.Quality,
                     Size = request.Size,
-                    Usage = finalUsage != null ? new ImageUsage
-                    {
-                        InputTokens = finalUsage.InputTokens,
-                        OutputTokens = finalUsage.OutputTokens,
-                        TotalTokens = finalUsage.InputTokens + finalUsage.OutputTokens,
-                        InputTokensDetails = new ImageInputTokensDetails
-                        {
-                            TextTokens = finalUsage.InputTokens,
-                            ImageTokens = 0
-                        }
-                    } : null
+                    Usage = ConvertUsage(finalUsage)
                 };
 
                 return Ok(response);
@@ -411,6 +426,26 @@ public class OpenAIImageController(
             "high" => DBReasoningEffort.High,
             "auto" => DBReasoningEffort.Default,
             _ => DBReasoningEffort.Default
+        };
+    }
+
+    private static ImageUsage? ConvertUsage(ChatTokenUsage? usage)
+    {
+        if (usage == null)
+        {
+            return null;
+        }
+
+        return new ImageUsage
+        {
+            InputTokens = usage.InputTokens,
+            OutputTokens = usage.OutputTokens,
+            TotalTokens = usage.InputTokens + usage.OutputTokens,
+            InputTokensDetails = new ImageInputTokensDetails
+            {
+                TextTokens = usage.InputTokens,
+                ImageTokens = 0
+            }
         };
     }
 

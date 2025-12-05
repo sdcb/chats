@@ -1,4 +1,4 @@
-﻿using Chats.BE.DB;
+using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
@@ -38,38 +38,46 @@ public class Test2ChatService : ChatService
         NeutralMessage lastUserMessage = request.Messages.LastUserMessage() ?? throw new InvalidOperationException("No user message in the request.");
         string messageText = lastUserMessage.GetFirstTextContent() ?? string.Empty;
 
-        if (messageText == "test-url")
+        return messageText switch
         {
-            return UrlOnly(cancellationToken);
-        }
-        else if (messageText == "test-both")
-        {
-            return TextAndUrl(cancellationToken);
-        }
-        else
-        {
-            return TextOnly(messageText, cancellationToken);
-        }
+            "test-url" => UrlOnly(messageText, cancellationToken),
+            "test-both" => TextAndUrl(messageText, cancellationToken),
+            _ => TextOnly(messageText, cancellationToken),
+        };
     }
 
-    async IAsyncEnumerable<ChatSegment> UrlOnly([EnumeratorCancellation] CancellationToken cancellationToken)
+    async IAsyncEnumerable<ChatSegment> UrlOnly(string inputText, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        int inputTokens = Tokenizer.CountTokens(inputText);
+        int outputTokens = 0;
         for (int i = 0; i < outputs.Length; i++)
         {
             string url = urls[i];
-            yield return new ChatSegment()
-            {
-                Items = [ChatSegmentItem.FromUrlImage(url)],
-                FinishReason = null,
-                Usage = null,
-            };
+            yield return ChatSegment.FromUrlImage(url);
             await Task.Delay(1, cancellationToken);
         }
+
+        yield return new UsageChatSegment
+        {
+            Usage = new ChatTokenUsage
+            {
+                InputTokens = inputTokens,
+                OutputTokens = outputTokens,
+                ReasoningTokens = 0,
+                CacheTokens = 0,
+            }
+        };
+        yield return new FinishReasonChatSegment
+        {
+            FinishReason = DBFinishReason.Success,
+        };
     }
 
-    async IAsyncEnumerable<ChatSegment> TextAndUrl([EnumeratorCancellation] CancellationToken cancellationToken)
+    async IAsyncEnumerable<ChatSegment> TextAndUrl(string inputText, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         StringBuilder outputed = new();
+        int inputTokens = Tokenizer.CountTokens(inputText);
+        int outputTokens = 0;
         for (int i = 0; i < outputs.Length; i++)
         {
             string output = outputs[i];
@@ -78,29 +86,36 @@ public class Test2ChatService : ChatService
             {
                 string combined = string.Concat(c);
                 outputed.Append(combined);
-                int outputTokens = Tokenizer.CountTokens(outputed.ToString());
-                yield return new ChatSegment()
-                {
-                    Items = ChatSegmentItem.FromTextAndThink(combined, null),
-                    Usage = null,
-                    FinishReason = null,
-                };
+                outputTokens += Tokenizer.CountTokens(combined);
+                yield return ChatSegment.FromText(combined);
                 await Task.Delay(1, cancellationToken);
             }
             await Task.Delay(1, cancellationToken);
-            yield return new ChatSegment()
-            {
-                Items = [ChatSegmentItem.FromUrlImage(url)],
-                FinishReason = DBFinishReason.Success,
-                Usage = null,
-            };
+            yield return ChatSegment.FromUrlImage(url);
         }
+
+        yield return new UsageChatSegment
+        {
+            Usage = new ChatTokenUsage
+            {
+                InputTokens = inputTokens,
+                OutputTokens = outputTokens,
+                ReasoningTokens = 0,
+                CacheTokens = 0,
+            }
+        };
+        yield return new FinishReasonChatSegment
+        {
+            FinishReason = DBFinishReason.Success,
+        };
     }
 
     async IAsyncEnumerable<ChatSegment> TextOnly(string inputText, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         int duration = inputText == "test-slow" ? 200 : 1;
         StringBuilder outputed = new();
+        int inputTokens = Tokenizer.CountTokens(inputText);
+        int outputTokens = 0;
         for (int i = 0; i < outputs.Length; i++)
         {
             string output = outputs[i];
@@ -108,25 +123,31 @@ public class Test2ChatService : ChatService
             {
                 string combined = string.Concat(c);
                 outputed.Append(combined);
-                int outputTokens = Tokenizer.CountTokens(outputed.ToString());
-                yield return new ChatSegment()
-                {
-                    Items = ChatSegmentItem.FromTextAndThink(combined, null),
-                    Usage = null,
-                    FinishReason = null,
-                };
+                outputTokens += Tokenizer.CountTokens(combined);
+                yield return ChatSegment.FromText(combined);
                 await Task.Delay(duration, cancellationToken);
             }
             {
                 outputed.Append('\n');
-                yield return new ChatSegment()
-                {
-                    Items = ChatSegmentItem.FromTextAndThink("\n", null),
-                    Usage = null,
-                    FinishReason = DBFinishReason.Success,
-                };
+                outputTokens += Tokenizer.CountTokens("\n");
+                yield return ChatSegment.FromText("\n");
             }
         }
+
+        yield return new UsageChatSegment
+        {
+            Usage = new ChatTokenUsage
+            {
+                InputTokens = inputTokens,
+                OutputTokens = outputTokens,
+                ReasoningTokens = 0,
+                CacheTokens = 0,
+            }
+        };
+        yield return new FinishReasonChatSegment
+        {
+            FinishReason = DBFinishReason.Success,
+        };
     }
 
     internal const string ModelName = "test-model";

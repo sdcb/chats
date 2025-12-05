@@ -8,6 +8,7 @@ using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 using Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 using Chats.BE.Services.Models.ChatServices.Test;
+using Chats.BE.Services.Models.Dtos;
 
 namespace Chats.BE.Services.Models.ChatServices;
 
@@ -72,12 +73,9 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
         ChatService cs = CreateChatService(model);
         try
         {
-            await foreach (Dtos.InternalChatSegment seg in cs.ChatEntry(ChatRequest.Simple("1+1=?", model), fup, UsageSource.Validate, cancellationToken))
+            await foreach (ChatSegment _ in cs.ChatEntry(ChatRequest.Simple("1+1=?", model), fup, UsageSource.Validate, cancellationToken))
             {
-                if (seg.IsFromUpstream)
-                {
-                    return ModelValidateResult.Success();
-                }
+                return ModelValidateResult.Success();
             }
             return ModelValidateResult.Success();
         }

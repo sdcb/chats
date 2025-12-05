@@ -42,8 +42,16 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
         if (n > 1)
         {
             Console.WriteLine("ImageGenerationService.ChatStreamed: n > 1, fallback to non-streaming Chat method.");
-            ChatSegment result = await Chat(request, cancellationToken);
-            yield return result;
+            (List<ChatSegment> imagesGenerated, ChatTokenUsage? usage) = await GenerateImagesAsync(request, cancellationToken);
+            foreach (ChatSegment image in imagesGenerated)
+            {
+                yield return image;
+            }
+            if (usage != null)
+            {
+                yield return ChatSegment.FromUsage(usage);
+            }
+            yield return ChatSegment.FromFinishReason(DBFinishReason.Success);
             yield break;
         }
 
@@ -132,7 +140,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
         }
     }
 
-    public override async Task<ChatSegment> Chat(ChatRequest request, CancellationToken cancellationToken)
+    private async Task<(List<ChatSegment> Segments, ChatTokenUsage? Usage)> GenerateImagesAsync(ChatRequest request, CancellationToken cancellationToken)
     {
         string prompt = GetPromptStatic(request.Messages);
         NeutralContent[] images = GetImagesStatic(request.Messages);
@@ -203,7 +211,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
         JsonNode? usage = rawJson["usage"];
         JsonArray? data = rawJson["data"]?.AsArray();
 
-        List<ChatSegmentItem> items = [];
+        List<ChatSegment> items = [];
         if (data != null)
         {
             foreach (JsonNode? item in data)
@@ -211,23 +219,20 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
                 string? b64Json = item?["b64_json"]?.GetValue<string>();
                 if (b64Json != null)
                 {
-                    items.Add(ChatSegmentItem.FromBase64Image(b64Json, "image/png"));
+                    items.Add(ChatSegment.FromBase64Image(b64Json, "image/png"));
                 }
             }
         }
 
-        return new ChatSegment()
+        ChatTokenUsage? usageInfo = usage != null ? new ChatTokenUsage()
         {
-            FinishReason = null,
-            Items = items,
-            Usage = usage != null ? new ChatTokenUsage()
-            {
-                InputTokens = usage["input_tokens"]?.GetValue<int>() ?? 0,
-                OutputTokens = usage["output_tokens"]?.GetValue<int>() ?? 0,
-                ReasoningTokens = 0,
-                CacheTokens = 0,
-            } : null,
-        };
+            InputTokens = usage["input_tokens"]?.GetValue<int>() ?? 0,
+            OutputTokens = usage["output_tokens"]?.GetValue<int>() ?? 0,
+            ReasoningTokens = 0,
+            CacheTokens = 0,
+        } : null;
+
+        return (items, usageInfo);
     }
 
     private static string GetPromptStatic(IList<NeutralMessage> messages)
@@ -379,12 +384,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
 
                 Console.WriteLine($"[{sw.Elapsed.TotalSeconds:F3}s] {eventType} #{eventIndex}");
 
-                yield return new ChatSegment()
-                {
-                    FinishReason = null,
-                    Items = [ChatSegmentItem.FromBase64PreviewImage(b64Json, contentType)],
-                    Usage = null,
-                };
+                yield return ChatSegment.FromBase64PreviewImage(b64Json, contentType);
             }
             else if (eventType == "image_generation.completed" || eventType == "image_edit.completed")
             {
@@ -403,12 +403,12 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
 
                 Console.WriteLine($"[{sw.Elapsed.TotalSeconds:F3}s] {eventType} #{eventIndex}, input={usage.InputTokens}, output={usage.OutputTokens}");
 
-                yield return new ChatSegment()
+                yield return ChatSegment.FromBase64Image(b64Json, contentType);
+                if (usage != null)
                 {
-                    FinishReason = DBFinishReason.Success,
-                    Items = [ChatSegmentItem.FromBase64Image(b64Json, contentType)],
-                    Usage = usage,
-                };
+                    yield return ChatSegment.FromUsage(usage);
+                }
+                yield return ChatSegment.FromFinishReason(DBFinishReason.Success);
             }
             else if (eventType == "error")
             {

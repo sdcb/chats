@@ -113,22 +113,28 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
 
             if (status == "incomplete")
             {
-                yield return ChatSegment.Completed(usage ?? ChatTokenUsage.Zero, DBFinishReason.Length);
+                if (usage != null)
+                {
+                    yield return ChatSegment.FromUsage(usage);
+                }
+                yield return ChatSegment.FromFinishReason(DBFinishReason.Length);
             }
             else if (status == "failed")
             {
                 string? errorMessage = responseObj?["error"]?["message"]?.GetValue<string>() ?? "Response failed";
-                yield return ChatSegment.Completed(usage ?? ChatTokenUsage.Zero, DBFinishReason.ContentFilter);
+                if (usage != null)
+                {
+                    yield return ChatSegment.FromUsage(usage);
+                }
+                yield return ChatSegment.FromFinishReason(DBFinishReason.ContentFilter);
                 throw new CustomChatServiceException(DBFinishReason.ContentFilter, errorMessage);
             }
             else if (status == "cancelled" || cancelled)
             {
-                yield return new ChatSegment()
+                if (usage != null)
                 {
-                    Usage = usage ?? ChatTokenUsage.Zero,
-                    FinishReason = null,
-                    Items = [],
-                };
+                    yield return ChatSegment.FromUsage(usage);
+                }
                 throw new TaskCanceledException();
             }
             else if (status != "completed")
@@ -167,7 +173,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                                 }
                                 if (thinkText.Length > 0)
                                 {
-                                    yield return ChatSegment.FromThinking(thinkText.ToString());
+                                    yield return ChatSegment.FromThink(thinkText.ToString());
                                 }
                             }
                         }
@@ -177,13 +183,13 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                             string? callId = item?["call_id"]?.GetValue<string>();
                             string? name = item?["name"]?.GetValue<string>();
                             string? arguments = item?["arguments"]?.GetValue<string>();
-                            yield return ChatSegment.FromToolCall(new ToolCallSegment
+                            yield return new ToolCallSegment
                             {
                                 Index = fcIndex++,
                                 Id = callId,
                                 Name = name,
                                 Arguments = arguments ?? "",
-                            });
+                            };
                         }
                         else if (itemType == "message")
                         {
@@ -212,7 +218,11 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                     }
                 }
 
-                yield return ChatSegment.Completed(usage ?? ChatTokenUsage.Zero, hasTools ? DBFinishReason.ToolCalls : DBFinishReason.Success);
+                if (usage != null)
+                {
+                    yield return ChatSegment.FromUsage(usage);
+                }
+                yield return ChatSegment.FromFinishReason(hasTools ? DBFinishReason.ToolCalls : DBFinishReason.Success);
             }
         }
         else
@@ -288,7 +298,14 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                         _ => null,
                     };
 
-                    yield return ChatSegment.Completed(usage ?? ChatTokenUsage.Zero, finishReason);
+                    if (usage != null)
+                    {
+                        yield return ChatSegment.FromUsage(usage);
+                    }
+                    if (finishReason != null)
+                    {
+                        yield return ChatSegment.FromFinishReason(finishReason);
+                    }
                 }
                 else if (eventType == "response.output_item.added")
                 {
@@ -297,23 +314,23 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                         hasTools = true;
                         currentFcId = itemEl.TryGetProperty("call_id", out JsonElement callIdEl) ? callIdEl.GetString() : null;
                         currentFcName = itemEl.TryGetProperty("name", out JsonElement nameEl) ? nameEl.GetString() : null;
-                        yield return ChatSegment.FromToolCall(new ToolCallSegment
+                        yield return new ToolCallSegment
                         {
                             Index = fcIndex,
                             Id = currentFcId,
                             Name = currentFcName,
                             Arguments = "",
-                        });
+                        };
                     }
                 }
                 else if (eventType == "response.function_call_arguments.delta")
                 {
                     string? delta = json.TryGetProperty("delta", out JsonElement deltaEl) ? deltaEl.GetString() : null;
-                    yield return ChatSegment.FromToolCall(new ToolCallSegment
+                    yield return new ToolCallSegment
                     {
                         Index = fcIndex,
                         Arguments = delta ?? "",
-                    });
+                    };
                 }
                 else if (eventType == "response.output_item.done")
                 {
@@ -327,12 +344,12 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                     string? delta = json.TryGetProperty("delta", out JsonElement deltaEl) ? deltaEl.GetString() : null;
                     if (!string.IsNullOrEmpty(delta))
                     {
-                        yield return ChatSegment.FromThinking(delta);
+                        yield return ChatSegment.FromThink(delta);
                     }
                 }
                 else if (eventType == "response.reasoning_summary_text.done")
                 {
-                    yield return ChatSegment.FromThinking("\n\n");
+                    yield return ChatSegment.FromThink("\n\n");
                 }
             }
         }

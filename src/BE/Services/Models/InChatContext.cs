@@ -1,4 +1,4 @@
-﻿using Chats.BE.Controllers.Chats.Chats;
+using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.DB.Jsons;
@@ -13,25 +13,34 @@ public class InChatContext(long firstTick)
 {
     private long _preprocessTick, _firstReasoningTick, _firstResponseTick, _endResponseTick, _finishTick;
     private short _segmentCount;
-    private InternalChatSegment _lastSegment = InternalChatSegment.Empty;
-    private readonly List<ChatSegmentItem> _items = [];
+    private readonly List<ChatSegment> _segments = [];
+    private readonly List<ChatSegment> _segmentsAfterUsage = [];
+    private UsageChatSegment? _finalUsageSegment;
+    private UsageChatSegment? _lastReliableUsageSegment;
+    private JsonPriceConfig? _priceConfig;
+    private ScopedBalanceCalculator? _balance;
 
     public DBFinishReason FinishReason { get; set; } = DBFinishReason.Success;
 
-    public async IAsyncEnumerable<InternalChatSegment> Run(ScopedBalanceCalculator balance, UserModel userModel, IAsyncEnumerable<InternalChatSegment> segments)
+    public async IAsyncEnumerable<ChatSegment> Run(
+        ScopedBalanceCalculator balance,
+        UserModel userModel,
+        IAsyncEnumerable<ChatSegment> segments)
     {
+        _balance = balance;
+
         _preprocessTick = _firstReasoningTick = _firstResponseTick = _endResponseTick = _finishTick = Stopwatch.GetTimestamp();
         if (userModel.ExpiresAt.IsExpired())
         {
             throw new SubscriptionExpiredException(userModel.ExpiresAt);
         }
-        JsonPriceConfig priceConfig = userModel.Model.ToPriceConfig();
+        _priceConfig = userModel.Model.ToPriceConfig();
         if (!balance.IsSufficient)
         {
             throw new InsufficientBalanceException();
         }
 
-        balance.SetCost(userModel.ModelId, 0, 0, 0, priceConfig);
+        balance.SetCost(userModel.ModelId, 0, 0, 0, _priceConfig);
         if (!balance.IsSufficient)
         {
             throw new InsufficientBalanceException();
@@ -39,38 +48,20 @@ public class InChatContext(long firstTick)
 
         try
         {
-            _preprocessTick = _firstReasoningTick = _firstResponseTick = _endResponseTick = _finishTick = Stopwatch.GetTimestamp();
-            await foreach (InternalChatSegment seg in segments)
+            await foreach (ChatSegment seg in segments)
             {
-                if (seg.IsFromUpstream)
+                switch (seg)
                 {
-                    _segmentCount++;
-                    string? think = seg.Items.GetThink();
-                    if (!string.IsNullOrEmpty(think))
-                    {
-                        if (_firstReasoningTick == _preprocessTick) // never reasoning
-                        {
-                            _firstReasoningTick = Stopwatch.GetTimestamp();
-                        }
-                    }
-                    if (seg.Items.OfType<TextChatSegment>().Any() || seg.Items.OfType<ImageChatSegment>().Any() || seg.Items.OfType<ToolCallSegment>().Any())
-                    {
-                        if (_firstResponseTick == _preprocessTick) // never response
-                        {
-                            _firstResponseTick = Stopwatch.GetTimestamp();
-                        }
-                    }
+                    case FinishReasonChatSegment stop:
+                        FinishReason = stop.FinishReason ?? FinishReason;
+                        break;
+                    case UsageChatSegment usage:
+                        RegisterUsage(usage, userModel);
+                        break;
+                    default:
+                        RegisterContentSegment(seg);
+                        break;
                 }
-                _lastSegment = seg;
-                _items.AddOne(seg.Items);
-
-                balance.SetCost(userModel.ModelId, seg.Usage.InputTokens, seg.Usage.OutputTokens, seg.Usage.CacheTokens, priceConfig);
-                if (!balance.IsSufficient)
-                {
-                    FinishReason = DBFinishReason.InsufficientBalance;
-                    throw new InsufficientBalanceException();
-                }
-                FinishReason = seg.FinishReason ?? FinishReason;
 
                 yield return seg;
             }
@@ -78,16 +69,142 @@ public class InChatContext(long firstTick)
         finally
         {
             _endResponseTick = Stopwatch.GetTimestamp();
+            EnsureFinalUsage(userModel);
         }
     }
 
-    public InternalChatSegment FullResponse => _lastSegment with { Items = _items, };
+    private void RegisterUsage(UsageChatSegment usage, UserModel userModel)
+    {
+        if (_priceConfig == null || _balance == null)
+        {
+            throw new InvalidOperationException("InChatContext has not been initialized.");
+        }
 
-    public int ReasoningDurationMs => _items.OfType<ThinkChatSegment>().Any() ? (int)Stopwatch.GetElapsedTime(_firstReasoningTick, _firstResponseTick).TotalMilliseconds : 0;
+        _balance.SetCost(userModel.ModelId, usage.Usage.InputTokens, usage.Usage.OutputTokens, usage.Usage.CacheTokens, _priceConfig);
+        if (!_balance.IsSufficient)
+        {
+            FinishReason = DBFinishReason.InsufficientBalance;
+            throw new InsufficientBalanceException();
+        }
+        _lastReliableUsageSegment = usage;
+        _finalUsageSegment = usage;
+        _segmentsAfterUsage.Clear();
+    }
+
+    private void RegisterContentSegment(ChatSegment segment)
+    {
+        if (segment is ThinkChatSegment think && _firstReasoningTick == _preprocessTick)
+        {
+            _firstReasoningTick = Stopwatch.GetTimestamp();
+        }
+        if (segment is TextChatSegment or ImageChatSegment or ToolCallSegment && _firstResponseTick == _preprocessTick)
+        {
+            _firstResponseTick = Stopwatch.GetTimestamp();
+        }
+
+        if (segment is TextChatSegment or ImageChatSegment or ToolCallSegment)
+        {
+            _segmentCount++;
+        }
+
+        _segments.AddMerged(segment);
+        _segmentsAfterUsage.Add(segment);
+    }
+
+    private void EnsureFinalUsage(UserModel userModel)
+    {
+        if (_priceConfig == null || _balance == null)
+        {
+            return;
+        }
+
+        ChatTokenUsage baseUsage = _lastReliableUsageSegment?.Usage ?? ChatTokenUsage.Zero;
+        ChatTokenUsage additionalUsage = CalculateUsageFromSegments(_segmentsAfterUsage);
+
+        bool hasReliableBase = _lastReliableUsageSegment != null;
+        bool hasAdditional = additionalUsage.OutputTokens > 0 || additionalUsage.ReasoningTokens > 0;
+
+        ChatTokenUsage finalUsage;
+
+        if (hasReliableBase)
+        {
+            if (hasAdditional)
+            {
+                finalUsage = new ChatTokenUsage
+                {
+                    InputTokens = baseUsage.InputTokens,
+                    OutputTokens = baseUsage.OutputTokens + additionalUsage.OutputTokens,
+                    ReasoningTokens = baseUsage.ReasoningTokens + additionalUsage.ReasoningTokens,
+                    CacheTokens = baseUsage.CacheTokens
+                };
+            }
+            else
+            {
+                finalUsage = baseUsage;
+            }
+        }
+        else
+        {
+            finalUsage = additionalUsage;
+        }
+
+        _finalUsageSegment = new UsageChatSegment { Usage = finalUsage };
+
+        _balance.SetCost(userModel.ModelId, finalUsage.InputTokens, finalUsage.OutputTokens, finalUsage.CacheTokens, _priceConfig);
+        if (!_balance.IsSufficient)
+        {
+            FinishReason = DBFinishReason.InsufficientBalance;
+            throw new InsufficientBalanceException();
+        }
+    }
+
+    private static ChatTokenUsage CalculateUsageFromSegments(IEnumerable<ChatSegment> segments)
+    {
+        int textTokens = segments
+            .OfType<TextChatSegment>()
+            .Sum(t => ChatService.Tokenizer.CountTokens(t.Text));
+        int reasoningTokens = segments
+            .OfType<ThinkChatSegment>()
+            .Sum(t => ChatService.Tokenizer.CountTokens(t.Think));
+
+        return new ChatTokenUsage
+        {
+            InputTokens = 0,
+            OutputTokens = textTokens + reasoningTokens,
+            ReasoningTokens = reasoningTokens,
+            CacheTokens = 0,
+        };
+    }
+
+    public ChatCompletionSnapshot FullResponse
+    {
+        get
+        {
+            UsageChatSegment? usageSegment = _finalUsageSegment ?? _lastReliableUsageSegment;
+            ChatTokenUsage usage = usageSegment?.Usage ?? ChatTokenUsage.Zero;
+            bool hasReliableUsage = _lastReliableUsageSegment != null;
+            bool noPendingSegments = _segmentsAfterUsage.Count == 0;
+            bool isReliable = usageSegment != null && hasReliableUsage && noPendingSegments;
+
+            return new ChatCompletionSnapshot
+            {
+                Segments = _segments,
+                Usage = usage,
+                IsUsageReliable = isReliable,
+                FinishReason = FinishReason
+            };
+        }
+    }
+
+    public int ReasoningDurationMs => _segments.OfType<ThinkChatSegment>().Any()
+        ? (int)Stopwatch.GetElapsedTime(_firstReasoningTick, _firstResponseTick).TotalMilliseconds
+        : 0;
 
     public UserModelUsage ToUserModelUsage(int userId, ScopedBalanceCalculator calc, UserModel userModel, int clientInfoId, bool isApi)
     {
         if (_finishTick == _preprocessTick) _finishTick = Stopwatch.GetTimestamp();
+
+        ChatCompletionSnapshot snapshot = FullResponse;
 
         UserModelUsage usage = new()
         {
@@ -103,11 +220,11 @@ public class InChatContext(long firstTick)
             FirstResponseDurationMs = (int)Stopwatch.GetElapsedTime(_preprocessTick, _firstReasoningTick != _preprocessTick ? _firstReasoningTick : _firstResponseTick).TotalMilliseconds,
             PostprocessDurationMs = (int)Stopwatch.GetElapsedTime(_endResponseTick, _finishTick).TotalMilliseconds,
             TotalDurationMs = (int)Stopwatch.GetElapsedTime(firstTick, _finishTick).TotalMilliseconds,
-            InputFreshTokens = _lastSegment.Usage.InputFreshTokens,
-            OutputTokens = _lastSegment.Usage.OutputTokens,
-            ReasoningTokens = _lastSegment.Usage.ReasoningTokens,
-            InputCachedTokens = _lastSegment.Usage.CacheTokens,
-            IsUsageReliable = _lastSegment.IsUsageReliable,
+            InputFreshTokens = snapshot.Usage.InputFreshTokens,
+            OutputTokens = snapshot.Usage.OutputTokens,
+            ReasoningTokens = snapshot.Usage.ReasoningTokens,
+            InputCachedTokens = snapshot.Usage.CacheTokens,
+            IsUsageReliable = snapshot.IsUsageReliable,
             InputFreshCost = calc.Cost.InputFreshCost,
             OutputCost = calc.Cost.OutputCost,
             InputCachedCost = calc.Cost.InputCachedCost,

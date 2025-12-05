@@ -1,4 +1,4 @@
-﻿using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
+using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Services.Models.Dtos;
 using System.Runtime.CompilerServices;
@@ -10,7 +10,7 @@ namespace Chats.BE.Services.Models.ChatServices;
 /// <summary>
 /// OpenAI “tool_calls” 数组里，单块（片段）对应的模型。
 /// </summary>
-public sealed record ToolCallSegment : ChatSegmentItem
+public sealed record ToolCallSegment : ChatSegment
 {
     [JsonPropertyName("index")]
     public required int Index { get; init; }
@@ -27,7 +27,7 @@ public sealed record ToolCallSegment : ChatSegmentItem
     public string? Arguments { get; init; }
 }
 
-public sealed record ToolCallResponseSegment : ChatSegmentItem
+public sealed record ToolCallResponseSegment : ChatSegment
 {
     public required string ToolCallId { get; init; }
 

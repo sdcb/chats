@@ -26,85 +26,29 @@ public abstract partial class ChatService
         return Task.FromResult(request.EstimatePromptTokens(Tokenizer));
     }
 
-    public virtual async Task<ChatSegment> Chat(ChatRequest request, CancellationToken cancellationToken)
+    public async IAsyncEnumerable<ChatSegment> ChatEntry(ChatRequest request, FileUrlProvider fup, UsageSource source, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        List<ChatSegmentItem> segments = [];
-        ChatSegment? lastSegment = null;
-        await foreach (ChatSegment seg in ChatStreamed(request, cancellationToken))
-        {
-            lastSegment = seg;
-            segments.AddRange(seg.Items);
-        }
-
-        return new ChatSegment()
-        {
-            Usage = lastSegment?.Usage,
-            FinishReason = lastSegment?.FinishReason,
-            Items = segments,
-        };
-    }
-
-    public async IAsyncEnumerable<InternalChatSegment> ChatEntry(ChatRequest request, FileUrlProvider fup, UsageSource source, [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        ChatRequest newRequest = await PreProcess(request, fup, source, cancellationToken);
+        ChatRequest finalRequest = await PreProcess(request, fup, source, cancellationToken);
+        IAsyncEnumerable<ChatSegment> stream = ChatStreamed(finalRequest, cancellationToken);
 
         if (request.ChatConfig.Model.ThinkTagParserEnabled)
         {
-            InternalChatSegment current = null!;
-            async IAsyncEnumerable<string> TokenYielder()
-            {
-                await foreach (InternalChatSegment seg in ChatPrivate(newRequest, cancellationToken))
-                {
-                    current = seg;
-                    string? text = seg.Items.GetText();
-                    if (text != null)
-                    {
-                        yield return text;
-                    }
-                }
-            }
-
-            await foreach (ThinkAndResponseSegment seg in ThinkTagParser.Parse(TokenYielder(), cancellationToken))
-            {
-                yield return current with { Items = ChatSegmentItem.FromTextAndThink(seg.Response, seg.Think) };
-            }
+            stream = ApplyThinkTagParser(stream, cancellationToken);
         }
-        else
+
+        await foreach (ChatSegment seg in stream.WithCancellation(cancellationToken))
         {
-            await foreach (InternalChatSegment seg in ChatPrivate(newRequest, cancellationToken))
-            {
-                yield return seg;
-            }
+            yield return seg;
         }
     }
 
-    private async IAsyncEnumerable<InternalChatSegment> ChatPrivate(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    protected virtual async IAsyncEnumerable<ChatSegment> ApplyThinkTagParser(
+        IAsyncEnumerable<ChatSegment> segments,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        // notify inputTokenCount first to better support price calculation
-        int inputTokens = request.EstimatePromptTokens(Tokenizer);
-        int outputTokens = 0;
-        int reasoningTokens = 0;
-        yield return InternalChatSegment.InputOnly(inputTokens);
-
-        ChatTokenUsage usageAccessor(ChatSegment seg) => new()
+        await foreach (ChatSegment segment in segments.WithCancellation(cancellationToken))
         {
-            InputTokens = inputTokens,
-            OutputTokens = outputTokens += seg.Items.GetText() switch { null => 0, var x => Tokenizer.CountTokens(x) },
-            ReasoningTokens = reasoningTokens += seg.Items.GetThink() switch { null => 0, var x => Tokenizer.CountTokens(x) },
-            CacheTokens = 0,
-        };
-
-        if (request.ChatConfig.Model.AllowStreaming && request.Streamed)
-        {
-            await foreach (ChatSegment seg in ChatStreamed(request, cancellationToken))
-            {
-                yield return seg.ToInternal(() => usageAccessor(seg));
-            }
-        }
-        else
-        {
-            ChatSegment seg = await Chat(request, cancellationToken);
-            yield return seg.ToInternal(() => usageAccessor(seg));
+            yield return segment;
         }
     }
 

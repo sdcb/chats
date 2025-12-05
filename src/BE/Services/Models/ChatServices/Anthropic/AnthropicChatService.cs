@@ -68,7 +68,13 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                         {
                             int inputTokens = usage.TryGetProperty("input_tokens", out JsonElement it) ? it.GetInt32() : 0;
                             int outputTokens = usage.TryGetProperty("output_tokens", out JsonElement ot) ? ot.GetInt32() : 0;
-                            yield return ChatSegment.FromUsageOnly(inputTokens, outputTokens, cacheTokens: GetCacheReadTokens(usage));
+                            yield return ChatSegment.FromUsage(new ChatTokenUsage
+                            {
+                                InputTokens = inputTokens,
+                                OutputTokens = outputTokens,
+                                CacheTokens = GetCacheReadTokens(usage),
+                                ReasoningTokens = 0
+                            });
                         }
                         break;
                     }
@@ -84,26 +90,26 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                                 ++toolCallIndex;
                                 string? id = contentBlock.TryGetProperty("id", out JsonElement idEl) ? idEl.GetString() : null;
                                 string? name = contentBlock.TryGetProperty("name", out JsonElement nameEl) ? nameEl.GetString() : null;
-                                yield return ChatSegment.FromToolCall(new ToolCallSegment
+                                yield return new ToolCallSegment
                                 {
                                     Arguments = "",
                                     Index = toolCallIndex,
                                     Id = id,
                                     Name = name,
-                                });
+                                };
                             }
                             else if (blockType == "server_tool_use")
                             {
                                 ++toolCallIndex;
                                 string? id = contentBlock.TryGetProperty("id", out JsonElement idEl) ? idEl.GetString() : null;
                                 string? name = contentBlock.TryGetProperty("name", out JsonElement nameEl) ? nameEl.GetString() : null;
-                                yield return ChatSegment.FromToolCall(new ToolCallSegment
+                                yield return new ToolCallSegment
                                 {
                                     Arguments = "",
                                     Index = toolCallIndex,
                                     Id = id,
                                     Name = name,
-                                });
+                                };
                             }
                             else if (blockType == "web_search_tool_result")
                             {
@@ -111,7 +117,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                                 if (contentBlock.TryGetProperty("content", out JsonElement content) && toolUseId != null)
                                 {
                                     string responseText = RemoveEncryptedContent(content);
-                                    yield return ChatSegment.FromToolCallResponse(toolUseId, responseText);
+                                    yield return ChatSegment.FromToolCallResponse(toolUseId, responseText, 0, true);
                                 }
                             }
                             // text block start - do nothing, wait for delta
@@ -131,7 +137,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                                 string? thinking = delta.TryGetProperty("thinking", out JsonElement th) ? th.GetString() : null;
                                 if (!string.IsNullOrEmpty(thinking))
                                 {
-                                    yield return ChatSegment.FromThinking(thinking);
+                                    yield return ChatSegment.FromThink(thinking);
                                 }
                             }
                             else if (deltaType == "text_delta")
@@ -145,18 +151,18 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                             else if (deltaType == "input_json_delta")
                             {
                                 string? partialJson = delta.TryGetProperty("partial_json", out JsonElement pj) ? pj.GetString() : null;
-                                yield return ChatSegment.FromToolCall(new ToolCallSegment
+                                yield return new ToolCallSegment
                                 {
                                     Arguments = partialJson ?? "",
                                     Index = toolCallIndex,
-                                });
+                                };
                             }
                             else if (deltaType == "signature_delta")
                             {
                                 string? signature = delta.TryGetProperty("signature", out JsonElement sig) ? sig.GetString() : null;
                                 if (!string.IsNullOrEmpty(signature))
                                 {
-                                    yield return ChatSegment.FromThinkingSignature(signature);
+                                    yield return ChatSegment.FromThinkingSegment(signature);
                                 }
                             }
                             // citations_delta - ignore for now
@@ -197,17 +203,21 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                             outputTokens = usageElement.TryGetProperty("output_tokens", out JsonElement ot) ? ot.GetInt32() : 0;
                         }
 
-                        yield return new ChatSegment
+                        ChatTokenUsage usage = new()
                         {
-                            FinishReason = finishReason,
-                            Items = [],
-                            Usage = new ChatTokenUsage
-                            {
-                                InputTokens = inputTokens,
-                                OutputTokens = outputTokens,
-                                CacheTokens = hasUsage ? GetCacheReadTokens(usageElement) : 0,
-                            }
+                            InputTokens = inputTokens,
+                            OutputTokens = outputTokens,
+                            CacheTokens = hasUsage ? GetCacheReadTokens(usageElement) : 0,
                         };
+
+                        if (hasUsage)
+                        {
+                            yield return ChatSegment.FromUsage(usage);
+                        }
+                        if (finishReason != null)
+                        {
+                            yield return ChatSegment.FromFinishReason(finishReason);
+                        }
                         break;
                     }
 

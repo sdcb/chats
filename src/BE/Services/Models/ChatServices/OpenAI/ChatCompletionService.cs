@@ -75,6 +75,15 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        if (!request.ChatConfig.Model.AllowStreaming || !request.Streamed)
+        {
+            await foreach (ChatSegment segment in ChatNonStreaming(request, cancellationToken))
+            {
+                yield return segment;
+            }
+            yield break;
+        }
+
         string url = GetEndpoint(request.ChatConfig.Model.ModelKey);
         JsonObject requestBody = BuildRequestBody(request, stream: true);
 
@@ -117,15 +126,16 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             // Parse choices
             if (!json.TryGetProperty("choices", out JsonElement choices) || choices.GetArrayLength() == 0)
             {
-                // Check for usage only update
                 if (json.TryGetProperty("usage", out JsonElement usageOnly))
                 {
-                    yield return ChatSegment.FromUsageOnly(
-                        usageOnly.TryGetProperty("prompt_tokens", out JsonElement pt) ? pt.GetInt32() : 0,
-                        usageOnly.TryGetProperty("completion_tokens", out JsonElement ct) ? ct.GetInt32() : 0,
-                        GetReasoningTokens(usageOnly),
-                        GetCachedTokens(usageOnly)
-                    );
+                    ChatTokenUsage? usageSegment = ParseUsage(usageOnly);
+                    if (usageSegment != null)
+                    {
+                        yield return new UsageChatSegment
+                        {
+                            Usage = usageSegment,
+                        };
+                    }
                 }
                 continue;
             }
@@ -173,16 +183,10 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             }
 
             // Parse usage
-            Dtos.ChatTokenUsage? usage = null;
-            if (json.TryGetProperty("usage", out JsonElement u) && u.ValueKind == JsonValueKind.Object)
+            ChatTokenUsage? usage = null;
+            if (json.TryGetProperty("usage", out JsonElement u))
             {
-                usage = new Dtos.ChatTokenUsage
-                {
-                    InputTokens = u.TryGetProperty("prompt_tokens", out JsonElement pit) ? pit.GetInt32() : 0,
-                    OutputTokens = u.TryGetProperty("completion_tokens", out JsonElement cot) ? cot.GetInt32() : 0,
-                    ReasoningTokens = GetReasoningTokens(u),
-                    CacheTokens = GetCachedTokens(u)
-                };
+                usage = ParseUsage(u);
             }
 
             // Skip empty updates
@@ -191,23 +195,38 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                 continue;
             }
 
-            List<ChatSegmentItem> items = [];
+            List<ChatSegment> items = [];
             if (!string.IsNullOrEmpty(content))
             {
-                items.Add(ChatSegmentItem.FromText(content));
+                items.Add(ChatSegment.FromText(content));
             }
             if (!string.IsNullOrEmpty(reasoningContent))
             {
-                items.Add(ChatSegmentItem.FromThink(reasoningContent));
+                items.Add(ChatSegment.FromThink(reasoningContent));
             }
             items.AddRange(toolCallSegments);
 
-            yield return new ChatSegment
+            foreach (ChatSegment item in items)
             {
-                Items = items,
-                FinishReason = finishReason,
-                Usage = usage,
-            };
+                yield return item;
+            }
+
+            if (usage != null)
+            {
+                yield return new UsageChatSegment
+                {
+                    Usage = usage,
+                };
+            }
+
+            if (finishReason != null)
+            {
+                yield return new FinishReasonChatSegment
+                {
+                    FinishReason = finishReason,
+                };
+                finishReason = null;
+            }
         }
     }
 
@@ -231,7 +250,23 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         return 0;
     }
 
-    public override async Task<ChatSegment> Chat(ChatRequest request, CancellationToken cancellationToken)
+    private static ChatTokenUsage? ParseUsage(JsonElement usageElement)
+    {
+        if (usageElement.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return new ChatTokenUsage
+        {
+            InputTokens = usageElement.TryGetProperty("prompt_tokens", out JsonElement pt) ? pt.GetInt32() : 0,
+            OutputTokens = usageElement.TryGetProperty("completion_tokens", out JsonElement ct) ? ct.GetInt32() : 0,
+            ReasoningTokens = GetReasoningTokens(usageElement),
+            CacheTokens = GetCachedTokens(usageElement)
+        };
+    }
+
+    private async IAsyncEnumerable<ChatSegment> ChatNonStreaming(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         string url = GetEndpoint(request.ChatConfig.Model.ModelKey);
         JsonObject requestBody = BuildRequestBody(request, stream: false);
@@ -254,7 +289,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         using JsonDocument doc = JsonDocument.Parse(jsonResponse);
         JsonElement root = doc.RootElement;
 
-        List<ChatSegmentItem> items = [];
+        List<ChatSegment> items = [];
         DBFinishReason? finishReason = null;
         Dtos.ChatTokenUsage? usage = null;
 
@@ -269,7 +304,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                     string? text = content.GetString();
                     if (!string.IsNullOrEmpty(text))
                     {
-                        items.Add(ChatSegmentItem.FromText(text));
+                        items.Add(ChatSegment.FromText(text));
                     }
                 }
 
@@ -279,7 +314,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                     string? reasoning = rc.GetString();
                     if (!string.IsNullOrEmpty(reasoning))
                     {
-                        items.Add(ChatSegmentItem.FromThink(reasoning));
+                        items.Add(ChatSegment.FromThink(reasoning));
                     }
                 }
 
@@ -329,11 +364,22 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             };
         }
 
-        return new ChatSegment
+        foreach (ChatSegment item in items)
         {
-            Items = items,
-            FinishReason = finishReason,
-            Usage = usage,
+            yield return item;
+        }
+
+        if (usage != null)
+        {
+            yield return new UsageChatSegment
+            {
+                Usage = usage
+            };
+        }
+
+        yield return new FinishReasonChatSegment
+        {
+            FinishReason = finishReason ?? DBFinishReason.Success
         };
     }
 
