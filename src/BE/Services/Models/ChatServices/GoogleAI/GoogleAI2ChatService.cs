@@ -23,9 +23,9 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
         new SafetySetting { Category = HarmCategory.HarmCategoryHarassment, Threshold = HarmBlockThreshold.BlockNone },
     ];
 
-    public bool AllowImageGeneration(Model model) => model.DeploymentName == "gemini-2.0-flash-exp" ||
-                                        model.DeploymentName == "gemini-2.0-flash-exp-image-generation" ||
-                                        model.DeploymentName == "gemini-2.5-flash-image";
+    public bool AllowImageGeneration(Model model) => model.DeploymentName.Contains("gemini-2.0-flash-exp") ||
+                                        model.DeploymentName.Contains("gemini-2.0-flash-exp-image-generation") ||
+                                        model.DeploymentName.Contains("gemini-2.5-flash-image");
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {

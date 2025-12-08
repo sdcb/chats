@@ -152,7 +152,7 @@ UPDATE dbo.StepContentThink
 SET SignatureBase64 = CAST(N'' AS XML).value('xs:base64Binary(xs:hexBinary(sql:column("Signature")))', 'NVARCHAR(MAX)')
 WHERE Signature IS NOT NULL AND SignatureBase64 IS NULL;
 
-PRINT N'    -> 已完成数据迁移，共更新 ' + CAST(@@ROWCOUNT AS NVARCHAR(20)) + ' 行';
+PRINT N'    -> 已完成数据迁移，共更新 ' + CAST(@@ROWCOUNT AS NVARCHAR(20)) + N' 行';
 
 GO
 
