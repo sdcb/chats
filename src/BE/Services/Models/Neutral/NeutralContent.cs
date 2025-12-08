@@ -71,11 +71,11 @@ public record NeutralThinkContent : NeutralContent
 {
     public required string Content { get; init; }
     /// <summary>
-    /// Signature for Anthropic thinking blocks (required for multi-turn conversations).
+    /// Signature for Anthropic/Gemini/Response api thinking blocks (required for multi-step tool call).
     /// </summary>
-    public byte[]? Signature { get; init; }
+    public string? Signature { get; init; }
 
-    public static NeutralThinkContent Create(string content, byte[]? signature = null, NeutralCacheControl? cacheControl = null)
+    public static NeutralThinkContent Create(string content, string? signature = null, NeutralCacheControl? cacheControl = null)
         => new() { Content = content, Signature = signature, CacheControl = cacheControl };
 }
 

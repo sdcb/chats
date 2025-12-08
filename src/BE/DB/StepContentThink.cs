@@ -14,7 +14,7 @@ public partial class StepContentThink
 
     public string Content { get; set; } = null!;
 
-    public byte[]? Signature { get; set; }
+    public string? Signature { get; set; }
 
     [ForeignKey("Id")]
     [InverseProperty("StepContentThink")]

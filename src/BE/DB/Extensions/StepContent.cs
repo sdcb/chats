@@ -46,7 +46,7 @@ public partial class StepContent
         return new StepContent { StepContentText = new() { Content = text }, ContentTypeId = (byte)DBStepContentType.Text };
     }
 
-    public static StepContent FromThink(string text, byte[]? signature = null)
+    public static StepContent FromThink(string text, string? signature = null)
     {
         return new StepContent { StepContentThink = new() { Content = text, Signature = signature }, ContentTypeId = (byte)DBStepContentType.Think };
     }
@@ -111,7 +111,7 @@ public partial class StepContent
             {
                 Base64PreviewImage => null, // skip preview images
                 TextChatSegment text => FromText(text.Text),
-                ThinkChatSegment think => FromThink(think.Think, think.Signature != null ? Encoding.UTF8.GetBytes(think.Signature) : null),
+                ThinkChatSegment think => FromThink(think.Think, think.Signature),
                 ImageChatSegment image => FromFile(imageMcCache[image].Task.GetAwaiter().GetResult()),
                 ToolCallSegment tool => FromTool(tool.Id ?? tool.Index.ToString(), tool.Name!, tool.Arguments!),
                 ToolCallResponseSegment toolResp => FromToolResponse(toolResp.ToolCallId, toolResp.Response, toolResp.DurationMs, toolResp.IsSuccess),
@@ -181,7 +181,7 @@ public partial class StepContent
         return false;
     }
 
-    public bool TryGetThink([NotNullWhen(true)] out string? text, out byte[]? signature)
+    public bool TryGetThink([NotNullWhen(true)] out string? text, out string? signature)
     {
         if ((DBStepContentType)ContentTypeId == DBStepContentType.Think && StepContentThink != null)
         {

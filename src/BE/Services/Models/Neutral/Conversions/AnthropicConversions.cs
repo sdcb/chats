@@ -214,8 +214,7 @@ public static class AnthropicConversions
                         string? signature = (string?)block["signature"];
                         if (!string.IsNullOrEmpty(thinking))
                         {
-                            byte[]? signatureBytes = !string.IsNullOrEmpty(signature) ? Convert.FromBase64String(signature) : null;
-                            contents.Add(NeutralThinkContent.Create(thinking, signatureBytes, cacheControl));
+                            contents.Add(NeutralThinkContent.Create(thinking, signature, cacheControl));
                         }
                         break;
 
@@ -223,7 +222,7 @@ public static class AnthropicConversions
                         string? redactedSig = (string?)block["data"];
                         if (!string.IsNullOrEmpty(redactedSig))
                         {
-                            contents.Add(NeutralThinkContent.Create("", Convert.FromBase64String(redactedSig), cacheControl));
+                            contents.Add(NeutralThinkContent.Create("", redactedSig, cacheControl));
                         }
                         break;
                 }

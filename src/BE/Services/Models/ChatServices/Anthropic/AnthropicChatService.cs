@@ -737,14 +737,12 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
     private static JsonObject CreateThinkingBlock(NeutralThinkContent think)
     {
-        string? signatureBase64 = think.Signature != null ? Encoding.UTF8.GetString(think.Signature) : null;
-
         if (string.IsNullOrEmpty(think.Content))
         {
             return new JsonObject
             {
                 ["type"] = "redacted_thinking",
-                ["data"] = signatureBase64
+                ["data"] = think.Signature
             };
         }
         else
@@ -753,7 +751,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             {
                 ["type"] = "thinking",
                 ["thinking"] = think.Content,
-                ["signature"] = signatureBase64!
+                ["signature"] = think.Signature,
             };
         }
     }
