@@ -23,7 +23,6 @@
     <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
     <PackageReference Include="MiniExcel" Version="1.42.0" />
     <PackageReference Include="ModelContextProtocol.Core" Version="0.4.0-preview.3" />
-    <PackageReference Include="Mscc.GenerativeAI" Version="2.9.3" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.0.1" />
     <PackageReference Include="System.Runtime.Caching" Version="10.0.0" />

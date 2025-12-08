@@ -2,7 +2,6 @@ using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
-using Mscc.GenerativeAI;
 
 namespace Chats.BE.Services.Models.Dtos;
 
@@ -73,17 +72,6 @@ public abstract record ChatSegment
             segments.Add(FromThink(think));
         }
         return segments;
-    }
-
-    public static ToolCallSegment FromToolCall(int fcIndex, FunctionCall toolCall)
-    {
-        return new ToolCallSegment
-        {
-            Index = fcIndex,
-            Id = toolCall.Id ?? fcIndex.ToString(),
-            Name = toolCall.Name,
-            Arguments = JSON.Serialize(toolCall.Args)
-        };
     }
 
     public static ToolCallResponseSegment FromToolCallResponse(string toolCallId, string? response, int durationMs, bool isSuccess)

@@ -1,321 +1,709 @@
+using System.Collections.Generic;
+using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
-using Mscc.GenerativeAI;
 using System.Diagnostics;
+using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using FinishReason = Mscc.GenerativeAI.FinishReason;
-using Model = Chats.BE.DB.Model;
 
 namespace Chats.BE.Services.Models.ChatServices.GoogleAI;
 
-public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) : ChatService
+public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, IHttpClientFactory httpClientFactory) : ChatService
 {
-    private readonly List<SafetySetting> _safetySettings =
+    private readonly IHttpClientFactory httpClientFactory = httpClientFactory;
+    private readonly ChatCompletionService chatCompletionService = chatCompletionService;
+
+    private static readonly (string Category, string Threshold)[] DefaultSafetySettings =
     [
-        new SafetySetting { Category = HarmCategory.HarmCategoryHateSpeech, Threshold = HarmBlockThreshold.BlockNone },
-        new SafetySetting { Category = HarmCategory.HarmCategorySexuallyExplicit, Threshold = HarmBlockThreshold.BlockNone },
-        new SafetySetting { Category = HarmCategory.HarmCategoryDangerousContent, Threshold = HarmBlockThreshold.BlockNone },
-        new SafetySetting { Category = HarmCategory.HarmCategoryHarassment, Threshold = HarmBlockThreshold.BlockNone },
+        ("HARM_CATEGORY_HATE_SPEECH", "BLOCK_NONE"),
+        ("HARM_CATEGORY_SEXUALLY_EXPLICIT", "BLOCK_NONE"),
+        ("HARM_CATEGORY_DANGEROUS_CONTENT", "BLOCK_NONE"),
+        ("HARM_CATEGORY_HARASSMENT", "BLOCK_NONE"),
     ];
 
+    private const string DefaultEndpoint = "https://generativelanguage.googleapis.com";
+
     public bool AllowImageGeneration(Model model) => model.DeploymentName.Contains("gemini-2.0-flash-exp") ||
-                                        model.DeploymentName.Contains("gemini-2.0-flash-exp-image-generation") ||
-                                        model.DeploymentName.Contains("gemini-2.5-flash-image");
+                                                     model.DeploymentName.Contains("gemini-2.0-flash-exp-image-generation") ||
+                                                     model.DeploymentName.Contains("gemini-2.5-flash-image");
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         bool allowImageGeneration = AllowImageGeneration(request.ChatConfig.Model);
-        GenerationConfig gc = new()
+        JsonObject requestBody = BuildRequestBody(request, allowImageGeneration);
+
+        string modelPath = NormalizeModelName(request.ChatConfig.Model.DeploymentName);
+        string endpoint = $"{GetBaseUrl(request.ChatConfig.Model.ModelKey)}/v1beta/{modelPath}:streamGenerateContent";
+
+        using HttpRequestMessage httpRequest = new(HttpMethod.Post, endpoint);
+        httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        httpRequest.Headers.TryAddWithoutValidation("x-goog-api-key", request.ChatConfig.Model.ModelKey.Secret ?? throw new InvalidOperationException("Google AI API key is required."));
+        httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+
+        using HttpClient httpClient = httpClientFactory.CreateClient();
+        httpClient.Timeout = NetworkTimeout;
+
+        using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (!response.IsSuccessStatusCode)
         {
-            Temperature = request.ChatConfig.Temperature,
-            ResponseModalities = allowImageGeneration ? [ResponseModality.Text, ResponseModality.Image] : [ResponseModality.Text],
-        };
-        if (!allowImageGeneration && !request.ChatConfig.Model.DeploymentName.Contains("2.5-pro"))
-        {
-            gc.EnableEnhancedCivicAnswers = true;
-        }
-        if (Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.ReasoningEffortOptions).Length > 0)
-        {
-            gc.ThinkingConfig = new ThinkingConfig
-            {
-                ThinkingBudget = request.ChatConfig.ReasoningEffort switch
-            {
-                var x when x.IsLowOrMinimal() => 1024,
-                    _ => null,
-                },
-                IncludeThoughts = true,
-            };
+            string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new RawChatServiceException((int)response.StatusCode, errorBody);
         }
 
-        GenerativeModel client = new()
-        {
-            ApiKey = request.ChatConfig.Model.ModelKey.Secret,
-            Model = request.ChatConfig.Model.DeploymentName,
-        };
-        if (client.Timeout != NetworkTimeout)
-        {
-            client.Timeout = NetworkTimeout;
-        }
+        await using Stream responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
-        Tool? tool = ToGoogleAIToolCallTool(request);
-        if (tool == null)
-        {
-            if (request.ChatConfig.CodeExecutionEnabled)
-            {
-                tool = new Tool()
-                {
-                    CodeExecution = new()
-                };
-            }
-            
-            if (request.ChatConfig.WebSearchEnabled)
-            {
-                client.UseGoogleSearch = true;
-            }
-        }
-
-        int fcIndex = 0;
-        string? effectiveSystemPrompt = request.GetEffectiveSystemPrompt();
-        GenerateContentRequest gcr = new()
-        {
-            Contents = ConvertMessages(request.Messages),
-            SystemInstruction = effectiveSystemPrompt != null ? new Content() { Role = Role.System, Parts = [new TextData() { Text = effectiveSystemPrompt }] } : null,
-            GenerationConfig = gc,
-            SafetySettings = _safetySettings,
-            Tools = request.ChatConfig.Model.AllowToolCall && tool != null ? [tool] : null,
-        };
-        Stopwatch codeExecutionSw = new();
+        int toolCallIndex = 0;
         string? codeExecutionId = null;
-        await foreach (GenerateContentResponse response in client.GenerateContentStream(gcr, new RequestOptions()
+        Stopwatch codeExecutionSw = new();
+
+        await foreach (JsonElement chunk in JsonSerializer.DeserializeAsyncEnumerable<JsonElement>(responseStream, JSON.JsonSerializerOptions, cancellationToken: cancellationToken))
         {
-            Retry = new Retry()
+            if (chunk.ValueKind != JsonValueKind.Object)
             {
-                Maximum = 1,
-            },
-            Timeout = NetworkTimeout,
-        }, cancellationToken))
-        {
-            if (response.Candidates != null && response.Candidates.Count > 0)
+                continue;
+            }
+
+            if (chunk.TryGetProperty("error", out JsonElement errorElement))
             {
-                List<ChatSegment> items = [];
-                foreach (Part part in response.Candidates[0].Content?.Parts ?? [])
-                {
-                    if (part.ThoughtSignature != null)
-                    {
-                        items.Add(ChatSegment.FromThinkingSegment(Convert.ToBase64String(part.ThoughtSignature)));
-                    }
+                string errorMessage = errorElement.TryGetProperty("message", out JsonElement messageElement)
+                    ? messageElement.GetString() ?? errorElement.GetRawText()
+                    : errorElement.GetRawText();
+                throw new RawChatServiceException(200, errorMessage);
+            }
 
-                    if (part.ExecutableCode != null)
+            List<ChatSegment> items = new();
+            DBFinishReason? finishReason = null;
+
+            if (chunk.TryGetProperty("candidates", out JsonElement candidatesElement) &&
+                candidatesElement.ValueKind == JsonValueKind.Array &&
+                candidatesElement.GetArrayLength() > 0)
+            {
+                JsonElement candidate = candidatesElement[0];
+                if (candidate.TryGetProperty("content", out JsonElement contentElement) &&
+                    contentElement.TryGetProperty("parts", out JsonElement partsElement) &&
+                    partsElement.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (JsonElement part in partsElement.EnumerateArray())
                     {
-                        codeExecutionId = "ce-" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                        items.Add(ChatSegment.FromToolCall(0, new FunctionCall()
-                        {
-                            Id = codeExecutionId,
-                            Name = part.ExecutableCode.Language.ToString(),
-                            Args = new
-                            {
-                                code = part.ExecutableCode.Code,
-                            },
-                        }));
-                        codeExecutionSw = Stopwatch.StartNew();
-                    }
-                    else if (part.CodeExecutionResult != null)
-                    {
-                        if (codeExecutionId == null)
-                        {
-                            throw new InvalidOperationException("CodeExecutionResult received without prior ExecutableCode.");
-                        }
-                        items.Add(ChatSegment.FromToolCallResponse(codeExecutionId, part.CodeExecutionResult.Output,
-                            (int)codeExecutionSw.ElapsedMilliseconds,
-                            isSuccess: part.CodeExecutionResult.Outcome == Outcome.OutcomeOk));
-                    }
-                    else if (part.Text != null)
-                    {
-                        if (part.Thought == true)
-                        {
-                            items.Add(ChatSegment.FromThink(part.Text));
-                        }
-                        else
-                        {
-                            items.Add(ChatSegment.FromText(part.Text));
-                        }
-                    }
-                    if (part.InlineData != null)
-                    {
-                        items.Add(ChatSegment.FromBase64Image(part.InlineData.Data, part.InlineData.MimeType));
-                    }
-                    if (part.FunctionCall != null)
-                    {
-                        items.Add(ChatSegment.FromToolCall(fcIndex++, part.FunctionCall));
+                        ProcessPart(part, items, ref toolCallIndex, ref codeExecutionId, ref codeExecutionSw);
                     }
                 }
 
-                FinishReason? finishReason = response.Candidates[0].FinishReason;
-                ChatTokenUsage? usage = GetUsage(response.UsageMetadata);
+                if (candidate.TryGetProperty("finishReason", out JsonElement finishElement))
+                {
+                    finishReason = ToDbFinishReason(finishElement.GetString());
+                }
+            }
 
-                foreach (ChatSegment item in items)
-                {
-                    yield return item;
-                }
+            ChatTokenUsage? usage = chunk.TryGetProperty("usageMetadata", out JsonElement usageElement) ? GetUsage(usageElement) : null;
 
-                DBFinishReason? dbFinish = ToDBFinishReason(finishReason);
-                if (usage != null)
-                {
-                    yield return ChatSegment.FromUsage(usage);
-                }
-                if (dbFinish != null)
-                {
-                    yield return ChatSegment.FromFinishReason(dbFinish);
-                }
+            foreach (ChatSegment item in items)
+            {
+                yield return item;
+            }
+
+            if (usage != null)
+            {
+                yield return ChatSegment.FromUsage(usage);
+            }
+
+            if (finishReason != null)
+            {
+                yield return ChatSegment.FromFinishReason(finishReason);
             }
         }
     }
 
-    private static ChatTokenUsage? GetUsage(UsageMetadata? usageMetadata)
+    private static void ProcessPart(
+        JsonElement part,
+        List<ChatSegment> items,
+        ref int toolCallIndex,
+        ref string? codeExecutionId,
+        ref Stopwatch codeExecutionSw)
     {
-        if (usageMetadata == null) return null;
-        ChatTokenUsage usage = new()
+        if (part.TryGetProperty("thoughtSignature", out JsonElement signatureElement))
         {
-            InputTokens = usageMetadata.PromptTokenCount,
-            OutputTokens = usageMetadata.TotalTokenCount - usageMetadata.PromptTokenCount,
-            ReasoningTokens = usageMetadata.ThoughtsTokenCount,
-            CacheTokens = 0,
-        };
-        return usage;
+            string? signature = signatureElement.GetString();
+            if (!string.IsNullOrEmpty(signature))
+            {
+                items.Add(ChatSegment.FromThinkingSegment(NormalizeThoughtSignature(signature)));
+            }
+        }
+
+        if (part.TryGetProperty("text", out JsonElement textElement) && textElement.ValueKind == JsonValueKind.String)
+        {
+            string text = textElement.GetString() ?? string.Empty;
+            bool isThought = part.TryGetProperty("thought", out JsonElement thoughtElement) && thoughtElement.ValueKind == JsonValueKind.True;
+            items.Add(isThought ? ChatSegment.FromThink(text) : ChatSegment.FromText(text));
+        }
+
+        if (part.TryGetProperty("inlineData", out JsonElement inlineData) &&
+            inlineData.TryGetProperty("data", out JsonElement dataElement))
+        {
+            string? base64 = dataElement.GetString();
+            string mimeType = inlineData.TryGetProperty("mimeType", out JsonElement mimeElement) ? mimeElement.GetString() ?? "application/octet-stream" : "application/octet-stream";
+            if (!string.IsNullOrEmpty(base64))
+            {
+                items.Add(ChatSegment.FromBase64Image(base64, mimeType));
+            }
+        }
+
+        if (part.TryGetProperty("executableCode", out JsonElement executableCode))
+        {
+            string language = executableCode.TryGetProperty("language", out JsonElement languageElement) ? languageElement.GetString() ?? "code_execution" : "code_execution";
+            string? code = executableCode.TryGetProperty("code", out JsonElement codeElement) ? codeElement.GetString() : null;
+            if (code != null)
+            {
+                codeExecutionId = "ce-" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                codeExecutionSw = Stopwatch.StartNew();
+                string arguments = JsonSerializer.Serialize(new { code }, JSON.JsonSerializerOptions);
+                items.Add(new ToolCallSegment
+                {
+                    Index = 0,
+                    Id = codeExecutionId,
+                    Name = language,
+                    Arguments = arguments
+                });
+            }
+        }
+
+        if (part.TryGetProperty("codeExecutionResult", out JsonElement executionResult) && codeExecutionId != null)
+        {
+            string output = executionResult.TryGetProperty("output", out JsonElement outputElement) ? outputElement.GetString() ?? string.Empty : string.Empty;
+            string outcome = executionResult.TryGetProperty("outcome", out JsonElement outcomeElement) ? outcomeElement.GetString() ?? string.Empty : string.Empty;
+            bool isSuccess = string.Equals(outcome, "OUTCOME_OK", StringComparison.OrdinalIgnoreCase);
+            int duration = codeExecutionSw.IsRunning ? (int)codeExecutionSw.ElapsedMilliseconds : 0;
+            codeExecutionSw.Reset();
+
+            items.Add(ChatSegment.FromToolCallResponse(codeExecutionId, output, duration, isSuccess: isSuccess));
+            codeExecutionId = null;
+        }
+
+        if (part.TryGetProperty("functionCall", out JsonElement functionCall))
+        {
+            string? id = functionCall.TryGetProperty("id", out JsonElement idElement) ? idElement.GetString() : null;
+            string? name = functionCall.TryGetProperty("name", out JsonElement nameElement) ? nameElement.GetString() : null;
+            string arguments = "{}";
+            if (functionCall.TryGetProperty("args", out JsonElement argsElement))
+            {
+                arguments = SerializeFunctionArgs(argsElement);
+            }
+
+            items.Add(new ToolCallSegment
+            {
+                Index = toolCallIndex,
+                Id = id,
+                Name = name,
+                Arguments = arguments
+            });
+            toolCallIndex++;
+        }
     }
 
-    static DBFinishReason? ToDBFinishReason(FinishReason? finishReason)
+    private static string SerializeFunctionArgs(JsonElement argsElement)
     {
-        if (finishReason == null)
+        return argsElement.ValueKind switch
+        {
+            JsonValueKind.String => argsElement.GetString() ?? "{}",
+            JsonValueKind.Null or JsonValueKind.Undefined => "{}",
+            _ => argsElement.GetRawText()
+        };
+    }
+
+    private static ChatTokenUsage? GetUsage(JsonElement usageMetadata)
+    {
+        if (usageMetadata.ValueKind != JsonValueKind.Object)
         {
             return null;
         }
 
-        return finishReason switch
+        int promptTokens = usageMetadata.TryGetProperty("promptTokenCount", out JsonElement promptElement) ? promptElement.GetInt32() : 0;
+        int totalTokens = usageMetadata.TryGetProperty("totalTokenCount", out JsonElement totalElement) ? totalElement.GetInt32() : 0;
+        int outputTokens = totalTokens >= promptTokens ? totalTokens - promptTokens : 0;
+        if (outputTokens == 0 && usageMetadata.TryGetProperty("candidatesTokenCount", out JsonElement candidateElement))
         {
-            FinishReason.FinishReasonUnspecified => null, // Assume unspecified maps to null
-            FinishReason.Stop => DBFinishReason.Success,
-            FinishReason.MaxTokens => DBFinishReason.Length,
-            FinishReason.Safety => DBFinishReason.ContentFilter,
-            FinishReason.Recitation => DBFinishReason.ContentFilter,
-            FinishReason.Other => DBFinishReason.ContentFilter,
-            FinishReason.Blocklist => DBFinishReason.ContentFilter,
-            FinishReason.ProhibitedContent => DBFinishReason.ContentFilter,
-            FinishReason.Spii => DBFinishReason.ContentFilter,
-            FinishReason.MalformedFunctionCall => DBFinishReason.ToolCalls,
-            FinishReason.Language => DBFinishReason.ContentFilter, // Map to closest match
-            FinishReason.ImageSafety => DBFinishReason.ContentFilter, // Map to closest match
-            _ => null // Handle any unknown values
+            outputTokens = candidateElement.GetInt32();
+        }
+        int reasoningTokens = usageMetadata.TryGetProperty("thoughtsTokenCount", out JsonElement reasoningElement) ? reasoningElement.GetInt32() : 0;
+
+        return new ChatTokenUsage
+        {
+            InputTokens = promptTokens,
+            OutputTokens = outputTokens,
+            ReasoningTokens = reasoningTokens,
+            CacheTokens = 0,
         };
     }
 
-    static List<Content> ConvertMessages(IList<NeutralMessage> messages)
+    private static DBFinishReason? ToDbFinishReason(string? finishReason)
     {
-        return [.. messages
-            .Select(msg => msg.Role switch
-            {
-                NeutralChatRole.User => new Content("") { Role = Role.User, Parts = [.. msg.Contents.Select(NeutralContentToGooglePart).Where(x => x != null).Select(x => x!)] },
-                NeutralChatRole.Assistant => new Content("") { Role = Role.Model, Parts = AssistantMessageToParts(msg) },
-                NeutralChatRole.Tool => new Content("") { Role = Role.Function, Parts = [ToolCallMessageToPart(msg)] },
-                _ => throw new NotSupportedException($"Unsupported message role: {msg.Role} in {nameof(GoogleAI2ChatService)}"),
-            })];
-
-        static IPart ToolCallMessageToPart(NeutralMessage message)
+        if (string.IsNullOrEmpty(finishReason))
         {
-            NeutralContent? toolCallContent = message.Contents.FirstOrDefault();
-            if (toolCallContent is not NeutralToolCallResponseContent tcr)
+            return null;
+        }
+
+        return finishReason.ToUpperInvariant() switch
+        {
+            "STOP" => DBFinishReason.Success,
+            "MAX_TOKENS" => DBFinishReason.Length,
+            "SAFETY" => DBFinishReason.ContentFilter,
+            "RECITATION" => DBFinishReason.ContentFilter,
+            "OTHER" => DBFinishReason.ContentFilter,
+            "BLOCKLIST" => DBFinishReason.ContentFilter,
+            "PROHIBITED_CONTENT" => DBFinishReason.ContentFilter,
+            "SPII" => DBFinishReason.ContentFilter,
+            "LANGUAGE" => DBFinishReason.ContentFilter,
+            "IMAGE_SAFETY" => DBFinishReason.ContentFilter,
+            "MALFORMED_FUNCTION_CALL" => DBFinishReason.ToolCalls,
+            _ => null
+        };
+    }
+
+    private JsonObject BuildRequestBody(ChatRequest request, bool allowImageGeneration)
+    {
+        JsonObject body = new()
+        {
+            ["model"] = NormalizeModelName(request.ChatConfig.Model.DeploymentName),
+            ["contents"] = ConvertMessages(request.Messages),
+            ["safetySettings"] = BuildSafetySettings()
+        };
+
+        JsonObject? generationConfig = BuildGenerationConfig(request, allowImageGeneration);
+        if (generationConfig != null && generationConfig.Count > 0)
+        {
+            body["generationConfig"] = generationConfig;
+        }
+
+        JsonObject? systemInstruction = BuildSystemInstruction(request.GetEffectiveSystemPrompt());
+        if (systemInstruction != null)
+        {
+            body["systemInstruction"] = systemInstruction;
+        }
+
+        JsonArray? tools = BuildTools(request);
+        if (tools != null && tools.Count > 0)
+        {
+            body["tools"] = tools;
+        }
+
+        return body;
+    }
+
+    private static JsonArray BuildSafetySettings()
+    {
+        JsonArray safety = new();
+        foreach ((string Category, string Threshold) setting in DefaultSafetySettings)
+        {
+            safety.Add(new JsonObject
             {
-                throw new Exception($"{nameof(ToolCallMessageToPart)} expected tool call response content but none found.");
+                ["category"] = setting.Category,
+                ["threshold"] = setting.Threshold
+            });
+        }
+        return safety;
+    }
+
+    private static JsonObject? BuildGenerationConfig(ChatRequest request, bool allowImageGeneration)
+    {
+        JsonObject config = new();
+        JsonArray modalities = new()
+        {
+            "TEXT"
+        };
+        if (allowImageGeneration)
+        {
+            modalities.Add("IMAGE");
+        }
+        config["responseModalities"] = modalities;
+
+        if (request.ChatConfig.Temperature is float temperature)
+        {
+            config["temperature"] = temperature;
+        }
+
+        if (request.TopP is float topP)
+        {
+            config["topP"] = topP;
+        }
+
+        int? maxTokens = request.ChatConfig.MaxOutputTokens ?? request.ChatConfig.Model.MaxResponseTokens;
+        if (maxTokens.HasValue && maxTokens.Value > 0)
+        {
+            config["maxOutputTokens"] = maxTokens.Value;
+        }
+
+        if (!allowImageGeneration && !request.ChatConfig.Model.DeploymentName.Contains("2.5-pro", StringComparison.OrdinalIgnoreCase))
+        {
+            config["enableEnhancedCivicAnswers"] = true;
+        }
+
+        if (Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.ReasoningEffortOptions).Length > 0)
+        {
+            JsonObject thinkingConfig = new()
+            {
+                ["includeThoughts"] = true
+            };
+
+            int? thinkingBudget = request.ChatConfig.ReasoningEffort switch
+            {
+                var effort when effort.IsLowOrMinimal() => 1024,
+                _ => request.ChatConfig.ThinkingBudget
+            };
+
+            if (thinkingBudget.HasValue && thinkingBudget.Value > 0)
+            {
+                thinkingConfig["thinkingBudget"] = thinkingBudget.Value;
             }
 
-            return Part.FromFunctionResponse(tcr.ToolCallId, new
+            config["thinkingConfig"] = thinkingConfig;
+        }
+
+        return config;
+    }
+
+    private static JsonObject? BuildSystemInstruction(string? systemPrompt)
+    {
+        if (string.IsNullOrEmpty(systemPrompt))
+        {
+            return null;
+        }
+
+        return new JsonObject
+        {
+            ["role"] = "system",
+            ["parts"] = new JsonArray
             {
-                result = tcr.Response
+                new JsonObject { ["text"] = systemPrompt }
+            }
+        };
+    }
+
+    private static JsonArray? BuildTools(ChatRequest request)
+    {
+        JsonArray tools = new();
+
+        JsonObject? functionTool = BuildFunctionDeclarations(request);
+        if (functionTool != null)
+        {
+            tools.Add(functionTool);
+        }
+
+        if (request.ChatConfig.CodeExecutionEnabled && request.ChatConfig.Model.AllowCodeExecution)
+        {
+            tools.Add(new JsonObject
+            {
+                ["codeExecution"] = new JsonObject()
             });
         }
 
-        static List<IPart> AssistantMessageToParts(NeutralMessage assistantMessage)
+        if (request.ChatConfig.WebSearchEnabled && request.ChatConfig.Model.AllowSearch)
         {
-            List<IPart> results = [];
-            foreach (NeutralToolCallContent toolCall in assistantMessage.Contents.OfType<NeutralToolCallContent>())
+            tools.Add(new JsonObject
             {
-                results.Add(new FunctionCall()
-                {
-                    Id = toolCall.Id,
-                    Name = toolCall.Name,
-                    Args = JsonSerializer.Deserialize<JsonObject>(toolCall.Parameters),
-                });
-            }
-
-            results.AddRange(assistantMessage.Contents
-                .Select(NeutralContentToGooglePart)
-                .Where(x => x != null).Select(x => x!));
-            return results;
+                ["googleSearch"] = new JsonObject()
+            });
         }
 
-        static IPart? NeutralContentToGooglePart(NeutralContent content)
-        {
-            return content switch
-            {
-                NeutralTextContent text => new TextData() { Text = text.Content },
-                NeutralFileBlobContent blob => new InlineData() { Data = Convert.ToBase64String(blob.Data), MimeType = blob.MediaType },
-                NeutralThinkContent => null, // Skip thinking parts for Google AI
-                NeutralToolCallContent => null, // Tool calls are handled separately in AssistantMessageToParts
-                NeutralToolCallResponseContent => null, // Tool call responses are handled separately
-                NeutralErrorContent error => new TextData() { Text = error.Content },
-                _ => throw new NotSupportedException($"Unsupported content type: {content.GetType().Name}"),
-            };
-        }
+        return tools.Count > 0 ? tools : null;
     }
 
-    static Tool? ToGoogleAIToolCallTool(ChatRequest cco)
+    private static JsonObject? BuildFunctionDeclarations(ChatRequest request)
     {
-        IEnumerable<FunctionTool> functionTools = cco.Tools?.OfType<FunctionTool>() ?? Enumerable.Empty<FunctionTool>();
-        if (!functionTools.Any())
+        if (!request.ChatConfig.Model.AllowToolCall)
         {
             return null;
         }
 
-        return new Tool()
+        FunctionTool[] functionTools = request.Tools.OfType<FunctionTool>().ToArray();
+        if (functionTools.Length == 0)
         {
-            FunctionDeclarations = [.. functionTools
-                .Select(tool => new FunctionDeclaration()
-                {
-                    Name = tool.FunctionName,
-                    Description = tool.FunctionDescription,
-                    Parameters = ToGoogleAIParameters(tool.FunctionParameters),
-                })],
+            return null;
+        }
+
+        JsonArray declarations = new();
+        foreach (FunctionTool tool in functionTools)
+        {
+            JsonObject declaration = new()
+            {
+                ["name"] = tool.FunctionName
+            };
+
+            if (!string.IsNullOrEmpty(tool.FunctionDescription))
+            {
+                declaration["description"] = tool.FunctionDescription;
+            }
+
+            declaration["parameters"] = BuildGoogleSchema(tool.FunctionParameters);
+            declarations.Add(declaration);
+        }
+
+        return new JsonObject
+        {
+            ["functionDeclarations"] = declarations
+        };
+    }
+
+    private static JsonObject BuildGoogleSchema(string? openAiSchema)
+    {
+        JsonObject schema = new()
+        {
+            ["type"] = "OBJECT"
         };
 
-        static Schema ToGoogleAIParameters(string? parameters)
+        if (string.IsNullOrEmpty(openAiSchema))
         {
-            if (string.IsNullOrEmpty(parameters)) return new Schema { Type = ParameterType.Object };
-            JsonObject jsonObject = JsonSerializer.Deserialize<JsonObject>(parameters)!;
-            return new Schema()
+            return schema;
+        }
+
+        JsonNode? parsed;
+        try
+        {
+            parsed = JsonNode.Parse(openAiSchema);
+        }
+        catch (JsonException)
+        {
+            return schema;
+        }
+
+        if (parsed is not JsonObject root)
+        {
+            return schema;
+        }
+
+        if (root.TryGetPropertyValue("properties", out JsonNode? propsNode) && propsNode is JsonObject props)
+        {
+            JsonObject properties = new();
+            foreach ((string key, JsonNode? value) in props)
             {
-                Type = ParameterType.Object,
-                Properties = jsonObject["properties"]?.AsObject().ToDictionary(x => x.Key, x => new Schema()
+                if (value is not JsonObject propertyObject)
                 {
-                    Type = x.Value?["type"]?.ToString() switch
-                    {
-                        "integer" => ParameterType.Integer,
-                        "null" => ParameterType.Null,
-                        "string" => ParameterType.String,
-                        "number" => ParameterType.Number,
-                        "boolean" => ParameterType.Boolean,
-                        "array" => ParameterType.Array,
-                        "object" => ParameterType.Object,
-                        _ => throw new NotSupportedException($"Unsupported parameter type: {x.Value?["type"]}")
-                    },
-                    Description = x.Value["description"]?.ToString()!,
-                }),
-                Required = jsonObject["required"]?.AsArray().Select(x => (string)x!).ToList(),
+                    continue;
+                }
+
+                JsonObject property = new()
+                {
+                    ["type"] = ConvertSchemaType(propertyObject.TryGetPropertyValue("type", out JsonNode? typeNode) ? typeNode?.GetValue<string>() : null)
+                };
+
+                if (propertyObject.TryGetPropertyValue("description", out JsonNode? descriptionNode) && descriptionNode is JsonValue descriptionValue && descriptionValue.TryGetValue(out string? description) && description != null)
+                {
+                    property["description"] = description;
+                }
+
+                properties[key] = property;
+            }
+
+            if (properties.Count > 0)
+            {
+                schema["properties"] = properties;
+            }
+        }
+
+        if (root.TryGetPropertyValue("required", out JsonNode? requiredNode) && requiredNode is JsonArray requiredArray)
+        {
+            JsonArray required = new();
+            foreach (JsonNode? node in requiredArray)
+            {
+                if (node is JsonValue value && value.TryGetValue(out string? str) && str != null)
+                {
+                    required.Add(str);
+                }
+            }
+            if (required.Count > 0)
+            {
+                schema["required"] = required;
+            }
+        }
+
+        return schema;
+    }
+
+    private static string ConvertSchemaType(string? type)
+    {
+        return type switch
+        {
+            "integer" => "INTEGER",
+            "null" => "NULL",
+            "string" => "STRING",
+            "number" => "NUMBER",
+            "boolean" => "BOOLEAN",
+            "array" => "ARRAY",
+            "object" => "OBJECT",
+            _ => "STRING"
+        };
+    }
+
+    private static JsonArray ConvertMessages(IList<NeutralMessage> messages)
+    {
+        JsonArray result = new();
+        foreach (NeutralMessage message in messages)
+        {
+            JsonObject content = new()
+            {
+                ["role"] = message.Role switch
+                {
+                    NeutralChatRole.User => "user",
+                    NeutralChatRole.Assistant => "model",
+                    NeutralChatRole.Tool => "function",
+                    _ => throw new NotSupportedException($"Unsupported message role: {message.Role} in {nameof(GoogleAI2ChatService)}"),
+                }
             };
+
+            JsonArray parts = message.Role switch
+            {
+                NeutralChatRole.User => BuildUserParts(message),
+                NeutralChatRole.Assistant => BuildAssistantParts(message),
+                NeutralChatRole.Tool => new JsonArray { ToolCallMessageToPart(message) },
+                _ => throw new NotSupportedException($"Unsupported message role: {message.Role} in {nameof(GoogleAI2ChatService)}"),
+            };
+
+            content["parts"] = parts;
+            result.Add(content);
+        }
+        return result;
+    }
+
+    private static JsonArray BuildUserParts(NeutralMessage message)
+    {
+        JsonArray parts = new();
+        foreach (NeutralContent content in message.Contents)
+        {
+            JsonObject? part = NeutralContentToGooglePart(content);
+            if (part != null)
+            {
+                parts.Add(part);
+            }
+        }
+        return parts;
+    }
+
+    private static JsonArray BuildAssistantParts(NeutralMessage message)
+    {
+        JsonArray parts = new();
+
+        foreach (NeutralToolCallContent toolCall in message.Contents.OfType<NeutralToolCallContent>())
+        {
+            JsonObject args = ParseJson(toolCall.Parameters) as JsonObject ?? new JsonObject();
+            JsonObject functionCall = new()
+            {
+                ["functionCall"] = new JsonObject
+                {
+                    ["id"] = toolCall.Id,
+                    ["name"] = toolCall.Name,
+                    ["args"] = args
+                }
+            };
+            parts.Add(functionCall);
+        }
+
+        foreach (NeutralContent content in message.Contents)
+        {
+            if (content is NeutralToolCallContent)
+            {
+                continue;
+            }
+
+            JsonObject? part = NeutralContentToGooglePart(content);
+            if (part != null)
+            {
+                parts.Add(part);
+            }
+        }
+
+        return parts;
+    }
+
+    private static JsonObject ToolCallMessageToPart(NeutralMessage message)
+    {
+        NeutralToolCallResponseContent? responseContent = message.Contents.OfType<NeutralToolCallResponseContent>().FirstOrDefault();
+        if (responseContent == null)
+        {
+            throw new InvalidOperationException($"{nameof(ToolCallMessageToPart)} expected tool call response content but none found.");
+        }
+
+        return new JsonObject
+        {
+            ["functionResponse"] = new JsonObject
+            {
+                ["name"] = responseContent.ToolCallId,
+                ["response"] = new JsonObject
+                {
+                    ["result"] = ParseJson(responseContent.Response) ?? JsonValue.Create(responseContent.Response) ?? JsonValue.Create(string.Empty)!
+                }
+            }
+        };
+    }
+
+    private static JsonObject? NeutralContentToGooglePart(NeutralContent content)
+    {
+        return content switch
+        {
+            NeutralTextContent text => new JsonObject { ["text"] = text.Content },
+            NeutralErrorContent error => new JsonObject { ["text"] = error.Content },
+            NeutralFileBlobContent blob => new JsonObject
+            {
+                ["inlineData"] = new JsonObject
+                {
+                    ["data"] = Convert.ToBase64String(blob.Data),
+                    ["mimeType"] = blob.MediaType
+                }
+            },
+            NeutralThinkContent => null,
+            NeutralToolCallContent => null,
+            NeutralToolCallResponseContent => null,
+            NeutralFileUrlContent => throw new NotSupportedException("FileUrl content is not supported for Google AI. Please convert to binary data first."),
+            NeutralFileContent => throw new NotSupportedException("File content should be materialized before sending to Google AI."),
+            _ => throw new NotSupportedException($"Unsupported content type: {content.GetType().Name}")
+        };
+    }
+
+    private static JsonNode? ParseJson(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonNode.Parse(json);
+        }
+        catch (JsonException)
+        {
+            return JsonValue.Create(json);
+        }
+    }
+
+    private static string NormalizeModelName(string deploymentName)
+    {
+        return deploymentName.StartsWith("models/", StringComparison.OrdinalIgnoreCase)
+            ? deploymentName
+            : $"models/{deploymentName}";
+    }
+
+    private static string GetBaseUrl(ModelKey modelKey)
+    {
+        return string.IsNullOrWhiteSpace(modelKey.Host) ? DefaultEndpoint : modelKey.Host.TrimEnd('/');
+    }
+
+    private static string NormalizeThoughtSignature(string signature)
+    {
+        try
+        {
+            byte[] decoded = Convert.FromBase64String(signature);
+            return Convert.ToBase64String(decoded);
+        }
+        catch (FormatException)
+        {
+            return signature;
         }
     }
 
