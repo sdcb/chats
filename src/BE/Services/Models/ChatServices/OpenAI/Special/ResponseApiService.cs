@@ -4,6 +4,7 @@ using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
 using System.Diagnostics;
+using System.Linq;
 using System.Net.Http.Headers;
 using System.Net.ServerSentEvents;
 using System.Runtime.CompilerServices;
@@ -445,31 +446,14 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         }
 
         // Tools
-        if (request.Tools.Count > 0)
+        JsonArray functionTools = [];
+        foreach (FunctionTool tool in request.Tools.OfType<FunctionTool>())
         {
-            JsonArray tools = [];
-            foreach (ChatTool tool in request.Tools)
-            {
-                JsonObject toolObj = new()
-                {
-                    ["type"] = "function",
-                    ["name"] = tool.FunctionName,
-                };
-                if (tool.FunctionDescription != null)
-                {
-                    toolObj["description"] = tool.FunctionDescription;
-                }
-                if (tool.FunctionParameters != null)
-                {
-                    toolObj["parameters"] = JsonNode.Parse(tool.FunctionParameters);
-                }
-                if (tool.FunctionSchemaIsStrict == true)
-                {
-                    toolObj["strict"] = true;
-                }
-                tools.Add(toolObj);
-            }
-            body["tools"] = tools;
+            functionTools.Add(tool.ToJsonObject());
+        }
+        if (functionTools.Count > 0)
+        {
+            body["tools"] = functionTools;
         }
 
         if (background)

@@ -1,3 +1,4 @@
+using System;
 using Chats.BE.DB;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Neutral;
@@ -88,16 +89,28 @@ public class AnthropicRequestWrapper(JsonObject json)
             if (toolNode == null) continue;
 
             string? name = (string?)toolNode["name"];
+            string? type = (string?)toolNode["type"];
             string? description = (string?)toolNode["description"];
             JsonNode? inputSchema = toolNode["input_schema"];
 
             if (string.IsNullOrEmpty(name)) continue;
 
-            tools.Add(ChatTool.CreateFunctionTool(
-                name,
-                description,
-                inputSchema?.ToJsonString() ?? "{}"
-            ));
+            if (string.IsNullOrEmpty(type) || type.Equals("function", StringComparison.OrdinalIgnoreCase))
+            {
+                tools.Add(FunctionTool.Create(
+                    name,
+                    description,
+                    inputSchema?.ToJsonString()
+                ));
+            }
+            else
+            {
+                tools.Add(new AnthropicBuiltInTool
+                {
+                    Name = name,
+                    Type = type
+                });
+            }
         }
 
         return tools;

@@ -6,18 +6,23 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 // DBFinishReason is defined in Chats.BE.Services.Models namespace
 
 /// <summary>
-/// Represents a tool that can be called by the model.
+/// Base type for chat tools.
 /// </summary>
-public class ChatTool
+public abstract record ChatTool;
+
+/// <summary>
+/// Represents a function tool that follows the OpenAI tool schema.
+/// </summary>
+public sealed record FunctionTool : ChatTool
 {
     public required string FunctionName { get; init; }
     public string? FunctionDescription { get; init; }
     public string? FunctionParameters { get; init; }
     public bool? FunctionSchemaIsStrict { get; init; }
 
-    public static ChatTool CreateFunctionTool(string name, string? description = null, string? parameters = null)
+    public static FunctionTool Create(string name, string? description = null, string? parameters = null)
     {
-        return new ChatTool
+        return new FunctionTool
         {
             FunctionName = name,
             FunctionDescription = description,
@@ -42,11 +47,38 @@ public class ChatTool
             function["parameters"] = JsonNode.Parse(FunctionParameters);
         }
 
-        return new JsonObject
+        JsonObject tool = new()
         {
             ["type"] = "function",
             ["function"] = function
         };
+
+        if (FunctionSchemaIsStrict == true)
+        {
+            tool["strict"] = true;
+        }
+
+        return tool;
+    }
+}
+
+/// <summary>
+/// Represents Anthropic built-in tools (e.g., web_search, bash).
+/// </summary>
+public sealed record AnthropicBuiltInTool : ChatTool
+{
+    public required string Name { get; init; }
+    public required string Type { get; init; }
+
+    public JsonObject ToJsonObject()
+    {
+        JsonObject result = new()
+        {
+            ["name"] = Name,
+            ["type"] = Type
+        };
+
+        return result;
     }
 }
 

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
@@ -395,7 +397,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             };
         }
 
-        JsonArray tools = BuildToolsArray(request);
+        JsonArray tools = BuildToolsArray(request.Tools);
         if (tools.Count > 0)
         {
             body["tools"] = tools;
@@ -473,51 +475,53 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         return (allowThinkingBlocks, allowThinking);
     }
 
-    private static JsonArray BuildToolsArray(ChatRequest request)
+    private static JsonArray BuildToolsArray(IEnumerable<ChatTool> tools)
     {
-        JsonArray tools = [];
-        bool hasWebSearchTool = false;
-
-        foreach (ChatTool tool in request.Tools)
+        JsonArray result = [];
+        foreach (ChatTool tool in tools)
         {
-            if (tool.FunctionName == "web_search" && !HasRealParameters(tool))
+            JsonObject? obj = tool switch
             {
-                hasWebSearchTool = true;
-                continue;
+                FunctionTool functionTool => ConvertFunctionTool(functionTool),
+                AnthropicBuiltInTool builtInTool => builtInTool.ToJsonObject(),
+                _ => null
+            };
+            if (obj is not null)
+            {
+                result.Add(obj);
             }
-            tools.Add(ConvertTool(tool));
         }
+        return result;
 
-        if (hasWebSearchTool || request.ChatConfig.WebSearchEnabled)
+        static JsonObject ConvertFunctionTool(FunctionTool tool)
         {
-            tools.Add(new JsonObject
+            JsonObject inputSchema = new() { ["type"] = "object" };
+
+            JsonObject? parameters = string.IsNullOrEmpty(tool.FunctionParameters) ? null : JsonSerializer.Deserialize<JsonObject>(tool.FunctionParameters);
+            if (parameters != null)
             {
-                ["name"] = "web_search",
-                ["type"] = "web_search_20250305"
-            });
-        }
-
-        return tools;
-    }
-
-    private static bool HasRealParameters(ChatTool tool)
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(tool.FunctionParameters)) return false;
-            JsonObject? parameters = JsonSerializer.Deserialize<JsonObject>(tool.FunctionParameters);
-            if (parameters == null) return false;
-
-            if (parameters.TryGetPropertyValue("properties", out JsonNode? props) &&
-                props is JsonObject propsObj && propsObj.Count > 0)
-            {
-                return true;
+                if (parameters.TryGetPropertyValue("properties", out JsonNode? props) && props != null)
+                {
+                    inputSchema["properties"] = JsonNode.Parse(props.ToJsonString());
+                }
+                if (parameters.TryGetPropertyValue("required", out JsonNode? req) && req != null)
+                {
+                    inputSchema["required"] = JsonNode.Parse(req.ToJsonString());
+                }
             }
-            return false;
-        }
-        catch
-        {
-            return false;
+
+            JsonObject result = new()
+            {
+                ["name"] = tool.FunctionName,
+                ["input_schema"] = inputSchema
+            };
+
+            if (!string.IsNullOrEmpty(tool.FunctionDescription))
+            {
+                result["description"] = tool.FunctionDescription;
+            }
+
+            return result;
         }
     }
 
@@ -542,44 +546,13 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             };
         }
 
-        JsonArray tools = BuildToolsArray(request);
+        JsonArray tools = BuildToolsArray(request.Tools);
         if (tools.Count > 0)
         {
             body["tools"] = tools;
         }
 
         return body;
-    }
-
-    private static JsonObject ConvertTool(ChatTool tool)
-    {
-        JsonObject inputSchema = new() { ["type"] = "object" };
-
-        JsonObject? parameters = string.IsNullOrEmpty(tool.FunctionParameters) ? null : JsonSerializer.Deserialize<JsonObject>(tool.FunctionParameters);
-        if (parameters != null)
-        {
-            if (parameters.TryGetPropertyValue("properties", out JsonNode? props) && props != null)
-            {
-                inputSchema["properties"] = JsonNode.Parse(props.ToJsonString());
-            }
-            if (parameters.TryGetPropertyValue("required", out JsonNode? req) && req != null)
-            {
-                inputSchema["required"] = JsonNode.Parse(req.ToJsonString());
-            }
-        }
-
-        JsonObject result = new()
-        {
-            ["name"] = tool.FunctionName,
-            ["input_schema"] = inputSchema
-        };
-
-        if (!string.IsNullOrEmpty(tool.FunctionDescription))
-        {
-            result["description"] = tool.FunctionDescription;
-        }
-
-        return result;
     }
 
     private static JsonArray ConvertMessages(IList<NeutralMessage> messages, bool allowThinkingBlocks)

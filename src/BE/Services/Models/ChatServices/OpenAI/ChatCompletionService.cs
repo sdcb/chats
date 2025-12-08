@@ -444,17 +444,26 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         }
 
         // Tools
-        if (request.Tools.Count > 0)
+        JsonArray toolsArray = BuildFunctionToolsArray(request.Tools);
+        if (toolsArray.Count > 0)
         {
-            JsonArray tools = [];
-            foreach (ChatTool tool in request.Tools)
-            {
-                tools.Add(tool.ToJsonObject());
-            }
-            body["tools"] = tools;
+            body["tools"] = toolsArray;
         }
 
         return body;
+    }
+
+    private static JsonArray BuildFunctionToolsArray(IEnumerable<ChatTool> tools)
+    {
+        JsonArray result = [];
+        foreach (ChatTool tool in tools)
+        {
+            if (tool is FunctionTool functionTool)
+            {
+                result.Add(functionTool.ToJsonObject());
+            }
+        }
+        return result;
     }
 
     protected virtual JsonArray BuildMessages(ChatRequest request)

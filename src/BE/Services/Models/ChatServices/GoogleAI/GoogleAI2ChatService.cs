@@ -3,6 +3,8 @@ using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
+using System.Collections.Generic;
+using System.Linq;
 using Mscc.GenerativeAI;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -270,14 +272,15 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
 
     static Tool? ToGoogleAIToolCallTool(ChatRequest cco)
     {
-        if (cco.Tools == null || cco.Tools.Count == 0)
+        IEnumerable<FunctionTool> functionTools = cco.Tools?.OfType<FunctionTool>() ?? Enumerable.Empty<FunctionTool>();
+        if (!functionTools.Any())
         {
             return null;
         }
 
         return new Tool()
         {
-            FunctionDeclarations = [.. cco.Tools
+            FunctionDeclarations = [.. functionTools
                 .Select(tool => new FunctionDeclaration()
                 {
                     Name = tool.FunctionName,

@@ -453,7 +453,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             }
 
             toolNameMap[finalName] = (tool.McpServerId, tool.ToolName);
-            csr.Tools.Add(new ChatTool
+            csr.Tools.Add(new FunctionTool
             {
                 FunctionName = finalName,
                 FunctionDescription = tool.Description,

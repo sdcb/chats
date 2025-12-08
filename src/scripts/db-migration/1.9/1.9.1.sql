@@ -127,5 +127,65 @@ END
 
 GO
 
+-- =============================================
+-- 第三步：StepContentThink.Signature 从 varbinary 转换为 nvarchar(max)
+-- =============================================
+PRINT N'[Step 3.1] 新增 StepContentThink.SignatureBase64 临时列';
+
+IF COL_LENGTH(N'dbo.StepContentThink', N'SignatureBase64') IS NULL
+BEGIN
+    ALTER TABLE dbo.StepContentThink
+    ADD SignatureBase64 NVARCHAR(MAX) NULL;
+
+    PRINT N'    -> 已新增 StepContentThink.SignatureBase64 列';
+END
+ELSE
+BEGIN
+    PRINT N'    -> StepContentThink.SignatureBase64 已存在，跳过';
+END
+
+GO
+
+PRINT N'[Step 3.2] 将 Signature (varbinary) 数据转换为 Base64 并迁移到 SignatureBase64';
+
+UPDATE dbo.StepContentThink
+SET SignatureBase64 = CAST(N'' AS XML).value('xs:base64Binary(xs:hexBinary(sql:column("Signature")))', 'NVARCHAR(MAX)')
+WHERE Signature IS NOT NULL AND SignatureBase64 IS NULL;
+
+PRINT N'    -> 已完成数据迁移，共更新 ' + CAST(@@ROWCOUNT AS NVARCHAR(20)) + ' 行';
+
+GO
+
+PRINT N'[Step 3.3] 删除原 Signature 列';
+
+IF COL_LENGTH(N'dbo.StepContentThink', N'Signature') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.StepContentThink
+    DROP COLUMN Signature;
+
+    PRINT N'    -> 已删除原 Signature 列';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 原 Signature 列不存在，跳过';
+END
+
+GO
+
+PRINT N'[Step 3.4] 将 SignatureBase64 重命名为 Signature';
+
+IF COL_LENGTH(N'dbo.StepContentThink', N'Signature') IS NULL
+   AND COL_LENGTH(N'dbo.StepContentThink', N'SignatureBase64') IS NOT NULL
+BEGIN
+    EXEC sp_rename N'dbo.StepContentThink.SignatureBase64', N'Signature', N'COLUMN';
+    PRINT N'    -> 已重命名 SignatureBase64 -> Signature';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 无需重命名或列状态异常';
+END
+
+GO
+
 PRINT N'[1.9.1] 所有迁移步骤已完成';
 GO

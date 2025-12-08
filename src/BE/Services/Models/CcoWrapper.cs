@@ -106,7 +106,7 @@ public class CcoWrapper(JsonObject json)
                 string? description = (string?)function["description"];
                 JsonNode? parameters = function["parameters"];
 
-                tools.Add(ChatTool.CreateFunctionTool(
+                tools.Add(FunctionTool.Create(
                     name,
                     description,
                     parameters?.ToJsonString()
