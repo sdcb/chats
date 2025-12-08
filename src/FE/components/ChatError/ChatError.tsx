@@ -1,7 +1,5 @@
 import useTranslation from '@/hooks/useTranslation';
 
-import { Alert, AlertDescription } from '@/components/ui/alert';
-
 interface Props {
   error?: string;
 }
@@ -21,14 +19,11 @@ const ChatError = (props: Props) => {
   }
 
   return (
-    <Alert
-      variant="destructive"
-      className="bg-card my-2 mt-0 border-none p-0 px-1 pt-1"
-    >
-      <AlertDescription className="flex items-center gap-1">
+    <div className="my-2 mt-0 px-1 pt-1">
+      <pre className="font-mono text-sm whitespace-pre-wrap break-words m-0 p-0 bg-transparent text-red-600 dark:text-red-400">
         {errorMessage()}
-      </AlertDescription>
-    </Alert>
+      </pre>
+    </div>
   );
 };
 
