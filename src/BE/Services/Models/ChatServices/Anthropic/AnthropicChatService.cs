@@ -73,6 +73,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                                 InputTokens = inputTokens,
                                 OutputTokens = outputTokens,
                                 CacheTokens = GetCacheReadTokens(usage),
+                                CacheCreationTokens = GetCacheCreationTokens(usage),
                                 ReasoningTokens = 0
                             });
                         }
@@ -208,6 +209,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                             InputTokens = inputTokens,
                             OutputTokens = outputTokens,
                             CacheTokens = hasUsage ? GetCacheReadTokens(usageElement) : 0,
+                            CacheCreationTokens = hasUsage ? GetCacheCreationTokens(usageElement) : 0,
                         };
 
                         if (hasUsage)
@@ -275,6 +277,15 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         if (usage.TryGetProperty("cache_read_input_tokens", out JsonElement cacheRead))
         {
             return cacheRead.GetInt32();
+        }
+        return 0;
+    }
+
+    private static int GetCacheCreationTokens(JsonElement usage)
+    {
+        if (usage.TryGetProperty("cache_creation_input_tokens", out JsonElement cacheCreation))
+        {
+            return cacheCreation.GetInt32();
         }
         return 0;
     }

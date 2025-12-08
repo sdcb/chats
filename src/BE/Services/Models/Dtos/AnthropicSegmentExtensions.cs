@@ -67,6 +67,7 @@ public static class AnthropicSegmentExtensions
             {
                 InputTokens = snapshot.Usage.InputTokens,
                 OutputTokens = snapshot.Usage.OutputTokens,
+                CacheCreationInputTokens = snapshot.Usage.CacheCreationTokens,
                 CacheReadInputTokens = snapshot.Usage.CacheTokens
             }
         };
@@ -85,7 +86,9 @@ public static class AnthropicSegmentExtensions
                 Model = model,
                 Usage = new MessageStartUsage
                 {
-                    InputTokens = snapshot.Usage.InputTokens
+                    InputTokens = snapshot.Usage.InputTokens,
+                    CacheCreationInputTokens = snapshot.Usage.CacheCreationTokens,
+                    CacheReadInputTokens = snapshot.Usage.CacheTokens
                 }
             }
         };
@@ -106,7 +109,7 @@ public static class AnthropicSegmentExtensions
             {
                 InputTokens = snapshot.Usage.InputTokens,
                 OutputTokens = snapshot.Usage.OutputTokens,
-                CacheCreationInputTokens = 0,
+                CacheCreationInputTokens = snapshot.Usage.CacheCreationTokens,
                 CacheReadInputTokens = snapshot.Usage.CacheTokens
             }
         };

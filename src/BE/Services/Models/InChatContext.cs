@@ -135,7 +135,8 @@ public class InChatContext(long firstTick)
                     InputTokens = baseUsage.InputTokens,
                     OutputTokens = baseUsage.OutputTokens + additionalUsage.OutputTokens,
                     ReasoningTokens = baseUsage.ReasoningTokens + additionalUsage.ReasoningTokens,
-                    CacheTokens = baseUsage.CacheTokens
+                    CacheTokens = baseUsage.CacheTokens,
+                    CacheCreationTokens = baseUsage.CacheCreationTokens
                 };
             }
             else

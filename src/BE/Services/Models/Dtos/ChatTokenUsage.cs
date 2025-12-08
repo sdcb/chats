@@ -12,6 +12,8 @@ public record ChatTokenUsage
 
     public int CacheTokens { get; init; }
 
+    public int CacheCreationTokens { get; init; }
+
     public int InputFreshTokens => Math.Max(0, InputTokens - CacheTokens);
 
     public static ChatTokenUsage Zero { get; } = new ChatTokenUsage
@@ -20,5 +22,6 @@ public record ChatTokenUsage
         OutputTokens = 0,
         ReasoningTokens = 0,
         CacheTokens = 0,
+        CacheCreationTokens = 0,
     };
 }
