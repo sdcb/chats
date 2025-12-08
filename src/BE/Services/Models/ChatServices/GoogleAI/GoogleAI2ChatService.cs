@@ -3,8 +3,6 @@ using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
-using System.Collections.Generic;
-using System.Linq;
 using Mscc.GenerativeAI;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -107,6 +105,11 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService) :
                 List<ChatSegment> items = [];
                 foreach (Part part in response.Candidates[0].Content?.Parts ?? [])
                 {
+                    if (part.ThoughtSignature != null)
+                    {
+                        items.Add(ChatSegment.FromThinkingSegment(Convert.ToBase64String(part.ThoughtSignature)));
+                    }
+
                     if (part.ExecutableCode != null)
                     {
                         codeExecutionId = "ce-" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
