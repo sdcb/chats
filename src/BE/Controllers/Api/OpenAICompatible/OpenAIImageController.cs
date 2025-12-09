@@ -166,7 +166,7 @@ public class OpenAIImageController(
                 List<Base64Image> pendingFinalImages = [];
                 ChatTokenUsage? latestUsage = null;
 
-                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s.ChatEntry(chatRequest, fup, UsageSource.Api, cancellationToken)))
+                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s.ChatEntry(chatRequest, fup, cancellationToken)))
                 {
                     switch (segment)
                     {
@@ -269,7 +269,7 @@ public class OpenAIImageController(
                 // Non-streaming response
                 List<ImageData> imageDataList = [];
 
-                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s.ChatEntry(chatRequest, fup, UsageSource.Api, cancellationToken)))
+                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s.ChatEntry(chatRequest, fup, cancellationToken)))
                 {
                     if (segment is Base64Image image && segment is not Base64PreviewImage)
                     {
@@ -410,6 +410,7 @@ public class OpenAIImageController(
 
         return new ChatRequest()
         {
+            Source = UsageSource.Api,
             ChatConfig = chatConfig,
             EndUserId = request.User ?? currentApiKey.User.Id.ToString(),
             Streamed = isStreamed,

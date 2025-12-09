@@ -87,7 +87,7 @@ public class AnthropicMessagesController(
         try
         {
             ChatRequest csr = request.ToChatRequest(currentApiKey.User.Id.ToString(), cm);
-            await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s.ChatEntry(csr, fup, UsageSource.Api, cancellationToken)))
+            await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s.ChatEntry(csr, fup, cancellationToken)))
             {
                 if (request.Streamed)
                 {

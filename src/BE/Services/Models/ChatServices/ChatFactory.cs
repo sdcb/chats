@@ -73,7 +73,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
         ChatService cs = CreateChatService(model);
         try
         {
-            await foreach (ChatSegment _ in cs.ChatEntry(ChatRequest.Simple("1+1=?", model), fup, UsageSource.Validate, cancellationToken))
+            await foreach (ChatSegment _ in cs.ChatEntry(ChatRequest.SimpleValidate("1+1=?", model), fup, cancellationToken))
             {
                 return ModelValidateResult.Success();
             }

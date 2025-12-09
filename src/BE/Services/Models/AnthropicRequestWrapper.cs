@@ -4,6 +4,7 @@ using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Neutral;
 using Chats.BE.Services.Models.Neutral.Conversions;
 using System.Text.Json.Nodes;
+using Chats.BE.Controllers.Users.Usages.Dtos;
 
 namespace Chats.BE.Services.Models;
 
@@ -75,6 +76,7 @@ public class AnthropicRequestWrapper(JsonObject json)
             System = systemMessage,
             Tools = tools,
             TopP = TopP,
+            Source = UsageSource.Api,
         };
     }
 

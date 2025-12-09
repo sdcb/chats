@@ -1,3 +1,4 @@
+using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Neutral;
@@ -33,6 +34,8 @@ public record ChatRequest
     public float? TopP { get; init; }
 
     public long? Seed { get; init; }
+
+    public required UsageSource Source { get; init; }
 
     /// <summary>
     /// Gets the effective system prompt, prioritizing System over ChatConfig.SystemPrompt.
@@ -80,7 +83,7 @@ public record ChatRequest
         return tokens;
     }
 
-    public static ChatRequest Simple(string prompt, Model model)
+    public static ChatRequest SimpleValidate(string prompt, Model model)
     {
         return new ChatRequest
         {
@@ -88,7 +91,8 @@ public record ChatRequest
             ChatConfig = new ChatConfig()
             {
                 Model = model,
-            }
+            },
+            Source = UsageSource.Validate,
         };
     }
 
@@ -107,6 +111,7 @@ public record ChatRequest
             AllowParallelToolCalls = cco.AllowParallelToolCalls,
             TopP = cco.TopP,
             Seed = cco.Seed,
+            Source = UsageSource.Api,
             ChatConfig = new ChatConfig
             {
                 Model = model,

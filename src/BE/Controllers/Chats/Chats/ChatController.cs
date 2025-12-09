@@ -433,6 +433,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             Messages = allSteps.ToNeutral(),
             ChatConfig = chatSpan.ChatConfig,
             Tools = [],
+            Source = UsageSource.WebChat,
         };
 
         // Build a name mapping for tools to avoid collisions while keeping names clean
@@ -637,7 +638,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 ChatService s = chatFactory.CreateChatService(userModel.Model);
 
                 bool responseStated = false, reasoningStarted = false;
-                await foreach (ChatSegment segment in icc.Run(calc, userModel, s.ChatEntry(request, fup, UsageSource.WebChat, cancellationToken)))
+                await foreach (ChatSegment segment in icc.Run(calc, userModel, s.ChatEntry(request, fup, cancellationToken)))
                 {
                     switch (segment)
                     {

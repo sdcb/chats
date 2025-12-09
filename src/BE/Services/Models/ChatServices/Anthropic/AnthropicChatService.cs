@@ -1,8 +1,5 @@
-using System.Collections.Generic;
-using System.Linq;
 using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
-using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
@@ -13,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Chats.BE.Controllers.Users.Usages.Dtos;
 
 namespace Chats.BE.Services.Models.ChatServices.Anthropic;
 
@@ -371,7 +369,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         {
             ["max_tokens"] = request.ChatConfig.Model.MaxResponseTokens,
             ["model"] = request.ChatConfig.Model.DeploymentName,
-            ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks),
+            ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks, request.Source),
             ["stream"] = true,
         };
 
@@ -452,27 +450,39 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
     private static (bool allowThinkingBlocks, bool allowThinking) DetermineThinkingSettings(ChatRequest request)
     {
-        // Anthropic has strict policies on thinking blocks
-        bool hasThinkingBlocks = request.Messages
-            .Where(m => m.Role == NeutralChatRole.Assistant)
-            .SelectMany(m => m.Contents)
-            .Any(c => c is NeutralThinkContent);
+        // Only enforce thinking block rules for WebChat usage, for API/validation we'll leave it flexible
+        if (request.Source != UsageSource.WebChat) return (true, true);
 
-        bool allThinkingHaveSignature = !hasThinkingBlocks || request.Messages
-            .Where(m => m.Role == NeutralChatRole.Assistant)
-            .SelectMany(m => m.Contents)
-            .OfType<NeutralThinkContent>()
-            .All(tc => tc.Signature != null);
+        // https://platform.claude.com/docs/zh-CN/build-with-claude/extended-thinking
+        if (!request.ChatConfig.ThinkingBudget.HasValue)
+        {
+            // 如果禁用了思考，最后的助手转向不能包含任何思考块
+            return (false, false);
+        }
+        else
+        {
+            // 如果启用了思考，最后的助手转向必须以思考块开始
+            IList<NeutralContent> lastAssistantContents = request.Messages
+                .Where(x => x.Role == NeutralChatRole.Assistant)
+                .LastOrDefault()?.Contents ?? [];
 
-        bool allowThinkingBlocks = hasThinkingBlocks && allThinkingHaveSignature;
+            // Anthropic has strict policies on thinking blocks
+            bool hasThinkingBlocks = lastAssistantContents
+                .OfType<NeutralThinkContent>()
+                .Any();
 
-        bool hasToolCall = request.Messages.Any(m =>
-            m.Role == NeutralChatRole.Assistant &&
-            m.Contents.Any(c => c is NeutralToolCallContent));
+            bool allThinkingHaveSignature = !hasThinkingBlocks || lastAssistantContents
+                .OfType<NeutralThinkContent>()
+                .All(tc => tc.Signature != null);
 
-        bool allowThinking = !hasToolCall || allowThinkingBlocks;
+            bool allowThinkingBlocks = hasThinkingBlocks && allThinkingHaveSignature;
 
-        return (allowThinkingBlocks, allowThinking);
+            bool hasToolCall = lastAssistantContents.OfType<NeutralToolCallContent>().Any();
+
+            bool allowThinking = !hasToolCall || allowThinkingBlocks;
+
+            return (allowThinkingBlocks, allowThinking);
+        }
     }
 
     private static JsonArray BuildToolsArray(IEnumerable<ChatTool> tools)
@@ -532,7 +542,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         JsonObject body = new()
         {
             ["model"] = request.ChatConfig.Model.DeploymentName,
-            ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks),
+            ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks, request.Source),
         };
 
         AddSystemPrompt(body, request);
@@ -555,219 +565,222 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         return body;
     }
 
-    private static JsonArray ConvertMessages(IList<NeutralMessage> messages, bool allowThinkingBlocks)
+    private static JsonArray ConvertMessages(IList<NeutralMessage> messages, bool allowThinkingBlocks, UsageSource source)
     {
         List<NeutralMessage> mergedMessages = [.. SwitchServerToolResponsesAsUser(MergeToolMessages(messages))];
         JsonArray result = [];
+        NeutralMessage? lastAssistantMessage = mergedMessages.Last(x => x.Role == NeutralChatRole.Assistant);
         foreach (NeutralMessage msg in mergedMessages)
         {
-            result.Add(ToAnthropicMessage(msg, allowThinkingBlocks));
+            // only keep thinking blocks in the last assistant message for WebChat usage
+            bool reallyAllowThinkingBlocks = allowThinkingBlocks && (source == UsageSource.WebChat && msg == lastAssistantMessage);
+            result.Add(ToAnthropicMessage(msg, reallyAllowThinkingBlocks));
         }
         return result;
-    }
 
-    private static IEnumerable<NeutralMessage> SwitchServerToolResponsesAsUser(IEnumerable<NeutralMessage> messages)
-    {
-        foreach (NeutralMessage msg in messages)
+        static IEnumerable<NeutralMessage> MergeToolMessages(IEnumerable<NeutralMessage> messages)
         {
-            if (msg.Role != NeutralChatRole.Assistant)
-            {
-                yield return msg;
-                continue;
-            }
+            List<NeutralContent> toolBuffer = [];
 
-            List<NeutralContent> assistantBuffer = [];
-            List<NeutralContent> userBuffer = [];
-
-            foreach (NeutralContent content in msg.Contents)
+            foreach (NeutralMessage msg in messages)
             {
-                if (content is NeutralToolCallResponseContent)
+                if (msg.Role == NeutralChatRole.Tool)
                 {
-                    if (assistantBuffer.Count > 0)
-                    {
-                        yield return new NeutralMessage
-                        {
-                            Role = NeutralChatRole.Assistant,
-                            Contents = [.. assistantBuffer],
-                        };
-                        assistantBuffer.Clear();
-                    }
-                    userBuffer.Add(content);
+                    toolBuffer.AddRange(msg.Contents);
                 }
                 else
                 {
-                    if (userBuffer.Count > 0)
+                    if (toolBuffer.Count > 0)
                     {
                         yield return new NeutralMessage
                         {
                             Role = NeutralChatRole.User,
-                            Contents = [.. userBuffer],
+                            Contents = [.. toolBuffer],
                         };
-                        userBuffer.Clear();
+                        toolBuffer.Clear();
                     }
-                    assistantBuffer.Add(content);
+                    yield return msg;
                 }
             }
 
-            if (assistantBuffer.Count > 0)
-            {
-                yield return new NeutralMessage
-                {
-                    Role = NeutralChatRole.Assistant,
-                    Contents = [.. assistantBuffer],
-                };
-            }
-
-            if (userBuffer.Count > 0)
+            if (toolBuffer.Count > 0)
             {
                 yield return new NeutralMessage
                 {
                     Role = NeutralChatRole.User,
-                    Contents = [.. userBuffer],
+                    Contents = [.. toolBuffer],
                 };
             }
         }
-    }
 
-    private static IEnumerable<NeutralMessage> MergeToolMessages(IEnumerable<NeutralMessage> messages)
-    {
-        List<NeutralContent> toolBuffer = [];
-
-        foreach (NeutralMessage msg in messages)
+        static IEnumerable<NeutralMessage> SwitchServerToolResponsesAsUser(IEnumerable<NeutralMessage> messages)
         {
-            if (msg.Role == NeutralChatRole.Tool)
+            foreach (NeutralMessage msg in messages)
             {
-                toolBuffer.AddRange(msg.Contents);
-            }
-            else
-            {
-                if (toolBuffer.Count > 0)
+                if (msg.Role != NeutralChatRole.Assistant)
+                {
+                    yield return msg;
+                    continue;
+                }
+
+                List<NeutralContent> assistantBuffer = [];
+                List<NeutralContent> userBuffer = [];
+
+                foreach (NeutralContent content in msg.Contents)
+                {
+                    if (content is NeutralToolCallResponseContent)
+                    {
+                        if (assistantBuffer.Count > 0)
+                        {
+                            yield return new NeutralMessage
+                            {
+                                Role = NeutralChatRole.Assistant,
+                                Contents = [.. assistantBuffer],
+                            };
+                            assistantBuffer.Clear();
+                        }
+                        userBuffer.Add(content);
+                    }
+                    else
+                    {
+                        if (userBuffer.Count > 0)
+                        {
+                            yield return new NeutralMessage
+                            {
+                                Role = NeutralChatRole.User,
+                                Contents = [.. userBuffer],
+                            };
+                            userBuffer.Clear();
+                        }
+                        assistantBuffer.Add(content);
+                    }
+                }
+
+                if (assistantBuffer.Count > 0)
+                {
+                    yield return new NeutralMessage
+                    {
+                        Role = NeutralChatRole.Assistant,
+                        Contents = [.. assistantBuffer],
+                    };
+                }
+
+                if (userBuffer.Count > 0)
                 {
                     yield return new NeutralMessage
                     {
                         Role = NeutralChatRole.User,
-                        Contents = [.. toolBuffer],
+                        Contents = [.. userBuffer],
                     };
-                    toolBuffer.Clear();
                 }
-                yield return msg;
             }
         }
 
-        if (toolBuffer.Count > 0)
+        static JsonObject ToAnthropicMessage(NeutralMessage message, bool allowThinkingBlocks)
         {
-            yield return new NeutralMessage
+            string anthropicRole = message.Role switch
             {
-                Role = NeutralChatRole.User,
-                Contents = [.. toolBuffer],
+                NeutralChatRole.User => "user",
+                NeutralChatRole.Assistant => "assistant",
+                NeutralChatRole.Tool => throw new InvalidOperationException("Tool messages should be merged into user messages before conversion."),
+                _ => throw new InvalidOperationException($"Unknown message role: {message.Role}"),
             };
-        }
-    }
 
-    private static JsonObject ToAnthropicMessage(NeutralMessage message, bool allowThinkingBlocks)
-    {
-        string anthropicRole = message.Role switch
-        {
-            NeutralChatRole.User => "user",
-            NeutralChatRole.Assistant => "assistant",
-            NeutralChatRole.Tool => throw new InvalidOperationException("Tool messages should be merged into user messages before conversion."),
-            _ => throw new InvalidOperationException($"Unknown message role: {message.Role}"),
-        };
-
-        JsonArray content = [];
-        foreach (NeutralContent c in message.Contents)
-        {
-            JsonObject? contentBlock = ToAnthropicContent(c, allowThinkingBlocks);
-            if (contentBlock != null)
+            JsonArray content = [];
+            foreach (NeutralContent c in message.Contents)
             {
-                content.Add(contentBlock);
-            }
-        }
-
-        return new JsonObject
-        {
-            ["role"] = anthropicRole,
-            ["content"] = content
-        };
-    }
-
-    private static JsonObject? ToAnthropicContent(NeutralContent content, bool allowThinkingBlocks)
-    {
-        JsonObject? result = content switch
-        {
-            NeutralTextContent text => new JsonObject { ["type"] = "text", ["text"] = text.Content },
-            NeutralErrorContent error => new JsonObject { ["type"] = "text", ["text"] = error.Content },
-            NeutralFileUrlContent fileUrl => new JsonObject
-            {
-                ["type"] = "image",
-                ["source"] = new JsonObject { ["type"] = "url", ["url"] = fileUrl.Url }
-            },
-            NeutralFileBlobContent fileBlob => new JsonObject
-            {
-                ["type"] = "image",
-                ["source"] = new JsonObject
+                JsonObject? contentBlock = ToAnthropicContent(c, allowThinkingBlocks);
+                if (contentBlock != null)
                 {
-                    ["type"] = "base64",
-                    ["media_type"] = fileBlob.MediaType,
-                    ["data"] = Convert.ToBase64String(fileBlob.Data)
+                    content.Add(contentBlock);
                 }
-            },
-            NeutralThinkContent think when allowThinkingBlocks => CreateThinkingBlock(think),
-            NeutralThinkContent => null, // Drop thinking blocks when not allowed
-            NeutralToolCallContent toolCall => new JsonObject
-            {
-                ["type"] = "tool_use",
-                ["id"] = toolCall.Id,
-                ["name"] = toolCall.Name,
-                ["input"] = JsonNode.Parse(toolCall.Parameters)
-            },
-            NeutralToolCallResponseContent toolResp => CreateToolResultBlock(toolResp),
-            NeutralFileContent => throw new InvalidOperationException("FileId should be converted to FileUrl/FileBlob before conversion."),
-            _ => throw new InvalidOperationException($"Unsupported content type: {content.GetType().Name}")
-        };
+            }
 
-        // Add cache control if present
-        if (result != null && content.CacheControl != null)
-        {
-            result["cache_control"] = new JsonObject { ["type"] = content.CacheControl.Type };
-        }
-
-        return result;
-    }
-
-    private static JsonObject CreateThinkingBlock(NeutralThinkContent think)
-    {
-        if (string.IsNullOrEmpty(think.Content))
-        {
             return new JsonObject
             {
-                ["type"] = "redacted_thinking",
-                ["data"] = think.Signature
+                ["role"] = anthropicRole,
+                ["content"] = content
             };
-        }
-        else
-        {
-            return new JsonObject
-            {
-                ["type"] = "thinking",
-                ["thinking"] = think.Content,
-                ["signature"] = think.Signature,
-            };
-        }
-    }
 
-    private static JsonObject CreateToolResultBlock(NeutralToolCallResponseContent toolResp)
-    {
-        JsonObject result = new()
-        {
-            ["type"] = "tool_result",
-            ["tool_use_id"] = toolResp.ToolCallId,
-            ["content"] = toolResp.Response
-        };
-        if (!toolResp.IsSuccess)
-        {
-            result["is_error"] = true;
+            static JsonObject? ToAnthropicContent(NeutralContent content, bool allowThinkingBlocks)
+            {
+                JsonObject? result = content switch
+                {
+                    NeutralTextContent text => new JsonObject { ["type"] = "text", ["text"] = text.Content },
+                    NeutralErrorContent error => new JsonObject { ["type"] = "text", ["text"] = error.Content },
+                    NeutralFileUrlContent fileUrl => new JsonObject
+                    {
+                        ["type"] = "image",
+                        ["source"] = new JsonObject { ["type"] = "url", ["url"] = fileUrl.Url }
+                    },
+                    NeutralFileBlobContent fileBlob => new JsonObject
+                    {
+                        ["type"] = "image",
+                        ["source"] = new JsonObject
+                        {
+                            ["type"] = "base64",
+                            ["media_type"] = fileBlob.MediaType,
+                            ["data"] = Convert.ToBase64String(fileBlob.Data)
+                        }
+                    },
+                    NeutralThinkContent think when allowThinkingBlocks => CreateThinkingBlock(think),
+                    NeutralThinkContent => null, // Drop thinking blocks when not allowed
+                    NeutralToolCallContent toolCall => new JsonObject
+                    {
+                        ["type"] = "tool_use",
+                        ["id"] = toolCall.Id,
+                        ["name"] = toolCall.Name,
+                        ["input"] = JsonNode.Parse(toolCall.Parameters)
+                    },
+                    NeutralToolCallResponseContent toolResp => CreateToolResultBlock(toolResp),
+                    NeutralFileContent => throw new InvalidOperationException("FileId should be converted to FileUrl/FileBlob before conversion."),
+                    _ => throw new InvalidOperationException($"Unsupported content type: {content.GetType().Name}")
+                };
+
+                // Add cache control if present
+                if (result != null && content.CacheControl != null)
+                {
+                    result["cache_control"] = new JsonObject { ["type"] = content.CacheControl.Type };
+                }
+
+                return result;
+
+                static JsonObject CreateToolResultBlock(NeutralToolCallResponseContent toolResp)
+                {
+                    JsonObject result = new()
+                    {
+                        ["type"] = "tool_result",
+                        ["tool_use_id"] = toolResp.ToolCallId,
+                        ["content"] = toolResp.Response
+                    };
+                    if (!toolResp.IsSuccess)
+                    {
+                        result["is_error"] = true;
+                    }
+                    return result;
+                }
+
+                static JsonObject CreateThinkingBlock(NeutralThinkContent think)
+                {
+                    if (string.IsNullOrEmpty(think.Content))
+                    {
+                        return new JsonObject
+                        {
+                            ["type"] = "redacted_thinking",
+                            ["data"] = think.Signature
+                        };
+                    }
+                    else
+                    {
+                        return new JsonObject
+                        {
+                            ["type"] = "thinking",
+                            ["thinking"] = think.Content,
+                            ["signature"] = think.Signature,
+                        };
+                    }
+                }
+            }
         }
-        return result;
     }
 }

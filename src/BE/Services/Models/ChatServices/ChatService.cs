@@ -26,9 +26,9 @@ public abstract partial class ChatService
         return Task.FromResult(request.EstimatePromptTokens(Tokenizer));
     }
 
-    public async IAsyncEnumerable<ChatSegment> ChatEntry(ChatRequest request, FileUrlProvider fup, UsageSource source, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<ChatSegment> ChatEntry(ChatRequest request, FileUrlProvider fup, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        ChatRequest finalRequest = await PreProcess(request, fup, source, cancellationToken);
+        ChatRequest finalRequest = await PreProcess(request, fup, cancellationToken);
         IAsyncEnumerable<ChatSegment> stream = ChatStreamed(finalRequest, cancellationToken);
 
         if (request.ChatConfig.Model.ThinkTagParserEnabled)
@@ -57,12 +57,12 @@ public abstract partial class ChatService
         "*"
     ];
 
-    protected virtual async Task<ChatRequest> PreProcess(ChatRequest request, FileUrlProvider fup, UsageSource source, CancellationToken cancellationToken)
+    protected virtual async Task<ChatRequest> PreProcess(ChatRequest request, FileUrlProvider fup, CancellationToken cancellationToken)
     {
         ChatRequest final = request;
 
         // Apply system prompt template replacements
-        if (source == UsageSource.WebChat)
+        if (request.Source == UsageSource.WebChat)
         {
             string? effectiveSystemPrompt = final.GetEffectiveSystemPrompt();
             if (effectiveSystemPrompt != null)
@@ -94,7 +94,7 @@ public abstract partial class ChatService
 
         float? temperature = final.ChatConfig.Temperature;
         byte reasoningEffortId = final.ChatConfig.ReasoningEffortId;
-        if (source == UsageSource.WebChat)
+        if (request.Source == UsageSource.WebChat)
         {
             temperature = request.ChatConfig.Model.ClampTemperature(temperature);
             reasoningEffortId = request.ChatConfig.Model.ClampReasoningEffortId(reasoningEffortId);
