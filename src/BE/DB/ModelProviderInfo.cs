@@ -1,4 +1,5 @@
 ﻿using Chats.BE.DB.Enums;
+using Chats.BE.Services.Models.ChatServices.GoogleAI;
 
 namespace Chats.BE.DB;
 
@@ -97,7 +98,7 @@ public static class ModelProviderInfo
         [DBModelProvider.GoogleAI] = new(
             DBModelProvider.GoogleAI,
             "Google AI",
-            "https://generativelanguage.googleapis.com/v1beta/openai/",
+            GoogleAI2ChatService.DefaultEndpoint,
             ""
         ),
         [DBModelProvider.Ollama] = new(

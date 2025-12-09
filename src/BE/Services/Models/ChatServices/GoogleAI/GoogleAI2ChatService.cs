@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
@@ -6,8 +5,6 @@ using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
 using System.Diagnostics;
-using System.Linq;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -29,7 +26,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
         ("HARM_CATEGORY_HARASSMENT", "BLOCK_NONE"),
     ];
 
-    private const string DefaultEndpoint = "https://generativelanguage.googleapis.com";
+    internal const string DefaultEndpoint = "https://generativelanguage.googleapis.com";
 
     public bool AllowImageGeneration(Model model) => model.DeploymentName.Contains("gemini-2.0-flash-exp") ||
                                                      model.DeploymentName.Contains("gemini-2.0-flash-exp-image-generation") ||
@@ -79,7 +76,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
                 throw new RawChatServiceException(200, errorMessage);
             }
 
-            List<ChatSegment> items = new();
+            List<ChatSegment> items = [];
             DBFinishReason? finishReason = null;
 
             if (chunk.TryGetProperty("candidates", out JsonElement candidatesElement) &&
@@ -299,7 +296,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
 
     private static JsonArray BuildSafetySettings()
     {
-        JsonArray safety = new();
+        JsonArray safety = [];
         foreach ((string Category, string Threshold) setting in DefaultSafetySettings)
         {
             safety.Add(new JsonObject
@@ -313,11 +310,11 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
 
     private static JsonObject? BuildGenerationConfig(ChatRequest request, bool allowImageGeneration)
     {
-        JsonObject config = new();
-        JsonArray modalities = new()
-        {
+        JsonObject config = [];
+        JsonArray modalities =
+        [
             "TEXT"
-        };
+        ];
         if (allowImageGeneration)
         {
             modalities.Add("IMAGE");
@@ -388,7 +385,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
 
     private static JsonArray? BuildTools(ChatRequest request)
     {
-        JsonArray tools = new();
+        JsonArray tools = [];
 
         JsonObject? functionTool = BuildFunctionDeclarations(request);
         if (functionTool != null)
@@ -428,7 +425,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
             return null;
         }
 
-        JsonArray declarations = new();
+        JsonArray declarations = [];
         foreach (FunctionTool tool in functionTools)
         {
             JsonObject declaration = new()
@@ -480,7 +477,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
 
         if (root.TryGetPropertyValue("properties", out JsonNode? propsNode) && propsNode is JsonObject props)
         {
-            JsonObject properties = new();
+            JsonObject properties = [];
             foreach ((string key, JsonNode? value) in props)
             {
                 if (value is not JsonObject propertyObject)
@@ -509,7 +506,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
 
         if (root.TryGetPropertyValue("required", out JsonNode? requiredNode) && requiredNode is JsonArray requiredArray)
         {
-            JsonArray required = new();
+            JsonArray required = [];
             foreach (JsonNode? node in requiredArray)
             {
                 if (node is JsonValue value && value.TryGetValue(out string? str) && str != null)
@@ -543,7 +540,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
 
     private static JsonArray ConvertMessages(IList<NeutralMessage> messages)
     {
-        JsonArray result = new();
+        JsonArray result = [];
         foreach (NeutralMessage message in messages)
         {
             JsonObject content = new()
@@ -561,7 +558,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
             {
                 NeutralChatRole.User => BuildUserParts(message),
                 NeutralChatRole.Assistant => BuildAssistantParts(message),
-                NeutralChatRole.Tool => new JsonArray { ToolCallMessageToPart(message) },
+                NeutralChatRole.Tool => [ToolCallMessageToPart(message)],
                 _ => throw new NotSupportedException($"Unsupported message role: {message.Role} in {nameof(GoogleAI2ChatService)}"),
             };
 
@@ -573,7 +570,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
 
     private static JsonArray BuildUserParts(NeutralMessage message)
     {
-        JsonArray parts = new();
+        JsonArray parts = [];
         foreach (NeutralContent content in message.Contents)
         {
             JsonObject? part = NeutralContentToGooglePart(content);
@@ -587,38 +584,66 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
 
     private static JsonArray BuildAssistantParts(NeutralMessage message)
     {
-        JsonArray parts = new();
-
-        foreach (NeutralToolCallContent toolCall in message.Contents.OfType<NeutralToolCallContent>())
-        {
-            JsonObject args = ParseJson(toolCall.Parameters) as JsonObject ?? new JsonObject();
-            JsonObject functionCall = new()
-            {
-                ["functionCall"] = new JsonObject
-                {
-                    ["id"] = toolCall.Id,
-                    ["name"] = toolCall.Name,
-                    ["args"] = args
-                }
-            };
-            parts.Add(functionCall);
-        }
+        JsonArray parts = [];
+        string? pendingThoughtSignature = null;
 
         foreach (NeutralContent content in message.Contents)
         {
-            if (content is NeutralToolCallContent)
+            switch (content)
             {
-                continue;
-            }
+                case NeutralThinkContent think:
+                    // https://ai.google.dev/gemini-api/docs/thought-signatures?hl=zh-cn
+                    // Don't need to care about the thinking content
+                    //if (!string.IsNullOrEmpty(think.Content))
+                    //{
+                    //    parts.Add(new JsonObject
+                    //    {
+                    //        ["text"] = think.Content,
+                    //        ["thought"] = true
+                    //    });
+                    //}
+                    if (!string.IsNullOrEmpty(think.Signature))
+                    {
+                        pendingThoughtSignature = think.Signature;
+                    }
+                    break;
 
-            JsonObject? part = NeutralContentToGooglePart(content);
-            if (part != null)
-            {
-                parts.Add(part);
+                case NeutralToolCallContent toolCall:
+                    JsonObject args = ParseJson(toolCall.Parameters) as JsonObject ?? [];
+                    JsonObject functionCall = new()
+                    {
+                        ["functionCall"] = new JsonObject
+                        {
+                            ["id"] = toolCall.Id,
+                            ["name"] = toolCall.Name,
+                            ["args"] = args
+                        }
+                    };
+                    AttachPendingThoughtSignature(functionCall, ref pendingThoughtSignature);
+                    parts.Add(functionCall);
+                    break;
+
+                default:
+                    JsonObject? part = NeutralContentToGooglePart(content);
+                    if (part != null)
+                    {
+                        AttachPendingThoughtSignature(part, ref pendingThoughtSignature);
+                        parts.Add(part);
+                    }
+                    break;
             }
         }
 
         return parts;
+    }
+
+    private static void AttachPendingThoughtSignature(JsonObject part, ref string? pendingThoughtSignature)
+    {
+        if (pendingThoughtSignature != null)
+        {
+            part["thoughtSignature"] = pendingThoughtSignature;
+            pendingThoughtSignature = null;
+        }
     }
 
     private static JsonObject ToolCallMessageToPart(NeutralMessage message)
