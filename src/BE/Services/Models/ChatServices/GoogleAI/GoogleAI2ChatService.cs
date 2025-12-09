@@ -137,9 +137,12 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
 
         if (part.TryGetProperty("text", out JsonElement textElement) && textElement.ValueKind == JsonValueKind.String)
         {
-            string text = textElement.GetString() ?? string.Empty;
-            bool isThought = part.TryGetProperty("thought", out JsonElement thoughtElement) && thoughtElement.ValueKind == JsonValueKind.True;
-            items.Add(isThought ? ChatSegment.FromThink(text) : ChatSegment.FromText(text));
+            string? text = textElement.GetString();
+            if (!string.IsNullOrEmpty(text))
+            {
+                bool isThought = part.TryGetProperty("thought", out JsonElement thoughtElement) && thoughtElement.ValueKind == JsonValueKind.True;
+                items.Add(isThought ? ChatSegment.FromThink(text) : ChatSegment.FromText(text));
+            }
         }
 
         if (part.TryGetProperty("inlineData", out JsonElement inlineData) &&
