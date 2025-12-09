@@ -569,7 +569,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
     {
         List<NeutralMessage> mergedMessages = [.. SwitchServerToolResponsesAsUser(MergeToolMessages(messages))];
         JsonArray result = [];
-        NeutralMessage? lastAssistantMessage = mergedMessages.Last(x => x.Role == NeutralChatRole.Assistant);
+        NeutralMessage? lastAssistantMessage = mergedMessages.LastOrDefault(x => x.Role == NeutralChatRole.Assistant);
         foreach (NeutralMessage msg in mergedMessages)
         {
             // only keep thinking blocks in the last assistant message for WebChat usage
