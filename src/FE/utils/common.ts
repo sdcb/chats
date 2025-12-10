@@ -23,10 +23,7 @@ export function termDateString() {
 export const PhoneRegExp = /^[1][3,4,5,6,7,8,9][0-9]{9}$/;
 export const SmsExpirationSeconds = 300;
 
-export const getApiUrl = () =>
-  typeof window !== 'undefined'
-    ? (window as any)['API_URL'] || ''
-    : process.env.API_URL;
+export const getApiUrl = () => process.env.API_URL || '';
 
 export const getQueryId = (router: NextRouter): string => {
   const { id } = router.query;

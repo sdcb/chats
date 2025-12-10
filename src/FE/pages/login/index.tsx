@@ -30,10 +30,7 @@ type LoginHeader = {
   [key in TabKeys]: { title: string; description: string };
 };
 
-const getFeVersion = () =>
-  typeof window !== 'undefined'
-    ? (window as any).FE_VERSION as string
-    : process.env.FE_VERSION as string;
+const getFeVersion = () => process.env.FE_VERSION || 'local';
 
 export default function LoginPage() {
   const { t } = useTranslation();
