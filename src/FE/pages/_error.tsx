@@ -14,7 +14,7 @@ const Custom404 = () => {
   );
 };
 
-const ErrorPage = ({ statusCode }: { statusCode: number }) => {
+const ErrorPage = ({ statusCode = 404 }: { statusCode?: number }) => {
   const { t } = useTranslation();
   if (statusCode === 404) {
     return <Custom404 />;
@@ -28,11 +28,6 @@ const ErrorPage = ({ statusCode }: { statusCode: number }) => {
       </p>
     </div>
   );
-};
-
-ErrorPage.getInitialProps = ({ res, err }: any) => {
-  const statusCode = res ? res.statusCode : err ? err.statusCode : 404;
-  return { statusCode };
 };
 
 export default ErrorPage;
