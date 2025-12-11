@@ -245,11 +245,11 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="flex justify-between items-end h-1/6 text-sm text-muted-foreground">
+            <div className="flex justify-between items-end h-1/6 text-xs sm:text-sm text-muted-foreground">
               <div className="flex items-center text-center">
                 © {new Date().getFullYear()}&nbsp;
                 <Button
-                  className="p-0 m-0 h-auto font-semibold text-sm text-muted-foreground"
+                  className="p-0 m-0 h-auto font-semibold text-xs sm:text-sm text-muted-foreground"
                   variant="link"
                   onClick={redirectToGithub}
                 >
@@ -257,7 +257,7 @@ export default function LoginPage() {
                 </Button>
                 . All Rights Reserved.
               </div>
-              <div className="text-xs text-muted-foreground text-right font-mono">
+              <div className="text-[10px] sm:text-xs text-muted-foreground text-right font-mono">
                 {feVersion}
               </div>
             </div>
