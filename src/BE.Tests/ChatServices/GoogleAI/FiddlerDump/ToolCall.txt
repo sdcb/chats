@@ -1,0 +1,133 @@
+POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent HTTP/1.1
+Host: generativelanguage.googleapis.com
+Accept: application/json
+x-goog-api-key: [REDACTED]
+User-Agent: Mscc.GenerativeAI/2.9.3.0
+x-goog-api-client: Mscc.GenerativeAI/2.9.3.0
+traceparent: 00-fb159216b574129f1a06547a2579028f-b8130e5517ba8a21-00
+Content-Type: application/json
+Content-Length: 5780
+
+{"model":"models/gemini-2.5-flash","contents":[{"role":"user","parts":[{"text":"\u8C03\u7528C#\u5DE5\u5177\uFF0C\u8BA1\u7B971234/5432=?"}]}],"generationConfig":{"temperature":1,"enableEnhancedCivicAnswers":true,"responseModalities":["TEXT"],"thinkingConfig":{"includeThoughts":true,"thinkingBudget":1024}},"safetySettings":[{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"systemInstruction":{"role":"system","parts":[{"text":"\u4F60\u662FAI\u52A9\u624BSdcb Chats\n\u5F53\u524D\u65E5\u671F: 2025/12/08\uFF0C\u5F53\u524D\u6A21\u578B\uFF1Agemini-2.5-flash"}]},"tools":[{"functionDeclarations":[{"name":"run_code","description":"**\u5DE5\u5177\u4F7F\u7528\u6307\u5357\uFF1A\u0060run_code\u0060 C#\u4EE3\u7801\u6267\u884C\u5668**\n\n\u4F60\u5DF2\u96C6\u6210 \u0060run_code\u0060 \u5DE5\u5177\uFF0C\u5B83\u80FD\u6267\u884CC#\u4EE3\u7801\u7247\u6BB5\u3002\u8BF7\u7528\u5B83\u6765\u56DE\u7B54\u9700\u8981\u7CBE\u786E\u8BA1\u7B97\u3001\u5B9E\u65F6\u6570\u636E\u6216\u590D\u6742\u903B\u8F91\u5904\u7406\u7684\u95EE\u9898\uFF0C\u8D85\u65F6\u65F6\u95F4\u4E3A30\u79D2\u3002\n\n---\n**\u4F55\u65F6\u4F7F\u7528 \u0060run_code\u0060\uFF1A**\n\n* **\u7CBE\u786E\u8BA1\u7B97\u4E0E\u6570\u636E\u5904\u7406**\n    * **\u6570\u5B66\u8FD0\u7B97**:\n        * \u7528\u6237\u63D0\u95EE: \u00222\u768464\u6B21\u65B9\u51CF1\u662F\u591A\u5C11\uFF1F\u0022\n        * \u0060run_code\u0060 \u4EE3\u7801: \u0060(BigInteger.Pow(2, 64) - 1).ToString()\u0060\n    * **\u65E5\u671F\u4E0E\u65F6\u95F4**:\n        * \u7528\u6237\u63D0\u95EE: \u0022\u8BA1\u7B97\u4E00\u4E0B2025\u5E74\u5723\u8BDE\u8282\u662F\u661F\u671F\u51E0\uFF1F\u0022\n        * \u0060run_code\u0060 \u4EE3\u7801: \u0060new DateTime(2025, 12, 25).DayOfWeek.ToString()\u0060\n    * **\u52A0\u5BC6\u4E0E\u54C8\u5E0C**:\n        * \u7528\u6237\u63D0\u95EE: \u0022\u8BA1\u7B97\u5B57\u7B26\u4E32 \u0027Gemini\u0027 \u7684SHA256\u54C8\u5E0C\u503C\u3002\u0022\n        * \u0060run_code\u0060 \u4EE3\u7801: \u0060string.Concat(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(\u0022Gemini\u0022)).Select(b =\u003E b.ToString(\u0022x2\u0022)))\u0060\n    * **\u6570\u636E\u8F6C\u6362 (LINQ)**:\n        * \u7528\u6237\u63D0\u95EE: \u0022\u5C06\u5217\u8868 \u0060[\u0022anna\u0022, \u0022bob\u0022, \u0022CATHY\u0022]\u0060 \u6574\u7406\u6210\u9996\u5B57\u6BCD\u5927\u5199\u5E76\u6392\u5E8F\u3002\u0022\n        * \u0060run_code\u0060 \u4EE3\u7801: \u0060new[] { \u0022anna\u0022, \u0022bob\u0022, \u0022CATHY\u0022 }.Select(n =\u003E char.ToUpper(n[0]) \u002B n.Substring(1).ToLower()).OrderBy(n =\u003E n).ToList()\u0060\n\n* **\u6587\u672C\u5904\u7406\u4E0E\u89E3\u6790**\n    * **JSON \u64CD\u4F5C**:\n        * \u7528\u6237\u63D0\u95EE: \u0022\u4ECEJSON \u0060{\\\u0022user\\\u0022: {\\\u0022name\\\u0022: \\\u0022John\\\u0022}}\u0060 \u4E2D\u63D0\u53D6\u7528\u6237\u540D\u3002\u0022\n        * \u0060run_code\u0060 \u4EE3\u7801: \u0060JsonDocument.Parse(\u0022{\\\u0022user\\\u0022: {\\\u0022name\\\u0022: \\\u0022John\\\u0022}}\u0022).RootElement.GetProperty(\u0022user\u0022).GetProperty(\u0022name\u0022).GetString()\u0060\n    * **\u6B63\u5219\u8868\u8FBE\u5F0F**:\n        * \u7528\u6237\u63D0\u95EE: \u0022\u4ECE\u6587\u672C \u0027\u6211\u7684\u90AE\u7BB1\u662F test@example.com\u0027 \u4E2D\u63D0\u53D6\u51FA\u7535\u5B50\u90AE\u4EF6\u5730\u5740\u3002\u0022\n        * \u0060run_code\u0060 \u4EE3\u7801: \u0060Regex.Match(\u0022\u6211\u7684\u90AE\u7BB1\u662F test@example.com\u0022, @\u0022[\\w]\u002B@[\\w]\u002B\\.\\w\u002B\u0022).Value\u0060\n\n* **\u5B9E\u65F6\u7F51\u7EDC\u8BF7\u6C42**\n    * **API\u8C03\u7528**:\n        * \u7528\u6237\u63D0\u95EE: \u0022\u770B\u770B\u535A\u5BA2\u56ED\u6709\u4EC0\u4E48\u6700\u65B0\u5934\u6761\u0022\n        * \u0060run_code\u0060 \u4EE3\u7801: \u0060using (var client = new HttpClient()) { var response = await client.GetAsync(\u0022https://cnblogs.com\u0022); return await response.Content.ReadAsStringAsync(); }\u0060\n\n* **\u7B97\u6CD5\u903B\u8F91\u9A8C\u8BC1**\n    * **\u786E\u5B9A\u6027\u95EE\u9898**:\n        * \u7528\u6237\u63D0\u95EE: \u0022\u5224\u65AD1997\u662F\u4E0D\u662F\u4E00\u4E2A\u8D28\u6570\u3002\u0022\n        * \u0060run_code\u0060 \u4EE3\u7801: \u0060int n = 1997; if (n \u003C= 1) return false; for (int i = 2; i * i \u003C= n; i\u002B\u002B) { if (n % i == 0) return false; } return true;\u0060\n\n---\n**\u4F55\u65F6\u907F\u514D\u4F7F\u7528 \u0060run_code\u0060\uFF1A**\n\n* \u5F00\u653E\u5F0F\u95EE\u9898\uFF08\u5982\u5BFB\u6C42\u89E3\u91CA\u6216\u5EFA\u8BAE\uFF09\u3002\n* \u9700\u8981\u4F7F\u7528\u5916\u90E8NuGet\u5305\u3002\n* \u9700\u8981\u8DE8\u6B21\u8C03\u7528\u7EF4\u6301\u72B6\u6001\u3002\n* \u957F\u65F6\u95F4\u8FD0\u884C\u6216\u9AD8\u8D44\u6E90\u6D88\u8017\u7684\u4EFB\u52A1\u3002\n* \u9700\u8981\u8BBF\u95EE\u672C\u5730\u6587\u4EF6\u6216\u6570\u636E\u5E93\u3002\n* \u9700\u8981\u6784\u5EFA\u7528\u6237\u754C\u9762\uFF08UI\uFF09\u3002\n\n---\n**\u6838\u5FC3\u539F\u5219\uFF1A**\n\n* **\u7CBE\u786E\u4F18\u5148**: \u5BF9\u4E8E\u6709\u786E\u5B9A\u7B54\u6848\u7684\u95EE\u9898\uFF0C\u4F18\u5148\u6267\u884C\u4EE3\u7801\uFF0C\u800C\u4E0D\u662F\u4F9D\u8D56\u8BB0\u5FC6\u3002\n* **\u4EFB\u52A1\u5206\u89E3**: \u5C06\u590D\u6742\u95EE\u9898\u62C6\u89E3\uFF0C\u7528\u4EE3\u7801\u89E3\u51B3\u5176\u4E2D\u7684\u786E\u5B9A\u6027\u6B65\u9AA4\u3002\n* **\u5584\u7528\u5DE5\u5177**: \u79EF\u6781\u5229\u7528\u4EE3\u7801\u6267\u884C\u80FD\u529B\uFF0C\u63D0\u4F9B\u66F4\u53EF\u9760\u548C\u5B9E\u65F6\u7684\u56DE\u7B54\u3002","parameters":{"type":"OBJECT","properties":{"code":{"type":"STRING"},"timeout":{"type":"INTEGER"}},"required":["code"]}}]}]}
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=UTF-8
+Vary: X-Origin
+Vary: Referer
+Date: Mon, 08 Dec 2025 07:57:42 GMT
+Server: scaffolding on HTTPServer2
+X-XSS-Protection: 0
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+Server-Timing: gfet4t7; dur=1826
+Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+Accept-Ranges: none
+Vary: Origin,Accept-Encoding
+Transfer-Encoding: chunked
+
+345
+[{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "**Implementing Division Logic**\n\nI've decided to employ the `run_code` tool to execute C# code for the division. Converting the numbers to `double` is crucial for precise floating-point results. This approach guarantees an accurate calculation for any numeric inputs. Now I'm preparing the C# snippet for execution.\n\n\n",
+            "thought": true
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 966,
+    "totalTokenCount": 1037,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 966
+      }
+    ],
+    "thoughtsTokenCount": 71
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "9YQ2aZ_SGMqu4-EPsdrmiAg"
+}
+
+386
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "**Defining C# Snippet**\n\nI'm now drafting the C# code within the `run_code` execution environment. My priority is to build a robust division function, and the plan is to capture the result as a string. To handle all cases, I'm ensuring there are proper checks. I'll utilize try-catch blocks to manage potential exceptions, such as division by zero, before returning the outcome.\n\n\n",
+            "thought": true
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 966,
+    "totalTokenCount": 1044,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 966
+      }
+    ],
+    "thoughtsTokenCount": 78
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "9YQ2aZ_SGMqu4-EPsdrmiAg"
+}
+
+59f
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "functionCall": {
+              "name": "run_code",
+              "args": {
+                "code": "(1234.0 / 5432.0).ToString()"
+              }
+            },
+            "thoughtSignature": "CikBcsjafPVtPMcLlLanB2JrV45/LbBOR6AFeSf+gfuQX0oOgfAEHH6etgptAXLI2nxBamgZZV/mrLPJyDNmYDH6loPAftX7DwP/sjRs0PUh/zS6RdrZJIlb0kwcvw5jtYTXKlABU8+v0mDLa5eruB9WPx4YSXIMkA2iWTF+fkzJvjFIjtapiWOn9e9gX6v6wOtDIVv5pFJHoAqDAgFyyNp8FKAC+6tpBygWeDi2enCAODl0Qu7e4R7/iA7y3dWorKzCcFx0tBq1L3rJaaPKyDWlUVMnXe2mfORL5fOUoMnMKiaa7Hlxjj9LiqA9E1eTWDjQKUMo7KAChXqobFoUxRZ0frGebE+fGp9OH2yrjQhXsXfcnnwVGvMdeOIoz9gX7k0z6+tNXSUxdanqyEJWkRfCenWD4akczsI2bBKFBROKeCoPHLsVvkI4W0RVkVwBA+Dejhwe4mLOl8mDbhFcmCU9tUQWyE9EXDXcFGyhv18twWMwLFM2r+7dkUdHpxhrdn9eiR7tMC8LsnT46v2oX6B/lWnfW9L+a6w2PhTMvlwKQQFyyNp8UtKPDzcjIt+UV3NHJAqNhPvRYNYHN8HECLKXXq6DBxfXiEIeWi8lBqlq1RzbwM1rYfmn4KL2apcS4R27"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "finishMessage": "Model generated function call(s)."
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 966,
+    "candidatesTokenCount": 29,
+    "totalTokenCount": 1073,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 966
+      }
+    ],
+    "thoughtsTokenCount": 78
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "9YQ2aZ_SGMqu4-EPsdrmiAg"
+}
+
+1
+]
+0
+

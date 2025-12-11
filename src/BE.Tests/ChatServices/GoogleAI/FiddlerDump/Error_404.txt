@@ -1,0 +1,35 @@
+POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:streamGenerateContent HTTP/1.1
+Host: generativelanguage.googleapis.com
+Accept: application/json
+x-goog-api-key: [REDACTED]
+traceparent: 00-44ee910c811d6c7288f54ec43e113a33-f948223e7d5c98e0-00
+Content-Type: application/json; charset=utf-8
+Content-Length: 3666
+
+{"model":"models/gemini-2.0-flash-exp-image-generation","contents":[{"role":"user","parts":[{"text":"生成一张小猫的图片"}]}],"safetySettings":[{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"generationConfig":{"responseModalities":["TEXT","IMAGE"],"temperature":1,"maxOutputTokens":8192},"tools":[{"functionDeclarations":[{"name":"run_code","description":"**工具使用指南：`run_code` C#代码执行器**\n\n你已集成 `run_code` 工具，它能执行C#代码片段。请用它来回答需要精确计算、实时数据或复杂逻辑处理的问题，超时时间为30秒。\n\n---\n**何时使用 `run_code`：**\n\n* **精确计算与数据处理**\n    * **数学运算**:\n        * 用户提问: \"2的64次方减1是多少？\"\n        * `run_code` 代码: `(BigInteger.Pow(2, 64) - 1).ToString()`\n    * **日期与时间**:\n        * 用户提问: \"计算一下2025年圣诞节是星期几？\"\n        * `run_code` 代码: `new DateTime(2025, 12, 25).DayOfWeek.ToString()`\n    * **加密与哈希**:\n        * 用户提问: \"计算字符串 'Gemini' 的SHA256哈希值。\"\n        * `run_code` 代码: `string.Concat(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(\"Gemini\")).Select(b => b.ToString(\"x2\")))`\n    * **数据转换 (LINQ)**:\n        * 用户提问: \"将列表 `[\"anna\", \"bob\", \"CATHY\"]` 整理成首字母大写并排序。\"\n        * `run_code` 代码: `new[] { \"anna\", \"bob\", \"CATHY\" }.Select(n => char.ToUpper(n[0]) + n.Substring(1).ToLower()).OrderBy(n => n).ToList()`\n\n* **文本处理与解析**\n    * **JSON 操作**:\n        * 用户提问: \"从JSON `{\\\"user\\\": {\\\"name\\\": \\\"John\\\"}}` 中提取用户名。\"\n        * `run_code` 代码: `JsonDocument.Parse(\"{\\\"user\\\": {\\\"name\\\": \\\"John\\\"}}\").RootElement.GetProperty(\"user\").GetProperty(\"name\").GetString()`\n    * **正则表达式**:\n        * 用户提问: \"从文本 '我的邮箱是 test@example.com' 中提取出电子邮件地址。\"\n        * `run_code` 代码: `Regex.Match(\"我的邮箱是 test@example.com\", @\"[\\w]+@[\\w]+\\.\\w+\").Value`\n\n* **实时网络请求**\n    * **API调用**:\n        * 用户提问: \"看看博客园有什么最新头条\"\n        * `run_code` 代码: `using (var client = new HttpClient()) { var response = await client.GetAsync(\"https://cnblogs.com\"); return await response.Content.ReadAsStringAsync(); }`\n\n* **算法逻辑验证**\n    * **确定性问题**:\n        * 用户提问: \"判断1997是不是一个质数。\"\n        * `run_code` 代码: `int n = 1997; if (n <= 1) return false; for (int i = 2; i * i <= n; i++) { if (n % i == 0) return false; } return true;`\n\n---\n**何时避免使用 `run_code`：**\n\n* 开放式问题（如寻求解释或建议）。\n* 需要使用外部NuGet包。\n* 需要跨次调用维持状态。\n* 长时间运行或高资源消耗的任务。\n* 需要访问本地文件或数据库。\n* 需要构建用户界面（UI）。\n\n---\n**核心原则：**\n\n* **精确优先**: 对于有确定答案的问题，优先执行代码，而不是依赖记忆。\n* **任务分解**: 将复杂问题拆解，用代码解决其中的确定性步骤。\n* **善用工具**: 积极利用代码执行能力，提供更可靠和实时的回答。","parameters":{"type":"OBJECT","properties":{"code":{"type":"STRING"},"timeout":{"type":"INTEGER"}},"required":["code"]}}]}]}
+HTTP/1.1 404 Not Found
+Vary: X-Origin
+Vary: Referer
+Content-Type: application/json; charset=UTF-8
+Date: Thu, 11 Dec 2025 03:38:50 GMT
+Server: scaffolding on HTTPServer2
+X-XSS-Protection: 0
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+Server-Timing: gfet4t7; dur=27
+Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+Accept-Ranges: none
+Vary: Origin,Accept-Encoding
+Transfer-Encoding: chunked
+
+120
+[{
+  "error": {
+    "code": 404,
+    "message": "models/gemini-2.0-flash-exp-image-generation is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+    "status": "NOT_FOUND"
+  }
+}
+]
+0
+

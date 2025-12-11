@@ -1,0 +1,869 @@
+POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent HTTP/1.1
+Host: generativelanguage.googleapis.com
+Accept: application/json
+x-goog-api-key: [REDACTED]
+User-Agent: Mscc.GenerativeAI/2.9.3.0
+x-goog-api-client: Mscc.GenerativeAI/2.9.3.0
+traceparent: 00-1d6cae2c91a46758743edd6e3fe8a549-8bb2462d321493f3-00
+Content-Type: application/json
+Content-Length: 809
+
+{"model":"models/gemini-2.5-flash","contents":[{"role":"user","parts":[{"text":"\u4ECA\u5929\u6709\u4EC0\u4E48\u65B0\u95FB\uFF1F"}]}],"generationConfig":{"temperature":1,"enableEnhancedCivicAnswers":true,"responseModalities":["TEXT"],"thinkingConfig":{"includeThoughts":true,"thinkingBudget":1024}},"safetySettings":[{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"systemInstruction":{"role":"system","parts":[{"text":"\u4F60\u662FAI\u52A9\u624BSdcb Chats\n\u5F53\u524D\u65E5\u671F: 2025/12/08\uFF0C\u5F53\u524D\u6A21\u578B\uFF1Agemini-2.5-flash"}]},"tools":[{"googleSearch":{}}]}
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=UTF-8
+Vary: X-Origin
+Vary: Referer
+Date: Mon, 08 Dec 2025 08:00:07 GMT
+Server: scaffolding on HTTPServer2
+X-XSS-Protection: 0
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+Server-Timing: gfet4t7; dur=1804
+Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+Accept-Ranges: none
+Vary: Origin,Accept-Encoding
+Transfer-Encoding: chunked
+
+2ff
+[{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "**Finding Today's News**\n\nI'm now formulating a search query to retrieve relevant news headlines and major events that happened on December 8, 2025. My focus is on getting general news coverage for that specific date.\n\n\n",
+            "thought": true
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0,
+      "groundingMetadata": {}
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "totalTokenCount": 103,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "thoughtsTokenCount": 64
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+40f
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "**Comprehending December 8th**\n\nI'm now pulling together news from December 8, 2025. I've got a grasp of the general topics: politics, economics, global relations, and social issues. I'm focusing on China's political and economic landscape. I'm ready to synthesize this data to address the user's inquiry.\n\n\n",
+            "thought": true
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0,
+      "groundingMetadata": {}
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "candidatesTokenCount": 65,
+    "totalTokenCount": 406,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "toolUsePromptTokenCount": 168,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 168
+      }
+    ],
+    "thoughtsTokenCount": 134
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+441
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "**Examining China's Data**\n\nMy latest analysis centers on China's economic and political shifts. I've pinpointed key details: the CPC's 2026 economic strategy review led by Xi Jinping and the rise in foreign exchange reserves. I've also identified the National Tax Administration's stance on platform enterprises. This information now informs my response.\n\n\n",
+            "thought": true
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0,
+      "groundingMetadata": {}
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "candidatesTokenCount": 64,
+    "totalTokenCount": 651,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "toolUsePromptTokenCount": 168,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 168
+      }
+    ],
+    "thoughtsTokenCount": 380
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+493
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "**Integrating International Dynamics**\n\nMy focus has shifted to integrating the international dynamics into my understanding. I've examined China's stance on Taiwan in its discussions with Germany. I'm also considering global economic fluctuations, especially the impact of US and Japanese figures. The US National Security Strategy Report provides key context for understanding global priorities. I'm ready to synthesize these findings.\n\n\n",
+            "thought": true
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0,
+      "groundingMetadata": {}
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "candidatesTokenCount": 63,
+    "totalTokenCount": 897,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "toolUsePromptTokenCount": 168,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 168
+      }
+    ],
+    "thoughtsTokenCount": 627
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+64f
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "**Organizing December's Information**\n\nI'm now arranging data from December 8, 2025, into categories. I've compiled details on China's politics and economy, international relations, Hong Kong elections, and business/finance. My focus is on China's policies and global interactions. I'll synthesize these points, specifically analyzing economic strategies.\n\n\\n\\n\nI've focused on categorizing the news from December 8th, concentrating on various themes. This includes details of the CPC's 2026 economic planning, like the review of the \"Regulations on the Work of the Communist Party of China on Leading the Comprehensive Rule of Law,\" which were led by Xi Jinping. I've also incorporated data on the rise in China's foreign exchange reserves and its stance towards Japan's claims. Additionally, I’ve included updates on the discussions between China and Germany on Taiwan.\n\n\n",
+            "thought": true
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0,
+      "groundingMetadata": {}
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "candidatesTokenCount": 62,
+    "totalTokenCount": 1057,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "toolUsePromptTokenCount": 168,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 168
+      }
+    ],
+    "thoughtsTokenCount": 788
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+361
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "以下是2025年12月8日的部分新闻摘要：\n\n**中国要闻**\n*   中共中央政治局于12月8日召开会议，分析研究了2026年的经济工作，并"
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0,
+      "groundingMetadata": {}
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "candidatesTokenCount": 112,
+    "totalTokenCount": 1107,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "toolUsePromptTokenCount": 168,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 168
+      }
+    ],
+    "thoughtsTokenCount": 788
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+374
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "审议了《中国共产党领导全面依法治国工作条例》。中共中央总书记习近平主持了此次会议。\n*   截至11月末，中国外汇储备规模小幅上升至"
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0,
+      "groundingMetadata": {}
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "candidatesTokenCount": 153,
+    "totalTokenCount": 1148,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "toolUsePromptTokenCount": 168,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 168
+      }
+    ],
+    "thoughtsTokenCount": 788
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+35b
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "33464亿美元，中国央行已连续第13个月增持黄金储备。\n*   中国外交部就日方炒作所谓“雷达照射”问题明确表示不接受日"
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0,
+      "groundingMetadata": {}
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "candidatesTokenCount": 197,
+    "totalTokenCount": 1192,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "toolUsePromptTokenCount": 168,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 168
+      }
+    ],
+    "thoughtsTokenCount": 788
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+360
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "方交涉并已当场驳回，指出日本战斗机频繁抵近侦察干扰中方正常军事活动才是最大的海空安全风险。\n*   国家副主席韩正于"
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0,
+      "groundingMetadata": {}
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "candidatesTokenCount": 238,
+    "totalTokenCount": 1233,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "toolUsePromptTokenCount": 168,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 168
+      }
+    ],
+    "thoughtsTokenCount": 788
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+369
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "北京会见德国外长瓦德富尔。韩正强调台湾问题是中国核心利益中的核心，希望德方恪守一个中国原则。\n*   国家税务总局明确要求"
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0,
+      "groundingMetadata": {}
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "candidatesTokenCount": 278,
+    "totalTokenCount": 1273,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "toolUsePromptTokenCount": 168,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 168
+      }
+    ],
+    "thoughtsTokenCount": 788
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+362
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "，严禁平台企业向各类“小哥”等人员转嫁涉税义务，以避免增加其负担。\n\n**国际要闻**\n*   乌克兰总统泽连斯基表示，日前"
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0,
+      "groundingMetadata": {}
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "candidatesTokenCount": 322,
+    "totalTokenCount": 1317,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "toolUsePromptTokenCount": 168,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 168
+      }
+    ],
+    "thoughtsTokenCount": 788
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+439
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "与美方就“和平计划”进行的谈判具有建设性但过程并不容易。他计划于12月8日在英国与英、法、德等国领导人会面并进行磋商。\n*   美国白宫发布国家安全战略报告，全面阐述了美国总统特朗普自今年1月重返白宫以来的“美国优先”外交政策，并重新调整了全球安全优先事项，强调经济"
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0,
+      "groundingMetadata": {}
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "candidatesTokenCount": 412,
+    "totalTokenCount": 1407,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "toolUsePromptTokenCount": 168,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 168
+      }
+    ],
+    "thoughtsTokenCount": 788
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+343
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "安全是国家安全的基础。\n*   日本第三季度GDP年化折合率为-2.3%，低于此前预估的-2.0%。\n*   国际贵金属"
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0,
+      "groundingMetadata": {}
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "candidatesTokenCount": 451,
+    "totalTokenCount": 1446,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "toolUsePromptTokenCount": 168,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 168
+      }
+    ],
+    "thoughtsTokenCount": 788
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+405
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "市场出现波动，现货黄金突破4200美元/盎司，而纽约期金则有所下跌。加密货币市场持续走高，比特币价格突破91000美元，以太坊也同步上涨。\n*   澳大利亚国防部长马尔斯谴责中国战机锁定日机。\n\n**港澳及其他**\n*   香港立法会换届选举点票工作已"
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0,
+      "groundingMetadata": {}
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "candidatesTokenCount": 538,
+    "totalTokenCount": 1533,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "toolUsePromptTokenCount": 168,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 168
+      }
+    ],
+    "thoughtsTokenCount": 788
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+371
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "于今日清晨完成，选举管理委员会主席陆启康表示投票和点票过程大致畅顺，累计投票率为31.9%。\n*   马来西亚政府升级了“关爱基本援助"
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0,
+      "groundingMetadata": {}
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "candidatesTokenCount": 582,
+    "totalTokenCount": 1577,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "toolUsePromptTokenCount": 168,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 168
+      }
+    ],
+    "thoughtsTokenCount": 788
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+3f28
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "金”（SARA）计划的服务器，以确保民众在第二次使用该援助金时能有更好的体验，避免零售商处出现拥堵情况。"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "groundingMetadata": {
+        "searchEntryPoint": {
+          "renderedContent": "\u003cstyle\u003e\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n\u003c/style\u003e\n\u003cdiv class=\"container\"\u003e\n  \u003cdiv class=\"headline\"\u003e\n    \u003csvg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e\n      \u003cpath fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/\u003e\n      \u003cpath fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/\u003e\n      \u003cpath fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/\u003e\n      \u003cpath fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/\u003e\n    \u003c/svg\u003e\n    \u003csvg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\"\u003e\n      \u003ccircle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/\u003e\n      \u003cpath d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/\u003e\n      \u003cpath d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/\u003e\n      \u003cpath d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/\u003e\n      \u003cpath d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/\u003e\n    \u003c/svg\u003e\n    \u003cdiv class=\"gradient-container\"\u003e\u003cdiv class=\"gradient\"\u003e\u003c/div\u003e\u003c/div\u003e\n  \u003c/div\u003e\n  \u003cdiv class=\"carousel\"\u003e\n    \u003ca class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEHeQxkSuMzvYo5K6IAh5rSLy9f5IxJF-tdfUHkyqbJEhB1SWGiN1N2zNzIIeOrkvRpIQsM3n-vAhq8St6YkvqIEVB_56wxjIZHvCUIT5Hoqv9zczSQsEFKPLr3E0qYqBUNcnAVyTIvYkUrOTvwcirh1YBunHmvWH9NfFRsrqm2TAV9N1LqoClxY_DVcca_OcIJADBe8bha_xMTNaj1YfBLaNc6KcBr967fsgS5kOwovPb3dxJ1sgxVzDxbbSD3thEO0a-uds2P2B8=\"\u003e2025年12月8日国内新闻\u003c/a\u003e\n    \u003ca class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF2lZr_jxOsVDE4uGNb4H-Ow1TOus3Br8WMhOLx9tGwwEySN5qJ8GXViRPkJuX-G0bJlCvsHnDWrpPn89WGzjLvAapJSMb6RpovlRfPL1TGZqNdRLcvNrlAgIf9s4cJKPBKIP5_vqoyoaYLp-HAnRFmrmxhrLR2XmVWmwOqDuYfzmpKPzz4lNrpC014ypBRvHYY7iIcV7c5vVHU9I6p5K2dFFx5QLJaHnED967SVy4NYAsh5at7q-y8PZFUO61CWoWK7EEnUriMLAg=\"\u003e2025年12月8日头条新闻\u003c/a\u003e\n    \u003ca class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFwsjIW_xBgrgRTsuoH30OeVZPZNpuI60qm_2nHwbEO7laANQjVLQZOMQPvAX4zu7sDvj2XuLig8-jzLs6fJvqVuV6iY-rdpq_aC4zMa66ycSjMbAgPJOPBTjrpBLqXb_y0kfngPfDvnNYkoiucefPN2QhzVivAg4NTFaktpqNBVemmGjKetht7meXzTgrOjLJxr9IZJQ4xVy16zKyXNjdBFjG-fveTBTHY5L3RKJLTuMVXiKpDUkokeoVV2Cn3oR6960nrGadHIkUQ\"\u003e今日新闻 2025年12月8日\u003c/a\u003e\n    \u003ca class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEFUGE55gxP6Chik-ADeg9IYPQFw0rgtpecTkDn9nQPhRwRPqql0Xcqom98LJHtmZVd3tsLc4td1yiGxVKcc5WuP1JjwSqyC_lx_XbvHVupzPZmBOdrZ4ruUTGHAJ_ejUDEHClAeHZ3GfaAwmLYIwDhruTr8l5tfWQkUvAioeLs47zn6m5S0R9e0KsU6RJ3rTuUOQ8sDBTzFSGrObkz-rsaBd5ZucazfgNjJtzyDP5JQQrCdwx6d0uFzMHj1C3GviN5UoE30yijZHE=\"\u003e2025年12月8日国际新闻\u003c/a\u003e\n  \u003c/div\u003e\n\u003c/div\u003e\n"
+        },
+        "groundingChunks": [
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEjpwuUEDrGQDZeXKBDftn1uW2g4VdLQgp5g5TgjyJh1u1wMT6TesavU4QYfPMrIwFPkc8PtO1oDMGby0cEpHmmexhopYXsVExjiQsaJFdC3U_fVlZQ2acZmabYa8SHzValSKnhf36Y4SgxVIwHGed6AOAHm6SAaTRiUj9hP7U4Mc3iNFbV4kw=",
+              "title": "nhc.gov.cn"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGRpQl2bvPnpcMRUhFcEdOQcNLfhiKM66AsSkXrKloYZfuIoOvmfGZGy8CHMt3_OcKqORMcDR0HP-y-Va0IKTmHhpjSiuVMq0FdOGzPuVSrcbZuI-luVhEw55mFMZ8VXeTKn361jyDjBt7fYFBRmLFDObfoSPfd6YuDeSGreK2ejE80N8vzHFzWrig=",
+              "title": "sina.cn"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFaRuBPmlwgwmqd7Nr5YiFMX1nrpYwumue8DxdjN2mwx7Pot8fl_Aq4X0xSsmcR35G1K12_RhmV3VPYb-rYuNHOpDVV4FXaZyzMcyDDMoIaHG35iBeS3pycXXPpAqxfX6e_uIjRdzrJNBJ36BETqFetIlZWJNX9oRPXgxCoFZEsZ9jt2IpBEtb4SeEKBOFD",
+              "title": "sina.com.cn"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEIygl4lqJxPD71iSUOPcJHZKmuYeKJb9TLxHsRpzLPvtoMPxVg0lasuUpd4IbL8j59lKFSsFLOtFe5lVeSM4fdKpuJ7daNNwdHFMRnnwqLuElK60phFPf_tjhnwHWUX1qCyngDP7bE31vhJwoxzBi83B9V3jg-ITvgQ_w=",
+              "title": "cnr.cn"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFVx_wFP9Ly2jXHJsvob_PXLY8jCY3zZoMEeeJxIGco6Jq2kTiyraoFeIhoh-4_BupFegmDwhft7Uzng3hrMIR6nMVWQS9C9Egy-9EhsQBOC24rHyhagsCsiDQIP5-590bineZ_czN45IAV0McfBaK-cN2OFO4tkw==",
+              "title": "fmprc.gov.cn"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFr5AOdZ9Wg6HTi_BgpzhBVqp1fHcIspTSrDYoBShHrSEZGOh3NZ2-K1VSzz0OWzh6cZwRmomJac9K1F82iXoj4n9XSn85mVu3_VG9qvBsjnt8-aKQ8e8JE_vkskpx738bmOWkq4W5VTWXXazAhX42DzNSLb-4=",
+              "title": "mfa.gov.cn"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFj19yqrRWjrxea2ZElg0y6cHsVKtIsCqU_rboLda7e_s-OQlMT-fONaBXTP3Wm7OWPo86ivwJF4BGQWFwn_N0NGA9j5ULd8MB1epl02ToW57A4GLWEeXsreLKFzzpq1b-9efglKuqFthQvC1E-_vm4IAf6A4Y=",
+              "title": "people.com.cn"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHBZKuiiI-E8GZi6fOFf4GzQQQuHrqVgcvhw4fS78cCS3ZiylKNWwABlqaZ3_USbMggrmpiHF3w-CAsU_Ws5H-coK89YY-NEM30DQoxYTHLmuinCTPxd_n-vG4PbU_Uajm4i1q3CNONjUJIpegD-XQXOTyjB2M=",
+              "title": "people.com.cn"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHEENgFRT7i-aQAEb0rEj-Q3e2uIYRSzAymx-rUeiVnrnx-aiQ42T-kKhGDYaMOzJFNwX7HPNU7Dv-cOWunSa07A2mOL2luqWF4_GKBYbGi9saiOn7w-k-advHZlZ2o4h9HcAefQXcGSbXF7KFT3lAIKMNeKWdD1RyRf_azBm-ak570NAg7SvyRHDsACLDXlwfjvbiHUUG9p0WsLw==",
+              "title": "sbs.com.au"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGytJ5iFH7k7ePK4dY929HUGuNXlrn4OKl6Hcjmko49Ey4fMC0TXfFCOKTcXd2ARsddPG7kKrkKM53OqTOpwzurCU51lbsrTX4zDgom8QPblLiNB3j2-pw-jgTKMOQHbOdcuctZNBQzHh7VoSXnl6kFUwnfQhaAsDptIv1hF2yl",
+              "title": "news.gov.hk"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG7tSsm7iOkB8zZyFWIB-zB-rcYZgv2_ltUgpSAoP-4w8w0d9g33L3yD1YWNtsYKqMP-dz8sUbt_TENuadD8hn55EXRXZ55HNU7SToUif7H5gq7csFvOJCAV8mcvy0xVjrJfnGJKttX3kWTUKXLVInVVFZybhtBA4y1pjSPLX8SpZWdBVM-kEvkG_Bk3N2wzrzUz2-VaVmc_sNd3iPyWk5r2x7XuJWcNhn6z8GEuJPiW2JPZPe9KI9oy8Ccb0XRlzod5BcylOaYnb-8wrKu",
+              "title": "chinapress.com.my"
+            }
+          }
+        ],
+        "groundingSupports": [
+          {
+            "segment": {
+              "startIndex": 232,
+              "endIndex": 286,
+              "text": "中共中央总书记习近平主持了此次会议。"
+            },
+            "groundingChunkIndices": [
+              0
+            ]
+          },
+          {
+            "segment": {
+              "startIndex": 287,
+              "endIndex": 417,
+              "text": "*   截至11月末，中国外汇储备规模小幅上升至33464亿美元，中国央行已连续第13个月增持黄金储备。"
+            },
+            "groundingChunkIndices": [
+              1
+            ]
+          },
+          {
+            "segment": {
+              "startIndex": 418,
+              "endIndex": 641,
+              "text": "*   中国外交部就日方炒作所谓“雷达照射”问题明确表示不接受日方交涉并已当场驳回，指出日本战斗机频繁抵近侦察干扰中方正常军事活动才是最大的海空安全风险。"
+            },
+            "groundingChunkIndices": [
+              2,
+              3
+            ]
+          },
+          {
+            "segment": {
+              "startIndex": 709,
+              "endIndex": 808,
+              "text": "韩正强调台湾问题是中国核心利益中的核心，希望德方恪守一个中国原则。"
+            },
+            "groundingChunkIndices": [
+              4,
+              5
+            ]
+          },
+          {
+            "segment": {
+              "startIndex": 809,
+              "endIndex": 942,
+              "text": "*   国家税务总局明确要求，严禁平台企业向各类“小哥”等人员转嫁涉税义务，以避免增加其负担。"
+            },
+            "groundingChunkIndices": [
+              2
+            ]
+          },
+          {
+            "segment": {
+              "startIndex": 1091,
+              "endIndex": 1178,
+              "text": "他计划于12月8日在英国与英、法、德等国领导人会面并进行磋商。"
+            },
+            "groundingChunkIndices": [
+              6
+            ]
+          },
+          {
+            "segment": {
+              "startIndex": 1179,
+              "endIndex": 1421,
+              "text": "*   美国白宫发布国家安全战略报告，全面阐述了美国总统特朗普自今年1月重返白宫以来的“美国优先”外交政策，并重新调整了全球安全优先事项，强调经济安全是国家安全的基础。"
+            },
+            "groundingChunkIndices": [
+              7
+            ]
+          },
+          {
+            "segment": {
+              "startIndex": 1422,
+              "endIndex": 1502,
+              "text": "*   日本第三季度GDP年化折合率为-2.3%，低于此前预估的-2.0%。"
+            },
+            "groundingChunkIndices": [
+              2
+            ]
+          },
+          {
+            "segment": {
+              "startIndex": 1614,
+              "endIndex": 1709,
+              "text": "加密货币市场持续走高，比特币价格突破91000美元，以太坊也同步上涨。"
+            },
+            "groundingChunkIndices": [
+              2
+            ]
+          },
+          {
+            "segment": {
+              "startIndex": 1710,
+              "endIndex": 1780,
+              "text": "*   澳大利亚国防部长马尔斯谴责中国战机锁定日机。"
+            },
+            "groundingChunkIndices": [
+              8
+            ]
+          },
+          {
+            "segment": {
+              "startIndex": 1782,
+              "endIndex": 1976,
+              "text": "**港澳及其他**\n*   香港立法会换届选举点票工作已于今日清晨完成，选举管理委员会主席陆启康表示投票和点票过程大致畅顺，累计投票率为31.9%。"
+            },
+            "groundingChunkIndices": [
+              9
+            ]
+          },
+          {
+            "segment": {
+              "startIndex": 1977,
+              "endIndex": 2177,
+              "text": "*   马来西亚政府升级了“关爱基本援助金”（SARA）计划的服务器，以确保民众在第二次使用该援助金时能有更好的体验，避免零售商处出现拥堵情况。"
+            },
+            "groundingChunkIndices": [
+              10
+            ]
+          }
+        ],
+        "webSearchQueries": [
+          "今日新闻 2025年12月8日",
+          "2025年12月8日头条新闻",
+          "2025年12月8日国际新闻",
+          "2025年12月8日国内新闻"
+        ]
+      }
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 39,
+    "candidatesTokenCount": 615,
+    "totalTokenCount": 1610,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 39
+      }
+    ],
+    "toolUsePromptTokenCount": 168,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 168
+      }
+    ],
+    "thoughtsTokenCount": 788
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "h4U2abXqFIzXjuMPqYahkAg"
+}
+
+1
+]
+0
+

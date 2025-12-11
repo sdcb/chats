@@ -1,0 +1,249 @@
+POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent HTTP/1.1
+Host: generativelanguage.googleapis.com
+Accept: application/json
+x-goog-api-key: [REDACTED]
+User-Agent: Mscc.GenerativeAI/2.9.3.0
+x-goog-api-client: Mscc.GenerativeAI/2.9.3.0
+traceparent: 00-6d098217a44d52e0bdee3c0659f9028e-8646a6b19a09111e-00
+Content-Type: application/json
+Content-Length: 827
+
+{"model":"models/gemini-2.5-flash","contents":[{"role":"user","parts":[{"text":"\u8C03\u7528\u5185\u7F6E\u5DE5\u5177\uFF0C\u8BA1\u7B971234/5432=?"}]}],"generationConfig":{"temperature":1,"enableEnhancedCivicAnswers":true,"responseModalities":["TEXT"],"thinkingConfig":{"includeThoughts":true,"thinkingBudget":1024}},"safetySettings":[{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"systemInstruction":{"role":"system","parts":[{"text":"\u4F60\u662FAI\u52A9\u624BSdcb Chats\n\u5F53\u524D\u65E5\u671F: 2025/12/08\uFF0C\u5F53\u524D\u6A21\u578B\uFF1Agemini-2.5-flash"}]},"tools":[{"codeExecution":{}}]}
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=UTF-8
+Vary: X-Origin
+Vary: Referer
+Date: Mon, 08 Dec 2025 07:59:36 GMT
+Server: scaffolding on HTTPServer2
+X-XSS-Protection: 0
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+Server-Timing: gfet4t7; dur=1767
+Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+Accept-Ranges: none
+Vary: Origin,Accept-Encoding
+Transfer-Encoding: chunked
+
+2da
+[{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "**Executing a Division**\n\nI've got a division task at hand: 1234 needs to be divided by 5432. My next step involves leveraging the built-in Python tools to execute this calculation and derive the accurate result.\n\n\n",
+            "thought": true
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 50,
+    "totalTokenCount": 88,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 50
+      }
+    ],
+    "thoughtsTokenCount": 38
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "Z4U2aaHVJL2jjuMP6Z3n4Ao"
+}
+
+26c
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "executableCode": {
+              "language": "PYTHON",
+              "code": "print(1234 / 5432)\n"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 50,
+    "candidatesTokenCount": 12,
+    "totalTokenCount": 100,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 50
+      }
+    ],
+    "thoughtsTokenCount": 38
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "Z4U2aaHVJL2jjuMP6Z3n4Ao"
+}
+
+276
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "codeExecutionResult": {
+              "outcome": "OUTCOME_OK",
+              "output": "0.2271723122238586\n"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 50,
+    "candidatesTokenCount": 12,
+    "totalTokenCount": 100,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 50
+      }
+    ],
+    "thoughtsTokenCount": 38
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "Z4U2aaHVJL2jjuMP6Z3n4Ao"
+}
+
+29d
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "1234"
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 50,
+    "candidatesTokenCount": 16,
+    "totalTokenCount": 223,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 50
+      }
+    ],
+    "toolUsePromptTokenCount": 119,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 119
+      }
+    ],
+    "thoughtsTokenCount": 38
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "Z4U2aaHVJL2jjuMP6Z3n4Ao"
+}
+
+2bb
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "/5432 的计算结果是 0.2271723"
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 50,
+    "candidatesTokenCount": 35,
+    "totalTokenCount": 242,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 50
+      }
+    ],
+    "toolUsePromptTokenCount": 119,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 119
+      }
+    ],
+    "thoughtsTokenCount": 38
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "Z4U2aaHVJL2jjuMP6Z3n4Ao"
+}
+
+2c3
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "122238586。"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 50,
+    "candidatesTokenCount": 45,
+    "totalTokenCount": 252,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 50
+      }
+    ],
+    "toolUsePromptTokenCount": 119,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 119
+      }
+    ],
+    "thoughtsTokenCount": 38
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "Z4U2aaHVJL2jjuMP6Z3n4Ao"
+}
+
+1
+]
+0
+
