@@ -58,6 +58,7 @@ public class Program
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.GithubModelsChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.GoogleAI.GoogleAI2ChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.SiliconFlowChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.TokenPonyChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.OpenRouterChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.ResponseApiService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.AzureResponseApiService>();
