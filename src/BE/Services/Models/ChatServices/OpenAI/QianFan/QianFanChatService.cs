@@ -1,3 +1,4 @@
+using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -11,7 +12,7 @@ public class QianFanChatService(IHttpClientFactory httpClientFactory) : ChatComp
         ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
 
         JsonQianFanApiConfig? cfg = JsonSerializer.Deserialize<JsonQianFanApiConfig>(modelKey.Secret)
-            ?? throw new ArgumentException("Invalid qianfan secret");
+            ?? throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Invalid qianfan secret");
 
         request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", cfg.ApiKey);
         request.Headers.Add("appid", cfg.AppId);

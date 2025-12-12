@@ -63,7 +63,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
 
             if (responseId == null)
             {
-                throw new Exception("Response ID not found in the response.");
+                throw new CustomChatServiceException(DBFinishReason.UpstreamError, "Response ID not found in the response.");
             }
 
             CancellationTokenRegistration? cancelRegistration = cancellationToken.Register(async () =>
@@ -139,7 +139,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             }
             else if (status != "completed")
             {
-                throw new NotSupportedException($"Unsupported response status: {status}");
+                throw new CustomChatServiceException(DBFinishReason.UpstreamError, $"Unsupported response status: {status}");
             }
             else
             {

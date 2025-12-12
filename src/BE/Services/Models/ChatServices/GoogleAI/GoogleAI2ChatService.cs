@@ -42,7 +42,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, endpoint);
         httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        httpRequest.Headers.TryAddWithoutValidation("x-goog-api-key", request.ChatConfig.Model.ModelKey.Secret ?? throw new InvalidOperationException("Google AI API key is required."));
+        httpRequest.Headers.TryAddWithoutValidation("x-goog-api-key", request.ChatConfig.Model.ModelKey.Secret ?? throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Google AI API key is required."));
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
 
         using HttpClient httpClient = httpClientFactory.CreateClient();
@@ -553,7 +553,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
                     NeutralChatRole.User => "user",
                     NeutralChatRole.Assistant => "model",
                     NeutralChatRole.Tool => "function",
-                    _ => throw new NotSupportedException($"Unsupported message role: {message.Role} in {nameof(GoogleAI2ChatService)}"),
+                    _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Unsupported message role: {message.Role} in {nameof(GoogleAI2ChatService)}"),
                 }
             };
 
@@ -654,7 +654,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
         NeutralToolCallResponseContent? responseContent = message.Contents.OfType<NeutralToolCallResponseContent>().FirstOrDefault();
         if (responseContent == null)
         {
-            throw new InvalidOperationException($"{nameof(ToolCallMessageToPart)} expected tool call response content but none found.");
+            throw new CustomChatServiceException(DBFinishReason.BadParameter, $"{nameof(ToolCallMessageToPart)} expected tool call response content but none found.");
         }
 
         return new JsonObject
@@ -687,9 +687,9 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
             NeutralThinkContent => null,
             NeutralToolCallContent => null,
             NeutralToolCallResponseContent => null,
-            NeutralFileUrlContent => throw new NotSupportedException("FileUrl content is not supported for Google AI. Please convert to binary data first."),
-            NeutralFileContent => throw new NotSupportedException("File content should be materialized before sending to Google AI."),
-            _ => throw new NotSupportedException($"Unsupported content type: {content.GetType().Name}")
+            NeutralFileUrlContent => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "FileUrl content is not supported for Google AI. Please convert to binary data first."),
+            NeutralFileContent => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "File content should be materialized before sending to Google AI."),
+            _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Unsupported content type: {content.GetType().Name}")
         };
     }
 

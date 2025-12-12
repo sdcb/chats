@@ -1,3 +1,4 @@
+using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
@@ -35,7 +36,7 @@ public class Test2ChatService : ChatService
 
     public override IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, CancellationToken cancellationToken)
     {
-        NeutralMessage lastUserMessage = request.Messages.LastUserMessage() ?? throw new InvalidOperationException("No user message in the request.");
+        NeutralMessage lastUserMessage = request.Messages.LastUserMessage() ?? throw new CustomChatServiceException(DBFinishReason.BadParameter, "No user message in the request.");
         string messageText = lastUserMessage.GetFirstTextContent() ?? string.Empty;
 
         return messageText switch

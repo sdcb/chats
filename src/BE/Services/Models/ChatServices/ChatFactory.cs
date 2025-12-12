@@ -1,3 +1,4 @@
+using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
@@ -64,7 +65,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
                 _ => sp.GetRequiredService<ImageGenerationService>() // Fallback to OpenAI-compatible
             },
 
-            _ => throw new NotSupportedException($"Unknown API type: {apiType}")
+            _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Unknown API type: {apiType}")
         };
     }
 

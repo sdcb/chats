@@ -497,7 +497,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             NeutralChatRole.User => "user",
             NeutralChatRole.Assistant => "assistant",
             NeutralChatRole.Tool => "tool",
-            _ => throw new NotSupportedException($"Role {message.Role} is not supported")
+            _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Role {message.Role} is not supported")
         };
 
         if (message.Role == NeutralChatRole.Tool)
@@ -594,8 +594,8 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             NeutralThinkContent => null, // ChatCompletion API does not support "think" content type
             NeutralToolCallContent => null, // Tool calls are handled separately
             NeutralToolCallResponseContent => null, // Tool responses are handled separately
-            NeutralFileContent => throw new Exception("FileId content type should be converted to FileUrl or FileBlob before sending to OpenAI API in PreProcess."),
-            _ => throw new NotSupportedException($"Content type {content.GetType().Name} is not supported.")
+            NeutralFileContent => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "FileId content type should be converted to FileUrl or FileBlob before sending to OpenAI API in PreProcess."),
+            _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Content type {content.GetType().Name} is not supported.")
         };
     }
 }

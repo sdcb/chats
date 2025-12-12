@@ -1,4 +1,5 @@
 using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
+using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
 using Chats.BE.Services.Models.Dtos;
 using System.Runtime.CompilerServices;
@@ -100,7 +101,7 @@ public sealed record ToolCall
             {
                 // 校验必填字段已补齐；若缺失直接抛异常更易排查
                 if (id is null || name is null)
-                    throw new InvalidOperationException(
+                    throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue,
                         $"Incomplete function call for index {currentIndex}");
 
                 return new ToolCall

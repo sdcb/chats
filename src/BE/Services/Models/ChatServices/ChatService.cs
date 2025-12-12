@@ -1,3 +1,4 @@
+using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
@@ -166,7 +167,7 @@ public abstract partial class ChatService
             HttpResponseMessage resp = await http.GetAsync(url, cancellationToken);
             if (!resp.IsSuccessStatusCode)
             {
-                throw new Exception($"Failed to download image from {url}");
+                throw new CustomChatServiceException(DBFinishReason.UpstreamError, $"Failed to download image from {url}");
             }
 
             string contentType = resp.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";

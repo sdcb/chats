@@ -711,18 +711,6 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 icc.FinishReason = DBFinishReason.Cancelled;
                 errorText = "Conversation cancelled";
             }
-            catch (UriFormatException e)
-            {
-                icc.FinishReason = DBFinishReason.InternalConfigIssue;
-                errorText = e.Message;
-                logger.LogError(e, "Invalid URL in conversation for message: {userMessageId}", req.LastMessageId);
-            }
-            catch (JsonException e)
-            {
-                icc.FinishReason = DBFinishReason.InternalConfigIssue;
-                errorText = e.Message;
-                logger.LogError(e, "Invalid JSON config in conversation for message: {userMessageId}", req.LastMessageId);
-            }
             catch (Exception e)
             {
                 icc.FinishReason = DBFinishReason.UnknownError;

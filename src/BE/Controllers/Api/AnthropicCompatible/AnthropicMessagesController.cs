@@ -155,27 +155,9 @@ public class AnthropicMessagesController(
             icc.FinishReason = cse.ErrorCode;
             errorToReturn = await YieldError(hasSuccessYield && request.Streamed, MapFinishReasonToErrorType(cse.ErrorCode), cse.Message, cancellationToken);
         }
-        catch (ClientResultException e)
-        {
-            icc.FinishReason = DBFinishReason.UpstreamError;
-            logger.LogError(e, "Upstream error");
-            errorToReturn = await YieldError(hasSuccessYield && request.Streamed, AnthropicErrorTypes.ApiError, e.Message, cancellationToken);
-        }
         catch (TaskCanceledException)
         {
             icc.FinishReason = DBFinishReason.Cancelled;
-        }
-        catch (UriFormatException e)
-        {
-            icc.FinishReason = DBFinishReason.InternalConfigIssue;
-            logger.LogError(e, "Invalid API host URL");
-            errorToReturn = await YieldError(hasSuccessYield && request.Streamed, AnthropicErrorTypes.ApiError, e.Message, cancellationToken);
-        }
-        catch (JsonException e)
-        {
-            icc.FinishReason = DBFinishReason.InternalConfigIssue;
-            logger.LogError(e, "Invalid JSON config");
-            errorToReturn = await YieldError(hasSuccessYield && request.Streamed, AnthropicErrorTypes.InvalidRequestError, e.Message, cancellationToken);
         }
         catch (Exception e)
         {

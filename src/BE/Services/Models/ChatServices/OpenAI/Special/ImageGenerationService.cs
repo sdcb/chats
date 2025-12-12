@@ -244,12 +244,12 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             string textPart = userMessage.Contents
                 .OfType<NeutralTextContent>()
                 .Select(x => x.Content)
-                .LastOrDefault() ?? throw new InvalidOperationException($"Unable to find a text part in the user message.");
+                .LastOrDefault() ?? throw new CustomChatServiceException(DBFinishReason.BadParameter, $"Unable to find a text part in the user message.");
             return textPart;
         }
         else
         {
-            throw new InvalidOperationException("Unable to find the user message in the messages.");
+            throw new CustomChatServiceException(DBFinishReason.BadParameter, "Unable to find the user message in the messages.");
         }
     }
 
@@ -413,7 +413,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             else if (eventType == "error")
             {
                 Console.WriteLine($"[{sw.Elapsed.TotalSeconds:F3}s] {eventType} #{eventIndex}");
-                throw new Exception(root.ToString());
+                throw new RawChatServiceException(200, root.ToString());
             }
             else
             {

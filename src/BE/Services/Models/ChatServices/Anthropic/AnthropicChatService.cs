@@ -297,7 +297,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         {
             url += "/anthropic";
         }
-        return (url, modelKey.Secret ?? throw new InvalidOperationException("API key is required for Anthropic"));
+        return (url, modelKey.Secret ?? throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "API key is required for Anthropic"));
     }
 
     public override async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
@@ -682,8 +682,8 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             {
                 NeutralChatRole.User => "user",
                 NeutralChatRole.Assistant => "assistant",
-                NeutralChatRole.Tool => throw new InvalidOperationException("Tool messages should be merged into user messages before conversion."),
-                _ => throw new InvalidOperationException($"Unknown message role: {message.Role}"),
+                NeutralChatRole.Tool => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Tool messages should be merged into user messages before conversion."),
+                _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Unknown message role: {message.Role}"),
             };
 
             JsonArray content = [];
@@ -733,8 +733,8 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                         ["input"] = JsonNode.Parse(toolCall.Parameters)
                     },
                     NeutralToolCallResponseContent toolResp => CreateToolResultBlock(toolResp),
-                    NeutralFileContent => throw new InvalidOperationException("FileId should be converted to FileUrl/FileBlob before conversion."),
-                    _ => throw new InvalidOperationException($"Unsupported content type: {content.GetType().Name}")
+                    NeutralFileContent => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "FileId should be converted to FileUrl/FileBlob before conversion."),
+                    _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Unsupported content type: {content.GetType().Name}")
                 };
 
                 // Add cache control if present
