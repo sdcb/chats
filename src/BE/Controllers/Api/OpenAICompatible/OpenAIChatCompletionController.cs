@@ -18,7 +18,6 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Http.Extensions;
 using Chats.BE.Services.FileServices;
-using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 
 namespace Chats.BE.Controllers.Api.OpenAICompatible;
@@ -213,7 +212,7 @@ public partial class OpenAIChatCompletionController(
         {
             if (icc.FinishReason == DBFinishReason.Success || icc.FinishReason == DBFinishReason.Stop || icc.FinishReason == DBFinishReason.ToolCalls)
             {
-                FullChatCompletion toBeCached = icc.FullResponse.ToOpenAIFullChat(cco.Model, HttpContext.TraceIdentifier);
+                FullChatCompletion toBeCached = icc.FullResponse!.ToOpenAIFullChat(cco.Model, HttpContext.TraceIdentifier);
                 UserApiCache cache = new()
                 {
                     UserApiKeyId = currentApiKey.ApiKeyId,
@@ -249,7 +248,7 @@ public partial class OpenAIChatCompletionController(
         try
         {
             ChatRequest csr = ChatRequest.FromOpenAI(currentApiKey.User.Id.ToString(), cm, cco.Streamed, cco.Messages!, cco.ToCleanCco());
-            await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s.ChatEntry(csr, fup, cancellationToken)))
+            await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, csr, fup, cancellationToken))
             {
                 if (cco.Streamed)
                 {
@@ -278,7 +277,7 @@ public partial class OpenAIChatCompletionController(
             {
                 if (!streamedFinishSegment)
                 {
-                    ChatCompletionChunk finalChunk = icc.FullResponse.ToFinalChunk(cco.Model, HttpContext.TraceIdentifier);
+                    ChatCompletionChunk finalChunk = icc.FullResponse!.ToFinalChunk(cco.Model, HttpContext.TraceIdentifier);
                     await YieldResponse(finalChunk, cancellationToken);
                 }
 
@@ -353,7 +352,7 @@ public partial class OpenAIChatCompletionController(
         else
         {
             // non-streamed success
-            FullChatCompletion fullChatCompletion = icc.FullResponse.ToOpenAIFullChat(cco.Model, HttpContext.TraceIdentifier);
+            FullChatCompletion fullChatCompletion = icc.FullResponse!.ToOpenAIFullChat(cco.Model, HttpContext.TraceIdentifier);
             return Ok(fullChatCompletion);
         }
     }

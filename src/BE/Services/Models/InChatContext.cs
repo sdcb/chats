@@ -3,9 +3,11 @@ using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.DB.Jsons;
 using Chats.BE.Services.Common;
+using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace Chats.BE.Services.Models;
 
@@ -15,16 +17,16 @@ public class InChatContext(long firstTick)
     private short _segmentCount;
     private readonly List<ChatSegment> _segments = [];
     private readonly List<ChatSegment> _segmentsAfterUsage = [];
-    private UsageChatSegment? _finalUsageSegment;
     private UsageChatSegment? _lastReliableUsageSegment;
     private JsonPriceConfig? _priceConfig;
     private ScopedBalanceCalculator? _balance;
 
     public DBFinishReason FinishReason { get; set; } = DBFinishReason.Success;
 
-    public async IAsyncEnumerable<ChatSegment> Run(
+    internal async IAsyncEnumerable<ChatSegment> RunInternal(
         ScopedBalanceCalculator balance,
         UserModel userModel,
+        ChatRequest requestForEstimation,
         IAsyncEnumerable<ChatSegment> segments)
     {
         _balance = balance;
@@ -40,7 +42,7 @@ public class InChatContext(long firstTick)
             throw new InsufficientBalanceException();
         }
 
-        balance.SetCost(userModel.ModelId, 0, 0, 0, _priceConfig);
+        balance.SetCost(userModel.ModelId, 1, 0, 0, _priceConfig);
         if (!balance.IsSufficient)
         {
             throw new InsufficientBalanceException();
@@ -69,7 +71,36 @@ public class InChatContext(long firstTick)
         finally
         {
             _endResponseTick = Stopwatch.GetTimestamp();
-            EnsureFinalUsage(userModel);
+            (ChatTokenUsage finalUsage, bool isReliable) = EnsureFinalUsage(requestForEstimation, userModel);
+
+            FullResponse = new ChatCompletionSnapshot
+            {
+                Segments = _segments,
+                Usage = finalUsage,
+                IsUsageReliable = isReliable,
+                FinishReason = FinishReason
+            };
+
+            _balance.SetCost(userModel.ModelId, finalUsage.InputTokens, finalUsage.OutputTokens, finalUsage.CacheTokens, _priceConfig);
+            if (!_balance.IsSufficient)
+            {
+                FinishReason = DBFinishReason.InsufficientBalance;
+                throw new InsufficientBalanceException();
+            }
+        }
+    }
+
+    public async IAsyncEnumerable<ChatSegment> Run(
+        ScopedBalanceCalculator balance,
+        UserModel userModel,
+        ChatService chatService,
+        ChatRequest request,
+        FileUrlProvider fup,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await foreach (ChatSegment seg in RunInternal(balance, userModel, request, chatService.ChatEntry(request, fup, cancellationToken)))
+        {
+            yield return seg;
         }
     }
 
@@ -87,13 +118,12 @@ public class InChatContext(long firstTick)
             throw new InsufficientBalanceException();
         }
         _lastReliableUsageSegment = usage;
-        _finalUsageSegment = usage;
         _segmentsAfterUsage.Clear();
     }
 
     private void RegisterContentSegment(ChatSegment segment)
     {
-        if (segment is ThinkChatSegment think && _firstReasoningTick == _preprocessTick)
+        if (segment is ThinkChatSegment && _firstReasoningTick == _preprocessTick)
         {
             _firstReasoningTick = Stopwatch.GetTimestamp();
         }
@@ -108,14 +138,14 @@ public class InChatContext(long firstTick)
         }
 
         _segments.AddMerged(segment);
-        _segmentsAfterUsage.Add(segment);
+        _segmentsAfterUsage.AddMerged(segment);
     }
 
-    private void EnsureFinalUsage(UserModel userModel)
+    private (ChatTokenUsage usage, bool isReliable) EnsureFinalUsage(ChatRequest chatRequest, UserModel userModel)
     {
         if (_priceConfig == null || _balance == null)
         {
-            return;
+            throw new InvalidOperationException("InChatContext has not been initialized.");
         }
 
         ChatTokenUsage baseUsage = _lastReliableUsageSegment?.Usage ?? ChatTokenUsage.Zero;
@@ -124,38 +154,31 @@ public class InChatContext(long firstTick)
         bool hasReliableBase = _lastReliableUsageSegment != null;
         bool hasAdditional = additionalUsage.OutputTokens > 0 || additionalUsage.ReasoningTokens > 0;
 
-        ChatTokenUsage finalUsage;
-
         if (hasReliableBase)
         {
             if (hasAdditional)
             {
-                finalUsage = new ChatTokenUsage
+                return (new ChatTokenUsage
                 {
                     InputTokens = baseUsage.InputTokens,
                     OutputTokens = baseUsage.OutputTokens + additionalUsage.OutputTokens,
                     ReasoningTokens = baseUsage.ReasoningTokens + additionalUsage.ReasoningTokens,
                     CacheTokens = baseUsage.CacheTokens,
                     CacheCreationTokens = baseUsage.CacheCreationTokens
-                };
+                }, false);
             }
             else
             {
-                finalUsage = baseUsage;
+                return (baseUsage, true);
             }
         }
         else
         {
-            finalUsage = additionalUsage;
-        }
-
-        _finalUsageSegment = new UsageChatSegment { Usage = finalUsage };
-
-        _balance.SetCost(userModel.ModelId, finalUsage.InputTokens, finalUsage.OutputTokens, finalUsage.CacheTokens, _priceConfig);
-        if (!_balance.IsSufficient)
-        {
-            FinishReason = DBFinishReason.InsufficientBalance;
-            throw new InsufficientBalanceException();
+            int promptTokens = chatRequest.EstimatePromptTokens(ChatService.Tokenizer);
+            return (additionalUsage with
+            {
+                InputTokens = promptTokens,
+            }, false);
         }
     }
 
@@ -177,25 +200,7 @@ public class InChatContext(long firstTick)
         };
     }
 
-    public ChatCompletionSnapshot FullResponse
-    {
-        get
-        {
-            UsageChatSegment? usageSegment = _finalUsageSegment ?? _lastReliableUsageSegment;
-            ChatTokenUsage usage = usageSegment?.Usage ?? ChatTokenUsage.Zero;
-            bool hasReliableUsage = _lastReliableUsageSegment != null;
-            bool noPendingSegments = _segmentsAfterUsage.Count == 0;
-            bool isReliable = usageSegment != null && hasReliableUsage && noPendingSegments;
-
-            return new ChatCompletionSnapshot
-            {
-                Segments = _segments,
-                Usage = usage,
-                IsUsageReliable = isReliable,
-                FinishReason = FinishReason
-            };
-        }
-    }
+    public ChatCompletionSnapshot? FullResponse { get; private set; }
 
     public int ReasoningDurationMs => _segments.OfType<ThinkChatSegment>().Any()
         ? (int)Stopwatch.GetElapsedTime(_firstReasoningTick, _firstResponseTick).TotalMilliseconds
@@ -205,7 +210,7 @@ public class InChatContext(long firstTick)
     {
         if (_finishTick == _preprocessTick) _finishTick = Stopwatch.GetTimestamp();
 
-        ChatCompletionSnapshot snapshot = FullResponse;
+        ChatCompletionSnapshot snapshot = FullResponse ?? throw new InvalidOperationException("FullResponse is not available.");
 
         UserModelUsage usage = new()
         {

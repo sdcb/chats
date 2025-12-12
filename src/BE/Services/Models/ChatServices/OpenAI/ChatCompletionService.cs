@@ -460,7 +460,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         {
             if (tool is FunctionTool functionTool)
             {
-                result.Add(functionTool.ToJsonObject());
+                result.Add(functionTool.ToChatCompletionToolCall());
             }
         }
         return result;

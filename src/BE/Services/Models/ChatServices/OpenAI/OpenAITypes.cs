@@ -30,7 +30,7 @@ public sealed record FunctionTool : ChatTool
         };
     }
 
-    public JsonObject ToJsonObject()
+    public JsonObject ToChatCompletionToolCall()
     {
         JsonObject function = new()
         {
@@ -59,6 +59,32 @@ public sealed record FunctionTool : ChatTool
         }
 
         return tool;
+    }
+
+    public JsonObject ToResponseToolCall()
+    {
+        JsonObject function = new()
+        {
+            ["type"] = "function",
+            ["name"] = FunctionName
+        };
+
+        if (FunctionDescription != null)
+        {
+            function["description"] = FunctionDescription;
+        }
+
+        if (FunctionParameters != null)
+        {
+            function["parameters"] = JsonNode.Parse(FunctionParameters);
+        }
+
+        if (FunctionSchemaIsStrict == true)
+        {
+            function["strict"] = true;
+        }
+
+        return function;
     }
 }
 

@@ -166,7 +166,7 @@ public class OpenAIImageController(
                 List<Base64Image> pendingFinalImages = [];
                 ChatTokenUsage? latestUsage = null;
 
-                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s.ChatEntry(chatRequest, fup, cancellationToken)))
+                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, chatRequest, fup, cancellationToken))
                 {
                     switch (segment)
                     {
@@ -237,7 +237,7 @@ public class OpenAIImageController(
 
                 if (pendingFinalImages.Count > 0)
                 {
-                    ChatTokenUsage usageFallback = latestUsage ?? icc.FullResponse.Usage;
+                    ChatTokenUsage usageFallback = latestUsage ?? icc.FullResponse!.Usage;
                     if (!hasSuccessYield)
                     {
                         Response.StatusCode = 200;
@@ -269,7 +269,7 @@ public class OpenAIImageController(
                 // Non-streaming response
                 List<ImageData> imageDataList = [];
 
-                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s.ChatEntry(chatRequest, fup, cancellationToken)))
+                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, chatRequest, fup, cancellationToken))
                 {
                     if (segment is Base64Image image && segment is not Base64PreviewImage)
                     {
@@ -277,7 +277,7 @@ public class OpenAIImageController(
                     }
                 }
 
-                ChatTokenUsage finalUsage = icc.FullResponse.Usage;
+                ChatTokenUsage finalUsage = icc.FullResponse!.Usage;
 
                 ImageGenerationResponse response = new()
                 {

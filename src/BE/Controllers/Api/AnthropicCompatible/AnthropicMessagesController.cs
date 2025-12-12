@@ -87,7 +87,7 @@ public class AnthropicMessagesController(
         try
         {
             ChatRequest csr = request.ToChatRequest(currentApiKey.User.Id.ToString(), cm);
-            await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s.ChatEntry(csr, fup, cancellationToken)))
+            await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, csr, fup, cancellationToken))
             {
                 if (request.Streamed)
                 {
@@ -138,7 +138,7 @@ public class AnthropicMessagesController(
                 }
 
                 // Send message_delta with stop_reason
-                await YieldEvent("message_delta", icc.FullResponse.ToMessageDeltaEvent(), cancellationToken);
+                await YieldEvent("message_delta", icc.FullResponse!.ToMessageDeltaEvent(), cancellationToken);
 
                 // Send message_stop
                 await YieldEvent("message_stop", new MessageStopEvent(), cancellationToken);
@@ -216,7 +216,7 @@ public class AnthropicMessagesController(
         else
         {
             // Non-streamed success response
-            AnthropicResponse response = icc.FullResponse.ToAnthropicResponse(request.Model!, messageId);
+            AnthropicResponse response = icc.FullResponse!.ToAnthropicResponse(request.Model!, messageId);
             return Ok(response);
         }
     }

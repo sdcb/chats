@@ -638,7 +638,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 ChatService s = chatFactory.CreateChatService(userModel.Model);
 
                 bool responseStated = false, reasoningStarted = false;
-                await foreach (ChatSegment segment in icc.Run(calc, userModel, s.ChatEntry(request, fup, cancellationToken)))
+                await foreach (ChatSegment segment in icc.Run(calc, userModel, s, request, fup, cancellationToken))
                 {
                     switch (segment)
                     {
@@ -742,7 +742,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 ChatRoleId = (byte)DBChatRole.Assistant,
                 CreatedAt = DateTime.UtcNow,
                 Usage = icc.ToUserModelUsage(currentUser.Id, calc, userModel, await clientInfoIdTask, isApi: false),
-                StepContents = [.. StepContent.FromFullResponse(icc.FullResponse, errorText, imageFileCache)],
+                StepContents = [.. StepContent.FromFullResponse(icc.FullResponse!, errorText, imageFileCache)],
                 Turn = turn,
             };
 

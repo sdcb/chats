@@ -4,7 +4,6 @@ using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
 using System.Diagnostics;
-using System.Linq;
 using System.Net.Http.Headers;
 using System.Net.ServerSentEvents;
 using System.Runtime.CompilerServices;
@@ -449,7 +448,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         JsonArray functionTools = [];
         foreach (FunctionTool tool in request.Tools.OfType<FunctionTool>())
         {
-            functionTools.Add(tool.ToJsonObject());
+            functionTools.Add(tool.ToResponseToolCall());
         }
         if (functionTools.Count > 0)
         {
