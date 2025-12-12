@@ -272,7 +272,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
 
                 if (eventType == "error")
                 {
-                    string? errorMessage = json.TryGetProperty("error", out JsonElement errorEl) && errorEl.TryGetProperty("message", out JsonElement msgEl) ? msgEl.GetString() : "Unknown error";
+                    string? errorMessage = json.TryGetProperty("error", out JsonElement errorEl) ? errorEl.GetString() : "Unknown error";
                     throw new CustomChatServiceException(DBFinishReason.UpstreamError, errorMessage ?? "Unknown error");
                 }
                 else if (eventType == "response.output_text.delta")
