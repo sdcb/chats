@@ -2,7 +2,7 @@ namespace Chats.BE.Tests.ChatServices;
 
 public class FiddlerHttpDumpParserTests
 {
-    private const string TestDataPath = "ChatServices/GoogleAI";
+    private const string TestDataPath = "ChatServices/GoogleAI/FiddlerDump";
 
     [Fact]
     public void CanParseCodeExecuteDump()
@@ -82,7 +82,7 @@ public class FiddlerHttpDumpParserTests
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         
         // Assert - Request
-        Assert.Contains("image-generation", dump.Request.Url);
+        Assert.Equal("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:streamGenerateContent", dump.Request.Url);
         Assert.Contains("IMAGE", dump.Request.Body);
         
         // Assert - Response
