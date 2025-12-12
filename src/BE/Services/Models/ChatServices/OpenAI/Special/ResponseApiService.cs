@@ -121,7 +121,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             }
             else if (status == "failed")
             {
-                string? errorMessage = responseObj?["error"]?["message"]?.GetValue<string>() ?? "Response failed";
+                string? errorMessage = responseObj?["error"]?.ToString() ?? "Response failed";
                 if (usage != null)
                 {
                     yield return ChatSegment.FromUsage(usage);
