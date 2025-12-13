@@ -48,6 +48,7 @@ public class Program
         builder.Services.AddSingleton<ChatFactory>();
         builder.Services.AddSingleton<Services.Models.ChatServices.Test.Test2ChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.ChatCompletionService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.DeepSeekChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.AzureAIFoundryChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.QianFan.QianFanChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.QwenChatService>();
@@ -62,6 +63,7 @@ public class Program
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.OpenRouterChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.ResponseApiService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.AzureResponseApiService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.MiniMaxChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.Anthropic.AnthropicChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.Anthropic.DeepSeekAnthropicService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.Anthropic.MiniMaxAnthropicService>();

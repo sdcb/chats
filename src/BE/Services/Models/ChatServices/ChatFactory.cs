@@ -32,6 +32,8 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
             DBApiType.OpenAIChatCompletion => modelProvider switch
             {
                 DBModelProvider.AzureAIFoundry => sp.GetRequiredService<AzureAIFoundryChatService>(),
+                DBModelProvider.DeepSeek => sp.GetRequiredService<DeepSeekChatService>(),
+                    DBModelProvider.MiniMax => sp.GetRequiredService<MiniMaxChatService>(),
                 DBModelProvider.WenXinQianFan => sp.GetRequiredService<QianFanChatService>(),
                 DBModelProvider.AliyunDashscope => sp.GetRequiredService<QwenChatService>(),
                 DBModelProvider.ZhiPuAI => sp.GetRequiredService<GLMChatService>(),

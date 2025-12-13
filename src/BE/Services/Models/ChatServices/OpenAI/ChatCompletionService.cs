@@ -73,6 +73,101 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
     protected virtual string ReasoningContentPropertyName => "reasoning_content";
 
+    /// <summary>
+    /// Controls how to persist thinking/reasoning content returned from upstream.
+    /// Default behavior keeps existing functionality: persist it as <see cref="ThinkChatSegment"/>.
+    /// Override to drop or transform the thinking content.
+    /// </summary>
+    protected virtual bool TryCreateThinkingSegmentForStorage(string thinkingContent, out ChatSegment? segment)
+    {
+        if (string.IsNullOrEmpty(thinkingContent))
+        {
+            segment = null;
+            return false;
+        }
+
+        segment = ChatSegment.FromThink(thinkingContent);
+        return true;
+    }
+
+    /// <summary>
+    /// Controls how to persist thinking/reasoning content returned from upstream, with an optional signature.
+    /// Some providers (e.g., MiniMax `reasoning_details`) return structured reasoning payloads that should be
+    /// preserved in history for interleaved thinking.
+    /// Default behavior ignores the signature and uses <see cref="TryCreateThinkingSegmentForStorage(string, out ChatSegment?)"/>.
+    /// </summary>
+    protected virtual bool TryCreateThinkingSegmentForStorage(string thinkingContent, string? thinkingSignature, out ChatSegment? segment)
+    {
+        return TryCreateThinkingSegmentForStorage(thinkingContent, out segment);
+    }
+
+    /// <summary>
+    /// Controls how to send thinking/reasoning content back to upstream in the next request.
+    /// Default behavior sends nothing to avoid impacting providers that don't support it.
+    /// Override in provider-specific services (e.g., DeepSeek) to support interleaved thinking.
+    /// </summary>
+    protected virtual bool TryBuildThinkingContentForRequest(
+        NeutralMessage message,
+        IReadOnlyList<NeutralThinkContent> thinkingContents,
+        IReadOnlyList<NeutralToolCallContent> toolCalls,
+        out string? thinkingContent)
+    {
+        thinkingContent = null;
+        return false;
+    }
+
+    /// <summary>
+    /// Controls how to send thinking/reasoning content back to upstream in the next request.
+    /// Use this when the upstream expects a structured reasoning payload (e.g., MiniMax `reasoning_details`).
+    /// Default behavior returns false.
+    /// </summary>
+    protected virtual bool TryBuildThinkingNodeForRequest(
+        NeutralMessage message,
+        IReadOnlyList<NeutralThinkContent> thinkingContents,
+        IReadOnlyList<NeutralToolCallContent> toolCalls,
+        out JsonNode? thinkingNode)
+    {
+        thinkingNode = null;
+        return false;
+    }
+
+    private static string? ExtractThinkingText(JsonElement el)
+    {
+        return el.ValueKind switch
+        {
+            JsonValueKind.String => el.GetString(),
+            JsonValueKind.Object => el.TryGetProperty("text", out JsonElement t) && t.ValueKind == JsonValueKind.String ? t.GetString() : null,
+            JsonValueKind.Array => ExtractThinkingTextFromArray(el),
+            _ => null
+        };
+    }
+
+    private static string? ExtractThinkingTextFromArray(JsonElement el)
+    {
+        StringBuilder sb = new();
+        foreach (JsonElement item in el.EnumerateArray())
+        {
+            string? part = ExtractThinkingText(item);
+            if (!string.IsNullOrEmpty(part))
+            {
+                sb.Append(part);
+            }
+        }
+        return sb.Length > 0 ? sb.ToString() : null;
+    }
+
+    private (string? text, string? signature) TryGetThinkingPayload(JsonElement obj)
+    {
+        if (!obj.TryGetProperty(ReasoningContentPropertyName, out JsonElement rc))
+        {
+            return (null, null);
+        }
+
+        string? text = ExtractThinkingText(rc);
+        string? signature = rc.ValueKind is JsonValueKind.Array or JsonValueKind.Object ? rc.GetRawText() : null;
+        return (text, signature);
+    }
+
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         if (!request.ChatConfig.Model.AllowStreaming || !request.Streamed)
@@ -147,7 +242,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             string? content = delta.TryGetProperty("content", out JsonElement c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
 
             // Parse reasoning content (for models like DeepSeek-R1)
-            string? reasoningContent = delta.TryGetProperty(ReasoningContentPropertyName, out JsonElement rc) && rc.ValueKind == JsonValueKind.String ? rc.GetString() : null;
+            var (reasoningContent, reasoningSignature) = TryGetThinkingPayload(delta);
 
             // Parse tool calls
             List<ToolCallSegment> toolCallSegments = [];
@@ -200,9 +295,10 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             {
                 items.Add(ChatSegment.FromText(content));
             }
-            if (!string.IsNullOrEmpty(reasoningContent))
+
+            if (!string.IsNullOrEmpty(reasoningContent) && TryCreateThinkingSegmentForStorage(reasoningContent, reasoningSignature, out ChatSegment? thinkSegment) && thinkSegment != null)
             {
-                items.Add(ChatSegment.FromThink(reasoningContent));
+                items.Add(thinkSegment);
             }
             items.AddRange(toolCallSegments);
 
@@ -309,13 +405,10 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                 }
 
                 // Reasoning content
-                if (message.TryGetProperty(ReasoningContentPropertyName, out JsonElement rc) && rc.ValueKind == JsonValueKind.String)
+                var (reasoning, reasoningSignature) = TryGetThinkingPayload(message);
+                if (!string.IsNullOrEmpty(reasoning) && TryCreateThinkingSegmentForStorage(reasoning, reasoningSignature, out ChatSegment? thinkSegment) && thinkSegment != null)
                 {
-                    string? reasoning = rc.GetString();
-                    if (!string.IsNullOrEmpty(reasoning))
-                    {
-                        items.Add(ChatSegment.FromThink(reasoning));
-                    }
+                    items.Add(thinkSegment);
                 }
 
                 // Tool calls
@@ -513,6 +606,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         // Check if we have tool calls (assistant message)
         List<NeutralToolCallContent> toolCalls = message.Contents.OfType<NeutralToolCallContent>().ToList();
+        List<NeutralThinkContent> thinkingContents = message.Contents.OfType<NeutralThinkContent>().ToList();
         List<NeutralContent> otherContents = message.Contents.Where(c => c is not NeutralToolCallContent and not NeutralThinkContent).ToList();
 
         JsonObject msg = new() { ["role"] = role };
@@ -559,6 +653,15 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                 });
             }
             msg["tool_calls"] = toolCallsArray;
+        }
+
+        if (TryBuildThinkingNodeForRequest(message, thinkingContents, toolCalls, out JsonNode? thinkingNode) && thinkingNode != null)
+        {
+            msg[ReasoningContentPropertyName] = thinkingNode;
+        }
+        else if (TryBuildThinkingContentForRequest(message, thinkingContents, toolCalls, out string? thinkingContent) && !string.IsNullOrEmpty(thinkingContent))
+        {
+            msg[ReasoningContentPropertyName] = thinkingContent;
         }
 
         return msg;
