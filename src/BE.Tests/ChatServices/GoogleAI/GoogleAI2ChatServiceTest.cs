@@ -10,6 +10,8 @@ using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
 using System.Net;
 using System.Text;
+using System.Text.Json;
+using Chats.BE.Tests.ChatServices.Http;
 
 namespace Chats.BE.Tests.ChatServices.GoogleAI;
 
@@ -23,11 +25,17 @@ public class GoogleAI2ChatServiceTest
     private static IHttpClientFactory CreateMockHttpClientFactory(FiddlerHttpDumpParser.HttpDump dump)
     {
         var statusCode = (HttpStatusCode)dump.Response.StatusCode;
-        return new FakeHttpClientFactory(dump.Response.Chunks, statusCode);
+        return new FiddlerDumpHttpClientFactory(dump.Response.Chunks, statusCode, dump.Request.Body);
     }
 
     private static ChatRequest CreateBaseChatRequest(string modelDeploymentName, string prompt, Action<ChatConfig>? configure = null)
     {
+        bool isFlash = modelDeploymentName.Contains("gemini-2.5-flash", StringComparison.OrdinalIgnoreCase) &&
+                       !modelDeploymentName.Contains("gemini-2.5-flash-image", StringComparison.OrdinalIgnoreCase);
+        bool isFlashImage = modelDeploymentName.Contains("gemini-2.5-flash-image", StringComparison.OrdinalIgnoreCase);
+        bool isImageGenerationExp = modelDeploymentName.Contains("gemini-2.0-flash-exp-image-generation", StringComparison.OrdinalIgnoreCase);
+        bool isFlashExp = modelDeploymentName.Contains("gemini-2.0-flash-exp", StringComparison.OrdinalIgnoreCase);
+
         var modelKey = new ModelKey
         {
             Id = 1,
@@ -50,10 +58,15 @@ public class GoogleAI2ChatServiceTest
             AllowCodeExecution = true,
             AllowToolCall = true,
             ContextWindow = 128000,
-            MaxResponseTokens = 8192,
+            MaxResponseTokens = isImageGenerationExp ? 8192 : (isFlashExp ? 8000 : (isFlashImage ? 8192 : 0)),
             MinTemperature = 0,
             MaxTemperature = 2,
         };
+
+        if (isFlash)
+        {
+            model.ReasoningEffortOptions = "1";
+        }
 
         var chatConfig = new ChatConfig
         {
@@ -61,6 +74,8 @@ public class GoogleAI2ChatServiceTest
             ModelId = 1,
             Model = model,
             Temperature = 1.0f,
+            ReasoningEffortId = isFlash ? (byte)DBReasoningEffort.Minimal : (byte)DBReasoningEffort.Default,
+            SystemPrompt = null,
         };
 
         configure?.Invoke(chatConfig);
@@ -87,6 +102,7 @@ public class GoogleAI2ChatServiceTest
         var request = CreateBaseChatRequest("gemini-2.5-flash", "调用内置工具，计算1234/5432=?", cfg =>
         {
             cfg.CodeExecutionEnabled = true;
+            cfg.SystemPrompt = GoogleAiDumpExtractors.TryGetSystemPrompt(dump.Request.Body);
         });
 
         // Act
@@ -146,6 +162,7 @@ public class GoogleAI2ChatServiceTest
         var request = CreateBaseChatRequest("gemini-2.5-flash", "调用C#工具，计算1234/5432=?", cfg =>
         {
             // 添加工具定义
+            cfg.SystemPrompt = GoogleAiDumpExtractors.TryGetSystemPrompt(dump.Request.Body);
         });
         request = request with
         {
@@ -154,8 +171,8 @@ public class GoogleAI2ChatServiceTest
                 new FunctionTool
                 {
                     FunctionName = "run_code",
-                    FunctionDescription = "执行C#代码",
-                    FunctionParameters = """{"type":"object","properties":{"code":{"type":"string"}},"required":["code"]}"""
+                    FunctionDescription = GoogleAiDumpExtractors.TryGetFirstFunctionDescription(dump.Request.Body) ?? "执行C#代码",
+                    FunctionParameters = """{"type":"object","properties":{"code":{"type":"string"},"timeout":{"type":"integer"}},"required":["code"]}"""
                 }
             ]
         };
@@ -197,6 +214,7 @@ public class GoogleAI2ChatServiceTest
         var request = CreateBaseChatRequest("gemini-2.5-flash", "今天有什么新闻？", cfg =>
         {
             cfg.WebSearchEnabled = true;
+            cfg.SystemPrompt = GoogleAiDumpExtractors.TryGetSystemPrompt(dump.Request.Body);
         });
 
         // Act
@@ -238,8 +256,8 @@ public class GoogleAI2ChatServiceTest
         var chatCompletionService = new ChatCompletionService(httpClientFactory);
         var service = new GoogleAI2ChatService(chatCompletionService, httpClientFactory);
 
-        // 使用支持图片生成的模型名称
-        var request = CreateBaseChatRequest("gemini-2.0-flash-exp-image-generation", "1+1=?");
+        // 使用与录制 Fiddler dump 一致的图片生成模型名称
+        var request = CreateBaseChatRequest("gemini-2.5-flash-image", "生成一张小猫的图片");
 
         // Act
         var segments = new List<ChatSegment>();
@@ -279,7 +297,18 @@ public class GoogleAI2ChatServiceTest
         var chatCompletionService = new ChatCompletionService(httpClientFactory);
         var service = new GoogleAI2ChatService(chatCompletionService, httpClientFactory);
 
-        var request = CreateBaseChatRequest("gemini-2.0-flash-exp-image-generation", "生成一张小猫的图片");
+        var request = CreateBaseChatRequest("gemini-2.0-flash-exp-image-generation", "生成一张小猫的图片") with
+        {
+            Tools =
+            [
+                new FunctionTool
+                {
+                    FunctionName = "run_code",
+                    FunctionDescription = GoogleAiDumpExtractors.TryGetFirstFunctionDescription(dump.Request.Body) ?? "执行C#代码",
+                    FunctionParameters = """{"type":"object","properties":{"code":{"type":"string"},"timeout":{"type":"integer"}},"required":["code"]}"""
+                }
+            ]
+        };
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<RawChatServiceException>(async () =>
@@ -306,7 +335,18 @@ public class GoogleAI2ChatServiceTest
         var chatCompletionService = new ChatCompletionService(httpClientFactory);
         var service = new GoogleAI2ChatService(chatCompletionService, httpClientFactory);
 
-        var request = CreateBaseChatRequest("gemini-2.0-flash-exp", "生成一张小猫的图片");
+        var request = CreateBaseChatRequest("gemini-2.0-flash-exp", "生成一张小猫的图片") with
+        {
+            Tools =
+            [
+                new FunctionTool
+                {
+                    FunctionName = "run_code",
+                    FunctionDescription = GoogleAiDumpExtractors.TryGetFirstFunctionDescription(dump.Request.Body) ?? "执行C#代码",
+                    FunctionParameters = """{"type":"object","properties":{"code":{"type":"string"},"timeout":{"type":"integer"}},"required":["code"]}"""
+                }
+            ]
+        };
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<RawChatServiceException>(async () =>
@@ -323,123 +363,78 @@ public class GoogleAI2ChatServiceTest
     }
 }
 
-/// <summary>
-/// 模拟的 HttpClientFactory，基于 Fiddler dump 的 chunks 逐块返回响应
-/// </summary>
-public class FakeHttpClientFactory : IHttpClientFactory
+internal static class GoogleAiDumpExtractors
 {
-    private readonly List<string> _chunks;
-    private readonly HttpStatusCode _statusCode;
-
-    public FakeHttpClientFactory(List<string> chunks, HttpStatusCode statusCode = HttpStatusCode.OK)
+    public static string? TryGetSystemPrompt(string? requestBodyJson)
     {
-        _chunks = chunks;
-        _statusCode = statusCode;
-    }
-
-    public HttpClient CreateClient(string name)
-    {
-        var handler = new FakeHttpMessageHandler(_chunks, _statusCode);
-        return new HttpClient(handler);
-    }
-}
-
-/// <summary>
-/// 模拟的 HttpMessageHandler，逐块返回响应内容
-/// </summary>
-public class FakeHttpMessageHandler : HttpMessageHandler
-{
-    private readonly List<string> _chunks;
-    private readonly HttpStatusCode _statusCode;
-
-    public FakeHttpMessageHandler(List<string> chunks, HttpStatusCode statusCode = HttpStatusCode.OK)
-    {
-        _chunks = chunks;
-        _statusCode = statusCode;
-    }
-
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-    {
-        var response = new HttpResponseMessage(_statusCode)
+        if (string.IsNullOrWhiteSpace(requestBodyJson))
         {
-            Content = new StreamContent(new ChunkedMemoryStream(_chunks))
-        };
-        response.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json")
-        {
-            CharSet = "UTF-8"
-        };
-        return Task.FromResult(response);
-    }
-}
+            return null;
+        }
 
-/// <summary>
-/// 模拟 chunked 流式响应的 Stream
-/// 将 chunks 列表转换为可读取的流（跳过 chunk 大小行）
-/// </summary>
-public class ChunkedMemoryStream : Stream
-{
-    private readonly MemoryStream _innerStream;
-
-    public ChunkedMemoryStream(List<string> chunks)
-    {
-        // HTTP chunked encoding 中，chunk 大小行只是协议分隔符
-        // 原始数据是连续的字节流，chunk 之间不需要添加任何换行符
-        var content = new StringBuilder();
-        
-        foreach (var line in chunks)
+        try
         {
-            if (!IsChunkSizeLine(line))
+            using JsonDocument doc = JsonDocument.Parse(requestBodyJson);
+            if (!doc.RootElement.TryGetProperty("systemInstruction", out JsonElement sys))
             {
-                content.Append(line);
+                return null;
             }
+
+            if (!sys.TryGetProperty("parts", out JsonElement parts) || parts.ValueKind != JsonValueKind.Array || parts.GetArrayLength() == 0)
+            {
+                return null;
+            }
+
+            JsonElement first = parts[0];
+            if (!first.TryGetProperty("text", out JsonElement text) || text.ValueKind != JsonValueKind.String)
+            {
+                return null;
+            }
+
+            return text.GetString();
         }
-        
-        var bytes = Encoding.UTF8.GetBytes(content.ToString());
-        _innerStream = new MemoryStream(bytes);
-    }
-
-    /// <summary>
-    /// 判断是否为 chunk 大小行
-    /// </summary>
-    private static bool IsChunkSizeLine(string line)
-    {
-        if (string.IsNullOrEmpty(line)) return false;
-        
-        // 如果行首有空白字符（有缩进），则不是 chunk 大小行
-        if (char.IsWhiteSpace(line[0])) return false;
-        
-        var trimmed = line.Trim();
-        if (string.IsNullOrEmpty(trimmed)) return false;
-        if (trimmed.Length > 8) return false;
-        
-        return trimmed.All(c => 
-            (c >= '0' && c <= '9') || 
-            (c >= 'a' && c <= 'f') || 
-            (c >= 'A' && c <= 'F'));
-    }
-
-    public override bool CanRead => true;
-    public override bool CanSeek => _innerStream.CanSeek;
-    public override bool CanWrite => false;
-    public override long Length => _innerStream.Length;
-    public override long Position 
-    { 
-        get => _innerStream.Position; 
-        set => _innerStream.Position = value; 
-    }
-
-    public override void Flush() => _innerStream.Flush();
-    public override int Read(byte[] buffer, int offset, int count) => _innerStream.Read(buffer, offset, count);
-    public override long Seek(long offset, SeekOrigin origin) => _innerStream.Seek(offset, origin);
-    public override void SetLength(long value) => throw new NotSupportedException();
-    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
+        catch (JsonException)
         {
-            _innerStream.Dispose();
+            return null;
         }
-        base.Dispose(disposing);
+    }
+
+    public static string? TryGetFirstFunctionDescription(string? requestBodyJson)
+    {
+        if (string.IsNullOrWhiteSpace(requestBodyJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(requestBodyJson);
+            if (!doc.RootElement.TryGetProperty("tools", out JsonElement tools) || tools.ValueKind != JsonValueKind.Array)
+            {
+                return null;
+            }
+
+            foreach (JsonElement tool in tools.EnumerateArray())
+            {
+                if (!tool.TryGetProperty("functionDeclarations", out JsonElement decls) || decls.ValueKind != JsonValueKind.Array || decls.GetArrayLength() == 0)
+                {
+                    continue;
+                }
+
+                JsonElement decl = decls[0];
+                if (!decl.TryGetProperty("description", out JsonElement desc) || desc.ValueKind != JsonValueKind.String)
+                {
+                    return null;
+                }
+
+                return desc.GetString();
+            }
+
+            return null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }
