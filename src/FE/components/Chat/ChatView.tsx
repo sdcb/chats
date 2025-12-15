@@ -126,10 +126,41 @@ const ChatView = memo(() => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const autoScrollDisabledRef = useRef<boolean>(false);
+  const prevIsMessagesLoadingRef = useRef<boolean>(isMessagesLoading);
 
   useEffect(() => {
     autoScrollDisabledRef.current = autoScrollTemporarilyDisabled;
   }, [autoScrollTemporarilyDisabled]);
+
+  // 当消息加载完成后（从 loading 变为 loaded），滚动到 leafMessage 的位置
+  useEffect(() => {
+    const wasLoading = prevIsMessagesLoadingRef.current;
+    prevIsMessagesLoadingRef.current = isMessagesLoading;
+
+    // 如果之前是 loading，现在不是 loading，说明消息加载完成
+    if (wasLoading && !isMessagesLoading && selectedMessages.length > 0) {
+      // 使用 requestAnimationFrame 确保 DOM 渲染完成后再滚动
+      requestAnimationFrame(() => {
+        // 获取最后一条活跃消息（leafMessage）
+        const lastMessageGroup = selectedMessages[selectedMessages.length - 1];
+        const leafMessage = lastMessageGroup?.find((x) => x.isActive);
+        
+        if (leafMessage) {
+          // 通过 data-message-id 属性找到 leafMessage 的 DOM 元素
+          const leafMessageElement = chatContainerRef.current?.querySelector(
+            `[data-message-id="${leafMessage.id}"]`
+          );
+          if (leafMessageElement) {
+            // 滚动到 leafMessage 的开始位置
+            leafMessageElement.scrollIntoView({ behavior: 'instant', block: 'start' });
+            return;
+          }
+        }
+        // 如果找不到 leafMessage 元素，回退到滚动到底部
+        messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+      });
+    }
+  }, [isMessagesLoading, selectedMessages]);
 
   const checkSelectChatModelIsExist = useCallback((spans: ChatSpanDto[]) => {
     const modelList = spans
