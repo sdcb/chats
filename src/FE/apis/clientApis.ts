@@ -8,6 +8,7 @@ import {
   ResponseContent,
 } from '@/types/chat';
 import { IChatMessage, IStepGenerateInfo } from '@/types/chatMessage';
+import { transformBackendTurnToMessage } from '@/utils/message';
 import {
   ChatResult,
   ChatPresetReorderRequest,
@@ -68,7 +69,9 @@ export const changeUserPassword = (params: PostUserPassword) => {
 
 export const getUserMessages = (chatId: string): Promise<IChatMessage[]> => {
   const fetchService = createFetchClient();
-  return fetchService.get(`/api/messages/${chatId}`);
+  return fetchService.get(`/api/messages/${chatId}`).then((data: unknown) => {
+    return (data as any[]).map(transformBackendTurnToMessage);
+  });
 };
 
 export const getTurnGenerateInfo = (
@@ -86,6 +89,26 @@ export const getSharedTurnGenerateInfo = (
   const fetchService = createFetchClient();
   return fetchService.get(
     `/api/public/chat-share/${chatShareId}/${turnId}/generate-info`,
+  );
+};
+
+export const getStepGenerateInfo = (
+  chatId: string,
+  turnId: string,
+  stepId: string,
+): Promise<IStepGenerateInfo | null> => {
+  const fetchService = createFetchClient();
+  return fetchService.get(`/api/messages/${chatId}/${turnId}/steps/${stepId}/generate-info`);
+};
+
+export const getSharedStepGenerateInfo = (
+  chatShareId: string,
+  turnId: string,
+  stepId: string,
+): Promise<IStepGenerateInfo | null> => {
+  const fetchService = createFetchClient();
+  return fetchService.get(
+    `/api/public/chat-share/${chatShareId}/${turnId}/steps/${stepId}/generate-info`,
   );
 };
 

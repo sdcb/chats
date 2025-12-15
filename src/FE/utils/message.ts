@@ -8,9 +8,35 @@ import {
 import {
   ChatMessageNode,
   IChatMessage,
+  IStep,
   ResponseMessageTempId,
   UserMessageTempId,
 } from '@/types/chatMessage';
+
+/**
+ * Transform backend turn response to frontend message format
+ * Backend returns steps with contents, frontend needs both flattened content and steps
+ */
+export function transformBackendTurnToMessage(backendTurn: any): IChatMessage {
+  const steps: IStep[] = backendTurn.steps || [];
+  const flattenedContent: ResponseContent[] = steps.flatMap(step => step.contents || []);
+  
+  return {
+    id: backendTurn.id,
+    spanId: backendTurn.spanId,
+    parentId: backendTurn.parentId,
+    role: backendTurn.role,
+    steps: steps,
+    content: flattenedContent,
+    status: ChatSpanStatus.None,
+    siblingIds: [],
+    modelId: backendTurn.modelId || 0,
+    modelName: backendTurn.modelName,
+    modelProviderId: backendTurn.modelProviderId,
+    reaction: backendTurn.reaction,
+    createdAt: backendTurn.createdAt,
+  } as IChatMessage;
+}
 
 export function findLastLeafId(
   messages: ChatMessageNode[],
@@ -187,6 +213,7 @@ export function generateResponseMessage(
     siblingIds: [],
     isActive: false,
     content: [],
+    steps: [],
     modelName: modelName,
     modelId: modelId,
   } as IChatMessage;
@@ -206,5 +233,6 @@ export function generateUserMessage(
     siblingIds: [],
     isActive: false,
     content,
+    steps: [],
   } as IChatMessage;
 }

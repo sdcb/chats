@@ -6,6 +6,14 @@ import {
   Role,
 } from './chat';
 
+// Step interface representing a single step within a turn
+export interface IStep {
+  id: string;
+  edited: boolean;
+  contents: ResponseContent[];
+  createdAt: string;
+}
+
 // Enum equivalent to SseResponseKind
 export enum SseResponseKind {
   StopId = 0,
@@ -132,14 +140,14 @@ export interface IChatMessage {
   parentId: string | null;
   siblingIds: string[];
   role: ChatRole;
-  content: ResponseContent[];
+  steps: IStep[];
+  content: ResponseContent[]; // Flattened content from all steps for backward compatibility
   status: ChatSpanStatus;
   isActive?: boolean;
   modelName?: string;
   modelId: number;
   modelProviderId?: number;
   reaction?: boolean | null;
-  edited?: boolean;
   displayType?: MessageDisplayType;
   createdAt?: string;
 }
@@ -162,6 +170,7 @@ export interface MessageNode {
   id: string;
   parentId: string | null;
   content: ResponseContent[];
+  steps: IStep[];
   siblingIds: string[];
   modelName?: string;
   role: Role;
@@ -177,6 +186,7 @@ export interface ChatMessageNode {
   parentId: string | null;
   modelId: number;
   content: ResponseContent[];
+  steps: IStep[];
   siblingIds: string[];
   isActive?: boolean;
   status: ChatSpanStatus;

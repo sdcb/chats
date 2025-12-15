@@ -98,7 +98,7 @@ const ResponseMessageActions = (props: Props) => {
             .join('')}
         />
 
-        {message.edited && <EditStatusAction />}
+        {message.steps.some(step => step.edited) && <EditStatusAction />}
 
         <DeleteAction
           hidden={chatting}
@@ -108,7 +108,7 @@ const ResponseMessageActions = (props: Props) => {
         />
 
         <GenerateInformationAction
-          hidden={message.edited}
+          hidden={message.steps.some(step => step.edited)}
           disabled={messageReceiving}
           message={message}
           chatId={selectedChat.id}
