@@ -1,8 +1,14 @@
 import { IStepGenerateInfo } from '@/types/chatMessage';
-import { getSharedTurnGenerateInfo, getTurnGenerateInfo } from '@/apis/clientApis';
+import { getSharedTurnGenerateInfo, getTurnGenerateInfo, getStepGenerateInfo, getSharedStepGenerateInfo } from '@/apis/clientApis';
 
 export interface GenerateInfoCacheKey {
   turnId: string;
+  chatId?: string;
+  chatShareId?: string;
+}
+
+export interface StepGenerateInfoCacheKey {
+  stepId: string;
   chatId?: string;
   chatShareId?: string;
 }
@@ -190,4 +196,119 @@ export const getOrLoadGenerateInfo = async (
   const cached = getCachedGenerateInfo(key);
   if (cached) return cached;
   return requestGenerateInfo(key);
+};
+
+// Step-level cache
+const stepResolvedCache = new Map<string, IStepGenerateInfo | null>();
+const stepInFlightCache = new Map<string, Promise<IStepGenerateInfo | null>>();
+
+type StepCacheListener = (data: IStepGenerateInfo | null) => void;
+const stepListeners = new Map<string, Set<StepCacheListener>>();
+
+const toStepCacheKey = ({ stepId, chatId, chatShareId }: StepGenerateInfoCacheKey): string => {
+  if (chatShareId) return `share:${chatShareId}:step:${stepId}`;
+  if (chatId) return `chat:${chatId}:step:${stepId}`;
+  return `step:${stepId}`;
+};
+
+const emitStepCacheUpdate = (cacheKey: string, data: IStepGenerateInfo | null): void => {
+  const subs = stepListeners.get(cacheKey);
+  if (!subs || subs.size === 0) return;
+
+  subs.forEach((listener) => {
+    try {
+      listener(data);
+    } catch (error) {
+      console.error('stepGenerateInfoCache listener failed:', error);
+    }
+  });
+};
+
+export const getCachedStepGenerateInfo = (key: StepGenerateInfoCacheKey): IStepGenerateInfo | null | undefined => {
+  const cacheKey = toStepCacheKey(key);
+  if (stepResolvedCache.has(cacheKey)) {
+    return stepResolvedCache.get(cacheKey);
+  }
+  return undefined;
+};
+
+export const fetchStepGenerateInfoCached = async (
+  key: StepGenerateInfoCacheKey,
+  fetcher: () => Promise<IStepGenerateInfo | null>,
+): Promise<IStepGenerateInfo | null> => {
+  const cacheKey = toStepCacheKey(key);
+
+  if (stepResolvedCache.has(cacheKey)) {
+    return stepResolvedCache.get(cacheKey) ?? null;
+  }
+
+  const inFlight = stepInFlightCache.get(cacheKey);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const promise = fetcher()
+    .then((data) => {
+      stepResolvedCache.set(cacheKey, data);
+      emitStepCacheUpdate(cacheKey, data);
+      stepInFlightCache.delete(cacheKey);
+      return data;
+    })
+    .catch((error) => {
+      stepInFlightCache.delete(cacheKey);
+      throw error;
+    });
+
+  stepInFlightCache.set(cacheKey, promise);
+  return promise;
+};
+
+export const setStepGenerateInfoCache = (
+  key: StepGenerateInfoCacheKey,
+  data: IStepGenerateInfo | null,
+): void => {
+  const cacheKey = toStepCacheKey(key);
+  stepResolvedCache.set(cacheKey, data);
+  emitStepCacheUpdate(cacheKey, data);
+};
+
+export const subscribeStepGenerateInfoCache = (
+  key: StepGenerateInfoCacheKey,
+  listener: StepCacheListener,
+): (() => void) => {
+  const cacheKey = toStepCacheKey(key);
+  const existing = stepListeners.get(cacheKey);
+  if (existing) {
+    existing.add(listener);
+  } else {
+    stepListeners.set(cacheKey, new Set([listener]));
+  }
+
+  return () => {
+    const subs = stepListeners.get(cacheKey);
+    if (!subs) return;
+    subs.delete(listener);
+    if (subs.size === 0) {
+      stepListeners.delete(cacheKey);
+    }
+  };
+};
+
+export const requestStepGenerateInfo = async (
+  key: StepGenerateInfoCacheKey,
+): Promise<IStepGenerateInfo | null> => {
+  return fetchStepGenerateInfoCached(key, () => {
+    const { chatId, chatShareId, stepId } = key;
+    if (chatShareId) return getSharedStepGenerateInfo(chatShareId, stepId);
+    if (chatId) return getStepGenerateInfo(chatId, stepId);
+    return Promise.resolve(null);
+  });
+};
+
+export const getOrLoadStepGenerateInfo = async (
+  key: StepGenerateInfoCacheKey,
+): Promise<IStepGenerateInfo | null> => {
+  const cached = getCachedStepGenerateInfo(key);
+  if (cached !== undefined) return cached;
+  return requestStepGenerateInfo(key);
 };

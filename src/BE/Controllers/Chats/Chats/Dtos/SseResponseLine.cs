@@ -146,7 +146,12 @@ public sealed record ToolCompletedLine(
 
 public sealed record EndStep(
     [property: JsonPropertyName("i")] byte SpanId,
-    [property: JsonPropertyName("r")] Step Step
+    [property: JsonPropertyName("r")] StepDto Step
+) : SseResponseLine;
+
+public sealed record EndStepInternal(
+    byte SpanId,
+    Step Step
 ) : SseResponseLine;
 
 public sealed record EndTurn(

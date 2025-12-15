@@ -306,7 +306,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     await YieldResponse(SseResponseLine.ChatLeafTurnId(chat.LeafTurnId!.Value, idEncryption));
                 }
             }
-            else if (line is EndStep endLine)
+            else if (line is EndStepInternal endLine)
             {
                 if (endLine.Step.Turn.ChatConfig == null)
                 {
@@ -315,6 +315,10 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 }
                 chat.UpdatedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync(CancellationToken.None);
+                
+                // Send EndStep to client with StepDto
+                StepDto stepDto = StepDto.FromDB(endLine.Step, fup, idEncryption);
+                await YieldResponse(new EndStep(endLine.SpanId, stepDto));
             }
             else if (line is TempImageGeneratedLine tempImageGeneratedLine)
             {
@@ -625,7 +629,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         {
             csr.Messages.Add(step.ToNeutral());
             turn.Steps.Add(step);
-            writer.TryWrite(new EndStep(chatSpan.SpanId, step));
+            writer.TryWrite(new EndStepInternal(chatSpan.SpanId, step));
         }
 
         async Task<Step> RunOne(ChatRequest request, CancellationToken cancellationToken)

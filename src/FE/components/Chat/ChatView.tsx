@@ -41,11 +41,13 @@ import {
 } from '@/types/chat';
 import {
   IChatMessage,
+  IStep,
   MessageDisplayType,
   ReactionMessageType,
   ResponseMessageTempId,
   SseResponseKind,
   SseResponseLine,
+  getMessageContents,
 } from '@/types/chatMessage';
 import { ChatSpanDto } from '@/types/clientApis';
 import { Prompt } from '@/types/prompt';
@@ -340,6 +342,71 @@ const ChatView = memo(() => {
     changeSelectedChatStatus(ChatStatus.Failed);
   }, [changeSelectedChatStatus]);
 
+  // Helper to get the last step's contents (for streaming, we append to last step)
+  const getLastStepContents = (msg: IChatMessage): ResponseContent[] => {
+    if (msg.steps.length === 0) return [];
+    return msg.steps[msg.steps.length - 1].contents;
+  };
+
+  // Helper to update the last step's contents
+  const withUpdatedLastStepContents = (
+    msg: IChatMessage,
+    newContents: ResponseContent[],
+  ): IChatMessage => {
+    if (msg.steps.length === 0) {
+      return {
+        ...msg,
+        steps: [{ id: '', contents: newContents, edited: false, createdAt: new Date().toISOString() }],
+      };
+    }
+    const newSteps = [...msg.steps];
+    newSteps[newSteps.length - 1] = {
+      ...newSteps[newSteps.length - 1],
+      contents: newContents,
+    };
+    return { ...msg, steps: newSteps };
+  };
+
+  // Helper to add a new step to a message (used when EndStep is received)
+  const addNewStepToMessage = (
+    msg: IChatMessage,
+    stepData: IStep,
+  ): IChatMessage => {
+    return {
+      ...msg,
+      steps: [...msg.steps, { ...stepData, contents: [] }],
+    };
+  };
+
+  // Handle EndStep event: finalize current step and start a new one
+  const changeSelectedResponseEndStep = (
+    selectedMsgs: IChatMessage[][],
+    messageId: string,
+    stepData: IStep,
+  ): IChatMessage[][] => {
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
+    const updatedMessageList = messageList.map((x) => {
+      if (x.id === messageId) {
+        // Replace the last step with the actual step data from server, and add a new empty step
+        if (x.steps.length > 0) {
+          const newSteps = [...x.steps];
+          newSteps[newSteps.length - 1] = stepData;
+          // Add a new empty step for upcoming content
+          newSteps.push({ id: '', contents: [], edited: false, createdAt: new Date().toISOString() });
+          return { ...x, steps: newSteps };
+        }
+        return x;
+      }
+      return x;
+    });
+
+    const newSelectedMsgs = [...selectedMsgs];
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
+    messageDispatch(setSelectedMessages(newSelectedMsgs));
+    return newSelectedMsgs;
+  };
+
   const changeSelectedResponseMessage = (
     selectedMsgs: IChatMessage[][],
     messageId: string,
@@ -351,8 +418,9 @@ const ChatView = memo(() => {
     const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        const lastContentIndex = x.content.length - 1;
-        let newContent = [...x.content];
+        const currentContents = getLastStepContents(x);
+        const lastContentIndex = currentContents.length - 1;
+        let newContent = [...currentContents];
         
         if (
           lastContentIndex >= 0 &&
@@ -372,15 +440,18 @@ const ChatView = memo(() => {
           newContent.push({ i: '', $type: MessageContentType.error, c: text });
         }
 
-        const updatedMessage = {
-          ...x,
-          content: newContent,
+        let updatedMessage = withUpdatedLastStepContents(x, newContent);
+        updatedMessage = {
+          ...updatedMessage,
           status: status,
         };
 
         if (status === ChatSpanStatus.None) {
-          updatedMessage.siblingIds = [...x.siblingIds, messageId];
-          updatedMessage.id = finalMessageId!;
+          updatedMessage = {
+            ...updatedMessage,
+            siblingIds: [...x.siblingIds, messageId],
+            id: finalMessageId!,
+          };
         }
 
         return updatedMessage;
@@ -403,8 +474,9 @@ const ChatView = memo(() => {
     const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        const lastContentIndex = x.content.length - 1;
-        let newContent = [...x.content];
+        const currentContents = getLastStepContents(x);
+        const lastContentIndex = currentContents.length - 1;
+        let newContent = [...currentContents];
         
         // 检查最后一个内容是否是 tempFileId 类型（预览图片）
         if (
@@ -421,10 +493,7 @@ const ChatView = memo(() => {
           newContent.push({ i: '', $type: MessageContentType.tempFileId, c: text });
         }
 
-        return {
-          ...x,
-          content: newContent,
-        };
+        return withUpdatedLastStepContents(x, newContent);
       }
       return x;
     });
@@ -444,8 +513,9 @@ const ChatView = memo(() => {
     const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        const lastContentIndex = x.content.length - 1;
-        let newContent = [...x.content];
+        const currentContents = getLastStepContents(x);
+        const lastContentIndex = currentContents.length - 1;
+        let newContent = [...currentContents];
         
         // 检查最后一个内容是否是 tempFileId 类型（预览图片）
         if (
@@ -463,10 +533,7 @@ const ChatView = memo(() => {
           newContent.push({ i: '', $type: MessageContentType.fileId, c: text });
         }
 
-        return {
-          ...x,
-          content: newContent,
-        };
+        return withUpdatedLastStepContents(x, newContent);
       }
       return x;
     });
@@ -486,8 +553,9 @@ const ChatView = memo(() => {
     const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        const lastContentIndex = x.content.length - 1;
-        let newContent = [...x.content];
+        const currentContents = getLastStepContents(x);
+        const lastContentIndex = currentContents.length - 1;
+        let newContent = [...currentContents];
         
         if (
           lastContentIndex >= 0 &&
@@ -508,10 +576,10 @@ const ChatView = memo(() => {
           } as ReasoningContent);
         }
 
+        let updatedMessage = withUpdatedLastStepContents(x, newContent);
         return {
-          ...x,
+          ...updatedMessage,
           status: ChatSpanStatus.Reasoning,
-          content: newContent,
         };
       }
       return x;
@@ -532,7 +600,8 @@ const ChatView = memo(() => {
     const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        const newContent = [...x.content];
+        const currentContents = getLastStepContents(x);
+        const newContent = [...currentContents];
         for (let i = newContent.length - 1; i >= 0; i--) {
           const c = newContent[i];
           if (c.$type === MessageContentType.reasoning) {
@@ -547,10 +616,7 @@ const ChatView = memo(() => {
             break;
           }
         }
-        return {
-          ...x,
-          content: newContent,
-        };
+        return withUpdatedLastStepContents(x, newContent);
       }
       return x;
     });
@@ -572,7 +638,8 @@ const ChatView = memo(() => {
     const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        let newContent = [...x.content];
+        const currentContents = getLastStepContents(x);
+        let newContent = [...currentContents];
 
         // 查找是否已存在该工具调用/响应
         const callIndex = newContent.findIndex(
@@ -606,10 +673,7 @@ const ChatView = memo(() => {
           }
         }
 
-        return {
-          ...x,
-          content: newContent,
-        };
+        return withUpdatedLastStepContents(x, newContent);
       }
       return x;
     });
@@ -630,7 +694,8 @@ const ChatView = memo(() => {
     const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
-        let newContent = [...x.content];
+        const currentContents = getLastStepContents(x);
+        let newContent = [...currentContents];
 
         // 查找是否已存在该工具调用/响应
         const callIndex = newContent.findIndex(
@@ -662,10 +727,7 @@ const ChatView = memo(() => {
           }
         }
 
-        return {
-          ...x,
-          content: newContent,
-        };
+        return withUpdatedLastStepContents(x, newContent);
       }
       return x;
     });
@@ -938,6 +1000,12 @@ const ChatView = memo(() => {
         if (currentToolCallIdBySpan.get(spanId) === toolCallId) {
           currentToolCallIdBySpan.delete(spanId);
         }
+      } else if (value.k === SseResponseKind.EndStep) {
+        const { r: stepData, i: spanId } = value;
+        const msgId = `${ResponseMessageTempId}-${spanId}`;
+        // End current step and start a new one
+        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
+        selectedMessageList = changeSelectedResponseEndStep(selectedMessageList, msgId, stepData);
       } else if (value.k === SseResponseKind.UpdateTitle) {
         changeChatTitle(value.r);
       } else if (value.k === SseResponseKind.TitleSegment) {
@@ -1147,11 +1215,15 @@ const ChatView = memo(() => {
     if (!isCopy) {
       msgs = messages.map((x) => {
         if (x.id === messageId) {
-          const newContent = x.content.map((c) => {
-            if (c.i === content.i) return content;
-            return c;
-          });
-          return { ...x, content: newContent, edited: true };
+          const newSteps = x.steps.map((step) => ({
+            ...step,
+            contents: step.contents.map((c) => {
+              if (c.i === content.i) return content;
+              return c;
+            }),
+            edited: step.contents.some((c) => c.i === content.i) ? true : step.edited,
+          }));
+          return { ...x, steps: newSteps };
         }
         return x;
       });
@@ -1169,11 +1241,15 @@ const ChatView = memo(() => {
             };
             return copyMsg;
           } else {
-            const newContent = m.content.map((c) => {
-              if (c.i === content.i) return content;
-              return c;
-            });
-            m.content = newContent;
+            const newSteps = m.steps.map((step) => ({
+              ...step,
+              contents: step.contents.map((c) => {
+                if (c.i === content.i) return content;
+                return c;
+              }),
+              edited: step.contents.some((c) => c.i === content.i) ? true : step.edited,
+            }));
+            m.steps = newSteps;
           }
         }
         return m;
@@ -1216,11 +1292,14 @@ const ChatView = memo(() => {
 
     const msgs = messages.map((x) => {
       if (x.id === messageId && x.role === ChatRole.User) {
-        const newContent = x.content.map((c) => {
-          if (c.i === content.i) return content;
-          return c;
-        });
-        return { ...x, content: newContent };
+        const newSteps = x.steps.map((step) => ({
+          ...step,
+          contents: step.contents.map((c) => {
+            if (c.i === content.i) return content;
+            return c;
+          }),
+        }));
+        return { ...x, steps: newSteps };
       }
       return x;
     });
@@ -1228,13 +1307,16 @@ const ChatView = memo(() => {
     const selectedMsgs = selectedMessages.map((msg) => {
       return msg.map((m) => {
         if (m.id === messageId && m.role === ChatRole.User) {
-          const newContent = m.content.map((c) => {
-            if (c.i === content.i) return content;
-            return c;
-          });
+          const newSteps = m.steps.map((step) => ({
+            ...step,
+            contents: step.contents.map((c) => {
+              if (c.i === content.i) return content;
+              return c;
+            }),
+          }));
           return {
             ...m,
-            content: newContent,
+            steps: newSteps,
           };
         }
         return m;

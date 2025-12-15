@@ -10,6 +10,7 @@ import {
   IChatMessage,
   ResponseMessageTempId,
   UserMessageTempId,
+  getMessageContents,
 } from '@/types/chatMessage';
 
 export function findLastLeafId(
@@ -92,8 +93,8 @@ export function findSelectedMessageByLeafId(
         let selectedMessage: ChatMessageNode | null = null;
 
         siblingGroup.forEach((x) => {
-          const messageIsError = !!x.content.find(
-            (x) => x.$type === MessageContentType.error,
+          const messageIsError = !!getMessageContents(x).find(
+            (c) => c.$type === MessageContentType.error,
           );
           if (x.id === currentMessage!.id) {
             selectedMessage = {
@@ -118,8 +119,8 @@ export function findSelectedMessageByLeafId(
 
         if (!selectedMessage) {
           const lastMessage = siblingGroup[siblingGroup.length - 1];
-          const messageIsError = !!lastMessage.content.find(
-            (x) => x.$type === MessageContentType.error,
+          const messageIsError = !!getMessageContents(lastMessage).find(
+            (c) => c.$type === MessageContentType.error,
           );
           selectedMessage = {
             ...lastMessage,
@@ -186,7 +187,7 @@ export function generateResponseMessage(
     status,
     siblingIds: [],
     isActive: false,
-    content: [],
+    steps: [{ id: '', contents: [], edited: false, createdAt: new Date().toISOString() }],
     modelName: modelName,
     modelId: modelId,
   } as IChatMessage;
@@ -205,6 +206,6 @@ export function generateUserMessage(
     parentId,
     siblingIds: [],
     isActive: false,
-    content,
+    steps: [{ id: '', contents: content, edited: false, createdAt: new Date().toISOString() }],
   } as IChatMessage;
 }

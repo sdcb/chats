@@ -55,6 +55,16 @@ public static class UrlEncryptionServiceExtensions
         return string.IsNullOrEmpty(encryptedTurnId) ? null : that.DecryptAsInt64(encryptedTurnId, EncryptionPurpose.TurnId);
     }
 
+    public static string EncryptStepId(this IUrlEncryptionService that, long stepId)
+    {
+        return that.Encrypt(stepId, EncryptionPurpose.StepId);
+    }
+
+    public static long DecryptStepId(this IUrlEncryptionService that, string encryptedStepId)
+    {
+        return that.DecryptAsInt64(encryptedStepId, EncryptionPurpose.StepId);
+    }
+
     public static string EncryptChatGroupId(this IUrlEncryptionService that, int chatGroupId)
     {
         return that.Encrypt(chatGroupId, EncryptionPurpose.ChatGroupId);

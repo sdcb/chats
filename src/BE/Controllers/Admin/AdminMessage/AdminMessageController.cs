@@ -167,13 +167,11 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                 Id = x.Id,
                 ParentId = x.ParentId,
                 Role = x.IsUser ? DBChatRole.User : DBChatRole.Assistant,
-                Content = x.Steps
-                    .SelectMany(x => x.StepContents)
-                    .OrderBy(x => x.Id)
+                Steps = x.Steps
+                    .OrderBy(s => s.Id)
                     .ToArray(),
                 CreatedAt = x.Steps.First().CreatedAt,
                 SpanId = x.SpanId,
-                Edited = x.Steps.Any(x => x.Edited),
                 Usage = x.IsUser ? null : new ChatMessageTempUsage()
                 {
                     ModelId = x.Steps.First().Usage!.ModelId,

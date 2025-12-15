@@ -14,6 +14,7 @@ import {
   ResponseContent,
   TextContent,
 } from '@/types/chat';
+import { IChatMessage, getMessageContents } from '@/types/chatMessage';
 
 import { Button } from '@/components/ui/button';
 import { SendButton, useSendKeyHandler } from '@/components/ui/send-button';
@@ -27,17 +28,8 @@ import EditAction from './EditAction';
 import PaginationAction from './PaginationAction';
 import RegenerateAction from './RegenerateAction';
 
-export interface UserMessage {
-  id: string;
-  role: ChatRole;
-  content: ResponseContent[];
-  status: ChatSpanStatus;
-  parentId: string | null;
-  siblingIds: string[];
-}
-
 interface Props {
-  message: UserMessage;
+  message: IChatMessage;
   selectedChat: IChat;
   readonly?: boolean;
   onChangeMessage?: (messageId: string) => void;
@@ -63,7 +55,8 @@ const UserMessage = (props: Props) => {
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { id: messageId, siblingIds, parentId, content } = message;
+  const { id: messageId, siblingIds, parentId } = message;
+  const content = getMessageContents(message);
   const defaultText = useMemo(() => {
     const textContent = content.find((x) => x.$type === MessageContentType.text) as TextContent | undefined;
     return textContent?.c || '';
@@ -79,14 +72,14 @@ const UserMessage = (props: Props) => {
 
   const handleEditMessage = (isOnlySave: boolean = false) => {
     if (isOnlySave) {
-      let msgContent = message.content.find(
+      let msgContent = content.find(
         (x) => x.$type === MessageContentType.text,
       )! as TextContent;
       msgContent.c = contentText;
       onEditUserMessage && onEditUserMessage(message.id, msgContent);
     } else {
       if (selectedChat.id && onEditAndSendMessage) {
-        const messageContent = structuredClone(message.content).map(
+        const messageContent = structuredClone(content).map(
           (x: any) => {
             if (x.$type === MessageContentType.text) {
               x.c = contentText;

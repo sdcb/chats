@@ -20,17 +20,14 @@ public abstract record TurnDto
     [JsonPropertyName("role")]
     public required DBChatRole Role { get; init; }
 
-    [JsonPropertyName("content")]
-    public required ContentResponseItem[] Content { get; init; }
+    [JsonPropertyName("steps")]
+    public required StepDto[] Steps { get; init; }
 
     [JsonPropertyName("createdAt")]
     public required DateTime CreatedAt { get; init; }
 
     [JsonPropertyName("spanId")]
     public required byte? SpanId { get; init; }
-
-    [JsonPropertyName("edited")]
-    public required bool Edited { get; init; }
 }
 
 public record RequestMessageDto : TurnDto
@@ -42,10 +39,9 @@ public record RequestMessageDto : TurnDto
             Id = urlEncryption.EncryptTurnId(message.Id),
             ParentId = urlEncryption.EncryptTurnId(message.ParentId),
             Role = message.IsUser ? DBChatRole.User : DBChatRole.Assistant,
-            Content = ContentResponseItem.FromContent([.. message.Steps.SelectMany(x => x.StepContents)], fup, urlEncryption),
+            Steps = StepDto.FromDB(message.Steps, fup, urlEncryption),
             CreatedAt = message.Steps.First().CreatedAt,
             SpanId = message.SpanId,
-            Edited = message.Steps.Any(x => x.Edited),
         };
     }
 }
@@ -92,10 +88,9 @@ public record ChatMessageTemp
     public required long Id { get; init; }
     public required long? ParentId { get; init; }
     public required DBChatRole Role { get; init; }
-    public required StepContent[] Content { get; init; }
+    public required Step[] Steps { get; init; }
     public required DateTime CreatedAt { get; init; }
     public required byte? SpanId { get; init; }
-    public required bool Edited { get; init; }
     public required ChatMessageTempUsage? Usage { get; init; }
     public required bool? Reaction { get; init; }
 
@@ -108,10 +103,9 @@ public record ChatMessageTemp
                 Id = urlEncryption.EncryptTurnId(Id),
                 ParentId = ParentId != null ? urlEncryption.EncryptTurnId(ParentId.Value) : null, 
                 Role = Role,
-                Content = ContentResponseItem.FromContent(Content, fup, urlEncryption),
+                Steps = StepDto.FromDB(Steps, fup, urlEncryption),
                 CreatedAt = CreatedAt,
                 SpanId = SpanId,
-                Edited = Edited,
             };
         }
         else
@@ -121,10 +115,9 @@ public record ChatMessageTemp
                 Id = urlEncryption.EncryptTurnId(Id),
                 ParentId = ParentId != null ? urlEncryption.EncryptTurnId(ParentId.Value) : null, 
                 Role = Role,
-                Content = ContentResponseItem.FromContent(Content, fup, urlEncryption),
+                Steps = StepDto.FromDB(Steps, fup, urlEncryption),
                 CreatedAt = CreatedAt,
                 SpanId = SpanId,
-                Edited = Edited,
 
                 ModelId = Usage.ModelId,
                 ModelName = Usage.ModelName,
@@ -141,13 +134,12 @@ public record ChatMessageTemp
             // user/system message
             return new()
             {
-                Content = [.. assistantMessage.Steps.SelectMany(x => x.StepContents)],
+                Steps = [.. assistantMessage.Steps.OrderBy(x => x.Id)],
                 CreatedAt = assistantMessage.Steps.First().CreatedAt,
                 Id = assistantMessage.Id,
                 ParentId = assistantMessage.ParentId,
                 Role = DBChatRole.User,
                 SpanId = assistantMessage.SpanId,
-                Edited = false,
                 Usage = null,
                 Reaction = null,
             };
@@ -161,13 +153,12 @@ public record ChatMessageTemp
 
             return new()
             {
-                Content = [.. assistantMessage.Steps.SelectMany(x => x.StepContents)],
+                Steps = [.. assistantMessage.Steps.OrderBy(x => x.Id)],
                 CreatedAt = assistantMessage.Steps.First().CreatedAt,
                 Id = assistantMessage.Id,
                 ParentId = assistantMessage.ParentId,
                 Role = DBChatRole.Assistant,
                 SpanId = assistantMessage.SpanId,
-                Edited = assistantMessage.Steps.Any(x => x.Edited),
                 Usage = new ChatMessageTempUsage()
                 {
                     ModelId = assistantMessage.Steps.First().Usage!.ModelId,

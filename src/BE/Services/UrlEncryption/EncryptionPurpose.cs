@@ -5,6 +5,7 @@ public enum EncryptionPurpose
     ChatId,
     FileId,
     TurnId,
+    StepId,
     ChatGroupId,
     ChatShareId,
     ChatPresetId,

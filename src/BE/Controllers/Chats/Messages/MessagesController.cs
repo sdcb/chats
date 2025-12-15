@@ -32,13 +32,11 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                 Id = x.Id,
                 ParentId = x.ParentId,
                 Role = x.IsUser ? DBChatRole.User : DBChatRole.Assistant,
-                Content = x.Steps
-                    .SelectMany(x => x.StepContents)
-                    .OrderBy(x => x.Id)
+                Steps = x.Steps
+                    .OrderBy(s => s.Id)
                     .ToArray(),
                 CreatedAt = x.Steps.First().CreatedAt,
                 SpanId = x.SpanId,
-                Edited = x.Steps.Any(x => x.Edited),
                 Usage = x.IsUser ? null : new ChatMessageTempUsage()
                 {
                     ModelId = x.Steps.First().Usage!.ModelId,
@@ -87,6 +85,38 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         }
 
         return Ok(stepInfos);
+    }
+
+    [HttpGet("{chatId}/step/{encryptedStepId}/generate-info")]
+    public async Task<ActionResult<StepGenerateInfoDto>> GetStepGenerateInfo(string chatId, string encryptedStepId, CancellationToken cancellationToken)
+    {
+        long stepId = urlEncryption.DecryptStepId(encryptedStepId);
+        int decryptedChatId = urlEncryption.DecryptChatId(chatId);
+
+        StepGenerateInfoDto? stepInfo = await db.Steps
+            .Where(s => s.Id == stepId && s.Turn.ChatId == decryptedChatId && s.Turn.Chat.UserId == currentUser.Id && s.Usage != null)
+            .Select(s => new StepGenerateInfoDto
+            {
+                InputCachedTokens = s.Usage!.InputCachedTokens,
+                InputOverallTokens = s.Usage!.InputFreshTokens + s.Usage!.InputCachedTokens,
+                OutputTokens = s.Usage!.OutputTokens,
+                InputFreshPrice = s.Usage!.InputFreshCost,
+                InputCachedPrice = s.Usage!.InputCachedCost,
+                InputPrice = s.Usage!.InputFreshCost + s.Usage!.InputCachedCost,
+                OutputPrice = s.Usage!.OutputCost,
+                ReasoningTokens = s.Usage!.ReasoningTokens,
+                Duration = s.Usage!.TotalDurationMs,
+                ReasoningDuration = s.Usage!.ReasoningDurationMs,
+                FirstTokenLatency = s.Usage!.FirstResponseDurationMs,
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (stepInfo == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(stepInfo);
     }
 
     [HttpPut("{encryptedTurnId}/reaction/up")]

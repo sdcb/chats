@@ -4,11 +4,10 @@ import { useMemo } from 'react';
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatSpanDto } from '@/types/clientApis';
 import { ChatStatus, IChat, MessageContentType, TextContent } from '@/types/chat';
-import { IChatMessage, ReactionMessageType } from '@/types/chatMessage';
+import { IChatMessage, ReactionMessageType, getMessageContents, isAllStepsEdited } from '@/types/chatMessage';
 
 import CopyAction from './CopyAction';
 import DeleteAction from './DeleteAction';
-import EditStatusAction from './EditStatusAction';
 import GenerateInformationAction from './GenerateInformationAction';
 import PaginationAction from './PaginationAction';
 import ReactionAction from './ReactionAction';
@@ -92,13 +91,11 @@ const ResponseMessageActions = (props: Props) => {
       />
       <div className="flex gap-0 items-center">
         <CopyAction
-          text={message.content
+          text={getMessageContents(message)
             .filter((x) => x.$type === MessageContentType.text)
             .map((x) => (x as TextContent).c)
             .join('')}
         />
-
-        {message.edited && <EditStatusAction />}
 
         <DeleteAction
           hidden={chatting}
@@ -108,7 +105,7 @@ const ResponseMessageActions = (props: Props) => {
         />
 
         <GenerateInformationAction
-          hidden={message.edited}
+          hidden={isAllStepsEdited(message)}
           disabled={messageReceiving}
           message={message}
           chatId={selectedChat.id}

@@ -8,6 +8,8 @@ import {
 
 // Enum equivalent to SseResponseKind
 export enum SseResponseKind {
+  EndStep = -2,
+  EndTurn = -1,
   StopId = 0,
   Segment = 1,
   Error = 2,
@@ -109,6 +111,18 @@ interface SseResponseLineToolCompleted {
   r: string; // Result (工具调用结果)
 }
 
+interface SseResponseLineEndStep {
+  k: SseResponseKind.EndStep; // Kind is EndStep
+  i: number; // SpanId
+  r: IStep; // Step data
+}
+
+interface SseResponseLineEndTurn {
+  k: SseResponseKind.EndTurn; // Kind is EndTurn
+  i: number; // SpanId
+  r: IChatMessage; // Turn data
+}
+
 // Combined type for SseResponseLine
 export type SseResponseLine =
   | SseResponseLineStopId
@@ -124,7 +138,17 @@ export type SseResponseLine =
   | SseResponseLineImageGenerated
   | SseResponseLineImageGenerating
   | SseResponseLineCallingTool
-  | SseResponseLineToolCompleted;
+  | SseResponseLineToolCompleted
+  | SseResponseLineEndStep
+  | SseResponseLineEndTurn;
+
+/// Step represents a single step within a turn
+export interface IStep {
+  id: string;
+  contents: ResponseContent[];
+  edited: boolean;
+  createdAt: string;
+}
 
 export interface IChatMessage {
   id: string;
@@ -132,16 +156,30 @@ export interface IChatMessage {
   parentId: string | null;
   siblingIds: string[];
   role: ChatRole;
-  content: ResponseContent[];
+  steps: IStep[];
   status: ChatSpanStatus;
   isActive?: boolean;
   modelName?: string;
   modelId: number;
   modelProviderId?: number;
   reaction?: boolean | null;
-  edited?: boolean;
   displayType?: MessageDisplayType;
   createdAt?: string;
+}
+
+/// Helper function to get all contents from a message's steps
+export function getMessageContents(message: IChatMessage): ResponseContent[] {
+  return message.steps.flatMap((step) => step.contents);
+}
+
+/// Helper function to check if all steps in the message are edited
+export function isAllStepsEdited(message: IChatMessage): boolean {
+  return message.steps.length > 0 && message.steps.every((step) => step.edited);
+}
+
+/// Helper function to check if any step in the message is edited (kept for compatibility)
+export function isMessageEdited(message: IChatMessage): boolean {
+  return message.steps.some((step) => step.edited);
 }
 
 export interface IStepGenerateInfo {
@@ -161,7 +199,7 @@ export interface IStepGenerateInfo {
 export interface MessageNode {
   id: string;
   parentId: string | null;
-  content: ResponseContent[];
+  steps: IStep[];
   siblingIds: string[];
   modelName?: string;
   role: Role;
@@ -176,7 +214,7 @@ export interface ChatMessageNode {
   id: string;
   parentId: string | null;
   modelId: number;
-  content: ResponseContent[];
+  steps: IStep[];
   siblingIds: string[];
   isActive?: boolean;
   status: ChatSpanStatus;
@@ -192,7 +230,6 @@ export interface ChatMessageNode {
   duration?: number;
   firstTokenLatency?: number;
   reaction?: boolean | null;
-  edited?: boolean;
 }
 
 export const ResponseMessageTempId = 'RESPONSE_MESSAGE_TEMP_ID';

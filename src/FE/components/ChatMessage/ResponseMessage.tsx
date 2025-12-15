@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 
 import useTranslation from '@/hooks/useTranslation';
@@ -16,13 +16,14 @@ import {
   ToolCallContent,
   ToolResponseContent,
 } from '@/types/chat';
-import { IChatMessage, IStepGenerateInfo, MessageDisplayType } from '@/types/chatMessage';
+import { IChatMessage, IStep, IStepGenerateInfo, MessageDisplayType, getMessageContents } from '@/types/chatMessage';
 
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
 import ToolCallBlock from '@/components/Markdown/ToolCallBlock';
 import ImagePreview from '@/components/ImagePreview/ImagePreview';
 import FilePreview from '@/components/FilePreview/FilePreview';
+import StepDivider from './StepDivider';
 
 import ChatError from '../ChatError/ChatError';
 import { IconCopy, IconDots, IconEdit } from '../Icons';
@@ -145,11 +146,12 @@ const ResponseMessage = (props: Props) => {
   const { message, chatStatus, readonly, chatId, chatShareId, onEditResponseMessage } = props;
   const { t } = useTranslation();
 
-  const { id: messageId, status: messageStatus, content } = message;
+  const { id: messageId, status: messageStatus } = message;
+  const content = useMemo(() => getMessageContents(message), [message.steps]);
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [editId, setEditId] = useState(EMPTY_ID);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [messageContent, setMessageContent] = useState(message.content);
+  const [messageContent, setMessageContent] = useState(content);
   const [contentText, setContentText] = useState('');
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -255,7 +257,8 @@ const ResponseMessage = (props: Props) => {
 
   useEffect(() => {
     setMessageContent(structuredClone(content));
-  }, [content]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message.steps]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -275,25 +278,63 @@ const ResponseMessage = (props: Props) => {
   );
   const allImageUrls = imageContents.map((c) => getFileUrl(c.c as FileDef));
 
-  // 将连续的图片内容分组
-  const groupedContent: (ProcessedContent | ProcessedContent[])[] = [];
+  // 计算每个 content 属于哪个 step（用于在 step 切换处插入分隔线）
+  const contentStepMap = useMemo(() => {
+    const map = new Map<string, { stepIndex: number; step: IStep }>();
+    message.steps.forEach((step, stepIndex) => {
+      step.contents.forEach((c) => {
+        map.set(c.i, { stepIndex, step });
+      });
+    });
+    return map;
+  }, [message.steps]);
+
+  // 将连续的图片内容分组，并追踪 step 边界
+  type GroupedItem = { type: 'content'; item: ProcessedContent | ProcessedContent[] } | { type: 'stepDivider'; stepIndex: number; step: IStep };
+  const groupedContent: GroupedItem[] = [];
   let currentImageGroup: ProcessedContent[] = [];
+  let lastStepIndex = -1;
+  
+  // 获取 content 的 ID（ToolGroupContent 使用 toolCall.i）
+  const getContentId = (c: ProcessedContent): string => {
+    if (c.$type === 'toolGroup') {
+      return (c as ToolGroupContent).toolCall.i;
+    }
+    return (c as ResponseContent).i;
+  };
   
   processedContent.forEach((c) => {
+    // 检查是否需要插入 step 分隔线（仅当有多个 step 时）
+    const contentId = getContentId(c);
+    const contentInfo = contentStepMap.get(contentId);
+    if (contentInfo && message.steps.length > 1) {
+      if (lastStepIndex !== -1 && contentInfo.stepIndex !== lastStepIndex) {
+        // Step 切换，先处理当前图片组
+        if (currentImageGroup.length > 0) {
+          groupedContent.push({ type: 'content', item: currentImageGroup });
+          currentImageGroup = [];
+        }
+        // 插入前一个 step 的分隔线
+        const prevStep = message.steps[lastStepIndex];
+        groupedContent.push({ type: 'stepDivider', stepIndex: lastStepIndex, step: prevStep });
+      }
+      lastStepIndex = contentInfo.stepIndex;
+    }
+
     if (c.$type === MessageContentType.fileId || c.$type === MessageContentType.tempFileId) {
       currentImageGroup.push(c);
     } else {
       if (currentImageGroup.length > 0) {
-        groupedContent.push(currentImageGroup);
+        groupedContent.push({ type: 'content', item: currentImageGroup });
         currentImageGroup = [];
       }
-      groupedContent.push(c);
+      groupedContent.push({ type: 'content', item: c });
     }
   });
   
   // 处理最后一组图片
   if (currentImageGroup.length > 0) {
-    groupedContent.push(currentImageGroup);
+    groupedContent.push({ type: 'content', item: currentImageGroup });
   }
 
   // 判断是否应该显示骨架动画
@@ -323,7 +364,22 @@ const ResponseMessage = (props: Props) => {
       />
 
       {/* Render content in original order */}
-      {groupedContent.map((item, groupIndex) => {
+      {groupedContent.map((groupItem, groupIndex) => {
+        // 渲染 step 分隔线
+        if (groupItem.type === 'stepDivider') {
+          return (
+            <StepDivider
+              key={`step-divider-${groupItem.stepIndex}`}
+              stepId={groupItem.step.id}
+              stepIndex={groupItem.stepIndex}
+              edited={groupItem.step.edited}
+              chatId={chatId}
+              chatShareId={chatShareId}
+            />
+          );
+        }
+
+        const item = groupItem.item;
         // 如果是文件数组，用容器包裹并横向排列
         if (Array.isArray(item)) {
           return (

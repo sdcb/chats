@@ -79,14 +79,32 @@ export const getTurnGenerateInfo = (
   return fetchService.get(`/api/messages/${chatId}/${turnId}/generate-info`);
 };
 
+export const getStepGenerateInfo = (
+  chatId: string,
+  stepId: string,
+): Promise<IStepGenerateInfo | null> => {
+  const fetchService = createFetchClient();
+  return fetchService.get<IStepGenerateInfo>(`/api/messages/${chatId}/step/${stepId}/generate-info`).catch(() => null);
+};
+
 export const getSharedTurnGenerateInfo = (
   chatShareId: string,
   turnId: string,
 ): Promise<IStepGenerateInfo[]> => {
   const fetchService = createFetchClient();
-  return fetchService.get(
+  return fetchService.get<IStepGenerateInfo[]>(
     `/api/public/chat-share/${chatShareId}/${turnId}/generate-info`,
   );
+};
+
+export const getSharedStepGenerateInfo = (
+  chatShareId: string,
+  stepId: string,
+): Promise<IStepGenerateInfo | null> => {
+  const fetchService = createFetchClient();
+  return fetchService.get<IStepGenerateInfo>(
+    `/api/public/chat-share/${chatShareId}/step/${stepId}/generate-info`,
+  ).catch(() => null);
 };
 
 export const getChatsByPaging = (
