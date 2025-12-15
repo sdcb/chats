@@ -20,6 +20,7 @@ import {
   generateUserMessage,
 } from '@/utils/message';
 import { throttle } from '@/utils/throttle';
+import { syncChatsToCache } from '@/utils/chatCache';
 
 import {
   ChatRole,
@@ -107,6 +108,8 @@ const ChatView = memo(() => {
       const updatedChats = updater(chatsRef.current);
       chatsRef.current = updatedChats;
       chatDispatch(setChats(updatedChats));
+      // 同步更新缓存
+      syncChatsToCache(updatedChats);
     },
     [chatDispatch],
   );
@@ -919,10 +922,11 @@ const ChatView = memo(() => {
       leafMessageId,
     );
 
+    const updatedAt = currentISODateString();
     updateChatsState((prevChats) =>
       prevChats.map((x) =>
         x.id === selectedChat.id
-          ? { ...x, updatedAt: currentISODateString() }
+          ? { ...x, leafMessageId, updatedAt }
           : x,
       ),
     );
@@ -1034,14 +1038,15 @@ const ChatView = memo(() => {
     const selectedMsgs = findSelectedMessageByLeafId(messages, leafId);
     messageDispatch(setSelectedMessages(selectedMsgs));
     
+    const updatedAt = currentISODateString();
     // 更新selectedChat的leafMessageId
     updateChatsState((prevChats) =>
       prevChats.map((x) =>
         x.id === selectedChat.id
           ? {
               ...x,
-              leafMessageId: messageId,
-              updatedAt: currentISODateString(),
+              leafMessageId: leafId,
+              updatedAt,
             }
           : x,
       ),
@@ -1153,11 +1158,12 @@ const ChatView = memo(() => {
 
       msgs.push(copyMsg!);
       
+      const updatedAt = currentISODateString();
       // 更新chats中的leafMessageId
       updateChatsState((prevChats) =>
         prevChats.map((chat) =>
           chat.id === selectedChat.id
-            ? { ...chat, leafMessageId: copyMsg!.id }
+            ? { ...chat, leafMessageId: copyMsg!.id, updatedAt }
             : chat,
         ),
       );
@@ -1272,6 +1278,19 @@ const ChatView = memo(() => {
     const leafId = nextMsgId ? findLastLeafId(msgs, nextMsgId) : null;
     await deleteMessage(messageId, leafId);
     const selectedMsgs = leafId ? findSelectedMessageByLeafId(msgs, leafId) : [];
+    
+    // 更新chats中的leafMessageId
+    if (selectedChat && leafId) {
+      const updatedAt = currentISODateString();
+      updateChatsState((prevChats) =>
+        prevChats.map((x) =>
+          x.id === selectedChat.id
+            ? { ...x, leafMessageId: leafId, updatedAt }
+            : x,
+        ),
+      );
+    }
+    
     messageDispatch(setSelectedMessages(selectedMsgs));
     messageDispatch(setMessages(msgs));
   };

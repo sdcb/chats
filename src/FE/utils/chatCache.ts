@@ -120,3 +120,55 @@ export const clearChatCache = (): void => {
   
   localStorage.removeItem(cacheKey);
 };
+
+/**
+ * 根据内存中的 chats 数组同步更新缓存
+ * @param chats 当前内存中的聊天列表
+ */
+export const syncChatsToCache = (chats: { id: string; leafMessageId?: string; title: string; updatedAt: string }[]): void => {
+  const cachedData = getChatCache();
+  if (!cachedData?.length) return;
+
+  // 创建一个 map 方便查找
+  const chatMap = new Map(chats.map(c => [c.id, c]));
+  let changed = false;
+
+  const updatedGroups = cachedData.map((group) => {
+    const rows = group.chats.rows.map((cachedChat) => {
+      const memoryChat = chatMap.get(cachedChat.id);
+      if (!memoryChat) return cachedChat;
+
+      // 检查是否有变化
+      if (
+        cachedChat.leafMessageId !== memoryChat.leafMessageId ||
+        cachedChat.title !== memoryChat.title ||
+        cachedChat.updatedAt !== memoryChat.updatedAt
+      ) {
+        changed = true;
+        return {
+          ...cachedChat,
+          leafMessageId: memoryChat.leafMessageId,
+          title: memoryChat.title,
+          updatedAt: memoryChat.updatedAt,
+        };
+      }
+      return cachedChat;
+    });
+
+    if (rows === group.chats.rows) {
+      return group;
+    }
+
+    return {
+      ...group,
+      chats: {
+        ...group.chats,
+        rows,
+      },
+    };
+  });
+
+  if (changed) {
+    setChatCache(updatedGroups, '');
+  }
+};
