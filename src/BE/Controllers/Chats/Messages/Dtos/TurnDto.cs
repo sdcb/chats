@@ -20,17 +20,14 @@ public abstract record TurnDto
     [JsonPropertyName("role")]
     public required DBChatRole Role { get; init; }
 
-    [JsonPropertyName("content")]
-    public required ContentResponseItem[] Content { get; init; }
+    [JsonPropertyName("steps")]
+    public required StepDto[] Steps { get; init; }
 
     [JsonPropertyName("createdAt")]
     public required DateTime CreatedAt { get; init; }
 
     [JsonPropertyName("spanId")]
     public required byte? SpanId { get; init; }
-
-    [JsonPropertyName("edited")]
-    public required bool Edited { get; init; }
 }
 
 public record RequestMessageDto : TurnDto
@@ -42,10 +39,9 @@ public record RequestMessageDto : TurnDto
             Id = urlEncryption.EncryptTurnId(message.Id),
             ParentId = urlEncryption.EncryptTurnId(message.ParentId),
             Role = message.IsUser ? DBChatRole.User : DBChatRole.Assistant,
-            Content = ContentResponseItem.FromContent([.. message.Steps.SelectMany(x => x.StepContents)], fup, urlEncryption),
+            Steps = StepDto.FromDB([.. message.Steps], fup, urlEncryption),
             CreatedAt = message.Steps.First().CreatedAt,
             SpanId = message.SpanId,
-            Edited = message.Steps.Any(x => x.Edited),
         };
     }
 }
@@ -108,10 +104,15 @@ public record ChatMessageTemp
                 Id = urlEncryption.EncryptTurnId(Id),
                 ParentId = ParentId != null ? urlEncryption.EncryptTurnId(ParentId.Value) : null, 
                 Role = Role,
-                Content = ContentResponseItem.FromContent(Content, fup, urlEncryption),
+                Steps = new[] { new StepDto
+                {
+                    Id = urlEncryption.EncryptStepId(0), // Placeholder for user message without real step ID
+                    Edited = Edited,
+                    Contents = ContentResponseItem.FromContent(Content, fup, urlEncryption),
+                    CreatedAt = CreatedAt,
+                }},
                 CreatedAt = CreatedAt,
                 SpanId = SpanId,
-                Edited = Edited,
             };
         }
         else
@@ -121,10 +122,15 @@ public record ChatMessageTemp
                 Id = urlEncryption.EncryptTurnId(Id),
                 ParentId = ParentId != null ? urlEncryption.EncryptTurnId(ParentId.Value) : null, 
                 Role = Role,
-                Content = ContentResponseItem.FromContent(Content, fup, urlEncryption),
+                Steps = new[] { new StepDto
+                {
+                    Id = urlEncryption.EncryptStepId(0), // Placeholder for assistant message without real step ID
+                    Edited = Edited,
+                    Contents = ContentResponseItem.FromContent(Content, fup, urlEncryption),
+                    CreatedAt = CreatedAt,
+                }},
                 CreatedAt = CreatedAt,
                 SpanId = SpanId,
-                Edited = Edited,
 
                 ModelId = Usage.ModelId,
                 ModelName = Usage.ModelName,

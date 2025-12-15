@@ -134,4 +134,14 @@ public static class UrlEncryptionServiceExtensions
     {
         return that.DecryptAsInt64(encryptedMessageContentId, EncryptionPurpose.MessageContentId);
     }
+
+    public static string EncryptStepId(this IUrlEncryptionService that, long stepId)
+    {
+        return that.Encrypt(stepId, EncryptionPurpose.StepId);
+    }
+
+    public static long DecryptStepId(this IUrlEncryptionService that, string encryptedStepId)
+    {
+        return that.DecryptAsInt64(encryptedStepId, EncryptionPurpose.StepId);
+    }
 }

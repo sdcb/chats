@@ -89,6 +89,36 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         return Ok(stepInfos);
     }
 
+    [HttpGet("{chatId}/{encryptedTurnId}/steps/{encryptedStepId}/generate-info")]
+    public async Task<ActionResult<StepGenerateInfoDto?>> GetStepGenerateInfo(string chatId, string encryptedTurnId, string encryptedStepId, CancellationToken cancellationToken)
+    {
+        long turnId = urlEncryption.DecryptTurnId(encryptedTurnId);
+        long stepId = urlEncryption.DecryptStepId(encryptedStepId);
+        int decryptedChatId = urlEncryption.DecryptChatId(chatId);
+
+        StepGenerateInfoDto? stepInfo = await db.Steps
+            .Where(s => s.Id == stepId && s.TurnId == turnId && s.Turn.ChatId == decryptedChatId && s.Turn.Chat.UserId == currentUser.Id)
+            .Where(s => s.Usage != null)
+            .Select(s => new StepGenerateInfoDto
+            {
+                InputCachedTokens = s.Usage!.InputCachedTokens,
+                InputOverallTokens = s.Usage!.InputFreshTokens + s.Usage!.InputCachedTokens,
+                OutputTokens = s.Usage!.OutputTokens,
+                InputFreshPrice = s.Usage!.InputFreshCost,
+                InputCachedPrice = s.Usage!.InputCachedCost,
+                InputPrice = s.Usage!.InputFreshCost + s.Usage!.InputCachedCost,
+                OutputPrice = s.Usage!.OutputCost,
+                ReasoningTokens = s.Usage!.ReasoningTokens,
+                Duration = s.Usage!.TotalDurationMs,
+                ReasoningDuration = s.Usage!.ReasoningDurationMs,
+                FirstTokenLatency = s.Usage!.FirstResponseDurationMs,
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        // Return null for user messages or edited AI messages without usage data
+        return Ok(stepInfo);
+    }
+
     [HttpPut("{encryptedTurnId}/reaction/up")]
     public async Task<ActionResult> ReactionUp(string encryptedTurnId, CancellationToken cancellationToken)
     {

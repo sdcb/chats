@@ -75,6 +75,44 @@ public class SharedChatController(ChatsDB db) : ControllerBase
         return Ok(stepInfos);
     }
 
+    [HttpGet("{encryptedChatShareId}/{encryptedTurnId}/steps/{encryptedStepId}/generate-info")]
+    public async Task<ActionResult<StepGenerateInfoDto?>> GetSharedStepGenerateInfo(string encryptedChatShareId, string encryptedTurnId, string encryptedStepId,
+        [FromServices] IUrlEncryptionService idEncryption,
+        CancellationToken cancellationToken)
+    {
+        int chatShareId = idEncryption.DecryptChatShareId(encryptedChatShareId);
+        long turnId = idEncryption.DecryptTurnId(encryptedTurnId);
+        long stepId = idEncryption.DecryptStepId(encryptedStepId);
+        
+        ChatShare? chatShare = await db.ChatShares.FirstOrDefaultAsync(x => x.Id == chatShareId, cancellationToken);
+        if (chatShare == null || chatShare.ExpiresAt < DateTime.UtcNow)
+        {
+            return NotFound();
+        }
+
+        StepGenerateInfoDto? stepInfo = await db.Steps
+            .Where(s => s.Id == stepId && s.TurnId == turnId && s.Turn.ChatId == chatShare.ChatId && s.CreatedAt <= chatShare.SnapshotTime)
+            .Where(s => s.Usage != null)
+            .Select(s => new StepGenerateInfoDto
+            {
+                InputCachedTokens = s.Usage!.InputCachedTokens,
+                InputOverallTokens = s.Usage!.InputFreshTokens + s.Usage!.InputCachedTokens,
+                OutputTokens = s.Usage!.OutputTokens,
+                InputFreshPrice = s.Usage!.InputFreshCost,
+                InputCachedPrice = s.Usage!.InputCachedCost,
+                InputPrice = s.Usage!.InputFreshCost + s.Usage!.InputCachedCost,
+                OutputPrice = s.Usage!.OutputCost,
+                ReasoningTokens = s.Usage!.ReasoningTokens,
+                Duration = s.Usage!.TotalDurationMs,
+                ReasoningDuration = s.Usage!.ReasoningDurationMs,
+                FirstTokenLatency = s.Usage!.FirstResponseDurationMs,
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        // Return null for user messages or edited AI messages without usage data
+        return Ok(stepInfo);
+    }
+
     [HttpPut("{encryptedChatShareId}"), Authorize]
     public async Task<ActionResult<ChatShareDto>> UpdateShared(string encryptedChatShareId,
         DateTimeOffset validBefore,
