@@ -6,6 +6,15 @@ using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 
+internal static class StepIdConstants
+{
+    /// <summary>
+    /// Placeholder step ID used for aggregated step data where real step IDs are not available
+    /// (e.g., during SSE streaming or for aggregated historical data)
+    /// </summary>
+    public const long PlaceholderAggregatedStepId = 0;
+}
+
 [JsonPolymorphic]
 [JsonDerivedType(typeof(RequestMessageDto))]
 [JsonDerivedType(typeof(ResponseMessageDto))]
@@ -106,7 +115,7 @@ public record ChatMessageTemp
                 Role = Role,
                 Steps = new[] { new StepDto
                 {
-                    Id = urlEncryption.EncryptStepId(0), // Placeholder for user message without real step ID
+                    Id = urlEncryption.EncryptStepId(StepIdConstants.PlaceholderAggregatedStepId),
                     Edited = Edited,
                     Contents = ContentResponseItem.FromContent(Content, fup, urlEncryption),
                     CreatedAt = CreatedAt,
@@ -124,7 +133,7 @@ public record ChatMessageTemp
                 Role = Role,
                 Steps = new[] { new StepDto
                 {
-                    Id = urlEncryption.EncryptStepId(0), // Placeholder for assistant message without real step ID
+                    Id = urlEncryption.EncryptStepId(StepIdConstants.PlaceholderAggregatedStepId),
                     Edited = Edited,
                     Contents = ContentResponseItem.FromContent(Content, fup, urlEncryption),
                     CreatedAt = CreatedAt,
