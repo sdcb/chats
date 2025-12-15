@@ -569,11 +569,11 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
     {
         List<NeutralMessage> mergedMessages = [.. SwitchServerToolResponsesAsUser(MergeToolMessages(messages))];
         JsonArray result = [];
-        NeutralMessage? lastAssistantMessage = mergedMessages.LastOrDefault(x => x.Role == NeutralChatRole.Assistant);
         foreach (NeutralMessage msg in mergedMessages)
         {
-            // only keep thinking blocks in the last assistant message for WebChat usage
-            bool reallyAllowThinkingBlocks = allowThinkingBlocks && (source == UsageSource.WebChat && msg == lastAssistantMessage);
+            // 非当前 turn 的 thinking 已在 ChatService.PreProcess 中统一清理；
+            // 这里仅根据 WebChat + allowThinkingBlocks 决定是否允许 thinking block 出现在上游 payload 中。
+            bool reallyAllowThinkingBlocks = allowThinkingBlocks && source == UsageSource.WebChat;
             result.Add(ToAnthropicMessage(msg, reallyAllowThinkingBlocks));
         }
         return result;

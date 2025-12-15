@@ -112,13 +112,61 @@ public abstract partial class ChatService
         final = final with
         {
             ChatConfig = final.ChatConfig.WithClamps(temperature, reasoningEffortId),
-            Messages = await final.Messages
+            Messages = await (request.Source == UsageSource.WebChat
+                    ? RemoveNonCurrentTurnThinkingBlocks(final.Messages)
+                    : final.Messages)
                 .ToAsyncEnumerable()
                 .Select(async (m, ct) => await FilterVision(request.ChatConfig.Model.SupportsVisionLink, request.ChatConfig.Model.AllowVision, m, fup, ct))
                 .ToListAsync(cancellationToken)
         };
 
         return final;
+    }
+
+    /// <summary>
+    /// WebChat 场景下，历史 turn 的 thinking 对继续对话基本无用，
+    /// 还会增加 prompt 体积；部分上游（例如 Anthropic thinking 规则）
+    /// 也会对 thinking 的出现位置更敏感。
+    /// 因此只保留「最后一个 assistant 消息」中的 thinking，其它消息中的 thinking 全部移除。
+    /// </summary>
+    internal static IList<NeutralMessage> RemoveNonCurrentTurnThinkingBlocks(IList<NeutralMessage> messages)
+    {
+        if (messages.Count == 0)
+        {
+            return messages;
+        }
+
+        int lastAssistantIndex = -1;
+        for (int i = messages.Count - 1; i >= 0; i--)
+        {
+            if (messages[i].Role == NeutralChatRole.Assistant)
+            {
+                lastAssistantIndex = i;
+                break;
+            }
+        }
+
+        if (lastAssistantIndex <= 0)
+        {
+            return messages;
+        }
+
+        List<NeutralMessage>? updated = null;
+        for (int i = 0; i < messages.Count; i++)
+        {
+            NeutralMessage msg = messages[i];
+
+            if (i < lastAssistantIndex && msg.Contents.Any(c => c is NeutralThinkContent))
+            {
+                updated ??= [.. messages];
+                updated[i] = msg with
+                {
+                    Contents = [.. msg.Contents.Where(c => c is not NeutralThinkContent)]
+                };
+            }
+        }
+
+        return updated ?? messages;
     }
 
     protected virtual async Task<NeutralMessage> FilterVision(bool supportsVisionLink, bool allowVision, NeutralMessage message, FileUrlProvider fup, CancellationToken cancellationToken)
