@@ -2,11 +2,11 @@
 
 **[English](README_EN.md)** | **简体中文** 
 
-Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 20+ 主流 AI 模型服务商。无论您是希望统一管理多种模型接口，还是需要一个简单易用的部署方案，Sdcb Chats 都能满足您的需求。
+Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 21+ 主流 AI 模型服务商。无论您是希望统一管理多种模型接口，还是需要一个简单易用的部署方案，Sdcb Chats 都能满足您的需求。
 
 ## ✨ 为什么选择 Sdcb Chats
 
-- 🚀 **一站式管理**：统一管理 20+ 主流 AI 模型服务商
+- 🚀 **一站式管理**：统一管理 21+ 主流 AI 模型服务商
 - 🎯 **开箱即用**：支持 Docker 一键部署，也提供 8 种平台的原生可执行文件
 - 💾 **灵活存储**：支持 SQLite/SQL Server/PostgreSQL，支持本地文件/S3/OSS/Azure Blob 等多种存储
 - 🔐 **企业级安全**：完善的用户权限管理和账户余额控制，支持 Keycloak SSO
@@ -231,6 +231,7 @@ dotnet Chats.BE.dll
 | 18  | OpenRouter       | https://openrouter.ai/api/v1                             |
 | 19  | 小马算力         | https://api.tokenpony.cn/v1                              |
 | 20  | Anthropic        | https://api.anthropic.com                                |
+| 21  | 小米Mimo         | https://api.xiaomimimo.com/v1                            |
 
 **注意事项：**
 

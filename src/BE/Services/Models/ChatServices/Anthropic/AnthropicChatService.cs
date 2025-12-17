@@ -22,8 +22,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         JsonObject requestBody = BuildRequestBody(request);
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/v1/messages");
-        httpRequest.Headers.Add("x-api-key", apiKey);
-        httpRequest.Headers.Add("anthropic-version", "2023-06-01");
+        AddApiKeyHeader(httpRequest, apiKey);
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
         httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
@@ -300,13 +299,31 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         return (url, modelKey.Secret ?? throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "API key is required for Anthropic"));
     }
 
+    protected virtual void AddApiKeyHeader(HttpRequestMessage request, string apiKey)
+    {
+        request.Headers.Add("x-api-key", apiKey);
+        request.Headers.Add("anthropic-version", "2023-06-01");
+    }
+
+    protected virtual JsonNode? BuildThinkingNode(ChatRequest request, bool allowThinking)
+    {
+        if (allowThinking && request.ChatConfig.ThinkingBudget != null)
+        {
+            return new JsonObject
+            {
+                ["type"] = "enabled",
+                ["budget_tokens"] = request.ChatConfig.ThinkingBudget.Value
+            };
+        }
+        return null;
+    }
+
     public override async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
     {
         (string url, string apiKey) = GetEndpointAndKey(modelKey);
 
         using HttpRequestMessage request = new(HttpMethod.Get, url + "/v1/models");
-        request.Headers.Add("x-api-key", apiKey);
-        request.Headers.Add("anthropic-version", "2023-06-01");
+        AddApiKeyHeader(request, apiKey);
 
         using HttpClient httpClient = httpClientFactory.CreateClient();
         httpClient.Timeout = NetworkTimeout;
@@ -340,8 +357,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         JsonObject requestBody = BuildCountTokensRequestBody(request);
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/v1/messages/count_tokens");
-        httpRequest.Headers.Add("x-api-key", apiKey);
-        httpRequest.Headers.Add("anthropic-version", "2023-06-01");
+        AddApiKeyHeader(httpRequest, apiKey);
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
 
         using HttpClient httpClient = httpClientFactory.CreateClient();
@@ -360,7 +376,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         return 0;
     }
 
-    private static JsonObject BuildRequestBody(ChatRequest request)
+    private JsonObject BuildRequestBody(ChatRequest request)
     {
         // Determine thinking block handling
         var (allowThinkingBlocks, allowThinking) = DetermineThinkingSettings(request);
@@ -386,13 +402,10 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             body["top_p"] = request.TopP.Value;
         }
 
-        if (allowThinking && request.ChatConfig.ThinkingBudget != null)
+        JsonNode? thinkingNode = BuildThinkingNode(request, allowThinking);
+        if (thinkingNode != null)
         {
-            body["thinking"] = new JsonObject
-            {
-                ["type"] = "enabled",
-                ["budget_tokens"] = request.ChatConfig.ThinkingBudget.Value
-            };
+            body["thinking"] = thinkingNode;
         }
 
         JsonArray tools = BuildToolsArray(request.Tools);

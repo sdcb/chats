@@ -2,11 +2,11 @@
 
 **English** | **[简体中文](README.md)**
 
-Sdcb Chats is a powerful and flexible frontend for large language models, supporting 20+ mainstream AI model providers. Whether you want to unify the management of multiple model interfaces or need a simple and easy-to-use deployment solution, Sdcb Chats can meet your needs.
+Sdcb Chats is a powerful and flexible frontend for large language models, supporting 21+ mainstream AI model providers. Whether you want to unify the management of multiple model interfaces or need a simple and easy-to-use deployment solution, Sdcb Chats can meet your needs.
 
 ## ✨ Why Choose Sdcb Chats
 
-- 🚀 **All-in-One Management**: Unified management of 20+ mainstream AI model providers
+- 🚀 **All-in-One Management**: Unified management of 21+ mainstream AI model providers
 - 🎯 **Ready to Use**: Supports Docker one-click deployment, also provides native executables for 8 platforms
 - 💾 **Flexible Storage**: Supports SQLite/SQL Server/PostgreSQL, local files/S3/OSS/Azure Blob and other storage options
 - 🔐 **Enterprise-Grade Security**: Comprehensive user permission management and account balance control, supports Keycloak SSO
@@ -231,6 +231,7 @@ Download .NET Runtime: [https://dotnet.microsoft.com/download](https://dotnet.mi
 | 18  | OpenRouter       | https://openrouter.ai/api/v1                             |
 | 19  | Token Pony       | https://api.tokenpony.cn/v1                              |
 | 20  | Anthropic        | https://api.anthropic.com                                |
+| 21  | Xiaomi Mimo      | https://api.xiaomimimo.com/v1                            |
 
 **Note:**
 

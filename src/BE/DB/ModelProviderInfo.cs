@@ -143,6 +143,12 @@ public static class ModelProviderInfo
             "https://api.anthropic.com/v1",
             "sk-ant-"
         ),
+        [DBModelProvider.Mimo] = new(
+            DBModelProvider.Mimo,
+            "Xiaomi Mimo",
+            "https://api.xiaomimimo.com/v1",
+            ""
+        ),
     };
 
     private static readonly Dictionary<string, DBModelProvider> _nameToIdMap = _providers

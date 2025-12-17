@@ -33,7 +33,8 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
             {
                 DBModelProvider.AzureAIFoundry => sp.GetRequiredService<AzureAIFoundryChatService>(),
                 DBModelProvider.DeepSeek => sp.GetRequiredService<DeepSeekChatService>(),
-                    DBModelProvider.MiniMax => sp.GetRequiredService<MiniMaxChatService>(),
+                DBModelProvider.MiniMax => sp.GetRequiredService<MiniMaxChatService>(),
+                DBModelProvider.Mimo => sp.GetRequiredService<MimoChatService>(),
                 DBModelProvider.WenXinQianFan => sp.GetRequiredService<QianFanChatService>(),
                 DBModelProvider.AliyunDashscope => sp.GetRequiredService<QwenChatService>(),
                 DBModelProvider.ZhiPuAI => sp.GetRequiredService<GLMChatService>(),
@@ -58,6 +59,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
             {
                 DBModelProvider.DeepSeek => sp.GetRequiredService<DeepSeekAnthropicService>(),
                 DBModelProvider.MiniMax => sp.GetRequiredService<MiniMaxAnthropicService>(),
+                DBModelProvider.Mimo => sp.GetRequiredService<MimoAnthropicService>(),
                 _ => sp.GetRequiredService<AnthropicChatService>(),
             },
 

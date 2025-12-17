@@ -26,6 +26,7 @@ export enum DBModelProvider {
   OpenRouter = 18,
   TokenPony = 19,
   Anthropic = 20,
+  Mimo = 21,
 }
 
 export type FEModelProvider = {
@@ -125,6 +126,11 @@ export const feModelProviders: FEModelProvider[] = [
     name: 'Anthropic',
     icon: '/logos/anthropic.svg',
     allowWebSearch: true,
+  },
+  {
+    id: DBModelProvider.Mimo,
+    name: 'Xiaomi Mimo',
+    icon: 'https://platform.xiaomimimo.com/favicon.874c9507.png',
   },
 ];
 

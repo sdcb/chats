@@ -23,4 +23,5 @@ public enum DBModelProvider
     OpenRouter = 18,
     TokenPony = 19,
     Anthropic = 20,
+    Mimo = 21,
 }
