@@ -23,17 +23,11 @@ import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdo
 import ToolCallBlock from '@/components/Markdown/ToolCallBlock';
 import ImagePreview from '@/components/ImagePreview/ImagePreview';
 import FilePreview from '@/components/FilePreview/FilePreview';
-import StepDivider from './StepDivider';
+import StepInfoBubble from './StepInfoBubble';
 
 import ChatError from '../ChatError/ChatError';
-import { IconCopy, IconDots, IconEdit } from '../Icons';
+import { IconCopy, IconEdit } from '../Icons';
 import { Button } from '../ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
 import { Textarea } from '../ui/textarea';
 import ThinkingMessage from './ThinkingMessage';
 
@@ -242,16 +236,31 @@ const ResponseMessage = (props: Props) => {
     return processedContent;
   };
 
-  const renderToolGroup = (toolGroup: ToolGroupContent, index: number) => {
+  const renderToolGroup = (toolGroup: ToolGroupContent, index: number, stepInfo?: { step: IStep; isLastInStep: boolean }) => {
     const { toolCall, toolResponse } = toolGroup;
+    const showStepInfo = stepInfo?.isLastInStep && !stepInfo.step.edited && stepInfo.step.id;
 
     return (
-      <ToolCallBlock
-        key={`tool-group-${index}`}
-        toolCall={toolCall}
-        toolResponse={toolResponse}
-        chatStatus={messageStatus}
-      />
+      <div key={`tool-group-${index}`} className="relative group/item">
+        <ToolCallBlock
+          toolCall={toolCall}
+          toolResponse={toolResponse}
+          chatStatus={messageStatus}
+        />
+        {showStepInfo && (
+          <div className={cn(
+            'absolute -bottom-0.5 right-0 z-10 invisible group-hover/item:visible bg-card rounded-full',
+            isChatting(chatStatus) && 'hidden',
+          )}>
+            <StepInfoBubble
+              stepId={stepInfo!.step.id}
+              edited={stepInfo!.step.edited}
+              chatId={chatId}
+              chatShareId={chatShareId}
+            />
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -278,22 +287,25 @@ const ResponseMessage = (props: Props) => {
   );
   const allImageUrls = imageContents.map((c) => getFileUrl(c.c as FileDef));
 
-  // 计算每个 content 属于哪个 step（用于在 step 切换处插入分隔线）
+  // 计算每个 content 属于哪个 step，以及是否为该 step 的最后一个 content
   const contentStepMap = useMemo(() => {
-    const map = new Map<string, { stepIndex: number; step: IStep }>();
+    const map = new Map<string, { stepIndex: number; step: IStep; isLastInStep: boolean }>();
     message.steps.forEach((step, stepIndex) => {
-      step.contents.forEach((c) => {
-        map.set(c.i, { stepIndex, step });
+      step.contents.forEach((c, contentIndex) => {
+        map.set(c.i, { 
+          stepIndex, 
+          step,
+          isLastInStep: contentIndex === step.contents.length - 1
+        });
       });
     });
     return map;
   }, [message.steps]);
 
-  // 将连续的图片内容分组，并追踪 step 边界
-  type GroupedItem = { type: 'content'; item: ProcessedContent | ProcessedContent[] } | { type: 'stepDivider'; stepIndex: number; step: IStep };
+  // 将连续的图片内容分组
+  type GroupedItem = { type: 'content'; item: ProcessedContent | ProcessedContent[] };
   const groupedContent: GroupedItem[] = [];
   let currentImageGroup: ProcessedContent[] = [];
-  let lastStepIndex = -1;
   
   // 获取 content 的 ID（ToolGroupContent 使用 toolCall.i）
   const getContentId = (c: ProcessedContent): string => {
@@ -304,23 +316,6 @@ const ResponseMessage = (props: Props) => {
   };
   
   processedContent.forEach((c) => {
-    // 检查是否需要插入 step 分隔线（仅当有多个 step 时）
-    const contentId = getContentId(c);
-    const contentInfo = contentStepMap.get(contentId);
-    if (contentInfo && message.steps.length > 1) {
-      if (lastStepIndex !== -1 && contentInfo.stepIndex !== lastStepIndex) {
-        // Step 切换，先处理当前图片组
-        if (currentImageGroup.length > 0) {
-          groupedContent.push({ type: 'content', item: currentImageGroup });
-          currentImageGroup = [];
-        }
-        // 插入前一个 step 的分隔线
-        const prevStep = message.steps[lastStepIndex];
-        groupedContent.push({ type: 'stepDivider', stepIndex: lastStepIndex, step: prevStep });
-      }
-      lastStepIndex = contentInfo.stepIndex;
-    }
-
     if (c.$type === MessageContentType.fileId || c.$type === MessageContentType.tempFileId) {
       currentImageGroup.push(c);
     } else {
@@ -365,20 +360,6 @@ const ResponseMessage = (props: Props) => {
 
       {/* Render content in original order */}
       {groupedContent.map((groupItem, groupIndex) => {
-        // 渲染 step 分隔线
-        if (groupItem.type === 'stepDivider') {
-          return (
-            <StepDivider
-              key={`step-divider-${groupItem.stepIndex}`}
-              stepId={groupItem.step.id}
-              stepIndex={groupItem.stepIndex}
-              edited={groupItem.step.edited}
-              chatId={chatId}
-              chatShareId={chatShareId}
-            />
-          );
-        }
-
         const item = groupItem.item;
         // 如果是文件数组，用容器包裹并横向排列
         if (Array.isArray(item)) {
@@ -463,7 +444,9 @@ const ResponseMessage = (props: Props) => {
         const index = groupIndex;
         
         if (c.$type === 'toolGroup') {
-          return renderToolGroup(c, index);
+          const toolGroupContent = c as ToolGroupContent;
+          const contentInfo = contentStepMap.get(toolGroupContent.toolCall.i);
+          return renderToolGroup(c, index, contentInfo);
         } else if (c.$type === MessageContentType.reasoning) {
           const finished = (c as any).finished as boolean | undefined;
           return (
@@ -535,66 +518,71 @@ const ResponseMessage = (props: Props) => {
               </div>
             </div>
           ) : (
-            <div key={'text-' + index} className="relative group/item">
-              {message.displayType === 'Raw' ? (
-                <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3 group/item">
-                  <div className="whitespace-pre-wrap font-mono">{c.c}</div>
-                </div>
-              ) : (
-                <MemoizedReactMarkdown
-                  // 顺序：math -> gfm -> breaks，确保数学与 GFM 处理后，再将 softbreak 转为 <br/>
-                  remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
-                  rehypePlugins={[rehypeKatex as any]}
-                  components={markdownComponents}
-                >
-                  {`${preprocessLaTeX(c.c!)}${
-                    (messageStatus === ChatSpanStatus.Pending || messageStatus === ChatSpanStatus.Chatting) && 
-                    index === processedContent.length - 1 && 
-                    c.$type === MessageContentType.text ? '▍' : ''
-                  }`}
-                </MemoizedReactMarkdown>
-              )}
-              <div className="absolute -bottom-0.5 right-0 z-10">
-                {!isChatting(chatStatus) && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      disabled={isChatting(messageStatus)}
-                      className={cn(
-                        'focus:outline-none invisible group-hover/item:visible bg-card rounded-full p-1',
-                        readonly && 'hidden',
-                      )}
+            (() => {
+              const contentInfo = contentStepMap.get(c.i);
+              const showStepInfo = contentInfo?.isLastInStep && !contentInfo.step.edited && contentInfo.step.id;
+              return (
+                <div key={'text-' + index} className="relative group/item">
+                  {message.displayType === 'Raw' ? (
+                    <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3 group/item">
+                      <div className="whitespace-pre-wrap font-mono">{c.c}</div>
+                    </div>
+                  ) : (
+                    <MemoizedReactMarkdown
+                      // 顺序：math -> gfm -> breaks，确保数学与 GFM 处理后，再将 softbreak 转为 <br/>
+                      remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
+                      rehypePlugins={[rehypeKatex as any]}
+                      components={markdownComponents}
                     >
-                      <IconDots
-                        className="rotate-90 hover:opacity-50"
-                        size={16}
-                      />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-42 border-none">
-                      <DropdownMenuItem
-                        className="flex justify-start gap-3"
-                        onClick={(e) => {
-                          handleCopy(c.c);
-                          e.stopPropagation();
-                        }}
-                      >
-                        <IconCopy />
-                        {t('Copy')}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="flex justify-start gap-3"
-                        onClick={(e) => {
-                          handleToggleEditing(c.i, c.c);
-                          e.stopPropagation();
-                        }}
-                      >
-                        <IconEdit />
-                        {t('Edit')}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-            </div>
+                      {`${preprocessLaTeX(c.c!)}${
+                        (messageStatus === ChatSpanStatus.Pending || messageStatus === ChatSpanStatus.Chatting) && 
+                        index === processedContent.length - 1 && 
+                        c.$type === MessageContentType.text ? '▍' : ''
+                      }`}
+                    </MemoizedReactMarkdown>
+                  )}
+                  <div className="absolute -bottom-0.5 right-0 z-10 flex items-center gap-0.5">
+                    {!isChatting(chatStatus) && !readonly && (
+                      <>
+                        <button
+                          disabled={isChatting(messageStatus)}
+                          className="invisible group-hover/item:visible bg-card rounded-full p-1 hover:bg-accent transition-colors"
+                          onClick={(e) => {
+                            handleCopy(c.c);
+                            e.stopPropagation();
+                          }}
+                        >
+                          <IconCopy size={16} className="hover:opacity-50" />
+                        </button>
+                        <button
+                          disabled={isChatting(messageStatus)}
+                          className="invisible group-hover/item:visible bg-card rounded-full p-1 hover:bg-accent transition-colors"
+                          onClick={(e) => {
+                            handleToggleEditing(c.i, c.c);
+                            e.stopPropagation();
+                          }}
+                        >
+                          <IconEdit size={16} className="hover:opacity-50" />
+                        </button>
+                      </>
+                    )}
+                    {showStepInfo && (
+                      <div className={cn(
+                        'invisible group-hover/item:visible bg-card rounded-full',
+                        isChatting(chatStatus) && 'hidden',
+                      )}>
+                        <StepInfoBubble
+                          stepId={contentInfo!.step.id}
+                          edited={contentInfo!.step.edited}
+                          chatId={chatId}
+                          chatShareId={chatShareId}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()
           );
         } else if (c.$type === MessageContentType.error) {
           return (

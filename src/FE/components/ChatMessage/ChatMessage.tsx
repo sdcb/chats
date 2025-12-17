@@ -101,7 +101,7 @@ export const ChatMessage: FC<Props> = memo(
                       </div>
                     )}
                     {message.role === ChatRole.Assistant && (
-                      <div className="group/item">
+                      <div>
                         <ChatMessageHeader
                           readonly={readonly}
                           onChangeDisplayType={onChangeDisplayType}
