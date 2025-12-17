@@ -4,12 +4,10 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { preprocessLaTeX } from '@/utils/chats';
 import {
-  aggregateStepGenerateInfo,
-  fetchGenerateInfoCached,
-  GenerateInfoCacheKey,
-  getCachedGenerateInfo,
-  subscribeGenerateInfoCache,
-  requestGenerateInfo,
+  getCachedStepGenerateInfo,
+  requestStepGenerateInfo,
+  subscribeStepGenerateInfoCache,
+  StepGenerateInfoCacheKey,
 } from '@/utils/generateInfoCache';
 
 import { ChatStatus } from '@/types/chat';
@@ -89,13 +87,14 @@ interface Props {
   content: string;
   finished?: boolean; // 是否已结束推理
   messageId: string;
+  stepId?: string;
   chatId?: string;
   chatShareId?: string;
   chatStatus: ChatStatus;
 }
 
 const ThinkingMessage = (props: Props) => {
-  const { content, finished, messageId, chatId, chatShareId, chatStatus } = props;
+  const { content, finished, messageId, stepId, chatId, chatShareId, chatStatus } = props;
   const { t } = useTranslation();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -103,9 +102,12 @@ const ThinkingMessage = (props: Props) => {
   const [loading, setLoading] = useState(false);
   const [isManuallyToggled, setIsManuallyToggled] = useState(false);
 
-  const cacheKey = useMemo<GenerateInfoCacheKey>(
-    () => ({ turnId: messageId, chatId, chatShareId }),
-    [messageId, chatId, chatShareId],
+  const cacheKey = useMemo<StepGenerateInfoCacheKey | null>(
+    () => {
+      if (!stepId) return null;
+      return { stepId, chatId, chatShareId };
+    },
+    [stepId, chatId, chatShareId],
   );
 
   const canLoadDuration = useMemo(() => {
@@ -118,8 +120,11 @@ const ThinkingMessage = (props: Props) => {
     if (!messageId || messageId.startsWith(ResponseMessageTempId)) {
       return false;
     }
+    if (!stepId) {
+      return false;
+    }
     return true;
-  }, [chatStatus, finished, messageId]);
+  }, [chatStatus, finished, messageId, stepId]);
 
   // 自动开合逻辑（不覆盖用户手动动作）
   useEffect(() => {
@@ -128,57 +133,55 @@ const ThinkingMessage = (props: Props) => {
     setIsOpen(!isFinished);
   }, [finished, isManuallyToggled]);
 
-  const resolveDurationFromSteps = useCallback((stepInfos?: IStepGenerateInfo[]) => {
-    if (!stepInfos || stepInfos.length === 0) {
+  const resolveDurationFromStep = useCallback((stepInfo?: IStepGenerateInfo | null) => {
+    if (!stepInfo) {
       return;
     }
-    const aggregated = aggregateStepGenerateInfo(stepInfos);
-    if (!aggregated) {
-      return;
-    }
-    const duration = aggregated.reasoningDuration || aggregated.duration || 0;
+    const duration = stepInfo.reasoningDuration || stepInfo.duration || 0;
     if (duration > 0) {
       setDisplayDurationMs(duration);
     }
   }, []);
 
   const ensureDurationLoaded = useCallback(async () => {
-    if (!canLoadDuration) {
+    if (!canLoadDuration || !cacheKey) {
       return;
     }
     if (loading) return;
     if ((displayDurationMs ?? 0) > 0) return;
-    const cached = getCachedGenerateInfo(cacheKey);
-    if (cached && cached.length > 0) {
-      resolveDurationFromSteps(cached);
+    const cached = getCachedStepGenerateInfo(cacheKey);
+    if (cached !== undefined) {
+      resolveDurationFromStep(cached);
       return;
     }
 
     setLoading(true);
     try {
-      const infos = await fetchGenerateInfoCached(cacheKey, () => requestGenerateInfo(cacheKey));
-      resolveDurationFromSteps(infos);
+      const info = await requestStepGenerateInfo(cacheKey);
+      resolveDurationFromStep(info);
     } catch (error) {
       console.error('Failed to load reasoning duration:', error);
     } finally {
       setLoading(false);
     }
-  }, [canLoadDuration, cacheKey, displayDurationMs, loading, resolveDurationFromSteps]);
+  }, [canLoadDuration, cacheKey, displayDurationMs, loading, resolveDurationFromStep]);
   
   useEffect(() => {
-    const cached = getCachedGenerateInfo(cacheKey);
-    if (cached && cached.length > 0) {
-      resolveDurationFromSteps(cached);
+    if (!cacheKey) return;
+    
+    const cached = getCachedStepGenerateInfo(cacheKey);
+    if (cached !== undefined) {
+      resolveDurationFromStep(cached);
     }
 
-    const unsubscribe = subscribeGenerateInfoCache(cacheKey, (data) => {
-      resolveDurationFromSteps(data);
+    const unsubscribe = subscribeStepGenerateInfoCache(cacheKey, (data) => {
+      resolveDurationFromStep(data);
     });
 
     return () => {
       unsubscribe();
     };
-  }, [cacheKey, resolveDurationFromSteps]);
+  }, [cacheKey, resolveDurationFromStep]);
 
   const toggleOpen = useCallback(() => {
     const nextState = !isOpen;
@@ -198,11 +201,20 @@ const ThinkingMessage = (props: Props) => {
     if (!isFinished) {
       return t('Thinking...');
     }
-    if ((displayDurationMs ?? 0) > 0) {
-      const seconds = Math.floor((displayDurationMs ?? 0) / 1000);
-      return t('Deeply thought (took {{time}} seconds)', { time: seconds });
+    const durationMs = displayDurationMs ?? 0;
+    if (durationMs > 0) {
+      if (durationMs < 1000) {
+        // 小于1秒，显示毫秒
+        return t('Thought for {{time}} ms', { time: Math.round(durationMs) });
+      } else if (durationMs < 10000) {
+        // 小于10秒，显示秒并保留1位小数
+        return t('Thought for {{time}} s', { time: (durationMs / 1000).toFixed(1) });
+      } else {
+        // 大于等于10秒，显示秒不保留小数
+        return t('Thought for {{time}} s', { time: Math.round(durationMs / 1000) });
+      }
     }
-    return t('Deeply thought');
+    return t('Thought');
   }, [finished, displayDurationMs, t]);
 
   useEffect(() => {

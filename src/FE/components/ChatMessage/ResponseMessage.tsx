@@ -449,12 +449,14 @@ const ResponseMessage = (props: Props) => {
           return renderToolGroup(c, index, contentInfo);
         } else if (c.$type === MessageContentType.reasoning) {
           const finished = (c as any).finished as boolean | undefined;
+          const contentInfo = contentStepMap.get(c.i);
           return (
             <ThinkingMessage
               key={'reasoning-' + index}
               content={c.c}
               finished={finished}
               messageId={message.id}
+              stepId={contentInfo?.step.id}
               chatId={chatId}
               chatShareId={chatShareId}
               chatStatus={chatStatus}
