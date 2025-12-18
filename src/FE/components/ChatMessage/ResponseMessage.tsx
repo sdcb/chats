@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Image from 'next/image';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -16,7 +15,7 @@ import {
   ToolCallContent,
   ToolResponseContent,
 } from '@/types/chat';
-import { IChatMessage, IStep, IStepGenerateInfo, MessageDisplayType, getMessageContents } from '@/types/chatMessage';
+import { IChatMessage, IStep, getMessageContents } from '@/types/chatMessage';
 
 import { CodeBlock } from '@/components/Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
@@ -382,13 +381,12 @@ const ResponseMessage = (props: Props) => {
                   
                   if (isImage) {
                     return (
-                      <div key={'temp-file-' + groupIndex + '-' + index} className="relative rounded-md overflow-hidden" style={{ maxWidth: 300, maxHeight: 300 }}>
-                        <Image
+                      <div key={'temp-file-' + groupIndex + '-' + index} className="relative rounded-md overflow-hidden" style={{ height: 300, maxWidth: '100%' }}>
+                        <img
                           alt={t('Loading...')}
-                          className="w-full h-full object-cover rounded-md cursor-pointer hover:opacity-90 transition-opacity"
+                          className="h-full w-auto rounded-md cursor-pointer hover:opacity-90 transition-opacity"
+                          style={{ maxWidth: '100%' }}
                           src={imageUrl}
-                          width={300}
-                          height={300}
                           onClick={(e) => handleImageClick(imageUrl, allImageUrls, e)}
                         />
                         {/* 蓝色激光扫描效果 */}

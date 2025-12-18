@@ -1,5 +1,4 @@
 import React from 'react';
-import Image from 'next/image';
 
 import { FileDef, getFileUrl } from '@/types/chat';
 import { 
@@ -124,13 +123,11 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', sh
   if (isImageType(contentType)) {
     return (
       <div className={`relative ${className}`}>
-        <Image
+        <img
           className="rounded-md cursor-pointer hover:opacity-90 transition-opacity"
-          style={{ maxWidth, maxHeight }}
+          style={{ height: maxHeight, width: 'auto', maxWidth: '100%' }}
           src={fileUrl}
           alt={fileName || 'Image'}
-          width={maxWidth}
-          height={maxHeight}
           onClick={(e) => onImageClick?.(fileUrl, [fileUrl], e)}
         />
         {showDelete && onDelete && (
