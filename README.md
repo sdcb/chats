@@ -223,7 +223,7 @@ dotnet Chats.BE.dll
 | 10  | DeepSeek         | https://api.deepseek.com/v1                              |
 | 11  | x.ai             | https://api.x.ai/v1                                      |
 | 12  | Github Models    | https://models.inference.ai.azure.com                    |
-| 13  | 谷歌AI           | https://generativelanguage.googleapis.com/v1beta/openai |
+| 13  | 谷歌AI           | https://generativelanguage.googleapis.com/v1beta         |
 | 14  | Ollama           | http://localhost:11434/v1                                |
 | 15  | MiniMax          | https://api.minimax.chat/v1                              |
 | 16  | 火山方舟         | https://ark.cn-beijing.volces.com/api/v3                |

@@ -13,10 +13,9 @@ using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.GoogleAI;
 
-public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, IHttpClientFactory httpClientFactory) : ChatService
+public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {
     private readonly IHttpClientFactory httpClientFactory = httpClientFactory;
-    private readonly ChatCompletionService chatCompletionService = chatCompletionService;
 
     private static readonly (string Category, string Threshold)[] DefaultSafetySettings =
     [
@@ -26,7 +25,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
         ("HARM_CATEGORY_HARASSMENT", "BLOCK_NONE"),
     ];
 
-    internal const string DefaultEndpoint = "https://generativelanguage.googleapis.com";
+    internal const string DefaultEndpoint = "https://generativelanguage.googleapis.com/v1beta";
 
     public bool AllowImageGeneration(Model model) => model.DeploymentName.Contains("gemini-2.0-flash-exp") ||
                                                      model.DeploymentName.Contains("gemini-2.0-flash-exp-image-generation") ||
@@ -38,7 +37,7 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
         JsonObject requestBody = BuildRequestBody(request, allowImageGeneration);
 
         string modelPath = NormalizeModelName(request.ChatConfig.Model.DeploymentName);
-        string endpoint = $"{GetBaseUrl(request.ChatConfig.Model.ModelKey)}/v1beta/{modelPath}:streamGenerateContent";
+        string endpoint = $"{GetBaseUrl(request.ChatConfig.Model.ModelKey)}/{modelPath}:streamGenerateContent";
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, endpoint);
         httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -735,8 +734,14 @@ public class GoogleAI2ChatService(ChatCompletionService chatCompletionService, I
         }
     }
 
-    public override Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
+    protected override string GetEndpoint(ModelKey modelKey)
     {
-        return chatCompletionService.ListModels(modelKey, cancellationToken);
+        // for gemini, this method is only used for extract models
+        var url = base.GetEndpoint(modelKey).TrimEnd('/');
+        if (!url.EndsWith("/openai"))
+        {
+            return url + "/openai";
+        }
+        return url;
     }
 }
