@@ -113,7 +113,7 @@ public abstract partial class ChatService
         {
             ChatConfig = final.ChatConfig.WithClamps(temperature, reasoningEffortId),
             Messages = await (request.Source == UsageSource.WebChat
-                    ? RemoveNonCurrentTurnThinkingBlocks(final.Messages)
+                    ? this.RemoveNonCurrentTurnThinkingBlocks(final.Messages)
                     : final.Messages)
                 .ToAsyncEnumerable()
                 .Select(async (m, ct) => await FilterVision(request.ChatConfig.Model.SupportsVisionLink, request.ChatConfig.Model.AllowVision, m, fup, ct))
@@ -129,7 +129,7 @@ public abstract partial class ChatService
     /// 也会对 thinking 的出现位置更敏感。
     /// 因此只保留「最后一个 assistant 消息」中的 thinking，其它消息中的 thinking 全部移除。
     /// </summary>
-    internal static IList<NeutralMessage> RemoveNonCurrentTurnThinkingBlocks(IList<NeutralMessage> messages)
+    protected virtual IList<NeutralMessage> RemoveNonCurrentTurnThinkingBlocks(IList<NeutralMessage> messages)
     {
         if (messages.Count == 0)
         {

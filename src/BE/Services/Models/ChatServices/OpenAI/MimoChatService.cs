@@ -15,6 +15,17 @@ public class MimoChatService(IHttpClientFactory httpClientFactory) : ChatComplet
         request.Headers.Add("api-key", modelKey.Secret);
     }
 
+    /// <summary>
+    /// Mimo requires all historical reasoning_content to be preserved for interleaved thinking.
+    /// If reasoning_content is removed from previous turns, tool calls may be incorrectly
+    /// output into reasoning_content instead of tool_calls field.
+    /// </summary>
+    protected override IList<NeutralMessage> RemoveNonCurrentTurnThinkingBlocks(IList<NeutralMessage> messages)
+    {
+        // Do not remove any thinking blocks - Mimo needs them all
+        return messages;
+    }
+
     protected override bool TryBuildThinkingContentForRequest(
         NeutralMessage message,
         IReadOnlyList<NeutralThinkContent> thinkingContents,
