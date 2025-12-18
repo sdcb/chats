@@ -412,7 +412,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                 }
 
                 // Tool calls
-                if (message.TryGetProperty("tool_calls", out JsonElement toolCalls))
+                if (message.TryGetProperty("tool_calls", out JsonElement toolCalls) && toolCalls.ValueKind == JsonValueKind.Array)
                 {
                     int index = 0;
                     foreach (JsonElement tc in toolCalls.EnumerateArray())

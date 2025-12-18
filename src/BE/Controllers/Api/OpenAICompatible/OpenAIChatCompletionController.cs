@@ -38,6 +38,11 @@ public partial class OpenAIChatCompletionController(
     [HttpPost("v1/chat/completions")]
     public async Task<ActionResult> ChatCompletion([FromBody] JsonObject json, [FromServices] AsyncClientInfoManager clientInfoManager, CancellationToken cancellationToken)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         InChatContext icc = new(Stopwatch.GetTimestamp());
         CcoWrapper cco = new(json);
         if (!cco.SeemsValid())
