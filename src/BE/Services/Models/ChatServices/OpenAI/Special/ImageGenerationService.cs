@@ -423,4 +423,10 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             eventIndex++;
         }
     }
+
+    protected override Task<NeutralMessage> FilterVision(bool supportsVisionLink, bool allowVision, NeutralMessage message, FileUrlProvider fup, CancellationToken cancellationToken)
+    {
+        // enforce vision support but don't use image link
+        return base.FilterVision(supportsVisionLink: false, allowVision: true, message, fup, cancellationToken);
+    }
 }
