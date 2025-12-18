@@ -30,7 +30,8 @@ public class GoogleAI2ChatServiceTest
 
     private static ChatRequest CreateBaseChatRequest(string modelDeploymentName, string prompt, Action<ChatConfig>? configure = null)
     {
-        bool isFlash = modelDeploymentName.Contains("gemini-2.5-flash", StringComparison.OrdinalIgnoreCase) &&
+        bool isFlash = (modelDeploymentName.Contains("gemini-2.5-flash", StringComparison.OrdinalIgnoreCase) ||
+                        modelDeploymentName.Contains("gemini-3-flash", StringComparison.OrdinalIgnoreCase)) &&
                        !modelDeploymentName.Contains("gemini-2.5-flash-image", StringComparison.OrdinalIgnoreCase);
         bool isFlashImage = modelDeploymentName.Contains("gemini-2.5-flash-image", StringComparison.OrdinalIgnoreCase);
         bool isImageGenerationExp = modelDeploymentName.Contains("gemini-2.0-flash-exp-image-generation", StringComparison.OrdinalIgnoreCase);
@@ -97,7 +98,7 @@ public class GoogleAI2ChatServiceTest
         var httpClientFactory = CreateMockHttpClientFactory(dump);
         
         var chatCompletionService = new ChatCompletionService(httpClientFactory);
-        var service = new GoogleAI2ChatService(chatCompletionService, httpClientFactory);
+        var service = new GoogleAI2ChatService(httpClientFactory);
 
         var request = CreateBaseChatRequest("gemini-2.5-flash", "调用内置工具，计算1234/5432=?", cfg =>
         {
@@ -157,7 +158,7 @@ public class GoogleAI2ChatServiceTest
         var httpClientFactory = CreateMockHttpClientFactory(dump);
         
         var chatCompletionService = new ChatCompletionService(httpClientFactory);
-        var service = new GoogleAI2ChatService(chatCompletionService, httpClientFactory);
+        var service = new GoogleAI2ChatService(httpClientFactory);
 
         var request = CreateBaseChatRequest("gemini-2.5-flash", "调用C#工具，计算1234/5432=?", cfg =>
         {
@@ -209,7 +210,7 @@ public class GoogleAI2ChatServiceTest
         var httpClientFactory = CreateMockHttpClientFactory(dump);
         
         var chatCompletionService = new ChatCompletionService(httpClientFactory);
-        var service = new GoogleAI2ChatService(chatCompletionService, httpClientFactory);
+        var service = new GoogleAI2ChatService(httpClientFactory);
 
         var request = CreateBaseChatRequest("gemini-2.5-flash", "今天有什么新闻？", cfg =>
         {
@@ -254,7 +255,7 @@ public class GoogleAI2ChatServiceTest
         var httpClientFactory = CreateMockHttpClientFactory(dump);
         
         var chatCompletionService = new ChatCompletionService(httpClientFactory);
-        var service = new GoogleAI2ChatService(chatCompletionService, httpClientFactory);
+        var service = new GoogleAI2ChatService(httpClientFactory);
 
         // 使用与录制 Fiddler dump 一致的图片生成模型名称
         var request = CreateBaseChatRequest("gemini-2.5-flash-image", "生成一张小猫的图片");
@@ -295,7 +296,7 @@ public class GoogleAI2ChatServiceTest
         var httpClientFactory = CreateMockHttpClientFactory(dump);
         
         var chatCompletionService = new ChatCompletionService(httpClientFactory);
-        var service = new GoogleAI2ChatService(chatCompletionService, httpClientFactory);
+        var service = new GoogleAI2ChatService(httpClientFactory);
 
         var request = CreateBaseChatRequest("gemini-2.0-flash-exp-image-generation", "生成一张小猫的图片") with
         {
@@ -333,7 +334,7 @@ public class GoogleAI2ChatServiceTest
         var httpClientFactory = CreateMockHttpClientFactory(dump);
         
         var chatCompletionService = new ChatCompletionService(httpClientFactory);
-        var service = new GoogleAI2ChatService(chatCompletionService, httpClientFactory);
+        var service = new GoogleAI2ChatService(httpClientFactory);
 
         var request = CreateBaseChatRequest("gemini-2.0-flash-exp", "生成一张小猫的图片") with
         {
@@ -360,6 +361,43 @@ public class GoogleAI2ChatServiceTest
         Assert.Equal(429, exception.StatusCode);
         Assert.Contains("RESOURCE_EXHAUSTED", exception.Body);
         Assert.Contains("exceeded your current quota", exception.Body);
+    }
+
+    [Fact]
+    public async Task ThoughtSignature_ShouldBeDiscardedIfAfterText()
+    {
+        // Arrange
+        var filePath = Path.Combine(TestDataPath, "ThoughtSignature.txt");
+        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
+        var httpClientFactory = CreateMockHttpClientFactory(dump);
+
+        var service = new GoogleAI2ChatService(httpClientFactory);
+
+        var request = CreateBaseChatRequest("gemini-3-flash-preview", "你好，你是谁？", cfg =>
+        {
+            cfg.SystemPrompt = GoogleAiDumpExtractors.TryGetSystemPrompt(dump.Request.Body);
+            cfg.MaxOutputTokens = 65536;
+            cfg.ReasoningEffortId = (byte)DBReasoningEffort.Minimal;
+        });
+
+        // Act
+        var segments = new List<ChatSegment>();
+        await foreach (var segment in service.ChatStreamed(request, CancellationToken.None))
+        {
+            segments.Add(segment);
+        }
+
+        // Assert
+        var thinkSegments = segments.OfType<ThinkChatSegment>().ToList();
+        var textSegments = segments.OfType<TextChatSegment>().ToList();
+        
+        Assert.NotEmpty(thinkSegments);
+        Assert.NotEmpty(textSegments);
+
+        // 确保最后一个 text 之后没有 think
+        int lastTextIndex = segments.FindLastIndex(s => s is TextChatSegment);
+        int lastThinkIndex = segments.FindLastIndex(s => s is ThinkChatSegment);
+        Assert.True(lastThinkIndex < lastTextIndex, "Think segment should not appear after text segment");
     }
 }
 

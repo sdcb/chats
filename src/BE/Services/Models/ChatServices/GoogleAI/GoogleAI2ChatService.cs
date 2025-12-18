@@ -59,6 +59,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
         int toolCallIndex = 0;
         string? codeExecutionId = null;
         Stopwatch codeExecutionSw = new();
+        bool hasEmittedText = false; // Used to decide whether to discard late-arriving thoughtSignatures in plain text chats
 
         await foreach (JsonElement chunk in JsonSerializer.DeserializeAsyncEnumerable<JsonElement>(responseStream, JSON.JsonSerializerOptions, cancellationToken: cancellationToken))
         {
@@ -89,7 +90,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
                 {
                     foreach (JsonElement part in partsElement.EnumerateArray())
                     {
-                        ProcessPart(part, items, ref toolCallIndex, ref codeExecutionId, ref codeExecutionSw);
+                        ProcessPart(part, items, ref toolCallIndex, ref codeExecutionId, ref codeExecutionSw, hasEmittedText);
                     }
                 }
 
@@ -103,6 +104,10 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
 
             foreach (ChatSegment item in items)
             {
+                if (item is TextChatSegment)
+                {
+                    hasEmittedText = true;
+                }
                 yield return item;
             }
 
@@ -123,14 +128,22 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
         List<ChatSegment> items,
         ref int toolCallIndex,
         ref string? codeExecutionId,
-        ref Stopwatch codeExecutionSw)
+        ref Stopwatch codeExecutionSw,
+        bool hasEmittedText)
     {
         if (part.TryGetProperty("thoughtSignature", out JsonElement signatureElement))
         {
             string? signature = signatureElement.GetString();
             if (!string.IsNullOrEmpty(signature))
             {
-                items.Add(ChatSegment.FromThinkingSegment(NormalizeThoughtSignature(signature)));
+                bool isToolCall = part.TryGetProperty("functionCall", out _) || part.TryGetProperty("executableCode", out _);
+                // Gemini will send a thoughtSignature after text parts in plain text chats.
+                // We discard it to avoid showing an empty "thinking" block at the end of the message,
+                // but we must keep it if it's associated with a tool call for multi-turn consistency.
+                if (isToolCall || !hasEmittedText)
+                {
+                    items.Add(ChatSegment.FromThinkingSegment(NormalizeThoughtSignature(signature)));
+                }
             }
         }
 

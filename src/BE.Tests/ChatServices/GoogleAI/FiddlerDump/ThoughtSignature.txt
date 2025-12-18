@@ -1,0 +1,187 @@
+POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:streamGenerateContent HTTP/1.1
+Host: generativelanguage.googleapis.com
+Accept: application/json
+x-goog-api-key: [REDACTED]
+traceparent: 00-c58675fe67deefce731bda3e5e95bafe-84ca668c26e5d3dc-00
+Content-Type: application/json; charset=utf-8
+Content-Length: 746
+
+{"model":"models/gemini-3-flash-preview","contents":[{"role":"user","parts":[{"text":"你好，你是谁？"}]}],"safetySettings":[{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"generationConfig":{"responseModalities":["TEXT"],"temperature":1,"maxOutputTokens":65536,"enableEnhancedCivicAnswers":true,"thinkingConfig":{"includeThoughts":true,"thinkingBudget":1024}},"systemInstruction":{"role":"system","parts":[{"text":"你是AI助手Sdcb Chats\n当前日期: 2025/12/18，当前模型：gemini-3-flash-preview"}]}}
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=UTF-8
+Vary: X-Origin
+Vary: Referer
+Date: Thu, 18 Dec 2025 14:37:16 GMT
+Server: scaffolding on HTTPServer2
+X-XSS-Protection: 0
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+Server-Timing: gfet4t7; dur=2291
+Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+Accept-Ranges: none
+Vary: Origin,Accept-Encoding
+Transfer-Encoding: chunked
+
+335
+[{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "**Identifying the Query**\n\nI've just processed the user's initial query in Chinese, \"你好，你是谁？\" This is a straightforward greeting asking for my identity. I'm noting the system context - Sdcb Chats, a Google language model, dated December 18, 2025, running on the gem model. This is an interesting starting point.\n\n\n",
+            "thought": true
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 40,
+    "totalTokenCount": 40,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 40
+      }
+    ]
+  },
+  "modelVersion": "gemini-3-flash-preview",
+  "responseId": "nBFEabigEZa0vr0P96Gq2Ao"
+}
+
+3db
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "**Formulating a Response**\n\nI'm now drafting the initial response, focusing on a clear and concise introduction. My planned response will be something like, \"你好！我是 Sdcb Chats，是由 Google 开发的大型语言模型。我可以协助你完成各种任务，比如回答问题、提供建议、编写代码或者进行翻译。请问今天有什么我可以帮你的吗？\" The plan is to be friendly, clearly state my identity and capabilities, then actively offer assistance.\n\n\n",
+            "thought": true
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 40,
+    "totalTokenCount": 40,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 40
+      }
+    ]
+  },
+  "modelVersion": "gemini-3-flash-preview",
+  "responseId": "nBFEabigEZa0vr0P96Gq2Ao"
+}
+
+2df
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "你好！我是 **Sdcb Chats**，是由 **Google** 开发的大型语言模型。\n\n我可以帮你回答问题、提供建议、练习编程、翻译语言、进行创意写作，或者只是陪你聊天。\n\n"
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 40,
+    "candidatesTokenCount": 45,
+    "totalTokenCount": 353,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 40
+      }
+    ],
+    "thoughtsTokenCount": 268
+  },
+  "modelVersion": "gemini-3-flash-preview",
+  "responseId": "nBFEabigEZa0vr0P96Gq2Ao"
+}
+
+238
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "请问今天有什么我可以帮你的吗？"
+          }
+        ],
+        "role": "model"
+      },
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 40,
+    "candidatesTokenCount": 54,
+    "totalTokenCount": 362,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 40
+      }
+    ],
+    "thoughtsTokenCount": 268
+  },
+  "modelVersion": "gemini-3-flash-preview",
+  "responseId": "nBFEabigEZa0vr0P96Gq2Ao"
+}
+
+92d
+,
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "",
+            "thoughtSignature": "EqMKCqAKAXLI2nxl8lrEDoTnbS2ArO8oMsPV7vW2X4NF/HYkNU6xlNBWK+8BBt52cWoRmcWN66QhsRx6rUEWO0MOjpP+PrIHmIBzCpTQylQQhE8J7cREqbUq5X1Ki7yxXnC02WwzHetyt7H8F0nD+uYwH7BsczGd0JdoWG8x35/W9ZbnDfH8ptF1OUhUaWcsZa4FckqbebktNdDMsWo16uJZh8km1l0+hbgb9OfXeuWrucGdOy7WGNQzJcWWl1Xu39Ey9/34qC30dZEmb1sN/I8NWt9VicQiq9Nzw8Yvr02ASWMgATOdOi++nHScJb4CFjhZSIiyGu3lrx9wxqfuIaluvdd88boiy8/6EGcZT1fgyvP2l8mUciCaxmFXsD9vRd7aZEnPr3aPTtmSCifrnklBy3O/3tzcCbSnZgS++jRZGlFuFwoLJd5m4PYx5mbpsyoEreCmBWpEa1Xplcz1FWHgSmc3tSwylM3fGpO0TIQVskR0kaozbyGFHCDa0iBQG5o0uatsSERPGSJWBNaso919aonISjXHA4CrGb8fIk+LuJdGX2G80/cXCzTWmCImAvf8svz9ZWWOtStyURl+TnjcMMH6qZyCX4MUbjHH+102fOb+G1zwr1sN2H6XsleRJ5AwHkgVAJZIpcLE60hFyuqcTiMw4dhvm1T2WZI45jfROC0SCrKNwyFYOxT7ousx8SZmhWUMXbtxkEnzRScb19jYsWdFcMkCXS2JkxsYznW6xUUBdgTsR7i4ID+J39aBVchDdTq+2HmmApcdh136mQ6U3VQGJnok8xQcYOX6rxC5rtHxKCsyx3VSswv2TIpa13PVno9MjHJqB98Y7PzMwruFV+BMyr8Fc56HDjSh2f4LGByDII5PuxaNde48x0j0/vxWNfMDMAS4yb2SDwknnxVrzCannUIc9IRQc8lODuqLlI4NAuyjckDo2sgdYw6nnZ6wnevdcasbBmaOeqJKy2DlrdT6mWscpl1AND/06DCWEM/2S7GPoyhMptyFc5tW3mT/li0bE7wMpAMCTjsXFprPA1+hGW6fa2oopBq5+paPyhhtlSmpSk8aYfDAzi6SfgDpDJtN+PtBkHzGJoWQCQ3/S+yT5BFbEl+y979M9qTF3hBp4b/IWwgJVyPrzURpk8ni7VxFnMomJFQFia37q7EY6Vrwb0E078yMclWxKlW4eCGHXGadGXzfHk5SInKfY9eXhGpsaG/+fox3NPNaZw7+SONGwc7XD8KyEuZxJsK+4nSrpZbBKCpHDlr184N3RUWNlUDZ4D/8i/Ih+jAplB9N+vkmUpq57N8CUDQKmJVoRA/IyKg211r4wV75qDiGgd6mKqF4h0PDwBy+zSdbG6C84x/jUZ4L3mnIJ4Jm1Pza4FF+uZlBtqyhrV+cNHKxKm2uodTwHm0jxYzkyxmTu4Vu7RNAs6Mioblwuylz3jy+oW1HCd2tAk2i+vpW806jvC+PjZRd7qpAIvbGkVzMX+1gsenqSo19xC6l3EJVFKWNIa2+SeBJlunHBLaMshHHT+tGOgikI/g71QdCxquVgOpUiqtcqTA6Lmr3NrL52bAMl/ntxMxlLVhKPR8SR6ZQdtsHRG9EWc0cUV8qcmxjAT3YeQCLogz9Hegt4/pk35nTzt2dGab3uncKVcxaPbrOM2Cujxy1fqWenIVYd0DwNGAiBJOHqJ1MRS6Tq72WWH4shCHQphF8tyWHhsPblkFl8B12X7kXr1PdPYmSBs7/dA6+ab5Vaw=="
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 40,
+    "candidatesTokenCount": 54,
+    "totalTokenCount": 362,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 40
+      }
+    ],
+    "thoughtsTokenCount": 268
+  },
+  "modelVersion": "gemini-3-flash-preview",
+  "responseId": "nBFEabigEZa0vr0P96Gq2Ao"
+}
+
+1
+]
+0
+
