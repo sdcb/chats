@@ -19,6 +19,7 @@ import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdo
 import { IconChevronRight, IconThink } from '../Icons';
 
 import rehypeKatex from 'rehype-katex';
+import { rehypeKatexDataMath } from '@/components/Markdown/rehypeKatexWithCopy';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import type { Components as MarkdownComponents } from 'react-markdown';
@@ -256,7 +257,7 @@ const ThinkingMessage = (props: Props) => {
         <div className="px-2 text-gray-400 text-sm mt-2">
           <MemoizedReactMarkdown
             remarkPlugins={[remarkMath, remarkGfm]}
-            rehypePlugins={[rehypeKatex as any]}
+            rehypePlugins={[rehypeKatex as any, rehypeKatexDataMath]}
             components={thinkingMarkdownComponents}
           >
             {`${preprocessLaTeX(content!)}${finished === false ? '▍' : ''}`}

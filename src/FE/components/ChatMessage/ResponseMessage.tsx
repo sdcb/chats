@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
+import useMathCopy from '@/hooks/useMathCopy';
 
 import { isChatting, preprocessLaTeX } from '@/utils/chats';
 
@@ -32,6 +33,7 @@ import ThinkingMessage from './ThinkingMessage';
 
 import { cn } from '@/lib/utils';
 import rehypeKatex from 'rehype-katex';
+import { rehypeKatexDataMath } from '@/components/Markdown/rehypeKatexWithCopy';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import remarkBreaks from 'remark-breaks';
@@ -138,6 +140,9 @@ interface Props {
 const ResponseMessage = (props: Props) => {
   const { message, chatStatus, readonly, chatId, chatShareId, onEditResponseMessage } = props;
   const { t } = useTranslation();
+
+  // 启用数学公式复制功能（复制时保留原始 LaTeX）
+  useMathCopy();
 
   const { id: messageId, status: messageStatus } = message;
   const content = useMemo(() => getMessageContents(message), [message.steps]);
@@ -531,7 +536,7 @@ const ResponseMessage = (props: Props) => {
                     <MemoizedReactMarkdown
                       // 顺序：math -> gfm -> breaks，确保数学与 GFM 处理后，再将 softbreak 转为 <br/>
                       remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
-                      rehypePlugins={[rehypeKatex as any]}
+                      rehypePlugins={[rehypeKatex as any, rehypeKatexDataMath]}
                       components={markdownComponents}
                     >
                       {`${preprocessLaTeX(c.c!)}${
