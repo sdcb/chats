@@ -17,13 +17,6 @@ public class MimoAnthropicService(IHttpClientFactory httpClientFactory) : Anthro
         );
     }
 
-    protected override void AddApiKeyHeader(HttpRequestMessage request, string apiKey)
-    {
-        // Mimo uses api-key header instead of x-api-key
-        request.Headers.Add("api-key", apiKey);
-        request.Headers.Add("anthropic-version", "2023-06-01");
-    }
-
     protected override JsonNode? BuildThinkingNode(ChatRequest request, bool allowThinking)
     {
         // Mimo enables thinking mode via `thinking: { type: "enabled" }` when ThinkingBudget is set.

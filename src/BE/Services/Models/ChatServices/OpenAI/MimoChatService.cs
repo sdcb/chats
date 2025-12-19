@@ -14,12 +14,6 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 /// </summary>
 public class MimoChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {
-    protected override void AddAuthorizationHeader(HttpRequestMessage request, DB.ModelKey modelKey)
-    {
-        // Mimo uses api-key header instead of Authorization: Bearer
-        request.Headers.Add("api-key", modelKey.Secret);
-    }
-
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         MimoInterleavedToolCallTransformer transformer = new();
