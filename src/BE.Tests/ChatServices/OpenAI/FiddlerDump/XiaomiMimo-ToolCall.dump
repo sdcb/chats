@@ -1,6 +1,6 @@
 POST https://api.xiaomimimo.com/v1/chat/completions HTTP/1.1
 Host: api.xiaomimimo.com
-api-key: sk-c18xcncx1picfwljpg1aj1qzh4v8tl7t0yyuq8wajatmd0fv
+api-key: [REDACTED]
 Accept: text/event-stream
 traceparent: 00-d15e737bc09fec121cb37d0a39e3a19b-18bd1a43fc0b5483-00
 Content-Type: application/json; charset=utf-8
