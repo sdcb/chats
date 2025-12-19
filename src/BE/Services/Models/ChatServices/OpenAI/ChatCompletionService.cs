@@ -523,7 +523,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             body["seed"] = request.Seed.Value;
         }
 
-        if (request.Source == UsageSource.WebChat)
+        if (request.Source == UsageSource.WebChat && request.Tools.Any())
         {
             body["parallel_tool_calls"] = true;
         }
