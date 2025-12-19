@@ -208,30 +208,30 @@ Download .NET Runtime: [https://dotnet.microsoft.com/download](https://dotnet.mi
 
 ## Supported LLM Services
 
-| Id  | Name             | Host                                                     |
-| --- | ---------------- | -------------------------------------------------------- |
-| 0   | Test             | null                                                     |
-| 1   | Azure AI Foundry | https://<resource-name>.openai.azure.com/                |
-| 2   | Tencent Hunyuan  | https://api.hunyuan.cloud.tencent.com/v1                 |
-| 3   | 01.ai            | https://api.lingyiwanwu.com/v1                           |
-| 4   | Moonshot         | https://api.moonshot.cn/v1                               |
-| 5   | OpenAI           | https://api.openai.com/v1                                |
-| 6   | Wenxin Qianfan   | https://qianfan.baidubce.com/v2                          |
-| 7   | DashScope        | https://dashscope.aliyuncs.com/compatible-mode/v1        |
-| 8   | Xunfei SparkDesk | https://spark-api-open.xf-yun.com/v1                     |
-| 9   | Zhipu AI         | https://open.bigmodel.cn/api/paas/v4/                    |
-| 10  | DeepSeek         | https://api.deepseek.com/v1                              |
-| 11  | x.ai             | https://api.x.ai/v1                                      |
-| 12  | Github Models    | https://models.inference.ai.azure.com                    |
-| 13  | Google AI        | https://generativelanguage.googleapis.com/v1beta/        |
-| 14  | Ollama           | http://localhost:11434/v1                                |
-| 15  | MiniMax          | https://api.minimax.chat/v1                              |
-| 16  | Doubao           | https://ark.cn-beijing.volces.com/api/v3/                |
-| 17  | SiliconFlow      | https://api.siliconflow.cn/v1                            |
-| 18  | OpenRouter       | https://openrouter.ai/api/v1                             |
-| 19  | Token Pony       | https://api.tokenpony.cn/v1                              |
-| 20  | Anthropic        | https://api.anthropic.com                                |
-| 21  | Xiaomi Mimo      | https://api.xiaomimimo.com/v1                            |
+| Id  | Name             | Added      | Git Commit |
+| --- | ---------------- | ---------- | ---------- |
+| 0   | Test             | 2024-11-18 | [66d011b1](https://github.com/sdcb/chats/commit/66d011b1) |
+| 1   | Azure AI Foundry | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
+| 2   | Tencent Hunyuan  | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
+| 3   | 01.ai            | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
+| 4   | Moonshot         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
+| 5   | OpenAI           | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
+| 6   | Wenxin Qianfan   | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
+| 7   | DashScope        | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
+| 8   | Xunfei SparkDesk | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
+| 9   | Zhipu AI         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
+| 10  | DeepSeek         | 2024-12-06 | [30db0079](https://github.com/sdcb/chats/commit/30db0079) |
+| 11  | x.ai             | 2024-12-11 | [0d1cab20](https://github.com/sdcb/chats/commit/0d1cab20) |
+| 12  | Github Models    | 2024-12-11 | [0d1cab20](https://github.com/sdcb/chats/commit/0d1cab20) |
+| 13  | Google AI        | 2025-01-10 | [a4effc1b](https://github.com/sdcb/chats/commit/a4effc1b) |
+| 14  | Ollama           | 2025-01-20 | [6a5288e7](https://github.com/sdcb/chats/commit/6a5288e7) |
+| 15  | MiniMax          | 2025-01-20 | [6a5288e7](https://github.com/sdcb/chats/commit/6a5288e7) |
+| 16  | Doubao           | 2025-01-24 | [843510ff](https://github.com/sdcb/chats/commit/843510ff) |
+| 17  | SiliconFlow      | 2025-02-08 | [889144cf](https://github.com/sdcb/chats/commit/889144cf) |
+| 18  | OpenRouter       | 2025-03-05 | [15adedfe](https://github.com/sdcb/chats/commit/15adedfe) |
+| 19  | Token Pony       | 2025-11-07 | [32e4a0d5](https://github.com/sdcb/chats/commit/32e4a0d5) |
+| 20  | Anthropic        | 2025-11-24 | [22ebef98](https://github.com/sdcb/chats/commit/22ebef98) |
+| 21  | Xiaomi Mimo      | 2025-12-17 | [026f1a4e](https://github.com/sdcb/chats/commit/026f1a4e) |
 
 **Note:**
 
