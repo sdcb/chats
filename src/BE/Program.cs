@@ -10,10 +10,12 @@ using Chats.BE.Services.Sessions;
 using Chats.BE.Services.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Chats.BE.Services.FileServices;
 using Microsoft.AspNetCore.StaticFiles;
 using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.Controllers.Admin.GlobalConfigs;
 
 [assembly: InternalsVisibleTo("Chats.BE.Tests")]
 
@@ -21,6 +23,10 @@ namespace Chats.BE;
 
 public class Program
 {
+    private static string? CurrentVersion => typeof(Program).Assembly
+        .GetCustomAttribute<AssemblyFileVersionAttribute>()?
+        .Version;
+
     public static async Task Main(string[] args)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -38,7 +44,10 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
         builder.Services.AddDbContext<ChatsDB>(o => o.Configure(builder.Configuration, builder.Environment));
-        builder.Services.AddHttpClient();
+        builder.Services.AddHttpClient(string.Empty, httpClient =>
+        {
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd($"Sdcb-Chats/{CurrentVersion}");
+        });
         builder.Services.AddSingleton<InitService>();
         builder.Services.AddSingleton<AppConfigService>();
         builder.Services.AddSingleton<CsrfTokenService>();
@@ -77,6 +86,7 @@ public class Program
         builder.Services.AddSingleton<FileImageInfoService>();
         builder.Services.AddSingleton<AsyncClientInfoManager>();
         builder.Services.AddSingleton<AsyncCacheUsageManager>();
+        builder.Services.AddSingleton<GitHubReleaseChecker>();
 
         builder.Services.AddScoped<CurrentUser>();
         builder.Services.AddScoped<CurrentApiKey>();

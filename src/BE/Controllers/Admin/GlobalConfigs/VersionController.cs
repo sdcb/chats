@@ -20,13 +20,13 @@ public class VersionController(ILogger<VersionController> logger) : ControllerBa
 
     [HttpPost("check-update")]
     public async Task<ActionResult<CheckUpdateResponse>> CheckUpdate(
-        [FromServices] ILogger<VersionController> logger,
+        [FromServices] GitHubReleaseChecker gitHubReleaseChecker,
         CancellationToken cancellationToken)
     {
         string? tagName = null;
         try
         {
-            tagName = await GitHubReleaseChecker.SdcbChats.GetLatestReleaseTagNameAsync(cancellationToken);
+            tagName = await gitHubReleaseChecker.GetLatestReleaseTagNameAsync(cancellationToken);
         }
         catch (Exception e)
         {
