@@ -239,21 +239,20 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             IsUser = message.IsUser,
             Steps = [.. message.Steps.Select(x => new Step()
             {
-                StepContents = stepContents,
+                StepContents = [.. stepContents],
                 Edited = true, // Mark as edited since we are creating a new message
                 ChatRoleId = message.IsUser ? (byte)DBChatRole.User : (byte)DBChatRole.Assistant,
                 CreatedAt = DateTime.UtcNow,
                 Usage = message.Steps.First().Usage != null ? new UserModelUsage()
                 {
                     ModelId = message.Steps.First().Usage!.ModelId,
-                    Model = message.Steps.First().Usage!.Model,
                     UserId = currentUser.Id,
                     FinishReasonId = (byte)DBFinishReason.Success,
                     SegmentCount = 1,
                     InputFreshTokens = message.Steps.First().Usage!.InputFreshTokens,
                     InputCachedTokens = message.Steps.First().Usage!.InputCachedTokens,
                     OutputTokens = ChatService.Tokenizer.CountTokens(content.Text),
-                    ClientInfo = clientInfo,
+                    ClientInfoId = clientInfo.Id, // Use FK instead of navigation property to avoid EF Core collection modification issue
                     ReasoningTokens = 0,
                     IsUsageReliable = false,
                     PreprocessDurationMs = 0,
