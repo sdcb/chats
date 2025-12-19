@@ -384,14 +384,20 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
                   <SelectValue placeholder={t('Select API Key')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {apiKeys.map((apiKey) => (
-                    <SelectItem
-                      key={apiKey.id.toString()}
-                      value={apiKey.id.toString()}
-                    >
-                      {apiKey.key}
-                    </SelectItem>
-                  ))}
+                  {apiKeys.map((apiKey) => {
+                    const date = formatDate(apiKey.createdAt);
+                    const displayText = apiKey.comment
+                      ? `${apiKey.comment}(${date})`
+                      : `(${date})`;
+                    return (
+                      <SelectItem
+                        key={apiKey.id.toString()}
+                        value={apiKey.id.toString()}
+                      >
+                        {displayText}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

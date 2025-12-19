@@ -9,7 +9,7 @@ Date.prototype.addYear = function (years: number, date?: Date | string): Date {
 };
 
 export const formatDate = (value: string | Date) =>
-  value ? format(new Date(value), 'yyyy-M-d') : value;
+  value ? format(new Date(value), 'yyyy-MM-dd') : value;
 
 export const formatDateTime = (value: string | Date) =>
   value ? format(new Date(value), 'yyyy-M-d HH:mm:ss') : value;
