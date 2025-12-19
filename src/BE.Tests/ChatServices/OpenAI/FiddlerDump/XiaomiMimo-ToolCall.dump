@@ -1,0 +1,489 @@
+POST https://api.xiaomimimo.com/v1/chat/completions HTTP/1.1
+Host: api.xiaomimimo.com
+api-key: sk-c18xcncx1picfwljpg1aj1qzh4v8tl7t0yyuq8wajatmd0fv
+Accept: text/event-stream
+traceparent: 00-d15e737bc09fec121cb37d0a39e3a19b-18bd1a43fc0b5483-00
+Content-Type: application/json; charset=utf-8
+Content-Length: 1597
+
+{"model":"mimo-v2-flash","messages":[{"role":"system","content":"你是Sdcb Chats，一个人工智能助手\n当前日期: 2025/12/18，当前模型：mimo-v2-flash，用markdown回复"},{"role":"user","content":"计算1234/5432=?"}],"stream":true,"stream_options":{"include_usage":true},"user":"8","tools":[{"type":"function","function":{"name":"run_csharp","description":"C#代码执行器，用于精确计算、实时数据或复杂逻辑处理，默认超时时间30秒。\n\n何时使用：\n- 数学运算: (BigInteger.Pow(2, 64) - 1).ToString()\n- 日期时间: new DateTime(2025, 12, 25).DayOfWeek.ToString()\n- 加密哈希: string.Concat(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(\"Gemini\")).Select(b => b.ToString(\"x2\")))\n- LINQ处理: new[] { \"anna\", \"bob\" }.Select(n => char.ToUpper(n[0]) + n[1..].ToLower()).OrderBy(n => n).ToList()\n- JSON解析: JsonDocument.Parse(\"{\\\"name\\\": \\\"John\\\"}\").RootElement.GetProperty(\"name\").GetString()\n- 正则匹配: Regex.Match(\"test@example.com\", @\"[\\w]+@[\\w]+\\.\\w+\").Value\n- HTTP请求: await new HttpClient().GetStringAsync(\"https://example.com\")\n- 算法验证: int n = 1997; for (int i = 2; i * i <= n; i++) if (n % i == 0) return false; return n > 1;\n\n何时避免：开放式问题、外部NuGet包、状态维持、长时间任务、本地文件访问、UI构建。\n\n原则：精确优先，任务分解，善用工具。","parameters":{"type":"object","properties":{"code":{"type":"string"},"timeout":{"type":"integer","default":30000}},"required":["code"]}}}],"thinking":{"type":"enabled"}}
+HTTP/1.1 200 OK
+Date: Thu, 18 Dec 2025 08:45:25 GMT
+Content-Type: text/event-stream
+Transfer-Encoding: chunked
+Connection: keep-alive
+Server: MiFE/3.4.29
+X-MiFE-Upstream-Status: 200
+
+132
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047525,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047525,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"用户","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"要求","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+132
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"计算1","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12c
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"2","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12d
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"34","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"除","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"以","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12d
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"54","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12d
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"32","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"的结果","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13a
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"。这是一个","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"简单的","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+137
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"数学计算","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+137
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"，我可以","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+137
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"直接计算","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"，但","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"为了","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"确保","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"精确","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"，","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"我会","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13a
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"使用计算器","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"或者","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047526,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"编程","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"语言","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"来计算","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+132
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"。\n\n","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"首先","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"，我","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"需要","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"理解","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"这个","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+136
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"计算：12","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12d
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"34","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":" ÷","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12f
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":" 543","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13b
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"2。这是一个","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"除法","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13a
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"运算，结果","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"将会","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13a
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"是一个小数","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+137
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"。我可以","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"手动","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"计算，","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"但为了","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"准确性","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"，我会","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047527,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"使用工具。\n\n","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"用户","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"可能","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"希望","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13a
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"得到一个小","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"数","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13a
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"形式的结果","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+140
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"，或者分数形式","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"。我会","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"先","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"计算出","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"小数","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"形式","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+132
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"。\n\n","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"我可以","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+132
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"使用C","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12c
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"#","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13a
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"代码来执行","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"这个","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"计算，","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+132
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"因为C","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12f
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"#有","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"高","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047528,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"精度","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"的计算","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"能力","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"。我会","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"使用","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"run","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+132
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"_csharp","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"工具","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"来","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"计算123","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12d
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"4.","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12d
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"0/","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12f
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"5432","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+130
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":".0，","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13a
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"以确保得到","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+137
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"小数结果","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13b
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"。\n\n让我写","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13a
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"一个简单的","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+136
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"C#代码来","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13a
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"计算这个除","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+135
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"法。\n\n","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"代码：","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"```","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+139
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"csharp\ndouble","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+136
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047529,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":" result = 1","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"234","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+130
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":".0 / ","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12f
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"5432","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+137
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":".0;\nConsole","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+140
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":".WriteLine(result);\n","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13b
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"```\n\n或者，","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13a
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"我可以计算","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"精确","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"的","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13d
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"分数形式，但","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+137
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"用户可能","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"更","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+13d
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"关心小数形式","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+138
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"。\n\n我会","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+134
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"计算并","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"返回","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+131
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"结果","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+12e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047530,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":"。","tool_calls":null},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+1ea
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047531,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":null,"tool_calls":[{"id":"call_13f2f94b48d240a8ae062fe0","index":0,"type":"function","function":{"name":"run_csharp","arguments":"{\"code\": \"double result = 1234.0 / 5432.0;\\nConsole.WriteLine(result);\"}"}}]},"logprobs":null,"finish_reason":null,"matched_stop":null}],"usage":null}
+
+
+25e
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","object":"chat.completion.chunk","created":1766047531,"model":"mimo-v2-flash","choices":[{"index":0,"delta":{"role":null,"content":null,"reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":"tool_calls","matched_stop":151645}],"usage":null}
+
+data: {"id":"caffe5ba46d64ad18892602fc3552df5","choices":[],"created":1766047531,"model":"mimo-v2-flash","object":"chat.completion.chunk","usage":{"completion_tokens":266,"prompt_tokens":617,"total_tokens":883,"completion_tokens_details":{"reasoning_tokens":219},"prompt_tokens_details":null}}
+
+
+e
+data: [DONE]
+
+
+0
+

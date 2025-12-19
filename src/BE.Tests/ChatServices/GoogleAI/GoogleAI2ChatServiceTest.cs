@@ -93,7 +93,7 @@ public class GoogleAI2ChatServiceTest
     public async Task CodeExecute_ShouldReturnCodeExecutionResult()
     {
         // Arrange
-        var filePath = Path.Combine(TestDataPath, "CodeExecute.txt");
+        var filePath = Path.Combine(TestDataPath, "CodeExecute.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump);
         
@@ -153,7 +153,7 @@ public class GoogleAI2ChatServiceTest
     public async Task ToolCall_ShouldReturnFunctionCall()
     {
         // Arrange
-        var filePath = Path.Combine(TestDataPath, "ToolCall.txt");
+        var filePath = Path.Combine(TestDataPath, "ToolCall.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump);
         
@@ -205,7 +205,7 @@ public class GoogleAI2ChatServiceTest
     public async Task WebSearch_ShouldReturnSearchResults()
     {
         // Arrange
-        var filePath = Path.Combine(TestDataPath, "WebSearch.txt");
+        var filePath = Path.Combine(TestDataPath, "WebSearch.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump);
         
@@ -250,7 +250,7 @@ public class GoogleAI2ChatServiceTest
     public async Task ImageGenerate_ShouldReturnImage()
     {
         // Arrange
-        var filePath = Path.Combine(TestDataPath, "ImageGenerate.txt");
+        var filePath = Path.Combine(TestDataPath, "ImageGenerate.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump);
         
@@ -291,7 +291,7 @@ public class GoogleAI2ChatServiceTest
     public async Task Error404_ShouldThrowRawChatServiceException()
     {
         // Arrange
-        var filePath = Path.Combine(TestDataPath, "Error_404.txt");
+        var filePath = Path.Combine(TestDataPath, "Error_404.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump);
         
@@ -329,7 +329,7 @@ public class GoogleAI2ChatServiceTest
     public async Task Error429_ShouldThrowRawChatServiceException()
     {
         // Arrange
-        var filePath = Path.Combine(TestDataPath, "Error_429.txt");
+        var filePath = Path.Combine(TestDataPath, "Error_429.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump);
         
@@ -367,7 +367,7 @@ public class GoogleAI2ChatServiceTest
     public async Task ThoughtSignature_ShouldBeDiscardedIfAfterText()
     {
         // Arrange
-        var filePath = Path.Combine(TestDataPath, "ThoughtSignature.txt");
+        var filePath = Path.Combine(TestDataPath, "ThoughtSignature.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump);
 

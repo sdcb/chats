@@ -12,7 +12,7 @@ public class FiddlerDumpHttpClientFactoryTests
     public async Task WhenRequestMatchesDump_ShouldReturnResponse()
     {
         // Arrange
-        var filePath = Path.Combine(TestDataPath, "CodeExecute.txt");
+        var filePath = Path.Combine(TestDataPath, "CodeExecute.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var statusCode = (HttpStatusCode)dump.Response.StatusCode;
 
@@ -39,7 +39,7 @@ public class FiddlerDumpHttpClientFactoryTests
     public async Task WhenRequestJsonValueMismatch_ShouldThrow()
     {
         // Arrange
-        var filePath = Path.Combine(TestDataPath, "CodeExecute.txt");
+        var filePath = Path.Combine(TestDataPath, "CodeExecute.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
 
         IHttpClientFactory factory = new FiddlerDumpHttpClientFactory(dump.Response.Chunks, (HttpStatusCode)dump.Response.StatusCode, dump.Request.Body);
@@ -63,7 +63,7 @@ public class FiddlerDumpHttpClientFactoryTests
     public async Task WhenRequestJsonShapeMismatch_ShouldThrow()
     {
         // Arrange
-        var filePath = Path.Combine(TestDataPath, "CodeExecute.txt");
+        var filePath = Path.Combine(TestDataPath, "CodeExecute.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
 
         IHttpClientFactory factory = new FiddlerDumpHttpClientFactory(dump.Response.Chunks, (HttpStatusCode)dump.Response.StatusCode, dump.Request.Body);
@@ -86,7 +86,7 @@ public class FiddlerDumpHttpClientFactoryTests
     public async Task WhenActualBodyIsInvalidJson_ShouldThrow()
     {
         // Arrange
-        var filePath = Path.Combine(TestDataPath, "CodeExecute.txt");
+        var filePath = Path.Combine(TestDataPath, "CodeExecute.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
 
         IHttpClientFactory factory = new FiddlerDumpHttpClientFactory(dump.Response.Chunks, (HttpStatusCode)dump.Response.StatusCode, dump.Request.Body);
@@ -108,7 +108,7 @@ public class FiddlerDumpHttpClientFactoryTests
     public async Task WhenExpectedBodyIsInvalidJson_ShouldThrow()
     {
         // Arrange
-        var filePath = Path.Combine(TestDataPath, "CodeExecute.txt");
+        var filePath = Path.Combine(TestDataPath, "CodeExecute.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
 
         IHttpClientFactory factory = new FiddlerDumpHttpClientFactory(dump.Response.Chunks, (HttpStatusCode)dump.Response.StatusCode, expectedRequestBody: "not-json");

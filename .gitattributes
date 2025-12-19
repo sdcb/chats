@@ -1,0 +1,5 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Fiddler HTTP dump files - preserve original line endings (binary)
+*.dump binary

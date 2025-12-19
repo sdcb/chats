@@ -62,7 +62,8 @@ internal sealed class FiddlerDumpHttpMessageHandler : HttpMessageHandler
 }
 
 /// <summary>
-/// Simulates chunked stream response. Converts a list of chunk lines into a readable stream (skipping the chunk-size lines).
+/// Simulates chunked stream response. Converts a list of chunks into a readable stream.
+/// Now that FiddlerHttpDumpParser correctly parses HTTP chunks, we just need to concatenate them.
 /// </summary>
 public sealed class ChunkedMemoryStream : Stream
 {
@@ -70,34 +71,10 @@ public sealed class ChunkedMemoryStream : Stream
 
     public ChunkedMemoryStream(List<string> chunks)
     {
-        var content = new StringBuilder();
-
-        foreach (var line in chunks)
-        {
-            if (!IsChunkSizeLine(line))
-            {
-                content.Append(line);
-            }
-        }
-
-        var bytes = Encoding.UTF8.GetBytes(content.ToString());
+        // Chunks 现在已经是正确解析的内容，直接拼接即可
+        var content = string.Concat(chunks);
+        var bytes = Encoding.UTF8.GetBytes(content);
         innerStream = new MemoryStream(bytes);
-    }
-
-    private static bool IsChunkSizeLine(string line)
-    {
-        if (string.IsNullOrEmpty(line)) return false;
-
-        if (char.IsWhiteSpace(line[0])) return false;
-
-        var trimmed = line.Trim();
-        if (string.IsNullOrEmpty(trimmed)) return false;
-        if (trimmed.Length > 8) return false;
-
-        return trimmed.All(c =>
-            (c >= '0' && c <= '9') ||
-            (c >= 'a' && c <= 'f') ||
-            (c >= 'A' && c <= 'F'));
     }
 
     public override bool CanRead => true;

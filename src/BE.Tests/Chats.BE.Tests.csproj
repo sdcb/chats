@@ -33,10 +33,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="ChatServices\GoogleAI\FiddlerDump\*.txt">
+    <None Update="ChatServices\GoogleAI\FiddlerDump\*.dump">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="ChatServices\OpenAI\FiddlerDump\*.txt">
+    <None Update="ChatServices\OpenAI\FiddlerDump\*.dump">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

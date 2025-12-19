@@ -1,4 +1,5 @@
 using Chats.BE.Controllers.Chats.Chats;
+using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
 using Chats.BE.DB.Enums;
 using Chats.BE.Services.Models.Dtos;
@@ -522,7 +523,11 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             body["seed"] = request.Seed.Value;
         }
 
-        if (request.AllowParallelToolCalls.HasValue)
+        if (request.Source == UsageSource.WebChat)
+        {
+            body["parallel_tool_calls"] = true;
+        }
+        else if (request.AllowParallelToolCalls.HasValue)
         {
             body["parallel_tool_calls"] = request.AllowParallelToolCalls.Value;
         }
