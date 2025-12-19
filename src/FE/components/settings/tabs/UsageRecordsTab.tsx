@@ -54,17 +54,6 @@ interface Provider {
   name: string;
 }
 
-interface QueryParams {
-  [key: string]: string | string[] | undefined;
-  tab?: string;
-  source?: string;
-  kid?: string;
-  page?: string;
-  start?: string;
-  end?: string;
-  provider?: string;
-}
-
 interface UsageRecordsTabProps {
   fixedSource?: UsageSource;
   basePath?: string;
@@ -75,8 +64,6 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
   const router = useRouter();
   const user = useUserInfo();
 
-  const { source, kid, page, start, end, provider } = router.query;
-
   const [usageLogs, setUsageLogs] = useState<GetUsageResult[]>([]);
   const [usageStat, setUsageStat] = useState<GetUsageStatResult>(
     {} as GetUsageStatResult,
@@ -85,22 +72,16 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
   const [totalCount, setTotalCount] = useState(0);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [apiKeys, setApiKeys] = useState<GetUserApiKeyResult[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState<string>(
-    (provider as string) || '',
-  );
-  const [selectedApiKey, setSelectedApiKey] = useState<string>(
-    (kid as string) || '',
-  );
+  const [selectedProvider, setSelectedProvider] = useState<string>('');
+  const [selectedApiKey, setSelectedApiKey] = useState<string>('');
   const [pagination, setPagination] = useState({
-    page: parseInt((page as string) || '1'),
+    page: 1,
     pageSize: 10,
   });
 
-  const [startDate, setStartDate] = useState<string>((start as string) || '');
-  const [endDate, setEndDate] = useState<string>((end as string) || '');
-  const [selectedSource, setSelectedSource] = useState<string>(
-    fixedSource !== undefined ? String(fixedSource) : (source as string) || '',
-  );
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [selectedSource, setSelectedSource] = useState<string>('');
 
   const getQueryTab = () => basePath ? undefined : 'usage';
   const getPathname = () => basePath || router.pathname;
@@ -124,33 +105,34 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
     });
   }, []);
 
+  // Sync state with URL params and fetch data when router is ready or URL changes
   useEffect(() => {
     if (router.isReady) {
-      setStartDate((start as string) || '');
-      setEndDate((end as string) || '');
-      setSelectedProvider((provider as string) || '');
-      setSelectedApiKey((kid as string) || '');
-      if (fixedSource === undefined) {
-        setSelectedSource((source as string) || '');
-      }
-      fetchUsageData();
+      // Read directly from router.query to avoid stale closure issues
+      const query = router.query;
+      const params = {
+        source: fixedSource !== undefined ? String(fixedSource) : (query.source as string) || '',
+        kid: (query.kid as string) || '',
+        page: parseInt((query.page as string) || '1'),
+        start: (query.start as string) || '',
+        end: (query.end as string) || '',
+        provider: (query.provider as string) || '',
+      };
+
+      setStartDate(params.start);
+      setEndDate(params.end);
+      setSelectedProvider(params.provider);
+      setSelectedApiKey(params.kid);
+      setSelectedSource(params.source);
+      setPagination({ ...pagination, page: params.page });
+
+      // Fetch data using URL params directly to ensure consistency
+      fetchUsageDataWithParams(params);
+      fetchUsageStatWithParams(params);
     }
   }, [
     router.query.kid,
     router.query.page,
-    router.query.start,
-    router.query.end,
-    router.query.provider,
-    router.query.source,
-    router.isReady,
-  ]);
-
-  useEffect(() => {
-    if (router.isReady) {
-      fetchUsageStat();
-    }
-  }, [
-    router.query.kid,
     router.query.start,
     router.query.end,
     router.query.provider,
@@ -191,6 +173,78 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
     return params;
   }
 
+  // Helper to build GetUsageParams from URL query params
+  const getUsageParamsFromQuery = (query: {
+    source: string;
+    kid: string;
+    page: number;
+    start: string;
+    end: string;
+    provider: string;
+  }): GetUsageParams => {
+    const params: GetUsageParams = {
+      kid: query.kid || undefined,
+      user: user?.username,
+      page: query.page,
+      pageSize: 10,
+      tz: getTz(),
+    };
+
+    if (query.source) {
+      params.source = Number(query.source) as UsageSource;
+    }
+
+    if (query.start) {
+      params.start = query.start;
+    }
+
+    if (query.end) {
+      params.end = query.end;
+    }
+
+    if (query.provider) {
+      params.provider = query.provider;
+    }
+
+    return params;
+  };
+
+  const fetchUsageDataWithParams = (query: {
+    source: string;
+    kid: string;
+    page: number;
+    start: string;
+    end: string;
+    provider: string;
+  }) => {
+    setLoading(true);
+    const params: GetUsageParams = getUsageParamsFromQuery(query);
+
+    getUsage(params)
+      .then((data: PageResult<GetUsageResult[]>) => {
+        setUsageLogs(data.rows);
+        setTotalCount(data.count);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
+  const fetchUsageStatWithParams = (query: {
+    source: string;
+    kid: string;
+    page: number;
+    start: string;
+    end: string;
+    provider: string;
+  }) => {
+    const params: GetUsageParams = getUsageParamsFromQuery(query);
+    getUsageStat(params).then((data: GetUsageStatResult) => {
+      setUsageStat(data);
+    });
+  };
+
+  // Keep original functions for backward compatibility (used by export button)
   const fetchUsageData = () => {
     setLoading(true);
     const params: GetUsageParams = getUsageParams();
