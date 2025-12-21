@@ -51,9 +51,20 @@ public record FullChatCompletion
         };
     }
 
-    public string Serialize()
+    /// <summary>
+    /// 序列化用于缓存存储，包含 segments 字段
+    /// </summary>
+    public string SerializeForCache()
     {
         return JsonSerializer.Serialize(this, JSON.JsonSerializerOptions);
+    }
+
+    /// <summary>
+    /// 序列化用于 API 响应，排除 segments 字段
+    /// </summary>
+    public string SerializeForApi()
+    {
+        return JsonSerializer.Serialize(this, JSON.ApiJsonSerializerOptions);
     }
 }
 

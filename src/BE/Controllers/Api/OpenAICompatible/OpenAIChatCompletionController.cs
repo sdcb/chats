@@ -182,12 +182,17 @@ public partial class OpenAIChatCompletionController(
                     else
                     {
                         isSuccess = true;
-                        return Ok(fullResponse);
+                        return Content(fullResponse.SerializeForApi(), "application/json");
                     }
                 }
                 catch (JsonException e)
                 {
                     logger.LogError(e, "Invalid JSON in cache");
+                }
+                catch (NotSupportedException e)
+                {
+                    // 旧缓存数据可能缺少多态类型标识符，需要重新生成
+                    logger.LogWarning(e, "Cache data missing polymorphic type discriminator, regenerating");
                 }
                 finally
                 {
@@ -226,7 +231,7 @@ public partial class OpenAIChatCompletionController(
                     UserApiCacheBody = new UserApiCacheBody()
                     {
                         Request = requestBody,
-                        Response = toBeCached.Serialize(),
+                        Response = toBeCached.SerializeForCache(),
                     },
                     CreatedAt = DateTime.UtcNow,
                     ClientInfoId = await clientInfoIdTask,
@@ -340,7 +345,7 @@ public partial class OpenAIChatCompletionController(
         {
             // non-streamed success
             FullChatCompletion fullChatCompletion = icc.FullResponse!.ToOpenAIFullChat(cco.Model, HttpContext.TraceIdentifier);
-            return Ok(fullChatCompletion);
+            return Content(fullChatCompletion.SerializeForApi(), "application/json");
         }
     }
 

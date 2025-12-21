@@ -1,10 +1,23 @@
 using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
-using Chats.BE.DB.Enums;
-using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
+using System.Text.Json.Serialization;
 
 namespace Chats.BE.Services.Models.Dtos;
 
+/// <summary>
+/// 需要配置多态序列化，否则 System.Text.Json 只会序列化基类属性（空对象）。
+/// 用于 Chat Completion API 缓存响应时正确序列化 Segments 字段。
+/// </summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(TextChatSegment), typeDiscriminator: "text")]
+[JsonDerivedType(typeof(ThinkChatSegment), typeDiscriminator: "think")]
+[JsonDerivedType(typeof(UsageChatSegment), typeDiscriminator: "usage")]
+[JsonDerivedType(typeof(FinishReasonChatSegment), typeDiscriminator: "finish_reason")]
+[JsonDerivedType(typeof(ToolCallSegment), typeDiscriminator: "tool_call")]
+[JsonDerivedType(typeof(ToolCallResponseSegment), typeDiscriminator: "tool_call_response")]
+[JsonDerivedType(typeof(Base64Image), typeDiscriminator: "base64_image")]
+[JsonDerivedType(typeof(Base64PreviewImage), typeDiscriminator: "base64_preview_image")]
+[JsonDerivedType(typeof(UrlImage), typeDiscriminator: "url_image")]
 public abstract record ChatSegment
 {
     public static ChatSegment FromText(string text)
