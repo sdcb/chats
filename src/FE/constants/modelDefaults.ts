@@ -100,7 +100,7 @@ const DEFAULT_IMAGE_MODEL_CONFIG: Partial<UpdateModelDto> = {
   maxResponseTokens: 10, // 最大批量生成图片数量
   maxThinkingBudget: null,
   reasoningEffortOptions: [2, 3, 4], // 图片质量：低、中、高
-  supportedImageSizes: ['1024x1024', '1792x1024', '1024x1792'],
+  supportedImageSizes: ['1024x1024', '1536x1024', '1024x1536'],
   apiType: ApiType.ImageGeneration,
   useAsyncApi: false,
   useMaxCompletionTokens: false,

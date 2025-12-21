@@ -63,7 +63,7 @@ const ImageGenerationConfig: React.FC<ImageGenerationConfigProps> = ({ control }
                 <FormLabel>{t('Supported Image Sizes')}</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder={t('e.g. 1024x1024, 1792x1024')!}
+                    placeholder={t('e.g. 1024x1024, 1536x1024')!}
                     {...field}
                   />
                 </FormControl>
