@@ -77,6 +77,12 @@ export const StepInfoBubble = ({ stepId, edited, chatId, chatShareId, className 
           className={`p-1 m-0 h-7 w-7 hover:bg-accent hover:text-accent-foreground transition-colors ${className || ''}`}
           onClick={(e) => {
             e.stopPropagation();
+            // 移动端点击时也需要加载数据
+            if (!window.matchMedia('(hover: hover)').matches) {
+              if (!isOpen) {
+                handleLoadInfo();
+              }
+            }
             setIsOpen(!isOpen);
           }}
           onMouseEnter={() => {
