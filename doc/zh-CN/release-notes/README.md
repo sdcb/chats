@@ -7,7 +7,24 @@
 
 ---
 
-## [1.9.0](1.9.0.md) - 2025-11-27 ⭐ 最新版本
+## [1.9.1](1.9.1.md) - 2025-12-21 ⭐ 最新版本
+
+**核心亮点**：小米 MiMo 提供商 · Prompt Cache Token 计费 · Next.js 16 与 React 19 升级 · 交错思考 · 4 级聊天视图架构
+
+- 🤖 **小米 MiMo 支持**：新增小米 MiMo 提供商（ID=21），支持 MiMo-V2-Flash 及 OpenAI/Anthropic API 格式
+- 💰 **Prompt Cache 计费**：缓存 Token 定价，区分 Fresh/Cached Token，在生成信息中显示用量
+- 🔄 **框架升级**：Next.js 15.5.3 → 16.0.7，React 18.2.0 → 19.2.1，升级所有 @radix-ui 包
+- 🧠 **交错思考**：Minimax 和 DeepSeek 支持 Chat Completions API 格式交错思考
+- 🏗️ **4 级架构**：chat/turn/step/content 结构，生成信息气泡，优化消息展示
+- 📋 **LaTeX 复制**：一键复制原始 LaTeX 公式代码，自定义 rehype 插件
+- 🗑️ **SDK 清理**：移除 OpenAI .NET SDK 和 Mscc.GenerativeAI，使用原生 HttpClient
+- 🐛 **问题修复**：DeepSeek-R1 签名解析、Token 统计、图片生成、UI 闪烁
+
+[查看完整发布说明 →](1.9.1.md)
+
+---
+
+## [1.9.0](1.9.0.md) - 2025-11-27
 
 **核心亮点**：Anthropic 提供商支持 · Anthropic Messages API · OpenAI 图像 API · Build 开发者页面 · .NET 10 升级
 
@@ -230,5 +247,5 @@
 ---
 
 <p align="center">
-  <sub>上次更新：2025-11-27</sub>
+  <sub>上次更新：2025-12-21</sub>
 </p>

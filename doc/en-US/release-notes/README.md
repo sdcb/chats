@@ -7,7 +7,24 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.9.0](1.9.0.md) - 2025-11-27 ⭐ Latest Release
+## [1.9.1](1.9.1.md) - 2025-12-21 ⭐ Latest Release
+
+**Core Highlights**: Xiaomi MiMo Provider · Prompt Cache Token Billing · Next.js 16 & React 19 Upgrade · Interleaved Thinking · 4-Level Chat View Architecture
+
+- 🤖 **Xiaomi MiMo Support**: New Xiaomi MiMo provider (ID=21), supports MiMo-V2-Flash with OpenAI/Anthropic API formats
+- 💰 **Prompt Cache Billing**: Cache token pricing, distinguishes Fresh/Cached tokens, displays usage in generation info
+- 🔄 **Framework Upgrades**: Next.js 15.5.3 → 16.0.7, React 18.2.0 → 19.2.1, upgraded all @radix-ui packages
+- 🧠 **Interleaved Thinking**: Minimax and DeepSeek support for Chat Completions API format interleaved thinking
+- 🏗️ **4-Level Architecture**: chat/turn/step/content structure, generation info bubbles, improved message display
+- 📋 **LaTeX Copy**: One-click copy of original LaTeX formula code with custom rehype plugin
+- 🗑️ **SDK Cleanup**: Removed OpenAI .NET SDK and Mscc.GenerativeAI, using native HttpClient
+- 🐛 **Bug Fixes**: DeepSeek-R1 signature parsing, token counting, image generation, UI flickering
+
+[View Full Release Notes →](1.9.1.md)
+
+---
+
+## [1.9.0](1.9.0.md) - 2025-11-27
 
 **Core Highlights**: Anthropic Provider Support · Anthropic Messages API · OpenAI Image API · Build Developer Pages · .NET 10 Upgrade
 
@@ -230,5 +247,5 @@ Starting from 1.0.0, Chats follows Semantic Versioning:
 ---
 
 <p align="center">
-  <sub>Last updated: 2025-11-27</sub>
+  <sub>Last updated: 2025-12-21</sub>
 </p>
