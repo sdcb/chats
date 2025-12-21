@@ -34,7 +34,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         bool allowImageGeneration = AllowImageGeneration(request.ChatConfig.Model);
-        JsonObject requestBody = BuildRequestBody(request, allowImageGeneration);
+        JsonObject requestBody = BuildNativeRequestBody(request, allowImageGeneration);
 
         string modelPath = NormalizeModelName(request.ChatConfig.Model.DeploymentName);
         string endpoint = $"{GetBaseUrl(request.ChatConfig.Model.ModelKey)}/{modelPath}:streamGenerateContent";
@@ -279,7 +279,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
         };
     }
 
-    private JsonObject BuildRequestBody(ChatRequest request, bool allowImageGeneration)
+    private JsonObject BuildNativeRequestBody(ChatRequest request, bool allowImageGeneration)
     {
         JsonObject body = new()
         {
