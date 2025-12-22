@@ -1,0 +1,143 @@
+﻿using Chats.Web.DB;
+using Chats.Web.DB.Init;
+using Chats.Web.Infrastructure;
+using Chats.Web.Services;
+using Chats.Web.Services.Configs;
+using Chats.Web.Services.Models;
+using Chats.Web.Services.UrlEncryption;
+using Chats.Web.Services.OpenAIApiKeySession;
+using Chats.Web.Services.Sessions;
+using Chats.Web.Services.Security;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Mvc;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using Chats.Web.Services.FileServices;
+using Microsoft.AspNetCore.StaticFiles;
+using Chats.Web.Services.Models.ChatServices;
+using Chats.Web.Controllers.Admin.GlobalConfigs;
+
+[assembly: InternalsVisibleTo("Chats.Web.Tests")]
+
+namespace Chats.Web;
+
+public class Program
+{
+    private static string? CurrentVersion => typeof(Program).Assembly
+        .GetCustomAttribute<AssemblyFileVersionAttribute>()?
+        .Version;
+
+    public static async Task Main(string[] args)
+    {
+        WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+        // Add services to the container.
+        builder.Services.AddControllers(options =>
+        {
+            options.CacheProfiles.Add("ModelInfo", new CacheProfile()
+            {
+                Duration = 5 * 60,
+                Location = ResponseCacheLocation.Client,
+            });
+        });
+        // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen();
+        builder.Services.AddDbContext<ChatsDB>(o => o.Configure(builder.Configuration, builder.Environment));
+        builder.Services.AddHttpClient(string.Empty, httpClient =>
+        {
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd($"Sdcb-Chats/{CurrentVersion}");
+        });
+        builder.Services.AddSingleton<InitService>();
+        builder.Services.AddSingleton<AppConfigService>();
+        builder.Services.AddSingleton<CsrfTokenService>();
+        builder.Services.AddSingleton<JwtKeyManager>();
+        builder.Services.AddSingleton<PasswordHasher>();
+        builder.Services.AddSingleton<HostUrlService>();
+        builder.Services.AddSingleton<ChatFactory>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.Test.Test2ChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.ChatCompletionService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.DeepSeekChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.AzureAIFoundryChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.QianFan.QianFanChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.QwenChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.GLMChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.HunyuanChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.LingYiChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.XAIChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.GithubModelsChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.GoogleAI.GoogleAI2ChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.SiliconFlowChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.TokenPonyChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.OpenRouterChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.ResponseApiService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.AzureResponseApiService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.MiniMaxChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.Anthropic.AnthropicChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.Anthropic.DeepSeekAnthropicService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.Anthropic.MiniMaxAnthropicService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.Anthropic.MimoAnthropicService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.MimoChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.ImageGenerationService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.AzureImageGenerationService>();
+        builder.Services.AddSingleton<BalanceService>();
+        builder.Services.AddSingleton<FileServiceFactory>();
+        builder.Services.AddSingleton<ChatStopService>();
+        builder.Services.AddSingleton<FileImageInfoService>();
+        builder.Services.AddSingleton<AsyncClientInfoManager>();
+        builder.Services.AddSingleton<AsyncCacheUsageManager>();
+        builder.Services.AddSingleton<GitHubReleaseChecker>();
+
+        builder.Services.AddScoped<CurrentUser>();
+        builder.Services.AddScoped<CurrentApiKey>();
+        builder.Services.AddScoped<GlobalDBConfig>();
+        builder.Services.AddScoped<UserManager>();
+        builder.Services.AddScoped<SessionManager>();
+        builder.Services.AddScoped<UserModelManager>();
+        builder.Services.AddScoped<OpenAIApiKeySessionManager>();
+        builder.Services.AddScoped<ClientInfoManager>();
+        builder.Services.AddScoped<FileUrlProvider>();
+        builder.Services.AddScoped<ChatConfigService>();
+        builder.Services.AddScoped<DBFileService>();
+    builder.Services.AddScoped<LoginRateLimiter>();
+
+        builder.Services.AddUrlEncryption();
+        builder.Services.AddHttpContextAccessor();
+
+        // Add authentication and configure the default scheme
+        builder.Services.AddAuthentication("SessionId")
+            .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>("SessionId", null)
+            .AddScheme<AuthenticationSchemeOptions, OpenAIApiKeyAuthenticationHandler>("OpenAIApiKey", null);
+
+        builder.AddCORSPolicies();
+
+        WebApplication app = builder.Build();
+
+        // Configure the HTTP request pipeline.
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseSwagger();
+            app.UseSwaggerUI();
+        }
+
+        app.UseCORSMiddleware();
+
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.MapControllers();
+        app.UseMiddleware<FrontendMiddleware>();
+        app.UseStaticFiles();
+        app.UseStaticFiles(new StaticFileOptions()
+        {
+            ContentTypeProvider = new FileExtensionContentTypeProvider(new Dictionary<string, string>
+            {
+                [".avif"] = "image/avif",
+            })
+        });
+
+        // before run:
+        await app.Services.GetRequiredService<InitService>().Init();
+
+        await app.RunAsync();
+    }
+}

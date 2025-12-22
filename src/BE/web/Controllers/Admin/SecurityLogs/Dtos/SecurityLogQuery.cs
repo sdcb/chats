@@ -1,0 +1,60 @@
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+
+using Chats.Web.Controllers.Common.Dtos;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Chats.Web.Controllers.Admin.SecurityLogs.Dtos;
+
+public interface ISecurityLogFilter
+{
+    DateTime? Start { get; }
+
+    DateTime? End { get; }
+
+    string? UserName { get; }
+    
+    short TimezoneOffset { get; }
+
+    bool? IsSuccessful { get; }
+}
+
+public record SecurityLogQuery : PagingRequest, ISecurityLogFilter
+{
+    [DefaultValue(null)]
+    [FromQuery(Name = "start")]
+    public DateTime? Start { get; init; }
+
+    [DefaultValue(null)]
+    [FromQuery(Name = "end")]
+    public DateTime? End { get; init; }
+
+    [StringLength(100)]
+    [FromQuery(Name = "username")]
+    public string? UserName { get; init; }
+
+    [FromQuery(Name = "tz")]
+    public short TimezoneOffset { get; init; }
+
+    [FromQuery(Name = "success")]
+    public bool? IsSuccessful { get; init; }
+}
+
+public record SecurityLogExportQuery : ISecurityLogFilter
+{
+    [FromQuery(Name = "start")]
+    public DateTime? Start { get; init; }
+
+    [FromQuery(Name = "end")]
+    public DateTime? End { get; init; }
+
+    [StringLength(100)]
+    [FromQuery(Name = "username")]
+    public string? UserName { get; init; }
+
+    [FromQuery(Name = "tz")]
+    public short TimezoneOffset { get; init; }
+
+    [FromQuery(Name = "success")]
+    public bool? IsSuccessful { get; init; }
+}

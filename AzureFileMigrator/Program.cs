@@ -1,13 +1,13 @@
 ﻿using AzureFileMigrator;
-using Chats.BE.DB;
-using Chats.BE.DB.Enums;
-using Chats.BE.Services.FileServices;
-using Chats.BE.Services.UrlEncryption;
+using Chats.Web.DB;
+using Chats.Web.DB.Enums;
+using Chats.Web.Services.FileServices;
+using Chats.Web.Services.UrlEncryption;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
-using File = Chats.BE.DB.File;
+using File = Chats.Web.DB.File;
 
 Console.WriteLine("Press enter to start the migration...");
 Console.ReadLine();

@@ -31,8 +31,8 @@ jobs:
       - name: Get Version
         id: get_version
         run: |
-          cd ./src/BE
-          ver=$(grep -oPm1 "(?<=<Version>)[^<]+" Chats.BE.csproj) # 1.0.0
+          cd ./src/BE/web
+          ver=$(grep -oPm1 "(?<=<Version>)[^<]+" Chats.Web.csproj) # 1.0.0
           minor_ver=$(echo $ver | cut -d '.' -f 1-2) # 1.0
           major_ver=$(echo $ver | cut -d '.' -f 1) # 1
           full_ver=${ver}.${{ github.run_number }} # 1.0.0.587
@@ -71,8 +71,8 @@ jobs:
 
       - name: Copy FE build artifacts
         run: |
-          mkdir -p ./src/BE/wwwroot
-          cp -r ./src/FE/out/* ./src/BE/wwwroot
+          mkdir -p ./src/BE/web/wwwroot
+          cp -r ./src/FE/out/* ./src/BE/web/wwwroot
         
       - name: Upload FE build artifacts
         uses: actions/upload-artifact@v4
@@ -129,7 +129,7 @@ jobs:
 
       - name: Build container
         run: |
-          dotnet publish ./be-src/Chats.BE.csproj -c Release --os linux --arch x64 /t:PublishContainer /p:ContainerRepository=chats ${{ needs.build-fe.outputs.msbuild_args }}
+          dotnet publish ./be-src/web/Chats.Web.csproj -c Release --os linux --arch x64 /t:PublishContainer /p:ContainerRepository=chats ${{ needs.build-fe.outputs.msbuild_args }}
 
       - name: Tag container with run number
         run: |
@@ -178,7 +178,7 @@ jobs:
 
       - name: Build container
         run: |
-          dotnet publish ./be-src/Chats.BE.csproj -c Release --os ${{ matrix.os }} --arch ${{ matrix.arch }} /t:PublishContainer /p:ContainerRepository=chats ${{ needs.build-fe.outputs.msbuild_args }} ${{ matrix.args }}
+          dotnet publish ./be-src/web/Chats.Web.csproj -c Release --os ${{ matrix.os }} --arch ${{ matrix.arch }} /t:PublishContainer /p:ContainerRepository=chats ${{ needs.build-fe.outputs.msbuild_args }} ${{ matrix.args }}
 
       - name: Tag container with run number
         run: |
@@ -258,7 +258,7 @@ jobs:
           path: ./be-src
       - name: build binary
         run: |
-          dotnet publish ./be-src/Chats.BE.csproj -c Release -o ./Publish ${{ matrix.args }} ${{ needs.build-fe.outputs.msbuild_args }}
+          dotnet publish ./be-src/web/Chats.Web.csproj -c Release -o ./Publish ${{ matrix.args }} ${{ needs.build-fe.outputs.msbuild_args }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -289,7 +289,7 @@ jobs:
           path: ./be-src
       - name: build binary
         run: |
-          dotnet publish ./be-src/Chats.BE.csproj -c Release -o ./Publish ${{ matrix.args }} /p:DeleteExistingFiles=True ${{ needs.build-fe.outputs.msbuild_args }}
+          dotnet publish ./be-src/web/Chats.Web.csproj -c Release -o ./Publish ${{ matrix.args }} /p:DeleteExistingFiles=True ${{ needs.build-fe.outputs.msbuild_args }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

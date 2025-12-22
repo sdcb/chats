@@ -1,0 +1,19 @@
+﻿using Chats.Web.Controllers.Common.Dtos;
+using System.Diagnostics.CodeAnalysis;
+
+namespace Chats.Web.Controllers.Chats.UserChats.Dtos;
+
+public record ChatsQuery(string? GroupId, string? Query) : QueryPagingRequest(Query)
+{
+    [SetsRequiredMembers]
+    public ChatsQuery(string? GroupId, int Page, int PageSize, string? Query) : this(GroupId, Query)
+    {
+        this.Page = Page;
+        this.PageSize = PageSize;
+    }
+}
+
+public record ChatsQueryDto(string? GroupId, int Page, int PageSize, string? Query)
+{
+    public ChatsQuery ToChatsQuery() => new(GroupId, Page, PageSize, Query);
+}

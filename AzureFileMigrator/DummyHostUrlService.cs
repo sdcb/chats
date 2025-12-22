@@ -1,4 +1,4 @@
-﻿using Chats.BE.Services;
+﻿using Chats.Web.Services;
 
 namespace AzureFileMigrator;
 
