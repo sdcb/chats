@@ -344,7 +344,7 @@ docker run --restart unless-stopped --name sdcb-chats -e DBType=postgresql -e Co
 
 ## 许可证
 
-本项目采用 [MIT License](LICENSE) 开源许可证。
+本项目采用 [Apache 2.0](LICENSE) 开源许可证。
 
 ---
 
