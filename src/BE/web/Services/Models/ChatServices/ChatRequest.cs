@@ -1,10 +1,11 @@
-using Chats.Web.Controllers.Users.Usages.Dtos;
-using Chats.Web.DB;
-using Chats.Web.Services.Models.ChatServices.OpenAI;
-using Chats.Web.Services.Models.Neutral;
+using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Users.Usages.Dtos;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
+using Chats.BE.Services.Models.Neutral;
 using Tokenizer = Microsoft.ML.Tokenizers.Tokenizer;
 
-namespace Chats.Web.Services.Models;
+namespace Chats.BE.Services.Models;
 
 public record ChatRequest
 {
@@ -121,7 +122,7 @@ public record ChatRequest
                 CodeExecutionEnabled = cco.EnableCodeExecution ?? false,
                 SystemPrompt = cco.SystemPrompt,
                 ImageSize = cco.ImageSize,
-                ReasoningEffortId = (byte)DB.Enums.DBReasoningEffortExtensions.FromString(cco.ReasoningEffort),
+                ReasoningEffortId = (byte)DBReasoningEffortExtensions.FromString(cco.ReasoningEffort),
             }
         };
     }

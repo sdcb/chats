@@ -1,19 +1,19 @@
-﻿using Chats.Web.Controllers.Chats.ChatPresets.Dtos;
-using Chats.Web.Controllers.Chats.Chats.Dtos;
-using Chats.Web.Controllers.Chats.Prompts.Dtos;
-using Chats.Web.Controllers.Chats.Prompts;
-using Chats.Web.Controllers.Chats.UserChats.Dtos;
-using Chats.Web.Controllers.Common.Dtos;
-using Chats.Web.DB;
-using Chats.Web.Infrastructure;
-using Chats.Web.Services;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.BE.Controllers.Chats.ChatPresets.Dtos;
+using Chats.BE.Controllers.Chats.Chats.Dtos;
+using Chats.BE.Controllers.Chats.Prompts.Dtos;
+using Chats.BE.Controllers.Chats.Prompts;
+using Chats.BE.Controllers.Chats.UserChats.Dtos;
+using Chats.BE.Controllers.Common.Dtos;
+using Chats.BE.Infrastructure;
+using Chats.BE.Services;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
-using Chats.Web.DB.Enums;
+using Chats.DB;
+using Chats.DB.Enums;
 
-namespace Chats.Web.Controllers.Chats.ChatPresets;
+namespace Chats.BE.Controllers.Chats.ChatPresets;
 
 [Route("api/chat-preset"), Authorize]
 public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncryptionService idEncryption) : ControllerBase

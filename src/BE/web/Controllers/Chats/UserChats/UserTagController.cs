@@ -1,4 +1,4 @@
-﻿namespace Chats.Web.Controllers.Chats.UserChats
+﻿namespace Chats.BE.Controllers.Chats.UserChats
 {
     public class UserTagController
     {

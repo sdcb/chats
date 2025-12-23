@@ -1,6 +1,6 @@
-﻿using Chats.Web.DB;
+﻿using Chats.DB;
 
-namespace Chats.Web.Services.OpenAIApiKeySession;
+namespace Chats.BE.Services.OpenAIApiKeySession;
 
 public class AsyncCacheUsageManager(IServiceScopeFactory serviceScopeFactory)
 {

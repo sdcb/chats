@@ -1,8 +1,8 @@
-﻿using System.Configuration;
+﻿using Chats.DB.Enums;
+using System.Configuration;
 using System.Text.Json.Serialization;
-using Chats.Web.DB.Enums;
 
-namespace Chats.Web.Controllers.Public.SMSs.Dtos;
+namespace Chats.BE.Controllers.Public.SMSs.Dtos;
 
 public record SmsRequest
 {

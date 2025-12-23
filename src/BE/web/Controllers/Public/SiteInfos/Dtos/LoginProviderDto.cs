@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Public.SiteInfos.Dtos;
+namespace Chats.BE.Controllers.Public.SiteInfos.Dtos;
 
 public record LoginProviderDto
 {

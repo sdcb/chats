@@ -1,12 +1,13 @@
-using Chats.Web.Controllers.Api.OpenAICompatible.Dtos;
-using Chats.Web.Controllers.Chats.Chats;
-using Chats.Web.DB;
-using Chats.Web.Services.Models.Dtos;
+using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
+using Chats.BE.Controllers.Chats.Chats;
+using Chats.BE.Services.Models.Dtos;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Services.Models.ChatServices;
+namespace Chats.BE.Services.Models.ChatServices;
 
 /// <summary>
 /// OpenAI “tool_calls” 数组里，单块（片段）对应的模型。

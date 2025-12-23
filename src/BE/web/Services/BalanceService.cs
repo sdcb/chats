@@ -1,7 +1,7 @@
-﻿using Chats.Web.DB;
+﻿using Chats.DB;
 using Microsoft.EntityFrameworkCore;
 
-namespace Chats.Web.Services;
+namespace Chats.BE.Services;
 
 public class BalanceService(IServiceScopeFactory serviceScopeFactory)
 {

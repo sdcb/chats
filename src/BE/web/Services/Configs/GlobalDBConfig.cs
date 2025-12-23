@@ -1,10 +1,10 @@
-﻿using Chats.Web.DB;
-using Chats.Web.DB.Jsons;
-using Chats.Web.Services.Common;
+﻿using Chats.DB;
+using Chats.BE.DB.Jsons;
+using Chats.BE.Services.Common;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
-namespace Chats.Web.Services.Configs;
+namespace Chats.BE.Services.Configs;
 
 public class GlobalDBConfig(ChatsDB db, ILogger<GlobalDBConfig> logger)
 {

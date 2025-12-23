@@ -1,12 +1,12 @@
-﻿using Chats.Web.Controllers.Chats.Prompts.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Init;
-using Chats.Web.Infrastructure;
+﻿using Chats.DB;
+using Chats.BE.Controllers.Chats.Prompts.Dtos;
+using Chats.BE.DB.Init;
+using Chats.BE.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Chats.Web.Controllers.Chats.Prompts;
+namespace Chats.BE.Controllers.Chats.Prompts;
 
 [Route("api/prompts"), Authorize]
 public class PromptsController(ChatsDB db, CurrentUser currentUser) : ControllerBase

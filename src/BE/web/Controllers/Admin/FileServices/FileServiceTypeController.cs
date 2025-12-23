@@ -1,9 +1,9 @@
-﻿using Chats.Web.Controllers.Admin.Common;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
+﻿using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Admin.Common;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Chats.Web.Controllers.Admin.FileServices;
+namespace Chats.BE.Controllers.Admin.FileServices;
 
 [Route("api/admin/file-service-type"), AuthorizeAdmin]
 public class FileServiceTypeController : ControllerBase

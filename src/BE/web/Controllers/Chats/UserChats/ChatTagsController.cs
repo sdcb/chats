@@ -1,11 +1,11 @@
-﻿using Chats.Web.DB;
-using Chats.Web.Infrastructure;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.DB;
+using Chats.BE.Infrastructure;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Chats.Web.Controllers.Chats.UserChats;
+namespace Chats.BE.Controllers.Chats.UserChats;
 
 [Route("api/chats/tags"), Authorize]
 public class ChatTagsController(ChatsDB db, CurrentUser user, IUrlEncryptionService urlEncryption) : ControllerBase

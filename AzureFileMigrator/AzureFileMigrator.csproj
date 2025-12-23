@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\BE\web\Chats.Web.csproj" />
+    <ProjectReference Include="..\src\BE\web\Chats.BE.csproj" />
   </ItemGroup>
 
 </Project>

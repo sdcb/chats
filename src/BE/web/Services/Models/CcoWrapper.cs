@@ -1,11 +1,9 @@
-using Chats.Web.DB.Enums;
-using Chats.Web.Services.Models.ChatServices.OpenAI;
-using Chats.Web.Services.Models.Neutral;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
+using Chats.BE.Services.Models.Neutral;
 using System.Globalization;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace Chats.Web.Services.Models;
+namespace Chats.BE.Services.Models;
 
 public class CcoWrapper(JsonObject json)
 {

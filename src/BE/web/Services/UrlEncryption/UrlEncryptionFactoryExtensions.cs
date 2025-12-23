@@ -1,5 +1,5 @@
 ﻿
-namespace Chats.Web.Services.UrlEncryption;
+namespace Chats.BE.Services.UrlEncryption;
 
 public static class UrlEncryptionFactoryExtensions
 {

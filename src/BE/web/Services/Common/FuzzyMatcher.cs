@@ -1,4 +1,4 @@
-﻿namespace Chats.Web.Services.Common;
+﻿namespace Chats.BE.Services.Common;
 
 using System;
 using System.Collections.Generic;

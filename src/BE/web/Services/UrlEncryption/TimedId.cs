@@ -1,6 +1,6 @@
 ﻿using System.Buffers.Binary;
 
-namespace Chats.Web.Services.UrlEncryption;
+namespace Chats.BE.Services.UrlEncryption;
 
 public record TimedId(int Id, DateTimeOffset ValidBefore)
 {

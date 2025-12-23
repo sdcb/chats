@@ -1,11 +1,11 @@
-﻿using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Services.FileServices;
-using Chats.Web.Services.UrlEncryption;
-using System.Linq;
+﻿using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.DB.Extensions;
+using Chats.BE.Services.FileServices;
+using Chats.BE.Services.UrlEncryption;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Chats.Messages.Dtos;
+namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 
 [JsonPolymorphic]
 [JsonDerivedType(typeof(TextContentRequestItem), typeDiscriminator: (int)DBStepContentType.Text)]

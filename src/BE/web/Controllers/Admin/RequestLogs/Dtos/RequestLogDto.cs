@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.RequestLogs.Dtos;
+namespace Chats.BE.Controllers.Admin.RequestLogs.Dtos;
 
 public record RequestLogDto
 {

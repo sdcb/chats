@@ -1,8 +1,8 @@
 using System.Text.Json.Nodes;
-using Chats.Web.Services.Models.Dtos;
-using Chats.Web.Services.Models.Neutral;
+using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.Models.Neutral;
 
-namespace Chats.Web.Services.Models.ChatServices.OpenAI;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 /// <summary>
 /// MiniMax OpenAI-compatible chat completion service.

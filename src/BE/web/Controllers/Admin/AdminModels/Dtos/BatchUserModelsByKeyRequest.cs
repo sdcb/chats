@@ -1,7 +1,6 @@
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.AdminModels.Dtos;
+namespace Chats.BE.Controllers.Admin.AdminModels.Dtos;
 
 /// <summary>
 /// 按Key批量操作用户模型请求（添加/删除）

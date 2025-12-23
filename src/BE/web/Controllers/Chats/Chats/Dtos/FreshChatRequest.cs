@@ -1,8 +1,8 @@
-﻿using Chats.Web.Controllers.Chats.Messages.Dtos;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
+using Chats.BE.Services.UrlEncryption;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Chats.Chats.Dtos;
+namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 
 public abstract record EncryptedWebChatRequest
 {

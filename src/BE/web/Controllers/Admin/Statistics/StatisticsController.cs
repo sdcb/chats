@@ -1,13 +1,13 @@
-﻿using Chats.Web.Controllers.Admin.Common;
-using Chats.Web.Controllers.Admin.Statistics.Dtos;
-using Chats.Web.Controllers.Users.Usages.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
+﻿using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Admin.Statistics.Dtos;
+using Chats.BE.Controllers.Users.Usages.Dtos;
+using Chats.BE.DB;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
 
-namespace Chats.Web.Controllers.Admin.Statistics;
+namespace Chats.BE.Controllers.Admin.Statistics;
 
 [Route("api/admin/statistics"), AuthorizeAdmin]
 public class StatisticsController(ChatsDB db) : ControllerBase

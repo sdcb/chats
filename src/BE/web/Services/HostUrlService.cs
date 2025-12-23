@@ -1,7 +1,7 @@
-﻿using Chats.Web.Services.Common;
+﻿using Chats.BE.Services.Common;
 using Microsoft.Extensions.Primitives;
 
-namespace Chats.Web.Services;
+namespace Chats.BE.Services;
 
 public class HostUrlService(IHttpContextAccessor _ctx)
 {

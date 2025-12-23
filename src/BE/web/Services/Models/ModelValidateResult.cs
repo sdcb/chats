@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Services.Models;
+namespace Chats.BE.Services.Models;
 
 public record ModelValidateResult
 {

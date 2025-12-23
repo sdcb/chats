@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.AdminModels.Dtos;
+namespace Chats.BE.Controllers.Admin.AdminModels.Dtos;
 
 /// <summary>
 /// 模型的用户权限列表项DTO - 用于模型视角管理用户权限

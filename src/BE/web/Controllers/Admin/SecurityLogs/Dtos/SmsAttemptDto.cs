@@ -1,4 +1,4 @@
-namespace Chats.Web.Controllers.Admin.SecurityLogs.Dtos;
+namespace Chats.BE.Controllers.Admin.SecurityLogs.Dtos;
 
 public record SmsAttemptDto
 {

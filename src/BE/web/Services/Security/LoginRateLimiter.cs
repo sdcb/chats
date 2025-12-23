@@ -1,10 +1,9 @@
-using Chats.Web.Controllers.Public.SMSs;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
+using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Public.SMSs;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
-namespace Chats.Web.Services.Security;
+namespace Chats.BE.Services.Security;
 
 public class LoginRateLimiter(ChatsDB db, ILogger<LoginRateLimiter> logger)
 {

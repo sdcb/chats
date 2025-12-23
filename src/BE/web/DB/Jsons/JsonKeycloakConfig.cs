@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
-using Chats.Web.Services.Common;
-using Chats.Web.Services.Keycloak;
+using Chats.BE.Services.Common;
+using Chats.BE.Services.Keycloak;
 
-namespace Chats.Web.DB.Jsons;
+namespace Chats.BE.DB.Jsons;
 
 public record JsonKeycloakConfig
 {

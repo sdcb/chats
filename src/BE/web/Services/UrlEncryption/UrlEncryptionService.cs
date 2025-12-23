@@ -1,7 +1,7 @@
-﻿using Chats.Web.Infrastructure.Functional;
+﻿using Chats.BE.Infrastructure.Functional;
 using System.Security.Cryptography;
 
-namespace Chats.Web.Services.UrlEncryption;
+namespace Chats.BE.Services.UrlEncryption;
 
 public class UrlEncryptionService : IUrlEncryptionService
 {

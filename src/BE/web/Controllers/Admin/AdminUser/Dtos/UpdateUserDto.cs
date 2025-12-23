@@ -1,8 +1,8 @@
-﻿using Chats.Web.DB;
-using Chats.Web.Services;
+﻿using Chats.DB;
+using Chats.BE.Services;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.AdminUser.Dtos;
+namespace Chats.BE.Controllers.Admin.AdminUser.Dtos;
 
 public record UpdateUserDto
 {

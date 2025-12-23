@@ -1,26 +1,25 @@
-using Chats.Web.Controllers.Chats.Chats;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Services;
-using Chats.Web.Services.Models;
-using Chats.Web.Services.Models.Dtos;
-using Chats.Web.Services.OpenAIApiKeySession;
+using Chats.BE.Controllers.Chats.Chats;
+using Chats.BE.Services;
+using Chats.BE.Services.Models;
+using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.OpenAIApiKeySession;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.ClientModel;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
-using Chats.Web.Services.Models.ChatServices;
+using Chats.BE.Services.Models.ChatServices;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Http.Extensions;
-using Chats.Web.Services.FileServices;
-using Chats.Web.Controllers.Api.OpenAICompatible.Dtos;
+using Chats.BE.Services.FileServices;
+using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
+using Chats.DB;
+using Chats.DB.Enums;
 
-namespace Chats.Web.Controllers.Api.OpenAICompatible;
+namespace Chats.BE.Controllers.Api.OpenAICompatible;
 
 [Authorize(AuthenticationSchemes = "OpenAIApiKey")]
 public partial class OpenAIChatCompletionController(

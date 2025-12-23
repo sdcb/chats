@@ -1,6 +1,6 @@
 ﻿using System.Security.Cryptography;
 
-namespace Chats.Web.Services;
+namespace Chats.BE.Services;
 
 public class CsrfTokenService
 {

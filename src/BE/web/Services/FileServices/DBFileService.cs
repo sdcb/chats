@@ -1,13 +1,13 @@
-﻿using Chats.Web.DB;
-using Chats.Web.Infrastructure;
-using Chats.Web.Services.Models.ChatServices;
-using File = Chats.Web.DB.File;
+﻿using Chats.DB;
+using Chats.BE.Infrastructure;
+using Chats.BE.Services.Models.ChatServices;
+using DBFile = Chats.DB.File;
 
-namespace Chats.Web.Services.FileServices;
+namespace Chats.BE.Services.FileServices;
 
 public class DBFileService(ChatsDB db, FileServiceFactory fsf, CurrentUser currentUser, FileImageInfoService fiis)
 {
-    public async Task<File> StoreImage(ImageChatSegment image, int clientInfoId, FileService dbfs, CancellationToken cancellationToken = default)
+    public async Task<DBFile> StoreImage(ImageChatSegment image, int clientInfoId, FileService dbfs, CancellationToken cancellationToken = default)
     {
         DBFileDef def = await image.Download(cancellationToken);
         IFileService fs = fsf.Create(dbfs);
@@ -22,7 +22,7 @@ public class DBFileService(ChatsDB db, FileServiceFactory fsf, CurrentUser curre
             ContentType = def.ContentType
         }, cancellationToken);
 
-        File file = new()
+        DBFile file = new()
         {
             FileName = def.FileName,
             MediaType = def.ContentType,

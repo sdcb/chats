@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.GlobalConfigs.Dtos;
+namespace Chats.BE.Controllers.Admin.GlobalConfigs.Dtos;
 
 public record GlobalConfigDto
 {

@@ -1,10 +1,10 @@
-﻿using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Controllers.Admin.AdminModels.Validators;
+﻿using Chats.BE.Controllers.Admin.AdminModels.Validators;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Chats.DB;
+using Chats.DB.Enums;
 
-namespace Chats.Web.Controllers.Admin.AdminModels.Dtos;
+namespace Chats.BE.Controllers.Admin.AdminModels.Dtos;
 
 [ValidateTemperatureRange]
 [ValidateChatResponseTokens]

@@ -1,4 +1,4 @@
-﻿namespace Chats.Web.Services.FileServices;
+﻿namespace Chats.BE.Services.FileServices;
 
 public record DBFileDef(byte[] Bytes, string ContentType, string? SuggestedFileName)
 {

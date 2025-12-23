@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
-namespace Chats.Web.Controllers.Common.Dtos;
+namespace Chats.BE.Controllers.Common.Dtos;
 
 public record QueryPagingRequest(string? Query) : PagingRequest;
 

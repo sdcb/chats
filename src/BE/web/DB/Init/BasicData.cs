@@ -1,4 +1,6 @@
-namespace Chats.Web.DB.Init;
+using Chats.DB;
+
+namespace Chats.BE.DB.Init;
 
 internal static class BasicData
 {

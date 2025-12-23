@@ -1,9 +1,9 @@
-﻿using Chats.Web.Controllers.Public.ModelInfo.DTOs;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
+﻿using Chats.DB.Enums;
+using Chats.BE.Controllers.Public.ModelInfo.DTOs;
+using Chats.BE.DB;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Chats.Web.Controllers.Public.ModelInfo;
+namespace Chats.BE.Controllers.Public.ModelInfo;
 
 [ResponseCache(CacheProfileName = "ModelInfo")]
 public class ModelInfoController : ControllerBase

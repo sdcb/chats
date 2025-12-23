@@ -1,7 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Text.Json;
 
-namespace Chats.Web.Controllers.Admin.GlobalConfigs;
+namespace Chats.BE.Controllers.Admin.GlobalConfigs;
 
 public class GitHubReleaseChecker(IHttpClientFactory httpClientFactory)
 {

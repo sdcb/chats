@@ -1,7 +1,7 @@
 ﻿using Aliyun.OSS;
 using System.Net;
 
-namespace Chats.Web.Services.FileServices.Implementations.AliyunOSS;
+namespace Chats.BE.Services.FileServices.Implementations.AliyunOSS;
 
 public class AliyunOSSFileService(AliyunOssConfig config) : IFileService
 {

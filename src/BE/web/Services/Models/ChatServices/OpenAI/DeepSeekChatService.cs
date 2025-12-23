@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
-using Chats.Web.Services.Models.Neutral;
+using Chats.BE.Services.Models.Neutral;
 
-namespace Chats.Web.Services.Models.ChatServices.OpenAI;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 /// <summary>
 /// DeepSeek OpenAI-compatible chat completion service.

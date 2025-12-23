@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.ModelKeys.Dtos;
+namespace Chats.BE.Controllers.Admin.ModelKeys.Dtos;
 
 public record UpdateModelKeyRequest
 {

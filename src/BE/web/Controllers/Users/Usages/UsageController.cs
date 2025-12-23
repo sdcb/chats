@@ -1,16 +1,17 @@
-﻿using Chats.Web.Controllers.Common.Dtos;
-using Chats.Web.Controllers.Users.Usages.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Infrastructure;
-using Chats.Web.Services.Common;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Common.Dtos;
+using Chats.BE.Controllers.Users.Usages.Dtos;
+using Chats.BE.DB;
+using Chats.BE.Infrastructure;
+using Chats.BE.Services.Common;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MiniExcelLibs;
 
-namespace Chats.Web.Controllers.Users.Usages;
+namespace Chats.BE.Controllers.Users.Usages;
 
 [Route("api/usage"), Authorize]
 public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryptionService idEncryption) : ControllerBase

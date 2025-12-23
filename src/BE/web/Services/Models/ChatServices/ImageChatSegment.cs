@@ -1,9 +1,9 @@
-using Chats.Web.Controllers.Chats.Messages.Dtos;
-using Chats.Web.Services.FileServices;
-using Chats.Web.Services.Models.Dtos;
+using Chats.BE.Controllers.Chats.Messages.Dtos;
+using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models.Dtos;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Services.Models.ChatServices;
+namespace Chats.BE.Services.Models.ChatServices;
 
 [JsonPolymorphic]
 [JsonDerivedType(typeof(Base64Image), typeDiscriminator: "base64")]

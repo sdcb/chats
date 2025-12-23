@@ -1,4 +1,4 @@
-namespace Chats.Web.Services.Models.Neutral;
+namespace Chats.BE.Services.Models.Neutral;
 
 /// <summary>
 /// Neutral cache control that can be applied to content blocks.

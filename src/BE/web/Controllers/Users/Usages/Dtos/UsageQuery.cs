@@ -1,7 +1,7 @@
-﻿using Chats.Web.Controllers.Common.Dtos;
+﻿using Chats.BE.Controllers.Common.Dtos;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Chats.Web.Controllers.Users.Usages.Dtos;
+namespace Chats.BE.Controllers.Users.Usages.Dtos;
 
 public record UsageQuery : PagingRequest, IUsageQuery
 {

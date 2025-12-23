@@ -1,5 +1,5 @@
 ﻿
-namespace Chats.Web.Services.UrlEncryption;
+namespace Chats.BE.Services.UrlEncryption;
 
 public class UrlEncryptionFactory(ILogger<UrlEncryptionFactory> logger, IConfiguration configuration)
 {

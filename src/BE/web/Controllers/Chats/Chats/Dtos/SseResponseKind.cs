@@ -1,4 +1,4 @@
-﻿namespace Chats.Web.Controllers.Chats.Chats.Dtos;
+﻿namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 
 public enum SseResponseKind
 {

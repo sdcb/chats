@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Chats.Messages.Dtos;
+namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 
 public record TurnGenerateInfoDto
 {

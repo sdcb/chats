@@ -1,6 +1,6 @@
-using System;
+using Chats.DB;
 
-namespace Chats.Web.Infrastructure;
+namespace Chats.BE.Infrastructure;
 
 /// <summary>
 /// 重排序配置选项
@@ -228,20 +228,4 @@ public class ReorderHelper
             }
         }
     }
-}
-
-/// <summary>
-/// 具有 Order 属性的实体接口
-/// </summary>
-public interface IOrderable
-{
-    short Order { get; set; }
-}
-
-/// <summary>
-/// 具有 UpdatedAt 属性的实体接口
-/// </summary>
-public interface IUpdatable
-{
-    DateTime UpdatedAt { get; set; }
 }

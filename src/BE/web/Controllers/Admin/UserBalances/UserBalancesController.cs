@@ -1,13 +1,13 @@
-﻿using Chats.Web.Controllers.Admin.Common;
-using Chats.Web.Controllers.Admin.UserBalances.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Infrastructure;
-using Chats.Web.Services;
+﻿using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Admin.UserBalances.Dtos;
+using Chats.BE.Infrastructure;
+using Chats.BE.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Chats.Web.Controllers.Admin.UserBalances;
+namespace Chats.BE.Controllers.Admin.UserBalances;
 
 [Route("api/admin/user-balances"), AuthorizeAdmin]
 public class UserBalancesController(ChatsDB db, CurrentUser currentUser, BalanceService balanceService) : ControllerBase

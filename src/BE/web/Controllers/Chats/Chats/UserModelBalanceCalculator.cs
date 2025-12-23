@@ -1,8 +1,8 @@
-﻿using Chats.Web.DB;
-using Chats.Web.DB.Jsons;
+﻿using Chats.DB;
+using Chats.BE.DB.Jsons;
 using System.Collections.Concurrent;
 
-namespace Chats.Web.Controllers.Chats.Chats;
+namespace Chats.BE.Controllers.Chats.Chats;
 
 public record UserModelBalanceCalculator(BalanceInitialInfo Initial, ConcurrentDictionary<string, BalanceCostInfo> Costs)
 {

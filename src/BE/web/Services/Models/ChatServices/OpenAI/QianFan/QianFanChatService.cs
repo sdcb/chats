@@ -1,9 +1,10 @@
-using Chats.Web.Controllers.Chats.Chats;
-using Chats.Web.DB;
+using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Chats.Chats;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace Chats.Web.Services.Models.ChatServices.OpenAI.QianFan;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 
 public class QianFanChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {

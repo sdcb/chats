@@ -1,15 +1,15 @@
-using Chats.Web.Controllers.Api.AnthropicCompatible.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Services;
-using Chats.Web.Services.Models;
-using Chats.Web.Services.Models.ChatServices;
-using Chats.Web.Services.OpenAIApiKeySession;
+using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Api.AnthropicCompatible.Dtos;
+using Chats.BE.Services;
+using Chats.BE.Services.Models;
+using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.Services.OpenAIApiKeySession;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json.Nodes;
 
-namespace Chats.Web.Controllers.Api.AnthropicCompatible;
+namespace Chats.BE.Controllers.Api.AnthropicCompatible;
 
 [Authorize(AuthenticationSchemes = "OpenAIApiKey")]
 public class AnthropicCountTokenController(

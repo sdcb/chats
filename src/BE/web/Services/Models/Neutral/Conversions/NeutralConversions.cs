@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 
-namespace Chats.Web.Services.Models.Neutral;
+namespace Chats.BE.Services.Models.Neutral;
 
 /// <summary>
 /// Conversion methods for parsing OpenAI JSON format to NeutralMessage.

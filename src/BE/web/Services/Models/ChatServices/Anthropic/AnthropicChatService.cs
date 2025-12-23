@@ -1,18 +1,19 @@
-using Chats.Web.Controllers.Chats.Chats;
-using Chats.Web.DB;
-using Chats.Web.Services.Models.ChatServices.OpenAI;
-using Chats.Web.Services.Models.Dtos;
-using Chats.Web.Services.Models.Neutral;
+using Chats.DB;
+using Chats.BE.Controllers.Chats.Chats;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
+using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.Models.Neutral;
 using System.Net.Http.Headers;
-using ChatTokenUsage = Chats.Web.Services.Models.Dtos.ChatTokenUsage;
+using ChatTokenUsage = Chats.BE.Services.Models.Dtos.ChatTokenUsage;
 using System.Net.ServerSentEvents;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Chats.Web.Controllers.Users.Usages.Dtos;
+using Chats.BE.Controllers.Users.Usages.Dtos;
+using Chats.DB.Enums;
 
-namespace Chats.Web.Services.Models.ChatServices.Anthropic;
+namespace Chats.BE.Services.Models.ChatServices.Anthropic;
 
 public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatService
 {

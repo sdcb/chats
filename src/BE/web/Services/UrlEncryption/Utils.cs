@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
 using System.Security.Cryptography;
 
-namespace Chats.Web.Services.UrlEncryption;
+namespace Chats.BE.Services.UrlEncryption;
 
 internal class Utils
 {

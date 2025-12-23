@@ -1,12 +1,12 @@
-﻿using Chats.Web.Services.Common;
-using Chats.Web.Services.OpenAIApiKeySession;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.BE.Services.Common;
+using Chats.BE.Services.OpenAIApiKeySession;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 
-namespace Chats.Web.Infrastructure;
+namespace Chats.BE.Infrastructure;
 
 public class OpenAIApiKeyAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,

@@ -1,19 +1,20 @@
-﻿using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Infrastructure;
-using Chats.Web.Services;
-using Chats.Web.Services.FileServices;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.BE.Infrastructure;
+using Chats.BE.Services;
+using Chats.BE.Services.FileServices;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
-using Chats.Web.Infrastructure.Functional;
-using Chats.Web.Controllers.Chats.Messages.Dtos;
+using Chats.BE.Infrastructure.Functional;
+using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Microsoft.Net.Http.Headers;
-using Chats.Web.Controllers.Common.Dtos;
+using Chats.BE.Controllers.Common.Dtos;
 using System.Runtime.Caching;
+using Chats.DB;
+using DBFile = Chats.DB.File;
+using Chats.DB.Enums;
 
-namespace Chats.Web.Controllers.Chats.Files;
+namespace Chats.BE.Controllers.Chats.Files;
 
 [Route("api"), Authorize]
 public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, IUrlEncryptionService urlEncryption, ILogger<FileController> logger) : ControllerBase
@@ -26,7 +27,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         [FromServices] FileImageInfoService fileImageInfoService,
         CancellationToken cancellationToken)
     {
-        DB.FileService? fileService = await DB.FileService.GetDefault(db, cancellationToken);
+        FileService? fileService = await db.GetDefaultFileService(cancellationToken);
         if (fileService == null)
         {
             return NotFound("File service config not found.");
@@ -43,7 +44,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         [FromServices] FileImageInfoService fileImageInfoService,
         CancellationToken cancellationToken)
     {
-        DB.FileService? fileService = await db.FileServices.FindAsync([fileServiceId], cancellationToken);
+        FileService? fileService = await db.FileServices.FindAsync([fileServiceId], cancellationToken);
         if (fileService == null)
         {
             return NotFound("File server config not found.");
@@ -58,7 +59,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         ClientInfoManager clientInfoManager,
         FileUrlProvider fdup,
         CurrentUser currentUser,
-        DB.FileService fileService,
+        FileService fileService,
         FileImageInfoService fileImageInfoService,
         CancellationToken cancellationToken)
     {
@@ -110,7 +111,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
             }, cancellationToken);
         }
 
-        DB.File dbFile = new()
+        DBFile dbFile = new()
         {
             FileName = file.FileName,
             MediaType = file.ContentType,
@@ -135,7 +136,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         CancellationToken cancellationToken)
     {
         int fileId = urlEncryption.DecryptFileId(encryptedFileId);
-        DB.File? file = await db.Files
+        DBFile? file = await db.Files
             .Include(x => x.FileService)
             .FirstOrDefaultAsync(x => x.Id == fileId, cancellationToken);
         if (file == null)
@@ -161,7 +162,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         }
 
         int fileId = decodeResult.Value;
-        DB.File? file = await db.Files
+        DBFile? file = await db.Files
             .Include(x => x.FileService)
             .FirstOrDefaultAsync(x => x.Id == fileId, cancellationToken);
         if (file == null)
@@ -174,7 +175,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
 
     private static readonly MemoryCache _fileUrlCache = new("file-url-cache");
 
-    internal ActionResult ServeStaticFile(DB.File file)
+    internal ActionResult ServeStaticFile(DBFile file)
     {
         DBFileServiceType fileServiceType = (DBFileServiceType)file.FileService.FileServiceTypeId;
         IFileService fs = fileServiceFactory.Create(file.FileService);
@@ -212,7 +213,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         [FromServices] FileUrlProvider fdup,
         CancellationToken cancellationToken)
     {
-        IQueryable<DB.File> queryable = db.Files
+        IQueryable<DBFile> queryable = db.Files
             .Where(x => x.CreateUserId == currentUser.Id)
             .OrderByDescending(x => x.Id);
         PagedResult<FileDto> pagedResult = await PagedResult.FromTempQuery(queryable, query, f => fdup.CreateFileDto(f), cancellationToken);
@@ -225,7 +226,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
         CancellationToken cancellationToken)
     {
         int fileId = urlEncryption.DecryptFileId(encryptedFileId);
-        DB.File? file = await db.Files
+        DBFile? file = await db.Files
             .Include(x => x.FileService)
             .Include(x => x.StepContentFiles)
             .FirstOrDefaultAsync(x => x.Id == fileId, cancellationToken);

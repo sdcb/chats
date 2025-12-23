@@ -1,11 +1,11 @@
-﻿using Chats.Web.Controllers.Public.SiteInfos.Dtos;
-using Chats.Web.DB;
-using Chats.Web.Services.Configs;
+﻿using Chats.DB;
+using Chats.BE.Controllers.Public.SiteInfos.Dtos;
+using Chats.BE.Services.Configs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Chats.Web.Controllers.Public.SiteInfos;
+namespace Chats.BE.Controllers.Public.SiteInfos;
 
 [Route("api/public"), AllowAnonymous]
 public class SiteInfoController() : ControllerBase

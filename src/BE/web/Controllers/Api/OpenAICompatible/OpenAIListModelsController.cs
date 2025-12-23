@@ -1,11 +1,11 @@
-using Chats.Web.Controllers.Api.OpenAICompatible.Dtos;
-using Chats.Web.DB;
-using Chats.Web.Services;
-using Chats.Web.Services.OpenAIApiKeySession;
+using Chats.DB;
+using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
+using Chats.BE.Services;
+using Chats.BE.Services.OpenAIApiKeySession;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Chats.Web.Controllers.Api.OpenAICompatible;
+namespace Chats.BE.Controllers.Api.OpenAICompatible;
 
 [Authorize(AuthenticationSchemes = "OpenAIApiKey")]
 public class OpenAIListModelsController(

@@ -1,7 +1,7 @@
-﻿using Chats.Web.DB.Enums;
-using Chats.Web.Services.Models.ChatServices.GoogleAI;
+﻿using Chats.DB.Enums;
+using Chats.BE.Services.Models.ChatServices.GoogleAI;
 
-namespace Chats.Web.DB;
+namespace Chats.BE.DB;
 
 /// <summary>
 /// 静态的模型提供者信息，替代数据库中的 ModelProvider 表

@@ -1,13 +1,13 @@
-using Chats.Web.Controllers.Users.Mcps.Dtos;
-using Chats.Web.DB;
-using Chats.Web.Infrastructure;
+using Chats.DB;
+using Chats.BE.Controllers.Users.Mcps.Dtos;
+using Chats.BE.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Client;
 using System.Text.Json;
 
-namespace Chats.Web.Controllers.Users.Mcps;
+namespace Chats.BE.Controllers.Users.Mcps;
 
 [Route("api/mcp"), Authorize]
 public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase

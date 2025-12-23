@@ -1,16 +1,15 @@
-using Chats.Web.Controllers.Chats.Chats;
-using Chats.Web.Controllers.Users.Usages.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Services.FileServices;
-using Chats.Web.Services.Models.ChatServices;
-using Chats.Web.Services.Models.Dtos;
-using Chats.Web.Services.Models.Neutral;
+using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Chats.Chats;
+using Chats.BE.Controllers.Users.Usages.Dtos;
+using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.Models.Neutral;
 using Microsoft.ML.Tokenizers;
 using System.Runtime.CompilerServices;
 using Tokenizer = Microsoft.ML.Tokenizers.Tokenizer;
 
-namespace Chats.Web.Services.Models;
+namespace Chats.BE.Services.Models;
 
 public abstract partial class ChatService
 {

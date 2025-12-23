@@ -1,15 +1,14 @@
-﻿using Chats.Web.Controllers.Admin.Common;
-using Chats.Web.Controllers.Admin.ModelKeys.Dtos;
-using Chats.Web.Controllers.Admin.AdminModels.Dtos;
-using Chats.Web.Controllers.Admin.ModelProviders.Dtos;
-using Chats.Web.Controllers.Common.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Infrastructure;
+﻿using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Admin.ModelKeys.Dtos;
+using Chats.BE.Controllers.Admin.AdminModels.Dtos;
+using Chats.BE.Controllers.Admin.ModelProviders.Dtos;
+using Chats.BE.Controllers.Common.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Chats.DB;
+using Chats.DB.Enums;
 
-namespace Chats.Web.Controllers.Admin.ModelProviders;
+namespace Chats.BE.Controllers.Admin.ModelProviders;
 
 [Route("api/admin/model-providers"), AuthorizeAdmin]
 public class ModelProvidersController(ChatsDB db) : ControllerBase

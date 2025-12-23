@@ -1,4 +1,4 @@
-namespace Chats.Web.Services.Models.ChatServices.OpenAI;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 /// <summary>
 /// LingYi (01.ai) Chat Service

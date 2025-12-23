@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
-namespace Chats.Web.DB.Init;
+namespace Chats.BE.DB.Init;
 
 public static class DBConfigure
 {

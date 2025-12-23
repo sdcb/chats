@@ -1,10 +1,10 @@
-﻿using Chats.Web.DB;
-using Chats.Web.Infrastructure;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.DB;
+using Chats.BE.Infrastructure;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Chats.UserChats.Dtos;
+namespace Chats.BE.Controllers.Chats.UserChats.Dtos;
 
 public class UpdateChatsRequest
 {

@@ -1,11 +1,11 @@
-using Chats.Web.Controllers.Admin.Common;
-using Chats.Web.Controllers.Admin.GlobalConfigs.Dtos;
-using Chats.Web.DB;
+using Chats.DB;
+using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Admin.GlobalConfigs.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
-namespace Chats.Web.Controllers.Admin.GlobalConfigs;
+namespace Chats.BE.Controllers.Admin.GlobalConfigs;
 
 [Route("api/admin/global-configs"), AuthorizeAdmin]
 public class GlobalConfigController(ChatsDB db) : ControllerBase

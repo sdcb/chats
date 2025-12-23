@@ -2,7 +2,7 @@
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.InitialConfigs.Dtos;
+namespace Chats.BE.Controllers.Admin.InitialConfigs.Dtos;
 
 public class UserInitialConfigDto
 {

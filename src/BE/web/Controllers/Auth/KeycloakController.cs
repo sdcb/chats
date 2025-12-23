@@ -1,10 +1,10 @@
-﻿using Chats.Web.Controllers.Auth.Dtos;
-using Chats.Web.DB.Jsons;
-using Chats.Web.Services;
-using Chats.Web.Services.Configs;
+﻿using Chats.BE.Controllers.Auth.Dtos;
+using Chats.BE.DB.Jsons;
+using Chats.BE.Services;
+using Chats.BE.Services.Configs;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Chats.Web.Controllers.Auth;
+namespace Chats.BE.Controllers.Auth;
 
 [Route("api/auth/signin/keycloak")]
 public class KeycloakController(CsrfTokenService csrf, GlobalDBConfig globalConfig) : ControllerBase

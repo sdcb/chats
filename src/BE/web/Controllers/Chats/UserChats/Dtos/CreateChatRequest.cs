@@ -1,7 +1,7 @@
-﻿using Chats.Web.Services.UrlEncryption;
+﻿using Chats.BE.Services.UrlEncryption;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Chats.UserChats.Dtos;
+namespace Chats.BE.Controllers.Chats.UserChats.Dtos;
 
 public record EncryptedCreateChatRequest
 {

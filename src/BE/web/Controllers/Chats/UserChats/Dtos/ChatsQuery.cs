@@ -1,7 +1,7 @@
-﻿using Chats.Web.Controllers.Common.Dtos;
+﻿using Chats.BE.Controllers.Common.Dtos;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Chats.Web.Controllers.Chats.UserChats.Dtos;
+namespace Chats.BE.Controllers.Chats.UserChats.Dtos;
 
 public record ChatsQuery(string? GroupId, string? Query) : QueryPagingRequest(Query)
 {

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Chats.Prompts.Dtos;
+namespace Chats.BE.Controllers.Chats.Prompts.Dtos;
 
 public record BriefPromptDto
 {

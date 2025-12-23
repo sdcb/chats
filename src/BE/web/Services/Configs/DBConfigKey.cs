@@ -1,4 +1,4 @@
-﻿namespace Chats.Web.Services.Configs;
+﻿namespace Chats.BE.Services.Configs;
 
 public static class DBConfigKey
 {

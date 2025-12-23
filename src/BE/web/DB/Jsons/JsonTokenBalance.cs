@@ -1,8 +1,9 @@
-﻿using Chats.Web.DB.Enums;
+﻿using Chats.DB;
+using Chats.DB.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.DB.Jsons;
+namespace Chats.BE.DB.Jsons;
 
 public record JsonTokenBalance
 {

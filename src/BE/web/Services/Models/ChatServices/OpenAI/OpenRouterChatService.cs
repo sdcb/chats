@@ -1,7 +1,7 @@
-using Chats.Web.DB;
+using Chats.DB;
 using System.Text.Json.Nodes;
 
-namespace Chats.Web.Services.Models.ChatServices.OpenAI;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 public class OpenRouterChatService(IHttpClientFactory httpClientFactory, HostUrlService hostUrlService) : ChatCompletionService(httpClientFactory)
 {

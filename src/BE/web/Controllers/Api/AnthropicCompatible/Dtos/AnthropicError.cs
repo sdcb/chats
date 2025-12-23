@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Api.AnthropicCompatible.Dtos;
+namespace Chats.BE.Controllers.Api.AnthropicCompatible.Dtos;
 
 /// <summary>
 /// Anthropic API error response format

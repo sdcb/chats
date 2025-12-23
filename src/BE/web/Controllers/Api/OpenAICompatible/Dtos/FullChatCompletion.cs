@@ -1,9 +1,9 @@
-using Chats.Web.Services;
-using Chats.Web.Services.Models.Dtos;
+using Chats.BE.Services;
+using Chats.BE.Services.Models.Dtos;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Api.OpenAICompatible.Dtos;
+namespace Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 
 public record FullChatCompletion
 {

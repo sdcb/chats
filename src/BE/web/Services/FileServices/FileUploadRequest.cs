@@ -1,6 +1,7 @@
 ﻿using Microsoft.IdentityModel.Tokens;
+using DBFile = Chats.DB.File;
 
-namespace Chats.Web.Services.FileServices;
+namespace Chats.BE.Services.FileServices;
 
 /// <summary>
 /// Represents a request to upload a file.
@@ -38,7 +39,7 @@ public record CreateDownloadUrlRequest
 
     public static TimeSpan DefaultValidPeriod { get; } = TimeSpan.FromHours(2);
 
-    public static CreateDownloadUrlRequest FromFile(DB.File file)
+    public static CreateDownloadUrlRequest FromFile(DBFile file)
     {
         return new CreateDownloadUrlRequest { FileId = file.Id, StorageKey = file.StorageKey };
     }

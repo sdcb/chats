@@ -1,9 +1,9 @@
-﻿using Chats.Web.Controllers.Admin.AdminModels.Dtos;
-using Chats.Web.DB.Enums;
+﻿using Chats.DB.Enums;
+using Chats.BE.Controllers.Admin.AdminModels.Dtos;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 
-namespace Chats.Web.Controllers.Admin.AdminModels.Validators;
+namespace Chats.BE.Controllers.Admin.AdminModels.Validators;
 
 /// <summary>
 /// 验证温度范围：minTemperature 必须小于或等于 maxTemperature

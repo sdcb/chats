@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 
-namespace Chats.Web.Services.Models.ChatServices.OpenAI;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 /// <summary>
 /// Google AI Chat Service using OpenAI-compatible API

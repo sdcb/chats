@@ -1,10 +1,10 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
-using Chats.Web.Controllers.Common.Dtos;
+using Chats.BE.Controllers.Common.Dtos;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Chats.Web.Controllers.Admin.SecurityLogs.Dtos;
+namespace Chats.BE.Controllers.Admin.SecurityLogs.Dtos;
 
 public interface ISecurityLogFilter
 {

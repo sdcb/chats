@@ -1,8 +1,8 @@
-﻿using Chats.Web.DB.Enums;
-using Chats.Web.Services.Common;
+﻿using Chats.DB.Enums;
+using Chats.BE.Services.Common;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.FileServices.Dtos;
+namespace Chats.BE.Controllers.Admin.FileServices.Dtos;
 
 public record FileServiceSimpleDto
 {

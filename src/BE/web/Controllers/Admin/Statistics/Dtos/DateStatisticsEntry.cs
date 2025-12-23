@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
-namespace Chats.Web.Controllers.Admin.Statistics.Dtos;
+namespace Chats.BE.Controllers.Admin.Statistics.Dtos;
 
 public record DateStatisticsEntry<T>
 {

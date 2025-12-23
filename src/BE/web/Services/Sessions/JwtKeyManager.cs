@@ -1,4 +1,4 @@
-﻿namespace Chats.Web.Services.Sessions;
+﻿namespace Chats.BE.Services.Sessions;
 
 public class JwtKeyManager(IConfiguration configuration)
 {

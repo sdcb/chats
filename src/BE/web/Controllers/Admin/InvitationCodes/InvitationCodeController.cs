@@ -1,11 +1,11 @@
-﻿using Chats.Web.Controllers.Admin.Common;
-using Chats.Web.Controllers.Admin.InvitationCodes.Dtos;
-using Chats.Web.DB;
-using Chats.Web.Infrastructure;
+﻿using Chats.DB;
+using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Admin.InvitationCodes.Dtos;
+using Chats.BE.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Chats.Web.Controllers.Admin.InvitationCodes;
+namespace Chats.BE.Controllers.Admin.InvitationCodes;
 
 [Route("api/admin/invitation-code"), AuthorizeAdmin]
 public class InvitationCodeController(ChatsDB db) : ControllerBase

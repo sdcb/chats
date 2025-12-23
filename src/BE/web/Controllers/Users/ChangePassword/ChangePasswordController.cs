@@ -1,12 +1,12 @@
-using Chats.Web.Controllers.Users.ChangePassword.Dtos;
-using Chats.Web.DB;
-using Chats.Web.Infrastructure;
-using Chats.Web.Services;
+using Chats.DB;
+using Chats.BE.Controllers.Users.ChangePassword.Dtos;
+using Chats.BE.Infrastructure;
+using Chats.BE.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Chats.Web.Controllers.Users.ChangePassword;
+namespace Chats.BE.Controllers.Users.ChangePassword;
 
 [Route("api/user"), Authorize]
 public class ChangePasswordController(ChatsDB db, CurrentUser currentUser, PasswordHasher passwordHasher) : ControllerBase

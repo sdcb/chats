@@ -1,4 +1,4 @@
-﻿namespace Chats.Web.Services.Models.Dtos;
+﻿namespace Chats.BE.Services.Models.Dtos;
 
 using System;
 

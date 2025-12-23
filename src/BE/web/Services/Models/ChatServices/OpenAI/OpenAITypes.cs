@@ -1,6 +1,7 @@
+using Chats.DB.Enums;
 using System.Text.Json.Nodes;
 
-namespace Chats.Web.Services.Models.ChatServices.OpenAI;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 // Re-export ChatTool, ChatResponseFormat, etc. for easier access from other namespaces
 // DBFinishReason is defined in Chats.BE.Services.Models namespace

@@ -1,33 +1,33 @@
-using Chats.Web.Controllers.Chats.Chats.Dtos;
-using Chats.Web.Controllers.Chats.Messages.Dtos;
-using Chats.Web.Controllers.Users.Usages.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Infrastructure;
-using Chats.Web.Infrastructure.Functional;
-using Chats.Web.Services;
-using Chats.Web.Services.FileServices;
-using Chats.Web.Services.Models;
-using Chats.Web.Services.Models.ChatServices;
-using Chats.Web.Services.Models.ChatServices.Test;
-using Chats.Web.Services.Models.Dtos;
-using Chats.Web.Services.Models.Neutral;
-using Chats.Web.Services.Models.Neutral.Conversions;
-using Chats.Web.Services.UrlEncryption;
+using Chats.BE.Controllers.Chats.Chats.Dtos;
+using Chats.BE.Controllers.Chats.Messages.Dtos;
+using Chats.BE.Controllers.Users.Usages.Dtos;
+using Chats.BE.Infrastructure;
+using Chats.BE.Services;
+using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models;
+using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.Services.Models.ChatServices.Test;
+using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.Models.Neutral.Conversions;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
-using Chats.Web.Services.Models.ChatServices.OpenAI;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Channels;
 using EmptyResult = Microsoft.AspNetCore.Mvc.EmptyResult;
+using Chats.DB;
+using DBFile = Chats.DB.File;
+using Chats.DB.Enums;
+using Chats.BE.DB.Extensions;
 
-namespace Chats.Web.Controllers.Chats.Chats;
+namespace Chats.BE.Controllers.Chats.Chats;
 
 [Route("api/chats"), Authorize]
 public class ChatController(ChatStopService stopService, AsyncClientInfoManager clientInfoManager) : ControllerBase
@@ -217,7 +217,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 [
                     new Step()
                     {
-                        StepContents = await StepContent.FromRequest(generalRequest.UserMessage, fup, cancellationToken),
+                        StepContents = await StepContentExtensions.FromRequest(generalRequest.UserMessage, fup, cancellationToken),
                         ChatRoleId = (byte)DBChatRole.User,
                         CreatedAt = DateTime.UtcNow,
                         Edited = false,
@@ -253,7 +253,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         UserModelBalanceCalculator cost = new(BalanceInitialInfo.FromDB(userModels.Values, userBalance.Balance), []);
 
         Channel<SseResponseLine>[] channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
-        Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache = [];
+        Dictionary<ImageChatSegment, TaskCompletionSource<DBFile>> imageFileCache = [];
         Task[] streamTasks = [.. toGenerateSpans.Select((span, index) => ProcessChatSpan(
             currentUser,
             logger,
@@ -323,7 +323,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             else if (line is TempImageGeneratedLine tempImageGeneratedLine)
             {
                 ImageChatSegment image = tempImageGeneratedLine.Image;
-                if (!imageFileCache.TryGetValue(image, out TaskCompletionSource<DB.File>? tcs))
+                if (!imageFileCache.TryGetValue(image, out TaskCompletionSource<DBFile>? tcs))
                 {
                     throw new InvalidOperationException("Image file cache not found.");
                 }
@@ -338,8 +338,8 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
                 try
                 {
-                    fs ??= await FileService.GetDefault(db, cancellationToken) ?? throw new InvalidOperationException("Default file service config not found.");
-                    DB.File file = await dbFileService.StoreImage(image, await clientInfoIdTask, fs, cancellationToken: default);
+                    fs ??= await db.GetDefaultFileService(cancellationToken) ?? throw new InvalidOperationException("Default file service config not found.");
+                    DBFile file = await dbFileService.StoreImage(image, await clientInfoIdTask, fs, cancellationToken: default);
                     tcs.SetResult(file);
                     // yield final file dto
                     await YieldResponse(new ImageGeneratedLine(tempImageGeneratedLine.SpanId, fup.CreateFileDto(file, tryWithUrl: false)));
@@ -424,7 +424,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         ChatTurn? dbUserMessage,
         ScopedBalanceCalculator calc,
         Task<int> clientInfoIdTask,
-        Dictionary<ImageChatSegment, TaskCompletionSource<DB.File>> imageFileCache,
+        Dictionary<ImageChatSegment, TaskCompletionSource<DBFile>> imageFileCache,
         ChannelWriter<SseResponseLine> writer,
         CancellationToken cancellationToken)
     {
@@ -676,7 +676,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                             writer.TryWrite(new ImageGeneratingLine(chatSpan.SpanId, preview.ToTempFileDto()));
                             break;
                         case ImageChatSegment imgSeg:
-                            imageFileCache[imgSeg] = new TaskCompletionSource<DB.File>();
+                            imageFileCache[imgSeg] = new TaskCompletionSource<DBFile>();
                             writer.TryWrite(new TempImageGeneratedLine(chatSpan.SpanId, imgSeg));
                             break;
                     }
@@ -734,7 +734,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 ChatRoleId = (byte)DBChatRole.Assistant,
                 CreatedAt = DateTime.UtcNow,
                 Usage = icc.ToUserModelUsage(currentUser.Id, calc, userModel, await clientInfoIdTask, isApi: false),
-                StepContents = [.. StepContent.FromFullResponse(icc.FullResponse!, errorText, imageFileCache)],
+                StepContents = [.. StepContentExtensions.FromFullResponse(icc.FullResponse!, errorText, imageFileCache)],
                 Turn = turn,
             };
 

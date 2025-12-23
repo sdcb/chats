@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Api.OpenAICompatible.Dtos;
+namespace Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 
 #region Request DTOs
 

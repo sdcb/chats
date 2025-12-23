@@ -1,9 +1,9 @@
-﻿using Chats.Web.Controllers.Chats.Messages.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
+﻿using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Chats.Messages.Dtos;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Chats.UserChats.Dtos;
+namespace Chats.BE.Controllers.Chats.UserChats.Dtos;
 
 public record ChatsResponse
 {

@@ -1,17 +1,16 @@
-using Chats.Web.Controllers.Chats.Chats;
-using Chats.Web.Controllers.Users.Usages.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Services.FileServices;
-using Chats.Web.Services.Models.ChatServices.Anthropic;
-using Chats.Web.Services.Models.ChatServices.GoogleAI;
-using Chats.Web.Services.Models.ChatServices.OpenAI;
-using Chats.Web.Services.Models.ChatServices.OpenAI.QianFan;
-using Chats.Web.Services.Models.ChatServices.OpenAI.Special;
-using Chats.Web.Services.Models.ChatServices.Test;
-using Chats.Web.Services.Models.Dtos;
+using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Chats.Chats;
+using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models.ChatServices.Anthropic;
+using Chats.BE.Services.Models.ChatServices.GoogleAI;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
+using Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
+using Chats.BE.Services.Models.ChatServices.OpenAI.Special;
+using Chats.BE.Services.Models.ChatServices.Test;
+using Chats.BE.Services.Models.Dtos;
 
-namespace Chats.Web.Services.Models.ChatServices;
+namespace Chats.BE.Services.Models.ChatServices;
 
 public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
 {

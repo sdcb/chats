@@ -1,8 +1,8 @@
-﻿using Chats.Web.Services.Sessions;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.BE.Services.Sessions;
+using Chats.BE.Services.UrlEncryption;
 using System.Security.Claims;
 
-namespace Chats.Web.Infrastructure;
+namespace Chats.BE.Infrastructure;
 
 public class CurrentUser
 {

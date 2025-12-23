@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Chats.Files.Dtos;
+namespace Chats.BE.Controllers.Chats.Files.Dtos;
 
 public record GetFileUrlsRequest
 {

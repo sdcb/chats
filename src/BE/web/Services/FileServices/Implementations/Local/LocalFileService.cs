@@ -1,7 +1,6 @@
-﻿using Chats.Web.DB.Enums;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.BE.Services.UrlEncryption;
 
-namespace Chats.Web.Services.FileServices.Implementations.Local;
+namespace Chats.BE.Services.FileServices.Implementations.Local;
 
 public class LocalFileService(string localFolder, HostUrlService hostUrlservice, IUrlEncryptionService urlEncryption) : IFileService
 {

@@ -1,7 +1,7 @@
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
+using Chats.DB;
+using Chats.DB.Enums;
 
-namespace Chats.Web.Services.Models.Neutral.Conversions;
+namespace Chats.BE.Services.Models.Neutral.Conversions;
 
 /// <summary>
 /// Conversion methods between Step (DB model) and NeutralMessage.

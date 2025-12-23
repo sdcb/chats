@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.Web.Services.Keycloak;
+namespace Chats.BE.Services.Keycloak;
 
 public record SsoTokenDto
 {

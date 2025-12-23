@@ -1,10 +1,10 @@
-﻿using Chats.Web.Controllers.Admin.Common;
-using Chats.Web.Controllers.Admin.LoginServices.Dtos;
-using Chats.Web.DB;
+﻿using Chats.DB;
+using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Admin.LoginServices.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Chats.Web.Controllers.Admin.LoginServices;
+namespace Chats.BE.Controllers.Admin.LoginServices;
 
 [Route("api/admin/login-service"), AuthorizeAdmin]
 public class LoginServiceController(ChatsDB db) : ControllerBase

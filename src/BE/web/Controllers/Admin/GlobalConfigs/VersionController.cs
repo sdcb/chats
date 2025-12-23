@@ -1,9 +1,9 @@
-﻿using Chats.Web.Controllers.Admin.Common;
-using Chats.Web.Controllers.Admin.GlobalConfigs.Dtos;
+﻿using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Admin.GlobalConfigs.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using System.Reflection;
 
-namespace Chats.Web.Controllers.Admin.GlobalConfigs;
+namespace Chats.BE.Controllers.Admin.GlobalConfigs;
 
 [AuthorizeAdmin, Route("api/version")]
 public class VersionController(ILogger<VersionController> logger) : ControllerBase

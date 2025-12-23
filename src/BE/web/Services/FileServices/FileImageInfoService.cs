@@ -1,7 +1,7 @@
-﻿using Chats.Web.DB;
+﻿using Chats.DB;
 using SixLabors.ImageSharp;
 
-namespace Chats.Web.Services.FileServices;
+namespace Chats.BE.Services.FileServices;
 
 public class FileImageInfoService(ILogger<FileImageInfoService> logger)
 {

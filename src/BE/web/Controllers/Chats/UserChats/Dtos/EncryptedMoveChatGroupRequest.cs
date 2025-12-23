@@ -1,11 +1,10 @@
-﻿using Chats.Web.DB;
-using Chats.Web.Infrastructure.Functional;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.DB;
+using Chats.BE.Infrastructure.Functional;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 
-namespace Chats.Web.Controllers.Chats.UserChats.Dtos;
+namespace Chats.BE.Controllers.Chats.UserChats.Dtos;
 
 public record EncryptedMoveChatGroupRequest
 {

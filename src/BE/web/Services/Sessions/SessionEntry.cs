@@ -1,7 +1,7 @@
-﻿using Chats.Web.Services.UrlEncryption;
+﻿using Chats.BE.Services.UrlEncryption;
 using System.Security.Claims;
 
-namespace Chats.Web.Services.Sessions;
+namespace Chats.BE.Services.Sessions;
 
 public record SessionEntry
 {

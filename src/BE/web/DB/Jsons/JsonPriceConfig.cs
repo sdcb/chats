@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.DB.Jsons;
+namespace Chats.BE.DB.Jsons;
 
 public record JsonPriceConfig
 {

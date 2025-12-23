@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.Web.Services.Configs;
+namespace Chats.BE.Services.Configs;
 
 public record TencentSmsConfig
 {

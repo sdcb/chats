@@ -1,7 +1,7 @@
 ﻿
-using Chats.Web.Infrastructure.Functional;
+using Chats.BE.Infrastructure.Functional;
 
-namespace Chats.Web.Services.UrlEncryption;
+namespace Chats.BE.Services.UrlEncryption;
 
 public static class UrlEncryptionServiceExtensions
 {

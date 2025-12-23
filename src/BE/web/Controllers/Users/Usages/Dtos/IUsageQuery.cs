@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-
-namespace Chats.Web.Controllers.Users.Usages.Dtos;
+﻿namespace Chats.BE.Controllers.Users.Usages.Dtos;
 
 public interface IUsageQuery
 {

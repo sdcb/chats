@@ -1,6 +1,6 @@
-﻿using Chats.Web.Services.Models;
+﻿using Chats.DB.Enums;
 
-namespace Chats.Web.Controllers.Chats.Chats;
+namespace Chats.BE.Controllers.Chats.Chats;
 
 public abstract class ChatServiceException(DBFinishReason errorCode) : Exception
 {

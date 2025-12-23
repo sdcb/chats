@@ -1,7 +1,7 @@
-﻿using Chats.Web.DB.Enums;
+﻿using Chats.DB.Enums;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.AdminModels.Dtos;
+namespace Chats.BE.Controllers.Admin.AdminModels.Dtos;
 
 public record AdminModelDto
 {

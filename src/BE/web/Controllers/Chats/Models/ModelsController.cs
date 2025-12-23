@@ -1,14 +1,14 @@
-﻿using Chats.Web.Controllers.Admin.AdminModels.Dtos;
-using Chats.Web.Controllers.Chats.Models.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Infrastructure;
-using Chats.Web.Services;
+﻿using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Admin.AdminModels.Dtos;
+using Chats.BE.Controllers.Chats.Models.Dtos;
+using Chats.BE.Infrastructure;
+using Chats.BE.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Chats.Web.Controllers.Chats.Models;
+namespace Chats.BE.Controllers.Chats.Models;
 
 [Route("api/models"), Authorize]
 public class ModelsController : ControllerBase

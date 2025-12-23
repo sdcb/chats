@@ -1,17 +1,17 @@
-using Chats.Web.Controllers.Chats.Prompts.Dtos;
-using Chats.Web.Controllers.Chats.Prompts;
-using Chats.Web.Controllers.Chats.UserChats.Dtos;
-using Chats.Web.Controllers.Common.Dtos;
-using Chats.Web.DB;
-using Chats.Web.Infrastructure;
-using Chats.Web.Services;
-using Chats.Web.Services.UrlEncryption;
+using Chats.BE.Controllers.Chats.Prompts.Dtos;
+using Chats.BE.Controllers.Chats.Prompts;
+using Chats.BE.Controllers.Chats.UserChats.Dtos;
+using Chats.BE.Controllers.Common.Dtos;
+using Chats.BE.Infrastructure;
+using Chats.BE.Services;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Chats.Web.DB.Enums;
+using Chats.DB;
+using Chats.DB.Enums;
 
-namespace Chats.Web.Controllers.Chats.UserChats;
+namespace Chats.BE.Controllers.Chats.UserChats;
 
 [Route("api/user/chats"), Authorize]
 public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryptionService idEncryption) : ControllerBase

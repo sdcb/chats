@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.AdminModels.Dtos;
+namespace Chats.BE.Controllers.Admin.AdminModels.Dtos;
 
 /// <summary>
 /// 用户模型权限 - 模型提供商DTO

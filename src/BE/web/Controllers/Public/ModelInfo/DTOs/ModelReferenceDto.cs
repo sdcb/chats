@@ -1,7 +1,7 @@
-﻿using Chats.Web.DB.Enums;
+﻿using Chats.DB.Enums;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Public.ModelInfo.DTOs;
+namespace Chats.BE.Controllers.Public.ModelInfo.DTOs;
 
 public record ModelReferenceDto : SimpleModelReferenceDto
 {

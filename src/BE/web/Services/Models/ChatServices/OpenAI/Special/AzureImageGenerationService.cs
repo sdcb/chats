@@ -1,6 +1,8 @@
-using Chats.Web.DB;
+using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.DB;
 
-namespace Chats.Web.Services.Models.ChatServices.OpenAI.Special;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
 public class AzureImageGenerationService(IHttpClientFactory httpClientFactory) : ImageGenerationService(httpClientFactory)
 {
@@ -11,7 +13,7 @@ public class AzureImageGenerationService(IHttpClientFactory httpClientFactory) :
         string? host = modelKey.Host;
         if (string.IsNullOrWhiteSpace(host))
         {
-            host = ModelProviderInfo.GetInitialHost((DB.Enums.DBModelProvider)modelKey.ModelProviderId);
+            host = ModelProviderInfo.GetInitialHost((DBModelProvider)modelKey.ModelProviderId);
         }
         return TransformAzureHost(host);
     }

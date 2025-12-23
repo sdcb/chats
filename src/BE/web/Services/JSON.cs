@@ -1,9 +1,9 @@
-﻿using Chats.Web.Controllers.Api.OpenAICompatible.Dtos;
+﻿using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
-namespace Chats.Web.Services;
+namespace Chats.BE.Services;
 
 public static class JSON
 {

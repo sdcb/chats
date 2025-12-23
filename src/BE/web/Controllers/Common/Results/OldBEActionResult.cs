@@ -1,9 +1,9 @@
-﻿using Chats.Web.Services;
+﻿using Chats.BE.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
 using System.Text.Json;
 
-namespace Chats.Web.Controllers.Common.Results;
+namespace Chats.BE.Controllers.Common.Results;
 
 public class OldBEActionResult(object? json) : ActionResult
 {

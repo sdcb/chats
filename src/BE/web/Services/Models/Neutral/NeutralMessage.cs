@@ -1,4 +1,4 @@
-namespace Chats.Web.Services.Models.Neutral;
+namespace Chats.BE.Services.Models.Neutral;
 
 /// <summary>
 /// Neutral message that is independent of any third-party SDK or database model.

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Chats.Models.Dtos;
+namespace Chats.BE.Controllers.Chats.Models.Dtos;
 
 public record TemperatureOptions(
     [property: JsonPropertyName("min")] decimal Min,

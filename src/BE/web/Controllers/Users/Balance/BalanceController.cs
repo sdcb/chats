@@ -1,10 +1,10 @@
-﻿using Chats.Web.DB;
-using Chats.Web.Infrastructure;
+﻿using Chats.DB;
+using Chats.BE.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Chats.Web.Controllers.Users.Balance;
+namespace Chats.BE.Controllers.Users.Balance;
 
 [Route("api/user"), Authorize]
 public class BalanceController(ChatsDB db, CurrentUser currentUser) : ControllerBase

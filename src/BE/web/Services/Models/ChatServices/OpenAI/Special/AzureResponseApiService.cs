@@ -1,6 +1,8 @@
-using Chats.Web.DB;
+using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.DB;
 
-namespace Chats.Web.Services.Models.ChatServices.OpenAI.Special;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
 public class AzureResponseApiService(IHttpClientFactory httpClientFactory, ILogger<AzureResponseApiService> logger) : ResponseApiService(httpClientFactory, logger)
 {
@@ -11,7 +13,7 @@ public class AzureResponseApiService(IHttpClientFactory httpClientFactory, ILogg
         string? host = modelKey.Host;
         if (string.IsNullOrWhiteSpace(host))
         {
-            host = ModelProviderInfo.GetInitialHost((DB.Enums.DBModelProvider)modelKey.ModelProviderId);
+            host = ModelProviderInfo.GetInitialHost((DBModelProvider)modelKey.ModelProviderId);
         }
         return TransformAzureHost(host);
     }

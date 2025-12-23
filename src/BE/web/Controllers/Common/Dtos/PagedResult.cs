@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Common.Dtos;
+namespace Chats.BE.Controllers.Common.Dtos;
 
 public record PagedResult<T> where T : class
 {

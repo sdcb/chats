@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.AdminUser.Dtos;
+namespace Chats.BE.Controllers.Admin.AdminUser.Dtos;
 
 public record CreateUserDto
 {

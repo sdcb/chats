@@ -2,7 +2,7 @@
 using System.Text.Json;
 using System.Text;
 
-namespace Chats.Web.Services.Keycloak;
+namespace Chats.BE.Services.Keycloak;
 
 public record AccessTokenInfo
 {

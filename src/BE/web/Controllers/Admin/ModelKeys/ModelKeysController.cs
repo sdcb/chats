@@ -1,17 +1,17 @@
-﻿using Chats.Web.Controllers.Admin.Common;
-using Chats.Web.Controllers.Admin.AdminModels.Dtos;
-using Chats.Web.Controllers.Admin.ModelKeys.Dtos;
-using Chats.Web.Controllers.Common.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Infrastructure;
-using Chats.Web.Services.Common;
-using Chats.Web.Services.Models;
-using Chats.Web.Services.Models.ChatServices;
+﻿using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Admin.AdminModels.Dtos;
+using Chats.BE.Controllers.Admin.ModelKeys.Dtos;
+using Chats.BE.Controllers.Common.Dtos;
+using Chats.BE.Infrastructure;
+using Chats.BE.Services.Common;
+using Chats.BE.Services.Models;
+using Chats.BE.Services.Models.ChatServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Chats.DB;
+using Chats.DB.Enums;
 
-namespace Chats.Web.Controllers.Admin.ModelKeys;
+namespace Chats.BE.Controllers.Admin.ModelKeys;
 
 [Route("api/admin/model-keys"), AuthorizeAdmin]
 public class ModelKeysController(ChatsDB db) : ControllerBase

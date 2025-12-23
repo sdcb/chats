@@ -1,25 +1,25 @@
-﻿using Chats.Web.DB;
-using Chats.Web.DB.Init;
-using Chats.Web.Infrastructure;
-using Chats.Web.Services;
-using Chats.Web.Services.Configs;
-using Chats.Web.Services.Models;
-using Chats.Web.Services.UrlEncryption;
-using Chats.Web.Services.OpenAIApiKeySession;
-using Chats.Web.Services.Sessions;
-using Chats.Web.Services.Security;
+﻿using Chats.DB;
+using Chats.BE.DB.Init;
+using Chats.BE.Infrastructure;
+using Chats.BE.Services;
+using Chats.BE.Services.Configs;
+using Chats.BE.Services.Models;
+using Chats.BE.Services.UrlEncryption;
+using Chats.BE.Services.OpenAIApiKeySession;
+using Chats.BE.Services.Sessions;
+using Chats.BE.Services.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Chats.Web.Services.FileServices;
+using Chats.BE.Services.FileServices;
 using Microsoft.AspNetCore.StaticFiles;
-using Chats.Web.Services.Models.ChatServices;
-using Chats.Web.Controllers.Admin.GlobalConfigs;
+using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.Controllers.Admin.GlobalConfigs;
 
-[assembly: InternalsVisibleTo("Chats.Web.Tests")]
+[assembly: InternalsVisibleTo("Chats.BE.UnitTest")]
 
-namespace Chats.Web;
+namespace Chats.BE;
 
 public class Program
 {

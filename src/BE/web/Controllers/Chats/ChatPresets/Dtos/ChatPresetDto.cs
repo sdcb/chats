@@ -1,9 +1,8 @@
-﻿using Chats.Web.Controllers.Chats.UserChats.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.DB;
+using Chats.BE.Controllers.Chats.UserChats.Dtos;
+using Chats.BE.Services.UrlEncryption;
 
-namespace Chats.Web.Controllers.Chats.ChatPresets.Dtos;
+namespace Chats.BE.Controllers.Chats.ChatPresets.Dtos;
 
 public record ChatPresetDto
 {

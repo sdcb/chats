@@ -1,12 +1,12 @@
-﻿using Chats.Web.Services.Sessions;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.BE.Services.Sessions;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 
-namespace Chats.Web.Infrastructure;
+namespace Chats.BE.Infrastructure;
 
 public class SessionAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,

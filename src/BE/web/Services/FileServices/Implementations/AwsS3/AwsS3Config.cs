@@ -2,7 +2,7 @@
 using Amazon.S3;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Services.FileServices.Implementations.AwsS3;
+namespace Chats.BE.Services.FileServices.Implementations.AwsS3;
 
 public record AwsS3Config
 {

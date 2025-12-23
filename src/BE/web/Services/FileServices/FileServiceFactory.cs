@@ -1,15 +1,15 @@
-﻿using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Services.FileServices.Implementations.AliyunOSS;
-using Chats.Web.Services.FileServices.Implementations.AwsS3;
-using Chats.Web.Services.FileServices.Implementations.AzureBlobStorage;
-using Chats.Web.Services.FileServices.Implementations.Local;
-using Chats.Web.Services.FileServices.Implementations.Minio;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Services.FileServices.Implementations.AliyunOSS;
+using Chats.BE.Services.FileServices.Implementations.AwsS3;
+using Chats.BE.Services.FileServices.Implementations.AzureBlobStorage;
+using Chats.BE.Services.FileServices.Implementations.Local;
+using Chats.BE.Services.FileServices.Implementations.Minio;
+using Chats.BE.Services.UrlEncryption;
 using System.Collections.Concurrent;
 using System.Text.Json;
 
-namespace Chats.Web.Services.FileServices;
+namespace Chats.BE.Services.FileServices;
 
 public class FileServiceFactory(HostUrlService hostUrlService, IUrlEncryptionService urlEncryption)
 {

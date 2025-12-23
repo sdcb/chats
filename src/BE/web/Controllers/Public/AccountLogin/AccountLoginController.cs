@@ -1,20 +1,19 @@
-using Chats.Web.Controllers.Common;
-using Chats.Web.Controllers.Common.Results;
-using Chats.Web.Controllers.Public.AccountLogin.Dtos;
-using Chats.Web.Controllers.Public.SMSs;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.DB.Jsons;
-using Chats.Web.Services;
-using Chats.Web.Services.Common;
-using Chats.Web.Services.Configs;
-using Chats.Web.Services.Keycloak;
-using Chats.Web.Services.Sessions;
-using Chats.Web.Services.Security;
+using Chats.BE.Controllers.Common.Results;
+using Chats.BE.Controllers.Public.AccountLogin.Dtos;
+using Chats.BE.Controllers.Public.SMSs;
+using Chats.BE.DB.Jsons;
+using Chats.BE.Services;
+using Chats.BE.Services.Common;
+using Chats.BE.Services.Configs;
+using Chats.BE.Services.Keycloak;
+using Chats.BE.Services.Sessions;
+using Chats.BE.Services.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Chats.DB;
+using Chats.DB.Enums;
 
-namespace Chats.Web.Controllers.Public.AccountLogin;
+namespace Chats.BE.Controllers.Public.AccountLogin;
 
 [Route("api/public")]
 public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> logger, SessionManager sessionManager, ClientInfoManager clientInfoService, LoginRateLimiter loginRateLimiter) : ControllerBase

@@ -1,4 +1,4 @@
-﻿namespace Chats.Web.Services;
+﻿namespace Chats.BE.Services;
 
 public class AppConfigService(IConfiguration configuration)
 {

@@ -1,4 +1,4 @@
-﻿namespace Chats.Web.Controllers.Public.AccountLogin.Dtos;
+﻿namespace Chats.BE.Controllers.Public.AccountLogin.Dtos;
 
 public record PasswordLoginRequest
 {

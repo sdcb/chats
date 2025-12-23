@@ -1,5 +1,5 @@
-using Chats.Web.Controllers.Common.Dtos;
+using Chats.BE.Controllers.Common.Dtos;
 
-namespace Chats.Web.Controllers.Admin.AdminMessage.Dtos;
+namespace Chats.BE.Controllers.Admin.AdminMessage.Dtos;
 
 public record AdminChatsQueryRequest(string? User, string? Content) : PagingRequest;

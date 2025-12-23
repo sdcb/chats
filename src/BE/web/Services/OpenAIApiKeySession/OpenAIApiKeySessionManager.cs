@@ -1,8 +1,8 @@
-﻿using Chats.Web.DB;
+﻿using Chats.DB;
 using Microsoft.EntityFrameworkCore;
 using System.Runtime.Caching;
 
-namespace Chats.Web.Services.OpenAIApiKeySession;
+namespace Chats.BE.Services.OpenAIApiKeySession;
 
 public class OpenAIApiKeySessionManager(ChatsDB db)
 {

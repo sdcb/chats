@@ -1,7 +1,7 @@
-﻿using Chats.Web.DB;
+﻿using Chats.DB;
 using Microsoft.EntityFrameworkCore;
 
-namespace Chats.Web.Services.Models.ChatServices;
+namespace Chats.BE.Services.Models.ChatServices;
 
 public class ChatConfigService(ChatsDB db)
 {

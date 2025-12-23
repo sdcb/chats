@@ -1,7 +1,7 @@
-using Chats.Web.DB;
+using Chats.DB;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Users.ApiKeys.Dtos;
+namespace Chats.BE.Controllers.Users.ApiKeys.Dtos;
 
 public record UpdateApiKeyDto
 {

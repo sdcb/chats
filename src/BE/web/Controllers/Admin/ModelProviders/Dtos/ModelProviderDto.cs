@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.ModelProviders.Dtos;
+namespace Chats.BE.Controllers.Admin.ModelProviders.Dtos;
 
 public record ModelProviderDto
 {

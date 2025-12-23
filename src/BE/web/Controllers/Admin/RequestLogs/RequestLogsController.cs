@@ -1,9 +1,9 @@
-﻿using Chats.Web.Controllers.Admin.Common;
-using Chats.Web.Controllers.Admin.RequestLogs.Dtos;
-using Chats.Web.Controllers.Common.Dtos;
+﻿using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Admin.RequestLogs.Dtos;
+using Chats.BE.Controllers.Common.Dtos;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Chats.Web.Controllers.Admin.RequestLogs;
+namespace Chats.BE.Controllers.Admin.RequestLogs;
 
 [Route("api/admin/request-logs"), AuthorizeAdmin]
 public class RequestLogsController : ControllerBase

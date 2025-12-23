@@ -1,16 +1,17 @@
-﻿using Chats.Web.Controllers.Chats.Messages.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Infrastructure;
-using Chats.Web.Services.Models;
-using Chats.Web.Services.FileServices;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
+using Chats.BE.Infrastructure;
+using Chats.BE.Services.Models;
+using Chats.BE.Services.FileServices;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Chats.Web.Services;
+using Chats.BE.Services;
+using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.DB.Extensions;
 
-namespace Chats.Web.Controllers.Chats.Messages;
+namespace Chats.BE.Controllers.Chats.Messages;
 
 [Route("api/messages"), Authorize]
 public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncryptionService urlEncryption) : ControllerBase
@@ -229,7 +230,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
 
         ContentRequestItem[] newContent = [.. ContentRequestItem.FromDB([.. message.Steps.SelectMany(x => x.StepContents)], urlEncryption, textContent.Id, content)];
 
-        StepContent[] stepContents = await StepContent.FromRequest(newContent, fup, cancellationToken);
+        StepContent[] stepContents = await StepContentExtensions.FromRequest(newContent, fup, cancellationToken);
         ClientInfo clientInfo = await clientInfoManager.GetClientInfo(cancellationToken);
         ChatTurn turn = new()
         {

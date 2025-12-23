@@ -1,4 +1,4 @@
-﻿namespace Chats.Web.Infrastructure.Functional;
+﻿namespace Chats.BE.Infrastructure.Functional;
 
 public class ResultFailedException : Exception
 {

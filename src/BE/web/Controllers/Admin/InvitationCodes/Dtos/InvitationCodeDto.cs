@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.InvitationCodes.Dtos;
+namespace Chats.BE.Controllers.Admin.InvitationCodes.Dtos;
 
 public record InvitationCodeDto
 {

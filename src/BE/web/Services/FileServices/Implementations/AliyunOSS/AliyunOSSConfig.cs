@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.Web.Services.FileServices.Implementations.AliyunOSS;
+namespace Chats.BE.Services.FileServices.Implementations.AliyunOSS;
 
 public record AliyunOssConfig
 {

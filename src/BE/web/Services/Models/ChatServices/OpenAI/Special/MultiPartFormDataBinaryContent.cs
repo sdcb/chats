@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.Net.Http.Headers;
 
-namespace Chats.Web.Services.Models.ChatServices.OpenAI.Special;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
 // from: https://github.com/openai/openai-dotnet/blob/06191fad53746b841badfac8f16cdd301a500094/src/Generated/Internal/MultiPartFormDataBinaryContent.cs#L16
 internal partial class MultiPartFormDataBinaryContent : BinaryContent

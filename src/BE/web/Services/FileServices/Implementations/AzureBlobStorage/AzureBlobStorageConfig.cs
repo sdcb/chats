@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.Web.Services.FileServices.Implementations.AzureBlobStorage;
+namespace Chats.BE.Services.FileServices.Implementations.AzureBlobStorage;
 
 public record AzureBlobStorageConfig
 {

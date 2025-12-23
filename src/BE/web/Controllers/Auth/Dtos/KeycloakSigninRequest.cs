@@ -1,4 +1,4 @@
-﻿namespace Chats.Web.Controllers.Auth.Dtos;
+﻿namespace Chats.BE.Controllers.Auth.Dtos;
 
 public record KeycloakSigninRequest
 {

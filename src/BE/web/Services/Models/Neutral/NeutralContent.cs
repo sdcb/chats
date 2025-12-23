@@ -1,4 +1,6 @@
-namespace Chats.Web.Services.Models.Neutral;
+using DBFile = Chats.DB.File;
+
+namespace Chats.BE.Services.Models.Neutral;
 
 /// <summary>
 /// Base class for neutral content that is independent of any third-party SDK or database model.
@@ -58,9 +60,9 @@ public record NeutralFileBlobContent : NeutralContent
 /// </summary>
 public record NeutralFileContent : NeutralContent
 {
-    public required Chats.Web.DB.File File { get; init; }
+    public required DBFile File { get; init; }
 
-    public static NeutralFileContent Create(Chats.Web.DB.File file)
+    public static NeutralFileContent Create(DBFile file)
         => new() { File = file };
 }
 

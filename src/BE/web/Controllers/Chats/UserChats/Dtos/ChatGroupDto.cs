@@ -1,8 +1,8 @@
-﻿using Chats.Web.Controllers.Common.Dtos;
-using Chats.Web.DB;
+﻿using Chats.DB;
+using Chats.BE.Controllers.Common.Dtos;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Chats.UserChats.Dtos;
+namespace Chats.BE.Controllers.Chats.UserChats.Dtos;
 
 public record ChatGroupDto
 {

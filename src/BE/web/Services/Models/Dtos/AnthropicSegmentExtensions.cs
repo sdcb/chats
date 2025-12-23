@@ -1,8 +1,9 @@
-using Chats.Web.Controllers.Api.AnthropicCompatible.Dtos;
-using Chats.Web.Services.Models.ChatServices;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Api.AnthropicCompatible.Dtos;
+using Chats.BE.Services.Models.ChatServices;
 using System.Text.Json;
 
-namespace Chats.Web.Services.Models.Dtos;
+namespace Chats.BE.Services.Models.Dtos;
 
 public static class AnthropicSegmentExtensions
 {

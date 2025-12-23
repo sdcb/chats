@@ -1,12 +1,12 @@
-﻿using Chats.Web.Controllers.Public.AccountLogin.Dtos;
-using Chats.Web.DB;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.DB;
+using Chats.BE.Controllers.Public.AccountLogin.Dtos;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 
-namespace Chats.Web.Services.Sessions;
+namespace Chats.BE.Services.Sessions;
 
 public class SessionManager(JwtKeyManager jwtKeyManager, IConfiguration configuration, IUrlEncryptionService idEncryption)
 {

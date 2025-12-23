@@ -1,9 +1,10 @@
-using Chats.Web.Controllers.Chats.Chats;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Services.FileServices;
-using Chats.Web.Services.Models.Dtos;
-using Chats.Web.Services.Models.Neutral;
+using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Chats.Chats;
+using Chats.BE.DB;
+using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.Models.Neutral;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Net.ServerSentEvents;
@@ -11,9 +12,9 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using ChatTokenUsage = Chats.Web.Services.Models.Dtos.ChatTokenUsage;
+using ChatTokenUsage = Chats.BE.Services.Models.Dtos.ChatTokenUsage;
 
-namespace Chats.Web.Services.Models.ChatServices.OpenAI.Special;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
 public class ImageGenerationService(IHttpClientFactory httpClientFactory) : ChatService
 {

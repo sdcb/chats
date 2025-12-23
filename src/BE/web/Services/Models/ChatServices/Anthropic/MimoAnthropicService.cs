@@ -1,7 +1,7 @@
+using Chats.DB;
 using System.Text.Json.Nodes;
-using Chats.Web.DB;
 
-namespace Chats.Web.Services.Models.ChatServices.Anthropic;
+namespace Chats.BE.Services.Models.ChatServices.Anthropic;
 
 /// <summary>
 /// Xiaomi Mimo Anthropic-compatible messages service.

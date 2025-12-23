@@ -1,8 +1,10 @@
-using Chats.Web.Controllers.Api.OpenAICompatible.Dtos;
-using Chats.Web.Services.Models.ChatServices;
+using Chats.DB.Enums;
+using Chats.BE.DB.Extensions;
+using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
+using Chats.BE.Services.Models.ChatServices;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Services.Models.Dtos;
+namespace Chats.BE.Services.Models.Dtos;
 
 /// <summary>
 /// 需要配置多态序列化，否则 System.Text.Json 只会序列化基类属性（空对象）。

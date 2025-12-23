@@ -1,4 +1,4 @@
-﻿namespace Chats.Web.Services.FileServices;
+﻿namespace Chats.BE.Services.FileServices;
 
 /// <summary>
 /// Abstract for file service operations such as upload, download, and creating download URLs.

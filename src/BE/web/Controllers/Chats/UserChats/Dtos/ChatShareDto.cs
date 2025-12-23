@@ -1,9 +1,9 @@
-﻿using Chats.Web.DB;
-using Chats.Web.Services;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.DB;
+using Chats.BE.Services;
+using Chats.BE.Services.UrlEncryption;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Chats.UserChats.Dtos;
+namespace Chats.BE.Controllers.Chats.UserChats.Dtos;
 
 public record ChatShareDto
 {

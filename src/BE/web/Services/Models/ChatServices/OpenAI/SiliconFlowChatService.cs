@@ -1,7 +1,8 @@
-using Chats.Web.DB.Enums;
+using Chats.DB;
+using Chats.DB.Enums;
 using System.Text.Json.Nodes;
 
-namespace Chats.Web.Services.Models.ChatServices.OpenAI;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 public class SiliconFlowChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {
@@ -9,7 +10,7 @@ public class SiliconFlowChatService(IHttpClientFactory httpClientFactory) : Chat
     {
         JsonObject body = base.BuildRequestBody(request, stream);
 
-        if (DB.Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.ReasoningEffortOptions).Length != 0)
+        if (Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.ReasoningEffortOptions).Length != 0)
         {
             if (request.ChatConfig.ReasoningEffort.IsLowOrMinimal())
             {

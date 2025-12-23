@@ -1,13 +1,13 @@
 ﻿using AzureFileMigrator;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Services.FileServices;
-using Chats.Web.Services.UrlEncryption;
+using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Services.FileServices;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
-using File = Chats.Web.DB.File;
+using DBFile = Chats.DB.File;
 
 Console.WriteLine("Press enter to start the migration...");
 Console.ReadLine();
@@ -39,14 +39,14 @@ FileServiceFactory fileServiceFactory = new(new DummyHostUrlService(), new NoOpU
 IFileService azureFileService = fileServiceFactory.Create(azureConfig);
 IFileService minioFileService = fileServiceFactory.Create(minioConfig);
 
-List<File> files = db.Files
+List<DBFile> files = db.Files
     .Include(x => x.FileService)
     .Where(x => x.FileService.FileServiceTypeId == (byte)DBFileServiceType.AzureBlobStorage)
     .OrderByDescending(x => x.Id)
     .ToList();
 for (int i = 0; i < files.Count; i++)
 {
-    File file = files[i];
+    DBFile file = files[i];
     Console.Write($"Processing {i + 1}/{files.Count}: {file.FileName}...");
     using Stream stream = await azureFileService.Download(file.StorageKey);
     string newStorageKey = await minioFileService.Upload(new FileUploadRequest()

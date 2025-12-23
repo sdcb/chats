@@ -2,7 +2,7 @@
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 
-namespace Chats.Web.Services.FileServices.Implementations.AzureBlobStorage;
+namespace Chats.BE.Services.FileServices.Implementations.AzureBlobStorage;
 
 public class AzureBlobStorageFileService(AzureBlobStorageConfig config) : IFileService
 {

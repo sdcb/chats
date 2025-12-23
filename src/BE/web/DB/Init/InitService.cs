@@ -1,10 +1,11 @@
-﻿using Chats.Web.DB.Enums;
-using Chats.Web.Services;
-using Chats.Web.Services.Configs;
-using Chats.Web.Services.Models.ChatServices.Test;
+﻿using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Services;
+using Chats.BE.Services.Configs;
+using Chats.BE.Services.Models.ChatServices.Test;
 using System.Text.Json;
 
-namespace Chats.Web.DB.Init;
+namespace Chats.BE.DB.Init;
 
 public class InitService(IServiceScopeFactory scopeFactory)
 {

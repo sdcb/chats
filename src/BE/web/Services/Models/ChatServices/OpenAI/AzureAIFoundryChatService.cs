@@ -1,6 +1,8 @@
-using Chats.Web.DB;
+using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.DB;
 
-namespace Chats.Web.Services.Models.ChatServices.OpenAI;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 public class AzureAIFoundryChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {
@@ -9,7 +11,7 @@ public class AzureAIFoundryChatService(IHttpClientFactory httpClientFactory) : C
         string? host = modelKey.Host;
         if (string.IsNullOrWhiteSpace(host))
         {
-            host = ModelProviderInfo.GetInitialHost((DB.Enums.DBModelProvider)modelKey.ModelProviderId);
+            host = ModelProviderInfo.GetInitialHost((DBModelProvider)modelKey.ModelProviderId);
         }
 
         return TransformAzureAIFoundryHost(host);

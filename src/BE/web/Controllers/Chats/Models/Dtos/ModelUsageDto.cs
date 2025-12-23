@@ -1,7 +1,7 @@
-﻿using Chats.Web.DB;
+﻿using Chats.DB;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Chats.Models.Dtos;
+namespace Chats.BE.Controllers.Chats.Models.Dtos;
 
 public record ModelUsageDto
 {

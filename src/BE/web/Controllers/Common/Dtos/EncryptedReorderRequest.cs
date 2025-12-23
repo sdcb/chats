@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using Chats.Web.Services.UrlEncryption;
+using Chats.BE.Services.UrlEncryption;
 
-namespace Chats.Web.Controllers.Common.Dtos;
+namespace Chats.BE.Controllers.Common.Dtos;
 
 /// <summary>
 /// 通用的加密重排序请求，可以解密为不同类型的ReorderRequest

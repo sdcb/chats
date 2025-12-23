@@ -1,9 +1,9 @@
-﻿using Chats.Web.DB;
-using Chats.Web.DB.Jsons;
+﻿using Chats.DB;
+using Chats.BE.DB.Jsons;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.InitialConfigs.Dtos;
+namespace Chats.BE.Controllers.Admin.InitialConfigs.Dtos;
 
 public class UserInitialConfigUpdateRequest
 {

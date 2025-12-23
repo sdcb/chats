@@ -1,4 +1,4 @@
-﻿namespace Chats.Web.Infrastructure;
+﻿namespace Chats.BE.Infrastructure;
 
 internal static class CORS
 {

@@ -1,9 +1,8 @@
 ﻿using Amazon;
 using Amazon.S3;
-using Chats.Web.Services.FileServices.Implementations.AwsS3;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Services.FileServices.Implementations.Minio;
+namespace Chats.BE.Services.FileServices.Implementations.Minio;
 
 public record MinioConfig
 {

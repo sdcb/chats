@@ -53,14 +53,12 @@ logs.txt
 *.user
 /src/**/obj
 /src/**/bin
-/src/BE/wwwroot
+/src/BE/web/wwwroot
 /**/chats.db
 /**/chats.db-shm
 /**/chats.db-wal
 /Publish
-/src/BE/AppData/*
-/eng/ReleaseWebhook/bin
-/eng/ReleaseWebhook/obj
+/src/BE/web/AppData/*
 /AzureFileMigrator/bin
 /AzureFileMigrator/obj
 .claude

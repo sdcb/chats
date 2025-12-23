@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.UserBalances.Dtos;
+namespace Chats.BE.Controllers.Admin.UserBalances.Dtos;
 
 public record ChargeBalanceRequest
 {

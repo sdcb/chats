@@ -1,7 +1,7 @@
-﻿using Chats.Web.Services;
+﻿using Chats.BE.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Chats.Web.Controllers.Auth;
+namespace Chats.BE.Controllers.Auth;
 
 [Route("api/auth/csrf")]
 public class CsrfController(CsrfTokenService csrf) : ControllerBase

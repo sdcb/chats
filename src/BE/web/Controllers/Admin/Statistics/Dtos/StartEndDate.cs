@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
-namespace Chats.Web.Controllers.Admin.Statistics.Dtos;
+namespace Chats.BE.Controllers.Admin.Statistics.Dtos;
 
 public record StartEndDate
 {

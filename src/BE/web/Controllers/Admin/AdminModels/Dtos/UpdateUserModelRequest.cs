@@ -1,7 +1,7 @@
-﻿using Chats.Web.DB.Jsons;
+﻿using Chats.BE.DB.Jsons;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.AdminModels.Dtos;
+namespace Chats.BE.Controllers.Admin.AdminModels.Dtos;
 
 public record UserModelUpdateDto : JsonTokenBalance
 {

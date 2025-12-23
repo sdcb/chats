@@ -1,9 +1,9 @@
-﻿using Chats.Web.Controllers.Admin.Common;
-using Chats.Web.Controllers.Admin.InitialConfigs.Dtos;
-using Chats.Web.DB;
+﻿using Chats.DB;
+using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Admin.InitialConfigs.Dtos;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Chats.Web.Controllers.Admin.InitialConfigs;
+namespace Chats.BE.Controllers.Admin.InitialConfigs;
 
 [Route("api/admin/user-config"), AuthorizeAdmin]
 public class InititalConfigController(ChatsDB db) : ControllerBase

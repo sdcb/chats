@@ -1,7 +1,7 @@
-﻿using Chats.Web.Infrastructure;
+﻿using Chats.BE.Infrastructure;
 using System.Security.Claims;
 
-namespace Chats.Web.Services.OpenAIApiKeySession;
+namespace Chats.BE.Services.OpenAIApiKeySession;
 
 /// <summary>
 /// Note: This class is only used for OpenAIApiKey authentication scheme.

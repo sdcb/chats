@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 
-namespace Chats.Web.Services.Models.ChatServices.OpenAI;
+namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 public class XAIChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {

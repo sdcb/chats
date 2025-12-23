@@ -1,12 +1,12 @@
-﻿using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.DB.Jsons;
-using Chats.Web.Services.Common;
-using Chats.Web.Services.Keycloak;
+﻿using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.DB.Jsons;
+using Chats.BE.Services.Common;
+using Chats.BE.Services.Keycloak;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
-namespace Chats.Web.Services;
+namespace Chats.BE.Services;
 
 public class UserManager(ChatsDB db)
 {

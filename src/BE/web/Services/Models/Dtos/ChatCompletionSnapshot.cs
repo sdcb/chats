@@ -1,7 +1,8 @@
-using Chats.Web.Controllers.Api.OpenAICompatible.Dtos;
-using Chats.Web.DB.Enums;
+using Chats.DB.Enums;
+using Chats.BE.DB.Extensions;
+using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 
-namespace Chats.Web.Services.Models.Dtos;
+namespace Chats.BE.Services.Models.Dtos;
 
 public sealed record ChatCompletionSnapshot
 {

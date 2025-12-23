@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.FileProviders;
 
-namespace Chats.Web.Infrastructure;
+namespace Chats.BE.Infrastructure;
 
 public class FrontendMiddleware(RequestDelegate next, IWebHostEnvironment webHostEnvironment)
 {

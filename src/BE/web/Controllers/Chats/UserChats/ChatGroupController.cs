@@ -1,14 +1,14 @@
-﻿using Chats.Web.Controllers.Chats.UserChats.Dtos;
-using Chats.Web.Controllers.Common.Dtos;
-using Chats.Web.DB;
-using Chats.Web.Infrastructure;
-using Chats.Web.Infrastructure.Functional;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.DB;
+using Chats.BE.Controllers.Chats.UserChats.Dtos;
+using Chats.BE.Controllers.Common.Dtos;
+using Chats.BE.Infrastructure;
+using Chats.BE.Infrastructure.Functional;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Chats.Web.Controllers.Chats.UserChats;
+namespace Chats.BE.Controllers.Chats.UserChats;
 
 [Route("api/chat/group"), Authorize]
 public class ChatGroupController(ChatsDB db, CurrentUser user, IUrlEncryptionService urlEncryption) : ControllerBase

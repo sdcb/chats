@@ -1,11 +1,11 @@
-using Chats.Web.DB;
+using Chats.DB;
 
-namespace Chats.Web.Services.Models.ChatServices.Anthropic;
+namespace Chats.BE.Services.Models.ChatServices.Anthropic;
 
-public class MiniMaxAnthropicService(IHttpClientFactory httpClientFactory) : AnthropicChatService(httpClientFactory)
+public class DeepSeekAnthropicService(IHttpClientFactory httpClientFactory) : AnthropicChatService(httpClientFactory)
 {
     protected override (string url, string apiKey) GetEndpointAndKey(ModelKey modelKey)
     {
-        return (modelKey.Host ?? "https://api.minimaxi.com/anthropic", modelKey.Secret ?? throw new ArgumentNullException(nameof(modelKey), "ModelKey.Secret cannot be null for DeepSeekAnthropicService"));
+        return (modelKey.Host ?? "https://api.deepseek.com/anthropic", modelKey.Secret ?? throw new ArgumentNullException(nameof(modelKey), "ModelKey.Secret cannot be null for DeepSeekAnthropicService"));
     }
 }

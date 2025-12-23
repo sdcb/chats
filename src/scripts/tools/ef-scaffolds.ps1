@@ -7,15 +7,15 @@
 
 # 确保当前脚本目录作为起点
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-$projectFolder = Join-Path (Split-Path (Split-Path $scriptPath -Parent) -Parent) "BE"
+$projectFolder = Join-Path (Split-Path (Split-Path $scriptPath -Parent) -Parent) "BE/web"
 $provider = "Microsoft.EntityFrameworkCore.SqlServer"
 
 Write-Host "切换到项目目录: $projectFolder" -ForegroundColor Green
 Set-Location $projectFolder
 
 # 检查项目文件是否存在
-if (-not (Test-Path "Chats.BE.csproj")) {
-    Write-Error "未找到 Chats.BE.csproj 项目文件"
+if (-not (Test-Path "Chats.Web.csproj")) {
+    Write-Error "未找到 Chats.Web.csproj 项目文件"
     exit 1
 }
 
@@ -29,8 +29,9 @@ $options = @(
     "--data-annotations",
     "--force",
     "--context", $contextName,
-    "--output-dir", "DB",
+    "--output-dir", "../db",
     "--verbose",
+    "--namespace", "Chats.DB",
     "--no-onconfiguring"
 )
 

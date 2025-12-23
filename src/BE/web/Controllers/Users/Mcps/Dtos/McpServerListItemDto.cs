@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Users.Mcps.Dtos;
+namespace Chats.BE.Controllers.Users.Mcps.Dtos;
 
 public record McpServerListItemDto
 {

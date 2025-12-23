@@ -1,6 +1,6 @@
-﻿using Chats.Web.Controllers.Chats.Chats.Dtos;
+﻿using Chats.BE.Controllers.Chats.Chats.Dtos;
 
-namespace Chats.Web.Controllers.Chats.ChatPresets.Dtos;
+namespace Chats.BE.Controllers.Chats.ChatPresets.Dtos;
 
 public record UpdateChatPresetRequest
 {

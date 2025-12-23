@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
 using System.Runtime.Caching;
 
-namespace Chats.Web.Services.Models;
+namespace Chats.BE.Services.Models;
 
 public class ChatStopService
 {

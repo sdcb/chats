@@ -2,7 +2,7 @@
 using Amazon.S3.Model;
 using System.Net;
 
-namespace Chats.Web.Services.FileServices.Implementations.AwsS3;
+namespace Chats.BE.Services.FileServices.Implementations.AwsS3;
 
 public class AwsS3FileService : IFileService
 {

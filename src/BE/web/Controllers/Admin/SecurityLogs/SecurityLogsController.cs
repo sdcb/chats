@@ -1,13 +1,13 @@
-using Chats.Web.Controllers.Admin.Common;
-using Chats.Web.Controllers.Admin.SecurityLogs.Dtos;
-using Chats.Web.Controllers.Common.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
+using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Admin.SecurityLogs.Dtos;
+using Chats.BE.Controllers.Common.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MiniExcelLibs;
 
-namespace Chats.Web.Controllers.Admin.SecurityLogs;
+namespace Chats.BE.Controllers.Admin.SecurityLogs;
 
 [Route("api/admin/security-logs"), AuthorizeAdmin]
 public class SecurityLogsController(ChatsDB db) : ControllerBase

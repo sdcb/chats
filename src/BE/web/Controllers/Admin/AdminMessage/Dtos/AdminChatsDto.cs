@@ -1,7 +1,7 @@
-﻿using Chats.Web.Controllers.Chats.UserChats.Dtos;
+﻿using Chats.BE.Controllers.Chats.UserChats.Dtos;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.AdminMessage.Dtos;
+namespace Chats.BE.Controllers.Admin.AdminMessage.Dtos;
 
 public record AdminChatsDto
 {

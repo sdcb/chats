@@ -1,10 +1,10 @@
-using Chats.Web.DB;
-using Chats.Web.DB.Jsons;
-using Chats.Web.Services.Common;
+using Chats.DB;
+using Chats.BE.DB.Jsons;
+using Chats.BE.Services.Common;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Admin.LoginServices.Dtos;
+namespace Chats.BE.Controllers.Admin.LoginServices.Dtos;
 
 public record LoginServiceUpdateRequest
 {

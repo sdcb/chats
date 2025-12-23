@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 
-namespace Chats.Web.Services.Models.Neutral.Conversions;
+namespace Chats.BE.Services.Models.Neutral.Conversions;
 
 /// <summary>
 /// Conversion methods between Anthropic JSON messages and NeutralMessage.

@@ -1,8 +1,8 @@
-﻿using Chats.Web.Controllers.Users.ApiKeys.Dtos;
-using Chats.Web.DB;
-using Chats.Web.Infrastructure;
-using Chats.Web.Services;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.DB;
+using Chats.BE.Controllers.Users.ApiKeys.Dtos;
+using Chats.BE.Infrastructure;
+using Chats.BE.Services;
+using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +10,7 @@ using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Chats.Web.Controllers.Users.ApiKeys;
+namespace Chats.BE.Controllers.Users.ApiKeys;
 
 [Authorize, Route("api/user/api-key")]
 public class ApiKeyController(ChatsDB db, CurrentUser currentUser, IUrlEncryptionService idEncryption) : ControllerBase

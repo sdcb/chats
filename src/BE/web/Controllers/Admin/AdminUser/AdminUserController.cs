@@ -1,13 +1,13 @@
-﻿using Chats.Web.Controllers.Admin.AdminUser.Dtos;
-using Chats.Web.Controllers.Admin.Common;
-using Chats.Web.Controllers.Common.Dtos;
-using Chats.Web.DB;
-using Chats.Web.Infrastructure;
-using Chats.Web.Services;
+﻿using Chats.DB;
+using Chats.BE.Controllers.Admin.AdminUser.Dtos;
+using Chats.BE.Controllers.Admin.Common;
+using Chats.BE.Controllers.Common.Dtos;
+using Chats.BE.Infrastructure;
+using Chats.BE.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Chats.Web.Controllers.Admin.AdminUser;
+namespace Chats.BE.Controllers.Admin.AdminUser;
 
 [Route("api/admin/users"), AuthorizeAdmin]
 public class AdminUserController(ChatsDB db, CurrentUser adminUser) : ControllerBase

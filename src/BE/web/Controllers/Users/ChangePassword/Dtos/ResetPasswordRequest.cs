@@ -2,7 +2,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Users.ChangePassword.Dtos;
+namespace Chats.BE.Controllers.Users.ChangePassword.Dtos;
 
 public record ResetPasswordRequest
 {

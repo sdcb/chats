@@ -1,12 +1,11 @@
-using System;
-using Chats.Web.DB;
-using Chats.Web.Services.Models.ChatServices.OpenAI;
-using Chats.Web.Services.Models.Neutral;
-using Chats.Web.Services.Models.Neutral.Conversions;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
+using Chats.BE.Services.Models.Neutral;
+using Chats.BE.Services.Models.Neutral.Conversions;
 using System.Text.Json.Nodes;
-using Chats.Web.Controllers.Users.Usages.Dtos;
+using Chats.BE.Controllers.Users.Usages.Dtos;
+using Chats.DB;
 
-namespace Chats.Web.Services.Models;
+namespace Chats.BE.Services.Models;
 
 public class AnthropicRequestWrapper(JsonObject json)
 {

@@ -1,11 +1,11 @@
-﻿using Chats.Web.Controllers.Chats.Messages.Dtos;
-using Chats.Web.DB;
-using Chats.Web.Services.FileServices;
-using Chats.Web.Services.Models.ChatServices;
-using Chats.Web.Services.UrlEncryption;
+﻿using Chats.DB;
+using Chats.BE.Controllers.Chats.Messages.Dtos;
+using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.Services.UrlEncryption;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Chats.Chats.Dtos;
+namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 
 /// <summary>
 /// SSE 一行的抽象基类，实际序列化时由 k 字段区分不同派生类型。

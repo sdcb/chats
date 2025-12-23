@@ -1,15 +1,15 @@
-using Chats.Web.Controllers.Public.SMSs.Dtos;
-using Chats.Web.DB;
-using Chats.Web.DB.Enums;
-using Chats.Web.Services.Common;
-using Chats.Web.Services.Configs;
+using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Public.SMSs.Dtos;
+using Chats.BE.Services.Common;
+using Chats.BE.Services.Configs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TencentCloud.Common;
 using TencentCloud.Sms.V20210111;
 using TencentCloud.Sms.V20210111.Models;
 
-namespace Chats.Web.Controllers.Public.SMSs;
+namespace Chats.BE.Controllers.Public.SMSs;
 
 [Route("api/public")]
 public class SmsController(ChatsDB db, GlobalDBConfig globalConfig, ILogger<SmsController> logger) : ControllerBase

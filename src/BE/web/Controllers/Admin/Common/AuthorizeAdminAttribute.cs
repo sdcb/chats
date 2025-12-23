@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 
-namespace Chats.Web.Controllers.Admin.Common;
+namespace Chats.BE.Controllers.Admin.Common;
 
 public class AuthorizeAdminAttribute : AuthorizeAttribute
 {

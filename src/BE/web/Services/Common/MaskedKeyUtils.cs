@@ -1,7 +1,7 @@
 ﻿using System.Text.Encodings.Web;
 using System.Text.Json;
 
-namespace Chats.Web.Services.Common;
+namespace Chats.BE.Services.Common;
 
 internal static class MaskedKeyUtils
 {

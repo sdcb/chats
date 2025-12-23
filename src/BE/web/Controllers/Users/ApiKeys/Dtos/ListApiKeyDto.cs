@@ -1,4 +1,4 @@
-﻿namespace Chats.Web.Controllers.Users.ApiKeys.Dtos;
+﻿namespace Chats.BE.Controllers.Users.ApiKeys.Dtos;
 
 using System.Text.Json.Serialization;
 

@@ -1,9 +1,9 @@
-using Chats.Web.DB;
-using Chats.Web.Services.FileServices;
-using Chats.Web.Services.UrlEncryption;
+using Chats.DB;
+using Chats.BE.Services.FileServices;
+using Chats.BE.Services.UrlEncryption;
 using System.Text.Json.Serialization;
 
-namespace Chats.Web.Controllers.Chats.Messages.Dtos;
+namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 
 /// <summary>
 /// 表示一个 Step，包含内容、编辑状态等信息
