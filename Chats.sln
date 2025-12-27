@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chats.BE.ApiTest", "src\BE\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chats.BE.UnitTest", "src\BE\tests\Chats.BE.UnitTest\Chats.BE.UnitTest.csproj", "{761387A7-5CE1-760B-2688-E63732EC5AEB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chats.DockerInterface", "src\BE\docker\Chats.DockerInterface.csproj", "{F7FF20F5-21FE-8BE0-B528-F5D569CE991F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -63,6 +65,10 @@ Global
 		{761387A7-5CE1-760B-2688-E63732EC5AEB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{761387A7-5CE1-760B-2688-E63732EC5AEB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{761387A7-5CE1-760B-2688-E63732EC5AEB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7FF20F5-21FE-8BE0-B528-F5D569CE991F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7FF20F5-21FE-8BE0-B528-F5D569CE991F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7FF20F5-21FE-8BE0-B528-F5D569CE991F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7FF20F5-21FE-8BE0-B528-F5D569CE991F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -74,6 +80,7 @@ Global
 		{B0DD0E5F-1FDE-BF40-1BE9-CD56851BA089} = {0832D4F1-8C33-4DBF-A914-81E1D618E8F9}
 		{E6E9FFD5-6882-15F5-F6AA-19E52E319301} = {1452823B-41DF-47A7-8AEC-1BF5A32BD6B2}
 		{761387A7-5CE1-760B-2688-E63732EC5AEB} = {1452823B-41DF-47A7-8AEC-1BF5A32BD6B2}
+		{F7FF20F5-21FE-8BE0-B528-F5D569CE991F} = {0832D4F1-8C33-4DBF-A914-81E1D618E8F9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {95C9C38D-AE58-4010-8FEF-0134C15F36B6}
