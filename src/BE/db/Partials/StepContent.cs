@@ -1,6 +1,5 @@
 using Chats.DB.Enums;
 using System.Diagnostics.CodeAnalysis;
-using System.Net.Http;
 
 namespace Chats.DB;
 

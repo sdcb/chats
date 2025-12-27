@@ -19,6 +19,8 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<ChatConfigMcp> ChatConfigMcps { get; set; }
 
+    public virtual DbSet<ChatDockerSession> ChatDockerSessions { get; set; }
+
     public virtual DbSet<ChatGroup> ChatGroups { get; set; }
 
     public virtual DbSet<ChatPreset> ChatPresets { get; set; }
@@ -188,6 +190,13 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.ChatConfig).WithMany(p => p.ChatConfigMcps).HasConstraintName("FK_ChatConfigMcp_ChatConfig");
 
             entity.HasOne(d => d.McpServer).WithMany(p => p.ChatConfigMcps).HasConstraintName("FK_ChatConfigMcp_McpServer");
+        });
+
+        modelBuilder.Entity<ChatDockerSession>(entity =>
+        {
+            entity.HasOne(d => d.OwnerTurn).WithMany(p => p.ChatDockerSessions)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ChatDockerSession_ChatTurn");
         });
 
         modelBuilder.Entity<ChatGroup>(entity =>

@@ -1,6 +1,3 @@
-using System.Net.Http;
-using System.Threading.Tasks;
-
 namespace Chats.BE.ApiTest;
 
 public static class HttpResponseMessageExtensions
