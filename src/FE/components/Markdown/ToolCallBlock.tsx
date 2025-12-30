@@ -108,6 +108,37 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
     const code = getCodeIfAvailable();
     const webSearchResults = getWebSearchResults();
 
+    const getHeaderTitle = (): string => {
+        if (toolCall.n !== 'run_command') {
+            return toolCall.n;
+        }
+
+        try {
+            const parsedResponse = JSON.parse(toolCall.p);
+            const responseObj = Array.isArray(parsedResponse) ? parsedResponse[0] : parsedResponse;
+
+            if (!responseObj || typeof responseObj !== 'object' || Array.isArray(responseObj)) {
+                return toolCall.n;
+            }
+
+            const responseKeys = Object.keys(responseObj as Record<string, unknown>);
+            if (responseKeys[0] !== 'sessionId') {
+                return toolCall.n;
+            }
+
+            const command = (responseObj as Record<string, unknown>)?.command;
+            if (typeof command === 'string' && command.trim().length > 0) {
+                return `${toolCall.n}: ${command}`;
+            }
+        } catch {
+            return toolCall.n;
+        }
+
+        return toolCall.n;
+    };
+
+    const headerTitle = getHeaderTitle();
+
     const toggleOpen = () => {
         setIsOpen(!isOpen);
         setIsManuallyToggled(true);
@@ -131,7 +162,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
             >
                 <div className="flex items-center gap-2">
                     <span>🔧</span>
-                    <span className="text-sm text-gray-800 dark:text-white">{toolCall.n}</span>
+                    <span className="text-sm text-gray-800 dark:text-white">{headerTitle}</span>
                 </div>
                 <div
                     className="flex items-center transition-transform duration-300 ease-in-out"
@@ -316,7 +347,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                 style={{ visibility: 'hidden', pointerEvents: 'none', whiteSpace: 'nowrap' }}
             >
                 <span>🔧</span>
-                <span className="text-sm">{toolCall.n}</span>
+                <span className="text-sm">{headerTitle}</span>
                 <IconChevronRight size={18} className="stroke-gray-500" />
             </div>
         </div>
