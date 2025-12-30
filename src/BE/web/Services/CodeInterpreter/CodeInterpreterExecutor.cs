@@ -388,7 +388,8 @@ public sealed class CodeInterpreterExecutor(
             throw new InvalidOperationException("Cannot determine start turn id for session lookup. Ensure MessageTurns includes the last message turn (and/or CurrentAssistantTurn has an id).");
         }
 
-        Dictionary<long, long?> parentById = ctx.MessageTurns
+        ChatTurn[] candidatesTurns = [.. ctx.MessageTurns, ctx.CurrentAssistantTurn];
+        Dictionary<long, long?> parentById = candidatesTurns
             .Where(t => t.Id > 0)
             .GroupBy(t => t.Id)
             .ToDictionary(g => g.Key, g => g.Last().ParentId);
