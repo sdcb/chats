@@ -18,6 +18,8 @@ using Chats.BE.Services.FileServices;
 using Chats.BE.Controllers.Api.OpenAICompatible.Dtos;
 using Chats.DB;
 using Chats.DB.Enums;
+using Chats.BE.Services.Options;
+using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Controllers.Api.OpenAICompatible;
 
@@ -35,7 +37,11 @@ public partial class OpenAIChatCompletionController(
     private static readonly DBApiType[] AllowedApiTypes = [DBApiType.OpenAIChatCompletion, DBApiType.OpenAIResponse, DBApiType.AnthropicMessages];
 
     [HttpPost("v1/chat/completions")]
-    public async Task<ActionResult> ChatCompletion([FromBody] JsonObject json, [FromServices] AsyncClientInfoManager clientInfoManager, CancellationToken cancellationToken)
+    public async Task<ActionResult> ChatCompletion(
+        [FromBody] JsonObject json,
+        [FromServices] AsyncClientInfoManager clientInfoManager,
+        [FromServices] IOptions<ChatOptions> chatOptions,
+        CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
         {
@@ -66,15 +72,21 @@ public partial class OpenAIChatCompletionController(
         if (ccoCacheControl != null)
         {
             cco.CacheControl = null;
-            return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, icc, clientInfoIdTask, cancellationToken);
+            int? retry429Times = chatOptions.Value.Retry429Times;
+            return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, icc, clientInfoIdTask, retry429Times, cancellationToken);
         }
 
-        return await ChatCompletionNoCache(cco, userModel, icc, clientInfoIdTask, cancellationToken);
+        int? retry429TimesNoCache = chatOptions.Value.Retry429Times;
+        return await ChatCompletionNoCache(cco, userModel, icc, clientInfoIdTask, retry429TimesNoCache, cancellationToken);
     }
 
     [HttpPost("v1-cached/chat/completions")]
     [HttpPost("v1-cached-createOnly/chat/completions")]
-    public async Task<ActionResult> ChatCompletionCached([FromBody] JsonObject json, [FromServices] AsyncClientInfoManager clientInfoManager, CancellationToken cancellationToken)
+    public async Task<ActionResult> ChatCompletionCached(
+        [FromBody] JsonObject json,
+        [FromServices] AsyncClientInfoManager clientInfoManager,
+        [FromServices] IOptions<ChatOptions> chatOptions,
+        CancellationToken cancellationToken)
     {
         InChatContext icc = new(Stopwatch.GetTimestamp());
         try
@@ -111,7 +123,8 @@ public partial class OpenAIChatCompletionController(
                 CreateOnly = Request.GetDisplayUrl().Contains("v1-cached-createOnly", StringComparison.OrdinalIgnoreCase),
             };
             cco.CacheControl = null;
-            return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, icc, clientInfoIdTask, cancellationToken);
+            int? retry429Times = chatOptions.Value.Retry429Times;
+            return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, icc, clientInfoIdTask, retry429Times, cancellationToken);
         }
         finally
         {
@@ -128,6 +141,7 @@ public partial class OpenAIChatCompletionController(
         UserModel userModel,
         InChatContext icc,
         Task<int> clientInfoIdTask,
+        int? retry429Times,
         CancellationToken cancellationToken)
     {
         string requestBody = cco.Serialize();
@@ -214,7 +228,7 @@ public partial class OpenAIChatCompletionController(
 
         try
         {
-            ActionResult result = await ChatCompletionNoCache(cco, userModel, icc, clientInfoIdTask, cancellationToken);
+            ActionResult result = await ChatCompletionNoCache(cco, userModel, icc, clientInfoIdTask, retry429Times, cancellationToken);
             return result;
         }
         finally
@@ -242,7 +256,7 @@ public partial class OpenAIChatCompletionController(
         }
     }
 
-    private async Task<ActionResult> ChatCompletionNoCache(CcoWrapper cco, UserModel userModel, InChatContext icc, Task<int> clientInfoIdTask, CancellationToken cancellationToken)
+    private async Task<ActionResult> ChatCompletionNoCache(CcoWrapper cco, UserModel userModel, InChatContext icc, Task<int> clientInfoIdTask, int? retry429Times, CancellationToken cancellationToken)
     {
         Model cm = userModel.Model;
         ChatService s = cf.CreateChatService(cm);
@@ -257,7 +271,8 @@ public partial class OpenAIChatCompletionController(
         try
         {
             ChatRequest csr = ChatRequest.FromOpenAI(currentApiKey.User.Id.ToString(), cm, cco.Streamed, cco.Messages!, cco.ToCleanCco());
-            await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, csr, fup, cancellationToken))
+
+            await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, csr, fup, retry429Times, cancellationToken))
             {
                 if (cco.Streamed)
                 {

@@ -14,6 +14,8 @@ using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Chats.BE.Services.Options;
+using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Controllers.Api.AnthropicCompatible;
 
@@ -30,7 +32,11 @@ public class AnthropicMessagesController(
     private static readonly DBApiType[] AllowedApiTypes = [DBApiType.OpenAIChatCompletion, DBApiType.OpenAIResponse, DBApiType.AnthropicMessages];
 
     [HttpPost("v1/messages")]
-    public async Task<ActionResult> CreateMessage([FromBody] JsonObject json, [FromServices] AsyncClientInfoManager clientInfoManager, CancellationToken cancellationToken)
+    public async Task<ActionResult> CreateMessage(
+        [FromBody] JsonObject json,
+        [FromServices] AsyncClientInfoManager clientInfoManager,
+        [FromServices] IOptions<ChatOptions> chatOptions,
+        CancellationToken cancellationToken)
     {
         InChatContext icc = new(Stopwatch.GetTimestamp());
         AnthropicRequestWrapper request = new(json);
@@ -57,7 +63,8 @@ public class AnthropicMessagesController(
             return ErrorMessage(AnthropicErrorTypes.InvalidRequestError, $"The model `{request.Model}` does not support messages API.");
         }
 
-        return await ProcessMessage(request, userModel, icc, clientInfoIdTask, cancellationToken);
+        int? retry429Times = chatOptions.Value.Retry429Times;
+        return await ProcessMessage(request, userModel, icc, clientInfoIdTask, retry429Times, cancellationToken);
     }
 
     private async Task<ActionResult> ProcessMessage(
@@ -65,6 +72,7 @@ public class AnthropicMessagesController(
         UserModel userModel,
         InChatContext icc,
         Task<int> clientInfoIdTask,
+        int? retry429Times,
         CancellationToken cancellationToken)
     {
         Model cm = userModel.Model;
@@ -85,7 +93,8 @@ public class AnthropicMessagesController(
         try
         {
             ChatRequest csr = request.ToChatRequest(currentApiKey.User.Id.ToString(), cm);
-            await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, csr, fup, cancellationToken))
+
+            await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, csr, fup, retry429Times, cancellationToken))
             {
                 if (request.Streamed)
                 {

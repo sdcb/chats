@@ -29,6 +29,8 @@ using Chats.DB.Enums;
 using Chats.BE.DB.Extensions;
 using Chats.BE.Services.CodeInterpreter;
 using Chats.BE.Infrastructure.Functional;
+using Chats.BE.Services.Options;
+using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Controllers.Chats.Chats;
 
@@ -41,6 +43,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         [FromServices] ChatsDB db,
         [FromServices] CurrentUser currentUser,
         [FromServices] ILogger<ChatController> logger,
+        [FromServices] IOptions<ChatOptions> chatOptions,
         [FromServices] IUrlEncryptionService idEncryption,
         [FromServices] BalanceService balanceService,
         [FromServices] ChatFactory chatFactory,
@@ -56,9 +59,11 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             return BadRequest(ModelState);
         }
 
+        int? retry429Times = chatOptions.Value.Retry429Times;
+
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
+            db, currentUser, logger, retry429Times, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
             cancellationToken);
     }
 
@@ -68,6 +73,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
     [FromServices] ChatsDB db,
     [FromServices] CurrentUser currentUser,
     [FromServices] ILogger<ChatController> logger,
+    [FromServices] IOptions<ChatOptions> chatOptions,
     [FromServices] IUrlEncryptionService idEncryption,
     [FromServices] BalanceService balanceService,
     [FromServices] ChatFactory chatFactory,
@@ -83,9 +89,11 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             return BadRequest(ModelState);
         }
 
+        int? retry429Times = chatOptions.Value.Retry429Times;
+
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
+            db, currentUser, logger, retry429Times, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
             cancellationToken);
     }
 
@@ -95,6 +103,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         [FromServices] ChatsDB db,
         [FromServices] CurrentUser currentUser,
         [FromServices] ILogger<ChatController> logger,
+        [FromServices] IOptions<ChatOptions> chatOptions,
         [FromServices] IUrlEncryptionService idEncryption,
         [FromServices] BalanceService balanceService,
         [FromServices] ChatFactory chatFactory,
@@ -115,9 +124,11 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             return BadRequest("User message must have at least one text content");
         }
 
+        int? retry429Times = chatOptions.Value.Retry429Times;
+
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
+            db, currentUser, logger, retry429Times, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
             cancellationToken);
     }
 
@@ -126,6 +137,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         ChatsDB db,
         CurrentUser currentUser,
         ILogger<ChatController> logger,
+        int? retry429Times,
         IUrlEncryptionService idEncryption,
         BalanceService balanceService,
         ChatFactory chatFactory,
@@ -282,6 +294,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             imageFileCache,
             fileCache,
             channels[index].Writer,
+            retry429Times,
             cancellationToken))];
 
         if (isEmptyChat && req is GeneralChatRequest generalChatRequest)
@@ -469,6 +482,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         Dictionary<ImageChatSegment, TaskCompletionSource<DBFile>> imageFileCache,
         Dictionary<string, TaskCompletionSource<DBFile>> fileCache,
         ChannelWriter<SseResponseLine> writer,
+        int? retry429Times,
         CancellationToken cancellationToken)
     {
         chatSpan.ChatConfig.Model = userModel.Model;
@@ -804,7 +818,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 ChatService s = chatFactory.CreateChatService(userModel.Model);
 
                 bool responseStated = false, reasoningStarted = false;
-                await foreach (ChatSegment segment in icc.Run(calc, userModel, s, request, fup, cancellationToken))
+                await foreach (ChatSegment segment in icc.Run(calc, userModel, s, request, fup, retry429Times, cancellationToken))
                 {
                     switch (segment)
                     {

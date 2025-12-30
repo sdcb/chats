@@ -15,6 +15,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using System.Text.Json;
+using Chats.BE.Services.Options;
+using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Controllers.Api.OpenAICompatible;
 
@@ -35,7 +37,11 @@ public class OpenAIImageController(
     /// Supports both streaming and non-streaming responses
     /// </summary>
     [HttpPost("v1/images/generations")]
-    public async Task<ActionResult> ImageGeneration([FromBody] ImageGenerationRequest? request, [FromServices] AsyncClientInfoManager clientInfoManager, CancellationToken cancellationToken)
+    public async Task<ActionResult> ImageGeneration(
+        [FromBody] ImageGenerationRequest? request,
+        [FromServices] AsyncClientInfoManager clientInfoManager,
+        [FromServices] IOptions<ChatOptions> chatOptions,
+        CancellationToken cancellationToken)
     {
         if (request == null || string.IsNullOrWhiteSpace(request.Prompt))
         {
@@ -57,7 +63,8 @@ public class OpenAIImageController(
         }
 
         bool isStreamed = request.Stream == true;
-        return await ProcessImageGeneration(request, userModel, isStreamed, images: null, clientInfoIdTask, cancellationToken);
+        int? retry429Times = chatOptions.Value.Retry429Times;
+        return await ProcessImageGeneration(request, userModel, isStreamed, images: null, clientInfoIdTask, retry429Times, cancellationToken);
     }
 
     /// <summary>
@@ -67,7 +74,10 @@ public class OpenAIImageController(
     /// </summary>
     [HttpPost("v1/images/edits")]
     [Consumes("multipart/form-data")]
-    public async Task<ActionResult> ImageEdits([FromServices] AsyncClientInfoManager clientInfoManager, CancellationToken cancellationToken)
+    public async Task<ActionResult> ImageEdits(
+        [FromServices] AsyncClientInfoManager clientInfoManager,
+        [FromServices] IOptions<ChatOptions> chatOptions,
+        CancellationToken cancellationToken)
     {
         IFormCollection form = await Request.ReadFormAsync(cancellationToken);
 
@@ -129,7 +139,8 @@ public class OpenAIImageController(
             Moderation = moderation
         };
 
-        return await ProcessImageGeneration(request, userModel, isStreamed, images, clientInfoIdTask, cancellationToken);
+        int? retry429Times = chatOptions.Value.Retry429Times;
+        return await ProcessImageGeneration(request, userModel, isStreamed, images, clientInfoIdTask, retry429Times, cancellationToken);
     }
 
     private async Task<ActionResult> ProcessImageGeneration(
@@ -138,6 +149,7 @@ public class OpenAIImageController(
         bool isStreamed,
         List<(byte[] Data, string ContentType, string FileName, bool IsMask)>? images,
         Task<int> clientInfoIdTask,
+        int? retry429Times,
         CancellationToken cancellationToken)
     {
         InChatContext icc = new(Stopwatch.GetTimestamp());
@@ -165,7 +177,7 @@ public class OpenAIImageController(
                 List<Base64Image> pendingFinalImages = [];
                 ChatTokenUsage? latestUsage = null;
 
-                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, chatRequest, fup, cancellationToken))
+                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, chatRequest, fup, retry429Times, cancellationToken))
                 {
                     switch (segment)
                     {
@@ -268,7 +280,7 @@ public class OpenAIImageController(
                 // Non-streaming response
                 List<ImageData> imageDataList = [];
 
-                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, chatRequest, fup, cancellationToken))
+                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, chatRequest, fup, retry429Times, cancellationToken))
                 {
                     if (segment is Base64Image image && segment is not Base64PreviewImage)
                     {

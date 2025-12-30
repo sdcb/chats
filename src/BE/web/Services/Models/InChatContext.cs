@@ -30,6 +30,15 @@ public class InChatContext(long firstTick)
         ChatRequest requestForEstimation,
         IAsyncEnumerable<ChatSegment> segments)
     {
+        // This context instance may be reused when doing retries.
+        // Ensure per-attempt state is clean.
+        _segments.Clear();
+        _segmentsAfterUsage.Clear();
+        _segmentCount = 0;
+        _lastReliableUsageSegment = null;
+        FullResponse = null;
+        FinishReason = DBFinishReason.Success;
+
         _balance = balance;
 
         _preprocessTick = _firstReasoningTick = _firstResponseTick = _endResponseTick = _finishTick = Stopwatch.GetTimestamp();
@@ -97,12 +106,68 @@ public class InChatContext(long firstTick)
         ChatService chatService,
         ChatRequest request,
         FileUrlProvider fup,
+        int? retry429Times,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (ChatSegment seg in RunInternal(balance, userModel, request, chatService.ChatEntry(request, fup, cancellationToken)))
+        int attempt = 0;
+
+        while (true)
         {
-            yield return seg;
+            bool yieldedAny = false;
+            bool shouldRetry = false;
+
+            await using (IAsyncEnumerator<ChatSegment> enumerator = RunInternal(
+                    balance,
+                    userModel,
+                    request,
+                    chatService.ChatEntry(request, fup, cancellationToken))
+                .GetAsyncEnumerator(cancellationToken))
+            {
+                while (true)
+                {
+                    bool moved;
+                    try
+                    {
+                        moved = await enumerator.MoveNextAsync();
+                    }
+                    catch (RawChatServiceException ex) when (
+                        !yieldedAny &&
+                        retry429Times is int maxRetries &&
+                        maxRetries > 0 &&
+                        attempt < maxRetries &&
+                        ex.StatusCode == 429)
+                    {
+                        attempt++;
+                        TimeSpan delay = GetExponentialBackoffDelay(attempt);
+                        await Task.Delay(delay, cancellationToken);
+                        shouldRetry = true;
+                        break;
+                    }
+
+                    if (!moved)
+                    {
+                        yield break;
+                    }
+
+                    yieldedAny = true;
+                    yield return enumerator.Current;
+                }
+            }
+
+            if (!shouldRetry)
+            {
+                yield break;
+            }
         }
+    }
+
+    private static TimeSpan GetExponentialBackoffDelay(int attempt)
+    {
+        // attempt: 1..N
+        // 1s, 2s, 4s, 8s... (cap 30s) + small jitter
+        double seconds = Math.Min(30, Math.Pow(2, attempt - 1));
+        int jitterMs = Random.Shared.Next(0, 250);
+        return TimeSpan.FromSeconds(seconds) + TimeSpan.FromMilliseconds(jitterMs);
     }
 
     private void RegisterUsage(UsageChatSegment usage, UserModel userModel)

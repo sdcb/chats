@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Controllers.Admin.GlobalConfigs;
 using Chats.BE.Services.CodeInterpreter;
+using Chats.BE.Services.Options;
 using Chats.DockerInterface;
 using Microsoft.Extensions.Options;
 
@@ -113,6 +114,7 @@ public class Program
         builder.Services.Configure<CodeInterpreterOptions>(builder.Configuration.GetSection("CodeInterpreter"));
         builder.Services.AddScoped<CodeInterpreterExecutor>();
         builder.Services.AddHostedService<ChatDockerSessionCleanupService>();
+            builder.Services.Configure<ChatOptions>(builder.Configuration.GetSection("Chat"));
 
         builder.Services.AddUrlEncryption();
         builder.Services.AddHttpContextAccessor();
