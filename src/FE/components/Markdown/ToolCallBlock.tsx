@@ -108,36 +108,111 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
     const code = getCodeIfAvailable();
     const webSearchResults = getWebSearchResults();
 
+    const parseToolCallJson = (): unknown | null => {
+        try {
+            return JSON.parse(toolCall.p);
+        } catch {
+            return null;
+        }
+    };
+
+    const getToolCallJsonObject = (): Record<string, unknown> | null => {
+        const parsed = parseToolCallJson();
+        const obj = Array.isArray(parsed) ? parsed[0] : parsed;
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+            return null;
+        }
+        return obj as Record<string, unknown>;
+    };
+
+    const hasSessionId = (obj: Record<string, unknown> | null): boolean => {
+        return !!obj && Object.prototype.hasOwnProperty.call(obj, 'sessionId');
+    };
+
     const getHeaderTitle = (): string => {
-        if (toolCall.n !== 'run_command') {
+        if (
+            toolCall.n !== 'run_command' &&
+            toolCall.n !== 'write_file' &&
+            toolCall.n !== 'patch_file' &&
+            toolCall.n !== 'read_file' &&
+            toolCall.n !== 'destroy_session'
+        ) {
             return toolCall.n;
         }
 
-        try {
-            const parsedResponse = JSON.parse(toolCall.p);
-            const responseObj = Array.isArray(parsedResponse) ? parsedResponse[0] : parsedResponse;
+        const obj = getToolCallJsonObject();
+        if (!obj) {
+            return toolCall.n;
+        }
 
-            if (!responseObj || typeof responseObj !== 'object' || Array.isArray(responseObj)) {
+        // run_command: JSON 且包含 sessionId
+        if (toolCall.n === 'run_command') {
+            if (!hasSessionId(obj)) {
                 return toolCall.n;
             }
-
-            const responseKeys = Object.keys(responseObj as Record<string, unknown>);
-            if (responseKeys[0] !== 'sessionId') {
-                return toolCall.n;
-            }
-
-            const command = (responseObj as Record<string, unknown>)?.command;
+            const command = obj.command;
             if (typeof command === 'string' && command.trim().length > 0) {
                 return `${toolCall.n}: ${command}`;
             }
-        } catch {
             return toolCall.n;
+        }
+
+        // write_file/patch_file: JSON 且包含 sessionId
+        if (!hasSessionId(obj)) {
+            return toolCall.n;
+        }
+
+        // destroy_session: JSON 且包含 sessionId
+        if (toolCall.n === 'destroy_session') {
+            const sessionId = obj.sessionId;
+            if (typeof sessionId === 'string' && sessionId.trim().length > 0) {
+                return `${toolCall.n}: ${sessionId}`;
+            }
+            if (typeof sessionId === 'number') {
+                return `${toolCall.n}: ${sessionId}`;
+            }
+            return toolCall.n;
+        }
+
+        // read_file: JSON 且包含 sessionId
+        if (toolCall.n === 'read_file') {
+            const path = obj.path;
+            if (typeof path === 'string' && path.trim().length > 0) {
+                return `${toolCall.n}: ${path}`;
+            }
+            return toolCall.n;
+        }
+
+        const path = obj.path;
+        if (typeof path === 'string' && path.trim().length > 0) {
+            return `${toolCall.n}: ${path}`;
         }
 
         return toolCall.n;
     };
 
     const headerTitle = getHeaderTitle();
+
+    const getDisplayParams = (): string => {
+        if (toolCall.n !== 'write_file' && toolCall.n !== 'patch_file') {
+            return toolCall.p;
+        }
+
+        const obj = getToolCallJsonObject();
+        if (!hasSessionId(obj)) {
+            return toolCall.p;
+        }
+
+        if (toolCall.n === 'write_file') {
+            const text = obj?.text;
+            return typeof text === 'string' ? text : toolCall.p;
+        }
+
+        const patch = obj?.patch;
+        return typeof patch === 'string' ? patch : toolCall.p;
+    };
+
+    const displayParams = getDisplayParams();
 
     const toggleOpen = () => {
         setIsOpen(!isOpen);
@@ -230,7 +305,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                                 borderBottomLeftRadius: toolResponse ? 0 : 12,
                             }}
                         >
-                            {toolCall.p}
+                            {displayParams}
                         </div>
 
                         {/* 参数区域的复制按钮 */}
@@ -240,7 +315,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                                     <TooltipTrigger asChild>
                                         <button
                                             className="flex items-center rounded bg-none p-1 text-xs hover:bg-black/10 dark:hover:bg-white/10"
-                                            onClick={copyToClipboard(toolCall.p, true)}
+                                            onClick={copyToClipboard(displayParams, true)}
                                         >
                                             {isParamsCopied ? (
                                                 <IconCheck className="stroke-gray-600 dark:stroke-gray-300" size={16} />
