@@ -354,7 +354,7 @@ public sealed class CodeInterpreterExecutor(
             state.SnapshotTaken = true;
         }
 
-        return Result.Ok($"sessionId: {label}\ncontainerId: {dbSession.ContainerId}\nworkdir: {PathSafety.WorkDir}");
+        return Result.Ok($"sessionId: {label}\nimage: {dbSession.Image}");
     }
 
     private static long? GetSessionLookupStartTurnId(TurnContext ctx)
