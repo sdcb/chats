@@ -38,7 +38,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                     .ToArray(),
                 CreatedAt = x.Steps.First().CreatedAt,
                 SpanId = x.SpanId,
-                Usage = x.IsUser ? null : new ChatMessageTempUsage()
+                Usage = x.IsUser || x.Steps.First().Usage == null ? null : new ChatMessageTempUsage()
                 {
                     ModelId = x.Steps.First().Usage!.ModelId,
                     ModelName = x.Steps.First().Usage!.Model.Name,
