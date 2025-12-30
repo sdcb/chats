@@ -27,11 +27,10 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
   const maxResponseTokens = watch('maxResponseTokens');
   const allowVision = watch('allowVision');
 
-  // 根据 modelProviderId 获取是否支持 WebSearch 和 CodeExecute
+  // 根据 modelProviderId 获取是否支持 WebSearch
   const provider = feModelProviders.find(p => p.id === modelProviderId);
   const providerCapabilities = {
     allowWebSearch: provider?.allowWebSearch ?? false,
-    allowCodeExecute: provider?.allowCodeExecute ?? false,
   };
 
   return (
@@ -79,8 +78,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
               )}
             />
           )}
-          {providerCapabilities.allowCodeExecute && (
-            <FormField
+          {<FormField
               control={control}
               name="allowCodeExecution"
               render={({ field }) => (
@@ -92,7 +90,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                 />
               )}
             />
-          )}
+          }
           <FormField
             control={control}
             name="allowStreaming"
