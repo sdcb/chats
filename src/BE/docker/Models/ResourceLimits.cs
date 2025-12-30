@@ -25,18 +25,27 @@ public class ResourceLimits
     /// </summary>
     public void Validate(ResourceLimits maxLimits)
     {
-        if (MemoryBytes > maxLimits.MemoryBytes)
+        // 0 means "unlimited".
+        if (MemoryBytes < 0)
+            throw new ArgumentException("Memory limit must be >= 0");
+        if (CpuCores < 0)
+            throw new ArgumentException("CPU limit must be >= 0");
+        if (MaxProcesses < 0)
+            throw new ArgumentException("Process limit must be >= 0");
+
+        if (maxLimits.MemoryBytes > 0 && MemoryBytes == 0)
+            throw new ArgumentException("Memory unlimited exceeds maximum");
+        if (maxLimits.CpuCores > 0 && CpuCores == 0)
+            throw new ArgumentException("CPU unlimited exceeds maximum");
+        if (maxLimits.MaxProcesses > 0 && MaxProcesses == 0)
+            throw new ArgumentException("Process unlimited exceeds maximum");
+
+        if (maxLimits.MemoryBytes > 0 && MemoryBytes > maxLimits.MemoryBytes)
             throw new ArgumentException($"Memory limit {MemoryBytes} exceeds maximum {maxLimits.MemoryBytes}");
-        if (CpuCores > maxLimits.CpuCores)
+        if (maxLimits.CpuCores > 0 && CpuCores > maxLimits.CpuCores)
             throw new ArgumentException($"CPU limit {CpuCores} exceeds maximum {maxLimits.CpuCores}");
-        if (MaxProcesses > maxLimits.MaxProcesses)
+        if (maxLimits.MaxProcesses > 0 && MaxProcesses > maxLimits.MaxProcesses)
             throw new ArgumentException($"Process limit {MaxProcesses} exceeds maximum {maxLimits.MaxProcesses}");
-        if (MemoryBytes <= 0)
-            throw new ArgumentException("Memory limit must be positive");
-        if (CpuCores <= 0)
-            throw new ArgumentException("CPU limit must be positive");
-        if (MaxProcesses <= 0)
-            throw new ArgumentException("Process limit must be positive");
     }
 
     /// <summary>

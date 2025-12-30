@@ -1,0 +1,212 @@
+using System.Text.Json;
+using Chats.BE.Infrastructure.Functional;
+using Chats.BE.Services;
+using Chats.BE.Services.CodeInterpreter;
+using Chats.BE.Services.FileServices;
+using Chats.BE.Services.UrlEncryption;
+using Chats.DB;
+using Chats.DockerInterface;
+using Chats.DockerInterface.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+
+namespace Chats.BE.UnitTest.CodeInterpreter;
+
+public sealed class CodeInterpreterSessionLookupTests
+{
+    private sealed class FakeDockerService : IDockerService
+    {
+        public int CreateContainerCalls { get; private set; }
+
+        public void Dispose() { }
+
+        public Task EnsureImageAsync(string image, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<ContainerInfo> CreateContainerAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default)
+        {
+            CreateContainerCalls++;
+            return Task.FromResult(new ContainerInfo
+            {
+                ContainerId = $"container-{CreateContainerCalls:D2}-abcdef0123456789",
+                Name = $"codepod-test-{CreateContainerCalls:D2}",
+                Image = image,
+                DockerStatus = "running",
+                CreatedAt = DateTimeOffset.UtcNow,
+            });
+        }
+
+        public Task<List<ContainerInfo>> GetManagedContainersAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new List<ContainerInfo>());
+
+        public Task<ContainerInfo?> GetContainerAsync(string containerId, CancellationToken cancellationToken = default)
+            => Task.FromResult<ContainerInfo?>(null);
+
+        public Task DeleteContainerAsync(string containerId, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task DeleteAllManagedContainersAsync(CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<CommandResult> ExecuteCommandAsync(string containerId, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        public Task<CommandResult> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        public Task UploadFileAsync(string containerId, string containerPath, byte[] content, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        public Task<List<FileEntry>> ListDirectoryAsync(string containerId, string path, CancellationToken cancellationToken = default)
+            => Task.FromResult(new List<FileEntry>());
+
+        public Task<byte[]> DownloadFileAsync(string containerId, string filePath, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        public Task<SessionUsage?> GetContainerStatsAsync(string containerId, CancellationToken cancellationToken = default)
+            => Task.FromResult<SessionUsage?>(null);
+    }
+
+    private static ServiceProvider CreateServiceProvider(string dbName)
+    {
+        ServiceCollection services = new();
+        services.AddDbContext<ChatsDB>(o => o.UseInMemoryDatabase(dbName));
+        return services.BuildServiceProvider();
+    }
+
+    private static CodeInterpreterExecutor CreateExecutor(ServiceProvider sp, FakeDockerService docker)
+    {
+        IHttpContextAccessor accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
+        HostUrlService host = new(accessor);
+        FileServiceFactory fsf = new(host, new NoOpUrlEncryptionService());
+
+        return new CodeInterpreterExecutor(
+            docker,
+            fsf,
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            Options.Create(new CodePodConfig()),
+            Options.Create(new CodeInterpreterOptions()),
+            NullLogger<CodeInterpreterExecutor>.Instance);
+    }
+
+    private static CodeInterpreterExecutor.TurnContext CreateCtx(long currentTurnId, params ChatTurn[] messageTurns)
+    {
+        return new CodeInterpreterExecutor.TurnContext
+        {
+            MessageTurns = messageTurns,
+            MessageSteps = Array.Empty<Step>(),
+            CurrentAssistantTurn = new ChatTurn { Id = currentTurnId, ChatId = 1, Chat = null! },
+            ClientInfoId = 1,
+        };
+    }
+
+    private static async Task SeedTurnAsync(ChatsDB db, long id, long? parentId)
+    {
+        db.ChatTurns.Add(new ChatTurn
+        {
+            Id = id,
+            ChatId = 1,
+            ParentId = parentId,
+            IsUser = false,
+            Chat = null!,
+        });
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task SeedSessionAsync(ChatsDB db, long ownerTurnId, string label, string containerId)
+    {
+        DateTime now = DateTime.UtcNow;
+        db.ChatDockerSessions.Add(new ChatDockerSession
+        {
+            OwnerTurnId = ownerTurnId,
+            Label = label,
+            ContainerId = containerId,
+            Image = "mcr.microsoft.com/dotnet/sdk:10.0",
+            NetworkMode = (byte)NetworkMode.None,
+            CreatedAt = now.AddMinutes(-10),
+            LastActiveAt = now.AddMinutes(-5),
+            ExpiresAt = now.AddMinutes(30),
+        });
+        await db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task CreateSession_ShouldReuseNearestAncestorSession_ByLabel()
+    {
+        string dbName = Guid.NewGuid().ToString();
+        using ServiceProvider sp = CreateServiceProvider(dbName);
+        using (IServiceScope scope = sp.CreateScope())
+        {
+            ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
+            await SeedTurnAsync(db, id: 1, parentId: null);
+            await SeedTurnAsync(db, id: 2, parentId: 1); // Turn A
+            await SeedTurnAsync(db, id: 4, parentId: 2); // Turn C (child of A)
+
+            await SeedSessionAsync(db, ownerTurnId: 1, label: "python-env", containerId: "container-root");
+            await SeedSessionAsync(db, ownerTurnId: 2, label: "python-env", containerId: "container-A");
+        }
+
+        FakeDockerService docker = new();
+        CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
+        CodeInterpreterExecutor.TurnContext ctx = CreateCtx(
+            currentTurnId: 4,
+            new ChatTurn { Id = 1, ParentId = null, ChatId = 1, Chat = null! },
+            new ChatTurn { Id = 2, ParentId = 1, ChatId = 1, Chat = null! },
+            new ChatTurn { Id = 4, ParentId = 2, ChatId = 1, Chat = null! });
+
+        Result<string> r = await exec.ExecuteToolCallAsync(ctx, "create_docker_session", JsonSerializer.Serialize(new { label = "python-env" }), CancellationToken.None);
+
+        Assert.True(r.IsSuccess);
+        Assert.Contains("sessionId: python-env", r.Value);
+        Assert.Contains("containerId: container-A", r.Value);
+        Assert.Equal(0, docker.CreateContainerCalls);
+    }
+
+    [Fact]
+    public async Task CreateSession_ShouldNotSeeSiblingSessions_AndCreateNew()
+    {
+        string dbName = Guid.NewGuid().ToString();
+        using ServiceProvider sp = CreateServiceProvider(dbName);
+        using (IServiceScope scope = sp.CreateScope())
+        {
+            ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
+            await SeedTurnAsync(db, id: 1, parentId: null);
+            await SeedTurnAsync(db, id: 2, parentId: 1); // Turn A
+            await SeedTurnAsync(db, id: 3, parentId: 1); // Turn A' (sibling)
+
+            await SeedSessionAsync(db, ownerTurnId: 2, label: "python-env", containerId: "container-A");
+        }
+
+        FakeDockerService docker = new();
+        CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
+        CodeInterpreterExecutor.TurnContext ctx = CreateCtx(
+            currentTurnId: 3,
+            new ChatTurn { Id = 1, ParentId = null, ChatId = 1, Chat = null! },
+            new ChatTurn { Id = 3, ParentId = 1, ChatId = 1, Chat = null! });
+
+        Result<string> r = await exec.ExecuteToolCallAsync(ctx, "create_docker_session", JsonSerializer.Serialize(new { label = "python-env" }), CancellationToken.None);
+
+        Assert.True(r.IsSuccess);
+        Assert.Contains("sessionId: python-env", r.Value);
+        Assert.Contains("containerId: container-01", r.Value);
+        Assert.Equal(1, docker.CreateContainerCalls);
+
+        using (IServiceScope scope2 = sp.CreateScope())
+        {
+            ChatsDB db2 = scope2.ServiceProvider.GetRequiredService<ChatsDB>();
+            ChatDockerSession created = await db2.ChatDockerSessions.AsNoTracking().OrderByDescending(x => x.Id).FirstAsync();
+            Assert.Equal(3, created.OwnerTurnId);
+            Assert.Equal("python-env", created.Label);
+            Assert.Equal("container-01-abcdef0123456789", created.ContainerId);
+        }
+    }
+}

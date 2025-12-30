@@ -8,6 +8,7 @@ using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.ChatServices.Test;
 using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.Models.Neutral;
 using Chats.BE.Services.Models.Neutral.Conversions;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
@@ -26,6 +27,8 @@ using Chats.DB;
 using DBFile = Chats.DB.File;
 using Chats.DB.Enums;
 using Chats.BE.DB.Extensions;
+using Chats.BE.Services.CodeInterpreter;
+using Chats.BE.Infrastructure.Functional;
 
 namespace Chats.BE.Controllers.Chats.Chats;
 
@@ -45,6 +48,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         [FromServices] FileUrlProvider fup,
         [FromServices] ChatConfigService chatConfigService,
         [FromServices] DBFileService dBFileService,
+        [FromServices] CodeInterpreterExecutor codeInterpreter,
         CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -54,7 +58,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService,
+            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
             cancellationToken);
     }
 
@@ -71,6 +75,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
     [FromServices] FileUrlProvider fup,
     [FromServices] ChatConfigService chatConfigService,
     [FromServices] DBFileService dBFileService,
+    [FromServices] CodeInterpreterExecutor codeInterpreter,
     CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -80,7 +85,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService,
+            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
             cancellationToken);
     }
 
@@ -97,6 +102,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         [FromServices] FileUrlProvider fup,
         [FromServices] ChatConfigService chatConfigService,
         [FromServices] DBFileService dBFileService,
+        [FromServices] CodeInterpreterExecutor codeInterpreter,
         CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -111,7 +117,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService,
+            db, currentUser, logger, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
             cancellationToken);
     }
 
@@ -127,6 +133,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         FileUrlProvider fup,
         ChatConfigService chatConfigService,
         DBFileService dbFileService,
+        CodeInterpreterExecutor codeInterpreter,
         CancellationToken cancellationToken)
     {
         long firstTick = Stopwatch.GetTimestamp();
@@ -254,22 +261,26 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
         Channel<SseResponseLine>[] channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
         Dictionary<ImageChatSegment, TaskCompletionSource<DBFile>> imageFileCache = [];
+        Dictionary<string, TaskCompletionSource<DBFile>> fileCache = new(StringComparer.Ordinal);
         Task[] streamTasks = [.. toGenerateSpans.Select((span, index) => ProcessChatSpan(
             currentUser,
             logger,
             chatFactory,
             fup,
+            codeInterpreter,
             span,
             firstTick,
             req,
             chat,
             userModels[span.ChatConfig.ModelId],
             userMcps,
+            messageTreeNoContent,
             messageTree,
             newDbUserTurn,
             cost.WithScoped(span.SpanId.ToString()),
             clientInfoIdTask,
             imageFileCache,
+            fileCache,
             channels[index].Writer,
             cancellationToken))];
 
@@ -342,11 +353,40 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     DBFile file = await dbFileService.StoreImage(image, await clientInfoIdTask, fs, cancellationToken: default);
                     tcs.SetResult(file);
                     // yield final file dto
-                    await YieldResponse(new ImageGeneratedLine(tempImageGeneratedLine.SpanId, fup.CreateFileDto(file, tryWithUrl: false)));
+                    await YieldResponse(new FileGeneratedLine(tempImageGeneratedLine.SpanId, fup.CreateFileDto(file, tryWithUrl: false)));
                 }
                 catch (Exception e)
                 {
                     tcs.SetException(e);
+                }
+            }
+            else if (line is TempFileGeneratedLine tempFileGeneratedLine)
+            {
+                if (!fileCache.TryGetValue(tempFileGeneratedLine.Token, out TaskCompletionSource<DBFile>? tcs))
+                {
+                    throw new InvalidOperationException("File cache not found.");
+                }
+
+                try
+                {
+                    fs ??= await db.GetDefaultFileService(cancellationToken) ?? throw new InvalidOperationException("Default file service config not found.");
+                    DBFile file = await dbFileService.StoreFileBytes(
+                        tempFileGeneratedLine.Bytes,
+                        tempFileGeneratedLine.FileName,
+                        tempFileGeneratedLine.ContentType,
+                        await clientInfoIdTask,
+                        fs,
+                        cancellationToken);
+                    tcs.SetResult(file);
+                    await YieldResponse(new FileGeneratedLine(tempFileGeneratedLine.SpanId, fup.CreateFileDto(file, tryWithUrl: false)));
+                }
+                catch (Exception e)
+                {
+                    tcs.SetException(e);
+                }
+                finally
+                {
+                    fileCache.Remove(tempFileGeneratedLine.Token);
                 }
             }
             else
@@ -414,28 +454,66 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         ILogger<ChatController> logger,
         ChatFactory chatFactory,
         FileUrlProvider fup,
+        CodeInterpreterExecutor codeInterpreter,
         ChatSpan chatSpan,
         long firstTick,
         WebChatRequest req,
         Chat chat,
         UserModel userModel,
         UserMcp[] userMcps,
+        IEnumerable<ChatTurn> messageTurns,
         IEnumerable<Step> messageTree,
         ChatTurn? dbUserMessage,
         ScopedBalanceCalculator calc,
         Task<int> clientInfoIdTask,
         Dictionary<ImageChatSegment, TaskCompletionSource<DBFile>> imageFileCache,
+        Dictionary<string, TaskCompletionSource<DBFile>> fileCache,
         ChannelWriter<SseResponseLine> writer,
         CancellationToken cancellationToken)
     {
         chatSpan.ChatConfig.Model = userModel.Model;
         // Combine message tree and user message steps, then convert to neutral format
-        IEnumerable<Step> allSteps = [.. messageTree, .. (dbUserMessage?.Steps ?? [])];
+        List<Step> allSteps = [.. messageTree, .. dbUserMessage?.Steps ?? []];
+
+        bool codeExecutionEnabled = chatSpan.ChatConfig.CodeExecutionEnabled;
+
+        IList<NeutralMessage> neutralMessages;
+        if (codeExecutionEnabled)
+        {
+            List<NeutralMessage> injected = new(allSteps.Count);
+            List<Step> priorSteps = new(allSteps.Count);
+
+            foreach (Step step in allSteps)
+            {
+                NeutralMessage msg = step.ToNeutral();
+                if ((DBChatRole)step.ChatRoleId == DBChatRole.User)
+                {
+                    string? prefix = codeInterpreter.BuildCloudFilesContextPrefix(priorSteps);
+                    if (!string.IsNullOrWhiteSpace(prefix))
+                    {
+                        List<NeutralContent> contents = [NeutralTextContent.Create(prefix), .. msg.Contents];
+                        msg = msg with { Contents = contents };
+                    }
+                }
+
+                injected.Add(msg);
+                priorSteps.Add(step);
+            }
+
+            neutralMessages = injected;
+        }
+        else
+        {
+            neutralMessages = allSteps.ToNeutral();
+        }
         ChatRequest csr = new()
         {
             EndUserId = currentUser.Id.ToString(),
-            Messages = allSteps.ToNeutral(),
+            Messages = neutralMessages,
             ChatConfig = chatSpan.ChatConfig,
+            System = chatSpan.ChatConfig.CodeExecutionEnabled
+                ? codeInterpreter.BuildSystemMessage(chatSpan.ChatConfig.SystemPrompt, allSteps)
+                : null,
             Tools = [],
             Source = UsageSource.WebChat,
         };
@@ -443,6 +521,16 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         // Build a name mapping for tools to avoid collisions while keeping names clean
         Dictionary<string, (int serverId, string originalToolName)> toolNameMap = new(StringComparer.Ordinal);
         HashSet<string> usedToolNames = new(StringComparer.Ordinal);
+
+        if (codeExecutionEnabled)
+        {
+            // Reserve CI tool names to avoid collisions with MCP tools.
+            foreach (string n in CodeInterpreterExecutor.ToolNames)
+            {
+                usedToolNames.Add(n);
+            }
+            codeInterpreter.AddTools(csr.Tools);
+        }
         foreach (McpTool tool in chatSpan.ChatConfig.ChatConfigMcps.SelectMany(x => x.McpServer.McpTools))
         {
             string finalName = tool.ToolName;
@@ -481,18 +569,92 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         }
         chat.ChatTurns.Add(turn);
 
+        CodeInterpreterExecutor.TurnContext? ciCtx = null;
+        if (codeExecutionEnabled)
+        {
+            ciCtx = new CodeInterpreterExecutor.TurnContext
+            {
+                MessageTurns = messageTurns.Where(t => t.Id > 0).ToList(),
+                MessageSteps = allSteps.ToList(),
+                CurrentAssistantTurn = turn,
+                ClientInfoId = await clientInfoIdTask,
+            };
+        }
+
         while (!cancellationToken.IsCancellationRequested)
         {
             Step step = await RunOne(csr, cancellationToken);
+
+            bool hasUnfinishedToolCalls = TryGetUnfinishedToolCall(step, out List<StepContentToolCall> unfinishedToolCalls);
+
             WriteStep(step);
 
-            if (TryGetUnfinishedToolCall(step, out List<StepContentToolCall> unfinishedToolCalls))
+            if (hasUnfinishedToolCalls)
             {
                 foreach (StepContentToolCall call in unfinishedToolCalls)
                 {
-                    if (!toolNameMap.TryGetValue(call.Name!, out (int serverId, string originalToolName) mapped))
+                    string callName = call.Name ?? throw new InvalidOperationException("Tool call name is null");
+
+                    if (codeExecutionEnabled && codeInterpreter.IsCodeInterpreterTool(callName))
                     {
-                        throw new InvalidOperationException($"Tool name not found in map: {call.Name}");
+                        Stopwatch ciSw = Stopwatch.StartNew();
+                        writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId!, "Executing code interpreter tool..."));
+                        Result<string> ci = await codeInterpreter.ExecuteToolCallAsync(ciCtx!, callName, call.Parameters ?? "{}", cancellationToken);
+                        string ciResult = ci.IsSuccess ? ci.Value : ci.Error!;
+                        ciSw.Stop();
+
+                        writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, ci.IsSuccess, call.ToolCallId!, ciResult));
+
+                        // Drain any artifacts produced by this tool call and upload via controller thread.
+                        List<StepContent> artifactStepContents = [];
+                        foreach (CodeInterpreterExecutor.PendingFileArtifact a in codeInterpreter.DrainPendingArtifacts(ciCtx!))
+                        {
+                            string token = $"{chatSpan.SpanId}_{Guid.NewGuid():N}";
+                            TaskCompletionSource<DBFile> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                            fileCache[token] = tcs;
+
+                            writer.TryWrite(new TempFileGeneratedLine(chatSpan.SpanId, token, a.FileName, a.ContentType, a.Bytes));
+
+                            try
+                            {
+                                DBFile f = await tcs.Task;
+                                artifactStepContents.Add(StepContent.FromFile(f));
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.LogWarning(ex, "Failed to store generated file artifact: {fileName}", a.FileName);
+                            }
+                        }
+
+                        WriteStep(new Step()
+                        {
+                            Turn = turn,
+                            ChatRoleId = (byte)DBChatRole.ToolCall,
+                            CreatedAt = DateTime.UtcNow,
+                            Edited = false,
+                            StepContents =
+                            [
+                                new StepContent()
+                                {
+                                    StepContentToolCallResponse = new()
+                                    {
+                                        ToolCallId = call.ToolCallId,
+                                        Response = ciResult,
+                                        DurationMs = (int)ciSw.ElapsedMilliseconds,
+                                        IsSuccess = ci.IsSuccess,
+                                    },
+                                    ContentTypeId = (byte)DBStepContentType.ToolCallResponse,
+                                },
+                                .. artifactStepContents
+                            ],
+                        });
+
+                        continue;
+                    }
+
+                    if (!toolNameMap.TryGetValue(callName, out (int serverId, string originalToolName) mapped))
+                    {
+                        throw new InvalidOperationException($"Tool name not found in map: {callName}");
                     }
                     int serverId = mapped.serverId;
                     string toolName = mapped.originalToolName;
@@ -549,7 +711,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     {
                         try
                         {
-                            CallToolResult result = await mcpClient.CallToolAsync(toolName, JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Parameters)!, new ProgressReporter(pnv =>
+                            CallToolResult result = await mcpClient.CallToolAsync(toolName, JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Parameters!), new ProgressReporter(pnv =>
                             {
                                 logger.LogInformation("Tool {call.Name} progress: {pnv.Message}", call.Name, pnv.Message);
                                 writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId!, pnv.Message!));
@@ -673,7 +835,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                             writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, toolCallResponse.IsSuccess, toolCallResponse.ToolCallId!, toolCallResponse.Response!));
                             break;
                         case Base64PreviewImage preview:
-                            writer.TryWrite(new ImageGeneratingLine(chatSpan.SpanId, preview.ToTempFileDto()));
+                            writer.TryWrite(new FileGeneratingLine(chatSpan.SpanId, preview.ToTempFileDto()));
                             break;
                         case ImageChatSegment imgSeg:
                             imageFileCache[imgSeg] = new TaskCompletionSource<DBFile>();

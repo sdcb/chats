@@ -16,6 +16,9 @@ using Chats.BE.Services.FileServices;
 using Microsoft.AspNetCore.StaticFiles;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Controllers.Admin.GlobalConfigs;
+using Chats.BE.Services.CodeInterpreter;
+using Chats.DockerInterface;
+using Microsoft.Extensions.Options;
 
 [assembly: InternalsVisibleTo("Chats.BE.UnitTest")]
 
@@ -100,6 +103,16 @@ public class Program
         builder.Services.AddScoped<ChatConfigService>();
         builder.Services.AddScoped<DBFileService>();
     builder.Services.AddScoped<LoginRateLimiter>();
+
+        builder.Services.Configure<CodePodConfig>(builder.Configuration.GetSection("CodePod"));
+        builder.Services.AddSingleton<IDockerService>(sp =>
+            new DockerService(
+                sp.GetRequiredService<IOptions<CodePodConfig>>().Value,
+                sp.GetService<ILogger<DockerService>>()));
+
+        builder.Services.Configure<CodeInterpreterOptions>(builder.Configuration.GetSection("CodeInterpreter"));
+        builder.Services.AddScoped<CodeInterpreterExecutor>();
+        builder.Services.AddHostedService<ChatDockerSessionCleanupService>();
 
         builder.Services.AddUrlEncryption();
         builder.Services.AddHttpContextAccessor();

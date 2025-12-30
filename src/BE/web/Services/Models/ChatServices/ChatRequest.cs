@@ -26,6 +26,12 @@ public record ChatRequest
 
     public IList<ChatTool> Tools { get; init; } = [];
 
+    /// <summary>
+    /// Enables the model provider's built-in code execution capability (e.g., Gemini codeExecution).
+    /// This is intentionally NOT exposed to WebChat/API callers by default; unit tests may toggle it.
+    /// </summary>
+    public bool ModelProviderCodeExecutionEnabled { get; set; } = false;
+
     public ChatResponseFormat? TextFormat { get; init; }
 
     public bool? AllowParallelToolCalls { get; init; }

@@ -40,4 +40,44 @@ public class DBFileService(ChatsDB db, FileServiceFactory fsf, CurrentUser curre
 
         return file;
     }
+
+    public async Task<DBFile> StoreFileBytes(byte[] bytes, string fileName, string contentType, int clientInfoId, FileService dbfs, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(bytes);
+        if (string.IsNullOrWhiteSpace(fileName)) throw new ArgumentException("fileName is required", nameof(fileName));
+        if (string.IsNullOrWhiteSpace(contentType)) contentType = "application/octet-stream";
+
+        IFileService fs = fsf.Create(dbfs);
+
+        FileImageInfo? imageInfo = fiis.GetImageInfo(fileName, contentType, bytes);
+
+        string storageKey;
+        using (MemoryStream uploadStream = new(bytes))
+        {
+            storageKey = await fs.Upload(new FileUploadRequest
+            {
+                Stream = uploadStream,
+                FileName = fileName,
+                ContentType = contentType,
+            }, cancellationToken);
+        }
+
+        DBFile file = new()
+        {
+            FileName = fileName,
+            MediaType = contentType,
+            StorageKey = storageKey,
+            Size = bytes.Length,
+            ClientInfoId = clientInfoId,
+            CreatedAt = DateTime.UtcNow,
+            CreateUserId = currentUser.Id,
+            FileServiceId = dbfs.Id,
+            FileService = dbfs,
+            FileImageInfo = imageInfo,
+        };
+        db.Files.Add(file);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return file;
+    }
 }

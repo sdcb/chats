@@ -101,9 +101,9 @@ public class GoogleAI2ChatServiceTest
 
         var request = CreateBaseChatRequest("gemini-2.5-flash", "调用内置工具，计算1234/5432=?", cfg =>
         {
-            cfg.CodeExecutionEnabled = true;
             cfg.SystemPrompt = GoogleAiDumpExtractors.TryGetSystemPrompt(dump.Request.Body);
         });
+        request.ModelProviderCodeExecutionEnabled = true;
 
         // Act
         var segments = new List<ChatSegment>();

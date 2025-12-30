@@ -110,7 +110,13 @@ public class CodePodConfig
     /// <summary>
     /// 默认资源限制（用于创建容器时的最大上限）
     /// </summary>
-    public ResourceLimits MaxResourceLimits { get; set; } = ResourceLimits.Standard;
+    public ResourceLimits MaxResourceLimits { get; set; } = new()
+    {
+        // 0 means unlimited (validated by ResourceLimits.Validate)
+        MemoryBytes = 0,
+        CpuCores = 0,
+        MaxProcesses = 0,
+    };
 
     /// <summary>
     /// 默认资源限制（用于不指定限制时的默认值）

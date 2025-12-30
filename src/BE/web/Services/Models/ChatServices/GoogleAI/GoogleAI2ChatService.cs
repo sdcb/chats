@@ -408,7 +408,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
             tools.Add(functionTool);
         }
 
-        if (request.ChatConfig.CodeExecutionEnabled && request.ChatConfig.Model.AllowCodeExecution)
+        if (request.ModelProviderCodeExecutionEnabled && request.ChatConfig.Model.AllowCodeExecution)
         {
             tools.Add(new JsonObject
             {

@@ -22,8 +22,8 @@ namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 [JsonDerivedType(typeof(UpdateTitleLine      ), (int)SseResponseKind.UpdateTitle      )]
 [JsonDerivedType(typeof(TitleSegmentLine     ), (int)SseResponseKind.TitleSegment     )]
 [JsonDerivedType(typeof(ChatLeafTurnIdLine   ), (int)SseResponseKind.ChatLeafTurnId   )]
-[JsonDerivedType(typeof(ImageGeneratingLine  ), (int)SseResponseKind.ImageGenerating  )]
-[JsonDerivedType(typeof(ImageGeneratedLine   ), (int)SseResponseKind.ImageGenerated   )]
+[JsonDerivedType(typeof(FileGeneratingLine   ), (int)SseResponseKind.FileGenerating   )]
+[JsonDerivedType(typeof(FileGeneratedLine    ), (int)SseResponseKind.FileGenerated    )]
 [JsonDerivedType(typeof(CallingToolLine      ), (int)SseResponseKind.CallingTool      )]
 [JsonDerivedType(typeof(ToolProgressLine     ), (int)SseResponseKind.ToolProgress     )]
 [JsonDerivedType(typeof(ToolCompletedLine    ), (int)SseResponseKind.ToolCompleted    )]
@@ -109,7 +109,7 @@ public sealed record ChatLeafTurnIdLine(
     [property: JsonPropertyName("r")] string EncryptedLeafMessageId
 ) : SseResponseLine;
 
-public sealed record ImageGeneratingLine(
+public sealed record FileGeneratingLine(
     [property: JsonPropertyName("i")] byte SpanId,
     [property: JsonPropertyName("r")] FileDto File
 ) : SseResponseLine;
@@ -119,7 +119,15 @@ public sealed record TempImageGeneratedLine(
     ImageChatSegment Image
 ) : SseResponseLine;
 
-public sealed record ImageGeneratedLine(
+public sealed record TempFileGeneratedLine(
+    byte SpanId,
+    string Token,
+    string FileName,
+    string ContentType,
+    byte[] Bytes
+) : SseResponseLine;
+
+public sealed record FileGeneratedLine(
     [property: JsonPropertyName("i")] byte SpanId,
     [property: JsonPropertyName("r")] FileDto File
 ) : SseResponseLine;

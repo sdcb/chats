@@ -411,18 +411,14 @@ public class DockerService : IDockerService
                 if (string.IsNullOrWhiteSpace(entry.Key))
                     continue;
 
-                string cleanKey = entry.Key.TrimStart('.', '/');
-                if (string.IsNullOrEmpty(cleanKey))
-                    continue;
-
-                string fullPath = path.TrimEnd('/') + "/" + cleanKey.TrimEnd('/');
-                if (fullPath.TrimEnd('/') == path.TrimEnd('/'))
+                string? fullPath = TryGetFullPathFromArchiveEntry(path, entry.Key);
+                if (string.IsNullOrEmpty(fullPath))
                     continue;
 
                 entries.Add(new FileEntry
                 {
                     Path = fullPath,
-                    Name = Path.GetFileName(cleanKey.TrimEnd('/')),
+                    Name = Path.GetFileName(fullPath.TrimEnd('/')),
                     IsDirectory = entry.IsDirectory,
                     Size = entry.Size,
                     LastModified = entry.LastModifiedTime
@@ -431,6 +427,113 @@ public class DockerService : IDockerService
 
             return entries;
         }, containerId);
+    }
+
+    internal static string? TryGetFullPathFromArchiveEntry(string requestedPath, string entryKey)
+    {
+        if (string.IsNullOrWhiteSpace(requestedPath) || string.IsNullOrWhiteSpace(entryKey))
+        {
+            return null;
+        }
+
+        // Docker tar entry keys are typically relative, and often include the directory name once.
+        // Example: requested "/app/artifacts" may yield entry keys like "artifacts/" and "artifacts/hello.txt".
+        string normalizedRequested = NormalizeContainerPath(requestedPath);
+        string normalizedRequestedNoTrailing = normalizedRequested.TrimEnd('/');
+
+        string cleanKey = entryKey.Replace('\\', '/').TrimStart('.', '/');
+        cleanKey = cleanKey.Trim();
+        if (string.IsNullOrEmpty(cleanKey))
+        {
+            return null;
+        }
+
+        // 1) Strip the full requested path (relative form) if the archive key includes it.
+        string requestedRelative = normalizedRequestedNoTrailing.TrimStart('/');
+        if (!string.IsNullOrEmpty(requestedRelative))
+        {
+            cleanKey = StripPrefix(cleanKey, requestedRelative);
+        }
+
+        // 2) Also strip a single leading directory matching the requested basename (common Docker behavior).
+        string requestedBaseName = GetContainerBaseName(normalizedRequestedNoTrailing);
+        if (!string.IsNullOrEmpty(requestedBaseName))
+        {
+            cleanKey = StripPrefix(cleanKey, requestedBaseName);
+        }
+
+        cleanKey = cleanKey.TrimStart('/').TrimEnd('/');
+        if (string.IsNullOrEmpty(cleanKey))
+        {
+            // This is the root directory entry itself.
+            return null;
+        }
+
+        string combined = CombineContainerPath(normalizedRequestedNoTrailing, cleanKey);
+        if (string.Equals(combined.TrimEnd('/'), normalizedRequestedNoTrailing.TrimEnd('/'), StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return combined;
+    }
+
+    private static string StripPrefix(string key, string prefix)
+    {
+        if (string.Equals(key, prefix, StringComparison.Ordinal))
+        {
+            return string.Empty;
+        }
+
+        string withSlash = prefix.EndsWith('/') ? prefix : prefix + "/";
+        return key.StartsWith(withSlash, StringComparison.Ordinal) ? key[withSlash.Length..] : key;
+    }
+
+    private static string GetContainerBaseName(string pathNoTrailing)
+    {
+        string p = pathNoTrailing.TrimEnd('/');
+        if (p == "/" || string.IsNullOrEmpty(p))
+        {
+            return string.Empty;
+        }
+
+        int idx = p.LastIndexOf('/');
+        return idx >= 0 ? p[(idx + 1)..] : p;
+    }
+
+    private static string NormalizeContainerPath(string path)
+    {
+        string p = path.Replace('\\', '/').Trim();
+        if (string.IsNullOrEmpty(p))
+        {
+            return "/";
+        }
+
+        if (!p.StartsWith('/'))
+        {
+            p = "/" + p;
+        }
+
+        // Avoid "//" except for root.
+        while (p.Length > 1 && p.Contains("//", StringComparison.Ordinal))
+        {
+            p = p.Replace("//", "/", StringComparison.Ordinal);
+        }
+
+        return p;
+    }
+
+    private static string CombineContainerPath(string basePathNoTrailing, string relativeNoLeading)
+    {
+        string basePath = NormalizeContainerPath(basePathNoTrailing).TrimEnd('/');
+        string rel = relativeNoLeading.Replace('\\', '/').TrimStart('/');
+
+        if (string.IsNullOrEmpty(basePath) || basePath == "/")
+        {
+            return "/" + rel;
+        }
+
+        return basePath + "/" + rel;
     }
 
     public async Task<byte[]> DownloadFileAsync(string containerId, string filePath, CancellationToken cancellationToken = default)

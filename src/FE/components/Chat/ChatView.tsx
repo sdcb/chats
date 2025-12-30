@@ -952,13 +952,13 @@ const ChatView = memo(() => {
         const msgId = `${ResponseMessageTempId}-${spanId}`;
         // 离开 ReasoningSegment，完成上一段 reasoning
         selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
-      } else if (value.k === SseResponseKind.ImageGenerating) {
+      } else if (value.k === SseResponseKind.FileGenerating) {
         const { r, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
         // 离开 ReasoningSegment，完成上一段 reasoning
         selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
         selectedMessageList = changeSelectedResponseFilePreview(selectedMessageList, msgId, r);
-      } else if (value.k === SseResponseKind.ImageGenerated) {
+      } else if (value.k === SseResponseKind.FileGenerated) {
         const { r, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;
         // 离开 ReasoningSegment，完成上一段 reasoning
