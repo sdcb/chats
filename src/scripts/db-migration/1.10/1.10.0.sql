@@ -95,5 +95,28 @@ END
 
 GO
 
+-- =============================================
+-- 第二步：允许支持 ToolCall 的模型启用 Code Execution
+-- =============================================
+PRINT N'[Step 2] 将支持工具调用（AllowToolCall=1）的模型 AllowCodeExecution 置为 1';
+
+IF OBJECT_ID(N'dbo.Model', N'U') IS NOT NULL
+     AND COL_LENGTH(N'dbo.Model', N'AllowToolCall') IS NOT NULL
+     AND COL_LENGTH(N'dbo.Model', N'AllowCodeExecution') IS NOT NULL
+BEGIN
+        UPDATE dbo.Model
+        SET AllowCodeExecution = 1
+        WHERE AllowToolCall = 1
+            AND AllowCodeExecution = 0;
+
+        PRINT N'    -> 已更新 Model.AllowCodeExecution（仅对 AllowToolCall=1 且当前为 0 的记录）';
+END
+ELSE
+BEGIN
+        PRINT N'    -> dbo.Model 或相关列不存在，跳过 Step 2';
+END
+
+GO
+
 PRINT N'[1.10.0] 所有迁移步骤已完成';
 GO

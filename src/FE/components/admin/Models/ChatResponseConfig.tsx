@@ -10,6 +10,7 @@ import Tips from '@/components/Tips/Tips';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { feModelProviders } from '@/types/model';
+import { ApiType } from '@/constants/modelDefaults';
 
 interface ChatResponseConfigProps {
   control: Control<any>;
@@ -26,6 +27,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
   const { t } = useTranslation();
   const maxResponseTokens = watch('maxResponseTokens');
   const allowVision = watch('allowVision');
+  const allowToolCall = watch('allowToolCall');
 
   // 根据 modelProviderId 获取是否支持 WebSearch
   const provider = feModelProviders.find(p => p.id === modelProviderId);
@@ -78,19 +80,6 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
               )}
             />
           )}
-          {<FormField
-              control={control}
-              name="allowCodeExecution"
-              render={({ field }) => (
-                <LabelSwitch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  label={t('Allow Code Execution')!}
-                  tooltip={t("Enables the model provider's built-in code execution capability (e.g., Gemini). It is NOT a system-provided tool.")}
-                />
-              )}
-            />
-          }
           <FormField
             control={control}
             name="allowStreaming"
@@ -115,6 +104,20 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
               />
             )}
           />
+          {allowToolCall && (
+            <FormField
+              control={control}
+              name="allowCodeExecution"
+              render={({ field }) => (
+                <LabelSwitch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  label={t('Allow Code Execution')}
+                  tooltip={t("Enables the model provider's built-in code execution capability (e.g., Gemini). It is NOT a system-provided tool.")}
+                />
+              )}
+            />
+          )}
           {apiType === 0 && (
             <FormField
               control={control}
