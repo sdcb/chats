@@ -22,7 +22,7 @@ env:
     scipy
     pillow
     requests
-  NUGET_PACKAGES: >-
+  NUGET_PRECACHE: >-
     ClosedXML
   NUGET_CONFIG: |
     <?xml version="1.0" encoding="utf-8"?>
@@ -84,7 +84,7 @@ jobs:
           #!/bin/bash
           set -e
           mkdir -p /opt/nuget-local
-          for pkg in $NUGET_PACKAGES; do
+          for pkg in $PRECACHE_PACKAGES; do
             echo "Downloading $pkg and dependencies..."
             cd /tmp && mkdir -p nuget-temp && cd nuget-temp
             dotnet new console -n temp --no-restore
@@ -100,7 +100,7 @@ jobs:
           FROM mcr.microsoft.com/dotnet/sdk:10.0
           RUN apt-get update && apt-get install -y ${{ env.APT_PACKAGES }} && rm -rf /var/lib/apt/lists/*
           RUN pip install --break-system-packages ${{ env.PIP_PACKAGES }}
-          ENV NUGET_PACKAGES="${{ env.NUGET_PACKAGES }}"
+          ENV PRECACHE_PACKAGES="${{ env.NUGET_PRECACHE }}"
           COPY download-nuget.sh /tmp/download-nuget.sh
           RUN chmod +x /tmp/download-nuget.sh && /tmp/download-nuget.sh && rm /tmp/download-nuget.sh
           COPY NuGet.Config /etc/nuget/NuGet.Config
