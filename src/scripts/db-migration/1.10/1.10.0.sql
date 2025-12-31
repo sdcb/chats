@@ -14,6 +14,7 @@ BEGIN
         Label NVARCHAR(64) NOT NULL,
         ContainerId NVARCHAR(128) NOT NULL,
         Image NVARCHAR(256) NOT NULL,
+        ShellPrefix NVARCHAR(128) NOT NULL,
         MemoryBytes BIGINT NULL,
         CpuCores REAL NULL,
         MaxProcesses SMALLINT NULL,
@@ -146,6 +147,52 @@ END
 ELSE
 BEGIN
     PRINT N'    -> ChatDockerSession 表或 OwnerTurnId 列不存在，跳过 Step 1.1';
+END
+
+GO
+
+-- =============================================
+-- 第一步（1.2）：添加 ShellPrefix 字段并迁移现有数据
+-- =============================================
+PRINT N'[Step 1.2] 添加 ShellPrefix 字段并迁移现有数据';
+
+IF OBJECT_ID(N'dbo.ChatDockerSession', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ChatDockerSession', N'ShellPrefix') IS NULL
+BEGIN
+    ALTER TABLE dbo.ChatDockerSession ADD ShellPrefix NVARCHAR(128) NOT NULL DEFAULT '/bin/bash,-lc';
+    PRINT N'    -> 已添加 ShellPrefix 字段';
+    
+    -- 移除默认约束
+    DECLARE @ConstraintName NVARCHAR(200);
+    SELECT @ConstraintName = dc.name
+    FROM sys.default_constraints dc
+    JOIN sys.columns c ON dc.parent_column_id = c.column_id
+    WHERE dc.parent_object_id = OBJECT_ID(N'dbo.ChatDockerSession')
+      AND c.name = N'ShellPrefix';
+    
+    IF @ConstraintName IS NOT NULL
+    BEGIN
+        DECLARE @SqlDrop NVARCHAR(500);
+        SET @SqlDrop = N'ALTER TABLE dbo.ChatDockerSession DROP CONSTRAINT ' + @ConstraintName;
+        EXEC sp_executesql @SqlDrop;
+        PRINT N'    -> 已移除临时默认约束';
+    END
+END
+ELSE IF OBJECT_ID(N'dbo.ChatDockerSession', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ChatDockerSession', N'ShellPrefix') IS NOT NULL
+BEGIN
+    PRINT N'    -> ShellPrefix 字段已存在，跳过添加';
+    
+    -- 更新现有空值记录（使用动态SQL避免编译时检查）
+    DECLARE @SqlUpdate NVARCHAR(500);
+    SET @SqlUpdate = N'UPDATE dbo.ChatDockerSession SET ShellPrefix = ''/bin/bash,-lc'' WHERE ShellPrefix IS NULL OR ShellPrefix = ''''';
+    EXEC sp_executesql @SqlUpdate;
+    
+    PRINT N'    -> 已将现有空值记录的 ShellPrefix 更新为 /bin/bash,-lc';
+END
+ELSE
+BEGIN
+    PRINT N'    -> ChatDockerSession 表不存在，跳过 Step 1.2';
 END
 
 GO

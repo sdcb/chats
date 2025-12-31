@@ -39,6 +39,9 @@ public partial class ChatDockerSession
 
     public DateTime ExpiresAt { get; set; }
 
+    [StringLength(128)]
+    public string ShellPrefix { get; set; } = null!;
+
     [ForeignKey("OwnerTurnId")]
     [InverseProperty("ChatDockerSessions")]
     public virtual ChatTurn? OwnerTurn { get; set; }
