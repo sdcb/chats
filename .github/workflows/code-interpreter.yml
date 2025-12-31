@@ -32,6 +32,7 @@ jobs:
         run: |
           cat <<'EOF' > Dockerfile
           FROM mcr.microsoft.com/dotnet/sdk:10.0
+          RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
           WORKDIR /app
           EOF
 
@@ -43,6 +44,10 @@ jobs:
           push: true
           provenance: false
           tags: ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/code-interpreter:r-${{ github.run_number }}-${{ matrix.tag }}
+
+      - name: Smoke test - verify ffmpeg
+        run: |
+          docker run --rm ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/code-interpreter:r-${{ github.run_number }}-${{ matrix.tag }} ffmpeg -version
 
   docker-manifest:
     needs: build-containers
