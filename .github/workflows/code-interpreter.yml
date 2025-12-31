@@ -15,6 +15,40 @@ env:
     ffmpeg
     python3
     python3-pip
+  PIP_PACKAGES: >-
+    numpy
+    pandas
+    matplotlib
+    scipy
+    pillow
+    requests
+  SKILLS_MD: |
+    # Code Interpreter Skills
+
+    This environment is pre-configured with the following tools and libraries:
+
+    ## .NET SDK
+    - **Version**: 10.0
+    - **Usage**: Build and run C#/F#/VB.NET applications
+    - **Commands**: `dotnet build`, `dotnet run`, `dotnet script`
+
+    ## Python
+    - **Version**: 3.x (system default)
+    - **Pre-installed packages**:
+      - `numpy` - Numerical computing
+      - `pandas` - Data manipulation and analysis
+      - `matplotlib` - Data visualization
+      - `scipy` - Scientific computing
+      - `pillow` - Image processing
+      - `requests` - HTTP requests
+
+    ## FFmpeg
+    - **Usage**: Audio/video processing
+    - **Commands**: `ffmpeg`, `ffprobe`
+
+    ## Tips
+    - Working directory: `/app`
+    - All tools are available in PATH
 
 jobs:
   build-containers:
@@ -37,10 +71,15 @@ jobs:
 
       - name: Create inline Dockerfile
         run: |
+          cat <<'SKILLS_EOF' > skills.md
+          ${{ env.SKILLS_MD }}
+          SKILLS_EOF
           cat <<EOF > Dockerfile
           FROM mcr.microsoft.com/dotnet/sdk:10.0
           RUN apt-get update && apt-get install -y ${{ env.APT_PACKAGES }} && rm -rf /var/lib/apt/lists/*
+          RUN pip install --break-system-packages ${{ env.PIP_PACKAGES }}
           WORKDIR /app
+          COPY skills.md /app/skills.md
           EOF
 
       - name: Build and push container
@@ -62,6 +101,10 @@ jobs:
           docker run --rm $IMAGE ffmpeg -version | head -n 1
           echo "=== Python Version ==="
           docker run --rm $IMAGE python3 --version
+          echo "=== Python Packages ==="
+          docker run --rm $IMAGE python3 -c "import numpy, pandas, matplotlib, scipy, PIL, requests; print('All packages imported successfully')"
+          echo "=== Skills.md ==="
+          docker run --rm $IMAGE cat /app/skills.md
 
   docker-manifest:
     needs: build-containers
