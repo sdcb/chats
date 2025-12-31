@@ -42,6 +42,7 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           push: true
+          load: true
           provenance: false
           tags: ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/code-interpreter:r-${{ github.run_number }}-${{ matrix.tag }}
 
