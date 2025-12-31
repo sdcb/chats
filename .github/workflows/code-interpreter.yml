@@ -22,33 +22,36 @@ env:
     scipy
     pillow
     requests
+  NUGET_PACKAGES: >-
+    ClosedXML
+  NUGET_CONFIG: |
+    <?xml version="1.0" encoding="utf-8"?>
+    <configuration>
+      <packageSources>
+        <add key="local" value="/opt/nuget-local" />
+        <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+      </packageSources>
+    </configuration>
   SKILLS_MD: |
     # Code Interpreter Skills
 
     This environment is pre-configured with the following tools and libraries:
 
     ## .NET SDK
-    - **Version**: 10.0
-    - **Usage**: Build and run C#/F#/VB.NET applications
-    - **Commands**: `dotnet build`, `dotnet run`, `dotnet script`
+    - Version: 10.0
+    - Usage: Build and run C#/F#/VB.NET applications
+    - Commands: `dotnet build`, `dotnet run single-file.cs`, `dotnet script`
+    - Pre-cached NuGet packages (in /opt/nuget-local):
+      ClosedXML (Excel processing)
 
     ## Python
-    - **Version**: 3.x (system default)
-    - **Pre-installed packages**:
-      - `numpy` - Numerical computing
-      - `pandas` - Data manipulation and analysis
-      - `matplotlib` - Data visualization
-      - `scipy` - Scientific computing
-      - `pillow` - Image processing
-      - `requests` - HTTP requests
+    - Version: 3.x (system default)
+    - Pre-installed packages:
+      numpy, pandas, matplotlib, scipy, pillow, requests
 
     ## FFmpeg
-    - **Usage**: Audio/video processing
-    - **Commands**: `ffmpeg`, `ffprobe`
-
-    ## Tips
-    - Working directory: `/app`
-    - All tools are available in PATH
+    - Usage: Audio/video processing
+    - Commands: `ffmpeg`, `ffprobe`
 
 jobs:
   build-containers:
@@ -74,10 +77,33 @@ jobs:
           cat <<'SKILLS_EOF' > skills.md
           ${{ env.SKILLS_MD }}
           SKILLS_EOF
+          cat <<'NUGET_EOF' > NuGet.Config
+          ${{ env.NUGET_CONFIG }}
+          NUGET_EOF
+          cat <<'EOF' > download-nuget.sh
+          #!/bin/bash
+          set -e
+          mkdir -p /opt/nuget-local
+          for pkg in $NUGET_PACKAGES; do
+            echo "Downloading $pkg and dependencies..."
+            cd /tmp && mkdir -p nuget-temp && cd nuget-temp
+            dotnet new console -n temp --no-restore
+            cd temp
+            dotnet add package $pkg
+            dotnet restore --packages /opt/nuget-local
+            cd /tmp && rm -rf nuget-temp
+          done
+          echo "NuGet packages cached:"
+          ls -la /opt/nuget-local
+          EOF
           cat <<EOF > Dockerfile
           FROM mcr.microsoft.com/dotnet/sdk:10.0
           RUN apt-get update && apt-get install -y ${{ env.APT_PACKAGES }} && rm -rf /var/lib/apt/lists/*
           RUN pip install --break-system-packages ${{ env.PIP_PACKAGES }}
+          ENV NUGET_PACKAGES="${{ env.NUGET_PACKAGES }}"
+          COPY download-nuget.sh /tmp/download-nuget.sh
+          RUN chmod +x /tmp/download-nuget.sh && /tmp/download-nuget.sh && rm /tmp/download-nuget.sh
+          COPY NuGet.Config /etc/nuget/NuGet.Config
           WORKDIR /app
           COPY skills.md /app/skills.md
           EOF
@@ -103,6 +129,12 @@ jobs:
           docker run --rm $IMAGE python3 --version
           echo "=== Python Packages ==="
           docker run --rm $IMAGE python3 -c "import numpy, pandas, matplotlib, scipy, PIL, requests; print('All packages imported successfully')"
+          echo "=== NuGet Local Cache ==="
+          docker run --rm $IMAGE ls /opt/nuget-local
+          echo "=== NuGet Config ==="
+          docker run --rm $IMAGE cat /etc/nuget/NuGet.Config
+          echo "=== Test ClosedXML restore from local cache ==="
+          docker run --rm $IMAGE bash -c "cd /tmp && mkdir test && cd test && dotnet new console -n test --no-restore && cd test && dotnet add package ClosedXML && dotnet restore -v n 2>&1 | grep -E '(local|Restored)'"
           echo "=== Skills.md ==="
           docker run --rm $IMAGE cat /app/skills.md
 
