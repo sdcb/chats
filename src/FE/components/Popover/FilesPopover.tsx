@@ -64,7 +64,7 @@ const FilesPopover = ({ onSelect, selectedFiles }: FilesPopoverProps) => {
           </PopoverTrigger>
         }
         side="top"
-        content={t('Select remote photos')}
+        content={t('Select remote files')}
       />
       <PopoverContent className="min-w-80 max-w-lg">
         <div className="grid grid-cols-3 gap-2">
