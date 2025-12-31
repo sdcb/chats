@@ -17,6 +17,14 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
 public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<ResponseApiService> logger) : ChatService
 {
+    protected override HashSet<string> SupportedContentTypes =>
+    [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+    ];
+
     protected virtual string GetEndpoint(ModelKey modelKey)
     {
         string? host = modelKey.Host;
