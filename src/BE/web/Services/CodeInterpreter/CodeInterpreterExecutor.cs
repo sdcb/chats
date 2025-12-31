@@ -260,8 +260,7 @@ public sealed class CodeInterpreterExecutor(
         {
             dbSession = ctx.MessageTurns
                 .SelectMany(t => t.ChatDockerSessions)
-                .Where(s => s.TerminatedAt == null && s.ExpiresAt > nowUtc && s.Label == label)
-                .LastOrDefault();
+                .LastOrDefault(s => s.TerminatedAt == null && s.ExpiresAt > nowUtc && s.Label == label);
         }
 
         if (dbSession == null)
