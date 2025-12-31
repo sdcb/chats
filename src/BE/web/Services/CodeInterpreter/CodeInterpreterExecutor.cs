@@ -1,17 +1,18 @@
-using System.Security.Cryptography;
-using System.Text;
-using System.ComponentModel.DataAnnotations;
+using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Neutral;
-using Chats.BE.Infrastructure.Functional;
 using Chats.DB;
-using DBFile = Chats.DB.File;
 using Chats.DockerInterface;
 using Chats.DockerInterface.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.ComponentModel.DataAnnotations;
+using System.Security.Cryptography;
+using System.Text;
+using DBFile = Chats.DB.File;
 
 namespace Chats.BE.Services.CodeInterpreter;
 
@@ -129,8 +130,7 @@ public sealed class CodeInterpreterExecutor(
 
         sb.AppendLine("You have access to a sandboxed code interpreter environment.");
         sb.AppendLine($"- Working directory: {PathSafety.WorkDir}");
-        sb.AppendLine($"- Artifacts directory: {PathSafety.WorkDir}/artifacts");
-        sb.AppendLine("- No network by default; use networkMode only if required.");
+        sb.AppendLine($"- Artifacts directory: {PathSafety.WorkDir}/artifacts, MUST copy to artifacts folder so user can download it!");
         sb.AppendLine("- To use files from the chat, you MUST call download_files first.");
 
         return NeutralSystemMessage.FromText(sb.ToString());
@@ -168,15 +168,38 @@ public sealed class CodeInterpreterExecutor(
         public sealed class SessionState
         {
             public required ChatDockerSession DbSession { get; init; }
+            public required string[] ShellPrefix { get; init; }
             public Dictionary<string, FileEntry> ArtifactsSnapshot { get; set; } = new(StringComparer.Ordinal);
             public bool SnapshotTaken { get; set; }
             public bool UsedInThisTurn { get; set; }
-            public int? DefaultTimeoutSeconds { get; set; }
-
             public List<PendingFileArtifact> PendingArtifacts { get; } = [];
             public HashSet<string> PendingArtifactPaths { get; } = new(StringComparer.Ordinal);
             public long PendingArtifactsBytesThisTurn { get; set; }
         }
+    }
+
+    private static string[] ParseShellPrefixCsv(string? csv, bool isWindowsContainer)
+    {
+        if (!string.IsNullOrWhiteSpace(csv))
+        {
+            string[] parts = csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length > 0)
+            {
+                return parts;
+            }
+        }
+
+        // Fallback for legacy rows (or misconfigured data): use bootstrap shells.
+        return isWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"];
+    }
+
+    private static string ToShellPrefixCsv(string[] shellPrefix)
+    {
+        if (shellPrefix == null || shellPrefix.Length == 0)
+        {
+            throw new InvalidOperationException("ShellPrefix is required");
+        }
+        return string.Join(',', shellPrefix);
     }
 
     public async Task<Result<string>> ExecuteToolCallAsync(TurnContext ctx, string toolName, string rawJsonArgs, CancellationToken cancellationToken)
@@ -189,16 +212,6 @@ public sealed class CodeInterpreterExecutor(
         {
             _logger.LogWarning(ex, "CodeInterpreter tool failed: {toolName}", toolName);
             return Result.Fail<string>(ex.Message);
-        }
-    }
-
-    public async Task FinalizeTurnAndAttachFilesAsync(TurnContext ctx, Step assistantStep, CancellationToken cancellationToken)
-    {
-        // NOTE: Artifacts are now synced after each tool call (run_command/write_file).
-        // End-of-turn should not upload artifacts.
-        foreach (TurnContext.SessionState state in ctx.SessionsBySessionId.Values.Where(s => s.UsedInThisTurn))
-        {
-            await TouchSession(state.DbSession, cancellationToken);
         }
     }
 
@@ -224,8 +237,6 @@ public sealed class CodeInterpreterExecutor(
         string? image,
         [ToolParam("Label. If empty, server will use the new container id prefix (first 12 chars).")]
         string? label,
-        [ToolParam("Default command timeout seconds (null means use server default: {defaultTimeoutSeconds}).")]
-        int? timeoutSeconds,
         [ToolParam("Resource limits (null means use server default: {defaultResourceLimits}).")]
         ResourceLimitsArgs? resourceLimits,
         [ToolParam("Network mode. One of: none, bridge, host. null means use server default: {defaultNetworkMode}.")]
@@ -239,8 +250,7 @@ public sealed class CodeInterpreterExecutor(
         if (hasLabel && ctx.SessionsBySessionId.TryGetValue(label!, out TurnContext.SessionState? existing))
         {
             existing.UsedInThisTurn = true;
-            existing.DefaultTimeoutSeconds ??= timeoutSeconds;
-            return Result.Ok($"sessionId: {label}\ncontainerId: {existing.DbSession.ContainerId}\nworkdir: {PathSafety.WorkDir}");
+            return Result.Ok($"sessionId: {label}\nimage: {existing.DbSession.Image}\nshell: [{existing.DbSession.ShellPrefix}]");
         }
 
         // Resolve from DB along the ParentId chain of the current generating turn.
@@ -295,6 +305,7 @@ public sealed class CodeInterpreterExecutor(
                 Label = label!,
                 ContainerId = container.ContainerId,
                 Image = effectiveImage,
+                ShellPrefix = ToShellPrefixCsv(container.ShellPrefix),
                 MemoryBytes = limits.MemoryBytes == 0 ? null : limits.MemoryBytes,
                 CpuCores = limits.CpuCores == 0 ? null : (float)limits.CpuCores,
                 MaxProcesses = limits.MaxProcesses == 0 ? null : (short)Math.Min(short.MaxValue, limits.MaxProcesses),
@@ -315,7 +326,7 @@ public sealed class CodeInterpreterExecutor(
         TurnContext.SessionState state = new()
         {
             DbSession = dbSession,
-            DefaultTimeoutSeconds = timeoutSeconds,
+            ShellPrefix = ParseShellPrefixCsv(dbSession.ShellPrefix, _codePodConfig.IsWindowsContainer),
             UsedInThisTurn = true,
         };
         ctx.SessionsBySessionId[label!] = state;
@@ -326,7 +337,7 @@ public sealed class CodeInterpreterExecutor(
             state.SnapshotTaken = true;
         }
 
-        return Result.Ok($"sessionId: {label}\nimage: {dbSession.Image}");
+        return Result.Ok($"sessionId: {label}\nimage: {dbSession.Image}\nshell: [{dbSession.ShellPrefix}]");
     }
 
     [ToolFunction("Destroy the docker session")]
@@ -371,11 +382,9 @@ public sealed class CodeInterpreterExecutor(
     {
         TurnContext.SessionState state = await EnsureSession(ctx, sessionId, cancellationToken);
         state.UsedInThisTurn = true;
+        int timeout = _options.GetEffectiveTimeoutSeconds(timeoutSeconds);
 
-        int? requestedTimeout = timeoutSeconds ?? state.DefaultTimeoutSeconds;
-        int timeout = _options.GetEffectiveTimeoutSeconds(requestedTimeout);
-
-        CommandResult result = await _docker.ExecuteCommandAsync(state.DbSession.ContainerId, command, PathSafety.WorkDir, timeout, cancellationToken);
+        CommandResult result = await _docker.ExecuteCommandAsync(state.DbSession.ContainerId, state.ShellPrefix, command, PathSafety.WorkDir, timeout, cancellationToken);
         await TouchSession(state.DbSession, cancellationToken);
 
         await SyncArtifactsAfterToolCall(ctx, state, cancellationToken);
@@ -783,7 +792,28 @@ public sealed class CodeInterpreterExecutor(
 
         if (!ctx.SessionsBySessionId.TryGetValue(sessionId, out TurnContext.SessionState? state))
         {
-            throw new InvalidOperationException($"Session not found in this turn: {sessionId}. Call create_docker_session first.");
+            // add DB lookup for existing active session
+            ChatDockerSession? dbSession = ctx.MessageTurns
+                .SelectMany(t => t.ChatDockerSessions)
+                .Where(s => s.TerminatedAt == null && s.ExpiresAt > DateTime.UtcNow && s.Label == sessionId)
+                .LastOrDefault();
+
+            if (dbSession != null)
+            {
+                state = new TurnContext.SessionState()
+                {
+                    DbSession = dbSession,
+                    ShellPrefix = ParseShellPrefixCsv(dbSession.ShellPrefix, _codePodConfig.IsWindowsContainer),
+                    UsedInThisTurn = true,
+                };
+                state.ArtifactsSnapshot = await SnapshotArtifacts(state.DbSession.ContainerId, cancellationToken);
+                state.SnapshotTaken = true;
+                ctx.SessionsBySessionId[sessionId] = state;
+            }
+            else
+            {
+                throw new InvalidOperationException($"Session not found in this turn: {sessionId}. Call create_docker_session first.");
+            }
         }
 
         if (!state.SnapshotTaken)

@@ -36,6 +36,7 @@ public sealed class CodeInterpreterSessionLookupTests
                 Image = image,
                 DockerStatus = "running",
                 CreatedAt = DateTimeOffset.UtcNow,
+                ShellPrefix = ["/bin/sh", "-lc"],
             });
         }
 
@@ -51,13 +52,13 @@ public sealed class CodeInterpreterSessionLookupTests
         public Task DeleteAllManagedContainersAsync(CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
-        public Task<CommandResult> ExecuteCommandAsync(string containerId, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
+        public Task<CommandResult> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<CommandResult> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
-        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
+        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
@@ -131,6 +132,7 @@ public sealed class CodeInterpreterSessionLookupTests
             Label = label,
             ContainerId = containerId,
             Image = "mcr.microsoft.com/dotnet/sdk:10.0",
+            ShellPrefix = "/bin/sh,-lc",
             NetworkMode = (byte)NetworkMode.None,
             CreatedAt = now.AddMinutes(-10),
             LastActiveAt = now.AddMinutes(-5),

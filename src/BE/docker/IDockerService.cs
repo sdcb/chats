@@ -40,9 +40,9 @@ public interface IDockerService : IDisposable
     Task DeleteAllManagedContainersAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 执行 shell 命令
+    /// 执行 shell 命令（使用指定的 shell 前缀进行包装）
     /// </summary>
-    Task<CommandResult> ExecuteCommandAsync(string containerId, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default);
+    Task<CommandResult> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 执行命令数组（直接执行，不经过 shell 包装）
@@ -50,9 +50,9 @@ public interface IDockerService : IDisposable
     Task<CommandResult> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 流式执行 shell 命令
+    /// 流式执行 shell 命令（使用指定的 shell 前缀进行包装）
     /// </summary>
-    IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 流式执行命令数组（直接执行，不经过 shell 包装）

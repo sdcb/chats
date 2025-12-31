@@ -137,7 +137,12 @@ public class DockerService : IDockerService
 
         // 创建工作目录和 artifacts 目录
         string mkdirCmd = _config.GetMkdirCommand(_config.WorkDir, $"{_config.WorkDir}/{_config.ArtifactsDir}");
-        await ExecuteCommandAsync(response.ID, mkdirCmd, "/", 30, cancellationToken);
+        string[] bootstrapPrefix = _config.IsWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"];
+        await ExecuteCommandAsync(response.ID, [.. bootstrapPrefix, mkdirCmd], "/", 30, cancellationToken);
+
+        // 探测容器内可用的 shell 前缀（用于后续命令执行；需要落库）
+        string[] shellPrefix = await DetectShellPrefixAsync(response.ID, cancellationToken);
+        _logger?.LogDebug("Detected shell prefix for container {ContainerId}: {ShellPrefix}", response.ID[..12], string.Join(' ', shellPrefix));
 
         return new ContainerInfo
         {
@@ -148,7 +153,8 @@ public class DockerService : IDockerService
             Status = SdkContainerStatus.Warming,
             CreatedAt = DateTimeOffset.UtcNow,
             StartedAt = DateTimeOffset.UtcNow,
-            Labels = labels
+            Labels = labels,
+            ShellPrefix = shellPrefix
         };
     }
 
@@ -179,7 +185,8 @@ public class DockerService : IDockerService
                     DockerStatus = container.State,
                     Status = SdkContainerStatus.Idle,
                     CreatedAt = container.Created,
-                    Labels = new Dictionary<string, string>(container.Labels)
+                    Labels = new Dictionary<string, string>(container.Labels),
+                    ShellPrefix = _config.IsWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"]
                 });
             }
 
@@ -207,7 +214,8 @@ public class DockerService : IDockerService
                 Status = SdkContainerStatus.Idle,
                 CreatedAt = inspect.Created,
                 StartedAt = DateTimeOffset.TryParse(inspect.State.StartedAt, out DateTimeOffset started) ? started : null,
-                Labels = new Dictionary<string, string>(inspect.Config.Labels)
+                Labels = new Dictionary<string, string>(inspect.Config.Labels),
+                ShellPrefix = _config.IsWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"]
             };
         }
         catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -240,10 +248,15 @@ public class DockerService : IDockerService
         _logger?.LogInformation("Deleted {Count} managed containers", containers.Count);
     }
 
-    public Task<CommandResult> ExecuteCommandAsync(string containerId, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
+    public Task<CommandResult> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
     {
-        // 包装为 shell 命令
-        return ExecuteCommandAsync(containerId, _config.GetShellCommand(command), workingDirectory, timeoutSeconds, cancellationToken);
+        if (shellPrefix == null || shellPrefix.Length == 0)
+        {
+            throw new ArgumentException("shellPrefix is required", nameof(shellPrefix));
+        }
+
+        string[] full = [.. shellPrefix, command];
+        return ExecuteCommandAsync(containerId, full, workingDirectory, timeoutSeconds, cancellationToken);
     }
 
     public async Task<CommandResult> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
@@ -287,13 +300,60 @@ public class DockerService : IDockerService
 
     public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(
         string containerId,
+        string[] shellPrefix,
         string command,
         string workingDirectory,
         int timeoutSeconds,
         CancellationToken cancellationToken = default)
     {
-        // 包装为 shell 命令
-        return ExecuteCommandStreamAsync(containerId, _config.GetShellCommand(command), workingDirectory, timeoutSeconds, cancellationToken);
+        if (shellPrefix == null || shellPrefix.Length == 0)
+        {
+            throw new ArgumentException("shellPrefix is required", nameof(shellPrefix));
+        }
+
+        string[] full = [.. shellPrefix, command];
+        return ExecuteCommandStreamAsync(containerId, full, workingDirectory, timeoutSeconds, cancellationToken);
+    }
+
+    private async Task<string[]> DetectShellPrefixAsync(string containerId, CancellationToken cancellationToken)
+    {
+        // 使用最可靠的 bootstrap：Windows 用 cmd，Linux 用 /bin/sh。
+        // 输出格式：逗号分隔的一行，例如："pwsh,-NoProfile,-NonInteractive,-Command" 或 "/bin/bash,-lc"。
+        const int timeoutSeconds = 10;
+
+        if (_config.IsWindowsContainer)
+        {
+            string script = "where pwsh >nul 2>nul && (echo pwsh,-NoProfile,-NonInteractive,-Command) || (where powershell >nul 2>nul && (echo powershell,-NoProfile,-NonInteractive,-Command) || (echo cmd,/c))";
+            CommandResult result = await ExecuteCommandAsync(containerId, ["cmd", "/c", script], "/", timeoutSeconds, cancellationToken);
+            return ParseShellPrefixCsv(result.Stdout, fallback: ["cmd", "/c"]);
+        }
+        else
+        {
+            string script = "if command -v pwsh >/dev/null 2>&1; then echo 'pwsh,-NoProfile,-NonInteractive,-Command'; " +
+                            "elif command -v bash >/dev/null 2>&1; then echo \"$(command -v bash),-lc\"; " +
+                            "elif command -v sh >/dev/null 2>&1; then echo \"$(command -v sh),-lc\"; " +
+                            "else echo '/bin/sh,-lc'; fi";
+
+            CommandResult result = await ExecuteCommandAsync(containerId, ["/bin/sh", "-lc", script], "/", timeoutSeconds, cancellationToken);
+            return ParseShellPrefixCsv(result.Stdout, fallback: ["/bin/sh", "-lc"]);
+        }
+    }
+
+    private static string[] ParseShellPrefixCsv(string? stdout, string[] fallback)
+    {
+        string firstLine = (stdout ?? string.Empty)
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(firstLine))
+        {
+            return fallback;
+        }
+
+        string[] parts = firstLine
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return parts.Length == 0 ? fallback : parts;
     }
 
     public async IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(

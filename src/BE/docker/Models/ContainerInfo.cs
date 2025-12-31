@@ -49,4 +49,10 @@ public class ContainerInfo
     /// 容器标签
     /// </summary>
     public Dictionary<string, string> Labels { get; init; } = new();
+
+    /// <summary>
+    /// Shell 前缀（不包含实际命令参数），用于拼接执行命令。
+    /// 例如：Linux: ["/bin/bash", "-lc"], Windows: ["pwsh", "-NoProfile", "-NonInteractive", "-Command"]
+    /// </summary>
+    public required string[] ShellPrefix { get; init; }
 }

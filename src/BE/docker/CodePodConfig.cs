@@ -38,18 +38,6 @@ public class CodePodConfig
     }
 
     /// <summary>
-    /// 获取用于执行命令的 shell 命令数组
-    /// Linux: /bin/bash -lc "command"
-    /// Windows: pwsh -c "command" (PowerShell 7)
-    /// </summary>
-    public string[] GetShellCommand(string command)
-    {
-        return IsWindowsContainer
-            ? ["powershell", "-NoProfile", "-NonInteractive", "-Command", command]
-            : ["/bin/bash", "-lc", command];
-    }
-
-    /// <summary>
     /// 获取容器保持运行的命令
     /// Linux: tail -f /dev/null
     /// Windows: cmd /c "ping -t localhost" (使用原生命令，启动更快)
@@ -58,7 +46,7 @@ public class CodePodConfig
     {
         return IsWindowsContainer
             ? ["cmd", "/c", "ping -t localhost"]
-            : ["/bin/bash", "-lc", "tail -f /dev/null"];
+            : ["/bin/sh", "-lc", "tail -f /dev/null"];
     }
 
     /// <summary>
