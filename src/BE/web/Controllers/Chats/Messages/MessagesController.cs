@@ -304,7 +304,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         long turnId = urlEncryption.DecryptTurnId(encryptedTurnId);
         long? leafTurnId = urlEncryption.DecryptTurnIdOrEmpty(encryptedLeafMessageId);
         ChatTurn? turn = await db.ChatTurns
-            .Include(x => x.Chat.ChatTurns)
+            .Include(x => x.Chat.ChatTurns).ThenInclude(turn => turn.ChatDockerSessions)
             .FirstOrDefaultAsync(x => x.Id == turnId, cancellationToken);
         if (turn == null)
         {
@@ -337,6 +337,11 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         }
         foreach (ChatTurn toDeleteTurn in toDeleteTurns)
         {
+            // ChatDockerSession don't have cascade delete set up, so we need to delete them manually
+            foreach (ChatDockerSession cds in toDeleteTurn.ChatDockerSessions)
+            {
+                db.ChatDockerSessions.Remove(cds);
+            }
             turn.Chat.ChatTurns.Remove(toDeleteTurn);
         }
         turn.Chat.LeafTurnId = leafTurnId;
