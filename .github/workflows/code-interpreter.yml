@@ -9,6 +9,13 @@ on:
       - .github/workflows/code-interpreter.yml
   workflow_dispatch:
 
+env:
+  IMAGE_NAME: code-interpreter
+  APT_PACKAGES: >-
+    ffmpeg
+    python3
+    python3-pip
+
 jobs:
   build-containers:
     strategy:
@@ -30,9 +37,9 @@ jobs:
 
       - name: Create inline Dockerfile
         run: |
-          cat <<'EOF' > Dockerfile
+          cat <<EOF > Dockerfile
           FROM mcr.microsoft.com/dotnet/sdk:10.0
-          RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+          RUN apt-get update && apt-get install -y ${{ env.APT_PACKAGES }} && rm -rf /var/lib/apt/lists/*
           WORKDIR /app
           EOF
 
@@ -44,11 +51,17 @@ jobs:
           push: true
           load: true
           provenance: false
-          tags: ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/code-interpreter:r-${{ github.run_number }}-${{ matrix.tag }}
+          tags: ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:r-${{ github.run_number }}-${{ matrix.tag }}
 
-      - name: Smoke test - verify ffmpeg
+      - name: Smoke test
         run: |
-          docker run --rm ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/code-interpreter:r-${{ github.run_number }}-${{ matrix.tag }} ffmpeg -version
+          IMAGE=${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:r-${{ github.run_number }}-${{ matrix.tag }}
+          echo "=== .NET Version ==="
+          docker run --rm $IMAGE dotnet --version
+          echo "=== FFmpeg Version ==="
+          docker run --rm $IMAGE ffmpeg -version | head -n 1
+          echo "=== Python Version ==="
+          docker run --rm $IMAGE python3 --version
 
   docker-manifest:
     needs: build-containers
@@ -59,17 +72,17 @@ jobs:
         
       - name: Create and push manifest for run number tag
         run: |
-          docker manifest create --amend ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/code-interpreter:r-${{ github.run_number }} \
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/code-interpreter:r-${{ github.run_number }}-linux-x64 \
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/code-interpreter:r-${{ github.run_number }}-linux-arm64
+          docker manifest create --amend ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:r-${{ github.run_number }} \
+            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:r-${{ github.run_number }}-linux-x64 \
+            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:r-${{ github.run_number }}-linux-arm64
           
-          docker manifest push ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/code-interpreter:r-${{ github.run_number }}
+          docker manifest push ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:r-${{ github.run_number }}
 
       - name: Create and push latest manifest (main branch only)
         if: github.ref_name == 'main'
         run: |
-          docker manifest create --amend ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/code-interpreter:latest \
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/code-interpreter:r-${{ github.run_number }}-linux-x64 \
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/code-interpreter:r-${{ github.run_number }}-linux-arm64
+          docker manifest create --amend ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:latest \
+            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:r-${{ github.run_number }}-linux-x64 \
+            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:r-${{ github.run_number }}-linux-arm64
           
-          docker manifest push ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/code-interpreter:latest
+          docker manifest push ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:latest
