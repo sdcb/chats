@@ -19,7 +19,6 @@ import {
   FileDef,
   Message,
   MessageContentType,
-  getFileUrl,
 } from '@/types/chat';
 import { Prompt } from '@/types/prompt';
 
@@ -414,8 +413,7 @@ const ChatInput = ({
     return (
       !uploading &&
       contentFiles.length < defaultFileConfig.count &&
-      selectedChat.spans.filter((x) => modelMap[x.modelId]?.allowVision)
-        .length > 0
+      selectedChat.spans.filter((x) => modelMap[x.modelId]?.allowVision || x.codeExecutionEnabled).length > 0
     );
   };
 
