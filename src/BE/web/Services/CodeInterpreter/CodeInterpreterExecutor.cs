@@ -336,7 +336,23 @@ public sealed class CodeInterpreterExecutor(
             state.SnapshotTaken = true;
         }
 
-        return Result.Ok($"sessionId: {label}\nimage: {dbSession.Image}\nshell: [{dbSession.ShellPrefix}]");
+        // Try to read skills.md for the AI model (only for newly created/loaded sessions)
+        string result = $"sessionId: {label}\nimage: {dbSession.Image}\nshell: [{dbSession.ShellPrefix}]";
+        try
+        {
+            byte[] skillsBytes = await _docker.DownloadFileAsync(dbSession.ContainerId, "/app/skills.md", cancellationToken);
+            string skillsContent = Encoding.UTF8.GetString(skillsBytes);
+            if (!string.IsNullOrWhiteSpace(skillsContent))
+            {
+                result += $"\nskills.md:\n{skillsContent}";
+            }
+        }
+        catch
+        {
+            // skills.md may not exist, ignore
+        }
+
+        return Result.Ok(result);
     }
 
     [ToolFunction("Destroy the docker session")]
