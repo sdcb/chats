@@ -18,6 +18,7 @@ interface FilePreviewProps {
   maxWidth?: number;
   maxHeight?: number;
   className?: string;
+  interactive?: boolean; // 是否允许组件内部交互（预览/下载/播放器等）。为 false 时仅展示，不处理点击。
   showDelete?: boolean;  // 是否显示删除按钮
   onDelete?: () => void;  // 删除回调
   onImageClick?: (imageUrl: string, allImages: string[], event: React.MouseEvent<HTMLImageElement>) => void;
@@ -88,13 +89,13 @@ const formatFileSize = (bytes?: number): string => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', showDelete = false, onDelete, onImageClick }: FilePreviewProps) => {
+const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', interactive = true, showDelete = false, onDelete, onImageClick }: FilePreviewProps) => {
   // 处理降级场景：如果传入的是 string，显示为未知文件类型的警告状态
   if (typeof file === 'string') {
     return (
       <div 
         className={`rounded-md border-2 border-red-500 bg-red-50 dark:bg-red-950/20 ${className}`}
-        style={{ maxWidth: 300 }}
+        style={{ maxWidth }}
       >
         <div className="flex items-center gap-3 p-3">
           <div className="flex-shrink-0 text-red-500">
@@ -119,16 +120,24 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', sh
   const fileUrl = getFileUrl(file);
   const { contentType, fileName } = file;
 
+  const canPreviewImage = interactive && !!onImageClick;
+
   // 图片类型 - 可点击预览
   if (isImageType(contentType)) {
+    const imageStyle: React.CSSProperties = interactive
+      ? { height: maxHeight, width: 'auto', maxWidth: '100%' }
+      : { height: '100%', width: '100%', objectFit: 'cover' };
+
     return (
-      <div className={`relative ${className}`}>
+      <div
+        className={`relative ${!interactive ? 'w-full h-full overflow-hidden' : ''} ${className}`}
+      >
         <img
-          className="rounded-md cursor-pointer hover:opacity-90 transition-opacity"
-          style={{ height: maxHeight, width: 'auto', maxWidth: '100%' }}
+          className={`rounded-md transition-opacity ${canPreviewImage ? 'cursor-pointer hover:opacity-90' : ''}`}
+          style={imageStyle}
           src={fileUrl}
           alt={fileName || 'Image'}
-          onClick={(e) => onImageClick?.(fileUrl, [fileUrl], e)}
+          onClick={canPreviewImage ? (e) => onImageClick?.(fileUrl, [fileUrl], e) : undefined}
         />
         {showDelete && onDelete && (
           <button
@@ -149,7 +158,7 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', sh
   }
 
   // 视频类型 - 使用原生播放器
-  if (isVideoType(contentType)) {
+  if (interactive && isVideoType(contentType)) {
     return (
       <div className={`relative rounded-md overflow-hidden border border-border ${className}`} style={{ maxWidth }}>
         <video
@@ -185,9 +194,9 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', sh
   }
 
   // 音频类型 - 使用原生播放器
-  if (isAudioType(contentType)) {
+  if (interactive && isAudioType(contentType)) {
     return (
-      <div className={`relative rounded-md overflow-hidden border border-border ${className}`} style={{ maxWidth: 400 }}>
+      <div className={`relative rounded-md overflow-hidden border border-border ${className}`} style={{ maxWidth }}>
         <div className="p-3 bg-muted">
           <div className="flex items-center gap-2 mb-2">
             <IconFile className="text-muted-foreground" size={20} />
@@ -228,27 +237,40 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', sh
   return (
     <div 
       className={`relative rounded-md border border-border hover:border-primary transition-colors ${className}`}
-      style={{ maxWidth: 300 }}
+      style={{ maxWidth }}
     >
-      <a
-        href={fileUrl}
-        download={fileName || undefined}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors"
-      >
-        <div className="flex-shrink-0">
-          {React.createElement(fileIconComponent, { size: 32 })}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium truncate">
-            {fileName || 'Unknown file'}
+      {interactive ? (
+        <a
+          href={fileUrl}
+          download={fileName || undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center hover:bg-muted/50 transition-colors"
+        >
+          <div className="flex-shrink-0">
+            {React.createElement(fileIconComponent, { size: 32 })}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium truncate">
+              {fileName || 'Unknown file'}
+            </div>
+          </div>
+          <div className="flex-shrink-0 text-muted-foreground hover:text-primary">
+            <IconDownload size={20} />
+          </div>
+        </a>
+      ) : (
+        <div className="flex items-center">
+          <div className="flex-shrink-0">
+            {React.createElement(fileIconComponent, { size: 32 })}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium truncate">
+              {fileName || 'Unknown file'}
+            </div>
           </div>
         </div>
-        <div className="flex-shrink-0 text-muted-foreground hover:text-primary">
-          <IconDownload size={20} />
-        </div>
-      </a>
+      )}
       {showDelete && onDelete && (
         <button
           onClick={(e) => {
