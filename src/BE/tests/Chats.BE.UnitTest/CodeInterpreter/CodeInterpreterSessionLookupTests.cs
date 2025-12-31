@@ -122,10 +122,10 @@ public sealed class CodeInterpreterSessionLookupTests
         await db.SaveChangesAsync();
     }
 
-    private static async Task SeedSessionAsync(ChatsDB db, long ownerTurnId, string label, string containerId)
+    private static async Task<ChatDockerSession> SeedSessionAsync(ChatsDB db, long ownerTurnId, string label, string containerId)
     {
         DateTime now = DateTime.UtcNow;
-        db.ChatDockerSessions.Add(new ChatDockerSession
+        ChatDockerSession session = new()
         {
             OwnerTurnId = ownerTurnId,
             Label = label,
@@ -135,8 +135,10 @@ public sealed class CodeInterpreterSessionLookupTests
             CreatedAt = now.AddMinutes(-10),
             LastActiveAt = now.AddMinutes(-5),
             ExpiresAt = now.AddMinutes(30),
-        });
+        };
+        db.ChatDockerSessions.Add(session);
         await db.SaveChangesAsync();
+        return session;
     }
 
     [Fact]
@@ -144,6 +146,7 @@ public sealed class CodeInterpreterSessionLookupTests
     {
         string dbName = Guid.NewGuid().ToString();
         using ServiceProvider sp = CreateServiceProvider(dbName);
+        ChatDockerSession containerRoot = null!, containerA = null!;
         using (IServiceScope scope = sp.CreateScope())
         {
             ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
@@ -151,17 +154,17 @@ public sealed class CodeInterpreterSessionLookupTests
             await SeedTurnAsync(db, id: 2, parentId: 1); // Turn A
             await SeedTurnAsync(db, id: 4, parentId: 2); // Turn C (child of A)
 
-            await SeedSessionAsync(db, ownerTurnId: 1, label: "dotnet-env", containerId: "container-root");
-            await SeedSessionAsync(db, ownerTurnId: 2, label: "dotnet-env", containerId: "container-A");
+            containerRoot = await SeedSessionAsync(db, ownerTurnId: 1, label: "dotnet-env", containerId: "container-root");
+            containerA = await SeedSessionAsync(db, ownerTurnId: 2, label: "dotnet-env", containerId: "container-A");
         }
 
         FakeDockerService docker = new();
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(
             currentTurnId: 4,
-            new ChatTurn { Id = 1, ParentId = null, ChatId = 1, Chat = null! },
-            new ChatTurn { Id = 2, ParentId = 1, ChatId = 1, Chat = null! },
-            new ChatTurn { Id = 4, ParentId = 2, ChatId = 1, Chat = null! });
+            new ChatTurn { Id = 1, ParentId = null, ChatId = 1, ChatDockerSessions = [containerRoot] },
+            new ChatTurn { Id = 2, ParentId = 1, ChatId = 1, ChatDockerSessions = [containerA] },
+            new ChatTurn { Id = 4, ParentId = 2, ChatId = 1 });
 
         Result<string> r = await exec.ExecuteToolCallAsync(ctx, "create_docker_session", JsonSerializer.Serialize(new { label = "dotnet-env" }), CancellationToken.None);
 

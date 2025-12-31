@@ -248,39 +248,11 @@ public sealed class CodeInterpreterExecutor(
         ChatDockerSession? dbSession = null;
         if (hasLabel)
         {
-            using IServiceScope scope = _scopeFactory.CreateScope();
-            ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
-
-            List<long> turnPathIds = [];
-            if (ctx.MessageTurns.Count > 0)
-            {
-                // In normal request flow, MessageTurns is the authoritative in-memory parent chain.
-                // If it's not complete, that's a bug and we should fail fast rather than silently hitting DB.
-                turnPathIds = LoadTurnPathIdsFromMessageTurns(ctx);
-            }
-            if (turnPathIds.Count > 0)
-            {
-                List<ChatDockerSession> candidates = await db.ChatDockerSessions
-                    .AsNoTracking()
-                    .Where(x => x.TerminatedAt == null && x.ExpiresAt > nowUtc && x.Label == label && turnPathIds.Contains(x.OwnerTurnId))
-                    .OrderByDescending(x => x.Id)
-                    .ToListAsync(cancellationToken);
-
-                if (candidates.Count > 0)
-                {
-                    Dictionary<long, int> depth = turnPathIds
-                        .Select((id, idx) => (id, idx))
-                        .ToDictionary(x => x.id, x => x.idx);
-
-                    dbSession = candidates
-                        .OrderBy(x => depth.GetValueOrDefault(x.OwnerTurnId, int.MaxValue))
-                        .ThenByDescending(x => x.Id)
-                        .FirstOrDefault();
-                }
-            }
+            dbSession = ctx.MessageTurns
+                .SelectMany(t => t.ChatDockerSessions)
+                .Where(s => s.TerminatedAt == null && s.ExpiresAt > nowUtc && s.Label == label)
+                .LastOrDefault();
         }
-
-        int? defaultTimeoutSeconds = timeoutSeconds;
 
         if (dbSession == null)
         {
@@ -343,7 +315,7 @@ public sealed class CodeInterpreterExecutor(
         TurnContext.SessionState state = new()
         {
             DbSession = dbSession,
-            DefaultTimeoutSeconds = defaultTimeoutSeconds,
+            DefaultTimeoutSeconds = timeoutSeconds,
             UsedInThisTurn = true,
         };
         ctx.SessionsBySessionId[label!] = state;
@@ -355,73 +327,6 @@ public sealed class CodeInterpreterExecutor(
         }
 
         return Result.Ok($"sessionId: {label}\nimage: {dbSession.Image}");
-    }
-
-    private static long? GetSessionLookupStartTurnId(TurnContext ctx)
-    {
-        if (ctx.CurrentAssistantTurn.Id > 0)
-        {
-            return ctx.CurrentAssistantTurn.Id;
-        }
-
-        // In controller request flow, the current assistant turn is new (Id=0).
-        // MessageTurns is a parent-chain ending at req.LastMessageId, which is the correct anchor for session reuse.
-        if (ctx.MessageTurns.Count > 0)
-        {
-            long lastId = ctx.MessageTurns[^1].Id;
-            if (lastId > 0) return lastId;
-        }
-
-        if (ctx.CurrentAssistantTurn.ParentId != null)
-        {
-            return ctx.CurrentAssistantTurn.ParentId.Value;
-        }
-
-        return ctx.CurrentAssistantTurn.Parent?.Id;
-    }
-
-    private static List<long> LoadTurnPathIdsFromMessageTurns(TurnContext ctx)
-    {
-        long? start = GetSessionLookupStartTurnId(ctx);
-        if (start == null)
-        {
-            throw new InvalidOperationException("Cannot determine start turn id for session lookup. Ensure MessageTurns includes the last message turn (and/or CurrentAssistantTurn has an id).");
-        }
-
-        // MessageTurns is authoritative. Only append CurrentAssistantTurn when it fills a gap;
-        // otherwise it can override a more complete ParentId for the same Id.
-        IEnumerable<ChatTurn> candidatesTurns = ctx.MessageTurns;
-        if (ctx.CurrentAssistantTurn.Id > 0 && !ctx.MessageTurns.Any(t => t.Id == ctx.CurrentAssistantTurn.Id))
-        {
-            candidatesTurns = candidatesTurns.Append(ctx.CurrentAssistantTurn);
-        }
-
-        Dictionary<long, long?> parentById = candidatesTurns
-            .Where(t => t.Id > 0)
-            .GroupBy(t => t.Id)
-            .ToDictionary(g => g.Key, g => g.Last().ParentId);
-
-        List<long> ids = [];
-        long? current = start;
-        while (current != null)
-        {
-            long id = current.Value;
-            ids.Add(id);
-
-            if (ids.Count > 512)
-            {
-                break;
-            }
-
-            if (!parentById.TryGetValue(id, out long? parent))
-            {
-                throw new InvalidOperationException($"MessageTurns is incomplete: missing turnId={id} in parent chain.");
-            }
-
-            current = parent;
-        }
-
-        return ids;
     }
 
     [ToolFunction("Destroy the docker session")]

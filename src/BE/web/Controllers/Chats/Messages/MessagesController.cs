@@ -337,11 +337,8 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         }
         foreach (ChatTurn toDeleteTurn in toDeleteTurns)
         {
-            // ChatDockerSession don't have cascade delete set up, so we need to delete them manually
-            foreach (ChatDockerSession cds in toDeleteTurn.ChatDockerSessions)
-            {
-                db.ChatDockerSessions.Remove(cds);
-            }
+            // Deassociate docker sessions
+            toDeleteTurn.ChatDockerSessions.Clear();
             turn.Chat.ChatTurns.Remove(toDeleteTurn);
         }
         turn.Chat.LeafTurnId = leafTurnId;

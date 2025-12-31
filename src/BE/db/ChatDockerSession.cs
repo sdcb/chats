@@ -12,7 +12,7 @@ public partial class ChatDockerSession
     [Key]
     public long Id { get; set; }
 
-    public long OwnerTurnId { get; set; }
+    public long? OwnerTurnId { get; set; }
 
     [StringLength(64)]
     public string Label { get; set; } = null!;
@@ -41,5 +41,5 @@ public partial class ChatDockerSession
 
     [ForeignKey("OwnerTurnId")]
     [InverseProperty("ChatDockerSessions")]
-    public virtual ChatTurn OwnerTurn { get; set; } = null!;
+    public virtual ChatTurn? OwnerTurn { get; set; }
 }

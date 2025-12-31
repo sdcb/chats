@@ -155,7 +155,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig)
                 .ThenInclude(x => x.ChatConfigMcps).ThenInclude(x => x.McpServer.McpTools)
-            .Include(x => x.ChatTurns)
+            .Include(x => x.ChatTurns).ThenInclude(x => x.ChatDockerSessions)
             .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == req.ChatId && x.UserId == currentUser.Id, cancellationToken);
         if (chat == null)

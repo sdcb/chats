@@ -10,7 +10,7 @@ BEGIN
     CREATE TABLE dbo.ChatDockerSession
     (
         Id BIGINT NOT NULL IDENTITY(1, 1),
-        OwnerTurnId BIGINT NOT NULL,
+        OwnerTurnId BIGINT NULL,
         Label NVARCHAR(64) NOT NULL,
         ContainerId NVARCHAR(128) NOT NULL,
         Image NVARCHAR(256) NOT NULL,
@@ -91,6 +91,61 @@ END
 ELSE
 BEGIN
     PRINT N'    -> ChatDockerSession 表不存在，跳过外键与索引创建';
+END
+
+GO
+
+-- =============================================
+-- 第一步（1.1）：将 ChatDockerSession.OwnerTurnId 改为可空
+-- =============================================
+PRINT N'[Step 1.1] 将 ChatDockerSession.OwnerTurnId 置为可空（若当前为 NOT NULL）';
+
+IF OBJECT_ID(N'dbo.ChatDockerSession', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ChatDockerSession', N'OwnerTurnId') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM sys.columns
+        WHERE object_id = OBJECT_ID(N'dbo.ChatDockerSession')
+          AND name = N'OwnerTurnId'
+          AND is_nullable = 0
+    )
+    BEGIN
+        DECLARE @hadFk BIT = 0;
+
+        IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_ChatDockerSession_ChatTurn')
+        BEGIN
+            SET @hadFk = 1;
+            ALTER TABLE dbo.ChatDockerSession DROP CONSTRAINT FK_ChatDockerSession_ChatTurn;
+            PRINT N'    -> 已移除外键 FK_ChatDockerSession_ChatTurn（用于修改列可空性）';
+        END
+
+        ALTER TABLE dbo.ChatDockerSession ALTER COLUMN OwnerTurnId BIGINT NULL;
+        PRINT N'    -> 已将 ChatDockerSession.OwnerTurnId 修改为可空';
+
+        IF @hadFk = 1
+        BEGIN
+            ALTER TABLE dbo.ChatDockerSession
+            WITH CHECK ADD CONSTRAINT FK_ChatDockerSession_ChatTurn
+            FOREIGN KEY (OwnerTurnId) REFERENCES dbo.ChatTurn(Id);
+
+            ALTER TABLE dbo.ChatDockerSession CHECK CONSTRAINT FK_ChatDockerSession_ChatTurn;
+
+            PRINT N'    -> 已恢复外键 FK_ChatDockerSession_ChatTurn';
+        END
+        ELSE
+        BEGIN
+            PRINT N'    -> 外键 FK_ChatDockerSession_ChatTurn 原本不存在，未恢复';
+        END
+    END
+    ELSE
+    BEGIN
+        PRINT N'    -> OwnerTurnId 已是可空列，跳过';
+    END
+END
+ELSE
+BEGIN
+    PRINT N'    -> ChatDockerSession 表或 OwnerTurnId 列不存在，跳过 Step 1.1';
 END
 
 GO

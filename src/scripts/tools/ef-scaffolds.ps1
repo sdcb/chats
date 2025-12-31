@@ -14,8 +14,8 @@ Write-Host "切换到项目目录: $projectFolder" -ForegroundColor Green
 Set-Location $projectFolder
 
 # 检查项目文件是否存在
-if (-not (Test-Path "Chats.Web.csproj")) {
-    Write-Error "未找到 Chats.Web.csproj 项目文件"
+if (-not (Test-Path "Chats.BE.csproj")) {
+    Write-Error "未找到 Chats.BE.csproj 项目文件"
     exit 1
 }
 
