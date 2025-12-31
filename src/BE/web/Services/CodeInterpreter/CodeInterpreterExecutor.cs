@@ -388,7 +388,14 @@ public sealed class CodeInterpreterExecutor(
             throw new InvalidOperationException("Cannot determine start turn id for session lookup. Ensure MessageTurns includes the last message turn (and/or CurrentAssistantTurn has an id).");
         }
 
-        ChatTurn[] candidatesTurns = [.. ctx.MessageTurns, ctx.CurrentAssistantTurn];
+        // MessageTurns is authoritative. Only append CurrentAssistantTurn when it fills a gap;
+        // otherwise it can override a more complete ParentId for the same Id.
+        IEnumerable<ChatTurn> candidatesTurns = ctx.MessageTurns;
+        if (ctx.CurrentAssistantTurn.Id > 0 && !ctx.MessageTurns.Any(t => t.Id == ctx.CurrentAssistantTurn.Id))
+        {
+            candidatesTurns = candidatesTurns.Append(ctx.CurrentAssistantTurn);
+        }
+
         Dictionary<long, long?> parentById = candidatesTurns
             .Where(t => t.Id > 0)
             .GroupBy(t => t.Id)

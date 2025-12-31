@@ -151,8 +151,8 @@ public sealed class CodeInterpreterSessionLookupTests
             await SeedTurnAsync(db, id: 2, parentId: 1); // Turn A
             await SeedTurnAsync(db, id: 4, parentId: 2); // Turn C (child of A)
 
-            await SeedSessionAsync(db, ownerTurnId: 1, label: "python-env", containerId: "container-root");
-            await SeedSessionAsync(db, ownerTurnId: 2, label: "python-env", containerId: "container-A");
+            await SeedSessionAsync(db, ownerTurnId: 1, label: "dotnet-env", containerId: "container-root");
+            await SeedSessionAsync(db, ownerTurnId: 2, label: "dotnet-env", containerId: "container-A");
         }
 
         FakeDockerService docker = new();
@@ -163,11 +163,11 @@ public sealed class CodeInterpreterSessionLookupTests
             new ChatTurn { Id = 2, ParentId = 1, ChatId = 1, Chat = null! },
             new ChatTurn { Id = 4, ParentId = 2, ChatId = 1, Chat = null! });
 
-        Result<string> r = await exec.ExecuteToolCallAsync(ctx, "create_docker_session", JsonSerializer.Serialize(new { label = "python-env" }), CancellationToken.None);
+        Result<string> r = await exec.ExecuteToolCallAsync(ctx, "create_docker_session", JsonSerializer.Serialize(new { label = "dotnet-env" }), CancellationToken.None);
 
         Assert.True(r.IsSuccess);
-        Assert.Contains("sessionId: python-env", r.Value);
-        Assert.Contains("containerId: container-A", r.Value);
+        Assert.Contains("sessionId: dotnet-env", r.Value);
+        Assert.Contains("image: mcr.microsoft.com/dotnet/sdk:10.0", r.Value);
         Assert.Equal(0, docker.CreateContainerCalls);
     }
 
@@ -183,7 +183,7 @@ public sealed class CodeInterpreterSessionLookupTests
             await SeedTurnAsync(db, id: 2, parentId: 1); // Turn A
             await SeedTurnAsync(db, id: 3, parentId: 1); // Turn A' (sibling)
 
-            await SeedSessionAsync(db, ownerTurnId: 2, label: "python-env", containerId: "container-A");
+            await SeedSessionAsync(db, ownerTurnId: 2, label: "dotnet-env", containerId: "container-A");
         }
 
         FakeDockerService docker = new();
@@ -193,11 +193,11 @@ public sealed class CodeInterpreterSessionLookupTests
             new ChatTurn { Id = 1, ParentId = null, ChatId = 1, Chat = null! },
             new ChatTurn { Id = 3, ParentId = 1, ChatId = 1, Chat = null! });
 
-        Result<string> r = await exec.ExecuteToolCallAsync(ctx, "create_docker_session", JsonSerializer.Serialize(new { label = "python-env" }), CancellationToken.None);
+        Result<string> r = await exec.ExecuteToolCallAsync(ctx, "create_docker_session", JsonSerializer.Serialize(new { label = "dotnet-env" }), CancellationToken.None);
 
         Assert.True(r.IsSuccess);
-        Assert.Contains("sessionId: python-env", r.Value);
-        Assert.Contains("containerId: container-01", r.Value);
+        Assert.Contains("sessionId: dotnet-env", r.Value);
+        Assert.Contains("image: mcr.microsoft.com/dotnet/sdk:10.0", r.Value);
         Assert.Equal(1, docker.CreateContainerCalls);
 
         using (IServiceScope scope2 = sp.CreateScope())
@@ -205,7 +205,7 @@ public sealed class CodeInterpreterSessionLookupTests
             ChatsDB db2 = scope2.ServiceProvider.GetRequiredService<ChatsDB>();
             ChatDockerSession created = await db2.ChatDockerSessions.AsNoTracking().OrderByDescending(x => x.Id).FirstAsync();
             Assert.Equal(3, created.OwnerTurnId);
-            Assert.Equal("python-env", created.Label);
+            Assert.Equal("dotnet-env", created.Label);
             Assert.Equal("container-01-abcdef0123456789", created.ContainerId);
         }
     }

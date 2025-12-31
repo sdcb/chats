@@ -502,7 +502,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 NeutralMessage msg = step.ToNeutral();
                 if ((DBChatRole)step.ChatRoleId == DBChatRole.User)
                 {
-                    string? prefix = codeInterpreter.BuildCloudFilesContextPrefix(priorSteps);
+                    string? prefix = codeInterpreter.BuildCloudFilesContextPrefix(priorSteps.Append(step));
                     if (!string.IsNullOrWhiteSpace(prefix))
                     {
                         List<NeutralContent> contents = [NeutralTextContent.Create(prefix), .. msg.Contents];
