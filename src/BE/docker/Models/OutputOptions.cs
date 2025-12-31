@@ -6,9 +6,9 @@ namespace Chats.DockerInterface.Models;
 public class OutputOptions
 {
     /// <summary>
-    /// 最大输出字节数。默认 64KB
+    /// 最大输出字节数。默认 6KB
     /// </summary>
-    public int MaxOutputBytes { get; set; } = 64 * 1024;
+    public int MaxOutputBytes { get; set; } = 6 * 1024;
 
     /// <summary>
     /// 截断策略。默认保留首尾
