@@ -42,7 +42,7 @@ env:
     - Usage: Build and run C#/F#/VB.NET applications
     - Commands: `dotnet build`, `dotnet run single-file.cs`, `dotnet script`
     - Pre-cached NuGet packages (in /opt/nuget-local):
-      ClosedXML (Excel processing)
+      ClosedXML, DocumentFormat.OpenXml
 
     ## Python
     - Version: 3.x (system default)
