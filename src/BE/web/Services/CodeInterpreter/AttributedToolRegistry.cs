@@ -23,6 +23,11 @@ internal sealed class ToolParamAttribute(string description)
 
 internal sealed class AttributedToolRegistry
 {
+    private static readonly JsonSerializerOptions ToolJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
     internal sealed record ToolDescriptor(
         string ToolName,
         string Description,
@@ -228,7 +233,7 @@ internal sealed class AttributedToolRegistry
         }
 
         string json = node.ToJsonString();
-        return JsonSerializer.Deserialize(json, targetType);
+        return JsonSerializer.Deserialize(json, targetType, ToolJsonOptions);
     }
 
     private static bool IsNullable(ParameterInfo p)

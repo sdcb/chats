@@ -284,6 +284,18 @@ public sealed class AttributedToolRegistryTest
         Assert.Equal("echo:x", r.Value);
     }
 
+    [Fact]
+    public async Task Invoke_ShouldBindNestedObject_CamelCaseProperties()
+    {
+        AttributedToolRegistry reg = new(typeof(TestHost));
+        TestHost host = new();
+        CodeInterpreterExecutor.TurnContext ctx = CreateCtx();
+
+        Result<string> r = await reg.InvokeAsync(host, ctx, "limits", "{\"limits\":{\"memoryBytes\":123,\"cpuCores\":2}}", CancellationToken.None);
+        Assert.True(r.IsSuccess);
+        Assert.Equal("limits:mem=123,cpu=2", r.Value);
+    }
+
     private sealed class BadHost
     {
         [ToolFunction("Bad return type")]
