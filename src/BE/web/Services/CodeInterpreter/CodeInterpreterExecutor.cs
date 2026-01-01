@@ -695,18 +695,39 @@ public sealed class CodeInterpreterExecutor(
         };
     }
 
-    [ToolFunction("Apply a unified diff patch to a file under /app. Supported: standard unified diff hunks (lines starting with ' ', '+', '-', and optional \\ No newline at end of file). Not supported: *** Begin Patch/*** End Patch wrappers. Each hunk must use a full header like @@ -oldStart,oldCount +newStart,newCount @@.")]
+    [ToolFunction("""
+        Apply a patch to a file under /app.
+        The target file is specified by the 'path' argument.
+        The 'patch' argument MUST be unified-diff hunks ONLY (no headers/wrappers).
+        """)]
     private async Task<Result<string>> PatchFile(
         TurnContext ctx,
-        [ToolParam("Session id.")]
-        [Required]
-        string sessionId,
-        [ToolParam("Target file path under /app.")]
-        [Required]
-        string path,
-        [ToolParam("Unified diff patch text (no markdown code fences). Do not include *** Begin Patch/*** End Patch wrappers. Use unified diff hunks with full headers: @@ -oldStart,oldCount +newStart,newCount @@.")]
-        [Required]
-        string patch,
+        [ToolParam("Session id."), Required] string sessionId,
+        [ToolParam("Target file path under /app."), Required] string path,
+        [ToolParam("""
+            Patch text (RAW, no markdown). MUST contain unified-diff hunks ONLY.
+
+            Supported input:
+            - One or more hunks.
+            - Each hunk header MUST be exactly:
+                @@ -oldStart,oldCount +newStart,newCount @@
+                (full ranges required)
+            - Inside hunks, each line must start with:
+                - ' ' (context)
+                - '+' (add)
+                - '-' (delete)
+                - or be exactly: \\ No newline at end of file
+
+            Not supported (do NOT include):
+            - diff --git / index / --- / +++
+            - *** Begin Patch/*** End Patch wrappers
+            - markdown code fences (```)
+            - any extra commentary text
+
+            Notes:
+            - An empty context line must be represented as a single space ' ' line (no empty lines inside hunks).
+            - Recommended workflow: call read_file(withLineNumbers=true) first, then generate hunks with enough context.
+            """), Required] string patch,
         CancellationToken cancellationToken)
     {
         if (!UnifiedDiffPatchToolValidator.TryValidate(patch, out string validationError))

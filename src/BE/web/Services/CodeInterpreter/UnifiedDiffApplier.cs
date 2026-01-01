@@ -13,7 +13,13 @@ internal static class UnifiedDiffApplier
         string[] originalLines = SplitLinesPreserveNoNewline(originalText);
         List<string> output = new();
 
-        string[] diffLines = unifiedDiff.Replace("\r\n", "\n").Split('\n');
+        string[] diffLinesRaw = unifiedDiff.Replace("\r\n", "\n").Split('\n');
+        int lastNonEmpty = diffLinesRaw.Length - 1;
+        while (lastNonEmpty >= 0 && diffLinesRaw[lastNonEmpty].Length == 0)
+        {
+            lastNonEmpty--;
+        }
+        string[] diffLines = lastNonEmpty < 0 ? [] : diffLinesRaw[..(lastNonEmpty + 1)];
 
         int origIndex = 0;
         int i = 0;

@@ -172,4 +172,91 @@ index 1234567..89abcde 100644
         Assert.Contains("diff --git", error, StringComparison.Ordinal);
         Assert.Contains("@@ -oldStart,oldCount +newStart,newCount @@", error, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void PatchToolFormat_BeginPatchWrapper_IsRejectedWithHelpfulMessage()
+    {
+        string patch = """
+*** Begin Patch
+*** Update File: x
+@@ -1,1 +1,1 @@
+-a
++b
+*** End Patch
+""";
+
+        bool ok = UnifiedDiffPatchToolValidator.TryValidate(patch, out string error);
+
+        Assert.False(ok);
+        Assert.Contains("Begin Patch", error, StringComparison.Ordinal);
+        Assert.Contains("only unified diff hunks", error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void PatchToolFormat_MarkdownCodeFence_IsRejectedWithHelpfulMessage()
+    {
+        string patch = """
+```diff
+@@ -1,1 +1,1 @@
+-a
++b
+```
+""";
+
+        bool ok = UnifiedDiffPatchToolValidator.TryValidate(patch, out string error);
+
+        Assert.False(ok);
+        Assert.Contains("markdown", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no markdown code fences", error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void PatchToolFormat_IncompleteHunkHeader_IsRejectedWithHelpfulMessage()
+    {
+        string patch = """
+@@
+-a
++b
+""";
+
+        bool ok = UnifiedDiffPatchToolValidator.TryValidate(patch, out string error);
+
+        Assert.False(ok);
+        Assert.Contains("Invalid hunk header", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("@@ -oldStart,oldCount +newStart,newCount @@", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Apply_TrailingNewlineInPatch_DoesNotCreatePhantomEmptyContextLine()
+    {
+        // Regression test: if patch ends with a newline, Split('\n') yields a trailing empty string.
+        // That empty string must NOT be treated as an extra context line.
+        string original = "a\n// CPU-bound benchmark: count primes up to N.\n// Run in Release\n// Examples:\n//   one\n//   two\nend";
+        string diff = """
+@@ -2,5 +2,5 @@
+-// CPU-bound benchmark: count primes up to N.
++// CPU-bound benchmark: count primes up to N (prime counting).
+ // Run in Release
+ // Examples:
+ //   one
+""";
+
+        // Note: diff above intentionally ends with a newline; applying should succeed and preserve the remaining lines.
+        string result = UnifiedDiffApplier.Apply(original, diff);
+
+        Assert.Contains("prime counting", result);
+        Assert.Contains("//   two", result);
+    }
+
+    [Fact]
+    public void PatchToolFormat_EmptyLineInsideHunk_IsRejected()
+    {
+        string patch = "@@ -1,1 +1,1 @@\n\n-a\n+b\n";
+
+        bool ok = UnifiedDiffPatchToolValidator.TryValidate(patch, out string error);
+
+        Assert.False(ok);
+        Assert.Contains("empty lines", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("inside hunks", error, StringComparison.OrdinalIgnoreCase);
+    }
 }

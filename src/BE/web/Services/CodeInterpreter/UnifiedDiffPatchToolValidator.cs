@@ -13,8 +13,53 @@ internal static class UnifiedDiffPatchToolValidator
         // PatchFile already takes a target `path`. To avoid confusing multi-file git patches,
         // we reject git-apply style headers and require *only* unified diff hunks.
         string[] lines = patch.Replace("\r\n", "\n").Split('\n');
-        foreach (string line in lines)
+
+        // Allow a trailing newline without creating an extra empty line entry.
+        int lastNonEmpty = lines.Length - 1;
+        while (lastNonEmpty >= 0 && lines[lastNonEmpty].Length == 0)
         {
+            lastNonEmpty--;
+        }
+
+        bool inHunk = false;
+        bool sawHunkHeader = false;
+
+        for (int i = 0; i <= lastNonEmpty; i++)
+        {
+            string line = lines[i];
+
+            // Empty lines are only allowed outside hunks.
+            // Inside hunks, an empty context line must be represented as a single space ' ' line.
+            if (line.Length == 0)
+            {
+                if (inHunk)
+                {
+                    error =
+                        "Unsupported patch format: empty lines are not allowed inside hunks. " +
+                        "Use a single space ' ' line to represent an empty context line.";
+                    return false;
+                }
+                continue;
+            }
+
+            // Disallow markdown code fences; tool expects raw patch text.
+            if (line.StartsWith("```", StringComparison.Ordinal))
+            {
+                error =
+                    "Unsupported patch format: markdown code fences are not supported by patch_file. " +
+                    "Provide raw patch text (no markdown code fences) containing only unified diff hunks.";
+                return false;
+            }
+
+            // Disallow common LLM wrapper format.
+            if (line.StartsWith("*** ", StringComparison.Ordinal) || line.StartsWith("*** Begin Patch", StringComparison.Ordinal))
+            {
+                error =
+                    "Unsupported patch format: '*** Begin Patch/*** End Patch' wrappers are not supported. " +
+                    "Provide only unified diff hunks. Each hunk must use a full header like: @@ -oldStart,oldCount +newStart,newCount @@.";
+                return false;
+            }
+
             if (line.StartsWith("diff --git ", StringComparison.Ordinal) ||
                 line.StartsWith("index ", StringComparison.Ordinal) ||
                 line.StartsWith("new file mode ", StringComparison.Ordinal) ||
@@ -33,9 +78,100 @@ internal static class UnifiedDiffPatchToolValidator
                     "The target file is specified by the 'path' argument.";
                 return false;
             }
+
+            if (line.StartsWith("@@", StringComparison.Ordinal))
+            {
+                // Require full header with explicit counts (LLM-friendly + avoids the `@@` ambiguity).
+                // Allow optional trailing section text after the closing @@.
+                if (!IsValidFullHunkHeader(line))
+                {
+                    error =
+                        $"Invalid hunk header: '{line}'. " +
+                        "patch_file only supports unified diff hunks. " +
+                        "Each hunk must use a full header like: @@ -oldStart,oldCount +newStart,newCount @@.";
+                    return false;
+                }
+
+                inHunk = true;
+                sawHunkHeader = true;
+                continue;
+            }
+
+            if (!inHunk)
+            {
+                error =
+                    "Unsupported patch format: patch_file only supports unified diff hunks (only lines starting with '@@', ' ', '+', '-', or '\\ No newline at end of file'). " +
+                    "Do not include any headers or wrappers.";
+                return false;
+            }
+
+            char prefix = line[0];
+            if (prefix is ' ' or '+' or '-')
+            {
+                // ok (note: a single space ' ' is a valid empty context line)
+                continue;
+            }
+
+            if (line == "\\ No newline at end of file")
+            {
+                continue;
+            }
+
+            error =
+                $"Unsupported patch format: invalid hunk line '{line}'. " +
+                "Within hunks, each line must start with ' ' (context), '+' (add), '-' (delete), or be exactly '\\ No newline at end of file'.";
+            return false;
+        }
+
+        if (!sawHunkHeader)
+        {
+            error =
+                "Unsupported patch format: no unified diff hunks found. " +
+                "Provide only unified diff hunks starting with a header like: @@ -oldStart,oldCount +newStart,newCount @@.";
+            return false;
         }
 
         error = string.Empty;
+        return true;
+    }
+
+    private static bool IsValidFullHunkHeader(string line)
+    {
+        // Minimal strict pattern:
+        // @@ -<oldStart>,<oldCount> +<newStart>,<newCount> @@
+        // optionally followed by section text.
+        if (!line.StartsWith("@@ -", StringComparison.Ordinal)) return false;
+
+        int idx = 4; // after "@@ -"
+
+        if (!TryReadUInt(line, ref idx)) return false;
+        if (!TryConsumeChar(line, ref idx, ',')) return false;
+        if (!TryReadUInt(line, ref idx)) return false;
+        if (!TryConsumeChar(line, ref idx, ' ')) return false;
+        if (!TryConsumeChar(line, ref idx, '+')) return false;
+        if (!TryReadUInt(line, ref idx)) return false;
+        if (!TryConsumeChar(line, ref idx, ',')) return false;
+        if (!TryReadUInt(line, ref idx)) return false;
+        if (!TryConsumeChar(line, ref idx, ' ')) return false;
+        if (!TryConsumeChar(line, ref idx, '@')) return false;
+        if (!TryConsumeChar(line, ref idx, '@')) return false;
+        return true;
+    }
+
+    private static bool TryReadUInt(string line, ref int idx)
+    {
+        int start = idx;
+        while (idx < line.Length && char.IsDigit(line[idx]))
+        {
+            idx++;
+        }
+        return idx > start;
+    }
+
+    private static bool TryConsumeChar(string line, ref int idx, char c)
+    {
+        if (idx >= line.Length || line[idx] != c) return false;
+        idx++;
         return true;
     }
 }
