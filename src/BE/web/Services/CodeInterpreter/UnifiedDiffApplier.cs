@@ -2,6 +2,8 @@ namespace Chats.BE.Services.CodeInterpreter;
 
 internal static class UnifiedDiffApplier
 {
+    private const int MaxHunkStartOffsetSearchLines = 5;
+
     internal static string Apply(string originalText, string unifiedDiff)
     {
         // Minimal unified diff applier supporting @@ hunks with + / - /  context lines.
@@ -33,17 +35,11 @@ internal static class UnifiedDiffApplier
             }
 
             (int startOld, int countOld) = ParseHunkHeader(line);
-            int targetOrigIndex = Math.Max(0, startOld - 1);
-
-            // Copy unchanged lines before this hunk
-            while (origIndex < targetOrigIndex && origIndex < originalLines.Length)
-            {
-                output.Add(originalLines[origIndex]);
-                origIndex++;
-            }
+            int nominalOrigIndex = Math.Max(0, startOld - 1);
 
             i++; // move to hunk body
 
+            List<string> hunkLines = new();
             while (i < diffLines.Length)
             {
                 string hunkLine = diffLines[i];
@@ -56,42 +52,23 @@ internal static class UnifiedDiffApplier
                     i++;
                     continue;
                 }
-                if (hunkLine.Length == 0)
-                {
-                    // empty line counts as context line with ' ' prefix in proper diffs.
-                    // If it's truly empty due to splitting, treat as context match of empty.
-                }
 
-                char prefix = hunkLine.Length > 0 ? hunkLine[0] : ' ';
-                string content = hunkLine.Length > 0 ? hunkLine[1..] : string.Empty;
-
-                switch (prefix)
-                {
-                    case ' ':
-                        EnsureLineEquals(originalLines, origIndex, content);
-                        output.Add(content);
-                        origIndex++;
-                        break;
-                    case '-':
-                        EnsureLineEquals(originalLines, origIndex, content);
-                        origIndex++;
-                        break;
-                    case '+':
-                        output.Add(content);
-                        break;
-                    case '\\':
-                        // "\\ No newline at end of file" - ignore
-                        break;
-                    default:
-                        // Unknown line, treat as context
-                        EnsureLineEquals(originalLines, origIndex, hunkLine);
-                        output.Add(hunkLine);
-                        origIndex++;
-                        break;
-                }
-
+                hunkLines.Add(hunkLine);
                 i++;
             }
+
+            int resolvedStartIndex = ResolveHunkStartIndex(originalLines, origIndex, nominalOrigIndex, hunkLines);
+
+            // Copy unchanged lines before this hunk (up to the resolved start)
+            while (origIndex < resolvedStartIndex && origIndex < originalLines.Length)
+            {
+                output.Add(originalLines[origIndex]);
+                origIndex++;
+            }
+
+            int hunkOrigIndex = origIndex;
+            ApplyHunkAt(originalLines, output, ref hunkOrigIndex, hunkLines);
+            origIndex = hunkOrigIndex;
         }
 
         // Copy remaining original lines
@@ -141,9 +118,152 @@ internal static class UnifiedDiffApplier
         }
 
         string actual = originalLines[index];
-        if (!string.Equals(actual, expected, StringComparison.Ordinal))
+        if (!LinesEqualWithTolerance(actual, expected))
         {
             throw new InvalidOperationException($"Patch failed at line {index + 1}: expected '{expected}', got '{actual}'");
+        }
+    }
+
+    private static bool LinesEqualWithTolerance(string actual, string expected)
+    {
+        if (string.Equals(actual, expected, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        // Medium tolerance: ignore trailing whitespace mismatches. (Avoid ignoring leading whitespace for safety.)
+        return string.Equals(actual.TrimEnd(), expected.TrimEnd(), StringComparison.Ordinal);
+    }
+
+    private static int ResolveHunkStartIndex(string[] originalLines, int minStartIndex, int nominalStartIndex, List<string> hunkLines)
+    {
+        int start = Math.Max(minStartIndex, nominalStartIndex);
+
+        // If there are no lines that must match the original (only additions / markers), there's nothing to anchor.
+        if (!HunkHasMatchConstraints(hunkLines))
+        {
+            return start;
+        }
+
+        if (TryValidateHunkAt(originalLines, start, hunkLines))
+        {
+            return start;
+        }
+
+        // Offset search (medium tolerance): try nearby lines around the nominal start.
+        for (int offset = 1; offset <= MaxHunkStartOffsetSearchLines; offset++)
+        {
+            int backward = start - offset;
+            if (backward >= minStartIndex && backward >= 0 && TryValidateHunkAt(originalLines, backward, hunkLines))
+            {
+                return backward;
+            }
+
+            int forward = start + offset;
+            if (forward >= minStartIndex && forward <= originalLines.Length && TryValidateHunkAt(originalLines, forward, hunkLines))
+            {
+                return forward;
+            }
+        }
+
+        // Fall back to nominal start: let the caller throw a helpful message at the first mismatch.
+        return start;
+    }
+
+    private static bool HunkHasMatchConstraints(List<string> hunkLines)
+    {
+        foreach (string hunkLine in hunkLines)
+        {
+            char prefix = hunkLine.Length > 0 ? hunkLine[0] : ' ';
+            if (prefix is ' ' or '-')
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool TryValidateHunkAt(string[] originalLines, int startIndex, List<string> hunkLines)
+    {
+        int idx = startIndex;
+        foreach (string hunkLine in hunkLines)
+        {
+            char prefix = hunkLine.Length > 0 ? hunkLine[0] : ' ';
+            string content = hunkLine.Length > 0 ? hunkLine[1..] : string.Empty;
+
+            switch (prefix)
+            {
+                case ' ':
+                case '-':
+                    if (idx >= originalLines.Length)
+                    {
+                        return false;
+                    }
+                    if (!LinesEqualWithTolerance(originalLines[idx], content))
+                    {
+                        return false;
+                    }
+                    idx++;
+                    break;
+                case '+':
+                    break;
+                case '\\':
+                    break;
+                default:
+                    if (idx >= originalLines.Length)
+                    {
+                        return false;
+                    }
+                    if (!LinesEqualWithTolerance(originalLines[idx], hunkLine))
+                    {
+                        return false;
+                    }
+                    idx++;
+                    break;
+            }
+        }
+
+        return true;
+    }
+
+    private static void ApplyHunkAt(string[] originalLines, List<string> output, ref int origIndex, List<string> hunkLines)
+    {
+        foreach (string hunkLine in hunkLines)
+        {
+            if (hunkLine.Length == 0)
+            {
+                // empty line counts as context line with ' ' prefix in proper diffs.
+                // If it's truly empty due to splitting, treat as context match of empty.
+            }
+
+            char prefix = hunkLine.Length > 0 ? hunkLine[0] : ' ';
+            string content = hunkLine.Length > 0 ? hunkLine[1..] : string.Empty;
+
+            switch (prefix)
+            {
+                case ' ':
+                    EnsureLineEquals(originalLines, origIndex, content);
+                    // Preserve original line (including whitespace).
+                    output.Add(originalLines[origIndex]);
+                    origIndex++;
+                    break;
+                case '-':
+                    EnsureLineEquals(originalLines, origIndex, content);
+                    origIndex++;
+                    break;
+                case '+':
+                    output.Add(content);
+                    break;
+                case '\\':
+                    // "\\ No newline at end of file" - ignore
+                    break;
+                default:
+                    // Unknown line, treat as context
+                    EnsureLineEquals(originalLines, origIndex, hunkLine);
+                    output.Add(originalLines[origIndex]);
+                    origIndex++;
+                    break;
+            }
         }
     }
 

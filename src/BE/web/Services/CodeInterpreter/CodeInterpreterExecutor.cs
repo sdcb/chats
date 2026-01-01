@@ -695,7 +695,7 @@ public sealed class CodeInterpreterExecutor(
         };
     }
 
-    [ToolFunction("Apply a unified diff patch to a file under /app")]
+    [ToolFunction("Apply a unified diff patch to a file under /app. Supported: standard unified diff hunks (lines starting with ' ', '+', '-', and optional \\ No newline at end of file). Not supported: *** Begin Patch/*** End Patch wrappers. Each hunk must use a full header like @@ -oldStart,oldCount +newStart,newCount @@.")]
     private async Task<Result<string>> PatchFile(
         TurnContext ctx,
         [ToolParam("Session id.")]
@@ -704,11 +704,16 @@ public sealed class CodeInterpreterExecutor(
         [ToolParam("Target file path under /app.")]
         [Required]
         string path,
-        [ToolParam("Unified diff patch.")]
+        [ToolParam("Unified diff patch text (no markdown code fences). Do not include *** Begin Patch/*** End Patch wrappers. Use unified diff hunks with full headers: @@ -oldStart,oldCount +newStart,newCount @@.")]
         [Required]
         string patch,
         CancellationToken cancellationToken)
     {
+        if (!UnifiedDiffPatchToolValidator.TryValidate(patch, out string validationError))
+        {
+            return Result.Fail<string>(validationError);
+        }
+
         TurnContext.SessionState state = await EnsureSession(ctx, sessionId, cancellationToken);
         state.UsedInThisTurn = true;
 
