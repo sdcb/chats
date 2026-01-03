@@ -28,6 +28,7 @@ env:
   NUGET_PRECACHE: >-
     ClosedXML
     SixLabors.ImageSharp
+    DocumentFormat.OpenXml
 
 jobs:
   build-containers:
