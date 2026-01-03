@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+
+def run_text(cmd: list[str]) -> str:
+    return subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT).strip()
+
+
+def ffmpeg_version() -> str:
+    first_line = run_text(["ffmpeg", "-version"]).splitlines()[0]
+    m = re.search(r"ffmpeg\s+version\s+([^\s]+)", first_line)
+    return m.group(1) if m else first_line
+
+
+def python_version() -> str:
+    out = run_text(["python3", "--version"])
+    # Typical output: "Python 3.12.3"
+    m = re.search(r"Python\s+([^\s]+)", out)
+    return m.group(1) if m else out
+
+
+def dotnet_version() -> str:
+    return run_text(["dotnet", "--version"])
+
+
+def version_key(version: str):
+    parts = re.split(r"[\.-]", version)
+    key = []
+    for p in parts:
+        if p.isdigit():
+            key.append((0, int(p)))
+        else:
+            key.append((1, p.lower()))
+    return key
+
+
+def find_cached_nuget_version(package_name: str, cache_root: Path) -> str | None:
+    package_dir = cache_root / package_name.lower()
+    if not package_dir.exists() or not package_dir.is_dir():
+        return None
+
+    versions: list[str] = []
+    for child in package_dir.iterdir():
+        if child.is_dir():
+            versions.append(child.name)
+
+    if not versions:
+        return None
+
+    return max(versions, key=version_key)
+
+
+def main() -> int:
+    if len(sys.argv) != 3:
+        print("Usage: render-skills.py <template.md> <output.md>", file=sys.stderr)
+        return 2
+
+    template_path = Path(sys.argv[1])
+    output_path = Path(sys.argv[2])
+
+    template = template_path.read_text(encoding="utf-8")
+
+    dn = dotnet_version()
+    py = python_version()
+    ff = ffmpeg_version()
+
+    cache_root = Path("/opt/nuget-local")
+    precache = os.environ.get("PRECACHE_PACKAGES") or os.environ.get("NUGET_PRECACHE") or ""
+    top_level = [p for p in re.split(r"\s+", precache.strip()) if p]
+
+    bullet_lines: list[str] = []
+    for pkg in top_level:
+        ver = find_cached_nuget_version(pkg, cache_root) or "(not found)"
+        bullet_lines.append(f"  * {pkg} {ver}")
+
+    packages_block = "\n".join(bullet_lines) if bullet_lines else "  * (none)"
+
+    rendered = template
+    rendered = rendered.replace("{dotnetVersion}", dn)
+    rendered = rendered.replace("{pythonVersion}", py)
+    rendered = rendered.replace("{ffmpegVersion}", ff)
+    rendered = rendered.replace("  {all packages in this format: `* PackageName Version`}", packages_block)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(rendered.rstrip() + "\n", encoding="utf-8")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
