@@ -329,8 +329,9 @@ public class DockerService : IDockerService
         }
         else
         {
-            string script = "if command -v pwsh >/dev/null 2>&1; then echo 'pwsh,-NoProfile,-NonInteractive,-Command'; " +
-                            "elif command -v bash >/dev/null 2>&1; then echo \"$(command -v bash),-lc\"; " +
+            // Linux 容器：优先使用 bash（-lc），其次才尝试 pwsh。
+            string script = "if command -v bash >/dev/null 2>&1; then echo \"$(command -v bash),-lc\"; " +
+                            "elif command -v pwsh >/dev/null 2>&1; then echo 'pwsh,-NoProfile,-NonInteractive,-Command'; " +
                             "elif command -v sh >/dev/null 2>&1; then echo \"$(command -v sh),-lc\"; " +
                             "else echo '/bin/sh,-lc'; fi";
 
