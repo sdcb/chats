@@ -52,7 +52,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .github/workflows/code-interpreter
-          file: Dockerfile
+          file: .github/workflows/code-interpreter/Dockerfile
           platforms: ${{ matrix.platform }}
           push: true
           load: true
