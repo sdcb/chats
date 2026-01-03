@@ -274,6 +274,12 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         Channel<SseResponseLine>[] channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
         Dictionary<ImageChatSegment, TaskCompletionSource<DBFile>> imageFileCache = [];
         Dictionary<string, TaskCompletionSource<DBFile>> fileCache = new(StringComparer.Ordinal);
+        // Ensure Model navigation is populated on the controller thread to avoid cross-thread mutation of tracked entities.
+        foreach (ChatSpan span in toGenerateSpans)
+        {
+            span.ChatConfig.Model = userModels[span.ChatConfig.ModelId].Model;
+        }
+
         Task[] streamTasks = [.. toGenerateSpans.Select((span, index) => ProcessChatSpan(
             currentUser,
             logger,
@@ -332,6 +338,10 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             }
             else if (line is EndStepInternal endLine)
             {
+                // Attach the new Step to the tracked Turn on the controller thread.
+                // This avoids cross-thread mutations of EF tracked entities (DbContext is not thread-safe).
+                endLine.Step.Turn.Steps.Add(endLine.Step);
+
                 if (endLine.Step.Turn.ChatConfig == null)
                 {
                     ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == endLine.SpanId);
@@ -485,7 +495,6 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         int? retry429Times,
         CancellationToken cancellationToken)
     {
-        chatSpan.ChatConfig.Model = userModel.Model;
         // Combine message tree and user message steps, then convert to neutral format
         List<Step> allSteps = [.. messageTree, .. dbUserMessage?.Steps ?? []];
 
@@ -804,7 +813,6 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         void WriteStep(Step step)
         {
             csr.Messages.Add(step.ToNeutral());
-            turn.Steps.Add(step);
             writer.TryWrite(new EndStepInternal(chatSpan.SpanId, step));
         }
 
