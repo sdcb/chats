@@ -16,6 +16,8 @@ env:
     ffmpeg
     python3
     python3-pip
+    zip
+    p7zip-full
   PIP_PACKAGES: >-
     numpy
     pandas
@@ -25,6 +27,7 @@ env:
     requests
   NUGET_PRECACHE: >-
     ClosedXML
+    SixLabors.ImageSharp
 
 jobs:
   build-containers:
