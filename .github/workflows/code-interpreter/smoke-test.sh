@@ -45,21 +45,30 @@ cat /etc/nuget/NuGet.Config
 echo "=== Test ClosedXML restore from local cache ==="
 get_local_version() {
 	local pkg="$1"
-	local file
-	file="$(find /opt/nuget-local -maxdepth 1 -type f -iname "${pkg}.*.nupkg" -printf '%f\n' | sort -V | tail -n 1)"
-	if [[ -z "${file}" ]]; then
+	local pkg_lc="${pkg,,}"
+	local prefix="${pkg_lc}."
+	local ver
+	ver="$(
+		find /opt/nuget-local -maxdepth 1 -type f -iname "${pkg}.*.nupkg" -printf '%f\n' |
+			while IFS= read -r f; do
+				local file_lc="${f,,}"
+				if [[ "${file_lc}" != ${prefix}*.nupkg ]]; then
+					continue
+				fi
+				local v="${file_lc#${prefix}}"
+				v="${v%.nupkg}"
+				# Filter out sub-packages like ClosedXML.Parser (closedxml.parser.2.0.0.nupkg).
+				if [[ "${v}" =~ ^[0-9] ]]; then
+					echo "${v}"
+				fi
+			done |
+			sort -V |
+			tail -n 1
+	)"
+	if [[ -z "${ver}" ]]; then
 		echo "ERROR: ${pkg} not found in /opt/nuget-local" >&2
 		return 1
 	fi
-	local file_lc="${file,,}"
-	local pkg_lc="${pkg,,}"
-	local prefix="${pkg_lc}."
-	if [[ "${file_lc}" != ${prefix}*.nupkg ]]; then
-		echo "ERROR: unexpected nupkg filename '${file}' for package '${pkg}'" >&2
-		return 1
-	fi
-	local ver="${file_lc#${prefix}}"
-	ver="${ver%.nupkg}"
 	echo "${ver}"
 }
 
