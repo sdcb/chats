@@ -51,7 +51,16 @@ get_local_version() {
 		echo "ERROR: ${pkg} not found in /opt/nuget-local" >&2
 		return 1
 	fi
-	echo "${file}" | sed -E 's/^.*\.([0-9][0-9A-Za-z\.\-+]*)\.nupkg$/\1/'
+	local file_lc="${file,,}"
+	local pkg_lc="${pkg,,}"
+	local prefix="${pkg_lc}."
+	if [[ "${file_lc}" != ${prefix}*.nupkg ]]; then
+		echo "ERROR: unexpected nupkg filename '${file}' for package '${pkg}'" >&2
+		return 1
+	fi
+	local ver="${file_lc#${prefix}}"
+	ver="${ver%.nupkg}"
+	echo "${ver}"
 }
 
 closedxml_ver="$(get_local_version ClosedXML)"
