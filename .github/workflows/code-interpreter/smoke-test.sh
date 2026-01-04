@@ -1,40 +1,75 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE="${IMAGE:?IMAGE env is required}"
+if [[ "${RUNNING_IN_CONTAINER:-}" != "1" ]]; then
+  IMAGE="${IMAGE:?IMAGE env is required}"
+
+  # Execute all checks in a single container run.
+  docker run --rm --network none \
+    -e RUNNING_IN_CONTAINER=1 \
+    -v "$(pwd)/.github/workflows/code-interpreter/smoke-test.sh:/tmp/smoke-test.sh:ro" \
+    "$IMAGE" bash /tmp/smoke-test.sh
+  exit 0
+fi
 
 echo "=== .NET Version ==="
-docker run --rm "$IMAGE" dotnet --version
+dotnet --version
 
 echo "=== FFmpeg Version ==="
-docker run --rm "$IMAGE" ffmpeg -version | head -n 1
+ffmpeg -version | head -n 1
 
 echo "=== Python Version ==="
-docker run --rm "$IMAGE" python3 --version
+python3 --version
 
 echo "=== GCC Version ==="
-docker run --rm "$IMAGE" gcc --version | head -n 1
+gcc --version | head -n 1
 
 echo "=== Node.js Version ==="
-docker run --rm "$IMAGE" node --version
+node --version
 
 echo "=== file(1) Version ==="
-docker run --rm "$IMAGE" file --version | head -n 1
+file --version | head -n 1
 
 echo "=== SQLite Version ==="
-docker run --rm "$IMAGE" sqlite3 --version
+sqlite3 --version
 
 echo "=== Python Packages ==="
-docker run --rm "$IMAGE" python3 -c "import numpy, pandas, matplotlib, scipy, PIL, requests, openpyxl; print('All packages imported successfully')"
+python3 -c "import numpy, pandas, matplotlib, scipy, PIL, requests, openpyxl; print('All packages imported successfully')"
 
 echo "=== NuGet Local Cache ==="
-docker run --rm "$IMAGE" ls /opt/nuget-local
+ls /opt/nuget-local
 
 echo "=== NuGet Config ==="
-docker run --rm "$IMAGE" cat /etc/nuget/NuGet.Config
+cat /etc/nuget/NuGet.Config
 
 echo "=== Test ClosedXML restore from local cache ==="
-docker run --rm "$IMAGE" bash -c "cd /tmp && mkdir -p test && cd test && dotnet new console -n test --no-restore && cd test && dotnet add package ClosedXML && dotnet restore -v n 2>&1 | grep -E '(local|Restored)'"
+get_local_version() {
+	local pkg="$1"
+	local file
+	file="$(find /opt/nuget-local -maxdepth 1 -type f -iname "${pkg}.*.nupkg" -printf '%f\n' | sort -V | tail -n 1)"
+	if [[ -z "${file}" ]]; then
+		echo "ERROR: ${pkg} not found in /opt/nuget-local" >&2
+		return 1
+	fi
+	echo "${file}" | sed -E 's/^.*\.([0-9][0-9A-Za-z\.\-+]*)\.nupkg$/\1/'
+}
+
+closedxml_ver="$(get_local_version ClosedXML)"
+echo "Using ClosedXML version from /opt/nuget-local: ${closedxml_ver}"
+
+cd /tmp
+rm -rf test
+mkdir -p test
+cd test
+dotnet new console -n test --no-restore
+cd test
+
+dotnet add package ClosedXML --version "${closedxml_ver}" --no-restore
+
+restore_log="$(dotnet restore -p:NuGetAudit=false -v n 2>&1)"
+echo "${restore_log}"
+
+echo "${restore_log}" | grep -E '(/opt/nuget-local|Installed|Restored)'
 
 echo "=== Skills.md ==="
-docker run --rm "$IMAGE" cat /app/skills.md
+cat /app/skills.md

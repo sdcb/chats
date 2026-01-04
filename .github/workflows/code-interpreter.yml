@@ -76,7 +76,11 @@ jobs:
 
       - name: Smoke test
         run: |
-          IMAGE=${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:r-${{ github.run_number }}-${{ matrix.tag }} bash .github/workflows/code-interpreter/smoke-test.sh
+          IMAGE=${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:r-${{ github.run_number }}-${{ matrix.tag }}
+          docker run --rm --network none \
+            -e RUNNING_IN_CONTAINER=1 \
+            -v "${GITHUB_WORKSPACE}/.github/workflows/code-interpreter/smoke-test.sh:/tmp/smoke-test.sh:ro" \
+            "${IMAGE}" bash /tmp/smoke-test.sh
 
   docker-manifest:
     needs: build-containers
