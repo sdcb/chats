@@ -127,17 +127,17 @@ public sealed class CodeInterpreterExecutor(
             sb.AppendLine();
         }
 
-        sb.AppendLine("You have access to a sandboxed code interpreter environment.");
+        sb.AppendLine("You have access to sandboxed code interpreter environments.");
         sb.AppendLine($"- Working directory: {PathSafety.WorkDir}");
         sb.AppendLine($"- Artifacts directory: {PathSafety.WorkDir}/artifacts, MUST copy to artifacts folder so user can download it!");
-        sb.AppendLine("- To use files from the chat, you MUST call download_files first.");
+        sb.AppendLine("- Call create_docker_session to get a sessionId.");
 
         return NeutralSystemMessage.FromText(sb.ToString());
     }
 
     public string? BuildCloudFilesContextPrefix(IEnumerable<Step> messageSteps)
     {
-        List<(int fileId, string fileName, DBFile file)> cloudFiles = CollectCloudFiles(messageSteps);
+        List<DBFile> cloudFiles = CollectCloudFiles(messageSteps);
 
         if (cloudFiles.Count == 0)
         {
@@ -145,14 +145,38 @@ public sealed class CodeInterpreterExecutor(
         }
 
         StringBuilder sb = new();
-        sb.AppendLine("[Environment Info]");
-        sb.AppendLine("Cloud Files Available:");
-        foreach ((int fileId, string fileName, DBFile file) in cloudFiles.OrderBy(x => x.fileId))
+        sb.AppendLine("[Cloud Files Available]");
+        foreach (DBFile file in cloudFiles)
         {
-            sb.AppendLine($"- {fileName} (id={fileId}, size={file.Size}, type={file.MediaType})");
+            sb.AppendLine($"- {ToAIModelReadable(file)}");
         }
-        sb.AppendLine("Use download_files with wildcard patterns matching the file names above.");
+        sb.AppendLine("Use download_chat_files with wildcard patterns matching the file names above.");
         return sb.ToString();
+    }
+
+    static string ToAIModelReadable(DBFile file)
+    {
+        return $"{file.FileName} (size:{HumanizeFileSize(file.Size)}{ImageRelated(file)})";
+
+        static string ImageRelated(DBFile file)
+        {
+            if (file.FileImageInfo != null)
+            {
+                return $", image resolution: {file.FileImageInfo.Width}x{file.FileImageInfo.Height}";
+            }
+            return "";
+        }
+    }
+
+    static string HumanizeFileSize(long fileSize)
+    {
+        if (fileSize >= 1024L * 1024 * 1024)
+            return $"{fileSize / (1024.0 * 1024 * 1024):0.##}GB";
+        if (fileSize >= 1024L * 1024)
+            return $"{fileSize / (1024.0 * 1024):0.##}MB";
+        if (fileSize >= 1024L)
+            return $"{fileSize / 1024.0:0.##}KB";
+        return $"{fileSize}B";
     }
 
     public sealed class TurnContext
@@ -249,7 +273,7 @@ public sealed class CodeInterpreterExecutor(
         if (hasLabel && ctx.SessionsBySessionId.TryGetValue(label!, out TurnContext.SessionState? existing))
         {
             existing.UsedInThisTurn = true;
-            return Result.Ok($"sessionId: {label}\nimage: {existing.DbSession.Image}\nshell: [{existing.DbSession.ShellPrefix}]");
+            return Result.Ok(BuildAIReableDockerInfo(existing.DbSession));
         }
 
         // Resolve from DB along the ParentId chain of the current generating turn.
@@ -335,15 +359,15 @@ public sealed class CodeInterpreterExecutor(
             state.SnapshotTaken = true;
         }
 
-        // Try to read skills.md for the AI model (only for newly created/loaded sessions)
-        string result = $"sessionId: {label}\nimage: {dbSession.Image}\nshell: [{dbSession.ShellPrefix}]";
+        string info = BuildAIReableDockerInfo(dbSession);
         try
         {
+            // Try to read skills.md for the AI model (only for newly created/loaded sessions)
             byte[] skillsBytes = await _docker.DownloadFileAsync(dbSession.ContainerId, "/app/skills.md", cancellationToken);
             string skillsContent = Encoding.UTF8.GetString(skillsBytes);
             if (!string.IsNullOrWhiteSpace(skillsContent))
             {
-                result += $"\nskills.md:\n{skillsContent}";
+                info += $"\n{skillsContent}";
             }
         }
         catch
@@ -351,13 +375,25 @@ public sealed class CodeInterpreterExecutor(
             // skills.md may not exist, ignore
         }
 
-        return Result.Ok(result);
+        return Result.Ok(info);
+
+        static string BuildAIReableDockerInfo(ChatDockerSession dbSession)
+        {
+            string basicInfo = $"sessionId: {dbSession.Label}, image: {dbSession.Image}\nshell: [{dbSession.ShellPrefix.Replace(',', ' ')}]";
+            string resourceLimits = $"resource limits: cpu cores={dbSession.CpuCores}, memory={HumanizeMemoryLimits(dbSession.MemoryBytes)}, max processes={dbSession.MaxProcesses}, network={(NetworkMode)dbSession.NetworkMode}";
+            return basicInfo + "\n" + resourceLimits;
+
+            static string HumanizeMemoryLimits(long? memoryLimits)
+            {
+                if (memoryLimits == null) return "(unlimited)";
+                return HumanizeFileSize(memoryLimits.Value);
+            }
+        }
     }
 
     [ToolFunction("Destroy the docker session")]
     private async Task<Result<string>> DestroySession(
         TurnContext ctx,
-        [ToolParam("Session id.")]
         [Required]
         string sessionId,
         CancellationToken cancellationToken)
@@ -384,7 +420,6 @@ public sealed class CodeInterpreterExecutor(
     [ToolFunction("Run a shell command inside the session workdir /app")]
     private async Task<Result<string>> RunCommand(
         TurnContext ctx,
-        [ToolParam("Session id.")]
         [Required]
         string sessionId,
         [ToolParam("Shell command to run")]
@@ -440,7 +475,6 @@ public sealed class CodeInterpreterExecutor(
     [ToolFunction("Write a file under /app")]
     private async Task<Result<string>> WriteFile(
         TurnContext ctx,
-        [ToolParam("Session id.")]
         [Required]
         string sessionId,
         [ToolParam("Path under /app.")]
@@ -482,7 +516,6 @@ public sealed class CodeInterpreterExecutor(
     [ToolFunction("Read a file under /app")]
     private async Task<Result<string>> ReadFile(
         TurnContext ctx,
-        [ToolParam("Session id.")]
         [Required]
         string sessionId,
         [ToolParam("Absolute path to the file (must be under /app).")]
@@ -701,7 +734,7 @@ public sealed class CodeInterpreterExecutor(
         """)]
     private async Task<Result<string>> PatchFile(
         TurnContext ctx,
-        [ToolParam("Session id."), Required] string sessionId,
+        [Required] string sessionId,
         [ToolParam("Target file path under /app."), Required] string path,
         [ToolParam("""
             Patch text (RAW, no markdown). MUST contain unified-diff hunks ONLY.
@@ -752,9 +785,8 @@ public sealed class CodeInterpreterExecutor(
     }
 
     [ToolFunction("Download cloud files (from chat history) into /app")]
-    private async Task<Result<string>> DownloadFiles(
+    private async Task<Result<string>> DowloadChatFiles(
         TurnContext ctx,
-        [ToolParam("Session id.")]
         [Required]
         string sessionId,
         [ToolParam("Wildcard patterns matching cloud file names.")]
@@ -768,13 +800,12 @@ public sealed class CodeInterpreterExecutor(
         List<string> patternsList = patterns.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
         if (patternsList.Count == 0) return Result.Fail<string>("patterns is required");
 
-        List<(int fileId, string fileName, DBFile file)> cloudFiles = CollectCloudFiles(ctx.MessageSteps);
+        List<DBFile> cloudFiles = CollectCloudFiles(ctx.MessageSteps);
+        List<DBFile> downloaded = [];
 
-        List<(int fileId, string fileName, string targetPath, int size)> downloaded = [];
-
-        foreach ((int fileId, string fileName, DBFile file) in cloudFiles)
+        foreach (DBFile file in cloudFiles)
         {
-            if (!patternsList.Any(p => WildcardMatcher.IsMatch(p, fileName))) continue;
+            if (!patternsList.Any(p => WildcardMatcher.IsMatch(p, file.FileName))) continue;
 
             IFileService fs = _fileServiceFactory.Create(file.FileService);
             await using Stream s = await fs.Download(file.StorageKey, cancellationToken);
@@ -782,11 +813,11 @@ public sealed class CodeInterpreterExecutor(
             await s.CopyToAsync(ms, cancellationToken);
             byte[] bytes = ms.ToArray();
 
-            string safeName = PathSafety.SanitizeFileName(fileName);
-            string targetPath = $"{PathSafety.WorkDir}/{fileId}_{safeName}";
+            string safeName = PathSafety.SanitizeFileName(file.FileName);
+            string targetPath = Path.Combine(PathSafety.WorkDir, safeName);
             await _docker.UploadFileAsync(state.DbSession.ContainerId, targetPath, bytes, cancellationToken);
 
-            downloaded.Add((fileId, fileName, targetPath, bytes.Length));
+            downloaded.Add(file);
         }
 
         await TouchSession(state.DbSession, cancellationToken);
@@ -798,16 +829,16 @@ public sealed class CodeInterpreterExecutor(
 
         StringBuilder sb = new();
         sb.AppendLine("Downloaded:");
-        foreach (var d in downloaded.OrderBy(x => x.fileId))
+        foreach (DBFile file in cloudFiles)
         {
-            sb.AppendLine($"- {d.fileName} (id={d.fileId}, {d.size} bytes) -> {d.targetPath}");
+            sb.AppendLine($"- {ToAIModelReadable(file)}");
         }
         return Result.Ok(sb.ToString().TrimEnd());
     }
 
-    private static List<(int fileId, string fileName, DBFile file)> CollectCloudFiles(IEnumerable<Step> steps)
+    private static List<DBFile> CollectCloudFiles(IEnumerable<Step> steps)
     {
-        Dictionary<int, (int, string, DBFile)> result = new();
+        Dictionary<string, DBFile> result = [];
 
         foreach (Step step in steps)
         {
@@ -816,11 +847,11 @@ public sealed class CodeInterpreterExecutor(
             {
                 DBFile? f = sc.StepContentFile?.File;
                 if (f == null) continue;
-                result[f.Id] = (f.Id, f.FileName, f);
+                result[f.FileName] = f;
             }
         }
 
-        return result.Values.ToList();
+        return [..result.Values];
     }
     
     private async Task<TurnContext.SessionState> EnsureSession(TurnContext ctx, string sessionId, CancellationToken cancellationToken)
@@ -835,8 +866,7 @@ public sealed class CodeInterpreterExecutor(
             // add DB lookup for existing active session
             ChatDockerSession? dbSession = ctx.MessageTurns
                 .SelectMany(t => t.ChatDockerSessions)
-                .Where(s => s.TerminatedAt == null && s.ExpiresAt > DateTime.UtcNow && s.Label == sessionId)
-                .LastOrDefault();
+                .LastOrDefault(s => s.TerminatedAt == null && s.ExpiresAt > DateTime.UtcNow && s.Label == sessionId);
 
             if (dbSession != null)
             {
