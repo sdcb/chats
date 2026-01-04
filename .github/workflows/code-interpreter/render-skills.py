@@ -56,14 +56,26 @@ def version_key(version: str):
 
 
 def find_cached_nuget_version(package_name: str, cache_root: Path) -> str | None:
-    package_dir = cache_root / package_name.lower()
-    if not package_dir.exists() or not package_dir.is_dir():
+    # cache_root is expected to contain exported nupkg files, e.g.:
+    #   /opt/nuget-local/ClosedXML.0.105.0.nupkg
+    if not cache_root.exists() or not cache_root.is_dir():
         return None
 
+    pkg_lower = package_name.lower()
     versions: list[str] = []
-    for child in package_dir.iterdir():
-        if child.is_dir():
-            versions.append(child.name)
+    for child in cache_root.iterdir():
+        if not child.is_file():
+            continue
+        name_lower = child.name.lower()
+        if not (name_lower.endswith(".nupkg") and name_lower.startswith(pkg_lower + ".")):
+            continue
+
+        # Strip: "<PackageId>." prefix and ".nupkg" suffix
+        ver = child.name[len(package_name) + 1 : -len(".nupkg")]
+        # Fallback if casing differs (we matched lower-case)
+        if not ver:
+            ver = child.name.split(".", 1)[1][:-len(".nupkg")]
+        versions.append(ver)
 
     if not versions:
         return None
