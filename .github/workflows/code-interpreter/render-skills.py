@@ -27,6 +27,23 @@ def dotnet_version() -> str:
     return run_text(["dotnet", "--version"])
 
 
+def gcc_version() -> str:
+    try:
+        # Produces a clean version string like "13.2.0" on Debian/Ubuntu.
+        out = run_text(["gcc", "-dumpfullversion", "-dumpversion"]).strip()
+        return out
+    except Exception:
+        first_line = run_text(["gcc", "--version"]).splitlines()[0]
+        m = re.search(r"\)\s+([0-9]+\.[0-9]+(?:\.[0-9]+)?)", first_line)
+        return m.group(1) if m else first_line
+
+
+def node_version() -> str:
+    out = run_text(["node", "--version"]).strip()
+    # Typical output: "v20.10.0"
+    return out[1:] if out.startswith("v") else out
+
+
 def version_key(version: str):
     parts = re.split(r"[\.-]", version)
     key = []
@@ -67,6 +84,8 @@ def main() -> int:
     dn = dotnet_version()
     py = python_version()
     ff = ffmpeg_version()
+    gcc = gcc_version()
+    node = node_version()
 
     cache_root = Path("/opt/nuget-local")
     precache = os.environ.get("PRECACHE_PACKAGES") or os.environ.get("NUGET_PRECACHE") or ""
@@ -83,6 +102,8 @@ def main() -> int:
     rendered = rendered.replace("{dotnetVersion}", dn)
     rendered = rendered.replace("{pythonVersion}", py)
     rendered = rendered.replace("{ffmpegVersion}", ff)
+    rendered = rendered.replace("{gccVersion}", gcc)
+    rendered = rendered.replace("{nodeVersion}", node)
     rendered = rendered.replace("  {all packages in this format: `* PackageName Version`}", packages_block)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

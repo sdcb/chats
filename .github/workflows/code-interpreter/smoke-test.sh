@@ -12,8 +12,20 @@ docker run --rm "$IMAGE" ffmpeg -version | head -n 1
 echo "=== Python Version ==="
 docker run --rm "$IMAGE" python3 --version
 
+echo "=== GCC Version ==="
+docker run --rm "$IMAGE" gcc --version | head -n 1
+
+echo "=== Node.js Version ==="
+docker run --rm "$IMAGE" node --version
+
+echo "=== file(1) Version ==="
+docker run --rm "$IMAGE" file --version | head -n 1
+
+echo "=== SQLite Version ==="
+docker run --rm "$IMAGE" sqlite3 --version
+
 echo "=== Python Packages ==="
-docker run --rm "$IMAGE" python3 -c "import numpy, pandas, matplotlib, scipy, PIL, requests; print('All packages imported successfully')"
+docker run --rm "$IMAGE" python3 -c "import numpy, pandas, matplotlib, scipy, PIL, requests, openpyxl; print('All packages imported successfully')"
 
 echo "=== NuGet Local Cache ==="
 docker run --rm "$IMAGE" ls /opt/nuget-local

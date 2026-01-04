@@ -8,9 +8,19 @@ This environment is pre-configured with the following tools and libraries:
   {all packages in this format: `* PackageName Version`}
 
 ## Python {pythonVersion}
-- Commands: `python3 - <<'PY' ...`, `pip install package-name`
-- Pre-installed packages: numpy, pandas, matplotlib, scipy, pillow, requests
+- Commands: `python3 - <<'PY' ...`, `pip install --break-system-packages package-name`
+- Pre-installed packages: numpy, pandas, matplotlib, scipy, pillow, requests, openpyxl
 
 ## FFmpeg {ffmpegVersion}
 - Usage: Audio/video processing
 - Commands: `ffmpeg`, `ffprobe`
+
+## C/C++ Toolchain (gcc {gccVersion})
+- Tools: `gcc`, `g++`, `make`, `cmake`
+- Utility: `file`
+
+## Node.js {nodeVersion}
+- Commands: `node`, `npm`
+
+## SQLite
+- Commands: `sqlite3`

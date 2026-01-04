@@ -18,6 +18,12 @@ env:
     python3-pip
     zip
     p7zip-full
+    build-essential
+    cmake
+    nodejs
+    npm
+    file
+    sqlite3
   PIP_PACKAGES: >-
     numpy
     pandas
@@ -25,6 +31,7 @@ env:
     scipy
     pillow
     requests
+    openpyxl
   NUGET_PRECACHE: >-
     ClosedXML
     SixLabors.ImageSharp
