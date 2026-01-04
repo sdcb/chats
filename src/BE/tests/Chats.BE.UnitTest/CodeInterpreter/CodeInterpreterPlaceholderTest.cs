@@ -151,14 +151,14 @@ public sealed class CodeInterpreterPlaceholderTest
         {
             ["{defaultTimeoutSeconds}"] = "300",
             ["{defaultNetworkMode}"] = "none",
-            ["{defaultImage}"] = "mcr.microsoft.com/dotnet/sdk:10.0"
+            ["{defaultImage}"] = "mcr.microsoft.com/dotnet/sdk:10.0 (Supports .NET SDK, Python, and FFmpeg; suitable for code-related work.)"
         };
 
         string result = CodeInterpreterExecutor.ReplacePlaceholders(schemaJson, placeholders);
 
         Assert.Contains("server default: 300", result);
         Assert.Contains("server default: none", result);
-        Assert.Contains("server default: mcr.microsoft.com/dotnet/sdk:10.0", result);
+        Assert.Contains("server default: mcr.microsoft.com/dotnet/sdk:10.0 (Supports .NET SDK, Python, and FFmpeg; suitable for code-related work.)", result);
         Assert.DoesNotContain("{defaultTimeoutSeconds}", result);
         Assert.DoesNotContain("{defaultNetworkMode}", result);
         Assert.DoesNotContain("{defaultImage}", result);

@@ -53,12 +53,18 @@ public sealed class CodeInterpreterExecutor(
         string networkModeStr = _options.GetDefaultNetworkMode().ToString().ToLowerInvariant();
         string timeoutStr = _options.DefaultTimeoutSeconds?.ToString() ?? "unlimited";
 
+        string defaultImageDisplay = _options.DefaultImage;
+        if (!string.IsNullOrWhiteSpace(_options.DefaultImageDescription))
+        {
+            defaultImageDisplay = $"{defaultImageDisplay} ({_options.DefaultImageDescription})";
+        }
+
         return new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["{defaultTimeoutSeconds}"] = timeoutStr,
             ["{defaultResourceLimits}"] = resourceLimitsStr,
             ["{defaultNetworkMode}"] = networkModeStr,
-            ["{defaultImage}"] = _options.DefaultImage,
+            ["{defaultImage}"] = defaultImageDisplay,
         };
     }
 

@@ -7,6 +7,12 @@ public sealed class CodeInterpreterOptions
     public string DefaultImage { get; set; } = "mcr.microsoft.com/dotnet/sdk:10.0";
 
     /// <summary>
+    /// A short description of what's available inside <see cref="DefaultImage"/>.
+    /// Used to enrich the system prompt sent to the model.
+    /// </summary>
+    public string? DefaultImageDescription { get; set; }
+
+    /// <summary>
     /// Default command timeout. null means effectively unlimited (implemented as a large timeout).
     /// </summary>
     public int? DefaultTimeoutSeconds { get; set; } = 300;
