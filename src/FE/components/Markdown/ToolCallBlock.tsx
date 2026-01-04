@@ -1,4 +1,4 @@
-import { FC, memo, useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { FC, memo, useState, useEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
@@ -30,24 +30,6 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
 
     const [isOpen, setIsOpen] = useState<boolean>(!finished);
     const [isManuallyToggled, setIsManuallyToggled] = useState<boolean>(false);
-    const headerMeasureRef = useRef<HTMLDivElement>(null);
-    const [collapsedWidth, setCollapsedWidth] = useState<number | null>(null);
-
-    useLayoutEffect(() => {
-        if (typeof ResizeObserver === 'undefined' || !headerMeasureRef.current) {
-            return;
-        }
-
-        const observer = new ResizeObserver((entries) => {
-            const entry = entries[0];
-            if (!entry) return;
-            const width = entry.borderBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
-            setCollapsedWidth(Math.ceil(width));
-        });
-
-        observer.observe(headerMeasureRef.current);
-        return () => observer.disconnect();
-    }, []);
 
     // 自动开合逻辑（不覆盖用户手动动作）- 仅依赖 finished，类似 ThinkingMessage
     useEffect(() => {
@@ -145,14 +127,11 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
             return toolCall.n;
         }
 
-        // run_command: JSON 且包含 sessionId
+        // run_command: 如果有 command，只显示命令本身（不显示 "run_command:" 前缀）
         if (toolCall.n === 'run_command') {
-            if (!hasSessionId(obj)) {
-                return toolCall.n;
-            }
             const command = obj.command;
             if (typeof command === 'string' && command.trim().length > 0) {
-                return `${toolCall.n}: ${command}`;
+                return command;
             }
             return toolCall.n;
         }
@@ -225,7 +204,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
             <div
                 className="flex items-center gap-2 py-[6px] px-3 bg-gray-200 dark:bg-gray-700 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 ease-in-out"
                 style={{
-                    width: isOpen ? '100%' : collapsedWidth ? `${collapsedWidth}px` : 'fit-content',
+                    width: isOpen ? '100%' : 'fit-content',
                     maxWidth: '100%',
                     justifyContent: isOpen ? 'space-between' : 'flex-start',
                     borderTopLeftRadius: 12,
@@ -235,9 +214,9 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                 }}
                 onClick={toggleOpen}
             >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                     <span>🔧</span>
-                    <span className="text-sm text-gray-800 dark:text-white">{headerTitle}</span>
+                    <span className="text-sm text-gray-800 dark:text-white truncate">{headerTitle}</span>
                 </div>
                 <div
                     className="flex items-center transition-transform duration-300 ease-in-out"
@@ -415,16 +394,6 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                     </div>
                 </div>
             )}
-            <div
-                ref={headerMeasureRef}
-                aria-hidden="true"
-                className="absolute -z-10 inline-flex items-center gap-2 py-[6px] px-3"
-                style={{ visibility: 'hidden', pointerEvents: 'none', whiteSpace: 'nowrap' }}
-            >
-                <span>🔧</span>
-                <span className="text-sm">{headerTitle}</span>
-                <IconChevronRight size={18} className="stroke-gray-500" />
-            </div>
         </div>
     );
 });
