@@ -4,7 +4,7 @@ import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 import useTranslation from '@/hooks/useTranslation';
 import CopyButton from '@/components/Button/CopyButton';
-import { ChatSpanStatus, ToolCallContent, ToolResponseContent } from '@/types/chat';
+import { ChatSpanStatus, ToolCallContent, ToolResponseContent, ToolProgressDelta } from '@/types/chat';
 import { IconCheck, IconChevronRight, IconClipboard } from '@/components/Icons/index';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -70,6 +70,11 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         return null;
     };
 
+    const getToolProgressDeltas = (): ToolProgressDelta[] | null => {
+        const deltas = toolResponse?.progress;
+        return deltas && deltas.length > 0 ? deltas : null;
+    };
+
     const copyToClipboard = (text: string, isParams: boolean) => (e: React.MouseEvent) => {
         if (!navigator.clipboard || !navigator.clipboard.writeText) {
             return;
@@ -89,6 +94,13 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
 
     const code = getCodeIfAvailable();
     const webSearchResults = getWebSearchResults();
+    const toolProgressDeltas = getToolProgressDeltas();
+
+    const deltaToText = (delta: ToolProgressDelta): string => {
+        if (delta.kind === 'stdout') return delta.stdOutput;
+        if (delta.kind === 'stderr') return delta.stdError;
+        return '';
+    };
 
     const parseToolCallJson = (): unknown | null => {
         try {
@@ -327,7 +339,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
 
                     {/* Response content */}
                     <div
-                        className={`relative group text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 ${webSearchResults ? 'p-2' : 'p-4'}`}
+                        className="relative group text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 p-2"
                         style={{
                             borderBottomRightRadius: 12,
                             borderBottomLeftRadius: 12,
@@ -387,9 +399,26 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                                 </tbody>
                             </table>
                         ) : (
-                            <div className="whitespace-pre-wrap break-words">
-                                {toolResponse.r}
-                            </div>
+                            toolProgressDeltas ? (
+                                <pre className="not-prose whitespace-pre-wrap break-words font-mono">
+                                    {toolProgressDeltas.map((d, idx) => (
+                                        <span
+                                            key={idx}
+                                            className={
+                                                d.kind === 'stderr'
+                                                    ? 'text-red-600 dark:text-red-400'
+                                                    : undefined
+                                            }
+                                        >
+                                            {deltaToText(d)}
+                                        </span>
+                                    ))}
+                                </pre>
+                            ) : (
+                                <div className="whitespace-pre-wrap break-words">
+                                    {toolResponse.r}
+                                </div>
+                            )
                         )}
                     </div>
                 </div>

@@ -95,11 +95,25 @@ export type ToolCallContent = {
   p: string; // Parameters
 };
 
+export type StdOutToolProgressDelta = {
+  kind: 'stdout';
+  stdOutput: string;
+};
+
+export type StdErrorToolProgressDelta = {
+  kind: 'stderr';
+  stdError: string;
+};
+
+export type ToolProgressDelta = StdOutToolProgressDelta | StdErrorToolProgressDelta;
+
 export type ToolResponseContent = {
   i: string;
   $type: MessageContentType.toolResponse;
   u: string; // ToolCallId
   r: string; // Response
+  // 流式工具输出（SSE k=14）。存在时表示当前响应区展示的是进度流。
+  progress?: ToolProgressDelta[];
 };
 
 export type TextRequestContent = {

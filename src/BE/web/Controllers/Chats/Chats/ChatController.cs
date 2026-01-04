@@ -621,7 +621,6 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     if (codeExecutionEnabled && codeInterpreter.IsCodeInterpreterTool(callName))
                     {
                         Stopwatch ciSw = Stopwatch.StartNew();
-                        writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId!, "Executing code interpreter tool..."));
                         Result<string> ci = await codeInterpreter.ExecuteToolCallAsync(ciCtx!, callName, call.Parameters ?? "{}", cancellationToken);
                         string ciResult = ci.IsSuccess ? ci.Value : ci.Error!;
                         ciSw.Stop();
@@ -737,7 +736,16 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                             CallToolResult result = await mcpClient.CallToolAsync(toolName, JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Parameters!), new ProgressReporter(pnv =>
                             {
                                 logger.LogInformation("Tool {call.Name} progress: {pnv.Message}", call.Name, pnv.Message);
-                                writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId!, pnv.Message!));
+                                try
+                                {
+                                    ToolProgressDelta delta = JsonSerializer.Deserialize<ToolProgressDelta>(pnv.Message!)!;
+                                    writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId!, delta));
+                                }
+                                catch (JsonException)
+                                {
+                                    // ignore invalid progress delta
+                                    return;
+                                }
                             }), cancellationToken: cancellationToken);
                             return (result.IsError switch
                             {

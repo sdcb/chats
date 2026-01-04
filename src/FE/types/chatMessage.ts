@@ -3,6 +3,7 @@ import {
   ChatSpanStatus,
   FileDef,
   ResponseContent,
+  ToolProgressDelta,
   Role,
 } from './chat';
 
@@ -104,6 +105,13 @@ interface SseResponseLineCallingTool {
   p: string; // Parameters (流式输出的参数)
 }
 
+interface SseResponseLineToolProgress {
+  k: SseResponseKind.ToolProgress; // Kind is ToolProgress
+  i: number; // SpanId is required for ToolProgress
+  u: string; // ToolCallId
+  r: ToolProgressDelta; // Progress delta (strong-typed)
+}
+
 interface SseResponseLineToolCompleted {
   k: SseResponseKind.ToolCompleted; // Kind is ToolCompleted
   i: number; // SpanId is required for ToolCompleted
@@ -138,6 +146,7 @@ export type SseResponseLine =
   | SseResponseLineFileGenerated
   | SseResponseLineFileGenerating
   | SseResponseLineCallingTool
+  | SseResponseLineToolProgress
   | SseResponseLineToolCompleted
   | SseResponseLineEndStep
   | SseResponseLineEndTurn;

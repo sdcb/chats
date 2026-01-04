@@ -37,6 +37,7 @@ import {
   TempFileContent,
   TextContent,
   ToolCallContent,
+  ToolProgressDelta,
   ToolResponseContent,
 } from '@/types/chat';
 import {
@@ -711,6 +712,7 @@ const ChatView = memo(() => {
           newContent[respIndex] = {
             ...existingToolResponse,
             r: result,
+            progress: undefined,
           };
         } else {
           // 新的工具响应；如果工具调用已存在，则把响应插入到它的后面，保持“参数在上、结果在下”
@@ -719,6 +721,7 @@ const ChatView = memo(() => {
             $type: MessageContentType.toolResponse,
             u: toolCallId,
             r: result,
+            progress: undefined,
           };
           if (callIndex >= 0) {
             newContent.splice(callIndex + 1, 0, toolResponseContent);
@@ -732,6 +735,76 @@ const ChatView = memo(() => {
       return x;
     });
     
+    const newSelectedMsgs = [...selectedMsgs];
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
+    messageDispatch(setSelectedMessages(newSelectedMsgs));
+    return newSelectedMsgs;
+  };
+
+  const changeSelectedResponseToolProgress = (
+    selectedMsgs: IChatMessage[][],
+    messageId: string,
+    toolCallId: string,
+    progress: ToolProgressDelta,
+  ): IChatMessage[][] => {
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
+
+    const deltaToText = (delta: ToolProgressDelta): string => {
+      if (delta.kind === 'stdout') return delta.stdOutput;
+      if (delta.kind === 'stderr') return delta.stdError;
+      return '';
+    };
+
+    const updatedMessageList = messageList.map((x) => {
+      if (x.id !== messageId) return x;
+
+      const currentContents = getLastStepContents(x);
+      let newContent = [...currentContents];
+
+      const callIndex = newContent.findIndex(
+        (c) => c.$type === MessageContentType.toolCall && (c as ToolCallContent).u === toolCallId,
+      );
+      const respIndex = newContent.findIndex(
+        (c) => c.$type === MessageContentType.toolResponse && (c as ToolResponseContent).u === toolCallId,
+      );
+
+      const deltaText = deltaToText(progress);
+
+      if (respIndex >= 0) {
+        const existingToolResponse = newContent[respIndex] as ToolResponseContent;
+
+        // 如果已经是最终结果（存在非空 r，且没有 progress），则忽略后续 progress，避免与 k=15 冲突
+        if (!existingToolResponse.progress && (existingToolResponse.r ?? '').trim() !== '') {
+          return x;
+        }
+
+        const existingProgress = existingToolResponse.progress ?? [];
+        newContent[respIndex] = {
+          ...existingToolResponse,
+          // r 仅用于复制/兜底展示；不额外加工换行，完全按后端输出
+          r: (existingToolResponse.r ?? '') + deltaText,
+          progress: [...existingProgress, progress],
+        };
+      } else {
+        const toolResponseContent: ToolResponseContent = {
+          i: `tool-response-${toolCallId}`,
+          $type: MessageContentType.toolResponse,
+          u: toolCallId,
+          r: deltaText,
+          progress: [progress],
+        };
+
+        if (callIndex >= 0) {
+          newContent.splice(callIndex + 1, 0, toolResponseContent);
+        } else {
+          newContent.push(toolResponseContent);
+        }
+      }
+
+      return withUpdatedLastStepContents(x, newContent);
+    });
+
     const newSelectedMsgs = [...selectedMsgs];
     newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
@@ -1000,6 +1073,17 @@ const ChatView = memo(() => {
         if (currentToolCallIdBySpan.get(spanId) === toolCallId) {
           currentToolCallIdBySpan.delete(spanId);
         }
+      } else if (value.k === SseResponseKind.ToolProgress) {
+        const { u: toolCallId, r: progress, i: spanId } = value;
+        const msgId = `${ResponseMessageTempId}-${spanId}`;
+        // 离开 ReasoningSegment，完成上一段 reasoning
+        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
+        selectedMessageList = changeSelectedResponseToolProgress(
+          selectedMessageList,
+          msgId,
+          toolCallId,
+          progress,
+        );
       } else if (value.k === SseResponseKind.EndStep) {
         const { r: stepData, i: spanId } = value;
         const msgId = `${ResponseMessageTempId}-${spanId}`;

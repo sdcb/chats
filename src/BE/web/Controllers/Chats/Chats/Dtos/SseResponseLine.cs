@@ -142,7 +142,7 @@ public sealed record CallingToolLine(
 public sealed record ToolProgressLine(
     [property: JsonPropertyName("i")] byte SpanId,
     [property: JsonPropertyName("u")] string ToolCallId,
-    [property: JsonPropertyName("r")] string Progress
+    [property: JsonPropertyName("r")] ToolProgressDelta Delta
 ) : SseResponseLine;
 
 public sealed record ToolCompletedLine(
@@ -168,3 +168,20 @@ public sealed record EndTurn(
 ) : SseResponseLine;
 
 #endregion
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+[JsonDerivedType(typeof(StdOutToolProgressDelta), "stdout")]
+[JsonDerivedType(typeof(StdErrorToolProgressDelta), "stderr")]
+public abstract record ToolProgressDelta;
+
+public sealed record StdOutToolProgressDelta : ToolProgressDelta
+{
+    [JsonPropertyName("stdOutput")]
+    public required string StdOutput { get; init; }
+}
+
+public sealed record StdErrorToolProgressDelta : ToolProgressDelta
+{
+    [JsonPropertyName("stdError")]
+    public required string StdError { get; init; }
+}
