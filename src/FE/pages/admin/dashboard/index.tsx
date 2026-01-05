@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useRouter } from 'next/router';
 
@@ -21,36 +21,54 @@ import {
   getModelStatistics,
   getSourceStatistics,
 } from '@/apis/adminApis';
-import { endOfToday, subDays, subMonths } from 'date-fns';
+import {
+  endOfToday,
+  endOfWeek,
+  endOfMonth,
+  startOfToday,
+  startOfWeek,
+  startOfMonth,
+  subDays,
+} from 'date-fns';
+
+import { Button } from '@/components/ui/button';
 
 export default function Dashboard() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [timeParams, setTimeParams] = useState<StatisticsTimeParams>({
-    start: formatDate(subDays(endOfToday(), 7)),
-    end: formatDate(endOfToday()),
-    tz: getTz(),
-  });
   const [triggerUpdate, setTriggerUpdate] = useState(0);
 
-  useEffect(() => {
-    if (router.isReady) {
-      const start =
-        (router.query.start as string) ||
-        formatDate(subDays(endOfToday(), 7));
-      const end = (router.query.end as string) || formatDate(endOfToday());
-      setStartDate(start);
-      setEndDate(end);
+  const defaultStart = useMemo(
+    () => formatDate(subDays(endOfToday(), 7)),
+    [],
+  );
+  const defaultEnd = useMemo(() => formatDate(endOfToday()), []);
 
-      setTimeParams({
-        start,
-        end,
-        tz: getTz(),
-      });
-    }
-  }, [router.isReady]);
+  const startDate = useMemo(() => {
+    const queryValue = router.query.start;
+    return typeof queryValue === 'string' && queryValue
+      ? queryValue
+      : defaultStart;
+  }, [router.query.start, defaultStart]);
+
+  const endDate = useMemo(() => {
+    const queryValue = router.query.end;
+    return typeof queryValue === 'string' && queryValue ? queryValue : defaultEnd;
+  }, [router.query.end, defaultEnd]);
+
+  const timeParams = useMemo<StatisticsTimeParams>(
+    () => ({
+      start: startDate,
+      end: endDate,
+      tz: getTz(),
+    }),
+    [startDate, endDate],
+  );
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    setTriggerUpdate((prev) => prev + 1);
+  }, [router.isReady, startDate, endDate]);
 
   const handleDateChange = useCallback(
     (newStartDate: string, newEndDate: string) => {
@@ -77,16 +95,36 @@ export default function Dashboard() {
         undefined,
         { shallow: true },
       );
-
-      setTimeParams({
-        start: newStartDate,
-        end: newEndDate,
-        tz: getTz(),
-      });
-
-      setTriggerUpdate((prev) => prev + 1);
     },
     [router],
+  );
+
+  const setQuickRange = useCallback(
+    (range: 'today' | 'yesterday' | 'week' | 'month') => {
+      const today = endOfToday();
+      if (range === 'today') {
+        const date = formatDate(startOfToday());
+        handleDateChange(date, date);
+        return;
+      }
+
+      if (range === 'yesterday') {
+        const date = formatDate(subDays(today, 1));
+        handleDateChange(date, date);
+        return;
+      }
+
+      if (range === 'week') {
+        handleDateChange(
+          formatDate(startOfWeek(today, { weekStartsOn: 1 })),
+          formatDate(endOfWeek(today, { weekStartsOn: 1 })),
+        );
+        return;
+      }
+
+      handleDateChange(formatDate(startOfMonth(today)), formatDate(endOfMonth(today)));
+    },
+    [handleDateChange],
   );
 
   return (
@@ -94,9 +132,39 @@ export default function Dashboard() {
       <DateSelector
         startDate={startDate}
         endDate={endDate}
-        setStartDate={setStartDate}
-        setEndDate={setEndDate}
         onDateChange={handleDateChange}
+        rightSlot={
+          <div className="flex items-center gap-2">
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => setQuickRange('today')}
+            >
+              {t('Today')}
+            </Button>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => setQuickRange('yesterday')}
+            >
+              {t('Yesterday')}
+            </Button>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => setQuickRange('week')}
+            >
+              {t('This week')}
+            </Button>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => setQuickRange('month')}
+            >
+              {t('This month')}
+            </Button>
+          </div>
+        }
       />
 
       <div className='pm-2'>

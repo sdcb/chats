@@ -165,9 +165,9 @@ public class StatisticsController(ChatsDB db) : ControllerBase
         {
             q = q.Where(x => x.CreatedAt >= query.StartDate);
         }
-        if (query.EndDate != null)
+        if (query.EndDateExclusive != null)
         {
-            q = q.Where(x => x.CreatedAt <= query.EndDate);
+            q = q.Where(x => x.CreatedAt < query.EndDateExclusive);
         }
 
         return q;
@@ -177,7 +177,7 @@ public class StatisticsController(ChatsDB db) : ControllerBase
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
         IOrderedQueryable<IGrouping<DateOnly, UserModelUsage>> group = q
-            .GroupBy(x => DateOnly.FromDateTime(x.CreatedAt.AddMinutes(query.TimezoneOffset)))
+            .GroupBy(x => DateOnly.FromDateTime(x.CreatedAt.AddMinutes(-query.TimezoneOffset)))
             .OrderBy(x => x.Key);
         return group;
     }

@@ -6,29 +6,23 @@ import { formatDate } from '@/utils/date';
 
 import DateTimePopover from '@/components/Popover/DateTimePopover';
 
-import { Card } from '@/components/ui/card';
-
 interface DateSelectorProps {
   startDate: string;
   endDate: string;
-  setStartDate: (date: string) => void;
-  setEndDate: (date: string) => void;
   onDateChange?: (startDate: string, endDate: string) => void;
+  rightSlot?: React.ReactNode;
 }
 
 export default function DateSelector({
   startDate,
   endDate,
-  setStartDate,
-  setEndDate,
   onDateChange,
+  rightSlot,
 }: DateSelectorProps) {
   const { t } = useTranslation();
 
   const handleStartDateChange = (date: Date | null) => {
     const formattedDate = date ? formatDate(date.toLocaleDateString()) : '';
-    setStartDate(formattedDate);
-
     if (onDateChange) {
       onDateChange(formattedDate, endDate);
     }
@@ -36,8 +30,6 @@ export default function DateSelector({
 
   const handleEndDateChange = (date: Date | null) => {
     const formattedDate = date ? formatDate(date.toLocaleDateString()) : '';
-    setEndDate(formattedDate);
-
     if (onDateChange) {
       onDateChange(startDate, formattedDate);
     }
@@ -64,6 +56,8 @@ export default function DateSelector({
           onReset={() => handleEndDateChange(null)}
         />
       </div>
+
+      {rightSlot ? <div className="flex items-center">{rightSlot}</div> : null}
     </div>
   );
 }

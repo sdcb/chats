@@ -16,6 +16,11 @@ public record StartEndDate
     internal DateTime? StartDate => Start?.ToDateTime(new TimeOnly(), DateTimeKind.Utc)
         .AddMinutes(TimezoneOffset);
 
-    internal DateTime? EndDate => End?.ToDateTime(new TimeOnly(), DateTimeKind.Utc)
+    /// <summary>
+    /// Exclusive upper bound for end date.
+    /// Treats "end" as the whole end day in user's timezone.
+    /// </summary>
+    internal DateTime? EndDateExclusive => End?.ToDateTime(new TimeOnly(), DateTimeKind.Utc)
+        .AddDays(1)
         .AddMinutes(TimezoneOffset);
 }
