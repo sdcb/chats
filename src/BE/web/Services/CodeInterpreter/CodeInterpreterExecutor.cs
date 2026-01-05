@@ -1,4 +1,5 @@
 using Chats.BE.Infrastructure.Functional;
+using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Neutral;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.ComponentModel.DataAnnotations;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using DBFile = Chats.DB.File;
@@ -233,16 +235,97 @@ public sealed class CodeInterpreterExecutor(
         return string.Join(',', shellPrefix);
     }
 
-    public async Task<Result<string>> ExecuteToolCallAsync(TurnContext ctx, string toolName, string rawJsonArgs, CancellationToken cancellationToken)
+    public async IAsyncEnumerable<ToolProgressDelta> ExecuteToolCallAsync(
+        TurnContext ctx,
+        string toolCallId,
+        string toolName,
+        string rawJsonArgs,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        AttributedToolRegistry.ToolInvokeResult? inv = null;
+        ToolProgressDelta? invokeFailure = null;
         try
         {
-            return await _toolRegistry.InvokeAsync(this, ctx, toolName, rawJsonArgs, cancellationToken);
+            inv = _toolRegistry.Invoke(this, ctx, toolName, rawJsonArgs, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "CodeInterpreter tool failed: {toolName}", toolName);
-            return Result.Fail<string>(ex.Message);
+            invokeFailure = new ToolCompletedToolProgressDelta { Result = Result.Fail<string>(ex.Message) };
+        }
+
+        if (invokeFailure != null)
+        {
+            yield return invokeFailure;
+            yield break;
+        }
+
+        switch (inv)
+        {
+            case AttributedToolRegistry.ToolInvokeStream s:
+                {
+                    Exception? streamException = null;
+                    ConfiguredCancelableAsyncEnumerable<ToolProgressDelta>.Enumerator enumerator = s.Stream
+                        .WithCancellation(cancellationToken)
+                        .GetAsyncEnumerator();
+                    try
+                    {
+                        while (true)
+                        {
+                            bool moved;
+                            try
+                            {
+                                moved = await enumerator.MoveNextAsync();
+                            }
+                            catch (Exception ex)
+                            {
+                                streamException = ex;
+                                break;
+                            }
+
+                            if (!moved)
+                            {
+                                break;
+                            }
+
+                            yield return enumerator.Current;
+                        }
+                    }
+                    finally
+                    {
+                        await enumerator.DisposeAsync();
+                    }
+
+                    if (streamException != null)
+                    {
+                        _logger.LogWarning(streamException, "CodeInterpreter tool stream failed: {toolName}", toolName);
+                        yield return new ToolCompletedToolProgressDelta { Result = Result.Fail<string>(streamException.Message) };
+                    }
+                    break;
+                }
+
+            case AttributedToolRegistry.ToolInvokeTask t:
+                {
+                    Result<string> r;
+                    try
+                    {
+                        r = await t.Task;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "CodeInterpreter tool task failed: {toolName}", toolName);
+                        r = Result.Fail<string>(ex.Message);
+                    }
+                    yield return new ToolCompletedToolProgressDelta { Result = r };
+                    break;
+                }
+
+            default:
+                yield return new ToolCompletedToolProgressDelta
+                {
+                    Result = Result.Fail<string>($"Unknown tool invocation result type: {inv?.GetType().Name}")
+                };
+                break;
         }
     }
 
@@ -437,7 +520,7 @@ public sealed class CodeInterpreterExecutor(
     }
 
     [ToolFunction("Run a shell command inside the session workdir /app")]
-    private async Task<Result<string>> RunCommand(
+    private async IAsyncEnumerable<ToolProgressDelta> RunCommand(
         TurnContext ctx,
         [Required]
         string sessionId,
@@ -446,49 +529,85 @@ public sealed class CodeInterpreterExecutor(
         string command,
         [ToolParam("Command timeout seconds (null means use server default).")]
         int? timeoutSeconds,
-        CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         TurnContext.SessionState state = await EnsureSession(ctx, sessionId, cancellationToken);
         state.UsedInThisTurn = true;
         int timeout = _options.GetEffectiveTimeoutSeconds(timeoutSeconds);
 
-        CommandResult result = await _docker.ExecuteCommandAsync(state.DbSession.ContainerId, state.ShellPrefix, command, PathSafety.WorkDir, timeout, cancellationToken);
-        await TouchSession(state.DbSession, cancellationToken);
+        CommandExitEvent? exit = null;
 
+        Exception? streamException = null;
+        ConfiguredCancelableAsyncEnumerable<CommandOutputEvent>.Enumerator enumerator = _docker
+            .ExecuteCommandStreamAsync(state.DbSession.ContainerId, state.ShellPrefix, command, PathSafety.WorkDir, timeout, cancellationToken)
+            .WithCancellation(cancellationToken)
+            .GetAsyncEnumerator();
+        try
+        {
+            while (true)
+            {
+                bool moved;
+                try
+                {
+                    moved = await enumerator.MoveNextAsync();
+                }
+                catch (Exception ex)
+                {
+                    streamException = ex;
+                    break;
+                }
+
+                if (!moved)
+                {
+                    break;
+                }
+
+                CommandOutputEvent ev = enumerator.Current;
+                switch (ev)
+                {
+                    case CommandStdoutEvent o:
+                        yield return new StdOutToolProgressDelta { StdOutput = o.Data };
+                        break;
+                    case CommandStderrEvent e:
+                        yield return new StdErrorToolProgressDelta { StdError = e.Data };
+                        break;
+                    case CommandExitEvent x:
+                        exit = x;
+                        break;
+                }
+            }
+        }
+        finally
+        {
+            await enumerator.DisposeAsync();
+        }
+
+        if (streamException != null)
+        {
+            yield return new ToolCompletedToolProgressDelta { Result = Result.Fail<string>(streamException.Message) };
+            yield break;
+        }
+
+        if (exit == null)
+        {
+            yield return new ToolCompletedToolProgressDelta
+            {
+                Result = Result.Fail<string>("Command stream ended without exit event")
+            };
+            yield break;
+        }
+
+        // 结束阶段再做 truncate + 生成 summary（progress 阶段不 truncate）。
+        CommandStreamSummaryBuilder summaryBuilder = new(_codePodConfig.OutputOptions);
+        string output = summaryBuilder.BuildRunCommandSummary(exit);
+
+        await TouchSession(state.DbSession, cancellationToken);
         await SyncArtifactsAfterToolCall(ctx, state, cancellationToken);
 
-        return Result.Ok(FormatRunCommandResult(result));
-    }
-
-    private static string FormatRunCommandResult(CommandResult result)
-    {
-        string stdout = result.Stdout ?? string.Empty;
-        string stderr = result.Stderr ?? string.Empty;
-
-        bool isCleanSuccess = result.ExitCode == 0 && !result.IsTruncated && string.IsNullOrWhiteSpace(stderr);
-        if (isCleanSuccess)
+        yield return new ToolCompletedToolProgressDelta
         {
-            return string.IsNullOrWhiteSpace(stdout) ? "(no output)" : stdout;
-        }
-
-        StringBuilder sb = new();
-        sb.AppendLine($"ExitCode: {result.ExitCode}");
-        sb.AppendLine($"ExecutionTimeMs: {result.ExecutionTimeMs}");
-        if (result.IsTruncated) sb.AppendLine("IsTruncated: true");
-
-        if (!string.IsNullOrEmpty(stdout))
-        {
-            sb.AppendLine("Stdout:");
-            sb.AppendLine(stdout);
-        }
-
-        if (!string.IsNullOrEmpty(stderr))
-        {
-            sb.AppendLine("Stderr:");
-            sb.AppendLine(stderr);
-        }
-
-        return sb.ToString().TrimEnd();
+            Result = exit.ExitCode == 0 ? Result.Ok(output) : Result.Fail<string>(output)
+        };
     }
 
     [ToolFunction("Write a file under /app")]
@@ -613,28 +732,28 @@ public sealed class CodeInterpreterExecutor(
                     }
                     else
                     {
-                StringBuilder sb = new();
-                if (wantsLineNumbers)
-                {
-                    sb.Append("TotalLines: ").Append(totalLines).Append('\n');
-                }
+                        StringBuilder sb = new();
+                        if (wantsLineNumbers)
+                        {
+                            sb.Append("TotalLines: ").Append(totalLines).Append('\n');
+                        }
 
-                for (int i = effectiveStart; i <= effectiveEnd; i++)
-                {
-                    string line = lines[i - 1];
-                    if (wantsLineNumbers)
-                    {
-                        sb.Append(i).Append(": ");
-                    }
-                    sb.Append(line);
+                        for (int i = effectiveStart; i <= effectiveEnd; i++)
+                        {
+                            string line = lines[i - 1];
+                            if (wantsLineNumbers)
+                            {
+                                sb.Append(i).Append(": ");
+                            }
+                            sb.Append(line);
 
-                    if (i != effectiveEnd)
-                    {
-                        sb.Append('\n');
-                    }
-                }
+                            if (i != effectiveEnd)
+                            {
+                                sb.Append('\n');
+                            }
+                        }
 
-                output = sb.ToString();
+                        output = sb.ToString();
                     }
                 }
             }
@@ -870,9 +989,9 @@ public sealed class CodeInterpreterExecutor(
             }
         }
 
-        return [..result.Values];
+        return [.. result.Values];
     }
-    
+
     private async Task<TurnContext.SessionState> EnsureSession(TurnContext ctx, string sessionId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(sessionId))

@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.ComponentModel.DataAnnotations;
 using Chats.BE.Infrastructure.Functional;
+using Chats.BE.Controllers.Chats.Chats.Dtos;
 
 namespace Chats.BE.Services.CodeInterpreter;
 
@@ -54,11 +55,15 @@ internal sealed class AttributedToolRegistry
 
     public string GetDescription(string toolName) => _byName[toolName].Description;
 
-    public async Task<Result<string>> InvokeAsync(object hostInstance, CodeInterpreterExecutor.TurnContext ctx, string toolName, string rawJsonArgs, CancellationToken cancellationToken)
+    internal abstract record ToolInvokeResult;
+    internal sealed record ToolInvokeTask(Task<Result<string>> Task) : ToolInvokeResult;
+    internal sealed record ToolInvokeStream(IAsyncEnumerable<ToolProgressDelta> Stream) : ToolInvokeResult;
+
+    public ToolInvokeResult Invoke(object hostInstance, CodeInterpreterExecutor.TurnContext ctx, string toolName, string rawJsonArgs, CancellationToken cancellationToken)
     {
         if (!_byName.TryGetValue(toolName, out ToolDescriptor? desc))
         {
-            return Result.Fail<string>($"Unknown code interpreter tool: {toolName}");
+            return new ToolInvokeTask(Task.FromResult(Result.Fail<string>($"Unknown code interpreter tool: {toolName}")));
         }
 
         JsonObject argsObj;
@@ -73,20 +78,20 @@ internal sealed class AttributedToolRegistry
                 JsonNode? node = JsonNode.Parse(rawJsonArgs);
                 if (node is not JsonObject o)
                 {
-                    return Result.Fail<string>("Tool args must be a JSON object");
+                    return new ToolInvokeTask(Task.FromResult(Result.Fail<string>("Tool args must be a JSON object")));
                 }
                 argsObj = o;
             }
         }
         catch (Exception ex)
         {
-            return Result.Fail<string>($"Invalid JSON args: {ex.Message}");
+            return new ToolInvokeTask(Task.FromResult(Result.Fail<string>($"Invalid JSON args: {ex.Message}")));
         }
 
         Result<object?[]> bound = BindArguments(desc.ToolParameters, argsObj);
         if (bound.IsFailure)
         {
-            return Result.Fail<string>(bound.Error!);
+            return new ToolInvokeTask(Task.FromResult(Result.Fail<string>(bound.Error!)));
         }
 
         object?[] invokeArgs = new object?[bound.Value.Length + 2];
@@ -102,18 +107,24 @@ internal sealed class AttributedToolRegistry
             object? result = desc.Method.Invoke(hostInstance, invokeArgs);
             if (result is Task<Result<string>> task)
             {
-                return await task;
+                return new ToolInvokeTask(task);
             }
 
-            return Result.Fail<string>($"Tool method '{desc.Method.Name}' must return Task<Result<string>>");
+            if (result is IAsyncEnumerable<ToolProgressDelta> stream)
+            {
+                return new ToolInvokeStream(stream);
+            }
+
+            return new ToolInvokeTask(Task.FromResult(Result.Fail<string>(
+                $"Tool method '{desc.Method.Name}' must return Task<Result<string>> or IAsyncEnumerable<ToolProgressDelta>")));
         }
         catch (TargetInvocationException tie) when (tie.InnerException != null)
         {
-            return Result.Fail<string>(tie.InnerException.Message);
+            return new ToolInvokeTask(Task.FromResult(Result.Fail<string>(tie.InnerException.Message)));
         }
         catch (Exception ex)
         {
-            return Result.Fail<string>(ex.Message);
+            return new ToolInvokeTask(Task.FromResult(Result.Fail<string>(ex.Message)));
         }
     }
 
@@ -261,9 +272,12 @@ internal sealed class AttributedToolRegistry
             ToolFunctionAttribute? fn = m.GetCustomAttribute<ToolFunctionAttribute>();
             if (fn == null) continue;
 
-            if (!typeof(Task<Result<string>>).IsAssignableFrom(m.ReturnType))
+            bool isCompat = typeof(Task<Result<string>>).IsAssignableFrom(m.ReturnType);
+            bool isStream = m.ReturnType == typeof(IAsyncEnumerable<ToolProgressDelta>);
+            if (!isCompat && !isStream)
             {
-                throw new InvalidOperationException($"Tool method {hostType.Name}.{m.Name} must return Task<Result<string>>");
+                throw new InvalidOperationException(
+                    $"Tool method {hostType.Name}.{m.Name} must return Task<Result<string>> or IAsyncEnumerable<ToolProgressDelta>");
             }
 
             ParameterInfo[] ps = m.GetParameters();

@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Services.CodeInterpreter;
 using Chats.DockerInterface;
@@ -67,16 +68,32 @@ public sealed class NetworkModeRestrictionsTests
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx();
 
-        Result<string> result = await executor.ExecuteToolCallAsync(
-            ctx,
-            "create_docker_session",
-            "{\"networkMode\":\"host\"}",
-            CancellationToken.None);
+        Result<string> done = await ExecuteToolAsync(executor, ctx, "call_1", "create_docker_session", "{\"networkMode\":\"host\"}");
 
-        Assert.True(result.IsFailure);
-        Assert.Contains("Requested networkMode 'host' exceeds MaxAllowedNetworkMode 'bridge'", result.Error);
+        Assert.True(done.IsFailure);
+        Assert.Contains("Requested networkMode 'host' exceeds MaxAllowedNetworkMode 'bridge'", done.Error);
         Assert.False(docker.EnsureImageCalled);
         Assert.False(docker.CreateContainerCalled);
+    }
+
+    private static async Task<Result<string>> ExecuteToolAsync(
+        CodeInterpreterExecutor exec,
+        CodeInterpreterExecutor.TurnContext ctx,
+        string toolCallId,
+        string toolName,
+        string json)
+    {
+        Result<string>? completed = null;
+        await foreach (ToolProgressDelta delta in exec.ExecuteToolCallAsync(ctx, toolCallId, toolName, json, CancellationToken.None))
+        {
+            if (delta is ToolCompletedToolProgressDelta done)
+            {
+                completed = done.Result;
+            }
+        }
+
+        Assert.NotNull(completed);
+        return completed!;
     }
 
     private static CodeInterpreterExecutor CreateExecutor(TrackingDockerService docker, CodeInterpreterOptions options)
@@ -129,8 +146,8 @@ public sealed class NetworkModeRestrictionsTests
         public Task<ContainerInfo?> GetContainerAsync(string containerId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task DeleteContainerAsync(string containerId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task DeleteAllManagedContainersAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<CommandResult> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<CommandResult> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task UploadFileAsync(string containerId, string containerPath, byte[] content, CancellationToken cancellationToken = default) => throw new NotImplementedException();

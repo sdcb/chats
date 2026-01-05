@@ -256,7 +256,7 @@ public class DockerService : IDockerService
         _logger?.LogInformation("Deleted {Count} managed containers", containers.Count);
     }
 
-    public Task<CommandResult> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
+    public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
     {
         if (shellPrefix == null || shellPrefix.Length == 0)
         {
@@ -267,7 +267,7 @@ public class DockerService : IDockerService
         return ExecuteCommandAsync(containerId, full, workingDirectory, timeoutSeconds, cancellationToken);
     }
 
-    public async Task<CommandResult> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
+    public async Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
     {
         return await WrapDockerOperationAsync("ExecuteCommand", async () =>
         {
@@ -291,18 +291,16 @@ public class DockerService : IDockerService
 
             sw.Stop();
 
-            // 应用输出截断
-            (string? truncatedStdout, bool stdoutTruncated) = TruncateOutput(stdout);
-            (string? truncatedStderr, bool stderrTruncated) = TruncateOutput(stderr);
+            // 应用输出截断（保持与旧 CommandResult 行为一致）
+            (string truncatedStdout, bool stdoutTruncated) = CommandOutputTruncation.Truncate(stdout ?? string.Empty, _config.OutputOptions);
+            (string truncatedStderr, bool stderrTruncated) = CommandOutputTruncation.Truncate(stderr ?? string.Empty, _config.OutputOptions);
 
-            return new CommandResult
-            {
-                Stdout = truncatedStdout,
-                Stderr = truncatedStderr,
-                ExitCode = inspect.ExitCode,
-                ExecutionTimeMs = sw.ElapsedMilliseconds,
-                IsTruncated = stdoutTruncated || stderrTruncated
-            };
+            return new CommandExitEvent(
+                truncatedStdout,
+                truncatedStderr,
+                inspect.ExitCode,
+                sw.ElapsedMilliseconds,
+                stdoutTruncated || stderrTruncated);
         }, containerId);
     }
 
@@ -370,7 +368,7 @@ public class DockerService : IDockerService
         if (_config.IsWindowsContainer)
         {
             string script = "where pwsh >nul 2>nul && (echo pwsh,-NoProfile,-NonInteractive,-Command) || (where powershell >nul 2>nul && (echo powershell,-NoProfile,-NonInteractive,-Command) || (echo cmd,/c))";
-            CommandResult result = await ExecuteCommandAsync(containerId, ["cmd", "/c", script], "/", timeoutSeconds, cancellationToken);
+            CommandExitEvent result = await ExecuteCommandAsync(containerId, ["cmd", "/c", script], "/", timeoutSeconds, cancellationToken);
             return ParseShellPrefixCsv(result.Stdout, fallback: ["cmd", "/c"]);
         }
         else
@@ -381,7 +379,7 @@ public class DockerService : IDockerService
                             "elif command -v sh >/dev/null 2>&1; then echo \"$(command -v sh),-lc\"; " +
                             "else echo '/bin/sh,-lc'; fi";
 
-            CommandResult result = await ExecuteCommandAsync(containerId, ["/bin/sh", "-lc", script], "/", timeoutSeconds, cancellationToken);
+            CommandExitEvent result = await ExecuteCommandAsync(containerId, ["/bin/sh", "-lc", script], "/", timeoutSeconds, cancellationToken);
             return ParseShellPrefixCsv(result.Stdout, fallback: ["/bin/sh", "-lc"]);
         }
     }
@@ -411,6 +409,11 @@ public class DockerService : IDockerService
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+
+        // IMPORTANT: ExecuteCommandStreamAsync 不负责生成 summary。
+        // 这里仅保留完整 stdout/stderr 用于生成最终 exit 事件（不截断）。
+        StringBuilder stdout = new();
+        StringBuilder stderr = new();
 
         ContainerExecCreateResponse execCreate = await _client.Exec.ExecCreateContainerAsync(containerId, new ContainerExecCreateParameters
         {
@@ -444,13 +447,16 @@ public class DockerService : IDockerService
 
                 string text = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
+                // IMPORTANT: progress阶段不做 truncate，让前端实时看到完整 stdout/stderr。
                 if (result.Target == MultiplexedStream.TargetStream.StandardOut)
                 {
-                    yield return CommandOutputEvent.FromStdout(text);
+                    stdout.Append(text);
+                    yield return new CommandStdoutEvent(text);
                 }
                 else
                 {
-                    yield return CommandOutputEvent.FromStderr(text);
+                    stderr.Append(text);
+                    yield return new CommandStderrEvent(text);
                 }
             }
         }
@@ -471,7 +477,12 @@ public class DockerService : IDockerService
             _logger?.LogWarning(ex, "Failed to inspect exec {ExecId}", execId);
         }
 
-        yield return CommandOutputEvent.FromExit(exitCode, sw.ElapsedMilliseconds);
+        yield return new CommandExitEvent(
+            stdout.ToString(),
+            stderr.ToString(),
+            exitCode,
+            sw.ElapsedMilliseconds,
+            IsTruncated: false);
     }
 
     public async Task UploadFileAsync(string containerId, string containerPath, byte[] content, CancellationToken cancellationToken = default)
@@ -729,41 +740,6 @@ public class DockerService : IDockerService
 
             return usage;
         }, containerId);
-    }
-
-    private (string output, bool truncated) TruncateOutput(string output)
-    {
-        OutputOptions options = _config.OutputOptions;
-        byte[] bytes = Encoding.UTF8.GetBytes(output);
-
-        if (bytes.Length <= options.MaxOutputBytes)
-        {
-            return (output, false);
-        }
-
-        int halfSize = options.MaxOutputBytes / 2;
-        int omittedBytes = bytes.Length - options.MaxOutputBytes;
-
-        return options.Strategy switch
-        {
-            TruncationStrategy.Head => (
-                Encoding.UTF8.GetString(bytes, 0, options.MaxOutputBytes) +
-                string.Format(options.TruncationMessage, omittedBytes),
-                true),
-
-            TruncationStrategy.Tail => (
-                string.Format(options.TruncationMessage, omittedBytes) +
-                Encoding.UTF8.GetString(bytes, bytes.Length - options.MaxOutputBytes, options.MaxOutputBytes),
-                true),
-
-            TruncationStrategy.HeadAndTail => (
-                Encoding.UTF8.GetString(bytes, 0, halfSize) +
-                string.Format(options.TruncationMessage, omittedBytes) +
-                Encoding.UTF8.GetString(bytes, bytes.Length - halfSize, halfSize),
-                true),
-
-            _ => (output, false)
-        };
     }
 
     private static async Task<(string stdout, string stderr)> ReadOutputAsync(MultiplexedStream stream, CancellationToken cancellationToken)

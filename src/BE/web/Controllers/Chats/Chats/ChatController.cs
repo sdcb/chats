@@ -621,11 +621,30 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     if (codeExecutionEnabled && codeInterpreter.IsCodeInterpreterTool(callName))
                     {
                         Stopwatch ciSw = Stopwatch.StartNew();
-                        Result<string> ci = await codeInterpreter.ExecuteToolCallAsync(ciCtx!, callName, call.Parameters ?? "{}", cancellationToken);
-                        string ciResult = ci.IsSuccess ? ci.Value : ci.Error!;
-                        ciSw.Stop();
+                        bool completedSuccess = false;
+                        string completedResult = "Tool did not produce completion";
 
-                        writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, ci.IsSuccess, call.ToolCallId!, ciResult));
+                        await foreach (ToolProgressDelta delta in codeInterpreter.ExecuteToolCallAsync(
+                            ciCtx!,
+                            call.ToolCallId!,
+                            callName,
+                            call.Parameters ?? "{}",
+                            cancellationToken))
+                        {
+                            if (delta is ToolCompletedToolProgressDelta done)
+                            {
+                                completedSuccess = done.Result.IsSuccess;
+                                completedResult = done.Result.IsSuccess ? done.Result.Value : done.Result.Error!;
+                                writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, completedSuccess, call.ToolCallId!, completedResult));
+                            }
+                            else
+                            {
+                                writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId!, delta));
+                            }
+                        }
+
+                        string ciResult = completedResult;
+                        ciSw.Stop();
 
                         // Drain any artifacts produced by this tool call and upload via controller thread.
                         List<StepContent> artifactStepContents = [];
@@ -663,7 +682,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                                         ToolCallId = call.ToolCallId,
                                         Response = ciResult,
                                         DurationMs = (int)ciSw.ElapsedMilliseconds,
-                                        IsSuccess = ci.IsSuccess,
+                                        IsSuccess = completedSuccess,
                                     },
                                     ContentTypeId = (byte)DBStepContentType.ToolCallResponse,
                                 },
@@ -739,6 +758,11 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                                 try
                                 {
                                     ToolProgressDelta delta = JsonSerializer.Deserialize<ToolProgressDelta>(pnv.Message!)!;
+                                    if (delta is ToolCompletedToolProgressDelta done)
+                                    {
+                                        throw new Exception("ToolCompletedToolProgressDelta in mcp tool call is not supported!");
+                                    }
+
                                     writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId!, delta));
                                 }
                                 catch (JsonException)

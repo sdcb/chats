@@ -42,12 +42,12 @@ public interface IDockerService : IDisposable
     /// <summary>
     /// 执行 shell 命令（使用指定的 shell 前缀进行包装）
     /// </summary>
-    Task<CommandResult> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default);
+    Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 执行命令数组（直接执行，不经过 shell 包装）
     /// </summary>
-    Task<CommandResult> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default);
+    Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 流式执行 shell 命令（使用指定的 shell 前缀进行包装）

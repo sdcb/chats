@@ -380,7 +380,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
     private JsonObject BuildRequestBody(ChatRequest request)
     {
         // Determine thinking block handling
-        var (allowThinkingBlocks, allowThinking) = DetermineThinkingSettings(request);
+        (bool allowThinkingBlocks, bool allowThinking) = DetermineThinkingSettings(request);
 
         JsonObject body = new()
         {
@@ -551,7 +551,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
     private static JsonObject BuildCountTokensRequestBody(ChatRequest request)
     {
-        var (allowThinkingBlocks, allowThinking) = DetermineThinkingSettings(request);
+        (bool allowThinkingBlocks, bool allowThinking) = DetermineThinkingSettings(request);
 
         JsonObject body = new()
         {

@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Services;
 using Chats.BE.Services.CodeInterpreter;
@@ -50,10 +51,10 @@ public sealed class ReadFileToolTests
         public Task DeleteAllManagedContainersAsync(CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
-        public Task<CommandResult> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
+        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
-        public Task<CommandResult> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
+        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
@@ -173,7 +174,18 @@ public sealed class ReadFileToolTests
     private static async Task<Result<string>> InvokeReadFileAsync(CodeInterpreterExecutor exec, CodeInterpreterExecutor.TurnContext ctx, object args)
     {
         string json = JsonSerializer.Serialize(args);
-        return await exec.ExecuteToolCallAsync(ctx, "read_file", json, CancellationToken.None);
+        Result<string>? completed = null;
+
+        await foreach (ToolProgressDelta delta in exec.ExecuteToolCallAsync(ctx, "call_1", "read_file", json, CancellationToken.None))
+        {
+            if (delta is ToolCompletedToolProgressDelta done)
+            {
+                completed = done.Result;
+            }
+        }
+
+        Assert.NotNull(completed);
+        return completed!;
     }
 
     [Fact]

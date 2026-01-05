@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Services;
 using Chats.BE.Services.CodeInterpreter;
@@ -52,10 +53,10 @@ public sealed class CodeInterpreterSessionLookupTests
         public Task DeleteAllManagedContainersAsync(CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
-        public Task<CommandResult> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
+        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
-        public Task<CommandResult> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
+        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
@@ -168,11 +169,11 @@ public sealed class CodeInterpreterSessionLookupTests
             new ChatTurn { Id = 2, ParentId = 1, ChatId = 1, ChatDockerSessions = [containerA] },
             new ChatTurn { Id = 4, ParentId = 2, ChatId = 1 });
 
-        Result<string> r = await exec.ExecuteToolCallAsync(ctx, "create_docker_session", JsonSerializer.Serialize(new { label = "dotnet-env" }), CancellationToken.None);
+        Result<string> done = await ExecuteToolAsync(exec, ctx, "call_1", "create_docker_session", JsonSerializer.Serialize(new { label = "dotnet-env" }));
 
-        Assert.True(r.IsSuccess);
-        Assert.Contains("sessionId: dotnet-env", r.Value);
-        Assert.Contains("image: mcr.microsoft.com/dotnet/sdk:10.0", r.Value);
+        Assert.True(done.IsSuccess);
+        Assert.Contains("sessionId: dotnet-env", done.Value);
+        Assert.Contains("image: mcr.microsoft.com/dotnet/sdk:10.0", done.Value);
         Assert.Equal(0, docker.CreateContainerCalls);
     }
 
@@ -198,11 +199,11 @@ public sealed class CodeInterpreterSessionLookupTests
             new ChatTurn { Id = 1, ParentId = null, ChatId = 1, Chat = null! },
             new ChatTurn { Id = 3, ParentId = 1, ChatId = 1, Chat = null! });
 
-        Result<string> r = await exec.ExecuteToolCallAsync(ctx, "create_docker_session", JsonSerializer.Serialize(new { label = "dotnet-env" }), CancellationToken.None);
+        Result<string> done = await ExecuteToolAsync(exec, ctx, "call_1", "create_docker_session", JsonSerializer.Serialize(new { label = "dotnet-env" }));
 
-        Assert.True(r.IsSuccess);
-        Assert.Contains("sessionId: dotnet-env", r.Value);
-        Assert.Contains("image: mcr.microsoft.com/dotnet/sdk:10.0", r.Value);
+        Assert.True(done.IsSuccess);
+        Assert.Contains("sessionId: dotnet-env", done.Value);
+        Assert.Contains("image: mcr.microsoft.com/dotnet/sdk:10.0", done.Value);
         Assert.Equal(1, docker.CreateContainerCalls);
 
         using (IServiceScope scope2 = sp.CreateScope())
@@ -213,5 +214,25 @@ public sealed class CodeInterpreterSessionLookupTests
             Assert.Equal("dotnet-env", created.Label);
             Assert.Equal("container-01-abcdef0123456789", created.ContainerId);
         }
+    }
+
+    private static async Task<Result<string>> ExecuteToolAsync(
+        CodeInterpreterExecutor exec,
+        CodeInterpreterExecutor.TurnContext ctx,
+        string toolCallId,
+        string toolName,
+        string json)
+    {
+        Result<string>? completed = null;
+        await foreach (ToolProgressDelta delta in exec.ExecuteToolCallAsync(ctx, toolCallId, toolName, json, CancellationToken.None))
+        {
+            if (delta is ToolCompletedToolProgressDelta done)
+            {
+                completed = done.Result;
+            }
+        }
+
+        Assert.NotNull(completed);
+        return completed!;
     }
 }

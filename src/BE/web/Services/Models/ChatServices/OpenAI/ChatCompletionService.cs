@@ -244,7 +244,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             string? content = delta.TryGetProperty("content", out JsonElement c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
 
             // Parse reasoning content (for models like DeepSeek-R1)
-            var (reasoningContent, reasoningSignature) = TryGetThinkingPayload(delta);
+            (string? reasoningContent, string? reasoningSignature) = TryGetThinkingPayload(delta);
 
             // Parse tool calls
             List<ToolCallSegment> toolCallSegments = [];
@@ -407,7 +407,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                 }
 
                 // Reasoning content
-                var (reasoning, reasoningSignature) = TryGetThinkingPayload(message);
+                (string? reasoning, string? reasoningSignature) = TryGetThinkingPayload(message);
                 if (!string.IsNullOrEmpty(reasoning) && TryCreateThinkingSegmentForStorage(reasoning, reasoningSignature, out ChatSegment? thinkSegment) && thinkSegment != null)
                 {
                     items.Add(thinkSegment);

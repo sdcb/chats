@@ -199,7 +199,7 @@ public sealed class AttributedToolRegistryTest
         TestHost host = new();
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx();
 
-        Result<string> r = await reg.InvokeAsync(host, ctx, "echo_text", "{not json", CancellationToken.None);
+        Result<string> r = await InvokeCompatAsync(reg, host, ctx, "echo_text", "{not json");
         Assert.True(r.IsFailure);
         Assert.Contains("Invalid JSON args", r.Error);
     }
@@ -211,7 +211,7 @@ public sealed class AttributedToolRegistryTest
         TestHost host = new();
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx();
 
-        Result<string> r = await reg.InvokeAsync(host, ctx, "echo_text", "[]", CancellationToken.None);
+        Result<string> r = await InvokeCompatAsync(reg, host, ctx, "echo_text", "[]");
         Assert.True(r.IsFailure);
         Assert.Contains("must be a JSON object", r.Error);
     }
@@ -223,11 +223,11 @@ public sealed class AttributedToolRegistryTest
         TestHost host = new();
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx();
 
-        Result<string> missing = await reg.InvokeAsync(host, ctx, "echo_text", "{}", CancellationToken.None);
+        Result<string> missing = await InvokeCompatAsync(reg, host, ctx, "echo_text", "{}");
         Assert.True(missing.IsFailure);
         Assert.Contains("Missing required parameter: text", missing.Error);
 
-        Result<string> empty = await reg.InvokeAsync(host, ctx, "echo_text", "{\"text\":\"   \"}", CancellationToken.None);
+        Result<string> empty = await InvokeCompatAsync(reg, host, ctx, "echo_text", "{\"text\":\"   \"}");
         Assert.True(empty.IsFailure);
         Assert.Contains("cannot be empty", empty.Error);
     }
@@ -239,7 +239,7 @@ public sealed class AttributedToolRegistryTest
         TestHost host = new();
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx();
 
-        Result<string> bad = await reg.InvokeAsync(host, ctx, "mode", "{\"mode\":\"invalid\"}", CancellationToken.None);
+        Result<string> bad = await InvokeCompatAsync(reg, host, ctx, "mode", "{\"mode\":\"invalid\"}");
         Assert.True(bad.IsFailure);
         Assert.Contains("must be one of", bad.Error);
     }
@@ -251,7 +251,7 @@ public sealed class AttributedToolRegistryTest
         TestHost host = new();
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx();
 
-        Result<string> bad = await reg.InvokeAsync(host, ctx, "need_two", "{\"items\":[\"a\"]}", CancellationToken.None);
+        Result<string> bad = await InvokeCompatAsync(reg, host, ctx, "need_two", "{\"items\":[\"a\"]}");
         Assert.True(bad.IsFailure);
         Assert.Contains("at least 2", bad.Error);
     }
@@ -263,11 +263,11 @@ public sealed class AttributedToolRegistryTest
         TestHost host = new();
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx();
 
-        Result<string> r = await reg.InvokeAsync(host, ctx, "optional_args", "{}", CancellationToken.None);
+        Result<string> r = await InvokeCompatAsync(reg, host, ctx, "optional_args", "{}");
         Assert.True(r.IsSuccess);
         Assert.Equal("note:<null>;count:5", r.Value);
 
-        Result<string> r2 = await reg.InvokeAsync(host, ctx, "optional_args", "{\"note\":\"hi\",\"count\":2}", CancellationToken.None);
+        Result<string> r2 = await InvokeCompatAsync(reg, host, ctx, "optional_args", "{\"note\":\"hi\",\"count\":2}");
         Assert.True(r2.IsSuccess);
         Assert.Equal("note:hi;count:2", r2.Value);
     }
@@ -279,7 +279,7 @@ public sealed class AttributedToolRegistryTest
         TestHost host = new();
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx();
 
-        Result<string> r = await reg.InvokeAsync(host, ctx, "echo_text", "{\"text\":\"x\",\"extra\":123}", CancellationToken.None);
+        Result<string> r = await InvokeCompatAsync(reg, host, ctx, "echo_text", "{\"text\":\"x\",\"extra\":123}");
         Assert.True(r.IsSuccess);
         Assert.Equal("echo:x", r.Value);
     }
@@ -291,9 +291,21 @@ public sealed class AttributedToolRegistryTest
         TestHost host = new();
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx();
 
-        Result<string> r = await reg.InvokeAsync(host, ctx, "limits", "{\"limits\":{\"memoryBytes\":123,\"cpuCores\":2}}", CancellationToken.None);
+        Result<string> r = await InvokeCompatAsync(reg, host, ctx, "limits", "{\"limits\":{\"memoryBytes\":123,\"cpuCores\":2}}");
         Assert.True(r.IsSuccess);
         Assert.Equal("limits:mem=123,cpu=2", r.Value);
+    }
+
+    private static async Task<Result<string>> InvokeCompatAsync(
+        AttributedToolRegistry reg,
+        object host,
+        CodeInterpreterExecutor.TurnContext ctx,
+        string toolName,
+        string json)
+    {
+        AttributedToolRegistry.ToolInvokeResult inv = reg.Invoke(host, ctx, toolName, json, CancellationToken.None);
+        AttributedToolRegistry.ToolInvokeTask task = Assert.IsType<AttributedToolRegistry.ToolInvokeTask>(inv);
+        return await task.Task;
     }
 
     private sealed class BadHost

@@ -3,6 +3,7 @@ using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.UrlEncryption;
+using Chats.BE.Infrastructure.Functional;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Chats.Dtos;
@@ -172,6 +173,7 @@ public sealed record EndTurn(
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
 [JsonDerivedType(typeof(StdOutToolProgressDelta), "stdout")]
 [JsonDerivedType(typeof(StdErrorToolProgressDelta), "stderr")]
+[JsonDerivedType(typeof(ToolCompletedToolProgressDelta), "completed")]
 public abstract record ToolProgressDelta;
 
 public sealed record StdOutToolProgressDelta : ToolProgressDelta
@@ -184,4 +186,10 @@ public sealed record StdErrorToolProgressDelta : ToolProgressDelta
 {
     [JsonPropertyName("stdError")]
     public required string StdError { get; init; }
+}
+
+public sealed record ToolCompletedToolProgressDelta : ToolProgressDelta
+{
+    [JsonPropertyName("result")]
+    public required Result<string> Result { get; init; }
 }
