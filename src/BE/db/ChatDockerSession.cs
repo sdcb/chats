@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,6 +43,9 @@ public partial class ChatDockerSession
 
     [StringLength(128)]
     public string ShellPrefix { get; set; } = null!;
+
+    [StringLength(45)]
+    public string? Ip { get; set; }
 
     [ForeignKey("OwnerTurnId")]
     [InverseProperty("ChatDockerSessions")]

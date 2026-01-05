@@ -55,4 +55,9 @@ public class ContainerInfo
     /// 例如：Linux: ["/bin/bash", "-lc"], Windows: ["pwsh", "-NoProfile", "-NonInteractive", "-Command"]
     /// </summary>
     public required string[] ShellPrefix { get; init; }
+
+    /// <summary>
+    /// 容器 IP（可能为空，例如 host/none 网络模式）
+    /// </summary>
+    public string? Ip { get; init; }
 }

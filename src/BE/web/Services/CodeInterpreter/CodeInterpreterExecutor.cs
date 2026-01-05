@@ -345,6 +345,7 @@ public sealed class CodeInterpreterExecutor(
                 ContainerId = container.ContainerId,
                 Image = effectiveImage,
                 ShellPrefix = ToShellPrefixCsv(container.ShellPrefix),
+                Ip = container.Ip,
                 MemoryBytes = limits.MemoryBytes == 0 ? null : limits.MemoryBytes,
                 CpuCores = limits.CpuCores == 0 ? null : (float)limits.CpuCores,
                 MaxProcesses = limits.MaxProcesses == 0 ? null : (short)Math.Min(short.MaxValue, limits.MaxProcesses),
@@ -398,6 +399,7 @@ public sealed class CodeInterpreterExecutor(
         {
             string basicInfo = $"sessionId: {dbSession.Label}, image: {dbSession.Image}\nshell: [{dbSession.ShellPrefix.Replace(',', ' ')}]";
             string resourceLimits = $"resource limits: cpu cores={dbSession.CpuCores}, memory={HumanizeMemoryLimits(dbSession.MemoryBytes)}, max processes={dbSession.MaxProcesses}, network={(NetworkMode)dbSession.NetworkMode}";
+            if (!string.IsNullOrWhiteSpace(dbSession.Ip)) resourceLimits += $", ip={dbSession.Ip}";
             return basicInfo + "\n" + resourceLimits;
 
             static string HumanizeMemoryLimits(long? memoryLimits)

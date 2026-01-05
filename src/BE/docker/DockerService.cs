@@ -144,6 +144,9 @@ public class DockerService : IDockerService
         string[] shellPrefix = await DetectShellPrefixAsync(response.ID, cancellationToken);
         _logger?.LogDebug("Detected shell prefix for container {ContainerId}: {ShellPrefix}", response.ID[..12], string.Join(' ', shellPrefix));
 
+        ContainerInspectResponse inspect = await _client.Containers.InspectContainerAsync(response.ID, cancellationToken);
+        string? ip = ExtractContainerIp(inspect.NetworkSettings);
+
         return new ContainerInfo
         {
             ContainerId = response.ID,
@@ -154,7 +157,8 @@ public class DockerService : IDockerService
             CreatedAt = DateTimeOffset.UtcNow,
             StartedAt = DateTimeOffset.UtcNow,
             Labels = labels,
-            ShellPrefix = shellPrefix
+            ShellPrefix = shellPrefix,
+            Ip = ip
         };
     }
 
@@ -186,7 +190,8 @@ public class DockerService : IDockerService
                     Status = SdkContainerStatus.Idle,
                     CreatedAt = container.Created,
                     Labels = new Dictionary<string, string>(container.Labels),
-                    ShellPrefix = _config.IsWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"]
+                    ShellPrefix = _config.IsWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"],
+                    Ip = ExtractContainerIp(container.NetworkSettings?.Networks)
                 });
             }
 
@@ -205,6 +210,8 @@ public class DockerService : IDockerService
                 return null;
             }
 
+            string? ip = ExtractContainerIp(inspect.NetworkSettings);
+
             return new ContainerInfo
             {
                 ContainerId = inspect.ID,
@@ -215,7 +222,8 @@ public class DockerService : IDockerService
                 CreatedAt = inspect.Created,
                 StartedAt = DateTimeOffset.TryParse(inspect.State.StartedAt, out DateTimeOffset started) ? started : null,
                 Labels = new Dictionary<string, string>(inspect.Config.Labels),
-                ShellPrefix = _config.IsWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"]
+                ShellPrefix = _config.IsWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"],
+                Ip = ip
             };
         }
         catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -313,6 +321,44 @@ public class DockerService : IDockerService
 
         string[] full = [.. shellPrefix, command];
         return ExecuteCommandStreamAsync(containerId, full, workingDirectory, timeoutSeconds, cancellationToken);
+    }
+
+    private static string? ExtractContainerIp(NetworkSettings? networkSettings)
+    {
+        if (networkSettings == null) return null;
+
+        if (!string.IsNullOrWhiteSpace(networkSettings.IPAddress))
+        {
+            return networkSettings.IPAddress;
+        }
+
+        if (networkSettings.Networks != null)
+        {
+            foreach ((_, EndpointSettings? endpoint) in networkSettings.Networks)
+            {
+                if (!string.IsNullOrWhiteSpace(endpoint?.IPAddress))
+                {
+                    return endpoint!.IPAddress;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static string? ExtractContainerIp(IDictionary<string, EndpointSettings>? networks)
+    {
+        if (networks == null) return null;
+
+        foreach ((_, EndpointSettings? endpoint) in networks)
+        {
+            if (!string.IsNullOrWhiteSpace(endpoint?.IPAddress))
+            {
+                return endpoint!.IPAddress;
+            }
+        }
+
+        return null;
     }
 
     private async Task<string[]> DetectShellPrefixAsync(string containerId, CancellationToken cancellationToken)

@@ -15,6 +15,7 @@ BEGIN
         ContainerId NVARCHAR(128) NOT NULL,
         Image NVARCHAR(256) NOT NULL,
         ShellPrefix NVARCHAR(128) NOT NULL,
+        Ip NVARCHAR(45) NULL,
         MemoryBytes BIGINT NULL,
         CpuCores REAL NULL,
         MaxProcesses SMALLINT NULL,
@@ -193,6 +194,29 @@ END
 ELSE
 BEGIN
     PRINT N'    -> ChatDockerSession 表不存在，跳过 Step 1.2';
+END
+
+GO
+
+-- =============================================
+-- 第一步（1.3）：添加 Ip 字段（若不存在）
+-- =============================================
+PRINT N'[Step 1.3] 添加 Ip 字段（若不存在）';
+
+IF OBJECT_ID(N'dbo.ChatDockerSession', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ChatDockerSession', N'Ip') IS NULL
+BEGIN
+    ALTER TABLE dbo.ChatDockerSession ADD Ip NVARCHAR(45) NULL;
+    PRINT N'    -> 已添加 Ip 字段';
+END
+ELSE IF OBJECT_ID(N'dbo.ChatDockerSession', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ChatDockerSession', N'Ip') IS NOT NULL
+BEGIN
+    PRINT N'    -> Ip 字段已存在，跳过';
+END
+ELSE
+BEGIN
+    PRINT N'    -> ChatDockerSession 表不存在，跳过 Step 1.3';
 END
 
 GO
