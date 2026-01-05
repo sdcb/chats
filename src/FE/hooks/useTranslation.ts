@@ -4,6 +4,8 @@ import {
   setLanguage,
 } from '@/utils/language';
 
+import { useCallback } from 'react';
+
 import zhCN from '../locales/zh-CN.json';
 
 const TRANSLATIONS = {
@@ -35,7 +37,10 @@ export const translate = (message: string, params: Record<string, any> = {}) => 
 };
 
 const useTranslation = () => {
-  const t = (message: string, params = {}) => translate(message, params);
+  const t = useCallback(
+    (message: string, params = {}) => translate(message, params),
+    [],
+  );
 
   const setForceUpdate = (forceUpdate: () => void) => {
     globalForceUpdate = forceUpdate;
