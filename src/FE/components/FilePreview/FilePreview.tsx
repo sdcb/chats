@@ -124,8 +124,10 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', in
 
   // 图片类型 - 可点击预览
   if (isImageType(contentType)) {
+    // 注意：不能同时“固定 height”又“限制 maxWidth=100%”，否则在窄屏下宽度被压缩但高度不变，会导致图片拉伸。
+    // 这里改为用 maxHeight 限制最大高度，并让浏览器用 auto 尺寸保持原始比例。
     const imageStyle: React.CSSProperties = interactive
-      ? { height: maxHeight, width: 'auto', maxWidth: '100%' }
+      ? { maxHeight, width: 'auto', height: 'auto', maxWidth: '100%' }
       : { height: '100%', width: '100%', objectFit: 'cover' };
 
     return (
