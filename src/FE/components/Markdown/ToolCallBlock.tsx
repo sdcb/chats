@@ -3,7 +3,6 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 import useTranslation from '@/hooks/useTranslation';
-import CopyButton from '@/components/Button/CopyButton';
 import { ChatSpanStatus, ToolCallContent, ToolResponseContent, ToolProgressDelta } from '@/types/chat';
 import { IconCheck, IconChevronRight, IconClipboard } from '@/components/Icons/index';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -12,6 +11,11 @@ interface ToolCallBlockProps {
     toolCall: ToolCallContent;
     toolResponse?: ToolResponseContent;
     chatStatus?: ChatSpanStatus;
+    /**
+     * 当后续（非 tool call/response）message content 开始输出后，自动收起。
+     * 注意：不会覆盖用户手动展开/收起。
+     */
+    nextMessageContentStarted?: boolean;
 }
 
 interface WebSearchResult {
@@ -21,21 +25,22 @@ interface WebSearchResult {
     page_age?: string;
 }
 
-export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolResponse, chatStatus }) => {
+export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolResponse, chatStatus, nextMessageContentStarted }) => {
     const { t } = useTranslation();
     const [isParamsCopied, setIsParamsCopied] = useState<boolean>(false);
     const [isResponseCopied, setIsResponseCopied] = useState<boolean>(false);
     // 计算 finished 状态：有 toolResponse 或者 聊天状态不是 Chatting (即已结束或失败)
     const finished = !!toolResponse || (chatStatus !== ChatSpanStatus.Chatting);
 
-    const [isOpen, setIsOpen] = useState<boolean>(!finished);
+    const [isOpen, setIsOpen] = useState<boolean>(!(nextMessageContentStarted ?? false));
     const [isManuallyToggled, setIsManuallyToggled] = useState<boolean>(false);
 
-    // 自动开合逻辑（不覆盖用户手动动作）- 仅依赖 finished，类似 ThinkingMessage
+    // 自动开合逻辑（不覆盖用户手动动作）
+    // 目标：在下一个 message content（非 tool）开始前保持展开。
     useEffect(() => {
         if (isManuallyToggled) return;
-        setIsOpen(!finished);
-    }, [finished, isManuallyToggled]);
+        setIsOpen(!(nextMessageContentStarted ?? false));
+    }, [nextMessageContentStarted, isManuallyToggled]);
 
     // 检查是否应该只显示code，并返回code内容
     const getCodeIfAvailable = (): string | null => {
