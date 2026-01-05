@@ -597,9 +597,9 @@ public sealed class CodeInterpreterExecutor(
             yield break;
         }
 
-        // 结束阶段再做 truncate + 生成 summary（progress 阶段不 truncate）。
-        CommandStreamSummaryBuilder summaryBuilder = new(_codePodConfig.OutputOptions);
-        string output = summaryBuilder.BuildRunCommandSummary(exit);
+        // DockerService 已保证 exit 事件与 ExecuteCommandAsync 返回完全一致（包含 truncate/IsTruncated）。
+        // RunCommand 只负责把 CommandExitEvent 格式化为旧 run_command 的文本输出。
+        string output = CommandExitEventFormatter.FormatForRunCommand(exit);
 
         await TouchSession(state.DbSession, cancellationToken);
         await SyncArtifactsAfterToolCall(ctx, state, cancellationToken);

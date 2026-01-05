@@ -16,19 +16,9 @@ namespace Chats.DockerInterface;
 /// <summary>
 /// Docker服务实现
 /// </summary>
-public class DockerService : IDockerService
+public class DockerService(CodePodConfig config, ILogger<DockerService>? logger = null) : IDockerService
 {
-    private readonly DockerClient _client;
-    private readonly CodePodConfig _config;
-    private readonly ILogger<DockerService>? _logger;
-
-
-    public DockerService(CodePodConfig config, ILogger<DockerService>? logger = null)
-    {
-        _client = new DockerClientConfiguration(config.GetDockerEndpointUri()).CreateClient();
-        _config = config;
-        _logger = logger;
-    }
+    private readonly DockerClient _client = new DockerClientConfiguration(config.GetDockerEndpointUri()).CreateClient();
 
     public async Task EnsureImageAsync(string image, CancellationToken cancellationToken = default)
     {
@@ -37,11 +27,11 @@ public class DockerService : IDockerService
             try
             {
                 await _client.Images.InspectImageAsync(image, cancellationToken);
-                _logger?.LogInformation("Image {Image} already exists", image);
+                logger?.LogInformation("Image {Image} already exists", image);
             }
             catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                _logger?.LogInformation("Pulling image {Image}...", image);
+                logger?.LogInformation("Pulling image {Image}...", image);
                 await _client.Images.CreateImageAsync(
                     new ImagesCreateParameters { FromImage = image },
                     null,
@@ -49,11 +39,11 @@ public class DockerService : IDockerService
                     {
                         if (!string.IsNullOrEmpty(m.Status))
                         {
-                            _logger?.LogDebug("{Status}", m.Status);
+                            logger?.LogDebug("{Status}", m.Status);
                         }
                     }),
                     cancellationToken);
-                _logger?.LogInformation("Image {Image} pulled successfully", image);
+                logger?.LogInformation("Image {Image} pulled successfully", image);
             }
         });
     }
@@ -78,33 +68,33 @@ public class DockerService : IDockerService
     private async Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits, NetworkMode? networkMode, CancellationToken cancellationToken)
     {
         // 使用指定的资源限制或默认值
-        ResourceLimits limits = resourceLimits ?? _config.DefaultResourceLimits;
+        ResourceLimits limits = resourceLimits ?? config.DefaultResourceLimits;
         // 验证不超过最大限制
-        limits.Validate(_config.MaxResourceLimits);
+        limits.Validate(config.MaxResourceLimits);
 
         // 使用指定的网络模式或默认值
-        NetworkMode network = networkMode ?? _config.DefaultNetworkMode;
+        NetworkMode network = networkMode ?? config.DefaultNetworkMode;
 
-        string containerName = $"{_config.LabelPrefix}-{Guid.NewGuid():N}";
+        string containerName = $"{config.LabelPrefix}-{Guid.NewGuid():N}";
         Dictionary<string, string> labels = new()
         {
-            [$"{_config.LabelPrefix}.managed"] = "true",
-            [$"{_config.LabelPrefix}.created"] = DateTimeOffset.UtcNow.ToString("o"),
-            [$"{_config.LabelPrefix}.memory"] = limits.MemoryBytes.ToString(),
-            [$"{_config.LabelPrefix}.cpu"] = limits.CpuCores.ToString("F2"),
-            [$"{_config.LabelPrefix}.pids"] = limits.MaxProcesses.ToString(),
-            [$"{_config.LabelPrefix}.network"] = network.ToString().ToLower()
+            [$"{config.LabelPrefix}.managed"] = "true",
+            [$"{config.LabelPrefix}.created"] = DateTimeOffset.UtcNow.ToString("o"),
+            [$"{config.LabelPrefix}.memory"] = limits.MemoryBytes.ToString(),
+            [$"{config.LabelPrefix}.cpu"] = limits.CpuCores.ToString("F2"),
+            [$"{config.LabelPrefix}.pids"] = limits.MaxProcesses.ToString(),
+            [$"{config.LabelPrefix}.network"] = network.ToString().ToLower()
         };
 
         // 构建 HostConfig，Windows 容器不支持某些选项
         HostConfig hostConfig = new()
         {
-            NetworkMode = network.ToDockerNetworkMode(_config.IsWindowsContainer),
+            NetworkMode = network.ToDockerNetworkMode(config.IsWindowsContainer),
             Memory = limits.MemoryBytes,
             NanoCPUs = (long)(limits.CpuCores * 1_000_000_000) // 1e9 = 1 CPU
         };
 
-        if (!_config.IsWindowsContainer)
+        if (!config.IsWindowsContainer)
         {
             // Linux 容器：支持 PidsLimit
             hostConfig.PidsLimit = limits.MaxProcesses;
@@ -113,7 +103,7 @@ public class DockerService : IDockerService
         {
             // Windows 容器：Windows Server 2025 支持 Memory 和 CPU 限制
             // 但不支持 PidsLimit（这是 Linux cgroups 特有功能）
-            _logger?.LogDebug("Windows container mode: PidsLimit is not supported");
+            logger?.LogDebug("Windows container mode: PidsLimit is not supported");
         }
 
         CreateContainerResponse response = await _client.Containers.CreateContainerAsync(new CreateContainerParameters
@@ -123,26 +113,26 @@ public class DockerService : IDockerService
             Tty = false,
             AttachStdout = false,
             AttachStderr = false,
-            Cmd = _config.GetKeepAliveCommand(),
-            WorkingDir = _config.WorkDir,
+            Cmd = config.GetKeepAliveCommand(),
+            WorkingDir = config.WorkDir,
             Labels = labels,
             HostConfig = hostConfig
         }, cancellationToken);
 
         await _client.Containers.StartContainerAsync(response.ID, new ContainerStartParameters(), cancellationToken);
 
-        _logger?.LogInformation("Created and started container {ContainerId} (name: {Name}, memory: {Memory}MB, cpu: {Cpu}, pids: {Pids}, network: {Network})",
+        logger?.LogInformation("Created and started container {ContainerId} (name: {Name}, memory: {Memory}MB, cpu: {Cpu}, pids: {Pids}, network: {Network})",
             response.ID[..12], containerName,
             limits.MemoryBytes / 1024 / 1024, limits.CpuCores, limits.MaxProcesses, network);
 
         // 创建工作目录和 artifacts 目录
-        string mkdirCmd = _config.GetMkdirCommand(_config.WorkDir, $"{_config.WorkDir}/{_config.ArtifactsDir}");
-        string[] bootstrapPrefix = _config.IsWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"];
+        string mkdirCmd = config.GetMkdirCommand(config.WorkDir, $"{config.WorkDir}/{config.ArtifactsDir}");
+        string[] bootstrapPrefix = config.IsWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"];
         await ExecuteCommandAsync(response.ID, [.. bootstrapPrefix, mkdirCmd], "/", 30, cancellationToken);
 
         // 探测容器内可用的 shell 前缀（用于后续命令执行；需要落库）
         string[] shellPrefix = await DetectShellPrefixAsync(response.ID, cancellationToken);
-        _logger?.LogDebug("Detected shell prefix for container {ContainerId}: {ShellPrefix}", response.ID[..12], string.Join(' ', shellPrefix));
+        logger?.LogDebug("Detected shell prefix for container {ContainerId}: {ShellPrefix}", response.ID[..12], string.Join(' ', shellPrefix));
 
         ContainerInspectResponse inspect = await _client.Containers.InspectContainerAsync(response.ID, cancellationToken);
         string? ip = ExtractContainerIp(inspect.NetworkSettings);
@@ -173,7 +163,7 @@ public class DockerService : IDockerService
                 {
                     ["label"] = new Dictionary<string, bool>
                     {
-                        [$"{_config.LabelPrefix}.managed=true"] = true
+                        [$"{config.LabelPrefix}.managed=true"] = true
                     }
                 }
             }, cancellationToken);
@@ -190,7 +180,7 @@ public class DockerService : IDockerService
                     Status = SdkContainerStatus.Idle,
                     CreatedAt = container.Created,
                     Labels = new Dictionary<string, string>(container.Labels),
-                    ShellPrefix = _config.IsWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"],
+                    ShellPrefix = config.IsWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"],
                     Ip = ExtractContainerIp(container.NetworkSettings?.Networks)
                 });
             }
@@ -205,7 +195,7 @@ public class DockerService : IDockerService
         {
             ContainerInspectResponse inspect = await _client.Containers.InspectContainerAsync(containerId, cancellationToken);
 
-            if (!inspect.Config.Labels.TryGetValue($"{_config.LabelPrefix}.managed", out string? managed) || managed != "true")
+            if (!inspect.Config.Labels.TryGetValue($"{config.LabelPrefix}.managed", out string? managed) || managed != "true")
             {
                 return null;
             }
@@ -222,7 +212,7 @@ public class DockerService : IDockerService
                 CreatedAt = inspect.Created,
                 StartedAt = DateTimeOffset.TryParse(inspect.State.StartedAt, out DateTimeOffset started) ? started : null,
                 Labels = new Dictionary<string, string>(inspect.Config.Labels),
-                ShellPrefix = _config.IsWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"],
+                ShellPrefix = config.IsWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"],
                 Ip = ip
             };
         }
@@ -238,11 +228,11 @@ public class DockerService : IDockerService
         {
             // Force=true 会自动停止运行中的容器
             await _client.Containers.RemoveContainerAsync(containerId, new ContainerRemoveParameters { Force = true }, cancellationToken);
-            _logger?.LogInformation("Deleted container {ContainerId}", containerId[..Math.Min(12, containerId.Length)]);
+            logger?.LogInformation("Deleted container {ContainerId}", containerId[..Math.Min(12, containerId.Length)]);
         }
         catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            _logger?.LogWarning("Container {ContainerId} not found, already removed", containerId[..Math.Min(12, containerId.Length)]);
+            logger?.LogWarning("Container {ContainerId} not found, already removed", containerId[..Math.Min(12, containerId.Length)]);
         }
     }
 
@@ -253,7 +243,7 @@ public class DockerService : IDockerService
         {
             await DeleteContainerAsync(container.ContainerId, cancellationToken);
         }
-        _logger?.LogInformation("Deleted {Count} managed containers", containers.Count);
+        logger?.LogInformation("Deleted {Count} managed containers", containers.Count);
     }
 
     public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
@@ -292,8 +282,8 @@ public class DockerService : IDockerService
             sw.Stop();
 
             // 应用输出截断（保持与旧 CommandResult 行为一致）
-            (string truncatedStdout, bool stdoutTruncated) = CommandOutputTruncation.Truncate(stdout ?? string.Empty, _config.OutputOptions);
-            (string truncatedStderr, bool stderrTruncated) = CommandOutputTruncation.Truncate(stderr ?? string.Empty, _config.OutputOptions);
+            (string truncatedStdout, bool stdoutTruncated) = CommandOutputTruncation.Truncate(stdout ?? string.Empty, config.OutputOptions);
+            (string truncatedStderr, bool stderrTruncated) = CommandOutputTruncation.Truncate(stderr ?? string.Empty, config.OutputOptions);
 
             return new CommandExitEvent(
                 truncatedStdout,
@@ -365,7 +355,7 @@ public class DockerService : IDockerService
         // 输出格式：逗号分隔的一行，例如："pwsh,-NoProfile,-NonInteractive,-Command" 或 "/bin/bash,-lc"。
         const int timeoutSeconds = 10;
 
-        if (_config.IsWindowsContainer)
+        if (config.IsWindowsContainer)
         {
             string script = "where pwsh >nul 2>nul && (echo pwsh,-NoProfile,-NonInteractive,-Command) || (where powershell >nul 2>nul && (echo powershell,-NoProfile,-NonInteractive,-Command) || (echo cmd,/c))";
             CommandExitEvent result = await ExecuteCommandAsync(containerId, ["cmd", "/c", script], "/", timeoutSeconds, cancellationToken);
@@ -410,10 +400,10 @@ public class DockerService : IDockerService
     {
         Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
 
-        // IMPORTANT: ExecuteCommandStreamAsync 不负责生成 summary。
-        // 这里仅保留完整 stdout/stderr 用于生成最终 exit 事件（不截断）。
-        StringBuilder stdout = new();
-        StringBuilder stderr = new();
+        // IMPORTANT:
+        // - progress 阶段 stdout/stderr 不做 truncate。
+        // - exit 事件必须与 ExecuteCommandAsync 返回的 CommandExitEvent 字段语义完全一致（包含 truncate + IsTruncated）。
+        CommandStreamSummaryBuilder summaryBuilder = new(config.OutputOptions);
 
         ContainerExecCreateResponse execCreate = await _client.Exec.ExecCreateContainerAsync(containerId, new ContainerExecCreateParameters
         {
@@ -424,7 +414,7 @@ public class DockerService : IDockerService
         }, cancellationToken);
 
         string execId = execCreate.ID;
-        _logger?.LogDebug("Created exec instance {ExecId} for container {ContainerId}", execId, containerId[..12]);
+        logger?.LogDebug("Created exec instance {ExecId} for container {ContainerId}", execId, containerId[..12]);
 
         using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
@@ -450,12 +440,12 @@ public class DockerService : IDockerService
                 // IMPORTANT: progress阶段不做 truncate，让前端实时看到完整 stdout/stderr。
                 if (result.Target == MultiplexedStream.TargetStream.StandardOut)
                 {
-                    stdout.Append(text);
+                    summaryBuilder.AppendStdout(text);
                     yield return new CommandStdoutEvent(text);
                 }
                 else
                 {
-                    stderr.Append(text);
+                    summaryBuilder.AppendStderr(text);
                     yield return new CommandStderrEvent(text);
                 }
             }
@@ -474,15 +464,10 @@ public class DockerService : IDockerService
         }
         catch (Exception ex)
         {
-            _logger?.LogWarning(ex, "Failed to inspect exec {ExecId}", execId);
+            logger?.LogWarning(ex, "Failed to inspect exec {ExecId}", execId);
         }
 
-        yield return new CommandExitEvent(
-            stdout.ToString(),
-            stderr.ToString(),
-            exitCode,
-            sw.ElapsedMilliseconds,
-            IsTruncated: false);
+        yield return summaryBuilder.BuildExit(exitCode, sw.ElapsedMilliseconds);
     }
 
     public async Task UploadFileAsync(string containerId, string containerPath, byte[] content, CancellationToken cancellationToken = default)
@@ -504,7 +489,7 @@ public class DockerService : IDockerService
                 tarStream,
                 cancellationToken);
 
-            _logger?.LogInformation("Uploaded file to container {ContainerId}: {Path} ({Size} bytes)", containerId[..12], containerPath, content.Length);
+            logger?.LogInformation("Uploaded file to container {ContainerId}: {Path} ({Size} bytes)", containerId[..12], containerPath, content.Length);
         }, containerId);
     }
 
@@ -706,7 +691,7 @@ public class DockerService : IDockerService
 
             if (statsData == null)
             {
-                _logger?.LogWarning("No stats data received for container {ContainerId}", containerId[..12]);
+                logger?.LogWarning("No stats data received for container {ContainerId}", containerId[..12]);
                 return null;
             }
 
@@ -776,12 +761,12 @@ public class DockerService : IDockerService
         }
         catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound && containerId != null)
         {
-            _logger?.LogError(ex, "Container {ContainerId} not found", containerId);
+            logger?.LogError(ex, "Container {ContainerId} not found", containerId);
             throw new ContainerNotFoundException(containerId, ex);
         }
         catch (DockerApiException ex)
         {
-            _logger?.LogError(ex, "Docker API operation {Operation} failed: {StatusCode}", operation, ex.StatusCode);
+            logger?.LogError(ex, "Docker API operation {Operation} failed: {StatusCode}", operation, ex.StatusCode);
             throw;
         }
         catch (OperationCanceledException)
@@ -790,7 +775,7 @@ public class DockerService : IDockerService
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Docker operation {Operation} failed", operation);
+            logger?.LogError(ex, "Docker operation {Operation} failed", operation);
             throw;
         }
     }

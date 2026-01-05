@@ -3,42 +3,28 @@ using System.Text;
 namespace Chats.DockerInterface.Models;
 
 /// <summary>
-/// 用于 run_command：基于 CommandExitEvent 生成与旧 run_command 相同的 summary 文本。
-///
-/// 注意：
-/// - ExecuteCommandStreamAsync 不负责生成 summary；只负责产出原始 stdout/stderr chunk 与原始 exit 事件。
-/// - ExecuteCommandAsync 仍会按 OutputOptions 截断并设置 IsTruncated（与旧 CommandResult 行为一致）。
+/// 用于 ExecuteCommandStreamAsync：缓存完整 stdout/stderr（progress 阶段不截断），结束时按 OutputOptions 截断，
+/// 生成与 ExecuteCommandAsync 返回完全一致字段的 CommandExitEvent。
 /// </summary>
-public sealed class CommandStreamSummaryBuilder(OutputOptions options)
+internal sealed class CommandStreamSummaryBuilder(OutputOptions options)
 {
-    public CommandExitEvent ApplyTruncationIfNeeded(CommandExitEvent exit)
+    private readonly StringBuilder _stdout = new();
+    private readonly StringBuilder _stderr = new();
+
+    public void AppendStdout(string chunk) => _stdout.Append(chunk);
+
+    public void AppendStderr(string chunk) => _stderr.Append(chunk);
+
+    public CommandExitEvent BuildExit(long exitCode, long executionTimeMs)
     {
-        if (exit.IsTruncated)
-        {
-            // Assume stdout/stderr already truncated (ExecuteCommandAsync behavior).
-            return exit;
-        }
-
-        (string truncatedStdout, bool stdoutTruncated) = CommandOutputTruncation.Truncate(exit.Stdout ?? string.Empty, options);
-        (string truncatedStderr, bool stderrTruncated) = CommandOutputTruncation.Truncate(exit.Stderr ?? string.Empty, options);
-
-        bool isTruncated = stdoutTruncated || stderrTruncated;
-        if (!isTruncated)
-        {
-            return exit;
-        }
+        (string truncatedStdout, bool stdoutTruncated) = CommandOutputTruncation.Truncate(_stdout.ToString(), options);
+        (string truncatedStderr, bool stderrTruncated) = CommandOutputTruncation.Truncate(_stderr.ToString(), options);
 
         return new CommandExitEvent(
             truncatedStdout,
             truncatedStderr,
-            exit.ExitCode,
-            exit.ExecutionTimeMs,
-            IsTruncated: true);
-    }
-
-    public string BuildRunCommandSummary(CommandExitEvent exit)
-    {
-        CommandExitEvent truncated = ApplyTruncationIfNeeded(exit);
-        return CommandExitEventFormatter.FormatForRunCommand(truncated);
+            exitCode,
+            executionTimeMs,
+            IsTruncated: stdoutTruncated || stderrTruncated);
     }
 }
