@@ -111,7 +111,10 @@ public class Program
                 sp.GetRequiredService<IOptions<CodePodConfig>>().Value,
                 sp.GetService<ILogger<DockerService>>()));
 
-        builder.Services.Configure<CodeInterpreterOptions>(builder.Configuration.GetSection("CodeInterpreter"));
+        builder.Services.AddSingleton<IValidateOptions<CodeInterpreterOptions>, CodeInterpreterOptionsValidator>();
+        builder.Services.AddOptions<CodeInterpreterOptions>()
+            .Bind(builder.Configuration.GetSection("CodeInterpreter"))
+            .ValidateOnStart();
         builder.Services.AddScoped<CodeInterpreterExecutor>();
         builder.Services.AddHostedService<ChatDockerSessionCleanupService>();
         builder.Services.Configure<ChatOptions>(builder.Configuration.GetSection("Chat"));

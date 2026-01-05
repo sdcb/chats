@@ -51,6 +51,7 @@ public sealed class CodeInterpreterExecutor(
         ResourceLimits defaultLimits = _options.BuildDefaultResourceLimits();
         string resourceLimitsStr = FormatResourceLimits(defaultLimits);
         string networkModeStr = _options.GetDefaultNetworkMode().ToString().ToLowerInvariant();
+        string allowedNetworkModesStr = _options.GetAllowedNetworkModesDisplay();
         string timeoutStr = _options.DefaultTimeoutSeconds?.ToString() ?? "unlimited";
 
         string defaultImageDisplay = _options.DefaultImage;
@@ -64,6 +65,7 @@ public sealed class CodeInterpreterExecutor(
             ["{defaultTimeoutSeconds}"] = timeoutStr,
             ["{defaultResourceLimits}"] = resourceLimitsStr,
             ["{defaultNetworkMode}"] = networkModeStr,
+            ["{allowedNetworkModes}"] = allowedNetworkModesStr,
             ["{defaultImage}"] = defaultImageDisplay,
         };
     }
@@ -268,7 +270,7 @@ public sealed class CodeInterpreterExecutor(
         string? label,
         [ToolParam("Resource limits (null means use server default: {defaultResourceLimits}).")]
         ResourceLimitsArgs? resourceLimits,
-        [ToolParam("Network mode. One of: none, bridge, host. null means use server default: {defaultNetworkMode}.")]
+        [ToolParam("Network mode. One of: {allowedNetworkModes}. null means use server default: {defaultNetworkMode}.")]
         [EnumDataType(typeof(NetworkMode))]
         string? networkMode,
         CancellationToken cancellationToken)
@@ -303,6 +305,15 @@ public sealed class CodeInterpreterExecutor(
             if (!string.IsNullOrWhiteSpace(networkMode))
             {
                 effectiveNetworkMode = ParseNetworkMode(networkMode);
+            }
+
+            NetworkMode maxAllowedNetworkMode = _options.GetMaxAllowedNetworkMode();
+            if ((int)effectiveNetworkMode > (int)maxAllowedNetworkMode)
+            {
+                string allowed = _options.GetAllowedNetworkModesDisplay();
+                return Result.Fail<string>(
+                    $"Requested networkMode '{effectiveNetworkMode.ToString().ToLowerInvariant()}' exceeds MaxAllowedNetworkMode " +
+                    $"'{maxAllowedNetworkMode.ToString().ToLowerInvariant()}'. Allowed: {allowed}.");
             }
 
             if (resourceLimits != null)

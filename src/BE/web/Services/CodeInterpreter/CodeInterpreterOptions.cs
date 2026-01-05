@@ -28,6 +28,14 @@ public sealed class CodeInterpreterOptions
     /// </summary>
     public string DefaultNetworkMode { get; set; } = "none";
 
+    /// <summary>
+    /// Maximum allowed network mode that the model can request when calling tools.
+    /// Supported: none | bridge | host.
+    ///
+    /// Allowed modes are all modes <= this value (None &lt; Bridge &lt; Host).
+    /// </summary>
+    public string MaxAllowedNetworkMode { get; set; } = "host";
+
     public ResourceLimitsOptions DefaultResourceLimits { get; set; } = new();
 
     public ResourceLimitsOptions MaxResourceLimits { get; set; } = new()
@@ -68,6 +76,32 @@ public sealed class CodeInterpreterOptions
             "host" => NetworkMode.Host,
             _ => throw new InvalidOperationException($"Invalid CodeInterpreter:DefaultNetworkMode '{DefaultNetworkMode}'. Expected: none|bridge|host"),
         };
+    }
+
+    public NetworkMode GetMaxAllowedNetworkMode()
+    {
+        string v = MaxAllowedNetworkMode?.Trim() ?? string.Empty;
+        if (string.IsNullOrEmpty(v))
+        {
+            return NetworkMode.Host;
+        }
+
+        return v.ToLowerInvariant() switch
+        {
+            "none" => NetworkMode.None,
+            "bridge" => NetworkMode.Bridge,
+            "host" => NetworkMode.Host,
+            _ => throw new InvalidOperationException($"Invalid CodeInterpreter:MaxAllowedNetworkMode '{MaxAllowedNetworkMode}'. Expected: none|bridge|host"),
+        };
+    }
+
+    public string GetAllowedNetworkModesDisplay()
+    {
+        NetworkMode maxAllowed = GetMaxAllowedNetworkMode();
+        IEnumerable<string> allowed = Enum.GetValues<NetworkMode>()
+            .Where(m => (int)m <= (int)maxAllowed)
+            .Select(m => m.ToString().ToLowerInvariant());
+        return string.Join(", ", allowed);
     }
 
     public ResourceLimits BuildDefaultResourceLimits() => DefaultResourceLimits.ToResourceLimitsOrUnlimitedFallback();
