@@ -168,6 +168,11 @@ public sealed record EndTurn(
     [property: JsonPropertyName("r")] ChatTurn Turn
 ) : SseResponseLine;
 
+public sealed record TempStartTurn(
+    [property: JsonPropertyName("i")] byte SpanId,
+    [property: JsonPropertyName("r")] ChatTurn Turn
+) : SseResponseLine;
+
 #endregion
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]

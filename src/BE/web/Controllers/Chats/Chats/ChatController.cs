@@ -316,7 +316,12 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         FileService fs = null!;
         await foreach (SseResponseLine line in MergeChannels(channels).Reader.ReadAllAsync(CancellationToken.None))
         {
-            if (line is EndTurn allEnd)
+            if (line is TempStartTurn startTurn)
+            {
+                chat.ChatTurns.Add(startTurn.Turn);
+                await db.SaveChangesAsync(CancellationToken.None);
+            }
+            else if (line is EndTurn allEnd)
             {
                 bool isLast = allEnd.SpanId == toGenerateSpans.Last().SpanId;
                 if (isLast)
@@ -590,7 +595,6 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         {
             turn.ParentId = regenerateAssistantMessageRequest.ParentUserMessageId;
         }
-        chat.ChatTurns.Add(turn);
 
         CodeInterpreterExecutor.TurnContext? ciCtx = null;
         if (codeExecutionEnabled)
@@ -604,6 +608,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             };
         }
 
+        writer.TryWrite(new TempStartTurn(chatSpan.SpanId, turn));
         while (!cancellationToken.IsCancellationRequested)
         {
             Step step = await RunOne(csr, cancellationToken);
