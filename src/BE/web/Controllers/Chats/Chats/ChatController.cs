@@ -815,6 +815,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             {
                 break;
             }
+            firstTick = Stopwatch.GetTimestamp();
         }
 
         static bool TryGetUnfinishedToolCall(Step step, out List<StepContentToolCall> toolCall)
