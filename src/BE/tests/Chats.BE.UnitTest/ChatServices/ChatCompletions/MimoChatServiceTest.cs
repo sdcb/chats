@@ -9,11 +9,11 @@ using Chats.BE.UnitTest.ChatServices.Http;
 using Chats.DB;
 using Chats.DB.Enums;
 
-namespace Chats.BE.UnitTest.ChatServices.OpenAI;
+namespace Chats.BE.UnitTest.ChatServices.ChatCompletions;
 
 public class MimoChatServiceTest
 {
-    private const string TestDataPath = "ChatServices/OpenAI/FiddlerDump";
+    private const string TestDataPath = "ChatServices/ChatCompletions/FiddlerDump";
 
     private static IHttpClientFactory CreateMockHttpClientFactory(FiddlerHttpDumpParser.HttpDump dump, bool validateRequest = true)
     {

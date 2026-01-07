@@ -6,7 +6,7 @@ using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Neutral;
 using System.Text.Json.Nodes;
 
-namespace Chats.BE.UnitTest.ChatServices.OpenAI;
+namespace Chats.BE.UnitTest.ChatServices.ChatCompletions;
 
 public class MiniMaxChatServiceTests
 {

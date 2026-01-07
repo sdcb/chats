@@ -2,7 +2,7 @@ using System.Text.Json.Nodes;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Neutral;
 
-namespace Chats.BE.UnitTest.ChatServices.OpenAI;
+namespace Chats.BE.UnitTest.ChatServices.ChatCompletions;
 
 public class DeepSeekChatServiceTests
 {

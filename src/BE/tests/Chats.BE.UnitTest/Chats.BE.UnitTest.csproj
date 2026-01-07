@@ -36,7 +36,7 @@
     <None Update="ChatServices\GoogleAI\FiddlerDump\*.dump">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="ChatServices\OpenAI\FiddlerDump\*.dump">
+    <None Update="ChatServices\ChatCompletions\FiddlerDump\*.dump">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

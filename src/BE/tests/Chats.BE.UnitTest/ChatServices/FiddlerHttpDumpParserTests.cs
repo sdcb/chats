@@ -3,7 +3,7 @@ namespace Chats.BE.UnitTest.ChatServices;
 public class FiddlerHttpDumpParserTests
 {
     private const string TestDataPath = "ChatServices/GoogleAI/FiddlerDump";
-    private const string OpenAITestDataPath = "ChatServices/OpenAI/FiddlerDump";
+    private const string OpenAITestDataPath = "ChatServices/ChatCompletions/FiddlerDump";
 
     [Fact]
     public void CanParseCodeExecuteDump()
