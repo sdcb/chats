@@ -11,7 +11,12 @@ using System.Text.Json;
 
 namespace Chats.BE.Services.FileServices;
 
-public class FileServiceFactory(HostUrlService hostUrlService, IUrlEncryptionService urlEncryption)
+public interface IFileServiceFactory
+{
+    IFileService Create(FileService dbfs);
+}
+
+public class FileServiceFactory(HostUrlService hostUrlService, IUrlEncryptionService urlEncryption) : IFileServiceFactory
 {
     private readonly ConcurrentDictionary<CacheKey, IFileService> _cache = [];
 

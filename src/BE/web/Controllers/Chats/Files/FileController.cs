@@ -17,7 +17,7 @@ using Chats.DB.Enums;
 namespace Chats.BE.Controllers.Chats.Files;
 
 [Route("api"), Authorize]
-public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, IUrlEncryptionService urlEncryption, ILogger<FileController> logger) : ControllerBase
+public class FileController(ChatsDB db, IFileServiceFactory fileServiceFactory, IUrlEncryptionService urlEncryption, ILogger<FileController> logger) : ControllerBase
 {
     [Route("file-service/upload"), HttpPut]
     public async Task<ActionResult<FileDto>> DefaultUpload(IFormFile file,
@@ -54,7 +54,7 @@ public class FileController(ChatsDB db, FileServiceFactory fileServiceFactory, I
     }
 
     private async Task<ActionResult<FileDto>> UploadPrivate(ChatsDB db, IFormFile file,
-        FileServiceFactory fileServiceFactory,
+        IFileServiceFactory fileServiceFactory,
         ILogger<FileController> logger,
         ClientInfoManager clientInfoManager,
         FileUrlProvider fdup,

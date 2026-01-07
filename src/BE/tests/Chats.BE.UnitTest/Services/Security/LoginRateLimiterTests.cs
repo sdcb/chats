@@ -26,7 +26,7 @@ public class LoginRateLimiterTests
 
         LoginRateLimiter limiter = new(db, NullLogger<LoginRateLimiter>.Instance);
 
-    LoginRateLimiter.RateLimitCheckResult result = await limiter.CheckPasswordAsync(clientInfo, CancellationToken.None);
+        LoginRateLimiter.RateLimitCheckResult result = await limiter.CheckPasswordAsync(clientInfo, CancellationToken.None);
 
         Assert.True(result.IsAllowed);
         Assert.Null(result.ErrorMessage);
@@ -52,7 +52,7 @@ public class LoginRateLimiterTests
 
         LoginRateLimiter limiter = new(db, NullLogger<LoginRateLimiter>.Instance);
 
-    LoginRateLimiter.RateLimitCheckResult result = await limiter.CheckPasswordAsync(clientInfo, CancellationToken.None);
+        LoginRateLimiter.RateLimitCheckResult result = await limiter.CheckPasswordAsync(clientInfo, CancellationToken.None);
 
         Assert.False(result.IsAllowed);
         Assert.Equal("Too many attempts. Please try again later.", result.ErrorMessage);
@@ -81,7 +81,7 @@ public class LoginRateLimiterTests
 
         LoginRateLimiter limiter = new(db, NullLogger<LoginRateLimiter>.Instance);
 
-    LoginRateLimiter.RateLimitCheckResult result = await limiter.CheckPasswordAsync(secondClientInfo, CancellationToken.None);
+        LoginRateLimiter.RateLimitCheckResult result = await limiter.CheckPasswordAsync(secondClientInfo, CancellationToken.None);
 
         Assert.False(result.IsAllowed);
         Assert.Equal("Too many attempts. Please try again later.", result.ErrorMessage);
@@ -118,7 +118,7 @@ public class LoginRateLimiterTests
 
         LoginRateLimiter limiter = new(db, NullLogger<LoginRateLimiter>.Instance);
 
-    LoginRateLimiter.RateLimitCheckResult result = await limiter.CheckSmsAsync(clientInfo, CancellationToken.None);
+        LoginRateLimiter.RateLimitCheckResult result = await limiter.CheckSmsAsync(clientInfo, CancellationToken.None);
 
         Assert.True(result.IsAllowed);
     }
@@ -145,7 +145,7 @@ public class LoginRateLimiterTests
 
         LoginRateLimiter limiter = new(db, NullLogger<LoginRateLimiter>.Instance);
 
-    LoginRateLimiter.RateLimitCheckResult result = await limiter.CheckSmsAsync(clientInfo, CancellationToken.None);
+        LoginRateLimiter.RateLimitCheckResult result = await limiter.CheckSmsAsync(clientInfo, CancellationToken.None);
 
         Assert.False(result.IsAllowed);
         Assert.Equal("Too many attempts.", result.ErrorMessage);

@@ -89,7 +89,7 @@ public sealed class CodeInterpreterSessionLookupTests
     {
         IHttpContextAccessor accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
         HostUrlService host = new(accessor);
-        FileServiceFactory fsf = new(host, new NoOpUrlEncryptionService());
+        IFileServiceFactory fsf = new FileServiceFactory(host, new NoOpUrlEncryptionService());
 
         return new CodeInterpreterExecutor(
             docker,

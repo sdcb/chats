@@ -5,7 +5,7 @@ using DBFile = Chats.DB.File;
 
 namespace Chats.BE.Services.FileServices;
 
-public class DBFileService(ChatsDB db, FileServiceFactory fsf, CurrentUser currentUser, FileImageInfoService fiis)
+public class DBFileService(ChatsDB db, IFileServiceFactory fsf, CurrentUser currentUser, FileImageInfoService fiis)
 {
     public async Task<DBFile> StoreImage(ImageChatSegment image, int clientInfoId, FileService dbfs, CancellationToken cancellationToken = default)
     {

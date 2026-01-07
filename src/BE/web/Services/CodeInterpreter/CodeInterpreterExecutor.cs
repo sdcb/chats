@@ -19,7 +19,7 @@ namespace Chats.BE.Services.CodeInterpreter;
 
 public sealed class CodeInterpreterExecutor(
     IDockerService docker,
-    FileServiceFactory fileServiceFactory,
+    IFileServiceFactory fileServiceFactory,
     IServiceScopeFactory scopeFactory,
     IOptions<CodePodConfig> codePodConfig,
     IOptions<CodeInterpreterOptions> options,
@@ -28,7 +28,7 @@ public sealed class CodeInterpreterExecutor(
     private static readonly AttributedToolRegistry _toolRegistry = new(typeof(CodeInterpreterExecutor));
 
     private readonly IDockerService _docker = docker;
-    private readonly FileServiceFactory _fileServiceFactory = fileServiceFactory;
+    private readonly IFileServiceFactory _fileServiceFactory = fileServiceFactory;
     private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
     private readonly CodePodConfig _codePodConfig = codePodConfig.Value;
     private readonly CodeInterpreterOptions _options = options.Value;
@@ -923,7 +923,7 @@ public sealed class CodeInterpreterExecutor(
     }
 
     [ToolFunction("Download cloud files (from chat history) into /app")]
-    private async Task<Result<string>> DowloadChatFiles(
+    private async Task<Result<string>> DownloadChatFiles(
         TurnContext ctx,
         [Required]
         string sessionId,
@@ -967,7 +967,7 @@ public sealed class CodeInterpreterExecutor(
 
         StringBuilder sb = new();
         sb.AppendLine("Downloaded:");
-        foreach (DBFile file in cloudFiles)
+        foreach (DBFile file in downloaded)
         {
             sb.AppendLine($"- {ToAIModelReadable(file)}");
         }

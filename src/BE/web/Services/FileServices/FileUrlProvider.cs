@@ -9,7 +9,7 @@ using DBFile = Chats.DB.File;
 
 namespace Chats.BE.Services.FileServices;
 
-public class FileUrlProvider(ChatsDB db, FileServiceFactory fileServiceFactory, IUrlEncryptionService urlEncryptionService)
+public class FileUrlProvider(ChatsDB db, IFileServiceFactory fileServiceFactory, IUrlEncryptionService urlEncryptionService)
 {
     public async Task<StepContent> CreateOpenAIImagePart(DBFile file, CancellationToken cancellationToken)
     {

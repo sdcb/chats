@@ -85,7 +85,7 @@ public class Program
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.ImageGenerationService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.AzureImageGenerationService>();
         builder.Services.AddSingleton<BalanceService>();
-        builder.Services.AddSingleton<FileServiceFactory>();
+        builder.Services.AddSingleton<IFileServiceFactory, FileServiceFactory>();
         builder.Services.AddSingleton<ChatStopService>();
         builder.Services.AddSingleton<FileImageInfoService>();
         builder.Services.AddSingleton<AsyncClientInfoManager>();
