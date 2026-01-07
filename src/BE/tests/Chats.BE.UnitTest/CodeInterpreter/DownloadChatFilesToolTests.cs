@@ -1,7 +1,5 @@
-using System.Text.Json;
-using Chats.BE.Controllers.Chats.Chats.Dtos;
+
 using Chats.BE.Infrastructure.Functional;
-using Chats.BE.Services;
 using Chats.BE.Services.CodeInterpreter;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.UrlEncryption;
@@ -9,7 +7,6 @@ using Chats.DB;
 using Chats.DB.Enums;
 using Chats.DockerInterface;
 using Chats.DockerInterface.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -154,26 +151,6 @@ public sealed class DownloadChatFilesToolTests
         return ctx;
     }
 
-    private static async Task<Result<string>> ExecuteToolAsync(
-        CodeInterpreterExecutor exec,
-        CodeInterpreterExecutor.TurnContext ctx,
-        string toolCallId,
-        string toolName,
-        string json)
-    {
-        Result<string>? completed = null;
-        await foreach (ToolProgressDelta delta in exec.ExecuteToolCallAsync(ctx, toolCallId, toolName, json, CancellationToken.None))
-        {
-            if (delta is ToolCompletedToolProgressDelta done)
-            {
-                completed = done.Result;
-            }
-        }
-
-        Assert.NotNull(completed);
-        return completed!;
-    }
-
     [Fact]
     public async Task DownloadChatFiles_ShouldOnlyListAndUploadMatchedFiles()
     {
@@ -272,12 +249,7 @@ public sealed class DownloadChatFilesToolTests
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker, blobs);
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(session, [step]);
 
-        Result<string> done = await ExecuteToolAsync(
-            exec,
-            ctx,
-            toolCallId: "call_1",
-            toolName: "download_chat_files",
-            json: JsonSerializer.Serialize(new { sessionId = session.Label, patterns = new[] { "maze_game.zip" } }));
+        Result<string> done = await exec.DownloadChatFiles(ctx, session.Label, ["maze_game.zip"], CancellationToken.None);
 
         Assert.True(done.IsSuccess);
         Assert.Contains("maze_game.zip", done.Value);

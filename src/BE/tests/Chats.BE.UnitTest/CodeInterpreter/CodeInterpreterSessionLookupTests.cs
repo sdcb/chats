@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Services;
@@ -169,7 +168,13 @@ public sealed class CodeInterpreterSessionLookupTests
             new ChatTurn { Id = 2, ParentId = 1, ChatId = 1, ChatDockerSessions = [containerA] },
             new ChatTurn { Id = 4, ParentId = 2, ChatId = 1 });
 
-        Result<string> done = await ExecuteToolAsync(exec, ctx, "call_1", "create_docker_session", JsonSerializer.Serialize(new { label = "dotnet-env" }));
+        Result<string> done = await exec.CreateDockerSession(
+            ctx,
+            image: null,
+            label: "dotnet-env",
+            resourceLimits: null,
+            networkMode: null,
+            cancellationToken: CancellationToken.None);
 
         Assert.True(done.IsSuccess);
         Assert.Contains("sessionId: dotnet-env", done.Value);
@@ -199,7 +204,13 @@ public sealed class CodeInterpreterSessionLookupTests
             new ChatTurn { Id = 1, ParentId = null, ChatId = 1, Chat = null! },
             new ChatTurn { Id = 3, ParentId = 1, ChatId = 1, Chat = null! });
 
-        Result<string> done = await ExecuteToolAsync(exec, ctx, "call_1", "create_docker_session", JsonSerializer.Serialize(new { label = "dotnet-env" }));
+        Result<string> done = await exec.CreateDockerSession(
+            ctx,
+            image: null,
+            label: "dotnet-env",
+            resourceLimits: null,
+            networkMode: null,
+            cancellationToken: CancellationToken.None);
 
         Assert.True(done.IsSuccess);
         Assert.Contains("sessionId: dotnet-env", done.Value);
@@ -216,23 +227,4 @@ public sealed class CodeInterpreterSessionLookupTests
         }
     }
 
-    private static async Task<Result<string>> ExecuteToolAsync(
-        CodeInterpreterExecutor exec,
-        CodeInterpreterExecutor.TurnContext ctx,
-        string toolCallId,
-        string toolName,
-        string json)
-    {
-        Result<string>? completed = null;
-        await foreach (ToolProgressDelta delta in exec.ExecuteToolCallAsync(ctx, toolCallId, toolName, json, CancellationToken.None))
-        {
-            if (delta is ToolCompletedToolProgressDelta done)
-            {
-                completed = done.Result;
-            }
-        }
-
-        Assert.NotNull(completed);
-        return completed!;
-    }
 }

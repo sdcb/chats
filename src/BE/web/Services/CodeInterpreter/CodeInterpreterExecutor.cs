@@ -345,7 +345,7 @@ public sealed class CodeInterpreterExecutor(
     internal sealed record ResourceLimitsArgs(long? MemoryBytes = null, double? CpuCores = null, long? MaxProcesses = null);
 
     [ToolFunction("Create a docker session")]
-    private async Task<Result<string>> CreateDockerSession(
+    internal async Task<Result<string>> CreateDockerSession(
         TurnContext ctx,
         [ToolParam("Docker image to use (null means use server default: {defaultImage}).")]
         string? image,
@@ -494,7 +494,7 @@ public sealed class CodeInterpreterExecutor(
     }
 
     [ToolFunction("Destroy the docker session")]
-    private async Task<Result<string>> DestroySession(
+    internal async Task<Result<string>> DestroySession(
         TurnContext ctx,
         [Required]
         string sessionId,
@@ -520,7 +520,7 @@ public sealed class CodeInterpreterExecutor(
     }
 
     [ToolFunction("Run a shell command inside the session workdir /app")]
-    private async IAsyncEnumerable<ToolProgressDelta> RunCommand(
+    internal async IAsyncEnumerable<ToolProgressDelta> RunCommand(
         TurnContext ctx,
         [Required]
         string sessionId,
@@ -611,7 +611,7 @@ public sealed class CodeInterpreterExecutor(
     }
 
     [ToolFunction("Write a file under /app")]
-    private async Task<Result<string>> WriteFile(
+    internal async Task<Result<string>> WriteFile(
         TurnContext ctx,
         [Required]
         string sessionId,
@@ -652,7 +652,7 @@ public sealed class CodeInterpreterExecutor(
     }
 
     [ToolFunction("Read a file under /app")]
-    private async Task<Result<string>> ReadFile(
+    internal async Task<Result<string>> ReadFile(
         TurnContext ctx,
         [Required]
         string sessionId,
@@ -870,7 +870,7 @@ public sealed class CodeInterpreterExecutor(
         The target file is specified by the 'path' argument.
         The 'patch' argument MUST be unified-diff hunks ONLY (no headers/wrappers).
         """)]
-    private async Task<Result<string>> PatchFile(
+    internal async Task<Result<string>> PatchFile(
         TurnContext ctx,
         [Required] string sessionId,
         [ToolParam("Target file path under /app."), Required] string path,
@@ -923,7 +923,7 @@ public sealed class CodeInterpreterExecutor(
     }
 
     [ToolFunction("Download cloud files (from chat history) into /app")]
-    private async Task<Result<string>> DownloadChatFiles(
+    internal async Task<Result<string>> DownloadChatFiles(
         TurnContext ctx,
         [Required]
         string sessionId,

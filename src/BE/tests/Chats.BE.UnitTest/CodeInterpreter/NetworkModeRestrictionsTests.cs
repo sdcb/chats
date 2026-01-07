@@ -68,32 +68,18 @@ public sealed class NetworkModeRestrictionsTests
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx();
 
-        Result<string> done = await ExecuteToolAsync(executor, ctx, "call_1", "create_docker_session", "{\"networkMode\":\"host\"}");
+        Result<string> done = await executor.CreateDockerSession(
+            ctx,
+            image: null,
+            label: null,
+            resourceLimits: null,
+            networkMode: "host",
+            cancellationToken: CancellationToken.None);
 
         Assert.True(done.IsFailure);
         Assert.Contains("Requested networkMode 'host' exceeds MaxAllowedNetworkMode 'bridge'", done.Error);
         Assert.False(docker.EnsureImageCalled);
         Assert.False(docker.CreateContainerCalled);
-    }
-
-    private static async Task<Result<string>> ExecuteToolAsync(
-        CodeInterpreterExecutor exec,
-        CodeInterpreterExecutor.TurnContext ctx,
-        string toolCallId,
-        string toolName,
-        string json)
-    {
-        Result<string>? completed = null;
-        await foreach (ToolProgressDelta delta in exec.ExecuteToolCallAsync(ctx, toolCallId, toolName, json, CancellationToken.None))
-        {
-            if (delta is ToolCompletedToolProgressDelta done)
-            {
-                completed = done.Result;
-            }
-        }
-
-        Assert.NotNull(completed);
-        return completed!;
     }
 
     private static CodeInterpreterExecutor CreateExecutor(TrackingDockerService docker, CodeInterpreterOptions options)

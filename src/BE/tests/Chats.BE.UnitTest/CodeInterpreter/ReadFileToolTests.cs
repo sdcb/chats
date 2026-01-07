@@ -1,6 +1,5 @@
 using System.Text;
-using System.Text.Json;
-using Chats.BE.Controllers.Chats.Chats.Dtos;
+
 using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Services;
 using Chats.BE.Services.CodeInterpreter;
@@ -171,23 +170,6 @@ public sealed class ReadFileToolTests
         };
     }
 
-    private static async Task<Result<string>> InvokeReadFileAsync(CodeInterpreterExecutor exec, CodeInterpreterExecutor.TurnContext ctx, object args)
-    {
-        string json = JsonSerializer.Serialize(args);
-        Result<string>? completed = null;
-
-        await foreach (ToolProgressDelta delta in exec.ExecuteToolCallAsync(ctx, "call_1", "read_file", json, CancellationToken.None))
-        {
-            if (delta is ToolCompletedToolProgressDelta done)
-            {
-                completed = done.Result;
-            }
-        }
-
-        Assert.NotNull(completed);
-        return completed!;
-    }
-
     [Fact]
     public async Task ReadFile_Defaults_ReturnsAllLines()
     {
@@ -201,7 +183,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
 
-        Result<string> r = await InvokeReadFileAsync(exec, ctx, new { sessionId = "s", path = "/foo.txt" });
+        Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "/foo.txt", startLine: null, endLine: null, withLineNumbers: null, CancellationToken.None);
 
         Assert.True(r.IsSuccess);
         Assert.Equal("a\nb\nc", r.Value);
@@ -222,7 +204,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
 
-        Result<string> r = await InvokeReadFileAsync(exec, ctx, new { sessionId = "s", path = "foo.txt", startLine = 2, endLine = 3 });
+        Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "foo.txt", startLine: 2, endLine: 3, withLineNumbers: null, CancellationToken.None);
 
         Assert.True(r.IsSuccess);
         Assert.Equal("b\nc", r.Value);
@@ -241,7 +223,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
 
-        Result<string> r = await InvokeReadFileAsync(exec, ctx, new { sessionId = "s", path = "foo.txt", startLine = 2, endLine = 999 });
+        Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "foo.txt", startLine: 2, endLine: 999, withLineNumbers: null, CancellationToken.None);
 
         Assert.True(r.IsSuccess);
         Assert.Equal("b\nc", r.Value);
@@ -260,7 +242,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
 
-        Result<string> r = await InvokeReadFileAsync(exec, ctx, new { sessionId = "s", path = "foo.txt", startLine = 999, withLineNumbers = true });
+        Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "foo.txt", startLine: 999, endLine: null, withLineNumbers: true, CancellationToken.None);
 
         Assert.True(r.IsSuccess);
         Assert.Equal("TotalLines: 3", r.Value);
@@ -279,7 +261,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
 
-        Result<string> r = await InvokeReadFileAsync(exec, ctx, new { sessionId = "s", path = "foo.txt", startLine = 2, endLine = 3, withLineNumbers = true });
+        Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "foo.txt", startLine: 2, endLine: 3, withLineNumbers: true, CancellationToken.None);
 
         Assert.True(r.IsSuccess);
         Assert.Equal("TotalLines: 3\n2: b\n3: c", r.Value);
@@ -298,7 +280,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
 
-        Result<string> r = await InvokeReadFileAsync(exec, ctx, new { sessionId = "s", path = "foo.txt", startLine = 0 });
+        Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "foo.txt", startLine: 0, endLine: null, withLineNumbers: null, CancellationToken.None);
 
         Assert.False(r.IsSuccess);
         Assert.Contains("startLine", r.Error, StringComparison.OrdinalIgnoreCase);
@@ -317,7 +299,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
 
-        Result<string> r = await InvokeReadFileAsync(exec, ctx, new { sessionId = "s", path = "foo.txt", startLine = 3, endLine = 2 });
+        Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "foo.txt", startLine: 3, endLine: 2, withLineNumbers: null, CancellationToken.None);
 
         Assert.False(r.IsSuccess);
         Assert.Contains("endLine", r.Error, StringComparison.OrdinalIgnoreCase);
@@ -344,7 +326,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
 
-        Result<string> r = await InvokeReadFileAsync(exec, ctx, new { sessionId = "s", path = "foo.txt" });
+        Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "foo.txt", startLine: null, endLine: null, withLineNumbers: null, CancellationToken.None);
 
         Assert.True(r.IsSuccess);
         Assert.Contains("bytes truncated", r.Value, StringComparison.Ordinal);
@@ -372,7 +354,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
 
-        Result<string> r = await InvokeReadFileAsync(exec, ctx, new { sessionId = "s", path = "foo.txt" });
+        Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "foo.txt", startLine: null, endLine: null, withLineNumbers: null, CancellationToken.None);
 
         Assert.True(r.IsSuccess);
         int noteIdx = r.Value.IndexOf("bytes truncated", StringComparison.Ordinal);
@@ -403,7 +385,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
 
-        Result<string> r = await InvokeReadFileAsync(exec, ctx, new { sessionId = "s", path = "foo.txt" });
+        Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "foo.txt", startLine: null, endLine: null, withLineNumbers: null, CancellationToken.None);
 
         Assert.True(r.IsSuccess);
         int headIdx = r.Value.IndexOf("HEAD-", StringComparison.Ordinal);
@@ -435,7 +417,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
 
-        Result<string> r = await InvokeReadFileAsync(exec, ctx, new { sessionId = "s", path = "foo.txt", withLineNumbers = true });
+        Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "foo.txt", startLine: null, endLine: null, withLineNumbers: true, CancellationToken.None);
 
         Assert.True(r.IsSuccess);
         Assert.StartsWith("TotalLines: 100\n", r.Value, StringComparison.Ordinal);
@@ -466,7 +448,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
 
-        Result<string> r = await InvokeReadFileAsync(exec, ctx, new { sessionId = "s", path = "bin.dat", withLineNumbers = true });
+        Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "bin.dat", startLine: null, endLine: null, withLineNumbers: true, CancellationToken.None);
 
         Assert.True(r.IsSuccess);
         Assert.StartsWith("TotalLines: 0\nPath: /app/bin.dat\n", r.Value, StringComparison.Ordinal);

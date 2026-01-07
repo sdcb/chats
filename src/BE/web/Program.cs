@@ -11,7 +11,6 @@ using Chats.BE.Services.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Chats.BE.Services.FileServices;
 using Microsoft.AspNetCore.StaticFiles;
 using Chats.BE.Services.Models.ChatServices;
@@ -20,8 +19,6 @@ using Chats.BE.Services.CodeInterpreter;
 using Chats.BE.Services.Options;
 using Chats.DockerInterface;
 using Microsoft.Extensions.Options;
-
-[assembly: InternalsVisibleTo("Chats.BE.UnitTest")]
 
 namespace Chats.BE;
 
