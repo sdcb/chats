@@ -39,6 +39,9 @@
     <None Update="ChatServices\ChatCompletions\FiddlerDump\*.dump">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="ChatServices\Response\FiddlerDump\*.dump">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

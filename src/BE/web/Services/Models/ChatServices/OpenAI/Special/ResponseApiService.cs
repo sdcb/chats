@@ -343,9 +343,26 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                 }
                 else if (eventType == "response.output_item.done")
                 {
-                    if (json.TryGetProperty("item", out JsonElement itemEl) && itemEl.TryGetProperty("type", out JsonElement itemTypeEl) && itemTypeEl.GetString() == "function_call")
+                    if (json.TryGetProperty("item", out JsonElement itemEl) && itemEl.TryGetProperty("type", out JsonElement itemTypeEl))
                     {
-                        fcIndex++;
+                        string? itemType = itemTypeEl.GetString();
+                        if (itemType == "function_call")
+                        {
+                            fcIndex++;
+                        }
+                        else if (itemType == "reasoning")
+                        {
+                            // When include contains reasoning.encrypted_content, the server can return an encrypted signature for thinking.
+                            // We store it in ThinkChatSegment.Signature for later use.
+                            if (itemEl.TryGetProperty("encrypted_content", out JsonElement encryptedEl))
+                            {
+                                string? encrypted = encryptedEl.GetString();
+                                if (!string.IsNullOrEmpty(encrypted))
+                                {
+                                    yield return ChatSegment.FromThinkingSegment(encrypted);
+                                }
+                            }
+                        }
                     }
                 }
                 else if (eventType == "response.reasoning_summary_text.delta")
@@ -442,6 +459,9 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                 ["effort"] = reasoningEffort,
                 ["summary"] = "detailed",
             };
+
+            // Request encrypted thinking signature.
+            body["include"] = new JsonArray { "reasoning.encrypted_content" };
         }
 
         // Text format
@@ -500,6 +520,20 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             }
             else if (message.Role == NeutralChatRole.Assistant)
             {
+                // Preserve thinking signature for multi-step tool calls (Response API).
+                foreach (NeutralThinkContent think in message.Contents.OfType<NeutralThinkContent>())
+                {
+                    if (!string.IsNullOrWhiteSpace(think.Signature))
+                    {
+                        input.Add(new JsonObject
+                        {
+                            ["type"] = "reasoning",
+                            ["encrypted_content"] = think.Signature,
+                            ["summary"] = new JsonArray(),
+                        });
+                    }
+                }
+
                 // Handle tool calls in assistant message
                 foreach (NeutralToolCallContent tc in message.Contents.OfType<NeutralToolCallContent>())
                 {
