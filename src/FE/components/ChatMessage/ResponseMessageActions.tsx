@@ -8,7 +8,7 @@ import { IChatMessage, ReactionMessageType, getMessageContents, isAllStepsEdited
 
 import CopyAction from './CopyAction';
 import DeleteAction from './DeleteAction';
-import GenerateInformationAction from './GenerateInformationAction';
+import TurnInfoBubble from './TurnInfoBubble';
 import PaginationAction from './PaginationAction';
 import ReactionAction from './ReactionAction';
 import RegenerateWithModelAction from './RegenerateWithModelAction';
@@ -104,7 +104,7 @@ const ResponseMessageActions = (props: Props) => {
           }}
         />
 
-        <GenerateInformationAction
+        <TurnInfoBubble
           hidden={isAllStepsEdited(message)}
           disabled={messageReceiving}
           message={message}

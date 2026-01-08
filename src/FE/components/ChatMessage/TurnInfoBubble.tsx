@@ -27,13 +27,14 @@ interface Props {
   isAdminView?: boolean;
 }
 
-export const GenerateInformationAction = (props: Props) => {
+export const TurnInfoBubble = (props: Props) => {
   const { message, hidden, disabled, chatId, chatShareId } = props;
   const [isOpen, setIsOpen] = useState(false);
   const cacheKey = useMemo<GenerateInfoCacheKey>(
     () => ({ turnId: message.id, chatId, chatShareId }),
     [message.id, chatId, chatShareId],
   );
+
   const [stepInfos, setStepInfos] = useState<IStepGenerateInfo[] | null>(() => {
     const cached = getCachedGenerateInfo(cacheKey);
     return cached ? [...cached] : null;
@@ -83,6 +84,21 @@ export const GenerateInformationAction = (props: Props) => {
     };
   }, [cacheKey]);
 
+  const stepCount = stepInfos?.length ?? 0;
+  const showAverages = !!stepInfos && stepInfos.length > 1;
+
+  const avgDurationMs = useMemo(() => {
+    if (!stepInfos || stepInfos.length === 0) return null;
+    const total = stepInfos.reduce((acc, s) => acc + (s.duration ?? 0), 0);
+    return Math.round(total / stepInfos.length);
+  }, [stepInfos]);
+
+  const avgFirstTokenLatencyMs = useMemo(() => {
+    if (!stepInfos || stepInfos.length === 0) return null;
+    const total = stepInfos.reduce((acc, s) => acc + (s.firstTokenLatency ?? 0), 0);
+    return Math.round(total / stepInfos.length);
+  }, [stepInfos]);
+
   // 聚合步骤数据
   const info = aggregateStepGenerateInfo(stepInfos);
 
@@ -113,15 +129,22 @@ export const GenerateInformationAction = (props: Props) => {
           <IconInfo />
         </Button>
       </PopoverTrigger>
-      <PopoverContent 
-        side="bottom" 
+      <PopoverContent
+        side="bottom"
         className="w-auto p-1 shadow-lg border-2"
         onPointerDownOutside={() => setIsOpen(false)}
       >
-        <GenerateInfoPopoverContent info={info} loading={loading} />
+        <GenerateInfoPopoverContent
+          info={info}
+          loading={loading}
+          title={'Turn information ({{count}} steps)'}
+          titleParams={{ count: stepInfos ? stepCount : '--' }}
+          avgDurationMs={showAverages ? avgDurationMs : undefined}
+          avgFirstTokenLatencyMs={showAverages ? avgFirstTokenLatencyMs : undefined}
+        />
       </PopoverContent>
     </Popover>
   );
 };
 
-export default GenerateInformationAction;
+export default TurnInfoBubble;
