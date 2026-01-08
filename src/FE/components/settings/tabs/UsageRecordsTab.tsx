@@ -4,6 +4,8 @@ import { useRouter } from 'next/router';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { IconRefresh } from '@/components/Icons';
+
 import { formatNumberAsMoney, toFixed } from '@/utils/common';
 import { formatDate, formatDateTime, getTz } from '@/utils/date';
 import { getUserSession } from '@/utils/user';
@@ -23,6 +25,7 @@ import DateTimePopover from '@/components/Popover/DateTimePopover';
 
 import ExportButton from '@/components/Button/ExportButtom';
 import PaginationContainer from '@/components/Pagination/Pagination';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
   Select,
@@ -264,6 +267,11 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
     getUsageStat(params).then((data: GetUsageStatResult) => {
       setUsageStat(data);
     });
+  };
+
+  const handleRefresh = () => {
+    fetchUsageStat();
+    fetchUsageData();
   };
 
   const buildQuery = (updates: Record<string, string | undefined> = {}) => {
@@ -512,6 +520,18 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
                 exportUrl="/api/usage/excel"
                 params={{ ...getUsageParams(true), token: getUserSession() }}
               />
+
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleRefresh}
+                disabled={loading}
+                aria-label={t('Refresh')}
+                title={t('Refresh')}
+              >
+                <IconRefresh size={18} />
+              </Button>
             </div>
           </div>
         </div>
