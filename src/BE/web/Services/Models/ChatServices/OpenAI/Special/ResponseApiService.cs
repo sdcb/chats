@@ -442,7 +442,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
 
         if (request.EndUserId != null)
         {
-            body["user"] = request.EndUserId;
+            body["prompt_cache_key"] = request.EndUserId;
         }
 
         if (request.ChatConfig.MaxOutputTokens != null)

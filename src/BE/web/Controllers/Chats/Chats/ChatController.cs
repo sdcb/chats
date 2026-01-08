@@ -536,7 +536,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         }
         ChatRequest csr = new()
         {
-            EndUserId = currentUser.Id.ToString(),
+            EndUserId = $"{chat.Id}-{chatSpan.SpanId}",
             Messages = neutralMessages,
             ChatConfig = chatSpan.ChatConfig,
             System = chatSpan.ChatConfig.CodeExecutionEnabled
