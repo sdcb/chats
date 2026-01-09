@@ -55,7 +55,6 @@ env:
     six
   NPM_GLOBAL_PACKAGES: >-
     docx
-    playwright
     pptxgenjs
     react
     react-dom
