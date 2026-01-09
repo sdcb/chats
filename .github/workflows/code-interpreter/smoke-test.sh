@@ -43,7 +43,7 @@ echo "=== NuGet Local Cache ==="
 ls /opt/nuget-local
 
 echo "=== NuGet Config ==="
-cat /etc/nuget/NuGet.Config
+cat /root/.nuget/NuGet/NuGet.Config
 
 echo "=== Test ClosedXML restore from local cache ==="
 get_local_version() {
