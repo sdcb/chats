@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 import re
 import subprocess
 import sys
@@ -44,45 +43,6 @@ def node_version() -> str:
     return out[1:] if out.startswith("v") else out
 
 
-def version_key(version: str):
-    parts = re.split(r"[\.-]", version)
-    key = []
-    for p in parts:
-        if p.isdigit():
-            key.append((0, int(p)))
-        else:
-            key.append((1, p.lower()))
-    return key
-
-
-def find_cached_nuget_version(package_name: str, cache_root: Path) -> str | None:
-    # cache_root is expected to contain exported nupkg files, e.g.:
-    #   /opt/nuget-local/ClosedXML.0.105.0.nupkg
-    if not cache_root.exists() or not cache_root.is_dir():
-        return None
-
-    pkg_lower = package_name.lower()
-    versions: list[str] = []
-    for child in cache_root.iterdir():
-        if not child.is_file():
-            continue
-        name_lower = child.name.lower()
-        if not (name_lower.endswith(".nupkg") and name_lower.startswith(pkg_lower + ".")):
-            continue
-
-        # Strip: "<PackageId>." prefix and ".nupkg" suffix
-        ver = child.name[len(package_name) + 1 : -len(".nupkg")]
-        # Fallback if casing differs (we matched lower-case)
-        if not ver:
-            ver = child.name.split(".", 1)[1][:-len(".nupkg")]
-        versions.append(ver)
-
-    if not versions:
-        return None
-
-    return max(versions, key=version_key)
-
-
 def main() -> int:
     if len(sys.argv) != 3:
         print("Usage: render-skills.py <template.md> <output.md>", file=sys.stderr)
@@ -99,24 +59,12 @@ def main() -> int:
     gcc = gcc_version()
     node = node_version()
 
-    cache_root = Path("/opt/nuget-local")
-    precache = os.environ.get("PRECACHE_PACKAGES") or os.environ.get("NUGET_PRECACHE") or ""
-    top_level = [p for p in re.split(r"\s+", precache.strip()) if p]
-
-    bullet_lines: list[str] = []
-    for pkg in top_level:
-        ver = find_cached_nuget_version(pkg, cache_root) or "(not found)"
-        bullet_lines.append(f"  * {pkg} {ver}")
-
-    packages_block = "\n".join(bullet_lines) if bullet_lines else "  * (none)"
-
     rendered = template
     rendered = rendered.replace("{dotnetVersion}", dn)
     rendered = rendered.replace("{pythonVersion}", py)
     rendered = rendered.replace("{ffmpegVersion}", ff)
     rendered = rendered.replace("{gccVersion}", gcc)
     rendered = rendered.replace("{nodeVersion}", node)
-    rendered = rendered.replace("  {all packages in this format: `* PackageName Version`}", packages_block)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(rendered.rstrip() + "\n", encoding="utf-8")

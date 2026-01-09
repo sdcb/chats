@@ -13,6 +13,7 @@ on:
 env:
   IMAGE_NAME: code-interpreter
   APT_PACKAGES: >-
+    git
     ffmpeg
     python3
     python3-pip
@@ -24,6 +25,10 @@ env:
     npm
     file
     sqlite3
+    libreoffice
+    pandoc
+    poppler-utils
+    iputils-ping
   PIP_PACKAGES: >-
     numpy
     pandas
@@ -32,6 +37,30 @@ env:
     pillow
     requests
     openpyxl
+    pyyaml
+    anthropic
+    defusedxml
+    imageio
+    imageio-ffmpeg
+    lxml
+    markitdown[pptx]
+    pdf2image
+    pdfplumber
+    playwright
+    pypdf
+    pypdfium2
+    pytesseract
+    python-pptx
+    reportlab
+    six
+  NPM_GLOBAL_PACKAGES: >-
+    docx
+    playwright
+    pptxgenjs
+    react
+    react-dom
+    react-icons
+    sharp
   NUGET_PRECACHE: >-
     ClosedXML
     SixLabors.ImageSharp
@@ -53,6 +82,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout anthropics/skills (for /app/skills)
+        uses: actions/checkout@v4
+        with:
+          repository: anthropics/skills
+          path: .github/workflows/code-interpreter/_anthropic-skills
+          fetch-depth: 1
+
+      - name: Stage skills folder into build context
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .github/workflows/code-interpreter/skills
+          mv .github/workflows/code-interpreter/_anthropic-skills/skills .github/workflows/code-interpreter/skills
+          rm -rf .github/workflows/code-interpreter/_anthropic-skills
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -71,6 +115,7 @@ jobs:
           build-args: |
             APT_PACKAGES=${{ env.APT_PACKAGES }}
             PIP_PACKAGES=${{ env.PIP_PACKAGES }}
+            NPM_GLOBAL_PACKAGES=${{ env.NPM_GLOBAL_PACKAGES }}
             NUGET_PRECACHE=${{ env.NUGET_PRECACHE }}
           tags: ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:r-${{ github.run_number }}-${{ matrix.tag }}
 

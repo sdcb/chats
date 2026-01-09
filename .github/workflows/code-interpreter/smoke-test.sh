@@ -15,6 +15,9 @@ fi
 echo "=== .NET Version ==="
 dotnet --version
 
+echo "=== Git Version ==="
+git --version
+
 echo "=== FFmpeg Version ==="
 ffmpeg -version | head -n 1
 
