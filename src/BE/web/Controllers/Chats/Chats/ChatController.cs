@@ -505,35 +505,11 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
         bool codeExecutionEnabled = chatSpan.ChatConfig.CodeExecutionEnabled;
 
-        IList<NeutralMessage> neutralMessages;
-        if (codeExecutionEnabled)
-        {
-            List<NeutralMessage> injected = new(allSteps.Count);
-            List<Step> priorSteps = new(allSteps.Count);
-
-            foreach (Step step in allSteps)
-            {
-                NeutralMessage msg = step.ToNeutral();
-                if ((DBChatRole)step.ChatRoleId == DBChatRole.User)
-                {
-                    string? prefix = codeInterpreter.BuildCloudFilesContextPrefix(priorSteps.Append(step));
-                    if (!string.IsNullOrWhiteSpace(prefix))
-                    {
-                        List<NeutralContent> contents = [NeutralTextContent.Create(prefix), .. msg.Contents];
-                        msg = msg with { Contents = contents };
-                    }
-                }
-
-                injected.Add(msg);
-                priorSteps.Add(step);
-            }
-
-            neutralMessages = injected;
-        }
-        else
-        {
-            neutralMessages = allSteps.ToNeutral();
-        }
+        IList<NeutralMessage> neutralMessages = CloudFilesContextMessageBuilder.BuildMessages(
+            historySteps: messageTree,
+            currentRoundSteps: dbUserMessage?.Steps ?? [],
+            codeExecutionEnabled: codeExecutionEnabled,
+            buildCloudFilesContextPrefix: codeInterpreter.BuildCloudFilesContextPrefix);
         ChatRequest csr = new()
         {
             EndUserId = $"{chat.Id}-{chatSpan.SpanId}",

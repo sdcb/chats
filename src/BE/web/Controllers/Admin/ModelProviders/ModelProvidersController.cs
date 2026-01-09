@@ -160,7 +160,7 @@ public class ModelProvidersController(ChatsDB db) : ControllerBase
         List<short> currentProviderOrder = providerOrders.Select(x => x.ModelProviderId).ToList();
 
         // 从当前列表中移除 source
-        List<short> newProviderOrder = new List<short>(currentProviderOrder);
+        List<short> newProviderOrder = [.. currentProviderOrder];
         newProviderOrder.Remove(request.SourceId);
 
         // 计算插入位置

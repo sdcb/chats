@@ -7,7 +7,6 @@ using Chats.DB;
 using Chats.DockerInterface;
 using Chats.DockerInterface.Models;
 using Microsoft.AspNetCore.StaticFiles;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
