@@ -1,5 +1,6 @@
-using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Controllers.Chats.Chats.Dtos;
+using Chats.BE.DB.Extensions;
+using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Neutral;
@@ -163,6 +164,45 @@ public sealed class CodeInterpreterExecutor(
         return sb.ToString();
     }
 
+    public string? BuildCodeInterpreterContextPrefix(IEnumerable<ChatTurn> messageTurns, IEnumerable<Step> messageSteps)
+        => BuildCodeInterpreterContextPrefix(messageTurns, messageSteps, DateTime.UtcNow);
+
+    internal static string? BuildCodeInterpreterContextPrefix(IEnumerable<ChatTurn> messageTurns, IEnumerable<Step> messageSteps, DateTime utcNow)
+    {
+        List<DBFile> cloudFiles = CollectCloudFiles(messageSteps);
+        List<ChatDockerSession> activeSessions = CollectActiveSessions(messageTurns, utcNow);
+
+        if (cloudFiles.Count == 0 && activeSessions.Count == 0)
+        {
+            return null;
+        }
+
+        StringBuilder sb = new();
+
+        if (cloudFiles.Count > 0)
+        {
+            sb.AppendLine("[Cloud Files Available]");
+            foreach (DBFile file in cloudFiles)
+            {
+                sb.AppendLine($"- {ToAIModelReadable(file)}");
+            }
+            sb.AppendLine("Use download_chat_files with wildcard patterns matching the file names above.");
+            sb.AppendLine();
+        }
+
+        if (activeSessions.Count > 0)
+        {
+            sb.AppendLine("[Active Docker Sessions]");
+            foreach (ChatDockerSession s in activeSessions)
+            {
+                sb.AppendLine($"- {s.AIReableDockerInfo}");
+            }
+            sb.AppendLine("Use the sessionId above when calling code interpreter tools.");
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
     static string ToAIModelReadable(DBFile file)
     {
         return $"{file.FileName} (size:{HumanizeFileSize(file.Size)}{ImageRelated(file)})";
@@ -171,13 +211,13 @@ public sealed class CodeInterpreterExecutor(
         {
             if (file.FileImageInfo != null)
             {
-                return $", image resolution: {file.FileImageInfo.Width}x{file.FileImageInfo.Height}";
+                return $", resolution: {file.FileImageInfo.Width}x{file.FileImageInfo.Height}";
             }
             return "";
         }
     }
 
-    static string HumanizeFileSize(long fileSize)
+    internal static string HumanizeFileSize(long fileSize)
     {
         if (fileSize >= 1024L * 1024 * 1024)
             return $"{fileSize / (1024.0 * 1024 * 1024):0.##}GB";
@@ -363,7 +403,7 @@ public sealed class CodeInterpreterExecutor(
         if (hasLabel && ctx.SessionsBySessionId.TryGetValue(label!, out TurnContext.SessionState? existing))
         {
             existing.UsedInThisTurn = true;
-            return Result.Ok(BuildAIReableDockerInfo(existing.DbSession));
+            return Result.Ok(existing.DbSession.AIReableDockerInfo);
         }
 
         // Resolve from DB along the ParentId chain of the current generating turn.
@@ -459,7 +499,7 @@ public sealed class CodeInterpreterExecutor(
             state.SnapshotTaken = true;
         }
 
-        string info = BuildAIReableDockerInfo(dbSession);
+        string info = dbSession.AIReableDockerInfo;
         try
         {
             // Try to read skills.md for the AI model (only for newly created/loaded sessions)
@@ -476,20 +516,6 @@ public sealed class CodeInterpreterExecutor(
         }
 
         return Result.Ok(info);
-
-        static string BuildAIReableDockerInfo(ChatDockerSession dbSession)
-        {
-            string basicInfo = $"sessionId: {dbSession.Label}, image: {dbSession.Image}\nshell: [{dbSession.ShellPrefix.Replace(',', ' ')}]";
-            string resourceLimits = $"resource limits: cpu cores={dbSession.CpuCores}, memory={HumanizeMemoryLimits(dbSession.MemoryBytes)}, max processes={dbSession.MaxProcesses}, network={(NetworkMode)dbSession.NetworkMode}";
-            if (!string.IsNullOrWhiteSpace(dbSession.Ip)) resourceLimits += $", ip={dbSession.Ip}";
-            return basicInfo + "\n" + resourceLimits;
-
-            static string HumanizeMemoryLimits(long? memoryLimits)
-            {
-                if (memoryLimits == null) return "(unlimited)";
-                return HumanizeFileSize(memoryLimits.Value);
-            }
-        }
     }
 
     [ToolFunction("Destroy the docker session")]
@@ -973,7 +999,7 @@ public sealed class CodeInterpreterExecutor(
         return Result.Ok(sb.ToString().TrimEnd());
     }
 
-    private static List<DBFile> CollectCloudFiles(IEnumerable<Step> steps)
+    internal static List<DBFile> CollectCloudFiles(IEnumerable<Step> steps)
     {
         Dictionary<string, DBFile> result = [];
 
@@ -989,6 +1015,23 @@ public sealed class CodeInterpreterExecutor(
         }
 
         return [.. result.Values];
+    }
+
+    internal static List<ChatDockerSession> CollectActiveSessions(IEnumerable<ChatTurn> turns, DateTime utcNow)
+    {
+        Dictionary<string, ChatDockerSession> byLabel = new(StringComparer.Ordinal);
+
+        foreach (ChatDockerSession s in turns.SelectMany(t => t.ChatDockerSessions))
+        {
+            if (string.IsNullOrWhiteSpace(s.Label)) continue;
+            if (s.TerminatedAt != null) continue;
+            if (s.ExpiresAt <= utcNow) continue;
+
+            // keep the last one by traversal order
+            byLabel[s.Label] = s;
+        }
+
+        return [.. byLabel.Values];
     }
 
     private async Task<TurnContext.SessionState> EnsureSession(TurnContext ctx, string sessionId, CancellationToken cancellationToken)

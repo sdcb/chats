@@ -5,16 +5,17 @@ using Chats.DB.Enums;
 
 namespace Chats.BE.Services.CodeInterpreter;
 
-public static class CloudFilesContextMessageBuilder
+public static class CodeInterpreterContextMessageBuilder
 {
     public static IList<NeutralMessage> BuildMessages(
         IEnumerable<Step> historySteps,
         IEnumerable<Step> currentRoundSteps,
         bool codeExecutionEnabled,
-        Func<IEnumerable<Step>, string?> buildCloudFilesContextPrefix)
+        string? contextPrefix)
     {
+        List<Step> history = [.. historySteps];
         List<Step> current = [.. currentRoundSteps];
-        List<Step> allSteps = [.. historySteps, .. current];
+        List<Step> allSteps = [.. history, .. current];
 
         if (!codeExecutionEnabled)
         {
@@ -23,12 +24,10 @@ public static class CloudFilesContextMessageBuilder
 
         if (current.Count == 0)
         {
-            // No "current round" user prompt to inject into.
             return allSteps.ToNeutral();
         }
 
-        string? prefix = buildCloudFilesContextPrefix(allSteps);
-        if (string.IsNullOrWhiteSpace(prefix))
+        if (string.IsNullOrWhiteSpace(contextPrefix))
         {
             return allSteps.ToNeutral();
         }
@@ -41,7 +40,7 @@ public static class CloudFilesContextMessageBuilder
             NeutralMessage msg = step.ToNeutral();
             if (injectTargets.Contains(step) && (DBChatRole)step.ChatRoleId == DBChatRole.User)
             {
-                List<NeutralContent> contents = [NeutralTextContent.Create(prefix), .. msg.Contents];
+                List<NeutralContent> contents = [NeutralTextContent.Create(contextPrefix), .. msg.Contents];
                 msg = msg with { Contents = contents };
             }
             injected.Add(msg);

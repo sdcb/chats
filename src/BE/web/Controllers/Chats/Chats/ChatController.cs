@@ -505,11 +505,15 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
 
         bool codeExecutionEnabled = chatSpan.ChatConfig.CodeExecutionEnabled;
 
-        IList<NeutralMessage> neutralMessages = CloudFilesContextMessageBuilder.BuildMessages(
+        string? ciPrefix = codeExecutionEnabled
+            ? codeInterpreter.BuildCodeInterpreterContextPrefix(messageTurns, allSteps)
+            : null;
+
+        IList<NeutralMessage> neutralMessages = CodeInterpreterContextMessageBuilder.BuildMessages(
             historySteps: messageTree,
             currentRoundSteps: dbUserMessage?.Steps ?? [],
             codeExecutionEnabled: codeExecutionEnabled,
-            buildCloudFilesContextPrefix: codeInterpreter.BuildCloudFilesContextPrefix);
+            contextPrefix: ciPrefix);
         ChatRequest csr = new()
         {
             EndUserId = $"{chat.Id}-{chatSpan.SpanId}",
