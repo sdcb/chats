@@ -9,7 +9,8 @@ RUN apt-get update \
     && apt-get install -y ${APT_PACKAGES} \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --break-system-packages ${PIP_PACKAGES}
+RUN pip install --break-system-packages ${PIP_PACKAGES} \
+    && playwright install chromium
 
 RUN npm install -g ${NPM_GLOBAL_PACKAGES}
 

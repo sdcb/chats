@@ -29,6 +29,12 @@ env:
     pandoc
     poppler-utils
     iputils-ping
+    fonts-wqy-microhei
+    fonts-wqy-zenhei
+    fonts-noto-cjk-full
+    fonts-cascadia-code
+    fonts-times-new-roman
+    fonts-roboto
   PIP_PACKAGES: >-
     numpy
     pandas
