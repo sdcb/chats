@@ -34,6 +34,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
                 DBModelProvider.DeepSeek => sp.GetRequiredService<DeepSeekChatService>(),
                 DBModelProvider.MiniMax => sp.GetRequiredService<MiniMaxChatService>(),
                 DBModelProvider.Mimo => sp.GetRequiredService<MimoChatService>(),
+                DBModelProvider.Moonshot => sp.GetRequiredService<MoonshotChatService>(),
                 DBModelProvider.WenXinQianFan => sp.GetRequiredService<QianFanChatService>(),
                 DBModelProvider.AliyunDashscope => sp.GetRequiredService<QwenChatService>(),
                 DBModelProvider.ZhiPuAI => sp.GetRequiredService<GLMChatService>(),

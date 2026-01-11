@@ -1,0 +1,175 @@
+POST https://api.moonshot.cn/v1/chat/completions HTTP/1.1
+Host: api.moonshot.cn
+Authorization: Bearer REDACTED
+Accept: text/event-stream
+User-Agent: Sdcb-Chats/1.10.0.0
+traceparent: 00-REDACTED-00
+Cookie: REDACTED
+Content-Type: application/json; charset=utf-8
+Content-Length: 10542
+
+{"model":"kimi-k2-thinking-turbo","messages":[{"role":"system","content":"你是AI助手Sdcb Chats\n当前日期: 2026/01/11，当前模型：kimi-k2-thinking-turbo\n输出格式请使用丰富的markdown标签\r\n\r\nYou have access to sandboxed code interpreter environments.\r\n- Working directory: /app\r\n- Artifacts directory: /app/artifacts, MUST copy to artifacts folder so user can download it!\r\n- Call create_docker_session to get a sessionId.\r\n"},{"role":"user","content":"测试一下你调用docker的能力"},{"role":"assistant","content":"我来测试一下Docker能力！首先创建一个Docker会话。","tool_calls":[{"id":"create_docker_session:0","type":"function","function":{"name":"create_docker_session","arguments":"{\"image\": null, \"label\": \"test-session\", \"networkMode\": null, \"resourceLimits\": null}"}}]},{"role":"tool","tool_call_id":"create_docker_session:0","content":"sessionId: test-session, image: sdcb/code-interpreter:r-25\nshell: [/usr/bin/bash -lc], cpu cores=2, memory=2GB, max processes=200, network=Bridge, ip=172.17.0.3\nThis environment is pre-configured with the following tools and libraries:\n* dotnet 10.0.101, commands: `dotnet build`, `dotnet run single-file.cs`, `dotnet add package`, pre-cached NuGet packages in `/opt/nuget-local`\n* python 3.12.3, commands: `python3 - <<'PY' ...`, `pip install --break-system-packages package-name`, pre-installed packages confirm with `pip list`\n* C/C++ Toolchain (gcc 13.3.0), tools: `gcc`, `g++`, `make`, `cmake`\n* node.js 18.19.1, commands: `node`, `npm`, global packages confirm with `npm -g ls`\n* utilities: git, LibreOffice, Pandoc, Poppler (`pdftotext`, `pdfinfo`), sqlite3, file, FFmpeg 6.1.1-3ubuntu5, git\n\nIf a user request involves reading, writing, converting, or analyzing complex artifacts (e.g., xlsx, pptx, pdf, docx, images, web assets), first run `ls /app/skills` to find the best-matching skill folder, then read and follow `/app/skills/<skill>/SKILL.md` (and its referenced scripts/workflows).\n"},{"role":"assistant","content":"太好！Docker会话已成功创建。现在让我测试一些基本功能：","tool_calls":[{"id":"run_command:1","type":"function","function":{"name":"run_command","arguments":"{\"sessionId\": \"test-session\", \"command\": \"echo \\\"Hello from Docker!\\\" && date && whoami\"}"}}]},{"role":"tool","tool_call_id":"run_command:1","content":"Hello from Docker!\nSun Jan 11 13:06:20 UTC 2026\nroot\n"},{"role":"assistant","content":"现在测试文件操作和代码执行：","tool_calls":[{"id":"write_file:2","type":"function","function":{"name":"write_file","arguments":"{\"sessionId\": \"test-session\", \"path\": \"/app/test.py\", \"text\": \"def hello(name):\\n    return f\\\"Hello, {name}!\\\"\\n\\nprint(hello(\\\"World\\\"))\\nprint(hello(\\\"Docker\\\"))\\nprint(\\\"Current date and time:\\\")\\nimport datetime\\nprint(datetime.datetime.now())\\n\"}"}}]},{"role":"tool","tool_call_id":"write_file:2","content":"Wrote 171 bytes to /app/test.py"},{"role":"assistant","tool_calls":[{"id":"read_file:3","type":"function","function":{"name":"read_file","arguments":"{\"sessionId\": \"test-session\", \"path\": \"/app/test.py\", \"withLineNumbers\": true}"}}]},{"role":"tool","tool_call_id":"read_file:3","content":"TotalLines: 9\n1: def hello(name):\n2:     return f\"Hello, {name}!\"\n3: \n4: print(hello(\"World\"))\n5: print(hello(\"Docker\"))\n6: print(\"Current date and time:\")\n7: import datetime\n8: print(datetime.datetime.now())\n9: "},{"role":"assistant","tool_calls":[{"id":"run_command:4","type":"function","function":{"name":"run_command","arguments":"{\"sessionId\": \"test-session\", \"command\": \"python /app/test.py\"}"}}]},{"role":"tool","tool_call_id":"run_command:4","content":"ExitCode: 127\r\nExecutionTimeMs: 27\r\nStderr:\r\n/usr/bin/bash: line 1: python: command not found"},{"role":"assistant","tool_calls":[{"id":"run_command:5","type":"function","function":{"name":"run_command","arguments":"{\"sessionId\": \"test-session\", \"command\": \"python3 /app/test.py\"}"}}]},{"role":"tool","tool_call_id":"run_command:5","content":"Hello, World!\nHello, Docker!\nCurrent date and time:\n2026-01-11 13:06:26.246254\n"},{"role":"assistant","content":"现在让我们测试Patch功能：","tool_calls":[{"id":"write_file:6","type":"function","function":{"name":"write_file","arguments":"{\"sessionId\": \"test-session\", \"path\": \"/app/patch_demo.txt\", \"text\": \"第1行：原始文本\\n第2行：这是一条示例\\n第3行：这是第三行\\n第4行：这是第四行\\n第5行：结束\\n\"}"}}]},{"role":"tool","tool_call_id":"write_file:6","content":"Wrote 121 bytes to /app/patch_demo.txt"},{"role":"assistant","tool_calls":[{"id":"patch_file:7","type":"function","function":{"name":"patch_file","arguments":"{\"sessionId\": \"test-session\", \"path\": \"/app/patch_demo.txt\", \"patch\": \"@@ -1,5 +1,5 @@\\n 第1行：原始文本\\n-第2行：这是一条示例\\n+第2行：这是修改后的内容示例\\n 第3行：这是第三行\\n-第4行：这是第四行\\n-第5行：结束\\n+第4行：这是第四行，PATCHED！\\n+第5行：结束，FINAL！\\n\"}"}}]},{"role":"tool","tool_call_id":"patch_file:7","content":"Patched /app/patch_demo.txt (157 bytes)"},{"role":"assistant","tool_calls":[{"id":"read_file:8","type":"function","function":{"name":"read_file","arguments":"{\"sessionId\": \"test-session\", \"path\": \"/app/patch_demo.txt\", \"withLineNumbers\": true}"}}]},{"role":"tool","tool_call_id":"read_file:8","content":"TotalLines: 6\n1: 第1行：原始文本\n2: 第2行：这是修改后的内容示例\n3: 第3行：这是第三行\n4: 第4行：这是第四行，PATCHED！\n5: 第5行：结束，FINAL！\n6: "},{"role":"assistant","content":"让我们测试C++编译执行：","tool_calls":[{"id":"run_command:9","type":"function","function":{"name":"run_command","arguments":"{\"sessionId\": \"test-session\", \"command\": \"echo '#include <iostream>' > test.cpp && echo 'int main(){std::cout <<\\\"C++ works!\\\"; return 0;}' >> test.cpp && g++ test.cpp -o test && ./test\"}"}}]},{"role":"tool","tool_call_id":"run_command:9","content":"C++ works!"}],"stream":true,"stream_options":{"include_usage":true},"user":"18038-0","parallel_tool_calls":true,"tools":[{"type":"function","function":{"name":"create_docker_session","description":"Create a docker session","parameters":{"type":"object","properties":{"image":{"type":["string","null"],"description":"Docker image to use (null means use server default: sdcb/code-interpreter:r-25 (Suitable for most code interpreter tasks))."},"label":{"type":["string","null"],"description":"Label. If empty, server will use the new container id prefix (first 12 chars)."},"resourceLimits":{"type":["object","null"],"properties":{"memoryBytes":{"type":["integer","null"]},"cpuCores":{"type":["number","null"]},"maxProcesses":{"type":["integer","null"]}},"description":"Resource limits (null means use server default: memory=2GB, cpu=2 cores, maxProcesses=200)."},"networkMode":{"type":["string","null"],"description":"Network mode. One of: none, bridge. null means use server default: bridge.","enum":["none","bridge","host"]}}}}},{"type":"function","function":{"name":"destroy_session","description":"Destroy the docker session","parameters":{"type":"object","properties":{"sessionId":{"type":"string"}},"required":["sessionId"]}}},{"type":"function","function":{"name":"download_chat_files","description":"Download cloud files (from chat history) into /app","parameters":{"type":"object","properties":{"sessionId":{"type":"string"},"patterns":{"type":"array","items":{"type":"string"},"description":"Wildcard patterns matching cloud file names.","minItems":1}},"required":["sessionId","patterns"]}}},{"type":"function","function":{"name":"patch_file","description":"Apply a patch to a file under /app.\r\nThe target file is specified by the 'path' argument.\r\nThe 'patch' argument MUST be unified-diff hunks ONLY (no headers/wrappers).","parameters":{"type":"object","properties":{"sessionId":{"type":"string"},"path":{"type":"string","description":"Target file path under /app."},"patch":{"type":"string","description":"Patch text (RAW, no markdown). MUST contain unified-diff hunks ONLY.\r\n\r\nSupported input:\r\n- One or more hunks.\r\n- Each hunk header MUST be exactly:\r\n    @@ -oldStart,oldCount +newStart,newCount @@\r\n    (full ranges required)\r\n- Inside hunks, each line must start with:\r\n    - ' ' (context)\r\n    - '+' (add)\r\n    - '-' (delete)\r\n    - or be exactly: \\\\ No newline at end of file\r\n\r\nNot supported (do NOT include):\r\n- diff --git / index / --- / +++\r\n- *** Begin Patch/*** End Patch wrappers\r\n- markdown code fences (```)\r\n- any extra commentary text\r\n\r\nNotes:\r\n- An empty context line must be represented as a single space ' ' line (no empty lines inside hunks).\r\n- Recommended workflow: call read_file(withLineNumbers=true) first, then generate hunks with enough context."}},"required":["sessionId","path","patch"]}}},{"type":"function","function":{"name":"read_file","description":"Read a file under /app","parameters":{"type":"object","properties":{"sessionId":{"type":"string"},"path":{"type":"string","description":"Absolute path to the file (must be under /app)."},"startLine":{"type":["integer","null"],"description":"Optional start line (1-based, inclusive)."},"endLine":{"type":["integer","null"],"description":"Optional end line (1-based, inclusive)."},"withLineNumbers":{"type":["boolean","null"],"description":"Optional (default false). If true, prefix each line with its line number; the first line will be the total line count."}},"required":["sessionId","path"]}}},{"type":"function","function":{"name":"run_command","description":"Run a shell command inside the session workdir /app","parameters":{"type":"object","properties":{"sessionId":{"type":"string"},"command":{"type":"string","description":"Shell command to run"},"timeoutSeconds":{"type":["integer","null"],"description":"Command timeout seconds (null means use server default)."}},"required":["sessionId","command"]}}},{"type":"function","function":{"name":"write_file","description":"Write a file under /app","parameters":{"type":"object","properties":{"sessionId":{"type":"string"},"path":{"type":"string","description":"Path under /app."},"text":{"type":["string","null"],"description":"UTF-8 text content."},"contentBase64":{"type":["string","null"],"description":"Base64-encoded bytes."}},"required":["sessionId","path"]}}}]}
+HTTP/1.1 200 OK
+Date: Sun, 11 Jan 2026 13:06:34 GMT
+Content-Type: text/event-stream
+Transfer-Encoding: chunked
+Connection: keep-alive
+Vary: Accept-Encoding
+Cache-Control: no-cache
+Msh-Context-Cache-Token-Saved: 2304
+Msh-Gid: enterprise-tier-1
+Msh-Org-Id: org-redacted
+Msh-Project-Id: proj-redacted
+Msh-Request-Id: redacted
+Msh-Schema-Warning: tools.function[create_docker_session].parameters is not a valid moonshot flavored json schema, details: <At path 'properties.resourceLimits': keyword properties is not allowed in combination with multiple types>
+Msh-Trace-Mode: on
+Msh-Uid: redacted
+Vary: Origin
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+b17
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"reasoning_content":"让我们"},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"reasoning_content":"测试"},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"reasoning_content":".NET"},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"reasoning_content":"运行"},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"reasoning_content":"："},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"reasoning_content":"测试"},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"reasoning_content":"一下"},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"reasoning_content":"dotnet"},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"reasoning_content":"的能力"},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"reasoning_content":"。"},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+
+b79
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"run_command:10","type":"function","function":{"name":"run_command","arguments":""}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"session"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Id"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \""}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"test"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"-session"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\","}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \""}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+
+123
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"command"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+
+6c1
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \""}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"echo"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" '"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Console"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":".Write"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+
+362
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Line"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"(\\\""}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Hello"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+
+b3f
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" from"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" ."}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"NET"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \\\""}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" +"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" Date"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Time"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":".Now"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":".To"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"String"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+
+b38
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"(\\\""}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"yyyy"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"-MM"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"-dd"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" HH"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":":mm"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":":ss"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\\\""}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"));"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"'"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+
+366
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \u003e"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" program"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":".cs"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+
+91e
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \u0026\u0026"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" dotnet"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" run"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":" program"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":".cs"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]},"finish_reason":null}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls","usage":{"prompt_tokens":2455,"completion_tokens":70,"total_tokens":2525,"cached_tokens":2304}}],"system_fingerprint":"fpv0_0b8aacdd"}
+
+data: {"id":"chatcmpl-6963a05a9e108cc845422af7","object":"chat.completion.chunk","created":1768136794,"model":"kimi-k2-thinking-turbo","choices":[],"usage":{"prompt_tokens":2455,"completion_tokens":70,"total_tokens":2525,"cached_tokens":2304}}
+
+data: [DONE]
+
+
+0
+

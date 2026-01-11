@@ -338,17 +338,19 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         return 0;
     }
 
-    private static int GetCachedTokens(JsonElement usage)
+    protected virtual int GetCachedTokens(JsonElement usage)
     {
+        // OpenAI style: usage.prompt_tokens_details.cached_tokens
         if (usage.TryGetProperty("prompt_tokens_details", out JsonElement ptd) && ptd.ValueKind == JsonValueKind.Object &&
-            ptd.TryGetProperty("cached_tokens", out JsonElement cached))
+            ptd.TryGetProperty("cached_tokens", out JsonElement cached) && cached.ValueKind == JsonValueKind.Number)
         {
             return cached.GetInt32();
         }
+
         return 0;
     }
 
-    private static ChatTokenUsage? ParseUsage(JsonElement usageElement)
+    private ChatTokenUsage? ParseUsage(JsonElement usageElement)
     {
         if (usageElement.ValueKind != JsonValueKind.Object)
         {
@@ -363,6 +365,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             CacheTokens = GetCachedTokens(usageElement)
         };
     }
+
 
     private async IAsyncEnumerable<ChatSegment> ChatNonStreaming(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {

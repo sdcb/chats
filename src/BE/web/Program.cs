@@ -1,4 +1,4 @@
-﻿using Chats.DB;
+using Chats.DB;
 using Chats.BE.DB.Init;
 using Chats.BE.Infrastructure;
 using Chats.BE.Services;
@@ -79,6 +79,8 @@ public class Program
         builder.Services.AddSingleton<Services.Models.ChatServices.Anthropic.MiniMaxAnthropicService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.Anthropic.MimoAnthropicService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.MimoChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.MoonshotChatService>();
+
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.ImageGenerationService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.AzureImageGenerationService>();
         builder.Services.AddSingleton<BalanceService>();
