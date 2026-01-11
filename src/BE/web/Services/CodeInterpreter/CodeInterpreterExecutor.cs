@@ -10,6 +10,7 @@ using Chats.DockerInterface.Models;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Options;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -51,7 +52,9 @@ public sealed class CodeInterpreterExecutor(
     private Dictionary<string, string> BuildPlaceholderReplacements()
     {
         ResourceLimits defaultLimits = _options.BuildDefaultResourceLimits();
-        string resourceLimitsStr = FormatResourceLimits(defaultLimits);
+        string defaultMemoryBytesStr = FormatDefaultMemoryBytes(defaultLimits.MemoryBytes);
+        string defaultCpuCoresStr = FormatDefaultCpuCores(defaultLimits.CpuCores);
+        string defaultMaxProcessesStr = FormatDefaultMaxProcesses(defaultLimits.MaxProcesses);
         string networkModeStr = _options.GetDefaultNetworkMode().ToString().ToLowerInvariant();
         string allowedNetworkModesStr = _options.GetAllowedNetworkModesDisplay();
         string timeoutStr = _options.DefaultTimeoutSeconds?.ToString() ?? "unlimited";
@@ -65,11 +68,31 @@ public sealed class CodeInterpreterExecutor(
         return new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["{defaultTimeoutSeconds}"] = timeoutStr,
-            ["{defaultResourceLimits}"] = resourceLimitsStr,
+            ["{defaultMemoryBytes}"] = defaultMemoryBytesStr,
+            ["{defaultCpuCores}"] = defaultCpuCoresStr,
+            ["{defaultMaxProcesses}"] = defaultMaxProcessesStr,
             ["{defaultNetworkMode}"] = networkModeStr,
             ["{allowedNetworkModes}"] = allowedNetworkModesStr,
             ["{defaultImage}"] = defaultImageDisplay,
         };
+    }
+
+    private static string FormatDefaultMemoryBytes(long memoryBytes)
+    {
+        if (memoryBytes == 0) return "0 (unlimited)";
+        return $"{memoryBytes.ToString(CultureInfo.InvariantCulture)} ({FormatBytes(memoryBytes)})";
+    }
+
+    private static string FormatDefaultCpuCores(double cpuCores)
+    {
+        if (cpuCores == 0) return "0 (unlimited)";
+        return cpuCores.ToString("0.##", CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatDefaultMaxProcesses(long maxProcesses)
+    {
+        if (maxProcesses == 0) return "0 (unlimited)";
+        return maxProcesses.ToString(CultureInfo.InvariantCulture);
     }
 
     internal static string FormatResourceLimits(ResourceLimits limits)
@@ -381,8 +404,6 @@ public sealed class CodeInterpreterExecutor(
         return result;
     }
 
-    internal sealed record ResourceLimitsArgs(long? MemoryBytes = null, double? CpuCores = null, long? MaxProcesses = null);
-
     [ToolFunction("Create a docker session")]
     internal async Task<Result<string>> CreateDockerSession(
         TurnContext ctx,
@@ -390,8 +411,12 @@ public sealed class CodeInterpreterExecutor(
         string? image,
         [ToolParam("Label. If empty, server will use the new container id prefix (first 12 chars).")]
         string? label,
-        [ToolParam("Resource limits (null means use server default: {defaultResourceLimits}).")]
-        ResourceLimitsArgs? resourceLimits,
+        [ToolParam("Memory limit in bytes (null means use server default: {defaultMemoryBytes}). 0 means unlimited.")]
+        long? memoryBytes,
+        [ToolParam("CPU limit in cores (null means use server default: {defaultCpuCores}). 0 means unlimited.")]
+        double? cpuCores,
+        [ToolParam("Max processes (null means use server default: {defaultMaxProcesses}). 0 means unlimited.")]
+        long? maxProcesses,
         [ToolParam("Network mode. One of: {allowedNetworkModes}. null means use server default: {defaultNetworkMode}.")]
         [EnumDataType(typeof(NetworkMode))]
         string? networkMode,
@@ -438,9 +463,9 @@ public sealed class CodeInterpreterExecutor(
                     $"'{maxAllowedNetworkMode.ToString().ToLowerInvariant()}'. Allowed: {allowed}.");
             }
 
-            if (resourceLimits != null)
+            if (memoryBytes != null || cpuCores != null || maxProcesses != null)
             {
-                limits = MergeLimitsWithDefaults(resourceLimits);
+                limits = MergeLimitsWithDefaults(memoryBytes, cpuCores, maxProcesses);
                 limits.Validate(max);
             }
 
@@ -1093,15 +1118,15 @@ public sealed class CodeInterpreterExecutor(
         return v[..len];
     }
 
-    private ResourceLimits MergeLimitsWithDefaults(ResourceLimitsArgs resourceLimitsArgs)
+    private ResourceLimits MergeLimitsWithDefaults(long? memoryBytes, double? cpuCores, long? maxProcesses)
     {
         ResourceLimits defaults = _options.BuildDefaultResourceLimits();
         ResourceLimits merged = defaults.Clone();
 
         // null means use server default (not unlimited) per user request.
-        if (resourceLimitsArgs.MemoryBytes != null) merged.MemoryBytes = resourceLimitsArgs.MemoryBytes.Value;
-        if (resourceLimitsArgs.CpuCores != null) merged.CpuCores = resourceLimitsArgs.CpuCores.Value;
-        if (resourceLimitsArgs.MaxProcesses != null) merged.MaxProcesses = resourceLimitsArgs.MaxProcesses.Value;
+        if (memoryBytes != null) merged.MemoryBytes = memoryBytes.Value;
+        if (cpuCores != null) merged.CpuCores = cpuCores.Value;
+        if (maxProcesses != null) merged.MaxProcesses = maxProcesses.Value;
 
         // If config default is unlimited (0), keep it.
         return merged;

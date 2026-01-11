@@ -172,7 +172,9 @@ public sealed class CodeInterpreterSessionLookupTests
             ctx,
             image: null,
             label: "dotnet-env",
-            resourceLimits: null,
+            memoryBytes: null,
+            cpuCores: null,
+            maxProcesses: null,
             networkMode: null,
             cancellationToken: CancellationToken.None);
 
@@ -208,7 +210,9 @@ public sealed class CodeInterpreterSessionLookupTests
             ctx,
             image: null,
             label: "dotnet-env",
-            resourceLimits: null,
+            memoryBytes: null,
+            cpuCores: null,
+            maxProcesses: null,
             networkMode: null,
             cancellationToken: CancellationToken.None);
 

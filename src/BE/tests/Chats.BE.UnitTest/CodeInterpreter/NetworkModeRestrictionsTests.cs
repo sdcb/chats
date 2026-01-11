@@ -72,7 +72,9 @@ public sealed class NetworkModeRestrictionsTests
             ctx,
             image: null,
             label: null,
-            resourceLimits: null,
+            memoryBytes: null,
+            cpuCores: null,
+            maxProcesses: null,
             networkMode: "host",
             cancellationToken: CancellationToken.None);
 

@@ -83,17 +83,19 @@ public sealed class CodeInterpreterPlaceholderTest
     [Fact]
     public void ReplacePlaceholders_ShouldReplaceAllOccurrences()
     {
-        string input = "Timeout: {defaultTimeoutSeconds}, Network: {defaultNetworkMode}, Limits: {defaultResourceLimits}";
+        string input = "Timeout: {defaultTimeoutSeconds}, Network: {defaultNetworkMode}, Limits: memory={defaultMemoryBytes}, cpu={defaultCpuCores}, maxProcesses={defaultMaxProcesses}";
         Dictionary<string, string> placeholders = new(StringComparer.Ordinal)
         {
             ["{defaultTimeoutSeconds}"] = "300",
             ["{defaultNetworkMode}"] = "none",
-            ["{defaultResourceLimits}"] = "memory=512MB, cpu=1 cores, maxProcesses=100"
+            ["{defaultMemoryBytes}"] = "536870912 (512MB)",
+            ["{defaultCpuCores}"] = "1",
+            ["{defaultMaxProcesses}"] = "100"
         };
 
         string result = CodeInterpreterExecutor.ReplacePlaceholders(input, placeholders);
 
-        Assert.Equal("Timeout: 300, Network: none, Limits: memory=512MB, cpu=1 cores, maxProcesses=100", result);
+        Assert.Equal("Timeout: 300, Network: none, Limits: memory=536870912 (512MB), cpu=1, maxProcesses=100", result);
     }
 
     [Fact]
