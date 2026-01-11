@@ -281,9 +281,7 @@ public class InChatContext(long firstTick)
         UserModelUsage usage = new()
         {
             ModelId = userModel.ModelId,
-            Model = userModel.Model,
-            UserId = userModel.UserId,
-            User = userModel.User,
+            UserId = userId,
             CreatedAt = DateTime.UtcNow,
             FinishReasonId = (byte)FinishReason,
             SegmentCount = _segmentCount,
