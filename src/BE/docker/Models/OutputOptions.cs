@@ -18,5 +18,5 @@ public class OutputOptions
     /// <summary>
     /// 截断提示信息
     /// </summary>
-    public string TruncationMessage { get; set; } = "\n... [Output truncated: {0} bytes omitted] ...\n";
+    public string TruncationMessage { get; set; } = "\n... [Output truncated: {0} lines omitted] ...\n";
 }

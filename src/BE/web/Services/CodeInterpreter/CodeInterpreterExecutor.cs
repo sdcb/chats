@@ -676,13 +676,10 @@ public sealed class CodeInterpreterExecutor(
         TurnContext ctx,
         [Required]
         string sessionId,
-        [ToolParam("Path under /app.")]
-        [Required]
+        [ToolParam("Path under /app."), Required]
         string path,
-        [ToolParam("UTF-8 text content.")]
-        string? text,
-        [ToolParam("Base64-encoded bytes.")]
-        string? contentBase64,
+        [ToolParam("Text content(written as UTF-8)"), Required]
+        string text,
         CancellationToken cancellationToken)
     {
         Result<TurnContext.SessionState> ensureResult = await EnsureSession(ctx, sessionId, cancellationToken);
@@ -695,26 +692,14 @@ public sealed class CodeInterpreterExecutor(
 
         string normalizedPath = PathSafety.NormalizeUnderWorkDir(path);
 
-        byte[] bytes;
-        if (!string.IsNullOrWhiteSpace(contentBase64))
-        {
-            bytes = Convert.FromBase64String(contentBase64);
-        }
-        else if (!string.IsNullOrEmpty(text))
-        {
-            bytes = Encoding.UTF8.GetBytes(text);
-        }
-        else
-        {
-            return Result.Fail<string>("Either text or contentBase64 is required");
-        }
-
+        byte[] bytes = Encoding.UTF8.GetBytes(text);
         await _docker.UploadFileAsync(state.DbSession.ContainerId, normalizedPath, bytes, cancellationToken);
         await TouchSession(state.DbSession, cancellationToken);
 
         await SyncArtifactsAfterToolCall(ctx, state, cancellationToken);
 
-        return Result.Ok($"Wrote {bytes.Length} bytes to {normalizedPath}");
+        int lineCount = string.IsNullOrEmpty(text) ? 0 : text.Split(["\r\n", "\n"], StringSplitOptions.None).Length;
+        return Result.Ok($"Wrote {lineCount} lines to {normalizedPath}");
     }
 
     [ToolFunction("Read a file under /app")]
@@ -844,7 +829,7 @@ public sealed class CodeInterpreterExecutor(
             int availableForBase64Chars = Math.Max(0, budget - minHeaderBytes);
 
             // base64 chars are ASCII; chars == bytes in UTF-8 for this portion.
-            int maxRawBytesFromBase64 = (availableForBase64Chars / 4) * 3;
+            int maxRawBytesFromBase64 = availableForBase64Chars / 4 * 3;
             int previewBytes = Math.Clamp(maxRawBytesFromBase64, 0, bytes.Length);
 
             // Ensure we return at least some data when possible.
@@ -889,12 +874,7 @@ public sealed class CodeInterpreterExecutor(
         return Result.Ok(truncatedOutput);
     }
 
-    private static string BuildReadFileTruncationNote(int omittedBytes)
-    {
-        return $"\n(... {omittedBytes} bytes truncated)\n";
-    }
-
-    private static (string output, bool truncated, int omittedBytes) TruncateText(string output, OutputOptions options)
+    private static (string output, bool truncated, int omittedLines) TruncateText(string output, OutputOptions options)
     {
         if (options.MaxOutputBytes <= 0)
         {
@@ -908,8 +888,30 @@ public sealed class CodeInterpreterExecutor(
         }
 
         int halfSize = options.MaxOutputBytes / 2;
-        int omittedBytes = bytes.Length - options.MaxOutputBytes;
-        string note = BuildReadFileTruncationNote(omittedBytes);
+        
+        string truncatedOutput;
+        switch (options.Strategy)
+        {
+            case TruncationStrategy.Head:
+                truncatedOutput = Encoding.UTF8.GetString(bytes, 0, options.MaxOutputBytes);
+                break;
+            case TruncationStrategy.Tail:
+                truncatedOutput = Encoding.UTF8.GetString(bytes, bytes.Length - options.MaxOutputBytes, options.MaxOutputBytes);
+                break;
+            case TruncationStrategy.HeadAndTail:
+                truncatedOutput = Encoding.UTF8.GetString(bytes, 0, halfSize) +
+                                Encoding.UTF8.GetString(bytes, bytes.Length - halfSize, halfSize);
+                break;
+            default:
+                return (output ?? string.Empty, false, 0);
+        }
+
+        // Calculate omitted lines
+        int totalLines = string.IsNullOrEmpty(output) ? 0 : output.Split(["\r\n", "\n"], StringSplitOptions.None).Length;
+        int keptLines = string.IsNullOrEmpty(truncatedOutput) ? 0 : truncatedOutput.Split(["\r\n", "\n"], StringSplitOptions.None).Length;
+        int omittedLines = Math.Max(0, totalLines - keptLines);
+        
+        string note = string.Format(options.TruncationMessage, omittedLines);
 
         return options.Strategy switch
         {
@@ -917,20 +919,20 @@ public sealed class CodeInterpreterExecutor(
                 Encoding.UTF8.GetString(bytes, 0, options.MaxOutputBytes) +
                 note,
                 true,
-                omittedBytes),
+                omittedLines),
 
             TruncationStrategy.Tail => (
                 note +
                 Encoding.UTF8.GetString(bytes, bytes.Length - options.MaxOutputBytes, options.MaxOutputBytes),
                 true,
-                omittedBytes),
+                omittedLines),
 
             TruncationStrategy.HeadAndTail => (
                 Encoding.UTF8.GetString(bytes, 0, halfSize) +
                 note +
                 Encoding.UTF8.GetString(bytes, bytes.Length - halfSize, halfSize),
                 true,
-                omittedBytes),
+                omittedLines),
 
             _ => (output ?? string.Empty, false, 0)
         };

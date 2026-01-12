@@ -329,8 +329,8 @@ public sealed class ReadFileToolTests
         Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "foo.txt", startLine: null, endLine: null, withLineNumbers: null, CancellationToken.None);
 
         Assert.True(r.IsSuccess);
-        Assert.Contains("bytes truncated", r.Value, StringComparison.Ordinal);
-        Assert.EndsWith("bytes truncated)\n", r.Value, StringComparison.Ordinal);
+        Assert.Contains("lines omitted", r.Value, StringComparison.Ordinal);
+        Assert.EndsWith("lines omitted] ...\n", r.Value, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -357,8 +357,8 @@ public sealed class ReadFileToolTests
         Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "foo.txt", startLine: null, endLine: null, withLineNumbers: null, CancellationToken.None);
 
         Assert.True(r.IsSuccess);
-        int noteIdx = r.Value.IndexOf("bytes truncated", StringComparison.Ordinal);
-        Assert.True(noteIdx >= 0 && noteIdx < 20);
+        int noteIdx = r.Value.IndexOf("lines omitted", StringComparison.Ordinal);
+        Assert.True(noteIdx >= 0 && noteIdx < 30);
         Assert.Contains("-TAIL", r.Value, StringComparison.Ordinal);
     }
 
@@ -389,7 +389,7 @@ public sealed class ReadFileToolTests
 
         Assert.True(r.IsSuccess);
         int headIdx = r.Value.IndexOf("HEAD-", StringComparison.Ordinal);
-        int noteIdx = r.Value.IndexOf("bytes truncated", StringComparison.Ordinal);
+        int noteIdx = r.Value.IndexOf("lines omitted", StringComparison.Ordinal);
         int tailIdx = r.Value.IndexOf("-TAIL", StringComparison.Ordinal);
         Assert.True(headIdx >= 0);
         Assert.True(noteIdx > headIdx);
@@ -423,7 +423,7 @@ public sealed class ReadFileToolTests
         Assert.StartsWith("TotalLines: 100\n", r.Value, StringComparison.Ordinal);
 
         int prefixEnd = r.Value.IndexOf('\n');
-        int noteIdx = r.Value.IndexOf("bytes truncated", StringComparison.Ordinal);
+        int noteIdx = r.Value.IndexOf("lines omitted", StringComparison.Ordinal);
         Assert.True(noteIdx > prefixEnd);
     }
 
