@@ -550,7 +550,12 @@ public sealed class CodeInterpreterExecutor(
         string sessionId,
         CancellationToken cancellationToken)
     {
-        TurnContext.SessionState state = await EnsureSession(ctx, sessionId, cancellationToken);
+        Result<TurnContext.SessionState> ensureResult = await EnsureSession(ctx, sessionId, cancellationToken);
+        if (!ensureResult.IsSuccess)
+        {
+            return Result.Fail<string>(ensureResult.Error!);
+        }
+        TurnContext.SessionState state = ensureResult.Value!;
 
         try
         {
@@ -581,7 +586,13 @@ public sealed class CodeInterpreterExecutor(
         int? timeoutSeconds,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        TurnContext.SessionState state = await EnsureSession(ctx, sessionId, cancellationToken);
+        Result<TurnContext.SessionState> ensureResult = await EnsureSession(ctx, sessionId, cancellationToken);
+        if (!ensureResult.IsSuccess)
+        {
+            yield return new ToolCompletedToolProgressDelta { Result = Result.Fail<string>(ensureResult.Error!) };
+            yield break;
+        }
+        TurnContext.SessionState state = ensureResult.Value!;
         state.UsedInThisTurn = true;
         int timeout = _options.GetEffectiveTimeoutSeconds(timeoutSeconds);
 
@@ -674,7 +685,12 @@ public sealed class CodeInterpreterExecutor(
         string? contentBase64,
         CancellationToken cancellationToken)
     {
-        TurnContext.SessionState state = await EnsureSession(ctx, sessionId, cancellationToken);
+        Result<TurnContext.SessionState> ensureResult = await EnsureSession(ctx, sessionId, cancellationToken);
+        if (!ensureResult.IsSuccess)
+        {
+            return Result.Fail<string>(ensureResult.Error!);
+        }
+        TurnContext.SessionState state = ensureResult.Value!;
         state.UsedInThisTurn = true;
 
         string normalizedPath = PathSafety.NormalizeUnderWorkDir(path);
@@ -717,7 +733,12 @@ public sealed class CodeInterpreterExecutor(
         bool? withLineNumbers,
         CancellationToken cancellationToken)
     {
-        TurnContext.SessionState state = await EnsureSession(ctx, sessionId, cancellationToken);
+        Result<TurnContext.SessionState> ensureResult = await EnsureSession(ctx, sessionId, cancellationToken);
+        if (!ensureResult.IsSuccess)
+        {
+            return Result.Fail<string>(ensureResult.Error!);
+        }
+        TurnContext.SessionState state = ensureResult.Value!;
         state.UsedInThisTurn = true;
 
         string normalizedPath = PathSafety.NormalizeUnderWorkDir(path);
@@ -955,7 +976,12 @@ public sealed class CodeInterpreterExecutor(
             return Result.Fail<string>(validationError);
         }
 
-        TurnContext.SessionState state = await EnsureSession(ctx, sessionId, cancellationToken);
+        Result<TurnContext.SessionState> ensureResult = await EnsureSession(ctx, sessionId, cancellationToken);
+        if (!ensureResult.IsSuccess)
+        {
+            return Result.Fail<string>(ensureResult.Error!);
+        }
+        TurnContext.SessionState state = ensureResult.Value!;
         state.UsedInThisTurn = true;
 
         string normalizedPath = PathSafety.NormalizeUnderWorkDir(path);
@@ -982,7 +1008,12 @@ public sealed class CodeInterpreterExecutor(
         string[] patterns,
         CancellationToken cancellationToken)
     {
-        TurnContext.SessionState state = await EnsureSession(ctx, sessionId, cancellationToken);
+        Result<TurnContext.SessionState> ensureResult = await EnsureSession(ctx, sessionId, cancellationToken);
+        if (!ensureResult.IsSuccess)
+        {
+            return Result.Fail<string>(ensureResult.Error!);
+        }
+        TurnContext.SessionState state = ensureResult.Value!;
         state.UsedInThisTurn = true;
 
         List<string> patternsList = patterns.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
@@ -1059,11 +1090,11 @@ public sealed class CodeInterpreterExecutor(
         return [.. byLabel.Values];
     }
 
-    private async Task<TurnContext.SessionState> EnsureSession(TurnContext ctx, string sessionId, CancellationToken cancellationToken)
+    private async Task<Result<TurnContext.SessionState>> EnsureSession(TurnContext ctx, string sessionId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(sessionId))
         {
-            throw new InvalidOperationException("sessionId is required");
+            return Result.Fail<TurnContext.SessionState>("sessionId is required");
         }
 
         if (!ctx.SessionsBySessionId.TryGetValue(sessionId, out TurnContext.SessionState? state))
@@ -1087,7 +1118,7 @@ public sealed class CodeInterpreterExecutor(
             }
             else
             {
-                throw new InvalidOperationException($"Session not found in this turn: {sessionId}. Call create_docker_session first.");
+                return Result.Fail<TurnContext.SessionState>($"Session not found in this turn: {sessionId}. Call create_docker_session first.");
             }
         }
 
@@ -1096,7 +1127,7 @@ public sealed class CodeInterpreterExecutor(
             state.ArtifactsSnapshot = await SnapshotArtifacts(state.DbSession.ContainerId, cancellationToken);
             state.SnapshotTaken = true;
         }
-        return state;
+        return Result.Ok(state);
     }
 
     private static string ComputeSessionIdFromContainerId(string containerId)
