@@ -18,7 +18,7 @@ public class SiteInfoController() : ControllerBase
         SiteInfo? info = await config.GetFillingInfo(cancellationToken);
         if (info == null)
         {
-            return NotFound();
+            return Ok(new SiteInfo());
         }
 
         return Ok(info);
