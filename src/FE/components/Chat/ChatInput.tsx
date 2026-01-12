@@ -551,7 +551,7 @@ const ChatInput = ({
                         onUploading={handleUploading}
                         onFailed={handleUploadFailed}
                         onSuccessful={handleUploadSuccessful}
-                        containerRef={inputContainerRef}
+                        containerRef={inputContainerRef as React.RefObject<HTMLElement>}
                       />
                     )}
 
