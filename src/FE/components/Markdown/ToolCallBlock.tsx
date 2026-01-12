@@ -181,14 +181,14 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                 if (obj.sessionId !== undefined) {
                     parts.push(
                         <span key="sessionId">
-                            sessionId: <strong>{obj.sessionId}</strong>
+                            sessionId: <strong>{String(obj.sessionId)}</strong>
                         </span>
                     );
                 }
                 if (obj.timeout !== undefined) {
                     parts.push(
                         <span key="timeout">
-                            timeout: <strong>{obj.timeout}ms</strong>
+                            timeout: <strong>{String(obj.timeout)}ms</strong>
                         </span>
                     );
                 }
@@ -226,7 +226,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                 if (obj!.sessionId !== undefined) {
                     metadataLine = (
                         <>
-                            sessionId: <strong>{obj!.sessionId}</strong>
+                            sessionId: <strong>{String(obj!.sessionId)}</strong>
                         </>
                     );
                 }
