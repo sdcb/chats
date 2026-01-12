@@ -231,4 +231,80 @@ public sealed class CodeInterpreterSessionLookupTests
         }
     }
 
+    [Fact]
+    public async Task EnsureSession_ShouldFail_WhenSessionWasDestroyed()
+    {
+        string dbName = Guid.NewGuid().ToString();
+        using ServiceProvider sp = CreateServiceProvider(dbName);
+        ChatDockerSession destroyedSession = null!;
+        using (IServiceScope scope = sp.CreateScope())
+        {
+            ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
+            await SeedTurnAsync(db, id: 1, parentId: null);
+            await SeedTurnAsync(db, id: 2, parentId: 1);
+
+            destroyedSession = await SeedSessionAsync(db, ownerTurnId: 1, label: "destroyed-session", containerId: "container-destroyed");
+            destroyedSession.TerminatedAt = DateTime.UtcNow.AddMinutes(-5);
+            await db.SaveChangesAsync();
+        }
+
+        FakeDockerService docker = new();
+        CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
+        CodeInterpreterExecutor.TurnContext ctx = CreateCtx(
+            currentTurnId: 2,
+            new ChatTurn { Id = 1, ParentId = null, ChatId = 1, ChatDockerSessions = [destroyedSession] },
+            new ChatTurn { Id = 2, ParentId = 1, ChatId = 1 });
+
+        ToolProgressDelta result = await exec.RunCommand(
+            ctx,
+            sessionId: "destroyed-session",
+            command: "echo test",
+            timeoutSeconds: null,
+            cancellationToken: CancellationToken.None).LastAsync();
+
+        Assert.IsType<ToolCompletedToolProgressDelta>(result);
+        ToolCompletedToolProgressDelta completed = (ToolCompletedToolProgressDelta)result;
+        Assert.False(completed.Result.IsSuccess);
+        Assert.Contains("destroyed-session", completed.Result.Error);
+        Assert.Contains("was destroyed", completed.Result.Error);
+    }
+
+    [Fact]
+    public async Task EnsureSession_ShouldFail_WhenSessionHasExpired()
+    {
+        string dbName = Guid.NewGuid().ToString();
+        using ServiceProvider sp = CreateServiceProvider(dbName);
+        ChatDockerSession expiredSession = null!;
+        using (IServiceScope scope = sp.CreateScope())
+        {
+            ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
+            await SeedTurnAsync(db, id: 1, parentId: null);
+            await SeedTurnAsync(db, id: 2, parentId: 1);
+
+            expiredSession = await SeedSessionAsync(db, ownerTurnId: 1, label: "expired-session", containerId: "container-expired");
+            expiredSession.ExpiresAt = DateTime.UtcNow.AddMinutes(-10);
+            await db.SaveChangesAsync();
+        }
+
+        FakeDockerService docker = new();
+        CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
+        CodeInterpreterExecutor.TurnContext ctx = CreateCtx(
+            currentTurnId: 2,
+            new ChatTurn { Id = 1, ParentId = null, ChatId = 1, ChatDockerSessions = [expiredSession] },
+            new ChatTurn { Id = 2, ParentId = 1, ChatId = 1 });
+
+        ToolProgressDelta result = await exec.RunCommand(
+            ctx,
+            sessionId: "expired-session",
+            command: "echo test",
+            timeoutSeconds: null,
+            cancellationToken: CancellationToken.None).LastAsync();
+
+        Assert.IsType<ToolCompletedToolProgressDelta>(result);
+        ToolCompletedToolProgressDelta completed = (ToolCompletedToolProgressDelta)result;
+        Assert.False(completed.Result.IsSuccess);
+        Assert.Contains("expired-session", completed.Result.Error);
+        Assert.Contains("expired", completed.Result.Error);
+    }
+
 }

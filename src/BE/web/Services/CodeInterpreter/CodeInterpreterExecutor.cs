@@ -1099,27 +1099,40 @@ public sealed class CodeInterpreterExecutor(
 
         if (!ctx.SessionsBySessionId.TryGetValue(sessionId, out TurnContext.SessionState? state))
         {
-            // add DB lookup for existing active session
+            // First, check if session exists (regardless of state)
             ChatDockerSession? dbSession = ctx.MessageTurns
                 .SelectMany(t => t.ChatDockerSessions)
-                .LastOrDefault(s => s.TerminatedAt == null && s.ExpiresAt > DateTime.UtcNow && s.Label == sessionId);
+                .LastOrDefault(s => s.Label == sessionId);
 
-            if (dbSession != null)
-            {
-                state = new TurnContext.SessionState()
-                {
-                    DbSession = dbSession,
-                    ShellPrefix = ParseShellPrefixCsv(dbSession.ShellPrefix, _codePodConfig.IsWindowsContainer),
-                    UsedInThisTurn = true,
-                };
-                state.ArtifactsSnapshot = await SnapshotArtifacts(state.DbSession.ContainerId, cancellationToken);
-                state.SnapshotTaken = true;
-                ctx.SessionsBySessionId[sessionId] = state;
-            }
-            else
+            if (dbSession == null)
             {
                 return Result.Fail<TurnContext.SessionState>($"Session not found in this turn: {sessionId}. Call create_docker_session first.");
             }
+
+            DateTime nowUtc = DateTime.UtcNow;
+
+            // Check if session was destroyed
+            if (dbSession.TerminatedAt != null)
+            {
+                return Result.Fail<TurnContext.SessionState>($"Session '{sessionId}' was destroyed at {dbSession.TerminatedAt:yyyy-MM-dd HH:mm:ss} UTC. Create a new session.");
+            }
+
+            // Check if session has expired
+            if (dbSession.ExpiresAt <= nowUtc)
+            {
+                return Result.Fail<TurnContext.SessionState>($"Session '{sessionId}' expired at {dbSession.ExpiresAt:yyyy-MM-dd HH:mm:ss} UTC. Create a new session.");
+            }
+
+            // Session is active
+            state = new TurnContext.SessionState()
+            {
+                DbSession = dbSession,
+                ShellPrefix = ParseShellPrefixCsv(dbSession.ShellPrefix, _codePodConfig.IsWindowsContainer),
+                UsedInThisTurn = true,
+            };
+            state.ArtifactsSnapshot = await SnapshotArtifacts(state.DbSession.ContainerId, cancellationToken);
+            state.SnapshotTaken = true;
+            ctx.SessionsBySessionId[sessionId] = state;
         }
 
         if (!state.SnapshotTaken)
