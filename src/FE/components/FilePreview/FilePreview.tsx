@@ -173,7 +173,7 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', in
           Your browser does not support the video tag.
         </video>
         {fileName && (
-          <div className="px-3 py-2 bg-muted text-sm truncate">
+          <div className="px-3 py-2 bg-muted text-sm break-all">
             {fileName}
           </div>
         )}
@@ -198,11 +198,11 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', in
   // 音频类型 - 使用原生播放器
   if (interactive && isAudioType(contentType)) {
     return (
-      <div className={`relative rounded-md overflow-hidden border border-border ${className}`} style={{ maxWidth }}>
+      <div className={`relative rounded-md overflow-hidden border border-border ${className}`} style={{ maxWidth: 'fit-content', minWidth: maxWidth }}>
         <div className="p-3 bg-muted">
           <div className="flex items-center gap-2 mb-2">
             <IconFile className="text-muted-foreground" size={20} />
-            <span className="text-sm font-medium truncate flex-1">
+            <span className="text-sm font-medium break-all flex-1">
               {fileName || 'Audio file'}
             </span>
           </div>
@@ -239,7 +239,7 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', in
   return (
     <div 
       className={`relative rounded-md border border-border hover:border-primary transition-colors ${className}`}
-      style={{ maxWidth }}
+      style={{ width: 'fit-content', maxWidth: '100%' }}
     >
       {interactive ? (
         <a
@@ -247,13 +247,13 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', in
           download={fileName || undefined}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center hover:bg-muted/50 transition-colors"
+          className="flex items-center gap-2 p-2 hover:bg-muted/50 transition-colors"
         >
           <div className="flex-shrink-0">
             {React.createElement(fileIconComponent, { size: 32 })}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium truncate">
+            <div className="text-sm font-medium break-all">
               {fileName || 'Unknown file'}
             </div>
           </div>
@@ -262,12 +262,12 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', in
           </div>
         </a>
       ) : (
-        <div className="flex items-center">
+        <div className="flex items-center gap-2 p-2">
           <div className="flex-shrink-0">
             {React.createElement(fileIconComponent, { size: 32 })}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium truncate">
+            <div className="text-sm font-medium break-all">
               {fileName || 'Unknown file'}
             </div>
           </div>
