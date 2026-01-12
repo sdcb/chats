@@ -5,6 +5,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { ChatResult } from '@/types/clientApis';
 
+import CopyButton from '@/components/Button/CopyButton';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -77,16 +78,22 @@ const SharedMessageModal = (props: IProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[320px]">
+      <DialogContent className={shareUrl ? "max-w-[600px]" : "max-w-[320px]"}>
         <DialogHeader>
           <DialogTitle>{t('Share Message')}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-2">
-          {shareUrl ? (
-            <>
+        {shareUrl ? (
+          <>
+            <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
+              <CopyButton value={shareUrl} />
+              <div className="flex-1 text-sm text-gray-800 dark:text-gray-200 break-all font-mono">
+                {shareUrl}
+              </div>
+            </div>
+            <div className="flex justify-start gap-2 mt-2">
               <Button
-                variant="link"
+                variant="destructive"
                 onClick={() => {
                   handleCloseShared();
                 }}
@@ -94,16 +101,10 @@ const SharedMessageModal = (props: IProps) => {
               >
                 {t('Close Shared')}
               </Button>
-              <Button
-                onClick={() => {
-                  handleCopySharedUrl(shareUrl);
-                }}
-                disabled={loading}
-              >
-                {t('Copy Link')}
-              </Button>
-            </>
-          ) : (
+            </div>
+          </>
+        ) : (
+          <div className="flex justify-end">
             <Button
               disabled={loading}
               onClick={() => {
@@ -112,8 +113,8 @@ const SharedMessageModal = (props: IProps) => {
             >
               {t('Share and Copy Link')}
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
