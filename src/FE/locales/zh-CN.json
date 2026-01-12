@@ -92,6 +92,7 @@
   "unit-price": "单价",
   "Generate information": "生成信息",
   "Turn information ({{count}} steps)": "回合信息（共{{count}}步）",
+  "Turn information": "回合信息",
   "Step information": "步骤信息",
   "duration": "耗时",
   "total duration": "总耗时",

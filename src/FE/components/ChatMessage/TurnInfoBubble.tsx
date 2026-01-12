@@ -137,8 +137,8 @@ export const TurnInfoBubble = (props: Props) => {
         <GenerateInfoPopoverContent
           info={info}
           loading={loading}
-          title={'Turn information ({{count}} steps)'}
-          titleParams={{ count: stepInfos ? stepCount : '--' }}
+          title={stepCount > 1 ? 'Turn information ({{count}} steps)' : 'Turn information'}
+          titleParams={stepCount > 1 ? { count: stepInfos ? stepCount : '--' } : undefined}
           avgDurationMs={showAverages ? avgDurationMs : undefined}
           avgFirstTokenLatencyMs={showAverages ? avgFirstTokenLatencyMs : undefined}
         />
