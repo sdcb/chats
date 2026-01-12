@@ -128,87 +128,170 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         return !!obj && Object.prototype.hasOwnProperty.call(obj, 'sessionId');
     };
 
-    const getHeaderTitle = (): string => {
-        if (
-            toolCall.n !== 'run_command' &&
-            toolCall.n !== 'write_file' &&
-            toolCall.n !== 'patch_file' &&
-            toolCall.n !== 'read_file' &&
-            toolCall.n !== 'destroy_session'
-        ) {
-            return toolCall.n;
-        }
-
+    const getDisplayInfo = (): { 
+        header: string; 
+        headerIcon: string; 
+        metadataLine: React.ReactNode | null; 
+        displayParams: string 
+    } => {
         const obj = getToolCallJsonObject();
-        if (!obj) {
-            return toolCall.n;
+        
+        // 根据工具名称选择图标
+        let headerIcon = '🔧'; // 默认图标
+        switch (toolCall.n) {
+            case 'create_docker_session':
+                headerIcon = '🐳';
+                break;
+            case 'destroy_session':
+                headerIcon = '🗑️';
+                break;
+            case 'run_command':
+                headerIcon = '⚡';
+                break;
+            case 'write_file':
+                headerIcon = '✏️';
+                break;
+            case 'read_file':
+                headerIcon = '📖';
+                break;
+            case 'patch_file':
+                headerIcon = '🩹';
+                break;
+            case 'download_chat_files':
+                headerIcon = '📥';
+                break;
         }
-
-        // run_command: 如果有 command，只显示命令本身（不显示 "run_command:" 前缀）
+        
+        // run_command: 提取 header, metadata 和 command
         if (toolCall.n === 'run_command') {
-            const command = obj.command;
-            if (typeof command === 'string' && command.trim().length > 0) {
-                return command;
+            let header = toolCall.n;
+            let metadataLine: React.ReactNode | null = null;
+            let displayParams = toolCall.p;
+
+            if (obj) {
+                // 提取 header (command 本身)
+                const command = obj.command;
+                if (typeof command === 'string' && command.trim().length > 0) {
+                    header = command;
+                    displayParams = command;
+                }
+
+                // 构建 metadata line
+                const parts: React.ReactNode[] = [];
+                if (obj.sessionId !== undefined) {
+                    parts.push(
+                        <span key="sessionId">
+                            sessionId: <strong>{obj.sessionId}</strong>
+                        </span>
+                    );
+                }
+                if (obj.timeout !== undefined) {
+                    parts.push(
+                        <span key="timeout">
+                            timeout: <strong>{obj.timeout}ms</strong>
+                        </span>
+                    );
+                }
+                if (parts.length > 0) {
+                    metadataLine = (
+                        <>
+                            {parts.map((part, index) => (
+                                <span key={index}>
+                                    {index > 0 && ', '}
+                                    {part}
+                                </span>
+                            ))}
+                        </>
+                    );
+                }
             }
-            return toolCall.n;
+
+            return { header, headerIcon, metadataLine, displayParams };
         }
 
-        // write_file/patch_file: JSON 且包含 sessionId
-        if (!hasSessionId(obj)) {
-            return toolCall.n;
+        // write_file/patch_file: 提取 header, metadata 和内容
+        if (toolCall.n === 'write_file' || toolCall.n === 'patch_file') {
+            let header = toolCall.n;
+            let metadataLine: React.ReactNode | null = null;
+            let displayParams = toolCall.p;
+
+            if (hasSessionId(obj)) {
+                // 提取 header (path)
+                const path = obj!.path;
+                if (typeof path === 'string' && path.trim().length > 0) {
+                    header = `${toolCall.n}: ${path}`;
+                }
+
+                // 构建 metadata line
+                if (obj!.sessionId !== undefined) {
+                    metadataLine = (
+                        <>
+                            sessionId: <strong>{obj!.sessionId}</strong>
+                        </>
+                    );
+                }
+
+                // 提取具体内容
+                if (toolCall.n === 'write_file') {
+                    const text = obj?.text;
+                    displayParams = typeof text === 'string' ? text : toolCall.p;
+                } else {
+                    const patch = obj?.patch;
+                    displayParams = typeof patch === 'string' ? patch : toolCall.p;
+                }
+            }
+
+            return { header, headerIcon, metadataLine, displayParams };
         }
 
-        // destroy_session: JSON 且包含 sessionId
-        if (toolCall.n === 'destroy_session') {
-            const sessionId = obj.sessionId;
-            if (typeof sessionId === 'string' && sessionId.trim().length > 0) {
-                return `${toolCall.n}: ${sessionId}`;
-            }
-            if (typeof sessionId === 'number') {
-                return `${toolCall.n}: ${sessionId}`;
-            }
-            return toolCall.n;
-        }
-
-        // read_file: JSON 且包含 sessionId
+        // read_file: 提取 header
         if (toolCall.n === 'read_file') {
+            let header = toolCall.n;
+            
+            if (obj) {
+                const path = obj.path;
+                if (typeof path === 'string' && path.trim().length > 0) {
+                    header = `${toolCall.n}: ${path}`;
+                }
+            }
+
+            return { header, headerIcon, metadataLine: null, displayParams: toolCall.p };
+        }
+
+        // destroy_session: 提取 header
+        if (toolCall.n === 'destroy_session') {
+            let header = toolCall.n;
+            
+            if (obj) {
+                const sessionId = obj.sessionId;
+                if (typeof sessionId === 'string' && sessionId.trim().length > 0) {
+                    header = `${toolCall.n}: ${sessionId}`;
+                } else if (typeof sessionId === 'number') {
+                    header = `${toolCall.n}: ${sessionId}`;
+                }
+            }
+
+            return { header, headerIcon, metadataLine: null, displayParams: toolCall.p };
+        }
+
+        // 其他工具：检查是否有 path 字段
+        if (obj) {
             const path = obj.path;
             if (typeof path === 'string' && path.trim().length > 0) {
-                return `${toolCall.n}: ${path}`;
+                return { 
+                    header: `${toolCall.n}: ${path}`, 
+                    headerIcon, 
+                    metadataLine: null, 
+                    displayParams: toolCall.p 
+                };
             }
-            return toolCall.n;
         }
 
-        const path = obj.path;
-        if (typeof path === 'string' && path.trim().length > 0) {
-            return `${toolCall.n}: ${path}`;
-        }
-
-        return toolCall.n;
+        // 默认情况
+        return { header: toolCall.n, headerIcon, metadataLine: null, displayParams: toolCall.p };
     };
 
-    const headerTitle = getHeaderTitle();
-
-    const getDisplayParams = (): string => {
-        if (toolCall.n !== 'write_file' && toolCall.n !== 'patch_file') {
-            return toolCall.p;
-        }
-
-        const obj = getToolCallJsonObject();
-        if (!hasSessionId(obj)) {
-            return toolCall.p;
-        }
-
-        if (toolCall.n === 'write_file') {
-            const text = obj?.text;
-            return typeof text === 'string' ? text : toolCall.p;
-        }
-
-        const patch = obj?.patch;
-        return typeof patch === 'string' ? patch : toolCall.p;
-    };
-
-    const displayParams = getDisplayParams();
+    const { header, headerIcon, metadataLine, displayParams } = getDisplayInfo();
 
     const toggleOpen = () => {
         setIsOpen(!isOpen);
@@ -232,8 +315,8 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                 onClick={toggleOpen}
             >
                 <div className="flex items-center gap-2 min-w-0">
-                    <span>🔧</span>
-                    <span className="text-sm text-gray-800 dark:text-white truncate">{headerTitle}</span>
+                    <span>{headerIcon}</span>
+                    <span className="text-sm text-gray-800 dark:text-white truncate">{header}</span>
                 </div>
                 <div
                     className="flex items-center transition-transform duration-300 ease-in-out"
@@ -301,6 +384,11 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                                 borderBottomLeftRadius: toolResponse ? 0 : 12,
                             }}
                         >
+                            {metadataLine && (
+                                <div className="text-blue-600 dark:text-blue-400 mb-1 text-xs [&_strong]:text-blue-600 dark:[&_strong]:text-blue-400">
+                                    {metadataLine}
+                                </div>
+                            )}
                             {displayParams}
                         </div>
 
