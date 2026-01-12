@@ -16,9 +16,12 @@ public static class CommandExitEventFormatter
         }
 
         StringBuilder sb = new();
-        sb.AppendLine($"ExitCode: {result.ExitCode}");
-        sb.AppendLine($"ExecutionTimeMs: {result.ExecutionTimeMs}");
-        if (result.IsTruncated) sb.AppendLine("IsTruncated: true");
+        string metadataInfo = $"exit code: {result.ExitCode}, execution time: {result.ExecutionTimeMs}ms";
+        if (result.IsTruncated)
+        {
+            metadataInfo += ", truncated";
+        }
+        sb.AppendLine(metadataInfo);
 
         if (!string.IsNullOrEmpty(stdout))
         {

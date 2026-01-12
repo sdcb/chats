@@ -53,9 +53,9 @@ public sealed class ExecuteCommandStreamAsyncTests
         Assert.True(exit.IsTruncated);
 
         string output = CommandExitEventFormatter.FormatForRunCommand(exit);
-        Assert.Contains("ExitCode: 2", output);
-        Assert.Contains("ExecutionTimeMs: 999", output);
-        Assert.Contains("IsTruncated: true", output);
+        Assert.Contains("exit code: 2", output);
+        Assert.Contains("execution time: 999ms", output);
+        Assert.Contains("truncated", output);
         Assert.Contains("Stdout:", output);
         Assert.Contains("Stderr:", output);
         Assert.Contains("bytes truncated", output);
