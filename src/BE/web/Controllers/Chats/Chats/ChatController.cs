@@ -379,7 +379,6 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 {
                     fs ??= await db.GetDefaultFileService(cancellationToken) ?? throw new InvalidOperationException("Default file service config not found.");
                     DBFile file = await dbFileService.StoreImage(image, await clientInfoIdTask, fs, cancellationToken: default);
-                    DetachTrackedFile(db, file);
                     tcs.SetResult(file);
                     // yield final file dto
                     await YieldResponse(new FileGeneratedLine(tempImageGeneratedLine.SpanId, fup.CreateFileDto(file, tryWithUrl: false)));
@@ -406,7 +405,6 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                         await clientInfoIdTask,
                         fs,
                         cancellationToken);
-                    DetachTrackedFile(db, file);
                     tcs.SetResult(file);
                     await YieldResponse(new FileGeneratedLine(tempFileGeneratedLine.SpanId, fup.CreateFileDto(file, tryWithUrl: false)));
                 }
@@ -1042,23 +1040,5 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             buffer[i] = alphanum[RandomNumberGenerator.GetInt32(alphanum.Length)];
         }
         return new string(buffer);
-    }
-
-    private static void DetachTrackedFile(ChatsDB db, DBFile file)
-    {
-        // Ensure this File instance won't be tracked by the request DbContext.
-        // Otherwise, later when we attach the Step graph (which references this file),
-        // EF may see another File instance with the same key already tracked.
-        db.Entry(file).State = EntityState.Detached;
-
-        if (file.FileService != null)
-        {
-            db.Entry(file.FileService).State = EntityState.Detached;
-        }
-
-        if (file.FileImageInfo != null)
-        {
-            db.Entry(file.FileImageInfo).State = EntityState.Detached;
-        }
     }
 }
