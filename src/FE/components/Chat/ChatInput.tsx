@@ -44,6 +44,7 @@ import { setShowChatInput } from '@/actions/setting.actions';
 import HomeContext from '@/contexts/home.context';
 import UploadButton from '../Button/UploadButton';
 import PasteUpload from '../PasteUpload/PasteUpload';
+import DragUpload from '../DragUpload/DragUpload';
 import FilesPopover from '../Popover/FilesPopover';
 import FilePreview from '@/components/FilePreview/FilePreview';
 import PromptList from './PromptList';
@@ -95,6 +96,7 @@ const ChatInput = ({
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const promptListRef = useRef<HTMLUListElement | null>(null);
+  const inputContainerRef = useRef<HTMLDivElement>(null);
   const prevChatStatusRef = useRef<ChatStatus>(selectedChat?.status || ChatStatus.None);
   const [contentText, setContentText] = useState('');
   const [contentFiles, setContentFiles] = useState<FileDef[]>([]);
@@ -487,6 +489,7 @@ const ChatInput = ({
       {/* 展开状态的 ChatInput */}
       {(renderExpanded || animationState !== 'idle') && (
         <div
+          ref={inputContainerRef}
           className="w-full border-transparent bg-background pointer-events-auto transition-transform ease-out"
           style={{
             transform: inputTransform,
@@ -535,9 +538,20 @@ const ChatInput = ({
                     {canUploadFile() && (
                       <PasteUpload
                         fileConfig={defaultFileConfig}
+                        allowAllFiles={selectedChat.spans.some(x => x.codeExecutionEnabled)}
                         onUploading={handleUploading}
                         onFailed={handleUploadFailed}
                         onSuccessful={handleUploadSuccessful}
+                      />
+                    )}
+                    {canUploadFile() && (
+                      <DragUpload
+                        fileConfig={defaultFileConfig}
+                        allowAllFiles={selectedChat.spans.some(x => x.codeExecutionEnabled)}
+                        onUploading={handleUploading}
+                        onFailed={handleUploadFailed}
+                        onSuccessful={handleUploadSuccessful}
+                        containerRef={inputContainerRef}
                       />
                     )}
 
