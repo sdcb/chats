@@ -28,7 +28,6 @@ using DBFile = Chats.DB.File;
 using Chats.DB.Enums;
 using Chats.BE.DB.Extensions;
 using Chats.BE.Services.CodeInterpreter;
-using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Services.Options;
 using Microsoft.Extensions.Options;
 
