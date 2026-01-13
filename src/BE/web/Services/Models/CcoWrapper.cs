@@ -174,7 +174,7 @@ public record CcoCacheControl
             return null;
 
         // 2) boolean
-        if (node is JsonValue jvBool && jvBool.TryGetValue<bool>(out bool b))
+        if (node is JsonValue jvBool && jvBool.TryGetValue(out bool b))
         {
             return b
                  ? new CcoCacheControl { CreateOnly = false, Ttl = 0 }   // true
@@ -182,7 +182,7 @@ public record CcoCacheControl
         }
 
         // 3) string
-        if (node is JsonValue jvStr && jvStr.TryGetValue<string>(out string? raw))
+        if (node is JsonValue jvStr && jvStr.TryGetValue(out string? raw))
         {
             raw = raw.Trim();
 

@@ -392,7 +392,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         List<ChatSegment> items = [];
         DBFinishReason? finishReason = null;
-        Dtos.ChatTokenUsage? usage = null;
+        ChatTokenUsage? usage = null;
 
         if (root.TryGetProperty("choices", out JsonElement choices) && choices.GetArrayLength() > 0)
         {
@@ -453,7 +453,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         // Usage
         if (root.TryGetProperty("usage", out JsonElement u))
         {
-            usage = new Dtos.ChatTokenUsage
+            usage = new ChatTokenUsage
             {
                 InputTokens = u.TryGetProperty("prompt_tokens", out JsonElement pit) ? pit.GetInt32() : 0,
                 OutputTokens = u.TryGetProperty("completion_tokens", out JsonElement cot) ? cot.GetInt32() : 0,

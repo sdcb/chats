@@ -92,7 +92,7 @@ public static class AnthropicConversions
         if (systemNode == null) return null;
 
         // Case 1: Simple string
-        if (systemNode is JsonValue stringValue && stringValue.TryGetValue<string>(out string? text))
+        if (systemNode is JsonValue stringValue && stringValue.TryGetValue(out string? text))
         {
             return NeutralSystemMessage.FromText(text);
         }
@@ -130,7 +130,7 @@ public static class AnthropicConversions
         List<NeutralContent> contents = [];
 
         // Content can be a string or an array
-        if (content is JsonValue stringValue && stringValue.TryGetValue<string>(out string? text))
+        if (content is JsonValue stringValue && stringValue.TryGetValue(out string? text))
         {
             if (!string.IsNullOrEmpty(text))
             {
@@ -201,7 +201,7 @@ public static class AnthropicConversions
                         {
                             string? response = resultContent switch
                             {
-                                JsonValue jv when jv.TryGetValue<string>(out string? s) => s,
+                                JsonValue jv when jv.TryGetValue(out string? s) => s,
                                 JsonArray arr => string.Join("\n", arr.Select(ExtractResultText)),
                                 _ => resultContent?.ToJsonString()
                             };

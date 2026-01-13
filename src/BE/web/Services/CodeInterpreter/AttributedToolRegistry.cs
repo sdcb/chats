@@ -440,7 +440,7 @@ internal sealed class AttributedToolRegistry
     {
         if (!isNullable) return schema;
 
-        if (schema["type"] is JsonValue tv && tv.TryGetValue<string>(out string? t))
+        if (schema["type"] is JsonValue tv && tv.TryGetValue(out string? t))
         {
             schema["type"] = new JsonArray(t, "null");
             return schema;

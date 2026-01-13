@@ -51,7 +51,7 @@ public static class NeutralConversions
             if (content == null) continue;
 
             // Content can be string or array
-            if (content is JsonValue jv && jv.TryGetValue<string>(out string? text))
+            if (content is JsonValue jv && jv.TryGetValue(out string? text))
             {
                 if (!string.IsNullOrWhiteSpace(text))
                 {
@@ -141,7 +141,7 @@ public static class NeutralConversions
     private static IEnumerable<NeutralContent> ParseContent(JsonNode contentNode)
     {
         // Content can be string or array
-        if (contentNode is JsonValue jv && jv.TryGetValue<string>(out string? text))
+        if (contentNode is JsonValue jv && jv.TryGetValue(out string? text))
         {
             if (!string.IsNullOrEmpty(text))
             {
@@ -200,7 +200,7 @@ public static class NeutralConversions
     {
         if (contentNode == null) return null;
 
-        if (contentNode is JsonValue jv && jv.TryGetValue<string>(out string? text))
+        if (contentNode is JsonValue jv && jv.TryGetValue(out string? text))
         {
             return text;
         }
