@@ -99,6 +99,21 @@ public static class NeutralConversions
         }
         else
         {
+            // Parse reasoning_content for assistant messages (must come before content)
+            // This enables interleaved thinking with tool calls, similar to DeepSeek
+            if (role == "assistant")
+            {
+                JsonNode? reasoningNode = msgNode["reasoning_content"];
+                if (reasoningNode != null)
+                {
+                    string? reasoningText = GetContentAsString(reasoningNode);
+                    if (!string.IsNullOrEmpty(reasoningText))
+                    {
+                        contents.Add(NeutralThinkContent.Create(reasoningText));
+                    }
+                }
+            }
+
             // Parse content
             JsonNode? contentNode = msgNode["content"];
             if (contentNode != null)
