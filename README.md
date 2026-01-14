@@ -15,7 +15,7 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 21+ 主流 
 - 💾 **灵活存储**：SQLite/SQL Server/PostgreSQL + 本地/AWS S3/Aliyun OSS/Azure Blob
 - 🔐 **企业级安全**：完善的用户权限管理和账户余额控制，限流审计日志，支持 Keycloak SSO 与短信验证码登录
 
-<img alt="chats" src="https://github.com/user-attachments/assets/64a8f9ac-3ac0-4e3e-8903-2a2cf0b111a5" />
+<img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
 ## 快速开始
 
