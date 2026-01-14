@@ -195,6 +195,15 @@ Download .NET Runtime: [https://dotnet.microsoft.com/download](https://dotnet.mi
 
 ---
 
+## Development Documentation
+
+Chats is developed using `C#`/`TypeScript`. For information on how to compile and develop Chats, please refer to:
+
+- [🛠️ Development Guide](./doc/en-US/build.md)
+- [⚙️ Configuration Guide](./doc/en-US/configuration.md)
+
+---
+
 ## Supported LLM Services
 
 | Id  | Name             | Added                                                       | Interleaved Thinking |
@@ -228,15 +237,6 @@ Download .NET Runtime: [https://dotnet.microsoft.com/download](https://dotnet.mi
 - 🤖 OpenAI/Azure AI Foundry's o3/o4-mini/gpt-5 series models use the Response API protocol (not Chat Completion API), supporting thought summary and thought process features
 - 🌐 Google AI's Gemini model uses the native Google Gemini API protocol
 - ❓ The provider uses an Anthropic Messages API–based implementation. It should support interleaved thinking by protocol, but it's not end-to-end tested, so full support is unverified.
-
----
-
-## Development Documentation
-
-Chats is developed using `C#`/`TypeScript`. For information on how to compile and develop Chats, please refer to:
-
-- [🛠️ Development Guide](./doc/en-US/build.md)
-- [⚙️ Configuration Guide](./doc/en-US/configuration.md)
 
 ---
 
