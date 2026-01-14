@@ -15,7 +15,7 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 - 💾 **Storage Freedom**: SQLite/SQL Server/PostgreSQL, plus Local/S3/OSS/Azure Blob
 - 🔐 **Enterprise Security**: Permissions & balance control, rate limiting & audit logs, Keycloak SSO & SMS login
 
-<img alt="chats-en" src="https://github.com/user-attachments/assets/001bb841-01b8-4868-b1cb-d2f916bab237" />
+<img alt="chats-en" src="https://github.com/user-attachments/assets/40d2376e-58a0-4309-a2f5-5ed8262a0c2e" />
 
 ## Quick Start
 
