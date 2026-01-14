@@ -1,4 +1,3 @@
-using System.Text;
 using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Services;
 using Chats.BE.Services.CodeInterpreter;
