@@ -8,6 +8,7 @@ using Chats.DB;
 using Chats.DockerInterface;
 using Chats.DockerInterface.Models;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
@@ -567,7 +568,7 @@ public sealed class CodeInterpreterExecutor(
         }
 
         state.DbSession.TerminatedAt = DateTime.UtcNow;
-        await TouchSession(state.DbSession, cancellationToken);
+        await TouchSession(state.DbSession.Id, cancellationToken);
 
         ctx.SessionsBySessionId.Remove(sessionId);
 
@@ -662,7 +663,7 @@ public sealed class CodeInterpreterExecutor(
         // RunCommand 只负责把 CommandExitEvent 格式化为旧 run_command 的文本输出。
         string output = CommandExitEventFormatter.FormatForRunCommand(exit);
 
-        await TouchSession(state.DbSession, cancellationToken);
+        await TouchSession(state.DbSession.Id, cancellationToken);
         await SyncArtifactsAfterToolCall(ctx, state, cancellationToken);
 
         yield return new ToolCompletedToolProgressDelta
@@ -694,7 +695,7 @@ public sealed class CodeInterpreterExecutor(
 
         byte[] bytes = Encoding.UTF8.GetBytes(text);
         await _docker.UploadFileAsync(state.DbSession.ContainerId, normalizedPath, bytes, cancellationToken);
-        await TouchSession(state.DbSession, cancellationToken);
+        await TouchSession(state.DbSession.Id, cancellationToken);
 
         await SyncArtifactsAfterToolCall(ctx, state, cancellationToken);
 
@@ -845,7 +846,7 @@ public sealed class CodeInterpreterExecutor(
             output = header + base64;
         }
 
-        await TouchSession(state.DbSession, cancellationToken);
+        await TouchSession(state.DbSession.Id, cancellationToken);
 
         // Apply truncation based on CodePod OutputOptions (same positioning semantics as run_command).
         OutputOptions options = _codePodConfig.OutputOptions;
@@ -995,7 +996,7 @@ public sealed class CodeInterpreterExecutor(
         byte[] newBytes = Encoding.UTF8.GetBytes(patched);
 
         await _docker.UploadFileAsync(state.DbSession.ContainerId, normalizedPath, newBytes, cancellationToken);
-        await TouchSession(state.DbSession, cancellationToken);
+        await TouchSession(state.DbSession.Id, cancellationToken);
 
         return Result.Ok($"Patched {normalizedPath} ({newBytes.Length} bytes)");
     }
@@ -1041,7 +1042,7 @@ public sealed class CodeInterpreterExecutor(
             downloaded.Add(file);
         }
 
-        await TouchSession(state.DbSession, cancellationToken);
+        await TouchSession(state.DbSession.Id, cancellationToken);
 
         if (downloaded.Count == 0)
         {
@@ -1178,22 +1179,16 @@ public sealed class CodeInterpreterExecutor(
         return merged;
     }
 
-    private async Task TouchSession(ChatDockerSession s, CancellationToken cancellationToken)
+    private async Task TouchSession(long dockerSessionId, CancellationToken cancellationToken)
     {
         DateTime now = DateTime.UtcNow;
-        s.LastActiveAt = now;
-        s.ExpiresAt = now.AddSeconds(_options.SessionIdleTimeoutSeconds);
-
         using IServiceScope scope = _scopeFactory.CreateScope();
         ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
-        db.ChatDockerSessions.Attach(s);
-        db.Entry(s).Property(x => x.LastActiveAt).IsModified = true;
-        db.Entry(s).Property(x => x.ExpiresAt).IsModified = true;
-        if (s.TerminatedAt != null)
-        {
-            db.Entry(s).Property(x => x.TerminatedAt).IsModified = true;
-        }
-        await db.SaveChangesAsync(cancellationToken);
+        await db.ChatDockerSessions
+            .Where(x => x.Id == dockerSessionId)
+            .ExecuteUpdateAsync(x => x
+                .SetProperty(v => v.LastActiveAt, now)
+                .SetProperty(v => v.ExpiresAt, now.AddSeconds(_options.SessionIdleTimeoutSeconds)), cancellationToken);
     }
 
     private async Task<Dictionary<string, FileEntry>> SnapshotArtifacts(string containerId, CancellationToken cancellationToken)
