@@ -344,7 +344,7 @@ Please submit issues or suggestions via [GitHub Issues](https://github.com/sdcb/
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [Apache 2.0](LICENSE).
 
 ---
 
