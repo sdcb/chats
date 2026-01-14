@@ -6,7 +6,7 @@
 
 ## 0. 配置来源与优先级
 
-Chats 基于 .NET 配置系统读取配置，常见来源（优先级从高到低）通常为：
+Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 
 1. **命令行参数**（如 `--DBType=sqlite`、`--ConnectionStrings:ChatsDB=...`）
 2. **环境变量**（如 `DBType`、`ConnectionStrings__ChatsDB`）

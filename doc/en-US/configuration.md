@@ -6,7 +6,7 @@ This document explains each backend configuration item (based on `src/BE/web/app
 
 ## 0. Configuration sources and precedence
 
-Chats uses the standard .NET configuration system. Common sources (from higher to lower precedence) are usually:
+Chats uses the standard .NET configuration system. from higher to lower precedence are:
 
 1. **Command-line arguments** (e.g., `--DBType=sqlite`, `--ConnectionStrings:ChatsDB=...`)
 2. **Environment variables** (e.g., `DBType`, `ConnectionStrings__ChatsDB`)
