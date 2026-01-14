@@ -34,6 +34,7 @@ env:
     fonts-noto-cjk-extra
     fonts-cascadia-code
     fonts-roboto
+    imagemagick
   PIP_PACKAGES: >-
     numpy
     pandas
