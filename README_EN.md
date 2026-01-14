@@ -86,16 +86,16 @@ By following the above steps, you will be able to use Docker to successfully dep
 
 Chats provides the following images:
 
-| Description                     | Docker Image                                             |
-| ------------------------------- | --------------------------------------------------------|
-| Latest (Recommended)            | `docker.io/sdcb/chats:latest`                           |
-| Specific Full Version           | `docker.io/sdcb/chats:{version}`                        |
-| Specific Major Version          | `docker.io/sdcb/chats:{major}`                          |
-| Specific Minor Version          | `docker.io/sdcb/chats:{major.minor}`                    |
-| Linux x64                       | `docker.io/sdcb/chats:{version}-linux-x64`              |
-| Linux ARM64                     | `docker.io/sdcb/chats:{version}-linux-arm64`            |
-| Windows Nano Server LTSC 2022   | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2022`    |
-| Windows Nano Server LTSC 2025   | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2025`    |
+| Description                   | Docker Image                                         |
+| ----------------------------- | ---------------------------------------------------- |
+| Latest (Recommended)          | `docker.io/sdcb/chats:latest`                        |
+| Specific Full Version         | `docker.io/sdcb/chats:{version}`                     |
+| Specific Major Version        | `docker.io/sdcb/chats:{major}`                       |
+| Specific Minor Version        | `docker.io/sdcb/chats:{major.minor}`                 |
+| Linux x64                     | `docker.io/sdcb/chats:{version}-linux-x64`           |
+| Linux ARM64                   | `docker.io/sdcb/chats:{version}-linux-arm64`         |
+| Windows Nano Server LTSC 2022 | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2022` |
+| Windows Nano Server LTSC 2025 | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2025` |
 
 **Version Information:**
 
@@ -137,17 +137,17 @@ For environments where using Docker is inconvenient, Chats provides native execu
 
 #### Download Links
 
-| Platform                          | GitHub Download (All Releases)                                                                           | Mirror Download (Latest Stable)                                           |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Windows 64-bit                    | [chats-win-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-win-x64.zip)           | [chats-win-x64.zip](https://chats.sdcb.pub/release/latest/chats-win-x64.zip)           |
-| Linux 64-bit                      | [chats-linux-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-x64.zip)       | [chats-linux-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-x64.zip)       |
-| Linux ARM64                       | [chats-linux-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-arm64.zip)   | [chats-linux-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-arm64.zip)   |
-| Linux musl x64                    | [chats-linux-musl-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-x64.zip) | [chats-linux-musl-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-x64.zip) |
-| Linux musl ARM64                  | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip) | [chats-linux-musl-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-arm64.zip) |
-| macOS ARM64                       | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)       | [chats-osx-arm64.zip](https://chats.sdcb.pub/release/latest/chats-osx-arm64.zip)       |
-| macOS x64                         | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)           | [chats-osx-x64.zip](https://chats.sdcb.pub/release/latest/chats-osx-x64.zip)           |
-| Generic (requires .NET 10)        | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                           | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                           |
-| Frontend files only               | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                     | [chats-fe.zip](https://chats.sdcb.pub/release/latest/chats-fe.zip)                     |
+| Platform                   | GitHub Download (All Releases)                                                                                  | Mirror Download (Latest Stable)                                                                |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Windows 64-bit             | [chats-win-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-win-x64.zip)                   | [chats-win-x64.zip](https://chats.sdcb.pub/release/latest/chats-win-x64.zip)                   |
+| Linux 64-bit               | [chats-linux-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-x64.zip)               | [chats-linux-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-x64.zip)               |
+| Linux ARM64                | [chats-linux-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-arm64.zip)           | [chats-linux-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-arm64.zip)           |
+| Linux musl x64             | [chats-linux-musl-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-x64.zip)     | [chats-linux-musl-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-x64.zip)     |
+| Linux musl ARM64           | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip) | [chats-linux-musl-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-arm64.zip) |
+| macOS ARM64                | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)               | [chats-osx-arm64.zip](https://chats.sdcb.pub/release/latest/chats-osx-arm64.zip)               |
+| macOS x64                  | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)                   | [chats-osx-x64.zip](https://chats.sdcb.pub/release/latest/chats-osx-x64.zip)                   |
+| Generic (requires .NET 10) | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                                   | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                                   |
+| Frontend files only        | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                             | [chats-fe.zip](https://chats.sdcb.pub/release/latest/chats-fe.zip)                             |
 
 > **💡 Download Tips**:
 > - **Mirror Download** (powered by Cloudflare R2): Recommended for users in China for faster speed
@@ -208,36 +208,37 @@ Download .NET Runtime: [https://dotnet.microsoft.com/download](https://dotnet.mi
 
 ## Supported LLM Services
 
-| Id  | Name             | Added      | Git Commit |
-| --- | ---------------- | ---------- | ---------- |
-| 0   | Test             | 2024-11-18 | [66d011b1](https://github.com/sdcb/chats/commit/66d011b1) |
-| 1   | Azure AI Foundry | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 2   | Tencent Hunyuan  | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 3   | 01.ai            | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 4   | Moonshot         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 5   | OpenAI           | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 6   | Wenxin Qianfan   | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 7   | DashScope        | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 8   | Xunfei SparkDesk | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 9   | Zhipu AI         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 10  | DeepSeek         | 2024-12-06 | [30db0079](https://github.com/sdcb/chats/commit/30db0079) |
-| 11  | x.ai             | 2024-12-11 | [0d1cab20](https://github.com/sdcb/chats/commit/0d1cab20) |
-| 12  | Github Models    | 2024-12-11 | [0d1cab20](https://github.com/sdcb/chats/commit/0d1cab20) |
-| 13  | Google AI        | 2025-01-10 | [a4effc1b](https://github.com/sdcb/chats/commit/a4effc1b) |
-| 14  | Ollama           | 2025-01-20 | [6a5288e7](https://github.com/sdcb/chats/commit/6a5288e7) |
-| 15  | MiniMax          | 2025-01-20 | [6a5288e7](https://github.com/sdcb/chats/commit/6a5288e7) |
-| 16  | Doubao           | 2025-01-24 | [843510ff](https://github.com/sdcb/chats/commit/843510ff) |
-| 17  | SiliconFlow      | 2025-02-08 | [889144cf](https://github.com/sdcb/chats/commit/889144cf) |
-| 18  | OpenRouter       | 2025-03-05 | [15adedfe](https://github.com/sdcb/chats/commit/15adedfe) |
-| 19  | Token Pony       | 2025-11-07 | [32e4a0d5](https://github.com/sdcb/chats/commit/32e4a0d5) |
-| 20  | Anthropic        | 2025-11-24 | [22ebef98](https://github.com/sdcb/chats/commit/22ebef98) |
-| 21  | Xiaomi Mimo      | 2025-12-17 | [026f1a4e](https://github.com/sdcb/chats/commit/026f1a4e) |
+| Id  | Name             | Added                                                       | Interleaved Thinking |
+| --- | ---------------- | ----------------------------------------------------------- | -------------------- |
+| 0   | Test             | [2024-11-18](https://github.com/sdcb/chats/commit/66d011b1) |                      |
+| 1   | Azure AI Foundry | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) | ✅                    |
+| 2   | Tencent Hunyuan  | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) | ❓                    |
+| 3   | 01.ai            | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) |                      |
+| 4   | Moonshot         | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) | ✅                    |
+| 5   | OpenAI           | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) | ✅                    |
+| 6   | Wenxin Qianfan   | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) |                      |
+| 7   | Alibaba Bailian  | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) | ❓                    |
+| 8   | Xunfei SparkDesk | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) |                      |
+| 9   | Zhipu AI         | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) | ❓                    |
+| 10  | DeepSeek         | [2024-12-06](https://github.com/sdcb/chats/commit/30db0079) | ✅                    |
+| 11  | x.ai             | [2024-12-11](https://github.com/sdcb/chats/commit/0d1cab20) |                      |
+| 12  | Github Models    | [2024-12-11](https://github.com/sdcb/chats/commit/0d1cab20) |                      |
+| 13  | Google AI        | [2025-01-10](https://github.com/sdcb/chats/commit/a4effc1b) | ✅                    |
+| 14  | Ollama           | [2025-01-20](https://github.com/sdcb/chats/commit/6a5288e7) |                      |
+| 15  | MiniMax          | [2025-01-20](https://github.com/sdcb/chats/commit/6a5288e7) | ✅                    |
+| 16  | Doubao           | [2025-01-24](https://github.com/sdcb/chats/commit/843510ff) | ❓                    |
+| 17  | SiliconFlow      | [2025-02-08](https://github.com/sdcb/chats/commit/889144cf) | ❓                    |
+| 18  | OpenRouter       | [2025-03-05](https://github.com/sdcb/chats/commit/15adedfe) | ❓                    |
+| 19  | Token Pony       | [2025-11-07](https://github.com/sdcb/chats/commit/32e4a0d5) | ❓                    |
+| 20  | Anthropic        | [2025-11-24](https://github.com/sdcb/chats/commit/22ebef98) | ✅                    |
+| 21  | Xiaomi Mimo      | [2025-12-17](https://github.com/sdcb/chats/commit/026f1a4e) | ✅                    |
 
 **Note:**
 
 - ✅ Any model provider that complies with the OpenAI Chat Completion API protocol can be accessed through Chats
 - 🤖 OpenAI/Azure AI Foundry's o3/o4-mini/gpt-5 series models use the Response API protocol (not Chat Completion API), supporting thought summary and thought process features
 - 🌐 Google AI's Gemini model uses the native Google Gemini API protocol
+- ❓ The provider uses an Anthropic Messages API–based implementation. It should support interleaved thinking by protocol, but it's not end-to-end tested, so full support is unverified.
 
 ---
 

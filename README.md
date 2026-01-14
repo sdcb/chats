@@ -86,16 +86,16 @@ docker run --restart unless-stopped --name sdcb-chats -e DBType=postgresql -e Co
 
 Chats 提供了以下几个镜像：
 
-| 描述                          | Docker 镜像                                              |
-| ----------------------------- | ------------------------------------------------------- |
-| Latest（推荐）                 | `docker.io/sdcb/chats:latest`                           |
-| 指定完整版本                   | `docker.io/sdcb/chats:{version}`                        |
-| 指定主版本                     | `docker.io/sdcb/chats:{major}`                          |
-| 指定次版本                     | `docker.io/sdcb/chats:{major.minor}`                    |
-| Linux x64                     | `docker.io/sdcb/chats:{version}-linux-x64`              |
-| Linux ARM64                   | `docker.io/sdcb/chats:{version}-linux-arm64`            |
-| Windows Nano Server LTSC 2022 | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2022`    |
-| Windows Nano Server LTSC 2025 | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2025`    |
+| 描述                          | Docker 镜像                                          |
+| ----------------------------- | ---------------------------------------------------- |
+| Latest（推荐）                | `docker.io/sdcb/chats:latest`                        |
+| 指定完整版本                  | `docker.io/sdcb/chats:{version}`                     |
+| 指定主版本                    | `docker.io/sdcb/chats:{major}`                       |
+| 指定次版本                    | `docker.io/sdcb/chats:{major.minor}`                 |
+| Linux x64                     | `docker.io/sdcb/chats:{version}-linux-x64`           |
+| Linux ARM64                   | `docker.io/sdcb/chats:{version}-linux-arm64`         |
+| Windows Nano Server LTSC 2022 | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2022` |
+| Windows Nano Server LTSC 2025 | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2025` |
 
 **版本说明：**
 
@@ -137,17 +137,17 @@ docker pull sdcb/chats:1.8.1-linux-x64
 
 #### 下载地址
 
-| 平台                    | GitHub 下载（所有版本）                                                                                | 国内镜像下载（最新稳定版）                                                      |
-| ----------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| Windows 64位            | [chats-win-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-win-x64.zip)         | [chats-win-x64.zip](https://chats.sdcb.pub/release/latest/chats-win-x64.zip)         |
-| Linux 64位              | [chats-linux-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-x64.zip)     | [chats-linux-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-x64.zip)     |
-| Linux ARM64             | [chats-linux-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-arm64.zip) | [chats-linux-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-arm64.zip) |
-| Linux musl x64          | [chats-linux-musl-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-x64.zip) | [chats-linux-musl-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-x64.zip) |
-| Linux musl ARM64        | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip) | [chats-linux-musl-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-arm64.zip) |
-| macOS ARM64             | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)     | [chats-osx-arm64.zip](https://chats.sdcb.pub/release/latest/chats-osx-arm64.zip)     |
-| macOS x64               | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)         | [chats-osx-x64.zip](https://chats.sdcb.pub/release/latest/chats-osx-x64.zip)         |
-| 通用包（需要 .NET 10） | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                         | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                         |
-| 纯前端文件              | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                   | [chats-fe.zip](https://chats.sdcb.pub/release/latest/chats-fe.zip)                   |
+| 平台                   | GitHub 下载（所有版本）                                                                                         | 国内镜像下载（最新稳定版）                                                                     |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Windows 64位           | [chats-win-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-win-x64.zip)                   | [chats-win-x64.zip](https://chats.sdcb.pub/release/latest/chats-win-x64.zip)                   |
+| Linux 64位             | [chats-linux-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-x64.zip)               | [chats-linux-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-x64.zip)               |
+| Linux ARM64            | [chats-linux-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-arm64.zip)           | [chats-linux-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-arm64.zip)           |
+| Linux musl x64         | [chats-linux-musl-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-x64.zip)     | [chats-linux-musl-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-x64.zip)     |
+| Linux musl ARM64       | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip) | [chats-linux-musl-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-arm64.zip) |
+| macOS ARM64            | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)               | [chats-osx-arm64.zip](https://chats.sdcb.pub/release/latest/chats-osx-arm64.zip)               |
+| macOS x64              | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)                   | [chats-osx-x64.zip](https://chats.sdcb.pub/release/latest/chats-osx-x64.zip)                   |
+| 通用包（需要 .NET 10） | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                                   | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                                   |
+| 纯前端文件             | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                             | [chats-fe.zip](https://chats.sdcb.pub/release/latest/chats-fe.zip)                             |
 
 > **💡 下载说明**：
 > - **国内镜像下载**（基于 Cloudflare R2）：推荐国内用户使用，速度更快
@@ -208,36 +208,38 @@ dotnet Chats.BE.dll
 
 ## 支持的大模型服务
 
-| Id  | Name             | 加入时间   | Git Commit |
-| --- | ---------------- | ---------- | ---------- |
-| 0   | 测试             | 2024-11-18 | [66d011b1](https://github.com/sdcb/chats/commit/66d011b1) |
-| 1   | Azure AI Foundry | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 2   | 腾讯混元         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 3   | 零一万物         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 4   | 月之暗面         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 5   | OpenAI           | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 6   | 文心一言         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 7   | 通义千问         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 8   | 讯飞星火         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 9   | 智谱AI           | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 10  | DeepSeek         | 2024-12-06 | [30db0079](https://github.com/sdcb/chats/commit/30db0079) |
-| 11  | x.ai             | 2024-12-11 | [0d1cab20](https://github.com/sdcb/chats/commit/0d1cab20) |
-| 12  | Github Models    | 2024-12-11 | [0d1cab20](https://github.com/sdcb/chats/commit/0d1cab20) |
-| 13  | 谷歌AI           | 2025-01-10 | [a4effc1b](https://github.com/sdcb/chats/commit/a4effc1b) |
-| 14  | Ollama           | 2025-01-20 | [6a5288e7](https://github.com/sdcb/chats/commit/6a5288e7) |
-| 15  | MiniMax          | 2025-01-20 | [6a5288e7](https://github.com/sdcb/chats/commit/6a5288e7) |
-| 16  | 火山方舟         | 2025-01-24 | [843510ff](https://github.com/sdcb/chats/commit/843510ff) |
-| 17  | 硅基流动         | 2025-02-08 | [889144cf](https://github.com/sdcb/chats/commit/889144cf) |
-| 18  | OpenRouter       | 2025-03-05 | [15adedfe](https://github.com/sdcb/chats/commit/15adedfe) |
-| 19  | 小马算力         | 2025-11-07 | [32e4a0d5](https://github.com/sdcb/chats/commit/32e4a0d5) |
-| 20  | Anthropic        | 2025-11-24 | [22ebef98](https://github.com/sdcb/chats/commit/22ebef98) |
-| 21  | 小米Mimo         | 2025-12-17 | [026f1a4e](https://github.com/sdcb/chats/commit/026f1a4e) |
+| Id  | Name             | 加入时间                                                    | 交错思考 |
+| --- | ---------------- | ----------------------------------------------------------- | -------- |
+| 0   | 测试             | [2024-11-18](https://github.com/sdcb/chats/commit/66d011b1) |          |
+| 1   | Azure AI Foundry | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) | ✅        |
+| 2   | 腾讯混元         | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) | ❓        |
+| 3   | 零一万物         | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) |          |
+| 4   | 月之暗面         | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) | ✅        |
+| 5   | OpenAI           | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) | ✅        |
+| 6   | 百度千帆         | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) |          |
+| 7   | 阿里百炼         | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) | ❓        |
+| 8   | 讯飞星火         | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) |          |
+| 9   | 智谱AI           | [2024-09-05](https://github.com/sdcb/chats/commit/3b3918af) | ❓        |
+| 10  | DeepSeek         | [2024-12-06](https://github.com/sdcb/chats/commit/30db0079) | ✅        |
+| 11  | x.ai             | [2024-12-11](https://github.com/sdcb/chats/commit/0d1cab20) |          |
+| 12  | Github Models    | [2024-12-11](https://github.com/sdcb/chats/commit/0d1cab20) |          |
+| 13  | 谷歌AI           | [2025-01-10](https://github.com/sdcb/chats/commit/a4effc1b) | ✅        |
+| 14  | Ollama           | [2025-01-20](https://github.com/sdcb/chats/commit/6a5288e7) |          |
+| 15  | MiniMax          | [2025-01-20](https://github.com/sdcb/chats/commit/6a5288e7) | ✅        |
+| 16  | 火山方舟         | [2025-01-24](https://github.com/sdcb/chats/commit/843510ff) | ❓        |
+| 17  | 硅基流动         | [2025-02-08](https://github.com/sdcb/chats/commit/889144cf) | ❓        |
+| 18  | OpenRouter       | [2025-03-05](https://github.com/sdcb/chats/commit/15adedfe) | ❓        |
+| 19  | 小马算力         | [2025-11-07](https://github.com/sdcb/chats/commit/32e4a0d5) | ❓        |
+| 20  | Anthropic        | [2025-11-24](https://github.com/sdcb/chats/commit/22ebef98) | ✅        |
+| 21  | 小米Mimo         | [2025-12-17](https://github.com/sdcb/chats/commit/026f1a4e) | ✅        |
+
 
 **注意事项：**
 
 - ✅ 任何符合 OpenAI Chat Completion API 协议的模型提供商都可以通过 Chats 进行访问
 - 🤖 OpenAI/Azure AI Foundry 的 o3/o4-mini/gpt-5 系列模型使用 Response API 协议（非 Chat Completion API），支持思考概要和思考过程功能
 - 🌐 Google AI 的 Gemini 模型使用 Google Gemini 原生 API 协议
+- ❓ 模型提供商使用了基于 Anthropic Messages API 的实现，按协议推断应该支持，但由于未做过端到端测试，因此不确定是否能实现完整的交错思考能力。
 
 ---
 
