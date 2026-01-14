@@ -237,6 +237,7 @@ dotnet Chats.BE.dll
 Chats 使用 `C#`/`TypeScript` 开发，有关如何编译和开发 Chats，请查看：
 
 - [🛠️ 开发文档](./doc/zh-CN/build.md)
+- [⚙️ 配置说明](./doc/zh-CN/configuration.md)
 
 ---
 
