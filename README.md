@@ -6,25 +6,14 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 21+ 主流 
 
 ## ✨ 为什么选择 Sdcb Chats
 
-- 🚀 **一站式管理**：统一管理 21+ 主流 AI 模型服务商
-- 🎯 **开箱即用**：支持 Docker 一键部署，也提供 8 种平台的原生可执行文件
-- 💾 **灵活存储**：支持 SQLite/SQL Server/PostgreSQL，支持本地文件/S3/OSS/Azure Blob 等多种存储
-- 🔐 **企业级安全**：完善的用户权限管理和账户余额控制，支持 Keycloak SSO
-- 🌐 **标准协议**：支持 OpenAI/Anthropic 等主流 API 协议，包括对话、图像生成等功能，兼容 Claude Code
-- 🎨 **现代界面**：美观易用的前端界面，支持视觉模型交互
-
-## 功能特性
-
-- **多模型支持**：动态管理多种大语言模型接口
-- **视觉模型支持**：集成视觉模型，增强用户交互体验
-- **用户权限管理**：提供精细的用户权限设置，确保安全性
-- **账户余额管理**：实时跟踪和管理用户账户余额
-- **模型管理**：轻松添加、删除和配置模型
-- **API 网关功能**：基于 OpenAI 协议透明地转发用户的聊天请求
-- **简单部署**：支持 4 种操作系统/平台架构的 Docker 镜像，此外提供 8 种不同操作系统的可执行文件，方便不使用 Docker 的用户一键部署
-- **多数据库支持**：兼容 SQLite、SQL Server 和 PostgreSQL 数据库，除了数据库外，不依赖其他组件
-- **多文件服务支持**：兼容本地文件、AWS S3、Minio、Aliyun OSS、Azure Blob Storage 等文件服务，可运行时配置修改
-- **多种登录方式支持**：支持 Keycloak SSO，支持手机短信验证码登录
+- 🚀 **一站式**：21+ 模型服务商，一个入口
+- 🎯 **分钟级上手**：一条命令 Docker 部署，8 平台原生可执行
+- 🐳 **代码解释器**：Docker 沙箱，内置浏览器/代码执行/Excel 等工具
+- 🔌 **API 网关**：Chat Completions/Messages 兼容，支持 Claude Code
+- 🌐 **标准协议**：Chat Completions/Messages/Responses/Gemini，支持交错思考
+- 👁️ **多模态**：视觉输入，图像生成
+- 💾 **灵活存储**：SQLite/SQL Server/PostgreSQL + 本地/AWS S3/Aliyun OSS/Azure Blob
+- 🔐 **企业级安全**：完善的用户权限管理和账户余额控制，限流审计日志，支持 Keycloak SSO 与短信验证码登录
 
 <img alt="chats" src="https://github.com/user-attachments/assets/64a8f9ac-3ac0-4e3e-8903-2a2cf0b111a5" />
 

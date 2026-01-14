@@ -6,25 +6,14 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 
 ## ✨ Why Choose Sdcb Chats
 
-- 🚀 **All-in-One Management**: Unified management of 21+ mainstream AI model providers
-- 🎯 **Ready to Use**: Supports Docker one-click deployment, also provides native executables for 8 platforms
-- 💾 **Flexible Storage**: Supports SQLite/SQL Server/PostgreSQL, local files/S3/OSS/Azure Blob and other storage options
-- 🔐 **Enterprise-Grade Security**: Comprehensive user permission management and account balance control, supports Keycloak SSO
-- 🌐 **Standard Protocol**: Supports mainstream API protocols including OpenAI/Anthropic for chat, image generation, and more, compatible with Claude Code
-- 🎨 **Modern Interface**: Beautiful and easy-to-use frontend interface, supports visual model interaction
-
-## Features
-
-- **Multi-model support**: Dynamically manage multiple large language model interfaces
-- **Visual model support**: Integrate visual models to enhance user interaction experience
-- **User permission management**: Provide fine-grained user permission settings to ensure security
-- **Account balance management**: Track and manage user account balances in real-time
-- **Model management**: Easily add, delete, and configure models
-- **API gateway functionality**: Transparently forward user chat requests based on the OpenAI protocol
-- **Simple deployment**: Support Docker images for 4 operating system/platform architectures, additionally provide executables for 8 different operating systems for users who do not use Docker for one-click deployment
-- **Multi-database support**: Compatible with SQLite, SQL Server, and PostgreSQL databases, with no dependence on other components besides the database
-- **Multi-file service support**: Compatible with local files, AWS S3, Minio, Aliyun OSS, Azure Blob Storage, etc., with runtime configuration modifications
-- **Multiple login method support**: Supports Keycloak SSO and phone SMS code login
+- 🚀 **All-in-One**: One hub for 21+ AI model providers
+- 🎯 **Ready in Minutes**: One-command Docker deploy, plus native executables for 8 platforms
+- 🐳 **Code Interpreter**: Docker sandbox with built-in tools (browser, code execution, Excel, and more)
+- 🔌 **API Gateway**: Chat Completions/Messages compatible, works with Claude Code
+- 🌐 **Standard APIs**: Chat Completions/Messages/Responses/Gemini, with interleaved thinking
+- 👁️ **Multimodal**: Vision in, images out
+- 💾 **Storage Freedom**: SQLite/SQL Server/PostgreSQL, plus Local/S3/OSS/Azure Blob
+- 🔐 **Enterprise Security**: Permissions & balance control, rate limiting & audit logs, Keycloak SSO & SMS login
 
 <img alt="chats-en" src="https://github.com/user-attachments/assets/001bb841-01b8-4868-b1cb-d2f916bab237" />
 
