@@ -195,6 +195,15 @@ dotnet Chats.BE.dll
 
 ---
 
+## 开发文档
+
+Chats 使用 `C#`/`TypeScript` 开发，有关如何编译和开发 Chats，请查看：
+
+- [🛠️ 开发文档](./doc/zh-CN/build.md)
+- [⚙️ 配置说明](./doc/zh-CN/configuration.md)
+
+---
+
 ## 支持的大模型服务
 
 | Id  | Name             | 加入时间                                                    | 交错思考 |
@@ -229,15 +238,6 @@ dotnet Chats.BE.dll
 - 🤖 OpenAI/Azure AI Foundry 的 o3/o4-mini/gpt-5 系列模型使用 Response API 协议（非 Chat Completion API），支持思考概要和思考过程功能
 - 🌐 Google AI 的 Gemini 模型使用 Google Gemini 原生 API 协议
 - ❓ 模型提供商使用了基于 Anthropic Messages API 的实现，按协议推断应该支持，但由于未做过端到端测试，因此不确定是否能实现完整的交错思考能力。
-
----
-
-## 开发文档
-
-Chats 使用 `C#`/`TypeScript` 开发，有关如何编译和开发 Chats，请查看：
-
-- [🛠️ 开发文档](./doc/zh-CN/build.md)
-- [⚙️ 配置说明](./doc/zh-CN/configuration.md)
 
 ---
 
