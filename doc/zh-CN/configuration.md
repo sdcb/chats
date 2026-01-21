@@ -2,7 +2,7 @@
 
 本文档说明后端配置文件中的各项配置（基于 `src/BE/web/appsettings.json`），并按功能分类逐项解释。
 
-> 约定：本文刻意不介绍 ASP.NET Core 通用项（例如 `Logging`、`AllowedHosts`）。
+> 注：本文刻意不介绍 ASP.NET Core 通用项（例如 `Logging`、`AllowedHosts`）。如需了解通用配置，请访问 [ASP.NET Core 官方配置文档](https://learn.microsoft.com/zh-cn/aspnet/core/fundamentals/configuration/)。
 
 ## 0. 配置来源与优先级
 
@@ -13,6 +13,35 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 3. **appsettings.json**（默认配置文件）
 
 > 提示：嵌套配置在环境变量中用双下划线 `__` 表示层级，例如 `ConnectionStrings__ChatsDB`、`CodeInterpreter__DefaultTimeoutSeconds`。
+
+### 配置项汇总
+
+| 配置名                                                                                         | 默认值                                  | 注意事项                    |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------- | --------------------------- |
+| [`FE_URL`](#11-fe_url)                                                                         | `http://localhost:3001`                 | 必须配置，影响CORS策略      |
+| [`ENCRYPTION_PASSWORD`](#21-encryption_password)                                               | 示例占位文本                            | 生产环境务必设置随机字符串  |
+| [`DBType`](#31-dbtype)                                                                         | `sqlite`                                | 支持sqlite/mssql/postgresql |
+| [`ConnectionStrings:ChatsDB`](#32-connectionstringschatsdb)                                    | `Data Source=./AppData/chats.db`        | 必须配置                    |
+| [`CodePod:IsWindowsContainer`](#41-codepodiswindowscontainer)                                  | `false`                                 | 影响Docker端点和命令        |
+| [`CodePod:DockerEndpoint`](#42-codepod​dockerendpoint)                                         | `null`                                  | null时自动选择默认端点      |
+| [`CodePod:WorkDir`](#43-codepodworkdir)                                                        | `/app`                                  | 建议保持默认值              |
+| [`CodePod:ArtifactsDir`](#44-codepodartifactsdir)                                              | `artifacts`                             | 相对于WorkDir的子目录       |
+| [`CodePod:LabelPrefix`](#45-codepodlabelprefix)                                                | `codepod`                               | 用于容器命名和标签          |
+| [`CodePod:OutputOptions:MaxOutputBytes`](#46-codepodoutputoptionsmaxoutputbytes)               | `6144`                                  | 6KB，超过会截断             |
+| [`CodeInterpreter:DefaultImage`](#51-codeinterpreterdefaultimage)                              | `sdcb/code-interpreter:r-26`            | 新建会话默认镜像            |
+| [`CodeInterpreter:DefaultImageDescription`](#52-codeinterpreterdefaultimagedescription)        | `Pre-installed with common packages...` | 用于丰富系统提示词          |
+| [`CodeInterpreter:DefaultTimeoutSeconds`](#53-codeinterpreterdefaulttimeoutseconds)            | `300`                                   | null表示近似无限(24小时)    |
+| [`CodeInterpreter:SessionIdleTimeoutSeconds`](#54-codeinterpretersessionidletimeoutseconds)    | `1800`                                  | 30分钟，会话空闲超时        |
+| [`CodeInterpreter:DefaultNetworkMode`](#55-codeinterpreterdefaultnetworkmode)                  | `bridge`                                | none/bridge/host            |
+| [`CodeInterpreter:MaxAllowedNetworkMode`](#56-codeinterpretermaxallowednetworkmode)            | `bridge`                                | 限制最大网络权限            |
+| [`CodeInterpreter:DefaultResourceLimits`](#57-codeinterpreterdefaultresourcelimits)            | 见详情                                  | 内存2GB/CPU 2核/进程200     |
+| [`CodeInterpreter:MaxResourceLimits`](#58-codeinterpretermaxresourcelimits)                    | 全部`null`                              | null表示不限制              |
+| [`CodeInterpreter:MaxArtifactsFilesToUpload`](#59-codeinterpretermaxartifactsfilestoupload)    | `50`                                    | 每轮最多上传文件数          |
+| [`CodeInterpreter:MaxSingleUploadBytes`](#510-codeinterpretermaxsingleuploadbytes)             | `157286400`                             | 150MB，单文件限制           |
+| [`CodeInterpreter:MaxTotalUploadBytesPerTurn`](#511-codeinterpretermaxtotaluploadbytesperturn) | `314572800`                             | 300MB，单轮总限制           |
+| [`JwtValidPeriod`](#61-jwtvalidperiod)                                                         | `1.00:00:00`                            | 1天，JWT有效期              |
+| [`JwtSecretKey`](#62-jwtsecretkey)                                                             | `null`                                  | 生产环境建议设置稳定密钥    |
+| [`Chat:Retry429Times`](#71-chatretry429times)                                                  | `5`                                     | HTTP 429重试次数            |
 
 ---
 
@@ -91,19 +120,37 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 
 > 重要：当前版本的代码解释器工具链在多个地方**默认假设工作目录为 `/app`，Artifacts 目录为 `/app/artifacts`**。除非你知道自己在做什么，否则建议保持 `WorkDir=/app`、`ArtifactsDir=artifacts`。
 
-### 4.1 `CodePod:WorkDir`
+### 4.1 `CodePod:IsWindowsContainer`
+
+- **类型**：布尔值
+- **默认值**：`false`（使用 Linux 容器）
+- **用途**：
+  - 指示是否使用 Windows 容器（默认使用 Linux 容器）。
+  - 影响默认 Docker 端点、容器内部命令（如 keep-alive、mkdir、删除文件等）。
+
+### 4.2 `CodePod:DockerEndpoint`
+
+- **类型**：字符串或 `null`
+- **默认值**：`null`（自动选择默认端点）
+- **用途**：指定 Docker 服务端点地址。
+- **行为说明**：
+  - 未配置时会根据 `CodePod:IsWindowsContainer` 自动选择默认端点：
+    - Windows 容器：`npipe://./pipe/docker_engine`
+    - Linux/macOS 容器：`unix:///var/run/docker.sock`
+
+### 4.3 `CodePod:WorkDir`
 
 - **类型**：字符串（容器内路径）
 - **默认值**：`/app`
 - **用途**：容器的工作目录（Docker `WorkingDir`）。
 
-### 4.2 `CodePod:ArtifactsDir`
+### 4.4 `CodePod:ArtifactsDir`
 
 - **类型**：字符串（相对于 `WorkDir` 的子目录名）
 - **默认值**：`artifacts`
 - **用途**：用于存放导出文件（供下载/上传回传）的目录。
 
-### 4.3 `CodePod:LabelPrefix`
+### 4.5 `CodePod:LabelPrefix`
 
 - **类型**：字符串
 - **默认值**：`codepod`
@@ -111,7 +158,7 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
   - 生成容器名称前缀（例如 `codepod-xxxxxxxx`）。
   - 作为 Docker labels 的前缀，标识“由 Chats 管理”的容器，便于清理与筛选。
 
-### 4.4 `CodePod:OutputOptions:MaxOutputBytes`
+### 4.6 `CodePod:OutputOptions:MaxOutputBytes`
 
 - **类型**：整数（字节）
 - **默认值**：`6144`（6KB）
@@ -128,13 +175,13 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 ### 5.1 `CodeInterpreter:DefaultImage`
 
 - **类型**：字符串（Docker 镜像名）
-- **默认值（仓库示例）**：`sdcb/code-interpreter:r-26`
+- **默认值**：`sdcb/code-interpreter:r-26`
 - **用途**：新建代码解释器会话时使用的默认镜像。
 
 ### 5.2 `CodeInterpreter:DefaultImageDescription`
 
 - **类型**：字符串
-- **默认值（仓库示例）**：`Pre-installed with common packages...`
+- **默认值**：`Pre-installed with common packages, suitable for most daily tasks`
 - **用途**：用于丰富系统提示词（告诉模型该镜像里有什么能力/工具）。
 
 ### 5.3 `CodeInterpreter:DefaultTimeoutSeconds`
@@ -155,14 +202,14 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 ### 5.5 `CodeInterpreter:DefaultNetworkMode`
 
 - **类型**：字符串
-- **默认值（仓库示例）**：`bridge`
+- **默认值**：`bridge`
 - **用途**：新建会话默认网络模式。
 - **可选值**：`none` | `bridge` | `host`
 
 ### 5.6 `CodeInterpreter:MaxAllowedNetworkMode`
 
 - **类型**：字符串
-- **默认值（仓库示例）**：`bridge`
+- **默认值**：`bridge`
 - **用途**：限制模型在调用工具时“可以请求的最大网络权限”。
 - **规则说明**：允许的模式为：所有“等级不高于该值”的模式（`none < bridge < host`）。
   - 例如 `MaxAllowedNetworkMode=bridge` 时，允许 `none`、`bridge`，禁止 `host`。
@@ -171,7 +218,7 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 ### 5.7 `CodeInterpreter:DefaultResourceLimits`
 
 - **类型**：对象
-- **默认值（仓库示例）**：
+- **默认值**：
   - `MemoryBytes`: `2147483648`（2GB）
   - `CpuCores`: `2.0`
   - `MaxProcesses`: `200`
@@ -184,7 +231,7 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 ### 5.8 `CodeInterpreter:MaxResourceLimits`
 
 - **类型**：对象
-- **默认值（仓库示例）**：全部为 `null`
+- **默认值**：全部为 `null`
 - **用途**：作为“硬上限”，防止模型/工具请求超过你允许的资源。
 - **行为说明**：
   - `null` 表示不限制（会被转换为 Docker 侧的“无限制/0”语义）。
@@ -198,14 +245,14 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 ### 5.10 `CodeInterpreter:MaxSingleUploadBytes`
 
 - **类型**：整数（字节）或 `null`
-- **默认值（仓库示例）**：`157286400`（150MB）
+- **默认值**：`157286400`（150MB）
 - **用途**：限制单个 artifacts 文件的最大回传大小。
 - **行为说明**：`null` 表示不限制。
 
 ### 5.11 `CodeInterpreter:MaxTotalUploadBytesPerTurn`
 
 - **类型**：整数（字节）或 `null`
-- **默认值（仓库示例）**：`314572800`（300MB）
+- **默认值**：`314572800`（300MB）
 - **用途**：限制“单轮对话”中所有 artifacts 回传的总大小。
 - **行为说明**：`null` 表示不限制。
 
@@ -216,7 +263,7 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 ### 6.1 `JwtValidPeriod`
 
 - **类型**：TimeSpan 字符串
-- **默认值（仓库示例）**：`1.00:00:00`（1 天）
+- **默认值**：`1.00:00:00`（1 天）
 - **用途**：控制用户登录后 JWT 的有效期。
 - **行为说明**：
   - 若不配置该项，默认有效期为 8 小时。
@@ -238,7 +285,7 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 ### 7.1 `Chat:Retry429Times`
 
 - **类型**：整数
-- **默认值（仓库示例）**：`5`
+- **默认值**：`5`
 - **用途**：当上游模型服务返回 HTTP 429（限流）时的重试次数。
 - **行为说明**：
   - 仅在“本次请求尚未产生任何输出片段（还没开始流式返回）”时才会触发重试。
