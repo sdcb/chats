@@ -190,6 +190,8 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
   - 指示是否使用 Windows 容器（默认使用 Linux 容器）。
   - 影响默认 Docker 端点、容器内部命令（如 keep-alive、mkdir、删除文件等）。
 
+> **⚠️ 警告**：基于 Windows 容器的 CodeInterpreter 在 1.10 版本中未经测试，不建议开启此选项。
+
 ### 5.2 `CodePod:DockerEndpoint`
 
 - **类型**：字符串或 `null`
@@ -199,6 +201,8 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
   - 未配置时会根据 `CodePod:IsWindowsContainer` 自动选择默认端点：
     - Windows 容器：`npipe://./pipe/docker_engine`
     - Linux/macOS 容器：`unix:///var/run/docker.sock`
+  - **容器化部署注意**：如果 Chats 后端本身运行在容器中，需要将 Docker socket 映射进容器，并使用 root 权限：
+    - 示例：`docker run -v /var/run/docker.sock:/var/run/docker.sock --user 0:0 ...`
 
 ### 5.3 `CodePod:WorkDir`
 

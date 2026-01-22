@@ -18,15 +18,19 @@
 ### SQLite 快速启动
 
 ```bash
-mkdir -p ./AppData && chmod 755 ./AppData && docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
+mkdir -p ./AppData
+chmod 755 ./AppData
+docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:/app/AppData -v /var/run/docker.sock:/var/run/docker.sock --user 0:0 -p 8080:8080 sdcb/chats:latest
 ```
 
-> **说明**：SQLite 需要映射 `./AppData` 文件夹用于存储数据库文件和上传文件（如图床服务使用本地文件提供商时）。
+> **说明**：
+> - SQLite 需要映射 `./AppData` 文件夹用于存储数据库文件和上传文件（如图床服务使用本地文件提供商时）。
+> - `-v /var/run/docker.sock:/var/run/docker.sock` 和 `--user 0:0` 是为了支持基于 Docker 沙箱的 Code Interpreter 功能，如果不需要该功能可以删除这两个参数。
 
 ### PostgreSQL 快速启动
 
 ```bash
-docker run --restart unless-stopped --name sdcb-chats -e DBType=postgresql -e ConnectionStrings__ChatsDB="Host=host.docker.internal;Port=5432;Username=postgres;Password=mysecretpassword;Database=postgres" -p 8080:8080 sdcb/chats:latest
+docker run --restart unless-stopped --name sdcb-chats -e DBType=postgresql -e ConnectionStrings__ChatsDB="Host=host.docker.internal;Port=5432;Username=postgres;Password=mysecretpassword;Database=postgres" -v /var/run/docker.sock:/var/run/docker.sock --user 0:0 -p 8080:8080 sdcb/chats:latest
 ```
 
 > **说明**：PostgreSQL 不依赖 `./AppData` 文件夹存储数据库，但如果使用本地文件提供商作为图床服务，仍需映射该文件夹：`-v ./AppData:/app/AppData`（用户可在管理界面配置其他文件存储方式）。
@@ -64,7 +68,7 @@ docker run --restart unless-stopped --name sdcb-chats -e DBType=postgresql -e Co
 
 ### 运行说明
 
-解压AOT可执行文件后的目录结构如下：
+解压可执行文件后的目录结构如下：
 
 ```
 C:\Users\ZhouJie\Downloads\chats-win-x64>dir
@@ -84,9 +88,10 @@ C:\Users\ZhouJie\Downloads\chats-win-x64>dir
 - **启动应用**：运行 `Chats.BE.exe` 即可启动 Chats 应用，该文件名虽指"后端"，但实际同时包含前端和后端组件。
 - **数据库配置**：默认情况下，应用将在当前目录创建名为 `AppData` 的目录，并以 SQLite 作为数据库。命令行参数可用于指定不同的数据库类型：
   ```pwsh
-  .\Chats.BE.exe --urls http://+:5000 --DBType=mssql --ConnectionStrings:ChatsDB="Data Source=(localdb)\mssqllocaldb; Initial Catalog=ChatsDB; Integrated Security=True"
+  .\Chats.BE.exe --urls http://+:5000 --CodePod:DockerEndpoint npipe://./pipe/docker_engine --DBType=mssql --ConnectionStrings:ChatsDB="Data Source=(localdb)\mssqllocaldb; Initial Catalog=ChatsDB; Integrated Security=True"
   ```
   - 参数 `--urls`：用于指定应用监听的地址和端口。
+  - 参数 `--CodePod:DockerEndpoint`：指定 Docker 服务端点地址。在 Windows 上，如果想连接 Docker Desktop 中的 Linux 容器作为 Code Interpreter 沙箱，需要使用 `npipe://./pipe/docker_engine` 而非默认的 `unix:///var/run/docker.sock`，否则在创建 Docker 会话时会报 `Connection failed` 错误。
   - 参数 `DBType`：可选 `sqlite`、`mssql` 或 `pgsql`。
   - 参数 `--ConnectionStrings:ChatsDB`：用于指定数据库的ADO.NET连接字符串。
   
