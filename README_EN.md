@@ -35,7 +35,8 @@ After startup, visit `http://localhost:8080` and log in with the default account
 
 Chats is developed using `C#`/`TypeScript`. Here are the complete documentation resources:
 
-- [🚀 Quick Start](./doc/en-US/quick-start.md) - Deployment guide, Docker configuration, executable downloads
+- [🚀 Quick Start](./doc/en-US/quick-start.md) - Deployment guide, Docker configuration, database setup
+- [💾 Downloads](./doc/en-US/downloads.md) - Docker images and executable file downloads
 - [🤖 Supported Model Providers](./doc/en-US/model-providers.md) - 21+ model providers list and support status
 - [🛠️ Development Guide](./doc/en-US/build.md) - How to compile and develop Chats
 - [⚙️ Configuration Guide](./doc/en-US/configuration.md) - Detailed configuration parameters

@@ -35,7 +35,8 @@ mkdir -p ./AppData && chmod 755 ./AppData && docker run --restart unless-stopped
 
 Chats 使用 `C#`/`TypeScript` 开发，以下是完整的文档资源：
 
-- [🚀 快速开始](./doc/zh-CN/quick-start.md) - 部署指南、Docker 配置、可执行文件下载
+- [🚀 快速开始](./doc/zh-CN/quick-start.md) - 部署指南、Docker 配置、数据库设置
+- [💾 下载地址](./doc/zh-CN/downloads.md) - Docker 镜像和可执行文件下载
 - [🤖 支持的模型提供商](./doc/zh-CN/model-providers.md) - 21+ 模型服务商列表及支持情况
 - [🛠️ 开发指南](./doc/zh-CN/build.md) - 如何编译和开发 Chats
 - [⚙️ 配置说明](./doc/zh-CN/configuration.md) - 详细配置参数说明

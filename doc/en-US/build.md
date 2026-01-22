@@ -93,6 +93,8 @@ The default configuration is located in `appsettings.json`, but **it is strongly
 | `ConnectionStrings:ChatsDB` | Database ADO.NET connection string | `Data Source=./AppData/chats.db` |
 | `ENCRYPTION_PASSWORD` | Key for encrypting auto-increment IDs | Recommended to set as random string |
 
+> For more detailed configuration instructions, please refer to the [Configuration Guide](./configuration.md).
+
 > **💡 Why use integer + encryption instead of GUID?**
 > 
 > Initially, the Chats project used GUIDs, but after careful consideration, it was switched to auto-increment integer IDs:
