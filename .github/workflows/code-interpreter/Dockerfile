@@ -16,6 +16,8 @@ RUN npm install -g ${NPM_GLOBAL_PACKAGES}
 
 ENV PRECACHE_PACKAGES="${NUGET_PRECACHE}"
 
+COPY matplotlibrc /root/.config/matplotlib/matplotlibrc
+
 COPY download-nuget.sh /tmp/download-nuget.sh
 RUN chmod +x /tmp/download-nuget.sh \
     && /tmp/download-nuget.sh \

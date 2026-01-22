@@ -1,0 +1,3 @@
+font.family: sans-serif
+font.sans-serif: WenQuanYi Micro Hei, WenQuanYi Zen Hei, Droid Sans Fallback, DejaVu Sans
+axes.unicode_minus: False
