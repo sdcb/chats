@@ -61,24 +61,22 @@ docker pull sdcb/chats:1.8.1-linux-x64
 
 ### 下载地址
 
-| 平台                   | GitHub 下载（最新稳定版）                                                                                       | 镜像下载（最新稳定版）                                                                         | 镜像下载（最新开发版）                                                                 |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Windows 64位           | [chats-win-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-win-x64.zip)                   | [chats-win-x64.zip](https://chats.sdcb.pub/release/latest/chats-win-x64.zip)                   | [chats-win-x64.zip](https://chats.sdcb.pub/latest/chats-win-x64.zip)                   |
-| Linux 64位             | [chats-linux-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-x64.zip)               | [chats-linux-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-x64.zip)               | [chats-linux-x64.zip](https://chats.sdcb.pub/latest/chats-linux-x64.zip)               |
-| Linux ARM64            | [chats-linux-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-arm64.zip)           | [chats-linux-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-arm64.zip)           | [chats-linux-arm64.zip](https://chats.sdcb.pub/latest/chats-linux-arm64.zip)           |
-| Linux musl x64         | [chats-linux-musl-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-x64.zip)     | [chats-linux-musl-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-x64.zip)     | [chats-linux-musl-x64.zip](https://chats.sdcb.pub/latest/chats-linux-musl-x64.zip)     |
-| Linux musl ARM64       | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip) | [chats-linux-musl-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-arm64.zip) | [chats-linux-musl-arm64.zip](https://chats.sdcb.pub/latest/chats-linux-musl-arm64.zip) |
-| macOS ARM64            | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)               | [chats-osx-arm64.zip](https://chats.sdcb.pub/release/latest/chats-osx-arm64.zip)               | [chats-osx-arm64.zip](https://chats.sdcb.pub/latest/chats-osx-arm64.zip)               |
-| macOS x64              | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)                   | [chats-osx-x64.zip](https://chats.sdcb.pub/release/latest/chats-osx-x64.zip)                   | [chats-osx-x64.zip](https://chats.sdcb.pub/latest/chats-osx-x64.zip)                   |
-| 通用包（需要 .NET 10） | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                                   | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                                   | [chats.zip](https://chats.sdcb.pub/latest/chats.zip)                                   |
-| 纯前端文件             | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                             | [chats-fe.zip](https://chats.sdcb.pub/release/latest/chats-fe.zip)                             | [chats-fe.zip](https://chats.sdcb.pub/latest/chats-fe.zip)                             |
+| 平台                   | GitHub 下载（最新稳定版）                                                                                       | 镜像下载（最新稳定版）                                                                         | 镜像下载（最新开发版）                                     |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Windows 64位           | [chats-win-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-win-x64.zip)                   | [chats-win-x64.zip](https://chats.sdcb.pub/release/latest/chats-win-x64.zip)                   | -                                                          |
+| Linux 64位             | [chats-linux-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-x64.zip)               | [chats-linux-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-x64.zip)               | -                                                          |
+| Linux ARM64            | [chats-linux-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-arm64.zip)           | [chats-linux-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-arm64.zip)           | -                                                          |
+| Linux musl x64         | [chats-linux-musl-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-x64.zip)     | [chats-linux-musl-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-x64.zip)     | -                                                          |
+| Linux musl ARM64       | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip) | [chats-linux-musl-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-arm64.zip) | -                                                          |
+| macOS ARM64            | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)               | [chats-osx-arm64.zip](https://chats.sdcb.pub/release/latest/chats-osx-arm64.zip)               | -                                                          |
+| macOS x64              | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)                   | [chats-osx-x64.zip](https://chats.sdcb.pub/release/latest/chats-osx-x64.zip)                   | -                                                          |
+| 通用包（需要 .NET 10） | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                                   | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                                   | [chats.zip](https://chats.sdcb.pub/latest/chats.zip)       |
+| 纯前端文件             | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                             | [chats-fe.zip](https://chats.sdcb.pub/release/latest/chats-fe.zip)                             | [chats-fe.zip](https://chats.sdcb.pub/latest/chats-fe.zip) |
 
 ### 下载说明
 
 - **国内镜像下载**（基于 Cloudflare R2）：推荐国内用户使用，速度更快
-- **最新开发版下载**：如需体验最新功能，开发版提供以下文件
-  - 通用包：[chats.zip](https://chats.sdcb.pub/latest/chats.zip)（需要 .NET 10）
-  - 前端文件：[chats-fe.zip](https://chats.sdcb.pub/latest/chats-fe.zip)
+- **最新开发版下载**：仅提供通用包和纯前端文件包，不包括其他平台的原生可执行文件
   - ⚠️ 注意：开发版会从 `dev`/`feature` 分支自动更新，可能不稳定
 - 除通用包外，所有平台都提供 AOT 编译的原生可执行文件，启动速度快，内存占用低
 
