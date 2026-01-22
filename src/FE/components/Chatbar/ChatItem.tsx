@@ -230,18 +230,6 @@ const ChatItem = ({ chat, onDragItemStart }: Props) => {
                     )}
                     style={{ zIndex: chat.spans.length - index }}
                   >
-                    <Tips
-                      trigger={
-                        <div>
-                          <ModelProviderIcon
-                            key={'chat-icon-' + span.spanId}
-                            providerId={span.modelProviderId}
-                          />
-                        </div>
-                      }
-                      side="bottom"
-                      content={span.modelName}
-                    />
                   </div>
                 ))
               )}

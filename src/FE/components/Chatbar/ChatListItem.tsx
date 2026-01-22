@@ -210,10 +210,8 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
         >
           <div
             className={cn(
-              'group relative transition-all duration-1000 overflow-hidden hover:max-w-[240px]',
-              chatsSelectType !== CHATS_SELECT_TYPE.NONE 
-                ? 'max-w-[20px]' 
-                : `max-w-[${Math.max(20, 20 + (chat.spans.length - 1) * 10)}px]`
+              'group relative overflow-hidden transition-all duration-300 max-w-[20px] hover:max-w-[240px]',
+              chatsSelectType !== CHATS_SELECT_TYPE.NONE && 'max-w-[20px]'
             )}
           >
             <div className="flex overflow-hidden">
@@ -233,8 +231,8 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
                   <div
                     key={'chat-icon-wrapper-' + span.spanId}
                     className={cn(
-                      "flex-shrink-0 relative",
-                      index > 0 && "-ml-2.5"
+                      "flex-shrink-0 relative transition-opacity duration-200",
+                      index > 0 && "-ml-2.5 group-hover:ml-[2px] opacity-0 group-hover:opacity-100"
                     )}
                     style={{ zIndex: chat.spans.length - index }}
                   >
