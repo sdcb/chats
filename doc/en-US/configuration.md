@@ -2,12 +2,6 @@
 
 **English** | [简体中文](../zh-CN/configuration.md)
 
-This document explains the configuration items in the backend configuration file (based on `src/BE/web/appsettings.json`), organized by functionality and explained item by item.
-
-> Convention: This document intentionally does not cover ASP.NET Core general items (such as `Logging`, `AllowedHosts`). For general configuration details, please visit the [official ASP.NET Core Configuration documentation](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/configuration/).
-
-## 0. Configuration Sources and Priority
-
 Chats reads configuration based on the .NET configuration system, with priority from high to low:
 
 1. **Command-line arguments** (e.g., `--DBType=sqlite`, `--ConnectionStrings:ChatsDB=...`)
@@ -18,38 +12,100 @@ Chats reads configuration based on the .NET configuration system, with priority 
 
 ### Configuration Summary
 
-| Configuration Name                                                                             | Default Value                           | Notes                                       |
-| ---------------------------------------------------------------------------------------------- | --------------------------------------- | ------------------------------------------- |
-| [`FE_URL`](#11-fe_url)                                                                         | `http://localhost:3001`                 | Required, affects CORS policy               |
-| [`ENCRYPTION_PASSWORD`](#21-encryption_password)                                               | Example placeholder text                | Must set random string in production        |
-| [`DBType`](#31-dbtype)                                                                         | `sqlite`                                | Supports sqlite/mssql/postgresql            |
-| [`ConnectionStrings:ChatsDB`](#32-connectionstringschatsdb)                                    | `Data Source=./AppData/chats.db`        | Required                                    |
-| [`CodePod:IsWindowsContainer`](#41-codepodiswindowscontainer)                                  | `false`                                 | Affects Docker endpoint and commands        |
-| [`CodePod:DockerEndpoint`](#42-codepoddockerendpoint)                                          | `null`                                  | Auto-selects default endpoint when null     |
-| [`CodePod:WorkDir`](#43-codepodworkdir)                                                        | `/app`                                  | Recommended to keep default                 |
-| [`CodePod:ArtifactsDir`](#44-codepodartifactsdir)                                              | `artifacts`                             | Subdirectory relative to WorkDir            |
-| [`CodePod:LabelPrefix`](#45-codepodlabelprefix)                                                | `codepod`                               | Used for container naming and labels        |
-| [`CodePod:OutputOptions:MaxOutputBytes`](#46-codepodoutputoptionsmaxoutputbytes)               | `6144`                                  | 6KB, truncates when exceeded                |
-| [`CodeInterpreter:DefaultImage`](#51-codeinterpreterdefaultimage)                              | `sdcb/code-interpreter:r-26`            | Default image for new sessions              |
-| [`CodeInterpreter:DefaultImageDescription`](#52-codeinterpreterdefaultimagedescription)        | `Pre-installed with common packages...` | Enriches system prompt                      |
-| [`CodeInterpreter:DefaultTimeoutSeconds`](#53-codeinterpreterdefaulttimeoutseconds)            | `300`                                   | null means approximately unlimited (24h)    |
-| [`CodeInterpreter:SessionIdleTimeoutSeconds`](#54-codeinterpretersessionidletimeoutseconds)    | `1800`                                  | 30 minutes, session idle timeout            |
-| [`CodeInterpreter:DefaultNetworkMode`](#55-codeinterpreterdefaultnetworkmode)                  | `bridge`                                | none/bridge/host                            |
-| [`CodeInterpreter:MaxAllowedNetworkMode`](#56-codeinterpretermaxallowednetworkmode)            | `bridge`                                | Limits maximum network permissions          |
-| [`CodeInterpreter:DefaultResourceLimits`](#57-codeinterpreterdefaultresourcelimits)            | See details                             | Memory 2GB/CPU 2 cores/Processes 200        |
-| [`CodeInterpreter:MaxResourceLimits`](#58-codeinterpretermaxresourcelimits)                    | All `null`                              | null means no limit                         |
-| [`CodeInterpreter:MaxArtifactsFilesToUpload`](#59-codeinterpretermaxartifactsfilestoupload)    | `50`                                    | Max files to upload per turn                |
-| [`CodeInterpreter:MaxSingleUploadBytes`](#510-codeinterpretermaxsingleuploadbytes)             | `157286400`                             | 150MB, single file limit                    |
-| [`CodeInterpreter:MaxTotalUploadBytesPerTurn`](#511-codeinterpretermaxtotaluploadbytesperturn) | `314572800`                             | 300MB, total limit per turn                 |
-| [`JwtValidPeriod`](#61-jwtvalidperiod)                                                         | `1.00:00:00`                            | 1 day, JWT validity period                  |
-| [`JwtSecretKey`](#62-jwtsecretkey)                                                             | `null`                                  | Recommended to set stable key in production |
-| [`Chat:Retry429Times`](#71-chatretry429times)                                                  | `5`                                     | HTTP 429 retry count                        |
+| Configuration Name                                                                                                               | Default Value                           | Notes                                         |
+| -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | --------------------------------------------- |
+| [`--urls`](#11---urls)                                                                                                           | `http://localhost:5000`                 | Important, controls backend listening address |
+| [`Logging:LogLevel:Default`](#12-loggingleveldefault)                                                                            | `Information`                           | Controls default log level                    |
+| [`Logging:LogLevel:Microsoft.EntityFrameworkCore.Database.Command`](#13-logginglevelmicrosoftentityframeworkcoredatabasecommand) | `None`                                  | Controls SQL log output                       |
+| [`AllowedHosts`](#14-allowedhosts)                                                                                               | `*`                                     | Restricts allowed Host headers                |
+| [`FE_URL`](#21-fe_url)                                                                                                           | `http://localhost:3001`                 | Required, affects CORS policy                 |
+| [`ENCRYPTION_PASSWORD`](#31-encryption_password)                                                                                 | Example placeholder text                | Must set random string in production          |
+| [`DBType`](#41-dbtype)                                                                                                           | `sqlite`                                | Supports sqlite/mssql/postgresql              |
+| [`ConnectionStrings:ChatsDB`](#42-connectionstringschatsdb)                                                                      | `Data Source=./AppData/chats.db`        | Required                                      |
+| [`CodePod:IsWindowsContainer`](#51-codepodiswindowscontainer)                                                                    | `false`                                 | Affects Docker endpoint and commands          |
+| [`CodePod:DockerEndpoint`](#52-codepoddockerendpoint)                                                                            | `null`                                  | Auto-selects default endpoint when null       |
+| [`CodePod:WorkDir`](#53-codepodworkdir)                                                                                          | `/app`                                  | Recommended to keep default                   |
+| [`CodePod:ArtifactsDir`](#54-codepodartifactsdir)                                                                                | `artifacts`                             | Subdirectory relative to WorkDir              |
+| [`CodePod:LabelPrefix`](#55-codepodlabelprefix)                                                                                  | `codepod`                               | Used for container naming and labels          |
+| [`CodePod:OutputOptions:MaxOutputBytes`](#56-codepodoutputoptionsmaxoutputbytes)                                                 | `6144`                                  | 6KB, truncates when exceeded                  |
+| [`CodeInterpreter:DefaultImage`](#61-codeinterpreterdefaultimage)                                                                | `sdcb/code-interpreter:r-26`            | Default image for new sessions                |
+| [`CodeInterpreter:DefaultImageDescription`](#62-codeinterpreterdefaultimagedescription)                                          | `Pre-installed with common packages...` | Enriches system prompt                        |
+| [`CodeInterpreter:DefaultTimeoutSeconds`](#63-codeinterpreterdefaulttimeoutseconds)                                              | `300`                                   | null means approximately unlimited (24h)      |
+| [`CodeInterpreter:SessionIdleTimeoutSeconds`](#64-codeinterpretersessionidletimeoutseconds)                                      | `1800`                                  | 30 minutes, session idle timeout              |
+| [`CodeInterpreter:DefaultNetworkMode`](#65-codeinterpreterdefaultnetworkmode)                                                    | `bridge`                                | none/bridge/host                              |
+| [`CodeInterpreter:MaxAllowedNetworkMode`](#66-codeinterpretermaxallowednetworkmode)                                              | `bridge`                                | Limits maximum network permissions            |
+| [`CodeInterpreter:DefaultResourceLimits`](#67-codeinterpreterdefaultresourcelimits)                                              | See details                             | Memory 2GB/CPU 2 cores/Processes 200          |
+| [`CodeInterpreter:MaxResourceLimits`](#68-codeinterpretermaxresourcelimits)                                                      | All `null`                              | null means no limit                           |
+| [`CodeInterpreter:MaxArtifactsFilesToUpload`](#69-codeinterpretermaxartifactsfilestoupload)                                      | `50`                                    | Max files to upload per turn                  |
+| [`CodeInterpreter:MaxSingleUploadBytes`](#610-codeinterpretermaxsingleuploadbytes)                                               | `157286400`                             | 150MB, single file limit                      |
+| [`CodeInterpreter:MaxTotalUploadBytesPerTurn`](#611-codeinterpretermaxtotaluploadbytesperturn)                                   | `314572800`                             | 300MB, total limit per turn                   |
+| [`JwtValidPeriod`](#71-jwtvalidperiod)                                                                                           | `1.00:00:00`                            | 1 day, JWT validity period                    |
+| [`JwtSecretKey`](#72-jwtsecretkey)                                                                                               | `null`                                  | Recommended to set stable key in production   |
+| [`Chat:Retry429Times`](#81-chatretry429times)                                                                                    | `5`                                     | HTTP 429 retry count                          |
+
+## 1. General Configuration
+
+This section introduces some common configuration items that apply to most applications.
+
+### 1.1 `--urls`
+
+- **Type**: String (URL)
+- **Default**: `http://localhost:5000`
+- **Purpose**:
+  - Specifies the URL addresses and ports the application listens on.
+  - Multiple addresses can be specified, separated by semicolons, e.g., `http://localhost:5000;https://localhost:5001`.
+  - Supports wildcard binding, e.g., `http://*:5000` or `http://0.0.0.0:5000` to listen on all network interfaces.
+
+- **Notes**:
+  - This is a **very important** configuration item used to control the backend service listening address.
+  - In containerized deployments, it typically needs to be set to `http://0.0.0.0:5000` to allow external access.
+
+- **Environment variable syntax**: `ASPNETCORE_URLS=http://0.0.0.0:5000`
+- **Command-line syntax**: `--urls=http://0.0.0.0:5000`
+
+### 1.2 `Logging:LogLevel:Default`
+
+- **Type**: String
+- **Default**: `Information`
+- **Purpose**: Sets the default log level.
+- **Possible values**: `Trace` | `Debug` | `Information` | `Warning` | `Error` | `Critical` | `None`
+- **Notes**:
+  - For development environments, `Debug` or `Information` is recommended.
+  - For production environments, `Warning` or `Error` is recommended to reduce log volume.
+
+- **Environment variable syntax**: `Logging__LogLevel__Default=Information`
+
+### 1.3 `Logging:LogLevel:Microsoft.EntityFrameworkCore.Database.Command`
+
+- **Type**: String
+- **Default**: `None`
+- **Purpose**: Controls the log output level for SQL commands executed by Entity Framework Core.
+- **Notes**:
+  - Set to `Information` to view the actual SQL statements in logs, useful for debugging.
+  - For production environments, keep it at `Warning` or higher to avoid sensitive information leakage and log bloat.
+
+- **Environment variable syntax**: `Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command=Warning`
+
+### 1.4 `AllowedHosts`
+
+- **Type**: String
+- **Default**: `*` (allow all)
+- **Purpose**:
+  - Restricts allowed HTTP Host header values to defend against Host header injection attacks.
+  - Multiple hostnames can be specified, separated by semicolons, e.g., `example.com;www.example.com`.
+
+- **Notes**:
+  - For production environments, it's recommended to configure specific domain names rather than using the wildcard `*`.
+
+- **Environment variable syntax**: `AllowedHosts=*`
+
+> For more general configuration items, refer to the [official ASP.NET Core Configuration documentation](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/configuration/).
 
 ---
 
-## 1. Frontend URL and CORS
+## 2. Frontend URL and CORS
 
-### 1.1 `FE_URL`
+### 2.1 `FE_URL`
 
 - **Type**: String (URL)
 - **Default**: `http://localhost:3001`
@@ -66,9 +122,9 @@ Chats reads configuration based on the .NET configuration system, with priority 
 
 ---
 
-## 2. Link/ID Encryption
+## 3. Link/ID Encryption
 
-### 2.1 `ENCRYPTION_PASSWORD`
+### 3.1 `ENCRYPTION_PASSWORD`
 
 - **Type**: String
 - **Default**: Example placeholder text (you should replace it)
@@ -84,9 +140,9 @@ Chats reads configuration based on the .NET configuration system, with priority 
 
 ---
 
-## 3. Database
+## 4. Database
 
-### 3.1 `DBType`
+### 4.1 `DBType`
 
 - **Type**: String
 - **Default**: `sqlite`
@@ -102,7 +158,7 @@ Chats reads configuration based on the .NET configuration system, with priority 
 - **Environment variable syntax**: `DBType=sqlite`
 - **Command-line syntax**: `--DBType=sqlite`
 
-### 3.2 `ConnectionStrings:ChatsDB`
+### 4.2 `ConnectionStrings:ChatsDB`
 
 - **Type**: String (ADO.NET connection string)
 - **Default**: `Data Source=./AppData/chats.db`
@@ -116,13 +172,13 @@ Chats reads configuration based on the .NET configuration system, with priority 
 
 ---
 
-## 4. CodePod (Docker Container Foundation)
+## 5. CodePod (Docker Container Foundation)
 
 The `CodePod` configuration group manages Docker container creation, working directories, output truncation, and other behaviors that the code interpreter sandbox depends on.
 
 > Important: The current version of the code interpreter toolchain **defaults to assuming the working directory is `/app` and the Artifacts directory is `/app/artifacts`** in multiple places. Unless you know what you're doing, it's recommended to keep `WorkDir=/app` and `ArtifactsDir=artifacts`.
 
-### 4.1 `CodePod:IsWindowsContainer`
+### 5.1 `CodePod:IsWindowsContainer`
 
 - **Type**: Boolean
 - **Default**: `false` (use Linux containers)
@@ -130,7 +186,7 @@ The `CodePod` configuration group manages Docker container creation, working dir
   - Indicates whether to use Windows containers (defaults to Linux containers).
   - Affects default Docker endpoint and container internal commands (e.g., keep-alive, mkdir, delete files, etc.).
 
-### 4.2 `CodePod:DockerEndpoint`
+### 5.2 `CodePod:DockerEndpoint`
 
 - **Type**: String or `null`
 - **Default**: `null` (automatically select default endpoint)
@@ -140,19 +196,19 @@ The `CodePod` configuration group manages Docker container creation, working dir
     - Windows containers: `npipe://./pipe/docker_engine`
     - Linux/macOS containers: `unix:///var/run/docker.sock`
 
-### 4.3 `CodePod:WorkDir`
+### 5.3 `CodePod:WorkDir`
 
 - **Type**: String (container internal path)
 - **Default**: `/app`
 - **Purpose**: The working directory of the container (Docker `WorkingDir`).
 
-### 4.4 `CodePod:ArtifactsDir`
+### 5.4 `CodePod:ArtifactsDir`
 
 - **Type**: String (subdirectory name relative to `WorkDir`)
 - **Default**: `artifacts`
 - **Purpose**: Directory for storing exported files (for download/upload return).
 
-### 4.5 `CodePod:LabelPrefix`
+### 5.5 `CodePod:LabelPrefix`
 
 - **Type**: String
 - **Default**: `codepod`
@@ -160,7 +216,7 @@ The `CodePod` configuration group manages Docker container creation, working dir
   - Generate container name prefix (e.g., `codepod-xxxxxxxx`).
   - Used as a prefix for Docker labels to identify "containers managed by Chats" for easy cleanup and filtering.
 
-### 4.6 `CodePod:OutputOptions:MaxOutputBytes`
+### 5.6 `CodePod:OutputOptions:MaxOutputBytes`
 
 - **Type**: Integer (bytes)
 - **Default**: `6144` (6KB)
@@ -170,23 +226,23 @@ The `CodePod` configuration group manages Docker container creation, working dir
 
 ---
 
-## 5. CodeInterpreter (Code Interpreter / Sandbox Policy)
+## 6. CodeInterpreter (Code Interpreter / Sandbox Policy)
 
 The `CodeInterpreter` configuration group controls: the default sandbox image to use, execution timeout per command, session idle reclamation, network isolation, resource limits, and the artifacts upload quota that can be returned per round.
 
-### 5.1 `CodeInterpreter:DefaultImage`
+### 6.1 `CodeInterpreter:DefaultImage`
 
 - **Type**: String (Docker image name)
 - **Default**: `sdcb/code-interpreter:r-26`
 - **Purpose**: The default image to use when creating a new code interpreter session.
 
-### 5.2 `CodeInterpreter:DefaultImageDescription`
+### 6.2 `CodeInterpreter:DefaultImageDescription`
 
 - **Type**: String
 - **Default**: `Pre-installed with common packages, suitable for most daily tasks`
 - **Purpose**: Used to enrich the system prompt (telling the model what capabilities/tools are available in this image).
 
-### 5.3 `CodeInterpreter:DefaultTimeoutSeconds`
+### 6.3 `CodeInterpreter:DefaultTimeoutSeconds`
 
 - **Type**: Integer seconds or `null`
 - **Default**: `300`
@@ -195,20 +251,20 @@ The `CodeInterpreter` configuration group controls: the default sandbox image to
   - `null` means "approximately unlimited" (in implementation, treated as 24 hours).
   - Eventually clamped to the range of `1..86400` seconds.
 
-### 5.4 `CodeInterpreter:SessionIdleTimeoutSeconds`
+### 6.4 `CodeInterpreter:SessionIdleTimeoutSeconds`
 
 - **Type**: Integer seconds
 - **Default**: `1800` (30 minutes)
 - **Purpose**: How long a session is idle before being considered expired (used to set the session's `ExpiresAt`, and reclaimed by the background cleanup service).
 
-### 5.5 `CodeInterpreter:DefaultNetworkMode`
+### 6.5 `CodeInterpreter:DefaultNetworkMode`
 
 - **Type**: String
 - **Default**: `bridge`
 - **Purpose**: Default network mode for new sessions.
 - **Possible values**: `none` | `bridge` | `host`
 
-### 5.6 `CodeInterpreter:MaxAllowedNetworkMode`
+### 6.6 `CodeInterpreter:MaxAllowedNetworkMode`
 
 - **Type**: String
 - **Default**: `bridge`
@@ -217,7 +273,7 @@ The `CodeInterpreter` configuration group controls: the default sandbox image to
   - For example, with `MaxAllowedNetworkMode=bridge`, `none` and `bridge` are allowed, but `host` is forbidden.
   - The system validates at startup: `DefaultNetworkMode` cannot be higher than `MaxAllowedNetworkMode`.
 
-### 5.7 `CodeInterpreter:DefaultResourceLimits`
+### 6.7 `CodeInterpreter:DefaultResourceLimits`
 
 - **Type**: Object
 - **Default**:
@@ -230,7 +286,7 @@ The `CodeInterpreter` configuration group controls: the default sandbox image to
   - `CpuCores`: Number of CPU cores (can be decimal)
   - `MaxProcesses`: Process limit (effective for Linux containers; Windows containers do not support this limit)
 
-### 5.8 `CodeInterpreter:MaxResourceLimits`
+### 6.8 `CodeInterpreter:MaxResourceLimits`
 
 - **Type**: Object
 - **Default**: All `null`
@@ -238,20 +294,20 @@ The `CodeInterpreter` configuration group controls: the default sandbox image to
 - **Behavior**:
   - `null` means no limit (converted to Docker's "unlimited/0" semantics).
 
-### 5.9 `CodeInterpreter:MaxArtifactsFilesToUpload`
+### 6.9 `CodeInterpreter:MaxArtifactsFilesToUpload`
 
 - **Type**: Integer
 - **Default**: `50`
 - **Purpose**: Maximum number of files allowed to be uploaded/returned from `/app/artifacts` per round.
 
-### 5.10 `CodeInterpreter:MaxSingleUploadBytes`
+### 6.10 `CodeInterpreter:MaxSingleUploadBytes`
 
 - **Type**: Integer (bytes) or `null`
 - **Default**: `157286400` (150MB)
 - **Purpose**: Limit the maximum return size of a single artifacts file.
 - **Behavior**: `null` means no limit.
 
-### 5.11 `CodeInterpreter:MaxTotalUploadBytesPerTurn`
+### 6.11 `CodeInterpreter:MaxTotalUploadBytesPerTurn`
 
 - **Type**: Integer (bytes) or `null`
 - **Default**: `314572800` (300MB)
@@ -260,9 +316,9 @@ The `CodeInterpreter` configuration group controls: the default sandbox image to
 
 ---
 
-## 6. Login Sessions and JWT
+## 7. Login Sessions and JWT
 
-### 6.1 `JwtValidPeriod`
+### 7.1 `JwtValidPeriod`
 
 - **Type**: TimeSpan string
 - **Default**: `1.00:00:00` (1 day)
@@ -271,7 +327,7 @@ The `CodeInterpreter` configuration group controls: the default sandbox image to
   - If this item is not configured, the default validity period is 8 hours.
   - Common format: `d.hh:mm:ss`, for example, `0.08:00:00` means 8 hours.
 
-### 6.2 `JwtSecretKey`
+### 7.2 `JwtSecretKey`
 
 - **Type**: String or `null`
 - **Default**: `null`
@@ -282,9 +338,9 @@ The `CodeInterpreter` configuration group controls: the default sandbox image to
 
 ---
 
-## 7. Chat Request Retry
+## 8. Chat Request Retry
 
-### 7.1 `Chat:Retry429Times`
+### 8.1 `Chat:Retry429Times`
 
 - **Type**: Integer
 - **Default**: `5`
