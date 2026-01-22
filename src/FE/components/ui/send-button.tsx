@@ -93,7 +93,7 @@ export const SendButton = ({
             onClick={() => updateSendMode('enter')}
             className="flex items-center gap-2"
           >
-            <div className="w-4 h-4 flex items-center justify-center text-sm font-mono">⏎</div>
+            <div className="w-4 h-4 flex items-center justify-center text-sm">⏎</div>
             <div className="flex-1">
               <div className="font-medium">{t('Press Enter to send')}</div>
               <div className="text-xs text-muted-foreground">
@@ -108,7 +108,7 @@ export const SendButton = ({
             onClick={() => updateSendMode('ctrl-enter')}
             className="flex items-center gap-2"
           >
-            <div className="w-4 h-4 flex items-center justify-center text-xs font-mono">^⏎</div>
+            <div className="w-4 h-4 flex items-center justify-center text-xs">^⏎</div>
             <div className="flex-1">
               <div className="font-medium">{t('Press Ctrl+Enter to send')}</div>
               <div className="text-xs text-muted-foreground">

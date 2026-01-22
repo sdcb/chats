@@ -87,7 +87,7 @@ const SharedMessageModal = (props: IProps) => {
           <>
             <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
               <CopyButton value={shareUrl} />
-              <div className="flex-1 text-sm text-gray-800 dark:text-gray-200 break-all font-mono">
+              <div className="flex-1 text-sm text-gray-800 dark:text-gray-200 break-all">
                 {shareUrl}
               </div>
             </div>

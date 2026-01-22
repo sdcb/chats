@@ -261,7 +261,7 @@ const ChatHeader = () => {
                           }}
                         >
                           <ModelProviderIcon providerId={span.modelProviderId} />
-                          <span className="font-mono">{span?.modelName}</span>
+                          <span>{span?.modelName}</span>
                         </Button>
                       ) : (
                         <div 
@@ -289,7 +289,7 @@ const ChatHeader = () => {
                                 )}
                               >
                                 <ModelProviderIcon providerId={span.modelProviderId} />
-                                <span className="font-mono">{span?.modelName}</span>
+                                <span>{span?.modelName}</span>
                               </div>
                             }
                             hideIcon={true}

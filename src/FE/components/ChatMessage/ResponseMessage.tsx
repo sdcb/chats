@@ -551,11 +551,12 @@ const ResponseMessage = (props: Props) => {
               return (
                 <div key={'text-' + index} className="relative group/item">
                   {message.displayType === 'Raw' ? (
-                    <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3 group/item">
+                    <div className="prose dark:prose-invert [--tw-prose-body:#000] [--tw-prose-headings:#000] rounded-r-md flex-1 overflow-auto text-sm leading-4 font-normal py-2 px-3 group/item">
                       <div className="whitespace-pre-wrap font-mono">{c.c}</div>
                     </div>
                   ) : (
                     <MemoizedReactMarkdown
+                      className="prose dark:prose-invert [--tw-prose-body:#000] [--tw-prose-headings:#000] leading-4 font-normal prose-p:text-sm prose-p:leading-4 prose-p:font-normal prose-li:text-sm prose-li:leading-4 prose-li:font-normal"
                       // 顺序：math -> gfm -> breaks，确保数学与 GFM 处理后，再将 softbreak 转为 <br/>
                       remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
                       rehypePlugins={[rehypeKatex as any, rehypeKatexDataMath]}

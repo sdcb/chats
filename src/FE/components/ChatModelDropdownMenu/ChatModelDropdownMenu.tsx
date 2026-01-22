@@ -164,7 +164,7 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
                           className="flex items-center gap-1"
                         >
                           <ApiIcon className="w-3.5 h-3.5 flex-shrink-0" />
-                          <span className="truncate font-mono text-sm">{x.name}</span>
+                          <span className="truncate text-sm">{x.name}</span>
                         </DropdownMenuItem>
                       );
                     })}

@@ -419,7 +419,7 @@ export default function ModelUserList({ model, isExpanded, onToggle, onAssignedU
                                 <TooltipTrigger asChild>
                                   <div className="flex items-center gap-1 text-[10px] sm:text-xs">
                                     <span className="hidden sm:inline text-muted-foreground">{t('Counts')}:</span>
-                                    <span className="font-mono">{user.counts ?? 0}</span>
+                                    <span>{user.counts ?? 0}</span>
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>{t('Usage count')}: {user.counts ?? 0}</TooltipContent>
@@ -428,7 +428,7 @@ export default function ModelUserList({ model, isExpanded, onToggle, onAssignedU
                                 <TooltipTrigger asChild>
                                   <div className="flex items-center gap-1 text-[10px] sm:text-xs">
                                     <span className="hidden sm:inline text-muted-foreground">{t('Tokens')}:</span>
-                                    <span className="font-mono">{user.tokens ?? 0}</span>
+                                    <span>{user.tokens ?? 0}</span>
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>{t('Token count')}: {user.tokens ?? 0}</TooltipContent>

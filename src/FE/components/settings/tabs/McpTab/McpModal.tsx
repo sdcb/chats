@@ -344,7 +344,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
                               value={tool.name}
                               onChange={(e) => handleToolChange(index, 'name', e.target.value)}
                               placeholder={t('Tool name')}
-                              className="font-mono w-32"
+                              className="w-32"
                               disabled={isReadOnly}
                             />
                           </TableCell>
@@ -364,14 +364,14 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
                               onChange={(e) => handleToolChange(index, 'parameters', e.target.value)}
                               placeholder='{"type": "object", "properties": {...}}'
                               rows={3}
-                              className={`min-w-[400px] font-mono text-xs ${tool.parameters && !validateJSON(tool.parameters)
+                              className={`min-w-[400px] text-sm font-mono ${tool.parameters && !validateJSON(tool.parameters)
                                   ? 'border-red-500 focus:border-red-500'
                                   : ''
                                 }`}
                               disabled={isReadOnly}
                             />
                             {tool.parameters && !validateJSON(tool.parameters) && (
-                              <p className="text-xs text-red-500 mt-1">{t('Invalid JSON format')}</p>
+                              <p className="text-sm text-red-500 mt-1">{t('Invalid JSON format')}</p>
                             )}
                           </TableCell>
                           <TableCell className="px-2">

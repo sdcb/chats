@@ -342,6 +342,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                             style={oneDark}
                             customStyle={{
                                 margin: 0,
+                                fontFamily: 'var(--font-mono)',
                                 borderTopLeftRadius: 0,
                                 borderTopRightRadius: 0,
                                 borderBottomRightRadius: toolResponse ? 0 : 12,
@@ -378,7 +379,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                     // 普通的参数显示
                     <div className="relative group">
                         <div
-                            className="whitespace-pre-wrap break-words font-mono text-sm p-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                            className="whitespace-pre-wrap break-words text-sm p-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-mono"
                             style={{
                                 borderBottomRightRadius: toolResponse ? 0 : 12,
                                 borderBottomLeftRadius: toolResponse ? 0 : 12,
@@ -508,7 +509,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                                     ))}
                                 </pre>
                             ) : (
-                                <div className="whitespace-pre-wrap break-words">
+                                <div className="whitespace-pre-wrap break-words font-mono">
                                     {toolResponse.r}
                                 </div>
                             )

@@ -257,7 +257,7 @@ export default function LoginPage() {
                 </Button>
                 . All Rights Reserved.
               </div>
-              <div className="text-[10px] sm:text-xs text-muted-foreground text-right font-mono">
+              <div className="text-[10px] sm:text-xs text-muted-foreground text-right">
                 {feVersion}
               </div>
             </div>

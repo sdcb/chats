@@ -189,7 +189,7 @@ export default function ModelItem({ model, onEditClick, onDeleteClick, onGoToUsa
         >
           <span className="truncate flex items-center gap-1.5 text-sm" title={getApiTypeName(model.apiType)}>
             <span className="hidden sm:inline">{getApiTypeIcon(model.apiType)}</span>
-            <span className={cn('truncate font-mono', !model.enabled && 'line-through')}>{model.name}</span>
+            <span className={cn('truncate', !model.enabled && 'line-through')}>{model.name}</span>
           </span>
           <span
             className={cn(
