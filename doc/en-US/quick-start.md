@@ -18,15 +18,19 @@ For most users, Docker provides the simplest and fastest way to deploy.
 ### SQLite Quick Start
 
 ```bash
-mkdir -p ./AppData && chmod 755 ./AppData && docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
+mkdir -p ./AppData
+chmod 755 ./AppData
+docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:/app/AppData -v /var/run/docker.sock:/var/run/docker.sock --user 0:0 -p 8080:8080 sdcb/chats:latest
 ```
 
-> **Note**: SQLite requires mapping the `./AppData` folder to store the database file and uploaded files (when using local file provider for image hosting service).
+> **Note**:
+> - SQLite requires mapping the `./AppData` folder to store the database file and uploaded files (when using local file provider for image hosting service).
+> - `-v /var/run/docker.sock:/var/run/docker.sock` and `--user 0:0` are for supporting Docker sandbox-based Code Interpreter functionality. If you don't need this feature, you can remove these two parameters.
 
 ### PostgreSQL Quick Start
 
 ```bash
-docker run --restart unless-stopped --name sdcb-chats -e DBType=postgresql -e ConnectionStrings__ChatsDB="Host=host.docker.internal;Port=5432;Username=postgres;Password=mysecretpassword;Database=postgres" -p 8080:8080 sdcb/chats:latest
+docker run --restart unless-stopped --name sdcb-chats -e DBType=postgresql -e ConnectionStrings__ChatsDB="Host=host.docker.internal;Port=5432;Username=postgres;Password=mysecretpassword;Database=postgres" -v /var/run/docker.sock:/var/run/docker.sock --user 0:0 -p 8080:8080 sdcb/chats:latest
 ```
 
 > **Note**: PostgreSQL does not depend on the `./AppData` folder for database storage, but if using local file provider for image hosting service, you still need to map the folder: `-v ./AppData:/app/AppData` (users can configure other file storage methods in the admin interface).
@@ -64,7 +68,7 @@ For environments where using Docker is inconvenient, Chats provides native execu
 
 ### Running Instructions
 
-The directory structure after extracting the AOT executable files is as follows:
+The directory structure after extracting the executable files is as follows:
 
 ```
 C:\Users\ZhouJie\Downloads\chats-win-x64>dir
@@ -84,9 +88,10 @@ C:\Users\ZhouJie\Downloads\chats-win-x64>dir
 - **Start Application**: Run `Chats.BE.exe` to start the Chats application. Although this filename indicates "backend," it actually contains both frontend and backend components.
 - **Database Configuration**: By default, the application will create a directory named `AppData` in the current directory and use SQLite as the database. Command-line parameters can be used to specify a different database type:
   ```pwsh
-  .\Chats.BE.exe --urls http://+:5000 --DBType=mssql --ConnectionStrings:ChatsDB="Data Source=(localdb)\mssqllocaldb; Initial Catalog=ChatsDB; Integrated Security=True"
+  .\Chats.BE.exe --urls http://+:5000 --CodePod:DockerEndpoint npipe://./pipe/docker_engine --DBType=mssql --ConnectionStrings:ChatsDB="Data Source=(localdb)\mssqllocaldb; Initial Catalog=ChatsDB; Integrated Security=True"
   ```
   - Parameter `--urls`: Used to specify the address and port the application listens on.
+  - Parameter `--CodePod:DockerEndpoint`: Specifies the Docker service endpoint address. On Windows, if you want to connect to Linux containers in Docker Desktop as the Code Interpreter sandbox, you need to use `npipe://./pipe/docker_engine` instead of the default `unix:///var/run/docker.sock`, otherwise you'll encounter a `Connection failed` error when creating Docker sessions.
   - Parameter `DBType`: Options are `sqlite`, `mssql`, or `pgsql`.
   - Parameter `--ConnectionStrings:ChatsDB`: For specifying the ADO.NET connection string for the database.
   

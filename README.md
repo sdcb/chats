@@ -22,7 +22,7 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 21+ 主流 
 一条命令即可启动（需要 Docker）：
 
 ```bash
-mkdir -p ./AppData && chmod 755 ./AppData && docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
+mkdir -p ./AppData && chmod 755 ./AppData && docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:/app/AppData -v /var/run/docker.sock:/var/run/docker.sock --user 0:0 -p 8080:8080 sdcb/chats:latest
 ```
 
 启动后访问 `http://localhost:8080`，使用默认账号 `chats` / `RESET!!!` 登录。

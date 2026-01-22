@@ -186,6 +186,8 @@ The `CodePod` configuration group manages Docker container creation, working dir
   - Indicates whether to use Windows containers (defaults to Linux containers).
   - Affects default Docker endpoint and container internal commands (e.g., keep-alive, mkdir, delete files, etc.).
 
+> **⚠️ Warning**: Windows container-based CodeInterpreter has not been tested in version 1.10 and is not recommended for production use.
+
 ### 5.2 `CodePod:DockerEndpoint`
 
 - **Type**: String or `null`
@@ -195,6 +197,8 @@ The `CodePod` configuration group manages Docker container creation, working dir
   - When not configured, it automatically selects the default endpoint based on `CodePod:IsWindowsContainer`:
     - Windows containers: `npipe://./pipe/docker_engine`
     - Linux/macOS containers: `unix:///var/run/docker.sock`
+  - **Containerized deployment note**: If Chats backend itself runs in a container, you need to map the Docker socket into the container and use root privileges:
+    - Example: `docker run -v /var/run/docker.sock:/var/run/docker.sock --user 0:0 ...`
 
 ### 5.3 `CodePod:WorkDir`
 
