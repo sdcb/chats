@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { IconChevronDown } from '@/components/Icons';
+import { IconChevronDown, IconSendPlane } from '@/components/Icons';
 import { cn } from '@/lib/utils';
 
 interface SendButtonProps {
@@ -47,17 +47,26 @@ export const SendButton = ({
   }, [onSend, disabled]);
 
   const sendText = t('Send');
+  const buttonBgClass =
+    'bg-primary/90 hover:bg-primary/80 active:bg-primary/75 text-primary-foreground';
 
   // 在移动端显示普通按钮
   if (isMobile) {
     return (
       <Button
-        className={cn('h-auto py-1.5 bg-primary/90 hover:bg-primary/80 active:bg-primary/75', className)}
+        className={cn('h-auto py-1.5', buttonBgClass, className)}
         onClick={onSend}
-        disabled={disabled || isSending}
+        disabled={isSending}
         size={size}
       >
-        {isSending ? t('Sending...') : sendText}
+        {isSending ? (
+          t('Sending...')
+        ) : (
+          <>
+            <IconSendPlane size={20} stroke="currentColor" />
+            <span className="sr-only">{sendText}</span>
+          </>
+        )}
       </Button>
     );
   }
@@ -67,25 +76,33 @@ export const SendButton = ({
     <div className="flex">
       <Button
         className={cn(
-          'rounded-r-none border-r border-r-black/20 flex-1',
+          'rounded-r-none border-r border-r-primary/30 flex-1',
+          buttonBgClass,
           className
         )}
         onClick={onSend}
-        disabled={disabled || isSending}
+        disabled={isSending}
         size={size}
       >
-        {isSending ? t('Sending...') : sendText}
+        {isSending ? (
+          t('Sending...')
+        ) : (
+          <>
+            <IconSendPlane size={20} stroke="currentColor" />
+            <span className="sr-only">{sendText}</span>
+          </>
+        )}
       </Button>
       
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            className="rounded-l-none px-2 border-l-0"
+            className={cn('rounded-l-none px-2 border-l-0', buttonBgClass)}
             variant="default"
             size={size}
             disabled={isSending}
           >
-            <IconChevronDown size={14} className="text-white dark:text-black" />
+            <IconChevronDown size={20} className="text-primary-foreground" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">

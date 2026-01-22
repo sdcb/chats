@@ -158,7 +158,7 @@ const ChatHeader = () => {
     }
 
     return (
-      <div className="flex items-center ml-2">
+      <div className="flex items-center">
         <TooltipProvider delayDuration={0}>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -167,7 +167,7 @@ const ChatHeader = () => {
                   className="p-0"
                   triggerClassName={'hover:bg-transparent p-2 bg-button hover:bg-accent'}
                   models={models}
-                  content={<IconPlus size={16} />}
+                  content={<IconPlus strokeWidth={1.8} size={20} />}
                   hideIcon={true}
                   onChangeModel={(model) => {
                     handleAddChatModel(model.modelId);
@@ -193,7 +193,7 @@ const ChatHeader = () => {
     }
 
     return (
-      <div className="flex items-center ml-2">
+      <div className="flex items-center">
         <Tips
           trigger={
             <Button
@@ -201,7 +201,7 @@ const ChatHeader = () => {
               className="p-2 h-auto hover:bg-accent"
               onClick={() => setIsResetDialogOpen(true)}
             >
-              <IconSettingsCog size={16} />
+              <IconSettingsCog strokeWidth={1.8} size={20} />
             </Button>
           }
           content={t('Reset Models')}
@@ -233,7 +233,7 @@ const ChatHeader = () => {
               >
                 <div
                   className={cn(
-                    'flex gap-2 items-center',
+                    'flex gap-1 items-center',
                     selectedChat.status === ChatStatus.Chatting &&
                       'pointer-events-none',
                   )}
@@ -325,7 +325,7 @@ const ChatHeader = () => {
                                   handleChangeChatSpan(span.spanId, checked);
                                 }}
                                 checked={span.enabled}
-                                className="ml-2"
+                                className=""
                               ></Switch>
                               <Button
                                 disabled={selectedChat.spans.length === 1}
@@ -335,7 +335,7 @@ const ChatHeader = () => {
                                 variant="ghost"
                                 className="h-6 w-6 m-0 p-0 hover:bg-accent"
                               >
-                                <IconX size={16} />
+                                <IconX strokeWidth={1.8} size={20} />
                               </Button>
                             </div>
                           </div>

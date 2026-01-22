@@ -61,6 +61,7 @@ export { default as IconPinnedOff } from './IconPinnedOff';
 export { default as IconPlus } from './IconPlus';
 export { default as IconReasoning } from './IconReasoning';
 export { default as IconRefresh } from './IconRefresh';
+export { default as IconSendPlane } from './IconSendPlane';
 export { default as IconRobot } from './IconRobot';
 export { default as IconSearch } from './IconSearch';
 export { default as IconSettings } from './IconSettings';

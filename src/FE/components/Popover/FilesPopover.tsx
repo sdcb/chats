@@ -59,7 +59,7 @@ const FilesPopover = ({ onSelect, selectedFiles }: FilesPopoverProps) => {
               size="xs"
               className="m-0.5 h-8 w-8 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
             >
-              <IconFolder size={22} />
+              <IconFolder size={20} />
             </Button>
           </PopoverTrigger>
         }

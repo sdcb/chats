@@ -501,11 +501,11 @@ const ChatInput = ({
               'stretch flex flex-row rounded-md mx-auto w-full px-2 md:px-4',
             )}
           >
-            <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] pl-0 pt-0 pr-0 pb-1">
+            <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]">
               {/* 滚动按钮组 - 水平排列 */}
               {/* 移除原来的位置，现在放到收起按钮同一排 */}
-              <div className="flex px-1 items-center gap-1 md:gap-2">
-                <div className="flex items-center gap-1 md:gap-2">
+              <div className="flex px-1 items-center">
+                <div className="flex items-center">
                   <div className="flex items-center">
                     {canUploadFile() && (
                       <UploadButton
@@ -518,7 +518,7 @@ const ChatInput = ({
                         tip={t('Upload from device')}
                         tipSide="top"
                       >
-                        <IconPaperclip size={22} />
+                        <IconPaperclip size={20} />
                       </UploadButton>
                     )}
                     {canUploadFile() && isMobile() && (
@@ -532,7 +532,7 @@ const ChatInput = ({
                         tip={t('Take photo')}
                         tipSide="top"
                       >
-                        <IconCamera size={22} />
+                        <IconCamera size={20} />
                       </UploadButton>
                     )}
                     {canUploadFile() && (
@@ -561,7 +561,7 @@ const ChatInput = ({
                         size="xs"
                         className="m-0.5 h-8 w-8 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
                       >
-                        <IconLoader className="animate-spin" size={22} />
+                        <IconLoader className="animate-spin" size={20} />
                       </Button>
                     )}
                   </div>
@@ -587,7 +587,7 @@ const ChatInput = ({
                           className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                           onClick={onScrollToTopClick}
                         >
-                          <IconArrowDoubleUp size={22} className="text-foreground/80" />
+                          <IconArrowDoubleUp size={20} className="text-foreground/80" />
                         </Button>
                       }
                       side="bottom"
@@ -604,7 +604,7 @@ const ChatInput = ({
                           className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                           onClick={onScrollToPrevUserMessageClick}
                         >
-                          <IconArrowUp size={22} className="text-foreground/80" />
+                          <IconArrowUp size={20} className="text-foreground/80" />
                         </Button>
                       }
                       side="bottom"
@@ -621,7 +621,7 @@ const ChatInput = ({
                           className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                           onClick={onScrollDownClick}
                         >
-                          <IconArrowDown size={22} className="text-foreground/80" />
+                          <IconArrowDown size={20} className="text-foreground/80" />
                         </Button>
                       }
                       side="bottom"
@@ -639,7 +639,7 @@ const ChatInput = ({
                         )}
                         onClick={handleToggleVisibility}
                       >
-                        <IconArrowCompactDown size={22} className="text-foreground/70" />
+                        <IconArrowCompactDown size={20} className="text-foreground/70" />
                       </Button>
                     }
                     side="bottom"
@@ -656,7 +656,7 @@ const ChatInput = ({
                           className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                           onClick={() => handleFullWriting(false)}
                         >
-                          <IconArrowsDiagonalMinimize size={22} />
+                          <IconArrowsDiagonalMinimize size={20} />
                         </Button>
                       }
                       side="bottom"
@@ -670,7 +670,7 @@ const ChatInput = ({
                           className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                           onClick={() => handleFullWriting(true)}
                         >
-                          <IconArrowsDiagonal size={22} />
+                          <IconArrowsDiagonal size={20} />
                         </Button>
                       }
                       side="bottom"
@@ -738,7 +738,6 @@ const ChatInput = ({
                   ) : (
                     <SendButton
                       onSend={handleSend}
-                      disabled={!contentText?.trim()}
                       size="sm"
                     />
                   )}
@@ -806,7 +805,7 @@ const ChatInput = ({
                   className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                   onClick={onScrollToTopClick}
                 >
-                  <IconArrowDoubleUp size={22} className="text-foreground/80" />
+                  <IconArrowDoubleUp size={20} className="text-foreground/80" />
                 </Button>
               }
               side="bottom"
@@ -823,7 +822,7 @@ const ChatInput = ({
                   className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                   onClick={onScrollToPrevUserMessageClick}
                 >
-                  <IconArrowUp size={22} className="text-foreground/80" />
+                  <IconArrowUp size={20} className="text-foreground/80" />
                 </Button>
               }
               side="bottom"
@@ -840,7 +839,7 @@ const ChatInput = ({
                   className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                   onClick={onScrollDownClick}
                 >
-                  <IconArrowDown size={22} className="text-foreground/80" />
+                  <IconArrowDown size={20} className="text-foreground/80" />
                 </Button>
               }
               side="bottom"
@@ -856,7 +855,7 @@ const ChatInput = ({
                 className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                 onClick={handleToggleVisibility}
               >
-                <IconArrowCompactDown size={22} className={'rotate-180 text-foreground/70'} />
+                <IconArrowCompactDown size={20} className={'rotate-180 text-foreground/70'} />
               </Button>
             }
             side="bottom"

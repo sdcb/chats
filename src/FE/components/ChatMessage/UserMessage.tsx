@@ -190,7 +190,6 @@ const UserMessage = (props: Props) => {
               </Button>
               <SendButton
                 onSend={() => handleEditMessage(false)}
-                disabled={!contentText?.trim()}
                 size="sm"
               />
               <Button

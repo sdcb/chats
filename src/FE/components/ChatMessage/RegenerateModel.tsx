@@ -25,7 +25,7 @@ export const RegenerateModel = (props: Props) => {
         >
           <div>
             <IconRefresh
-              size={22}
+              size={20}
               stroke="hsl(var(--muted-foreground))"
               className="text-muted-foreground ml-[6px] "
             />
