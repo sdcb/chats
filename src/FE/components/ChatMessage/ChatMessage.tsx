@@ -61,8 +61,7 @@ export const ChatMessage: FC<Props> = memo(
     return (
       <div
         className={cn(
-          'w-full m-auto p-2 md:p-4',
-          !isMultiSpan && 'w-full lg:w-11/12',
+          'w-full m-auto p-2 md:p-4 overflow-x-hidden',
           className,
         )}
       >

@@ -490,7 +490,7 @@ const ChatInput = ({
       {(renderExpanded || animationState !== 'idle') && (
         <div
           ref={inputContainerRef}
-          className="w-full border-transparent bg-background pointer-events-auto transition-transform ease-out"
+          className="w-full border-transparent bg-background pointer-events-auto transition-transform ease-out pd-0 md:pb-2"
           style={{
             transform: inputTransform,
             transitionDuration: `${ANIMATION_DURATION_MS}ms`,
@@ -504,7 +504,7 @@ const ChatInput = ({
             <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] pl-0 pt-0 pr-0 pb-1">
               {/* 滚动按钮组 - 水平排列 */}
               {/* 移除原来的位置，现在放到收起按钮同一排 */}
-              <div className="flex px-1 items-center gap-1 md:gap-2 bg-muted/60 md:bg-muted rounded-t-md border-b border-border/40">
+              <div className="flex px-1 items-center gap-1 md:gap-2">
                 <div className="flex items-center gap-1 md:gap-2">
                   <div className="flex items-center">
                     {canUploadFile() && (
