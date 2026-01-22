@@ -88,7 +88,7 @@ const DEFAULT_ANTHROPIC_MESSAGES_CONFIG: Partial<UpdateModelDto> = {
  * 用于创建新的图片生成模型时的初始配置
  */
 const DEFAULT_IMAGE_MODEL_CONFIG: Partial<UpdateModelDto> = {
-  allowVision: false,
+  allowVision: true,
   allowSearch: false,
   allowStreaming: true, // 返回中间状态预览图片
   allowCodeExecution: false,

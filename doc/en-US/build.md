@@ -1,5 +1,7 @@
 # Chats Development Guide
 
+**English** | [简体中文](../zh-CN/build.md)
+
 Welcome to Chats! This guide will help you quickly get started with development and understand how to use and configure the Chats project during the development phase. In the development phase, Chats adopts a front-end and back-end separation model, but in production, they will be combined into a single deployment package.
 
 ## 📑 Table of Contents
@@ -90,6 +92,8 @@ The default configuration is located in `appsettings.json`, but **it is strongly
 | `DBType` | Database type | `sqlite` (supports `mssql`, `postgresql`) |
 | `ConnectionStrings:ChatsDB` | Database ADO.NET connection string | `Data Source=./AppData/chats.db` |
 | `ENCRYPTION_PASSWORD` | Key for encrypting auto-increment IDs | Recommended to set as random string |
+
+> For more detailed configuration instructions, please refer to the [Configuration Guide](./configuration.md).
 
 > **💡 Why use integer + encryption instead of GUID?**
 > 

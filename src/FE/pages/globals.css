@@ -237,6 +237,11 @@ div {
   --rdp-accent-color-dark: hsl(var(--primary-foreground));
 }
 
+/* When no date is selected, make "today" visually obvious */
+.rdp-root.rdp-highlight-today .rdp-today:not(.rdp-outside):not(.rdp-selected) .rdp-day_button {
+  border: 2px solid hsl(var(--primary));
+}
+
 .dark .rdp-root {
   --rdp-accent-color: hsl(var(--primary));
   --rdp-background-color: hsl(var(--background));

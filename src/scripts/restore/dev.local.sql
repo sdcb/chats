@@ -28,6 +28,7 @@ END;
 
 RESTORE DATABASE [Chats3] 
 FROM URL = N's3://io.starworks.cc:88/cv-private/2025/chats/backup-latest.bak' WITH REPLACE,
+-- FROM URL = N'https://richsgp.blob.core.windows.net/backup/chats3/latest.bak' WITH REPLACE,
 	FILE = 1,
 	MOVE N'Chats3' TO @dataFile,
 	MOVE N'Chats3_log' TO @logFile,  

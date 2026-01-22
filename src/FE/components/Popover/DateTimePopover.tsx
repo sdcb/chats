@@ -27,6 +27,9 @@ const DateTimePopover = ({
   onSelect,
   onReset,
 }: DateTimePopoverProps) => {
+  const selectedDate = value ? new Date(value) : undefined;
+  const highlightToday = !selectedDate;
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -62,13 +65,13 @@ const DateTimePopover = ({
       <PopoverContent className="w-auto p-0" align="start">
         <CalendarComponent
           mode="single"
-          selected={value ? new Date(value) : undefined}
+          selected={selectedDate}
           onSelect={(date) => {
             if (date) {
               onSelect(date);
             }
           }}
-          initialFocus
+          className={cn(highlightToday && 'rdp-highlight-today')}
         />
       </PopoverContent>
     </Popover>

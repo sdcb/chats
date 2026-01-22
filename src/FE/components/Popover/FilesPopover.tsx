@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 
-import { FileDef, getFileUrl } from '@/types/chat';
+import { FileDef } from '@/types/chat';
 import { GetUserFilesResult } from '@/types/clientApis';
 
 import { IconFolder } from '@/components/Icons';
 import Tips from '@/components/Tips/Tips';
 import useTranslation from '@/hooks/useTranslation';
 import PaginationContainer from '@/components/Pagination/Pagination';
+import FilePreview from '@/components/FilePreview/FilePreview';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -16,7 +17,6 @@ import {
 
 import { getUserFiles } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
-import { ImageLoader } from '@/components/ImageLoader/imageLoader';
 
 interface FilesPopoverProps {
   selectedFiles?: FileDef[];
@@ -64,25 +64,25 @@ const FilesPopover = ({ onSelect, selectedFiles }: FilesPopoverProps) => {
           </PopoverTrigger>
         }
         side="top"
-        content={t('Select remote photos')}
+        content={t('Select remote files')}
       />
       <PopoverContent className="min-w-80 max-w-lg">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2 justify-items-center">
           {files.map((file) => (
             <div
               key={file.id}
-              className="aspect-square cursor-pointer"
+              className={cn(
+                'cursor-pointer rounded-md border-2 border-transparent p-1 w-full aspect-square max-w-[300px] max-h-[300px] overflow-hidden',
+                selectedFiles?.some((f) => f.id === file.id) ? 'border-black' : '',
+              )}
               onClick={() => onSelect?.(file)}
             >
-              <ImageLoader
-                src={getFileUrl(file.id)}
-                alt={file.fileName}
-                className={cn(
-                  'w-full h-full object-cover rounded-md border-2 border-transparent',
-                  selectedFiles?.some((f) => f.id === file.id)
-                    ? 'border-black'
-                    : '',
-                )}
+              <FilePreview
+                file={file}
+                interactive={false}
+                className="w-full h-full"
+                maxWidth={300}
+                maxHeight={300}
               />
             </div>
           ))}

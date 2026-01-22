@@ -34,9 +34,19 @@ interface GenerateInfoPopoverContentProps {
   info: AggregatedGenerateInfo | null;
   loading: boolean;
   title?: string;
+  titleParams?: Record<string, any>;
+  avgDurationMs?: number | null;
+  avgFirstTokenLatencyMs?: number | null;
 }
 
-export const GenerateInfoPopoverContent = ({ info, loading, title }: GenerateInfoPopoverContentProps) => {
+export const GenerateInfoPopoverContent = ({
+  info,
+  loading,
+  title,
+  titleParams,
+  avgDurationMs,
+  avgFirstTokenLatencyMs,
+}: GenerateInfoPopoverContentProps) => {
   const { t } = useTranslation();
 
   const inputCachedTokens = info?.inputCachedTokens ?? 0;
@@ -56,7 +66,7 @@ export const GenerateInfoPopoverContent = ({ info, loading, title }: GenerateInf
       <div className="mb-2 pb-1.5 border-b">
         <Label className="text-xs font-semibold flex items-center justify-center gap-1.5">
           <span className="text-sm">📊</span>
-          {t(title || 'Generate information')}
+          {t(title || 'Generate information', titleParams)}
         </Label>
       </div>
       <div className="space-y-0.5">
@@ -66,12 +76,28 @@ export const GenerateInfoPopoverContent = ({ info, loading, title }: GenerateInf
           icon="⏱️"
           loading={loading}
         />
+        {avgDurationMs !== undefined && (
+          <GenerateInfoItem
+            name={'average duration'}
+            value={avgDurationMs !== null ? `${avgDurationMs.toLocaleString()} ms` : '-'}
+            icon="⏱️"
+            loading={loading}
+          />
+        )}
         <GenerateInfoItem
           name={'first token latency'}
           value={info ? `${info.firstTokenLatency.toLocaleString()} ms` : '-'}
           icon="⚡"
           loading={loading}
         />
+        {avgFirstTokenLatencyMs !== undefined && (
+          <GenerateInfoItem
+            name={'average first token latency'}
+            value={avgFirstTokenLatencyMs !== null ? `${avgFirstTokenLatencyMs.toLocaleString()} ms` : '-'}
+            icon="⚡"
+            loading={loading}
+          />
+        )}
         <GenerateInfoItem
           name={'prompt tokens'}
           value={totalInputTokens !== undefined ? `${totalInputTokens.toLocaleString()}` : '-'}

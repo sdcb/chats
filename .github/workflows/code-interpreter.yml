@@ -1,0 +1,152 @@
+name: Code Interpreter Docker Image
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - feature/**
+    paths:
+      - .github/workflows/code-interpreter.yml
+      - .github/workflows/code-interpreter/**
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: code-interpreter
+  APT_PACKAGES: >-
+    git
+    ffmpeg
+    python3
+    python3-pip
+    zip
+    p7zip-full
+    build-essential
+    cmake
+    nodejs
+    npm
+    file
+    sqlite3
+    libreoffice
+    pandoc
+    poppler-utils
+    iputils-ping
+    fonts-wqy-microhei
+    fonts-wqy-zenhei
+    fonts-noto-cjk-extra
+    fonts-cascadia-code
+    fonts-roboto
+    imagemagick
+  PIP_PACKAGES: >-
+    numpy
+    pandas
+    matplotlib
+    scipy
+    pillow
+    requests
+    openpyxl
+    pyyaml
+    anthropic
+    defusedxml
+    imageio
+    imageio-ffmpeg
+    lxml
+    markitdown[pptx]
+    pdf2image
+    pdfplumber
+    playwright
+    pypdf
+    pypdfium2
+    pytesseract
+    python-pptx
+    reportlab
+    six
+  NPM_GLOBAL_PACKAGES: >-
+    docx
+    pptxgenjs
+    react
+    react-dom
+    react-icons
+    sharp
+  NUGET_PRECACHE: >-
+    ClosedXML
+    SixLabors.ImageSharp
+    DocumentFormat.OpenXml
+
+jobs:
+  build-containers:
+    strategy:
+      matrix:
+        include:
+          - tag: linux-x64
+            runs-on: ubuntu-24.04
+            platform: linux/amd64
+          - tag: linux-arm64
+            runs-on: ubuntu-24.04-arm
+            platform: linux/arm64
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout anthropics/skills (for /app/skills)
+        uses: actions/checkout@v4
+        with:
+          repository: anthropics/skills
+          path: .github/workflows/code-interpreter/_anthropic-skills
+          fetch-depth: 1
+
+      - name: Stage skills folder into build context
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .github/workflows/code-interpreter/skills
+          mv .github/workflows/code-interpreter/_anthropic-skills/skills .github/workflows/code-interpreter/skills
+          rm -rf .github/workflows/code-interpreter/_anthropic-skills
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ vars.DOCKER_USERNAME }} ${{ vars.DOCKER_REGISTRY }} --password-stdin
+
+      - name: Build and push container
+        uses: docker/build-push-action@v6
+        with:
+          context: .github/workflows/code-interpreter
+          file: .github/workflows/code-interpreter/Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: true
+          load: true
+          provenance: false
+          build-args: |
+            APT_PACKAGES=${{ env.APT_PACKAGES }}
+            PIP_PACKAGES=${{ env.PIP_PACKAGES }}
+            NPM_GLOBAL_PACKAGES=${{ env.NPM_GLOBAL_PACKAGES }}
+            NUGET_PRECACHE=${{ env.NUGET_PRECACHE }}
+          tags: ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:r-${{ github.run_number }}-${{ matrix.tag }}
+
+      - name: Smoke test
+        run: |
+          IMAGE=${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:r-${{ github.run_number }}-${{ matrix.tag }}
+          docker run --rm --network none \
+            -e RUNNING_IN_CONTAINER=1 \
+            -v "${GITHUB_WORKSPACE}/.github/workflows/code-interpreter/smoke-test.sh:/tmp/smoke-test.sh:ro" \
+            "${IMAGE}" bash /tmp/smoke-test.sh
+
+  docker-manifest:
+    needs: build-containers
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ vars.DOCKER_USERNAME }} ${{ vars.DOCKER_REGISTRY }} --password-stdin
+        
+      - name: Create and push manifest for run number tag
+        run: |
+          REGISTRY=${{ vars.DOCKER_REGISTRY }} NAMESPACE=${{ vars.DOCKER_NAMESPACE }} IMAGE_NAME=${{ env.IMAGE_NAME }} RUN_NUMBER=${{ github.run_number }} bash .github/workflows/code-interpreter/create-manifest-run-number.sh
+
+      - name: Create and push latest manifest (main branch only)
+        if: github.ref_name == 'main'
+        run: |
+          REGISTRY=${{ vars.DOCKER_REGISTRY }} NAMESPACE=${{ vars.DOCKER_NAMESPACE }} IMAGE_NAME=${{ env.IMAGE_NAME }} RUN_NUMBER=${{ github.run_number }} bash .github/workflows/code-interpreter/create-manifest-latest.sh

@@ -4,7 +4,7 @@
 
 // dotnet tool install --global dotnet-ef
 // dotnet tool update  --global dotnet-ef
-string projectFolder = Path.Combine(new FileInfo(Util.CurrentQueryPath).Directory!.Parent!.Parent!.ToString(), "BE");
+string projectFolder = Path.Combine(new FileInfo(Util.CurrentQueryPath).Directory!.Parent!.Parent!.ToString(), "BE/web");
 string provider = "Microsoft.EntityFrameworkCore.SqlServer";
 
 Directory.SetCurrentDirectory(projectFolder);
@@ -17,8 +17,9 @@ Directory.SetCurrentDirectory(projectFolder);
 		"--data-annotations",
 		"--force",
 		$"--context {contextName}",
-		"--output-dir DB",
+		"--output-dir ../db",
 		"--verbose",
+		"--namespace Chats.DB",
 		$"--no-onconfiguring",
 	});
 	Run($"dotnet ef dbcontext scaffold Name={connectionStringName} {provider} {options}".Dump());

@@ -7,7 +7,21 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.9.1](1.9.1.md) - 2025-12-21 ⭐ Latest Release
+## [1.10.0](1.10.0.md) - 2026-01-14 ⭐ Latest Release
+
+**Core Highlights**: Built-in Docker Code Interpreter · `sdcb/code-interpreter` Image & CI · Multi-provider Interleaved Thinking · DeepSeek v3.2 `reasoning_content` Compatibility · Tooling/Upload/Admin UI Improvements
+
+- 🐳 **Built-in Code Interpreter**: New Docker-based toolset with session management (create/run/read/write/patch/download/destroy)
+- 📦 **Default Image**: `sdcb/code-interpreter` as the out-of-box environment (multi-arch), preloaded with toolchains, document/media utilities, browser stack, and `anthropics/skills`
+- 🧠 **Interleaved Thinking**: Moonshot/DeepSeek/MiMo support reasoning (`reasoning_content`) round-tripping across tool calls
+- 🔁 **DeepSeek v3.2 Compatibility**: Chat Completions API parses/persists assistant `reasoning_content` for stable think–tool–think flows
+- 🧰 **Frontend UX**: ToolCallBlock progress/long output display, drag/paste upload, file preview & share UI, generation info & dashboard improvements
+
+[View Full Release Notes →](1.10.0.md)
+
+---
+
+## [1.9.1](1.9.1.md) - 2025-12-21
 
 **Core Highlights**: Xiaomi MiMo Provider · Prompt Cache Token Billing · Next.js 16 & React 19 Upgrade · Interleaved Thinking · 4-Level Chat View Architecture
 

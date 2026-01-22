@@ -33,7 +33,6 @@ export type FEModelProvider = {
   id: number;
   name: string;
   icon: string;
-  allowCodeExecute?: boolean;
   allowWebSearch?: boolean;
 };
 
@@ -99,7 +98,6 @@ export const feModelProviders: FEModelProvider[] = [
     id: DBModelProvider.GoogleAI,
     name: 'Google AI',
     icon: '/logos/google-ai.svg',
-    allowCodeExecute: true,
     allowWebSearch: true,
   },
   { id: DBModelProvider.Ollama, name: 'Ollama', icon: '/logos/ollama.svg' },

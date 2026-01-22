@@ -244,12 +244,34 @@ const ResponseMessage = (props: Props) => {
     const { toolCall, toolResponse } = toolGroup;
     const showStepInfo = stepInfo?.isLastInStep && !stepInfo.step.edited && stepInfo.step.id;
 
+    // 用于驱动 ToolCallBlock 的“自动收起”行为：
+    // 在该 toolGroup 之后的第一段非 tool 内容开始输出前，保持展开。
+    const processedIndex = processedContent.findIndex((c) => c === toolGroup);
+    let nextMessageContentStarted = false;
+    if (processedIndex >= 0) {
+      for (let i = processedIndex + 1; i < processedContent.length; i++) {
+        const next = processedContent[i] as any;
+        if (next?.$type === 'toolGroup') {
+          continue;
+        }
+
+        if (next?.$type === MessageContentType.text || next?.$type === MessageContentType.reasoning) {
+          nextMessageContentStarted = typeof next?.c === 'string' && next.c.trim().length > 0;
+        } else {
+          // 文件/图片等一旦出现就认为“内容已开始”
+          nextMessageContentStarted = true;
+        }
+        break;
+      }
+    }
+
     return (
       <div key={`tool-group-${index}`} className="relative group/item">
         <ToolCallBlock
           toolCall={toolCall}
           toolResponse={toolResponse}
           chatStatus={messageStatus}
+          nextMessageContentStarted={nextMessageContentStarted}
         />
         {showStepInfo && (
           <div className={cn(

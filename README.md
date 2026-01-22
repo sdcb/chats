@@ -1,324 +1,48 @@
-﻿# Sdcb Chats [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE) [![问DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sdcb/chats) [![更新日志](https://img.shields.io/static/v1?label=%F0%9F%93%9D%20&message=更新日志&color=8A2BE2)](./doc/zh-CN/release-notes/README.md)
+# Sdcb Chats [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE)
 
-**[English](README_EN.md)** | **简体中文** 
+[English](README_EN.md) | **简体中文** 
 
 Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 21+ 主流 AI 模型服务商。无论您是希望统一管理多种模型接口，还是需要一个简单易用的部署方案，Sdcb Chats 都能满足您的需求。
 
 ## ✨ 为什么选择 Sdcb Chats
 
-- 🚀 **一站式管理**：统一管理 21+ 主流 AI 模型服务商
-- 🎯 **开箱即用**：支持 Docker 一键部署，也提供 8 种平台的原生可执行文件
-- 💾 **灵活存储**：支持 SQLite/SQL Server/PostgreSQL，支持本地文件/S3/OSS/Azure Blob 等多种存储
-- 🔐 **企业级安全**：完善的用户权限管理和账户余额控制，支持 Keycloak SSO
-- 🌐 **标准协议**：支持 OpenAI/Anthropic 等主流 API 协议，包括对话、图像生成等功能，兼容 Claude Code
-- 🎨 **现代界面**：美观易用的前端界面，支持视觉模型交互
+- 🚀 **一站式**：21+ 模型服务商，一个入口
+- 🎯 **分钟级上手**：一条命令 Docker 部署，8 平台原生可执行
+- 🐳 **代码解释器**：Docker 沙箱，内置浏览器/代码执行/Excel 等工具
+- 🔌 **API 网关**：Chat Completions/Messages 兼容，支持 Claude Code
+- 🌐 **标准协议**：Chat Completions/Messages/Responses/Gemini，支持交错思考
+- 👁️ **多模态**：视觉输入，图像生成
+- 💾 **灵活存储**：SQLite/SQL Server/PostgreSQL + 本地/AWS S3/Aliyun OSS/Azure Blob
+- 🔐 **企业级安全**：完善的用户权限管理和账户余额控制，限流审计日志，支持 Keycloak SSO 与短信验证码登录
 
-## 功能特性
-
-- **多模型支持**：动态管理多种大语言模型接口
-- **视觉模型支持**：集成视觉模型，增强用户交互体验
-- **用户权限管理**：提供精细的用户权限设置，确保安全性
-- **账户余额管理**：实时跟踪和管理用户账户余额
-- **模型管理**：轻松添加、删除和配置模型
-- **API 网关功能**：基于 OpenAI 协议透明地转发用户的聊天请求
-- **简单部署**：支持 4 种操作系统/平台架构的 Docker 镜像，此外提供 8 种不同操作系统的可执行文件，方便不使用 Docker 的用户一键部署
-- **多数据库支持**：兼容 SQLite、SQL Server 和 PostgreSQL 数据库，除了数据库外，不依赖其他组件
-- **多文件服务支持**：兼容本地文件、AWS S3、Minio、Aliyun OSS、Azure Blob Storage 等文件服务，可运行时配置修改
-- **多种登录方式支持**：支持 Keycloak SSO，支持手机短信验证码登录
-
-<img alt="chats" src="https://github.com/user-attachments/assets/64a8f9ac-3ac0-4e3e-8903-2a2cf0b111a5" />
+<img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
 ## 快速开始
 
-### 系统要求
-
-- **Docker 部署**：任何支持 Docker 的系统（Linux/Windows/macOS）
-- **可执行文件部署**：
-  - Windows: Windows 10 或更高版本
-  - Linux: glibc 2.17+ 或 musl libc
-  - macOS: macOS 10.15 或更高版本
-- **数据库**：SQLite（默认，无需安装）/ SQL Server / PostgreSQL
-
-### Docker 部署
-
-对于大多数用户而言，Docker 提供了最简单快速的部署方式。
-
-#### SQLite 快速启动
+一条命令即可启动（需要 Docker）：
 
 ```bash
 mkdir -p ./AppData && chmod 755 ./AppData && docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
 ```
 
-> **说明**：SQLite 需要映射 `./AppData` 文件夹用于存储数据库文件和上传文件（如图床服务使用本地文件提供商时）。
+启动后访问 `http://localhost:8080`，使用默认账号 `chats` / `RESET!!!` 登录。
 
-#### PostgreSQL 快速启动
-
-```bash
-docker run --restart unless-stopped --name sdcb-chats -e DBType=postgresql -e ConnectionStrings__ChatsDB="Host=host.docker.internal;Port=5432;Username=postgres;Password=mysecretpassword;Database=postgres" -p 8080:8080 sdcb/chats:latest
-```
-
-> **说明**：PostgreSQL 不依赖 `./AppData` 文件夹存储数据库，但如果使用本地文件提供商作为图床服务，仍需映射该文件夹：`-v ./AppData:/app/AppData`（用户可在管理界面配置其他文件存储方式）。
-
-#### 配置说明
-
-- **数据库存储位置**：默认情况下，Chats 的 SQLite 数据库会在 `./AppData` 目录下创建。为了避免每次重新启动 Docker 容器时数据库被意外清空，我们首先创建一个 `AppData` 文件夹并将其权限设置为可写（`chmod 755`，安全起见不建议使用 777）
-  
-- **端口映射**：该命令将容器的 8080 端口映射到主机的 8080 端口，使得您可以通过 `http://localhost:8080` 访问应用
-
-- **数据库类型配置**：`DBType` 环境变量指定数据库类型，默认值为 `sqlite`。除了 SQLite，该应用还支持使用 `mssql`（或 `sqlserver`）和 `postgresql`（或 `pgsql`）作为数据库选项
-
-- **连接字符串**：`ConnectionStrings__ChatsDB` 的默认值为 `Data Source=./AppData/chats.db`，它是连接数据库的 ADO.NET 连接字符串
-
-- **非首次运行**：如果您的 `AppData` 目录已经创建并且 Docker 用户对其有写入权限，可以简化启动命令如下：
-
-    ```bash
-    docker run --restart unless-stopped --name sdcb-chats -v ./AppData:/app/AppData -p 8080:8080 sdcb/chats:latest
-    ```
-
-- **数据库初始化**：容器启动后，如果数据库文件不存在，将自动创建并插入初始数据
-  - 初始管理员用户名：`chats`
-  - 初始默认密码：`RESET!!!`
-  - ⚠️ **重要**：请在首次登录后立即前往左下角的用户管理界面修改密码，以确保系统安全
-
-通过以上步骤，您将能顺利使用 Docker 部署和运行应用。如果在部署过程中遇到任何问题，请通过 [Issues](https://github.com/sdcb/chats/issues) 或 [QQ 群](https://qm.qq.com/q/AM8tY9cAsS) 联系我们。
-
-#### Docker 镜像列表
-
-Chats 提供了以下几个镜像：
-
-| 描述                          | Docker 镜像                                              |
-| ----------------------------- | ------------------------------------------------------- |
-| Latest（推荐）                 | `docker.io/sdcb/chats:latest`                           |
-| 指定完整版本                   | `docker.io/sdcb/chats:{version}`                        |
-| 指定主版本                     | `docker.io/sdcb/chats:{major}`                          |
-| 指定次版本                     | `docker.io/sdcb/chats:{major.minor}`                    |
-| Linux x64                     | `docker.io/sdcb/chats:{version}-linux-x64`              |
-| Linux ARM64                   | `docker.io/sdcb/chats:{version}-linux-arm64`            |
-| Windows Nano Server LTSC 2022 | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2022`    |
-| Windows Nano Server LTSC 2025 | `docker.io/sdcb/chats:{version}-nanoserver-ltsc2025`    |
-
-**版本说明：**
-
-- **版本号格式**：采用语义化版本号，如 `1.8.1`
-  - `{major}`: 主版本号，如 `1`
-  - `{major.minor}`: 主版本号.次版本号，如 `1.8`
-  - `{version}`: 完整版本号，如 `1.8.1`
-
-- **多平台支持**：`latest` 和版本号标签（如 `1.8.1`、`1.8`、`1`）都是多平台镜像，包含：
-  - Linux x64
-  - Linux ARM64
-  - Windows Nano Server LTSC 2022（适用于 Windows Server 2022）
-  - Windows Nano Server LTSC 2025（适用于 Windows Server 2025）
-
-- **自动选择平台**：使用 `docker pull` 时，无需指定具体的操作系统版本，Docker 会通过 manifest 自动选择适合您系统的正确版本
-
-**示例：**
-
-```bash
-# 使用最新版本（推荐）
-docker pull sdcb/chats:latest
-
-# 使用指定版本
-docker pull sdcb/chats:1.8.1
-
-# 使用主版本号（自动获取 1.x.x 的最新版本）
-docker pull sdcb/chats:1
-
-# 使用次版本号（自动获取 1.8.x 的最新版本）
-docker pull sdcb/chats:1.8
-
-# 指定特定平台（通常不需要）
-docker pull sdcb/chats:1.8.1-linux-x64
-```
-
-### 可执行文件部署指南
-
-对于不便使用 Docker 部署的环境，Chats 提供了 8 种操作系统或架构的原生可执行文件，无需安装任何运行时环境即可直接运行。
-
-#### 下载地址
-
-| 平台                    | GitHub 下载（所有版本）                                                                                | 国内镜像下载（最新稳定版）                                                      |
-| ----------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| Windows 64位            | [chats-win-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-win-x64.zip)         | [chats-win-x64.zip](https://chats.sdcb.pub/release/latest/chats-win-x64.zip)         |
-| Linux 64位              | [chats-linux-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-x64.zip)     | [chats-linux-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-x64.zip)     |
-| Linux ARM64             | [chats-linux-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-arm64.zip) | [chats-linux-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-arm64.zip) |
-| Linux musl x64          | [chats-linux-musl-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-x64.zip) | [chats-linux-musl-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-x64.zip) |
-| Linux musl ARM64        | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip) | [chats-linux-musl-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-arm64.zip) |
-| macOS ARM64             | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)     | [chats-osx-arm64.zip](https://chats.sdcb.pub/release/latest/chats-osx-arm64.zip)     |
-| macOS x64               | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)         | [chats-osx-x64.zip](https://chats.sdcb.pub/release/latest/chats-osx-x64.zip)         |
-| 通用包（需要 .NET 10） | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                         | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                         |
-| 纯前端文件              | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                   | [chats-fe.zip](https://chats.sdcb.pub/release/latest/chats-fe.zip)                   |
-
-> **💡 下载说明**：
-> - **国内镜像下载**（基于 Cloudflare R2）：推荐国内用户使用，速度更快
-> - **最新开发版下载**：如需体验最新功能，开发版提供以下文件
->   - 通用包：[chats.zip](https://chats.sdcb.pub/latest/chats.zip)（需要 .NET 10）
->   - 前端文件：[chats-fe.zip](https://chats.sdcb.pub/latest/chats-fe.zip)
->   - ⚠️ 注意：开发版会从 `dev`/`feature` 分支自动更新，可能不稳定
-> - 除通用包外，所有平台都提供 AOT 编译的原生可执行文件，启动速度快，内存占用低
-
-#### 版本说明
-
-- **最新版本**：访问 [Releases](https://github.com/sdcb/chats/releases) 页面查看最新版本和更新日志
-- **替代下载**：在 GitHub 访问不便时，可使用以下格式的国内镜像地址：
-  ```
-  https://chats.sdcb.pub/release/latest/{artifact-id}.zip
-  ```
-  例如：`https://chats.sdcb.pub/release/latest/chats-win-x64.zip`
-
-#### 运行说明
-
-解压AOT可执行文件后的目录结构如下：
-
-```
-C:\Users\ZhouJie\Downloads\chats-win-x64>dir
- 2024/12/06  16:35    <DIR>          .
- 2024/12/06  16:35    <DIR>          ..
- 2024/12/06  16:35               119 appsettings.Development.json
- 2024/12/06  16:35               417 appsettings.json
- 2024/12/06  16:35           367,144 aspnetcorev2_inprocess.dll
- 2024/12/06  16:35        84,012,075 Chats.BE.exe
- 2024/12/06  16:35           200,296 Chats.BE.pdb
- 2024/12/06  16:35         1,759,232 e_sqlite3.dll
- 2024/12/06  16:35           504,872 Microsoft.Data.SqlClient.SNI.dll
- 2024/12/06  16:35               465 web.config
- 2024/12/06  16:35    <DIR>          wwwroot
-```
-
-- **启动应用**：运行 `Chats.BE.exe` 即可启动 Chats 应用，该文件名虽指“后端”，但实际同时包含前端和后端组件。
-- **数据库配置**：默认情况下，应用将在当前目录创建名为 `AppData` 的目录，并以 SQLite 作为数据库。命令行参数可用于指定不同的数据库类型：
-  ```pwsh
-  .\Chats.BE.exe --urls http://+:5000 --DBType=mssql --ConnectionStrings:ChatsDB="Data Source=(localdb)\mssqllocaldb; Initial Catalog=ChatsDB; Integrated Security=True"
-  ```
-  - 参数 `--urls`：用于指定应用监听的地址和端口。
-  - 参数 `DBType`：可选 `sqlite`、`mssql` 或 `pgsql`。
-  - 参数 `--ConnectionStrings:ChatsDB`：用于指定数据库的ADO.NET连接字符串。
-
-#### 依赖 .NET 运行时的版本说明
-
-对于下载的 `chats.zip`，需要安装 .NET 10 运行时。安装后，使用以下命令启动：
-
-```bash
-dotnet Chats.BE.dll
-```
-
-下载 .NET 运行时：[https://dotnet.microsoft.com/download](https://dotnet.microsoft.com/download)
+📖 **[查看完整部署指南](./doc/zh-CN/quick-start.md)** - 包含 Docker 部署、可执行文件部署、数据库配置等详细说明。
 
 ---
 
-## 支持的大模型服务
+## 📚 文档中心
 
-| Id  | Name             | 加入时间   | Git Commit |
-| --- | ---------------- | ---------- | ---------- |
-| 0   | 测试             | 2024-11-18 | [66d011b1](https://github.com/sdcb/chats/commit/66d011b1) |
-| 1   | Azure AI Foundry | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 2   | 腾讯混元         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 3   | 零一万物         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 4   | 月之暗面         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 5   | OpenAI           | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 6   | 文心一言         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 7   | 通义千问         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 8   | 讯飞星火         | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 9   | 智谱AI           | 2024-09-05 | [3b3918af](https://github.com/sdcb/chats/commit/3b3918af) |
-| 10  | DeepSeek         | 2024-12-06 | [30db0079](https://github.com/sdcb/chats/commit/30db0079) |
-| 11  | x.ai             | 2024-12-11 | [0d1cab20](https://github.com/sdcb/chats/commit/0d1cab20) |
-| 12  | Github Models    | 2024-12-11 | [0d1cab20](https://github.com/sdcb/chats/commit/0d1cab20) |
-| 13  | 谷歌AI           | 2025-01-10 | [a4effc1b](https://github.com/sdcb/chats/commit/a4effc1b) |
-| 14  | Ollama           | 2025-01-20 | [6a5288e7](https://github.com/sdcb/chats/commit/6a5288e7) |
-| 15  | MiniMax          | 2025-01-20 | [6a5288e7](https://github.com/sdcb/chats/commit/6a5288e7) |
-| 16  | 火山方舟         | 2025-01-24 | [843510ff](https://github.com/sdcb/chats/commit/843510ff) |
-| 17  | 硅基流动         | 2025-02-08 | [889144cf](https://github.com/sdcb/chats/commit/889144cf) |
-| 18  | OpenRouter       | 2025-03-05 | [15adedfe](https://github.com/sdcb/chats/commit/15adedfe) |
-| 19  | 小马算力         | 2025-11-07 | [32e4a0d5](https://github.com/sdcb/chats/commit/32e4a0d5) |
-| 20  | Anthropic        | 2025-11-24 | [22ebef98](https://github.com/sdcb/chats/commit/22ebef98) |
-| 21  | 小米Mimo         | 2025-12-17 | [026f1a4e](https://github.com/sdcb/chats/commit/026f1a4e) |
+Chats 使用 `C#`/`TypeScript` 开发，以下是完整的文档资源：
 
-**注意事项：**
-
-- ✅ 任何符合 OpenAI Chat Completion API 协议的模型提供商都可以通过 Chats 进行访问
-- 🤖 OpenAI/Azure AI Foundry 的 o3/o4-mini/gpt-5 系列模型使用 Response API 协议（非 Chat Completion API），支持思考概要和思考过程功能
-- 🌐 Google AI 的 Gemini 模型使用 Google Gemini 原生 API 协议
-
----
-
-## 开发文档
-
-Chats 使用 `C#`/`TypeScript` 开发，有关如何编译和开发 Chats，请查看：
-
-- [🛠️ 开发文档](./doc/zh-CN/build.md)
-
----
-
-## 常见问题
-
-<details>
-<summary><b>如何修改默认端口？</b></summary>
-
-在启动时使用 `--urls` 参数指定端口：
-
-```bash
-# Docker
-docker run -e ASPNETCORE_URLS="http://+:5000" -p 5000:5000 sdcb/chats:latest
-
-# 可执行文件
-./Chats.BE.exe --urls http://+:5000
-```
-</details>
-
-<details>
-<summary><b>如何切换到 SQL Server 或 PostgreSQL？</b></summary>
-
-使用 `--DBType` 参数和 `--ConnectionStrings:ChatsDB` 参数：
-
-```bash
-# SQL Server
-./Chats.BE.exe --DBType=mssql --ConnectionStrings:ChatsDB="Server=localhost;Database=ChatsDB;User Id=sa;Password=YourPassword"
-
-# PostgreSQL
-./Chats.BE.exe --DBType=pgsql --ConnectionStrings:ChatsDB="Host=localhost;Database=chatsdb;Username=postgres;Password=YourPassword"
-```
-</details>
-
-<details>
-<summary><b>如何配置文件存储服务？</b></summary>
-
-Chats 支持多种文件存储服务，可在管理界面的系统设置中配置，支持：
-- 本地文件系统
-- AWS S3
-- Minio
-- Aliyun OSS
-- Azure Blob Storage
-
-配置后无需重启即可生效。
-</details>
-
-<details>
-<summary><b>忘记管理员密码怎么办？</b></summary>
-
-可以通过数据库直接重置密码,或删除数据库文件重新初始化（注意备份数据）。
-</details>
-
-<details>
-<summary><b>如何在纯 Windows 环境使用 Docker 部署？</b></summary>
-
-纯 Windows 环境下使用 SQLite 数据库：
-
-```powershell
-mkdir AppData
-icacls .\AppData /grant "Users:(OI)(CI)(M)" /T
-docker run --restart unless-stopped --name sdcb-chats -e DBType=sqlite -e ConnectionStrings__ChatsDB="Data Source=./AppData/chats.db" -v ./AppData:C:/app/AppData -p 8080:8080 sdcb/chats:latest
-```
-
-纯 Windows 环境下使用 PostgreSQL 数据库：
-
-```powershell
-mkdir AppData
-icacls .\AppData /grant "Users:(OI)(CI)(M)" /T
-docker run --restart unless-stopped --name sdcb-chats -e DBType=postgresql -e ConnectionStrings__ChatsDB="Host=host.docker.internal;Port=5432;Username=postgres;Password=YourPassword;Database=postgres" -v ./AppData:C:/app/AppData -p 8080:8080 sdcb/chats:latest
-```
-
-**注意**：从容器访问宿主机服务时，使用 `host.docker.internal` 而不是 `localhost`。
-</details>
+- [🚀 快速开始](./doc/zh-CN/quick-start.md) - 部署指南、Docker 配置、数据库设置
+- [💾 下载地址](./doc/zh-CN/downloads.md) - Docker 镜像和可执行文件下载
+- [🤖 支持的模型提供商](./doc/zh-CN/model-providers.md) - 21+ 模型服务商列表及支持情况
+- [🛠️ 开发指南](./doc/zh-CN/build.md) - 如何编译和开发 Chats
+- [⚙️ 配置说明](./doc/zh-CN/configuration.md) - 详细配置参数说明
+- [📝 更新日志](./doc/zh-CN/release-notes/README.md) - 版本更新记录
+- [🔍 问 DeepWiki](https://deepwiki.com/sdcb/chats) - AI 驱动的项目知识库
+- [❓ 常见问题](./doc/zh-CN/faq.md) - 部署和使用中的常见问题解答
 
 ---
 
@@ -344,7 +68,7 @@ docker run --restart unless-stopped --name sdcb-chats -e DBType=postgresql -e Co
 
 ## 许可证
 
-本项目采用 [MIT License](LICENSE) 开源许可证。
+本项目采用 [Apache 2.0](LICENSE) 开源许可证。
 
 ---
 

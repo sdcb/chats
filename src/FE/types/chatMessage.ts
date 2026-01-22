@@ -3,6 +3,7 @@ import {
   ChatSpanStatus,
   FileDef,
   ResponseContent,
+  ToolProgressDelta,
   Role,
 } from './chat';
 
@@ -21,8 +22,8 @@ export enum SseResponseKind {
   ReasoningSegment = 8,
   StartResponse = 9,
   StartReasoning = 10,
-  ImageGenerating = 11,
-  ImageGenerated = 12,
+  FileGenerating = 11,
+  FileGenerated = 12,
   CallingTool = 13,
   ToolProgress = 14,
   ToolCompleted = 15,
@@ -84,15 +85,15 @@ interface SseResponseLineStartReasoning {
   i: number; // SpanId is required for StartReasoning
 }
 
-interface SseResponseLineImageGenerated {
-  k: SseResponseKind.ImageGenerated; // Kind is ImageGenerated
-  i: number; // SpanId is required for ImageGenerated
+interface SseResponseLineFileGenerated {
+  k: SseResponseKind.FileGenerated; // Kind is FileGenerated
+  i: number; // SpanId is required for FileGenerated
   r: FileDef;
 }
 
-interface SseResponseLineImageGenerating {
-  k: SseResponseKind.ImageGenerating; // Kind is ImageGenerating (preview)
-  i: number; // SpanId is required for ImageGenerating
+interface SseResponseLineFileGenerating {
+  k: SseResponseKind.FileGenerating; // Kind is FileGenerating (preview)
+  i: number; // SpanId is required for FileGenerating
   r: FileDef;
 }
 
@@ -102,6 +103,13 @@ interface SseResponseLineCallingTool {
   u: string; // ToolCallId
   r: string; // ToolName
   p: string; // Parameters (流式输出的参数)
+}
+
+interface SseResponseLineToolProgress {
+  k: SseResponseKind.ToolProgress; // Kind is ToolProgress
+  i: number; // SpanId is required for ToolProgress
+  u: string; // ToolCallId
+  r: ToolProgressDelta; // Progress delta (strong-typed)
 }
 
 interface SseResponseLineToolCompleted {
@@ -135,9 +143,10 @@ export type SseResponseLine =
   | SseResponseLineReasoningSegment
   | SseResponseLineStartResponse
   | SseResponseLineStartReasoning
-  | SseResponseLineImageGenerated
-  | SseResponseLineImageGenerating
+  | SseResponseLineFileGenerated
+  | SseResponseLineFileGenerating
   | SseResponseLineCallingTool
+  | SseResponseLineToolProgress
   | SseResponseLineToolCompleted
   | SseResponseLineEndStep
   | SseResponseLineEndTurn;

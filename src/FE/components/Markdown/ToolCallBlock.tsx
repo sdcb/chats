@@ -1,10 +1,9 @@
-import { FC, memo, useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { FC, memo, useState, useEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 import useTranslation from '@/hooks/useTranslation';
-import CopyButton from '@/components/Button/CopyButton';
-import { ChatSpanStatus, ToolCallContent, ToolResponseContent } from '@/types/chat';
+import { ChatSpanStatus, ToolCallContent, ToolResponseContent, ToolProgressDelta } from '@/types/chat';
 import { IconCheck, IconChevronRight, IconClipboard } from '@/components/Icons/index';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -12,6 +11,11 @@ interface ToolCallBlockProps {
     toolCall: ToolCallContent;
     toolResponse?: ToolResponseContent;
     chatStatus?: ChatSpanStatus;
+    /**
+     * 当后续（非 tool call/response）message content 开始输出后，自动收起。
+     * 注意：不会覆盖用户手动展开/收起。
+     */
+    nextMessageContentStarted?: boolean;
 }
 
 interface WebSearchResult {
@@ -21,39 +25,22 @@ interface WebSearchResult {
     page_age?: string;
 }
 
-export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolResponse, chatStatus }) => {
+export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolResponse, chatStatus, nextMessageContentStarted }) => {
     const { t } = useTranslation();
     const [isParamsCopied, setIsParamsCopied] = useState<boolean>(false);
     const [isResponseCopied, setIsResponseCopied] = useState<boolean>(false);
     // 计算 finished 状态：有 toolResponse 或者 聊天状态不是 Chatting (即已结束或失败)
     const finished = !!toolResponse || (chatStatus !== ChatSpanStatus.Chatting);
 
-    const [isOpen, setIsOpen] = useState<boolean>(!finished);
+    const [isOpen, setIsOpen] = useState<boolean>(!(nextMessageContentStarted ?? false));
     const [isManuallyToggled, setIsManuallyToggled] = useState<boolean>(false);
-    const headerMeasureRef = useRef<HTMLDivElement>(null);
-    const [collapsedWidth, setCollapsedWidth] = useState<number | null>(null);
 
-    useLayoutEffect(() => {
-        if (typeof ResizeObserver === 'undefined' || !headerMeasureRef.current) {
-            return;
-        }
-
-        const observer = new ResizeObserver((entries) => {
-            const entry = entries[0];
-            if (!entry) return;
-            const width = entry.borderBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
-            setCollapsedWidth(Math.ceil(width));
-        });
-
-        observer.observe(headerMeasureRef.current);
-        return () => observer.disconnect();
-    }, []);
-
-    // 自动开合逻辑（不覆盖用户手动动作）- 仅依赖 finished，类似 ThinkingMessage
+    // 自动开合逻辑（不覆盖用户手动动作）
+    // 目标：在下一个 message content（非 tool）开始前保持展开。
     useEffect(() => {
         if (isManuallyToggled) return;
-        setIsOpen(!finished);
-    }, [finished, isManuallyToggled]);
+        setIsOpen(!(nextMessageContentStarted ?? false));
+    }, [nextMessageContentStarted, isManuallyToggled]);
 
     // 检查是否应该只显示code，并返回code内容
     const getCodeIfAvailable = (): string | null => {
@@ -88,6 +75,11 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         return null;
     };
 
+    const getToolProgressDeltas = (): ToolProgressDelta[] | null => {
+        const deltas = toolResponse?.progress;
+        return deltas && deltas.length > 0 ? deltas : null;
+    };
+
     const copyToClipboard = (text: string, isParams: boolean) => (e: React.MouseEvent) => {
         if (!navigator.clipboard || !navigator.clipboard.writeText) {
             return;
@@ -107,6 +99,199 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
 
     const code = getCodeIfAvailable();
     const webSearchResults = getWebSearchResults();
+    const toolProgressDeltas = getToolProgressDeltas();
+
+    const deltaToText = (delta: ToolProgressDelta): string => {
+        if (delta.kind === 'stdout') return delta.stdOutput;
+        if (delta.kind === 'stderr') return delta.stdError;
+        return '';
+    };
+
+    const parseToolCallJson = (): unknown | null => {
+        try {
+            return JSON.parse(toolCall.p);
+        } catch {
+            return null;
+        }
+    };
+
+    const getToolCallJsonObject = (): Record<string, unknown> | null => {
+        const parsed = parseToolCallJson();
+        const obj = Array.isArray(parsed) ? parsed[0] : parsed;
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+            return null;
+        }
+        return obj as Record<string, unknown>;
+    };
+
+    const hasSessionId = (obj: Record<string, unknown> | null): boolean => {
+        return !!obj && Object.prototype.hasOwnProperty.call(obj, 'sessionId');
+    };
+
+    const getDisplayInfo = (): { 
+        header: string; 
+        headerIcon: string; 
+        metadataLine: React.ReactNode | null; 
+        displayParams: string 
+    } => {
+        const obj = getToolCallJsonObject();
+        
+        // 根据工具名称选择图标
+        let headerIcon = '🔧'; // 默认图标
+        switch (toolCall.n) {
+            case 'create_docker_session':
+                headerIcon = '🐳';
+                break;
+            case 'destroy_session':
+                headerIcon = '🗑️';
+                break;
+            case 'run_command':
+                headerIcon = '⚡';
+                break;
+            case 'write_file':
+                headerIcon = '✏️';
+                break;
+            case 'read_file':
+                headerIcon = '📖';
+                break;
+            case 'patch_file':
+                headerIcon = '🩹';
+                break;
+            case 'download_chat_files':
+                headerIcon = '📥';
+                break;
+        }
+        
+        // run_command: 提取 header, metadata 和 command
+        if (toolCall.n === 'run_command') {
+            let header = toolCall.n;
+            let metadataLine: React.ReactNode | null = null;
+            let displayParams = toolCall.p;
+
+            if (obj) {
+                // 提取 header (command 本身)
+                const command = obj.command;
+                if (typeof command === 'string' && command.trim().length > 0) {
+                    header = command;
+                    displayParams = command;
+                }
+
+                // 构建 metadata line
+                const parts: React.ReactNode[] = [];
+                if (obj.sessionId !== undefined) {
+                    parts.push(
+                        <span key="sessionId">
+                            sessionId: <strong>{String(obj.sessionId)}</strong>
+                        </span>
+                    );
+                }
+                if (obj.timeout !== undefined) {
+                    parts.push(
+                        <span key="timeout">
+                            timeout: <strong>{String(obj.timeout)}ms</strong>
+                        </span>
+                    );
+                }
+                if (parts.length > 0) {
+                    metadataLine = (
+                        <>
+                            {parts.map((part, index) => (
+                                <span key={index}>
+                                    {index > 0 && ', '}
+                                    {part}
+                                </span>
+                            ))}
+                        </>
+                    );
+                }
+            }
+
+            return { header, headerIcon, metadataLine, displayParams };
+        }
+
+        // write_file/patch_file: 提取 header, metadata 和内容
+        if (toolCall.n === 'write_file' || toolCall.n === 'patch_file') {
+            let header = toolCall.n;
+            let metadataLine: React.ReactNode | null = null;
+            let displayParams = toolCall.p;
+
+            if (hasSessionId(obj)) {
+                // 提取 header (path)
+                const path = obj!.path;
+                if (typeof path === 'string' && path.trim().length > 0) {
+                    header = `${toolCall.n}: ${path}`;
+                }
+
+                // 构建 metadata line
+                if (obj!.sessionId !== undefined) {
+                    metadataLine = (
+                        <>
+                            sessionId: <strong>{String(obj!.sessionId)}</strong>
+                        </>
+                    );
+                }
+
+                // 提取具体内容
+                if (toolCall.n === 'write_file') {
+                    const text = obj?.text;
+                    displayParams = typeof text === 'string' ? text : toolCall.p;
+                } else {
+                    const patch = obj?.patch;
+                    displayParams = typeof patch === 'string' ? patch : toolCall.p;
+                }
+            }
+
+            return { header, headerIcon, metadataLine, displayParams };
+        }
+
+        // read_file: 提取 header
+        if (toolCall.n === 'read_file') {
+            let header = toolCall.n;
+            
+            if (obj) {
+                const path = obj.path;
+                if (typeof path === 'string' && path.trim().length > 0) {
+                    header = `${toolCall.n}: ${path}`;
+                }
+            }
+
+            return { header, headerIcon, metadataLine: null, displayParams: toolCall.p };
+        }
+
+        // destroy_session: 提取 header
+        if (toolCall.n === 'destroy_session') {
+            let header = toolCall.n;
+            
+            if (obj) {
+                const sessionId = obj.sessionId;
+                if (typeof sessionId === 'string' && sessionId.trim().length > 0) {
+                    header = `${toolCall.n}: ${sessionId}`;
+                } else if (typeof sessionId === 'number') {
+                    header = `${toolCall.n}: ${sessionId}`;
+                }
+            }
+
+            return { header, headerIcon, metadataLine: null, displayParams: toolCall.p };
+        }
+
+        // 其他工具：检查是否有 path 字段
+        if (obj) {
+            const path = obj.path;
+            if (typeof path === 'string' && path.trim().length > 0) {
+                return { 
+                    header: `${toolCall.n}: ${path}`, 
+                    headerIcon, 
+                    metadataLine: null, 
+                    displayParams: toolCall.p 
+                };
+            }
+        }
+
+        // 默认情况
+        return { header: toolCall.n, headerIcon, metadataLine: null, displayParams: toolCall.p };
+    };
+
+    const { header, headerIcon, metadataLine, displayParams } = getDisplayInfo();
 
     const toggleOpen = () => {
         setIsOpen(!isOpen);
@@ -119,7 +304,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
             <div
                 className="flex items-center gap-2 py-[6px] px-3 bg-gray-200 dark:bg-gray-700 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 ease-in-out"
                 style={{
-                    width: isOpen ? '100%' : collapsedWidth ? `${collapsedWidth}px` : 'fit-content',
+                    width: isOpen ? '100%' : 'fit-content',
                     maxWidth: '100%',
                     justifyContent: isOpen ? 'space-between' : 'flex-start',
                     borderTopLeftRadius: 12,
@@ -129,9 +314,9 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                 }}
                 onClick={toggleOpen}
             >
-                <div className="flex items-center gap-2">
-                    <span>🔧</span>
-                    <span className="text-sm text-gray-800 dark:text-white">{toolCall.n}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                    <span>{headerIcon}</span>
+                    <span className="text-sm text-gray-800 dark:text-white truncate">{header}</span>
                 </div>
                 <div
                     className="flex items-center transition-transform duration-300 ease-in-out"
@@ -199,7 +384,12 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                                 borderBottomLeftRadius: toolResponse ? 0 : 12,
                             }}
                         >
-                            {toolCall.p}
+                            {metadataLine && (
+                                <div className="text-blue-600 dark:text-blue-400 mb-1 text-xs [&_strong]:text-blue-600 dark:[&_strong]:text-blue-400">
+                                    {metadataLine}
+                                </div>
+                            )}
+                            {displayParams}
                         </div>
 
                         {/* 参数区域的复制按钮 */}
@@ -209,7 +399,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                                     <TooltipTrigger asChild>
                                         <button
                                             className="flex items-center rounded bg-none p-1 text-xs hover:bg-black/10 dark:hover:bg-white/10"
-                                            onClick={copyToClipboard(toolCall.p, true)}
+                                            onClick={copyToClipboard(displayParams, true)}
                                         >
                                             {isParamsCopied ? (
                                                 <IconCheck className="stroke-gray-600 dark:stroke-gray-300" size={16} />
@@ -242,7 +432,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
 
                     {/* Response content */}
                     <div
-                        className={`relative group text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 ${webSearchResults ? 'p-2' : 'p-4'}`}
+                        className="relative group text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 p-2"
                         style={{
                             borderBottomRightRadius: 12,
                             borderBottomLeftRadius: 12,
@@ -302,23 +492,30 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                                 </tbody>
                             </table>
                         ) : (
-                            <div className="whitespace-pre-wrap break-words">
-                                {toolResponse.r}
-                            </div>
+                            toolProgressDeltas ? (
+                                <pre className="not-prose whitespace-pre-wrap break-words font-mono">
+                                    {toolProgressDeltas.map((d, idx) => (
+                                        <span
+                                            key={idx}
+                                            className={
+                                                d.kind === 'stderr'
+                                                    ? 'text-red-600 dark:text-red-400'
+                                                    : undefined
+                                            }
+                                        >
+                                            {deltaToText(d)}
+                                        </span>
+                                    ))}
+                                </pre>
+                            ) : (
+                                <div className="whitespace-pre-wrap break-words">
+                                    {toolResponse.r}
+                                </div>
+                            )
                         )}
                     </div>
                 </div>
             )}
-            <div
-                ref={headerMeasureRef}
-                aria-hidden="true"
-                className="absolute -z-10 inline-flex items-center gap-2 py-[6px] px-3"
-                style={{ visibility: 'hidden', pointerEvents: 'none', whiteSpace: 'nowrap' }}
-            >
-                <span>🔧</span>
-                <span className="text-sm">{toolCall.n}</span>
-                <IconChevronRight size={18} className="stroke-gray-500" />
-            </div>
         </div>
     );
 });

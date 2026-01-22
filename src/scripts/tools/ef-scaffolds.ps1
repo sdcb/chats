@@ -7,7 +7,7 @@
 
 # 确保当前脚本目录作为起点
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-$projectFolder = Join-Path (Split-Path (Split-Path $scriptPath -Parent) -Parent) "BE"
+$projectFolder = Join-Path (Split-Path (Split-Path $scriptPath -Parent) -Parent) "BE/web"
 $provider = "Microsoft.EntityFrameworkCore.SqlServer"
 
 Write-Host "切换到项目目录: $projectFolder" -ForegroundColor Green
@@ -29,8 +29,9 @@ $options = @(
     "--data-annotations",
     "--force",
     "--context", $contextName,
-    "--output-dir", "DB",
+    "--output-dir", "../db",
     "--verbose",
+    "--namespace", "Chats.DB",
     "--no-onconfiguring"
 )
 
