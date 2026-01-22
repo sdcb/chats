@@ -84,14 +84,16 @@ git clone https://github.com/sdcb/chats.git
 
 **配置选项详解：**
 
-| 配置项 | 说明 | 默认值 |
-|--------|------|--------|
-| `Logging` | 日志级别配置 | Information |
-| `AllowedHosts` | 允许访问的主机名 | `*`（接受所有） |
-| `FE_URL` | 前端 URL，用于 CORS 跨域配置 | `http://localhost:3001` |
-| `DBType` | 数据库类型 | `sqlite`（支持 `mssql`、`postgresql`） |
-| `ConnectionStrings:ChatsDB` | 数据库 ADO.NET 连接字符串 | `Data Source=./AppData/chats.db` |
-| `ENCRYPTION_PASSWORD` | 用于加密自增 ID 的密钥 | 建议设置为随机字符串 |
+| 配置项                      | 说明                         | 默认值                                 |
+| --------------------------- | ---------------------------- | -------------------------------------- |
+| `Logging`                   | 日志级别配置                 | Information                            |
+| `AllowedHosts`              | 允许访问的主机名             | `*`（接受所有）                        |
+| `FE_URL`                    | 前端 URL，用于 CORS 跨域配置 | `http://localhost:3001`                |
+| `DBType`                    | 数据库类型                   | `sqlite`（支持 `mssql`、`postgresql`） |
+| `ConnectionStrings:ChatsDB` | 数据库 ADO.NET 连接字符串    | `Data Source=./AppData/chats.db`       |
+| `ENCRYPTION_PASSWORD`       | 用于加密自增 ID 的密钥       | 建议设置为随机字符串                   |
+
+> 更详细的配置说明，请见[配置说明文档](./configuration.md)。
 
 > **💡 为什么使用整数 + 加密而非 GUID？**
 > 
