@@ -1,5 +1,7 @@
 # 常见问题
 
+[English](../en-US/faq.md) | **简体中文**
+
 ## 部署相关
 
 <details>

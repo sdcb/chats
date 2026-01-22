@@ -1,5 +1,7 @@
 # Configuration Guide (appsettings.json)
 
+**English** | [简体中文](../zh-CN/configuration.md)
+
 This document explains the configuration items in the backend configuration file (based on `src/BE/web/appsettings.json`), organized by functionality and explained item by item.
 
 > Convention: This document intentionally does not cover ASP.NET Core general items (such as `Logging`, `AllowedHosts`). For general configuration details, please visit the [official ASP.NET Core Configuration documentation](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/configuration/).

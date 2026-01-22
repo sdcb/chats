@@ -1,5 +1,7 @@
 # 支持的大模型服务
 
+[English](../en-US/model-providers.md) | **简体中文**
+
 Sdcb Chats 支持 21+ 主流 AI 模型服务商，以下是完整列表：
 
 | Id  | Name             | 加入时间                                                    | 交错思考 |

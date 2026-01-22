@@ -1,5 +1,7 @@
 # Quick Start
 
+**English** | [简体中文](../zh-CN/quick-start.md)
+
 ## System Requirements
 
 - **Docker Deployment**: Any system that supports Docker (Linux/Windows/macOS)

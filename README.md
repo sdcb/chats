@@ -1,6 +1,6 @@
-# Sdcb Chats [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE) [![问DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sdcb/chats) [![更新日志](https://img.shields.io/static/v1?label=%F0%9F%93%9D%20&message=更新日志&color=8A2BE2)](./doc/zh-CN/release-notes/README.md)
+# Sdcb Chats [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE)
 
-**[English](README_EN.md)** | **简体中文** 
+[English](README_EN.md) | **简体中文** 
 
 Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 21+ 主流 AI 模型服务商。无论您是希望统一管理多种模型接口，还是需要一个简单易用的部署方案，Sdcb Chats 都能满足您的需求。
 
@@ -39,6 +39,8 @@ Chats 使用 `C#`/`TypeScript` 开发，以下是完整的文档资源：
 - [🤖 支持的模型提供商](./doc/zh-CN/model-providers.md) - 21+ 模型服务商列表及支持情况
 - [🛠️ 开发指南](./doc/zh-CN/build.md) - 如何编译和开发 Chats
 - [⚙️ 配置说明](./doc/zh-CN/configuration.md) - 详细配置参数说明
+- [📝 更新日志](./doc/zh-CN/release-notes/README.md) - 版本更新记录
+- [🔍 问 DeepWiki](https://deepwiki.com/sdcb/chats) - AI 驱动的项目知识库
 - [❓ 常见问题](./doc/zh-CN/faq.md) - 部署和使用中的常见问题解答
 
 ---

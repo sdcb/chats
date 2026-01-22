@@ -1,5 +1,7 @@
 # FAQ
 
+**English** | [简体中文](../zh-CN/faq.md)
+
 ## Deployment
 
 <details>

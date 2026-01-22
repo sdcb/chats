@@ -1,5 +1,7 @@
 # 快速开始
 
+[English](../en-US/quick-start.md) | **简体中文**
+
 ## 系统要求
 
 - **Docker 部署**：任何支持 Docker 的系统（Linux/Windows/macOS）

@@ -1,5 +1,7 @@
 # 配置说明（appsettings.json）
 
+[English](../en-US/configuration.md) | **简体中文**
+
 本文档说明后端配置文件中的各项配置（基于 `src/BE/web/appsettings.json`），并按功能分类逐项解释。
 
 > 注：本文刻意不介绍 ASP.NET Core 通用项（例如 `Logging`、`AllowedHosts`）。如需了解通用配置，请访问 [ASP.NET Core 官方配置文档](https://learn.microsoft.com/zh-cn/aspnet/core/fundamentals/configuration/)。
