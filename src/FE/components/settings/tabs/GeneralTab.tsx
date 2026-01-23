@@ -76,6 +76,7 @@ const GeneralTab = () => {
   const [userBalance, setUserBalance] = useState(0);
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
   const [hideChatBackground, setHideChatBackground] = useState(false);
+  const [hideInputAfterSend, setHideInputAfterSend] = useState(false);
 
   useEffect(() => {
     getUserBalanceOnly().then((data) => setUserBalance(data));
@@ -83,6 +84,7 @@ const GeneralTab = () => {
     const settings = getSettings();
     setFontSize(settings.fontSize ?? DEFAULT_FONT_SIZE);
     setHideChatBackground(settings.hideChatBackground ?? false);
+    setHideInputAfterSend(settings.hideInputAfterSend ?? false);
   }, []);
 
   const handleFontSizeChange = (value: number) => {
@@ -100,6 +102,12 @@ const GeneralTab = () => {
     saveSettings({ ...settings, hideChatBackground: checked });
     // Apply to document
     document.documentElement.setAttribute('data-hide-chat-background', checked ? 'true' : 'false');
+  };
+
+  const handleHideInputAfterSendChange = (checked: boolean) => {
+    setHideInputAfterSend(checked);
+    const settings = getSettings();
+    saveSettings({ ...settings, hideInputAfterSend: checked });
   };
 
   // Apply font size on mount
@@ -200,6 +208,22 @@ const GeneralTab = () => {
               <Switch
                 checked={hideChatBackground}
                 onCheckedChange={handleHideChatBackgroundChange}
+              />
+            </div>
+
+            {/* 发送后隐藏输入框 */}
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-muted-foreground">
+                  {t('Hide Input After Send')}
+                </span>
+                <span className="text-xs text-muted-foreground/70">
+                  {t('Hide input box after sending message')}
+                </span>
+              </div>
+              <Switch
+                checked={hideInputAfterSend}
+                onCheckedChange={handleHideInputAfterSendChange}
               />
             </div>
 
