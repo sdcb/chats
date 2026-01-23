@@ -6,6 +6,7 @@ import { IconPencil, IconChartHistogram, IconMessage, IconMessageStar, IconPhoto
 import DeletePopover from '@/components/Popover/DeletePopover';
 import useTranslation from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
+import { TriStateCheckbox, TriStateCheckboxState } from '@/components/ui/tristate-checkbox';
 import ModelUserList from '@/components/admin/user-models/ModelUserList';
 import { putModels } from '@/apis/adminApis';
 import toast from 'react-hot-toast';
@@ -149,16 +150,12 @@ export default function ModelItem({ model, onEditClick, onDeleteClick, onGoToUsa
             >
               {batchPending ? (
                 <IconLoader size={18} className="animate-spin text-muted-foreground" />
-              ) : checkState === 'checked' ? (
-                <div className="w-[18px] h-[18px] rounded-full bg-green-500 flex items-center justify-center hover:bg-green-600 transition-colors">
-                  <span className="text-white text-[10px]">✓</span>
-                </div>
-              ) : checkState === 'indeterminate' ? (
-                <div className="w-[18px] h-[18px] rounded-full bg-blue-500 flex items-center justify-center hover:bg-blue-600 transition-colors">
-                  <span className="text-white text-[10px]">−</span>
-                </div>
               ) : (
-                <div className="w-[18px] h-[18px] rounded-full border-2 border-muted-foreground/30 hover:border-primary transition-colors" />
+                <TriStateCheckbox
+                  state={checkState as TriStateCheckboxState}
+                  size="lg"
+                  disabled={!model.enabled || batchPending}
+                />
               )}
             </button>
           </div>
