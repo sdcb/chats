@@ -5,9 +5,18 @@ import { useTheme } from 'next-themes';
 import useTranslation from '@/hooks/useTranslation';
 
 import { toFixed } from '@/utils/common';
+import {
+  DEFAULT_FONT_SIZE,
+  getSettings,
+  MAX_FONT_SIZE,
+  MIN_FONT_SIZE,
+  saveSettings,
+} from '@/utils/settings';
 
 import { IconDesktop, IconMoon, IconSun } from '@/components/Icons';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 
 import { getUserBalanceOnly } from '@/apis/clientApis';
@@ -64,10 +73,28 @@ const GeneralTab = () => {
   const { theme, setTheme } = useTheme();
 
   const [userBalance, setUserBalance] = useState(0);
+  const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
 
   useEffect(() => {
     getUserBalanceOnly().then((data) => setUserBalance(data));
+    // Load font size from settings
+    const settings = getSettings();
+    setFontSize(settings.fontSize ?? DEFAULT_FONT_SIZE);
   }, []);
+
+  const handleFontSizeChange = (value: number) => {
+    const clampedValue = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, value));
+    setFontSize(clampedValue);
+    const settings = getSettings();
+    saveSettings({ ...settings, fontSize: clampedValue });
+    // Apply font size to document
+    document.documentElement.style.setProperty('--chat-font-size', `${clampedValue}px`);
+  };
+
+  // Apply font size on mount
+  useEffect(() => {
+    document.documentElement.style.setProperty('--chat-font-size', `${fontSize}px`);
+  }, [fontSize]);
 
   const themeOptions: SegmentedControlOption<string>[] = [
     {
@@ -136,6 +163,64 @@ const GeneralTab = () => {
               value={language}
               onChange={changeLanguage}
             />
+          </div>
+
+          {/* 字体大小 */}
+          <div className="flex flex-col gap-3 pt-2">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-muted-foreground">
+                  {t('Font Size')}
+                </span>
+                <span className="text-xs text-muted-foreground/70">
+                  {t('Chat content font size')}
+                </span>
+              </div>
+              <Input
+                type="number"
+                min={MIN_FONT_SIZE}
+                max={MAX_FONT_SIZE}
+                value={fontSize}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value, 10);
+                  if (!isNaN(value)) {
+                    handleFontSizeChange(value);
+                  }
+                }}
+                className="w-16 h-8 text-center"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground">A</span>
+              <Slider
+                value={[fontSize]}
+                min={MIN_FONT_SIZE}
+                max={MAX_FONT_SIZE}
+                step={1}
+                onValueChange={([value]) => handleFontSizeChange(value)}
+                className="flex-1"
+              />
+              <span className="text-base text-muted-foreground">A</span>
+              <span className="text-sm text-muted-foreground min-w-[40px] text-center">
+                {fontSize === DEFAULT_FONT_SIZE ? t('Standard') : ''}
+              </span>
+            </div>
+            {/* 预览 */}
+            <div className="mt-2 p-4 rounded-lg bg-muted/50 border">
+              <div className="flex items-start gap-3 items-center">
+                <img
+                  src="/icons/logo.png"
+                  alt="logo"
+                  className="w-8 h-8 rounded-full"
+                />
+                <p
+                  style={{ fontSize: `${fontSize}px` }}
+                  className="text-foreground leading-relaxed"
+                >
+                  {t('Font size preview text')}
+                </p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

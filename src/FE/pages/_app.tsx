@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import type { AppProps } from 'next/app';
 import { useRouter } from 'next/router';
 
+import { DEFAULT_FONT_SIZE, getSettings } from '@/utils/settings';
 import { getUserInfo } from '@/utils/user';
 
 import { UserRole } from '@/types/adminApis';
@@ -24,6 +25,10 @@ function App({ Component, pageProps }: AppProps<{}> | any) {
   useEffect(() => {
     setIsClient(true);
     document.title = 'Chats';
+    // Apply saved font size on app start
+    const settings = getSettings();
+    const fontSize = settings.fontSize ?? DEFAULT_FONT_SIZE;
+    document.documentElement.style.setProperty('--chat-font-size', `${fontSize}px`);
   }, []);
 
   const isAdmin = () => {
