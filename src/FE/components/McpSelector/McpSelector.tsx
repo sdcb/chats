@@ -132,7 +132,7 @@ const McpSelector: FC<Props> = ({
     <div className="flex flex-col gap-4">
       <div className="flex justify-between">
         <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
-          <IconTools size={16} />
+          <IconTools size={20} />
           {t('MCP Tools')}
         </div>
         <Button
@@ -142,7 +142,7 @@ const McpSelector: FC<Props> = ({
           disabled={isLoading || (mcpServersLoaded && !hasAvailableServers())}
           className="h-6 w-6 p-0"
         >
-          <IconPlus size={16} />
+          <IconPlus size={20} />
         </Button>
       </div>
       

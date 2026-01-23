@@ -59,7 +59,7 @@ const ImageGenerationPresetConfig: React.FC<ImageGenerationPresetConfigProps> = 
       <div className="flex flex-col gap-4">
         <div className="flex justify-between">
           <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
-            <IconTokens size={16} />
+            <IconTokens size={20} />
             {t('Batch Image Count')}
           </div>
           <Button
@@ -72,7 +72,7 @@ const ImageGenerationPresetConfig: React.FC<ImageGenerationPresetConfigProps> = 
                 onChangeMaxOutputTokens(null);
               }
             }}
-            className="h-6 px-2 text-xs"
+            className="h-6 px-2 text-sm"
           >
             {maxOutputTokens === null ? t('Default') : t('Custom')}
           </Button>

@@ -75,7 +75,7 @@ export const CodeBlockCore: FC<Props> = memo(({ language, value }) => {
             margin: 0,
             background: 'transparent',
             borderRadius: '2px',
-            padding:16,
+            padding:12,
           }}
           codeTagProps={{
             style: { background: 'transparent' },

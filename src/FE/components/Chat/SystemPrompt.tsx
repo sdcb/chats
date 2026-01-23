@@ -233,7 +233,7 @@ const SystemPrompt: FC<Props> = ({
   return (
     <div className="flex flex-col">
       <label className="mb-2 text-left text-neutral-700 dark:text-neutral-400 flex gap-1 items-center">
-        <IconMessage size={16} />
+        <IconMessage size={20} />
         {t('System Prompt')}
       </label>
       {isEditing ? (
