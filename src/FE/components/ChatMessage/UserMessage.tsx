@@ -209,7 +209,7 @@ const UserMessage = (props: Props) => {
             </div>
           </div>
         ) : (
-          <div className="bg-card py-2 px-3 rounded-md overflow-hidden">
+          <div className="bg-card py-2 px-3 rounded-md overflow-hidden chat-message-bg">
             <div className="flex flex-wrap justify-end text-right gap-2">
               {content
                 .filter((x) => x.$type === MessageContentType.fileId)

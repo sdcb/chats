@@ -259,3 +259,12 @@ div {
   --rdp-background-color: hsl(var(--background));
   --rdp-accent-color-dark: hsl(var(--primary-foreground));
 }
+
+/* Hide chat background */
+[data-hide-chat-background="true"] .chat-background {
+  background-color: transparent !important;
+}
+
+[data-hide-chat-background="true"] .chat-message-bg {
+  background-color: transparent !important;
+}

@@ -17,6 +17,7 @@ import { IconDesktop, IconMoon, IconSun } from '@/components/Icons';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
 import { getUserBalanceOnly } from '@/apis/clientApis';
@@ -74,12 +75,14 @@ const GeneralTab = () => {
 
   const [userBalance, setUserBalance] = useState(0);
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
+  const [hideChatBackground, setHideChatBackground] = useState(false);
 
   useEffect(() => {
     getUserBalanceOnly().then((data) => setUserBalance(data));
     // Load font size from settings
     const settings = getSettings();
     setFontSize(settings.fontSize ?? DEFAULT_FONT_SIZE);
+    setHideChatBackground(settings.hideChatBackground ?? false);
   }, []);
 
   const handleFontSizeChange = (value: number) => {
@@ -91,10 +94,23 @@ const GeneralTab = () => {
     document.documentElement.style.setProperty('--chat-font-size', `${clampedValue}px`);
   };
 
+  const handleHideChatBackgroundChange = (checked: boolean) => {
+    setHideChatBackground(checked);
+    const settings = getSettings();
+    saveSettings({ ...settings, hideChatBackground: checked });
+    // Apply to document
+    document.documentElement.setAttribute('data-hide-chat-background', checked ? 'true' : 'false');
+  };
+
   // Apply font size on mount
   useEffect(() => {
     document.documentElement.style.setProperty('--chat-font-size', `${fontSize}px`);
   }, [fontSize]);
+
+  // Apply hide chat background on mount
+  useEffect(() => {
+    document.documentElement.setAttribute('data-hide-chat-background', hideChatBackground ? 'true' : 'false');
+  }, [hideChatBackground]);
 
   const themeOptions: SegmentedControlOption<string>[] = [
     {
@@ -165,60 +181,83 @@ const GeneralTab = () => {
             />
           </div>
 
-          {/* 字体大小 */}
-          <div className="flex flex-col gap-3 pt-2">
+          {/* 聊天外观 */}
+          <div className="flex flex-col gap-4 pt-4">
+            <span className="text-sm font-bold">
+              {t('Chat Appearance')}
+            </span>
+
+            {/* 隐藏聊天背景 */}
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-1">
                 <span className="text-sm font-medium text-muted-foreground">
-                  {t('Font Size')}
+                  {t('Hide Chat Background')}
                 </span>
                 <span className="text-xs text-muted-foreground/70">
-                  {t('Chat content font size')}
+                  {t('Make chat area transparent')}
                 </span>
               </div>
-              <Input
-                type="number"
-                min={MIN_FONT_SIZE}
-                max={MAX_FONT_SIZE}
-                value={fontSize}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value, 10);
-                  if (!isNaN(value)) {
-                    handleFontSizeChange(value);
-                  }
-                }}
-                className="w-16 h-8 text-center"
+              <Switch
+                checked={hideChatBackground}
+                onCheckedChange={handleHideChatBackgroundChange}
               />
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground">A</span>
-              <Slider
-                value={[fontSize]}
-                min={MIN_FONT_SIZE}
-                max={MAX_FONT_SIZE}
-                step={1}
-                onValueChange={([value]) => handleFontSizeChange(value)}
-                className="flex-1"
-              />
-              <span className="text-base text-muted-foreground">A</span>
-              <span className="text-sm text-muted-foreground min-w-[40px] text-center">
-                {fontSize === DEFAULT_FONT_SIZE ? t('Standard') : ''}
-              </span>
-            </div>
-            {/* 预览 */}
-            <div className="mt-2 p-4 rounded-lg bg-muted/50 border">
-              <div className="flex items-start gap-3 items-center">
-                <img
-                  src="/icons/logo.png"
-                  alt="logo"
-                  className="w-8 h-8 rounded-full"
+
+            {/* 字体大小 */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {t('Font Size')}
+                  </span>
+                  <span className="text-xs text-muted-foreground/70">
+                    {t('Chat content font size')}
+                  </span>
+                </div>
+                <Input
+                  type="number"
+                  min={MIN_FONT_SIZE}
+                  max={MAX_FONT_SIZE}
+                  value={fontSize}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value, 10);
+                    if (!isNaN(value)) {
+                      handleFontSizeChange(value);
+                    }
+                  }}
+                  className="w-16 h-8 text-center"
                 />
-                <p
-                  style={{ fontSize: `${fontSize}px` }}
-                  className="text-foreground leading-relaxed"
-                >
-                  {t('Font size preview text')}
-                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground">A</span>
+                <Slider
+                  value={[fontSize]}
+                  min={MIN_FONT_SIZE}
+                  max={MAX_FONT_SIZE}
+                  step={1}
+                  onValueChange={([value]) => handleFontSizeChange(value)}
+                  className="flex-1"
+                />
+                <span className="text-base text-muted-foreground">A</span>
+                <span className="text-sm text-muted-foreground min-w-[40px] text-center">
+                  {fontSize === DEFAULT_FONT_SIZE ? t('Standard') : ''}
+                </span>
+              </div>
+              {/* 预览 */}
+              <div className="mt-2 p-4 rounded-lg bg-muted/50 border">
+                <div className="flex items-start gap-3 items-center">
+                  <img
+                    src="/icons/logo.png"
+                    alt="logo"
+                    className="w-8 h-8 rounded-full"
+                  />
+                  <p
+                    style={{ fontSize: `${fontSize}px` }}
+                    className="text-foreground leading-relaxed"
+                  >
+                    {t('Font size preview text')}
+                  </p>
+                </div>
               </div>
             </div>
           </div>

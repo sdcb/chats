@@ -506,8 +506,10 @@ const HomeContent = () => {
 
   useEffect(() => {
     // 加载设置
-    const { showChatBar } = getSettings();
+    const { showChatBar, hideChatBackground } = getSettings();
     settingDispatch(setShowChatBar(showChatBar));
+    // 应用隐藏聊天背景设置
+    document.documentElement.setAttribute('data-hide-chat-background', hideChatBackground ? 'true' : 'false');
   }, []);
 
   useEffect(() => {
@@ -589,7 +591,7 @@ const HomeContent = () => {
       }}
     >
       <div className="flex h-screen w-screen flex-col text-sm">
-        <div className="flex h-full w-full bg-background">
+        <div className="flex h-full w-full bg-background chat-background">
           <Chatbar />
           <Chat />
         </div>

@@ -9,11 +9,13 @@ export const MAX_FONT_SIZE = 18;
 export interface Settings {
   showChatBar: boolean;
   fontSize: number;
+  hideChatBackground: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   showChatBar: typeof window !== 'undefined'  && isMobile() ? false : true,
   fontSize: DEFAULT_FONT_SIZE,
+  hideChatBackground: false,
 };
 
 export const getSettings = (): Settings => {
