@@ -1,6 +1,8 @@
 import { isChatting } from '@/utils/chats';
 import { useMemo } from 'react';
 
+import { ChatWindowStyle } from '@/utils/settings';
+
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatSpanDto } from '@/types/clientApis';
 import { ChatStatus, IChat, MessageContentType, TextContent } from '@/types/chat';
@@ -21,6 +23,7 @@ interface Props {
   readonly?: boolean;
   chatShareId?: string;
   isAdminView?: boolean;
+  chatWindowStyle?: ChatWindowStyle;
   onChangeMessage?: (messageId: string) => void;
   onRegenerate?: (messageId: string, modelId: number) => void;
   onReactionMessage?: (type: ReactionMessageType, messageId: string) => void;
@@ -36,11 +39,14 @@ const ResponseMessageActions = (props: Props) => {
     readonly,
     chatShareId,
     isAdminView,
+    chatWindowStyle = 'dialog',
     onChangeMessage,
     onRegenerate,
     onReactionMessage,
     onDeleteMessage,
   } = props;
+
+  const isDocumentMode = chatWindowStyle === 'document';
 
   const {
     id: messageId,
@@ -81,57 +87,111 @@ const ResponseMessageActions = (props: Props) => {
 
   return (
     <div className="flex gap-1 flex-wrap">
-      <PaginationAction
-        hidden={siblingIds.length <= 1 || chatting}
-        disabledPrev={currentMessageIndex === 0}
-        disabledNext={currentMessageIndex === siblingIds.length - 1}
-        messageIds={siblingIds}
-        currentSelectIndex={currentMessageIndex}
-        onChangeMessage={onChangeMessage}
-      />
-      <div className="flex gap-0 items-center">
-        <CopyAction
-          text={getMessageContents(message)
-            .filter((x) => x.$type === MessageContentType.text)
-            .map((x) => (x as TextContent).c)
-            .join('')}
-        />
+      {isDocumentMode ? (
+        // 文档模式：翻页在最左边，其他操作依次排列
+        <>
+          <PaginationAction
+            hidden={siblingIds.length <= 1 || chatting}
+            disabledPrev={currentMessageIndex === 0}
+            disabledNext={currentMessageIndex === siblingIds.length - 1}
+            messageIds={siblingIds}
+            currentSelectIndex={currentMessageIndex}
+            onChangeMessage={onChangeMessage}
+          />
+          <CopyAction
+            text={getMessageContents(message)
+              .filter((x) => x.$type === MessageContentType.text)
+              .map((x) => (x as TextContent).c)
+              .join('')}
+          />
+          <DeleteAction
+            hidden={chatting}
+            onDelete={() => {
+              onDeleteMessage && onDeleteMessage(messageId);
+            }}
+          />
+          <TurnInfoBubble
+            hidden={isAllStepsEdited(message)}
+            disabled={messageReceiving}
+            message={message}
+            chatId={selectedChat.id}
+            chatShareId={chatShareId}
+            isAdminView={isAdminView}
+          />
+          <ReactionAction
+            disabled={chatting}
+            value={message.reaction}
+            onReactionMessage={handleReactionMessage}
+          />
+          <RegenerateWithModelAction
+            hidden={readonly}
+            disabled={chatting || isSpanDeleted}
+            models={models}
+            regenerateModelName={regenerateModelName}
+            onRegenerate={() => {
+              onRegenerate && onRegenerate(parentId!, regenerateModelId);
+            }}
+            onChangeModel={(model) => {
+              onRegenerate && onRegenerate(parentId!, model.modelId);
+            }}
+          />
+        </>
+      ) : (
+        // 对话模式：原有布局
+        <>
+          <PaginationAction
+            hidden={siblingIds.length <= 1 || chatting}
+            disabledPrev={currentMessageIndex === 0}
+            disabledNext={currentMessageIndex === siblingIds.length - 1}
+            messageIds={siblingIds}
+            currentSelectIndex={currentMessageIndex}
+            onChangeMessage={onChangeMessage}
+          />
+          <div className="flex gap-0 items-center">
+            <CopyAction
+              text={getMessageContents(message)
+                .filter((x) => x.$type === MessageContentType.text)
+                .map((x) => (x as TextContent).c)
+                .join('')}
+            />
 
-        <DeleteAction
-          hidden={chatting}
-          onDelete={() => {
-            onDeleteMessage && onDeleteMessage(messageId);
-          }}
-        />
+            <DeleteAction
+              hidden={chatting}
+              onDelete={() => {
+                onDeleteMessage && onDeleteMessage(messageId);
+              }}
+            />
 
-        <TurnInfoBubble
-          hidden={isAllStepsEdited(message)}
-          disabled={messageReceiving}
-          message={message}
-          chatId={selectedChat.id}
-          chatShareId={chatShareId}
-          isAdminView={isAdminView}
-        />
+            <TurnInfoBubble
+              hidden={isAllStepsEdited(message)}
+              disabled={messageReceiving}
+              message={message}
+              chatId={selectedChat.id}
+              chatShareId={chatShareId}
+              isAdminView={isAdminView}
+            />
 
-        <ReactionAction
-          disabled={chatting}
-          value={message.reaction}
-          onReactionMessage={handleReactionMessage}
-        />
+            <ReactionAction
+              disabled={chatting}
+              value={message.reaction}
+              onReactionMessage={handleReactionMessage}
+            />
 
-        <RegenerateWithModelAction
-          hidden={readonly}
-          disabled={chatting || isSpanDeleted}
-          models={models}
-          regenerateModelName={regenerateModelName}
-          onRegenerate={() => {
-            onRegenerate && onRegenerate(parentId!, regenerateModelId);
-          }}
-          onChangeModel={(model) => {
-            onRegenerate && onRegenerate(parentId!, model.modelId);
-          }}
-        />
-      </div>
+            <RegenerateWithModelAction
+              hidden={readonly}
+              disabled={chatting || isSpanDeleted}
+              models={models}
+              regenerateModelName={regenerateModelName}
+              onRegenerate={() => {
+                onRegenerate && onRegenerate(parentId!, regenerateModelId);
+              }}
+              onChangeModel={(model) => {
+                onRegenerate && onRegenerate(parentId!, model.modelId);
+              }}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 };

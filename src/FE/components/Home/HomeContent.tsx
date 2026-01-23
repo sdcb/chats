@@ -506,10 +506,12 @@ const HomeContent = () => {
 
   useEffect(() => {
     // 加载设置
-    const { showChatBar, hideChatBackground } = getSettings();
+    const { showChatBar, hideChatBackground, chatWindowStyle } = getSettings();
     settingDispatch(setShowChatBar(showChatBar));
     // 应用隐藏聊天背景设置
     document.documentElement.setAttribute('data-hide-chat-background', hideChatBackground ? 'true' : 'false');
+    // 应用聊天窗口样式设置
+    document.documentElement.setAttribute('data-chat-window-style', chatWindowStyle || 'dialog');
   }, []);
 
   useEffect(() => {

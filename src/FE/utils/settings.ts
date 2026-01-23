@@ -6,11 +6,14 @@ export const DEFAULT_FONT_SIZE = 14;
 export const MIN_FONT_SIZE = 12;
 export const MAX_FONT_SIZE = 18;
 
+export type ChatWindowStyle = 'dialog' | 'document';
+
 export interface Settings {
   showChatBar: boolean;
   fontSize: number;
   hideChatBackground: boolean;
   hideInputAfterSend: boolean;
+  chatWindowStyle: ChatWindowStyle;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -18,6 +21,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fontSize: DEFAULT_FONT_SIZE,
   hideChatBackground: false,
   hideInputAfterSend: false,
+  chatWindowStyle: 'dialog',
 };
 
 export const getSettings = (): Settings => {

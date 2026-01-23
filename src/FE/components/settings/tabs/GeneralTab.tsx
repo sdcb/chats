@@ -6,6 +6,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { toFixed } from '@/utils/common';
 import {
+  ChatWindowStyle,
   DEFAULT_FONT_SIZE,
   getSettings,
   MAX_FONT_SIZE,
@@ -77,6 +78,7 @@ const GeneralTab = () => {
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
   const [hideChatBackground, setHideChatBackground] = useState(false);
   const [hideInputAfterSend, setHideInputAfterSend] = useState(false);
+  const [chatWindowStyle, setChatWindowStyle] = useState<ChatWindowStyle>('dialog');
 
   useEffect(() => {
     getUserBalanceOnly().then((data) => setUserBalance(data));
@@ -85,6 +87,7 @@ const GeneralTab = () => {
     setFontSize(settings.fontSize ?? DEFAULT_FONT_SIZE);
     setHideChatBackground(settings.hideChatBackground ?? false);
     setHideInputAfterSend(settings.hideInputAfterSend ?? false);
+    setChatWindowStyle(settings.chatWindowStyle ?? 'dialog');
   }, []);
 
   const handleFontSizeChange = (value: number) => {
@@ -110,6 +113,14 @@ const GeneralTab = () => {
     saveSettings({ ...settings, hideInputAfterSend: checked });
   };
 
+  const handleChatWindowStyleChange = (style: ChatWindowStyle) => {
+    setChatWindowStyle(style);
+    const settings = getSettings();
+    saveSettings({ ...settings, chatWindowStyle: style });
+    // Apply to document
+    document.documentElement.setAttribute('data-chat-window-style', style);
+  };
+
   // Apply font size on mount
   useEffect(() => {
     document.documentElement.style.setProperty('--chat-font-size', `${fontSize}px`);
@@ -119,6 +130,11 @@ const GeneralTab = () => {
   useEffect(() => {
     document.documentElement.setAttribute('data-hide-chat-background', hideChatBackground ? 'true' : 'false');
   }, [hideChatBackground]);
+
+  // Apply chat window style on mount
+  useEffect(() => {
+    document.documentElement.setAttribute('data-chat-window-style', chatWindowStyle);
+  }, [chatWindowStyle]);
 
   const themeOptions: SegmentedControlOption<string>[] = [
     {
@@ -194,6 +210,69 @@ const GeneralTab = () => {
             <span className="text-sm font-bold">
               {t('Chat Appearance')}
             </span>
+
+            {/* 聊天窗口样式 */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <span className="text-sm font-medium text-muted-foreground">
+                {t('Chat Window Style')}
+              </span>
+              <div className="inline-flex items-stretch rounded-lg bg-muted p-1 gap-1">
+                {/* 对话模式 */}
+                <button
+                  type="button"
+                  onClick={() => handleChatWindowStyleChange('dialog')}
+                  className={cn(
+                    'flex flex-col items-center gap-1.5 px-3 py-2 rounded-md transition-all duration-200',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                    chatWindowStyle === 'dialog'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                  )}
+                >
+                  {/* 预览图 */}
+                  <div className="w-24 h-14 rounded bg-muted/50 p-1.5 flex flex-col gap-1 justify-center">
+                    <div className="flex items-center gap-1">
+                      <div className="w-1 h-1 rounded-full bg-cyan-400"></div>
+                      <div className="h-1 w-10 rounded bg-muted-foreground/30"></div>
+                    </div>
+                    <div className="flex items-center gap-1 pl-3">
+                      <div className="w-1 h-1 rounded-full bg-amber-400"></div>
+                      <div className="h-1 w-8 rounded bg-muted-foreground/30"></div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-1 h-1 rounded-full bg-cyan-400"></div>
+                      <div className="h-1 w-12 rounded bg-muted-foreground/30"></div>
+                    </div>
+                    <div className="flex items-center gap-1 pl-3">
+                      <div className="w-1 h-1 rounded-full bg-amber-400"></div>
+                      <div className="h-1 w-6 rounded bg-muted-foreground/30"></div>
+                    </div>
+                  </div>
+                  <span className="text-xs">{t('Dialog Mode')}</span>
+                </button>
+                {/* 文档模式 */}
+                <button
+                  type="button"
+                  onClick={() => handleChatWindowStyleChange('document')}
+                  className={cn(
+                    'flex flex-col items-center gap-1.5 px-3 py-2 rounded-md transition-all duration-200',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                    chatWindowStyle === 'document'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                  )}
+                >
+                  {/* 预览图 */}
+                  <div className="w-24 h-14 rounded bg-muted/50 p-1.5 flex flex-col gap-1 justify-center">
+                    <div className="h-1 w-14 rounded bg-muted-foreground/30"></div>
+                    <div className="h-1 w-12 rounded bg-muted-foreground/30"></div>
+                    <div className="h-1 w-16 rounded bg-muted-foreground/30"></div>
+                    <div className="h-1 w-10 rounded bg-muted-foreground/30"></div>
+                  </div>
+                  <span className="text-xs">{t('Document Mode')}</span>
+                </button>
+              </div>
+            </div>
 
             {/* 隐藏聊天背景 */}
             <div className="flex items-center justify-between">

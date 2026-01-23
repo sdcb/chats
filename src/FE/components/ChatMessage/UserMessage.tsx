@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import useTranslation from '@/hooks/useTranslation';
 
 import { isChatting } from '@/utils/chats';
+import { ChatWindowStyle } from '@/utils/settings';
 
 import {
   ChatRole,
@@ -32,6 +33,7 @@ interface Props {
   message: IChatMessage;
   selectedChat: IChat;
   readonly?: boolean;
+  chatWindowStyle?: ChatWindowStyle;
   onChangeMessage?: (messageId: string) => void;
   onEditAndSendMessage?: (editedMessage: Message, parentId?: string) => void;
   onEditUserMessage?: (messageId: string, content: ResponseContent) => void;
@@ -46,12 +48,14 @@ const UserMessage = (props: Props) => {
     message,
     selectedChat,
     readonly,
+    chatWindowStyle = 'dialog',
     onChangeMessage,
     onEditAndSendMessage,
     onEditUserMessage,
     onDeleteMessage,
     onRegenerateAllAssistant,
   } = props;
+  const isDocumentMode = chatWindowStyle === 'document';
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -156,7 +160,7 @@ const UserMessage = (props: Props) => {
         sourceElement={sourceImageElement}
       />
 
-      <div className="flex flex-row-reverse relative">
+      <div className={isDocumentMode ? 'flex' : 'flex flex-row-reverse relative'}>
         {isEditing ? (
           <div className="flex w-full flex-col flex-wrap rounded-md bg-muted shadow-sm mb-3">
             <Textarea
@@ -210,7 +214,7 @@ const UserMessage = (props: Props) => {
           </div>
         ) : (
           <div className="bg-card py-2 px-3 rounded-md overflow-hidden chat-message-bg">
-            <div className="flex flex-wrap justify-end text-right gap-2">
+            <div className={`flex flex-wrap gap-2 ${isDocumentMode ? 'justify-start text-left' : 'justify-end text-right'}`}>
               {content
                 .filter((x) => x.$type === MessageContentType.fileId)
                 .map((file: any, index) => {
@@ -237,54 +241,106 @@ const UserMessage = (props: Props) => {
         )}
       </div>
 
-      <div className="flex justify-end my-1">
+      <div className={`flex my-1 ${isDocumentMode ? 'justify-start' : 'justify-end'}`}>
         {!isEditing && (
           <>
-            {!readonly && (
-              <EditAction
-                isHoverVisible
-                disabled={isChatting(chatStatus)}
-                onToggleEditing={handleToggleEditing}
-              />
-            )}
-            <CopyAction
-              triggerClassName="invisible group-hover:visible focus:visible"
-              text={contentText}
-            />
-            {!readonly && (
-              <RegenerateAction
-                hidden={!onRegenerateAllAssistant}
-                disabled={isChatting(chatStatus)}
-                isHoverVisible
-                onRegenerate={() => {
-                  if (onRegenerateAllAssistant && selectedChat.spans && selectedChat.spans.length > 0) {
-                    // 使用第一个启用的 span 的 modelId，如果没有启用的就使用第一个
-                    const enabledSpan = selectedChat.spans.find(s => s.enabled) || selectedChat.spans[0];
-                    onRegenerateAllAssistant(messageId, enabledSpan.modelId);
+            {isDocumentMode ? (
+              // 文档模式：翻页放第一个，操作依次排列
+              <>
+                <PaginationAction
+                  hidden={siblingIds.length <= 1}
+                  disabledPrev={currentMessageIndex === 0 || isChatting(chatStatus)}
+                  disabledNext={
+                    currentMessageIndex === siblingIds.length - 1 ||
+                    isChatting(chatStatus)
                   }
-                }}
-              />
+                  currentSelectIndex={currentMessageIndex}
+                  messageIds={siblingIds}
+                  onChangeMessage={onChangeMessage}
+                />
+                {!readonly && (
+                  <EditAction
+                    isHoverVisible
+                    disabled={isChatting(chatStatus)}
+                    onToggleEditing={handleToggleEditing}
+                  />
+                )}
+                <CopyAction
+                  triggerClassName="invisible group-hover:visible focus:visible"
+                  text={contentText}
+                />
+                {!readonly && (
+                  <RegenerateAction
+                    hidden={!onRegenerateAllAssistant}
+                    disabled={isChatting(chatStatus)}
+                    isHoverVisible
+                    onRegenerate={() => {
+                      if (onRegenerateAllAssistant && selectedChat.spans && selectedChat.spans.length > 0) {
+                        const enabledSpan = selectedChat.spans.find(s => s.enabled) || selectedChat.spans[0];
+                        onRegenerateAllAssistant(messageId, enabledSpan.modelId);
+                      }
+                    }}
+                  />
+                )}
+                {!readonly && (
+                  <DeleteAction
+                    hidden={isChatting(chatStatus)}
+                    isHoverVisible
+                    onDelete={() => {
+                      onDeleteMessage && onDeleteMessage(messageId);
+                    }}
+                  />
+                )}
+              </>
+            ) : (
+              // 对话模式：原有布局
+              <>
+                {!readonly && (
+                  <EditAction
+                    isHoverVisible
+                    disabled={isChatting(chatStatus)}
+                    onToggleEditing={handleToggleEditing}
+                  />
+                )}
+                <CopyAction
+                  triggerClassName="invisible group-hover:visible focus:visible"
+                  text={contentText}
+                />
+                {!readonly && (
+                  <RegenerateAction
+                    hidden={!onRegenerateAllAssistant}
+                    disabled={isChatting(chatStatus)}
+                    isHoverVisible
+                    onRegenerate={() => {
+                      if (onRegenerateAllAssistant && selectedChat.spans && selectedChat.spans.length > 0) {
+                        const enabledSpan = selectedChat.spans.find(s => s.enabled) || selectedChat.spans[0];
+                        onRegenerateAllAssistant(messageId, enabledSpan.modelId);
+                      }
+                    }}
+                  />
+                )}
+                {!readonly && (
+                  <DeleteAction
+                    hidden={isChatting(chatStatus)}
+                    isHoverVisible
+                    onDelete={() => {
+                      onDeleteMessage && onDeleteMessage(messageId);
+                    }}
+                  />
+                )}
+                <PaginationAction
+                  hidden={siblingIds.length <= 1}
+                  disabledPrev={currentMessageIndex === 0 || isChatting(chatStatus)}
+                  disabledNext={
+                    currentMessageIndex === siblingIds.length - 1 ||
+                    isChatting(chatStatus)
+                  }
+                  currentSelectIndex={currentMessageIndex}
+                  messageIds={siblingIds}
+                  onChangeMessage={onChangeMessage}
+                />
+              </>
             )}
-            {!readonly && (
-              <DeleteAction
-                hidden={isChatting(chatStatus)}
-                isHoverVisible
-                onDelete={() => {
-                  onDeleteMessage && onDeleteMessage(messageId);
-                }}
-              />
-            )}
-            <PaginationAction
-              hidden={siblingIds.length <= 1}
-              disabledPrev={currentMessageIndex === 0 || isChatting(chatStatus)}
-              disabledNext={
-                currentMessageIndex === siblingIds.length - 1 ||
-                isChatting(chatStatus)
-              }
-              currentSelectIndex={currentMessageIndex}
-              messageIds={siblingIds}
-              onChangeMessage={onChangeMessage}
-            />
           </>
         )}
       </div>
