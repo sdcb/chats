@@ -1582,7 +1582,7 @@ const ChatView = memo(() => {
         <div className="flex flex-col">
           <div className="relative h-16"></div>
           <div
-            className="relative h-[calc(100vh-64px)] overflow-x-hidden scroll-container w-full"
+            className="relative h-[calc(100vh-64px)] overflow-x-hidden scroll-container w-0 min-w-full"
             ref={chatContainerRef}
           >
             {hasModel() ? <NoChat /> : <NoModel />}
@@ -1597,7 +1597,7 @@ const ChatView = memo(() => {
       <div className="flex flex-col">
         <div className="relative h-16"><ChatHeader /></div>
         <div
-          className="relative h-[calc(100vh-64px)] overflow-x-hidden scroll-container w-full"
+          className="relative h-[calc(100vh-64px)] overflow-x-hidden scroll-container w-0 min-w-full"
           ref={chatContainerRef}
           onScroll={handleScroll}
         >

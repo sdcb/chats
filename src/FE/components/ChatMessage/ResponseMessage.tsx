@@ -266,7 +266,7 @@ const ResponseMessage = (props: Props) => {
     }
 
     return (
-      <div key={`tool-group-${index}`} className="relative group/item">
+      <div key={`tool-group-${index}`} className={cn("relative group/item", index > 0 ? "my-1" : "")}>
         <ToolCallBlock
           toolCall={toolCall}
           toolResponse={toolResponse}
@@ -275,7 +275,7 @@ const ResponseMessage = (props: Props) => {
         />
         {showStepInfo && (
           <div className={cn(
-            'absolute -bottom-0.5 right-0 z-10 invisible group-hover/item:visible bg-card rounded-full',
+            'absolute -bottom-0.5 right-2 z-10 invisible group-hover/item:visible hover:bg-muted rounded-full',
             isChatting(chatStatus) && 'hidden',
           )}>
             <StepInfoBubble
@@ -580,7 +580,7 @@ const ResponseMessage = (props: Props) => {
                             e.stopPropagation();
                           }}
                         >
-                          <IconCopy size={16} className="hover:opacity-50" />
+                          <IconCopy size={20} className="hover:opacity-50" />
                         </button>
                         <button
                           disabled={isChatting(messageStatus)}
@@ -590,7 +590,7 @@ const ResponseMessage = (props: Props) => {
                             e.stopPropagation();
                           }}
                         >
-                          <IconEdit size={16} className="hover:opacity-50" />
+                          <IconEdit size={20} className="hover:opacity-50" />
                         </button>
                       </>
                     )}

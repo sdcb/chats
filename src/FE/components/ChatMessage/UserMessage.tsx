@@ -17,7 +17,7 @@ import {
 import { IChatMessage, getMessageContents } from '@/types/chatMessage';
 
 import { Button } from '@/components/ui/button';
-import { SendButton, useSendKeyHandler } from '@/components/ui/send-button';
+import { useSendKeyHandler } from '@/components/ui/send-button';
 import ImagePreview from '@/components/ImagePreview/ImagePreview';
 import FilePreview from '@/components/FilePreview/FilePreview';
 
@@ -188,10 +188,14 @@ const UserMessage = (props: Props) => {
               >
                 {t('Save')}
               </Button>
-              <SendButton
-                onSend={() => handleEditMessage(false)}
-                size="sm"
-              />
+              <Button
+                variant="default"
+                className="rounded-md px-4 py-1 text-sm font-medium active:bg-primary/80"
+                onClick={() => handleEditMessage(false)}
+                disabled={(contentText || '')?.trim().length <= 0}
+              >
+                {t('Send')}
+              </Button>
               <Button
                 variant="outline"
                 className="rounded-md border border-neutral-300 px-4 py-1 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"

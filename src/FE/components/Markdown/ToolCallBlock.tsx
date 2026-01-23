@@ -1,6 +1,7 @@
 import { FC, memo, useState, useEffect } from 'react';
+import { useTheme } from 'next-themes';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+import { oneDark, oneLight } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 import useTranslation from '@/hooks/useTranslation';
 import { ChatSpanStatus, ToolCallContent, ToolResponseContent, ToolProgressDelta } from '@/types/chat';
@@ -27,6 +28,7 @@ interface WebSearchResult {
 
 export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolResponse, chatStatus, nextMessageContentStarted }) => {
     const { t } = useTranslation();
+    const { resolvedTheme } = useTheme();
     const [isParamsCopied, setIsParamsCopied] = useState<boolean>(false);
     const [isResponseCopied, setIsResponseCopied] = useState<boolean>(false);
     // 计算 finished 状态：有 toolResponse 或者 聊天状态不是 Chatting (即已结束或失败)
@@ -41,6 +43,8 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         if (isManuallyToggled) return;
         setIsOpen(!(nextMessageContentStarted ?? false));
     }, [nextMessageContentStarted, isManuallyToggled]);
+
+    const baseTheme = resolvedTheme === 'dark' ? oneDark : oneLight;
 
     // 检查是否应该只显示code，并返回code内容
     const getCodeIfAvailable = (): string | null => {
@@ -180,15 +184,15 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                 const parts: React.ReactNode[] = [];
                 if (obj.sessionId !== undefined) {
                     parts.push(
-                        <span key="sessionId">
-                            sessionId: <strong>{String(obj.sessionId)}</strong>
+                        <span key="sessionId" className='text-foreground font-sans font-semibold text-gray-600 dark:text-gray-100 text-sm'>
+                            SessionId: <span className='font-normal'>{String(obj.sessionId)}</span>
                         </span>
                     );
                 }
                 if (obj.timeout !== undefined) {
                     parts.push(
-                        <span key="timeout">
-                            timeout: <strong>{String(obj.timeout)}ms</strong>
+                        <span key="timeout" className='text-foreground font-sans font-semibold text-gray-600 dark:text-gray-100 text-sm'>
+                            Timeout: <span>{String(obj.timeout)}ms</span>
                         </span>
                     );
                 }
@@ -225,9 +229,9 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                 // 构建 metadata line
                 if (obj!.sessionId !== undefined) {
                     metadataLine = (
-                        <>
-                            sessionId: <strong>{String(obj!.sessionId)}</strong>
-                        </>
+                        <div className='text-foreground font-sans font-semibold text-gray-600 dark:text-gray-100 text-sm'>
+                            SessionId: <span className='font-normal'>{String(obj!.sessionId)}</span>
+                        </div>
                     );
                 }
 
@@ -299,10 +303,10 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
     };
 
     return (
-        <div className="codeblock relative font-sans text-[16px]">
+        <div className="codeblock relative font-sans text-base">
             {/* Tool header - 统一的标题栏 */}
             <div
-                className="flex items-center gap-2 py-[6px] px-3 bg-gray-200 dark:bg-gray-700 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 ease-in-out"
+                className="flex items-center gap-2 px-2 h-8 bg-muted cursor-pointer transition-all duration-200 ease-in-out"
                 style={{
                     width: isOpen ? '100%' : 'fit-content',
                     maxWidth: '100%',
@@ -316,13 +320,13 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
             >
                 <div className="flex items-center gap-2 min-w-0">
                     <span>{headerIcon}</span>
-                    <span className="text-sm text-gray-800 dark:text-white truncate">{header}</span>
+                    <span className="text-sm truncate">{header}</span>
                 </div>
                 <div
                     className="flex items-center transition-transform duration-300 ease-in-out"
                     style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
                 >
-                    <IconChevronRight size={18} className="stroke-gray-500" />
+                    <IconChevronRight size={18} className="stroke-muted-foreground" />
                 </div>
             </div>
 
@@ -337,20 +341,33 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                 {code !== null ? (
                     // 特殊的代码显示
                     <div className="relative group">
-                        <SyntaxHighlighter
-                            language="text"
-                            style={oneDark}
-                            customStyle={{
-                                margin: 0,
-                                fontFamily: 'var(--font-mono)',
+                        <div
+                            className="bg-muted"
+                            style={{
                                 borderTopLeftRadius: 0,
                                 borderTopRightRadius: 0,
                                 borderBottomRightRadius: toolResponse ? 0 : 12,
                                 borderBottomLeftRadius: toolResponse ? 0 : 12,
+                                overflow: 'hidden',
                             }}
                         >
-                            {code}
-                        </SyntaxHighlighter>
+                            <SyntaxHighlighter
+                                language="text"
+                                style={baseTheme}
+                                customStyle={{
+                                    margin: 0,
+                                    fontFamily: 'var(--font-mono)',
+                                    background: 'transparent',
+                                    borderRadius: 0,
+                                }}
+                                codeTagProps={{
+                                    style: { background: 'transparent' },
+                                }}
+                                useInlineStyles
+                            >
+                                {code}
+                            </SyntaxHighlighter>
+                        </div>
                         
                         {/* 代码区域的复制按钮 */}
                         <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -358,13 +375,13 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <button
-                                            className="flex items-center rounded bg-none p-1 text-xs hover:bg-white/10"
+                                            className="flex items-center rounded bg-none p-1 text-xs text-muted-foreground"
                                             onClick={copyToClipboard(code, true)}
                                         >
                                             {isParamsCopied ? (
-                                                <IconCheck stroke="white" size={16} />
+                                                <IconCheck stroke="currentColor" size={20} />
                                             ) : (
-                                                <IconClipboard stroke="white" size={16} />
+                                                <IconClipboard stroke="currentColor" size={20} />
                                             )}
                                         </button>
                                     </TooltipTrigger>
@@ -379,7 +396,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                     // 普通的参数显示
                     <div className="relative group">
                         <div
-                            className="whitespace-pre-wrap break-words text-sm p-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-mono"
+                            className="whitespace-pre-wrap break-words text-sm p-4 bg-muted text-foreground font-mono"
                             style={{
                                 borderBottomRightRadius: toolResponse ? 0 : 12,
                                 borderBottomLeftRadius: toolResponse ? 0 : 12,
@@ -399,13 +416,13 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <button
-                                            className="flex items-center rounded bg-none p-1 text-xs hover:bg-black/10 dark:hover:bg-white/10"
+                                            className="flex items-center rounded bg-none p-1 text-xs text-muted-foreground"
                                             onClick={copyToClipboard(displayParams, true)}
                                         >
                                             {isParamsCopied ? (
-                                                <IconCheck className="stroke-gray-600 dark:stroke-gray-300" size={16} />
+                                                <IconCheck className="stroke-gray-600 dark:stroke-gray-300" size={20} />
                                             ) : (
-                                                <IconClipboard className="stroke-gray-600 dark:stroke-gray-300" size={16} />
+                                                <IconClipboard className="stroke-gray-600 dark:stroke-gray-300" size={20} />
                                             )}
                                         </button>
                                     </TooltipTrigger>
@@ -429,11 +446,11 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                     }}
                 >
                     {/* Separator line */}
-                    <div className="bg-gray-300 dark:bg-gray-600 h-[1px]" />
+                    <div className="bg-muted-foreground/20 h-[1px]" />
 
                     {/* Response content */}
                     <div
-                        className="relative group text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 p-2"
+                        className="relative group text-sm bg-muted text-foreground p-2"
                         style={{
                             borderBottomRightRadius: 12,
                             borderBottomLeftRadius: 12,
@@ -445,13 +462,13 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <button
-                                            className="flex items-center rounded bg-none p-1 text-xs hover:bg-black/10 dark:hover:bg-white/10"
+                                            className="flex items-center rounded bg-none p-1 text-xs text-muted-foreground"
                                             onClick={copyToClipboard(toolResponse.r, false)}
                                         >
                                             {isResponseCopied ? (
-                                                <IconCheck className="stroke-gray-600 dark:stroke-gray-300" size={16} />
+                                                <IconCheck className="stroke-muted-foreground" size={20} />
                                             ) : (
-                                                <IconClipboard className="stroke-gray-600 dark:stroke-gray-300" size={16} />
+                                                <IconClipboard className="stroke-muted-foreground" size={20} />
                                             )}
                                         </button>
                                     </TooltipTrigger>
@@ -464,14 +481,14 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                         {webSearchResults ? (
                             <table className="w-full border-collapse text-left m-0">
                                 <thead>
-                                    <tr className="border-b border-gray-300 dark:border-gray-600">
+                                    <tr className="border-b border-border">
                                         <th className="py-1 pr-3 font-medium">{t('Title')}</th>
                                         <th className="py-1 px-3 font-medium whitespace-nowrap">{t('Age')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {webSearchResults.map((result, index) => (
-                                        <tr key={index} className="border-b border-gray-300 dark:border-gray-600 last:border-b-0 hover:bg-gray-200 dark:hover:bg-gray-700">
+                                        <tr key={index} className="border-b border-border last:border-b-0 hover:bg-muted/60">
                                             <td className="py-1 pr-3" title={result.url}>
                                                 {result.url ? (
                                                     <a

@@ -372,22 +372,20 @@ export const MermaidBlock: FC<Props> = memo(({ value }) => {
 
   return (
     <>
-      <div className="codeblock relative font-sans text-[16px]">
-        <div className="flex items-center justify-between w-full py-[6px] px-3 bg-[#3d3d3d]">
-          <span className="text-xs lowercase text-white">mermaid</span>
-
-          <div className="flex items-center gap-1">
+      <div className="codeblock relative font-sans text-base group">
+        <div className="relative bg-white dark:bg-gray-900 rounded-lg overflow-hidden">
+          <div className="absolute right-2 top-2 z-10 flex items-center gap-1 opacity-0 pointer-events-none transition-opacity duration-150 group-hover:opacity-100 group-hover:pointer-events-auto">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    className="flex items-center rounded bg-none p-1 text-xs text-white hover:bg-white/10"
+                    className="flex items-center rounded bg-none p-1 text-xs text-muted-foreground hover:bg-muted/60"
                     onClick={copyToClipboard}
                   >
                     {isCopied ? (
-                      <IconCheck stroke={'white'} size={16} />
+                      <IconCheck stroke={'currentColor'} size={16} />
                     ) : (
-                      <IconClipboard stroke={'white'} size={16} />
+                      <IconClipboard stroke={'currentColor'} size={16} />
                     )}
                   </button>
                 </TooltipTrigger>
@@ -396,16 +394,15 @@ export const MermaidBlock: FC<Props> = memo(({ value }) => {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            
-            {/* 全屏按钮 */}
+
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    className="flex items-center rounded bg-none p-1 text-xs text-white hover:bg-white/10"
+                    className="flex items-center rounded bg-none p-1 text-xs text-muted-foreground hover:bg-muted/60"
                     onClick={() => setIsFullscreenOpen(true)}
                   >
-                    <IconArrowsDiagonal stroke={'white'} size={16} />
+                    <IconArrowsDiagonal stroke={'currentColor'} size={16} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -414,16 +411,20 @@ export const MermaidBlock: FC<Props> = memo(({ value }) => {
               </Tooltip>
             </TooltipProvider>
           </div>
-        </div>
 
-        <div 
-          className="bg-white dark:bg-gray-900 p-4 rounded-b-lg overflow-x-auto flex justify-center items-center"
-          style={{ minHeight: '100px' }}
-        >
-          <div 
-            dangerouslySetInnerHTML={{ __html: svgCode }}
-            className="mermaid-diagram max-w-full"
-          />
+          <div className="absolute right-2 bottom-2 z-10 text-xs uppercase text-muted-foreground opacity-0 pointer-events-none transition-opacity duration-150 group-hover:opacity-100 group-hover:pointer-events-auto">
+            MERMAID
+          </div>
+
+          <div
+            className="p-4 overflow-x-auto flex justify-center items-center"
+            style={{ minHeight: '100px' }}
+          >
+            <div
+              dangerouslySetInnerHTML={{ __html: svgCode }}
+              className="mermaid-diagram max-w-full"
+            />
+          </div>
         </div>
       </div>
 

@@ -226,19 +226,19 @@ const ThinkingMessage = (props: Props) => {
   }, [canLoadDuration, ensureDurationLoaded, isOpen]);
 
   return (
-    <div className="my-4">
+    <div className="my-2">
       <div
-        className="inline-flex items-center px-3 py-1 bg-muted dark:bg-gray-700 text-xs gap-1 rounded-sm"
+        className="inline-flex items-center h-8 px-2.5 py-1 text-xs gap-1 rounded-sm leading-none"
         onClick={toggleOpen}
       >
         {(finished ?? true) ? (
-          <div className="flex items-center h-6 gap-1">
-            <IconThink size={16} />
-            <span>{headerLabel}</span>
+          <div className="flex items-center gap-1 leading-none">
+            <IconThink size={18} />
+            <span className=''>{headerLabel}</span>
             {isOpen && loading && <span className="text-muted-foreground">{t('Loading...')}</span>}
           </div>
         ) : (
-          headerLabel
+          <span className="leading-none">{headerLabel}</span>
         )}
         <div 
           className="transition-transform duration-300 ease-in-out"
