@@ -13,6 +13,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "github-actions", "github-actions", "{29CC0F58-0B4E-4F4F-A084-7C461F7A4E60}"
 	ProjectSection(SolutionItems) = preProject
 		.github\workflows\build.yml = .github\workflows\build.yml
+		.github\workflows\code-interpreter.yml = .github\workflows\code-interpreter.yml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "scripts", "src\scripts\scripts.csproj", "{1AE54C98-13A3-408B-B428-1FD975C02AF2}"
@@ -34,6 +35,18 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chats.BE.UnitTest", "src\BE\tests\Chats.BE.UnitTest\Chats.BE.UnitTest.csproj", "{761387A7-5CE1-760B-2688-E63732EC5AEB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chats.DockerInterface", "src\BE\docker\Chats.DockerInterface.csproj", "{F7FF20F5-21FE-8BE0-B528-F5D569CE991F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "code-interpreter", "code-interpreter", "{703FB265-2894-4916-9FBD-1D5F38A80FB3}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\code-interpreter\create-manifest-latest.sh = .github\workflows\code-interpreter\create-manifest-latest.sh
+		.github\workflows\code-interpreter\create-manifest-run-number.sh = .github\workflows\code-interpreter\create-manifest-run-number.sh
+		.github\workflows\code-interpreter\Dockerfile = .github\workflows\code-interpreter\Dockerfile
+		.github\workflows\code-interpreter\download-nuget.sh = .github\workflows\code-interpreter\download-nuget.sh
+		.github\workflows\code-interpreter\NuGet.Config = .github\workflows\code-interpreter\NuGet.Config
+		.github\workflows\code-interpreter\render-skills.py = .github\workflows\code-interpreter\render-skills.py
+		.github\workflows\code-interpreter\skills.md = .github\workflows\code-interpreter\skills.md
+		.github\workflows\code-interpreter\smoke-test.sh = .github\workflows\code-interpreter\smoke-test.sh
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -81,6 +94,7 @@ Global
 		{E6E9FFD5-6882-15F5-F6AA-19E52E319301} = {1452823B-41DF-47A7-8AEC-1BF5A32BD6B2}
 		{761387A7-5CE1-760B-2688-E63732EC5AEB} = {1452823B-41DF-47A7-8AEC-1BF5A32BD6B2}
 		{F7FF20F5-21FE-8BE0-B528-F5D569CE991F} = {0832D4F1-8C33-4DBF-A914-81E1D618E8F9}
+		{703FB265-2894-4916-9FBD-1D5F38A80FB3} = {29CC0F58-0B4E-4F4F-A084-7C461F7A4E60}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {95C9C38D-AE58-4010-8FEF-0134C15F36B6}

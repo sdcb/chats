@@ -52,13 +52,14 @@ env:
     markitdown[pptx]
     pdf2image
     pdfplumber
-    playwright
+    playwright==1.57.0
     pypdf
     pypdfium2
     pytesseract
     python-pptx
     reportlab
     six
+    opencv-python
   NPM_GLOBAL_PACKAGES: >-
     docx
     pptxgenjs
@@ -66,6 +67,7 @@ env:
     react-dom
     react-icons
     sharp
+    playwright@1.57.0
   NUGET_PRECACHE: >-
     ClosedXML
     SixLabors.ImageSharp
