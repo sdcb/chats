@@ -4,5 +4,3 @@ This environment is pre-configured with the following tools and libraries:
 * python {pythonVersion}, commands: `python3 - <<'PY' ...`, `pip install --break-system-packages package-name`, IMPORTANT: Many packages are pre-installed, Always check with `pip list` BEFORE installing to avoid unnecessary waits.
 * C/C++ Toolchain (gcc {gccVersion}), tools: `gcc`, `g++`, `make`, `cmake`
 * node.js {nodeVersion}, commands: `node`, `npm`, IMPORTANT: Many packages are pre-installed globally. Always check with `npm -g ls` BEFORE installing.
-
-Run `ls /app/skills` to find the best-matching skill folder if user requested "use skill.md", then read and follow `/app/skills/<skill>/SKILL.md` (and its referenced scripts/workflows).

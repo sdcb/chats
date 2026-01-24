@@ -32,6 +32,5 @@ COPY skills.md /tmp/skills.template.md
 COPY render-skills.py /tmp/render-skills.py
 
 WORKDIR /app
-COPY skills/ /app/skills/
 RUN python3 /tmp/render-skills.py /tmp/skills.template.md /app/skills.md \
     && rm -f /tmp/skills.template.md /tmp/render-skills.py
