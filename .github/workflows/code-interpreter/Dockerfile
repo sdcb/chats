@@ -10,11 +10,14 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --break-system-packages ${PIP_PACKAGES} \
-    && playwright install chromium
-
-RUN npm install -g ${NPM_GLOBAL_PACKAGES}
+    && playwright install chromium \
+    && mv /usr/local/bin/playwright /usr/local/bin/playwright-python \
+    && npm install -g ${NPM_GLOBAL_PACKAGES} \
+    && mv /usr/local/bin/playwright /usr/local/bin/playwright-node \
+    && mv /usr/local/bin/playwright-python /usr/local/bin/playwright
 
 ENV PRECACHE_PACKAGES="${NUGET_PRECACHE}"
+ENV NODE_PATH=/usr/local/lib/node_modules
 
 COPY download-nuget.sh /tmp/download-nuget.sh
 RUN chmod +x /tmp/download-nuget.sh \
