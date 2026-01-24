@@ -163,7 +163,7 @@ public class OpenAIImageController(
         UserModelBalanceCalculator calc = new(BalanceInitialInfo.FromDB([userModel], userBalance.Balance), []);
         ScopedBalanceCalculator scopedCalc = calc.WithScoped("0");
 
-        BadRequestObjectResult? errorToReturn = null;
+        ActionResult? errorToReturn = null;
         bool hasSuccessYield = false;
 
         try
@@ -303,6 +303,12 @@ public class OpenAIImageController(
 
                 return Ok(response);
             }
+        }
+        catch (RawChatServiceException rawEx)
+        {
+            icc.FinishReason = rawEx.ErrorCode;
+            logger.LogError(rawEx, "Upstream error: {StatusCode}", rawEx.StatusCode);
+            errorToReturn = await YieldRawError(hasSuccessYield && isStreamed, rawEx.StatusCode, rawEx.Body, cancellationToken);
         }
         catch (ChatServiceException cse)
         {
@@ -499,6 +505,24 @@ public class OpenAIImageController(
         }
 
         return ErrorMessage(code, message);
+    }
+
+    private async Task<ContentResult> YieldRawError(bool shouldStreamed, int statusCode, string rawBody, CancellationToken cancellationToken)
+    {
+        if (shouldStreamed)
+        {
+            await Response.Body.WriteAsync(dataU8, cancellationToken);
+            await Response.Body.WriteAsync(System.Text.Encoding.UTF8.GetBytes(rawBody), cancellationToken);
+            await Response.Body.WriteAsync(lflfU8, cancellationToken);
+            await Response.Body.FlushAsync(cancellationToken);
+        }
+
+        return new ContentResult
+        {
+            Content = rawBody,
+            ContentType = "application/json",
+            StatusCode = statusCode
+        };
     }
 
     private BadRequestObjectResult InvalidModel(string? modelName)
