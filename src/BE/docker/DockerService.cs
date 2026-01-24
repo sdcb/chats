@@ -7,7 +7,6 @@ using Docker.DotNet;
 using Docker.DotNet.Models;
 using Microsoft.Extensions.Logging;
 using SharpCompress.Common;
-using SharpCompress.Readers;
 using SharpCompress.Writers;
 using SdkContainerStatus = Chats.DockerInterface.Models.ContainerStatus;
 
@@ -497,8 +496,6 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
     {
         return await WrapDockerOperationAsync("ListDirectory", async () =>
         {
-            List<FileEntry> entries = new();
-
             GetArchiveFromContainerResponse archive = await _client.Containers.GetArchiveFromContainerAsync(
                 containerId,
                 new GetArchiveFromContainerParameters { Path = path },
@@ -506,30 +503,38 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
                 cancellationToken);
 
             await using Stream stream = archive.Stream;
-            using IReader reader = ReaderFactory.Open(stream);
+            return await ListDirectoryFromTarStreamAsync(path, stream, cancellationToken);
+        }, containerId);
+    }
 
-            while (reader.MoveToNextEntry())
+    internal static async Task<List<FileEntry>> ListDirectoryFromTarStreamAsync(string requestedPath, Stream tarStream, CancellationToken cancellationToken)
+    {
+        List<FileEntry> entries = new();
+
+        await foreach (TarEntryInfo entry in EnumerateTarEntriesAsync(tarStream, cancellationToken))
+        {
+            if (string.IsNullOrWhiteSpace(entry.Name))
             {
-                IEntry entry = reader.Entry;
-                if (string.IsNullOrWhiteSpace(entry.Key))
-                    continue;
-
-                string? fullPath = TryGetFullPathFromArchiveEntry(path, entry.Key);
-                if (string.IsNullOrEmpty(fullPath))
-                    continue;
-
-                entries.Add(new FileEntry
-                {
-                    Path = fullPath,
-                    Name = Path.GetFileName(fullPath.TrimEnd('/')),
-                    IsDirectory = entry.IsDirectory,
-                    Size = entry.Size,
-                    LastModified = entry.LastModifiedTime
-                });
+                continue;
             }
 
-            return entries;
-        }, containerId);
+            string? fullPath = TryGetFullPathFromArchiveEntry(requestedPath, entry.Name);
+            if (string.IsNullOrEmpty(fullPath))
+            {
+                continue;
+            }
+
+            entries.Add(new FileEntry
+            {
+                Path = fullPath,
+                Name = Path.GetFileName(fullPath.TrimEnd('/')),
+                IsDirectory = entry.IsDirectory,
+                Size = entry.IsDirectory ? 0 : entry.Size,
+                LastModified = entry.LastModified
+            });
+        }
+
+        return entries;
     }
 
     internal static string? TryGetFullPathFromArchiveEntry(string requestedPath, string entryKey)
@@ -650,21 +655,333 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
                 cancellationToken);
 
             await using Stream stream = archive.Stream;
-            using IReader reader = ReaderFactory.Open(stream);
+            byte[]? bytes = await ExtractFirstFileBytesFromTarStreamAsync(stream, cancellationToken);
+            return bytes ?? throw new FileNotFoundException($"File {filePath} not found in container");
+        }, containerId);
+    }
 
-            while (reader.MoveToNextEntry())
+    internal static async Task<byte[]?> ExtractFirstFileBytesFromTarStreamAsync(Stream tarStream, CancellationToken cancellationToken)
+    {
+        await foreach (TarEntryInfo entry in EnumerateTarEntriesAsync(tarStream, cancellationToken))
+        {
+            if (entry.IsDirectory)
             {
-                IEntry entry = reader.Entry;
-                if (!entry.IsDirectory)
+                continue;
+            }
+
+            if (entry.Data == null)
+            {
+                continue;
+            }
+
+            return entry.Data;
+        }
+
+        return null;
+    }
+
+    private sealed record TarEntryInfo(string Name, bool IsDirectory, long Size, DateTimeOffset? LastModified, byte[]? Data);
+
+    private static async IAsyncEnumerable<TarEntryInfo> EnumerateTarEntriesAsync(
+        Stream tarStream,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // Why custom tar reader?
+        // - Docker 的 archive API 在中文文件名场景会插入 PAX headers（typeflag 'x' / 'g'）。
+        // - System.Formats.Tar 在某些 Docker 流（chunked/无完整尾部 padding/终止块）上会必现 EndOfStreamException。
+        // - 这里实现一个“更宽容”的顺序读取器：能解析 PAX(path=...)，并对末尾 padding/终止块缺失容错。
+
+        byte[] header = new byte[512];
+        string? pendingPaxPath = null;
+        string? pendingLongName = null;
+
+        while (true)
+        {
+            int readHeader = await ReadAtMostAsync(tarStream, header, 0, header.Length, cancellationToken);
+            if (readHeader == 0)
+            {
+                yield break;
+            }
+
+            // 容错：如果最后不足 512 字节，视为结束（避免“读过头”）。
+            if (readHeader < 512)
+            {
+                yield break;
+            }
+
+            if (IsAllZeroBlock(header))
+            {
+                // tar 规范：连续两个 512 的全 0 block 表示结束。
+                // 这里读第二个 block，如果缺失也容错结束。
+                int read2 = await ReadAtMostAsync(tarStream, header, 0, header.Length, cancellationToken);
+                yield break;
+            }
+
+            TarHeaderInfo h = ParseTarHeader(header);
+
+            // 处理 GNU long name（typeflag 'L'）：其 data 是下一条目的完整文件名。
+            if (h.TypeFlag == 'L')
+            {
+                byte[] data = await ReadDataBestEffortAsync(tarStream, h.Size, cancellationToken);
+                pendingLongName = DecodeNullTerminatedString(data);
+                await SkipPaddingBestEffortAsync(tarStream, h.Size, cancellationToken);
+                continue;
+            }
+
+            // 处理 PAX（typeflag 'x' / 'g'）：其 data 是 key=value 记录，最重要的是 path。
+            if (h.TypeFlag is 'x' or 'g')
+            {
+                byte[] data = await ReadDataBestEffortAsync(tarStream, h.Size, cancellationToken);
+                pendingPaxPath = TryParsePaxPath(data);
+                await SkipPaddingBestEffortAsync(tarStream, h.Size, cancellationToken);
+                continue;
+            }
+
+            string effectiveName = pendingPaxPath
+                ?? pendingLongName
+                ?? h.Name;
+
+            pendingPaxPath = null;
+            pendingLongName = null;
+
+            bool isDir = h.TypeFlag == '5' || effectiveName.EndsWith("/", StringComparison.Ordinal);
+
+            if (isDir)
+            {
+                // 目录通常 size=0；即使有 size，也跳过。
+                if (h.Size > 0)
                 {
-                    await using MemoryStream memory = new();
-                    reader.WriteEntryTo(memory);
-                    return memory.ToArray();
+                    await SkipBytesBestEffortAsync(tarStream, h.Size, cancellationToken);
+                    await SkipPaddingBestEffortAsync(tarStream, h.Size, cancellationToken);
+                }
+
+                yield return new TarEntryInfo(effectiveName, IsDirectory: true, Size: 0, h.LastModified, Data: null);
+                continue;
+            }
+
+            // 普通文件：读取数据并 yield。
+            byte[] fileData = await ReadDataBestEffortAsync(tarStream, h.Size, cancellationToken);
+            await SkipPaddingBestEffortAsync(tarStream, h.Size, cancellationToken);
+            yield return new TarEntryInfo(effectiveName, IsDirectory: false, Size: h.Size, h.LastModified, fileData);
+        }
+    }
+
+    private readonly record struct TarHeaderInfo(string Name, long Size, char TypeFlag, DateTimeOffset? LastModified);
+
+    private static TarHeaderInfo ParseTarHeader(byte[] header)
+    {
+        // ustar: name(0-99), size(124-135), mtime(136-147), typeflag(156), prefix(345-499)
+        string name = DecodeTarString(header, 0, 100);
+        string prefix = DecodeTarString(header, 345, 155);
+        string fullName = string.IsNullOrEmpty(prefix) ? name : (prefix.TrimEnd('/') + "/" + name.TrimStart('/'));
+
+        long size = ParseTarNumber(header, 124, 12);
+        long mtimeSeconds = ParseTarNumber(header, 136, 12);
+        DateTimeOffset? mtime = mtimeSeconds > 0
+            ? DateTimeOffset.FromUnixTimeSeconds(mtimeSeconds)
+            : null;
+
+        char typeFlag = header[156] == 0 ? '0' : (char)header[156];
+        return new TarHeaderInfo(fullName, size, typeFlag, mtime);
+    }
+
+    private static string DecodeTarString(byte[] buffer, int offset, int length)
+    {
+        int end = offset;
+        int max = offset + length;
+        while (end < max && buffer[end] != 0)
+        {
+            end++;
+        }
+
+        // tar 字段可能包含尾部空格
+        return Encoding.UTF8.GetString(buffer, offset, end - offset).Trim();
+    }
+
+    private static long ParseTarNumber(byte[] buffer, int offset, int length)
+    {
+        // 兼容两种编码：
+        // 1) ASCII 八进制（最常见）
+        // 2) base-256（二进制，首字节最高位为 1）
+        if (length <= 0) return 0;
+
+        byte first = buffer[offset];
+        if ((first & 0x80) != 0)
+        {
+            // base-256，二进制补码
+            long value = 0;
+            for (int i = 0; i < length; i++)
+            {
+                value = (value << 8) | buffer[offset + i];
+            }
+
+            // 清除最高位
+            value &= ~(1L << (length * 8 - 1));
+            return value;
+        }
+
+        long result = 0;
+        int end = offset + length;
+        for (int i = offset; i < end; i++)
+        {
+            byte b = buffer[i];
+            if (b == 0 || b == (byte)' ') break;
+            if (b < '0' || b > '7') continue;
+            result = (result << 3) + (b - (byte)'0');
+        }
+
+        return result;
+    }
+
+    private static bool IsAllZeroBlock(byte[] block)
+    {
+        for (int i = 0; i < block.Length; i++)
+        {
+            if (block[i] != 0) return false;
+        }
+
+        return true;
+    }
+
+    private static string DecodeNullTerminatedString(byte[] bytes)
+    {
+        int end = Array.IndexOf(bytes, (byte)0);
+        if (end < 0) end = bytes.Length;
+        return Encoding.UTF8.GetString(bytes, 0, end).Trim();
+    }
+
+    private static string? TryParsePaxPath(byte[] paxBytes)
+    {
+        // PAX record format (byte-based): "<len> <key>=<value>\n" repeated.
+        // NOTE: <len> is the total RECORD LENGTH IN BYTES (including digits, space and trailing '\n').
+        int idx = 0;
+        while (idx < paxBytes.Length)
+        {
+            int space = Array.IndexOf(paxBytes, (byte)' ', idx);
+            if (space < 0)
+            {
+                break;
+            }
+
+            // parse length digits (ASCII)
+            int recordLen = 0;
+            for (int i = idx; i < space; i++)
+            {
+                byte b = paxBytes[i];
+                if (b < '0' || b > '9')
+                {
+                    recordLen = 0;
+                    break;
+                }
+                recordLen = recordLen * 10 + (b - (byte)'0');
+            }
+
+            if (recordLen <= 0)
+            {
+                break;
+            }
+
+            int recordStart = space + 1;
+            int recordEnd = idx + recordLen;
+            if (recordEnd > paxBytes.Length)
+            {
+                recordEnd = paxBytes.Length;
+            }
+
+            int recordDataLen = Math.Max(0, recordEnd - recordStart);
+            if (recordDataLen == 0)
+            {
+                idx = recordEnd;
+                continue;
+            }
+
+            // Drop trailing '\n' if present.
+            int trimmedEnd = recordEnd;
+            if (trimmedEnd > recordStart && paxBytes[trimmedEnd - 1] == (byte)'\n')
+            {
+                trimmedEnd--;
+            }
+
+            ReadOnlySpan<byte> record = paxBytes.AsSpan(recordStart, Math.Max(0, trimmedEnd - recordStart));
+            int eq = record.IndexOf((byte)'=');
+            if (eq > 0)
+            {
+                string key = Encoding.UTF8.GetString(record.Slice(0, eq));
+                if (string.Equals(key, "path", StringComparison.Ordinal))
+                {
+                    string value = Encoding.UTF8.GetString(record.Slice(eq + 1));
+                    return value.Trim();
                 }
             }
 
-            throw new FileNotFoundException($"File {filePath} not found in container");
-        }, containerId);
+            idx = recordEnd;
+        }
+
+        return null;
+    }
+
+    private static async Task<byte[]> ReadDataBestEffortAsync(Stream stream, long size, CancellationToken cancellationToken)
+    {
+        if (size <= 0) return Array.Empty<byte>();
+        if (size > int.MaxValue) throw new NotSupportedException($"Tar entry too large: {size}");
+
+        byte[] buffer = new byte[(int)size];
+        int offset = 0;
+        while (offset < buffer.Length)
+        {
+            int read = await stream.ReadAsync(buffer.AsMemory(offset, buffer.Length - offset), cancellationToken);
+            if (read == 0)
+            {
+                // 容错：流提前结束时返回已读部分（避免抛 EndOfStreamException）。
+                if (offset == 0) return Array.Empty<byte>();
+                Array.Resize(ref buffer, offset);
+                return buffer;
+            }
+
+            offset += read;
+        }
+
+        return buffer;
+    }
+
+    private static async Task SkipPaddingBestEffortAsync(Stream stream, long size, CancellationToken cancellationToken)
+    {
+        long pad = (512 - (size % 512)) % 512;
+        if (pad <= 0) return;
+        await SkipBytesBestEffortAsync(stream, pad, cancellationToken);
+    }
+
+    private static async Task SkipBytesBestEffortAsync(Stream stream, long count, CancellationToken cancellationToken)
+    {
+        if (count <= 0) return;
+        byte[] buf = new byte[8192];
+        long remaining = count;
+        while (remaining > 0)
+        {
+            int toRead = (int)Math.Min(buf.Length, remaining);
+            int read = await stream.ReadAsync(buf.AsMemory(0, toRead), cancellationToken);
+            if (read == 0)
+            {
+                return;
+            }
+
+            remaining -= read;
+        }
+    }
+
+    private static async Task<int> ReadAtMostAsync(Stream stream, byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        int total = 0;
+        while (total < count)
+        {
+            int read = await stream.ReadAsync(buffer.AsMemory(offset + total, count - total), cancellationToken);
+            if (read == 0)
+            {
+                break;
+            }
+            total += read;
+        }
+        return total;
     }
 
     public async Task<SessionUsage?> GetContainerStatsAsync(string containerId, CancellationToken cancellationToken = default)
