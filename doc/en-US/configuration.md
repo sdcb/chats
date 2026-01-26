@@ -237,7 +237,7 @@ The `CodeInterpreter` configuration group controls: the default sandbox image to
 ### 6.1 `CodeInterpreter:DefaultImage`
 
 - **Type**: String (Docker image name)
-- **Default**: `sdcb/code-interpreter:r-26`
+- **Default**: `sdcb/code-interpreter:latest`
 - **Purpose**: The default image to use when creating a new code interpreter session.
 
 ### 6.2 `CodeInterpreter:DefaultImageDescription`

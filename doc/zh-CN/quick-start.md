@@ -7,7 +7,8 @@
 - **Docker 部署**：任何支持 Docker 的系统（Linux/Windows/macOS）
 - **可执行文件部署**：
   - Windows: Windows 10 或更高版本
-  - Linux: glibc 2.17+ 或 musl libc
+  - Linux: glibc 2.27+（Ubuntu 18.04+、Debian 10+、RHEL8+ 等）
+  - Alpine Linux: Alpine 3.12+
   - macOS: macOS 10.15 或更高版本
 - **数据库**：SQLite（默认，无需安装）/ SQL Server / PostgreSQL
 
@@ -85,17 +86,31 @@ C:\Users\ZhouJie\Downloads\chats-win-x64>dir
  2024/12/06  16:35    <DIR>          wwwroot
 ```
 
-- **启动应用**：运行 `Chats.BE.exe` 即可启动 Chats 应用，该文件名虽指"后端"，但实际同时包含前端和后端组件。
-- **数据库配置**：默认情况下，应用将在当前目录创建名为 `AppData` 的目录，并以 SQLite 作为数据库。命令行参数可用于指定不同的数据库类型：
-  ```pwsh
-  .\Chats.BE.exe --urls http://+:5000 --CodePod:DockerEndpoint npipe://./pipe/docker_engine --DBType=mssql --ConnectionStrings:ChatsDB="Data Source=(localdb)\mssqllocaldb; Initial Catalog=ChatsDB; Integrated Security=True"
-  ```
-  - 参数 `--urls`：用于指定应用监听的地址和端口。
-  - 参数 `--CodePod:DockerEndpoint`：指定 Docker 服务端点地址。在 Windows 上，如果想连接 Docker Desktop 中的 Linux 容器作为 Code Interpreter 沙箱，需要使用 `npipe://./pipe/docker_engine` 而非默认的 `unix:///var/run/docker.sock`，否则在创建 Docker 会话时会报 `Connection failed` 错误。
-  - 参数 `DBType`：可选 `sqlite`、`mssql` 或 `pgsql`。
-  - 参数 `--ConnectionStrings:ChatsDB`：用于指定数据库的ADO.NET连接字符串。
-  
-  > 更多配置选项，请参考[配置说明文档](./configuration.md)。
+**基础启动**：直接运行 `Chats.BE.exe` 即可启动应用（该文件名虽指"后端"，但实际同时包含前端和后端组件）。应用默认使用 SQLite 数据库，并在当前目录创建 `AppData` 文件夹存储数据。
+
+**Windows + Docker Desktop 部署**：如果你在 Windows 系统上安装了 Docker Desktop，并希望使用 Code Interpreter 功能，需要指定 Docker 端点：
+
+```pwsh
+.\Chats.BE.exe --urls http://+:5000 --CodePod:DockerEndpoint npipe://./pipe/docker_engine
+```
+
+该配置将应用绑定到 5000 端口，并连接到 Docker Desktop 的命名管道，以支持基于 Docker 沙箱的代码执行环境。
+
+**更多配置选项**：
+
+如需自定义端口、数据库类型或连接字符串，可通过命令行参数进行配置，例如：
+
+```pwsh
+.\Chats.BE.exe --urls http://+:5000 --CodePod:DockerEndpoint npipe://./pipe/docker_engine --DBType=mssql --ConnectionStrings:ChatsDB="Data Source=(localdb)\mssqllocaldb; Initial Catalog=ChatsDB; Integrated Security=True"
+```
+
+**参数说明**：
+- `--urls`：指定应用监听的地址和端口
+- `--CodePod:DockerEndpoint`：指定 Docker 服务端点。Windows 上使用 `npipe://./pipe/docker_engine` 连接 Docker Desktop；Linux/macOS 使用默认的 `unix:///var/run/docker.sock`
+- `--DBType`：数据库类型，可选 `sqlite`（默认）、`mssql` 或 `pgsql`
+- `--ConnectionStrings:ChatsDB`：数据库的 ADO.NET 连接字符串
+
+> 💡 更多高级配置选项，请参考[配置说明文档](./configuration.md)。
 
 ### 依赖 .NET 运行时的版本说明
 

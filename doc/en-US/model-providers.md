@@ -44,10 +44,73 @@ Interleaved Thinking is an advanced reasoning feature that allows models to disp
 - **❓ Protocol Compatible**: Should support based on API protocol inference, but end-to-end testing not yet completed
 - **Blank**: The provider does not support or has not implemented interleaved thinking
 
+## Supported API Protocols
+
+Chats supports multiple AI model API protocols, providing flexible integration options for different scenarios:
+
+### 1. OpenAI Chat Completion API
+
+This is the basic protocol supported by Chats and the most widely adopted standard in the industry. Most model providers are compatible with this protocol.
+
+**Supported Features:**
+- Standard conversation generation
+- Streaming output
+- Function Calling
+- Vision understanding
+- Structured Outputs
+
+### 2. OpenAI Response API
+
+Used for advanced reasoning models from OpenAI and Azure AI Foundry (such as o3, o4-mini, gpt-5 series).
+
+**Special Features:**
+- Thinking Summary
+- Full thought process display
+- Enhanced reasoning capabilities
+
+### 3. Anthropic Messages API
+
+Native protocol support for Anthropic Claude series models.
+
+**Supported Features:**
+- Claude native message format
+- Interleaved Thinking
+- Extended context window
+- Tool Use
+
+### 4. Google Gemini API
+
+Native protocol support for Google AI's Gemini models.
+
+**Supported Features:**
+- Gemini native message format
+- Multimodal input
+- Code execution
+- Search grounding
+
+### 5. Image Generation API
+
+Supports OpenAI's `gpt-image` image generation protocol.
+
+**Supported Features:**
+- Text-to-image generation
+- Image variation generation
+- Configurable image size and quality
+
+### 6. Image Edit API
+
+Supports OpenAI's image editing protocol.
+
+**Supported Features:**
+- Prompt-based image editing
+- Image inpainting
+- Localized editing
+
 ## Custom Model Providers
 
-Since Chats supports the standard OpenAI Chat Completion API protocol, you can also add any custom model provider compatible with this protocol, including but not limited to:
+Since Chats supports the multiple standard API protocols mentioned above, you can add any custom model provider compatible with these protocols, including but not limited to:
 
-- Locally deployed open-source models (via Ollama, vLLM, etc.)
-- Third-party API proxy services
+- Locally deployed open-source models (via Ollama, vLLM, LM Studio, etc.)
+- Third-party API proxy services (such as OpenRouter, One API, etc.)
 - Enterprise internal model services
+- Self-hosted model inference services

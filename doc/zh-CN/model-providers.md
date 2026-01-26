@@ -44,10 +44,73 @@ Sdcb Chats 支持 21+ 主流 AI 模型服务商，以下是完整列表：
 - **❓ 协议兼容**：基于 API 协议推断应该支持，但尚未完成端到端测试
 - **空白**：该提供商不支持或未实现交错思考功能
 
+## 支持的 API 协议
+
+Chats 支持多种 AI 模型 API 协议，为不同的应用场景提供灵活的集成方式：
+
+### 1. OpenAI Chat Completion API
+
+这是 Chats 支持的基本协议，也是业界最广泛使用的标准。大多数模型提供商都兼容此协议。
+
+**支持的功能：**
+- 标准的对话生成
+- 流式输出
+- 函数调用（Function Calling）
+- 视觉理解（Vision）
+- 结构化输出（Structured Outputs）
+
+### 2. OpenAI Response API
+
+用于 OpenAI 和 Azure AI Foundry 的高级推理模型（如 o3、o4-mini、gpt-5 系列）。
+
+**特殊功能：**
+- 思考概要（Thinking Summary）
+- 完整思考过程展示
+- 增强的推理能力
+
+### 3. Anthropic Messages API
+
+为 Anthropic Claude 系列模型提供的原生协议支持。
+
+**支持的功能：**
+- Claude 原生消息格式
+- 交错思考（Interleaved Thinking）
+- 扩展上下文窗口
+- 工具使用（Tool Use）
+
+### 4. Google Gemini API
+
+为 Google AI 的 Gemini 模型提供的原生协议支持。
+
+**支持的功能：**
+- Gemini 原生消息格式
+- 多模态输入
+- 代码执行
+- 搜索增强
+
+### 5. Image Generation API
+
+支持 OpenAI 的 `gpt-image` 图像生成协议。
+
+**支持的功能：**
+- 文本到图像生成
+- 图像变体生成
+- 可配置的图像大小和质量
+
+### 6. Image Edit API
+
+支持 OpenAI 的图像编辑协议。
+
+**支持的功能：**
+- 基于提示的图像编辑
+- 图像修复（Inpainting）
+- 局部编辑
+
 ## 自定义模型提供商
 
-由于 Chats 支持标准的 OpenAI Chat Completion API 协议，您也可以添加任何兼容此协议的自定义模型提供商，包括但不限于：
+由于 Chats 支持上述多种标准 API 协议，您可以添加任何兼容这些协议的自定义模型提供商，包括但不限于：
 
-- 本地部署的开源模型（通过 Ollama、vLLM 等）
-- 第三方 API 代理服务
+- 本地部署的开源模型（通过 Ollama、vLLM、LM Studio 等）
+- 第三方 API 代理服务（如 OpenRouter、One API 等）
 - 企业内部的模型服务
+- 自建的模型推理服务

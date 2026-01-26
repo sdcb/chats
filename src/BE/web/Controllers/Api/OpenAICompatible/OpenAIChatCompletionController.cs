@@ -265,7 +265,7 @@ public partial class OpenAIChatCompletionController(
             .FirstOrDefaultAsync(cancellationToken) ?? throw new InvalidOperationException("User balance not found.");
         UserModelBalanceCalculator calc = new(BalanceInitialInfo.FromDB([userModel], userBalance.Balance), []);
         ScopedBalanceCalculator scopedCalc = calc.WithScoped("0");
-        BadRequestObjectResult? errorToReturn = null;
+        ActionResult? errorToReturn = null;
         bool hasSuccessYield = false;
         bool streamedFinishSegment = false;
         try
@@ -309,6 +309,12 @@ public partial class OpenAIChatCompletionController(
                 await Response.Body.WriteAsync("data: [DONE]\n\n"u8.ToArray(), cancellationToken);
                 await Response.Body.FlushAsync(cancellationToken);
             }
+        }
+        catch (RawChatServiceException rawEx)
+        {
+            icc.FinishReason = rawEx.ErrorCode;
+            logger.LogError(rawEx, "Upstream error: {StatusCode}", rawEx.StatusCode);
+            errorToReturn = await YieldRawError(hasSuccessYield && cco.Streamed, rawEx.StatusCode, rawEx.Body, cancellationToken);
         }
         catch (ChatServiceException cse)
         {
@@ -408,6 +414,24 @@ public partial class OpenAIChatCompletionController(
         await JsonSerializer.SerializeAsync(Response.Body, chunk, JSON.JsonSerializerOptions, cancellationToken);
         await Response.Body.WriteAsync(lflfU8, cancellationToken);
         await Response.Body.FlushAsync(cancellationToken);
+    }
+
+    private async Task<ContentResult> YieldRawError(bool shouldStreamed, int statusCode, string rawBody, CancellationToken cancellationToken)
+    {
+        if (shouldStreamed)
+        {
+            await Response.Body.WriteAsync(dataU8, cancellationToken);
+            await Response.Body.WriteAsync(System.Text.Encoding.UTF8.GetBytes(rawBody), cancellationToken);
+            await Response.Body.WriteAsync(lflfU8, cancellationToken);
+            await Response.Body.FlushAsync(cancellationToken);
+        }
+
+        return new ContentResult
+        {
+            Content = rawBody,
+            ContentType = "application/json",
+            StatusCode = statusCode
+        };
     }
 
     private BadRequestObjectResult InvalidModel(string? modelName)

@@ -78,7 +78,7 @@ For environments where using Docker is inconvenient, Chats provides native execu
 - **Mirror Download** (Based on Cloudflare R2): Recommended for users in China, faster speed
 - **Latest Development Build**: Only generic package and frontend files are available, not including native executables for other platforms
   - ⚠️ Note: Development builds auto-update from `dev`/`feature` branches and may be unstable
-- Except for the generic package, all platforms provide AOT-compiled native executables with fast startup and low memory footprint
+- Except for the generic package, all platforms provide pre-compiled native executables with fast startup and low memory footprint
 
 ### Version Notes
 

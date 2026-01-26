@@ -75,8 +75,8 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             {
                 ProviderId = g.Key,
                 KeyCount = g.Select(x => x.mk.Id).Distinct().Count(),
-                ModelCount = g.Count(x => x.m != null),
-                AssignedModelCount = g.Count(x => x.m != null && assignedModelIds.Contains(x.m.Id))
+                ModelCount = g.Sum(x => x.m != null ? 1 : 0),
+                AssignedModelCount = g.Sum(x => x.m != null && assignedModelIds.Contains(x.m.Id) ? 1 : 0)
             }
         ).ToArrayAsync(cancellationToken);
 
@@ -105,8 +105,8 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             {
                 Id = g.Key.Id,
                 Name = g.Key.Name,
-                ModelCount = g.Count(x => x.m != null),
-                AssignedModelCount = g.Count(x => x.m != null && assignedModelIds.Contains(x.m.Id))
+                ModelCount = g.Sum(x => x.m != null ? 1 : 0),
+                AssignedModelCount = g.Sum(x => x.m != null && assignedModelIds.Contains(x.m.Id) ? 1 : 0)
             }
         ).ToArrayAsync(cancellationToken);
 
@@ -551,8 +551,8 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             {
                 ProviderId = g.Key,
                 KeyCount = g.Select(x => x.mk.Id).Distinct().Count(),
-                ModelCount = g.Count(x => x.m != null),
-                AssignedModelCount = g.Count(x => x.m != null && assignedModelIds.Contains(x.m.Id))
+                ModelCount = g.Sum(x => x.m != null ? 1 : 0),
+                AssignedModelCount = g.Sum(x => x.m != null && assignedModelIds.Contains(x.m.Id) ? 1 : 0)
             }
         ).FirstOrDefaultAsync(cancellationToken);
     }
@@ -576,8 +576,8 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             {
                 Id = g.Key.Id,
                 Name = g.Key.Name,
-                ModelCount = g.Count(x => x.m != null),
-                AssignedModelCount = g.Count(x => x.m != null && assignedModelIds.Contains(x.m.Id))
+                ModelCount = g.Sum(x => x.m != null ? 1 : 0),
+                AssignedModelCount = g.Sum(x => x.m != null && assignedModelIds.Contains(x.m.Id) ? 1 : 0)
             }
         ).FirstOrDefaultAsync(cancellationToken);
     }

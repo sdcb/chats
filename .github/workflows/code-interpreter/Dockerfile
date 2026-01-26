@@ -19,6 +19,8 @@ RUN pip install --break-system-packages ${PIP_PACKAGES} \
 ENV PRECACHE_PACKAGES="${NUGET_PRECACHE}"
 ENV NODE_PATH=/usr/local/lib/node_modules
 
+COPY matplotlibrc /root/.config/matplotlib/matplotlibrc
+
 COPY download-nuget.sh /tmp/download-nuget.sh
 RUN chmod +x /tmp/download-nuget.sh \
     && /tmp/download-nuget.sh \
@@ -30,6 +32,5 @@ COPY skills.md /tmp/skills.template.md
 COPY render-skills.py /tmp/render-skills.py
 
 WORKDIR /app
-COPY skills/ /app/skills/
 RUN python3 /tmp/render-skills.py /tmp/skills.template.md /app/skills.md \
     && rm -f /tmp/skills.template.md /tmp/render-skills.py

@@ -155,7 +155,7 @@ public class AnthropicMessagesController(
         {
             icc.FinishReason = rawEx.ErrorCode;
             logger.LogError(rawEx, "Upstream error: {StatusCode}", rawEx.StatusCode);
-            errorToReturn = await YieldRawError(hasSuccessYield && request.Streamed, rawEx.Body, cancellationToken);
+            errorToReturn = await YieldRawError(hasSuccessYield && request.Streamed, rawEx.StatusCode, rawEx.Body, cancellationToken);
         }
         catch (ChatServiceException cse)
         {
@@ -388,7 +388,7 @@ public class AnthropicMessagesController(
         return ErrorMessage(errorType, message);
     }
 
-    private async Task<ContentResult> YieldRawError(bool shouldStreamed, string rawBody, CancellationToken cancellationToken)
+    private async Task<ContentResult> YieldRawError(bool shouldStreamed, int statusCode, string rawBody, CancellationToken cancellationToken)
     {
         if (shouldStreamed)
         {
@@ -406,7 +406,7 @@ public class AnthropicMessagesController(
         {
             Content = rawBody,
             ContentType = "application/json",
-            StatusCode = 400
+            StatusCode = statusCode
         };
     }
 

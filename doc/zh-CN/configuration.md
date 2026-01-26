@@ -241,7 +241,7 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 ### 6.1 `CodeInterpreter:DefaultImage`
 
 - **类型**：字符串（Docker 镜像名）
-- **默认值**：`sdcb/code-interpreter:r-26`
+- **默认值**：`sdcb/code-interpreter:latest`
 - **用途**：新建代码解释器会话时使用的默认镜像。
 
 ### 6.2 `CodeInterpreter:DefaultImageDescription`
