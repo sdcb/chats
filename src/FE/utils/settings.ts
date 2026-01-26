@@ -2,24 +2,18 @@ import { isMobile } from './common';
 
 const STORAGE_KEY = 'settings';
 
-export const DEFAULT_FONT_SIZE = 14;
+export const DEFAULT_FONT_SIZE = 15;
 export const MIN_FONT_SIZE = 12;
 export const MAX_FONT_SIZE = 18;
-
-export type ChatWindowStyle = 'dialog' | 'document';
 
 export interface Settings {
   showChatBar: boolean;
   fontSize: number;
-  hideChatBackground: boolean;
-  chatWindowStyle: ChatWindowStyle;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   showChatBar: typeof window !== 'undefined'  && isMobile() ? false : true,
   fontSize: DEFAULT_FONT_SIZE,
-  hideChatBackground: false,
-  chatWindowStyle: 'dialog',
 };
 
 export const getSettings = (): Settings => {

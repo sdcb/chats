@@ -1,7 +1,6 @@
 import { FC, memo } from 'react';
 
 import { hasMultipleSpans } from '@/utils/chats';
-import { ChatWindowStyle } from '@/utils/settings';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatRole, IChat, Message, ResponseContent } from '@/types/chat';
@@ -23,7 +22,6 @@ export interface Props {
   className?: string;
   chatShareId?: string;
   isAdminView?: boolean;
-  chatWindowStyle?: ChatWindowStyle;
   onChangeChatLeafMessageId?: (messageId: string) => void;
   onEditAndSendMessage?: (editedMessage: Message, parentId?: string) => void;
   onRegenerate?: (spanId: number, messageId: string, modelId: number) => void;
@@ -49,7 +47,6 @@ export const ChatMessage: FC<Props> = memo(
     className,
     chatShareId,
     isAdminView,
-    chatWindowStyle = 'dialog',
     onChangeChatLeafMessageId,
     onEditAndSendMessage,
     onRegenerate,
@@ -61,7 +58,6 @@ export const ChatMessage: FC<Props> = memo(
     onRegenerateAllAssistant,
   }) => {
     const isMultiSpan = hasMultipleSpans(selectedMessages);
-    const isDocumentMode = chatWindowStyle === 'document';
     return (
       <div
         className={cn(
@@ -76,12 +72,8 @@ export const ChatMessage: FC<Props> = memo(
               key={'message-group-' + groupIndex}
               className={cn(
                 isUserMessageGroup
-                  ? isDocumentMode
-                    ? 'flex w-full justify-start'
-                    : 'flex w-full justify-end'
+                  ? 'flex w-full justify-end'
                   : 'md:grid md:grid-cols-[repeat(auto-fit,minmax(375px,1fr))] gap-4',
-                // 文档模式下，从第二条用户消息开始，与上方返回消息添加间距
-                isDocumentMode && isUserMessageGroup && groupIndex > 0 && 'mt-2',
               )}
             >
               {messages.map((message, index) => {
@@ -92,7 +84,7 @@ export const ChatMessage: FC<Props> = memo(
                         key={'user-message-' + index}
                         className={cn(
                           'prose w-full dark:prose-invert rounded-r-md group',
-                          !isDocumentMode && 'sm:w-[50vw] xl:w-[50vw]',
+                          'sm:w-[50vw] xl:w-[50vw]',
                           index > 0 && 'mt-4',
                         )}
                         data-user-message-id={message.id}
@@ -101,7 +93,6 @@ export const ChatMessage: FC<Props> = memo(
                           readonly={readonly}
                           selectedChat={selectedChat}
                           message={message}
-                          chatWindowStyle={chatWindowStyle}
                           onChangeMessage={onChangeChatLeafMessageId}
                           onEditAndSendMessage={onEditAndSendMessage}
                           onEditUserMessage={onEditUserMessage}
@@ -154,7 +145,6 @@ export const ChatMessage: FC<Props> = memo(
                           message={message}
                           chatShareId={chatShareId}
                           isAdminView={isAdminView}
-                          chatWindowStyle={chatWindowStyle}
                           onChangeMessage={onChangeChatLeafMessageId}
                           onReactionMessage={onReactionMessage}
                           onRegenerate={(

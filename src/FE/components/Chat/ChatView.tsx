@@ -82,7 +82,6 @@ import {
 } from '@/apis/clientApis';
 import { streamGeneralChat, streamRegenerateAssistant, streamRegenerateAllAssistant, ChatApiError } from '@/apis/chatApi';
 import { cn } from '@/lib/utils';
-import { ChatWindowStyle, getSettings } from '@/utils/settings';
 
 const ChatView = memo(() => {
   const { t } = useTranslation();
@@ -126,31 +125,6 @@ const ChatView = memo(() => {
     useState<boolean>(false);
   const [showScrollToPrevUserMessageButton, setShowScrollToPrevUserMessageButton] =
     useState<boolean>(false);
-  const [chatWindowStyle, setChatWindowStyle] = useState<ChatWindowStyle>('dialog');
-
-  useEffect(() => {
-    const settings = getSettings();
-    setChatWindowStyle(settings.chatWindowStyle || 'dialog');
-
-    // 监听 chatWindowStyle 的变化
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'data-chat-window-style') {
-          const newStyle = document.documentElement.getAttribute('data-chat-window-style') as ChatWindowStyle;
-          if (newStyle) {
-            setChatWindowStyle(newStyle);
-          }
-        }
-      });
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-chat-window-style'],
-    });
-
-    return () => observer.disconnect();
-  }, []);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -1645,7 +1619,6 @@ const ChatView = memo(() => {
                 selectedMessages={selectedMessages}
                 models={models}
                 messagesEndRef={messagesEndRef}
-                chatWindowStyle={chatWindowStyle}
                 onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
                 onEditAndSendMessage={handleEditAndSendMessage}
                 onRegenerate={handleRegenerate}
