@@ -7,7 +7,8 @@
 - **Docker 部署**：任何支持 Docker 的系统（Linux/Windows/macOS）
 - **可执行文件部署**：
   - Windows: Windows 10 或更高版本
-  - Linux: glibc 2.17+ 或 musl libc
+  - Linux: glibc 2.27+（Ubuntu 18.04+、Debian 10+、RHEL8+ 等）
+  - Alpine Linux: Alpine 3.12+
   - macOS: macOS 10.15 或更高版本
 - **数据库**：SQLite（默认，无需安装）/ SQL Server / PostgreSQL
 

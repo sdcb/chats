@@ -7,7 +7,8 @@
 - **Docker Deployment**: Any system that supports Docker (Linux/Windows/macOS)
 - **Executable Deployment**:
   - Windows: Windows 10 or higher
-  - Linux: glibc 2.17+ or musl libc
+  - Linux: glibc 2.27+（Ubuntu 18.04+、Debian 10+、RHEL8+ 等）
+  - Alpine Linux: Alpine 3.12+
   - macOS: macOS 10.15 or higher
 - **Database**: SQLite (default, no installation required) / SQL Server / PostgreSQL
 
