@@ -13,7 +13,7 @@ interface ToolCallBlockProps {
     toolResponse?: ToolResponseContent;
     chatStatus?: ChatSpanStatus;
     /**
-     * 当后续（非 tool call/response）message content 开始输出后，自动收起。
+     * 当后续有任何内容（包括另一个 tool call）开始输出后，自动收起。
      * 注意：不会覆盖用户手动展开/收起。
      */
     nextMessageContentStarted?: boolean;
