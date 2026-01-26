@@ -9,7 +9,7 @@ import { ChatStatus, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
 
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
-import { IconDots, IconPlus, IconSettingsCog, IconX } from '@/components/Icons';
+import { IconDots, IconPlus, IconSettingsCog, IconTools, IconX } from '@/components/Icons';
 import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -24,6 +24,7 @@ import { setChats } from '@/actions/chat.actions';
 import HomeContext from '@/contexts/home.context';
 import ChatModelSettingModal from './ChatModelSettingsModal';
 import ChatPresetResetDialog from './ChatPresetResetDialog';
+import ChatSessionManagerWindow from '@/components/ChatSessionManager/ChatSessionManagerWindow';
 
 import {
   deleteUserChatSpan,
@@ -44,6 +45,7 @@ const ChatHeader = () => {
 
   const [selectedSpanId, setSelectedSpanId] = useState<number | null>(null);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isSessionManagerOpen, setIsSessionManagerOpen] = useState(false);
   
   // 如果没有选中的聊天，返回空
   if (!selectedChat) {
@@ -210,6 +212,28 @@ const ChatHeader = () => {
     );
   };
 
+  const renderSessionManagerButton = () => {
+    return (
+      <div className="flex items-center ml-2">
+        <Tips
+          trigger={
+            <Button
+              variant="ghost"
+              className="p-2 h-auto hover:bg-accent"
+              onClick={() => setIsSessionManagerOpen(true)}
+            >
+              <IconTools size={16} />
+              <span className="hidden sm:inline text-xs ml-1">
+                {t('Session Manager')}
+              </span>
+            </Button>
+          }
+          content={t('Session Manager')}
+        />
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="absolute top-0 left-0 w-full border-transparent bg-background">
@@ -346,6 +370,7 @@ const ChatHeader = () => {
                   })}
                   {renderAddButton()}
                   {renderResetButton()}
+                  {renderSessionManagerButton()}
                 </div>
               </div>
             </div>
@@ -366,6 +391,12 @@ const ChatHeader = () => {
       <ChatPresetResetDialog
         isOpen={isResetDialogOpen}
         onClose={() => setIsResetDialogOpen(false)}
+      />
+
+      <ChatSessionManagerWindow
+        chatId={selectedChat.id}
+        open={isSessionManagerOpen}
+        onOpenChange={setIsSessionManagerOpen}
       />
     </>
   );
