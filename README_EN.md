@@ -63,6 +63,7 @@ Please submit issues or suggestions via [GitHub Issues](https://github.com/sdcb/
 
 - **GitHub Issues**: [https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
 - **QQ Group**: 498452653 [![Join QQ Group](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=flat&logo=tencent-qq)](https://qm.qq.com/q/AM8tY9cAsS)
+- **WeChat Group** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png) If the WeChat group is full, please join the QQ group to get a temporary invitation QR code.
 
 ---
 

@@ -113,7 +113,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                   checked={field.value}
                   onCheckedChange={field.onChange}
                   label={t('Allow Code Execution')}
-                  tooltip={t("Enables the model provider's built-in code execution capability (e.g., Gemini). It is NOT a system-provided tool.")}
+                  tooltip={t("Enables the system's built-in Docker sandbox-based code executor capability.")}
                 />
               )}
             />
