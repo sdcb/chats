@@ -85,17 +85,31 @@ C:\Users\ZhouJie\Downloads\chats-win-x64>dir
  2024/12/06  16:35    <DIR>          wwwroot
 ```
 
-- **Start Application**: Run `Chats.BE.exe` to start the Chats application. Although this filename indicates "backend," it actually contains both frontend and backend components.
-- **Database Configuration**: By default, the application will create a directory named `AppData` in the current directory and use SQLite as the database. Command-line parameters can be used to specify a different database type:
-  ```pwsh
-  .\Chats.BE.exe --urls http://+:5000 --CodePod:DockerEndpoint npipe://./pipe/docker_engine --DBType=mssql --ConnectionStrings:ChatsDB="Data Source=(localdb)\mssqllocaldb; Initial Catalog=ChatsDB; Integrated Security=True"
-  ```
-  - Parameter `--urls`: Used to specify the address and port the application listens on.
-  - Parameter `--CodePod:DockerEndpoint`: Specifies the Docker service endpoint address. On Windows, if you want to connect to Linux containers in Docker Desktop as the Code Interpreter sandbox, you need to use `npipe://./pipe/docker_engine` instead of the default `unix:///var/run/docker.sock`, otherwise you'll encounter a `Connection failed` error when creating Docker sessions.
-  - Parameter `DBType`: Options are `sqlite`, `mssql`, or `pgsql`.
-  - Parameter `--ConnectionStrings:ChatsDB`: For specifying the ADO.NET connection string for the database.
-  
-  > For more configuration options, please refer to the [Configuration Guide](./configuration.md).
+**Basic Startup**: Simply run `Chats.BE.exe` to start the application (although the filename indicates "backend," it actually contains both frontend and backend components). The application defaults to using SQLite database and creates an `AppData` folder in the current directory to store data.
+
+**Windows + Docker Desktop Deployment**: If you have Docker Desktop installed on Windows and want to use the Code Interpreter feature, you need to specify the Docker endpoint:
+
+```pwsh
+.\Chats.BE.exe --urls http://+:5000 --CodePod:DockerEndpoint npipe://./pipe/docker_engine
+```
+
+This configuration binds the application to port 5000 and connects to Docker Desktop's named pipe to support Docker sandbox-based code execution environment.
+
+**Additional Configuration Options**:
+
+If you need to customize port, database type, or connection string, you can configure them via command-line parameters, for example:
+
+```pwsh
+.\Chats.BE.exe --urls http://+:5000 --CodePod:DockerEndpoint npipe://./pipe/docker_engine --DBType=mssql --ConnectionStrings:ChatsDB="Data Source=(localdb)\mssqllocaldb; Initial Catalog=ChatsDB; Integrated Security=True"
+```
+
+**Parameter Descriptions**:
+- `--urls`: Specifies the address and port the application listens on
+- `--CodePod:DockerEndpoint`: Specifies the Docker service endpoint. Use `npipe://./pipe/docker_engine` on Windows to connect to Docker Desktop; Linux/macOS use the default `unix:///var/run/docker.sock`
+- `--DBType`: Database type, options are `sqlite` (default), `mssql`, or `pgsql`
+- `--ConnectionStrings:ChatsDB`: ADO.NET connection string for the database
+
+> 💡 For more advanced configuration options, please refer to the [Configuration Guide](./configuration.md).
 
 ### .NET Runtime Dependent Version
 
