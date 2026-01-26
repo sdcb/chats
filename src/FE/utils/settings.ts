@@ -12,7 +12,6 @@ export interface Settings {
   showChatBar: boolean;
   fontSize: number;
   hideChatBackground: boolean;
-  hideInputAfterSend: boolean;
   chatWindowStyle: ChatWindowStyle;
 }
 
@@ -20,17 +19,16 @@ export const DEFAULT_SETTINGS: Settings = {
   showChatBar: typeof window !== 'undefined'  && isMobile() ? false : true,
   fontSize: DEFAULT_FONT_SIZE,
   hideChatBackground: false,
-  hideInputAfterSend: false,
   chatWindowStyle: 'dialog',
 };
 
 export const getSettings = (): Settings => {
-  let settings = DEFAULT_SETTINGS;
+  let settings = { ...DEFAULT_SETTINGS };
   if (typeof localStorage === 'undefined') return settings;
   const settingsJson = localStorage.getItem(STORAGE_KEY);
   if (settingsJson) {
     let savedSettings = JSON.parse(settingsJson) as Settings;
-    settings = Object.assign(settings, savedSettings);
+    settings = { ...settings, ...savedSettings };
   }
   return settings;
 };

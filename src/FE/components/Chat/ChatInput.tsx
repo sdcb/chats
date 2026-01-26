@@ -12,7 +12,6 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { isMobile } from '@/utils/common';
 import { formatPrompt } from '@/utils/promptVariable';
-import { getSettings } from '@/utils/settings';
 
 import {
   ChatRole,
@@ -167,7 +166,6 @@ const ChatInput = ({
 
     const prevStatus = prevChatStatusRef.current;
     const currentStatus = selectedChat.status;
-    const { hideInputAfterSend } = getSettings();
 
     // 从"非聊天" -> "聊天" 开始：标记本轮会话需要在结束时自动展开；如当前是展开，则先自动收起
     if (
@@ -176,8 +174,8 @@ const ChatInput = ({
     ) {
       // 会话上下文开始：预期结束时自动展开，除非期间被用户手动修改
       setIsCollapsedByChat(true);
-      // 仅当设置开启时才自动收起输入框
-      if (hideInputAfterSend && showChatInput) {
+      // 自动收起输入框
+      if (showChatInput) {
         settingDispatch(setShowChatInput(false));
       }
     }
@@ -187,8 +185,8 @@ const ChatInput = ({
       prevStatus === ChatStatus.Chatting &&
       currentStatus !== ChatStatus.Chatting
     ) {
-      // 仅当设置开启时才自动展开输入框
-      if (hideInputAfterSend && isCollapsedByChat && !showChatInput) {
+      // 自动展开输入框
+      if (isCollapsedByChat && !showChatInput) {
         settingDispatch(setShowChatInput(true));
       }
       // 无论是否展开，结束后重置标记，新的聊天重新计算
