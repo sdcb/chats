@@ -64,6 +64,32 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
         });
     }
 
+    public async Task<List<string>> ListImagesAsync(CancellationToken cancellationToken = default)
+    {
+        return await WrapDockerOperationAsync("ListImages", async () =>
+        {
+            IList<ImagesListResponse> images = await _client.Images.ListImagesAsync(
+                new ImagesListParameters { All = true },
+                cancellationToken);
+
+            HashSet<string> tags = new(StringComparer.OrdinalIgnoreCase);
+            foreach (ImagesListResponse img in images)
+            {
+                if (img.RepoTags == null) continue;
+                foreach (string tag in img.RepoTags)
+                {
+                    if (string.IsNullOrWhiteSpace(tag)) continue;
+                    if (tag == "<none>:<none>") continue;
+                    tags.Add(tag);
+                }
+            }
+
+            return tags
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        });
+    }
+
     private async Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits, NetworkMode? networkMode, CancellationToken cancellationToken)
     {
         // 使用指定的资源限制或默认值
@@ -494,17 +520,35 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
 
     public async Task<List<FileEntry>> ListDirectoryAsync(string containerId, string path, CancellationToken cancellationToken = default)
     {
-        return await WrapDockerOperationAsync("ListDirectory", async () =>
+        try
         {
-            GetArchiveFromContainerResponse archive = await _client.Containers.GetArchiveFromContainerAsync(
-                containerId,
-                new GetArchiveFromContainerParameters { Path = path },
-                false,
-                cancellationToken);
+            return await WrapDockerOperationAsync("ListDirectory", async () =>
+            {
+                GetArchiveFromContainerResponse archive = await _client.Containers.GetArchiveFromContainerAsync(
+                    containerId,
+                    new GetArchiveFromContainerParameters { Path = path },
+                    false,
+                    cancellationToken);
 
-            await using Stream stream = archive.Stream;
-            return await ListDirectoryFromTarStreamAsync(path, stream, cancellationToken);
-        }, containerId);
+                await using Stream stream = archive.Stream;
+                return await ListDirectoryFromTarStreamAsync(path, stream, cancellationToken);
+            }, containerId);
+        }
+        catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            // Docker returns 404 for both: container not found AND path not found.
+            // Verify container existence to report a correct error.
+            try
+            {
+                _ = await _client.Containers.InspectContainerAsync(containerId, cancellationToken);
+            }
+            catch (DockerApiException inspectEx) when (inspectEx.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                throw new ContainerNotFoundException(containerId, inspectEx);
+            }
+
+            throw new ContainerPathNotFoundException(containerId, path, ex);
+        }
     }
 
     internal static async Task<List<FileEntry>> ListDirectoryFromTarStreamAsync(string requestedPath, Stream tarStream, CancellationToken cancellationToken)

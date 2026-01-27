@@ -25,6 +25,11 @@ public interface IDockerService : IDisposable
     Task<List<ContainerInfo>> GetManagedContainersAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 列出本机 Docker daemon 的镜像标签（RepoTags）。
+    /// </summary>
+    Task<List<string>> ListImagesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 获取容器详情
     /// </summary>
     Task<ContainerInfo?> GetContainerAsync(string containerId, CancellationToken cancellationToken = default);

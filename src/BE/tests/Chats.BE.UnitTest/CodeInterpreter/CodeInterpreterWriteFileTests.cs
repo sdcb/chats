@@ -33,6 +33,9 @@ public sealed class CodeInterpreterWriteFileTests
         public Task<List<ContainerInfo>> GetManagedContainersAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(new List<ContainerInfo>());
 
+        public Task<List<string>> ListImagesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new List<string>());
+
         public Task<ContainerInfo?> GetContainerAsync(string containerId, CancellationToken cancellationToken = default)
             => Task.FromResult<ContainerInfo?>(null);
 

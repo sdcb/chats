@@ -130,6 +130,7 @@ public sealed class NetworkModeRestrictionsTests
         }
 
         public Task<List<ContainerInfo>> GetManagedContainersAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<List<string>> ListImagesAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<ContainerInfo?> GetContainerAsync(string containerId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task DeleteContainerAsync(string containerId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task DeleteAllManagedContainersAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
