@@ -6,10 +6,11 @@ import useTranslation from '@/hooks/useTranslation';
 import FloatingWindow from '@/components/ui/floating-window/FloatingWindow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { IconPlus } from '@/components/Icons';
+import { IconCheck, IconDocker, IconLoader, IconPlus, IconTrash, IconX } from '@/components/Icons';
 
 import {
   createChatDockerSession,
+  deleteChatDockerSession,
   getChatDockerSessions,
   getDockerCpuLimits,
   getDockerDefaultImage,
@@ -51,6 +52,8 @@ export default function ChatSessionManagerWindow({
   const [sessions, setSessions] = useState<DockerSessionDto[]>([]);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>('view');
+  const [deletingLabel, setDeletingLabel] = useState<string | null>(null);
+  const [confirmDeleteLabel, setConfirmDeleteLabel] = useState<string | null>(null);
 
   const [defaultImage, setDefaultImage] = useState<string>('');
   const [images, setImages] = useState<ImageListResponse>({ images: [] });
@@ -124,12 +127,40 @@ export default function ChatSessionManagerWindow({
   const handleCreate = useCallback(
     async (req: CreateDockerSessionRequest) => {
       const created = await createChatDockerSession(chatId, req);
-      setSessions((prev) => [...prev, created].sort((a, b) => a.id - b.id));
+      setSessions((prev) => [...prev, created]);
       setSelectedLabel(created.label);
       setMode('view');
       toast.success(t('Created successful'));
     },
     [chatId, t],
+  );
+
+  const handleDelete = useCallback(
+    async (label: string) => {
+      const session = sessions.find((s) => s.label === label);
+      if (!session) return;
+      setDeletingLabel(label);
+      try {
+        await deleteChatDockerSession(chatId, session.encryptedSessionId);
+        // 请求成功，直接更新前端列表
+        setSessions((prev) => prev.filter((s) => s.label !== label));
+        if (selectedLabel === label) {
+          setSelectedLabel((prev) => {
+            const remaining = sessions.filter((s) => s.label !== label);
+            return remaining.length > 0 ? remaining[0].label : null;
+          });
+        }
+        toast.success(t('Deleted successful'));
+      } catch {
+        // 请求失败，重新获取列表
+        await loadSessions();
+        toast.error(t('Delete failed'));
+      } finally {
+        setDeletingLabel(null);
+        setConfirmDeleteLabel(null);
+      }
+    },
+    [chatId, loadSessions, selectedLabel, sessions, t],
   );
 
   const showEmpty = !loadingSessions && sessions.length === 0;
@@ -138,7 +169,12 @@ export default function ChatSessionManagerWindow({
     <FloatingWindow
       open={open}
       onOpenChange={onOpenChange}
-      title={t('Session Manager')}
+      title={
+        <span className="flex items-center gap-2">
+          <IconDocker size={18} />
+          {t('Session Manager')}
+        </span>
+      }
       className="w-[min(100vw,920px)]"
     >
       <div className="p-3 flex flex-col gap-3">
@@ -152,23 +188,65 @@ export default function ChatSessionManagerWindow({
           ) : (
             <>
               {sessions.map((s) => (
-                <button
-                  key={s.id}
+                <div
+                  key={s.encryptedSessionId}
                   className={cn(
-                    'shrink-0 h-8 px-3 rounded-md border text-sm',
+                    'shrink-0 h-8 rounded-md border text-sm flex items-center',
                     selectedLabel === s.label
                       ? 'bg-accent'
                       : 'bg-background hover:bg-accent/60',
                   )}
-                  onClick={() => {
-                    setSelectedLabel(s.label);
-                    setMode('view');
-                    setActiveFilePath(null);
-                  }}
-                  title={s.image}
                 >
-                  {s.label}
-                </button>
+                  {confirmDeleteLabel === s.label ? (
+                    <div className="flex items-center px-2 gap-1">
+                      <span className="text-xs mr-1">{s.label}</span>
+                      <button
+                        className="p-1 hover:bg-accent rounded"
+                        onClick={() => handleDelete(s.label)}
+                        disabled={deletingLabel === s.label}
+                        title={t('Confirm')}
+                      >
+                        {deletingLabel === s.label ? (
+                          <IconLoader size={14} className="animate-spin" />
+                        ) : (
+                          <IconCheck size={14} />
+                        )}
+                      </button>
+                      <button
+                        className="p-1 hover:bg-accent rounded"
+                        onClick={() => setConfirmDeleteLabel(null)}
+                        disabled={deletingLabel === s.label}
+                        title={t('Cancel')}
+                      >
+                        <IconX size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        className="h-full px-3"
+                        onClick={() => {
+                          setSelectedLabel(s.label);
+                          setMode('view');
+                          setActiveFilePath(null);
+                        }}
+                        title={s.image}
+                      >
+                        {s.label}
+                      </button>
+                      <button
+                        className="pr-2 pl-1 h-full hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDeleteLabel(s.label);
+                        }}
+                        title={t('Delete')}
+                      >
+                        <IconTrash size={14} />
+                      </button>
+                    </>
+                  )}
+                </div>
               ))}
               <Button
                 variant="ghost"
@@ -206,7 +284,7 @@ export default function ChatSessionManagerWindow({
           <div className="flex flex-col gap-4">
             <SessionCommandRunner
               chatId={chatId}
-              sessionId={selectedSession.label}
+              encryptedSessionId={selectedSession.encryptedSessionId}
               onFinished={(ok) => {
                 if (ok) {
                   setRefreshFilesKey((k) => k + 1);
@@ -218,7 +296,7 @@ export default function ChatSessionManagerWindow({
             <SessionFileManager
               ref={fileManagerRef}
               chatId={chatId}
-              sessionId={selectedSession.label}
+              encryptedSessionId={selectedSession.encryptedSessionId}
               refreshKey={refreshFilesKey}
               onOpenTextFile={(path) => setActiveFilePath(path)}
             />
@@ -226,7 +304,7 @@ export default function ChatSessionManagerWindow({
             {activeFilePath && (
               <SessionFileEditor
                 chatId={chatId}
-                sessionId={selectedSession.label}
+                encryptedSessionId={selectedSession.encryptedSessionId}
                 path={activeFilePath}
                 onClose={() => setActiveFilePath(null)}
                 onSaved={() => {

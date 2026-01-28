@@ -154,7 +154,8 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig)
                 .ThenInclude(x => x.ChatConfigMcps).ThenInclude(x => x.McpServer.McpTools)
-            .Include(x => x.ChatTurns).ThenInclude(x => x.ChatDockerSessions)
+            .Include(x => x.ChatTurns).ThenInclude(x => x.ChatDockerSessions.Where(s => s.TerminatedAt == null && s.ExpiresAt > DateTime.UtcNow))
+            .Include(x => x.ChatDockerSessions.Where(s => s.TerminatedAt == null && s.ExpiresAt > DateTime.UtcNow))
             .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == req.ChatId && x.UserId == currentUser.Id, cancellationToken);
         if (chat == null)
@@ -244,6 +245,21 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 ParentId = generalRequest.ParentAssistantMessageId,
             };
             chat.ChatTurns.Add(newDbUserTurn);
+
+            // Bind dangling docker sessions to the new user turn if any span has code execution enabled
+            bool anyCodeExecutionEnabled = toGenerateSpans.Any(x => x.ChatConfig.CodeExecutionEnabled);
+            if (anyCodeExecutionEnabled)
+            {
+                DateTime nowUtc = DateTime.UtcNow;
+                List<ChatDockerSession> danglingSessions = [.. chat.ChatDockerSessions.Where(x => x.OwnerTurnId == null)];
+
+                foreach (ChatDockerSession session in danglingSessions)
+                {
+                    session.OwnerTurn = newDbUserTurn;
+                    // Also add to the collection so CollectActiveSessions can find it via newDbUserTurn
+                    newDbUserTurn.ChatDockerSessions.Add(session);
+                }
+            }
         }
         else if (req is RegenerateAllAssistantMessageRequest regenerateRequest)
         {
@@ -502,10 +518,15 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         // Combine message tree and user message steps, then convert to neutral format
         List<Step> allSteps = [.. messageTree, .. dbUserMessage?.Steps ?? []];
 
+        // Include dbUserMessage in the turns for CollectActiveSessions to find dangling sessions bound to it
+        IEnumerable<ChatTurn> allTurns = dbUserMessage != null
+            ? messageTurns.Append(dbUserMessage)
+            : messageTurns;
+
         bool codeExecutionEnabled = chatSpan.ChatConfig.CodeExecutionEnabled;
 
         string? ciPrefix = codeExecutionEnabled
-            ? codeInterpreter.BuildCodeInterpreterContextPrefix(messageTurns, allSteps)
+            ? codeInterpreter.BuildCodeInterpreterContextPrefix(allTurns)
             : null;
 
         IList<NeutralMessage> neutralMessages = CodeInterpreterContextMessageBuilder.BuildMessages(
@@ -519,7 +540,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             Messages = neutralMessages,
             ChatConfig = chatSpan.ChatConfig,
             System = chatSpan.ChatConfig.CodeExecutionEnabled
-                ? codeInterpreter.BuildSystemMessage(chatSpan.ChatConfig.SystemPrompt, allSteps)
+                ? codeInterpreter.BuildSystemMessage(chatSpan.ChatConfig.SystemPrompt)
                 : null,
             Tools = [],
             Source = UsageSource.WebChat,
@@ -578,9 +599,16 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         CodeInterpreterExecutor.TurnContext? ciCtx = null;
         if (codeExecutionEnabled)
         {
+            // Include dbUserMessage so that dangling sessions bound to it can be found by EnsureSession
+            List<ChatTurn> contextTurns = [.. messageTurns.Where(t => t.Id > 0)];
+            if (dbUserMessage != null)
+            {
+                contextTurns.Add(dbUserMessage);
+            }
+
             ciCtx = new CodeInterpreterExecutor.TurnContext
             {
-                MessageTurns = messageTurns.Where(t => t.Id > 0).ToList(),
+                MessageTurns = contextTurns,
                 MessageSteps = allSteps.ToList(),
                 CurrentAssistantTurn = turn,
                 ClientInfoId = await clientInfoIdTask,

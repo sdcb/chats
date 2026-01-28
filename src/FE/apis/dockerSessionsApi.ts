@@ -89,6 +89,17 @@ export const createChatDockerSession = (
   });
 };
 
+export const deleteChatDockerSession = (
+  chatId: string,
+  encryptedSessionId: string,
+) => {
+  const fetchService = createFetchClient();
+  return fetchService.delete<void>(
+    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}`,
+    { suppressDefaultToast: true },
+  );
+};
+
 export const getDockerDefaultImage = () => {
   const fetchService = createFetchClient();
   return fetchService.get<DefaultImageResponse>(`/api/docker-sessions/default-image`, {
@@ -126,12 +137,12 @@ export const getDockerNetworkModes = () => {
 
 export async function* streamRunDockerCommand(
   chatId: string,
-  sessionId: string,
+  encryptedSessionId: string,
   body: RunCommandRequest,
   options?: FetchOptions,
 ): AsyncGenerator<CommandStreamLine> {
   const res = await fetch(
-    `${getApiUrl()}/api/chat/${chatId}/docker-sessions/${encodeURIComponent(sessionId)}/run-command`,
+    `${getApiUrl()}/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}/run-command`,
     {
       method: 'POST',
       headers: {
@@ -153,19 +164,19 @@ export async function* streamRunDockerCommand(
 
 export const listDockerDirectory = (
   chatId: string,
-  sessionId: string,
+  encryptedSessionId: string,
   path?: string | null,
 ) => {
   const fetchService = createFetchClient();
   return fetchService.get<DirectoryListResponse>(
-    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(sessionId)}/files`,
+    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}/files`,
     { params: { path: path ?? undefined }, suppressDefaultToast: true },
   );
 };
 
 export const uploadDockerFiles = async (
   chatId: string,
-  sessionId: string,
+  encryptedSessionId: string,
   dir: string,
   files: File[],
 ) => {
@@ -176,67 +187,67 @@ export const uploadDockerFiles = async (
   }
 
   await fetchService.post<void>(
-    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(sessionId)}/upload?dir=${encodeURIComponent(dir)}`,
+    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}/upload?dir=${encodeURIComponent(dir)}`,
     { body: form, suppressDefaultToast: true },
   );
 };
 
 export const downloadDockerFile = async (
   chatId: string,
-  sessionId: string,
+  encryptedSessionId: string,
   path: string,
 ) => {
   const fetchService = createFetchClient();
   return fetchService.get<Blob>(
-    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(sessionId)}/download`,
+    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}/download`,
     { params: { path }, suppressDefaultToast: true },
   );
 };
 
 export const deleteDockerFile = async (
   chatId: string,
-  sessionId: string,
+  encryptedSessionId: string,
   path: string,
 ) => {
   const fetchService = createFetchClient();
   return fetchService.delete<void>(
-    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(sessionId)}/file`,
+    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}/file`,
     { params: { path }, suppressDefaultToast: true },
   );
 };
 
 export const mkdirDockerDir = async (
   chatId: string,
-  sessionId: string,
+  encryptedSessionId: string,
   path: string,
 ) => {
   const fetchService = createFetchClient();
   return fetchService.post<void>(
-    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(sessionId)}/mkdir`,
+    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}/mkdir`,
     { body: { path }, suppressDefaultToast: true },
   );
 };
 
 export const readDockerTextFile = (
   chatId: string,
-  sessionId: string,
+  encryptedSessionId: string,
   path: string,
 ) => {
   const fetchService = createFetchClient();
   return fetchService.get<TextFileResponse>(
-    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(sessionId)}/text-file`,
+    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}/text-file`,
     { params: { path }, suppressDefaultToast: true },
   );
 };
 
 export const saveDockerTextFile = (
   chatId: string,
-  sessionId: string,
+  encryptedSessionId: string,
   body: SaveTextFileRequest,
 ) => {
   const fetchService = createFetchClient();
   return fetchService.put<void>(
-    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(sessionId)}/text-file`,
+    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}/text-file`,
     { body, suppressDefaultToast: true },
   );
 };

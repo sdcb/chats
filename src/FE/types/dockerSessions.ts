@@ -1,5 +1,5 @@
 export type DockerSessionDto = {
-  id: number;
+  encryptedSessionId: string;
   label: string;
   image: string;
   containerId: string;

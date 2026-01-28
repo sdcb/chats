@@ -11,7 +11,7 @@ import { getApiErrorMessage } from '@/utils/apiError';
 
 type Props = {
   chatId: string;
-  sessionId: string;
+  encryptedSessionId: string;
   path: string;
   onClose: () => void;
   onSaved: () => void;
@@ -19,7 +19,7 @@ type Props = {
 
 export default function SessionFileEditor({
   chatId,
-  sessionId,
+  encryptedSessionId,
   path,
   onClose,
   onSaved,
@@ -38,7 +38,7 @@ export default function SessionFileEditor({
     setText('');
     setOriginal('');
 
-    readDockerTextFile(chatId, sessionId, path)
+    readDockerTextFile(chatId, encryptedSessionId, path)
       .then((res) => {
         if (cancelled) return;
         if (!res.isText || res.text == null) {
@@ -61,7 +61,7 @@ export default function SessionFileEditor({
     return () => {
       cancelled = true;
     };
-  }, [chatId, path, sessionId]);
+  }, [chatId, path, encryptedSessionId]);
 
   const dirty = useMemo(() => isText && text !== original, [isText, original, text]);
 
@@ -117,7 +117,7 @@ export default function SessionFileEditor({
           onClick={async () => {
             setSaving(true);
             try {
-              await saveDockerTextFile(chatId, sessionId, { path, text });
+              await saveDockerTextFile(chatId, encryptedSessionId, { path, text });
               toast.success(t('Save successful'));
               setOriginal(text);
               onSaved();

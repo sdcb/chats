@@ -45,19 +45,14 @@ public sealed class ChatDockerSessionsController(
         CancellationToken cancellationToken)
     {
         int chatId = _idEncryption.DecryptChatId(encryptedChatId);
-        bool hasChat = await _db.Chats.AnyAsync(x => x.Id == chatId && x.UserId == _currentUser.Id && !x.IsArchived, cancellationToken);
-        if (!hasChat) return NotFound();
 
         DateTime now = DateTime.UtcNow;
-        ChatDockerSessionDto[] sessions = await (
-            from s in _db.ChatDockerSessions.AsNoTracking()
-            join t in _db.ChatTurns.AsNoTracking() on s.OwnerTurnId equals t.Id
-            where t.ChatId == chatId
-               && s.TerminatedAt == null
-               && s.ExpiresAt > now
-            orderby s.Id
-            select new ChatDockerSessionDto(
-                s.Id,
+        ChatDockerSessionDto[] sessions = await _db.ChatDockerSessions
+            .Where(x => (x.OwnerChatId == chatId)
+                     && x.TerminatedAt == null
+                     && x.ExpiresAt > now)
+            .Select(s => new ChatDockerSessionDto(
+                _idEncryption.Encrypt(s.Id, EncryptionPurpose.DockerSessionId),
                 s.Label,
                 s.Image,
                 s.ContainerId,
@@ -67,8 +62,8 @@ public sealed class ChatDockerSessionsController(
                 ((NetworkMode)s.NetworkMode).ToString().ToLowerInvariant(),
                 s.CreatedAt,
                 s.LastActiveAt,
-                s.ExpiresAt)
-        ).ToArrayAsync(cancellationToken);
+                s.ExpiresAt))
+            .ToArrayAsync(cancellationToken);
 
         return sessions;
     }
@@ -82,28 +77,6 @@ public sealed class ChatDockerSessionsController(
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
         int chatId = _idEncryption.DecryptChatId(encryptedChatId);
-        long? leafTurnId = await _db.Chats
-            .Where(x => x.Id == chatId && x.UserId == _currentUser.Id && !x.IsArchived)
-            .Select(x => x.LeafTurnId)
-            .FirstOrDefaultAsync(cancellationToken);
-        if (leafTurnId == null && !await _db.Chats.AnyAsync(x => x.Id == chatId && x.UserId == _currentUser.Id && !x.IsArchived, cancellationToken))
-        {
-            return NotFound();
-        }
-
-        long ownerTurnId = leafTurnId ?? 0;
-        if (ownerTurnId == 0)
-        {
-            ownerTurnId = await _db.ChatTurns
-                .Where(t => t.ChatId == chatId)
-                .OrderByDescending(t => t.Id)
-                .Select(t => t.Id)
-                .FirstOrDefaultAsync(cancellationToken);
-        }
-        if (ownerTurnId == 0)
-        {
-            return BadRequest("Chat has no turns yet. Send a message first, then create a Docker session.");
-        }
 
         ResourceLimits max = _options.BuildMaxResourceLimits();
         ResourceLimits defaults = _options.BuildDefaultResourceLimits();
@@ -155,7 +128,7 @@ public sealed class ChatDockerSessionsController(
         DateTime nowUtc = DateTime.UtcNow;
         ChatDockerSession dbSession = new()
         {
-            OwnerTurnId = ownerTurnId,
+            OwnerChatId = chatId,
             Label = label,
             ContainerId = container.ContainerId,
             Image = effectiveImage,
@@ -174,7 +147,7 @@ public sealed class ChatDockerSessionsController(
         await _db.SaveChangesAsync(cancellationToken);
 
         return new ChatDockerSessionDto(
-            dbSession.Id,
+            _idEncryption.Encrypt(dbSession.Id, EncryptionPurpose.DockerSessionId),
             dbSession.Label,
             dbSession.Image,
             dbSession.ContainerId,
@@ -187,16 +160,45 @@ public sealed class ChatDockerSessionsController(
             dbSession.ExpiresAt);
     }
 
-    [HttpPost("{sessionId}/run-command")]
+    [HttpDelete("{encryptedSessionId}")]
+    public async Task<IActionResult> DeleteSession(
+        string encryptedChatId,
+        [Required] string encryptedSessionId,
+        CancellationToken cancellationToken)
+    {
+        int chatId = _idEncryption.DecryptChatId(encryptedChatId);
+        long sessionId = _idEncryption.DecryptAsInt64(encryptedSessionId, EncryptionPurpose.DockerSessionId);
+        ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
+        if (session == null) return NotFound();
+
+        // 删除 Docker 容器
+        try
+        {
+            await _docker.DeleteContainerAsync(session.ContainerId, cancellationToken);
+        }
+        catch
+        {
+            // 容器可能已不存在，忽略错误继续删除数据库记录
+        }
+
+        // 标记数据库记录为已终止
+        session.TerminatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return NoContent();
+    }
+
+    [HttpPost("{encryptedSessionId}/run-command")]
     public async Task<IActionResult> RunCommand(
         string encryptedChatId,
-        [Required] string sessionId,
+        [Required] string encryptedSessionId,
         [FromBody] RunCommandRequest request,
         CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
         int chatId = _idEncryption.DecryptChatId(encryptedChatId);
+        long sessionId = _idEncryption.DecryptAsInt64(encryptedSessionId, EncryptionPurpose.DockerSessionId);
         ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
         if (session == null) return NotFound();
 
@@ -249,14 +251,15 @@ public sealed class ChatDockerSessionsController(
         return new EmptyResult();
     }
 
-    [HttpGet("{sessionId}/files")]
+    [HttpGet("{encryptedSessionId}/files")]
     public async Task<ActionResult<DirectoryListResponse>> ListDirectory(
         string encryptedChatId,
-        [Required] string sessionId,
+        [Required] string encryptedSessionId,
         [FromQuery] string? path,
         CancellationToken cancellationToken)
     {
         int chatId = _idEncryption.DecryptChatId(encryptedChatId);
+        long sessionId = _idEncryption.DecryptAsInt64(encryptedSessionId, EncryptionPurpose.DockerSessionId);
         ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
         if (session == null) return NotFound();
 
@@ -279,16 +282,17 @@ public sealed class ChatDockerSessionsController(
         }
     }
 
-    [HttpPost("{sessionId}/upload")]
+    [HttpPost("{encryptedSessionId}/upload")]
     [RequestSizeLimit(1024L * 1024 * 200)]
     public async Task<IActionResult> UploadFiles(
         string encryptedChatId,
-        [Required] string sessionId,
+        [Required] string encryptedSessionId,
         [FromQuery] string? dir,
         [FromForm] List<IFormFile> files,
         CancellationToken cancellationToken)
     {
         int chatId = _idEncryption.DecryptChatId(encryptedChatId);
+        long sessionId = _idEncryption.DecryptAsInt64(encryptedSessionId, EncryptionPurpose.DockerSessionId);
         ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
         if (session == null) return NotFound();
 
@@ -310,14 +314,15 @@ public sealed class ChatDockerSessionsController(
         return Ok();
     }
 
-    [HttpGet("{sessionId}/download")]
+    [HttpGet("{encryptedSessionId}/download")]
     public async Task<IActionResult> DownloadFile(
         string encryptedChatId,
-        [Required] string sessionId,
+        [Required] string encryptedSessionId,
         [FromQuery, Required] string path,
         CancellationToken cancellationToken)
     {
         int chatId = _idEncryption.DecryptChatId(encryptedChatId);
+        long sessionId = _idEncryption.DecryptAsInt64(encryptedSessionId, EncryptionPurpose.DockerSessionId);
         ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
         if (session == null) return NotFound();
 
@@ -333,14 +338,15 @@ public sealed class ChatDockerSessionsController(
         return File(bytes, contentType, fileName);
     }
 
-    [HttpDelete("{sessionId}/file")]
+    [HttpDelete("{encryptedSessionId}/file")]
     public async Task<IActionResult> DeleteFile(
         string encryptedChatId,
-        [Required] string sessionId,
+        [Required] string encryptedSessionId,
         [FromQuery, Required] string path,
         CancellationToken cancellationToken)
     {
         int chatId = _idEncryption.DecryptChatId(encryptedChatId);
+        long sessionId = _idEncryption.DecryptAsInt64(encryptedSessionId, EncryptionPurpose.DockerSessionId);
         ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
         if (session == null) return NotFound();
 
@@ -352,16 +358,17 @@ public sealed class ChatDockerSessionsController(
         return Ok();
     }
 
-    [HttpPost("{sessionId}/mkdir")]
+    [HttpPost("{encryptedSessionId}/mkdir")]
     public async Task<IActionResult> Mkdir(
         string encryptedChatId,
-        [Required] string sessionId,
+        [Required] string encryptedSessionId,
         [FromBody] MkdirRequest request,
         CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
         int chatId = _idEncryption.DecryptChatId(encryptedChatId);
+        long sessionId = _idEncryption.DecryptAsInt64(encryptedSessionId, EncryptionPurpose.DockerSessionId);
         ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
         if (session == null) return NotFound();
 
@@ -373,14 +380,15 @@ public sealed class ChatDockerSessionsController(
         return Ok();
     }
 
-    [HttpGet("{sessionId}/text-file")]
+    [HttpGet("{encryptedSessionId}/text-file")]
     public async Task<ActionResult<TextFileResponse>> ReadTextFile(
         string encryptedChatId,
-        [Required] string sessionId,
+        [Required] string encryptedSessionId,
         [FromQuery, Required] string path,
         CancellationToken cancellationToken)
     {
         int chatId = _idEncryption.DecryptChatId(encryptedChatId);
+        long sessionId = _idEncryption.DecryptAsInt64(encryptedSessionId, EncryptionPurpose.DockerSessionId);
         ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
         if (session == null) return NotFound();
 
@@ -414,16 +422,17 @@ public sealed class ChatDockerSessionsController(
         }
     }
 
-    [HttpPut("{sessionId}/text-file")]
+    [HttpPut("{encryptedSessionId}/text-file")]
     public async Task<IActionResult> SaveTextFile(
         string encryptedChatId,
-        [Required] string sessionId,
+        [Required] string encryptedSessionId,
         [FromBody] SaveTextFileRequest request,
         CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
         int chatId = _idEncryption.DecryptChatId(encryptedChatId);
+        long sessionId = _idEncryption.DecryptAsInt64(encryptedSessionId, EncryptionPurpose.DockerSessionId);
         ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
         if (session == null) return NotFound();
 
@@ -458,20 +467,16 @@ public sealed class ChatDockerSessionsController(
                 .SetProperty(v => v.ExpiresAt, now.AddSeconds(_options.SessionIdleTimeoutSeconds)), cancellationToken);
     }
 
-    private async Task<ChatDockerSession?> GetActiveSessionForChat(int chatId, string sessionId, CancellationToken cancellationToken)
+    private async Task<ChatDockerSession?> GetActiveSessionForChat(int chatId, long sessionId, CancellationToken cancellationToken)
     {
         DateTime now = DateTime.UtcNow;
-        return await (
-            from s in _db.ChatDockerSessions
-            join t in _db.ChatTurns on s.OwnerTurnId equals t.Id
-            where t.ChatId == chatId
-               && t.Chat.UserId == _currentUser.Id
-               && s.Label == sessionId
-               && s.TerminatedAt == null
-               && s.ExpiresAt > now
-            orderby s.Id descending
-            select s
-        ).FirstOrDefaultAsync(cancellationToken);
+        return await _db.ChatDockerSessions
+            .Where(x => x.Id == sessionId
+                     && x.OwnerChatId == chatId
+                     && x.OwnerChat!.UserId == _currentUser.Id
+                     && x.TerminatedAt == null
+                     && x.ExpiresAt > now)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     private static NetworkMode ParseNetworkMode(string networkMode)

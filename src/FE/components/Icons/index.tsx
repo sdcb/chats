@@ -20,6 +20,7 @@ export { default as IconClipboard } from './IconClipboard';
 export { default as IconCode } from './IconCode';
 export { default as IconCopy } from './IconCopy';
 export { default as IconDesktop } from './IconDesktop';
+export { default as IconDocker } from './IconDocker';
 export { default as IconDots } from './IconDots';
 export { default as IconDownload } from './IconDownload';
 export { default as IconEdit } from './IconEdit';

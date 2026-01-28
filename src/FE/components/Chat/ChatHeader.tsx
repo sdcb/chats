@@ -9,7 +9,7 @@ import { ChatStatus, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
 
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
-import { IconDots, IconPlus, IconSettingsCog, IconTools, IconX } from '@/components/Icons';
+import { IconDocker, IconDots, IconPlus, IconSettingsCog, IconX } from '@/components/Icons';
 import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -213,6 +213,14 @@ const ChatHeader = () => {
   };
 
   const renderSessionManagerButton = () => {
+    // 只有在任意一个span的codeExecutionEnabled为true时才显示
+    const hasCodeExecutionEnabled = selectedChat.spans.some(
+      (span) => span.codeExecutionEnabled
+    );
+    if (!hasCodeExecutionEnabled) {
+      return null;
+    }
+
     return (
       <div className="flex items-center ml-2">
         <Tips
@@ -222,10 +230,7 @@ const ChatHeader = () => {
               className="p-2 h-auto hover:bg-accent"
               onClick={() => setIsSessionManagerOpen(true)}
             >
-              <IconTools size={16} />
-              <span className="hidden sm:inline text-xs ml-1">
-                {t('Session Manager')}
-              </span>
+              <IconDocker size={18} />
             </Button>
           }
           content={t('Session Manager')}

@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Chats.BE.Controllers.Chats.DockerSessions.Dtos;
 
 public sealed record ChatDockerSessionDto(
-    [property: JsonPropertyName("id")] long Id,
+    [property: JsonPropertyName("encryptedSessionId")] string EncryptedSessionId,
     [property: JsonPropertyName("label")] string Label,
     [property: JsonPropertyName("image")] string Image,
     [property: JsonPropertyName("containerId")] string ContainerId,

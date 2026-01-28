@@ -152,7 +152,7 @@ public sealed class CodeInterpreterExecutor(
     public bool IsCodeInterpreterTool(string toolName)
         => _toolRegistry.Contains(toolName);
 
-    public NeutralSystemMessage BuildSystemMessage(string? existingSystemPrompt, IEnumerable<Step> messageSteps)
+    public NeutralSystemMessage BuildSystemMessage(string? existingSystemPrompt)
     {
         StringBuilder sb = new();
         if (!string.IsNullOrWhiteSpace(existingSystemPrompt))
@@ -162,8 +162,8 @@ public sealed class CodeInterpreterExecutor(
         }
 
         sb.AppendLine("You have access to sandboxed code interpreter environments.");
-        sb.AppendLine($"- Working directory: {PathSafety.WorkDir}");
-        sb.AppendLine($"- Artifacts directory: {PathSafety.WorkDir}/artifacts, MUST copy to artifacts folder so user can download it!");
+        sb.AppendLine($"- Working directory: {codePodConfig.Value.WorkDir}");
+        sb.AppendLine($"- Artifacts directory: {codePodConfig.Value.WorkDir}/{codePodConfig.Value.ArtifactsDir}, MUST copy to this folder so user can download it!");
         sb.AppendLine("- Call create_docker_session to get a sessionId.");
 
         return NeutralSystemMessage.FromText(sb.ToString());
@@ -188,12 +188,12 @@ public sealed class CodeInterpreterExecutor(
         return sb.ToString();
     }
 
-    public string? BuildCodeInterpreterContextPrefix(IEnumerable<ChatTurn> messageTurns, IEnumerable<Step> messageSteps)
-        => BuildCodeInterpreterContextPrefix(messageTurns, messageSteps, DateTime.UtcNow);
+    public string? BuildCodeInterpreterContextPrefix(IEnumerable<ChatTurn> messageTurns)
+        => BuildCodeInterpreterContextPrefix(messageTurns, DateTime.UtcNow);
 
-    internal static string? BuildCodeInterpreterContextPrefix(IEnumerable<ChatTurn> messageTurns, IEnumerable<Step> messageSteps, DateTime utcNow)
+    internal static string? BuildCodeInterpreterContextPrefix(IEnumerable<ChatTurn> messageTurns, DateTime utcNow)
     {
-        List<DBFile> cloudFiles = CollectCloudFiles(messageSteps);
+        List<DBFile> cloudFiles = CollectCloudFiles(messageTurns.SelectMany(t => t.Steps));
         List<ChatDockerSession> activeSessions = CollectActiveSessions(messageTurns, utcNow);
 
         if (cloudFiles.Count == 0 && activeSessions.Count == 0)
@@ -489,6 +489,7 @@ public sealed class CodeInterpreterExecutor(
             dbSession = new ChatDockerSession
             {
                 OwnerTurnId = ctx.CurrentAssistantTurn.Id,
+                OwnerChatId = ctx.CurrentAssistantTurn.ChatId,
                 Label = label!,
                 ContainerId = container.ContainerId,
                 Image = effectiveImage,

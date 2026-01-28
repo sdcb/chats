@@ -4,15 +4,21 @@ import toast from 'react-hot-toast';
 import useTranslation from '@/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { IconBolt, IconLoader } from '@/components/Icons';
+import { IconBolt, IconCheck, IconClipboard, IconLoader } from '@/components/Icons';
 import { useSendKeyHandler } from '@/components/ui/send-button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 import { streamRunDockerCommand } from '@/apis/dockerSessionsApi';
 import { CommandStreamLine } from '@/types/dockerSessions';
 
 type Props = {
   chatId: string;
-  sessionId: string;
+  encryptedSessionId: string;
   onFinished?: (ok: boolean) => void;
 };
 
@@ -27,13 +33,14 @@ type OutputLine =
 
 export default function SessionCommandRunner({
   chatId,
-  sessionId,
+  encryptedSessionId,
   onFinished,
 }: Props) {
   const { t } = useTranslation();
   const [command, setCommand] = useState('');
   const [running, setRunning] = useState(false);
   const [output, setOutput] = useState<OutputLine[]>([]);
+  const [copied, setCopied] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const canRun = command.trim().length > 0 && !running;
@@ -62,7 +69,7 @@ export default function SessionCommandRunner({
 
     let ok = true;
     try {
-      for await (const line of streamRunDockerCommand(chatId, sessionId, {
+      for await (const line of streamRunDockerCommand(chatId, encryptedSessionId, {
         command: cmd,
       })) {
         setOutput((prev) => appendOutput(prev, line));
@@ -83,12 +90,29 @@ export default function SessionCommandRunner({
       if (textareaRef.current) {
         textareaRef.current.style.height = `${TEXTAREA_MIN_HEIGHT}px`;
         textareaRef.current.style.overflow = 'hidden';
+        textareaRef.current.focus();
       }
       onFinished?.(ok);
     }
-  }, [canRun, chatId, command, onFinished, sessionId]);
+  }, [canRun, chatId, command, onFinished, encryptedSessionId]);
 
   const { handleKeyDown } = useSendKeyHandler(run, false, !canRun);
+
+  const outputText = useMemo(() => {
+    return output
+      .map((l) => {
+        if (l.t === 'stdout' || l.t === 'stderr' || l.t === 'error') return l.v;
+        return `ExitCode: ${l.v.exitCode} ExecutionTimeMs: ${l.v.executionTimeMs}`;
+      })
+      .join('\n');
+  }, [output]);
+
+  const handleCopy = useCallback(() => {
+    if (!outputText) return;
+    navigator.clipboard.writeText(outputText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [outputText]);
 
   const outputView = useMemo(() => {
     if (output.length === 0) {
@@ -157,6 +181,7 @@ export default function SessionCommandRunner({
         <div className="absolute right-2 bottom-2">
           <Button
             size="sm"
+            variant="secondary"
             onClick={run}
             disabled={!canRun}
             className="gap-2"
@@ -171,8 +196,33 @@ export default function SessionCommandRunner({
         </div>
       </div>
 
-      <div className="rounded-md border bg-black p-3 min-h-[120px] max-h-[280px] overflow-auto">
-        {outputView}
+      <div className="relative rounded-md border bg-black min-h-[120px] max-h-[280px] group">
+        <div className="p-3 min-h-[120px] max-h-[280px] overflow-auto">
+          {outputView}
+        </div>
+        {output.length > 0 && (
+          <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className="flex items-center rounded bg-none p-1 text-muted-foreground hover:text-white"
+                    onClick={handleCopy}
+                  >
+                    {copied ? (
+                      <IconCheck stroke="currentColor" size={20} />
+                    ) : (
+                      <IconClipboard stroke="currentColor" size={20} />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {copied ? t('Copied') : t('Click Copy')}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -160,6 +160,7 @@ export const useSendKeyHandler = (
     // Alt+S 发送
     if (e.altKey && e.key.toLowerCase() === 's') {
       e.preventDefault();
+      e.stopPropagation();
       onSend();
       return;
     }

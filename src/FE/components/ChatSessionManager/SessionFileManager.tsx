@@ -41,13 +41,13 @@ export type FileManagerHandle = {
 
 type Props = {
   chatId: string;
-  sessionId: string;
+  encryptedSessionId: string;
   refreshKey?: number;
   onOpenTextFile: (path: string) => void;
 };
 
 const SessionFileManager = forwardRef<FileManagerHandle, Props>(
-  ({ chatId, sessionId, refreshKey, onOpenTextFile }, ref) => {
+  ({ chatId, encryptedSessionId, refreshKey, onOpenTextFile }, ref) => {
     const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -64,7 +64,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
         setLoading(true);
         try {
           const target = path ?? currentDir;
-          const res = await listDockerDirectory(chatId, sessionId, target);
+          const res = await listDockerDirectory(chatId, encryptedSessionId, target);
           setData(res);
           setCurrentDir(res.path);
           setInputDir(res.path);
@@ -78,7 +78,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
           setLoading(false);
         }
       },
-      [chatId, currentDir, sessionId, t],
+      [chatId, currentDir, encryptedSessionId, t],
     );
 
     useImperativeHandle(ref, () => ({ refresh: () => load(currentDir) }), [currentDir, load]);
@@ -86,7 +86,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
     useEffect(() => {
       load(null);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [chatId, sessionId]);
+    }, [chatId, encryptedSessionId]);
 
     useEffect(() => {
       if (refreshKey == null) return;
@@ -103,7 +103,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
         if (files.length === 0) return;
         setUploading(true);
         try {
-          await uploadDockerFiles(chatId, sessionId, currentDir, files);
+          await uploadDockerFiles(chatId, encryptedSessionId, currentDir, files);
           toast.success(t('Upload successful'));
           await load(currentDir);
         } catch (e: any) {
@@ -112,7 +112,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
           setUploading(false);
         }
       },
-      [chatId, currentDir, load, sessionId, t],
+      [chatId, currentDir, load, encryptedSessionId, t],
     );
 
     const onDrop = useCallback(
@@ -238,7 +238,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
                 if (!name) return;
                 const path = `${currentDir.replace(/\/+$/, '')}/${name}`;
                 try {
-                  await mkdirDockerDir(chatId, sessionId, path);
+                  await mkdirDockerDir(chatId, encryptedSessionId, path);
                   toast.success(t('Created successful'));
                   await load(currentDir);
                 } catch (e: any) {
@@ -327,7 +327,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
               onClick={async () => {
                 if (!selected || selected.isDirectory) return;
                 try {
-                  const blob = await downloadDockerFile(chatId, sessionId, selected.path);
+                  const blob = await downloadDockerFile(chatId, encryptedSessionId, selected.path);
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
                   a.href = url;
@@ -356,7 +356,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
                 );
                 if (!ok) return;
                 try {
-                  await deleteDockerFile(chatId, sessionId, selected.path);
+                  await deleteDockerFile(chatId, encryptedSessionId, selected.path);
                   toast.success(t('Deleted successful'));
                   await load(currentDir);
                 } catch (e: any) {
