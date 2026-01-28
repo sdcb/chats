@@ -32,6 +32,9 @@ public partial class Chat
 
     public DateTime UpdatedAt { get; set; }
 
+    [InverseProperty("OwnerChat")]
+    public virtual ICollection<ChatDockerSession> ChatDockerSessions { get; set; } = new List<ChatDockerSession>();
+
     [ForeignKey("ChatGroupId")]
     [InverseProperty("Chats")]
     public virtual ChatGroup? ChatGroup { get; set; }
