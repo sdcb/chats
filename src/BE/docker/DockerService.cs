@@ -524,14 +524,25 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
         {
             return await WrapDockerOperationAsync("ListDirectory", async () =>
             {
-                GetArchiveFromContainerResponse archive = await _client.Containers.GetArchiveFromContainerAsync(
-                    containerId,
-                    new GetArchiveFromContainerParameters { Path = path },
-                    false,
-                    cancellationToken);
+                // 使用命令行方式列目录，比 tar 流方式快得多
+                string[] command = config.GetListDirectoryCommand(path);
+                CommandExitEvent result = await ExecuteCommandAsync(containerId, command, "/", 30, cancellationToken);
 
-                await using Stream stream = archive.Stream;
-                return await ListDirectoryFromTarStreamAsync(path, stream, cancellationToken);
+                if (result.ExitCode != 0)
+                {
+                    // 检查是否是目录不存在
+                    string errorLower = result.Stderr?.ToLowerInvariant() ?? "";
+                    if (errorLower.Contains("no such file") || errorLower.Contains("cannot find") ||
+                        errorLower.Contains("cannot access") || errorLower.Contains("not exist"))
+                    {
+                        throw new ContainerPathNotFoundException(containerId, path, new Exception(result.Stderr));
+                    }
+                    throw new InvalidOperationException($"Failed to list directory: {result.Stderr}");
+                }
+
+                return config.IsWindowsContainer
+                    ? ParseWindowsDirOutput(path, result.Stdout ?? "")
+                    : ParseLinuxLsOutput(path, result.Stdout ?? "");
             }, containerId);
         }
         catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -549,6 +560,199 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
 
             throw new ContainerPathNotFoundException(containerId, path, ex);
         }
+    }
+
+    /// <summary>
+    /// 解析 Linux ls -la --full-time 命令的输出
+    /// 格式: drwxr-xr-x 2 root root 4096 2024-01-15 10:30:45.000000000 +0000 dirname
+    ///       -rw-r--r-- 1 root root 1234 2024-01-15 10:30:45.000000000 +0000 filename
+    /// </summary>
+    internal static List<FileEntry> ParseLinuxLsOutput(string requestedPath, string output)
+    {
+        List<FileEntry> entries = [];
+        string normalizedPath = NormalizeContainerPath(requestedPath).TrimEnd('/');
+
+        string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        foreach (string line in lines)
+        {
+            // 跳过 total 行和空行
+            string trimmed = line.Trim();
+            if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("total ", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            // 解析 ls -la 输出
+            // drwxr-xr-x 2 root root 4096 2024-01-15 10:30:45.000000000 +0000 dirname
+            // 字段: permissions, links, owner, group, size, date, time, timezone, name
+            string[] parts = trimmed.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 9)
+            {
+                continue;
+            }
+
+            string permissions = parts[0];
+            if (permissions.Length < 1)
+            {
+                continue;
+            }
+
+            // 跳过 . 和 .. 目录
+            string name = string.Join(" ", parts.Skip(8)); // 文件名可能包含空格
+            if (name == "." || name == "..")
+            {
+                continue;
+            }
+
+            bool isDirectory = permissions[0] == 'd';
+            long size = 0;
+            _ = long.TryParse(parts[4], out size);
+
+            // 解析时间: 2024-01-15 10:30:45.000000000 +0000
+            DateTimeOffset? lastModified = null;
+            if (parts.Length >= 8)
+            {
+                string dateStr = $"{parts[5]} {parts[6]} {parts[7]}";
+                if (DateTimeOffset.TryParse(dateStr, out DateTimeOffset parsed))
+                {
+                    lastModified = parsed;
+                }
+            }
+
+            string fullPath = CombineContainerPath(normalizedPath, name);
+
+            entries.Add(new FileEntry
+            {
+                Path = fullPath,
+                Name = name,
+                IsDirectory = isDirectory,
+                Size = isDirectory ? 0 : size,
+                LastModified = lastModified
+            });
+        }
+
+        return entries;
+    }
+
+    /// <summary>
+    /// 解析 Windows dir 命令的输出
+    /// 格式: 2024/01/15  10:30    &lt;DIR&gt;          dirname
+    ///       2024/01/15  10:30             1,234 filename.txt
+    /// </summary>
+    internal static List<FileEntry> ParseWindowsDirOutput(string requestedPath, string output)
+    {
+        List<FileEntry> entries = [];
+        string normalizedPath = NormalizeContainerPath(requestedPath).TrimEnd('/');
+
+        string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        bool inFileList = false;
+
+        foreach (string line in lines)
+        {
+            string trimmed = line.Trim();
+            if (string.IsNullOrEmpty(trimmed))
+            {
+                continue;
+            }
+
+            // 跳过头部信息行 (Volume, Directory of 等)
+            if (trimmed.StartsWith("Volume", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("Directory of", StringComparison.OrdinalIgnoreCase))
+            {
+                inFileList = true;
+                continue;
+            }
+
+            // 跳过尾部统计信息行
+            if (trimmed.Contains(" File(s)") || trimmed.Contains(" Dir(s)") ||
+                trimmed.Contains("个文件") || trimmed.Contains("个目录"))
+            {
+                continue;
+            }
+
+            if (!inFileList)
+            {
+                continue;
+            }
+
+            // 解析 dir 输出行
+            // 2024/01/15  10:30    <DIR>          dirname
+            // 2024/01/15  10:30             1,234 filename.txt
+            // 格式: 日期 时间 <DIR>或大小 文件名
+
+            // 尝试匹配日期格式 (支持多种格式如 2024/01/15, 01/15/2024, 2024-01-15)
+            if (trimmed.Length < 20)
+            {
+                continue;
+            }
+
+            // 查找 <DIR> 或数字大小
+            int dirIdx = trimmed.IndexOf("<DIR>", StringComparison.OrdinalIgnoreCase);
+            bool isDirectory = dirIdx >= 0;
+
+            string name;
+            long size = 0;
+            DateTimeOffset? lastModified = null;
+
+            if (isDirectory)
+            {
+                // <DIR> 后面是文件名
+                name = trimmed[(dirIdx + 5)..].Trim();
+            }
+            else
+            {
+                // 找最后一个数字序列（大小）和文件名
+                // 格式: 日期 时间 大小 文件名
+                string[] parts = trimmed.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 4)
+                {
+                    continue;
+                }
+
+                // 最后一个是文件名，倒数第二个是大小
+                name = parts[^1];
+                string sizeStr = parts[^2].Replace(",", "").Replace(".", "");
+                _ = long.TryParse(sizeStr, out size);
+
+                // 尝试从较长的文件名中提取（如果文件名包含空格）
+                // 找到大小位置后，后面的都是文件名
+                int sizePartIdx = Array.FindIndex(parts, p => p.Replace(",", "").Replace(".", "").All(char.IsDigit) && p.Length > 0 && p != parts[0] && p != parts[1]);
+                if (sizePartIdx >= 0 && sizePartIdx < parts.Length - 1)
+                {
+                    name = string.Join(" ", parts.Skip(sizePartIdx + 1));
+                }
+            }
+
+            // 跳过 . 和 .. 目录
+            if (name == "." || name == "..")
+            {
+                continue;
+            }
+
+            // 尝试解析日期时间 (取前两个部分)
+            string[] dateParts = trimmed.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+            if (dateParts.Length >= 2)
+            {
+                string dateTimeStr = $"{dateParts[0]} {dateParts[1]}";
+                if (DateTime.TryParse(dateTimeStr, out DateTime parsed))
+                {
+                    lastModified = new DateTimeOffset(parsed);
+                }
+            }
+
+            string fullPath = CombineContainerPath(normalizedPath, name);
+
+            entries.Add(new FileEntry
+            {
+                Path = fullPath,
+                Name = name,
+                IsDirectory = isDirectory,
+                Size = isDirectory ? 0 : size,
+                LastModified = lastModified
+            });
+        }
+
+        return entries;
     }
 
     internal static async Task<List<FileEntry>> ListDirectoryFromTarStreamAsync(string requestedPath, Stream tarStream, CancellationToken cancellationToken)
