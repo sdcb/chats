@@ -192,16 +192,16 @@ export const uploadDockerFiles = async (
   );
 };
 
-export const downloadDockerFile = async (
+export const getDockerFileDownloadUrl = (
   chatId: string,
   encryptedSessionId: string,
   path: string,
-) => {
-  const fetchService = createFetchClient();
-  return fetchService.get<Blob>(
-    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}/download`,
-    { params: { path }, suppressDefaultToast: true },
-  );
+): string => {
+  const params = new URLSearchParams({
+    path,
+    token: getUserSession(),
+  });
+  return `${getApiUrl()}/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}/download?${params.toString()}`;
 };
 
 export const deleteDockerFile = async (

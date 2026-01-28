@@ -27,7 +27,7 @@ import {
 
 import {
   deleteDockerFile,
-  downloadDockerFile,
+  getDockerFileDownloadUrl,
   listDockerDirectory,
   mkdirDockerDir,
   uploadDockerFiles,
@@ -324,19 +324,10 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
               size="sm"
               className="h-8 px-2 gap-1"
               disabled={!canDownload || loading || uploading}
-              onClick={async () => {
+              onClick={() => {
                 if (!selected || selected.isDirectory) return;
-                try {
-                  const blob = await downloadDockerFile(chatId, encryptedSessionId, selected.path);
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = selected.name;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                } catch (e: any) {
-                  toast.error(getApiErrorMessage(e, t('Download failed')));
-                }
+                const url = getDockerFileDownloadUrl(chatId, encryptedSessionId, selected.path);
+                window.open(url, '_blank');
               }}
               title={t('Download')}
             >
