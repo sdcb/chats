@@ -60,6 +60,7 @@ public sealed class ChatDockerSessionsController(
                 s.MemoryBytes,
                 s.MaxProcesses,
                 ((NetworkMode)s.NetworkMode).ToString().ToLowerInvariant(),
+                s.Ip,
                 s.CreatedAt,
                 s.LastActiveAt,
                 s.ExpiresAt))
@@ -155,6 +156,7 @@ public sealed class ChatDockerSessionsController(
             dbSession.MemoryBytes,
             dbSession.MaxProcesses,
             effectiveNetworkMode.ToString().ToLowerInvariant(),
+            dbSession.Ip,
             dbSession.CreatedAt,
             dbSession.LastActiveAt,
             dbSession.ExpiresAt);

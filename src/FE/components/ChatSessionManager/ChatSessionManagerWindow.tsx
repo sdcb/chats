@@ -32,6 +32,7 @@ import CreateSessionPane from './CreateSessionPane';
 import SessionCommandRunner from './SessionCommandRunner';
 import SessionFileManager, { FileManagerHandle } from './SessionFileManager';
 import SessionFileEditor from './SessionFileEditor';
+import SessionInfoCard from './SessionInfoCard';
 import { cn } from '@/lib/utils';
 
 type Mode = 'view' | 'create';
@@ -282,6 +283,8 @@ export default function ChatSessionManagerWindow({
           </div>
         ) : selectedSession ? (
           <div className="flex flex-col gap-4">
+            <SessionInfoCard session={selectedSession} />
+
             <SessionCommandRunner
               chatId={chatId}
               encryptedSessionId={selectedSession.encryptedSessionId}

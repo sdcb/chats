@@ -7,6 +7,7 @@ export type DockerSessionDto = {
   memoryBytes: number | null;
   maxProcesses: number | null;
   networkMode: string;
+  ipAddress: string | null;
   createdAt: string;
   lastActiveAt: string;
   expiresAt: string;

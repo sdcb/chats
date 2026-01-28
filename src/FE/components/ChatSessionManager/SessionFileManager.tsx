@@ -380,9 +380,8 @@ export default SessionFileManager;
 
 function getParentDir(path: string): string {
   const p = (path || '').replace(/\/+$/, '');
-  if (!p || p === '/app') return '/app';
+  if (!p || p === '/') return '/';
   const parts = p.split('/').filter(Boolean);
-  if (parts.length <= 1) return '/app';
-  const parent = '/' + parts.slice(0, -1).join('/');
-  return parent.startsWith('/app') ? parent : '/app';
+  if (parts.length <= 1) return '/';
+  return '/' + parts.slice(0, -1).join('/');
 }
