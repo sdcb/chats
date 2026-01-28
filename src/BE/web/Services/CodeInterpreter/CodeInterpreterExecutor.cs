@@ -530,7 +530,7 @@ public sealed class CodeInterpreterExecutor(
         try
         {
             // Try to read skills.md for the AI model (only for newly created/loaded sessions)
-            byte[] skillsBytes = await _docker.DownloadFileAsync(dbSession.ContainerId, "/app/skills.md", cancellationToken);
+            byte[] skillsBytes = await _docker.DownloadFileAsync(dbSession.ContainerId, $"{_codePodConfig.WorkDir}/skills.md", cancellationToken);
             string skillsContent = Encoding.UTF8.GetString(skillsBytes);
             if (!string.IsNullOrWhiteSpace(skillsContent))
             {
@@ -602,7 +602,7 @@ public sealed class CodeInterpreterExecutor(
 
         Exception? streamException = null;
         ConfiguredCancelableAsyncEnumerable<CommandOutputEvent>.Enumerator enumerator = _docker
-            .ExecuteCommandStreamAsync(state.DbSession.ContainerId, state.ShellPrefix, command, PathSafety.WorkDir, timeout, cancellationToken)
+            .ExecuteCommandStreamAsync(state.DbSession.ContainerId, state.ShellPrefix, command, _codePodConfig.WorkDir, timeout, cancellationToken)
             .WithCancellation(cancellationToken)
             .GetAsyncEnumerator();
         try
@@ -692,16 +692,14 @@ public sealed class CodeInterpreterExecutor(
         TurnContext.SessionState state = ensureResult.Value!;
         state.UsedInThisTurn = true;
 
-        string normalizedPath = PathSafety.NormalizeUnderWorkDir(path);
-
         byte[] bytes = Encoding.UTF8.GetBytes(text);
-        await _docker.UploadFileAsync(state.DbSession.ContainerId, normalizedPath, bytes, cancellationToken);
+        await _docker.UploadFileAsync(state.DbSession.ContainerId, path, bytes, cancellationToken);
         await TouchSession(state.DbSession.Id, cancellationToken);
 
         await SyncArtifactsAfterToolCall(ctx, state, cancellationToken);
 
         int lineCount = string.IsNullOrEmpty(text) ? 0 : text.Split(["\r\n", "\n"], StringSplitOptions.None).Length;
-        return Result.Ok($"Wrote {lineCount} lines to {normalizedPath}");
+        return Result.Ok($"Wrote {lineCount} lines to {path}");
     }
 
     [ToolFunction("Read a file under /app")]
@@ -728,9 +726,7 @@ public sealed class CodeInterpreterExecutor(
         TurnContext.SessionState state = ensureResult.Value!;
         state.UsedInThisTurn = true;
 
-        string normalizedPath = PathSafety.NormalizeUnderWorkDir(path);
-
-        byte[] bytes = await _docker.DownloadFileAsync(state.DbSession.ContainerId, normalizedPath, cancellationToken);
+        byte[] bytes = await _docker.DownloadFileAsync(state.DbSession.ContainerId, path, cancellationToken);
 
         string output;
         bool wantsLineNumbers = withLineNumbers == true;
@@ -824,7 +820,7 @@ public sealed class CodeInterpreterExecutor(
 
             // Try to keep the preview *useful* under MaxOutputBytes by accounting for base64 expansion.
             // We still apply TruncateText later as a final safety net.
-            string headerTemplate = $"{prefix}Path: {normalizedPath}\nSize: {bytes.Length}\nBase64(first {{0}} bytes):\n";
+            string headerTemplate = $"{prefix}Path: {path}\nSize: {bytes.Length}\nBase64(first {{0}} bytes):\n";
 
             int budget = Math.Max(1, binaryOptions.MaxOutputBytes);
             int minHeaderBytes = Encoding.UTF8.GetByteCount(string.Format(headerTemplate, 0));
@@ -988,18 +984,16 @@ public sealed class CodeInterpreterExecutor(
         TurnContext.SessionState state = ensureResult.Value!;
         state.UsedInThisTurn = true;
 
-        string normalizedPath = PathSafety.NormalizeUnderWorkDir(path);
-
-        byte[] originalBytes = await _docker.DownloadFileAsync(state.DbSession.ContainerId, normalizedPath, cancellationToken);
+        byte[] originalBytes = await _docker.DownloadFileAsync(state.DbSession.ContainerId, path, cancellationToken);
         string originalText = Encoding.UTF8.GetString(originalBytes);
 
         string patched = UnifiedDiffApplier.Apply(originalText, patch);
         byte[] newBytes = Encoding.UTF8.GetBytes(patched);
 
-        await _docker.UploadFileAsync(state.DbSession.ContainerId, normalizedPath, newBytes, cancellationToken);
+        await _docker.UploadFileAsync(state.DbSession.ContainerId, path, newBytes, cancellationToken);
         await TouchSession(state.DbSession.Id, cancellationToken);
 
-        return Result.Ok($"Patched {normalizedPath} ({newBytes.Length} bytes)");
+        return Result.Ok($"Patched {path} ({newBytes.Length} bytes)");
     }
 
     [ToolFunction("Download cloud files (from chat history) into /app")]
@@ -1036,8 +1030,7 @@ public sealed class CodeInterpreterExecutor(
             await s.CopyToAsync(ms, cancellationToken);
             byte[] bytes = ms.ToArray();
 
-            string safeName = PathSafety.SanitizeFileName(file.FileName);
-            string targetPath = Path.Combine(PathSafety.WorkDir, safeName);
+            string targetPath = $"{_codePodConfig.WorkDir}/{file.FileName}";
             await _docker.UploadFileAsync(state.DbSession.ContainerId, targetPath, bytes, cancellationToken);
 
             downloaded.Add(file);
@@ -1213,7 +1206,7 @@ public sealed class CodeInterpreterExecutor(
         List<FileEntry> entries;
         try
         {
-            entries = await _docker.ListDirectoryAsync(containerId, "/app/artifacts", cancellationToken);
+            entries = await _docker.ListDirectoryAsync(containerId, $"{_codePodConfig.WorkDir}/{_codePodConfig.ArtifactsDir}", cancellationToken);
         }
         catch
         {

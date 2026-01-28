@@ -220,7 +220,7 @@ public sealed class ChatDockerSessionsController(
                 session.ContainerId,
                 shellPrefix,
                 command,
-                PathSafety.WorkDir,
+                _codePodConfig.WorkDir,
                 timeout,
                 cancellationToken))
             {
@@ -263,7 +263,7 @@ public sealed class ChatDockerSessionsController(
         ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
         if (session == null) return NotFound();
 
-        string target = string.IsNullOrWhiteSpace(path) ? PathSafety.WorkDir : PathSafety.NormalizeUnderWorkDir(path);
+        string target = string.IsNullOrWhiteSpace(path) ? _codePodConfig.WorkDir : path;
         try
         {
             List<FileEntry> entries = await _docker.ListDirectoryAsync(session.ContainerId, target, cancellationToken);
@@ -298,11 +298,11 @@ public sealed class ChatDockerSessionsController(
 
         if (files == null || files.Count == 0) return BadRequest("No files");
 
-        string targetDir = string.IsNullOrWhiteSpace(dir) ? PathSafety.WorkDir : PathSafety.NormalizeUnderWorkDir(dir);
+        string targetDir = string.IsNullOrWhiteSpace(dir) ? _codePodConfig.WorkDir : dir;
         foreach (IFormFile file in files)
         {
             if (file.Length <= 0) continue;
-            string safeName = PathSafety.SanitizeFileName(file.FileName);
+            string safeName = file.FileName;
             string targetPath = $"{targetDir.TrimEnd('/')}/{safeName}";
             await using Stream stream = file.OpenReadStream();
             using MemoryStream ms = new();
@@ -326,11 +326,10 @@ public sealed class ChatDockerSessionsController(
         ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
         if (session == null) return NotFound();
 
-        string normalized = PathSafety.NormalizeUnderWorkDir(path);
-        byte[] bytes = await _docker.DownloadFileAsync(session.ContainerId, normalized, cancellationToken);
+        byte[] bytes = await _docker.DownloadFileAsync(session.ContainerId, path, cancellationToken);
         await TouchSession(session.Id, cancellationToken);
 
-        string fileName = Path.GetFileName(normalized);
+        string fileName = Path.GetFileName(path);
         if (!_contentTypeProvider.TryGetContentType(fileName, out string? contentType))
         {
             contentType = "application/octet-stream";
@@ -350,10 +349,9 @@ public sealed class ChatDockerSessionsController(
         ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
         if (session == null) return NotFound();
 
-        string normalized = PathSafety.NormalizeUnderWorkDir(path);
-        string cmd = _codePodConfig.GetDeleteFileCommand(normalized);
+        string cmd = _codePodConfig.GetDeleteFileCommand(path);
         string[] shellPrefix = ParseShellPrefixCsv(session.ShellPrefix);
-        await _docker.ExecuteCommandAsync(session.ContainerId, shellPrefix, cmd, PathSafety.WorkDir, timeoutSeconds: 60, cancellationToken);
+        await _docker.ExecuteCommandAsync(session.ContainerId, shellPrefix, cmd, _codePodConfig.WorkDir, timeoutSeconds: 60, cancellationToken);
         await TouchSession(session.Id, cancellationToken);
         return Ok();
     }
@@ -372,10 +370,9 @@ public sealed class ChatDockerSessionsController(
         ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
         if (session == null) return NotFound();
 
-        string normalized = PathSafety.NormalizeUnderWorkDir(request.Path);
-        string cmd = _codePodConfig.GetMkdirCommand(normalized);
+        string cmd = _codePodConfig.GetMkdirCommand(request.Path);
         string[] shellPrefix = ParseShellPrefixCsv(session.ShellPrefix);
-        await _docker.ExecuteCommandAsync(session.ContainerId, shellPrefix, cmd, PathSafety.WorkDir, timeoutSeconds: 60, cancellationToken);
+        await _docker.ExecuteCommandAsync(session.ContainerId, shellPrefix, cmd, _codePodConfig.WorkDir, timeoutSeconds: 60, cancellationToken);
         await TouchSession(session.Id, cancellationToken);
         return Ok();
     }
@@ -392,21 +389,20 @@ public sealed class ChatDockerSessionsController(
         ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
         if (session == null) return NotFound();
 
-        string normalized = PathSafety.NormalizeUnderWorkDir(path);
-        byte[] bytes = await _docker.DownloadFileAsync(session.ContainerId, normalized, cancellationToken);
+        byte[] bytes = await _docker.DownloadFileAsync(session.ContainerId, path, cancellationToken);
         await TouchSession(session.Id, cancellationToken);
 
         const int maxTextBytes = 1 * 1024 * 1024;
         if (bytes.LongLength > maxTextBytes)
         {
-            return new TextFileResponse(normalized, IsText: false, SizeBytes: bytes.LongLength, Text: null);
+            return new TextFileResponse(path, IsText: false, SizeBytes: bytes.LongLength, Text: null);
         }
 
         int sampleLen = (int)Math.Min(bytes.Length, 4096);
         ReadOnlySpan<byte> sample = bytes.AsSpan(0, sampleLen);
         if (sample.Contains((byte)0))
         {
-            return new TextFileResponse(normalized, IsText: false, SizeBytes: bytes.LongLength, Text: null);
+            return new TextFileResponse(path, IsText: false, SizeBytes: bytes.LongLength, Text: null);
         }
 
         try
@@ -414,11 +410,11 @@ public sealed class ChatDockerSessionsController(
             UTF8Encoding strictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
             _ = strictUtf8.GetString(sample);
             string text = strictUtf8.GetString(bytes);
-            return new TextFileResponse(normalized, IsText: true, SizeBytes: bytes.LongLength, Text: text);
+            return new TextFileResponse(path, IsText: true, SizeBytes: bytes.LongLength, Text: text);
         }
         catch
         {
-            return new TextFileResponse(normalized, IsText: false, SizeBytes: bytes.LongLength, Text: null);
+            return new TextFileResponse(path, IsText: false, SizeBytes: bytes.LongLength, Text: null);
         }
     }
 
@@ -436,7 +432,6 @@ public sealed class ChatDockerSessionsController(
         ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
         if (session == null) return NotFound();
 
-        string normalized = PathSafety.NormalizeUnderWorkDir(request.Path);
         byte[] bytes = Encoding.UTF8.GetBytes(request.Text ?? string.Empty);
         const int maxTextBytes = 1 * 1024 * 1024;
         if (bytes.LongLength > maxTextBytes)
@@ -444,7 +439,7 @@ public sealed class ChatDockerSessionsController(
             return BadRequest("Text file too large (max 1MB).");
         }
 
-        await _docker.UploadFileAsync(session.ContainerId, normalized, bytes, cancellationToken);
+        await _docker.UploadFileAsync(session.ContainerId, request.Path, bytes, cancellationToken);
         await TouchSession(session.Id, cancellationToken);
         return Ok();
     }
