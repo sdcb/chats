@@ -343,7 +343,7 @@ public sealed class ChatDockerSessionsController(
     public async Task<IActionResult> DeleteFile(
         string encryptedChatId,
         [Required] string encryptedSessionId,
-        [FromQuery, Required] string path,
+        [FromBody, Required] DeleteFileRequest request,
         CancellationToken cancellationToken)
     {
         int chatId = _idEncryption.DecryptChatId(encryptedChatId);
@@ -351,7 +351,7 @@ public sealed class ChatDockerSessionsController(
         ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
         if (session == null) return NotFound();
 
-        string cmd = _codePodConfig.GetDeleteFileCommand(path);
+        string cmd = _codePodConfig.GetDeleteFileCommand(request.Path);
         string[] shellPrefix = ParseShellPrefixCsv(session.ShellPrefix);
         await _docker.ExecuteCommandAsync(session.ContainerId, shellPrefix, cmd, _codePodConfig.WorkDir, timeoutSeconds: 60, cancellationToken);
         await TouchSession(session.Id, cancellationToken);

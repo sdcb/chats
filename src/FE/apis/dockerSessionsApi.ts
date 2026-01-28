@@ -212,7 +212,7 @@ export const deleteDockerFile = async (
   const fetchService = createFetchClient();
   return fetchService.delete<void>(
     `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}/file`,
-    { params: { path }, suppressDefaultToast: true },
+    { body: { path }, suppressDefaultToast: true },
   );
 };
 
