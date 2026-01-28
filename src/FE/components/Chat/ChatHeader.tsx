@@ -233,7 +233,7 @@ const ChatHeader = () => {
               <IconDocker size={18} />
             </Button>
           }
-          content={t('Session Manager')}
+          content={t('Sandbox Manager')}
         />
       </div>
     );

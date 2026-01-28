@@ -742,7 +742,7 @@
   "API keys are credentials for accessing Chats API with full account permissions. Please keep them secure.": "API 密钥是您访问 Chats 接口的凭证，具有该账户的完整权限，请您妥善保管。",
   "OpenAI Compatible APIs": "OpenAI 兼容 API",
   "Anthropic Compatible APIs": "Anthropic 兼容 API",
-  "Session Manager": "Session管理",
+  "Sandbox Manager": "沙箱管理",
   "Create session": "创建Session",
   "No Docker sessions. Click + to create one.": "你没有任何Docker会话，点击右上角的+号创建一个",
   "Default {{default}}; max {{max}}": "默认 {{default}}，最大 {{max}}",

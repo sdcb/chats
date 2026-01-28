@@ -172,7 +172,7 @@ export default function ChatSessionManagerWindow({
       title={
         <span className="flex items-center gap-2">
           <IconDocker size={18} />
-          {t('Session Manager')}
+          {t('Sandbox Manager')}
         </span>
       }
       className="w-[min(100vw,920px)]"
