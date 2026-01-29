@@ -87,14 +87,11 @@ export default function ChatSessionManagerWindow({
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>('info');
-  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
 
   const selectedSession = useMemo(
     () => sessions.find((s) => s.label === selectedLabel) ?? null,
     [selectedLabel, sessions],
   );
-
-  const tabOrder: TabType[] = ['info', 'command', 'files', 'editor'];
 
   // 编辑 tab 只有在有文件被选中时才启用
   const isEditorTabEnabled = !!selectedFile && !selectedFile.isDirectory;
@@ -102,11 +99,8 @@ export default function ChatSessionManagerWindow({
   const handleTabChange = useCallback((newTab: TabType) => {
     // 如果编辑 tab 未启用，不允许切换
     if (newTab === 'editor' && !isEditorTabEnabled) return;
-    const currentIndex = tabOrder.indexOf(activeTab);
-    const newIndex = tabOrder.indexOf(newTab);
-    setSlideDirection(newIndex > currentIndex ? 'right' : 'left');
     setActiveTab(newTab);
-  }, [activeTab, isEditorTabEnabled, tabOrder]);
+  }, [isEditorTabEnabled]);
 
   const loadSessions = useCallback(async () => {
     setLoadingSessions(true);
@@ -332,64 +326,81 @@ export default function ChatSessionManagerWindow({
             <div className="h-full flex flex-col">
               {/* Tab content with animation */}
               <div className="flex-1 overflow-hidden relative">
+                {/* Info tab */}
                 <div
-                  key={activeTab}
                   className={cn(
-                    'h-full overflow-auto p-3',
-                    'animate-in duration-300 ease-out',
-                    slideDirection === 'right' ? 'slide-in-from-right-4' : 'slide-in-from-left-4',
-                    'fade-in',
+                    'h-full overflow-auto p-3 absolute inset-0',
+                    activeTab === 'info' ? 'visible' : 'invisible pointer-events-none',
                   )}
                 >
-                  {activeTab === 'info' && (
-                    <SessionInfoCard session={selectedSession} />
+                  <SessionInfoCard session={selectedSession} />
+                </div>
+
+                {/* Command tab - 保持挂载以保留状态 */}
+                <div
+                  className={cn(
+                    'h-full overflow-auto p-3 absolute inset-0',
+                    activeTab === 'command' ? 'visible' : 'invisible pointer-events-none',
                   )}
-                  {activeTab === 'command' && (
-                    <SessionCommandRunner
+                >
+                  <SessionCommandRunner
+                    chatId={chatId}
+                    encryptedSessionId={selectedSession.encryptedSessionId}
+                    onFinished={(ok) => {
+                      if (ok) {
+                        setRefreshFilesKey((k) => k + 1);
+                        fileManagerRef.current?.refresh();
+                      }
+                    }}
+                  />
+                </div>
+
+                {/* Files tab - 保持挂载以保留状态 */}
+                <div
+                  className={cn(
+                    'h-full overflow-auto p-3 absolute inset-0',
+                    activeTab === 'files' ? 'visible' : 'invisible pointer-events-none',
+                  )}
+                >
+                  <SessionFileManager
+                    ref={fileManagerRef}
+                    chatId={chatId}
+                    encryptedSessionId={selectedSession.encryptedSessionId}
+                    refreshKey={refreshFilesKey}
+                    onSelectFile={(entry) => {
+                      setSelectedFile(entry);
+                      if (!entry || entry.isDirectory) {
+                        setActiveFilePath(null);
+                      }
+                    }}
+                    onEditFile={(path) => {
+                      setActiveFilePath(path);
+                      handleTabChange('editor');
+                    }}
+                  />
+                </div>
+
+                {/* Editor tab */}
+                <div
+                  className={cn(
+                    'h-full overflow-auto p-3 absolute inset-0',
+                    activeTab === 'editor' ? 'visible' : 'invisible pointer-events-none',
+                  )}
+                >
+                  {activeFilePath ? (
+                    <SessionFileEditor
                       chatId={chatId}
                       encryptedSessionId={selectedSession.encryptedSessionId}
-                      onFinished={(ok) => {
-                        if (ok) {
-                          setRefreshFilesKey((k) => k + 1);
-                          fileManagerRef.current?.refresh();
-                        }
+                      path={activeFilePath}
+                      onSaved={() => {
+                        setRefreshFilesKey((k) => k + 1);
+                        fileManagerRef.current?.refresh();
                       }}
                     />
-                  )}
-                  {activeTab === 'files' && (
-                    <SessionFileManager
-                      ref={fileManagerRef}
-                      chatId={chatId}
-                      encryptedSessionId={selectedSession.encryptedSessionId}
-                      refreshKey={refreshFilesKey}
-                      onSelectFile={(entry) => {
-                        setSelectedFile(entry);
-                        if (!entry || entry.isDirectory) {
-                          setActiveFilePath(null);
-                        }
-                      }}
-                      onEditFile={(path) => {
-                        setActiveFilePath(path);
-                        handleTabChange('editor');
-                      }}
-                    />
-                  )}
-                  {activeTab === 'editor' && (
-                    activeFilePath ? (
-                      <SessionFileEditor
-                        chatId={chatId}
-                        encryptedSessionId={selectedSession.encryptedSessionId}
-                        path={activeFilePath}
-                        onSaved={() => {
-                          setRefreshFilesKey((k) => k + 1);
-                          fileManagerRef.current?.refresh();
-                        }}
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-sm text-muted-foreground">
-                        {t('Select a file from File Manager to edit')}
-                      </div>
-                    )
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-sm text-muted-foreground">
+                      {t('Select a file from File Manager to edit')}
+                    </div>
                   )}
                 </div>
               </div>
