@@ -58,6 +58,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
     const [selected, setSelected] = useState<FileEntry | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [dragOver, setDragOver] = useState(false);
+    const dragCounterRef = useRef(0);
 
     const load = useCallback(
       async (path?: string | null) => {
@@ -118,6 +119,8 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
     const onDrop = useCallback(
       async (e: React.DragEvent) => {
         e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current = 0;
         setDragOver(false);
         if (uploading || loading) return;
         const files = Array.from(e.dataTransfer.files ?? []);
@@ -125,6 +128,29 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
       },
       [doUpload, loading, uploading],
     );
+
+    const onDragEnter = useCallback((e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounterRef.current++;
+      if (dragCounterRef.current === 1) {
+        setDragOver(true);
+      }
+    }, []);
+
+    const onDragOver = useCallback((e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    }, []);
+
+    const onDragLeave = useCallback((e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounterRef.current--;
+      if (dragCounterRef.current === 0) {
+        setDragOver(false);
+      }
+    }, []);
 
     const selectedPath = selected?.path ?? '';
     const selectedName = selected?.name ?? '';
@@ -286,18 +312,9 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
             (loading || uploading) && 'opacity-80 pointer-events-none',
             dragOver && 'ring-2 ring-primary',
           )}
-          onDragEnter={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={(e) => {
-            e.preventDefault();
-            setDragOver(false);
-          }}
+          onDragEnter={onDragEnter}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
           onDrop={onDrop}
         >
           {dragOver && (
