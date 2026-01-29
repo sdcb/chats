@@ -5,8 +5,8 @@ using Chats.BE.Services.CodeInterpreter;
 using Chats.BE.Services.UrlEncryption;
 using Chats.DB;
 using Chats.DockerInterface;
-using Chats.DockerInterface.Exceptions;
 using Chats.DockerInterface.Models;
+using Docker.DotNet;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
@@ -277,13 +277,13 @@ public sealed class ChatDockerSessionsController(
                 target,
                 entries.OrderByDescending(x => x.IsDirectory).ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToArray());
         }
-        catch (ContainerPathNotFoundException)
+        catch (FileNotFoundException e)
         {
-            return BadRequest($"Directory not found: {target}");
+            return BadRequest(e.Message);
         }
-        catch (ContainerNotFoundException)
+        catch (DockerContainerNotFoundException e)
         {
-            return BadRequest("Docker session container not found or has been deleted");
+            return BadRequest(e.Message);
         }
     }
 

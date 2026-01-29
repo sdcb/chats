@@ -1,4 +1,3 @@
-using Chats.DockerInterface.Exceptions;
 using Chats.DockerInterface.Models;
 
 namespace Chats.DockerInterface;
@@ -89,7 +88,7 @@ public interface IDockerService : IDisposable
             if (errorLower.Contains("no such file") || errorLower.Contains("cannot find") ||
                 errorLower.Contains("cannot access") || errorLower.Contains("not exist"))
             {
-                throw new ContainerPathNotFoundException(containerId, path, new Exception(result.Stderr));
+                throw new FileNotFoundException(result.Stderr, path);
             }
             throw new InvalidOperationException($"Failed to list directory: {result.Stderr}");
         }

@@ -588,7 +588,7 @@ public sealed class CodeInterpreterExecutor(
         }
 
         state.DbSession.TerminatedAt = DateTime.UtcNow;
-        await TouchSession(state.DbSession.Id, cancellationToken);
+        await TerminateSession(state.DbSession.Id, cancellationToken);
 
         ctx.SessionsBySessionId.Remove(sessionId);
 
@@ -1217,6 +1217,32 @@ public sealed class CodeInterpreterExecutor(
                 .ExecuteUpdateAsync(x => x
                     .SetProperty(v => v.LastActiveAt, now)
                     .SetProperty(v => v.ExpiresAt, now.AddSeconds(_options.SessionIdleTimeoutSeconds)), cancellationToken);
+        }
+    }
+
+    private async Task TerminateSession(long dockerSessionId, CancellationToken cancellationToken)
+    {
+        DateTime now = DateTime.UtcNow;
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
+
+        // In-Memory provider doesn't support ExecuteUpdateAsync, use fallback
+        if (db.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+        {
+            ChatDockerSession? session = await db.ChatDockerSessions
+                .FirstOrDefaultAsync(x => x.Id == dockerSessionId, cancellationToken);
+            if (session != null)
+            {
+                session.TerminatedAt = now;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            await db.ChatDockerSessions
+                .Where(x => x.Id == dockerSessionId)
+                .ExecuteUpdateAsync(x => x
+                    .SetProperty(v => v.TerminatedAt, now), cancellationToken);
         }
     }
 
