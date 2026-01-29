@@ -6,7 +6,18 @@ import useTranslation from '@/hooks/useTranslation';
 import FloatingWindow from '@/components/ui/floating-window/FloatingWindow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { IconCheck, IconDocker, IconLoader, IconPlus, IconTrash, IconX } from '@/components/Icons';
+import {
+  IconCheck,
+  IconDocker,
+  IconLoader,
+  IconPlus,
+  IconTrash,
+  IconX,
+  IconInfo,
+  IconBolt,
+  IconFolder,
+  IconEdit,
+} from '@/components/Icons';
 
 import {
   createChatDockerSession,
@@ -22,6 +33,7 @@ import {
 import {
   CreateDockerSessionRequest,
   DockerSessionDto,
+  FileEntry,
   ImageListResponse,
   MemoryLimitResponse,
   NetworkModesResponse,
@@ -36,6 +48,7 @@ import SessionInfoCard from './SessionInfoCard';
 import { cn } from '@/lib/utils';
 
 type Mode = 'view' | 'create';
+type TabType = 'info' | 'command' | 'files' | 'editor';
 
 type Props = {
   chatId: string;
@@ -68,13 +81,32 @@ export default function ChatSessionManagerWindow({
   const [createDefaultsLoaded, setCreateDefaultsLoaded] = useState(false);
 
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<FileEntry | null>(null);
   const [refreshFilesKey, setRefreshFilesKey] = useState(0);
   const fileManagerRef = useRef<FileManagerHandle | null>(null);
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<TabType>('info');
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
 
   const selectedSession = useMemo(
     () => sessions.find((s) => s.label === selectedLabel) ?? null,
     [selectedLabel, sessions],
   );
+
+  const tabOrder: TabType[] = ['info', 'command', 'files', 'editor'];
+
+  // 编辑 tab 只有在有文件被选中时才启用
+  const isEditorTabEnabled = !!selectedFile && !selectedFile.isDirectory;
+
+  const handleTabChange = useCallback((newTab: TabType) => {
+    // 如果编辑 tab 未启用，不允许切换
+    if (newTab === 'editor' && !isEditorTabEnabled) return;
+    const currentIndex = tabOrder.indexOf(activeTab);
+    const newIndex = tabOrder.indexOf(newTab);
+    setSlideDirection(newIndex > currentIndex ? 'right' : 'left');
+    setActiveTab(newTab);
+  }, [activeTab, isEditorTabEnabled, tabOrder]);
 
   const loadSessions = useCallback(async () => {
     setLoadingSessions(true);
@@ -115,6 +147,8 @@ export default function ChatSessionManagerWindow({
     if (!open) return;
     setMode('view');
     setActiveFilePath(null);
+    setSelectedFile(null);
+    setActiveTab('info');
     setCreateDefaultsLoaded(false);
   }, [open]);
 
@@ -166,6 +200,13 @@ export default function ChatSessionManagerWindow({
 
   const showEmpty = !loadingSessions && sessions.length === 0;
 
+  const tabs = useMemo(() => [
+    { id: 'info' as TabType, label: t('Basic Info'), icon: <IconInfo size={18} />, disabled: false },
+    { id: 'command' as TabType, label: t('Run command'), icon: <IconBolt size={18} />, disabled: false },
+    { id: 'files' as TabType, label: t('File manager'), icon: <IconFolder size={18} />, disabled: false },
+    { id: 'editor' as TabType, label: t('File editor'), icon: <IconEdit size={18} />, disabled: !isEditorTabEnabled },
+  ], [isEditorTabEnabled, t]);
+
   return (
     <FloatingWindow
       open={open}
@@ -178,8 +219,9 @@ export default function ChatSessionManagerWindow({
       }
       className="w-[min(100vw,920px)]"
     >
-      <div className="p-3 flex flex-col gap-3">
-        <div className="flex items-center gap-2 overflow-x-auto border-b pb-2">
+      <div className="flex flex-col h-full">
+        {/* Session selector */}
+        <div className="p-3 flex items-center gap-2 overflow-x-auto border-b shrink-0">
           {loadingSessions ? (
             <>
               <Skeleton className="h-8 w-28" />
@@ -230,6 +272,7 @@ export default function ChatSessionManagerWindow({
                           setSelectedLabel(s.label);
                           setMode('view');
                           setActiveFilePath(null);
+                          setActiveTab('info');
                         }}
                         title={s.image}
                       >
@@ -264,60 +307,120 @@ export default function ChatSessionManagerWindow({
           )}
         </div>
 
-        {mode === 'create' ? (
-          <CreateSessionPane
-            defaultImage={defaultImage}
-            images={images.images}
-            cpuLimits={cpuLimits}
-            memoryLimits={memoryLimits}
-            networkModes={networkModes}
-            onCancel={() => {
-              setMode('view');
-              setSelectedLabel((prev) => prev ?? sessions[0]?.label ?? null);
-            }}
-            onCreate={handleCreate}
-          />
-        ) : showEmpty ? (
-          <div className="flex flex-col items-center justify-center py-20 text-sm text-muted-foreground">
-            {t('No Docker sessions. Click + to create one.')}
-          </div>
-        ) : selectedSession ? (
-          <div className="flex flex-col gap-4">
-            <SessionInfoCard session={selectedSession} />
-
-            <SessionCommandRunner
-              chatId={chatId}
-              encryptedSessionId={selectedSession.encryptedSessionId}
-              onFinished={(ok) => {
-                if (ok) {
-                  setRefreshFilesKey((k) => k + 1);
-                  fileManagerRef.current?.refresh();
-                }
-              }}
-            />
-
-            <SessionFileManager
-              ref={fileManagerRef}
-              chatId={chatId}
-              encryptedSessionId={selectedSession.encryptedSessionId}
-              refreshKey={refreshFilesKey}
-              onOpenTextFile={(path) => setActiveFilePath(path)}
-            />
-
-            {activeFilePath && (
-              <SessionFileEditor
-                chatId={chatId}
-                encryptedSessionId={selectedSession.encryptedSessionId}
-                path={activeFilePath}
-                onClose={() => setActiveFilePath(null)}
-                onSaved={() => {
-                  setRefreshFilesKey((k) => k + 1);
-                  fileManagerRef.current?.refresh();
+        {/* Main content area */}
+        <div className="flex-1 overflow-hidden">
+          {mode === 'create' ? (
+            <div className="p-3 h-full overflow-auto">
+              <CreateSessionPane
+                defaultImage={defaultImage}
+                images={images.images}
+                cpuLimits={cpuLimits}
+                memoryLimits={memoryLimits}
+                networkModes={networkModes}
+                onCancel={() => {
+                  setMode('view');
+                  setSelectedLabel((prev) => prev ?? sessions[0]?.label ?? null);
                 }}
+                onCreate={handleCreate}
               />
-            )}
-          </div>
-        ) : null}
+            </div>
+          ) : showEmpty ? (
+            <div className="flex flex-col items-center justify-center h-full text-sm text-muted-foreground">
+              {t('No Docker sessions. Click + to create one.')}
+            </div>
+          ) : selectedSession ? (
+            <div className="h-full flex flex-col">
+              {/* Tab content with animation */}
+              <div className="flex-1 overflow-hidden relative">
+                <div
+                  key={activeTab}
+                  className={cn(
+                    'h-full overflow-auto p-3',
+                    'animate-in duration-300 ease-out',
+                    slideDirection === 'right' ? 'slide-in-from-right-4' : 'slide-in-from-left-4',
+                    'fade-in',
+                  )}
+                >
+                  {activeTab === 'info' && (
+                    <SessionInfoCard session={selectedSession} />
+                  )}
+                  {activeTab === 'command' && (
+                    <SessionCommandRunner
+                      chatId={chatId}
+                      encryptedSessionId={selectedSession.encryptedSessionId}
+                      onFinished={(ok) => {
+                        if (ok) {
+                          setRefreshFilesKey((k) => k + 1);
+                          fileManagerRef.current?.refresh();
+                        }
+                      }}
+                    />
+                  )}
+                  {activeTab === 'files' && (
+                    <SessionFileManager
+                      ref={fileManagerRef}
+                      chatId={chatId}
+                      encryptedSessionId={selectedSession.encryptedSessionId}
+                      refreshKey={refreshFilesKey}
+                      onSelectFile={(entry) => {
+                        setSelectedFile(entry);
+                        if (!entry || entry.isDirectory) {
+                          setActiveFilePath(null);
+                        }
+                      }}
+                      onEditFile={(path) => {
+                        setActiveFilePath(path);
+                        handleTabChange('editor');
+                      }}
+                    />
+                  )}
+                  {activeTab === 'editor' && (
+                    activeFilePath ? (
+                      <SessionFileEditor
+                        chatId={chatId}
+                        encryptedSessionId={selectedSession.encryptedSessionId}
+                        path={activeFilePath}
+                        onSaved={() => {
+                          setRefreshFilesKey((k) => k + 1);
+                          fileManagerRef.current?.refresh();
+                        }}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-sm text-muted-foreground">
+                        {t('Select a file from File Manager to edit')}
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom tabs */}
+              <div className="border-t shrink-0">
+                <div className="flex">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => handleTabChange(tab.id)}
+                      disabled={tab.disabled}
+                      className={cn(
+                        'flex-1 flex flex-col items-center gap-1 py-2.5 px-2 transition-colors',
+                        tab.disabled
+                          ? 'text-muted-foreground/50 cursor-not-allowed'
+                          : 'hover:bg-accent/50',
+                        activeTab === tab.id && !tab.disabled
+                          ? 'text-primary border-t-2 border-primary bg-accent/30'
+                          : '',
+                      )}
+                    >
+                      {tab.icon}
+                      <span className="text-xs font-medium">{tab.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
     </FloatingWindow>
   );

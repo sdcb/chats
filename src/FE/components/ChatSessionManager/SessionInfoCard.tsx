@@ -9,6 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 type Props = {
   session: DockerSessionDto;
@@ -22,6 +23,16 @@ function formatBytes(bytes: number | null): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
+// 卡片颜色配置
+const cardColors = [
+  'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400',
+  'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400',
+  'bg-purple-500/10 border-purple-500/30 text-purple-600 dark:text-purple-400',
+  'bg-orange-500/10 border-orange-500/30 text-orange-600 dark:text-orange-400',
+  'bg-cyan-500/10 border-cyan-500/30 text-cyan-600 dark:text-cyan-400',
+  'bg-pink-500/10 border-pink-500/30 text-pink-600 dark:text-pink-400',
+];
+
 export default function SessionInfoCard({ session }: Props) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
@@ -31,22 +42,27 @@ export default function SessionInfoCard({ session }: Props) {
       {
         label: t('Image'),
         value: session.image,
+        icon: '🐳',
       },
       {
         label: t('CPU'),
         value: session.cpuCores !== null ? `${session.cpuCores} ${t('cores')}` : t('Unlimited'),
+        icon: '⚡',
       },
       {
         label: t('Memory'),
         value: formatBytes(session.memoryBytes),
+        icon: '💾',
       },
       {
         label: t('PID Limit'),
         value: session.maxProcesses !== null ? String(session.maxProcesses) : t('Unlimited'),
+        icon: '🔢',
       },
       {
         label: t('Network'),
         value: session.networkMode,
+        icon: '🌐',
       },
     ];
 
@@ -55,6 +71,7 @@ export default function SessionInfoCard({ session }: Props) {
       items.push({
         label: t('IP Address'),
         value: session.ipAddress,
+        icon: '📍',
       });
     }
 
@@ -72,21 +89,17 @@ export default function SessionInfoCard({ session }: Props) {
   }, [copyText]);
 
   return (
-    <div className="relative rounded-md border bg-muted/30 px-3 py-2 group">
-      <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs pr-8">
-        {infoItems.map((item, index) => (
-          <div key={index} className="flex items-center gap-1 text-muted-foreground">
-            <span>{item.label}:</span>
-            <span className="text-foreground font-medium">{item.value}</span>
-          </div>
-        ))}
-      </div>
-      <div className="absolute top-1/2 -translate-y-1/2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div className="h-full flex flex-col">
+      {/* 标题栏 */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-medium text-muted-foreground">
+          {t('Session Information')}
+        </h3>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                className="flex items-center rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted"
+                className="flex items-center rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 onClick={handleCopy}
               >
                 {copied ? (
@@ -101,6 +114,27 @@ export default function SessionInfoCard({ session }: Props) {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+      </div>
+
+      {/* 卡片网格 */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {infoItems.map((item, index) => (
+          <div
+            key={index}
+            className={cn(
+              'rounded-lg border p-3 transition-all hover:shadow-md',
+              cardColors[index % cardColors.length],
+            )}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-base">{item.icon}</span>
+              <span className="text-xs font-medium opacity-80">{item.label}</span>
+            </div>
+            <div className="text-sm font-semibold truncate" title={item.value}>
+              {item.value}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

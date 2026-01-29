@@ -22,8 +22,8 @@ type Props = {
   onFinished?: (ok: boolean) => void;
 };
 
-const TEXTAREA_MIN_HEIGHT = 40;
-const TEXTAREA_MAX_HEIGHT = 40 * 5;
+const TEXTAREA_MIN_HEIGHT = 48;
+const TEXTAREA_MAX_HEIGHT = 48 * 4;
 
 type OutputLine =
   | { t: 'stdout'; v: string }
@@ -94,7 +94,7 @@ export default function SessionCommandRunner({
       }
       onFinished?.(ok);
     }
-  }, [canRun, chatId, command, onFinished, encryptedSessionId]);
+  }, [canRun, chatId, command, onFinished, encryptedSessionId, t]);
 
   const { handleKeyDown } = useSendKeyHandler(run, false, !canRun);
 
@@ -117,7 +117,7 @@ export default function SessionCommandRunner({
   const outputView = useMemo(() => {
     if (output.length === 0) {
       return (
-        <div className="text-white/70 text-sm">
+        <div className="text-white/70 text-sm flex items-center justify-center h-full">
           {t('No shell output. Enter a command to see results.')}
         </div>
       );
@@ -157,47 +157,44 @@ export default function SessionCommandRunner({
         })}
       </div>
     );
-  }, [output]);
+  }, [output, t]);
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <IconBolt size={16} /> {t('Run command')}
-      </div>
-
-      <div className="relative">
+    <div className="h-full flex flex-col gap-3">
+      {/* 命令输入区域 */}
+      <div className="relative shrink-0">
         <textarea
           ref={textareaRef}
           value={command}
           onChange={(e) => setCommand(e.target.value)}
           onKeyDown={handleKeyDown}
           className={cn(
-            'w-full resize-none rounded-md border bg-background px-3 py-2 pr-20 leading-6 outline-none',
-            'text-sm',
+            'w-full resize-none rounded-lg border bg-background px-4 py-3 pr-24 leading-6 outline-none',
+            'text-sm focus:ring-2 focus:ring-primary/20 transition-shadow',
           )}
           style={{ height: TEXTAREA_MIN_HEIGHT }}
           placeholder={t('Enter a shell command...')}
         />
-        <div className="absolute right-2 bottom-2">
+        <div className="absolute right-3 bottom-3">
           <Button
             size="sm"
-            variant="secondary"
             onClick={run}
             disabled={!canRun}
             className="gap-2"
           >
             {running ? (
-              <IconLoader className="animate-spin" size={16} />
+              <IconLoader className="animate-spin stroke-primary-foreground" size={16} />
             ) : (
-              <IconBolt size={16} />
+              <IconBolt className="stroke-primary-foreground" size={16} />
             )}
             {t('Run')}
           </Button>
         </div>
       </div>
 
-      <div className="relative rounded-md border bg-black min-h-[120px] max-h-[280px] group">
-        <div className="p-3 min-h-[120px] max-h-[280px] overflow-auto">
+      {/* 输出区域 - 占据剩余空间 */}
+      <div className="relative rounded-lg border bg-black flex-1 min-h-0 group">
+        <div className="p-4 h-full overflow-auto">
           {outputView}
         </div>
         {output.length > 0 && (

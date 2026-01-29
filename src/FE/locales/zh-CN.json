@@ -788,5 +788,13 @@
   "Select image": "选择镜像",
   "No matching images": "无匹配镜像",
   "Up": "向上一级",
-  "Directory does not exist": "不存在指定目录"
+  "Directory does not exist": "不存在指定目录",
+  "Basic Info": "基本信息",
+  "Session Information": "会话信息",
+  "Select a file from File Manager to edit": "从文件管理中选择一个文件进行编辑",
+  "Modified": "已修改",
+  "Are you sure you want to discard changes?": "确认放弃修改吗？",
+  "Discard Changes": "放弃修改",
+  "This file cannot be edited as text": "此文件无法作为文本编辑",
+  "Edit": "编辑"
 }

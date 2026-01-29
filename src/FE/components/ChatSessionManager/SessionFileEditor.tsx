@@ -2,9 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { IconCheck, IconClipboard, IconEdit, IconLoader, IconX } from '@/components/Icons';
+import { IconCheck, IconClipboard, IconEdit, IconLoader } from '@/components/Icons';
 import {
   Tooltip,
   TooltipContent,
@@ -15,14 +14,10 @@ import {
 import { readDockerTextFile, saveDockerTextFile } from '@/apis/dockerSessionsApi';
 import { getApiErrorMessage } from '@/utils/apiError';
 
-const TEXTAREA_MIN_HEIGHT = 80;
-const TEXTAREA_MAX_HEIGHT = 320;
-
 type Props = {
   chatId: string;
   encryptedSessionId: string;
   path: string;
-  onClose: () => void;
   onSaved: () => void;
 };
 
@@ -30,7 +25,6 @@ export default function SessionFileEditor({
   chatId,
   encryptedSessionId,
   path,
-  onClose,
   onSaved,
 }: Props) {
   const { t } = useTranslation();
@@ -42,23 +36,7 @@ export default function SessionFileEditor({
   const [copied, setCopied] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const resize = useCallback(() => {
-    if (!textareaRef.current) return;
-    const el = textareaRef.current;
-    el.style.height = 'auto';
-    const height = Math.min(
-      Math.max(el.scrollHeight, TEXTAREA_MIN_HEIGHT),
-      TEXTAREA_MAX_HEIGHT,
-    );
-    el.style.height = `${height}px`;
-    el.style.overflow = el.scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden';
-  }, []);
-
-  useEffect(() => {
-    resize();
-  }, [text, resize]);
-
-  useEffect(() => {
+  const loadFile = useCallback(() => {
     let cancelled = false;
     setLoading(true);
     setIsText(false);
@@ -88,7 +66,11 @@ export default function SessionFileEditor({
     return () => {
       cancelled = true;
     };
-  }, [chatId, path, encryptedSessionId]);
+  }, [chatId, encryptedSessionId, path]);
+
+  useEffect(() => {
+    return loadFile();
+  }, [loadFile]);
 
   const dirty = useMemo(() => isText && text !== original, [isText, original, text]);
 
@@ -99,96 +81,111 @@ export default function SessionFileEditor({
     setTimeout(() => setCopied(false), 2000);
   }, [text]);
 
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    try {
+      await saveDockerTextFile(chatId, encryptedSessionId, { path, text });
+      setSaving(false);
+      setOriginal(text);
+      onSaved();
+    } catch (e: any) {
+      toast.error(getApiErrorMessage(e, t('Save failed')));
+      setSaving(false);
+    }
+  }, [chatId, encryptedSessionId, onSaved, path, t, text]);
+
   if (loading) {
     return (
-      <div className="border rounded-md p-4">
-        <Skeleton className="h-4 w-40" />
-        <div className="mt-3 space-y-2">
+      <div className="h-full flex flex-col p-4">
+        <Skeleton className="h-5 w-48 mb-4" />
+        <div className="flex-1 space-y-2">
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-4/5" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
         </div>
       </div>
     );
   }
 
   if (!isText) {
-    return null;
+    return (
+      <div className="h-full flex flex-col items-center justify-center text-sm text-muted-foreground">
+        {t('This file cannot be edited as text')}
+      </div>
+    );
   }
 
   return (
-      <div className="border rounded-md p-4 flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <IconEdit size={16} />
-        {t('File editor')}: <span className="font-mono text-xs">{path}</span>
+    <div className="h-full flex flex-col gap-3">
+      {/* 标题栏 */}
+      <div className="flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2 text-sm font-medium min-w-0">
+          <IconEdit size={16} className="shrink-0" />
+          <span className="truncate font-mono text-xs" title={path}>
+            {path}
+          </span>
+          {dirty && (
+            <span className="shrink-0 text-xs text-orange-500 font-normal">
+              ({t('Modified')})
+            </span>
+          )}
+        </div>
+        {/* 复制按钮 */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className="flex items-center rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                onClick={handleCopy}
+              >
+                {copied ? (
+                  <IconCheck stroke="currentColor" size={16} />
+                ) : (
+                  <IconClipboard stroke="currentColor" size={16} />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {copied ? t('Copied') : t('Click Copy')}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
-      <div className="relative group">
+      {/* 编辑区域 */}
+      <div className="flex-1 min-h-0 relative">
         <textarea
           ref={textareaRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          className="w-full resize-none rounded-md border bg-background px-3 py-2 font-mono text-sm outline-none"
-          style={{ height: TEXTAREA_MIN_HEIGHT, overflow: 'hidden' }}
+          className="w-full h-full resize-none rounded-lg border bg-background px-4 py-3 font-mono text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-shadow"
           spellCheck={false}
         />
-        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* 右下角保存按钮 */}
+        {(dirty || saving) && (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  className="flex items-center rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted"
-                  onClick={handleCopy}
+                  className="absolute right-3 bottom-3 flex items-center rounded p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                  onClick={handleSave}
+                  disabled={saving}
                 >
-                  {copied ? (
-                    <IconCheck stroke="currentColor" size={16} />
+                  {saving ? (
+                    <IconLoader className="animate-spin" stroke="currentColor" size={20} />
                   ) : (
-                    <IconClipboard stroke="currentColor" size={16} />
+                    <IconCheck stroke="currentColor" size={20} />
                   )}
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                {copied ? t('Copied') : t('Click Copy')}
+                {t('Save')}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        </div>
-      </div>
-
-      <div className="flex justify-end gap-2">
-        <Button
-          variant="secondary"
-          onClick={onClose}
-          disabled={saving}
-          className="gap-2"
-        >
-          <IconX size={16} />
-          {t('Cancel')}
-        </Button>
-
-        <Button
-          onClick={async () => {
-            setSaving(true);
-            try {
-              await saveDockerTextFile(chatId, encryptedSessionId, { path, text });
-              toast.success(t('Save successful'));
-              setOriginal(text);
-              onSaved();
-            } catch (e: any) {
-              toast.error(getApiErrorMessage(e, t('Save failed')));
-            } finally {
-              setSaving(false);
-            }
-          }}
-          disabled={saving || !dirty}
-          className="gap-2"
-        >
-          {saving ? (
-            <IconLoader className="animate-spin" size={16} />
-          ) : (
-            t('Save')
-          )}
-        </Button>
+        )}
       </div>
     </div>
   );
