@@ -495,7 +495,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
         {/* 文件列表区域 */}
         <div
           className={cn(
-            'relative border rounded-lg p-3 flex-1 min-h-0 overflow-auto',
+            'relative border rounded-lg flex-1 min-h-0 overflow-auto flex flex-col',
             (loading || uploading) && 'opacity-80 pointer-events-none',
             dragOver && 'ring-2 ring-primary',
           )}
@@ -510,11 +510,20 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
             </div>
           )}
           {dirError ? (
-            <div className="flex items-center justify-center text-sm text-muted-foreground h-full">
-              {dirError}
+            <div className="flex flex-col h-full">
+              {/* 错误信息区域 - 类似命令执行的样式 */}
+              <div className="p-3">
+                <div className="text-sm font-mono whitespace-pre-wrap break-words text-red-300">
+                  {dirError}
+                </div>
+              </div>
+              {/* 空白占位区域 */}
+              <div className="flex-1 p-3" />
             </div>
           ) : (
-            listView
+            <div className="p-3 flex-1">
+              {listView}
+            </div>
           )}
         </div>
       </div>
