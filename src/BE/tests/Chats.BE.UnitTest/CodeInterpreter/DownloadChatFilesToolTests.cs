@@ -17,7 +17,7 @@ namespace Chats.BE.UnitTest.CodeInterpreter;
 
 public sealed class DownloadChatFilesToolTests
 {
-    private sealed record UploadCall(string ContainerId, string Path, byte[] Content);
+
 
     private sealed class FakeFileServiceFactory(IReadOnlyDictionary<string, byte[]> blobs) : IFileServiceFactory
     {
@@ -46,62 +46,7 @@ public sealed class DownloadChatFilesToolTests
             => throw new NotImplementedException();
     }
 
-    private sealed class FakeDockerService : IDockerService
-    {
-        public List<UploadCall> Uploads { get; } = [];
 
-        public CodePodConfig Config { get; } = new();
-
-        public void Dispose() { }
-
-        public Task EnsureImageAsync(string image, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<ContainerInfo> CreateContainerAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<List<ContainerInfo>> GetManagedContainersAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(new List<ContainerInfo>());
-
-        public Task<List<string>> ListImagesAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(new List<string>());
-
-        public Task<ContainerInfo?> GetContainerAsync(string containerId, CancellationToken cancellationToken = default)
-            => Task.FromResult<ContainerInfo?>(null);
-
-        public Task DeleteContainerAsync(string containerId, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task DeleteAllManagedContainersAsync(CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task UploadFileAsync(string containerId, string containerPath, byte[] content, CancellationToken cancellationToken = default)
-        {
-            Uploads.Add(new UploadCall(containerId, containerPath, content));
-            return Task.CompletedTask;
-        }
-
-        public Task<List<FileEntry>> ListDirectoryAsync(string containerId, string path, CancellationToken cancellationToken = default)
-            => Task.FromResult(new List<FileEntry>());
-
-        public Task<byte[]> DownloadFileAsync(string containerId, string filePath, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<SessionUsage?> GetContainerStatsAsync(string containerId, CancellationToken cancellationToken = default)
-            => Task.FromResult<SessionUsage?>(null);
-    }
 
     private sealed class ThrowingUrlEncryptionService : IUrlEncryptionService
     {

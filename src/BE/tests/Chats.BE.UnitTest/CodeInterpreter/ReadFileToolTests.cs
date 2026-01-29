@@ -18,94 +18,6 @@ namespace Chats.BE.UnitTest.CodeInterpreter;
 
 public sealed class ReadFileToolTests
 {
-    private sealed class FakeDockerService : IDockerService
-    {
-        private readonly Dictionary<(string containerId, string filePath), byte[]> _files = new();
-
-        public string? LastDownloadContainerId { get; private set; }
-        public string? LastDownloadPath { get; private set; }
-
-        public CodePodConfig Config { get; } = new();
-
-        /// <summary>
-        /// Normalize path: relative paths like "foo.txt" become "/app/foo.txt".
-        /// Absolute paths (starting with "/") are kept as-is.
-        /// </summary>
-        private string NormalizePath(string path)
-        {
-            if (path.StartsWith('/'))
-            {
-                return path; // absolute path, keep as-is
-            }
-            // relative path -> prepend workDir
-            string workDir = Config.WorkDir; // default "/app"
-            return $"{workDir}/{path}";
-        }
-
-        public void AddFile(string containerId, string filePath, byte[] content)
-        {
-            string normalized = NormalizePath(filePath);
-            _files[(containerId, normalized)] = content;
-        }
-
-        public void Dispose() { }
-
-        public Task EnsureImageAsync(string image, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<ContainerInfo> CreateContainerAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<List<ContainerInfo>> GetManagedContainersAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(new List<ContainerInfo>());
-
-        public Task<List<string>> ListImagesAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(new List<string>());
-
-        public Task<ContainerInfo?> GetContainerAsync(string containerId, CancellationToken cancellationToken = default)
-            => Task.FromResult<ContainerInfo?>(null);
-
-        public Task DeleteContainerAsync(string containerId, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task DeleteAllManagedContainersAsync(CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task UploadFileAsync(string containerId, string containerPath, byte[] content, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<List<FileEntry>> ListDirectoryAsync(string containerId, string path, CancellationToken cancellationToken = default)
-            => Task.FromResult(new List<FileEntry>());
-
-        public Task<byte[]> DownloadFileAsync(string containerId, string filePath, CancellationToken cancellationToken = default)
-        {
-            string normalized = NormalizePath(filePath);
-            LastDownloadContainerId = containerId;
-            LastDownloadPath = normalized;
-            if (_files.TryGetValue((containerId, normalized), out byte[]? content))
-            {
-                return Task.FromResult(content);
-            }
-
-            throw new InvalidOperationException($"File not found in fake docker: {containerId}:{normalized}");
-        }
-
-        public Task<SessionUsage?> GetContainerStatsAsync(string containerId, CancellationToken cancellationToken = default)
-            => Task.FromResult<SessionUsage?>(null);
-    }
-
     private static ServiceProvider CreateServiceProvider(string dbName)
     {
         ServiceCollection services = new();
@@ -195,7 +107,7 @@ public sealed class ReadFileToolTests
     public async Task ReadFile_Defaults_ReturnsAllLines()
     {
         using ServiceProvider sp = CreateServiceProvider(Guid.NewGuid().ToString());
-        FakeDockerService docker = new();
+        FakeDockerService docker = new() { NormalizePaths = true };
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
@@ -216,7 +128,7 @@ public sealed class ReadFileToolTests
     public async Task ReadFile_LineRange_ReturnsSubset()
     {
         using ServiceProvider sp = CreateServiceProvider(Guid.NewGuid().ToString());
-        FakeDockerService docker = new();
+        FakeDockerService docker = new() { NormalizePaths = true };
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
@@ -235,7 +147,7 @@ public sealed class ReadFileToolTests
     public async Task ReadFile_EndLineBeyondEof_ClampsToEof()
     {
         using ServiceProvider sp = CreateServiceProvider(Guid.NewGuid().ToString());
-        FakeDockerService docker = new();
+        FakeDockerService docker = new() { NormalizePaths = true };
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
@@ -254,7 +166,7 @@ public sealed class ReadFileToolTests
     public async Task ReadFile_StartLineBeyondEof_ReturnsEmpty_WhenWithLineNumbers()
     {
         using ServiceProvider sp = CreateServiceProvider(Guid.NewGuid().ToString());
-        FakeDockerService docker = new();
+        FakeDockerService docker = new() { NormalizePaths = true };
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
@@ -273,7 +185,7 @@ public sealed class ReadFileToolTests
     public async Task ReadFile_WithLineNumbers_IncludesTotalLines_AndPrefixes()
     {
         using ServiceProvider sp = CreateServiceProvider(Guid.NewGuid().ToString());
-        FakeDockerService docker = new();
+        FakeDockerService docker = new() { NormalizePaths = true };
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
@@ -292,7 +204,7 @@ public sealed class ReadFileToolTests
     public async Task ReadFile_InvalidStartLine_ReturnsFail()
     {
         using ServiceProvider sp = CreateServiceProvider(Guid.NewGuid().ToString());
-        FakeDockerService docker = new();
+        FakeDockerService docker = new() { NormalizePaths = true };
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
@@ -311,7 +223,7 @@ public sealed class ReadFileToolTests
     public async Task ReadFile_EndLineLessThanStartLine_ReturnsFail()
     {
         using ServiceProvider sp = CreateServiceProvider(Guid.NewGuid().ToString());
-        FakeDockerService docker = new();
+        FakeDockerService docker = new() { NormalizePaths = true };
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
@@ -330,7 +242,7 @@ public sealed class ReadFileToolTests
     public async Task ReadFile_Truncation_Head_AppendsNote()
     {
         using ServiceProvider sp = CreateServiceProvider(Guid.NewGuid().ToString());
-        FakeDockerService docker = new();
+        FakeDockerService docker = new() { NormalizePaths = true };
 
         OutputOptions oo = new()
         {
@@ -358,7 +270,7 @@ public sealed class ReadFileToolTests
     public async Task ReadFile_Truncation_Tail_PrependsNote()
     {
         using ServiceProvider sp = CreateServiceProvider(Guid.NewGuid().ToString());
-        FakeDockerService docker = new();
+        FakeDockerService docker = new() { NormalizePaths = true };
 
         OutputOptions oo = new()
         {
@@ -387,7 +299,7 @@ public sealed class ReadFileToolTests
     public async Task ReadFile_Truncation_HeadAndTail_InsertsMiddle()
     {
         using ServiceProvider sp = CreateServiceProvider(Guid.NewGuid().ToString());
-        FakeDockerService docker = new();
+        FakeDockerService docker = new() { NormalizePaths = true };
 
         OutputOptions oo = new()
         {
@@ -421,7 +333,7 @@ public sealed class ReadFileToolTests
     public async Task ReadFile_WithLineNumbers_PreservesTotalLinesPrefix_EvenWhenTailTruncates()
     {
         using ServiceProvider sp = CreateServiceProvider(Guid.NewGuid().ToString());
-        FakeDockerService docker = new();
+        FakeDockerService docker = new() { NormalizePaths = true };
 
         OutputOptions oo = new()
         {
@@ -452,7 +364,7 @@ public sealed class ReadFileToolTests
     public async Task ReadFile_Binary_FallsBackToBase64Preview_AndSupportsWithLineNumbersPrefix()
     {
         using ServiceProvider sp = CreateServiceProvider(Guid.NewGuid().ToString());
-        FakeDockerService docker = new();
+        FakeDockerService docker = new() { NormalizePaths = true };
 
         OutputOptions oo = new()
         {
