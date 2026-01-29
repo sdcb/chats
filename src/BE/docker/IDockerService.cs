@@ -13,16 +13,17 @@ public interface IDockerService : IDisposable
     /// </summary>
     CodePodConfig Config { get; }
     /// <summary>
-    /// 确保镜像存在
+    /// 确保镜像存在（拉取进度通过 stdout 输出）
     /// </summary>
     /// <param name="image">Docker镜像名称</param>
-    Task EnsureImageAsync(string image, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<CommandOutputEvent> EnsureImageAsync(string image, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 创建并启动容器（resourceLimits/networkMode 为 null 时使用默认值）
+    /// 创建并启动容器（resourceLimits/networkMode 为 null 时使用默认值）。
+    /// 调用前需先调用 EnsureImageAsync 确保镜像存在。
     /// </summary>
     /// <param name="image">Docker镜像名称</param>
-    Task<ContainerInfo> CreateContainerAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default);
+    Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 获取所有受管理的容器

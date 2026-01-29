@@ -113,17 +113,18 @@ public sealed class FakeDockerService : IDockerService
 
     public void Dispose() { }
 
-    public Task EnsureImageAsync(string image, CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<CommandOutputEvent> EnsureImageAsync(string image, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         EnsureImageCalled = true;
         if (ThrowOnDockerCalls)
         {
             throw new InvalidOperationException("Docker should not be called in this test");
         }
-        return Task.CompletedTask;
+        yield return new CommandStdoutEvent($"Image {image} already exists\n");
+        await Task.CompletedTask;
     }
 
-    public Task<ContainerInfo> CreateContainerAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default)
+    public Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default)
     {
         CreateContainerCalled = true;
         CreateContainerCalls++;

@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Chats.DockerInterface.Exceptions;
 using Chats.DockerInterface.Models;
 using Docker.DotNet;
 using Docker.DotNet.Models;
@@ -22,43 +21,61 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
     /// <inheritdoc />
     public CodePodConfig Config => config;
 
-    public async Task EnsureImageAsync(string image, CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<CommandOutputEvent> EnsureImageAsync(string image, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        // 检查镜像是否存在
+        bool imageExists = false;
         try
         {
             await _client.Images.InspectImageAsync(image, cancellationToken);
-            logger?.LogInformation("Image {Image} already exists", image);
+            imageExists = true;
         }
         catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            logger?.LogInformation("Pulling image {Image}...", image);
-            await _client.Images.CreateImageAsync(
-                new ImagesCreateParameters { FromImage = image },
-                null,
-                new Progress<JSONMessage>(m =>
-                {
-                    if (!string.IsNullOrEmpty(m.Status))
-                    {
-                        logger?.LogDebug("{Status}", m.Status);
-                    }
-                }),
-                cancellationToken);
-            logger?.LogInformation("Image {Image} pulled successfully", image);
+            imageExists = false;
         }
-    }
 
-    public async Task<ContainerInfo> CreateContainerAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default)
-    {
-        try
+        if (imageExists)
         {
-            return await CreateContainerCoreAsync(image, resourceLimits, networkMode, cancellationToken);
+            logger?.LogInformation("Image {Image} already exists", image);
+            yield return new CommandStdoutEvent($"Image {image} already exists\n");
+            yield break;
         }
-        catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+
+        // 镜像不存在，需要拉取
+        logger?.LogInformation("Pulling image {Image}...", image);
+        yield return new CommandStdoutEvent($"Pulling image {image}...\n");
+
+        // 使用 Channel 来桥接 Progress 回调和 IAsyncEnumerable
+        System.Threading.Channels.Channel<string> channel = System.Threading.Channels.Channel.CreateUnbounded<string>();
+
+        Task pullTask = _client.Images.CreateImageAsync(
+            new ImagesCreateParameters { FromImage = image },
+            null,
+            new Progress<JSONMessage>(m =>
+            {
+                if (!string.IsNullOrEmpty(m.Status))
+                {
+                    logger?.LogDebug("{Status}", m.Status);
+                    string message = string.IsNullOrEmpty(m.ProgressMessage)
+                        ? $"{m.Status}\n"
+                        : $"{m.Status}: {m.ProgressMessage}\n";
+                    channel.Writer.TryWrite(message);
+                }
+            }),
+            cancellationToken);
+
+        // 启动一个任务在 pull 完成后关闭 channel
+        _ = pullTask.ContinueWith(_ => channel.Writer.Complete(), TaskScheduler.Default);
+
+        await foreach (string message in channel.Reader.ReadAllAsync(cancellationToken))
         {
-            // Image may not exist locally when preloadImages=false. Pull once and retry.
-            await EnsureImageAsync(image, cancellationToken);
-            return await CreateContainerCoreAsync(image, resourceLimits, networkMode, cancellationToken);
+            yield return new CommandStdoutEvent(message);
         }
+
+        await pullTask; // 确保异常被传播
+        logger?.LogInformation("Image {Image} pulled successfully", image);
+        yield return new CommandStdoutEvent($"Image {image} pulled successfully\n");
     }
 
     public async Task<List<string>> ListImagesAsync(CancellationToken cancellationToken = default)
@@ -84,7 +101,7 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
             .ToList();
     }
 
-    private async Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits, NetworkMode? networkMode, CancellationToken cancellationToken)
+    public async Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default)
     {
         // 使用指定的资源限制或默认值
         ResourceLimits limits = resourceLimits ?? config.DefaultResourceLimits;

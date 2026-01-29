@@ -119,8 +119,11 @@ public sealed class ChatDockerSessionsController(
         }
 
         string effectiveImage = string.IsNullOrWhiteSpace(request.Image) ? _options.DefaultImage : request.Image.Trim();
-        await _docker.EnsureImageAsync(effectiveImage, cancellationToken);
-        ContainerInfo container = await _docker.CreateContainerAsync(effectiveImage, effectiveLimits, effectiveNetworkMode, cancellationToken);
+        await foreach (CommandOutputEvent _ in _docker.EnsureImageAsync(effectiveImage, cancellationToken))
+        {
+            // 消费进度输出
+        }
+        ContainerInfo container = await _docker.CreateContainerCoreAsync(effectiveImage, effectiveLimits, effectiveNetworkMode, cancellationToken);
 
         string label = string.IsNullOrWhiteSpace(request.Label)
             ? ComputeSessionIdFromContainerId(container.ContainerId)

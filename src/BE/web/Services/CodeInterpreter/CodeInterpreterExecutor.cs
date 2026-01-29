@@ -406,7 +406,7 @@ public sealed class CodeInterpreterExecutor(
     }
 
     [ToolFunction("Create a docker session")]
-    internal async Task<Result<string>> CreateDockerSession(
+    internal async IAsyncEnumerable<ToolProgressDelta> CreateDockerSession(
         TurnContext ctx,
         [ToolParam("Docker image to use (null means use server default: {defaultImage}).")]
         string? image,
@@ -421,7 +421,7 @@ public sealed class CodeInterpreterExecutor(
         [ToolParam("Network mode. One of: {allowedNetworkModes}. null means use server default: {defaultNetworkMode}.")]
         [EnumDataType(typeof(NetworkMode))]
         string? networkMode,
-        CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         bool hasLabel = !string.IsNullOrWhiteSpace(label);
 
@@ -429,7 +429,8 @@ public sealed class CodeInterpreterExecutor(
         if (hasLabel && ctx.SessionsBySessionId.TryGetValue(label!, out TurnContext.SessionState? existing))
         {
             existing.UsedInThisTurn = true;
-            return Result.Ok(existing.DbSession.AIReableDockerInfo);
+            yield return new ToolCompletedToolProgressDelta { Result = Result.Ok(existing.DbSession.AIReableDockerInfo) };
+            yield break;
         }
 
         // Resolve from DB along the ParentId chain of the current generating turn.
@@ -459,9 +460,13 @@ public sealed class CodeInterpreterExecutor(
             if ((int)effectiveNetworkMode > (int)maxAllowedNetworkMode)
             {
                 string allowed = _options.GetAllowedNetworkModesDisplay();
-                return Result.Fail<string>(
-                    $"Requested networkMode '{effectiveNetworkMode.ToString().ToLowerInvariant()}' exceeds MaxAllowedNetworkMode " +
-                    $"'{maxAllowedNetworkMode.ToString().ToLowerInvariant()}'. Allowed: {allowed}.");
+                yield return new ToolCompletedToolProgressDelta
+                {
+                    Result = Result.Fail<string>(
+                        $"Requested networkMode '{effectiveNetworkMode.ToString().ToLowerInvariant()}' exceeds MaxAllowedNetworkMode " +
+                        $"'{maxAllowedNetworkMode.ToString().ToLowerInvariant()}'. Allowed: {allowed}.")
+                };
+                yield break;
             }
 
             if (memoryBytes != null || cpuCores != null || maxProcesses != null)
@@ -471,8 +476,22 @@ public sealed class CodeInterpreterExecutor(
             }
 
             string effectiveImage = string.IsNullOrWhiteSpace(image) ? _options.DefaultImage : image;
-            await _docker.EnsureImageAsync(effectiveImage, cancellationToken);
-            ContainerInfo container = await _docker.CreateContainerAsync(effectiveImage, limits, effectiveNetworkMode, cancellationToken);
+
+            // 流式输出镜像拉取进度
+            await foreach (CommandOutputEvent ev in _docker.EnsureImageAsync(effectiveImage, cancellationToken))
+            {
+                switch (ev)
+                {
+                    case CommandStdoutEvent o:
+                        yield return new StdOutToolProgressDelta { StdOutput = o.Data };
+                        break;
+                    case CommandStderrEvent e:
+                        yield return new StdErrorToolProgressDelta { StdError = e.Data };
+                        break;
+                }
+            }
+
+            ContainerInfo container = await _docker.CreateContainerCoreAsync(effectiveImage, limits, effectiveNetworkMode, cancellationToken);
 
             if (!hasLabel)
             {
@@ -542,7 +561,7 @@ public sealed class CodeInterpreterExecutor(
             // skills.md may not exist, ignore
         }
 
-        return Result.Ok(info);
+        yield return new ToolCompletedToolProgressDelta { Result = Result.Ok(info) };
     }
 
     [ToolFunction("Destroy the docker session")]
