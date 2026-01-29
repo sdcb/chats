@@ -1,3 +1,4 @@
+using Chats.DockerInterface.Exceptions;
 using Chats.DockerInterface.Models;
 
 namespace Chats.DockerInterface;
@@ -7,6 +8,10 @@ namespace Chats.DockerInterface;
 /// </summary>
 public interface IDockerService : IDisposable
 {
+    /// <summary>
+    /// 获取配置（用于接口默认实现）
+    /// </summary>
+    CodePodConfig Config { get; }
     /// <summary>
     /// 确保镜像存在
     /// </summary>
@@ -70,9 +75,28 @@ public interface IDockerService : IDisposable
     Task UploadFileAsync(string containerId, string containerPath, byte[] content, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 列出容器中的目录
+    /// 列出容器中的目录（默认实现基于 ExecuteCommandAsync）
     /// </summary>
-    Task<List<FileEntry>> ListDirectoryAsync(string containerId, string path, CancellationToken cancellationToken = default);
+    async Task<List<FileEntry>> ListDirectoryAsync(string containerId, string path, CancellationToken cancellationToken = default)
+    {
+        string[] command = Config.GetListDirectoryCommand(path);
+        CommandExitEvent result = await ExecuteCommandAsync(containerId, command, "/", 30, cancellationToken);
+
+        if (result.ExitCode != 0)
+        {
+            string errorLower = result.Stderr?.ToLowerInvariant() ?? "";
+            if (errorLower.Contains("no such file") || errorLower.Contains("cannot find") ||
+                errorLower.Contains("cannot access") || errorLower.Contains("not exist"))
+            {
+                throw new ContainerPathNotFoundException(containerId, path, new Exception(result.Stderr));
+            }
+            throw new InvalidOperationException($"Failed to list directory: {result.Stderr}");
+        }
+
+        return Config.IsWindowsContainer
+            ? DockerOutputParser.ParseWindowsDirOutput(path, result.Stdout ?? "")
+            : DockerOutputParser.ParseLinuxLsOutput(path, result.Stdout ?? "");
+    }
 
     /// <summary>
     /// 从容器下载文件

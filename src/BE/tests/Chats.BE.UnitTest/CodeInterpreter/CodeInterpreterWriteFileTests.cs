@@ -22,6 +22,8 @@ public sealed class CodeInterpreterWriteFileTests
         public string? LastUploadedContainerId { get; private set; }
         public string? LastUploadedPath { get; private set; }
 
+        public CodePodConfig Config { get; } = new();
+
         public void Dispose() { }
 
         public Task EnsureImageAsync(string image, CancellationToken cancellationToken = default)

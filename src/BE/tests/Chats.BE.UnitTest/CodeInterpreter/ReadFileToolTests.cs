@@ -25,9 +25,27 @@ public sealed class ReadFileToolTests
         public string? LastDownloadContainerId { get; private set; }
         public string? LastDownloadPath { get; private set; }
 
+        public CodePodConfig Config { get; } = new();
+
+        /// <summary>
+        /// Normalize path: relative paths like "foo.txt" become "/app/foo.txt".
+        /// Absolute paths (starting with "/") are kept as-is.
+        /// </summary>
+        private string NormalizePath(string path)
+        {
+            if (path.StartsWith('/'))
+            {
+                return path; // absolute path, keep as-is
+            }
+            // relative path -> prepend workDir
+            string workDir = Config.WorkDir; // default "/app"
+            return $"{workDir}/{path}";
+        }
+
         public void AddFile(string containerId, string filePath, byte[] content)
         {
-            _files[(containerId, filePath)] = content;
+            string normalized = NormalizePath(filePath);
+            _files[(containerId, normalized)] = content;
         }
 
         public void Dispose() { }
@@ -73,15 +91,15 @@ public sealed class ReadFileToolTests
 
         public Task<byte[]> DownloadFileAsync(string containerId, string filePath, CancellationToken cancellationToken = default)
         {
+            string normalized = NormalizePath(filePath);
             LastDownloadContainerId = containerId;
-            LastDownloadPath = filePath;
-
-            if (_files.TryGetValue((containerId, filePath), out byte[]? content))
+            LastDownloadPath = normalized;
+            if (_files.TryGetValue((containerId, normalized), out byte[]? content))
             {
                 return Task.FromResult(content);
             }
 
-            throw new InvalidOperationException($"File not found in fake docker: {containerId}:{filePath}");
+            throw new InvalidOperationException($"File not found in fake docker: {containerId}:{normalized}");
         }
 
         public Task<SessionUsage?> GetContainerStatsAsync(string containerId, CancellationToken cancellationToken = default)
@@ -181,12 +199,12 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
-        docker.AddFile("c1", "/app/foo.txt", Encoding.UTF8.GetBytes("a\nb\nc"));
+        docker.AddFile("c1", "foo.txt", Encoding.UTF8.GetBytes("a\nb\nc"));
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
 
-        Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "/foo.txt", startLine: null, endLine: null, withLineNumbers: null, CancellationToken.None);
+        Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "foo.txt", startLine: null, endLine: null, withLineNumbers: null, CancellationToken.None);
 
         Assert.True(r.IsSuccess);
         Assert.Equal("a\nb\nc", r.Value);
@@ -202,7 +220,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
-        docker.AddFile("c1", "/app/foo.txt", Encoding.UTF8.GetBytes("a\nb\nc\nd"));
+        docker.AddFile("c1", "foo.txt", Encoding.UTF8.GetBytes("a\nb\nc\nd"));
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
@@ -221,7 +239,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
-        docker.AddFile("c1", "/app/foo.txt", Encoding.UTF8.GetBytes("a\nb\nc"));
+        docker.AddFile("c1", "foo.txt", Encoding.UTF8.GetBytes("a\nb\nc"));
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
@@ -240,7 +258,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
-        docker.AddFile("c1", "/app/foo.txt", Encoding.UTF8.GetBytes("a\nb\nc"));
+        docker.AddFile("c1", "foo.txt", Encoding.UTF8.GetBytes("a\nb\nc"));
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
@@ -259,7 +277,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
-        docker.AddFile("c1", "/app/foo.txt", Encoding.UTF8.GetBytes("a\nb\nc"));
+        docker.AddFile("c1", "foo.txt", Encoding.UTF8.GetBytes("a\nb\nc"));
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
@@ -278,7 +296,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
-        docker.AddFile("c1", "/app/foo.txt", Encoding.UTF8.GetBytes("a\nb"));
+        docker.AddFile("c1", "foo.txt", Encoding.UTF8.GetBytes("a\nb"));
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
@@ -297,7 +315,7 @@ public sealed class ReadFileToolTests
         CodeInterpreterExecutor exec = CreateExecutor(sp, docker);
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
-        docker.AddFile("c1", "/app/foo.txt", Encoding.UTF8.GetBytes("a\nb\nc"));
+        docker.AddFile("c1", "foo.txt", Encoding.UTF8.GetBytes("a\nb\nc"));
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
@@ -324,7 +342,7 @@ public sealed class ReadFileToolTests
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
         string content = new string('A', 200);
-        docker.AddFile("c1", "/app/foo.txt", Encoding.UTF8.GetBytes(content));
+        docker.AddFile("c1", "foo.txt", Encoding.UTF8.GetBytes(content));
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
@@ -352,7 +370,7 @@ public sealed class ReadFileToolTests
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
         string content = "HEAD-" + new string('B', 200) + "-TAIL";
-        docker.AddFile("c1", "/app/foo.txt", Encoding.UTF8.GetBytes(content));
+        docker.AddFile("c1", "foo.txt", Encoding.UTF8.GetBytes(content));
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
@@ -383,7 +401,7 @@ public sealed class ReadFileToolTests
         string head = "HEAD-" + new string('C', 50);
         string tail = new string('D', 50) + "-TAIL";
         string content = head + new string('X', 500) + tail;
-        docker.AddFile("c1", "/app/foo.txt", Encoding.UTF8.GetBytes(content));
+        docker.AddFile("c1", "foo.txt", Encoding.UTF8.GetBytes(content));
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
@@ -415,7 +433,7 @@ public sealed class ReadFileToolTests
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
         string content = string.Join("\n", Enumerable.Range(1, 100).Select(i => $"line-{i:D3}-" + new string('Z', 10)));
-        docker.AddFile("c1", "/app/foo.txt", Encoding.UTF8.GetBytes(content));
+        docker.AddFile("c1", "foo.txt", Encoding.UTF8.GetBytes(content));
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
@@ -446,7 +464,7 @@ public sealed class ReadFileToolTests
 
         ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, label: "s", containerId: "c1");
         byte[] bytes = [0xFF, 0xFE, 0xFD, 0xFC, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05];
-        docker.AddFile("c1", "/app/bin.dat", bytes);
+        docker.AddFile("c1", "bin.dat", bytes);
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);
@@ -454,7 +472,7 @@ public sealed class ReadFileToolTests
         Result<string> r = await exec.ReadFile(ctx, sessionId: "s", path: "bin.dat", startLine: null, endLine: null, withLineNumbers: true, CancellationToken.None);
 
         Assert.True(r.IsSuccess);
-        Assert.StartsWith("TotalLines: 0\nPath: /app/bin.dat\n", r.Value, StringComparison.Ordinal);
+        Assert.StartsWith("TotalLines: 0\nPath: bin.dat\n", r.Value, StringComparison.Ordinal);
         Assert.Contains("Base64(first 10 bytes):", r.Value, StringComparison.Ordinal);
         Assert.Contains(Convert.ToBase64String(bytes), r.Value, StringComparison.Ordinal);
     }

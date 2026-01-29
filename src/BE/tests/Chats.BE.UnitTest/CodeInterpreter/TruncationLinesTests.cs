@@ -21,6 +21,8 @@ public sealed class TruncationLinesTests
     {
         private readonly Dictionary<(string containerId, string filePath), byte[]> _files = new();
 
+        public CodePodConfig Config { get; } = new();
+
         public void AddFile(string containerId, string filePath, byte[] content)
         {
             _files[(containerId, filePath)] = content;
@@ -183,7 +185,7 @@ public sealed class TruncationLinesTests
         
         // Create content with 10 lines, each 20 bytes (200 bytes total)
         string content = string.Join("\n", Enumerable.Range(1, 10).Select(i => $"Line {i:D2} - Data"));
-        docker.AddFile("c1", "/app/test.txt", Encoding.UTF8.GetBytes(content));
+        docker.AddFile("c1", "test.txt", Encoding.UTF8.GetBytes(content));
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);

@@ -115,6 +115,8 @@ public sealed class NetworkModeRestrictionsTests
         public bool EnsureImageCalled { get; private set; }
         public bool CreateContainerCalled { get; private set; }
 
+        public CodePodConfig Config { get; } = new();
+
         public void Dispose() { }
 
         public Task EnsureImageAsync(string image, CancellationToken cancellationToken = default)

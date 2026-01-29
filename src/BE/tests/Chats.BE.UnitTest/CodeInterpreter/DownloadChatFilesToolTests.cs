@@ -50,6 +50,8 @@ public sealed class DownloadChatFilesToolTests
     {
         public List<UploadCall> Uploads { get; } = [];
 
+        public CodePodConfig Config { get; } = new();
+
         public void Dispose() { }
 
         public Task EnsureImageAsync(string image, CancellationToken cancellationToken = default)
