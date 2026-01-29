@@ -101,12 +101,18 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
 
     useImperativeHandle(ref, () => ({ refresh: () => load(currentDir) }), [currentDir, load]);
 
+    // 初始加载 - 当 session 变化时
     useEffect(() => {
       load(null);
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chatId, encryptedSessionId]);
 
+    // refreshKey 变化时刷新（跳过初始值 0）
+    const prevRefreshKeyRef = useRef(refreshKey);
     useEffect(() => {
+      // 只有当 refreshKey 真正变化（不是初始挂载）时才刷新
+      if (refreshKey === prevRefreshKeyRef.current) return;
+      prevRefreshKeyRef.current = refreshKey;
       if (refreshKey == null) return;
       load(currentDir);
     }, [currentDir, load, refreshKey]);
