@@ -227,10 +227,10 @@ export default function SessionEnvVarEditor({
                   variant="ghost"
                   onClick={handleCancelClick}
                   disabled={saving}
-                  className="h-6 w-6 p-0"
+                  className="h-7 w-7 p-0"
                   title={t('Cancel')}
                 >
-                  <IconX size={14} />
+                  <IconX size={18} />
                 </Button>
                 {hasChanges && (
                   <Button
@@ -238,13 +238,13 @@ export default function SessionEnvVarEditor({
                     variant="ghost"
                     onClick={handleSave}
                     disabled={saving}
-                    className="h-6 w-6 p-0"
+                    className="h-7 w-7 p-0"
                     title={t('Save')}
                   >
                     {saving ? (
-                      <IconLoader size={14} className="animate-spin" />
+                      <IconLoader size={18} className="animate-spin" />
                     ) : (
-                      <IconCheck size={14} />
+                      <IconCheck size={18} />
                     )}
                   </Button>
                 )}
@@ -259,13 +259,13 @@ export default function SessionEnvVarEditor({
                       e.stopPropagation();
                       handleCopyAll('user-all', userVars);
                     }}
-                    className="h-6 w-6 p-0 opacity-0 group-hover/user:opacity-100 group-[.is-active]/user:opacity-100 transition-opacity"
+                    className="h-7 w-7 p-0 opacity-0 group-hover/user:opacity-100 group-[.is-active]/user:opacity-100 transition-opacity"
                     title={t('Copy all')}
                   >
                     {copiedId === 'user-all' ? (
-                      <IconCheck size={14} className="text-green-500" />
+                      <IconCheck size={18} className="text-green-500" />
                     ) : (
-                      <IconClipboard size={14} />
+                      <IconClipboard size={18} />
                     )}
                   </Button>
                 )}
@@ -276,10 +276,10 @@ export default function SessionEnvVarEditor({
                     e.stopPropagation();
                     handleEnterEditMode();
                   }}
-                  className="h-6 w-6 p-0"
+                  className="h-7 w-7 p-0"
                   title={t('Edit')}
                 >
-                  <IconEdit size={14} />
+                  <IconEdit size={18} />
                 </Button>
               </>
             )}
@@ -431,13 +431,13 @@ export default function SessionEnvVarEditor({
                 e.stopPropagation();
                 handleCopyAll('system-all', systemVars);
               }}
-              className="h-6 w-6 p-0 opacity-0 group-hover/system:opacity-100 group-[.is-active]/system:opacity-100 transition-opacity"
+              className="h-7 w-7 p-0 opacity-0 group-hover/system:opacity-100 group-[.is-active]/system:opacity-100 transition-opacity"
               title={t('Copy all')}
             >
               {copiedId === 'system-all' ? (
-                <IconCheck size={14} className="text-green-500" />
+                <IconCheck size={18} className="text-green-500" />
               ) : (
-                <IconClipboard size={14} />
+                <IconClipboard size={18} />
               )}
             </Button>
           </div>

@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
 import { Skeleton } from '@/components/ui/skeleton';
-import { IconCheck, IconClipboard, IconEdit, IconLoader } from '@/components/Icons';
+import { IconCheck, IconClipboard, IconEdit, IconLoader, IconX } from '@/components/Icons';
 import {
   Tooltip,
   TooltipContent,
@@ -94,6 +94,12 @@ export default function SessionFileEditor({
     }
   }, [chatId, encryptedSessionId, onSaved, path, t, text]);
 
+  const handleDiscard = useCallback(() => {
+    if (confirm(t('You have unsaved changes. Are you sure you want to discard them?'))) {
+      setText(original);
+    }
+  }, [original, t]);
+
   if (loading) {
     return (
       <div className="h-full flex flex-col p-4">
@@ -135,38 +141,56 @@ export default function SessionFileEditor({
         {/* 保存和复制按钮 */}
         <div className="flex items-center gap-1">
           {dirty && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    className="flex items-center rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                    onClick={handleSave}
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      <IconLoader className="animate-spin" stroke="currentColor" size={16} />
-                    ) : (
-                      <IconCheck stroke="currentColor" size={16} />
-                    )}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t('Save')}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      className="flex items-center rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      onClick={handleDiscard}
+                      disabled={saving}
+                    >
+                      <IconX stroke="currentColor" size={18} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('Cancel')}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      className="flex items-center rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                      onClick={handleSave}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <IconLoader className="animate-spin" stroke="currentColor" size={18} />
+                      ) : (
+                        <IconCheck stroke="currentColor" size={18} />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('Save')}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </>
           )}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  className="flex items-center rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  className="flex items-center rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   onClick={handleCopy}
                 >
                   {copied ? (
-                    <IconCheck stroke="currentColor" size={16} />
+                    <IconCheck stroke="currentColor" size={18} />
                   ) : (
-                    <IconClipboard stroke="currentColor" size={16} />
+                    <IconClipboard stroke="currentColor" size={18} />
                   )}
                 </button>
               </TooltipTrigger>

@@ -99,13 +99,13 @@ export default function SessionInfoCard({ session }: Props) {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                className="flex items-center rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                className="flex items-center rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 onClick={handleCopy}
               >
                 {copied ? (
-                  <IconCheck stroke="currentColor" size={16} />
+                  <IconCheck stroke="currentColor" size={18} />
                 ) : (
-                  <IconClipboard stroke="currentColor" size={16} />
+                  <IconClipboard stroke="currentColor" size={18} />
                 )}
               </button>
             </TooltipTrigger>

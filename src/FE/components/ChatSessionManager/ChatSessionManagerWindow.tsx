@@ -161,9 +161,8 @@ export default function ChatSessionManagerWindow({
       setSessions((prev) => [...prev, created]);
       setSelectedLabel(created.label);
       setMode('view');
-      toast.success(t('Created successful'));
     },
-    [chatId, t],
+    [chatId],
   );
 
   const handleDelete = useCallback(
@@ -181,7 +180,6 @@ export default function ChatSessionManagerWindow({
             return remaining.length > 0 ? remaining[0].label : null;
           });
         }
-        toast.success(t('Deleted successful'));
       } catch {
         // 请求失败，重新获取列表
         await loadSessions();

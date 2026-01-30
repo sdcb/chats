@@ -170,7 +170,7 @@ export default function SessionCommandRunner({
           onKeyDown={handleKeyDown}
           className={cn(
             'w-full resize-none rounded-lg border bg-background px-4 py-3 pr-24 leading-6 outline-none',
-            'text-sm focus:ring-2 focus:ring-primary/20 transition-shadow',
+            'text-sm font-mono focus:ring-2 focus:ring-primary/20 transition-shadow',
           )}
           style={{ height: TEXTAREA_MIN_HEIGHT }}
           placeholder={t('Enter a shell command...')}
@@ -207,9 +207,9 @@ export default function SessionCommandRunner({
                     onClick={handleCopy}
                   >
                     {copied ? (
-                      <IconCheck stroke="currentColor" size={20} />
+                      <IconCheck stroke="currentColor" size={18} />
                     ) : (
-                      <IconClipboard stroke="currentColor" size={20} />
+                      <IconClipboard stroke="currentColor" size={18} />
                     )}
                   </button>
                 </TooltipTrigger>

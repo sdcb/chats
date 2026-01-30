@@ -76,6 +76,8 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
     const [newFolderName, setNewFolderName] = useState('');
     const [savingFolder, setSavingFolder] = useState(false);
     const newFolderInputRef = useRef<HTMLInputElement | null>(null);
+    // 用于移动端模拟双击
+    const lastClickRef = useRef<{ path: string; time: number } | null>(null);
 
     const load = useCallback(
       async (path?: string | null) => {
@@ -362,6 +364,15 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
                 selected?.path === e.path && 'bg-accent',
               )}
               onClick={() => {
+                const now = Date.now();
+                const last = lastClickRef.current;
+                // 检测移动端双击：300ms内点击同一文件
+                if (last && last.path === e.path && now - last.time < 300) {
+                  lastClickRef.current = null;
+                  handleDoubleClickFile(e);
+                  return;
+                }
+                lastClickRef.current = { path: e.path, time: now };
                 setSelected(e);
                 onSelectFile(e);
               }}
