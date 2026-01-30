@@ -1,8 +1,7 @@
 using System.Text.Json.Nodes;
-using Chats.BE.Infrastructure.Functional;
+using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Services.CodeInterpreter;
 using Chats.DockerInterface;
-using Chats.DockerInterface.Models;
 using Chats.DB;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -67,7 +66,7 @@ public sealed class NetworkModeRestrictionsTests
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx();
 
-        Result<string> done = await executor.CreateDockerSession(
+        ToolProgressDelta result = await executor.CreateDockerSession(
             ctx,
             image: null,
             label: null,
@@ -75,10 +74,12 @@ public sealed class NetworkModeRestrictionsTests
             cpuCores: null,
             maxProcesses: null,
             networkMode: "host",
-            cancellationToken: CancellationToken.None);
+            cancellationToken: CancellationToken.None).LastAsync();
 
-        Assert.True(done.IsFailure);
-        Assert.Contains("Requested networkMode 'host' exceeds MaxAllowedNetworkMode 'bridge'", done.Error);
+        Assert.IsType<ToolCompletedToolProgressDelta>(result);
+        ToolCompletedToolProgressDelta completed = (ToolCompletedToolProgressDelta)result;
+        Assert.True(completed.Result.IsFailure);
+        Assert.Contains("Requested networkMode 'host' exceeds MaxAllowedNetworkMode 'bridge'", completed.Result.Error);
         Assert.False(docker.EnsureImageCalled);
         Assert.False(docker.CreateContainerCalled);
     }

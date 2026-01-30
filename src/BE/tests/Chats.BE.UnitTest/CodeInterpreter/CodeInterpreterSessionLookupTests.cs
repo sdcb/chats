@@ -1,5 +1,4 @@
 using Chats.BE.Controllers.Chats.Chats.Dtos;
-using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Services;
 using Chats.BE.Services.CodeInterpreter;
 using Chats.BE.Services.FileServices;
@@ -108,7 +107,7 @@ public sealed class CodeInterpreterSessionLookupTests
             new ChatTurn { Id = 2, ParentId = 1, ChatId = 1, ChatDockerSessions = [containerA] },
             new ChatTurn { Id = 4, ParentId = 2, ChatId = 1 });
 
-        Result<string> done = await exec.CreateDockerSession(
+        ToolProgressDelta result = await exec.CreateDockerSession(
             ctx,
             image: null,
             label: "dotnet-env",
@@ -116,11 +115,13 @@ public sealed class CodeInterpreterSessionLookupTests
             cpuCores: null,
             maxProcesses: null,
             networkMode: null,
-            cancellationToken: CancellationToken.None);
+            cancellationToken: CancellationToken.None).LastAsync();
 
-        Assert.True(done.IsSuccess);
-        Assert.Contains("sessionId: dotnet-env", done.Value);
-        Assert.Contains("image: mcr.microsoft.com/dotnet/sdk:10.0", done.Value);
+        Assert.IsType<ToolCompletedToolProgressDelta>(result);
+        ToolCompletedToolProgressDelta completed = (ToolCompletedToolProgressDelta)result;
+        Assert.True(completed.Result.IsSuccess);
+        Assert.Contains("sessionId: dotnet-env", completed.Result.Value);
+        Assert.Contains("image: mcr.microsoft.com/dotnet/sdk:10.0", completed.Result.Value);
         Assert.Equal(0, docker.CreateContainerCalls);
     }
 
@@ -146,7 +147,7 @@ public sealed class CodeInterpreterSessionLookupTests
             new ChatTurn { Id = 1, ParentId = null, ChatId = 1, Chat = null! },
             new ChatTurn { Id = 3, ParentId = 1, ChatId = 1, Chat = null! });
 
-        Result<string> done = await exec.CreateDockerSession(
+        ToolProgressDelta result = await exec.CreateDockerSession(
             ctx,
             image: null,
             label: "dotnet-env",
@@ -154,11 +155,13 @@ public sealed class CodeInterpreterSessionLookupTests
             cpuCores: null,
             maxProcesses: null,
             networkMode: null,
-            cancellationToken: CancellationToken.None);
+            cancellationToken: CancellationToken.None).LastAsync();
 
-        Assert.True(done.IsSuccess);
-        Assert.Contains("sessionId: dotnet-env", done.Value);
-        Assert.Contains("image: mcr.microsoft.com/dotnet/sdk:10.0", done.Value);
+        Assert.IsType<ToolCompletedToolProgressDelta>(result);
+        ToolCompletedToolProgressDelta completed = (ToolCompletedToolProgressDelta)result;
+        Assert.True(completed.Result.IsSuccess);
+        Assert.Contains("sessionId: dotnet-env", completed.Result.Value);
+        Assert.Contains("image: mcr.microsoft.com/dotnet/sdk:10.0", completed.Result.Value);
         Assert.Equal(1, docker.CreateContainerCalls);
 
         using (IServiceScope scope2 = sp.CreateScope())
