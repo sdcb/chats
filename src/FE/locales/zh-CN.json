@@ -803,5 +803,7 @@
   "No user environment variables. Click + to add one.": "暂无用户环境变量，点击 + 添加。",
   "Failed to load environment variables": "加载环境变量失败",
   "Failed to save environment variables": "保存环境变量失败",
-  "Duplicate environment variable keys are not allowed": "不允许重复的环境变量键名"
+  "Duplicate environment variable keys are not allowed": "不允许重复的环境变量键名",
+  "Environment variable key cannot start with a digit": "环境变量键名不能以数字开头",
+  "You have unsaved changes. Are you sure you want to discard them?": "您有未保存的更改，确定要放弃吗？"
 }
