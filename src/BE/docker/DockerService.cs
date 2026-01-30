@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using Chats.DockerInterface.Models;
 using Docker.DotNet;
 using Docker.DotNet.Models;
@@ -37,13 +38,11 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
 
         if (imageExists)
         {
-            logger?.LogInformation("Image {Image} already exists", image);
             yield return new CommandStdoutEvent($"Image {image} already exists\n");
             yield break;
         }
 
         // 镜像不存在，需要拉取
-        logger?.LogInformation("Pulling image {Image}...", image);
         yield return new CommandStdoutEvent($"Pulling image {image}...\n");
 
         // 使用 Channel 来桥接 Progress 回调和 IAsyncEnumerable
@@ -54,9 +53,9 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
             null,
             new Progress<JSONMessage>(m =>
             {
+                logger.LogInformation(JsonSerializer.Serialize(m));
                 if (!string.IsNullOrEmpty(m.Status))
                 {
-                    logger?.LogDebug("{Status}", m.Status);
                     string message = string.IsNullOrEmpty(m.ProgressMessage)
                         ? $"{m.Status}\n"
                         : $"{m.Status}: {m.ProgressMessage}\n";
@@ -74,7 +73,6 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
         }
 
         await pullTask; // 确保异常被传播
-        logger?.LogInformation("Image {Image} pulled successfully", image);
         yield return new CommandStdoutEvent($"Image {image} pulled successfully\n");
     }
 
