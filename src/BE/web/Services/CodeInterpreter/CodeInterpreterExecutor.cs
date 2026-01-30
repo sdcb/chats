@@ -81,7 +81,7 @@ public sealed class CodeInterpreterExecutor(
     private static string FormatDefaultMemoryBytes(long memoryBytes)
     {
         if (memoryBytes == 0) return "0 (unlimited)";
-        return $"{memoryBytes.ToString(CultureInfo.InvariantCulture)} ({FormatBytes(memoryBytes)})";
+        return $"{memoryBytes.ToString(CultureInfo.InvariantCulture)} ({BytesFormatter.Format(memoryBytes)})";
     }
 
     private static string FormatDefaultCpuCores(double cpuCores)
@@ -101,7 +101,7 @@ public sealed class CodeInterpreterExecutor(
         List<string> parts = [];
         if (limits.MemoryBytes > 0)
         {
-            parts.Add($"memory={FormatBytes(limits.MemoryBytes)}");
+            parts.Add($"memory={BytesFormatter.Format(limits.MemoryBytes)}");
         }
         else
         {
@@ -127,17 +127,6 @@ public sealed class CodeInterpreterExecutor(
         }
 
         return string.Join(", ", parts);
-    }
-
-    internal static string FormatBytes(long bytes)
-    {
-        if (bytes >= 1024L * 1024 * 1024)
-            return $"{bytes / (1024.0 * 1024 * 1024):0.##}GB";
-        if (bytes >= 1024L * 1024)
-            return $"{bytes / (1024.0 * 1024):0.##}MB";
-        if (bytes >= 1024L)
-            return $"{bytes / 1024.0:0.##}KB";
-        return $"{bytes}B";
     }
 
     internal static string ReplacePlaceholders(string input, Dictionary<string, string> placeholders)

@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Text.Json;
 using Chats.DockerInterface.Models;
 using Docker.DotNet;
 using Docker.DotNet.Models;
@@ -53,12 +52,9 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
             null,
             new Progress<JSONMessage>(m =>
             {
-                logger.LogInformation(JsonSerializer.Serialize(m));
                 if (!string.IsNullOrEmpty(m.Status))
                 {
-                    string message = string.IsNullOrEmpty(m.ProgressMessage)
-                        ? $"{m.Status}\n"
-                        : $"{m.Status}: {m.ProgressMessage}\n";
+                    string message = FormatPullProgressMessage(m);
                     channel.Writer.TryWrite(message);
                 }
             }),
@@ -74,6 +70,32 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
 
         await pullTask; // 确保异常被传播
         yield return new CommandStdoutEvent($"Image {image} pulled successfully\n");
+    }
+
+    private static string FormatPullProgressMessage(JSONMessage m)
+    {
+        StringBuilder sb = new();
+
+        // 添加层 ID 前缀（如果存在）
+        if (!string.IsNullOrEmpty(m.ID))
+        {
+            sb.Append(m.ID);
+            sb.Append(": ");
+        }
+
+        sb.Append(m.Status);
+
+        // 如果有进度信息，显示下载/提取进度
+        if (m.Progress != null && m.Progress.Total > 0 && m.Progress.Current > 0)
+        {
+            double percentage = (double)m.Progress.Current / m.Progress.Total * 100;
+            string current = BytesFormatter.Format(m.Progress.Current);
+            string total = BytesFormatter.Format(m.Progress.Total);
+            sb.Append($" {current}/{total} ({percentage:F0}%)");
+        }
+
+        sb.Append('\n');
+        return sb.ToString();
     }
 
     public async Task<List<string>> ListImagesAsync(CancellationToken cancellationToken = default)
