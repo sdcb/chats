@@ -53,15 +53,16 @@ import VariableModal from './VariableModal';
 import { defaultFileConfig } from '@/apis/adminApis';
 import { getUserPromptDetail } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
+import CodeExecutionControl from './CodeExecutionControl';
 
 // 动画时长配置（与全屏动画一致）
 const ANIMATION_DURATION_MS = 200;
 
 // 文本框配置
 const TEXTAREA_LINE_HEIGHT = 24;
-const TEXTAREA_MIN_ROWS = 3;
+const TEXTAREA_MIN_ROWS = 2;
 const TEXTAREA_MAX_ROWS = 10;
-const TEXTAREA_MIN_HEIGHT = TEXTAREA_LINE_HEIGHT * TEXTAREA_MIN_ROWS; // 72px
+const TEXTAREA_MIN_HEIGHT = TEXTAREA_LINE_HEIGHT * TEXTAREA_MIN_ROWS; // 48px
 const TEXTAREA_MAX_HEIGHT = TEXTAREA_LINE_HEIGHT * TEXTAREA_MAX_ROWS; // 240px
 
 interface Props {
@@ -698,7 +699,7 @@ const ChatInput = ({
                   ))}
                 </div>
               )}
-              {/* Textarea容器 - 相对定位 */}
+              {/* Textarea容器 */}
               <div className="relative w-full">
                 <Textarea
                   ref={textareaRef}
@@ -722,29 +723,6 @@ const ChatInput = ({
                   onKeyDown={handleKeyDown}
                 />
 
-                {/* 发送按钮 - 绝对定位在右下角，允许遮挡 */}
-                <div className="absolute right-2 bottom-2 flex items-center gap-2 pointer-events-auto">
-                  {selectedChat.status === ChatStatus.Chatting ? (
-                    <Tips
-                      trigger={
-                        <Button
-                          className="rounded-sm w-20 h-9 shadow-md"
-                          onClick={handleStopChats}
-                        >
-                          <IconStopFilled className="h-4 w-4" />
-                        </Button>
-                      }
-                      side="top"
-                      content={t('Stop Generating')}
-                    />
-                  ) : (
-                    <SendButton
-                      onSend={handleSend}
-                      size="sm"
-                    />
-                  )}
-                </div>
-
                 {/* 全屏模式下的文件展示 */}
                 {isFullWriting && contentFiles.length > 0 && (
                   <div className="flex flex-row px-3 pb-2 gap-2">
@@ -762,6 +740,40 @@ const ChatInput = ({
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* 底部工具行 - Agent控制 + 发送按钮 */}
+              <div className="flex items-center justify-between px-2 py-2 border-t border-border/40">
+                {/* 左侧: Agent 代码执行控制 */}
+                <CodeExecutionControl
+                  chatId={selectedChat.id}
+                  spans={selectedChat.spans}
+                  modelMap={modelMap}
+                  disabled={selectedChat.status === ChatStatus.Chatting}
+                />
+
+                {/* 右侧: 发送/停止按钮 */}
+                <div className="flex items-center gap-2">
+                  {selectedChat.status === ChatStatus.Chatting ? (
+                    <Tips
+                      trigger={
+                        <Button
+                          className="rounded-sm h-9 px-4 shadow-md"
+                          onClick={handleStopChats}
+                        >
+                          <IconStopFilled className="h-4 w-4" />
+                        </Button>
+                      }
+                      side="top"
+                      content={t('Stop Generating')}
+                    />
+                  ) : (
+                    <SendButton
+                      onSend={handleSend}
+                      size="sm"
+                    />
+                  )}
+                </div>
               </div>
 
               {showPromptList && filteredPrompts.length > 0 && (
