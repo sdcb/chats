@@ -14,6 +14,8 @@ import {
   SaveTextFileRequest,
   DockerSessionDto,
   TextFileResponse,
+  EnvironmentVariablesResponse,
+  SaveUserEnvironmentVariablesRequest,
 } from '@/types/dockerSessions';
 
 type FetchOptions = {
@@ -248,6 +250,29 @@ export const saveDockerTextFile = (
   const fetchService = createFetchClient();
   return fetchService.put<void>(
     `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}/text-file`,
+    { body, suppressDefaultToast: true },
+  );
+};
+
+export const getDockerEnvironmentVariables = (
+  chatId: string,
+  encryptedSessionId: string,
+) => {
+  const fetchService = createFetchClient();
+  return fetchService.get<EnvironmentVariablesResponse>(
+    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}/environment-variables`,
+    { suppressDefaultToast: true },
+  );
+};
+
+export const saveDockerUserEnvironmentVariables = (
+  chatId: string,
+  encryptedSessionId: string,
+  body: SaveUserEnvironmentVariablesRequest,
+) => {
+  const fetchService = createFetchClient();
+  return fetchService.put<void>(
+    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}/environment-variables`,
     { body, suppressDefaultToast: true },
   );
 };

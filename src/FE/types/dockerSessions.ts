@@ -83,3 +83,17 @@ export type SaveTextFileRequest = {
   text: string;
 };
 
+export type EnvironmentVariable = {
+  key: string;
+  value: string;
+};
+
+export type EnvironmentVariablesResponse = {
+  systemVariables: EnvironmentVariable[];
+  userVariables: EnvironmentVariable[];
+};
+
+export type SaveUserEnvironmentVariablesRequest = {
+  variables: EnvironmentVariable[];
+};
+

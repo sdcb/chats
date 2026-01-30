@@ -333,7 +333,7 @@ export default function ChatSessionManagerWindow({
                     activeTab === 'info' ? 'visible' : 'invisible pointer-events-none',
                   )}
                 >
-                  <SessionInfoCard session={selectedSession} />
+                  <SessionInfoCard chatId={chatId} session={selectedSession} />
                 </div>
 
                 {/* Command tab - 保持挂载以保留状态 */}

@@ -132,30 +132,54 @@ export default function SessionFileEditor({
             </span>
           )}
         </div>
-        {/* 复制按钮 */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                className="flex items-center rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                onClick={handleCopy}
-              >
-                {copied ? (
-                  <IconCheck stroke="currentColor" size={16} />
-                ) : (
-                  <IconClipboard stroke="currentColor" size={16} />
-                )}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {copied ? t('Copied') : t('Click Copy')}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {/* 保存和复制按钮 */}
+        <div className="flex items-center gap-1">
+          {dirty && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className="flex items-center rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    onClick={handleSave}
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <IconLoader className="animate-spin" stroke="currentColor" size={16} />
+                    ) : (
+                      <IconCheck stroke="currentColor" size={16} />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('Save')}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="flex items-center rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  onClick={handleCopy}
+                >
+                  {copied ? (
+                    <IconCheck stroke="currentColor" size={16} />
+                  ) : (
+                    <IconClipboard stroke="currentColor" size={16} />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {copied ? t('Copied') : t('Click Copy')}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
 
       {/* 编辑区域 */}
-      <div className="flex-1 min-h-0 relative">
+      <div className="flex-1 min-h-0">
         <textarea
           ref={textareaRef}
           value={text}
@@ -163,29 +187,6 @@ export default function SessionFileEditor({
           className="w-full h-full resize-none rounded-lg border bg-background px-4 py-3 font-mono text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-shadow"
           spellCheck={false}
         />
-        {/* 右下角保存按钮 */}
-        {(dirty || saving) && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  className="absolute right-3 bottom-3 flex items-center rounded p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <IconLoader className="animate-spin" stroke="currentColor" size={20} />
-                  ) : (
-                    <IconCheck stroke="currentColor" size={20} />
-                  )}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t('Save')}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
       </div>
     </div>
   );

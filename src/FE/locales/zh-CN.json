@@ -796,5 +796,12 @@
   "Are you sure you want to discard changes?": "确认放弃修改吗？",
   "Discard Changes": "放弃修改",
   "This file cannot be edited as text": "此文件无法作为文本编辑",
-  "Edit": "编辑"
+  "Environment Variables": "环境变量",
+  "User Variables": "用户变量",
+  "Key": "键",
+  "Add environment variable": "添加环境变量",
+  "No user environment variables. Click + to add one.": "暂无用户环境变量，点击 + 添加。",
+  "Failed to load environment variables": "加载环境变量失败",
+  "Failed to save environment variables": "保存环境变量失败",
+  "Duplicate environment variable keys are not allowed": "不允许重复的环境变量键名"
 }
