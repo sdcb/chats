@@ -10,10 +10,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import SessionEnvVarEditor from './SessionEnvVarEditor';
 
 type Props = {
-  chatId: string;
   session: DockerSessionDto;
 };
 
@@ -35,7 +33,7 @@ const cardColors = [
   'bg-pink-500/10 border-pink-500/30 text-pink-600 dark:text-pink-400',
 ];
 
-export default function SessionInfoCard({ chatId, session }: Props) {
+export default function SessionInfoCard({ session }: Props) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
@@ -137,14 +135,6 @@ export default function SessionInfoCard({ chatId, session }: Props) {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* 环境变量管理 */}
-      <div className="mt-6">
-        <SessionEnvVarEditor
-          chatId={chatId}
-          encryptedSessionId={session.encryptedSessionId}
-        />
       </div>
     </div>
   );

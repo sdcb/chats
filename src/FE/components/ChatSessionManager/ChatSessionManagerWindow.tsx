@@ -17,6 +17,7 @@ import {
   IconBolt,
   IconFolder,
   IconEdit,
+  IconSettings,
 } from '@/components/Icons';
 
 import {
@@ -45,10 +46,11 @@ import SessionCommandRunner from './SessionCommandRunner';
 import SessionFileManager, { FileManagerHandle } from './SessionFileManager';
 import SessionFileEditor from './SessionFileEditor';
 import SessionInfoCard from './SessionInfoCard';
+import SessionEnvVarEditor from './SessionEnvVarEditor';
 import { cn } from '@/lib/utils';
 
 type Mode = 'view' | 'create';
-type TabType = 'info' | 'command' | 'files' | 'editor';
+type TabType = 'info' | 'env' | 'command' | 'files' | 'editor';
 
 type Props = {
   chatId: string;
@@ -196,6 +198,7 @@ export default function ChatSessionManagerWindow({
 
   const tabs = useMemo(() => [
     { id: 'info' as TabType, label: t('Basic Info'), icon: <IconInfo size={18} />, disabled: false },
+    { id: 'env' as TabType, label: t('Environment Variables'), icon: <IconSettings size={18} />, disabled: false },
     { id: 'command' as TabType, label: t('Run command'), icon: <IconBolt size={18} />, disabled: false },
     { id: 'files' as TabType, label: t('File manager'), icon: <IconFolder size={18} />, disabled: false },
     { id: 'editor' as TabType, label: t('File editor'), icon: <IconEdit size={18} />, disabled: !isEditorTabEnabled },
@@ -333,7 +336,20 @@ export default function ChatSessionManagerWindow({
                     activeTab === 'info' ? 'visible' : 'invisible pointer-events-none',
                   )}
                 >
-                  <SessionInfoCard chatId={chatId} session={selectedSession} />
+                  <SessionInfoCard session={selectedSession} />
+                </div>
+
+                {/* Environment variables tab */}
+                <div
+                  className={cn(
+                    'h-full overflow-auto p-3 absolute inset-0',
+                    activeTab === 'env' ? 'visible' : 'invisible pointer-events-none',
+                  )}
+                >
+                  <SessionEnvVarEditor
+                    chatId={chatId}
+                    encryptedSessionId={selectedSession.encryptedSessionId}
+                  />
                 </div>
 
                 {/* Command tab - 保持挂载以保留状态 */}

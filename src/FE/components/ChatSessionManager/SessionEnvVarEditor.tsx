@@ -133,53 +133,7 @@ export default function SessionEnvVarEditor({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <h3 className="text-sm font-medium text-muted-foreground">
-        {t('Environment Variables')}
-      </h3>
-
-      {/* System variables */}
-      {systemVars.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wide">
-            {t('System Variables')}
-          </h4>
-          <div className="rounded-md border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-muted/50 border-b">
-                  <th className="text-left px-3 py-2 font-medium w-1/3">
-                    {t('Key')}
-                  </th>
-                  <th className="text-left px-3 py-2 font-medium">
-                    {t('Value')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {systemVars.map((v, idx) => (
-                  <tr
-                    key={`sys-${idx}`}
-                    className={cn(
-                      'border-b last:border-b-0',
-                      idx % 2 === 0 ? 'bg-background' : 'bg-muted/20',
-                    )}
-                  >
-                    <td className="px-3 py-2 font-mono text-xs break-all">
-                      {v.key}
-                    </td>
-                    <td className="px-3 py-2 font-mono text-xs break-all text-muted-foreground">
-                      {v.value}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* User variables */}
+      {/* User variables - 放在上面 */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -285,6 +239,47 @@ export default function SessionEnvVarEditor({
           </div>
         )}
       </div>
+
+      {/* System variables - 放在下面 */}
+      {systemVars.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wide">
+            {t('System Variables')}
+          </h4>
+          <div className="rounded-md border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/50 border-b">
+                  <th className="text-left px-3 py-2 font-medium w-1/3">
+                    {t('Key')}
+                  </th>
+                  <th className="text-left px-3 py-2 font-medium">
+                    {t('Value')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {systemVars.map((v, idx) => (
+                  <tr
+                    key={`sys-${idx}`}
+                    className={cn(
+                      'border-b last:border-b-0',
+                      idx % 2 === 0 ? 'bg-background' : 'bg-muted/20',
+                    )}
+                  >
+                    <td className="px-3 py-2 font-mono text-xs break-all">
+                      {v.key}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs break-all text-muted-foreground">
+                      {v.value}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
