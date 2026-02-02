@@ -504,7 +504,7 @@ const ChatInput = ({
             )}
           >
             <div
-              className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]"
+              className="relative flex w-full flex-grow flex-col rounded-md border border-border/60 bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:bg-neutral-950 dark:border-border/40 dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]"
               onMouseEnter={() => {
                 if (!isMobileDevice) {
                   setShowFloatingControls(true);
