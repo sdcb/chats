@@ -32,13 +32,16 @@ import {
   IconCamera,
   IconLoader,
   IconPaperclip,
+  IconPlus,
   IconStopFilled,
+  IconFolder,
 } from '@/components/Icons/index';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { SendButton } from '@/components/ui/send-button';
 import { useSendMode } from '@/hooks/useSendMode';
 import Tips from '@/components/Tips/Tips';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import { setShowChatInput } from '@/actions/setting.actions';
 import HomeContext from '@/contexts/home.context';
@@ -490,6 +493,12 @@ const ChatInput = ({
       ? 'translateY(0)'
       : 'translateY(100%)';
 
+  const canUpload = canUploadFile();
+  const showDeviceUpload = canUpload;
+  const showCameraUpload = canUpload && isMobile();
+  const showRemoteFiles = canUpload;
+  const showUploadMenu = showDeviceUpload || showCameraUpload || showRemoteFiles;
+
   return (
     <div className="absolute bottom-0 left-0 w-full z-20 overflow-hidden pointer-events-none min-h-[48px]">
       {/* 展开状态的 ChatInput */}
@@ -511,76 +520,6 @@ const ChatInput = ({
               {/* 滚动按钮组 - 水平排列 */}
               {/* 移除原来的位置，现在放到收起按钮同一排 */}
               <div className="flex px-1 items-center">
-                <div className="flex items-center">
-                  <div className="flex items-center">
-                    {canUploadFile() && (
-                      <UploadButton
-                        fileConfig={defaultFileConfig}
-                        onUploading={handleUploading}
-                        onFailed={handleUploadFailed}
-                        onSuccessful={handleUploadSuccessful}
-                        capture={false}
-                        inputId="upload-device"
-                        tip={t('Upload from device')}
-                        tipSide="top"
-                      >
-                        <IconPaperclip size={20} />
-                      </UploadButton>
-                    )}
-                    {canUploadFile() && isMobile() && (
-                      <UploadButton
-                        fileConfig={defaultFileConfig}
-                        onUploading={handleUploading}
-                        onFailed={handleUploadFailed}
-                        onSuccessful={handleUploadSuccessful}
-                        capture={true}
-                        inputId="upload-camera"
-                        tip={t('Take photo')}
-                        tipSide="top"
-                      >
-                        <IconCamera size={20} />
-                      </UploadButton>
-                    )}
-                    {canUploadFile() && (
-                      <PasteUpload
-                        fileConfig={defaultFileConfig}
-                        allowAllFiles={selectedChat.spans.some(x => x.codeExecutionEnabled)}
-                        onUploading={handleUploading}
-                        onFailed={handleUploadFailed}
-                        onSuccessful={handleUploadSuccessful}
-                      />
-                    )}
-                    {canUploadFile() && (
-                      <DragUpload
-                        fileConfig={defaultFileConfig}
-                        allowAllFiles={selectedChat.spans.some(x => x.codeExecutionEnabled)}
-                        onUploading={handleUploading}
-                        onFailed={handleUploadFailed}
-                        onSuccessful={handleUploadSuccessful}
-                        containerRef={inputContainerRef as React.RefObject<HTMLElement>}
-                      />
-                    )}
-
-                    {uploading && (
-                      <Button
-                        disabled
-                        size="xs"
-                        className="m-0.5 h-8 w-8 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
-                      >
-                        <IconLoader className="animate-spin" size={20} />
-                      </Button>
-                    )}
-                  </div>
-                  <div className="flex items-center">
-                    {canUploadFile() && (
-                      <FilesPopover
-                        onSelect={handleFileSelect}
-                        selectedFiles={contentFiles}
-                      />
-                    )}
-                  </div>
-                </div>
-
                 <div className="flex flex-1" />
 
                 <div className="flex items-center gap-1 md:gap-2">
@@ -749,6 +688,112 @@ const ChatInput = ({
               <div className="flex items-center px-2 py-2 border-t border-border/40">
                 {/* 左侧: Agent 代码执行控制 */}
                 <div className="flex items-center gap-2 flex-1">
+                  {showUploadMenu && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          size="xs"
+                          className="h-8 w-8 rounded-full p-0 bg-muted/60 text-foreground hover:bg-muted"
+                        >
+                          <IconPlus size={18} />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent side="top" align="start" className="w-56 p-2">
+                        <div className="flex flex-col gap-1">
+                          {showDeviceUpload && (
+                            <UploadButton
+                              fileConfig={defaultFileConfig}
+                              onUploading={handleUploading}
+                              onFailed={handleUploadFailed}
+                              onSuccessful={handleUploadSuccessful}
+                              capture={false}
+                              inputId="upload-device"
+                              buttonProps={{
+                                size: 'sm',
+                                variant: 'ghost',
+                                className:
+                                  'm-0 w-full h-9 justify-start gap-2 px-2 py-1 rounded-md bg-muted/40 hover:bg-muted',
+                              }}
+                            >
+                              <IconPaperclip size={18} />
+                              <span className="text-sm">
+                                {t('Upload from device')}
+                              </span>
+                            </UploadButton>
+                          )}
+                          {showRemoteFiles && (
+                            <FilesPopover
+                              onSelect={handleFileSelect}
+                              selectedFiles={contentFiles}
+                              trigger={
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="m-0 w-full h-9 justify-start gap-2 px-2 py-1 rounded-md bg-muted/40 hover:bg-muted"
+                                >
+                                  <IconFolder size={18} />
+                                  <span className="text-sm">
+                                    {t('Select remote files')}
+                                  </span>
+                                </Button>
+                              }
+                            />
+                          )}
+                          {showCameraUpload && (
+                            <UploadButton
+                              fileConfig={defaultFileConfig}
+                              onUploading={handleUploading}
+                              onFailed={handleUploadFailed}
+                              onSuccessful={handleUploadSuccessful}
+                              capture={true}
+                              inputId="upload-camera"
+                              buttonProps={{
+                                size: 'sm',
+                                variant: 'ghost',
+                                className:
+                                  'm-0 w-full h-9 justify-start gap-2 px-2 py-1 rounded-md bg-muted/40 hover:bg-muted',
+                              }}
+                            >
+                              <IconCamera size={18} />
+                              <span className="text-sm">
+                                {t('Take photo')}
+                              </span>
+                            </UploadButton>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+
+                  {uploading && (
+                    <Button
+                      disabled
+                      size="xs"
+                      className="m-0.5 h-8 w-8 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
+                    >
+                      <IconLoader className="animate-spin" size={20} />
+                    </Button>
+                  )}
+
+                  {canUpload && (
+                    <PasteUpload
+                      fileConfig={defaultFileConfig}
+                      allowAllFiles={selectedChat.spans.some((x) => x.codeExecutionEnabled)}
+                      onUploading={handleUploading}
+                      onFailed={handleUploadFailed}
+                      onSuccessful={handleUploadSuccessful}
+                    />
+                  )}
+                  {canUpload && (
+                    <DragUpload
+                      fileConfig={defaultFileConfig}
+                      allowAllFiles={selectedChat.spans.some((x) => x.codeExecutionEnabled)}
+                      onUploading={handleUploading}
+                      onFailed={handleUploadFailed}
+                      onSuccessful={handleUploadSuccessful}
+                      containerRef={inputContainerRef as React.RefObject<HTMLElement>}
+                    />
+                  )}
                   <CodeExecutionControl
                     chatId={selectedChat.id}
                     spans={selectedChat.spans}

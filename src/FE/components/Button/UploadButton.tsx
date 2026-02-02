@@ -5,8 +5,7 @@ import { checkFileSizeCanUpload, uploadFile } from '@/utils/uploadFile';
 import { FileDef } from '@/types/chat';
 import { ChatModelFileConfig } from '@/types/model';
 
-import { Button } from '@/components/ui/button';
-import Tips from '@/components/Tips/Tips';
+import { Button, type ButtonProps } from '@/components/ui/button';
 
 interface Props {
   onSuccessful?: (def: FileDef) => void;
@@ -19,9 +18,7 @@ interface Props {
   capture?: boolean;
   // 可选的 input 元素 id，避免多个按钮时冲突
   inputId?: string;
-  // 可选：按钮的悬浮提示文案
-  tip?: React.ReactElement | string;
-  tipSide?: 'top' | 'right' | 'bottom' | 'left';
+  buttonProps?: ButtonProps;
 }
 
 const UploadButton: React.FunctionComponent<Props> = ({
@@ -32,8 +29,7 @@ const UploadButton: React.FunctionComponent<Props> = ({
   children,
   capture = true,
   inputId = 'upload',
-  tip,
-  tipSide = 'top',
+  buttonProps,
 }: Props) => {
   const uploadRef = useRef<HTMLInputElement>(null);
   const { maxSize } = fileConfig || { maxSize: 0 };
@@ -68,8 +64,7 @@ const UploadButton: React.FunctionComponent<Props> = ({
       onClick={() => {
         uploadRef.current?.click();
       }}
-      size="xs"
-      className="m-0.5 h-8 w-8 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
+      {...buttonProps}
     >
       {children}
     </Button>
@@ -77,12 +72,7 @@ const UploadButton: React.FunctionComponent<Props> = ({
 
   return (
     <div>
-      {tip ? (
-        <Tips trigger={Btn} side={tipSide} content={tip} />
-      ) : (
-        Btn
-      )}
-
+      {Btn}
       <input
         ref={uploadRef}
         style={{ display: 'none' }}

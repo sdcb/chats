@@ -3,12 +3,8 @@ import { useEffect, useState } from 'react';
 import { FileDef } from '@/types/chat';
 import { GetUserFilesResult } from '@/types/clientApis';
 
-import { IconFolder } from '@/components/Icons';
-import Tips from '@/components/Tips/Tips';
-import useTranslation from '@/hooks/useTranslation';
 import PaginationContainer from '@/components/Pagination/Pagination';
 import FilePreview from '@/components/FilePreview/FilePreview';
-import { Button } from '@/components/ui/button';
 import {
   Popover,
   PopoverContent,
@@ -21,9 +17,14 @@ import { cn } from '@/lib/utils';
 interface FilesPopoverProps {
   selectedFiles?: FileDef[];
   onSelect?: (file: GetUserFilesResult) => void;
+  trigger: React.ReactNode;
 }
 
-const FilesPopover = ({ onSelect, selectedFiles }: FilesPopoverProps) => {
+const FilesPopover = ({
+  onSelect,
+  selectedFiles,
+  trigger,
+}: FilesPopoverProps) => {
   const [files, setFiles] = useState<GetUserFilesResult[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [pagination, setPagination] = useState({
@@ -49,23 +50,11 @@ const FilesPopover = ({ onSelect, selectedFiles }: FilesPopoverProps) => {
     setPagination({ ...pagination, page });
   };
 
-  const { t } = useTranslation();
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <Tips
-        trigger={
-          <PopoverTrigger asChild>
-            <Button
-              size="xs"
-              className="m-0.5 h-8 w-8 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
-            >
-              <IconFolder size={20} />
-            </Button>
-          </PopoverTrigger>
-        }
-        side="top"
-        content={t('Select remote files')}
-      />
+      <PopoverTrigger asChild>
+        {trigger}
+      </PopoverTrigger>
       <PopoverContent className="min-w-80 max-w-lg">
         <div className="grid grid-cols-3 gap-2 justify-items-center">
           {files.map((file) => (
