@@ -9,7 +9,7 @@ public class DBFileService(ChatsDB db, IFileServiceFactory fsf, CurrentUser curr
 {
     public async Task<DBFile> StoreImage(ImageChatSegment image, int clientInfoId, FileService dbfs, CancellationToken cancellationToken = default)
     {
-        DBFileDef def = await DownloadImageSegment(image, cancellationToken);
+        DBFileDef def = await image.Download(httpClientFactory, cancellationToken);
         IFileService fs = fsf.Create(dbfs);
 
         // Get image info before upload
@@ -39,36 +39,6 @@ public class DBFileService(ChatsDB db, IFileServiceFactory fsf, CurrentUser curr
         await db.SaveChangesAsync(cancellationToken);
 
         return file;
-    }
-
-    private async Task<DBFileDef> DownloadImageSegment(ImageChatSegment image, CancellationToken cancellationToken)
-    {
-        switch (image)
-        {
-            case UrlImage urlImage:
-                return await DownloadUrlImage(urlImage, cancellationToken);
-            default:
-                // Base64Image / Base64PreviewImage do not perform HTTP
-                return await image.Download(cancellationToken);
-        }
-    }
-
-    private async Task<DBFileDef> DownloadUrlImage(UrlImage image, CancellationToken cancellationToken)
-    {
-        using HttpClient httpClient = httpClientFactory.CreateClient();
-        using HttpResponseMessage resp = await httpClient.GetAsync(image.Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        resp.EnsureSuccessStatusCode();
-
-        byte[] bytes = await resp.Content.ReadAsByteArrayAsync(cancellationToken);
-        string contentType = resp.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
-
-        string? fileName = resp.Content.Headers.ContentDisposition?.FileName;
-        if (!string.IsNullOrWhiteSpace(fileName))
-        {
-            fileName = fileName.Trim().Trim('"');
-        }
-
-        return new DBFileDef(bytes, contentType, fileName);
     }
 
     public async Task<DBFile> StoreFileBytes(byte[] bytes, string fileName, string contentType, int clientInfoId, FileService dbfs, CancellationToken cancellationToken = default)

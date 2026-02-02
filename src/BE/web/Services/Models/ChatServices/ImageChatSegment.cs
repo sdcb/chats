@@ -11,7 +11,7 @@ namespace Chats.BE.Services.Models.ChatServices;
 [JsonDerivedType(typeof(UrlImage), typeDiscriminator: "url")]
 public abstract record ImageChatSegment : ChatSegment
 {
-    public abstract Task<DBFileDef> Download(CancellationToken cancellationToken = default);
+    public abstract Task<DBFileDef> Download(IHttpClientFactory httpClientFactory, CancellationToken cancellationToken = default);
 
     protected abstract string ToTempUrl();
 
@@ -33,7 +33,7 @@ public record Base64Image : ImageChatSegment
     [JsonPropertyName("base64")]
     public required string Base64 { get; init; }
 
-    public override Task<DBFileDef> Download(CancellationToken cancellationToken = default)
+    public override Task<DBFileDef> Download(IHttpClientFactory httpClientFactory, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -64,9 +64,21 @@ public record UrlImage : ImageChatSegment
     [JsonPropertyName("url")]
     public required string Url { get; init; }
 
-    public override async Task<DBFileDef> Download(CancellationToken cancellationToken = default)
+    public override async Task<DBFileDef> Download(IHttpClientFactory httpClientFactory, CancellationToken cancellationToken = default)
     {
-        throw new InvalidOperationException("UrlImage.Download() is not supported. Use DBFileService.StoreImage(...) so the HTTP request can be made via DI (IHttpClientFactory).");
+        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpResponseMessage resp = await httpClient.GetAsync(Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        resp.EnsureSuccessStatusCode();
+
+        byte[] bytes = await resp.Content.ReadAsByteArrayAsync(cancellationToken);
+        string contentType = resp.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+        string? fileName = resp.Content.Headers.ContentDisposition?.FileName;
+        if (!string.IsNullOrWhiteSpace(fileName))
+        {
+            fileName = fileName.Trim().Trim('"');
+        }
+
+        return new DBFileDef(bytes, contentType, fileName);
     }
 
     protected override string ToTempUrl() => Url;
