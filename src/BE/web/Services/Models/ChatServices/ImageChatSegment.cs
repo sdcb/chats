@@ -66,14 +66,7 @@ public record UrlImage : ImageChatSegment
 
     public override async Task<DBFileDef> Download(CancellationToken cancellationToken = default)
     {
-        using HttpClient client = new();
-        HttpResponseMessage resp = await client.GetAsync(Url, cancellationToken);
-        resp.EnsureSuccessStatusCode();
-
-        byte[] bytes = await resp.Content.ReadAsByteArrayAsync(cancellationToken);
-        string contentType = resp.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
-        string? fileName = resp.Content.Headers.ContentDisposition?.FileName;
-        return new DBFileDef(bytes, contentType, fileName);
+        throw new InvalidOperationException("UrlImage.Download() is not supported. Use DBFileService.StoreImage(...) so the HTTP request can be made via DI (IHttpClientFactory).");
     }
 
     protected override string ToTempUrl() => Url;

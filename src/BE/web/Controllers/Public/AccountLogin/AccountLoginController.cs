@@ -16,7 +16,7 @@ using Chats.DB.Enums;
 namespace Chats.BE.Controllers.Public.AccountLogin;
 
 [Route("api/public")]
-public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> logger, SessionManager sessionManager, ClientInfoManager clientInfoService, LoginRateLimiter loginRateLimiter) : ControllerBase
+public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> logger, SessionManager sessionManager, ClientInfoManager clientInfoService, LoginRateLimiter loginRateLimiter, KeycloakOAuthClient keycloakClient) : ControllerBase
 {
     [HttpPost("account-login")]
     public async Task<ActionResult> Login(
@@ -60,7 +60,7 @@ public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> 
 
         try
         {
-            AccessTokenInfo token = await kcConfig.GetUserInfo(sso.Code, hostUrl.GetKeycloakSsoRedirectUrl(), cancellationToken);
+            AccessTokenInfo token = await keycloakClient.GetUserInfo(kcConfig, sso.Code, hostUrl.GetKeycloakSsoRedirectUrl(), cancellationToken);
             User user = await userManager.EnsureKeycloakUser(token, cancellationToken);
             ActionResult sessionResult = Ok(await sessionManager.GenerateSessionForUser(user, cancellationToken));
             await loginRateLimiter.RecordKeycloakAttemptAsync(KnownLoginProviders.Keycloak, clientInfo.Id, user.Id, true, token.Sub, token.Email, null, cancellationToken);

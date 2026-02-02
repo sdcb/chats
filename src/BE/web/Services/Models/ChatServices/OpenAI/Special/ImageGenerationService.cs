@@ -275,13 +275,13 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             .Take(1)];
     }
 
-    private static async Task<MultipartFormDataContent> BuildImageEditFormAsync(
+    private async Task<MultipartFormDataContent> BuildImageEditFormAsync(
         NeutralContent[] images,
         string prompt,
         ChatRequest request,
         CancellationToken cancellationToken)
     {
-        using HttpClient http = new();
+        using HttpClient http = httpClientFactory.CreateClient();
         MultipartFormDataContent form = new();
 
         Dictionary<string, HttpResponseMessage> downloadedFiles = (await Task.WhenAll(images

@@ -198,7 +198,7 @@ public abstract partial class ChatService
                     true => supportsVisionLink switch
                     {
                         true => content,
-                        false => await DownloadImagePart(http, fileUrl.Url, cancellationToken),
+                        false => await DownloadImagePart(fileUrl.Url, cancellationToken),
                     },
                     false => NeutralTextContent.Create(fileUrl.Url),
                 },
@@ -213,18 +213,17 @@ public abstract partial class ChatService
 
         return message with { Contents = processedContents };
 
-        static async Task<NeutralContent> DownloadImagePart(HttpClient http, string url, CancellationToken cancellationToken)
+        async Task<NeutralContent> DownloadImagePart(string url, CancellationToken cancellationToken)
         {
-            HttpResponseMessage resp = await http.GetAsync(url, cancellationToken);
-            if (!resp.IsSuccessStatusCode)
+            try
             {
-                throw new CustomChatServiceException(DBFinishReason.UpstreamError, $"Failed to download image from {url}");
+                (byte[] bytes, string contentType) = await fup.DownloadUrlBytesAsync(url, cancellationToken);
+                return NeutralFileBlobContent.Create(bytes, contentType);
             }
-
-            string contentType = resp.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
-            return NeutralFileBlobContent.Create(await resp.Content.ReadAsByteArrayAsync(cancellationToken), contentType);
+            catch (Exception ex)
+            {
+                throw new CustomChatServiceException(DBFinishReason.UpstreamError, $"Failed to download image from {url}: {ex.Message}");
+            }
         }
     }
-
-    private static readonly HttpClient http = new();
 }
