@@ -60,10 +60,13 @@ const ANIMATION_DURATION_MS = 200;
 
 // 文本框配置
 const TEXTAREA_LINE_HEIGHT = 24;
-const TEXTAREA_MIN_ROWS = 2;
+const TEXTAREA_PADDING_Y = 16; // py-2 (8px * 2)
+const TEXTAREA_MIN_ROWS = 1;
 const TEXTAREA_MAX_ROWS = 10;
-const TEXTAREA_MIN_HEIGHT = TEXTAREA_LINE_HEIGHT * TEXTAREA_MIN_ROWS; // 48px
-const TEXTAREA_MAX_HEIGHT = TEXTAREA_LINE_HEIGHT * TEXTAREA_MAX_ROWS; // 240px
+const TEXTAREA_MIN_HEIGHT =
+  TEXTAREA_LINE_HEIGHT * TEXTAREA_MIN_ROWS + TEXTAREA_PADDING_Y; // 40px
+const TEXTAREA_MAX_HEIGHT =
+  TEXTAREA_LINE_HEIGHT * TEXTAREA_MAX_ROWS + TEXTAREA_PADDING_Y; // 256px
 
 interface Props {
   onSend: (message: Message) => void;
@@ -704,7 +707,7 @@ const ChatInput = ({
                 <Textarea
                   ref={textareaRef}
                   className={cn(
-                    'm-0 w-full resize-none border-none outline-none rounded-md bg-transparent leading-6',
+                    'm-0 w-full resize-none border-none outline-none rounded-md bg-transparent leading-6 min-h-0',
                     `transition-[height] ease-out`,
                     isFullWriting && 'overflow-auto'
                   )}
