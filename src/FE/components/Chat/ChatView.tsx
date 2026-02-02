@@ -65,6 +65,7 @@ import HomeContext from '@/contexts/home.context';
 import ChatHeader from './ChatHeader';
 import ChatInput from './ChatInput';
 import ChatPresetList from './ChatPresetList';
+import ChatMiniMap from './ChatMiniMap';
 import { ChatMessage } from '@/components/ChatMessage';
 import ChatMessagesSkeleton from './ChatMessagesSkeleton';
 import NoChat from './NoChat';
@@ -119,12 +120,6 @@ const ChatView = memo(() => {
   const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(true);
   const [autoScrollTemporarilyDisabled, setAutoScrollTemporarilyDisabled] =
     useState<boolean>(false);
-  const [showScrollDownButton, setShowScrollDownButton] =
-    useState<boolean>(false);
-  const [showScrollToTopButton, setShowScrollToTopButton] =
-    useState<boolean>(false);
-  const [showScrollToPrevUserMessageButton, setShowScrollToPrevUserMessageButton] =
-    useState<boolean>(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -147,7 +142,7 @@ const ChatView = memo(() => {
         // 获取最后一条活跃消息（leafMessage）
         const lastMessageGroup = selectedMessages[selectedMessages.length - 1];
         const leafMessage = lastMessageGroup?.find((x) => x.isActive);
-        
+
         if (leafMessage) {
           // 通过 data-message-id 属性找到 leafMessage 的 DOM 元素
           const leafMessageElement = chatContainerRef.current?.querySelector(
@@ -190,7 +185,7 @@ const ChatView = memo(() => {
       messagesEndRef.current?.scrollIntoView(true);
     }
   }, [autoScrollEnabled]);
-  
+
   const throttledScrollDown = useMemo(
     () => throttle(scrollDown, 250),
     [scrollDown],
@@ -206,20 +201,11 @@ const ChatView = memo(() => {
         if (!autoScrollDisabledRef.current) {
           setAutoScrollEnabled(false);
         }
-        setShowScrollDownButton(true && selectedMessages.length > 0);
       } else {
         if (!autoScrollDisabledRef.current) {
           setAutoScrollEnabled(true);
         }
-        setShowScrollDownButton(false);
       }
-
-      // 判断是否显示滚动到顶部按钮（滚动超过100px时显示）
-      setShowScrollToTopButton(scrollTop > 100);
-      
-      // 判断是否显示滚动到上一个用户消息按钮
-      // 简单的逻辑：滚动超过200px且有多个消息时显示
-      setShowScrollToPrevUserMessageButton(scrollTop > 200 && selectedMessages.length > 1);
     }
   }, [selectedMessages]);
 
@@ -422,7 +408,7 @@ const ChatView = memo(() => {
         const currentContents = getLastStepContents(x);
         const lastContentIndex = currentContents.length - 1;
         let newContent = [...currentContents];
-        
+
         if (
           lastContentIndex >= 0 &&
           newContent[lastContentIndex].$type === MessageContentType.text
@@ -459,7 +445,7 @@ const ChatView = memo(() => {
       }
       return x;
     });
-    
+
     const newSelectedMsgs = [...selectedMsgs];
     newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
@@ -478,7 +464,7 @@ const ChatView = memo(() => {
         const currentContents = getLastStepContents(x);
         const lastContentIndex = currentContents.length - 1;
         let newContent = [...currentContents];
-        
+
         // 检查最后一个内容是否是 tempFileId 类型（预览图片）
         if (
           lastContentIndex >= 0 &&
@@ -498,7 +484,7 @@ const ChatView = memo(() => {
       }
       return x;
     });
-    
+
     const newSelectedMsgs = [...selectedMsgs];
     newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
@@ -517,7 +503,7 @@ const ChatView = memo(() => {
         const currentContents = getLastStepContents(x);
         const lastContentIndex = currentContents.length - 1;
         let newContent = [...currentContents];
-        
+
         // 检查最后一个内容是否是 tempFileId 类型（预览图片）
         if (
           lastContentIndex >= 0 &&
@@ -538,7 +524,7 @@ const ChatView = memo(() => {
       }
       return x;
     });
-    
+
     const newSelectedMsgs = [...selectedMsgs];
     newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
@@ -557,7 +543,7 @@ const ChatView = memo(() => {
         const currentContents = getLastStepContents(x);
         const lastContentIndex = currentContents.length - 1;
         let newContent = [...currentContents];
-        
+
         if (
           lastContentIndex >= 0 &&
           newContent[lastContentIndex].$type === MessageContentType.reasoning
@@ -585,7 +571,7 @@ const ChatView = memo(() => {
       }
       return x;
     });
-    
+
     const newSelectedMsgs = [...selectedMsgs];
     newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
@@ -678,7 +664,7 @@ const ChatView = memo(() => {
       }
       return x;
     });
-    
+
     const newSelectedMsgs = [...selectedMsgs];
     newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
@@ -734,7 +720,7 @@ const ChatView = memo(() => {
       }
       return x;
     });
-    
+
     const newSelectedMsgs = [...selectedMsgs];
     newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
@@ -827,7 +813,7 @@ const ChatView = memo(() => {
       }
       return x;
     });
-    
+
     const newSelectedMsgs = [...selectedMsgs];
     newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
     messageDispatch(setSelectedMessages(newSelectedMsgs));
@@ -892,21 +878,21 @@ const ChatView = memo(() => {
     if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
     startChat();
     let { id: chatId } = selectedChat;
-    
+
     // 找到用户消息在 selectedMessages 中的位置
     const userMessageIndex = selectedMessages.findIndex(
       (x) => x.findIndex((m) => m.id === messageId) !== -1,
     );
-    
+
     if (userMessageIndex === -1) return;
-    
+
     // 保留用户消息及之前的消息，重新生成所有助手消息
     let selectedMessageList = selectedMessages.slice(0, userMessageIndex + 1);
-    
+
     // 为所有启用的 span 生成新的响应消息
     let responseMessages = generateResponseMessages(selectedChat, messageId);
     selectedMessageList.push(responseMessages);
-    
+
     messageDispatch(setSelectedMessages(selectedMessageList));
 
     let chatBody = {
@@ -976,148 +962,148 @@ const ChatView = memo(() => {
       let messageList = [...messages];
       // 用于跟踪每个 span 最近一次非空的工具调用 ID，便于将 u 为 null 的参数片段归并
       const currentToolCallIdBySpan = new Map<number, string>();
-    for await (const value of stream) {
-      if (value.k === SseResponseKind.StopId) {
-        chatDispatch(setStopIds([value.r]));
-      } else if (value.k === SseResponseKind.ReasoningSegment) {
-        const { r: msg, i: spanId } = value;
-        const msgId = `${ResponseMessageTempId}-${spanId}`;
-        selectedMessageList = changeSelectedResponseReason(selectedMessageList, msgId, msg);
-      } else if (value.k === SseResponseKind.Segment) {
-        const { r: msg, i: spanId } = value;
-        const msgId = `${ResponseMessageTempId}-${spanId}`;
-        // 离开 ReasoningSegment，完成上一段 reasoning
-        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
-        selectedMessageList = changeSelectedResponseMessage(
-          selectedMessageList,
-          msgId,
-          msg,
-          ChatSpanStatus.Chatting,
-        );
-      } else if (value.k === SseResponseKind.Error) {
-        const { r: msg, i: spanId } = value;
-        const msgId = `${ResponseMessageTempId}-${spanId}`;
-        // 离开 ReasoningSegment，完成上一段 reasoning
-        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
-        selectedMessageList = changeSelectedResponseMessage(
-          selectedMessageList,
-          msgId,
-          msg,
-          ChatSpanStatus.Failed,
-        );
-      } else if (value.k === SseResponseKind.UserMessage) {
-        messageList.push(value.r);
-      } else if (value.k === SseResponseKind.ResponseMessage) {
-        const { r: msg, i: spanId } = value;
-        const msgId = `${ResponseMessageTempId}-${spanId}`;
-        // 离开 ReasoningSegment，完成上一段 reasoning
-        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
-        selectedMessageList = changeSelectedResponseMessage(
-          selectedMessageList,
-          msgId,
-          '',
-          ChatSpanStatus.None,
-        );
-        selectedMessageList = changeSelectedResponseMessageInfo(selectedMessageList, spanId, msg);
-        messageList.push(msg);
-      } else if (value.k === SseResponseKind.StartResponse) {
-        const { i: spanId } = value;
-        const msgId = `${ResponseMessageTempId}-${spanId}`;
-        // 离开 ReasoningSegment，完成上一段 reasoning
-        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
-      } else if (value.k === SseResponseKind.FileGenerating) {
-        const { r, i: spanId } = value;
-        const msgId = `${ResponseMessageTempId}-${spanId}`;
-        // 离开 ReasoningSegment，完成上一段 reasoning
-        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
-        selectedMessageList = changeSelectedResponseFilePreview(selectedMessageList, msgId, r);
-      } else if (value.k === SseResponseKind.FileGenerated) {
-        const { r, i: spanId } = value;
-        const msgId = `${ResponseMessageTempId}-${spanId}`;
-        // 离开 ReasoningSegment，完成上一段 reasoning
-        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
-        selectedMessageList = changeSelectedResponseFileFinal(selectedMessageList, msgId, r);
-      } else if (value.k === SseResponseKind.CallingTool) {
-        // 13 事件：u 仅在首个片段非空，后续片段 u/r 可能为 null，只携带 p（参数增量）
-        const { u, r: toolName, p: parameters, i: spanId } = value;
-        if (u) {
-          currentToolCallIdBySpan.set(spanId, u);
+      for await (const value of stream) {
+        if (value.k === SseResponseKind.StopId) {
+          chatDispatch(setStopIds([value.r]));
+        } else if (value.k === SseResponseKind.ReasoningSegment) {
+          const { r: msg, i: spanId } = value;
+          const msgId = `${ResponseMessageTempId}-${spanId}`;
+          selectedMessageList = changeSelectedResponseReason(selectedMessageList, msgId, msg);
+        } else if (value.k === SseResponseKind.Segment) {
+          const { r: msg, i: spanId } = value;
+          const msgId = `${ResponseMessageTempId}-${spanId}`;
+          // 离开 ReasoningSegment，完成上一段 reasoning
+          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
+          selectedMessageList = changeSelectedResponseMessage(
+            selectedMessageList,
+            msgId,
+            msg,
+            ChatSpanStatus.Chatting,
+          );
+        } else if (value.k === SseResponseKind.Error) {
+          const { r: msg, i: spanId } = value;
+          const msgId = `${ResponseMessageTempId}-${spanId}`;
+          // 离开 ReasoningSegment，完成上一段 reasoning
+          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
+          selectedMessageList = changeSelectedResponseMessage(
+            selectedMessageList,
+            msgId,
+            msg,
+            ChatSpanStatus.Failed,
+          );
+        } else if (value.k === SseResponseKind.UserMessage) {
+          messageList.push(value.r);
+        } else if (value.k === SseResponseKind.ResponseMessage) {
+          const { r: msg, i: spanId } = value;
+          const msgId = `${ResponseMessageTempId}-${spanId}`;
+          // 离开 ReasoningSegment，完成上一段 reasoning
+          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
+          selectedMessageList = changeSelectedResponseMessage(
+            selectedMessageList,
+            msgId,
+            '',
+            ChatSpanStatus.None,
+          );
+          selectedMessageList = changeSelectedResponseMessageInfo(selectedMessageList, spanId, msg);
+          messageList.push(msg);
+        } else if (value.k === SseResponseKind.StartResponse) {
+          const { i: spanId } = value;
+          const msgId = `${ResponseMessageTempId}-${spanId}`;
+          // 离开 ReasoningSegment，完成上一段 reasoning
+          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
+        } else if (value.k === SseResponseKind.FileGenerating) {
+          const { r, i: spanId } = value;
+          const msgId = `${ResponseMessageTempId}-${spanId}`;
+          // 离开 ReasoningSegment，完成上一段 reasoning
+          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
+          selectedMessageList = changeSelectedResponseFilePreview(selectedMessageList, msgId, r);
+        } else if (value.k === SseResponseKind.FileGenerated) {
+          const { r, i: spanId } = value;
+          const msgId = `${ResponseMessageTempId}-${spanId}`;
+          // 离开 ReasoningSegment，完成上一段 reasoning
+          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
+          selectedMessageList = changeSelectedResponseFileFinal(selectedMessageList, msgId, r);
+        } else if (value.k === SseResponseKind.CallingTool) {
+          // 13 事件：u 仅在首个片段非空，后续片段 u/r 可能为 null，只携带 p（参数增量）
+          const { u, r: toolName, p: parameters, i: spanId } = value;
+          if (u) {
+            currentToolCallIdBySpan.set(spanId, u);
+          }
+          const toolCallId = (u ?? currentToolCallIdBySpan.get(spanId)) as string | undefined;
+          if (!toolCallId) {
+            // 尚未获取到工具调用 ID，无法归并，跳过本片段
+            continue;
+          }
+          const msgId = `${ResponseMessageTempId}-${spanId}`;
+          // 离开 ReasoningSegment，完成上一段 reasoning
+          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
+          selectedMessageList = changeSelectedResponseToolCall(
+            selectedMessageList,
+            msgId,
+            toolCallId,
+            toolName ?? '',
+            parameters ?? '',
+          );
+        } else if (value.k === SseResponseKind.ToolCompleted) {
+          const { u: toolCallId, r: result, i: spanId } = value as any;
+          const msgId = `${ResponseMessageTempId}-${spanId}`;
+          // 离开 ReasoningSegment，完成上一段 reasoning
+          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
+          selectedMessageList = changeSelectedResponseToolResult(
+            selectedMessageList,
+            msgId,
+            toolCallId,
+            result,
+          );
+          // 若该 span 的活动调用已完成，清除追踪
+          if (currentToolCallIdBySpan.get(spanId) === toolCallId) {
+            currentToolCallIdBySpan.delete(spanId);
+          }
+        } else if (value.k === SseResponseKind.ToolProgress) {
+          const { u: toolCallId, r: progress, i: spanId } = value;
+          const msgId = `${ResponseMessageTempId}-${spanId}`;
+          // 离开 ReasoningSegment，完成上一段 reasoning
+          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
+          selectedMessageList = changeSelectedResponseToolProgress(
+            selectedMessageList,
+            msgId,
+            toolCallId,
+            progress,
+          );
+        } else if (value.k === SseResponseKind.EndStep) {
+          const { r: stepData, i: spanId } = value;
+          const msgId = `${ResponseMessageTempId}-${spanId}`;
+          // End current step and start a new one
+          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
+          selectedMessageList = changeSelectedResponseEndStep(selectedMessageList, msgId, stepData);
+        } else if (value.k === SseResponseKind.UpdateTitle) {
+          changeChatTitle(value.r);
+        } else if (value.k === SseResponseKind.TitleSegment) {
+          changeChatTitle(value.r, true);
+        } else {
+          console.log('Unknown message', value);
         }
-        const toolCallId = (u ?? currentToolCallIdBySpan.get(spanId)) as string | undefined;
-        if (!toolCallId) {
-          // 尚未获取到工具调用 ID，无法归并，跳过本片段
-          continue;
-        }
-        const msgId = `${ResponseMessageTempId}-${spanId}`;
-        // 离开 ReasoningSegment，完成上一段 reasoning
-        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
-        selectedMessageList = changeSelectedResponseToolCall(
-          selectedMessageList,
-          msgId,
-          toolCallId,
-          toolName ?? '',
-          parameters ?? '',
-        );
-      } else if (value.k === SseResponseKind.ToolCompleted) {
-        const { u: toolCallId, r: result, i: spanId } = value as any;
-        const msgId = `${ResponseMessageTempId}-${spanId}`;
-        // 离开 ReasoningSegment，完成上一段 reasoning
-        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
-        selectedMessageList = changeSelectedResponseToolResult(
-          selectedMessageList,
-          msgId,
-          toolCallId,
-          result,
-        );
-        // 若该 span 的活动调用已完成，清除追踪
-        if (currentToolCallIdBySpan.get(spanId) === toolCallId) {
-          currentToolCallIdBySpan.delete(spanId);
-        }
-      } else if (value.k === SseResponseKind.ToolProgress) {
-        const { u: toolCallId, r: progress, i: spanId } = value;
-        const msgId = `${ResponseMessageTempId}-${spanId}`;
-        // 离开 ReasoningSegment，完成上一段 reasoning
-        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
-        selectedMessageList = changeSelectedResponseToolProgress(
-          selectedMessageList,
-          msgId,
-          toolCallId,
-          progress,
-        );
-      } else if (value.k === SseResponseKind.EndStep) {
-        const { r: stepData, i: spanId } = value;
-        const msgId = `${ResponseMessageTempId}-${spanId}`;
-        // End current step and start a new one
-        selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
-        selectedMessageList = changeSelectedResponseEndStep(selectedMessageList, msgId, stepData);
-      } else if (value.k === SseResponseKind.UpdateTitle) {
-        changeChatTitle(value.r);
-      } else if (value.k === SseResponseKind.TitleSegment) {
-        changeChatTitle(value.r, true);
-      } else {
-        console.log('Unknown message', value);
       }
-    }
 
-    const leafMessageId = messageList[messageList.length - 1].id;
-    const selectedMsgs = findSelectedMessageByLeafId(
-      messageList,
-      leafMessageId,
-    );
+      const leafMessageId = messageList[messageList.length - 1].id;
+      const selectedMsgs = findSelectedMessageByLeafId(
+        messageList,
+        leafMessageId,
+      );
 
-    const updatedAt = currentISODateString();
-    updateChatsState((prevChats) =>
-      prevChats.map((x) =>
-        x.id === selectedChat.id
-          ? { ...x, leafMessageId, updatedAt }
-          : x,
-      ),
-    );
-    messageDispatch(setSelectedMessages(selectedMsgs));
-    messageDispatch(setMessages(messageList));
-    changeSelectedChatStatus(ChatStatus.None);
-    autoScrollDisabledRef.current = false;
-    setAutoScrollTemporarilyDisabled(false);
+      const updatedAt = currentISODateString();
+      updateChatsState((prevChats) =>
+        prevChats.map((x) =>
+          x.id === selectedChat.id
+            ? { ...x, leafMessageId, updatedAt }
+            : x,
+        ),
+      );
+      messageDispatch(setSelectedMessages(selectedMsgs));
+      messageDispatch(setMessages(messageList));
+      changeSelectedChatStatus(ChatStatus.None);
+      autoScrollDisabledRef.current = false;
+      setAutoScrollTemporarilyDisabled(false);
     },
     [
       changeChatTitle,
@@ -1129,79 +1115,6 @@ const ChatView = memo(() => {
       updateChatsState,
     ],
   );
-
-  const handleScrollDown = () => {
-    chatContainerRef.current?.scrollTo({
-      top: chatContainerRef.current.scrollHeight,
-      behavior: 'smooth',
-    });
-  };
-
-  const handleScrollToTop = () => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const handleScrollToPrevUserMessage = () => {
-    if (!chatContainerRef.current) return;
-    
-    // 获取当前滚动位置
-    const currentScrollTop = chatContainerRef.current.scrollTop;
-    
-    // 从 selectedMessages 中找到用户消息，按时间顺序排列
-    const allUserMessages: string[] = [];
-    selectedMessages.forEach((messageGroup) => {
-      messageGroup.forEach((message) => {
-        if (message.role === ChatRole.User) {
-          allUserMessages.push(message.id);
-        }
-      });
-    });
-    
-    if (allUserMessages.length === 0) {
-      handleScrollToTop();
-      return;
-    }
-    
-    // 使用新的data属性查找用户消息元素
-    let targetElement: Element | null = null;
-    
-    // 从后往前查找当前视口上方的用户消息
-    for (let i = allUserMessages.length - 1; i >= 0; i--) {
-      const messageId = allUserMessages[i];
-      
-      // 使用data属性查找用户消息元素
-      const element = chatContainerRef.current.querySelector(`[data-user-message-id="${messageId}"]`) ||
-                     chatContainerRef.current.querySelector(`[data-message-id="${messageId}"][data-message-role="user"]`);
-      
-      if (element) {
-        const elementTop = (element as HTMLElement).offsetTop;
-        // 如果这个消息在当前视口上方（留100px缓冲区）
-        if (elementTop < currentScrollTop - 100) {
-          targetElement = element;
-          break;
-        }
-      }
-    }
-    
-    if (targetElement) {
-      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else if (allUserMessages.length > 0) {
-      // 如果没有找到在视口上方的用户消息，滚动到第一个用户消息
-      const firstMessageId = allUserMessages[0];
-      const firstElement = chatContainerRef.current.querySelector(`[data-user-message-id="${firstMessageId}"]`) ||
-                          chatContainerRef.current.querySelector(`[data-message-id="${firstMessageId}"][data-message-role="user"]`);
-      
-      if (firstElement) {
-        firstElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        handleScrollToTop();
-      }
-    } else {
-      handleScrollToTop();
-    }
-  };
 
   const handleChangePrompt = (prompt: Prompt) => {
     // to do
@@ -1220,21 +1133,21 @@ const ChatView = memo(() => {
     const leafId = findLastLeafId(messages, messageId);
     const selectedMsgs = findSelectedMessageByLeafId(messages, leafId);
     messageDispatch(setSelectedMessages(selectedMsgs));
-    
+
     const updatedAt = currentISODateString();
     // 更新selectedChat的leafMessageId
     updateChatsState((prevChats) =>
       prevChats.map((x) =>
         x.id === selectedChat.id
           ? {
-              ...x,
-              leafMessageId: leafId,
-              updatedAt,
-            }
+            ...x,
+            leafMessageId: leafId,
+            updatedAt,
+          }
           : x,
       ),
     );
-    
+
     putChats(selectedChat.id, {
       setsLeafMessageId: true,
       leafMessageId: leafId,
@@ -1348,7 +1261,7 @@ const ChatView = memo(() => {
       });
 
       msgs.push(copyMsg!);
-      
+
       const updatedAt = currentISODateString();
       // 更新chats中的leafMessageId
       updateChatsState((prevChats) =>
@@ -1415,7 +1328,7 @@ const ChatView = memo(() => {
     let nextMsgId = '';
     let msgs = messages.filter((x) => x.id !== messageId);
     let deletedMessage: IChatMessage | undefined;
-    
+
     // 找到被删除的消息
     selectedMessages.forEach((msg) => {
       msg.forEach((m) => {
@@ -1437,12 +1350,12 @@ const ChatView = memo(() => {
       if (deletedMessage.role === ChatRole.Assistant) {
         // 删除的是助手消息
         // 1. 寻找其他助手响应消息（同一父级下的其他助手消息）
-        const otherAssistantMessages = msgs.filter(m => 
-          m.role === ChatRole.Assistant && 
+        const otherAssistantMessages = msgs.filter(m =>
+          m.role === ChatRole.Assistant &&
           m.parentId === deletedMessage!.parentId &&
           m.id !== deletedMessage!.id
         );
-        
+
         if (otherAssistantMessages.length > 0) {
           // 使用另一侧响应的当前显示的消息
           const activeAssistant = otherAssistantMessages.find(m => m.isActive);
@@ -1462,7 +1375,7 @@ const ChatView = memo(() => {
         childMessages.forEach(child => {
           msgs = msgs.filter(x => x.id !== child.id);
         });
-        
+
         // 选择父级消息
         if (deletedMessage.parentId) {
           nextMsgId = deletedMessage.parentId;
@@ -1475,7 +1388,7 @@ const ChatView = memo(() => {
     const leafId = nextMsgId ? findLastLeafId(msgs, nextMsgId) : null;
     await deleteMessage(messageId, leafId);
     const selectedMsgs = leafId ? findSelectedMessageByLeafId(msgs, leafId) : [];
-    
+
     // 更新chats中的leafMessageId
     if (selectedChat && leafId) {
       const updatedAt = currentISODateString();
@@ -1487,7 +1400,7 @@ const ChatView = memo(() => {
         ),
       );
     }
-    
+
     messageDispatch(setSelectedMessages(selectedMsgs));
     messageDispatch(setMessages(msgs));
   };
@@ -1596,43 +1509,46 @@ const ChatView = memo(() => {
     <div className="relative flex-1">
       <div className="flex flex-col">
         <div className="relative h-16"><ChatHeader /></div>
-        <div
-          className="relative h-[calc(100vh-64px)] overflow-x-hidden scroll-container w-0 min-w-full"
-          ref={chatContainerRef}
-          onScroll={handleScroll}
-        >
-          {isMessagesLoading ? (
-            <ChatMessagesSkeleton selectedChat={selectedChat} />
-          ) : (
-            <>
-              <div
-                className="sm:w-full chat-container"
-                style={{
-                  width: `calc(100vw - ${showChatBar ? 280 : 0}px)`,
-                }}
-              >
-                {selectedMessages.length === 0 && <ChatPresetList />}
-              </div>
+        <div className="relative h-[calc(100vh-64px)] w-0 min-w-full">
+          <div
+            className="h-full overflow-x-hidden scroll-container"
+            ref={chatContainerRef}
+            onScroll={handleScroll}
+          >
+            {isMessagesLoading ? (
+              <ChatMessagesSkeleton selectedChat={selectedChat} />
+            ) : (
+              <>
+                <div
+                  className="sm:w-full chat-container"
+                  style={{
+                    width: `calc(100vw - ${showChatBar ? 280 : 0}px)`,
+                  }}
+                >
+                  {selectedMessages.length === 0 && <ChatPresetList />}
+                </div>
 
-              <ChatMessage
-                selectedChat={selectedChat}
-                selectedMessages={selectedMessages}
-                models={models}
-                messagesEndRef={messagesEndRef}
-                onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
-                onEditAndSendMessage={handleEditAndSendMessage}
-                onRegenerate={handleRegenerate}
-                onReactionMessage={handleReactionMessage}
-                onEditResponseMessage={handleUpdateResponseMessage}
-                onEditUserMessage={handleUpdateUserMessage}
-                onDeleteMessage={handleDeleteMessage}
-                onChangeDisplayType={handleChangeDisplayType}
-                onRegenerateAllAssistant={handleRegenerateAllAssistant}
-              />
+                <ChatMessage
+                  selectedChat={selectedChat}
+                  selectedMessages={selectedMessages}
+                  models={models}
+                  messagesEndRef={messagesEndRef}
+                  onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
+                  onEditAndSendMessage={handleEditAndSendMessage}
+                  onRegenerate={handleRegenerate}
+                  onReactionMessage={handleReactionMessage}
+                  onEditResponseMessage={handleUpdateResponseMessage}
+                  onEditUserMessage={handleUpdateUserMessage}
+                  onDeleteMessage={handleDeleteMessage}
+                  onChangeDisplayType={handleChangeDisplayType}
+                  onRegenerateAllAssistant={handleRegenerateAllAssistant}
+                />
 
-              <div className={cn(showChatInput ? 'h-32' : 'h-2')}></div>
-            </>
-          )}
+                <div className={cn(showChatInput ? 'h-32' : 'h-2')}></div>
+              </>
+            )}
+          </div>
+          <ChatMiniMap messages={selectedMessages} containerRef={chatContainerRef} />
         </div>
 
         {hasModel() && (
@@ -1641,12 +1557,6 @@ const ChatView = memo(() => {
               const lastMessage = getSelectedMessagesLastActiveMessage();
               handleSend(message, lastMessage?.id);
             }}
-            onScrollDownClick={handleScrollDown}
-            onScrollToTopClick={handleScrollToTop}
-            onScrollToPrevUserMessageClick={handleScrollToPrevUserMessage}
-            showScrollDownButton={showScrollDownButton}
-            showScrollToTopButton={showScrollToTopButton}
-            showScrollToPrevUserMessageButton={showScrollToPrevUserMessageButton}
             onChangePrompt={handleChangePrompt}
           />
         )}

@@ -266,6 +266,8 @@
   "Deployment Name": "部署名称",
   "User Messages": "用户消息",
   "User Management": "用户管理",
+  "User": "用户",
+  "Assistant": "助手",
   "File Service": "文件服务",
   "Login Service": "登录服务",
   "Security Logs": "安全日志",

@@ -24,9 +24,6 @@ import { Prompt } from '@/types/prompt';
 
 import {
   IconArrowCompactDown,
-  IconArrowDown,
-  IconArrowDoubleUp,
-  IconArrowUp,
   IconArrowsDiagonal,
   IconArrowsDiagonalMinimize,
   IconCamera,
@@ -64,7 +61,7 @@ const ANIMATION_DURATION_MS = 200;
 // 文本框配置
 const TEXTAREA_LINE_HEIGHT = 24;
 const TEXTAREA_PADDING_Y = 16; // py-2 (8px * 2)
-const TEXTAREA_MIN_ROWS = 1;
+const TEXTAREA_MIN_ROWS = 2.5;
 const TEXTAREA_MAX_ROWS = 10;
 const TEXTAREA_MIN_HEIGHT =
   TEXTAREA_LINE_HEIGHT * TEXTAREA_MIN_ROWS + TEXTAREA_PADDING_Y; // 40px
@@ -73,24 +70,12 @@ const TEXTAREA_MAX_HEIGHT =
 
 interface Props {
   onSend: (message: Message) => void;
-  onScrollDownClick: () => void;
-  onScrollToTopClick: () => void;
-  onScrollToPrevUserMessageClick: () => void;
   onChangePrompt: (prompt: Prompt) => void;
-  showScrollDownButton: boolean;
-  showScrollToTopButton: boolean;
-  showScrollToPrevUserMessageButton: boolean;
 }
 
 const ChatInput = ({
   onSend,
-  onScrollDownClick,
-  onScrollToTopClick,
-  onScrollToPrevUserMessageClick,
   onChangePrompt,
-  showScrollDownButton,
-  showScrollToTopButton,
-  showScrollToPrevUserMessageButton,
 }: Props) => {
   const { t } = useTranslation();
 
@@ -118,6 +103,7 @@ const ChatInput = ({
   const [isFullWriting, setIsFullWriting] = useState(false);
   const [isCollapsedByChat, setIsCollapsedByChat] = useState(false);
   const [textareaHeight, setTextareaHeight] = useState<number | 'full'>(TEXTAREA_MIN_HEIGHT);
+  const [showFloatingControls, setShowFloatingControls] = useState(false);
   // 动画状态：
   // 'idle' - 无动画
   // 'pre-expanding' - 准备展开（ChatInput在屏幕外，按钮可见）
@@ -498,6 +484,7 @@ const ChatInput = ({
   const showCameraUpload = canUpload && isMobile();
   const showRemoteFiles = canUpload;
   const showUploadMenu = showDeviceUpload || showCameraUpload || showRemoteFiles;
+  const isMobileDevice = isMobile();
 
   return (
     <div className="absolute bottom-0 left-0 w-full z-20 overflow-hidden pointer-events-none min-h-[48px]">
@@ -516,113 +503,84 @@ const ChatInput = ({
               'stretch flex flex-row rounded-md mx-auto w-full px-2 md:px-4',
             )}
           >
-            <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]">
-              {/* 滚动按钮组 - 水平排列 */}
-              {/* 移除原来的位置，现在放到收起按钮同一排 */}
-              <div className="flex px-1 items-center">
-                <div className="flex flex-1" />
-
-                <div className="flex items-center gap-1 md:gap-2">
-                  {/* 滚动到顶部按钮 */}
-                  {showScrollToTopButton && (
-                    <Tips
-                      trigger={
-                        <Button
-                          size="xs"
-                          className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                          onClick={onScrollToTopClick}
-                        >
-                          <IconArrowDoubleUp size={20} className="text-foreground/80" />
-                        </Button>
-                      }
-                      side="bottom"
-                      content={t('Scroll to top')}
-                    />
-                  )}
-
-                  {/* 滚动到上一条用户消息按钮 */}
-                  {showScrollToPrevUserMessageButton && (
-                    <Tips
-                      trigger={
-                        <Button
-                          size="xs"
-                          className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                          onClick={onScrollToPrevUserMessageClick}
-                        >
-                          <IconArrowUp size={20} className="text-foreground/80" />
-                        </Button>
-                      }
-                      side="bottom"
-                      content={t('Scroll to previous user message')}
-                    />
-                  )}
-
-                  {/* 滚动到底部按钮 */}
-                  {showScrollDownButton && (
-                    <Tips
-                      trigger={
-                        <Button
-                          size="xs"
-                          className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                          onClick={onScrollDownClick}
-                        >
-                          <IconArrowDown size={20} className="text-foreground/80" />
-                        </Button>
-                      }
-                      side="bottom"
-                      content={t('Scroll to bottom')}
-                    />
-                  )}
-
-                  {/* 收起抽屉按钮 */}
+            <div
+              className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]"
+              onMouseEnter={() => {
+                if (!isMobileDevice) {
+                  setShowFloatingControls(true);
+                }
+              }}
+              onMouseLeave={() => {
+                if (!isMobileDevice) {
+                  setShowFloatingControls(false);
+                }
+              }}
+              onClick={() => {
+                if (isMobileDevice) {
+                  setShowFloatingControls(true);
+                }
+              }}
+              onFocusCapture={() => {
+                if (isMobileDevice) {
+                  setShowFloatingControls(true);
+                }
+              }}
+              onBlurCapture={(event) => {
+                if (!isMobileDevice) return;
+                const nextTarget = event.relatedTarget as Node | null;
+                if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
+                  setShowFloatingControls(false);
+                }
+              }}
+            >
+              <div
+                className={cn(
+                  'absolute right-2 top-2 z-10 flex items-center gap-1 transition-opacity',
+                  showFloatingControls ? 'opacity-100' : 'opacity-0 pointer-events-none',
+                )}
+              >
+                <Tips
+                  trigger={
+                    <Button
+                      size="xs"
+                      className="h-6 w-6 p-0 bg-muted/60 hover:bg-muted"
+                      onClick={handleToggleVisibility}
+                    >
+                      <IconArrowCompactDown size={14} className="text-foreground/80" />
+                    </Button>
+                  }
+                  side="left"
+                  content={t('Collapse input')}
+                />
+                {isFullWriting ? (
                   <Tips
                     trigger={
                       <Button
                         size="xs"
-                        className={cn(
-                          'p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted'
-                        )}
-                        onClick={handleToggleVisibility}
+                        className="h-6 w-6 p-0 bg-muted/60 hover:bg-muted"
+                        onClick={() => handleFullWriting(false)}
                       >
-                        <IconArrowCompactDown size={20} className="text-foreground/70" />
+                        <IconArrowsDiagonalMinimize size={14} />
                       </Button>
                     }
-                    side="bottom"
-                    content={t('Collapse input')}
+                    side="left"
+                    content={t('Exit fullscreen writing (Ctrl + F)')}
                   />
-                </div>
-
-                <div className="flex items-center gap-1 md:gap-2">
-                  {isFullWriting ? (
-                    <Tips
-                      trigger={
-                        <Button
-                          size="xs"
-                          className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                          onClick={() => handleFullWriting(false)}
-                        >
-                          <IconArrowsDiagonalMinimize size={20} />
-                        </Button>
-                      }
-                      side="bottom"
-                      content={t('Exit fullscreen writing (Ctrl + F)')}
-                    />
-                  ) : (
-                    <Tips
-                      trigger={
-                        <Button
-                          size="xs"
-                          className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                          onClick={() => handleFullWriting(true)}
-                        >
-                          <IconArrowsDiagonal size={20} />
-                        </Button>
-                      }
-                      side="bottom"
-                      content={t('Enter fullscreen writing (Ctrl + F)')}
-                    />
-                  )}
-                </div>
+                ) : (
+                  <Tips
+                    trigger={
+                      <Button
+                        size="xs"
+                        className="h-6 w-6 p-0 bg-muted/60 hover:bg-muted"
+                        onClick={() => handleFullWriting(true)}
+                      >
+                        <IconArrowsDiagonal size={14} />
+                      </Button>
+                    }
+                    side="left"
+                    content={t('Enter fullscreen writing (Ctrl + F)')}
+                  />
+                )}
               </div>
               {/* 非全屏模式下的文件预览 */}
               {!isFullWriting && contentFiles.length > 0 && (
@@ -860,57 +818,6 @@ const ChatInput = ({
             transitionDuration: `${ANIMATION_DURATION_MS}ms`,
           }}
         >
-          {/* 滚动到顶部按钮 */}
-          {showScrollToTopButton && (
-            <Tips
-              trigger={
-                <Button
-                  size="xs"
-                  className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                  onClick={onScrollToTopClick}
-                >
-                  <IconArrowDoubleUp size={20} className="text-foreground/80" />
-                </Button>
-              }
-              side="bottom"
-              content={t('Scroll to top')}
-            />
-          )}
-
-          {/* 滚动到上一条用户消息按钮 */}
-          {showScrollToPrevUserMessageButton && (
-            <Tips
-              trigger={
-                <Button
-                  size="xs"
-                  className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                  onClick={onScrollToPrevUserMessageClick}
-                >
-                  <IconArrowUp size={20} className="text-foreground/80" />
-                </Button>
-              }
-              side="bottom"
-              content={t('Scroll to previous user message')}
-            />
-          )}
-
-          {/* 滚动到底部按钮 */}
-          {showScrollDownButton && (
-            <Tips
-              trigger={
-                <Button
-                  size="xs"
-                  className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                  onClick={onScrollDownClick}
-                >
-                  <IconArrowDown size={20} className="text-foreground/80" />
-                </Button>
-              }
-              side="bottom"
-              content={t('Scroll to bottom')}
-            />
-          )}
-
           {/* 展开抽屉按钮 */}
           <Tips
             trigger={
