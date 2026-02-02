@@ -746,14 +746,16 @@ const ChatInput = ({
               </div>
 
               {/* 底部工具行 - Agent控制 + 发送按钮 */}
-              <div className="flex items-center justify-between px-2 py-2 border-t border-border/40">
+              <div className="flex items-center px-2 py-2 border-t border-border/40">
                 {/* 左侧: Agent 代码执行控制 */}
-                <CodeExecutionControl
-                  chatId={selectedChat.id}
-                  spans={selectedChat.spans}
-                  modelMap={modelMap}
-                  disabled={selectedChat.status === ChatStatus.Chatting}
-                />
+                <div className="flex items-center gap-2 flex-1">
+                  <CodeExecutionControl
+                    chatId={selectedChat.id}
+                    spans={selectedChat.spans}
+                    modelMap={modelMap}
+                    disabled={selectedChat.status === ChatStatus.Chatting}
+                  />
+                </div>
 
                 {/* 右侧: 发送/停止按钮 */}
                 <div className="flex items-center gap-2">
