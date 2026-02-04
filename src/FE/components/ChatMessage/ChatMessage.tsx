@@ -181,7 +181,11 @@ export const ChatMessage: FC<Props> = memo(
                     ))}
                   </div>
                   {shouldRenderResponseSpacer && (
-                    <div style={{ height: responseMessageMinHeight }} />
+                    <div
+                      data-response-spacer="true"
+                      data-response-group-index={groupIndex}
+                      style={{ height: responseMessageMinHeight }}
+                    />
                   )}
                 </>
               )}

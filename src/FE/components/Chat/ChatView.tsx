@@ -127,7 +127,13 @@ const ChatView = memo(() => {
   const prevIsMessagesLoadingRef = useRef<boolean>(isMessagesLoading);
   const pendingScrollToUserMessageIdRef = useRef<string | null>(null);
   const pendingScrollBehaviorRef = useRef<ScrollBehavior>('smooth');
+  const suppressAutoScrollRef = useRef<boolean>(false);
   const [responseMessageMinHeight, setResponseMessageMinHeight] = useState<string | undefined>(undefined);
+  const responseMessageSpacerPx = useMemo(() => {
+    if (!responseMessageMinHeight) return 0;
+    const parsed = Number.parseInt(responseMessageMinHeight, 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }, [responseMessageMinHeight]);
 
   useEffect(() => {
     autoScrollDisabledRef.current = autoScrollTemporarilyDisabled;
@@ -138,6 +144,8 @@ const ChatView = memo(() => {
     setAutoScrollEnabled(false);
     setAutoScrollTemporarilyDisabled(true);
     autoScrollDisabledRef.current = true;
+    pendingScrollToUserMessageIdRef.current = null;
+    suppressAutoScrollRef.current = false;
   }, []);
 
   const responseMessageMinHeightGroupIndex = useMemo(() => {
@@ -164,27 +172,25 @@ const ChatView = memo(() => {
 
     // 如果之前是 loading，现在不是 loading，说明消息加载完成
     if (wasLoading && !isMessagesLoading && selectedMessages.length > 0) {
-      // 使用 requestAnimationFrame 确保 DOM 渲染完成后再滚动
-      requestAnimationFrame(() => {
-        // 获取最后一条活跃消息（leafMessage）
-        const lastMessageGroup = selectedMessages[selectedMessages.length - 1];
-        const leafMessage = lastMessageGroup?.find((x) => x.isActive);
+      // 获取最后一条活跃消息（leafMessage）
+      const lastMessageGroup = selectedMessages[selectedMessages.length - 1];
+      const leafMessage = lastMessageGroup?.find((x) => x.isActive);
 
-        if (leafMessage) {
-          const anchorUserMessageId =
-            leafMessage.role === ChatRole.User
-              ? leafMessage.id
-              : (leafMessage.parentId || null);
+      if (leafMessage) {
+        const anchorUserMessageId =
+          leafMessage.role === ChatRole.User
+            ? leafMessage.id
+            : (leafMessage.parentId || null);
 
-          if (anchorUserMessageId) {
-            pendingScrollToUserMessageIdRef.current = anchorUserMessageId;
-            pendingScrollBehaviorRef.current = 'instant';
-            return;
-          }
+        if (anchorUserMessageId) {
+          pendingScrollToUserMessageIdRef.current = anchorUserMessageId;
+          pendingScrollBehaviorRef.current = 'instant';
+          suppressAutoScrollRef.current = true;
+          return;
         }
-        // 如果找不到 leafMessage 元素，回退到滚动到底部
-        messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
-      });
+      }
+      // 如果找不到 leafMessage 元素，回退到滚动到底部
+      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
     }
   }, [isMessagesLoading, selectedMessages]);
 
@@ -202,17 +208,13 @@ const ChatView = memo(() => {
     return count === 0;
   }, [models, t]);
 
-  const autoScrollCallback = useCallback(() => {
-    if (autoScrollEnabled) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [autoScrollEnabled]);
-
   const scrollDown = useCallback(() => {
-    if (autoScrollEnabled) {
-      messagesEndRef.current?.scrollIntoView(true);
-    }
-  }, [autoScrollEnabled]);
+    if (!autoScrollEnabled) return;
+    if (autoScrollDisabledRef.current) return;
+    if (suppressAutoScrollRef.current) return;
+    if (responseMessageSpacerPx > 0) return;
+    messagesEndRef.current?.scrollIntoView({ block: 'end' });
+  }, [autoScrollEnabled, responseMessageSpacerPx]);
 
   const throttledScrollDown = useMemo(
     () => throttle(scrollDown, 250),
@@ -224,8 +226,9 @@ const ChatView = memo(() => {
       const { scrollTop, scrollHeight, clientHeight } =
         chatContainerRef.current;
       const bottomTolerance = 30;
+      const effectiveScrollHeight = Math.max(0, scrollHeight - responseMessageSpacerPx);
 
-      if (scrollTop + clientHeight < scrollHeight - bottomTolerance) {
+      if (scrollTop + clientHeight < effectiveScrollHeight - bottomTolerance) {
         if (!autoScrollDisabledRef.current) {
           setAutoScrollEnabled(false);
         }
@@ -235,7 +238,7 @@ const ChatView = memo(() => {
         }
       }
     }
-  }, [selectedMessages]);
+  }, [responseMessageSpacerPx]);
 
   useEffect(() => {
     if (!selectedChat) return;
@@ -250,6 +253,15 @@ const ChatView = memo(() => {
     handleScroll,
     autoScrollEnabled,
   ]);
+
+  useEffect(() => {
+    if (!selectedChat) return;
+    if (!autoScrollEnabled) return;
+    if (autoScrollDisabledRef.current) return;
+    if (suppressAutoScrollRef.current) return;
+    if (responseMessageSpacerPx > 0) return;
+    throttledScrollDown();
+  }, [autoScrollEnabled, responseMessageSpacerPx, selectedChat, throttledScrollDown]);
 
   useEffect(() => {
     const container = chatContainerRef.current;
@@ -303,82 +315,62 @@ const ChatView = memo(() => {
       return;
     }
 
-    const pendingScrollTarget = pendingScrollToUserMessageIdRef.current;
-    const anchorUserMessageId = pendingScrollTarget ?? lastUserMessageId;
+    let resizeObserver: ResizeObserver | null = null;
+
     const updateResponseMinHeight = () => {
+      const pendingScrollTarget = pendingScrollToUserMessageIdRef.current;
+      const anchorUserMessageId = pendingScrollTarget ?? lastUserMessageId;
       const userMessageElement = container.querySelector(
         `[data-user-message-id="${anchorUserMessageId}"]`,
       ) as HTMLElement | null;
       if (!userMessageElement) return;
 
-      const containerRect = container.getBoundingClientRect();
-      const userRect = userMessageElement.getBoundingClientRect();
-      const userOffsetTop = userRect.top - containerRect.top + container.scrollTop;
-
-      const currentSpacerPx = (() => {
-        if (!responseMessageMinHeight) return 0;
-        const parsed = Number.parseInt(responseMessageMinHeight, 10);
-        return Number.isFinite(parsed) ? parsed : 0;
-      })();
-
-      const scrollHeightWithoutSpacer = Math.max(0, container.scrollHeight - currentSpacerPx);
-      const remainingHeightFromUserTop = scrollHeightWithoutSpacer - userOffsetTop;
-      const requiredSpacer = Math.ceil(container.clientHeight - remainingHeightFromUserTop);
-      const next = requiredSpacer > 0 ? `${requiredSpacer}px` : undefined;
-
-      setResponseMessageMinHeight((prev) => (prev === next ? prev : next));
-    };
-
-    const resizeObserver = new ResizeObserver(() => updateResponseMinHeight());
-    resizeObserver.observe(container);
-
-    const rafId = requestAnimationFrame(() => {
-      updateResponseMinHeight();
-      const userMessageElement = container.querySelector(
-        `[data-user-message-id="${lastUserMessageId}"]`,
-      ) as HTMLElement | null;
-      userMessageElement && resizeObserver.observe(userMessageElement);
+      resizeObserver?.observe(userMessageElement);
 
       if (responseMessageMinHeightGroupIndex != null) {
         const responseContentElement = container.querySelector(
           `[data-response-content="true"][data-response-group-index="${responseMessageMinHeightGroupIndex}"]`,
         ) as HTMLElement | null;
-        responseContentElement && resizeObserver.observe(responseContentElement);
+        responseContentElement && resizeObserver?.observe(responseContentElement);
       }
-    });
 
-    if (pendingScrollTarget) {
-      pendingScrollToUserMessageIdRef.current = null;
-      const behavior = pendingScrollBehaviorRef.current;
-      pendingScrollBehaviorRef.current = 'smooth';
+      const containerRect = container.getBoundingClientRect();
+      const userRect = userMessageElement.getBoundingClientRect();
+      const userOffsetTop = Math.round(userRect.top - containerRect.top + container.scrollTop);
 
-      if (behavior !== 'instant') {
-        disableAutoScrollForRequest();
+      const scrollHeightWithoutSpacer = Math.max(0, container.scrollHeight - responseMessageSpacerPx);
+      const requiredSpacer = Math.max(
+        0,
+        Math.ceil(userOffsetTop + container.clientHeight - scrollHeightWithoutSpacer),
+      );
+      const next = requiredSpacer > 0 ? `${requiredSpacer}px` : undefined;
+
+      const canScrollUserMessageToTop =
+        container.scrollHeight - container.clientHeight >= userOffsetTop - 1;
+
+      if (pendingScrollTarget && canScrollUserMessageToTop) {
+        const behavior = pendingScrollBehaviorRef.current;
+        pendingScrollToUserMessageIdRef.current = null;
+        pendingScrollBehaviorRef.current = 'smooth';
+        suppressAutoScrollRef.current = false;
+        userMessageElement.scrollIntoView({ behavior, block: 'start' });
       }
-      requestAnimationFrame(() => {
-        updateResponseMinHeight();
-        requestAnimationFrame(() => {
-          const targetElement =
-            (container.querySelector(
-              `[data-user-message-id="${pendingScrollTarget}"]`,
-            ) as HTMLElement | null) ||
-            (container.querySelector(
-              `[data-user-message-id="${lastUserMessageId}"]`,
-            ) as HTMLElement | null);
-          targetElement?.scrollIntoView({ behavior, block: 'start' });
-        });
-      });
-    }
+
+      setResponseMessageMinHeight((prev) => (prev === next ? prev : next));
+    };
+
+    resizeObserver = new ResizeObserver(updateResponseMinHeight);
+    resizeObserver.observe(container);
+
+    updateResponseMinHeight();
 
     return () => {
-      cancelAnimationFrame(rafId);
-      resizeObserver.disconnect();
+      resizeObserver?.disconnect();
     };
   }, [
     lastUserMessageId,
-    responseMessageMinHeight,
     responseMessageMinHeightGroupIndex,
-    disableAutoScrollForRequest,
+    responseMessageSpacerPx,
   ]);
 
   const getSelectedMessagesLastActiveMessage = () => {
@@ -429,6 +421,7 @@ const ChatView = memo(() => {
     autoScrollDisabledRef.current = false;
     setAutoScrollTemporarilyDisabled(false);
     setAutoScrollEnabled(true);
+    suppressAutoScrollRef.current = false;
   }, [changeSelectedChatStatus]);
 
   const handleChatError = useCallback(() => {
@@ -955,6 +948,9 @@ const ChatView = memo(() => {
 
     selectedMessageList = selectedMessageList.slice(0, index + 1);
 
+    pendingScrollToUserMessageIdRef.current = messageId;
+    pendingScrollBehaviorRef.current = 'smooth';
+    suppressAutoScrollRef.current = true;
     messageDispatch(setSelectedMessages(selectedMessageList));
 
     let chatBody = {
@@ -999,6 +995,9 @@ const ChatView = memo(() => {
     let responseMessages = generateResponseMessages(selectedChat, messageId);
     selectedMessageList.push(responseMessages);
 
+    pendingScrollToUserMessageIdRef.current = messageId;
+    pendingScrollBehaviorRef.current = 'smooth';
+    suppressAutoScrollRef.current = true;
     messageDispatch(setSelectedMessages(selectedMessageList));
 
     let chatBody = {
@@ -1038,7 +1037,7 @@ const ChatView = memo(() => {
     selectedMessageList.push(responseMessages);
     pendingScrollToUserMessageIdRef.current = userMessage.id;
     pendingScrollBehaviorRef.current = 'smooth';
-    disableAutoScrollForRequest();
+    suppressAutoScrollRef.current = true;
     messageDispatch(setSelectedMessages(selectedMessageList));
 
     const requestContent: RequestContent[] = responseContentToRequest(
@@ -1566,7 +1565,7 @@ const ChatView = memo(() => {
       selectedMessageList.push(responseMessages);
       pendingScrollToUserMessageIdRef.current = userMessage.id;
       pendingScrollBehaviorRef.current = 'smooth';
-      disableAutoScrollForRequest();
+      suppressAutoScrollRef.current = true;
       messageDispatch(setSelectedMessages(selectedMessageList));
       const requestContent: RequestContent[] = responseContentToRequest(
         message.content,
@@ -1590,7 +1589,6 @@ const ChatView = memo(() => {
     },
     [
       checkSelectChatModelIsExist,
-      disableAutoScrollForRequest,
       handleChatError,
       handleChatMessage,
       messageDispatch,
