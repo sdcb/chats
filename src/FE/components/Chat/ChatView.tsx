@@ -134,6 +134,11 @@ const ChatView = memo(() => {
     const parsed = Number.parseInt(responseMessageMinHeight, 10);
     return Number.isFinite(parsed) ? parsed : 0;
   }, [responseMessageMinHeight]);
+  const responseMessageSpacerPxRef = useRef<number>(0);
+
+  useEffect(() => {
+    responseMessageSpacerPxRef.current = responseMessageSpacerPx;
+  }, [responseMessageSpacerPx]);
 
   useEffect(() => {
     autoScrollDisabledRef.current = autoScrollTemporarilyDisabled;
@@ -338,12 +343,14 @@ const ChatView = memo(() => {
       const userRect = userMessageElement.getBoundingClientRect();
       const userOffsetTop = Math.round(userRect.top - containerRect.top + container.scrollTop);
 
-      const scrollHeightWithoutSpacer = Math.max(0, container.scrollHeight - responseMessageSpacerPx);
-      const requiredSpacer = Math.max(
+      const scrollHeightWithoutSpacer = Math.max(
         0,
-        Math.ceil(userOffsetTop + container.clientHeight - scrollHeightWithoutSpacer),
+        container.scrollHeight - responseMessageSpacerPxRef.current,
       );
-      const next = requiredSpacer > 0 ? `${requiredSpacer}px` : undefined;
+      const requiredSpacerRaw = userOffsetTop + container.clientHeight - scrollHeightWithoutSpacer;
+      const requiredSpacer = Math.max(0, Math.ceil(requiredSpacerRaw));
+      const stableSpacer = requiredSpacer <= 2 ? 0 : requiredSpacer;
+      const next = stableSpacer > 0 ? `${stableSpacer}px` : undefined;
 
       const canScrollUserMessageToTop =
         container.scrollHeight - container.clientHeight >= userOffsetTop - 1;
@@ -370,7 +377,6 @@ const ChatView = memo(() => {
   }, [
     lastUserMessageId,
     responseMessageMinHeightGroupIndex,
-    responseMessageSpacerPx,
   ]);
 
   const getSelectedMessagesLastActiveMessage = () => {
