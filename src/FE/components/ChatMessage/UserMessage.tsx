@@ -34,7 +34,7 @@ interface Props {
   onChangeMessage?: (messageId: string) => void;
   onEditAndSendMessage?: (editedMessage: Message, parentId?: string) => void;
   onEditUserMessage?: (messageId: string, content: ResponseContent) => void;
-  onDeleteMessage?: (messageId: string) => void;
+  onDeleteMessage?: (messageId: string) => Promise<void>;
   onRegenerateAllAssistant?: (messageId: string, modelId: number) => void;
 }
 
@@ -375,8 +375,8 @@ const UserMessage = (props: Props) => {
               <DeleteAction
                 hidden={isChatting(chatStatus)}
                 isHoverVisible
-                onDelete={() => {
-                  onDeleteMessage && onDeleteMessage(messageId);
+                onDelete={async () => {
+                  await onDeleteMessage?.(messageId);
                 }}
               />
             )}

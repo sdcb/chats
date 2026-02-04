@@ -24,7 +24,7 @@ interface Props {
   onChangeMessage?: (messageId: string) => void;
   onRegenerate?: (messageId: string, modelId: number) => void;
   onReactionMessage?: (type: ReactionMessageType, messageId: string) => void;
-  onDeleteMessage?: (messageId: string) => void;
+  onDeleteMessage?: (messageId: string) => Promise<void>;
 }
 
 const ResponseMessageActions = (props: Props) => {
@@ -99,8 +99,8 @@ const ResponseMessageActions = (props: Props) => {
 
         <DeleteAction
           hidden={chatting}
-          onDelete={() => {
-            onDeleteMessage && onDeleteMessage(messageId);
+          onDelete={async () => {
+            await onDeleteMessage?.(messageId);
           }}
         />
 

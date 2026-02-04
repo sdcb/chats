@@ -34,7 +34,7 @@ export interface Props {
     isCopy?: boolean,
   ) => void;
   onEditUserMessage?: (messageId: string, content: ResponseContent) => void;
-  onDeleteMessage?: (messageId: string) => void;
+  onDeleteMessage?: (messageId: string) => Promise<void>;
   onChangeDisplayType?: (messageId: string, type: MessageDisplayType) => void;
   onRegenerateAllAssistant?: (messageId: string, modelId: number) => void;
 }
