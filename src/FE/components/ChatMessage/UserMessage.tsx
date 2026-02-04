@@ -5,9 +5,6 @@ import useTranslation from '@/hooks/useTranslation';
 import { isChatting } from '@/utils/chats';
 
 import {
-  ChatRole,
-  ChatSpanStatus,
-  getFileUrl,
   IChat,
   Message,
   MessageContentType,
@@ -25,8 +22,10 @@ import { Textarea } from '../ui/textarea';
 import CopyAction from './CopyAction';
 import DeleteAction from './DeleteAction';
 import EditAction from './EditAction';
+import ExpandTextAction from './ExpandTextAction';
 import PaginationAction from './PaginationAction';
 import RegenerateAction from './RegenerateAction';
+import { ANIMATION_DURATION_MS } from '@/constants/animation';
 
 interface Props {
   message: IChatMessage;
@@ -69,6 +68,14 @@ const UserMessage = (props: Props) => {
   const [sourceImageElement, setSourceImageElement] = useState<HTMLImageElement | null>(null);
   const { status: chatStatus } = selectedChat;
   const currentMessageIndex = siblingIds.findIndex((x) => x === messageId);
+  const COLLAPSED_MAX_LINES = 5;
+  const [isTextExpanded, setIsTextExpanded] = useState(false);
+  const [isTextOverflowing, setIsTextOverflowing] = useState(false);
+  const [collapsedMaxHeight, setCollapsedMaxHeight] = useState<number | null>(null);
+  const [textMaxHeight, setTextMaxHeight] = useState<number | null>(null);
+  const [isTextAnimating, setIsTextAnimating] = useState(false);
+  const toggleAnimationTimerRef = useRef<number | null>(null);
+  const textContentRef = useRef<HTMLDivElement>(null);
 
   const handleEditMessage = (isOnlySave: boolean = false) => {
     if (isOnlySave) {
@@ -140,10 +147,93 @@ const UserMessage = (props: Props) => {
     }
   }, [isEditing]);
 
-  // 收集所有图片URL用于预览
-  const allImageUrls = content
-    .filter((x) => x.$type === MessageContentType.fileId)
-    .map((img: any) => getFileUrl(img.c));
+  useEffect(() => {
+    setIsTextExpanded(false);
+    setIsTextAnimating(false);
+    if (toggleAnimationTimerRef.current) {
+      window.clearTimeout(toggleAnimationTimerRef.current);
+      toggleAnimationTimerRef.current = null;
+    }
+  }, [messageId]);
+
+  useEffect(() => {
+    if (isEditing) return;
+    const el = textContentRef.current;
+    if (!el) return;
+
+    const compute = () => {
+      const lineHeight = Number.parseFloat(window.getComputedStyle(el).lineHeight || '');
+      const fallbackLineHeight = 20;
+      const resolvedLineHeight = Number.isFinite(lineHeight) ? lineHeight : fallbackLineHeight;
+      const maxHeight = resolvedLineHeight * COLLAPSED_MAX_LINES;
+      setCollapsedMaxHeight(maxHeight);
+      if (!isTextExpanded && !isTextAnimating) {
+        setTextMaxHeight(maxHeight);
+      }
+
+      requestAnimationFrame(() => {
+        const nextEl = textContentRef.current;
+        if (!nextEl) return;
+        setIsTextOverflowing(nextEl.scrollHeight > maxHeight + 1);
+      });
+    };
+
+    compute();
+
+    const resizeObserver = new ResizeObserver(() => compute());
+    resizeObserver.observe(el);
+    return () => resizeObserver.disconnect();
+  }, [isEditing, contentText, isTextExpanded, isTextAnimating]);
+
+  useEffect(() => {
+    return () => {
+      if (toggleAnimationTimerRef.current) {
+        window.clearTimeout(toggleAnimationTimerRef.current);
+        toggleAnimationTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleToggleTextExpanded = () => {
+    if (isEditing) return;
+    const el = textContentRef.current;
+    if (!el || !collapsedMaxHeight) {
+      setIsTextExpanded((v) => !v);
+      return;
+    }
+
+    if (toggleAnimationTimerRef.current) {
+      window.clearTimeout(toggleAnimationTimerRef.current);
+      toggleAnimationTimerRef.current = null;
+    }
+
+    const fullHeight = el.scrollHeight;
+    setIsTextAnimating(true);
+
+    if (!isTextExpanded) {
+      setIsTextExpanded(true);
+      setTextMaxHeight(collapsedMaxHeight);
+      requestAnimationFrame(() => {
+        setTextMaxHeight(fullHeight);
+      });
+      toggleAnimationTimerRef.current = window.setTimeout(() => {
+        setTextMaxHeight(null);
+        setIsTextAnimating(false);
+        toggleAnimationTimerRef.current = null;
+      }, ANIMATION_DURATION_MS);
+      return;
+    }
+
+    setIsTextExpanded(false);
+    setTextMaxHeight(fullHeight);
+    requestAnimationFrame(() => {
+      setTextMaxHeight(collapsedMaxHeight);
+    });
+    toggleAnimationTimerRef.current = window.setTimeout(() => {
+      setIsTextAnimating(false);
+      toggleAnimationTimerRef.current = null;
+    }, ANIMATION_DURATION_MS);
+  };
 
   return (
     <>
@@ -224,12 +314,23 @@ const UserMessage = (props: Props) => {
                 })}
             </div>
             <div
+              ref={textContentRef}
               className={`prose whitespace-pre-wrap dark:prose-invert text-sm ${
-                content.filter((x) => x.$type === MessageContentType.fileId)
-                  .length > 0
-                  ? 'mt-2'
-                  : ''
+                content.filter((x) => x.$type === MessageContentType.fileId).length > 0 ? 'mt-2' : ''
               }`}
+              style={
+                collapsedMaxHeight
+                  ? {
+                      ...(textMaxHeight != null
+                        ? { maxHeight: `${textMaxHeight}px`, overflow: 'hidden' }
+                        : !isTextExpanded
+                          ? { maxHeight: `${collapsedMaxHeight}px`, overflow: 'hidden' }
+                          : { overflow: 'visible' }),
+                      transition: `max-height ${ANIMATION_DURATION_MS}ms ease`,
+                      willChange: 'max-height',
+                    }
+                  : undefined
+              }
             >
               {contentText}
             </div>
@@ -240,6 +341,12 @@ const UserMessage = (props: Props) => {
       <div className="flex my-1 justify-end">
         {!isEditing && (
           <>
+            <ExpandTextAction
+              expanded={isTextExpanded}
+              hidden={!isTextOverflowing && !isTextExpanded}
+              isHoverVisible
+              onToggle={handleToggleTextExpanded}
+            />
             {!readonly && (
               <EditAction
                 isHoverVisible

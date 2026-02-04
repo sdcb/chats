@@ -54,9 +54,7 @@ import { defaultFileConfig } from '@/apis/adminApis';
 import { getUserPromptDetail } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 import CodeExecutionControl from './CodeExecutionControl';
-
-// 动画时长配置（与全屏动画一致）
-const ANIMATION_DURATION_MS = 200;
+import { ANIMATION_DURATION_MS } from '@/constants/animation';
 
 // 文本框配置
 const TEXTAREA_LINE_HEIGHT = 24;

@@ -125,10 +125,37 @@ const ChatView = memo(() => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const autoScrollDisabledRef = useRef<boolean>(false);
   const prevIsMessagesLoadingRef = useRef<boolean>(isMessagesLoading);
+  const pendingScrollToUserMessageIdRef = useRef<string | null>(null);
+  const pendingScrollBehaviorRef = useRef<ScrollBehavior>('smooth');
+  const [responseMessageMinHeight, setResponseMessageMinHeight] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     autoScrollDisabledRef.current = autoScrollTemporarilyDisabled;
   }, [autoScrollTemporarilyDisabled]);
+
+  const disableAutoScrollForRequest = useCallback(() => {
+    if (autoScrollDisabledRef.current) return;
+    setAutoScrollEnabled(false);
+    setAutoScrollTemporarilyDisabled(true);
+    autoScrollDisabledRef.current = true;
+  }, []);
+
+  const responseMessageMinHeightGroupIndex = useMemo(() => {
+    const lastGroupIndex = selectedMessages.length - 1;
+    if (lastGroupIndex < 0) return undefined;
+    const lastGroupHasAssistant = selectedMessages[lastGroupIndex]?.some(
+      (m) => m.role === ChatRole.Assistant,
+    );
+    return lastGroupHasAssistant ? lastGroupIndex : undefined;
+  }, [selectedMessages]);
+
+  const lastUserMessageId = useMemo(() => {
+    for (let groupIndex = selectedMessages.length - 1; groupIndex >= 0; groupIndex--) {
+      const userMessage = selectedMessages[groupIndex]?.find((m) => m.role === ChatRole.User);
+      if (userMessage) return userMessage.id;
+    }
+    return null;
+  }, [selectedMessages]);
 
   // 当消息加载完成后（从 loading 变为 loaded），滚动到 leafMessage 的位置
   useEffect(() => {
@@ -144,13 +171,14 @@ const ChatView = memo(() => {
         const leafMessage = lastMessageGroup?.find((x) => x.isActive);
 
         if (leafMessage) {
-          // 通过 data-message-id 属性找到 leafMessage 的 DOM 元素
-          const leafMessageElement = chatContainerRef.current?.querySelector(
-            `[data-message-id="${leafMessage.id}"]`
-          );
-          if (leafMessageElement) {
-            // 滚动到 leafMessage 的开始位置
-            leafMessageElement.scrollIntoView({ behavior: 'instant', block: 'start' });
+          const anchorUserMessageId =
+            leafMessage.role === ChatRole.User
+              ? leafMessage.id
+              : (leafMessage.parentId || null);
+
+          if (anchorUserMessageId) {
+            pendingScrollToUserMessageIdRef.current = anchorUserMessageId;
+            pendingScrollBehaviorRef.current = 'instant';
             return;
           }
         }
@@ -229,15 +257,6 @@ const ChatView = memo(() => {
 
     let touchStartY = 0;
 
-    const disableAutoScrollForRequest = () => {
-      if (autoScrollDisabledRef.current) {
-        return;
-      }
-      setAutoScrollEnabled(false);
-      setAutoScrollTemporarilyDisabled(true);
-      autoScrollDisabledRef.current = true;
-    };
-
     const handleWheel = (event: WheelEvent) => {
       if (event.deltaY < 0) {
         disableAutoScrollForRequest();
@@ -273,7 +292,94 @@ const ChatView = memo(() => {
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
     };
-  }, []);
+  }, [disableAutoScrollForRequest]);
+
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    if (!lastUserMessageId) {
+      setResponseMessageMinHeight(undefined);
+      return;
+    }
+
+    const pendingScrollTarget = pendingScrollToUserMessageIdRef.current;
+    const anchorUserMessageId = pendingScrollTarget ?? lastUserMessageId;
+    const updateResponseMinHeight = () => {
+      const userMessageElement = container.querySelector(
+        `[data-user-message-id="${anchorUserMessageId}"]`,
+      ) as HTMLElement | null;
+      if (!userMessageElement) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const userRect = userMessageElement.getBoundingClientRect();
+      const userOffsetTop = userRect.top - containerRect.top + container.scrollTop;
+
+      const currentSpacerPx = (() => {
+        if (!responseMessageMinHeight) return 0;
+        const parsed = Number.parseInt(responseMessageMinHeight, 10);
+        return Number.isFinite(parsed) ? parsed : 0;
+      })();
+
+      const scrollHeightWithoutSpacer = Math.max(0, container.scrollHeight - currentSpacerPx);
+      const remainingHeightFromUserTop = scrollHeightWithoutSpacer - userOffsetTop;
+      const requiredSpacer = Math.ceil(container.clientHeight - remainingHeightFromUserTop);
+      const next = requiredSpacer > 0 ? `${requiredSpacer}px` : undefined;
+
+      setResponseMessageMinHeight((prev) => (prev === next ? prev : next));
+    };
+
+    const resizeObserver = new ResizeObserver(() => updateResponseMinHeight());
+    resizeObserver.observe(container);
+
+    const rafId = requestAnimationFrame(() => {
+      updateResponseMinHeight();
+      const userMessageElement = container.querySelector(
+        `[data-user-message-id="${lastUserMessageId}"]`,
+      ) as HTMLElement | null;
+      userMessageElement && resizeObserver.observe(userMessageElement);
+
+      if (responseMessageMinHeightGroupIndex != null) {
+        const responseContentElement = container.querySelector(
+          `[data-response-content="true"][data-response-group-index="${responseMessageMinHeightGroupIndex}"]`,
+        ) as HTMLElement | null;
+        responseContentElement && resizeObserver.observe(responseContentElement);
+      }
+    });
+
+    if (pendingScrollTarget) {
+      pendingScrollToUserMessageIdRef.current = null;
+      const behavior = pendingScrollBehaviorRef.current;
+      pendingScrollBehaviorRef.current = 'smooth';
+
+      if (behavior !== 'instant') {
+        disableAutoScrollForRequest();
+      }
+      requestAnimationFrame(() => {
+        updateResponseMinHeight();
+        requestAnimationFrame(() => {
+          const targetElement =
+            (container.querySelector(
+              `[data-user-message-id="${pendingScrollTarget}"]`,
+            ) as HTMLElement | null) ||
+            (container.querySelector(
+              `[data-user-message-id="${lastUserMessageId}"]`,
+            ) as HTMLElement | null);
+          targetElement?.scrollIntoView({ behavior, block: 'start' });
+        });
+      });
+    }
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      resizeObserver.disconnect();
+    };
+  }, [
+    lastUserMessageId,
+    responseMessageMinHeight,
+    responseMessageMinHeightGroupIndex,
+    disableAutoScrollForRequest,
+  ]);
 
   const getSelectedMessagesLastActiveMessage = () => {
     const selectedMessageLength = selectedMessages.length - 1;
@@ -930,6 +1036,9 @@ const ChatView = memo(() => {
     selectedMessageList.push([userMessage]);
     let responseMessages = generateResponseMessages(selectedChat, messageId);
     selectedMessageList.push(responseMessages);
+    pendingScrollToUserMessageIdRef.current = userMessage.id;
+    pendingScrollBehaviorRef.current = 'smooth';
+    disableAutoScrollForRequest();
     messageDispatch(setSelectedMessages(selectedMessageList));
 
     const requestContent: RequestContent[] = responseContentToRequest(
@@ -1455,6 +1564,9 @@ const ChatView = memo(() => {
       selectedMessageList.push([userMessage]);
       const responseMessages = generateResponseMessages(selectedChat, messageId);
       selectedMessageList.push(responseMessages);
+      pendingScrollToUserMessageIdRef.current = userMessage.id;
+      pendingScrollBehaviorRef.current = 'smooth';
+      disableAutoScrollForRequest();
       messageDispatch(setSelectedMessages(selectedMessageList));
       const requestContent: RequestContent[] = responseContentToRequest(
         message.content,
@@ -1478,6 +1590,7 @@ const ChatView = memo(() => {
     },
     [
       checkSelectChatModelIsExist,
+      disableAutoScrollForRequest,
       handleChatError,
       handleChatMessage,
       messageDispatch,
@@ -1533,6 +1646,8 @@ const ChatView = memo(() => {
                   selectedMessages={selectedMessages}
                   models={models}
                   messagesEndRef={messagesEndRef}
+                  responseMessageMinHeight={responseMessageMinHeight}
+                  responseMessageMinHeightGroupIndex={responseMessageMinHeightGroupIndex}
                   onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
                   onEditAndSendMessage={handleEditAndSendMessage}
                   onRegenerate={handleRegenerate}
