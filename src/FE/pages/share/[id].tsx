@@ -75,7 +75,6 @@ export default function ShareMessage() {
           <ChatMessage
             selectedChat={selectedChat}
             selectedMessages={selectedMessages}
-            messagesEndRef={null}
             readonly={true}
             chatShareId={chatShareId}
             onChangeChatLeafMessageId={handleChangeChatLeafMessageId}

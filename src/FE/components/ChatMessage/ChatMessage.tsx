@@ -17,7 +17,6 @@ export interface Props {
   selectedMessages: IChatMessage[][];
   selectedChat: IChat;
   models?: AdminModelDto[];
-  messagesEndRef: any;
   readonly?: boolean;
   className?: string;
   chatShareId?: string;
@@ -44,7 +43,6 @@ export const ChatMessage: FC<Props> = memo(
     selectedMessages,
     selectedChat,
     models = [],
-    messagesEndRef,
     readonly,
     className,
     chatShareId,
@@ -192,7 +190,6 @@ export const ChatMessage: FC<Props> = memo(
             </div>
           );
         })}
-        <div ref={messagesEndRef} />
       </div>
     );
   },

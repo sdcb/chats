@@ -69,11 +69,13 @@ const TEXTAREA_MAX_HEIGHT =
 interface Props {
   onSend: (message: Message) => void;
   onChangePrompt: (prompt: Prompt) => void;
+  onHeightChange?: (height: number) => void;
 }
 
 const ChatInput = ({
   onSend,
   onChangePrompt,
+  onHeightChange,
 }: Props) => {
   const { t } = useTranslation();
 
@@ -87,6 +89,7 @@ const ChatInput = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const promptListRef = useRef<HTMLUListElement | null>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
+  const rootContainerRef = useRef<HTMLDivElement>(null);
   const prevChatStatusRef = useRef<ChatStatus>(selectedChat?.status || ChatStatus.None);
   const [contentText, setContentText] = useState('');
   const [contentFiles, setContentFiles] = useState<FileDef[]>([]);
@@ -228,6 +231,31 @@ const ChatInput = ({
       if (rafId) cancelAnimationFrame(rafId);
     };
   }, [showChatInput]);
+
+  useEffect(() => {
+    if (!onHeightChange) return;
+    const el = rootContainerRef.current;
+    if (!el) return;
+
+    let lastHeight = -1;
+
+    const emit = () => {
+      const nextHeight = Math.max(0, Math.round(el.getBoundingClientRect().height));
+      if (Math.abs(nextHeight - lastHeight) <= 1) return;
+      lastHeight = nextHeight;
+      onHeightChange(nextHeight);
+    };
+
+    emit();
+
+    const resizeObserver = new ResizeObserver(() => emit());
+    resizeObserver.observe(el);
+
+    return () => {
+      resizeObserver.disconnect();
+      onHeightChange(0);
+    };
+  }, [onHeightChange]);
 
   // 如果没有选中的聊天，不渲染ChatInput
   if (!selectedChat) {
@@ -485,7 +513,10 @@ const ChatInput = ({
   const isMobileDevice = isMobile();
 
   return (
-    <div className="absolute bottom-0 left-0 w-full z-20 overflow-hidden pointer-events-none min-h-[48px]">
+    <div
+      ref={rootContainerRef}
+      className="absolute bottom-0 left-0 w-full z-20 overflow-hidden pointer-events-none min-h-[48px]"
+    >
       {/* 展开状态的 ChatInput */}
       {(renderExpanded || animationState !== 'idle') && (
         <div

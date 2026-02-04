@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -129,6 +130,7 @@ const ChatView = memo(() => {
   const pendingScrollBehaviorRef = useRef<ScrollBehavior>('smooth');
   const suppressAutoScrollRef = useRef<boolean>(false);
   const [responseMessageMinHeight, setResponseMessageMinHeight] = useState<string | undefined>(undefined);
+  const [chatInputInsetPx, setChatInputInsetPx] = useState<number>(0);
   const responseMessageSpacerPx = useMemo(() => {
     if (!responseMessageMinHeight) return 0;
     const parsed = Number.parseInt(responseMessageMinHeight, 10);
@@ -139,6 +141,18 @@ const ChatView = memo(() => {
   useEffect(() => {
     responseMessageSpacerPxRef.current = responseMessageSpacerPx;
   }, [responseMessageSpacerPx]);
+
+  const chatInputInsetPxRef = useRef<number>(0);
+  useEffect(() => {
+    chatInputInsetPxRef.current = chatInputInsetPx;
+  }, [chatInputInsetPx]);
+
+  const handleChatInputHeightChange = useCallback((height: number) => {
+    setChatInputInsetPx((prev) => {
+      if (Math.abs(prev - height) <= 1) return prev;
+      return height;
+    });
+  }, []);
 
   useEffect(() => {
     autoScrollDisabledRef.current = autoScrollTemporarilyDisabled;
@@ -231,7 +245,10 @@ const ChatView = memo(() => {
       const { scrollTop, scrollHeight, clientHeight } =
         chatContainerRef.current;
       const bottomTolerance = 30;
-      const effectiveScrollHeight = Math.max(0, scrollHeight - responseMessageSpacerPx);
+      const effectiveScrollHeight = Math.max(
+        0,
+        scrollHeight - responseMessageSpacerPx - chatInputInsetPx,
+      );
 
       if (scrollTop + clientHeight < effectiveScrollHeight - bottomTolerance) {
         if (!autoScrollDisabledRef.current) {
@@ -243,7 +260,7 @@ const ChatView = memo(() => {
         }
       }
     }
-  }, [responseMessageSpacerPx]);
+  }, [responseMessageSpacerPx, chatInputInsetPx]);
 
   useEffect(() => {
     if (!selectedChat) return;
@@ -266,7 +283,7 @@ const ChatView = memo(() => {
     if (suppressAutoScrollRef.current) return;
     if (responseMessageSpacerPx > 0) return;
     throttledScrollDown();
-  }, [autoScrollEnabled, responseMessageSpacerPx, selectedChat, throttledScrollDown]);
+  }, [autoScrollEnabled, responseMessageSpacerPx, chatInputInsetPx, selectedChat, throttledScrollDown]);
 
   useEffect(() => {
     const container = chatContainerRef.current;
@@ -378,6 +395,37 @@ const ChatView = memo(() => {
     lastUserMessageId,
     responseMessageMinHeightGroupIndex,
   ]);
+
+  useLayoutEffect(() => {
+    const pendingScrollTarget = pendingScrollToUserMessageIdRef.current;
+    if (!pendingScrollTarget) return;
+
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    const userMessageElement = container.querySelector(
+      `[data-user-message-id="${pendingScrollTarget}"]`,
+    ) as HTMLElement | null;
+    if (!userMessageElement) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const userRect = userMessageElement.getBoundingClientRect();
+    const userOffsetTop = Math.round(
+      userRect.top - containerRect.top + container.scrollTop,
+    );
+
+    const canScrollUserMessageToTop =
+      container.scrollHeight - container.clientHeight >= userOffsetTop - 1;
+
+    if (!canScrollUserMessageToTop) return;
+
+    const behavior = pendingScrollBehaviorRef.current;
+    pendingScrollToUserMessageIdRef.current = null;
+    pendingScrollBehaviorRef.current = 'smooth';
+    suppressAutoScrollRef.current = false;
+
+    userMessageElement.scrollIntoView({ behavior, block: 'start' });
+  }, [lastUserMessageId, responseMessageMinHeight]);
 
   const getSelectedMessagesLastActiveMessage = () => {
     const selectedMessageLength = selectedMessages.length - 1;
@@ -1649,7 +1697,6 @@ const ChatView = memo(() => {
                   selectedChat={selectedChat}
                   selectedMessages={selectedMessages}
                   models={models}
-                  messagesEndRef={messagesEndRef}
                   responseMessageMinHeight={responseMessageMinHeight}
                   responseMessageMinHeightGroupIndex={responseMessageMinHeightGroupIndex}
                   onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
@@ -1663,7 +1710,8 @@ const ChatView = memo(() => {
                   onRegenerateAllAssistant={handleRegenerateAllAssistant}
                 />
 
-                <div className={cn(showChatInput ? 'h-32' : 'h-2')}></div>
+                <div style={{ height: chatInputInsetPx ? `${chatInputInsetPx}px` : undefined }} />
+                <div ref={messagesEndRef} />
               </>
             )}
           </div>
@@ -1677,6 +1725,7 @@ const ChatView = memo(() => {
               handleSend(message, lastMessage?.id);
             }}
             onChangePrompt={handleChangePrompt}
+            onHeightChange={handleChatInputHeightChange}
           />
         )}
       </div>
