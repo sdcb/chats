@@ -47,6 +47,12 @@ public partial class UserApiKey
     [InverseProperty("ApiKey")]
     public virtual ICollection<UserApiUsage> UserApiUsages { get; set; } = new List<UserApiUsage>();
 
+    [InverseProperty("ApiKey")]
+    public virtual ICollection<OAuthAuthorizationCode> AuthorizationCodes { get; set; } = new List<OAuthAuthorizationCode>();
+
+    [InverseProperty("ApiKey")]
+    public virtual ICollection<OAuthRefreshToken> OAuthRefreshTokens { get; set; } = new List<OAuthRefreshToken>();
+
     [ForeignKey("ApiKeyId")]
     [InverseProperty("ApiKeys")]
     public virtual ICollection<Model> Models { get; set; } = new List<Model>();

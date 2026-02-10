@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+using Chats.DB.Enums;
 
 namespace Chats.DB;
 
@@ -26,6 +27,11 @@ public partial class ModelKey
     [Unicode(false)]
     public string? Secret { get; set; }
 
+    public byte AuthTypeId { get; set; }
+
+    [StringLength(4000)]
+    public string? OAuthConfigJson { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
@@ -34,4 +40,11 @@ public partial class ModelKey
 
     [InverseProperty("ModelKey")]
     public virtual ICollection<Model> Models { get; set; } = new List<Model>();
+
+    [NotMapped]
+    public DBModelAuthType AuthType
+    {
+        get => (DBModelAuthType)AuthTypeId;
+        set => AuthTypeId = (byte)value;
+    }
 }

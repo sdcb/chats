@@ -69,6 +69,12 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<ModelProviderOrder> ModelProviderOrders { get; set; }
 
+    public virtual DbSet<OAuthAuthorizationCode> OAuthAuthorizationCodes { get; set; }
+
+    public virtual DbSet<OAuthClient> OAuthClients { get; set; }
+
+    public virtual DbSet<OAuthRefreshToken> OAuthRefreshTokens { get; set; }
+
     public virtual DbSet<PasswordAttempt> PasswordAttempts { get; set; }
 
     public virtual DbSet<Prompt> Prompts { get; set; }
@@ -334,6 +340,41 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<ModelProviderOrder>(entity =>
         {
             entity.Property(e => e.ModelProviderId).ValueGeneratedNever();
+        });
+
+        modelBuilder.Entity<OAuthAuthorizationCode>(entity =>
+        {
+            entity.HasOne(d => d.ApiKey).WithMany(p => p.AuthorizationCodes)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OAuthAuthorizationCode_ApiKeyId");
+
+            entity.HasOne(d => d.Client).WithMany(p => p.AuthorizationCodes)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OAuthAuthorizationCode_ClientId");
+
+            entity.HasOne(d => d.User).WithMany(p => p.OAuthAuthorizationCodes)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OAuthAuthorizationCode_UserId");
+        });
+
+        modelBuilder.Entity<OAuthClient>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_OAuthClient");
+        });
+
+        modelBuilder.Entity<OAuthRefreshToken>(entity =>
+        {
+            entity.HasOne(d => d.ApiKey).WithMany(p => p.OAuthRefreshTokens)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OAuthRefreshToken_ApiKeyId");
+
+            entity.HasOne(d => d.Client).WithMany(p => p.RefreshTokens)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OAuthRefreshToken_ClientId");
+
+            entity.HasOne(d => d.User).WithMany(p => p.OAuthRefreshTokens)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OAuthRefreshToken_UserId");
         });
 
         modelBuilder.Entity<PasswordAttempt>(entity =>

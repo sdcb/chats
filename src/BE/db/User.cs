@@ -87,6 +87,12 @@ public partial class User
     public virtual ICollection<UserApiKey> UserApiKeys { get; set; } = new List<UserApiKey>();
 
     [InverseProperty("User")]
+    public virtual ICollection<OAuthAuthorizationCode> OAuthAuthorizationCodes { get; set; } = new List<OAuthAuthorizationCode>();
+
+    [InverseProperty("User")]
+    public virtual ICollection<OAuthRefreshToken> OAuthRefreshTokens { get; set; } = new List<OAuthRefreshToken>();
+
+    [InverseProperty("User")]
     public virtual UserBalance? UserBalance { get; set; }
 
     [InverseProperty("User")]
