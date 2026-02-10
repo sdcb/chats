@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Chats.BE.Controllers.Api.OpenAICompatible;
 
-[Authorize(AuthenticationSchemes = "OpenAIApiKey")]
+[Authorize(AuthenticationSchemes = "OpenAIApiKey,OAuthAccessToken")]
 public class OpenAIListModelsController(
     CurrentApiKey currentApiKey,
     UserModelManager userModelManager) : ControllerBase
@@ -15,7 +15,7 @@ public class OpenAIListModelsController(
     [HttpGet("v1/models")]
     public async Task<ActionResult<ModelListDto>> GetModels(CancellationToken cancellationToken)
     {
-        UserModel[] models = await userModelManager.GetValidModelsByApiKey(currentApiKey.ApiKey, cancellationToken);
+        UserModel[] models = await userModelManager.GetValidModelsByApiKeyId(currentApiKey.ApiKeyId, cancellationToken);
         return Ok(new ModelListDto
         {
             Object = "list",

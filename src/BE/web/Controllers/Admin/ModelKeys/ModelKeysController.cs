@@ -28,6 +28,8 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
                 Name = x.Name,
                 Host = x.Host,
                 Secret = x.Secret,
+                AuthType = x.AuthType,
+                OAuthConfigJson = x.OAuthConfigJson,
                 CreatedAt = x.CreatedAt,
                 EnabledModelCount = x.Models.Count(x => !x.IsDeleted),
                 TotalModelCount = x.Models.Count
@@ -58,11 +60,20 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
         {
             return BadRequest("Invalid model provider");
         }
+        if (!Enum.IsDefined(typeof(DBModelAuthType), request.AuthType))
+        {
+            return BadRequest("Invalid model auth type");
+        }
         modelKey.ModelProviderId = request.ModelProviderId;
         modelKey.Name = request.Name;
+        modelKey.AuthType = request.AuthType;
         if (!modelKey.Secret.IsMaskedEquals(request.Secret))
         {
             modelKey.Secret = request.Secret;
+        }
+        if (!modelKey.OAuthConfigJson.IsMaskedEquals(request.OAuthConfigJson))
+        {
+            modelKey.OAuthConfigJson = request.OAuthConfigJson;
         }
         modelKey.Host = request.Host;
         if (db.ChangeTracker.HasChanges())
@@ -81,6 +92,10 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
         if (!Enum.IsDefined(typeof(DBModelProvider), (int)request.ModelProviderId))
         {
             return BadRequest("Invalid model provider");
+        }
+        if (!Enum.IsDefined(typeof(DBModelAuthType), request.AuthType))
+        {
+            return BadRequest("Invalid model auth type");
         }
 
         // 获取当前最大的 Order 值，以便将新的 ModelKey 放置在最后
@@ -119,6 +134,8 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             Name = request.Name,
             Host = request.Host,
             Secret = request.Secret,
+            AuthType = request.AuthType,
+            OAuthConfigJson = request.OAuthConfigJson,
             Order = (short)newOrder,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,

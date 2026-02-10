@@ -19,7 +19,7 @@ using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Controllers.Api.AnthropicCompatible;
 
-[Authorize(AuthenticationSchemes = "OpenAIApiKey")]
+[Authorize(AuthenticationSchemes = "OpenAIApiKey,OAuthAccessToken")]
 public class AnthropicMessagesController(
     ChatsDB db,
     CurrentApiKey currentApiKey,
@@ -52,7 +52,7 @@ public class AnthropicMessagesController(
         }
 
         Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
-        UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, request.Model, cancellationToken);
+        UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKeyId, request.Model, cancellationToken);
         if (userModel == null)
         {
             return ErrorMessage(AnthropicErrorTypes.NotFoundError, $"The model `{request.Model}` does not exist or you do not have access to it.");

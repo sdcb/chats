@@ -1,4 +1,5 @@
-﻿using Chats.BE.Services.Common;
+using Chats.BE.Services.Common;
+using Chats.DB.Enums;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Admin.ModelKeys.Dtos;
@@ -26,11 +27,21 @@ public record ModelKeyDto
     [JsonPropertyName("secret")]
     public required string? Secret { get; init; }
 
+    [JsonPropertyName("authType")]
+    public required DBModelAuthType AuthType { get; init; }
+
+    [JsonPropertyName("oauthConfigJson")]
+    public required string? OAuthConfigJson { get; init; }
+
     [JsonPropertyName("createdAt")]
     public required DateTime CreatedAt { get; init; }
 
     public ModelKeyDto WithMaskedKeys()
     {
-        return this with { Secret = Secret.JsonToMaskedNull() };
+        return this with
+        {
+            Secret = Secret.JsonToMaskedNull(),
+            OAuthConfigJson = OAuthConfigJson.JsonToMaskedNull(),
+        };
     }
 }

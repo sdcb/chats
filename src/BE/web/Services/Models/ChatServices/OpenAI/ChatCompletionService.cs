@@ -5,6 +5,7 @@ using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
+using Chats.BE.Services.OAuth;
 using System.Net.Http.Headers;
 using System.Net.ServerSentEvents;
 using System.Runtime.CompilerServices;
@@ -14,7 +15,7 @@ using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
-public partial class ChatCompletionService(IHttpClientFactory httpClientFactory) : ChatService
+public partial class ChatCompletionService(IHttpClientFactory httpClientFactory, OpenAIOAuthRequestHelper? openAIOAuthRequestHelper = null) : ChatService
 {
     protected override HashSet<string> SupportedContentTypes =>
     [
@@ -26,10 +27,10 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
     public override async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
-
-        string url = GetEndpoint(modelKey);
-        using HttpRequestMessage request = new(HttpMethod.Get, url + "/models");
+        string endpoint = GetEndpoint(modelKey);
+        bool useCodexOAuthCompat = openAIOAuthRequestHelper?.UseCodexOAuthCompat(modelKey, endpoint) == true;
+        string modelsPath = openAIOAuthRequestHelper?.ResolveModelsPath(useCodexOAuthCompat, v1Path: false) ?? "/models";
+        using HttpRequestMessage request = new(HttpMethod.Get, endpoint + modelsPath);
         AddAuthorizationHeader(request, modelKey);
 
         using HttpClient httpClient = httpClientFactory.CreateClient();
@@ -55,6 +56,19 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                 }
             }
         }
+        else if (doc.RootElement.TryGetProperty("models", out JsonElement modelList) && modelList.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement model in modelList.EnumerateArray())
+            {
+                string? modelId = model.TryGetProperty("id", out JsonElement id)
+                    ? id.GetString()
+                    : model.TryGetProperty("slug", out JsonElement slug) ? slug.GetString() : null;
+                if (!string.IsNullOrWhiteSpace(modelId))
+                {
+                    models.Add(modelId);
+                }
+            }
+        }
         return [.. models];
     }
 
@@ -65,12 +79,22 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         {
             host = ModelProviderInfo.GetInitialHost((DBModelProvider)modelKey.ModelProviderId);
         }
-        return host?.TrimEnd('/') ?? "";
+
+        string fallbackEndpoint = host?.TrimEnd('/') ?? "";
+        return openAIOAuthRequestHelper?.ResolveEndpoint(modelKey, fallbackEndpoint) ?? fallbackEndpoint;
     }
 
     protected virtual void AddAuthorizationHeader(HttpRequestMessage request, ModelKey modelKey)
     {
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelKey.Secret);
+        string endpoint = GetEndpoint(modelKey);
+        if (openAIOAuthRequestHelper != null)
+        {
+            openAIOAuthRequestHelper.ApplyAuthorizationHeaders(request, modelKey, endpoint);
+            return;
+        }
+
+        string bearerToken = modelKey.Secret ?? throw new InvalidOperationException("Model key secret is null");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", bearerToken);
     }
 
     protected virtual string ReasoningContentPropertyName => "reasoning_content";
@@ -483,9 +507,13 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
     protected virtual JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
+        ModelKey modelKey = request.ChatConfig.Model.ModelKey;
+        string endpoint = GetEndpoint(modelKey);
+        bool useCodexOAuthCompat = openAIOAuthRequestHelper?.UseCodexOAuthCompat(modelKey, endpoint) == true;
         JsonObject body = new()
         {
-            ["model"] = request.ChatConfig.Model.DeploymentName,
+            ["model"] = openAIOAuthRequestHelper?.ResolveDeploymentName(request.ChatConfig.Model.DeploymentName, useCodexOAuthCompat)
+                ?? request.ChatConfig.Model.DeploymentName,
             ["messages"] = BuildMessages(request),
             ["stream"] = stream,
         };
@@ -554,7 +582,6 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         return body;
     }
-
     private static JsonArray BuildFunctionToolsArray(IEnumerable<ChatTool> tools)
     {
         JsonArray result = [];

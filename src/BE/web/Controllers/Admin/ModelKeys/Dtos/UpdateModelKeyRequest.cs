@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+using Chats.DB.Enums;
+using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Admin.ModelKeys.Dtos;
 
@@ -15,4 +16,10 @@ public record UpdateModelKeyRequest
 
     [JsonPropertyName("secret")]
     public string? Secret { get; init; }
+
+    [JsonPropertyName("authType")]
+    public DBModelAuthType AuthType { get; init; } = DBModelAuthType.ApiKey;
+
+    [JsonPropertyName("oauthConfigJson")]
+    public string? OAuthConfigJson { get; init; }
 }

@@ -13,7 +13,7 @@ public class OpenAIApiKeySessionManager(ChatsDB db)
     {
         ApiKeyEntry? sessionEntry = await db.UserApiKeys
             .Include(x => x.User)
-            .Where(x => x.Key == apiKey && !x.IsDeleted)
+            .Where(x => x.Key == apiKey && !x.IsDeleted && !x.IsRevoked)
             .Select(x => new ApiKeyEntry()
             {
                 UserId = x.User.Id,

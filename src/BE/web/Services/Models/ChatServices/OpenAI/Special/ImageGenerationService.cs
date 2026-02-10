@@ -5,6 +5,7 @@ using Chats.BE.DB;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
+using Chats.BE.Services.OAuth;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Net.ServerSentEvents;
@@ -16,7 +17,7 @@ using ChatTokenUsage = Chats.BE.Services.Models.Dtos.ChatTokenUsage;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
-public class ImageGenerationService(IHttpClientFactory httpClientFactory) : ChatService
+public class ImageGenerationService(IHttpClientFactory httpClientFactory, OpenAIOAuthRequestHelper? openAIOAuthRequestHelper = null) : ChatService
 {
     protected virtual string GetEndpoint(ModelKey modelKey)
     {
@@ -25,12 +26,21 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
         {
             host = ModelProviderInfo.GetInitialHost((DBModelProvider)modelKey.ModelProviderId);
         }
-        return host?.TrimEnd('/') ?? "";
+        string fallbackEndpoint = host?.TrimEnd('/') ?? "";
+        return openAIOAuthRequestHelper?.ResolveEndpoint(modelKey, fallbackEndpoint) ?? fallbackEndpoint;
     }
 
     protected virtual void AddAuthorizationHeader(HttpRequestMessage request, ModelKey modelKey)
     {
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelKey.Secret);
+        string endpoint = GetEndpoint(modelKey);
+        if (openAIOAuthRequestHelper != null)
+        {
+            openAIOAuthRequestHelper.ApplyAuthorizationHeaders(request, modelKey, endpoint);
+            return;
+        }
+
+        string bearerToken = modelKey.Secret ?? throw new InvalidOperationException("Model key secret is null");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
     }
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)

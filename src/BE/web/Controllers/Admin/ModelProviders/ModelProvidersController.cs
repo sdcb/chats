@@ -59,6 +59,8 @@ public class ModelProvidersController(ChatsDB db) : ControllerBase
                 Name = x.Name,
                 Host = x.Host,
                 Secret = x.Secret,
+                AuthType = x.AuthType,
+                OAuthConfigJson = x.OAuthConfigJson,
                 CreatedAt = x.CreatedAt,
                 EnabledModelCount = x.Models.Count(m => !m.IsDeleted),
                 TotalModelCount = x.Models.Count

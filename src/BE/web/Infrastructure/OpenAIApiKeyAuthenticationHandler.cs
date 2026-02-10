@@ -23,7 +23,18 @@ public class OpenAIApiKeyAuthenticationHandler(
         if (Request.Headers.TryGetValue("Authorization", out Microsoft.Extensions.Primitives.StringValues authorizationHeader))
         {
             string authorizationHeaderString = authorizationHeader.ToString();
-            apiKey = authorizationHeaderString.Split(' ').Last();
+            if (!authorizationHeaderString.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                return AuthenticateResult.NoResult();
+            }
+
+            apiKey = authorizationHeaderString["Bearer ".Length..].Trim();
+
+            // If the token is a JWT-like bearer token, defer to OAuthAccessToken scheme.
+            if (SessionAuthenticationHandler.CountJwtTokenPart(apiKey, 3) == 3)
+            {
+                return AuthenticateResult.NoResult();
+            }
         }
         // Try Anthropic format: X-Api-Key: <apikey>
         else if (Request.Headers.TryGetValue("X-Api-Key", out Microsoft.Extensions.Primitives.StringValues xApiKeyHeader))

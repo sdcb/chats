@@ -20,7 +20,7 @@ using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Controllers.Api.OpenAICompatible;
 
-[Authorize(AuthenticationSchemes = "OpenAIApiKey")]
+[Authorize(AuthenticationSchemes = "OpenAIApiKey,OAuthAccessToken")]
 public class OpenAIImageController(
     ChatsDB db,
     CurrentApiKey currentApiKey,
@@ -54,7 +54,7 @@ public class OpenAIImageController(
         }
 
         Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
-        UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, request.Model, cancellationToken);
+        UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKeyId, request.Model, cancellationToken);
         if (userModel == null) return InvalidModel(request.Model);
 
         if (!AllowedApiTypes.Contains(userModel.Model.ApiType))
@@ -102,7 +102,7 @@ public class OpenAIImageController(
         }
 
         Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
-        UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, model, cancellationToken);
+        UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKeyId, model, cancellationToken);
         if (userModel == null) return InvalidModel(model);
 
         if (!AllowedApiTypes.Contains(userModel.Model.ApiType))

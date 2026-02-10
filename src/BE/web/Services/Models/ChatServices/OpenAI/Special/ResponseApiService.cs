@@ -1,9 +1,11 @@
 using Chats.DB;
 using Chats.DB.Enums;
 using Chats.BE.Controllers.Chats.Chats;
+using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
+using Chats.BE.Services.OAuth;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Net.ServerSentEvents;
@@ -15,7 +17,7 @@ using ChatTokenUsage = Chats.BE.Services.Models.Dtos.ChatTokenUsage;
 
 namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
-public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<ResponseApiService> logger) : ChatService
+public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<ResponseApiService> logger, OpenAIOAuthRequestHelper? openAIOAuthRequestHelper = null) : ChatService
 {
     protected override HashSet<string> SupportedContentTypes =>
     [
@@ -32,28 +34,57 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         {
             host = ModelProviderInfo.GetInitialHost((DBModelProvider)modelKey.ModelProviderId);
         }
-        return host?.TrimEnd('/') ?? "";
+
+        string fallbackEndpoint = host?.TrimEnd('/') ?? "";
+        return openAIOAuthRequestHelper?.ResolveEndpoint(modelKey, fallbackEndpoint) ?? fallbackEndpoint;
+    }
+
+    private static string BuildUpstreamUrl(string endpoint, string path, bool useCodexOAuthCompat)
+    {
+        string baseUrl = endpoint.TrimEnd('/');
+        if (useCodexOAuthCompat && path.StartsWith("/v1/", StringComparison.OrdinalIgnoreCase))
+        {
+            return baseUrl + path[3..];
+        }
+
+        if (baseUrl.EndsWith("/v1", StringComparison.OrdinalIgnoreCase) && path.StartsWith("/v1", StringComparison.OrdinalIgnoreCase))
+        {
+            return baseUrl[..^3].TrimEnd('/') + path;
+        }
+
+        return baseUrl + path;
     }
 
     protected virtual void AddAuthorizationHeader(HttpRequestMessage request, ModelKey modelKey)
     {
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelKey.Secret);
+        string endpoint = GetEndpoint(modelKey);
+        if (openAIOAuthRequestHelper != null)
+        {
+            openAIOAuthRequestHelper.ApplyAuthorizationHeaders(request, modelKey, endpoint);
+            return;
+        }
+
+        string bearerToken = modelKey.Secret ?? throw new InvalidOperationException("Model key secret is null");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", bearerToken);
+        request.Headers.TryAddWithoutValidation("User-Agent", "codex-cli");
     }
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        string endpoint = GetEndpoint(request.ChatConfig.Model.ModelKey);
+        ModelKey modelKey = request.ChatConfig.Model.ModelKey;
+        string endpoint = GetEndpoint(modelKey);
+        bool useCodexOAuthCompat = openAIOAuthRequestHelper?.UseCodexOAuthCompat(modelKey, endpoint) == true;
         bool hasTools = false;
 
-        if (request.ChatConfig.Model.UseAsyncApi)
+        if (request.ChatConfig.Model.UseAsyncApi && !useCodexOAuthCompat)
         {
             // Background mode
             Stopwatch sw = Stopwatch.StartNew();
-            JsonObject requestBody = BuildRequestBody(request, stream: false, background: true);
+            JsonObject requestBody = BuildRequestBody(request, useCodexOAuthCompat, stream: false, background: true);
 
-            using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/responses");
+            using HttpRequestMessage httpRequest = new(HttpMethod.Post, BuildUpstreamUrl(endpoint, "/v1/responses", useCodexOAuthCompat));
             AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
-            httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+            httpRequest.Content = CreateJsonContent(requestBody);
 
             using HttpClient httpClient = httpClientFactory.CreateClient();
             httpClient.Timeout = NetworkTimeout;
@@ -81,7 +112,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                 {
                     try
                     {
-                        using HttpRequestMessage cancelRequest = new(HttpMethod.Post, $"{endpoint}/v1/responses/{responseId}/cancel");
+                        using HttpRequestMessage cancelRequest = new(HttpMethod.Post, BuildUpstreamUrl(endpoint, $"/v1/responses/{responseId}/cancel", useCodexOAuthCompat));
                         AddAuthorizationHeader(cancelRequest, request.ChatConfig.Model.ModelKey);
                         using HttpClient cancelClient = httpClientFactory.CreateClient();
                         await cancelClient.SendAsync(cancelRequest, default);
@@ -101,7 +132,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                     logger.LogInformation("{responseId} status: {status}, elapsed: {sw.ElapsedMilliseconds:N0}ms", responseId, status, sw.ElapsedMilliseconds);
                     await Task.Delay(2000, cancellationToken);
 
-                    using HttpRequestMessage getRequest = new(HttpMethod.Get, $"{endpoint}/v1/responses/{responseId}");
+                    using HttpRequestMessage getRequest = new(HttpMethod.Get, BuildUpstreamUrl(endpoint, $"/v1/responses/{responseId}", useCodexOAuthCompat));
                     AddAuthorizationHeader(getRequest, request.ChatConfig.Model.ModelKey);
 
                     using HttpResponseMessage getResponse = await httpClient.SendAsync(getRequest, cancellationToken);
@@ -237,11 +268,11 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         else
         {
             // Streaming mode
-            JsonObject requestBody = BuildRequestBody(request, stream: true, background: false);
+            JsonObject requestBody = BuildRequestBody(request, useCodexOAuthCompat, stream: true, background: false);
 
-            using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/responses");
+            using HttpRequestMessage httpRequest = new(HttpMethod.Post, BuildUpstreamUrl(endpoint, "/v1/responses", useCodexOAuthCompat));
             AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
-            httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+            httpRequest.Content = CreateJsonContent(requestBody);
             httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
             using HttpClient httpClient = httpClientFactory.CreateClient();
@@ -426,33 +457,47 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         return 0;
     }
 
-    private JsonObject BuildRequestBody(ChatRequest request, bool stream, bool background)
+    private JsonObject BuildRequestBody(ChatRequest request, bool useCodexOAuthCompat, bool stream, bool background)
     {
+        string? effectiveSystemPrompt = request.GetEffectiveSystemPrompt();
+        string instructions = string.IsNullOrWhiteSpace(effectiveSystemPrompt)
+            ? "You are a helpful assistant."
+            : effectiveSystemPrompt;
+
         JsonObject body = new()
         {
-            ["model"] = request.ChatConfig.Model.DeploymentName,
-            ["input"] = BuildInputArray(request),
-            ["stream"] = stream,
+            ["model"] = openAIOAuthRequestHelper?.ResolveDeploymentName(request.ChatConfig.Model.DeploymentName, useCodexOAuthCompat)
+                ?? request.ChatConfig.Model.DeploymentName,
+            ["input"] = BuildInputArray(request, includeSystemPrompt: !useCodexOAuthCompat),
+            ["stream"] = useCodexOAuthCompat ? true : stream,
         };
 
-        if (request.ChatConfig.Temperature != null)
+        if (useCodexOAuthCompat)
+        {
+            // 原因：OpenAI OAuth 的 Codex 后端对参数更严格，只接受最小请求体。
+            // 这里仅保留其必需字段，避免 `Unsupported parameter: temperature/max_output_tokens`。
+            body["instructions"] = instructions;
+            body["store"] = false;
+        }
+
+        if (!useCodexOAuthCompat && request.ChatConfig.Temperature != null)
         {
             body["temperature"] = request.ChatConfig.Temperature.Value;
         }
 
-        if (request.EndUserId != null)
+        if (!useCodexOAuthCompat && request.EndUserId != null)
         {
             body["prompt_cache_key"] = request.EndUserId;
         }
 
-        if (request.ChatConfig.MaxOutputTokens != null)
+        if (!useCodexOAuthCompat && request.ChatConfig.MaxOutputTokens != null)
         {
             body["max_output_tokens"] = request.ChatConfig.MaxOutputTokens.Value;
         }
 
         // Reasoning options - only add if explicitly specified
         string? reasoningEffort = request.ChatConfig.ReasoningEffort.ToReasoningEffortString();
-        if (reasoningEffort != null)
+        if (!useCodexOAuthCompat && reasoningEffort != null)
         {
             body["reasoning"] = new JsonObject
             {
@@ -465,7 +510,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         }
 
         // Text format
-        if (request.TextFormat != null)
+        if (!useCodexOAuthCompat && request.TextFormat != null)
         {
             body["text"] = new JsonObject
             {
@@ -473,6 +518,8 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             };
         }
 
+        // 原因：Codex 兼容模式仍需保留 tools；否则会导致工具无法触发。
+        // 仅过滤不兼容参数，不过滤 tools。
         // Tools
         JsonArray functionTools = [];
         foreach (FunctionTool tool in request.Tools.OfType<FunctionTool>())
@@ -492,12 +539,12 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         return body;
     }
 
-    private static JsonArray BuildInputArray(ChatRequest request)
+    private static JsonArray BuildInputArray(ChatRequest request, bool includeSystemPrompt)
     {
         JsonArray input = [];
 
         string? effectiveSystemPrompt = request.GetEffectiveSystemPrompt();
-        if (effectiveSystemPrompt != null)
+        if (includeSystemPrompt && effectiveSystemPrompt != null)
         {
             input.Add(new JsonObject
             {
@@ -560,8 +607,10 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             }
             else if (message.Role == NeutralChatRole.Tool)
             {
-                NeutralToolCallResponseContent? tcr = message.Contents.OfType<NeutralToolCallResponseContent>().FirstOrDefault();
-                if (tcr != null)
+                // 原因：一个 Tool 消息可能包含多个 tool_result。
+                // 必须全部映射为 function_call_output，避免上游报
+                // "No tool output found for function call ...".
+                foreach (NeutralToolCallResponseContent tcr in message.Contents.OfType<NeutralToolCallResponseContent>())
                 {
                     input.Add(new JsonObject
                     {
@@ -574,6 +623,14 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         }
 
         return input;
+    }
+
+    private static HttpContent CreateJsonContent(JsonNode body)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(body.ToJsonString(JSON.JsonSerializerOptions));
+        ByteArrayContent content = new(bytes);
+        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        return content;
     }
 
     private static JsonArray ContentToInputParts(IList<NeutralContent> contents)
@@ -624,11 +681,10 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
 
     public override async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
-
         string endpoint = GetEndpoint(modelKey);
-
-        using HttpRequestMessage request = new(HttpMethod.Get, $"{endpoint}/v1/models");
+        bool useCodexOAuthCompat = openAIOAuthRequestHelper?.UseCodexOAuthCompat(modelKey, endpoint) == true;
+        string modelsPath = openAIOAuthRequestHelper?.ResolveModelsPath(useCodexOAuthCompat, v1Path: true) ?? "/v1/models";
+        using HttpRequestMessage request = new(HttpMethod.Get, BuildUpstreamUrl(endpoint, modelsPath, useCodexOAuthCompat));
         AddAuthorizationHeader(request, modelKey);
 
         using HttpClient httpClient = httpClientFactory.CreateClient();
@@ -652,6 +708,19 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                     {
                         models.Add(modelId);
                     }
+                }
+            }
+        }
+        else if (doc.RootElement.TryGetProperty("models", out JsonElement modelList) && modelList.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement model in modelList.EnumerateArray())
+            {
+                string? modelId = model.TryGetProperty("id", out JsonElement id)
+                    ? id.GetString()
+                    : model.TryGetProperty("slug", out JsonElement slug) ? slug.GetString() : null;
+                if (!string.IsNullOrWhiteSpace(modelId))
+                {
+                    models.Add(modelId);
                 }
             }
         }

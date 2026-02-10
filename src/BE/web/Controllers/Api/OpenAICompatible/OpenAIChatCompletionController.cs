@@ -23,7 +23,7 @@ using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Controllers.Api.OpenAICompatible;
 
-[Authorize(AuthenticationSchemes = "OpenAIApiKey")]
+[Authorize(AuthenticationSchemes = "OpenAIApiKey,OAuthAccessToken")]
 public partial class OpenAIChatCompletionController(
     ChatsDB db,
     CurrentApiKey currentApiKey,
@@ -60,7 +60,7 @@ public partial class OpenAIChatCompletionController(
         }
 
         Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
-        UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
+        UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKeyId, cco.Model, cancellationToken);
         if (userModel == null) return InvalidModel(cco.Model);
 
         if (!AllowedApiTypes.Contains(userModel.Model.ApiType))
@@ -106,7 +106,7 @@ public partial class OpenAIChatCompletionController(
             }
 
             Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
-            UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
+            UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKeyId, cco.Model, cancellationToken);
             if (logger.IsEnabled(LogLevel.Information))
             {
                 logger.LogInformation("{RequestId} [{Elapsed}], GetUserModel", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);

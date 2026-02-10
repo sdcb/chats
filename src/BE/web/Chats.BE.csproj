@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>d4aa34e2-6c5f-41b9-b61b-c1a48b1d1b44</UserSecretsId>
     <Version>1.10.0</Version>
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj_check\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

@@ -17,6 +17,7 @@ using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Controllers.Admin.GlobalConfigs;
 using Chats.BE.Services.CodeInterpreter;
 using Chats.BE.Services.Options;
+using Chats.BE.Services.OAuth;
 using Chats.DockerInterface;
 using Microsoft.Extensions.Options;
 
@@ -103,6 +104,10 @@ public class Program
         builder.Services.AddScoped<ChatConfigService>();
         builder.Services.AddScoped<DBFileService>();
         builder.Services.AddScoped<LoginRateLimiter>();
+        builder.Services.AddScoped<OAuthAuthorizationService>();
+        builder.Services.AddSingleton<OAuthAccessTokenService>();
+        builder.Services.AddSingleton<OpenAIModelOAuthService>();
+        builder.Services.AddSingleton<OpenAIOAuthRequestHelper>();
 
         builder.Services.Configure<CodePodConfig>(builder.Configuration.GetSection("CodePod"));
         builder.Services.AddSingleton<IDockerService>(sp =>
@@ -124,7 +129,8 @@ public class Program
         // Add authentication and configure the default scheme
         builder.Services.AddAuthentication("SessionId")
             .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>("SessionId", null)
-            .AddScheme<AuthenticationSchemeOptions, OpenAIApiKeyAuthenticationHandler>("OpenAIApiKey", null);
+            .AddScheme<AuthenticationSchemeOptions, OpenAIApiKeyAuthenticationHandler>("OpenAIApiKey", null)
+            .AddScheme<AuthenticationSchemeOptions, OAuthAccessTokenAuthenticationHandler>("OAuthAccessToken", null);
 
         builder.AddCORSPolicies();
 

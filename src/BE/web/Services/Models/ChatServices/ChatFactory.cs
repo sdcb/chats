@@ -30,6 +30,8 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
         {
             DBApiType.OpenAIChatCompletion => modelProvider switch
             {
+                DBModelProvider.OpenAI when model.ModelKey.AuthType == DBModelAuthType.OAuth =>
+                    sp.GetRequiredService<ResponseApiService>(),
                 DBModelProvider.AzureAIFoundry => sp.GetRequiredService<AzureAIFoundryChatService>(),
                 DBModelProvider.DeepSeek => sp.GetRequiredService<DeepSeekChatService>(),
                 DBModelProvider.MiniMax => sp.GetRequiredService<MiniMaxChatService>(),

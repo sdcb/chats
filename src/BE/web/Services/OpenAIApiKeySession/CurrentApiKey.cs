@@ -1,16 +1,26 @@
-﻿using Chats.BE.Infrastructure;
+using Chats.BE.Infrastructure;
 using System.Security.Claims;
 
 namespace Chats.BE.Services.OpenAIApiKeySession;
 
 /// <summary>
-/// Note: This class is only used for OpenAIApiKey authentication scheme.
+/// Note: This class is only used for OpenAIApiKey and OAuthAccessToken authentication schemes.
 /// </summary>
-public class CurrentApiKey(CurrentUser currentUser, IHttpContextAccessor httpContextAccessor)
+public class CurrentApiKey
 {
-    public CurrentUser User { get; } = currentUser;
+    public CurrentApiKey(CurrentUser currentUser, IHttpContextAccessor httpContextAccessor)
+    {
+        HttpContext httpContext = httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HttpContext is null");
+        ClaimsPrincipal user = httpContext.User;
 
-    public string ApiKey { get; } = httpContextAccessor.HttpContext!.User.FindFirstValue("api-key") ?? throw new InvalidOperationException("API Key is null");
+        User = currentUser;
+        ApiKeyId = int.Parse(user.FindFirstValue("api-key-id") ?? throw new InvalidOperationException("API Key id is null"));
+        ApiKey = user.FindFirstValue("api-key") ?? string.Empty;
+    }
 
-    public int ApiKeyId { get; } = int.Parse(httpContextAccessor.HttpContext!.User.FindFirstValue("api-key-id") ?? throw new InvalidOperationException("API Key is null"));
+    public CurrentUser User { get; }
+
+    public string ApiKey { get; }
+
+    public int ApiKeyId { get; }
 }
