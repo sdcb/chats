@@ -42,25 +42,19 @@ internal static class UnifiedDiffPatchToolValidator
                 continue;
             }
 
-            // Disallow markdown code fences; tool expects raw patch text.
-            if (line.StartsWith("```", StringComparison.Ordinal))
-            {
-                error =
-                    "Unsupported patch format: markdown code fences are not supported by patch_file. " +
-                    "Provide raw patch text (no markdown code fences) containing only unified diff hunks.";
-                return false;
-            }
-
-            // Disallow common LLM wrapper format.
-            if (line.StartsWith("*** ", StringComparison.Ordinal) || line.StartsWith("*** Begin Patch", StringComparison.Ordinal))
-            {
-                error =
-                    "Unsupported patch format: '*** Begin Patch/*** End Patch' wrappers are not supported. " +
-                    "Provide only unified diff hunks. Each hunk must use a full header like: @@ -oldStart,oldCount +newStart,newCount @@.";
-                return false;
-            }
-
-            if (line.StartsWith("diff --git ", StringComparison.Ordinal) ||
+            // 原因：模型经常输出被包装的 patch（```diff、diff --git、*** Begin Patch）。
+            // 这些外层文本本身不影响 hunk 语义，但此前会触发“能读文件、不能改文件”。
+            // 这里兼容并忽略包装，真正的变更仍由 hunk 规则严格校验。
+            // The target file is already provided via the `path` argument.
+            if (line.StartsWith("```", StringComparison.Ordinal) ||
+                line.StartsWith("*** Begin Patch", StringComparison.Ordinal) ||
+                line.StartsWith("*** End Patch", StringComparison.Ordinal) ||
+                line.StartsWith("*** Update File: ", StringComparison.Ordinal) ||
+                line.StartsWith("*** Add File: ", StringComparison.Ordinal) ||
+                line.StartsWith("*** Delete File: ", StringComparison.Ordinal) ||
+                line.StartsWith("*** Move to: ", StringComparison.Ordinal) ||
+                line.StartsWith("*** End of File", StringComparison.Ordinal) ||
+                line.StartsWith("diff --git ", StringComparison.Ordinal) ||
                 line.StartsWith("index ", StringComparison.Ordinal) ||
                 line.StartsWith("new file mode ", StringComparison.Ordinal) ||
                 line.StartsWith("deleted file mode ", StringComparison.Ordinal) ||
@@ -72,11 +66,7 @@ internal static class UnifiedDiffPatchToolValidator
                 line.StartsWith("--- ", StringComparison.Ordinal) ||
                 line.StartsWith("+++ ", StringComparison.Ordinal))
             {
-                error =
-                    "Unsupported patch format: git-style patch headers (e.g. 'diff --git', 'index', '---', '+++') are not supported by patch_file. " +
-                    "Provide only unified diff hunks. Each hunk must use a full header like: @@ -oldStart,oldCount +newStart,newCount @@. " +
-                    "The target file is specified by the 'path' argument.";
-                return false;
+                continue;
             }
 
             if (line.StartsWith("@@", StringComparison.Ordinal))
