@@ -34,6 +34,7 @@ public record CreateDownloadUrlRequest
 {
     public required int FileId { get; init; }
     public required string StorageKey { get; init; }
+    public required string FileName { get; init; }
     public TimeSpan ValidPeriod { get; init; } = DefaultValidPeriod;
     public DateTimeOffset ValidEnd => DateTimeOffset.UtcNow + ValidPeriod;
 
@@ -41,7 +42,12 @@ public record CreateDownloadUrlRequest
 
     public static CreateDownloadUrlRequest FromFile(DBFile file)
     {
-        return new CreateDownloadUrlRequest { FileId = file.Id, StorageKey = file.StorageKey };
+        return new CreateDownloadUrlRequest
+        {
+            FileId = file.Id,
+            StorageKey = file.StorageKey,
+            FileName = file.FileName,
+        };
     }
 }
 

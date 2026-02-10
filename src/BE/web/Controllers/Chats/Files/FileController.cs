@@ -189,6 +189,7 @@ public class FileController(ChatsDB db, IFileServiceFactory fileServiceFactory, 
 
             DateTimeOffset lastModified = fileInfo.LastWriteTimeUtc;
             EntityTagHeaderValue etag = new('"' + lastModified.Ticks.ToString("x") + '"', isWeak: true);
+            Response.Headers[HeaderNames.ContentDisposition] = $"inline; filename=\"{file.FileName}\"";
             return PhysicalFile(fileInfo.FullName, file.MediaType, lastModified, etag, enableRangeProcessing: true);
         }
         else

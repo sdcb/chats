@@ -23,13 +23,19 @@ public class AwsS3FileService : IFileService
 
     public string CreateDownloadUrl(CreateDownloadUrlRequest req)
     {
-        string url = _s3.GetPreSignedURL(new GetPreSignedUrlRequest
+        GetPreSignedUrlRequest request = new()
         {
             BucketName = _bucketName,
             Key = req.StorageKey,
             Expires = req.ValidEnd.UtcDateTime,
-            Verb = HttpVerb.GET
-        });
+            Verb = HttpVerb.GET,
+            ResponseHeaderOverrides = new ResponseHeaderOverrides
+            {
+                ContentDisposition = $"inline; filename=\"{req.FileName}\""
+            }
+        };
+
+        string url = _s3.GetPreSignedURL(request);
         return url;
     }
 
