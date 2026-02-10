@@ -52,6 +52,8 @@ import {
   PutUserParams,
   SecurityLogQueryParams,
   SecurityLogExportParams,
+  OpenAIModelOAuthStartResult,
+  OpenAIModelOAuthStatusResult,
   ReorderRequest,
   StatisticsTimeParams,
   TokenStatisticsByDateResult,
@@ -427,6 +429,32 @@ export const putModelKeys = (id: number, params: PostModelKeysParams) => {
 export const deleteModelKeys = (id: number) => {
   const fetchService = createFetchClient();
   return fetchService.delete(`/api/admin/model-keys/${id}`);
+};
+
+export const startOpenAIModelKeyOAuth = (
+  modelKeyId: number,
+  options?: { allowApiKeySource?: boolean },
+) => {
+  const fetchService = createFetchClient();
+  const searchParams = new URLSearchParams();
+  if (options?.allowApiKeySource) {
+    searchParams.set('allowApiKeySource', 'true');
+  }
+  const query = searchParams.toString();
+  const url = query
+    ? `/api/admin/model-keys/${modelKeyId}/oauth/openai/start?${query}`
+    : `/api/admin/model-keys/${modelKeyId}/oauth/openai/start`;
+  return fetchService.post<OpenAIModelOAuthStartResult>(url);
+};
+
+export const getOpenAIModelKeyOAuthStatus = (modelKeyId: number) => {
+  const fetchService = createFetchClient();
+  return fetchService.get<OpenAIModelOAuthStatusResult>(`/api/admin/model-keys/${modelKeyId}/oauth/openai/status`);
+};
+
+export const disconnectOpenAIModelKeyOAuth = (modelKeyId: number) => {
+  const fetchService = createFetchClient();
+  return fetchService.post(`/api/admin/model-keys/${modelKeyId}/oauth/openai/disconnect`);
 };
 
 export const reorderModelProviders = (params: ReorderRequest) => {

@@ -1,7 +1,7 @@
 import { IChatMessage } from './chatMessage';
 import { ChatSpanDto } from './clientApis';
 import { DBFileServiceType } from './file';
-import { DBModelProvider } from './model';
+import { DBModelAuthType, DBModelProvider } from './model';
 import { Paging } from './page';
 import { PayServiceType } from './pay';
 import { StatusCode } from './statusCode';
@@ -369,6 +369,8 @@ export class GetModelKeysResult {
   totalModelCount: number;
   host: string | null;
   secret: string | null;
+  authType: DBModelAuthType;
+  oauthConfigJson: string | null;
   createdAt: string;
 
   constructor(dto: any) {
@@ -379,6 +381,8 @@ export class GetModelKeysResult {
     this.totalModelCount = dto.totalModelCount;
     this.host = dto.host;
     this.secret = dto.secret;
+    this.authType = dto.authType ?? DBModelAuthType.ApiKey;
+    this.oauthConfigJson = dto.oauthConfigJson ?? null;
     this.createdAt = dto.createdAt;
   }
 
@@ -399,6 +403,24 @@ export interface PostModelKeysParams {
   name: string;
   host: string | null;
   secret: string | null;
+  authType?: DBModelAuthType;
+  oauthConfigJson?: string | null;
+}
+
+export interface OpenAIModelOAuthStartResult {
+  authorizationUrl: string;
+  state: string;
+  redirectUri: string;
+  expiresAtUtc: string;
+}
+
+export interface OpenAIModelOAuthStatusResult {
+  modelKeyId: number;
+  connected: boolean;
+  hasRefreshToken: boolean;
+  accessTokenExpiresAtUtc: string | null;
+  lastError: string | null;
+  updatedAtUtc: string | null;
 }
 
 export interface PostPromptParams {

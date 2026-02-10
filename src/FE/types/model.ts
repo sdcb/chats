@@ -29,6 +29,11 @@ export enum DBModelProvider {
   Mimo = 21,
 }
 
+export enum DBModelAuthType {
+  ApiKey = 0,
+  OAuth = 1,
+}
+
 export type FEModelProvider = {
   id: number;
   name: string;
