@@ -180,7 +180,7 @@ const ApiKeysTab = () => {
                   <div className="w-3/4">
                     <Input
                       className="h-9 text-xs px-3 border-none"
-                      value={x.comment}
+                      value={x.comment ?? ''}
                       onChange={(e) => {
                         changeApiKeyBy(index, 'comment', e.target.value);
                       }}
@@ -247,7 +247,7 @@ const ApiKeysTab = () => {
                     <TableCell className="py-2 min-w-[128px] max-w-[200px]">
                       <Input
                         className="border-none h-9 px-3"
-                        value={x.comment}
+                        value={x.comment ?? ''}
                         onChange={(e) => {
                           changeApiKeyBy(index, 'comment', e.target.value);
                         }}
