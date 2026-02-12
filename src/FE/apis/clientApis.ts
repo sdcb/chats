@@ -282,17 +282,17 @@ export const getUserApiKey = () => {
   return fetchServer.get<GetUserApiKeyResult[]>('/api/user/api-key');
 };
 
-export const postUserApiKey = () => {
+export const postUserApiKey = (body: { comment: string; expires: string }) => {
   const fetchServer = createFetchClient();
-  return fetchServer.post<GetUserApiKeyResult>('/api/user/api-key');
+  return fetchServer.post<GetUserApiKeyResult>('/api/user/api-key', { body });
 };
 
-export const putUserApiKey = (id: number, body: any) => {
+export const putUserApiKey = (id: string, body: any) => {
   const fetchServer = createFetchClient();
   return fetchServer.put<string>('/api/user/api-key/' + id, { body });
 };
 
-export const deleteUserApiKey = (id: number) => {
+export const deleteUserApiKey = (id: string) => {
   const fetchServer = createFetchClient();
   return fetchServer.delete('/api/user/api-key/' + id);
 };

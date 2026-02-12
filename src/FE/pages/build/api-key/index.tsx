@@ -1,22 +1,24 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import { useRouter } from 'next/router';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { getApiUrl, maskApiKey } from '@/utils/common';
+import { IconPencil } from '@/components/Icons';
+
+import { getApiUrl } from '@/utils/common';
 import { formatDate } from '@/utils/date';
 
 import { GetUserApiKeyResult } from '@/types/clientApis';
 
-import DateTimePopover from '@/components/Popover/DateTimePopover';
 import DeletePopover from '@/components/Popover/DeletePopover';
+import Tips from '@/components/Tips/Tips';
+import ApiKeyDialog from './ApiKeyDialog';
 
 import CopyButton from '@/components/Button/CopyButton';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -38,8 +40,31 @@ export default function BuildApiKeyPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [apiKeys, setApiKeys] = useState<GetUserApiKeyResult[]>([]);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  type GetUserApiKeyType = keyof GetUserApiKeyResult;
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createName, setCreateName] = useState('');
+  const [createExpires, setCreateExpires] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [createdKey, setCreatedKey] = useState<string | null>(null);
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<GetUserApiKeyResult | null>(null);
+  const [editComment, setEditComment] = useState('');
+  const [editExpires, setEditExpires] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const getDefaultName = () => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = `${now.getMonth() + 1}`.padStart(2, '0');
+    const dd = `${now.getDate()}`.padStart(2, '0');
+    return `${yyyy}${mm}${dd}`;
+  };
+
+  const getDefaultExpires = () => {
+    const date = new Date();
+    date.setFullYear(date.getFullYear() + 1);
+    return date.toISOString();
+  };
 
   const initData = () => {
     getUserApiKey()
@@ -55,53 +80,76 @@ export default function BuildApiKeyPage() {
     initData();
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, []);
-
-  const createApiKey = () => {
-    postUserApiKey().then(() => {
-      initData();
-    });
+  const openCreateDialog = () => {
+    setCreateName(getDefaultName());
+    setCreateExpires(getDefaultExpires());
+    setCreatedKey(null);
+    setCreateDialogOpen(true);
   };
 
-  const changeApiKeyBy = <K extends GetUserApiKeyType>(
-    index: number,
-    type: K,
-    value: GetUserApiKeyResult[K],
-  ) => {
-    const apiKey = apiKeys[index];
-    setApiKeys((prev) => {
-      const data = [...prev];
-      data[index][type] = value;
-      return data;
-    });
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
+  const submitCreate = () => {
+    const name = createName.trim();
+    if (!name) {
+      toast.error(t('Please enter a name'));
+      return;
     }
-    debounceRef.current = setTimeout(() => {
-      putUserApiKey(apiKey.id, { [type]: value }).then(() => {
-        toast.success(t('Save successful'));
+
+    setCreating(true);
+    postUserApiKey({
+      comment: name,
+      expires: createExpires,
+    })
+      .then((result) => {
+        setCreatedKey(result.key);
+        initData();
+      })
+      .finally(() => {
+        setCreating(false);
       });
-    }, 1000);
   };
 
-  const removeApiKey = (id: number) => {
+  const copyCreatedKey = async () => {
+    if (!createdKey) return;
+    await navigator.clipboard.writeText(createdKey);
+    toast.success(t('Copied to clipboard'));
+  };
+
+  const openEditDialog = (apiKey: GetUserApiKeyResult) => {
+    setEditTarget(apiKey);
+    setEditComment(apiKey.comment || '');
+    setEditExpires(apiKey.expires);
+    setEditDialogOpen(true);
+  };
+
+  const submitEdit = () => {
+    if (!editTarget) return;
+    setSavingEdit(true);
+    putUserApiKey(editTarget.id, {
+      comment: editComment,
+      expires: editExpires,
+    })
+      .then(() => {
+        toast.success(t('Save successful'));
+        setEditDialogOpen(false);
+        setEditTarget(null);
+        initData();
+      })
+      .finally(() => {
+        setSavingEdit(false);
+      });
+  };
+
+  const removeApiKey = (id: string) => {
     deleteUserApiKey(id).then(() => {
       setApiKeys((prev) =>
         prev.filter((x) => {
           return x.id !== id;
         }),
       );
-      toast.success(t('Delete successful'));
     });
   };
 
-  const viewApiKeyUsage = (id: number) => {
+  const viewApiKeyUsage = (id: string) => {
     router.push(`/build/usage?kid=${id}&page=1`);
   };
 
@@ -122,7 +170,7 @@ export default function BuildApiKeyPage() {
           </div>
         </div>
         <div>
-          <Button variant="default" onClick={createApiKey} size="sm">
+          <Button variant="default" onClick={openCreateDialog} size="sm">
             {t('New Key')}
           </Button>
         </div>
@@ -139,42 +187,25 @@ export default function BuildApiKeyPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {apiKeys.map((x, index) => (
+            {apiKeys.map((x) => (
               <Card key={x.id} className="p-2 border-none shadow-sm">
                 <div className="flex items-center justify-between mb-2 text-xs">
-                  <div className="font-medium">{t('Key')}</div>
-                  <div className="flex items-center">
-                    <span
-                      className="max-w-[180px] truncate cursor-pointer text-blue-600 hover:underline"
-                      onClick={() => viewApiKeyUsage(x.id)}
-                    >
-                      {maskApiKey(x.key)}
-                    </span>
-                    <CopyButton value={x.key} />
-                  </div>
+                  <div className="font-medium">{t('Comment')}</div>
+                  <button
+                    type="button"
+                    className="max-w-[180px] truncate cursor-pointer text-blue-600 hover:underline"
+                    onClick={() => viewApiKeyUsage(x.id)}
+                  >
+                    {x.comment || '-'}
+                  </button>
                 </div>
                 <div className="flex items-center justify-between mb-2 text-xs">
-                  <div className="font-medium">{t('Comment')}</div>
-                  <div className="w-3/4">
-                    <Input
-                      className="h-9 text-xs px-3 border-none"
-                      value={x.comment}
-                      onChange={(e) => {
-                        changeApiKeyBy(index, 'comment', e.target.value);
-                      }}
-                    />
-                  </div>
+                  <div className="font-medium">{t('Key')}</div>
+                  <div className="w-3/4 truncate text-right font-mono">{x.key}</div>
                 </div>
                 <div className="flex items-center justify-between mb-2 text-xs">
                   <div className="font-medium">{t('Expires')}</div>
-                  <div className="h-9 flex items-center">
-                    <DateTimePopover
-                      value={x.expires}
-                      onSelect={(date: Date) => {
-                        changeApiKeyBy(index, 'expires', date as any);
-                      }}
-                    />
-                  </div>
+                  <div className="h-9 flex items-center">{formatDate(x.expires)}</div>
                 </div>
                 <div className="flex items-center justify-between mb-2 text-xs">
                   <div className="font-medium">{t('LastUsedAt')}</div>
@@ -182,7 +213,21 @@ export default function BuildApiKeyPage() {
                     {x.lastUsedAt ? formatDate(x.lastUsedAt) : '-'}
                   </div>
                 </div>
-                <div className="flex justify-end mt-1">
+                <div className="flex justify-end items-center gap-2 mt-1">
+                  <Tips
+                    content={t('Edit')}
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={() => openEditDialog(x)}
+                        aria-label={t('Edit') || 'Edit'}
+                      >
+                        <IconPencil size={18} />
+                      </Button>
+                    }
+                  />
                   <DeletePopover
                     onDelete={() => {
                       removeApiKey(x.id);
@@ -200,56 +245,55 @@ export default function BuildApiKeyPage() {
           <Table>
             <TableHeader>
               <TableRow className="pointer-events-none">
-                <TableHead>{t('Key')}</TableHead>
                 <TableHead>{t('Comment')}</TableHead>
+                <TableHead>{t('Key')}</TableHead>
                 <TableHead>{t('Expires')}</TableHead>
                 <TableHead>{t('LastUsedAt')}</TableHead>
                 <TableHead>{t('Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody isEmpty={apiKeys.length === 0} isLoading={loading}>
-              {apiKeys.map((x, index) => {
+              {apiKeys.map((x) => {
                 return (
                   <TableRow key={x.id} className="cursor-pointer">
-                    <TableCell className="py-2">
-                      <div className="flex items-center">
-                        <div
-                          className="overflow-hidden text-ellipsis whitespace-nowrap text-blue-600 hover:underline cursor-pointer"
-                          onClick={() => viewApiKeyUsage(x.id)}
-                        >
-                          {maskApiKey(x.key)}
-                        </div>
-                        <CopyButton value={x.key} />
-                      </div>
-                    </TableCell>
                     <TableCell className="py-2 min-w-[128px] max-w-[200px]">
-                      <Input
-                        className="border-none h-9 px-3"
-                        value={x.comment}
-                        onChange={(e) => {
-                          changeApiKeyBy(index, 'comment', e.target.value);
-                        }}
-                      />
+                      <button
+                        type="button"
+                        className="overflow-hidden text-ellipsis whitespace-nowrap text-blue-600 hover:underline"
+                        onClick={() => viewApiKeyUsage(x.id)}
+                      >
+                        {x.comment || '-'}
+                      </button>
                     </TableCell>
-                    <TableCell className="py-2">
-                      <DateTimePopover
-                        className="w-[128px]"
-                        placeholder={t('Pick a date')}
-                        value={x.expires}
-                        onSelect={(date: Date) => {
-                          changeApiKeyBy(index, 'expires', date as any);
-                        }}
-                      />
+                    <TableCell className="py-2 min-w-[140px] max-w-[260px] font-mono overflow-hidden text-ellipsis whitespace-nowrap">
+                      {x.key}
                     </TableCell>
+                    <TableCell className="py-2">{formatDate(x.expires)}</TableCell>
                     <TableCell className="py-2 min-w-[128px] max-w-[150px]">
                       {x.lastUsedAt ? formatDate(x.lastUsedAt) : '-'}
                     </TableCell>
-                    <TableCell className="py-2 max-w-[64px]">
-                      <DeletePopover
-                        onDelete={() => {
-                          removeApiKey(x.id);
-                        }}
-                      />
+                    <TableCell className="py-2 max-w-[140px]">
+                      <div className="flex items-center gap-2">
+                        <Tips
+                          content={t('Edit')}
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9"
+                              onClick={() => openEditDialog(x)}
+                              aria-label={t('Edit') || 'Edit'}
+                            >
+                              <IconPencil size={18} />
+                            </Button>
+                          }
+                        />
+                        <DeletePopover
+                          onDelete={() => {
+                            removeApiKey(x.id);
+                          }}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -258,6 +302,59 @@ export default function BuildApiKeyPage() {
           </Table>
         </Card>
       </div>
+
+      <ApiKeyDialog
+        open={createDialogOpen}
+        mode="create"
+        title={t('New Key') || 'New Key'}
+        name={createName}
+        onNameChange={setCreateName}
+        expires={createExpires}
+        onExpiresChange={setCreateExpires}
+        submitting={creating}
+        submitText={creating ? t('Creating...') || 'Creating...' : t('Create') || 'Create'}
+        onSubmit={submitCreate}
+        onCancel={() => setCreateDialogOpen(false)}
+        createdKey={createdKey}
+        onCopyCreatedKey={copyCreatedKey}
+        onCloseCreatedState={() => {
+          setCreateDialogOpen(false);
+          setCreatedKey(null);
+        }}
+        onOpenChange={(open) => {
+          if (!creating) {
+            setCreateDialogOpen(open);
+            if (!open) {
+              setCreatedKey(null);
+            }
+          }
+        }}
+      />
+
+      <ApiKeyDialog
+        open={editDialogOpen}
+        mode="edit"
+        title={t('Edit') || 'Edit'}
+        name={editComment}
+        onNameChange={setEditComment}
+        expires={editExpires}
+        onExpiresChange={setEditExpires}
+        submitting={savingEdit}
+        submitText={savingEdit ? t('Saving...') || 'Saving...' : t('Save') || 'Save'}
+        onSubmit={submitEdit}
+        onCancel={() => {
+          setEditDialogOpen(false);
+          setEditTarget(null);
+        }}
+        onOpenChange={(open) => {
+          if (!savingEdit) {
+            setEditDialogOpen(open);
+            if (!open) {
+              setEditTarget(null);
+            }
+          }
+        }}
+      />
     </div>
   );
 }

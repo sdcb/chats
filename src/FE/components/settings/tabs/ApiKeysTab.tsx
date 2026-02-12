@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { getApiUrl, maskApiKey } from '@/utils/common';
+import { getApiUrl } from '@/utils/common';
 import { formatDate } from '@/utils/date';
 
 import { UsageSource } from '@/types/chat';
@@ -65,7 +65,18 @@ const ApiKeysTab = () => {
   }, []);
 
   const createApiKey = () => {
-    postUserApiKey().then(() => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = `${now.getMonth() + 1}`.padStart(2, '0');
+    const dd = `${now.getDate()}`.padStart(2, '0');
+    const comment = `${yyyy}${mm}${dd}`;
+    const expires = new Date(
+      now.getFullYear() + 1,
+      now.getMonth(),
+      now.getDate(),
+    ).toISOString();
+
+    postUserApiKey({ comment, expires }).then(() => {
       initData();
     });
   };
@@ -91,7 +102,7 @@ const ApiKeysTab = () => {
     }, 1000);
   };
 
-  const removeApiKey = (id: number) => {
+  const removeApiKey = (id: string) => {
     deleteUserApiKey(id).then(() => {
       setApiKeys((prev) =>
         prev.filter((x) => {
@@ -102,7 +113,7 @@ const ApiKeysTab = () => {
     });
   };
 
-  const viewApiKeyUsage = (id: number) => {
+  const viewApiKeyUsage = (id: string) => {
     router.push(
       `/settings?t=usage&kid=${id}&source=${UsageSource.API}&page=1`,
     );
@@ -159,7 +170,7 @@ const ApiKeysTab = () => {
                       className="max-w-[180px] truncate cursor-pointer text-blue-600 hover:underline"
                       onClick={() => viewApiKeyUsage(x.id)}
                     >
-                      {maskApiKey(x.key)}
+                      {x.key}
                     </span>
                     <CopyButton value={x.key} />
                   </div>
@@ -228,7 +239,7 @@ const ApiKeysTab = () => {
                           className="overflow-hidden text-ellipsis whitespace-nowrap text-blue-600 hover:underline cursor-pointer"
                           onClick={() => viewApiKeyUsage(x.id)}
                         >
-                          {maskApiKey(x.key)}
+                          {x.key}
                         </div>
                         <CopyButton value={x.key} />
                       </div>

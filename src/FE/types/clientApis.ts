@@ -120,16 +120,16 @@ export interface GetBalance7DaysUsageResult {
 }
 
 export interface GetUserApiKeyResult {
-  id: number;
+  id: string;
   key: string;
   isRevoked: boolean;
-  comment: string;
+  comment: string | null;
   allowEnumerate: boolean;
   allowAllModels: boolean;
   expires: string;
   createdAt: string;
   updatedAt: string;
-  lastUsedAt: string;
+  lastUsedAt: string | null;
   modelCount: number;
 }
 

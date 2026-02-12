@@ -751,6 +751,7 @@
   "View Documentation": "查看文档",
   "API documentation for supported endpoints. Click on the documentation link for detailed usage instructions.": "支持的 API 端点文档。点击文档链接查看详细使用说明。",
   "API keys are credentials for accessing Chats API with full account permissions. Please keep them secure.": "API 密钥是您访问 Chats 接口的凭证，具有该账户的完整权限，请您妥善保管。",
+  "Please save this API key securely and keep it accessible. For security reasons, you will not be able to view it again in API keys management. If you lose this key, you will need to create a new one.": "请将此 API key 保存在安全且易于访问的地方。出于安全原因，你将无法通过 API keys 管理界面再次查看它。如果你丟失了这个 key，将需要重新创建。",
   "OpenAI Compatible APIs": "OpenAI 兼容 API",
   "Anthropic Compatible APIs": "Anthropic 兼容 API",
   "Sandbox Manager": "沙箱管理",
