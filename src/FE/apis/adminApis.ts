@@ -319,6 +319,14 @@ export const deleteFileService = (id: number) => {
   return fetchService.delete(`/api/admin/file-service/${id}`);
 };
 
+export const validateFileService = (params: PostFileServicesParams) => {
+  const fetchService = createFetchClient();
+  return fetchService.post<void>(
+    '/api/admin/file-service/validate',
+    { body: params, suppressDefaultToast: true },
+  );
+};
+
 export const getFileServiceTypeInitialConfig = (fileServiceTypeId: number) => {
   const fetchService = createFetchClient();
   return fetchService.get<string>(

@@ -2,14 +2,68 @@ using Chats.DB;
 using Chats.DB.Enums;
 using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Admin.FileServices.Dtos;
+using Chats.BE.Services.FileServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 
 namespace Chats.BE.Controllers.Admin.FileServices;
 
 [Route("api/admin/file-service"), AuthorizeAdmin]
-public class FileServiceController(ChatsDB db) : ControllerBase
+public class FileServiceController(ChatsDB db, IFileServiceFactory fileServiceFactory) : ControllerBase
 {
+    [HttpPost("validate")]
+    public async Task<IActionResult> ValidateFileService(
+        [FromBody] FileServiceUpdateRequest req,
+        [FromServices] ILogger<FileServiceController> logger,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Requirement: put (upload) an object using the configured file service, then try delete it.
+            // Upload success => validate success. Delete result is not important.
+            FileService temp = new()
+            {
+                // not persisted, only used to create service implementation
+                FileServiceTypeId = (byte)req.FileServiceTypeId,
+                Name = req.Name,
+                Configs = req.Configs,
+                IsDefault = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            };
+
+            IFileService fileService = fileServiceFactory.Create(temp);
+
+            string now = DateTime.UtcNow.ToString("O");
+            byte[] bytes = Encoding.UTF8.GetBytes($"validate at {now}");
+            await using MemoryStream ms = new(bytes);
+            string fileName = $"file-service-validate-{DateTime.UtcNow:yyyyMMdd-HHmmss-fff}.txt";
+            string storageKey = await fileService.Upload(new FileUploadRequest
+            {
+                FileName = fileName,
+                ContentType = "text/plain",
+                Stream = ms,
+            }, cancellationToken);
+
+            try
+            {
+                _ = await fileService.Delete(storageKey, cancellationToken);
+            }
+            catch
+            {
+                // ignore delete failure
+            }
+
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error validating file service");
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpGet]
     public async Task<ActionResult<FileServiceSimpleDto[]>> ListFileServices(bool select, CancellationToken cancellationToken)
     {
@@ -28,7 +82,7 @@ public class FileServiceController(ChatsDB db) : ControllerBase
         else
         {
             // full mode, return all fields
-            FileServiceDto[] data = db.FileServices
+            FileServiceDto[] data = await db.FileServices
                 .Select(x => new FileServiceDto
                 {
                     Id = x.Id,
@@ -40,9 +94,7 @@ public class FileServiceController(ChatsDB db) : ControllerBase
                     FileCount = x.Files.Count,
                     UpdatedAt = x.UpdatedAt,
                 })
-                .AsEnumerable()
-                .Select(x => x.WithMaskedKeys())
-                .ToArray();
+                .ToArrayAsync(cancellationToken);
             return Ok(data);
         }
     }
