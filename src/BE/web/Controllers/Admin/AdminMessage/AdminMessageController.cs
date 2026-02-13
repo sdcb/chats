@@ -77,40 +77,6 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
         return Ok(resp);
     }
 
-    [HttpGet("message-details/{encryptedTurnId}/generate-info")]
-    public async Task<ActionResult<StepGenerateInfoDto[]>> GetAdminTurnGenerateInfo(int chatId, string encryptedTurnId, CancellationToken cancellationToken)
-    {
-        long turnId = urlEncryption.DecryptTurnId(encryptedTurnId);
-
-        StepGenerateInfoDto[] stepInfos = await db.ChatTurns
-            .Where(x => x.Id == turnId && x.ChatId == chatId)
-            .SelectMany(x => x.Steps
-                .Where(s => s.Usage != null)
-                .OrderBy(s => s.CreatedAt)
-                .Select(s => new StepGenerateInfoDto
-                {
-                    InputCachedTokens = s.Usage!.InputCachedTokens,
-                    InputOverallTokens = s.Usage!.InputFreshTokens + s.Usage!.InputCachedTokens,
-                    OutputTokens = s.Usage!.OutputTokens,
-                    InputFreshPrice = s.Usage!.InputFreshCost,
-                    InputCachedPrice = s.Usage!.InputCachedCost,
-                    InputPrice = s.Usage!.InputFreshCost + s.Usage!.InputCachedCost,
-                    OutputPrice = s.Usage!.OutputCost,
-                    ReasoningTokens = s.Usage!.ReasoningTokens,
-                    Duration = s.Usage!.TotalDurationMs,
-                    ReasoningDuration = s.Usage!.ReasoningDurationMs,
-                    FirstTokenLatency = s.Usage!.FirstResponseDurationMs,
-                }))
-            .ToArrayAsync(cancellationToken);
-
-        if (stepInfos.Length == 0)
-        {
-            return NotFound();
-        }
-
-        return Ok(stepInfos);
-    }
-
     internal static async Task<ChatsResponseWithMessage?> InternalGetChatWithMessages(ChatsDB db, IUrlEncryptionService urlEncryption, int chatId, FileUrlProvider fup, CancellationToken cancellationToken)
     {
         ChatsResponse? chats = await db.Chats
