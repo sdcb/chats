@@ -1,4 +1,5 @@
 ﻿using Chats.BE.Services.FileServices;
+using Chats.BE.Services;
 using Chats.BE.Services.UrlEncryption;
 using System.Text.Json.Serialization;
 using Chats.DB;
@@ -73,6 +74,7 @@ public record FileDto
     public required string ContentType { get; init; }
 
     [JsonPropertyName("url")]
+    [IgnoreForEtagHash]
     public string? Url { get; init; }
 }
 

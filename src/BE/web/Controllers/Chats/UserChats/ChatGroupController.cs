@@ -3,6 +3,7 @@ using Chats.BE.Controllers.Chats.UserChats.Dtos;
 using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.Infrastructure;
 using Chats.BE.Infrastructure.Functional;
+using Chats.BE.Services;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +11,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 
 namespace Chats.BE.Controllers.Chats.UserChats;
 
@@ -68,7 +68,7 @@ public class ChatGroupController(ChatsDB db, CurrentUser user, IUrlEncryptionSer
             group.Chats = await UserChatsController.GetChatsForGroupAsync(db, user, urlEncryption, new ChatsQuery(group.Id, req.Page, req.PageSize, req.Query), ct);
         });
 
-        string serialized = JsonSerializer.Serialize(groups);
+        string serialized = JSON.SerializeForEtag(groups);
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(serialized));
         string etagText = $"\"{Convert.ToHexString(hash)}\"";
         EntityTagHeaderValue etag = new(etagText, isWeak: false);
