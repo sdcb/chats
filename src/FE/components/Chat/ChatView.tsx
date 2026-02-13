@@ -21,7 +21,6 @@ import {
   generateUserMessage,
 } from '@/utils/message';
 import { throttle } from '@/utils/throttle';
-import { syncChatsToCache } from '@/utils/chatCache';
 
 import {
   ChatRole,
@@ -113,8 +112,6 @@ const ChatView = memo(() => {
       const updatedChats = updater(chatsRef.current);
       chatsRef.current = updatedChats;
       chatDispatch(setChats(updatedChats));
-      // 同步更新缓存
-      syncChatsToCache(updatedChats);
     },
     [chatDispatch],
   );

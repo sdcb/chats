@@ -7,6 +7,10 @@ using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace Chats.BE.Controllers.Chats.UserChats;
 
@@ -64,6 +68,24 @@ public class ChatGroupController(ChatsDB db, CurrentUser user, IUrlEncryptionSer
             group.Chats = await UserChatsController.GetChatsForGroupAsync(db, user, urlEncryption, new ChatsQuery(group.Id, req.Page, req.PageSize, req.Query), ct);
         });
 
+        string serialized = JsonSerializer.Serialize(groups);
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(serialized));
+        string etagText = $"\"{Convert.ToHexString(hash)}\"";
+        EntityTagHeaderValue etag = new(etagText, isWeak: false);
+
+        Response.GetTypedHeaders().CacheControl = new CacheControlHeaderValue
+        {
+            Private = true,
+            NoCache = true,
+            MustRevalidate = true,
+            MaxAge = TimeSpan.FromDays(30),
+        };
+        Response.GetTypedHeaders().ETag = etag;
+
+        if (Request.GetTypedHeaders().IfNoneMatch?.Any(x => x.Tag.Equals(etag.Tag, StringComparison.Ordinal)) == true)
+        {
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
         return Ok(groups);
     }
 

@@ -3,7 +3,6 @@ import { useRouter } from 'next/router';
 import useTranslation from '@/hooks/useTranslation';
 
 import { clearUserInfo, clearUserSession, getLoginUrl } from '@/utils/user';
-import { clearChatCache } from '@/utils/chatCache';
 
 import { UserRole } from '@/types/adminApis';
 
@@ -50,7 +49,6 @@ const UserMenuPopover = ({
   const logout = () => {
     clearUserSession();
     clearUserInfo();
-    clearChatCache();
     router.push(getLoginUrl());
   };
 
