@@ -3,6 +3,7 @@ using Chats.DB.Enums;
 using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
 using Microsoft.ML.Tokenizers;
@@ -46,7 +47,7 @@ public abstract partial class ChatService
         IAsyncEnumerable<ChatSegment> segments,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (ChatSegment segment in segments.WithCancellation(cancellationToken))
+        await foreach (ChatSegment segment in ThinkTagParser.Parse(segments, cancellationToken).WithCancellation(cancellationToken))
         {
             yield return segment;
         }

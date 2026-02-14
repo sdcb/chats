@@ -1,0 +1,320 @@
+POST https://api.tokenpony.cn/v1/chat/completions HTTP/1.1
+Host: api.tokenpony.cn
+Authorization: Bearer [REDACTED]
+Accept: text/event-stream
+User-Agent: Sdcb-Chats/1.10.1.0
+Content-Type: application/json; charset=utf-8
+Content-Length: 4871
+
+{"model":"minimax-m2.5","messages":[{"role":"system","content":"你是AI助手Sdcb Chats\n当前日期: 2026/02/14，当前模型：minimax-m2.5\r\n\r\nYou have access to sandboxed code interpreter environments.\r\n- Working directory: /app\r\n- Artifacts directory: /app/artifacts, MUST copy to this folder so user can download it!\r\n- Call create_docker_session to get a sessionId.\r\n"},{"role":"user","content":"计算12345/54321=?"}],"stream":true,"stream_options":{"include_usage":true},"user":"18854-0","parallel_tool_calls":true,"tools":[{"type":"function","function":{"name":"create_docker_session","description":"Create a docker session","parameters":{"type":"object","properties":{"image":{"type":["string","null"],"description":"Docker image to use (null means use server default: sdcb/code-interpreter:latest (Pre-installed with common packages, suitable for most daily tasks))."},"label":{"type":["string","null"],"description":"Label. If empty, server will use the new container id prefix (first 12 chars)."},"memoryBytes":{"type":["integer","null"],"description":"Memory limit in bytes (null means use server default: 2147483648 (2GB)). 0 means unlimited."},"cpuCores":{"type":["number","null"],"description":"CPU limit in cores (null means use server default: 2). 0 means unlimited."},"maxProcesses":{"type":["integer","null"],"description":"Max processes (null means use server default: 200). 0 means unlimited."},"networkMode":{"type":["string","null"],"description":"Network mode. One of: none, bridge. null means use server default: bridge.","enum":["none","bridge","host"]}}}}},{"type":"function","function":{"name":"destroy_session","description":"Destroy the docker session","parameters":{"type":"object","properties":{"sessionId":{"type":"string"}},"required":["sessionId"]}}},{"type":"function","function":{"name":"download_chat_files","description":"Download cloud files (from chat history) into /app","parameters":{"type":"object","properties":{"sessionId":{"type":"string"},"patterns":{"type":"array","items":{"type":"string"},"description":"Wildcard patterns matching cloud file names.","minItems":1}},"required":["sessionId","patterns"]}}},{"type":"function","function":{"name":"patch_file","description":"Apply a patch to a file under /app.\r\nThe target file is specified by the 'path' argument.\r\nThe 'patch' argument MUST be unified-diff hunks ONLY (no headers/wrappers).","parameters":{"type":"object","properties":{"sessionId":{"type":"string"},"path":{"type":"string","description":"Target file path under /app."},"patch":{"type":"string","description":"Patch text (RAW, no markdown). MUST contain unified-diff hunks ONLY.\r\n\r\nSupported input:\r\n- One or more hunks.\r\n- Each hunk header MUST be exactly:\r\n    @@ -oldStart,oldCount +newStart,newCount @@\r\n    (full ranges required)\r\n- Inside hunks, each line must start with:\r\n    - ' ' (context)\r\n    - '+' (add)\r\n    - '-' (delete)\r\n    - or be exactly: \\\\ No newline at end of file\r\n\r\nNot supported (do NOT include):\r\n- diff --git / index / --- / +++\r\n- *** Begin Patch/*** End Patch wrappers\r\n- markdown code fences (```)\r\n- any extra commentary text\r\n\r\nNotes:\r\n- An empty context line must be represented as a single space ' ' line (no empty lines inside hunks).\r\n- Recommended workflow: call read_file(withLineNumbers=true) first, then generate hunks with enough context."}},"required":["sessionId","path","patch"]}}},{"type":"function","function":{"name":"read_file","description":"Read a file under /app","parameters":{"type":"object","properties":{"sessionId":{"type":"string"},"path":{"type":"string","description":"Absolute path to the file (must be under /app)."},"startLine":{"type":["integer","null"],"description":"Optional start line (1-based, inclusive)."},"endLine":{"type":["integer","null"],"description":"Optional end line (1-based, inclusive)."},"withLineNumbers":{"type":["boolean","null"],"description":"Optional (default false). If true, prefix each line with its line number; the first line will be the total line count."}},"required":["sessionId","path"]}}},{"type":"function","function":{"name":"run_command","description":"Run a shell command inside the session workdir /app","parameters":{"type":"object","properties":{"sessionId":{"type":"string"},"command":{"type":"string","description":"Shell command to run"},"timeoutSeconds":{"type":["integer","null"],"description":"Command timeout seconds (null means use server default)."}},"required":["sessionId","command"]}}},{"type":"function","function":{"name":"write_file","description":"Write a file under /app","parameters":{"type":"object","properties":{"sessionId":{"type":"string"},"path":{"type":"string","description":"Path under /app."},"text":{"type":"string","description":"Text content(written as UTF-8)"}},"required":["sessionId","path","text"]}}}]}
+HTTP/1.1 200 OK
+Server: nginx
+Date: Sat, 14 Feb 2026 03:52:06 GMT
+Content-Type: text/event-stream; charset=utf-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+cache-control: no-cache
+access-control-allow-origin: *
+access-control-allow-headers: *
+access-control-allow-methods: GET, POST, OPTIONS
+x-process-time: 0.09400057792663574
+Cache-Control: no-cache
+
+157
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":null},"logprobs":null,"finish_reason":null}],"usage":{"prompt_tokens":1391,"total_tokens":1391,"completion_tokens":0},"prompt_token_ids":null}
+
+1
+
+
+14a
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"<think>用户","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1392,"completion_tokens":1}}
+
+1
+
+
+143
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"想要","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1393,"completion_tokens":2}}
+
+1
+
+
+143
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"计算","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1394,"completion_tokens":3}}
+
+1
+
+
+13e
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":" ","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1395,"completion_tokens":4}}
+
+1
+
+
+140
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"123","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1396,"completion_tokens":5}}
+
+1
+
+
+140
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"45","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1397,"completion_tokens":6}}
+
+
+13e
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"/","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1398,"completion_tokens":7}}
+
+1
+
+
+140
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"543","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1399,"completion_tokens":8}}
+
+1
+
+
+13f
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"21","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1400,"completion_tokens":9}}
+
+1
+
+
+142
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":" 的","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1401,"completion_tokens":10}}
+
+1
+
+
+144
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"结果","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1402,"completion_tokens":11}}
+
+1
+
+
+14d
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"。这是一个","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1403,"completion_tokens":12}}
+
+1
+
+
+147
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"简单的","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1404,"completion_tokens":13}}
+
+1
+
+
+144
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"数学","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1405,"completion_tokens":14}}
+
+1
+
+
+144
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"计算","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1406,"completion_tokens":15}}
+
+1
+
+
+144
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"，我","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1407,"completion_tokens":16}}
+
+1
+
+
+14a
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"可以直接","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1408,"completion_tokens":17}}
+
+1
+
+
+144
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"给出","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1409,"completion_tokens":18}}
+
+1
+
+
+144
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"答案","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1410,"completion_tokens":19}}
+
+1
+
+
+145
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"。\n\n","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1411,"completion_tokens":20}}
+
+1
+
+
+141
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"123","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1412,"completion_tokens":21}}
+
+1
+
+
+140
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"45","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1413,"completion_tokens":22}}
+
+1
+
+
+141
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":" ÷","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1414,"completion_tokens":23}}
+
+1
+
+
+13f
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":" ","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1415,"completion_tokens":24}}
+
+1
+
+
+141
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"543","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1416,"completion_tokens":25}}
+
+1
+
+
+140
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"21","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1417,"completion_tokens":26}}
+
+1
+
+
+143
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":" ≈","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1418,"completion_tokens":27}}
+
+
+13f
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":" ","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1419,"completion_tokens":28}}
+
+1
+
+
+13f
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"0","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1420,"completion_tokens":29}}
+
+1
+
+
+140
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":".","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1421,"completion_tokens":30}}
+
+
+141
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"227","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1422,"completion_tokens":31}}
+
+1
+
+
+13f
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"3","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1423,"completion_tokens":32}}
+
+1
+
+
+145
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"...\n\n","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1424,"completion_tokens":33}}
+
+1
+
+
+144
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"让我","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1425,"completion_tokens":34}}
+
+1
+
+
+141
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"用","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1426,"completion_tokens":35}}
+
+1
+
+
+144
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"代码","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1427,"completion_tokens":36}}
+
+1
+
+
+141
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"来","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1428,"completion_tokens":37}}
+
+1
+
+
+144
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"计算","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1429,"completion_tokens":38}}
+
+1
+
+
+144
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"精确","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1430,"completion_tokens":39}}
+
+1
+
+
+141
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"值","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1431,"completion_tokens":40}}
+
+1
+
+
+143
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"。\n","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1432,"completion_tokens":41}}
+
+1
+
+
+146
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"</think>","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1433,"completion_tokens":42}}
+
+1
+
+
+144
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"content":"\n\n\n","reasoning_content":null},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1434,"completion_tokens":43}}
+
+1
+
+
+1b4
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"reasoning_content":null,"tool_calls":[{"id":"call_67eda652bea74480a62e055f","type":"function","index":0,"function":{"name":"run_command","arguments":""}}]},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1443,"completion_tokens":52}}
+
+1
+
+
+169
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"reasoning_content":null,"tool_calls":[{"index":0,"function":{"arguments":"{"}}]},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1444,"completion_tokens":53}}
+
+1
+
+
+19e
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"reasoning_content":null,"tool_calls":[{"index":0,"function":{"arguments":"\"command\": \"python3 -c \\\"print(12345/54321)\\\"\""}}]},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1465,"completion_tokens":74}}
+
+1
+
+
+181
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"reasoning_content":null,"tool_calls":[{"index":0,"function":{"arguments":", \"sessionId\": \"main\""}}]},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1476,"completion_tokens":85}}
+
+1
+
+
+169
+data: {"id":"chatcmpl-906cbf870516b675","object":"chat.completion.chunk","created":1771041126,"model":"minimax-m2.5","choices":[{"index":0,"delta":{"reasoning_content":null,"tool_calls":[{"index":0,"function":{"arguments":"}"}}]},"logprobs":null,"finish_reason":null,"token_ids":null}],"usage":{"prompt_tokens":1391,"total_tokens":1479,"completion_tokens":88}}
+
+1
+
+
+178
+data: {"id": "chatcmpl-906cbf870516b675", "object": "chat.completion.chunk", "created": 1771041126, "model": "minimax-m2.5", "choices": [{"index": 0, "delta": {"content": "", "reasoning_content": null}, "logprobs": null, "finish_reason": "tool_calls", "stop_reason": null, "token_ids": null}], "usage": {"prompt_tokens": 1391, "total_tokens": 1481, "completion_tokens": 90}}
+
+
+e
+data: [DONE]
+
+
+0
+
