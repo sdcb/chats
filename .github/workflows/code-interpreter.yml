@@ -35,6 +35,7 @@ env:
     fonts-cascadia-code
     fonts-roboto
     imagemagick
+    ripgrep
   PIP_PACKAGES: >-
     numpy
     pandas
