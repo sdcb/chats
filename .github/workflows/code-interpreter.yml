@@ -135,7 +135,6 @@ jobs:
         run: |
           REGISTRY=${{ vars.DOCKER_REGISTRY }} NAMESPACE=${{ vars.DOCKER_NAMESPACE }} IMAGE_NAME=${{ env.IMAGE_NAME }} RUN_NUMBER=${{ github.run_number }} bash .github/workflows/code-interpreter/create-manifest-run-number.sh
 
-      - name: Create and push latest manifest (main branch only)
-        if: github.ref_name == 'main'
+      - name: Create and push latest manifest
         run: |
           REGISTRY=${{ vars.DOCKER_REGISTRY }} NAMESPACE=${{ vars.DOCKER_NAMESPACE }} IMAGE_NAME=${{ env.IMAGE_NAME }} RUN_NUMBER=${{ github.run_number }} bash .github/workflows/code-interpreter/create-manifest-latest.sh
