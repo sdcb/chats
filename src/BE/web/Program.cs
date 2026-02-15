@@ -89,6 +89,7 @@ public class Program
         builder.Services.AddSingleton<FileImageInfoService>();
         builder.Services.AddSingleton<AsyncClientInfoManager>();
         builder.Services.AddSingleton<AsyncCacheUsageManager>();
+        builder.Services.AddSingleton<UserModelLoadBalancer>();
         builder.Services.AddSingleton<GitHubReleaseChecker>();
 
         builder.Services.AddScoped<CurrentUser>();
