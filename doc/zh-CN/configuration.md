@@ -29,8 +29,8 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 | [`CodePod:WorkDir`](#53-codepodworkdir)                                                                                          | `/app`                                  | 建议保持默认值              |
 | [`CodePod:ArtifactsDir`](#54-codepodartifactsdir)                                                                                | `artifacts`                             | 相对于WorkDir的子目录       |
 | [`CodePod:LabelPrefix`](#55-codepodlabelprefix)                                                                                  | `codepod`                               | 用于容器命名和标签          |
-| [`CodePod:OutputOptions:MaxOutputBytes`](#56-codepodoutputoptionsmaxoutputbytes)                                                 | `6144`                                  | 6KB，超过会截断             |
-| [`CodeInterpreter:DefaultImage`](#61-codeinterpreterdefaultimage)                                                                | `sdcb/code-interpreter:r-26`            | 新建会话默认镜像            |
+| [`CodePod:OutputOptions:MaxOutputBytes`](#56-codepodoutputoptionsmaxoutputbytes)                                                 | `8192`                                  | 8KB，超过会截断             |
+| [`CodeInterpreter:DefaultImage`](#61-codeinterpreterdefaultimage)                                                                | `sdcb/code-interpreter:latest`            | 新建会话默认镜像            |
 | [`CodeInterpreter:DefaultImageDescription`](#62-codeinterpreterdefaultimagedescription)                                          | `Pre-installed with common packages...` | 用于丰富系统提示词          |
 | [`CodeInterpreter:DefaultTimeoutSeconds`](#63-codeinterpreterdefaulttimeoutseconds)                                              | `300`                                   | null表示近似无限(24小时)    |
 | [`CodeInterpreter:SessionIdleTimeoutSeconds`](#64-codeinterpretersessionidletimeoutseconds)                                      | `1800`                                  | 30分钟，会话空闲超时        |
@@ -227,10 +227,10 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 ### 5.6 `CodePod:OutputOptions:MaxOutputBytes`
 
 - **类型**：整数（字节）
-- **默认值**：`6144`（6KB）
+- **默认值**：`8192`（8KB）
 - **用途**：限制容器命令输出（stdout/stderr）的最大字节数，超过会触发截断（默认策略为保留首尾，并插入“输出已截断”的提示）。
 
-- **环境变量示例**：`CodePod__OutputOptions__MaxOutputBytes=6144`
+- **环境变量示例**：`CodePod__OutputOptions__MaxOutputBytes=8192`
 
 ---
 
