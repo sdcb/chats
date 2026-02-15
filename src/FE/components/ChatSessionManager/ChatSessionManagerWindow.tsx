@@ -334,7 +334,11 @@ export default function ChatSessionManagerWindow({
                     activeTab === 'info' ? 'visible' : 'invisible pointer-events-none',
                   )}
                 >
-                  <SessionInfoCard session={selectedSession} />
+                  <SessionInfoCard
+                    chatId={chatId}
+                    session={selectedSession}
+                    onRefreshTimes={loadSessions}
+                  />
                 </div>
 
                 {/* Environment variables tab */}

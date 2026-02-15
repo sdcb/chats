@@ -2,7 +2,8 @@ export type DockerSessionDto = {
   encryptedSessionId: string;
   label: string;
   image: string;
-  containerId: string;
+  isBoundToTurn: boolean;
+  boundTurnSpanId: number | null;
   cpuCores: number | null;
   memoryBytes: number | null;
   maxProcesses: number | null;

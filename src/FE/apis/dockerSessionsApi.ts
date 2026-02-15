@@ -276,3 +276,14 @@ export const saveDockerUserEnvironmentVariables = (
     { body, suppressDefaultToast: true },
   );
 };
+
+export const touchDockerSession = (
+  chatId: string,
+  encryptedSessionId: string,
+) => {
+  const fetchService = createFetchClient();
+  return fetchService.post<void>(
+    `/api/chat/${chatId}/docker-sessions/${encodeURIComponent(encryptedSessionId)}/touch`,
+    { suppressDefaultToast: true },
+  );
+};

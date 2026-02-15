@@ -55,7 +55,8 @@ public sealed class ChatDockerSessionsController(
                 _idEncryption.Encrypt(s.Id, EncryptionPurpose.DockerSessionId),
                 s.Label,
                 s.Image,
-                s.ContainerId,
+                s.OwnerTurnId != null,
+                s.OwnerTurnId == null ? null : s.OwnerTurn!.SpanId,
                 s.CpuCores,
                 s.MemoryBytes,
                 s.MaxProcesses,
@@ -154,7 +155,8 @@ public sealed class ChatDockerSessionsController(
             _idEncryption.Encrypt(dbSession.Id, EncryptionPurpose.DockerSessionId),
             dbSession.Label,
             dbSession.Image,
-            dbSession.ContainerId,
+            false,
+            null,
             dbSession.CpuCores,
             dbSession.MemoryBytes,
             dbSession.MaxProcesses,
@@ -562,6 +564,21 @@ public sealed class ChatDockerSessionsController(
         await _docker.UploadFileAsync(session.ContainerId, UserEnvFilePath, bytes, cancellationToken);
         await TouchSession(session.Id, cancellationToken);
         return Ok();
+    }
+
+    [HttpPost("{encryptedSessionId}/touch")]
+    public async Task<IActionResult> TouchDockerSession(
+        string encryptedChatId,
+        [Required] string encryptedSessionId,
+        CancellationToken cancellationToken)
+    {
+        int chatId = _idEncryption.DecryptChatId(encryptedChatId);
+        long sessionId = _idEncryption.DecryptAsInt64(encryptedSessionId, EncryptionPurpose.DockerSessionId);
+        ChatDockerSession? session = await GetActiveSessionForChat(chatId, sessionId, cancellationToken);
+        if (session == null) return NotFound();
+
+        await TouchSession(session.Id, cancellationToken);
+        return NoContent();
     }
 
     private static Dictionary<string, string> ParsePrintEnvOutput(string output)
