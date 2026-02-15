@@ -53,7 +53,7 @@ const TemperatureSlider: FC<Props> = ({
           delayDuration={100}
           trigger={
             <Button variant="ghost" className="p-0 m-0 h-auto">
-              <IconInfo size={18} />
+              <IconInfo size={20} />
             </Button>
           }
           content={t(

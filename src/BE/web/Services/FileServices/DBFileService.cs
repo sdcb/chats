@@ -5,11 +5,11 @@ using DBFile = Chats.DB.File;
 
 namespace Chats.BE.Services.FileServices;
 
-public class DBFileService(ChatsDB db, IFileServiceFactory fsf, CurrentUser currentUser, FileImageInfoService fiis)
+public class DBFileService(ChatsDB db, IFileServiceFactory fsf, CurrentUser currentUser, FileImageInfoService fiis, IHttpClientFactory httpClientFactory)
 {
     public async Task<DBFile> StoreImage(ImageChatSegment image, int clientInfoId, FileService dbfs, CancellationToken cancellationToken = default)
     {
-        DBFileDef def = await image.Download(cancellationToken);
+        DBFileDef def = await image.Download(httpClientFactory, cancellationToken);
         IFileService fs = fsf.Create(dbfs);
 
         // Get image info before upload

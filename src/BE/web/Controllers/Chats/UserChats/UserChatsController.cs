@@ -255,6 +255,15 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
 
         if (currentUser.IsAdmin)
         {
+            // Deassociate docker sessions before deleting chat
+            await db.ChatDockerSessions
+                .Where(x => x.OwnerChatId == chatId)
+                .ExecuteUpdateAsync(x => x.SetProperty(p => p.OwnerChatId, (int?)null), cancellationToken);
+
+            await db.ChatDockerSessions
+                .Where(x => x.OwnerTurn!.ChatId == chatId)
+                .ExecuteUpdateAsync(x => x.SetProperty(p => p.OwnerTurnId, (int?)null), cancellationToken);
+
             await db.Chats
                 .Where(x => x.Id == chatId)
                 .ExecuteDeleteAsync(cancellationToken);

@@ -137,7 +137,7 @@ export const GenerateInfoPopoverContent = ({
             {showInputTotalCost && (
               <GenerateInfoItem
                 name={'Input cost'}
-                value={info ? '￥' + formatNumberAsMoney(+totalInputPrice, 6) : '-'}
+                value={info ? formatNumberAsMoney(+totalInputPrice, 6) : '-'}
                 icon="💰"
                 loading={loading}
               />
@@ -145,7 +145,7 @@ export const GenerateInfoPopoverContent = ({
             {showInputCachedCost && (
               <GenerateInfoItem
                 name={'Input cost (cached)'}
-                value={info ? '￥' + formatNumberAsMoney(+inputCachedPrice, 6) : '-'}
+                value={info ? formatNumberAsMoney(+inputCachedPrice, 6) : '-'}
                 icon="♻️"
                 loading={loading}
               />
@@ -153,14 +153,14 @@ export const GenerateInfoPopoverContent = ({
             {showOutputCost && (
               <GenerateInfoItem
                 name={'Response cost'}
-                value={info ? '￥' + formatNumberAsMoney(+outputPrice, 6) : '-'}
+                value={info ? formatNumberAsMoney(+outputPrice, 6) : '-'}
                 icon="💵"
                 loading={loading}
               />
             )}
             <GenerateInfoItem
               name={'total cost'}
-              value={info ? '￥' + formatNumberAsMoney(totalCost, 6) : '-'}
+              value={info ? formatNumberAsMoney(totalCost, 6) : '-'}
               icon="💳"
               loading={loading}
             />

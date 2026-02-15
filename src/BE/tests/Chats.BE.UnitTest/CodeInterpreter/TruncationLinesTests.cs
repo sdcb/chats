@@ -17,67 +17,6 @@ namespace Chats.BE.UnitTest.CodeInterpreter;
 
 public sealed class TruncationLinesTests
 {
-    private sealed class FakeDockerService : IDockerService
-    {
-        private readonly Dictionary<(string containerId, string filePath), byte[]> _files = new();
-
-        public void AddFile(string containerId, string filePath, byte[] content)
-        {
-            _files[(containerId, filePath)] = content;
-        }
-
-        public void Dispose() { }
-
-        public Task EnsureImageAsync(string image, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<ContainerInfo> CreateContainerAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<List<ContainerInfo>> GetManagedContainersAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(new List<ContainerInfo>());
-
-        public Task<ContainerInfo?> GetContainerAsync(string containerId, CancellationToken cancellationToken = default)
-            => Task.FromResult<ContainerInfo?>(null);
-
-        public Task DeleteContainerAsync(string containerId, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task DeleteAllManagedContainersAsync(CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task UploadFileAsync(string containerId, string containerPath, byte[] content, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<List<FileEntry>> ListDirectoryAsync(string containerId, string path, CancellationToken cancellationToken = default)
-            => Task.FromResult(new List<FileEntry>());
-
-        public Task<byte[]> DownloadFileAsync(string containerId, string filePath, CancellationToken cancellationToken = default)
-        {
-            if (_files.TryGetValue((containerId, filePath), out byte[]? content))
-            {
-                return Task.FromResult(content);
-            }
-
-            throw new InvalidOperationException($"File not found in fake docker: {containerId}:{filePath}");
-        }
-
-        public Task<SessionUsage?> GetContainerStatsAsync(string containerId, CancellationToken cancellationToken = default)
-            => Task.FromResult<SessionUsage?>(null);
-    }
-
     private static ServiceProvider CreateServiceProvider(string dbName)
     {
         ServiceCollection services = new();
@@ -180,7 +119,7 @@ public sealed class TruncationLinesTests
         
         // Create content with 10 lines, each 20 bytes (200 bytes total)
         string content = string.Join("\n", Enumerable.Range(1, 10).Select(i => $"Line {i:D2} - Data"));
-        docker.AddFile("c1", "/app/test.txt", Encoding.UTF8.GetBytes(content));
+        docker.AddFile("c1", "test.txt", Encoding.UTF8.GetBytes(content));
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(currentTurnId: 1);
         AddSessionToCtx(ctx, "s", session);

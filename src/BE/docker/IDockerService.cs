@@ -8,21 +8,31 @@ namespace Chats.DockerInterface;
 public interface IDockerService : IDisposable
 {
     /// <summary>
-    /// 确保镜像存在
+    /// 获取配置（用于接口默认实现）
+    /// </summary>
+    CodePodConfig Config { get; }
+    /// <summary>
+    /// 确保镜像存在（拉取进度通过 stdout 输出）
     /// </summary>
     /// <param name="image">Docker镜像名称</param>
-    Task EnsureImageAsync(string image, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<CommandOutputEvent> EnsureImageAsync(string image, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 创建并启动容器（resourceLimits/networkMode 为 null 时使用默认值）
+    /// 创建并启动容器（resourceLimits/networkMode 为 null 时使用默认值）。
+    /// 调用前需先调用 EnsureImageAsync 确保镜像存在。
     /// </summary>
     /// <param name="image">Docker镜像名称</param>
-    Task<ContainerInfo> CreateContainerAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default);
+    Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 获取所有受管理的容器
     /// </summary>
     Task<List<ContainerInfo>> GetManagedContainersAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 列出本机 Docker daemon 的镜像标签（RepoTags）。
+    /// </summary>
+    Task<List<string>> ListImagesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 获取容器详情
@@ -65,9 +75,28 @@ public interface IDockerService : IDisposable
     Task UploadFileAsync(string containerId, string containerPath, byte[] content, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 列出容器中的目录
+    /// 列出容器中的目录（默认实现基于 ExecuteCommandAsync）
     /// </summary>
-    Task<List<FileEntry>> ListDirectoryAsync(string containerId, string path, CancellationToken cancellationToken = default);
+    async Task<List<FileEntry>> ListDirectoryAsync(string containerId, string path, CancellationToken cancellationToken = default)
+    {
+        string[] command = Config.GetListDirectoryCommand(path);
+        CommandExitEvent result = await ExecuteCommandAsync(containerId, command, "/", 30, cancellationToken);
+
+        if (result.ExitCode != 0)
+        {
+            string errorLower = result.Stderr?.ToLowerInvariant() ?? "";
+            if (errorLower.Contains("no such file") || errorLower.Contains("cannot find") ||
+                errorLower.Contains("cannot access") || errorLower.Contains("not exist"))
+            {
+                throw new FileNotFoundException(result.Stderr, path);
+            }
+            throw new InvalidOperationException($"Failed to list directory: {result.Stderr}");
+        }
+
+        return Config.IsWindowsContainer
+            ? DockerOutputParser.ParseWindowsDirOutput(path, result.Stdout ?? "")
+            : DockerOutputParser.ParseLinuxLsOutput(path, result.Stdout ?? "");
+    }
 
     /// <summary>
     /// 从容器下载文件

@@ -2,12 +2,13 @@
 using Chats.BE.DB.Jsons;
 using Chats.BE.Services;
 using Chats.BE.Services.Configs;
+using Chats.BE.Services.Keycloak;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Chats.BE.Controllers.Auth;
 
 [Route("api/auth/signin/keycloak")]
-public class KeycloakController(CsrfTokenService csrf, GlobalDBConfig globalConfig) : ControllerBase
+public class KeycloakController(CsrfTokenService csrf, GlobalDBConfig globalConfig, KeycloakOAuthClient keycloakClient) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> SignIn(KeycloakSigninRequest req, CancellationToken cancellationToken)
@@ -23,7 +24,7 @@ public class KeycloakController(CsrfTokenService csrf, GlobalDBConfig globalConf
             return NotFound("Keycloak config not found");
         }
 
-        string keycloakRedirectUrl = await config.GenerateLoginUrl(req.CallbackUrl, cancellationToken);
+        string keycloakRedirectUrl = await keycloakClient.GenerateLoginUrl(config, req.CallbackUrl, cancellationToken);
         return Redirect(keycloakRedirectUrl);
     }
 }

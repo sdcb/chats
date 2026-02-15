@@ -7,7 +7,21 @@
 
 ---
 
-## [1.10.0](1.10.0.md) - 2026-01-14 ⭐ 最新版本
+## [1.10.1](1.10.1.md) - 2026-02-15 ⭐ 最新版本
+
+**核心亮点**：沙箱管理器增强 · 服务端 ETag 缓存 · ChatMiniMap 导航 · API Key 管理升级 · Code Interpreter 镜像流水线更新
+
+- 🏷️ **沙箱管理器**：Session Manager 更名并增强，补齐信息/环境变量/文件/编辑等能力
+- ⚡ **ETag 缓存**：高频接口支持服务端 ETag + 304，移除前端聊天列表本地缓存
+- 🗺️ **ChatMiniMap**：新增右侧消息小地图，并将滚动控制从 ChatInput 迁移出去
+- 🔐 **API Keys**：创建后一次性展示完整 Key，列表脱敏，支持编辑与批量复制
+- 🐳 **镜像流水线**：skills 写入 `RUN_NUMBER` 构建标识、预装 `ripgrep`，非 main 分支也可发布 `latest` manifest
+
+[查看完整发布说明 →](1.10.1.md)
+
+---
+
+## [1.10.0](1.10.0.md) - 2026-01-14
 
 **核心亮点**：Docker 内置 Code Interpreter · `sdcb/code-interpreter` 镜像与 CI · 多提供商交错思考回传 · DeepSeek v3.2 `reasoning_content` 兼容 · 工具调用/上传/管理页优化
 

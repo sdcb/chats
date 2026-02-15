@@ -125,5 +125,24 @@ public class CodePodConfig
     /// Artifacts 目录路径（相对于 WorkDir）
     /// </summary>
     public string ArtifactsDir { get; set; } = "artifacts";
+
+    /// <summary>
+    /// 获取列出目录的命令
+    /// Linux: ls -la --full-time "path" (输出详细信息包括类型、大小、修改时间)
+    /// Windows: cmd /c dir /a /t:w "path" (使用原生命令)
+    /// </summary>
+    public string[] GetListDirectoryCommand(string path)
+    {
+        if (IsWindowsContainer)
+        {
+            // Windows cmd: dir /a 显示所有文件包括隐藏文件, /t:w 显示最后写入时间
+            return ["cmd", "/c", $"dir /a /t:w \"{path.Replace('/', '\\')}\""];
+        }
+        else
+        {
+            // Linux ls: -l 长格式, -a 包括隐藏文件, --full-time 完整时间格式
+            return ["ls", "-la", "--full-time", path];
+        }
+    }
 }
 

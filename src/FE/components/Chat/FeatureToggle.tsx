@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 
 const FeatureToggle = (props: {
   label: string;
@@ -26,8 +26,8 @@ const FeatureToggle = (props: {
           {label}
         </span>
         <div className="flex gap-1 items-center">
-          <Checkbox
-            defaultChecked={check}
+          <Switch
+            checked={check}
             onCheckedChange={(state: boolean) => {
               onChange(state);
               setCheck(state);

@@ -49,7 +49,6 @@ export default function MessageDetails() {
         <ChatMessage
           selectedChat={selectedChat}
           selectedMessages={selectedMessages}
-          messagesEndRef={null}
           readonly={true}
           isAdminView={true}
           onChangeChatLeafMessageId={handleChangeChatLeafMessageId}

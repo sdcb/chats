@@ -22,6 +22,7 @@ import {
 } from '@/apis/adminApis';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TriStateCheckbox } from '@/components/ui/tristate-checkbox';
 import { IconChevronDown, IconChevronRight, IconLoader, IconPencil } from '@/components/Icons';
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -637,31 +638,21 @@ export default function UserModelTree({ user, isExpanded, onToggle, onUserModelC
                         <div className={cn("transition-transform duration-200", isProviderExpanded && "rotate-0", !isProviderExpanded && "-rotate-90")}>
                           <IconChevronDown size={14} />
                         </div>
-                        <button
-                          type="button"
-                          className="flex items-center justify-center"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (!isProviderPending) {
-                              handleBatchToggleProvider(provider.providerId);
-                            }
-                          }}
-                          disabled={isProviderPending}
-                        >
-                          {isProviderPending ? (
-                            <IconLoader size={20} className="animate-spin text-muted-foreground" />
-                          ) : providerCheckState === 'checked' ? (
-                            <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center hover:bg-green-600 transition-colors">
-                              <span className="text-white text-xs">✓</span>
-                            </div>
-                          ) : providerCheckState === 'indeterminate' ? (
-                            <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center hover:bg-blue-600 transition-colors">
-                              <span className="text-white text-xs">−</span>
-                            </div>
-                          ) : (
-                            <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 hover:border-primary transition-colors" />
-                          )}
-                        </button>
+                        {isProviderPending ? (
+                          <IconLoader size={20} className="animate-spin text-muted-foreground" />
+                        ) : (
+                          <TriStateCheckbox
+                            state={providerCheckState}
+                            size="lg"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!isProviderPending) {
+                                handleBatchToggleProvider(provider.providerId);
+                              }
+                            }}
+                            disabled={isProviderPending}
+                          />
+                        )}
                         <ModelProviderIcon providerId={provider.providerId} className="w-5 h-5" />
                         <span className="text-sm font-medium">
                           {feProvider ? t(feProvider.name) : `Provider ${provider.providerId}`}
@@ -715,31 +706,21 @@ export default function UserModelTree({ user, isExpanded, onToggle, onUserModelC
                                   <div className={cn("transition-transform duration-200", isKeyExpanded && "rotate-0", !isKeyExpanded && "-rotate-90")}>
                                     <IconChevronDown size={12} />
                                   </div>
-                                  <button
-                                    type="button"
-                                    className="flex items-center justify-center"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (!isKeyPending && !isProviderPending) {
-                                        handleBatchToggleKey(key.id);
-                                      }
-                                    }}
-                                    disabled={isKeyPending || isProviderPending}
-                                  >
-                                    {isKeyPending ? (
-                                      <IconLoader size={16} className="animate-spin text-muted-foreground" />
-                                    ) : keyCheckState === 'checked' ? (
-                                      <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center hover:bg-green-600 transition-colors">
-                                        <span className="text-white text-[10px]">✓</span>
-                                      </div>
-                                    ) : keyCheckState === 'indeterminate' ? (
-                                      <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center hover:bg-blue-600 transition-colors">
-                                        <span className="text-white text-[10px]">−</span>
-                                      </div>
-                                    ) : (
-                                      <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30 hover:border-primary transition-colors" />
-                                    )}
-                                  </button>
+                                  {isKeyPending ? (
+                                    <IconLoader size={16} className="animate-spin text-muted-foreground" />
+                                  ) : (
+                                    <TriStateCheckbox
+                                      state={keyCheckState}
+                                      size="md"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (!isKeyPending && !isProviderPending) {
+                                          handleBatchToggleKey(key.id);
+                                        }
+                                      }}
+                                      disabled={isKeyPending || isProviderPending}
+                                    />
+                                  )}
                                   <span className="text-xs font-medium">{key.name}</span>
                                   <Badge variant="outline" className="text-xs">
                                     {t('{{assigned}}/{{total}} models', { 
@@ -787,39 +768,24 @@ export default function UserModelTree({ user, isExpanded, onToggle, onUserModelC
                                       >
                                         <div className="flex items-center gap-2 flex-1 min-w-0">
                                           {isPending ? (
-                                            <IconLoader size={14} className="animate-spin text-muted-foreground" />
-                                          ) : model.isAssigned ? (
-                                            <button
-                                              type="button"
-                                              className="flex items-center justify-center flex-shrink-0"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (!isDisabled) {
-                                                  handleDeleteModel(model, key.id);
-                                                }
-                                              }}
-                                              disabled={isDisabled}
-                                            >
-                                              <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center hover:bg-green-600 transition-colors">
-                                                <span className="text-white text-xs">✓</span>
-                                              </div>
-                                              <span className="sr-only">{t('Remove Model')}</span>
-                                            </button>
+                                            <IconLoader size={14} className="animate-spin text-muted-foreground flex-shrink-0" />
                                           ) : (
-                                            <button
-                                              type="button"
-                                              className="flex items-center justify-center flex-shrink-0"
+                                            <TriStateCheckbox
+                                              state={model.isAssigned ? 'checked' : 'unchecked'}
+                                              size="md"
                                               onClick={(e) => {
                                                 e.stopPropagation();
                                                 if (!isDisabled) {
-                                                  handleAddModel(model, key.id);
+                                                  if (model.isAssigned) {
+                                                    handleDeleteModel(model, key.id);
+                                                  } else {
+                                                    handleAddModel(model, key.id);
+                                                  }
                                                 }
                                               }}
                                               disabled={isDisabled}
-                                            >
-                                              <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30 hover:border-primary transition-colors" />
-                                              <span className="sr-only">{t('Add Model')}</span>
-                                            </button>
+                                              className="flex-shrink-0"
+                                            />
                                           )}
                                           <div className="flex items-center gap-2 flex-1 min-w-0">
                                             <span className={cn(

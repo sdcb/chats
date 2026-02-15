@@ -88,7 +88,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
         <FeatureToggle
           label={t('Internet Search')}
           enable={webSearchEnabled}
-          icon={<IconWorld size={16} />}
+          icon={<IconWorld size={20} />}
           onChange={onChangeEnableSearch}
         />
       )}
@@ -98,7 +98,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
         <FeatureToggle
           label={t('Code Execution')}
           enable={codeExecutionEnabled}
-          icon={<IconCode size={16} />}
+          icon={<IconCode size={20} />}
           onChange={onChangeCodeExecution}
         />
       )}
@@ -128,7 +128,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
         <div className="flex flex-col gap-4">
           <div className="flex justify-between">
             <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
-              <IconTemperature size={16} />
+              <IconTemperature size={20} />
               {t('Temperature')}
             </div>
             <Button
@@ -141,7 +141,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
                   onChangeTemperature(null);
                 }
               }}
-              className="h-6 px-2 text-xs"
+              className="h-6 px-2 text-sm"
             >
               {temperature === null ? t('Default') : t('Custom')}
             </Button>
@@ -170,7 +170,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
       <div className="flex flex-col gap-4">
         <div className="flex justify-between">
           <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
-            <IconTokens size={16} />
+            <IconTokens size={20} />
             {t('Max Output Tokens')}
           </div>
           <Button
@@ -183,7 +183,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
                 onChangeMaxOutputTokens(null);
               }
             }}
-            className="h-6 px-2 text-xs"
+            className="h-6 px-2 text-sm"
           >
             {maxOutputTokens === null ? t('Default') : t('Custom')}
           </Button>
@@ -212,7 +212,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
         <div className="flex flex-col gap-4">
           <div className="flex justify-between">
             <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
-              <IconReasoning size={16} />
+              <IconReasoning size={20} />
               {t('Thinking Budget')}
             </div>
             <Button
@@ -225,7 +225,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
                   onChangeThinkingBudget(null);
                 }
               }}
-              className="h-6 px-2 text-xs"
+              className="h-6 px-2 text-sm"
             >
               {thinkingBudget === null ? t('No Thinking') : t('Custom')}
             </Button>
@@ -242,7 +242,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
                   onChangeThinkingBudget(values[0]);
                 }}
               />
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="text-sm text-gray-500 mt-1">
                 {thinkingBudget || 0}
               </div>
             </div>

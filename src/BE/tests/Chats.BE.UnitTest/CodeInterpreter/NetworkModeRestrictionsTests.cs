@@ -1,8 +1,7 @@
 using System.Text.Json.Nodes;
-using Chats.BE.Infrastructure.Functional;
+using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Services.CodeInterpreter;
 using Chats.DockerInterface;
-using Chats.DockerInterface.Models;
 using Chats.DB;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -31,7 +30,7 @@ public sealed class NetworkModeRestrictionsTests
     [Fact]
     public void AddTools_ShouldEmitAllowedNetworkModes_InCreateDockerSessionSchema()
     {
-        TrackingDockerService docker = new();
+        FakeDockerService docker = new() { ThrowOnDockerCalls = true };
         CodeInterpreterExecutor executor = CreateExecutor(docker, new CodeInterpreterOptions
         {
             DefaultNetworkMode = "bridge",
@@ -58,7 +57,7 @@ public sealed class NetworkModeRestrictionsTests
     [Fact]
     public async Task CreateDockerSession_ShouldReject_DisallowedHigherNetworkMode()
     {
-        TrackingDockerService docker = new();
+        FakeDockerService docker = new() { ThrowOnDockerCalls = true };
         CodeInterpreterExecutor executor = CreateExecutor(docker, new CodeInterpreterOptions
         {
             DefaultNetworkMode = "bridge",
@@ -67,7 +66,7 @@ public sealed class NetworkModeRestrictionsTests
 
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx();
 
-        Result<string> done = await executor.CreateDockerSession(
+        ToolProgressDelta result = await executor.CreateDockerSession(
             ctx,
             image: null,
             label: null,
@@ -75,15 +74,17 @@ public sealed class NetworkModeRestrictionsTests
             cpuCores: null,
             maxProcesses: null,
             networkMode: "host",
-            cancellationToken: CancellationToken.None);
+            cancellationToken: CancellationToken.None).LastAsync();
 
-        Assert.True(done.IsFailure);
-        Assert.Contains("Requested networkMode 'host' exceeds MaxAllowedNetworkMode 'bridge'", done.Error);
+        Assert.IsType<ToolCompletedToolProgressDelta>(result);
+        ToolCompletedToolProgressDelta completed = (ToolCompletedToolProgressDelta)result;
+        Assert.True(completed.Result.IsFailure);
+        Assert.Contains("Requested networkMode 'host' exceeds MaxAllowedNetworkMode 'bridge'", completed.Result.Error);
         Assert.False(docker.EnsureImageCalled);
         Assert.False(docker.CreateContainerCalled);
     }
 
-    private static CodeInterpreterExecutor CreateExecutor(TrackingDockerService docker, CodeInterpreterOptions options)
+    private static CodeInterpreterExecutor CreateExecutor(FakeDockerService docker, CodeInterpreterOptions options)
     {
         return new CodeInterpreterExecutor(
             docker,
@@ -110,36 +111,4 @@ public sealed class NetworkModeRestrictionsTests
         public IServiceScope CreateScope() => throw new InvalidOperationException("ScopeFactory should not be used in this test");
     }
 
-    private sealed class TrackingDockerService : IDockerService
-    {
-        public bool EnsureImageCalled { get; private set; }
-        public bool CreateContainerCalled { get; private set; }
-
-        public void Dispose() { }
-
-        public Task EnsureImageAsync(string image, CancellationToken cancellationToken = default)
-        {
-            EnsureImageCalled = true;
-            throw new InvalidOperationException("Docker should not be called in this test");
-        }
-
-        public Task<ContainerInfo> CreateContainerAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default)
-        {
-            CreateContainerCalled = true;
-            throw new InvalidOperationException("Docker should not be called in this test");
-        }
-
-        public Task<List<ContainerInfo>> GetManagedContainersAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<ContainerInfo?> GetContainerAsync(string containerId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task DeleteContainerAsync(string containerId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task DeleteAllManagedContainersAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task UploadFileAsync(string containerId, string containerPath, byte[] content, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<List<FileEntry>> ListDirectoryAsync(string containerId, string path, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<byte[]> DownloadFileAsync(string containerId, string filePath, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<SessionUsage?> GetContainerStatsAsync(string containerId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-    }
 }

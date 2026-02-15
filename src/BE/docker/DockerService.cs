@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Chats.DockerInterface.Exceptions;
 using Chats.DockerInterface.Models;
 using Docker.DotNet;
 using Docker.DotNet.Models;
@@ -19,52 +18,110 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
 {
     private readonly DockerClient _client = new DockerClientConfiguration(config.GetDockerEndpointUri()).CreateClient();
 
-    public async Task EnsureImageAsync(string image, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public CodePodConfig Config => config;
+
+    public async IAsyncEnumerable<CommandOutputEvent> EnsureImageAsync(string image, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        await WrapDockerOperationAsync("EnsureImage", async () =>
+        // 检查镜像是否存在
+        bool imageExists = false;
+        try
         {
-            try
+            await _client.Images.InspectImageAsync(image, cancellationToken);
+            imageExists = true;
+        }
+        catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            imageExists = false;
+        }
+
+        if (imageExists)
+        {
+            yield return new CommandStdoutEvent($"Image {image} already exists\n");
+            yield break;
+        }
+
+        // 镜像不存在，需要拉取
+        yield return new CommandStdoutEvent($"Pulling image {image}...\n");
+
+        // 使用 Channel 来桥接 Progress 回调和 IAsyncEnumerable
+        System.Threading.Channels.Channel<string> channel = System.Threading.Channels.Channel.CreateUnbounded<string>();
+
+        Task pullTask = _client.Images.CreateImageAsync(
+            new ImagesCreateParameters { FromImage = image },
+            null,
+            new Progress<JSONMessage>(m =>
             {
-                await _client.Images.InspectImageAsync(image, cancellationToken);
-                logger?.LogInformation("Image {Image} already exists", image);
-            }
-            catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                logger?.LogInformation("Pulling image {Image}...", image);
-                await _client.Images.CreateImageAsync(
-                    new ImagesCreateParameters { FromImage = image },
-                    null,
-                    new Progress<JSONMessage>(m =>
-                    {
-                        if (!string.IsNullOrEmpty(m.Status))
-                        {
-                            logger?.LogDebug("{Status}", m.Status);
-                        }
-                    }),
-                    cancellationToken);
-                logger?.LogInformation("Image {Image} pulled successfully", image);
-            }
-        });
+                if (!string.IsNullOrEmpty(m.Status))
+                {
+                    string message = FormatPullProgressMessage(m);
+                    channel.Writer.TryWrite(message);
+                }
+            }),
+            cancellationToken);
+
+        // 启动一个任务在 pull 完成后关闭 channel
+        _ = pullTask.ContinueWith(_ => channel.Writer.Complete(), TaskScheduler.Default);
+
+        await foreach (string message in channel.Reader.ReadAllAsync(cancellationToken))
+        {
+            yield return new CommandStdoutEvent(message);
+        }
+
+        await pullTask; // 确保异常被传播
+        yield return new CommandStdoutEvent($"Image {image} pulled successfully\n");
     }
 
-    public async Task<ContainerInfo> CreateContainerAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default)
+    private static string FormatPullProgressMessage(JSONMessage m)
     {
-        return await WrapDockerOperationAsync("CreateContainer", async () =>
+        StringBuilder sb = new();
+
+        // 添加层 ID 前缀（如果存在）
+        if (!string.IsNullOrEmpty(m.ID))
         {
-            try
-            {
-                return await CreateContainerCoreAsync(image, resourceLimits, networkMode, cancellationToken);
-            }
-            catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                // Image may not exist locally when preloadImages=false. Pull once and retry.
-                await EnsureImageAsync(image, cancellationToken);
-                return await CreateContainerCoreAsync(image, resourceLimits, networkMode, cancellationToken);
-            }
-        });
+            sb.Append(m.ID);
+            sb.Append(": ");
+        }
+
+        sb.Append(m.Status);
+
+        // 如果有进度信息，显示下载/提取进度
+        if (m.Progress != null && m.Progress.Total > 0 && m.Progress.Current > 0)
+        {
+            double percentage = (double)m.Progress.Current / m.Progress.Total * 100;
+            string current = BytesFormatter.Format(m.Progress.Current);
+            string total = BytesFormatter.Format(m.Progress.Total);
+            sb.Append($" {current}/{total} ({percentage:F0}%)");
+        }
+
+        sb.Append('\n');
+        return sb.ToString();
     }
 
-    private async Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits, NetworkMode? networkMode, CancellationToken cancellationToken)
+    public async Task<List<string>> ListImagesAsync(CancellationToken cancellationToken = default)
+    {
+        IList<ImagesListResponse> images = await _client.Images.ListImagesAsync(
+            new ImagesListParameters { All = true },
+            cancellationToken);
+
+        HashSet<string> tags = new(StringComparer.OrdinalIgnoreCase);
+        foreach (ImagesListResponse img in images)
+        {
+            if (img.RepoTags == null) continue;
+            foreach (string tag in img.RepoTags)
+            {
+                if (string.IsNullOrWhiteSpace(tag)) continue;
+                if (tag == "<none>:<none>") continue;
+                tags.Add(tag);
+            }
+        }
+
+        return tags
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    public async Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default)
     {
         // 使用指定的资源限制或默认值
         ResourceLimits limits = resourceLimits ?? config.DefaultResourceLimits;
@@ -153,39 +210,36 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
 
     public async Task<List<ContainerInfo>> GetManagedContainersAsync(CancellationToken cancellationToken = default)
     {
-        return await WrapDockerOperationAsync("GetManagedContainers", async () =>
+        IList<ContainerListResponse> containers = await _client.Containers.ListContainersAsync(new ContainersListParameters
         {
-            IList<ContainerListResponse> containers = await _client.Containers.ListContainersAsync(new ContainersListParameters
+            All = true,
+            Filters = new Dictionary<string, IDictionary<string, bool>>
             {
-                All = true,
-                Filters = new Dictionary<string, IDictionary<string, bool>>
+                ["label"] = new Dictionary<string, bool>
                 {
-                    ["label"] = new Dictionary<string, bool>
-                    {
-                        [$"{config.LabelPrefix}.managed=true"] = true
-                    }
+                    [$"{config.LabelPrefix}.managed=true"] = true
                 }
-            }, cancellationToken);
-
-            List<ContainerInfo> result = new();
-            foreach (ContainerListResponse? container in containers)
-            {
-                result.Add(new ContainerInfo
-                {
-                    ContainerId = container.ID,
-                    Name = container.Names.FirstOrDefault()?.TrimStart('/') ?? container.ID[..12],
-                    Image = container.Image,
-                    DockerStatus = container.State,
-                    Status = SdkContainerStatus.Idle,
-                    CreatedAt = container.Created,
-                    Labels = new Dictionary<string, string>(container.Labels),
-                    ShellPrefix = config.IsWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"],
-                    Ip = ExtractContainerIp(container.NetworkSettings?.Networks)
-                });
             }
+        }, cancellationToken);
 
-            return result;
-        });
+        List<ContainerInfo> result = new();
+        foreach (ContainerListResponse? container in containers)
+        {
+            result.Add(new ContainerInfo
+            {
+                ContainerId = container.ID,
+                Name = container.Names.FirstOrDefault()?.TrimStart('/') ?? container.ID[..12],
+                Image = container.Image,
+                DockerStatus = container.State,
+                Status = SdkContainerStatus.Idle,
+                CreatedAt = container.Created,
+                Labels = new Dictionary<string, string>(container.Labels),
+                ShellPrefix = config.IsWindowsContainer ? ["cmd", "/c"] : ["/bin/sh", "-lc"],
+                Ip = ExtractContainerIp(container.NetworkSettings?.Networks)
+            });
+        }
+
+        return result;
     }
 
     public async Task<ContainerInfo?> GetContainerAsync(string containerId, CancellationToken cancellationToken = default)
@@ -258,39 +312,36 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
 
     public async Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
     {
-        return await WrapDockerOperationAsync("ExecuteCommand", async () =>
+        Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+
+        ContainerExecCreateResponse execCreate = await _client.Exec.ExecCreateContainerAsync(containerId, new ContainerExecCreateParameters
         {
-            Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+            AttachStdout = true,
+            AttachStderr = true,
+            WorkingDir = workingDirectory,
+            Cmd = command
+        }, cancellationToken);
 
-            ContainerExecCreateResponse execCreate = await _client.Exec.ExecCreateContainerAsync(containerId, new ContainerExecCreateParameters
-            {
-                AttachStdout = true,
-                AttachStderr = true,
-                WorkingDir = workingDirectory,
-                Cmd = command
-            }, cancellationToken);
+        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
 
-            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+        using MultiplexedStream stream = await _client.Exec.StartAndAttachContainerExecAsync(execCreate.ID, tty: false, cts.Token);
+        (string? stdout, string? stderr) = await ReadOutputAsync(stream, cts.Token);
 
-            using MultiplexedStream stream = await _client.Exec.StartAndAttachContainerExecAsync(execCreate.ID, tty: false, cts.Token);
-            (string? stdout, string? stderr) = await ReadOutputAsync(stream, cts.Token);
+        ContainerExecInspectResponse inspect = await _client.Exec.InspectContainerExecAsync(execCreate.ID, cancellationToken);
 
-            ContainerExecInspectResponse inspect = await _client.Exec.InspectContainerExecAsync(execCreate.ID, cancellationToken);
+        sw.Stop();
 
-            sw.Stop();
+        // 应用输出截断（保持与旧 CommandResult 行为一致）
+        (string truncatedStdout, bool stdoutTruncated) = CommandOutputTruncation.Truncate(stdout ?? string.Empty, config.OutputOptions);
+        (string truncatedStderr, bool stderrTruncated) = CommandOutputTruncation.Truncate(stderr ?? string.Empty, config.OutputOptions);
 
-            // 应用输出截断（保持与旧 CommandResult 行为一致）
-            (string truncatedStdout, bool stdoutTruncated) = CommandOutputTruncation.Truncate(stdout ?? string.Empty, config.OutputOptions);
-            (string truncatedStderr, bool stderrTruncated) = CommandOutputTruncation.Truncate(stderr ?? string.Empty, config.OutputOptions);
-
-            return new CommandExitEvent(
-                truncatedStdout,
-                truncatedStderr,
-                inspect.ExitCode,
-                sw.ElapsedMilliseconds,
-                stdoutTruncated || stderrTruncated);
-        }, containerId);
+        return new CommandExitEvent(
+            truncatedStdout,
+            truncatedStderr,
+            inspect.ExitCode,
+            sw.ElapsedMilliseconds,
+            stdoutTruncated || stderrTruncated);
     }
 
     public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(
@@ -471,41 +522,35 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
 
     public async Task UploadFileAsync(string containerId, string containerPath, byte[] content, CancellationToken cancellationToken = default)
     {
-        await WrapDockerOperationAsync("UploadFile", async () =>
+        string relativePath = containerPath.TrimStart('/');
+        await using MemoryStream tarStream = new();
+        using (IWriter writer = WriterFactory.Open(tarStream, ArchiveType.Tar, new WriterOptions(CompressionType.None) { LeaveStreamOpen = true }))
         {
-            string relativePath = containerPath.TrimStart('/');
-            await using MemoryStream tarStream = new();
-            using (IWriter writer = WriterFactory.Open(tarStream, ArchiveType.Tar, new WriterOptions(CompressionType.None) { LeaveStreamOpen = true }))
-            {
-                await using MemoryStream dataStream = new(content);
-                writer.Write(relativePath, dataStream, null);
-            }
-            tarStream.Seek(0, SeekOrigin.Begin);
+            await using MemoryStream dataStream = new(content);
+            writer.Write(relativePath, dataStream, null);
+        }
+        tarStream.Seek(0, SeekOrigin.Begin);
 
-            await _client.Containers.ExtractArchiveToContainerAsync(
-                containerId,
-                new ContainerPathStatParameters { Path = "/" },
-                tarStream,
-                cancellationToken);
+        await _client.Containers.ExtractArchiveToContainerAsync(
+            containerId,
+            new ContainerPathStatParameters { Path = "/" },
+            tarStream,
+            cancellationToken);
 
-            logger?.LogInformation("Uploaded file to container {ContainerId}: {Path} ({Size} bytes)", containerId[..12], containerPath, content.Length);
-        }, containerId);
+        logger?.LogInformation("Uploaded file to container {ContainerId}: {Path} ({Size} bytes)", containerId[..12], containerPath, content.Length);
     }
 
-    public async Task<List<FileEntry>> ListDirectoryAsync(string containerId, string path, CancellationToken cancellationToken = default)
-    {
-        return await WrapDockerOperationAsync("ListDirectory", async () =>
-        {
-            GetArchiveFromContainerResponse archive = await _client.Containers.GetArchiveFromContainerAsync(
-                containerId,
-                new GetArchiveFromContainerParameters { Path = path },
-                false,
-                cancellationToken);
+    /// <summary>
+    /// 解析 Linux ls -la --full-time 命令的输出
+    /// </summary>
+    internal static List<FileEntry> ParseLinuxLsOutput(string requestedPath, string output)
+        => DockerOutputParser.ParseLinuxLsOutput(requestedPath, output);
 
-            await using Stream stream = archive.Stream;
-            return await ListDirectoryFromTarStreamAsync(path, stream, cancellationToken);
-        }, containerId);
-    }
+    /// <summary>
+    /// 解析 Windows dir 命令的输出
+    /// </summary>
+    internal static List<FileEntry> ParseWindowsDirOutput(string requestedPath, string output)
+        => DockerOutputParser.ParseWindowsDirOutput(requestedPath, output);
 
     internal static async Task<List<FileEntry>> ListDirectoryFromTarStreamAsync(string requestedPath, Stream tarStream, CancellationToken cancellationToken)
     {
@@ -546,7 +591,7 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
 
         // Docker tar entry keys are typically relative, and often include the directory name once.
         // Example: requested "/app/artifacts" may yield entry keys like "artifacts/" and "artifacts/hello.txt".
-        string normalizedRequested = NormalizeContainerPath(requestedPath);
+        string normalizedRequested = DockerOutputParser.NormalizeContainerPath(requestedPath);
         string normalizedRequestedNoTrailing = normalizedRequested.TrimEnd('/');
 
         string cleanKey = entryKey.Replace('\\', '/').TrimStart('.', '/');
@@ -577,7 +622,7 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
             return null;
         }
 
-        string combined = CombineContainerPath(normalizedRequestedNoTrailing, cleanKey);
+        string combined = DockerOutputParser.CombineContainerPath(normalizedRequestedNoTrailing, cleanKey);
         if (string.Equals(combined.TrimEnd('/'), normalizedRequestedNoTrailing.TrimEnd('/'), StringComparison.Ordinal))
         {
             return null;
@@ -609,55 +654,17 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
         return idx >= 0 ? p[(idx + 1)..] : p;
     }
 
-    private static string NormalizeContainerPath(string path)
-    {
-        string p = path.Replace('\\', '/').Trim();
-        if (string.IsNullOrEmpty(p))
-        {
-            return "/";
-        }
-
-        if (!p.StartsWith('/'))
-        {
-            p = "/" + p;
-        }
-
-        // Avoid "//" except for root.
-        while (p.Length > 1 && p.Contains("//", StringComparison.Ordinal))
-        {
-            p = p.Replace("//", "/", StringComparison.Ordinal);
-        }
-
-        return p;
-    }
-
-    private static string CombineContainerPath(string basePathNoTrailing, string relativeNoLeading)
-    {
-        string basePath = NormalizeContainerPath(basePathNoTrailing).TrimEnd('/');
-        string rel = relativeNoLeading.Replace('\\', '/').TrimStart('/');
-
-        if (string.IsNullOrEmpty(basePath) || basePath == "/")
-        {
-            return "/" + rel;
-        }
-
-        return basePath + "/" + rel;
-    }
-
     public async Task<byte[]> DownloadFileAsync(string containerId, string filePath, CancellationToken cancellationToken = default)
     {
-        return await WrapDockerOperationAsync("DownloadFile", async () =>
-        {
-            GetArchiveFromContainerResponse archive = await _client.Containers.GetArchiveFromContainerAsync(
-                containerId,
-                new GetArchiveFromContainerParameters { Path = filePath },
-                false,
-                cancellationToken);
+        GetArchiveFromContainerResponse archive = await _client.Containers.GetArchiveFromContainerAsync(
+            containerId,
+            new GetArchiveFromContainerParameters { Path = filePath },
+            false,
+            cancellationToken);
 
-            await using Stream stream = archive.Stream;
-            byte[]? bytes = await ExtractFirstFileBytesFromTarStreamAsync(stream, cancellationToken);
-            return bytes ?? throw new FileNotFoundException($"File {filePath} not found in container");
-        }, containerId);
+        await using Stream stream = archive.Stream;
+        byte[]? bytes = await ExtractFirstFileBytesFromTarStreamAsync(stream, cancellationToken);
+        return bytes ?? throw new FileNotFoundException($"File {filePath} not found in container");
     }
 
     internal static async Task<byte[]?> ExtractFirstFileBytesFromTarStreamAsync(Stream tarStream, CancellationToken cancellationToken)
@@ -986,62 +993,59 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
 
     public async Task<SessionUsage?> GetContainerStatsAsync(string containerId, CancellationToken cancellationToken = default)
     {
-        return await WrapDockerOperationAsync("GetContainerStats", async () =>
+        ContainerStatsResponse? statsData = null;
+
+        // 使用同步 Action 来捕获数据
+        Progress<ContainerStatsResponse> progress = new(stats =>
         {
-            ContainerStatsResponse? statsData = null;
+            statsData = stats;
+        });
 
-            // 使用同步 Action 来捕获数据
-            Progress<ContainerStatsResponse> progress = new(stats =>
+        // 使用新的 API 签名获取容器统计信息（一次性读取）
+        await _client.Containers.GetContainerStatsAsync(
+            containerId,
+            new ContainerStatsParameters { Stream = false },
+            progress,
+            cancellationToken);
+
+        // 等待一小段时间确保回调已执行
+        await Task.Delay(50, cancellationToken);
+
+        if (statsData == null)
+        {
+            logger?.LogWarning("No stats data received for container {ContainerId}", containerId[..12]);
+            return null;
+        }
+
+        SessionUsage usage = new()
+        {
+            ContainerId = containerId
+        };
+
+        // CPU 使用
+        if (statsData.CPUStats?.CPUUsage != null)
+        {
+            usage.CpuUsageNanos = (long)statsData.CPUStats.CPUUsage.TotalUsage;
+        }
+
+        // 内存使用
+        if (statsData.MemoryStats != null)
+        {
+            usage.MemoryUsageBytes = (long)statsData.MemoryStats.Usage;
+            usage.PeakMemoryBytes = (long)statsData.MemoryStats.MaxUsage;
+        }
+
+        // 网络 IO
+        if (statsData.Networks != null)
+        {
+            foreach (NetworkStats? network in statsData.Networks.Values)
             {
-                statsData = stats;
-            });
-
-            // 使用新的 API 签名获取容器统计信息（一次性读取）
-            await _client.Containers.GetContainerStatsAsync(
-                containerId,
-                new ContainerStatsParameters { Stream = false },
-                progress,
-                cancellationToken);
-
-            // 等待一小段时间确保回调已执行
-            await Task.Delay(50, cancellationToken);
-
-            if (statsData == null)
-            {
-                logger?.LogWarning("No stats data received for container {ContainerId}", containerId[..12]);
-                return null;
+                usage.NetworkRxBytes += (long)network.RxBytes;
+                usage.NetworkTxBytes += (long)network.TxBytes;
             }
+        }
 
-            SessionUsage usage = new()
-            {
-                ContainerId = containerId
-            };
-
-            // CPU 使用
-            if (statsData.CPUStats?.CPUUsage != null)
-            {
-                usage.CpuUsageNanos = (long)statsData.CPUStats.CPUUsage.TotalUsage;
-            }
-
-            // 内存使用
-            if (statsData.MemoryStats != null)
-            {
-                usage.MemoryUsageBytes = (long)statsData.MemoryStats.Usage;
-                usage.PeakMemoryBytes = (long)statsData.MemoryStats.MaxUsage;
-            }
-
-            // 网络 IO
-            if (statsData.Networks != null)
-            {
-                foreach (NetworkStats? network in statsData.Networks.Values)
-                {
-                    usage.NetworkRxBytes += (long)network.RxBytes;
-                    usage.NetworkTxBytes += (long)network.TxBytes;
-                }
-            }
-
-            return usage;
-        }, containerId);
+        return usage;
     }
 
     private static async Task<(string stdout, string stderr)> ReadOutputAsync(MultiplexedStream stream, CancellationToken cancellationToken)
@@ -1068,42 +1072,6 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
         }
 
         return (stdout.ToString(), stderr.ToString());
-    }
-
-    private async Task<T> WrapDockerOperationAsync<T>(string operation, Func<Task<T>> action, string? containerId = null)
-    {
-        try
-        {
-            return await action();
-        }
-        catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound && containerId != null)
-        {
-            logger?.LogError(ex, "Container {ContainerId} not found", containerId);
-            throw new ContainerNotFoundException(containerId, ex);
-        }
-        catch (DockerApiException ex)
-        {
-            logger?.LogError(ex, "Docker API operation {Operation} failed: {StatusCode}", operation, ex.StatusCode);
-            throw;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger?.LogError(ex, "Docker operation {Operation} failed", operation);
-            throw;
-        }
-    }
-
-    private async Task WrapDockerOperationAsync(string operation, Func<Task> action, string? containerId = null)
-    {
-        await WrapDockerOperationAsync(operation, async () =>
-        {
-            await action();
-            return true;
-        }, containerId);
     }
 
     public void Dispose()

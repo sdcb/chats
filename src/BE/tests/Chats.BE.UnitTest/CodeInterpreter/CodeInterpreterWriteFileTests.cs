@@ -16,62 +16,6 @@ namespace Chats.BE.UnitTest.CodeInterpreter;
 
 public sealed class CodeInterpreterWriteFileTests
 {
-    private sealed class FakeDockerService : IDockerService
-    {
-        public byte[]? LastUploadedContent { get; private set; }
-        public string? LastUploadedContainerId { get; private set; }
-        public string? LastUploadedPath { get; private set; }
-
-        public void Dispose() { }
-
-        public Task EnsureImageAsync(string image, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<ContainerInfo> CreateContainerAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<List<ContainerInfo>> GetManagedContainersAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(new List<ContainerInfo>());
-
-        public Task<ContainerInfo?> GetContainerAsync(string containerId, CancellationToken cancellationToken = default)
-            => Task.FromResult<ContainerInfo?>(null);
-
-        public Task DeleteContainerAsync(string containerId, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task DeleteAllManagedContainersAsync(CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task UploadFileAsync(string containerId, string containerPath, byte[] content, CancellationToken cancellationToken = default)
-        {
-            LastUploadedContainerId = containerId;
-            LastUploadedPath = containerPath;
-            LastUploadedContent = content;
-            return Task.CompletedTask;
-        }
-
-        public Task<List<FileEntry>> ListDirectoryAsync(string containerId, string path, CancellationToken cancellationToken = default)
-            => Task.FromResult(new List<FileEntry>());
-
-        public Task<byte[]> DownloadFileAsync(string containerId, string filePath, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<SessionUsage?> GetContainerStatsAsync(string containerId, CancellationToken cancellationToken = default)
-            => Task.FromResult<SessionUsage?>(null);
-    }
-
     private static ServiceProvider CreateServiceProvider(string dbName)
     {
         ServiceCollection services = new();

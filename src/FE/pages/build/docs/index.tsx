@@ -54,7 +54,7 @@ function ApiTable({ apis, baseUrl }: { apis: ApiDoc[]; baseUrl: string }) {
                     >
                       {api.method}
                     </span>
-                    <span className="font-mono text-sm">{fullUrl}</span>
+                    <span className="text-sm font-mono">{fullUrl}</span>
                     <CopyButton value={fullUrl} />
                   </div>
                 </TableCell>

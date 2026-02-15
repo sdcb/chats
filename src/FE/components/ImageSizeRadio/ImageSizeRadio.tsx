@@ -46,14 +46,14 @@ const ImageSizeRadio: FC<Props> = ({
     <div className="flex flex-col gap-4">
       <div className="flex justify-between">
         <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
-          <IconPhoto size={16} />
+          <IconPhoto size={20} />
           {t('Image Size')}
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={handleToggleMode}
-          className="h-6 px-2 text-xs"
+          className="h-6 px-2 text-sm"
         >
           {isExpanded ? t('Custom') : t('Default')}
         </Button>

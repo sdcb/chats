@@ -230,18 +230,6 @@ const ChatItem = ({ chat, onDragItemStart }: Props) => {
                     )}
                     style={{ zIndex: chat.spans.length - index }}
                   >
-                    <Tips
-                      trigger={
-                        <div>
-                          <ModelProviderIcon
-                            key={'chat-icon-' + span.spanId}
-                            providerId={span.modelProviderId}
-                          />
-                        </div>
-                      }
-                      side="bottom"
-                      content={span.modelName}
-                    />
                   </div>
                 ))
               )}
@@ -249,7 +237,7 @@ const ChatItem = ({ chat, onDragItemStart }: Props) => {
           </div>
 
           <div
-            className={`relative max-h-5 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm break-all text-left text-[12.5px] leading-4 ${
+            className={`relative max-h-5 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm break-all text-left leading-4 ${
               selectChatId === chat.id ? 'pr-12' : 'pr-1'
             }`}
           >

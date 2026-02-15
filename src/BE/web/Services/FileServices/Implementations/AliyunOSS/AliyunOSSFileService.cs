@@ -9,7 +9,15 @@ public class AliyunOSSFileService(AliyunOssConfig config) : IFileService
 
     public string CreateDownloadUrl(CreateDownloadUrlRequest req)
     {
-        return _oss.GeneratePresignedUri(config.Bucket, req.StorageKey, req.ValidEnd.UtcDateTime, SignHttpMethod.Get).ToString();
+        GeneratePresignedUriRequest request = new(config.Bucket, req.StorageKey, SignHttpMethod.Get)
+        {
+            Expiration = req.ValidEnd.UtcDateTime,
+            ResponseHeaders = new ResponseHeaderOverrides
+            {
+                ContentDisposition = $"attachment; filename=\"{req.FileName}\""
+            }
+        };
+        return _oss.GeneratePresignedUri(request).ToString();
     }
 
     public Task<Stream> Download(string storageKey, CancellationToken cancellationToken)

@@ -5,9 +5,6 @@ import useTranslation from '@/hooks/useTranslation';
 import { isChatting } from '@/utils/chats';
 
 import {
-  ChatRole,
-  ChatSpanStatus,
-  getFileUrl,
   IChat,
   Message,
   MessageContentType,
@@ -17,7 +14,7 @@ import {
 import { IChatMessage, getMessageContents } from '@/types/chatMessage';
 
 import { Button } from '@/components/ui/button';
-import { SendButton, useSendKeyHandler } from '@/components/ui/send-button';
+import { useSendKeyHandler } from '@/components/ui/send-button';
 import ImagePreview from '@/components/ImagePreview/ImagePreview';
 import FilePreview from '@/components/FilePreview/FilePreview';
 
@@ -25,8 +22,10 @@ import { Textarea } from '../ui/textarea';
 import CopyAction from './CopyAction';
 import DeleteAction from './DeleteAction';
 import EditAction from './EditAction';
+import ExpandTextAction from './ExpandTextAction';
 import PaginationAction from './PaginationAction';
 import RegenerateAction from './RegenerateAction';
+import { ANIMATION_DURATION_MS } from '@/constants/animation';
 
 interface Props {
   message: IChatMessage;
@@ -35,7 +34,7 @@ interface Props {
   onChangeMessage?: (messageId: string) => void;
   onEditAndSendMessage?: (editedMessage: Message, parentId?: string) => void;
   onEditUserMessage?: (messageId: string, content: ResponseContent) => void;
-  onDeleteMessage?: (messageId: string) => void;
+  onDeleteMessage?: (messageId: string) => Promise<void>;
   onRegenerateAllAssistant?: (messageId: string, modelId: number) => void;
 }
 
@@ -69,6 +68,14 @@ const UserMessage = (props: Props) => {
   const [sourceImageElement, setSourceImageElement] = useState<HTMLImageElement | null>(null);
   const { status: chatStatus } = selectedChat;
   const currentMessageIndex = siblingIds.findIndex((x) => x === messageId);
+  const COLLAPSED_MAX_LINES = 5;
+  const [isTextExpanded, setIsTextExpanded] = useState(false);
+  const [isTextOverflowing, setIsTextOverflowing] = useState(false);
+  const [collapsedMaxHeight, setCollapsedMaxHeight] = useState<number | null>(null);
+  const [textMaxHeight, setTextMaxHeight] = useState<number | null>(null);
+  const [isTextAnimating, setIsTextAnimating] = useState(false);
+  const toggleAnimationTimerRef = useRef<number | null>(null);
+  const textContentRef = useRef<HTMLDivElement>(null);
 
   const handleEditMessage = (isOnlySave: boolean = false) => {
     if (isOnlySave) {
@@ -140,10 +147,93 @@ const UserMessage = (props: Props) => {
     }
   }, [isEditing]);
 
-  // 收集所有图片URL用于预览
-  const allImageUrls = content
-    .filter((x) => x.$type === MessageContentType.fileId)
-    .map((img: any) => getFileUrl(img.c));
+  useEffect(() => {
+    setIsTextExpanded(false);
+    setIsTextAnimating(false);
+    if (toggleAnimationTimerRef.current) {
+      window.clearTimeout(toggleAnimationTimerRef.current);
+      toggleAnimationTimerRef.current = null;
+    }
+  }, [messageId]);
+
+  useEffect(() => {
+    if (isEditing) return;
+    const el = textContentRef.current;
+    if (!el) return;
+
+    const compute = () => {
+      const lineHeight = Number.parseFloat(window.getComputedStyle(el).lineHeight || '');
+      const fallbackLineHeight = 20;
+      const resolvedLineHeight = Number.isFinite(lineHeight) ? lineHeight : fallbackLineHeight;
+      const maxHeight = resolvedLineHeight * COLLAPSED_MAX_LINES;
+      setCollapsedMaxHeight(maxHeight);
+      if (!isTextExpanded && !isTextAnimating) {
+        setTextMaxHeight(maxHeight);
+      }
+
+      requestAnimationFrame(() => {
+        const nextEl = textContentRef.current;
+        if (!nextEl) return;
+        setIsTextOverflowing(nextEl.scrollHeight > maxHeight + 1);
+      });
+    };
+
+    compute();
+
+    const resizeObserver = new ResizeObserver(() => compute());
+    resizeObserver.observe(el);
+    return () => resizeObserver.disconnect();
+  }, [isEditing, contentText, isTextExpanded, isTextAnimating]);
+
+  useEffect(() => {
+    return () => {
+      if (toggleAnimationTimerRef.current) {
+        window.clearTimeout(toggleAnimationTimerRef.current);
+        toggleAnimationTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleToggleTextExpanded = () => {
+    if (isEditing) return;
+    const el = textContentRef.current;
+    if (!el || !collapsedMaxHeight) {
+      setIsTextExpanded((v) => !v);
+      return;
+    }
+
+    if (toggleAnimationTimerRef.current) {
+      window.clearTimeout(toggleAnimationTimerRef.current);
+      toggleAnimationTimerRef.current = null;
+    }
+
+    const fullHeight = el.scrollHeight;
+    setIsTextAnimating(true);
+
+    if (!isTextExpanded) {
+      setIsTextExpanded(true);
+      setTextMaxHeight(collapsedMaxHeight);
+      requestAnimationFrame(() => {
+        setTextMaxHeight(fullHeight);
+      });
+      toggleAnimationTimerRef.current = window.setTimeout(() => {
+        setTextMaxHeight(null);
+        setIsTextAnimating(false);
+        toggleAnimationTimerRef.current = null;
+      }, ANIMATION_DURATION_MS);
+      return;
+    }
+
+    setIsTextExpanded(false);
+    setTextMaxHeight(fullHeight);
+    requestAnimationFrame(() => {
+      setTextMaxHeight(collapsedMaxHeight);
+    });
+    toggleAnimationTimerRef.current = window.setTimeout(() => {
+      setIsTextAnimating(false);
+      toggleAnimationTimerRef.current = null;
+    }, ANIMATION_DURATION_MS);
+  };
 
   return (
     <>
@@ -156,7 +246,7 @@ const UserMessage = (props: Props) => {
         sourceElement={sourceImageElement}
       />
 
-      <div className="flex flex-row-reverse relative">
+      <div className={'flex flex-row-reverse relative'}>
         {isEditing ? (
           <div className="flex w-full flex-col flex-wrap rounded-md bg-muted shadow-sm mb-3">
             <Textarea
@@ -188,11 +278,14 @@ const UserMessage = (props: Props) => {
               >
                 {t('Save')}
               </Button>
-              <SendButton
-                onSend={() => handleEditMessage(false)}
-                disabled={!contentText?.trim()}
-                size="sm"
-              />
+              <Button
+                variant="default"
+                className="rounded-md px-4 py-1 text-sm font-medium active:bg-primary/80"
+                onClick={() => handleEditMessage(false)}
+                disabled={(contentText || '')?.trim().length <= 0}
+              >
+                {t('Send')}
+              </Button>
               <Button
                 variant="outline"
                 className="rounded-md border border-neutral-300 px-4 py-1 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
@@ -206,8 +299,8 @@ const UserMessage = (props: Props) => {
             </div>
           </div>
         ) : (
-          <div className="bg-card py-2 px-3 rounded-md overflow-hidden">
-            <div className="flex flex-wrap justify-end text-right gap-2">
+          <div className="bg-card py-2 px-3 rounded-md overflow-hidden chat-message-bg">
+            <div className="flex flex-wrap gap-2 justify-end text-right">
               {content
                 .filter((x) => x.$type === MessageContentType.fileId)
                 .map((file: any, index) => {
@@ -221,12 +314,23 @@ const UserMessage = (props: Props) => {
                 })}
             </div>
             <div
-              className={`prose whitespace-pre-wrap dark:prose-invert text-base ${
-                content.filter((x) => x.$type === MessageContentType.fileId)
-                  .length > 0
-                  ? 'mt-2'
-                  : ''
+              ref={textContentRef}
+              className={`prose whitespace-pre-wrap dark:prose-invert text-sm ${
+                content.filter((x) => x.$type === MessageContentType.fileId).length > 0 ? 'mt-2' : ''
               }`}
+              style={
+                collapsedMaxHeight
+                  ? {
+                      ...(textMaxHeight != null
+                        ? { maxHeight: `${textMaxHeight}px`, overflow: 'hidden' }
+                        : !isTextExpanded
+                          ? { maxHeight: `${collapsedMaxHeight}px`, overflow: 'hidden' }
+                          : { overflow: 'visible' }),
+                      transition: `max-height ${ANIMATION_DURATION_MS}ms ease`,
+                      willChange: 'max-height',
+                    }
+                  : undefined
+              }
             >
               {contentText}
             </div>
@@ -234,9 +338,15 @@ const UserMessage = (props: Props) => {
         )}
       </div>
 
-      <div className="flex justify-end my-1">
+      <div className="flex my-1 justify-end">
         {!isEditing && (
           <>
+            <ExpandTextAction
+              expanded={isTextExpanded}
+              hidden={!isTextOverflowing && !isTextExpanded}
+              isHoverVisible
+              onToggle={handleToggleTextExpanded}
+            />
             {!readonly && (
               <EditAction
                 isHoverVisible
@@ -255,7 +365,6 @@ const UserMessage = (props: Props) => {
                 isHoverVisible
                 onRegenerate={() => {
                   if (onRegenerateAllAssistant && selectedChat.spans && selectedChat.spans.length > 0) {
-                    // 使用第一个启用的 span 的 modelId，如果没有启用的就使用第一个
                     const enabledSpan = selectedChat.spans.find(s => s.enabled) || selectedChat.spans[0];
                     onRegenerateAllAssistant(messageId, enabledSpan.modelId);
                   }
@@ -266,8 +375,8 @@ const UserMessage = (props: Props) => {
               <DeleteAction
                 hidden={isChatting(chatStatus)}
                 isHoverVisible
-                onDelete={() => {
-                  onDeleteMessage && onDeleteMessage(messageId);
+                onDelete={async () => {
+                  await onDeleteMessage?.(messageId);
                 }}
               />
             )}

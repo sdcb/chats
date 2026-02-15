@@ -13,7 +13,7 @@ public partial class ClientUserAgent
     [Key]
     public int Id { get; set; }
 
-    [StringLength(250)]
+    [StringLength(500)]
     [Unicode(false)]
     public string UserAgent { get; set; } = null!;
 

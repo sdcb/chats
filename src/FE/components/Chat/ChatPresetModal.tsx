@@ -465,7 +465,7 @@ const ChatPresetModal = (props: Props) => {
                     variant="ghost"
                     className="bg-transparent w-52 h-32 border"
                   >
-                    <IconPlus />
+                    <IconPlus size={20} />
                     {t('Add Model')}
                   </Button>
                 }
@@ -502,7 +502,7 @@ const ChatPresetModal = (props: Props) => {
                     models={models}
                     content={
                       <Button variant="ghost" className="bg-muted">
-                        <IconPlus />
+                        <IconPlus size={20} />
                       </Button>
                     }
                     hideIcon={true}

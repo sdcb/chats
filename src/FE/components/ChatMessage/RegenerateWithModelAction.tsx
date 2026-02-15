@@ -55,7 +55,7 @@ export const RegenerateWithModelAction = forwardRef<HTMLButtonElement, Props>(
                   e.stopPropagation();
                 }}
               >
-                <IconRefresh className="w-4 h-4" />
+                <IconRefresh size={20} />
               </Button>
             }
             side="bottom"
@@ -78,7 +78,7 @@ export const RegenerateWithModelAction = forwardRef<HTMLButtonElement, Props>(
                   hideIcon={true}
                   triggerClassName="p-1 m-0 h-7 w-7 rounded-l-none hover:bg-accent focus:outline-none justify-center"
                   className="px-0"
-                  content={<IconChevronDown className="w-4 h-4" />}
+                  content={<IconChevronDown size={20} />}
                 />
               </span>
             }

@@ -98,9 +98,9 @@ export const StepInfoBubble = ({ stepId, edited, chatId, chatShareId, className 
           }}
         >
           {loading ? (
-            <IconInfo size={18} className="animate-pulse opacity-50" />
+            <IconInfo size={20} className="animate-pulse opacity-50" />
           ) : (
-            <IconInfo size={18} />
+            <IconInfo size={20} />
           )}
         </Button>
       </PopoverTrigger>

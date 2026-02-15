@@ -17,6 +17,17 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 21+ 主流 
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
+## 🆕 最新版本（1.10.1）
+
+- 📅 发布日期：2026-02-15
+- 🐳 沙箱管理器增强：环境变量管理、会话信息卡片、文件管理与编辑体验升级
+- ⚡ 性能改进：高频接口支持服务端 ETag 缓存与 304，移除前端聊天列表本地缓存
+- 🗺️ 交互优化：新增 ChatMiniMap 导航，滚动控制从输入框迁移
+- 🔐 安全与可用性：API Key 创建后一次性展示完整 Key，列表默认脱敏
+- 📦 Code Interpreter 镜像流水线升级：支持构建运行号标识、预装 ripgrep、非 main 分支发布 latest manifest
+
+👉 [查看 1.10.1 发布说明](./doc/zh-CN/release-notes/1.10.1.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
+
 ## 快速开始
 
 一条命令即可启动（需要 Docker）：

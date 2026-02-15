@@ -688,7 +688,7 @@ export default function ModelManager() {
           const overlayPriceParts = (m.inputCachedTokenPrice1M > 0
             ? [m.inputFreshTokenPrice1M, m.inputCachedTokenPrice1M, m.outputTokenPrice1M]
             : [m.inputFreshTokenPrice1M, m.outputTokenPrice1M]);
-          const overlayPrice = '￥' + overlayPriceParts.map(value => formatNumberAsMoney(value)).join('/');
+          const overlayPrice = overlayPriceParts.map(value => formatNumberAsMoney(value)).join('/');
           return (
             <div className="rounded border bg-background/90 shadow-md px-2 py-1">
               <div className="flex items-center gap-2">

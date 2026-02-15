@@ -8,6 +8,7 @@ namespace Chats.DB;
 
 [Table("ChatDockerSession")]
 [Index("ExpiresAt", Name = "IX_ChatDockerSession_Active_ExpiresAt")]
+[Index("OwnerChatId", Name = "IX_ChatDockerSession_OwnerChatId")]
 [Index("OwnerTurnId", Name = "IX_ChatDockerSession_OwnerTurnId")]
 public partial class ChatDockerSession
 {
@@ -46,6 +47,12 @@ public partial class ChatDockerSession
 
     [StringLength(45)]
     public string? Ip { get; set; }
+
+    public int? OwnerChatId { get; set; }
+
+    [ForeignKey("OwnerChatId")]
+    [InverseProperty("ChatDockerSessions")]
+    public virtual Chat? OwnerChat { get; set; }
 
     [ForeignKey("OwnerTurnId")]
     [InverseProperty("ChatDockerSessions")]

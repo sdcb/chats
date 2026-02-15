@@ -5,7 +5,7 @@ export type SendMode = 'enter' | 'ctrl-enter';
 const SEND_MODE_KEY = 'chat-send-mode';
 
 export const useSendMode = () => {
-  const [sendMode, setSendMode] = useState<SendMode>('enter');
+  const [sendMode, setSendMode] = useState<SendMode>('ctrl-enter');
 
   useEffect(() => {
     const stored = localStorage.getItem(SEND_MODE_KEY);

@@ -9,8 +9,19 @@ using DBFile = Chats.DB.File;
 
 namespace Chats.BE.Services.FileServices;
 
-public class FileUrlProvider(ChatsDB db, IFileServiceFactory fileServiceFactory, IUrlEncryptionService urlEncryptionService)
+public class FileUrlProvider(ChatsDB db, IFileServiceFactory fileServiceFactory, IUrlEncryptionService urlEncryptionService, IHttpClientFactory httpClientFactory)
 {
+    public async Task<(byte[] Bytes, string ContentType)> DownloadUrlBytesAsync(string url, CancellationToken cancellationToken)
+    {
+        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpResponseMessage resp = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        resp.EnsureSuccessStatusCode();
+
+        string contentType = resp.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+        byte[] bytes = await resp.Content.ReadAsByteArrayAsync(cancellationToken);
+        return (bytes, contentType);
+    }
+
     public async Task<StepContent> CreateOpenAIImagePart(DBFile file, CancellationToken cancellationToken)
     {
         IFileService fs = fileServiceFactory.Create(file.FileService);

@@ -1,5 +1,4 @@
 using Chats.BE.Controllers.Chats.Chats.Dtos;
-using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Services;
 using Chats.BE.Services.CodeInterpreter;
 using Chats.BE.Services.FileServices;
@@ -17,66 +16,6 @@ namespace Chats.BE.UnitTest.CodeInterpreter;
 
 public sealed class CodeInterpreterSessionLookupTests
 {
-    private sealed class FakeDockerService : IDockerService
-    {
-        public int CreateContainerCalls { get; private set; }
-
-        public void Dispose() { }
-
-        public Task EnsureImageAsync(string image, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<ContainerInfo> CreateContainerAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default)
-        {
-            CreateContainerCalls++;
-            return Task.FromResult(new ContainerInfo
-            {
-                ContainerId = $"container-{CreateContainerCalls:D2}-abcdef0123456789",
-                Name = $"codepod-test-{CreateContainerCalls:D2}",
-                Image = image,
-                DockerStatus = "running",
-                CreatedAt = DateTimeOffset.UtcNow,
-                ShellPrefix = ["/bin/sh", "-lc"],
-            });
-        }
-
-        public Task<List<ContainerInfo>> GetManagedContainersAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(new List<ContainerInfo>());
-
-        public Task<ContainerInfo?> GetContainerAsync(string containerId, CancellationToken cancellationToken = default)
-            => Task.FromResult<ContainerInfo?>(null);
-
-        public Task DeleteContainerAsync(string containerId, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task DeleteAllManagedContainersAsync(CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<CommandExitEvent> ExecuteCommandAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] shellPrefix, string command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public IAsyncEnumerable<CommandOutputEvent> ExecuteCommandStreamAsync(string containerId, string[] command, string workingDirectory, int timeoutSeconds, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task UploadFileAsync(string containerId, string containerPath, byte[] content, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<List<FileEntry>> ListDirectoryAsync(string containerId, string path, CancellationToken cancellationToken = default)
-            => Task.FromResult(new List<FileEntry>());
-
-        public Task<byte[]> DownloadFileAsync(string containerId, string filePath, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
-        public Task<SessionUsage?> GetContainerStatsAsync(string containerId, CancellationToken cancellationToken = default)
-            => Task.FromResult<SessionUsage?>(null);
-    }
-
     private static ServiceProvider CreateServiceProvider(string dbName)
     {
         ServiceCollection services = new();
@@ -168,7 +107,7 @@ public sealed class CodeInterpreterSessionLookupTests
             new ChatTurn { Id = 2, ParentId = 1, ChatId = 1, ChatDockerSessions = [containerA] },
             new ChatTurn { Id = 4, ParentId = 2, ChatId = 1 });
 
-        Result<string> done = await exec.CreateDockerSession(
+        ToolProgressDelta result = await exec.CreateDockerSession(
             ctx,
             image: null,
             label: "dotnet-env",
@@ -176,11 +115,13 @@ public sealed class CodeInterpreterSessionLookupTests
             cpuCores: null,
             maxProcesses: null,
             networkMode: null,
-            cancellationToken: CancellationToken.None);
+            cancellationToken: CancellationToken.None).LastAsync();
 
-        Assert.True(done.IsSuccess);
-        Assert.Contains("sessionId: dotnet-env", done.Value);
-        Assert.Contains("image: mcr.microsoft.com/dotnet/sdk:10.0", done.Value);
+        Assert.IsType<ToolCompletedToolProgressDelta>(result);
+        ToolCompletedToolProgressDelta completed = (ToolCompletedToolProgressDelta)result;
+        Assert.True(completed.Result.IsSuccess);
+        Assert.Contains("sessionId: dotnet-env", completed.Result.Value);
+        Assert.Contains("image: mcr.microsoft.com/dotnet/sdk:10.0", completed.Result.Value);
         Assert.Equal(0, docker.CreateContainerCalls);
     }
 
@@ -206,7 +147,7 @@ public sealed class CodeInterpreterSessionLookupTests
             new ChatTurn { Id = 1, ParentId = null, ChatId = 1, Chat = null! },
             new ChatTurn { Id = 3, ParentId = 1, ChatId = 1, Chat = null! });
 
-        Result<string> done = await exec.CreateDockerSession(
+        ToolProgressDelta result = await exec.CreateDockerSession(
             ctx,
             image: null,
             label: "dotnet-env",
@@ -214,11 +155,13 @@ public sealed class CodeInterpreterSessionLookupTests
             cpuCores: null,
             maxProcesses: null,
             networkMode: null,
-            cancellationToken: CancellationToken.None);
+            cancellationToken: CancellationToken.None).LastAsync();
 
-        Assert.True(done.IsSuccess);
-        Assert.Contains("sessionId: dotnet-env", done.Value);
-        Assert.Contains("image: mcr.microsoft.com/dotnet/sdk:10.0", done.Value);
+        Assert.IsType<ToolCompletedToolProgressDelta>(result);
+        ToolCompletedToolProgressDelta completed = (ToolCompletedToolProgressDelta)result;
+        Assert.True(completed.Result.IsSuccess);
+        Assert.Contains("sessionId: dotnet-env", completed.Result.Value);
+        Assert.Contains("image: mcr.microsoft.com/dotnet/sdk:10.0", completed.Result.Value);
         Assert.Equal(1, docker.CreateContainerCalls);
 
         using (IServiceScope scope2 = sp.CreateScope())

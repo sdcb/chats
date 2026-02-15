@@ -55,6 +55,12 @@ public class ModelsController : ControllerBase
             SupportsVisionLink = x.SupportsVisionLink,
         })
             .ToArrayAsync(cancellationToken);
+
+        if (EtagCacheHelper.TryHandleNotModified(this, "models-list", data))
+        {
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
         return data;
     }
 

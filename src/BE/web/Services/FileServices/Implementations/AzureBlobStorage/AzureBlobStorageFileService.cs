@@ -11,8 +11,19 @@ public class AzureBlobStorageFileService(AzureBlobStorageConfig config) : IFileS
     public string CreateDownloadUrl(CreateDownloadUrlRequest req)
     {
         BlobClient blobClient = _containerClient.GetBlobClient(req.StorageKey);
-        Uri url = blobClient.GenerateSasUri(BlobSasPermissions.Read, req.ValidEnd);
-        return url.ToString();
+        string encodedFileName = Uri.EscapeDataString(req.FileName);
+        BlobSasBuilder sasBuilder = new()
+        {
+            BlobContainerName = _containerClient.Name,
+            BlobName = req.StorageKey,
+            Resource = "b",
+            ExpiresOn = req.ValidEnd,
+            ContentDisposition = $"inline;filename*=UTF-8''{encodedFileName}",
+        };
+        sasBuilder.SetPermissions(BlobSasPermissions.Read);
+
+        Uri sasUrl = blobClient.GenerateSasUri(sasBuilder);
+        return sasUrl.ToString();
     }
 
     public async Task<bool> Delete(string storageKey, CancellationToken cancellationToken)

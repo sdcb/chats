@@ -245,28 +245,12 @@ const ResponseMessage = (props: Props) => {
     const showStepInfo = stepInfo?.isLastInStep && !stepInfo.step.edited && stepInfo.step.id;
 
     // 用于驱动 ToolCallBlock 的“自动收起”行为：
-    // 在该 toolGroup 之后的第一段非 tool 内容开始输出前，保持展开。
+    // 在该 toolGroup 之后有任何内容（包括另一个 toolGroup）时，自动收起。
     const processedIndex = processedContent.findIndex((c) => c === toolGroup);
-    let nextMessageContentStarted = false;
-    if (processedIndex >= 0) {
-      for (let i = processedIndex + 1; i < processedContent.length; i++) {
-        const next = processedContent[i] as any;
-        if (next?.$type === 'toolGroup') {
-          continue;
-        }
-
-        if (next?.$type === MessageContentType.text || next?.$type === MessageContentType.reasoning) {
-          nextMessageContentStarted = typeof next?.c === 'string' && next.c.trim().length > 0;
-        } else {
-          // 文件/图片等一旦出现就认为“内容已开始”
-          nextMessageContentStarted = true;
-        }
-        break;
-      }
-    }
+    const nextMessageContentStarted = processedIndex >= 0 && processedIndex + 1 < processedContent.length;
 
     return (
-      <div key={`tool-group-${index}`} className="relative group/item">
+      <div key={`tool-group-${index}`} className={cn("relative group/item", index > 0 ? "my-1" : "")}>
         <ToolCallBlock
           toolCall={toolCall}
           toolResponse={toolResponse}
@@ -275,7 +259,7 @@ const ResponseMessage = (props: Props) => {
         />
         {showStepInfo && (
           <div className={cn(
-            'absolute -bottom-0.5 right-0 z-10 invisible group-hover/item:visible bg-card rounded-full',
+            'absolute -bottom-0.5 right-2 z-10 invisible group-hover/item:visible hover:bg-muted rounded-full',
             isChatting(chatStatus) && 'hidden',
           )}>
             <StepInfoBubble
@@ -551,11 +535,12 @@ const ResponseMessage = (props: Props) => {
               return (
                 <div key={'text-' + index} className="relative group/item">
                   {message.displayType === 'Raw' ? (
-                    <div className="prose dark:prose-invert rounded-r-md flex-1 overflow-auto text-base py-2 px-3 group/item">
+                    <div className="prose dark:prose-invert [--tw-prose-body:#000] [--tw-prose-headings:#000] rounded-r-md flex-1 overflow-auto text-sm leading-4 font-normal py-2 px-3 group/item">
                       <div className="whitespace-pre-wrap font-mono">{c.c}</div>
                     </div>
                   ) : (
                     <MemoizedReactMarkdown
+                      className="prose dark:prose-invert [--tw-prose-body:#000] [--tw-prose-headings:#000] leading-4 font-normal prose-p:text-sm prose-p:leading-4 prose-p:font-normal prose-li:text-sm prose-li:leading-4 prose-li:font-normal"
                       // 顺序：math -> gfm -> breaks，确保数学与 GFM 处理后，再将 softbreak 转为 <br/>
                       remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
                       rehypePlugins={[rehypeKatex as any, rehypeKatexDataMath]}
@@ -579,7 +564,7 @@ const ResponseMessage = (props: Props) => {
                             e.stopPropagation();
                           }}
                         >
-                          <IconCopy size={16} className="hover:opacity-50" />
+                          <IconCopy size={20} className="hover:opacity-50" />
                         </button>
                         <button
                           disabled={isChatting(messageStatus)}
@@ -589,7 +574,7 @@ const ResponseMessage = (props: Props) => {
                             e.stopPropagation();
                           }}
                         >
-                          <IconEdit size={16} className="hover:opacity-50" />
+                          <IconEdit size={20} className="hover:opacity-50" />
                         </button>
                       </>
                     )}

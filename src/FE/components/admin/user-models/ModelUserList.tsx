@@ -13,6 +13,7 @@ import {
 } from '@/apis/adminApis';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { TriStateCheckbox } from '@/components/ui/tristate-checkbox';
 import { cn } from '@/lib/utils';
 import { IconLoader, IconPencil } from '@/components/Icons';
 import PaginationContainer from '@/components/Pagination/Pagination';
@@ -366,37 +367,24 @@ export default function ModelUserList({ model, isExpanded, onToggle, onAssignedU
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           {isPending ? (
-                            <IconLoader size={14} className="animate-spin text-muted-foreground" />
-                          ) : user.isAssigned ? (
-                            <button
-                              type="button"
-                              className="flex items-center justify-center flex-shrink-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (!isDisabled) {
-                                  handleDeleteUser(user);
-                                }
-                              }}
-                              disabled={isDisabled}
-                            >
-                              <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center hover:bg-red-500 transition-colors">
-                                <span className="text-white text-[10px]">✓</span>
-                              </div>
-                            </button>
+                            <IconLoader size={14} className="animate-spin text-muted-foreground flex-shrink-0" />
                           ) : (
-                            <button
-                              type="button"
-                              className="flex items-center justify-center flex-shrink-0"
+                            <TriStateCheckbox
+                              state={user.isAssigned ? 'checked' : 'unchecked'}
+                              size="md"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (!isDisabled) {
-                                  handleAddUser(user);
+                                  if (user.isAssigned) {
+                                    handleDeleteUser(user);
+                                  } else {
+                                    handleAddUser(user);
+                                  }
                                 }
                               }}
                               disabled={isDisabled}
-                            >
-                              <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30 hover:border-primary transition-colors" />
-                            </button>
+                              className="flex-shrink-0"
+                            />
                           )}
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             <span className={cn(
@@ -419,7 +407,7 @@ export default function ModelUserList({ model, isExpanded, onToggle, onAssignedU
                                 <TooltipTrigger asChild>
                                   <div className="flex items-center gap-1 text-[10px] sm:text-xs">
                                     <span className="hidden sm:inline text-muted-foreground">{t('Counts')}:</span>
-                                    <span className="font-mono">{user.counts ?? 0}</span>
+                                    <span>{user.counts ?? 0}</span>
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>{t('Usage count')}: {user.counts ?? 0}</TooltipContent>
@@ -428,7 +416,7 @@ export default function ModelUserList({ model, isExpanded, onToggle, onAssignedU
                                 <TooltipTrigger asChild>
                                   <div className="flex items-center gap-1 text-[10px] sm:text-xs">
                                     <span className="hidden sm:inline text-muted-foreground">{t('Tokens')}:</span>
-                                    <span className="font-mono">{user.tokens ?? 0}</span>
+                                    <span>{user.tokens ?? 0}</span>
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>{t('Token count')}: {user.tokens ?? 0}</TooltipContent>

@@ -241,7 +241,7 @@ const QuickAddModelModal = (props: IProps) => {
                 <p className="text-sm mt-2">{t('Please use the regular add model method')}</p>
                 {errorDetail && (
                   <div className="mt-4 p-4 bg-muted rounded-md text-left">
-                    <p className="text-xs font-mono whitespace-pre-wrap break-all">{errorDetail}</p>
+                    <p className="text-xs whitespace-pre-wrap break-all">{errorDetail}</p>
                   </div>
                 )}
               </div>
@@ -304,7 +304,7 @@ const QuickAddModelModal = (props: IProps) => {
                           {t('Existed')}
                         </Badge>
                       )}
-                      <span className="font-mono text-sm">{model.deploymentName}</span>
+                      <span className="text-sm">{model.deploymentName}</span>
                     </div>
                   </TableCell>
                   <TableCell className="py-1.5">

@@ -41,7 +41,7 @@ const ImageQualityRadio: FC<Props> = ({
           'text-left text-neutral-700 dark:text-neutral-400 flex gap-1 items-center'
         }
       >
-        <IconReasoning size={16} />
+        <IconReasoning size={20} />
         {t('Image Quality')}
       </label>
 

@@ -13,7 +13,6 @@ public sealed class CodeInterpreterContextPrefixTests
     {
         string? prefix = CodeInterpreterExecutor.BuildCodeInterpreterContextPrefix(
             messageTurns: [],
-            messageSteps: [],
             utcNow: DateTime.UtcNow);
 
         Assert.Null(prefix);
@@ -55,7 +54,6 @@ public sealed class CodeInterpreterContextPrefixTests
 
         string? prefix = CodeInterpreterExecutor.BuildCodeInterpreterContextPrefix(
             messageTurns: [t],
-            messageSteps: [],
             utcNow: now);
 
         Assert.NotNull(prefix);
@@ -183,9 +181,10 @@ public sealed class CodeInterpreterContextPrefixTests
             StepContents = [StepContent.FromFile(f)],
         };
 
+        ChatTurn t = new() { Steps = [step] };
+
         string? prefix = CodeInterpreterExecutor.BuildCodeInterpreterContextPrefix(
-            messageTurns: [],
-            messageSteps: [step],
+            messageTurns: [t],
             utcNow: now);
 
         Assert.NotNull(prefix);

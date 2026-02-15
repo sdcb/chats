@@ -2,6 +2,7 @@
 import re
 import subprocess
 import sys
+import os
 from pathlib import Path
 
 
@@ -58,6 +59,7 @@ def main() -> int:
     ff = ffmpeg_version()
     gcc = gcc_version()
     node = node_version()
+    run_number = os.getenv("RUN_NUMBER", "unknown")
 
     rendered = template
     rendered = rendered.replace("{dotnetVersion}", dn)
@@ -65,6 +67,7 @@ def main() -> int:
     rendered = rendered.replace("{ffmpegVersion}", ff)
     rendered = rendered.replace("{gccVersion}", gcc)
     rendered = rendered.replace("{nodeVersion}", node)
+    rendered = rendered.replace("{runNumber}", run_number)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(rendered.rstrip() + "\n", encoding="utf-8")

@@ -556,15 +556,15 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
                 </div>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <div className="font-medium">{t('Input/Output Cost(￥)')}</div>
+                <div className="font-medium">{t('Input/Output Cost')}</div>
                 <div>
-                  ￥{toFixed(usageStat?.sumInputCost)}/
+                  {toFixed(usageStat?.sumInputCost)}/
                   {toFixed(usageStat?.sumOutputCost)}
                 </div>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <div className="font-medium">{t('Total Cost')}</div>
-                <div>￥{toFixed(usageStat?.sumTotalCost)}</div>
+                <div>{toFixed(usageStat?.sumTotalCost)}</div>
               </div>
             </Card>
             {usageLogs.map((log, index) => (
@@ -588,15 +588,15 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
                   <div className="font-medium">
-                    {t('Input/Output Cost(￥)')}
+                    {t('Input/Output Cost')}
                   </div>
                   <div>
-                    ￥{toFixed(log.inputCost)}/{toFixed(log.outputCost)}
+                    {toFixed(log.inputCost)}/{toFixed(log.outputCost)}
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
                   <div className="font-medium">{t('Total Cost')}</div>
-                  <div>￥{toFixed(log.inputCost + log.outputCost)}</div>
+                  <div>{toFixed(log.inputCost + log.outputCost)}</div>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
                   <div className="font-medium">{t('IP')}</div>
@@ -624,8 +624,8 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
                 <TableHead>{t('Date')}</TableHead>
                 <TableHead>{t('Model')}</TableHead>
                 <TableHead>{t('Input/Output Tokens')}</TableHead>
-                <TableHead>{t('Input/Output Cost(￥)')}</TableHead>
-                <TableHead>{t('Total Cost(￥)')}</TableHead>
+                <TableHead>{t('Input/Output Cost')}</TableHead>
+                <TableHead>{t('Total Cost')}</TableHead>
                 <TableHead>{t('IP')}</TableHead>
                 <TableHead>{t('Finish Reason')}</TableHead>
                 <TableHead>{t('Total Duration(ms)')}</TableHead>
@@ -645,10 +645,10 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
                     {log.inputTokens}/{log.outputTokens}
                   </TableCell>
                   <TableCell>
-                    ￥{toFixed(log.inputCost)}/￥{toFixed(log.outputCost)}
+                    {toFixed(log.inputCost)}/{toFixed(log.outputCost)}
                   </TableCell>
                   <TableCell>
-                    ￥{toFixed(log.inputCost + log.outputCost)}
+                    {toFixed(log.inputCost + log.outputCost)}
                   </TableCell>
                   <TableCell>{log.ip}</TableCell>
                   <TableCell>{log.finishReason}</TableCell>
@@ -667,10 +667,10 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
                     {formatNumberAsMoney(usageStat?.sumOutputTokens)}
                   </TableCell>
                   <TableCell>
-                    ￥{toFixed(usageStat?.sumInputCost)}/ ￥
+                    {toFixed(usageStat?.sumInputCost)}/
                     {toFixed(usageStat?.sumOutputCost)}
                   </TableCell>
-                  <TableCell>￥{toFixed(usageStat?.sumTotalCost)}</TableCell>
+                  <TableCell>{toFixed(usageStat?.sumTotalCost)}</TableCell>
                   <TableCell colSpan={3}></TableCell>
                 </TableRow>
               </TableFooter>

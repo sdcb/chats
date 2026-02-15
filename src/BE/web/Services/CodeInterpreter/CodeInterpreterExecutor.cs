@@ -81,7 +81,7 @@ public sealed class CodeInterpreterExecutor(
     private static string FormatDefaultMemoryBytes(long memoryBytes)
     {
         if (memoryBytes == 0) return "0 (unlimited)";
-        return $"{memoryBytes.ToString(CultureInfo.InvariantCulture)} ({FormatBytes(memoryBytes)})";
+        return $"{memoryBytes.ToString(CultureInfo.InvariantCulture)} ({BytesFormatter.Format(memoryBytes)})";
     }
 
     private static string FormatDefaultCpuCores(double cpuCores)
@@ -101,7 +101,7 @@ public sealed class CodeInterpreterExecutor(
         List<string> parts = [];
         if (limits.MemoryBytes > 0)
         {
-            parts.Add($"memory={FormatBytes(limits.MemoryBytes)}");
+            parts.Add($"memory={BytesFormatter.Format(limits.MemoryBytes)}");
         }
         else
         {
@@ -129,17 +129,6 @@ public sealed class CodeInterpreterExecutor(
         return string.Join(", ", parts);
     }
 
-    internal static string FormatBytes(long bytes)
-    {
-        if (bytes >= 1024L * 1024 * 1024)
-            return $"{bytes / (1024.0 * 1024 * 1024):0.##}GB";
-        if (bytes >= 1024L * 1024)
-            return $"{bytes / (1024.0 * 1024):0.##}MB";
-        if (bytes >= 1024L)
-            return $"{bytes / 1024.0:0.##}KB";
-        return $"{bytes}B";
-    }
-
     internal static string ReplacePlaceholders(string input, Dictionary<string, string> placeholders)
     {
         foreach (KeyValuePair<string, string> kvp in placeholders)
@@ -152,7 +141,7 @@ public sealed class CodeInterpreterExecutor(
     public bool IsCodeInterpreterTool(string toolName)
         => _toolRegistry.Contains(toolName);
 
-    public NeutralSystemMessage BuildSystemMessage(string? existingSystemPrompt, IEnumerable<Step> messageSteps)
+    public NeutralSystemMessage BuildSystemMessage(string? existingSystemPrompt)
     {
         StringBuilder sb = new();
         if (!string.IsNullOrWhiteSpace(existingSystemPrompt))
@@ -162,8 +151,8 @@ public sealed class CodeInterpreterExecutor(
         }
 
         sb.AppendLine("You have access to sandboxed code interpreter environments.");
-        sb.AppendLine($"- Working directory: {PathSafety.WorkDir}");
-        sb.AppendLine($"- Artifacts directory: {PathSafety.WorkDir}/artifacts, MUST copy to artifacts folder so user can download it!");
+        sb.AppendLine($"- Working directory: {codePodConfig.Value.WorkDir}");
+        sb.AppendLine($"- Artifacts directory: {codePodConfig.Value.WorkDir}/{codePodConfig.Value.ArtifactsDir}, MUST copy to this folder so user can download it!");
         sb.AppendLine("- Call create_docker_session to get a sessionId.");
 
         return NeutralSystemMessage.FromText(sb.ToString());
@@ -188,12 +177,12 @@ public sealed class CodeInterpreterExecutor(
         return sb.ToString();
     }
 
-    public string? BuildCodeInterpreterContextPrefix(IEnumerable<ChatTurn> messageTurns, IEnumerable<Step> messageSteps)
-        => BuildCodeInterpreterContextPrefix(messageTurns, messageSteps, DateTime.UtcNow);
+    public string? BuildCodeInterpreterContextPrefix(IEnumerable<ChatTurn> messageTurns)
+        => BuildCodeInterpreterContextPrefix(messageTurns, DateTime.UtcNow);
 
-    internal static string? BuildCodeInterpreterContextPrefix(IEnumerable<ChatTurn> messageTurns, IEnumerable<Step> messageSteps, DateTime utcNow)
+    internal static string? BuildCodeInterpreterContextPrefix(IEnumerable<ChatTurn> messageTurns, DateTime utcNow)
     {
-        List<DBFile> cloudFiles = CollectCloudFiles(messageSteps);
+        List<DBFile> cloudFiles = CollectCloudFiles(messageTurns.SelectMany(t => t.Steps));
         List<ChatDockerSession> activeSessions = CollectActiveSessions(messageTurns, utcNow);
 
         if (cloudFiles.Count == 0 && activeSessions.Count == 0)
@@ -406,7 +395,7 @@ public sealed class CodeInterpreterExecutor(
     }
 
     [ToolFunction("Create a docker session")]
-    internal async Task<Result<string>> CreateDockerSession(
+    internal async IAsyncEnumerable<ToolProgressDelta> CreateDockerSession(
         TurnContext ctx,
         [ToolParam("Docker image to use (null means use server default: {defaultImage}).")]
         string? image,
@@ -421,7 +410,7 @@ public sealed class CodeInterpreterExecutor(
         [ToolParam("Network mode. One of: {allowedNetworkModes}. null means use server default: {defaultNetworkMode}.")]
         [EnumDataType(typeof(NetworkMode))]
         string? networkMode,
-        CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         bool hasLabel = !string.IsNullOrWhiteSpace(label);
 
@@ -429,7 +418,8 @@ public sealed class CodeInterpreterExecutor(
         if (hasLabel && ctx.SessionsBySessionId.TryGetValue(label!, out TurnContext.SessionState? existing))
         {
             existing.UsedInThisTurn = true;
-            return Result.Ok(existing.DbSession.AIReableDockerInfo);
+            yield return new ToolCompletedToolProgressDelta { Result = Result.Ok(existing.DbSession.AIReableDockerInfo) };
+            yield break;
         }
 
         // Resolve from DB along the ParentId chain of the current generating turn.
@@ -459,9 +449,13 @@ public sealed class CodeInterpreterExecutor(
             if ((int)effectiveNetworkMode > (int)maxAllowedNetworkMode)
             {
                 string allowed = _options.GetAllowedNetworkModesDisplay();
-                return Result.Fail<string>(
-                    $"Requested networkMode '{effectiveNetworkMode.ToString().ToLowerInvariant()}' exceeds MaxAllowedNetworkMode " +
-                    $"'{maxAllowedNetworkMode.ToString().ToLowerInvariant()}'. Allowed: {allowed}.");
+                yield return new ToolCompletedToolProgressDelta
+                {
+                    Result = Result.Fail<string>(
+                        $"Requested networkMode '{effectiveNetworkMode.ToString().ToLowerInvariant()}' exceeds MaxAllowedNetworkMode " +
+                        $"'{maxAllowedNetworkMode.ToString().ToLowerInvariant()}'. Allowed: {allowed}.")
+                };
+                yield break;
             }
 
             if (memoryBytes != null || cpuCores != null || maxProcesses != null)
@@ -471,8 +465,22 @@ public sealed class CodeInterpreterExecutor(
             }
 
             string effectiveImage = string.IsNullOrWhiteSpace(image) ? _options.DefaultImage : image;
-            await _docker.EnsureImageAsync(effectiveImage, cancellationToken);
-            ContainerInfo container = await _docker.CreateContainerAsync(effectiveImage, limits, effectiveNetworkMode, cancellationToken);
+
+            // 流式输出镜像拉取进度
+            await foreach (CommandOutputEvent ev in _docker.EnsureImageAsync(effectiveImage, cancellationToken))
+            {
+                switch (ev)
+                {
+                    case CommandStdoutEvent o:
+                        yield return new StdOutToolProgressDelta { StdOutput = o.Data };
+                        break;
+                    case CommandStderrEvent e:
+                        yield return new StdErrorToolProgressDelta { StdError = e.Data };
+                        break;
+                }
+            }
+
+            ContainerInfo container = await _docker.CreateContainerCoreAsync(effectiveImage, limits, effectiveNetworkMode, cancellationToken);
 
             if (!hasLabel)
             {
@@ -489,6 +497,7 @@ public sealed class CodeInterpreterExecutor(
             dbSession = new ChatDockerSession
             {
                 OwnerTurnId = ctx.CurrentAssistantTurn.Id,
+                OwnerChatId = ctx.CurrentAssistantTurn.ChatId,
                 Label = label!,
                 ContainerId = container.ContainerId,
                 Image = effectiveImage,
@@ -529,7 +538,7 @@ public sealed class CodeInterpreterExecutor(
         try
         {
             // Try to read skills.md for the AI model (only for newly created/loaded sessions)
-            byte[] skillsBytes = await _docker.DownloadFileAsync(dbSession.ContainerId, "/app/skills.md", cancellationToken);
+            byte[] skillsBytes = await _docker.DownloadFileAsync(dbSession.ContainerId, $"{_codePodConfig.WorkDir}/skills.md", cancellationToken);
             string skillsContent = Encoding.UTF8.GetString(skillsBytes);
             if (!string.IsNullOrWhiteSpace(skillsContent))
             {
@@ -541,7 +550,7 @@ public sealed class CodeInterpreterExecutor(
             // skills.md may not exist, ignore
         }
 
-        return Result.Ok(info);
+        yield return new ToolCompletedToolProgressDelta { Result = Result.Ok(info) };
     }
 
     [ToolFunction("Destroy the docker session")]
@@ -568,7 +577,7 @@ public sealed class CodeInterpreterExecutor(
         }
 
         state.DbSession.TerminatedAt = DateTime.UtcNow;
-        await TouchSession(state.DbSession.Id, cancellationToken);
+        await TerminateSession(state.DbSession.Id, cancellationToken);
 
         ctx.SessionsBySessionId.Remove(sessionId);
 
@@ -601,7 +610,7 @@ public sealed class CodeInterpreterExecutor(
 
         Exception? streamException = null;
         ConfiguredCancelableAsyncEnumerable<CommandOutputEvent>.Enumerator enumerator = _docker
-            .ExecuteCommandStreamAsync(state.DbSession.ContainerId, state.ShellPrefix, command, PathSafety.WorkDir, timeout, cancellationToken)
+            .ExecuteCommandStreamAsync(state.DbSession.ContainerId, state.ShellPrefix, command, _codePodConfig.WorkDir, timeout, cancellationToken)
             .WithCancellation(cancellationToken)
             .GetAsyncEnumerator();
         try
@@ -691,16 +700,14 @@ public sealed class CodeInterpreterExecutor(
         TurnContext.SessionState state = ensureResult.Value!;
         state.UsedInThisTurn = true;
 
-        string normalizedPath = PathSafety.NormalizeUnderWorkDir(path);
-
         byte[] bytes = Encoding.UTF8.GetBytes(text);
-        await _docker.UploadFileAsync(state.DbSession.ContainerId, normalizedPath, bytes, cancellationToken);
+        await _docker.UploadFileAsync(state.DbSession.ContainerId, path, bytes, cancellationToken);
         await TouchSession(state.DbSession.Id, cancellationToken);
 
         await SyncArtifactsAfterToolCall(ctx, state, cancellationToken);
 
         int lineCount = string.IsNullOrEmpty(text) ? 0 : text.Split(["\r\n", "\n"], StringSplitOptions.None).Length;
-        return Result.Ok($"Wrote {lineCount} lines to {normalizedPath}");
+        return Result.Ok($"Wrote {lineCount} lines to {path}");
     }
 
     [ToolFunction("Read a file under /app")]
@@ -727,9 +734,7 @@ public sealed class CodeInterpreterExecutor(
         TurnContext.SessionState state = ensureResult.Value!;
         state.UsedInThisTurn = true;
 
-        string normalizedPath = PathSafety.NormalizeUnderWorkDir(path);
-
-        byte[] bytes = await _docker.DownloadFileAsync(state.DbSession.ContainerId, normalizedPath, cancellationToken);
+        byte[] bytes = await _docker.DownloadFileAsync(state.DbSession.ContainerId, path, cancellationToken);
 
         string output;
         bool wantsLineNumbers = withLineNumbers == true;
@@ -823,7 +828,7 @@ public sealed class CodeInterpreterExecutor(
 
             // Try to keep the preview *useful* under MaxOutputBytes by accounting for base64 expansion.
             // We still apply TruncateText later as a final safety net.
-            string headerTemplate = $"{prefix}Path: {normalizedPath}\nSize: {bytes.Length}\nBase64(first {{0}} bytes):\n";
+            string headerTemplate = $"{prefix}Path: {path}\nSize: {bytes.Length}\nBase64(first {{0}} bytes):\n";
 
             int budget = Math.Max(1, binaryOptions.MaxOutputBytes);
             int minHeaderBytes = Encoding.UTF8.GetByteCount(string.Format(headerTemplate, 0));
@@ -987,18 +992,16 @@ public sealed class CodeInterpreterExecutor(
         TurnContext.SessionState state = ensureResult.Value!;
         state.UsedInThisTurn = true;
 
-        string normalizedPath = PathSafety.NormalizeUnderWorkDir(path);
-
-        byte[] originalBytes = await _docker.DownloadFileAsync(state.DbSession.ContainerId, normalizedPath, cancellationToken);
+        byte[] originalBytes = await _docker.DownloadFileAsync(state.DbSession.ContainerId, path, cancellationToken);
         string originalText = Encoding.UTF8.GetString(originalBytes);
 
         string patched = UnifiedDiffApplier.Apply(originalText, patch);
         byte[] newBytes = Encoding.UTF8.GetBytes(patched);
 
-        await _docker.UploadFileAsync(state.DbSession.ContainerId, normalizedPath, newBytes, cancellationToken);
+        await _docker.UploadFileAsync(state.DbSession.ContainerId, path, newBytes, cancellationToken);
         await TouchSession(state.DbSession.Id, cancellationToken);
 
-        return Result.Ok($"Patched {normalizedPath} ({newBytes.Length} bytes)");
+        return Result.Ok($"Patched {path} ({newBytes.Length} bytes)");
     }
 
     [ToolFunction("Download cloud files (from chat history) into /app")]
@@ -1035,8 +1038,7 @@ public sealed class CodeInterpreterExecutor(
             await s.CopyToAsync(ms, cancellationToken);
             byte[] bytes = ms.ToArray();
 
-            string safeName = PathSafety.SanitizeFileName(file.FileName);
-            string targetPath = Path.Combine(PathSafety.WorkDir, safeName);
+            string targetPath = $"{_codePodConfig.WorkDir}/{file.FileName}";
             await _docker.UploadFileAsync(state.DbSession.ContainerId, targetPath, bytes, cancellationToken);
 
             downloaded.Add(file);
@@ -1184,11 +1186,53 @@ public sealed class CodeInterpreterExecutor(
         DateTime now = DateTime.UtcNow;
         using IServiceScope scope = _scopeFactory.CreateScope();
         ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
-        await db.ChatDockerSessions
-            .Where(x => x.Id == dockerSessionId)
-            .ExecuteUpdateAsync(x => x
-                .SetProperty(v => v.LastActiveAt, now)
-                .SetProperty(v => v.ExpiresAt, now.AddSeconds(_options.SessionIdleTimeoutSeconds)), cancellationToken);
+
+        // In-Memory provider doesn't support ExecuteUpdateAsync, use fallback
+        if (db.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+        {
+            ChatDockerSession? session = await db.ChatDockerSessions
+                .FirstOrDefaultAsync(x => x.Id == dockerSessionId, cancellationToken);
+            if (session != null)
+            {
+                session.LastActiveAt = now;
+                session.ExpiresAt = now.AddSeconds(_options.SessionIdleTimeoutSeconds);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            await db.ChatDockerSessions
+                .Where(x => x.Id == dockerSessionId)
+                .ExecuteUpdateAsync(x => x
+                    .SetProperty(v => v.LastActiveAt, now)
+                    .SetProperty(v => v.ExpiresAt, now.AddSeconds(_options.SessionIdleTimeoutSeconds)), cancellationToken);
+        }
+    }
+
+    private async Task TerminateSession(long dockerSessionId, CancellationToken cancellationToken)
+    {
+        DateTime now = DateTime.UtcNow;
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
+
+        // In-Memory provider doesn't support ExecuteUpdateAsync, use fallback
+        if (db.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+        {
+            ChatDockerSession? session = await db.ChatDockerSessions
+                .FirstOrDefaultAsync(x => x.Id == dockerSessionId, cancellationToken);
+            if (session != null)
+            {
+                session.TerminatedAt = now;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            await db.ChatDockerSessions
+                .Where(x => x.Id == dockerSessionId)
+                .ExecuteUpdateAsync(x => x
+                    .SetProperty(v => v.TerminatedAt, now), cancellationToken);
+        }
     }
 
     private async Task<Dictionary<string, FileEntry>> SnapshotArtifacts(string containerId, CancellationToken cancellationToken)
@@ -1196,7 +1240,7 @@ public sealed class CodeInterpreterExecutor(
         List<FileEntry> entries;
         try
         {
-            entries = await _docker.ListDirectoryAsync(containerId, "/app/artifacts", cancellationToken);
+            entries = await _docker.ListDirectoryAsync(containerId, $"{_codePodConfig.WorkDir}/{_codePodConfig.ArtifactsDir}", cancellationToken);
         }
         catch
         {

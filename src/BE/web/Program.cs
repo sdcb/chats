@@ -19,6 +19,7 @@ using Chats.BE.Services.CodeInterpreter;
 using Chats.BE.Services.Options;
 using Chats.DockerInterface;
 using Microsoft.Extensions.Options;
+using Chats.BE.Services.Keycloak;
 
 namespace Chats.BE;
 
@@ -49,6 +50,8 @@ public class Program
         {
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd($"Sdcb-Chats/{CurrentVersion}");
         });
+
+        builder.Services.AddSingleton<KeycloakOAuthClient>();
         builder.Services.AddSingleton<InitService>();
         builder.Services.AddSingleton<AppConfigService>();
         builder.Services.AddSingleton<CsrfTokenService>();

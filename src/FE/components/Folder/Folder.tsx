@@ -124,7 +124,7 @@ const Folder = ({
               <IconChevronRight size={18} stroke="#6b7280" />
             </div>
 
-            <div className="relative flex-1 overflow-hidden text-ellipsis whitespace-nowrap break-all text-left text-[12.5px] text-gray-500">
+            <div className="relative flex-1 overflow-hidden text-ellipsis whitespace-nowrap break-all text-left text-sm font-medium text-gray-500">
               {currentFolder.name === UngroupedChatName
                 ? t('All chats')
                 : currentFolder.name}

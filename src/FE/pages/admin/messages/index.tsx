@@ -128,15 +128,15 @@ export default function Messages() {
     }
   }, [init, router.isReady]);
 
-  // 同步 URL 中的参数到本地搜索输入状态
+  // 当 URL 参数变化（如刷新、前进后退）时，同步到输入框
   useEffect(() => {
-    if (userInput !== user) {
-      setUserInput(user);
+    if (!router.isReady) {
+      return;
     }
-    if (contentInput !== content) {
-      setContentInput(content);
-    }
-  }, [content, contentInput, user, userInput]);
+
+    setUserInput(user);
+    setContentInput(content);
+  }, [router.isReady, user, content]);
 
   return (
     <>

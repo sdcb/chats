@@ -50,6 +50,11 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             .Select(x => x.ToDto(urlEncryption, fup))
             .ToArrayAsync(cancellationToken);
 
+        if (EtagCacheHelper.TryHandleNotModified(this, "messages-turns", messages))
+        {
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
         return Ok(messages);
     }
 
@@ -59,8 +64,15 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         long turnId = urlEncryption.DecryptTurnId(encryptedTurnId);
         int decryptedChatId = urlEncryption.DecryptChatId(chatId);
 
-        StepGenerateInfoDto[] stepInfos = await db.ChatTurns
-            .Where(x => x.Id == turnId && x.ChatId == decryptedChatId && x.Chat.UserId == currentUser.Id)
+        IQueryable<ChatTurn> turns = db.ChatTurns
+            .Where(x => x.Id == turnId && x.ChatId == decryptedChatId);
+
+        if (!currentUser.IsAdmin)
+        {
+            turns = turns.Where(x => x.Chat.UserId == currentUser.Id);
+        }
+
+        StepGenerateInfoDto[] stepInfos = await turns
             .SelectMany(x => x.Steps
                 .Where(s => s.Usage != null)
                 .OrderBy(s => s.CreatedAt)
@@ -85,6 +97,11 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             return NotFound();
         }
 
+        if (EtagCacheHelper.TryHandleNotModified(this, "messages-turn-generate-info", stepInfos))
+        {
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
         return Ok(stepInfos);
     }
 
@@ -94,8 +111,15 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         long stepId = urlEncryption.DecryptStepId(encryptedStepId);
         int decryptedChatId = urlEncryption.DecryptChatId(chatId);
 
-        StepGenerateInfoDto? stepInfo = await db.Steps
-            .Where(s => s.Id == stepId && s.Turn.ChatId == decryptedChatId && s.Turn.Chat.UserId == currentUser.Id && s.Usage != null)
+        IQueryable<Step> steps = db.Steps
+            .Where(s => s.Id == stepId && s.Turn.ChatId == decryptedChatId && s.Usage != null);
+
+        if (!currentUser.IsAdmin)
+        {
+            steps = steps.Where(s => s.Turn.Chat.UserId == currentUser.Id);
+        }
+
+        StepGenerateInfoDto? stepInfo = await steps
             .Select(s => new StepGenerateInfoDto
             {
                 InputCachedTokens = s.Usage!.InputCachedTokens,
@@ -115,6 +139,11 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         if (stepInfo == null)
         {
             return NotFound();
+        }
+
+        if (EtagCacheHelper.TryHandleNotModified(this, "messages-step-generate-info", stepInfo))
+        {
+            return StatusCode(StatusCodes.Status304NotModified);
         }
 
         return Ok(stepInfo);

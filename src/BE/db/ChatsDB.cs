@@ -196,7 +196,11 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<ChatDockerSession>(entity =>
         {
-            entity.HasOne(d => d.OwnerTurn).WithMany(p => p.ChatDockerSessions).HasConstraintName("FK_ChatDockerSession_ChatTurn");
+            entity.HasOne(d => d.OwnerChat).WithMany(p => p.ChatDockerSessions).HasConstraintName("FK_ChatDockerSession_Chat");
+
+            entity.HasOne(d => d.OwnerTurn).WithMany(p => p.ChatDockerSessions)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_ChatDockerSession_ChatTurn");
         });
 
         modelBuilder.Entity<ChatGroup>(entity =>

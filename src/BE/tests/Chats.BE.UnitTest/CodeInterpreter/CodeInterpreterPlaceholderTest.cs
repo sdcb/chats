@@ -16,7 +16,7 @@ public sealed class CodeInterpreterPlaceholderTest
     [InlineData(100L * 1024 * 1024, "100MB")]
     public void FormatBytes_ShouldFormatCorrectly(long bytes, string expected)
     {
-        string result = CodeInterpreterExecutor.FormatBytes(bytes);
+        string result = BytesFormatter.Format(bytes);
         Assert.Equal(expected, result);
     }
 

@@ -40,7 +40,7 @@ export default function Authorizing() {
   return (
     <>
       {router.isReady && (
-        <div className="w-full text-center mt-8 text-gray-600 text-[12.5px]">
+        <div className="w-full text-center mt-8 text-gray-600">
           {t('Logging in...')}
         </div>
       )}

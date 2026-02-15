@@ -7,7 +7,6 @@ import { formatDateTime } from '@/utils/date';
 import { GetFileServicesResult } from '@/types/adminApis';
 import { feFileServiceTypes } from '@/types/file';
 
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
   Table,
@@ -17,6 +16,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+
+import IconActionButton from '@/components/common/IconActionButton';
+import { IconPlus } from '@/components/Icons';
 
 import FileServiceModal from '@/components/admin/Files/FileServiceModal';
 
@@ -53,15 +55,15 @@ export default function FileService() {
 
   return (
     <>
-      <div className="flex gap-4 mb-4">
-        <Button
+      <div className="flex items-center justify-end mb-4">
+        <IconActionButton
+          label={t('Add File Service')}
+          icon={<IconPlus size={18} />}
+          stopPropagation={false}
           onClick={() => {
             setIsOpen(true);
           }}
-          color="primary"
-        >
-          {t('Add File Service')}
-        </Button>
+        />
       </div>
       <Card>
         <Table>

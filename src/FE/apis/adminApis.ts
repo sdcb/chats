@@ -63,7 +63,6 @@ import {
   SmsAttemptLog,
 } from '@/types/adminApis';
 import { GetChatShareResult, GetChatVersionResult } from '@/types/clientApis';
-import { IStepGenerateInfo } from '@/types/chatMessage';
 import { IKeyCount } from '@/types/common';
 import { ChatModelFileConfig, DBModelProvider } from '@/types/model';
 import { PageResult } from '@/types/page';
@@ -319,6 +318,14 @@ export const deleteFileService = (id: number) => {
   return fetchService.delete(`/api/admin/file-service/${id}`);
 };
 
+export const validateFileService = (params: PostFileServicesParams) => {
+  const fetchService = createFetchClient();
+  return fetchService.post<void>(
+    '/api/admin/file-service/validate',
+    { body: params, suppressDefaultToast: true },
+  );
+};
+
 export const getFileServiceTypeInitialConfig = (fileServiceTypeId: number) => {
   const fetchService = createFetchClient();
   return fetchService.get<string>(
@@ -552,16 +559,6 @@ export const getAdminMessage = (chatId: string) => {
   const fetchServer = createFetchClient();
   return fetchServer.get<GetChatShareResult>(
     `/api/admin/message-details?chatId=${chatId}`,
-  );
-};
-
-export const getAdminTurnGenerateInfo = (
-  chatId: number,
-  turnId: string,
-): Promise<IStepGenerateInfo[]> => {
-  const fetchServer = createFetchClient();
-  return fetchServer.get(
-    `/api/admin/message-details/${turnId}/generate-info?chatId=${chatId}`,
   );
 };
 

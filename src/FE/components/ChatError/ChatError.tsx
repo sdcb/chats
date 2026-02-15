@@ -20,9 +20,9 @@ const ChatError = (props: Props) => {
 
   return (
     <div className="my-2 mt-0 px-1 pt-1">
-      <pre className="font-mono text-sm whitespace-pre-wrap break-words m-0 p-0 bg-transparent text-red-600 dark:text-red-400">
+      <span className="text-sm whitespace-pre-wrap break-words m-0 p-0 bg-transparent text-red-600 dark:text-red-400">
         {errorMessage()}
-      </pre>
+      </span>
     </div>
   );
 };

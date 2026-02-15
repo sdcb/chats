@@ -1,6 +1,7 @@
 ﻿using Chats.DB;
 using Chats.BE.Controllers.Users.ApiKeys.Dtos;
 using Chats.BE.Infrastructure;
+using Chats.BE.Services.Common;
 using Chats.BE.Services;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
@@ -23,7 +24,7 @@ public class ApiKeyController(ChatsDB db, CurrentUser currentUser, IUrlEncryptio
             .Select(x => new ListApiKeyDto
             {
                 Id = idEncryption.EncryptApiKeyId(x.Id),
-                Key = x.Key,
+                Key = x.Key.ToMasked(),
                 IsRevoked = x.IsRevoked,
                 Comment = x.Comment,
                 AllowEnumerate = x.AllowEnumerate,
@@ -61,26 +62,32 @@ public class ApiKeyController(ChatsDB db, CurrentUser currentUser, IUrlEncryptio
     }
 
     [HttpPost]
-    public async Task<ListApiKeyDto> CreateApiKey(CancellationToken cancellationToken)
+    public async Task<ActionResult<ListApiKeyDto>> CreateApiKey([FromBody] CreateApiKeyDto dto, CancellationToken cancellationToken)
     {
+        string comment = dto.Comment.Trim();
+        if (comment.Length == 0)
+        {
+            return BadRequest("comment is required");
+        }
+
         const int keyLength = 36;
         UserApiKey dbEntry = new()
         {
             UserId = currentUser.Id,
             Key = $"sk-{GenerateBase62Key(keyLength)}",
-            Comment = $"New key",
+            Comment = comment,
             IsRevoked = false, 
             IsDeleted = false, 
             AllowEnumerate = true,
             AllowAllModels = true,
-            Expires = DateTime.UtcNow.AddYears(1),
+            Expires = dto.Expires,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
         db.UserApiKeys.Add(dbEntry);
         await db.SaveChangesAsync(cancellationToken);
 
-        return new ListApiKeyDto()
+        return Ok(new ListApiKeyDto()
         {
             Id =  idEncryption.EncryptApiKeyId(dbEntry.Id),
             Key = dbEntry.Key,
@@ -93,7 +100,7 @@ public class ApiKeyController(ChatsDB db, CurrentUser currentUser, IUrlEncryptio
             UpdatedAt = dbEntry.UpdatedAt,
             LastUsedAt = null, 
             ModelCount = 0
-        };
+        });
     }
 
     static string GenerateBase62Key(int length)

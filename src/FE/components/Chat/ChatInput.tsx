@@ -24,21 +24,21 @@ import { Prompt } from '@/types/prompt';
 
 import {
   IconArrowCompactDown,
-  IconArrowDown,
-  IconArrowDoubleUp,
-  IconArrowUp,
   IconArrowsDiagonal,
   IconArrowsDiagonalMinimize,
   IconCamera,
   IconLoader,
   IconPaperclip,
+  IconPlus,
   IconStopFilled,
+  IconFolder,
 } from '@/components/Icons/index';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { SendButton } from '@/components/ui/send-button';
 import { useSendMode } from '@/hooks/useSendMode';
 import Tips from '@/components/Tips/Tips';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import { setShowChatInput } from '@/actions/setting.actions';
 import HomeContext from '@/contexts/home.context';
@@ -53,37 +53,29 @@ import VariableModal from './VariableModal';
 import { defaultFileConfig } from '@/apis/adminApis';
 import { getUserPromptDetail } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
-
-// 动画时长配置（与全屏动画一致）
-const ANIMATION_DURATION_MS = 200;
+import CodeExecutionControl from './CodeExecutionControl';
+import { ANIMATION_DURATION_MS } from '@/constants/animation';
 
 // 文本框配置
 const TEXTAREA_LINE_HEIGHT = 24;
-const TEXTAREA_MIN_ROWS = 3;
+const TEXTAREA_PADDING_Y = 16; // py-2 (8px * 2)
+const TEXTAREA_MIN_ROWS = 2.5;
 const TEXTAREA_MAX_ROWS = 10;
-const TEXTAREA_MIN_HEIGHT = TEXTAREA_LINE_HEIGHT * TEXTAREA_MIN_ROWS; // 72px
-const TEXTAREA_MAX_HEIGHT = TEXTAREA_LINE_HEIGHT * TEXTAREA_MAX_ROWS; // 240px
+const TEXTAREA_MIN_HEIGHT =
+  TEXTAREA_LINE_HEIGHT * TEXTAREA_MIN_ROWS + TEXTAREA_PADDING_Y; // 40px
+const TEXTAREA_MAX_HEIGHT =
+  TEXTAREA_LINE_HEIGHT * TEXTAREA_MAX_ROWS + TEXTAREA_PADDING_Y; // 256px
 
 interface Props {
   onSend: (message: Message) => void;
-  onScrollDownClick: () => void;
-  onScrollToTopClick: () => void;
-  onScrollToPrevUserMessageClick: () => void;
   onChangePrompt: (prompt: Prompt) => void;
-  showScrollDownButton: boolean;
-  showScrollToTopButton: boolean;
-  showScrollToPrevUserMessageButton: boolean;
+  onHeightChange?: (height: number) => void;
 }
 
 const ChatInput = ({
   onSend,
-  onScrollDownClick,
-  onScrollToTopClick,
-  onScrollToPrevUserMessageClick,
   onChangePrompt,
-  showScrollDownButton,
-  showScrollToTopButton,
-  showScrollToPrevUserMessageButton,
+  onHeightChange,
 }: Props) => {
   const { t } = useTranslation();
 
@@ -97,6 +89,7 @@ const ChatInput = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const promptListRef = useRef<HTMLUListElement | null>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
+  const rootContainerRef = useRef<HTMLDivElement>(null);
   const prevChatStatusRef = useRef<ChatStatus>(selectedChat?.status || ChatStatus.None);
   const [contentText, setContentText] = useState('');
   const [contentFiles, setContentFiles] = useState<FileDef[]>([]);
@@ -111,6 +104,7 @@ const ChatInput = ({
   const [isFullWriting, setIsFullWriting] = useState(false);
   const [isCollapsedByChat, setIsCollapsedByChat] = useState(false);
   const [textareaHeight, setTextareaHeight] = useState<number | 'full'>(TEXTAREA_MIN_HEIGHT);
+  const [showFloatingControls, setShowFloatingControls] = useState(false);
   // 动画状态：
   // 'idle' - 无动画
   // 'pre-expanding' - 准备展开（ChatInput在屏幕外，按钮可见）
@@ -174,6 +168,7 @@ const ChatInput = ({
     ) {
       // 会话上下文开始：预期结束时自动展开，除非期间被用户手动修改
       setIsCollapsedByChat(true);
+      // 自动收起输入框
       if (showChatInput) {
         settingDispatch(setShowChatInput(false));
       }
@@ -184,6 +179,7 @@ const ChatInput = ({
       prevStatus === ChatStatus.Chatting &&
       currentStatus !== ChatStatus.Chatting
     ) {
+      // 自动展开输入框
       if (isCollapsedByChat && !showChatInput) {
         settingDispatch(setShowChatInput(true));
       }
@@ -235,6 +231,31 @@ const ChatInput = ({
       if (rafId) cancelAnimationFrame(rafId);
     };
   }, [showChatInput]);
+
+  useEffect(() => {
+    if (!onHeightChange) return;
+    const el = rootContainerRef.current;
+    if (!el) return;
+
+    let lastHeight = -1;
+
+    const emit = () => {
+      const nextHeight = Math.max(0, Math.round(el.getBoundingClientRect().height));
+      if (Math.abs(nextHeight - lastHeight) <= 1) return;
+      lastHeight = nextHeight;
+      onHeightChange(nextHeight);
+    };
+
+    emit();
+
+    const resizeObserver = new ResizeObserver(() => emit());
+    resizeObserver.observe(el);
+
+    return () => {
+      resizeObserver.disconnect();
+      onHeightChange(0);
+    };
+  }, [onHeightChange]);
 
   // 如果没有选中的聊天，不渲染ChatInput
   if (!selectedChat) {
@@ -484,13 +505,23 @@ const ChatInput = ({
       ? 'translateY(0)'
       : 'translateY(100%)';
 
+  const canUpload = canUploadFile();
+  const showDeviceUpload = canUpload;
+  const showCameraUpload = canUpload && isMobile();
+  const showRemoteFiles = canUpload;
+  const showUploadMenu = showDeviceUpload || showCameraUpload || showRemoteFiles;
+  const isMobileDevice = isMobile();
+
   return (
-    <div className="absolute bottom-0 left-0 w-full z-20 overflow-hidden pointer-events-none min-h-[48px]">
+    <div
+      ref={rootContainerRef}
+      className="absolute bottom-0 left-0 w-full z-20 overflow-hidden pointer-events-none min-h-[48px]"
+    >
       {/* 展开状态的 ChatInput */}
       {(renderExpanded || animationState !== 'idle') && (
         <div
           ref={inputContainerRef}
-          className="w-full border-transparent bg-background pointer-events-auto transition-transform ease-out"
+          className="w-full border-transparent bg-background pointer-events-auto transition-transform ease-out pd-0 md:pb-2"
           style={{
             transform: inputTransform,
             transitionDuration: `${ANIMATION_DURATION_MS}ms`,
@@ -501,183 +532,84 @@ const ChatInput = ({
               'stretch flex flex-row rounded-md mx-auto w-full px-2 md:px-4',
             )}
           >
-            <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] pl-0 pt-0 pr-0 pb-1">
-              {/* 滚动按钮组 - 水平排列 */}
-              {/* 移除原来的位置，现在放到收起按钮同一排 */}
-              <div className="flex px-1 items-center gap-1 md:gap-2 bg-muted/60 md:bg-muted rounded-t-md border-b border-border/40">
-                <div className="flex items-center gap-1 md:gap-2">
-                  <div className="flex items-center">
-                    {canUploadFile() && (
-                      <UploadButton
-                        fileConfig={defaultFileConfig}
-                        onUploading={handleUploading}
-                        onFailed={handleUploadFailed}
-                        onSuccessful={handleUploadSuccessful}
-                        capture={false}
-                        inputId="upload-device"
-                        tip={t('Upload from device')}
-                        tipSide="top"
-                      >
-                        <IconPaperclip size={22} />
-                      </UploadButton>
-                    )}
-                    {canUploadFile() && isMobile() && (
-                      <UploadButton
-                        fileConfig={defaultFileConfig}
-                        onUploading={handleUploading}
-                        onFailed={handleUploadFailed}
-                        onSuccessful={handleUploadSuccessful}
-                        capture={true}
-                        inputId="upload-camera"
-                        tip={t('Take photo')}
-                        tipSide="top"
-                      >
-                        <IconCamera size={22} />
-                      </UploadButton>
-                    )}
-                    {canUploadFile() && (
-                      <PasteUpload
-                        fileConfig={defaultFileConfig}
-                        allowAllFiles={selectedChat.spans.some(x => x.codeExecutionEnabled)}
-                        onUploading={handleUploading}
-                        onFailed={handleUploadFailed}
-                        onSuccessful={handleUploadSuccessful}
-                      />
-                    )}
-                    {canUploadFile() && (
-                      <DragUpload
-                        fileConfig={defaultFileConfig}
-                        allowAllFiles={selectedChat.spans.some(x => x.codeExecutionEnabled)}
-                        onUploading={handleUploading}
-                        onFailed={handleUploadFailed}
-                        onSuccessful={handleUploadSuccessful}
-                        containerRef={inputContainerRef as React.RefObject<HTMLElement>}
-                      />
-                    )}
-
-                    {uploading && (
-                      <Button
-                        disabled
-                        size="xs"
-                        className="m-0.5 h-8 w-8 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
-                      >
-                        <IconLoader className="animate-spin" size={22} />
-                      </Button>
-                    )}
-                  </div>
-                  <div className="flex items-center">
-                    {canUploadFile() && (
-                      <FilesPopover
-                        onSelect={handleFileSelect}
-                        selectedFiles={contentFiles}
-                      />
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex flex-1" />
-
-                <div className="flex items-center gap-1 md:gap-2">
-                  {/* 滚动到顶部按钮 */}
-                  {showScrollToTopButton && (
-                    <Tips
-                      trigger={
-                        <Button
-                          size="xs"
-                          className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                          onClick={onScrollToTopClick}
-                        >
-                          <IconArrowDoubleUp size={22} className="text-foreground/80" />
-                        </Button>
-                      }
-                      side="bottom"
-                      content={t('Scroll to top')}
-                    />
-                  )}
-
-                  {/* 滚动到上一条用户消息按钮 */}
-                  {showScrollToPrevUserMessageButton && (
-                    <Tips
-                      trigger={
-                        <Button
-                          size="xs"
-                          className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                          onClick={onScrollToPrevUserMessageClick}
-                        >
-                          <IconArrowUp size={22} className="text-foreground/80" />
-                        </Button>
-                      }
-                      side="bottom"
-                      content={t('Scroll to previous user message')}
-                    />
-                  )}
-
-                  {/* 滚动到底部按钮 */}
-                  {showScrollDownButton && (
-                    <Tips
-                      trigger={
-                        <Button
-                          size="xs"
-                          className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                          onClick={onScrollDownClick}
-                        >
-                          <IconArrowDown size={22} className="text-foreground/80" />
-                        </Button>
-                      }
-                      side="bottom"
-                      content={t('Scroll to bottom')}
-                    />
-                  )}
-
-                  {/* 收起抽屉按钮 */}
+            <div
+              className="relative flex w-full flex-grow flex-col rounded-md border border-border/60 bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:bg-neutral-950 dark:border-border/40 dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]"
+              onMouseEnter={() => {
+                if (!isMobileDevice) {
+                  setShowFloatingControls(true);
+                }
+              }}
+              onMouseLeave={() => {
+                if (!isMobileDevice) {
+                  setShowFloatingControls(false);
+                }
+              }}
+              onClick={() => {
+                if (isMobileDevice) {
+                  setShowFloatingControls(true);
+                }
+              }}
+              onFocusCapture={() => {
+                if (isMobileDevice) {
+                  setShowFloatingControls(true);
+                }
+              }}
+              onBlurCapture={(event) => {
+                if (!isMobileDevice) return;
+                const nextTarget = event.relatedTarget as Node | null;
+                if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
+                  setShowFloatingControls(false);
+                }
+              }}
+            >
+              <div
+                className={cn(
+                  'absolute right-2 top-2 z-10 flex items-center gap-1 transition-opacity',
+                  showFloatingControls ? 'opacity-100' : 'opacity-0 pointer-events-none',
+                )}
+              >
+                <Tips
+                  trigger={
+                    <Button
+                      size="xs"
+                      className="h-6 w-6 p-0 bg-muted/60 hover:bg-muted"
+                      onClick={handleToggleVisibility}
+                    >
+                      <IconArrowCompactDown size={14} className="text-foreground/80" />
+                    </Button>
+                  }
+                  side="left"
+                  content={t('Collapse input')}
+                />
+                {isFullWriting ? (
                   <Tips
                     trigger={
                       <Button
                         size="xs"
-                        className={cn(
-                          'p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted'
-                        )}
-                        onClick={handleToggleVisibility}
+                        className="h-6 w-6 p-0 bg-muted/60 hover:bg-muted"
+                        onClick={() => handleFullWriting(false)}
                       >
-                        <IconArrowCompactDown size={22} className="text-foreground/70" />
+                        <IconArrowsDiagonalMinimize size={14} />
                       </Button>
                     }
-                    side="bottom"
-                    content={t('Collapse input')}
+                    side="left"
+                    content={t('Exit fullscreen writing (Ctrl + F)')}
                   />
-                </div>
-
-                <div className="flex items-center gap-1 md:gap-2">
-                  {isFullWriting ? (
-                    <Tips
-                      trigger={
-                        <Button
-                          size="xs"
-                          className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                          onClick={() => handleFullWriting(false)}
-                        >
-                          <IconArrowsDiagonalMinimize size={22} />
-                        </Button>
-                      }
-                      side="bottom"
-                      content={t('Exit fullscreen writing (Ctrl + F)')}
-                    />
-                  ) : (
-                    <Tips
-                      trigger={
-                        <Button
-                          size="xs"
-                          className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                          onClick={() => handleFullWriting(true)}
-                        >
-                          <IconArrowsDiagonal size={22} />
-                        </Button>
-                      }
-                      side="bottom"
-                      content={t('Enter fullscreen writing (Ctrl + F)')}
-                    />
-                  )}
-                </div>
+                ) : (
+                  <Tips
+                    trigger={
+                      <Button
+                        size="xs"
+                        className="h-6 w-6 p-0 bg-muted/60 hover:bg-muted"
+                        onClick={() => handleFullWriting(true)}
+                      >
+                        <IconArrowsDiagonal size={14} />
+                      </Button>
+                    }
+                    side="left"
+                    content={t('Enter fullscreen writing (Ctrl + F)')}
+                  />
+                )}
               </div>
               {/* 非全屏模式下的文件预览 */}
               {!isFullWriting && contentFiles.length > 0 && (
@@ -696,12 +628,12 @@ const ChatInput = ({
                   ))}
                 </div>
               )}
-              {/* Textarea容器 - 相对定位 */}
+              {/* Textarea容器 */}
               <div className="relative w-full">
                 <Textarea
                   ref={textareaRef}
                   className={cn(
-                    'm-0 w-full resize-none border-none outline-none rounded-md bg-transparent leading-6',
+                    'm-0 w-full resize-none border-none outline-none rounded-md bg-transparent leading-6 min-h-0',
                     `transition-[height] ease-out`,
                     isFullWriting && 'overflow-auto'
                   )}
@@ -720,30 +652,6 @@ const ChatInput = ({
                   onKeyDown={handleKeyDown}
                 />
 
-                {/* 发送按钮 - 绝对定位在右下角，允许遮挡 */}
-                <div className="absolute right-2 bottom-2 flex items-center gap-2 pointer-events-auto">
-                  {selectedChat.status === ChatStatus.Chatting ? (
-                    <Tips
-                      trigger={
-                        <Button
-                          className="rounded-sm w-20 h-9 shadow-md"
-                          onClick={handleStopChats}
-                        >
-                          <IconStopFilled className="h-4 w-4" />
-                        </Button>
-                      }
-                      side="top"
-                      content={t('Stop Generating')}
-                    />
-                  ) : (
-                    <SendButton
-                      onSend={handleSend}
-                      disabled={!contentText?.trim()}
-                      size="sm"
-                    />
-                  )}
-                </div>
-
                 {/* 全屏模式下的文件展示 */}
                 {isFullWriting && contentFiles.length > 0 && (
                   <div className="flex flex-row px-3 pb-2 gap-2">
@@ -761,6 +669,148 @@ const ChatInput = ({
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* 底部工具行 - Agent控制 + 发送按钮 */}
+              <div className="flex items-center px-2 py-2 border-t border-border/40">
+                {/* 左侧: Agent 代码执行控制 */}
+                <div className="flex items-center gap-2 flex-1">
+                  {showUploadMenu && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          size="xs"
+                          className="h-8 w-8 rounded-full p-0 bg-muted/60 text-foreground hover:bg-muted"
+                        >
+                          <IconPlus size={18} />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent side="top" align="start" className="w-56 p-2">
+                        <div className="flex flex-col gap-1">
+                          {showDeviceUpload && (
+                            <UploadButton
+                              fileConfig={defaultFileConfig}
+                              onUploading={handleUploading}
+                              onFailed={handleUploadFailed}
+                              onSuccessful={handleUploadSuccessful}
+                              capture={false}
+                              inputId="upload-device"
+                              buttonProps={{
+                                size: 'sm',
+                                variant: 'ghost',
+                                className:
+                                  'm-0 w-full h-9 justify-start gap-2 px-2 py-1 rounded-md bg-muted/40 hover:bg-muted',
+                              }}
+                            >
+                              <IconPaperclip size={18} />
+                              <span className="text-sm">
+                                {t('Upload from device')}
+                              </span>
+                            </UploadButton>
+                          )}
+                          {showRemoteFiles && (
+                            <FilesPopover
+                              onSelect={handleFileSelect}
+                              selectedFiles={contentFiles}
+                              trigger={
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="m-0 w-full h-9 justify-start gap-2 px-2 py-1 rounded-md bg-muted/40 hover:bg-muted"
+                                >
+                                  <IconFolder size={18} />
+                                  <span className="text-sm">
+                                    {t('Select remote files')}
+                                  </span>
+                                </Button>
+                              }
+                            />
+                          )}
+                          {showCameraUpload && (
+                            <UploadButton
+                              fileConfig={defaultFileConfig}
+                              onUploading={handleUploading}
+                              onFailed={handleUploadFailed}
+                              onSuccessful={handleUploadSuccessful}
+                              capture={true}
+                              inputId="upload-camera"
+                              buttonProps={{
+                                size: 'sm',
+                                variant: 'ghost',
+                                className:
+                                  'm-0 w-full h-9 justify-start gap-2 px-2 py-1 rounded-md bg-muted/40 hover:bg-muted',
+                              }}
+                            >
+                              <IconCamera size={18} />
+                              <span className="text-sm">
+                                {t('Take photo')}
+                              </span>
+                            </UploadButton>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+
+                  {uploading && (
+                    <Button
+                      disabled
+                      size="xs"
+                      className="m-0.5 h-8 w-8 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
+                    >
+                      <IconLoader className="animate-spin" size={20} />
+                    </Button>
+                  )}
+
+                  {canUpload && (
+                    <PasteUpload
+                      fileConfig={defaultFileConfig}
+                      allowAllFiles={selectedChat.spans.some((x) => x.codeExecutionEnabled)}
+                      onUploading={handleUploading}
+                      onFailed={handleUploadFailed}
+                      onSuccessful={handleUploadSuccessful}
+                    />
+                  )}
+                  {canUpload && (
+                    <DragUpload
+                      fileConfig={defaultFileConfig}
+                      allowAllFiles={selectedChat.spans.some((x) => x.codeExecutionEnabled)}
+                      onUploading={handleUploading}
+                      onFailed={handleUploadFailed}
+                      onSuccessful={handleUploadSuccessful}
+                      containerRef={inputContainerRef as React.RefObject<HTMLElement>}
+                    />
+                  )}
+                  <CodeExecutionControl
+                    chatId={selectedChat.id}
+                    spans={selectedChat.spans}
+                    modelMap={modelMap}
+                    disabled={selectedChat.status === ChatStatus.Chatting}
+                  />
+                </div>
+
+                {/* 右侧: 发送/停止按钮 */}
+                <div className="flex items-center gap-2">
+                  {selectedChat.status === ChatStatus.Chatting ? (
+                    <Tips
+                      trigger={
+                        <Button
+                          className="rounded-sm h-9 px-4 shadow-md"
+                          onClick={handleStopChats}
+                        >
+                          <IconStopFilled className="h-4 w-4" />
+                        </Button>
+                      }
+                      side="top"
+                      content={t('Stop Generating')}
+                    />
+                  ) : (
+                    <SendButton
+                      onSend={handleSend}
+                      size="sm"
+                    />
+                  )}
+                </div>
               </div>
 
               {showPromptList && filteredPrompts.length > 0 && (
@@ -797,57 +847,6 @@ const ChatInput = ({
             transitionDuration: `${ANIMATION_DURATION_MS}ms`,
           }}
         >
-          {/* 滚动到顶部按钮 */}
-          {showScrollToTopButton && (
-            <Tips
-              trigger={
-                <Button
-                  size="xs"
-                  className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                  onClick={onScrollToTopClick}
-                >
-                  <IconArrowDoubleUp size={22} className="text-foreground/80" />
-                </Button>
-              }
-              side="bottom"
-              content={t('Scroll to top')}
-            />
-          )}
-
-          {/* 滚动到上一条用户消息按钮 */}
-          {showScrollToPrevUserMessageButton && (
-            <Tips
-              trigger={
-                <Button
-                  size="xs"
-                  className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                  onClick={onScrollToPrevUserMessageClick}
-                >
-                  <IconArrowUp size={22} className="text-foreground/80" />
-                </Button>
-              }
-              side="bottom"
-              content={t('Scroll to previous user message')}
-            />
-          )}
-
-          {/* 滚动到底部按钮 */}
-          {showScrollDownButton && (
-            <Tips
-              trigger={
-                <Button
-                  size="xs"
-                  className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
-                  onClick={onScrollDownClick}
-                >
-                  <IconArrowDown size={22} className="text-foreground/80" />
-                </Button>
-              }
-              side="bottom"
-              content={t('Scroll to bottom')}
-            />
-          )}
-
           {/* 展开抽屉按钮 */}
           <Tips
             trigger={
@@ -856,7 +855,7 @@ const ChatInput = ({
                 className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                 onClick={handleToggleVisibility}
               >
-                <IconArrowCompactDown size={22} className={'rotate-180 text-foreground/70'} />
+                <IconArrowCompactDown size={20} className={'rotate-180 text-foreground/70'} />
               </Button>
             }
             side="bottom"

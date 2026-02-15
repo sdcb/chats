@@ -2,6 +2,7 @@
 using Chats.BE.Controllers.Chats.Prompts.Dtos;
 using Chats.BE.DB.Init;
 using Chats.BE.Infrastructure;
+using Chats.BE.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -50,6 +51,12 @@ public class PromptsController(ChatsDB db, CurrentUser currentUser) : Controller
                 UpdatedAt = x.UpdatedAt
             })
             .ToArrayAsync(cancellationToken);
+
+        if (EtagCacheHelper.TryHandleNotModified(this, "prompts-brief", prompts))
+        {
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
         return Ok(prompts);
     }
 
@@ -77,6 +84,12 @@ public class PromptsController(ChatsDB db, CurrentUser currentUser) : Controller
     public async Task<ActionResult<PromptDto>> GetDefaultPrompt(CancellationToken cancellationToken)
     {
         PromptDto dto = await GetDefaultPrompt(db, currentUser.Id, cancellationToken);
+
+        if (EtagCacheHelper.TryHandleNotModified(this, "prompts-default", dto))
+        {
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
         return Ok(dto);
     }
 
@@ -108,7 +121,7 @@ public class PromptsController(ChatsDB db, CurrentUser currentUser) : Controller
             Id = -1,
             IsDefault = true,
             Name = "Default",
-            UpdatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UnixEpoch,
             IsSystem = true
         };
 

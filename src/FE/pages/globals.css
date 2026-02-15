@@ -30,6 +30,7 @@
     --input                 : 240 5.9% 90%;
     --ring                  : 240 5.9% 10%;
     --radius                : 1rem;
+    --chat-font-size        : 14px;
     --chart-1: 221.2 83.2% 53.3%;
     --chart-2: 212 95% 68%;
     --chart-3: 216 92% 60%;
@@ -99,6 +100,7 @@
 }
 
 html {
+  font-size: 1rem;
   touch-action: manipulation;
 }
 
@@ -160,6 +162,16 @@ html {
 
 .prose {
   max-width: 100% !important;
+  font-size: var(--chat-font-size, 14px) !important;
+  line-height: 1.6 !important;
+}
+
+.prose p,
+.prose li,
+.prose td,
+.prose th {
+  font-size: var(--chat-font-size, 14px) !important;
+  line-height: 1.6 !important;
 }
 
 @media (max-width: 640px) {
@@ -193,11 +205,11 @@ select:focus {
   white-space: normal;
   /* 仍然保证长词/URL 在移动端可断行 */
   overflow-wrap: anywhere;
-  margin     : .5em 0 !important;
+  margin     : .2em 0 !important;
 }
 
 .prose img {
-  margin: .5em 0 !important;
+  margin: .2em 0 !important;
 }
 
 /* hidden input type is number spin button */

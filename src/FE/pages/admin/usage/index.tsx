@@ -552,15 +552,15 @@ const UsageRecords = () => {
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
                   <div className="font-medium">
-                    {t('Input/Output Cost(￥)')}
+                    {t('Input/Output Cost')}
                   </div>
                   <div>
-                    ￥{toFixed(log.inputCost)}/{toFixed(log.outputCost)}
+                    {toFixed(log.inputCost)}/{toFixed(log.outputCost)}
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
                   <div className="font-medium">{t('Total Cost')}</div>
-                  <div>￥{toFixed(log.inputCost + log.outputCost)}</div>
+                  <div>{toFixed(log.inputCost + log.outputCost)}</div>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
                   <div className="font-medium">{t('IP')}</div>
@@ -589,8 +589,8 @@ const UsageRecords = () => {
                 <TableHead>{t('Account')}</TableHead>
                 <TableHead>{t('Model')}</TableHead>
                 <TableHead>{t('Input/Output Tokens')}</TableHead>
-                <TableHead>{t('Input/Output Cost(￥)')}</TableHead>
-                <TableHead>{t('Total Cost(￥)')}</TableHead>
+                <TableHead>{t('Input/Output Cost')}</TableHead>
+                <TableHead>{t('Total Cost')}</TableHead>
                 <TableHead>{t('IP')}</TableHead>
                 <TableHead>{t('Finish Reason')}</TableHead>
                 <TableHead>{t('Total Duration(ms)')}</TableHead>
@@ -611,10 +611,10 @@ const UsageRecords = () => {
                     {log.inputTokens}/{log.outputTokens}
                   </TableCell>
                   <TableCell>
-                    ￥{toFixed(log.inputCost)}/￥{toFixed(log.outputCost)}
+                    {toFixed(log.inputCost)}/{toFixed(log.outputCost)}
                   </TableCell>
                   <TableCell>
-                    ￥{toFixed(log.inputCost + log.outputCost)}
+                    {toFixed(log.inputCost + log.outputCost)}
                   </TableCell>
                   <TableCell>{log.ip}</TableCell>
                   <TableCell>{log.finishReason}</TableCell>

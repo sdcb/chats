@@ -2,21 +2,27 @@ import { isMobile } from './common';
 
 const STORAGE_KEY = 'settings';
 
+export const DEFAULT_FONT_SIZE = 15;
+export const MIN_FONT_SIZE = 12;
+export const MAX_FONT_SIZE = 18;
+
 export interface Settings {
   showChatBar: boolean;
+  fontSize: number;
 }
 
-export const DEFAULT_SETTINGS = {
+export const DEFAULT_SETTINGS: Settings = {
   showChatBar: typeof window !== 'undefined'  && isMobile() ? false : true,
+  fontSize: DEFAULT_FONT_SIZE,
 };
 
 export const getSettings = (): Settings => {
-  let settings = DEFAULT_SETTINGS;
+  let settings = { ...DEFAULT_SETTINGS };
   if (typeof localStorage === 'undefined') return settings;
   const settingsJson = localStorage.getItem(STORAGE_KEY);
   if (settingsJson) {
     let savedSettings = JSON.parse(settingsJson) as Settings;
-    settings = Object.assign(settings, savedSettings);
+    settings = { ...settings, ...savedSettings };
   }
   return settings;
 };

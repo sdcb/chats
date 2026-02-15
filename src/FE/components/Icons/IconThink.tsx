@@ -12,7 +12,7 @@ const IconThink = (props: IconProps) => {
       height={size}
       strokeWidth={strokeWidth}
       stroke={stroke || 'var(--foreground)'}
-      viewBox="0 0 24 24"
+      viewBox="0 0 20 20"
       fill="none"
       strokeLinecap="round"
       strokeLinejoin="round"

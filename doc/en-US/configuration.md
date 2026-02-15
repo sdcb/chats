@@ -27,8 +27,8 @@ Chats reads configuration based on the .NET configuration system, with priority 
 | [`CodePod:WorkDir`](#53-codepodworkdir)                                                                                          | `/app`                                  | Recommended to keep default                   |
 | [`CodePod:ArtifactsDir`](#54-codepodartifactsdir)                                                                                | `artifacts`                             | Subdirectory relative to WorkDir              |
 | [`CodePod:LabelPrefix`](#55-codepodlabelprefix)                                                                                  | `codepod`                               | Used for container naming and labels          |
-| [`CodePod:OutputOptions:MaxOutputBytes`](#56-codepodoutputoptionsmaxoutputbytes)                                                 | `6144`                                  | 6KB, truncates when exceeded                  |
-| [`CodeInterpreter:DefaultImage`](#61-codeinterpreterdefaultimage)                                                                | `sdcb/code-interpreter:r-26`            | Default image for new sessions                |
+| [`CodePod:OutputOptions:MaxOutputBytes`](#56-codepodoutputoptionsmaxoutputbytes)                                                 | `8192`                                  | 8KB, truncates when exceeded                  |
+| [`CodeInterpreter:DefaultImage`](#61-codeinterpreterdefaultimage)                                                                | `sdcb/code-interpreter:latest`            | Default image for new sessions                |
 | [`CodeInterpreter:DefaultImageDescription`](#62-codeinterpreterdefaultimagedescription)                                          | `Pre-installed with common packages...` | Enriches system prompt                        |
 | [`CodeInterpreter:DefaultTimeoutSeconds`](#63-codeinterpreterdefaulttimeoutseconds)                                              | `300`                                   | null means approximately unlimited (24h)      |
 | [`CodeInterpreter:SessionIdleTimeoutSeconds`](#64-codeinterpretersessionidletimeoutseconds)                                      | `1800`                                  | 30 minutes, session idle timeout              |
@@ -223,10 +223,10 @@ The `CodePod` configuration group manages Docker container creation, working dir
 ### 5.6 `CodePod:OutputOptions:MaxOutputBytes`
 
 - **Type**: Integer (bytes)
-- **Default**: `6144` (6KB)
+- **Default**: `8192` (8KB)
 - **Purpose**: Limit the maximum byte size of container command output (stdout/stderr); exceeding this triggers truncation (default strategy is to keep the beginning and end, inserting an "output truncated" message).
 
-- **Environment variable example**: `CodePod__OutputOptions__MaxOutputBytes=6144`
+- **Environment variable example**: `CodePod__OutputOptions__MaxOutputBytes=8192`
 
 ---
 

@@ -9,17 +9,15 @@ import { currentISODateString } from '@/utils/date';
 import { findSelectedMessageByLeafId } from '@/utils/message';
 import { getSettings } from '@/utils/settings';
 import { getUserSession, redirectToLoginPage } from '@/utils/user';
-import { getChatCache, setChatCache } from '@/utils/chatCache';
 
 import {
   ChatStatus,
   DefaultChatPaging,
   IChat,
   IChatPaging,
-  UngroupedChatName,
 } from '@/types/chat';
 import { IChatMessage } from '@/types/chatMessage';
-import { ChatResult, GetChatsParams, GetUserChatGroupWithMessagesResult } from '@/types/clientApis';
+import { ChatResult, GetChatsParams } from '@/types/clientApis';
 import { IChatGroup } from '@/types/group';
 
 import {
@@ -206,104 +204,6 @@ const HomeContent = () => {
     return chat;
   }
 
-  const getGroupSnapshotForCache = (groupId: string | null) => {
-    if (groupId === null) {
-      return {
-        id: null,
-        name: UngroupedChatName,
-        rank: 0,
-        isExpanded: true,
-      } as const;
-    }
-
-    const matchedGroup = chatGroups.find((group) => group.id === groupId);
-    if (matchedGroup) {
-      return matchedGroup;
-    }
-
-    return {
-      id: groupId,
-      name: '',
-      rank: 0,
-      isExpanded: true,
-    } as const;
-  };
-
-  const persistNewChatToCache = (chat: IChat) => {
-    const cachedData = getChatCache();
-    if (!cachedData?.length) return;
-
-    const targetGroupId = chat.groupId ?? null;
-    let updated = false;
-
-    const updatedGroups = cachedData.map((group) => {
-      const groupId = group.id ?? null;
-      if (groupId !== targetGroupId) {
-        return group;
-      }
-
-      updated = true;
-      const filteredRows = group.chats.rows.filter((row) => row.id !== chat.id);
-      const existed = filteredRows.length !== group.chats.rows.length;
-
-      return {
-        ...group,
-        chats: {
-          ...group.chats,
-          rows: [{ ...chat }, ...filteredRows],
-          count: existed ? group.chats.count : group.chats.count + 1,
-        },
-      };
-    });
-
-    if (!updated) {
-      const snapshot = getGroupSnapshotForCache(targetGroupId);
-      updatedGroups.push({
-        id: snapshot.id,
-        name: snapshot.name,
-        rank: snapshot.rank,
-        isExpanded: snapshot.isExpanded,
-        chats: {
-          rows: [{ ...chat }],
-          count: 1,
-        },
-      } as GetUserChatGroupWithMessagesResult);
-    }
-
-    setChatCache(updatedGroups, '');
-  };
-
-  const removeChatsFromCache = (chatIds: string[]) => {
-    if (!chatIds.length) return;
-    const cachedData = getChatCache();
-    if (!cachedData?.length) return;
-
-    const idSet = new Set(chatIds);
-    let changed = false;
-
-    const updatedGroups = cachedData.map((group) => {
-      const rows = group.chats.rows.filter((row) => !idSet.has(row.id));
-      if (rows.length === group.chats.rows.length) {
-        return group;
-      }
-
-      changed = true;
-      const removedCount = group.chats.rows.length - rows.length;
-      return {
-        ...group,
-        chats: {
-          ...group.chats,
-          rows,
-          count: Math.max(0, group.chats.count - removedCount),
-        },
-      };
-    });
-
-    if (changed) {
-      setChatCache(updatedGroups, '');
-    }
-  };
-
   const handleNewChat = (groupId: string | null = null) => {
     return postChats({
       title: t('New Conversation'),
@@ -319,7 +219,6 @@ const HomeContent = () => {
 
       const chatId = data.id;
       router.push('#/' + chatId);
-      persistNewChatToCache(chat);
     });
   };
 
@@ -366,7 +265,6 @@ const HomeContent = () => {
       return !ids.includes(x.id);
     });
     chatDispatch(setChats(chatList));
-    removeChatsFromCache(ids);
 
     if (chatList.length > 0) {
       let chatIdToSelect: string | undefined;
@@ -430,8 +328,7 @@ const HomeContent = () => {
     });
   };
 
-  const getChats = async (query: string = ''): Promise<{ usedCache: boolean }> => {
-    // 处理缓存数据的通用函数
+  const getChats = async (query: string = '') => {
     const processChatData = (data: any[]) => {
       const chatList: IChat[] = [];
       let chatGroupList: IChatGroup[] = [];
@@ -452,40 +349,15 @@ const HomeContent = () => {
       chatDispatch(setChatPaging(chatPagingList));
     };
 
-    // 1. 先尝试从缓存读取（仅在没有搜索条件时）
-    let hasCacheData = false;
-    if (!query) {
-      const cachedData = getChatCache(query);
-      if (cachedData && cachedData.length > 0) {
-        // 立即显示缓存数据
-        processChatData(cachedData);
-        hasCacheData = true;
-        // 有缓存数据时，立即关闭骨骼屏
-        chatDispatch(setIsChatsLoading(false));
-      }
-    }
-
-    // 2. 异步请求最新数据
     try {
       const data = await getUserChatGroupWithMessages({
         ...DefaultChatPaging,
         query,
       });
-      
-      // 更新缓存（仅在没有搜索条件时）
-      if (!query) {
-        setChatCache(data, query);
-      }
-      
-      // 更新UI
       processChatData(data);
     } catch (error) {
       console.error('Failed to fetch chat groups:', error);
-      // 如果有缓存数据，错误时就继续使用缓存数据，不做额外处理
-      // 如果没有缓存数据，可以考虑显示错误提示
     }
-    
-    return { usedCache: hasCacheData };
   };
 
   const getChatsByGroup = (params: GetChatsParams) => {
@@ -532,12 +404,8 @@ const HomeContent = () => {
     });
 
     // 3. 加载聊天列表
-    getChats().then(({ usedCache }) => {
-      // 如果没有使用缓存，在 API 返回后关闭骨骼屏
-      if (!usedCache) {
-        chatDispatch(setIsChatsLoading(false));
-      }
-      // 如果使用了缓存，骨骼屏已经在 getChats 内部关闭了
+    getChats().finally(() => {
+      chatDispatch(setIsChatsLoading(false));
     });
 
     // 4. 加载提示词简要列表
@@ -589,7 +457,7 @@ const HomeContent = () => {
       }}
     >
       <div className="flex h-screen w-screen flex-col text-sm">
-        <div className="flex h-full w-full bg-background">
+        <div className="flex h-full w-full bg-background chat-background">
           <Chatbar />
           <Chat />
         </div>
