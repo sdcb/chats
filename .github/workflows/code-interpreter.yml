@@ -109,6 +109,7 @@ jobs:
             PIP_PACKAGES=${{ env.PIP_PACKAGES }}
             NPM_GLOBAL_PACKAGES=${{ env.NPM_GLOBAL_PACKAGES }}
             NUGET_PRECACHE=${{ env.NUGET_PRECACHE }}
+            RUN_NUMBER=${{ github.run_number }}
           tags: ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_NAMESPACE }}/${{ env.IMAGE_NAME }}:r-${{ github.run_number }}-${{ matrix.tag }}
 
       - name: Smoke test
