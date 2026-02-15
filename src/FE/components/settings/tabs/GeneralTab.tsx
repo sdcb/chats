@@ -146,7 +146,7 @@ const GeneralTab = () => {
               {t('Account balance')}
             </span>
             <span className="text-base font-semibold tabular-nums">
-              ￥{toFixed(+(userBalance || 0))}
+              {toFixed(+(userBalance || 0))}
             </span>
           </div>
 

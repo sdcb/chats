@@ -118,7 +118,7 @@ export default function ModelItem({ model, onEditClick, onDeleteClick, onGoToUsa
   const priceBreakdown = cachedPrice > 0
     ? [freshPrice, cachedPrice, model.outputTokenPrice1M]
     : [freshPrice, model.outputTokenPrice1M];
-  const formattedPrice = '￥' + priceBreakdown.map((value) => formatNumberAsMoney(value)).join('/');
+  const formattedPrice = priceBreakdown.map((value) => formatNumberAsMoney(value)).join('/');
 
   return (
     <div>

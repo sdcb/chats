@@ -39,7 +39,7 @@ const ChatModelInfo = (props: { modelId: number }) => {
           toFixed(modelUsage.inputFreshTokenPrice1M),
           toFixed(modelUsage.outputTokenPrice1M),
         ];
-  const priceDisplay = `￥${priceParts.join('/')}`;
+  const priceDisplay = priceParts.join('/');
 
   return (
     <div className="flex flex-col text-gray-600 text-sm h-5">
