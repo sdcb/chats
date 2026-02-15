@@ -17,6 +17,17 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 
 <img alt="chats-en" src="https://github.com/user-attachments/assets/40d2376e-58a0-4309-a2f5-5ed8262a0c2e" />
 
+## 🆕 Latest Release (1.10.1)
+
+- 📅 Release Date: 2026-02-15
+- 🐳 Sandbox Manager upgrades: environment variable management, richer session info, improved file manager and editor flows
+- ⚡ Performance: high-frequency APIs now use server-side ETag caching with 304 handling; frontend chat list local cache removed
+- 🗺️ UX: new ChatMiniMap navigation and scroll controls moved out of ChatInput
+- 🔐 Security & usability: API keys show full value once at creation and stay masked in list views
+- 📦 Code Interpreter image pipeline updates: run-version marker, preinstalled ripgrep, and latest manifest publishing on non-main branches
+
+👉 [View 1.10.1 Release Notes](./doc/en-US/release-notes/1.10.1.md) · [View All Releases](./doc/en-US/release-notes/README.md)
+
 ## Quick Start
 
 Start with a single command (requires Docker):

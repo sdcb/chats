@@ -7,7 +7,21 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.10.0](1.10.0.md) - 2026-01-14 ⭐ Latest Release
+## [1.10.1](1.10.1.md) - 2026-02-15 ⭐ Latest Release
+
+**Core Highlights**: Sandbox Manager Enhancements · Server-side ETag Caching · ChatMiniMap Navigation · API Key Management Upgrades · Code Interpreter Image Pipeline Updates
+
+- 🏷️ **Sandbox Manager**: Session Manager renamed and expanded with info/env/files/editor capabilities
+- ⚡ **ETag Caching**: High-frequency APIs now support server-driven ETag + 304 responses, frontend chat list local cache removed
+- 🗺️ **ChatMiniMap**: Adds right-side message mini-map and migrates scroll controls from ChatInput
+- 🔐 **API Keys**: One-time full-key display on create, masked list responses, edit + bulk copy support
+- 🐳 **Image Pipeline**: `RUN_NUMBER` rv marker in skills, `ripgrep` preinstalled, and non-main branches can publish `latest` manifest
+
+[View Full Release Notes →](1.10.1.md)
+
+---
+
+## [1.10.0](1.10.0.md) - 2026-01-14
 
 **Core Highlights**: Built-in Docker Code Interpreter · `sdcb/code-interpreter` Image & CI · Multi-provider Interleaved Thinking · DeepSeek v3.2 `reasoning_content` Compatibility · Tooling/Upload/Admin UI Improvements
 
