@@ -74,7 +74,7 @@ Chats 使用 `C#`/`TypeScript` 开发，以下是完整的文档资源：
 
 - **GitHub Issues**：[https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
 - **QQ 群**：498452653 [![加入QQ群](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=flat&logo=tencent-qq)](https://qm.qq.com/q/AM8tY9cAsS)
-- **微信群** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=3) 如果微信群已满，请加 QQ 群获取临时入群二维码。
+- **微信群** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=4) 如果微信群已满，请加 QQ 群获取临时入群二维码。
 
 ---
 
