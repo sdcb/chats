@@ -23,6 +23,12 @@ public class GlobalDBConfig(ChatsDB db, ILogger<GlobalDBConfig> logger)
 
     public Task<SiteInfo?> GetFillingInfo(CancellationToken cancellationToken) => GetConfigByKey<SiteInfo>(DBConfigKey.SiteInfo, cancellationToken);
 
+    public Task<RequestTraceConfig?> GetInboundRequestTraceConfig(CancellationToken cancellationToken) =>
+        GetConfigByKey<RequestTraceConfig>(DBConfigKey.InboundRequestTrace, cancellationToken);
+
+    public Task<RequestTraceConfig?> GetOutboundRequestTraceConfig(CancellationToken cancellationToken) =>
+        GetConfigByKey<RequestTraceConfig>(DBConfigKey.OutboundRequestTrace, cancellationToken);
+
     private async Task<T?> GetConfigByKey<T>(string key, CancellationToken cancellationToken) where T : class
     {
         string? configText = await db.Configs

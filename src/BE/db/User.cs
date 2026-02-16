@@ -78,6 +78,9 @@ public partial class User
     public virtual ICollection<Prompt> Prompts { get; set; } = new List<Prompt>();
 
     [InverseProperty("User")]
+    public virtual ICollection<RequestTrace> RequestTraces { get; set; } = new List<RequestTrace>();
+
+    [InverseProperty("User")]
     public virtual ICollection<SmsRecord> SmsRecords { get; set; } = new List<SmsRecord>();
 
     [InverseProperty("CreditUser")]

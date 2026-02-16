@@ -73,6 +73,10 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<Prompt> Prompts { get; set; }
 
+    public virtual DbSet<RequestTrace> RequestTraces { get; set; }
+
+    public virtual DbSet<RequestTracePayload> RequestTracePayloads { get; set; }
+
     public virtual DbSet<SmsAttempt> SmsAttempts { get; set; }
 
     public virtual DbSet<SmsRecord> SmsRecords { get; set; }
@@ -198,9 +202,7 @@ public partial class ChatsDB : DbContext
         {
             entity.HasOne(d => d.OwnerChat).WithMany(p => p.ChatDockerSessions).HasConstraintName("FK_ChatDockerSession_Chat");
 
-            entity.HasOne(d => d.OwnerTurn).WithMany(p => p.ChatDockerSessions)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("FK_ChatDockerSession_ChatTurn");
+            entity.HasOne(d => d.OwnerTurn).WithMany(p => p.ChatDockerSessions).HasConstraintName("FK_ChatDockerSession_ChatTurn");
         });
 
         modelBuilder.Entity<ChatGroup>(entity =>
@@ -356,6 +358,18 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.CreateUser).WithMany(p => p.Prompts)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Prompt_CreateUserId");
+        });
+
+        modelBuilder.Entity<RequestTrace>(entity =>
+        {
+            entity.HasOne(d => d.User).WithMany(p => p.RequestTraces).HasConstraintName("FK_RequestTrace_User");
+        });
+
+        modelBuilder.Entity<RequestTracePayload>(entity =>
+        {
+            entity.Property(e => e.LogId).ValueGeneratedNever();
+
+            entity.HasOne(d => d.Log).WithOne(p => p.RequestTracePayload).HasConstraintName("FK_RequestTracePayload_RequestTrace");
         });
 
         modelBuilder.Entity<SmsAttempt>(entity =>
