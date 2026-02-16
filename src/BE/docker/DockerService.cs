@@ -1,12 +1,11 @@
 using System.Diagnostics;
+using System.Formats.Tar;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Chats.DockerInterface.Models;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using Microsoft.Extensions.Logging;
-using SharpCompress.Common;
-using SharpCompress.Writers;
 using SdkContainerStatus = Chats.DockerInterface.Models.ContainerStatus;
 
 namespace Chats.DockerInterface;
@@ -524,10 +523,13 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
     {
         string relativePath = containerPath.TrimStart('/');
         await using MemoryStream tarStream = new();
-        using (IWriter writer = WriterFactory.Open(tarStream, ArchiveType.Tar, new WriterOptions(CompressionType.None) { LeaveStreamOpen = true }))
+        using (TarWriter writer = new(tarStream, TarEntryFormat.Pax, leaveOpen: true))
         {
-            await using MemoryStream dataStream = new(content);
-            writer.Write(relativePath, dataStream, null);
+            PaxTarEntry file = new(TarEntryType.RegularFile, relativePath)
+            {
+                DataStream = new MemoryStream(content, writable: false)
+            };
+            writer.WriteEntry(file);
         }
         tarStream.Seek(0, SeekOrigin.Begin);
 

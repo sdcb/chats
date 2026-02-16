@@ -8,8 +8,8 @@
 
   <ItemGroup>
     <PackageReference Include="Docker.DotNet" Version="3.125.15" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.1" />
-    <PackageReference Include="SharpCompress" Version="0.42.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.3" />
+    <PackageReference Include="SharpCompress" Version="0.46.0" />
   </ItemGroup>
 
 </Project>
