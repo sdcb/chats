@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Client;
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
+using Chats.BE.Services;
 
 namespace Chats.BE.Controllers.Users.Mcps;
 
@@ -371,7 +372,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
                 {
                     Name = tool.Name,
                     Description = tool.Description,
-                    Parameters = tool.InputSchema.GetRawText(),
+                    Parameters = JSON.Serialize(tool.InputSchema),
                 });
             }
             return Ok(tools);
