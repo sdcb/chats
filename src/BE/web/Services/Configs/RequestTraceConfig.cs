@@ -44,11 +44,11 @@ public record RequestTraceConfig
 public record RequestTraceFilters
 {
     /// <summary>
-    /// 限定命中的来源名称列表；入站可表示路由/端点名，出站可表示 HttpClient 名称。
+    /// 限定命中的来源名称模式列表；入站表示IP地址，出站可表示 HttpClient 名称。
     /// 为 null 表示不按名称限制（允许所有）。
     /// </summary>
-    [JsonPropertyName("sourceNames")]
-    public string[]? SourceNames { get; init; } = null;
+    [JsonPropertyName("sourcePatterns")]
+    public string[]? SourcePatterns { get; init; } = null;
 
     /// <summary>
     /// 仅包含这些 URL 模式（可使用通配符）；为 null 表示不过滤（允许所有）。
