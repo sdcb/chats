@@ -7,6 +7,7 @@ import { getConfigs } from '@/apis/adminApis';
 
 import SiteInfoConfig from '@/components/admin/global-configs/SiteInfoConfig';
 import TencentSmsConfig from '@/components/admin/global-configs/TencentSmsConfig';
+import RequestTraceGlobalConfig from '@/components/admin/global-configs/RequestTraceGlobalConfig';
 
 export default function Configs() {
   const { t } = useTranslation();
@@ -35,6 +36,7 @@ export default function Configs() {
     <div className="space-y-6">
       <SiteInfoConfig configs={configs} onConfigsUpdate={init} />
       <TencentSmsConfig configs={configs} onConfigsUpdate={init} />
+      <RequestTraceGlobalConfig configs={configs} onConfigsUpdate={init} />
     </div>
   );
 }

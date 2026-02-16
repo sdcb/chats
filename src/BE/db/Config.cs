@@ -15,7 +15,6 @@ public partial class Config
     [Unicode(false)]
     public string Key { get; set; } = null!;
 
-    [StringLength(1000)]
     public string Value { get; set; } = null!;
 
     [StringLength(50)]

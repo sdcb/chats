@@ -163,5 +163,41 @@ END
 
 GO
 
+-- =============================================
+-- Step 4: 扩展 Config.Value 到最大长度
+-- =============================================
+PRINT N'[Step 4] 扩展 Config.Value 到 NVARCHAR(MAX)（若需要）';
+
+IF OBJECT_ID(N'dbo.Config', N'U') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM sys.columns c
+        INNER JOIN sys.types t ON c.user_type_id = t.user_type_id
+        WHERE c.object_id = OBJECT_ID(N'dbo.Config')
+          AND c.name = N'Value'
+          AND (
+                t.name <> N'nvarchar'
+                OR c.max_length <> -1
+              )
+    )
+    BEGIN
+        ALTER TABLE dbo.Config
+        ALTER COLUMN [Value] NVARCHAR(MAX) NOT NULL;
+
+        PRINT N'    -> 已将 Config.Value 扩展为 NVARCHAR(MAX)';
+    END
+    ELSE
+    BEGIN
+        PRINT N'    -> Config.Value 已是 NVARCHAR(MAX)，跳过';
+    END
+END
+ELSE
+BEGIN
+    PRINT N'    -> Config 表不存在，跳过扩展';
+END
+
+GO
+
 PRINT N'[1.11.0] 数据库迁移任务完成';
 GO
