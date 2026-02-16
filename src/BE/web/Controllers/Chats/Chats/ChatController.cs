@@ -34,7 +34,7 @@ using Microsoft.Extensions.Options;
 namespace Chats.BE.Controllers.Chats.Chats;
 
 [Route("api/chats"), Authorize]
-public class ChatController(ChatStopService stopService, AsyncClientInfoManager clientInfoManager) : ControllerBase
+public class ChatController(ChatStopService stopService, AsyncClientInfoManager clientInfoManager, IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory) : ControllerBase
 {
     [HttpPost("regenerate-assistant-message")]
     public async Task<IActionResult> RegenerateOneMessage(
@@ -316,6 +316,8 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             fileCache,
             channels[index].Writer,
             retry429Times,
+            httpClientFactory,
+            loggerFactory,
             cancellationToken))];
 
         if (isEmptyChat && req is GeneralChatRequest generalChatRequest)
@@ -513,6 +515,8 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         Dictionary<string, TaskCompletionSource<DBFile>> fileCache,
         ChannelWriter<SseResponseLine> writer,
         int? retry429Times,
+        IHttpClientFactory httpClientFactory,
+        ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
         // Combine message tree and user message steps, then convert to neutral format
@@ -730,7 +734,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     {
                         Endpoint = new Uri(mcpServer.Url),
                         AdditionalHeaders = headers,
-                    }), cancellationToken: cancellationToken);
+                    }, httpClientFactory.CreateClient(), loggerFactory, ownsHttpClient: true), cancellationToken: cancellationToken);
 
                     logger.LogInformation("{mcpServer.Label} connected, elapsed={elapsed}ms, Calling tool: {toolName}, parameters: {call.Parameters}",
                         mcpServer.Label, sw.ElapsedMilliseconds, toolName, call.Parameters);

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Client;
 using System.Text.Json;
+using ModelContextProtocol.Protocol;
 
 namespace Chats.BE.Controllers.Users.Mcps;
 
@@ -325,7 +326,12 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
     }
 
     [HttpPost("fetch-tools")]
-    public async Task<ActionResult<List<McpToolBasicInfo>>> FetchMcpTools([FromBody] FetchToolsRequest req, [FromServices] ILogger<McpController> logger, CancellationToken cancellationToken)
+    public async Task<ActionResult<List<McpToolBasicInfo>>> FetchMcpTools(
+        [FromBody] FetchToolsRequest req, 
+        [FromServices] ILogger<McpController> logger,
+        [FromServices] IHttpClientFactory httpClientFactory,
+        [FromServices] ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
     {
         if (!Uri.TryCreate(req.ServerUrl, UriKind.Absolute, out Uri? serverUri))
         {
@@ -356,15 +362,16 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
 
         try
         {
-            McpClient client = await McpClient.CreateAsync(new HttpClientTransport(options), cancellationToken: cancellationToken);
+            McpClient client = await McpClient.CreateAsync(new HttpClientTransport(options, httpClientFactory.CreateClient(), loggerFactory), cancellationToken: cancellationToken);
             List<McpToolBasicInfo> tools = [];
-            await foreach (McpClientTool tool in client.EnumerateToolsAsync(cancellationToken: cancellationToken))
+            ListToolsResult mcpToolsResp = await client.ListToolsAsync(new ListToolsRequestParams(), cancellationToken);
+            foreach (Tool tool in mcpToolsResp.Tools)
             {
                 tools.Add(new McpToolBasicInfo
                 {
                     Name = tool.Name,
                     Description = tool.Description,
-                    Parameters = tool.JsonSchema.GetRawText(),
+                    Parameters = tool.InputSchema.GetRawText(),
                 });
             }
             return Ok(tools);
