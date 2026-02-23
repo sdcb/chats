@@ -142,10 +142,10 @@ public record RequestTraceBodyConfig
     public bool CaptureRawResponseBody { get; init; } = false;
 
     /// <summary>
-    /// 单次请求体或响应体可记录的最大字节数，超出将截断；默认 5MB。
+    /// 单次请求体或响应体可记录的最大字符数，超出将按文本策略截断。
     /// </summary>
-    [JsonPropertyName("maxBytes")]
-    public int MaxBytes { get; init; } = 5 * 1024 * 1024;
+    [JsonPropertyName("maxTextCharsForTruncate")]
+    public int MaxTextCharsForTruncate { get; init; } = 5 * 1024 * 1024;
 
     /// <summary>
     /// 允许采集 Body 的 Content-Type 前缀列表；为 null 表示允许所有类型。

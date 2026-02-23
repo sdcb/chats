@@ -13,8 +13,8 @@ BEGIN
         StartedAt DATETIME2(7) NOT NULL,                         -- 请求开始时间（UTC）
         DurationMs INT NOT NULL,                                 -- 耗时（毫秒）
         Direction TINYINT NOT NULL,                              -- 方向：0=Inbound（用户->后端），1=Outbound（后端->外部）
-        Source NVARCHAR(100) NULL,                               -- 来源标识；入站可放来源IP/来源名，出站可放命名HttpClient或目标来源标签（100 足够覆盖 IPv6 文本）
-        UserId INT NULL,                                         -- 关联用户（弱关联）；当前按你的要求保留索引+外键
+        Source NVARCHAR(100) NULL,                               -- 来源标识；入站可放来源IP，出站可放命名HttpClient或目标来源标签（100 足够覆盖 IPv6 文本）
+        UserId INT NULL,                                         -- 关联用户；但保留索引+外键
         TraceId NVARCHAR(100) NULL,                              -- 串联键：用于把同一链路日志聚合；按我们约定可直接使用 HttpContext.TraceIdentifier
         [Method] VARCHAR(10) NOT NULL,                           -- HTTP 方法（GET/POST/...）
         [Url] NVARCHAR(2048) NOT NULL,                           -- 完整 URL；已去掉 Host/Path/Query 拆列，避免冗余字段
