@@ -51,7 +51,7 @@ interface RequestTraceBodyConfig {
   captureResponseBody: boolean;
   captureRawRequestBody: boolean;
   captureRawResponseBody: boolean;
-  maxBytes: number;
+  maxTextCharsForTruncate: number;
   allowedContentTypes: string[] | null;
   redactJsonFields: string[];
 }
@@ -81,7 +81,7 @@ interface RequestTraceDirectionFormInput {
   captureResponseBody: boolean;
   captureRawRequestBody: boolean;
   captureRawResponseBody: boolean;
-  maxBytes: string;
+  maxTextCharsForTruncate: string;
   allowedContentTypes: string;
   redactJsonFields: string;
 }
@@ -116,7 +116,7 @@ const DEFAULT_DIRECTION_CONFIG: RequestTraceDirectionConfig = {
     captureResponseBody: true,
     captureRawRequestBody: false,
     captureRawResponseBody: false,
-    maxBytes: 5 * 1024 * 1024,
+    maxTextCharsForTruncate: 5 * 1024 * 1024,
     allowedContentTypes: null,
     redactJsonFields: ['password', 'token', 'secret', 'apiKey', 'access_token', 'refresh_token'],
   },
@@ -165,6 +165,7 @@ const normalizeDirectionConfig = (
   }
 
   const data = rawValue as Partial<RequestTraceDirectionConfig>;
+  const body = (data.body ?? {}) as Partial<RequestTraceBodyConfig>;
 
   return {
     enabled: data.enabled ?? DEFAULT_DIRECTION_CONFIG.enabled,
@@ -193,18 +194,17 @@ const normalizeDirectionConfig = (
         data.headers?.redactResponseHeaders ?? DEFAULT_DIRECTION_CONFIG.headers.redactResponseHeaders,
     },
     body: {
-      captureRequestBody:
-        data.body?.captureRequestBody ?? DEFAULT_DIRECTION_CONFIG.body.captureRequestBody,
-      captureResponseBody:
-        data.body?.captureResponseBody ?? DEFAULT_DIRECTION_CONFIG.body.captureResponseBody,
+      captureRequestBody: body.captureRequestBody ?? DEFAULT_DIRECTION_CONFIG.body.captureRequestBody,
+      captureResponseBody: body.captureResponseBody ?? DEFAULT_DIRECTION_CONFIG.body.captureResponseBody,
       captureRawRequestBody:
-        data.body?.captureRawRequestBody ?? DEFAULT_DIRECTION_CONFIG.body.captureRawRequestBody,
+        body.captureRawRequestBody ?? DEFAULT_DIRECTION_CONFIG.body.captureRawRequestBody,
       captureRawResponseBody:
-        data.body?.captureRawResponseBody ?? DEFAULT_DIRECTION_CONFIG.body.captureRawResponseBody,
-      maxBytes: data.body?.maxBytes ?? DEFAULT_DIRECTION_CONFIG.body.maxBytes,
-      allowedContentTypes:
-        data.body?.allowedContentTypes ?? DEFAULT_DIRECTION_CONFIG.body.allowedContentTypes,
-      redactJsonFields: data.body?.redactJsonFields ?? DEFAULT_DIRECTION_CONFIG.body.redactJsonFields,
+        body.captureRawResponseBody ?? DEFAULT_DIRECTION_CONFIG.body.captureRawResponseBody,
+      maxTextCharsForTruncate:
+        body.maxTextCharsForTruncate
+        ?? DEFAULT_DIRECTION_CONFIG.body.maxTextCharsForTruncate,
+      allowedContentTypes: body.allowedContentTypes ?? DEFAULT_DIRECTION_CONFIG.body.allowedContentTypes,
+      redactJsonFields: body.redactJsonFields ?? DEFAULT_DIRECTION_CONFIG.body.redactJsonFields,
     },
   };
 };
@@ -245,7 +245,7 @@ const toFormDirection = (
   captureResponseBody: config.body.captureResponseBody,
   captureRawRequestBody: config.body.captureRawRequestBody,
   captureRawResponseBody: config.body.captureRawResponseBody,
-  maxBytes: String(config.body.maxBytes),
+  maxTextCharsForTruncate: String(config.body.maxTextCharsForTruncate),
   allowedContentTypes: toTextareaValue(config.body.allowedContentTypes),
   redactJsonFields: toTextareaValue(config.body.redactJsonFields),
 });
@@ -274,7 +274,7 @@ const toDirectionConfig = (
     captureResponseBody: data.captureResponseBody,
     captureRawRequestBody: data.captureRawRequestBody,
     captureRawResponseBody: data.captureRawResponseBody,
-    maxBytes: Number.parseInt(data.maxBytes, 10),
+    maxTextCharsForTruncate: Number.parseInt(data.maxTextCharsForTruncate, 10),
     allowedContentTypes: toNullableArray(data.allowedContentTypes),
     redactJsonFields: toRequiredArray(data.redactJsonFields),
   },
@@ -290,14 +290,14 @@ const createRequestTraceSchema = (t: (key: string) => string) => {
       return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1;
     }, t('Sample rate must be between 0 and 1'));
 
-  const maxBytesSchema = z
+  const maxTextCharsForTruncateSchema = z
     .string()
     .trim()
-    .refine((value) => value.length > 0, t('Max bytes is required'))
+    .refine((value) => value.length > 0, t('Max text chars is required'))
     .refine((value) => {
       const parsed = Number.parseInt(value, 10);
       return Number.isInteger(parsed) && parsed > 0;
-    }, t('Max bytes must be a positive integer'));
+    }, t('Max text chars must be a positive integer'));
 
   const minDurationMsSchema = z
     .string()
@@ -350,7 +350,7 @@ const createRequestTraceSchema = (t: (key: string) => string) => {
     captureResponseBody: z.boolean(),
     captureRawRequestBody: z.boolean(),
     captureRawResponseBody: z.boolean(),
-    maxBytes: maxBytesSchema,
+    maxTextCharsForTruncate: maxTextCharsForTruncateSchema,
     allowedContentTypes: z.string(),
     redactJsonFields: z.string(),
   });
@@ -640,12 +640,17 @@ POST`}
 
           <FormField
             control={form.control}
-            name={toDirectionFieldPath(direction, 'maxBytes')}
+            name={toDirectionFieldPath(direction, 'maxTextCharsForTruncate')}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t('Max Bytes')}</FormLabel>
+                <FormLabel>{t('Max Text Chars For Truncate')}</FormLabel>
                 <FormControl>
-                  <Input type="number" min={1} placeholder={t('Maximum bytes for body capture')} {...field} />
+                  <Input
+                    type="number"
+                    min={1}
+                    placeholder={t('Maximum text characters before truncation')}
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

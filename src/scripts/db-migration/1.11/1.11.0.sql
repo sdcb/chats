@@ -25,8 +25,8 @@ BEGIN
         ErrorMessage NVARCHAR(MAX) NULL,                         -- 异常详情；inbound 可存 Exception.ToString()，outbound 通常为空
         RawRequestBodyBytes INT NOT NULL,                        -- 请求体原始字节数；0 表示无 body 或空 body
         RawResponseBodyBytes INT NULL,                           -- 响应体原始字节数；NULL 表示未知/未拿到响应，0 表示有响应但 body 为空
-        IsRequestBodyTruncated BIT NOT NULL,                     -- 请求体是否被 maxBytes 截断
-        IsResponseBodyTruncated BIT NOT NULL,                    -- 响应体是否被 maxBytes 截断
+        IsRequestBodyTruncated BIT NOT NULL,                     -- 请求体文本是否被 maxTextCharsForTruncate 截断
+        IsResponseBodyTruncated BIT NOT NULL,                    -- 响应体文本是否被 maxTextCharsForTruncate 截断
 
         CONSTRAINT PK_RequestTrace PRIMARY KEY CLUSTERED (Id),
         CONSTRAINT CK_RequestTrace_Direction CHECK (Direction IN (0, 1))
