@@ -28,6 +28,7 @@ public sealed class OutboundRequestTraceHandler(
         string url = request.RequestUri?.ToString() ?? string.Empty;
         string? source = request.RequestUri?.Host;
         int? userId = TryGetUserId(httpContextAccessor.HttpContext?.User, idEncryption);
+        string? traceId = httpContextAccessor.HttpContext?.TraceIdentifier;
 
         if (!RequestTraceHelper.MatchRequestStageFilters(config.Filters, source, method, url))
         {
@@ -65,7 +66,7 @@ public sealed class OutboundRequestTraceHandler(
                             Direction = RequestTraceDirection.Outbound,
                             Source = source,
                             UserId = userId,
-                            TraceId = null,
+                            TraceId = traceId,
                             Method = method,
                             Url = url,
                             RequestContentType = requestContentType,
@@ -98,7 +99,7 @@ public sealed class OutboundRequestTraceHandler(
             Direction = RequestTraceDirection.Outbound,
             Source = source,
             UserId = userId,
-            TraceId = null,
+            TraceId = traceId,
             Method = method,
             Url = url,
             RequestContentType = request.Content?.Headers.ContentType?.ToString(),
@@ -119,7 +120,7 @@ public sealed class OutboundRequestTraceHandler(
                 Direction = RequestTraceDirection.Outbound,
                 Source = source,
                 UserId = userId,
-                TraceId = null,
+                TraceId = traceId,
                 Method = method,
                 Url = url,
                 RequestContentType = null,
@@ -159,7 +160,7 @@ public sealed class OutboundRequestTraceHandler(
                 Direction = RequestTraceDirection.Outbound,
                 Source = source,
                 UserId = userId,
-                TraceId = null,
+                TraceId = traceId,
                 Method = method,
                 Url = url,
                 ResponseContentType = response.Content?.Headers.ContentType?.ToString(),
@@ -203,7 +204,7 @@ public sealed class OutboundRequestTraceHandler(
                                 Direction = RequestTraceDirection.Outbound,
                                 Source = source,
                                 UserId = userId,
-                                TraceId = null,
+                                TraceId = traceId,
                                 Method = method,
                                 Url = url,
                                 ResponseContentType = responseContentType,
@@ -234,7 +235,7 @@ public sealed class OutboundRequestTraceHandler(
                     Direction = RequestTraceDirection.Outbound,
                     Source = source,
                     UserId = userId,
-                    TraceId = null,
+                    TraceId = traceId,
                     Method = method,
                     Url = url,
                     ResponseContentType = null,
@@ -269,7 +270,7 @@ public sealed class OutboundRequestTraceHandler(
                         Direction = RequestTraceDirection.Outbound,
                         Source = source,
                         UserId = userId,
-                        TraceId = null,
+                        TraceId = traceId,
                         Method = method,
                         Url = url,
                         ResponseContentType = null,
@@ -294,7 +295,7 @@ public sealed class OutboundRequestTraceHandler(
                             Direction = RequestTraceDirection.Outbound,
                             Source = source,
                             UserId = userId,
-                            TraceId = null,
+                            TraceId = traceId,
                             Method = method,
                             Url = url,
                             ResponseContentType = null,
@@ -318,7 +319,7 @@ public sealed class OutboundRequestTraceHandler(
                         Direction = RequestTraceDirection.Outbound,
                         Source = source,
                         UserId = userId,
-                        TraceId = null,
+                        TraceId = traceId,
                         Method = method,
                         Url = url,
                         ResponseContentType = null,
