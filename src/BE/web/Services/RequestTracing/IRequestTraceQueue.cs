@@ -12,6 +12,8 @@ public interface IRequestTraceQueue
 
     bool TryEnqueueResponseBody(RequestTraceResponseBodyWriteModel item);
 
+    bool TryEnqueueException(RequestTraceExceptionWriteModel item);
+
     IAsyncEnumerable<RequestTraceWriteModel> ReadAllAsync(CancellationToken cancellationToken);
 
     long DroppedCount { get; }
@@ -41,6 +43,8 @@ public sealed class RequestTraceQueue : IRequestTraceQueue
     public bool TryEnqueueResponseHeader(RequestTraceResponseHeaderWriteModel item) => TryWrite(item);
 
     public bool TryEnqueueResponseBody(RequestTraceResponseBodyWriteModel item) => TryWrite(item);
+
+    public bool TryEnqueueException(RequestTraceExceptionWriteModel item) => TryWrite(item);
 
     private bool TryWrite(RequestTraceWriteModel item)
     {

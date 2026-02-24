@@ -186,8 +186,6 @@ public sealed class RequestTraceMiddleware(
                     Url = url,
                     ResponseContentType = context.Response.ContentType,
                     StatusCode = statusCode,
-                    ErrorType = exception?.GetType().Name,
-                    ErrorMessage = exception?.ToString(),
                     RawResponseBodyBytes = responseBytes?.Length,
                     IsResponseBodyTruncated = responseBodyTruncated || responseTextTruncated,
                     ResponseBody = responseText,
@@ -214,6 +212,28 @@ public sealed class RequestTraceMiddleware(
         catch (Exception ex)
         {
             exception = ex;
+
+            RequestTraceExceptionWriteModel exceptionModel = new()
+            {
+                StartedAt = startedAt,
+                ExceptionAt = DateTime.UtcNow,
+                Direction = RequestTraceDirection.Inbound,
+                Source = source,
+                UserId = userId,
+                TraceId = traceId,
+                Method = method,
+                Url = url,
+                ResponseContentType = context.Response.ContentType,
+                StatusCode = (short?)context.Response.StatusCode,
+                ErrorType = ex.GetType().Name,
+                ErrorMessage = ex.ToString(),
+            };
+
+            if (!queue.TryEnqueueException(exceptionModel))
+            {
+                logger.LogDebug("Request trace queue dropped an inbound exception event. dropped={dropped}", queue.DroppedCount);
+            }
+
             throw;
         }
         finally

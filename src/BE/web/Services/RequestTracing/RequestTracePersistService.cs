@@ -28,6 +28,9 @@ public sealed class RequestTracePersistService(
                     case RequestTraceResponseBodyWriteModel responseBodyItem:
                         await PersistResponseBodyAsync(responseBodyItem, stoppingToken);
                         break;
+                    case RequestTraceExceptionWriteModel exceptionItem:
+                        await PersistExceptionAsync(exceptionItem, stoppingToken);
+                        break;
                 }
             }
             catch (Exception ex)
@@ -188,8 +191,6 @@ public sealed class RequestTracePersistService(
         trace.ResponseBodyAt = item.ResponseBodyAt;
         trace.ResponseContentType = item.ResponseContentType;
         trace.StatusCode = item.StatusCode;
-        trace.ErrorType = item.ErrorType;
-        trace.ErrorMessage = item.ErrorMessage;
         trace.RawResponseBodyBytes = item.RawResponseBodyBytes;
         trace.IsResponseBodyTruncated = item.IsResponseBodyTruncated;
 
@@ -204,6 +205,39 @@ public sealed class RequestTracePersistService(
 
         trace.RequestTracePayload.ResponseBody = item.ResponseBody;
         trace.RequestTracePayload.ResponseBodyRaw = item.ResponseBodyRaw;
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task PersistExceptionAsync(RequestTraceExceptionWriteModel item, CancellationToken cancellationToken)
+    {
+        using IServiceScope scope = scopeFactory.CreateScope();
+        ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
+
+        List<RequestTrace> matches = await QueryCandidate(db, item)
+            .Where(x => x.ErrorType == null && x.ErrorMessage == null)
+            .OrderByDescending(x => x.Id)
+            .Take(2)
+            .ToListAsync(cancellationToken);
+
+        if (matches.Count == 0)
+        {
+            logger.LogWarning("No request trace row matched exception update. direction={direction}, method={method}, url={url}, startedAt={startedAt}",
+                item.Direction, item.Method, item.Url, item.StartedAt);
+            return;
+        }
+
+        if (matches.Count > 1)
+        {
+            logger.LogWarning("Multiple request trace rows matched exception update; using latest row. direction={direction}, method={method}, url={url}, startedAt={startedAt}",
+                item.Direction, item.Method, item.Url, item.StartedAt);
+        }
+
+        RequestTrace trace = matches[0];
+        trace.ResponseContentType ??= item.ResponseContentType;
+        trace.StatusCode ??= item.StatusCode;
+        trace.ErrorType = item.ErrorType;
+        trace.ErrorMessage = item.ErrorMessage;
 
         await db.SaveChangesAsync(cancellationToken);
     }

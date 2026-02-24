@@ -42,10 +42,17 @@ public sealed class RequestTraceResponseBodyWriteModel : RequestTraceWriteModel
     public DateTime ResponseBodyAt { get; init; }
     public string? ResponseContentType { get; init; }
     public short? StatusCode { get; init; }
-    public string? ErrorType { get; init; }
-    public string? ErrorMessage { get; init; }
     public int? RawResponseBodyBytes { get; init; }
     public bool IsResponseBodyTruncated { get; init; }
     public string? ResponseBody { get; init; }
     public byte[]? ResponseBodyRaw { get; init; }
+}
+
+public sealed class RequestTraceExceptionWriteModel : RequestTraceWriteModel
+{
+    public DateTime ExceptionAt { get; init; }
+    public string? ResponseContentType { get; init; }
+    public short? StatusCode { get; init; }
+    public string ErrorType { get; init; } = string.Empty;
+    public string ErrorMessage { get; init; } = string.Empty;
 }

@@ -208,8 +208,6 @@ public sealed class OutboundRequestTraceHandler(
                                 Url = url,
                                 ResponseContentType = responseContentType,
                                 StatusCode = statusCode,
-                                ErrorType = null,
-                                ErrorMessage = null,
                                 RawResponseBodyBytes = rawBytesCount,
                                 IsResponseBodyTruncated = rawTruncated || responseTextTruncated,
                                 ResponseBody = responseText,
@@ -241,8 +239,6 @@ public sealed class OutboundRequestTraceHandler(
                     Url = url,
                     ResponseContentType = null,
                     StatusCode = statusCode,
-                    ErrorType = null,
-                    ErrorMessage = null,
                     RawResponseBodyBytes = 0,
                     IsResponseBodyTruncated = false,
                     ResponseBody = null,
@@ -278,8 +274,8 @@ public sealed class OutboundRequestTraceHandler(
                         Url = url,
                         ResponseContentType = null,
                         StatusCode = statusCode,
-                        ErrorType = ex.GetType().Name,
-                        ErrorMessage = ex.ToString(),
+                        ErrorType = null,
+                        ErrorMessage = null,
                         ResponseHeaders = null,
                     };
 
@@ -303,8 +299,6 @@ public sealed class OutboundRequestTraceHandler(
                             Url = url,
                             ResponseContentType = null,
                             StatusCode = statusCode,
-                            ErrorType = ex.GetType().Name,
-                            ErrorMessage = ex.ToString(),
                             RawResponseBodyBytes = 0,
                             IsResponseBodyTruncated = false,
                             ResponseBody = null,
@@ -315,6 +309,27 @@ public sealed class OutboundRequestTraceHandler(
                         {
                             logger.LogDebug("Request trace queue dropped an outbound response-body event. dropped={dropped}", queue.DroppedCount);
                         }
+                    }
+
+                    RequestTraceExceptionWriteModel exceptionModel = new()
+                    {
+                        StartedAt = startedAt,
+                        ExceptionAt = DateTime.UtcNow,
+                        Direction = RequestTraceDirection.Outbound,
+                        Source = source,
+                        UserId = userId,
+                        TraceId = null,
+                        Method = method,
+                        Url = url,
+                        ResponseContentType = null,
+                        StatusCode = statusCode,
+                        ErrorType = ex.GetType().Name,
+                        ErrorMessage = ex.ToString(),
+                    };
+
+                    if (!queue.TryEnqueueException(exceptionModel))
+                    {
+                        logger.LogDebug("Request trace queue dropped an outbound exception event. dropped={dropped}", queue.DroppedCount);
                     }
                 }
             }
