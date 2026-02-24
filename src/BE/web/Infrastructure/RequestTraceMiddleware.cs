@@ -1,5 +1,7 @@
 using Chats.BE.Services.Configs;
 using Chats.BE.Services.RequestTracing;
+using Chats.BE.Services.Sessions;
+using Chats.BE.Services.UrlEncryption;
 using System.Diagnostics;
 using System.Security.Claims;
 
@@ -9,6 +11,7 @@ public sealed class RequestTraceMiddleware(
     RequestDelegate next,
     IRequestTraceConfigProvider configProvider,
     IRequestTraceQueue queue,
+    IUrlEncryptionService idEncryption,
     ILogger<RequestTraceMiddleware> logger)
 {
     public async Task Invoke(HttpContext context)
@@ -26,7 +29,7 @@ public sealed class RequestTraceMiddleware(
         string url = context.Request.Path + context.Request.QueryString;
         string? source = context.Connection.RemoteIpAddress?.ToString();
         string? traceId = context.TraceIdentifier;
-        int? userId = TryGetUserId(context.User);
+        int? userId = TryGetUserId(context.User, idEncryption);
 
         if (!RequestTraceHelper.MatchRequestStageFilters(config.Filters, source, method, url))
         {
@@ -231,10 +234,9 @@ public sealed class RequestTraceMiddleware(
         }
     }
 
-    private static int? TryGetUserId(ClaimsPrincipal user)
+    private static int? TryGetUserId(ClaimsPrincipal user, IUrlEncryptionService idEncryption)
     {
-        string? raw = user.FindFirstValue("UserId");
-        if (int.TryParse(raw, out int value)) return value;
-        return null;
+        string? encryptedUserId = user.FindFirstValue(JwtPropertyKeys.UserId);
+        return idEncryption.DecryptUserIdOrNull(encryptedUserId);
     }
 }

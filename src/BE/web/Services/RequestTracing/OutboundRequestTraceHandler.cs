@@ -1,12 +1,17 @@
 using Chats.BE.Services.Configs;
+using Chats.BE.Services.Sessions;
+using Chats.BE.Services.UrlEncryption;
 using System.Diagnostics;
 using System.Net.Http.Headers;
+using System.Security.Claims;
 
 namespace Chats.BE.Services.RequestTracing;
 
 public sealed class OutboundRequestTraceHandler(
     IRequestTraceConfigProvider configProvider,
     IRequestTraceQueue queue,
+    IHttpContextAccessor httpContextAccessor,
+    IUrlEncryptionService idEncryption,
     ILogger<OutboundRequestTraceHandler> logger) : DelegatingHandler
 {
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -22,6 +27,7 @@ public sealed class OutboundRequestTraceHandler(
         string method = request.Method.Method;
         string url = request.RequestUri?.ToString() ?? string.Empty;
         string? source = request.RequestUri?.Host;
+        int? userId = TryGetUserId(httpContextAccessor.HttpContext?.User, idEncryption);
 
         if (!RequestTraceHelper.MatchRequestStageFilters(config.Filters, source, method, url))
         {
@@ -45,7 +51,7 @@ public sealed class OutboundRequestTraceHandler(
             StartedAt = startedAt,
             Direction = RequestTraceDirection.Outbound,
             Source = source,
-            UserId = null,
+            UserId = userId,
             TraceId = null,
             Method = method,
             Url = url,
@@ -72,7 +78,7 @@ public sealed class OutboundRequestTraceHandler(
             StartedAt = startedAt,
             Direction = RequestTraceDirection.Outbound,
             Source = source,
-            UserId = null,
+            UserId = userId,
             TraceId = null,
             Method = method,
             Url = url,
@@ -122,7 +128,7 @@ public sealed class OutboundRequestTraceHandler(
                         StartedAt = startedAt,
                         Direction = RequestTraceDirection.Outbound,
                         Source = source,
-                        UserId = null,
+                        UserId = userId,
                         TraceId = null,
                         Method = method,
                         Url = url,
@@ -161,7 +167,7 @@ public sealed class OutboundRequestTraceHandler(
                         DurationMs = durationMs,
                         Direction = RequestTraceDirection.Outbound,
                         Source = source,
-                        UserId = null,
+                        UserId = userId,
                         TraceId = null,
                         Method = method,
                         Url = url,
@@ -275,5 +281,16 @@ public sealed class OutboundRequestTraceHandler(
                 yield return ToHeaderItem(header);
             }
         }
+    }
+
+    private static int? TryGetUserId(ClaimsPrincipal? user, IUrlEncryptionService idEncryption)
+    {
+        if (user == null)
+        {
+            return null;
+        }
+
+        string? encryptedUserId = user.FindFirstValue(JwtPropertyKeys.UserId);
+        return idEncryption.DecryptUserIdOrNull(encryptedUserId);
     }
 }
