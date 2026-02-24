@@ -648,10 +648,11 @@ POST`}
                   <Input
                     type="number"
                     min={1}
-                    placeholder={t('Maximum text characters before truncation')}
+                    placeholder={t('Maximum text characters before truncation (text capture only)')}
                     {...field}
                   />
                 </FormControl>
+                <FormDescription>{t('Only affects text body capture, not raw binary capture')}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}

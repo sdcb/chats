@@ -61,10 +61,11 @@ public sealed class RequestTraceMiddleware(
         bool captureRequestBody = config.Body.CaptureRequestBody || config.Body.CaptureRawRequestBody;
         if (captureRequestBody && context.Request.Body != Stream.Null && context.Request.Body.CanRead)
         {
+            int rawCaptureLimit = RequestTraceHelper.ResolveRawCaptureLimit(null);
             Stream originalRequestBody = context.Request.Body;
-            context.Request.Body = new RequestReadCaptureStream(
+            context.Request.Body = new ReadCaptureStream(
                 originalRequestBody,
-                config.Body.MaxTextCharsForTruncate,
+                rawCaptureLimit,
                 (totalBytesRead, capturedBytes, truncated) =>
                 {
                     try
@@ -108,10 +109,10 @@ public sealed class RequestTraceMiddleware(
         }
 
         Stream originalResponseBody = context.Response.Body;
-        TeeCaptureStream? tee = null;
+        WriteCaptureStream? tee = null;
         if (config.Body.CaptureResponseBody || config.Body.CaptureRawResponseBody)
         {
-            tee = new TeeCaptureStream(originalResponseBody, config.Body.MaxTextCharsForTruncate);
+            tee = new WriteCaptureStream(originalResponseBody);
             context.Response.Body = tee;
         }
 

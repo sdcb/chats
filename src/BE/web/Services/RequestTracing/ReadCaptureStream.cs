@@ -1,6 +1,6 @@
 namespace Chats.BE.Services.RequestTracing;
 
-public sealed class RequestReadCaptureStream(
+public sealed class ReadCaptureStream(
     Stream inner,
     int maxCaptureBytes,
     Action<int, byte[], bool> onCompleted) : Stream

@@ -1,15 +1,18 @@
 namespace Chats.BE.Services.RequestTracing;
 
-public sealed class TeeCaptureStream(Stream inner, int maxCaptureBytes) : Stream
+public sealed class WriteCaptureStream(Stream inner, int? maxCaptureBytes = null) : Stream
 {
     private readonly Stream _inner = inner;
-    private readonly int _maxCaptureBytes = Math.Max(maxCaptureBytes, 0);
+    private readonly int _maxCaptureBytes = Math.Max(RequestTraceHelper.ResolveRawCaptureLimit(maxCaptureBytes), 0);
     private readonly MemoryStream _capture = new();
     private bool _truncated;
+    private int _totalBytesWritten;
 
     public byte[] CapturedBytes => _capture.ToArray();
 
     public bool IsTruncated => _truncated;
+
+    public int TotalBytesWritten => _totalBytesWritten;
 
     public override bool CanRead => _inner.CanRead;
     public override bool CanSeek => _inner.CanSeek;
@@ -30,24 +33,28 @@ public sealed class TeeCaptureStream(Stream inner, int maxCaptureBytes) : Stream
     public override void Write(byte[] buffer, int offset, int count)
     {
         _inner.Write(buffer, offset, count);
+        _totalBytesWritten += count;
         Capture(buffer.AsSpan(offset, count));
     }
 
     public override void Write(ReadOnlySpan<byte> buffer)
     {
         _inner.Write(buffer);
+        _totalBytesWritten += buffer.Length;
         Capture(buffer);
     }
 
     public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
         await _inner.WriteAsync(buffer, cancellationToken);
+        _totalBytesWritten += buffer.Length;
         Capture(buffer.Span);
     }
 
     public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
         await _inner.WriteAsync(buffer.AsMemory(offset, count), cancellationToken);
+        _totalBytesWritten += count;
         Capture(buffer.AsSpan(offset, count));
     }
 

@@ -7,6 +7,8 @@ namespace Chats.BE.Services.RequestTracing;
 
 public static partial class RequestTraceHelper
 {
+    public const int DefaultRawCaptureMaxBytes = 20 * 1024 * 1024;
+
     private const string TruncateMessageTemplate = "... [content truncated: {0} chars omitted] ...";
 
     public static bool IsEnabledAndSampled(RequestTraceConfig config)
@@ -124,17 +126,21 @@ public static partial class RequestTraceHelper
     public static bool MatchResponseStageFilters(RequestTraceFilters filters, string? source, string method, string url, short? statusCode, int durationMs)
         => MatchFilters(filters, source, method, url, statusCode, durationMs);
 
-    public static bool IsLikelyStreamingContent(string? contentType)
+    public static int ResolveRawCaptureLimit(int? configured)
     {
-        if (string.IsNullOrWhiteSpace(contentType)) return false;
-        return contentType.Contains("text/event-stream", StringComparison.OrdinalIgnoreCase);
+        if (configured.HasValue && configured.Value > 0)
+        {
+            return configured.Value;
+        }
+
+        return DefaultRawCaptureMaxBytes;
     }
 
-    public static bool IsSmallKnownLength(long? contentLength, int maxTextChars)
+    public static bool IsSmallKnownLength(long? contentLength, int maxCaptureBytes)
     {
         if (!contentLength.HasValue) return false;
         if (contentLength.Value < 0) return false;
-        long cap = Math.Max(maxTextChars, 1024 * 256);
+        long cap = Math.Max(maxCaptureBytes, 1024 * 256);
         return contentLength.Value <= cap;
     }
 
