@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chats.BE.Services;
 
-public class UserModelManager(ChatsDB db)
+public class UserModelManager(ChatsDB db, UserModelLoadBalancer userModelLoadBalancer)
 {
     public async Task<UserModel?> GetUserModel(int userId, short modelId, CancellationToken cancellationToken)
     {
@@ -27,15 +27,16 @@ public class UserModelManager(ChatsDB db)
         return balances;
     }
 
-    private async Task<UserModel?> GetUserModel(int userId, string modelName, CancellationToken cancellationToken)
+    private async Task<UserModel[]> GetUserModels(int userId, string modelName, CancellationToken cancellationToken)
     {
-        UserModel? balances = await db.UserModels
+        UserModel[] userModels = await db.UserModels
             .Include(x => x.Model)
             .Include(x => x.Model.ModelKey)
             .Where(x => x.UserId == userId && !x.Model.IsDeleted && x.Model.Name == modelName)
-            .FirstOrDefaultAsync(cancellationToken);
+            .OrderBy(x => x.ModelId)
+            .ToArrayAsync(cancellationToken);
 
-        return balances;
+        return userModels;
     }
 
     public async Task<UserModel?> GetUserModel(string apiKey, string modelName, CancellationToken cancellationToken)
@@ -46,15 +47,23 @@ public class UserModelManager(ChatsDB db)
             .FirstOrDefaultAsync(cancellationToken);
         if (key == null) return null;
 
-        UserModel? userModel = await GetUserModel(key.UserId, modelName, cancellationToken);
-        if (key.AllowAllModels || userModel != null && key.Models.Select(x => x.Id).Contains(userModel.ModelId))
-        {
-            return userModel;
-        }
-        else
+        UserModel[] userModels = await GetUserModels(key.UserId, modelName, cancellationToken);
+        if (userModels.Length == 0)
         {
             return null;
         }
+
+        if (!key.AllowAllModels)
+        {
+            HashSet<short> selectedModels = key.Models.Select(x => x.Id).ToHashSet();
+            userModels = userModels.Where(x => selectedModels.Contains(x.ModelId)).ToArray();
+            if (userModels.Length == 0)
+            {
+                return null;
+            }
+        }
+
+        return userModelLoadBalancer.Select(key.UserId, modelName, userModels);
     }
 
     public IOrderedQueryable<UserModel> GetValidModelsByUserId(int userId)
