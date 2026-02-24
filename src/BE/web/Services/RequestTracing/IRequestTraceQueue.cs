@@ -4,9 +4,13 @@ namespace Chats.BE.Services.RequestTracing;
 
 public interface IRequestTraceQueue
 {
-    bool TryEnqueueRequest(RequestTraceRequestWriteModel item);
+    bool TryEnqueueRequestHeader(RequestTraceRequestHeaderWriteModel item);
 
-    bool TryEnqueueResponse(RequestTraceResponseWriteModel item);
+    bool TryEnqueueRequestBody(RequestTraceRequestBodyWriteModel item);
+
+    bool TryEnqueueResponseHeader(RequestTraceResponseHeaderWriteModel item);
+
+    bool TryEnqueueResponseBody(RequestTraceResponseBodyWriteModel item);
 
     IAsyncEnumerable<RequestTraceWriteModel> ReadAllAsync(CancellationToken cancellationToken);
 
@@ -30,9 +34,13 @@ public sealed class RequestTraceQueue : IRequestTraceQueue
 
     public long DroppedCount => Interlocked.Read(ref _droppedCount);
 
-    public bool TryEnqueueRequest(RequestTraceRequestWriteModel item) => TryWrite(item);
+    public bool TryEnqueueRequestHeader(RequestTraceRequestHeaderWriteModel item) => TryWrite(item);
 
-    public bool TryEnqueueResponse(RequestTraceResponseWriteModel item) => TryWrite(item);
+    public bool TryEnqueueRequestBody(RequestTraceRequestBodyWriteModel item) => TryWrite(item);
+
+    public bool TryEnqueueResponseHeader(RequestTraceResponseHeaderWriteModel item) => TryWrite(item);
+
+    public bool TryEnqueueResponseBody(RequestTraceResponseBodyWriteModel item) => TryWrite(item);
 
     private bool TryWrite(RequestTraceWriteModel item)
     {

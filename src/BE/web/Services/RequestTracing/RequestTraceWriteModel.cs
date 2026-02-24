@@ -11,17 +11,32 @@ public abstract class RequestTraceWriteModel
     public string Url { get; init; } = "/";
 }
 
-public sealed class RequestTraceRequestWriteModel : RequestTraceWriteModel
+public sealed class RequestTraceRequestHeaderWriteModel : RequestTraceWriteModel
+{
+    public string? RequestContentType { get; init; }
+    public string RequestHeaders { get; init; } = string.Empty;
+}
+
+public sealed class RequestTraceRequestBodyWriteModel : RequestTraceWriteModel
 {
     public string? RequestContentType { get; init; }
     public int RawRequestBodyBytes { get; init; }
     public bool IsRequestBodyTruncated { get; init; }
-    public string RequestHeaders { get; init; } = string.Empty;
     public string? RequestBody { get; init; }
     public byte[]? RequestBodyRaw { get; init; }
 }
 
-public sealed class RequestTraceResponseWriteModel : RequestTraceWriteModel
+public sealed class RequestTraceResponseHeaderWriteModel : RequestTraceWriteModel
+{
+    public int DurationMs { get; init; }
+    public string? ResponseContentType { get; init; }
+    public short? StatusCode { get; init; }
+    public string? ErrorType { get; init; }
+    public string? ErrorMessage { get; init; }
+    public string? ResponseHeaders { get; init; }
+}
+
+public sealed class RequestTraceResponseBodyWriteModel : RequestTraceWriteModel
 {
     public int DurationMs { get; init; }
     public string? ResponseContentType { get; init; }
@@ -30,7 +45,6 @@ public sealed class RequestTraceResponseWriteModel : RequestTraceWriteModel
     public string? ErrorMessage { get; init; }
     public int? RawResponseBodyBytes { get; init; }
     public bool IsResponseBodyTruncated { get; init; }
-    public string? ResponseHeaders { get; init; }
     public string? ResponseBody { get; init; }
     public byte[]? ResponseBodyRaw { get; init; }
 }

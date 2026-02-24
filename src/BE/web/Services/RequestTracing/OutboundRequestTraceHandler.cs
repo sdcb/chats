@@ -40,6 +40,24 @@ public sealed class OutboundRequestTraceHandler(
             config.Headers.IncludeRequestHeaders,
             config.Headers.RedactRequestHeaders);
 
+        RequestTraceRequestHeaderWriteModel requestHeaderModel = new()
+        {
+            StartedAt = startedAt,
+            Direction = RequestTraceDirection.Outbound,
+            Source = source,
+            UserId = null,
+            TraceId = null,
+            Method = method,
+            Url = url,
+            RequestContentType = request.Content?.Headers.ContentType?.ToString(),
+            RequestHeaders = requestHeaders,
+        };
+
+        if (!queue.TryEnqueueRequestHeader(requestHeaderModel))
+        {
+            logger.LogDebug("Request trace queue dropped an outbound request-header event. dropped={dropped}", queue.DroppedCount);
+        }
+
         (string? requestText, bool requestTextTruncated) = config.Body.CaptureRequestBody
             ? RequestTraceHelper.DecodeTextBody(
                 requestRaw,
@@ -49,7 +67,7 @@ public sealed class OutboundRequestTraceHandler(
                 request.Content?.Headers.ContentType?.ToString())
             : (null, false);
 
-        RequestTraceRequestWriteModel requestModel = new()
+        RequestTraceRequestBodyWriteModel requestBodyModel = new()
         {
             StartedAt = startedAt,
             Direction = RequestTraceDirection.Outbound,
@@ -61,14 +79,13 @@ public sealed class OutboundRequestTraceHandler(
             RequestContentType = request.Content?.Headers.ContentType?.ToString(),
             RawRequestBodyBytes = requestRaw?.Length ?? 0,
             IsRequestBodyTruncated = requestTruncated || requestTextTruncated,
-            RequestHeaders = requestHeaders,
             RequestBody = requestText,
             RequestBodyRaw = config.Body.CaptureRawRequestBody ? requestRaw : null,
         };
 
-        if (!queue.TryEnqueueRequest(requestModel))
+        if (!queue.TryEnqueueRequestBody(requestBodyModel))
         {
-            logger.LogDebug("Request trace queue dropped an outbound request event. dropped={dropped}", _queue.DroppedCount);
+            logger.LogDebug("Request trace queue dropped an outbound request-body event. dropped={dropped}", queue.DroppedCount);
         }
 
         HttpResponseMessage? response = null;
@@ -93,19 +110,41 @@ public sealed class OutboundRequestTraceHandler(
                 bool shouldPersist = RequestTraceHelper.MatchResponseStageFilters(config.Filters, source, method, url, statusCode, durationMs);
                 if (shouldPersist)
                 {
-                    byte[]? responseRaw = null;
-                    bool responseTruncated = false;
-                    if (response != null && (config.Body.CaptureResponseBody || config.Body.CaptureRawResponseBody))
-                    {
-                        (responseRaw, responseTruncated) = await TrySnapshotResponseBody(response, config.Body.MaxTextCharsForTruncate, cancellationToken);
-                    }
-
                     string? responseHeaders = response == null
                         ? null
                         : RequestTraceHelper.FormatHeaders(
                             EnumerateHeaders(response.Headers, response.Content?.Headers),
                             config.Headers.IncludeResponseHeaders,
                             config.Headers.RedactResponseHeaders);
+
+                    RequestTraceResponseHeaderWriteModel responseHeaderModel = new()
+                    {
+                        StartedAt = startedAt,
+                        Direction = RequestTraceDirection.Outbound,
+                        Source = source,
+                        UserId = null,
+                        TraceId = null,
+                        Method = method,
+                        Url = url,
+                        DurationMs = durationMs,
+                        ResponseContentType = response?.Content?.Headers.ContentType?.ToString(),
+                        StatusCode = statusCode,
+                        ErrorType = exception?.GetType().Name,
+                        ErrorMessage = exception?.ToString(),
+                        ResponseHeaders = responseHeaders,
+                    };
+
+                    if (!queue.TryEnqueueResponseHeader(responseHeaderModel))
+                    {
+                        logger.LogDebug("Request trace queue dropped an outbound response-header event. dropped={dropped}", queue.DroppedCount);
+                    }
+
+                    byte[]? responseRaw = null;
+                    bool responseTruncated = false;
+                    if (response != null && (config.Body.CaptureResponseBody || config.Body.CaptureRawResponseBody))
+                    {
+                        (responseRaw, responseTruncated) = await TrySnapshotResponseBody(response, config.Body.MaxTextCharsForTruncate, cancellationToken);
+                    }
 
                     (string? responseText, bool responseTextTruncated) = config.Body.CaptureResponseBody
                         ? RequestTraceHelper.DecodeTextBody(
@@ -116,7 +155,7 @@ public sealed class OutboundRequestTraceHandler(
                             response?.Content?.Headers.ContentType?.ToString())
                         : (null, false);
 
-                    RequestTraceResponseWriteModel responseModel = new()
+                    RequestTraceResponseBodyWriteModel responseBodyModel = new()
                     {
                         StartedAt = startedAt,
                         DurationMs = durationMs,
@@ -132,14 +171,13 @@ public sealed class OutboundRequestTraceHandler(
                         ErrorMessage = exception?.ToString(),
                         RawResponseBodyBytes = responseRaw?.Length,
                         IsResponseBodyTruncated = responseTruncated || responseTextTruncated,
-                        ResponseHeaders = responseHeaders,
                         ResponseBody = responseText,
                         ResponseBodyRaw = config.Body.CaptureRawResponseBody ? responseRaw : null,
                     };
 
-                    if (!queue.TryEnqueueResponse(responseModel))
+                    if (!queue.TryEnqueueResponseBody(responseBodyModel))
                     {
-                        logger.LogDebug("Request trace queue dropped an outbound response event. dropped={dropped}", queue.DroppedCount);
+                        logger.LogDebug("Request trace queue dropped an outbound response-body event. dropped={dropped}", queue.DroppedCount);
                     }
                 }
             }
