@@ -22,7 +22,7 @@ public static partial class RequestTraceHelper
     {
         if (!MatchesPatterns(source, filters.SourcePatterns)) return false;
         if (!MatchesPatterns(url, filters.IncludeUrlPatterns)) return false;
-        if (MatchesPatterns(url, filters.ExcludeUrlPatterns)) return false;
+        if (MatchesPatterns(url, filters.ExcludeUrlPatterns, emptyPatternsResult: false)) return false;
 
         if (filters.Methods is { Length: > 0 } && !filters.Methods.Any(x => string.Equals(x, method, StringComparison.OrdinalIgnoreCase)))
         {
@@ -112,7 +112,7 @@ public static partial class RequestTraceHelper
     {
         if (!MatchesPatterns(source, filters.SourcePatterns)) return false;
         if (!MatchesPatterns(url, filters.IncludeUrlPatterns)) return false;
-        if (MatchesPatterns(url, filters.ExcludeUrlPatterns)) return false;
+        if (MatchesPatterns(url, filters.ExcludeUrlPatterns, emptyPatternsResult: false)) return false;
         if (filters.Methods is { Length: > 0 } && !filters.Methods.Any(x => string.Equals(x, method, StringComparison.OrdinalIgnoreCase)))
         {
             return false;
@@ -160,11 +160,11 @@ public static partial class RequestTraceHelper
         return false;
     }
 
-    private static bool MatchesPatterns(string? value, string[]? patterns)
+    private static bool MatchesPatterns(string? value, string[]? patterns, bool emptyPatternsResult = true)
     {
         if (patterns == null || patterns.Length == 0)
         {
-            return true;
+            return emptyPatternsResult;
         }
 
         if (string.IsNullOrEmpty(value))
