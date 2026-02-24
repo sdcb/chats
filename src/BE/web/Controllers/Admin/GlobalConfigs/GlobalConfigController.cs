@@ -1,6 +1,7 @@
 using Chats.DB;
 using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Admin.GlobalConfigs.Dtos;
+using Chats.BE.Services.Configs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -8,7 +9,7 @@ using System.Text.Json;
 namespace Chats.BE.Controllers.Admin.GlobalConfigs;
 
 [Route("api/admin/global-configs"), AuthorizeAdmin]
-public class GlobalConfigController(ChatsDB db) : ControllerBase
+public class GlobalConfigController(ChatsDB db, IRequestTraceConfigProvider requestTraceConfigProvider) : ControllerBase
 {
     [HttpGet]
     public async Task<GlobalConfigDto[]> GetGlobalConfigs(CancellationToken cancellationToken)
@@ -52,6 +53,10 @@ public class GlobalConfigController(ChatsDB db) : ControllerBase
         if (db.ChangeTracker.HasChanges())
         {
             await db.SaveChangesAsync(cancellationToken);
+            if (req.Key == DBConfigKey.InboundRequestTrace || req.Key == DBConfigKey.OutboundRequestTrace)
+            {
+                await requestTraceConfigProvider.ForceRefreshAsync(cancellationToken);
+            }
         }
         return NoContent();
     }
@@ -66,6 +71,10 @@ public class GlobalConfigController(ChatsDB db) : ControllerBase
         }
         db.Configs.Remove(config);
         await db.SaveChangesAsync(cancellationToken);
+        if (id == DBConfigKey.InboundRequestTrace || id == DBConfigKey.OutboundRequestTrace)
+        {
+            await requestTraceConfigProvider.ForceRefreshAsync(cancellationToken);
+        }
         return NoContent();
     }
 }
