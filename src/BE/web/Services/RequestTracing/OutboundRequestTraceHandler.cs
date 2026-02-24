@@ -76,6 +76,7 @@ public sealed class OutboundRequestTraceHandler(
         RequestTraceRequestBodyWriteModel requestBodyModel = new()
         {
             StartedAt = startedAt,
+            RequestBodyAt = DateTime.UtcNow,
             Direction = RequestTraceDirection.Outbound,
             Source = source,
             UserId = userId,
@@ -126,13 +127,13 @@ public sealed class OutboundRequestTraceHandler(
                     RequestTraceResponseHeaderWriteModel responseHeaderModel = new()
                     {
                         StartedAt = startedAt,
+                        ResponseHeaderAt = DateTime.UtcNow,
                         Direction = RequestTraceDirection.Outbound,
                         Source = source,
                         UserId = userId,
                         TraceId = null,
                         Method = method,
                         Url = url,
-                        DurationMs = durationMs,
                         ResponseContentType = response?.Content?.Headers.ContentType?.ToString(),
                         StatusCode = statusCode,
                         ErrorType = exception?.GetType().Name,
@@ -164,7 +165,7 @@ public sealed class OutboundRequestTraceHandler(
                     RequestTraceResponseBodyWriteModel responseBodyModel = new()
                     {
                         StartedAt = startedAt,
-                        DurationMs = durationMs,
+                        ResponseBodyAt = DateTime.UtcNow,
                         Direction = RequestTraceDirection.Outbound,
                         Source = source,
                         UserId = userId,

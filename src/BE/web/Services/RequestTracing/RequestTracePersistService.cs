@@ -45,7 +45,9 @@ public sealed class RequestTracePersistService(
         RequestTrace trace = new()
         {
             StartedAt = item.StartedAt,
-            DurationMs = 0,
+            RequestBodyAt = null,
+            ResponseHeaderAt = null,
+            ResponseBodyAt = null,
             Direction = (byte)item.Direction,
             Source = item.Source,
             UserId = item.UserId,
@@ -94,6 +96,7 @@ public sealed class RequestTracePersistService(
         }
 
         trace.RequestContentType = item.RequestContentType;
+        trace.RequestBodyAt = item.RequestBodyAt;
         trace.RawRequestBodyBytes = item.RawRequestBodyBytes;
         trace.IsRequestBodyTruncated = item.IsRequestBodyTruncated;
 
@@ -118,7 +121,7 @@ public sealed class RequestTracePersistService(
         ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
 
         List<RequestTrace> matches = await QueryCandidate(db, item)
-            .Where(x => x.StatusCode == null && x.DurationMs == 0)
+            .Where(x => x.StatusCode == null && x.ResponseHeaderAt == null)
             .OrderByDescending(x => x.Id)
             .Take(2)
             .ToListAsync(cancellationToken);
@@ -137,7 +140,7 @@ public sealed class RequestTracePersistService(
         }
 
         RequestTrace trace = matches[0];
-        trace.DurationMs = item.DurationMs;
+        trace.ResponseHeaderAt = item.ResponseHeaderAt;
         trace.ResponseContentType = item.ResponseContentType;
         trace.StatusCode = item.StatusCode;
         trace.ErrorType = item.ErrorType;
@@ -182,7 +185,7 @@ public sealed class RequestTracePersistService(
         }
 
         RequestTrace trace = matches[0];
-        trace.DurationMs = item.DurationMs;
+        trace.ResponseBodyAt = item.ResponseBodyAt;
         trace.ResponseContentType = item.ResponseContentType;
         trace.StatusCode = item.StatusCode;
         trace.ErrorType = item.ErrorType;

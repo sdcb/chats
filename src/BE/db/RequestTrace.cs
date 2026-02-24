@@ -8,6 +8,7 @@ namespace Chats.DB;
 
 [Table("RequestTrace")]
 [Index("StartedAt", Name = "IX_RequestTrace_StartedAt")]
+[Index("TraceId", Name = "IX_RequestTrace_TraceId")]
 [Index("UserId", Name = "IX_RequestTrace_UserId")]
 public partial class RequestTrace
 {
@@ -16,7 +17,11 @@ public partial class RequestTrace
 
     public DateTime StartedAt { get; set; }
 
-    public int DurationMs { get; set; }
+    public DateTime? RequestBodyAt { get; set; }
+
+    public DateTime? ResponseHeaderAt { get; set; }
+
+    public DateTime? ResponseBodyAt { get; set; }
 
     public byte Direction { get; set; }
 
@@ -26,6 +31,7 @@ public partial class RequestTrace
     public int? UserId { get; set; }
 
     [StringLength(100)]
+    [Unicode(false)]
     public string? TraceId { get; set; }
 
     [StringLength(10)]
@@ -36,9 +42,11 @@ public partial class RequestTrace
     public string Url { get; set; } = null!;
 
     [StringLength(200)]
+    [Unicode(false)]
     public string? RequestContentType { get; set; }
 
     [StringLength(200)]
+    [Unicode(false)]
     public string? ResponseContentType { get; set; }
 
     public short? StatusCode { get; set; }
@@ -58,8 +66,4 @@ public partial class RequestTrace
 
     [InverseProperty("Log")]
     public virtual RequestTracePayload? RequestTracePayload { get; set; }
-
-    [ForeignKey("UserId")]
-    [InverseProperty("RequestTraces")]
-    public virtual User? User { get; set; }
 }

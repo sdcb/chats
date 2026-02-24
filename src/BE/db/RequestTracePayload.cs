@@ -12,8 +12,10 @@ public partial class RequestTracePayload
     [Key]
     public long LogId { get; set; }
 
+    [Unicode(false)]
     public string RequestHeaders { get; set; } = null!;
 
+    [Unicode(false)]
     public string? ResponseHeaders { get; set; }
 
     public string? RequestBody { get; set; }

@@ -2,7 +2,6 @@ using Chats.BE.Services.Configs;
 using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.Sessions;
 using Chats.BE.Services.UrlEncryption;
-using System.Diagnostics;
 using System.Security.Claims;
 
 namespace Chats.BE.Infrastructure;
@@ -24,7 +23,6 @@ public sealed class RequestTraceMiddleware(
         }
 
         DateTime startedAt = DateTime.UtcNow;
-        long startTick = Stopwatch.GetTimestamp();
         string method = context.Request.Method;
         string url = context.Request.Path + context.Request.QueryString;
         string? source = context.Connection.RemoteIpAddress?.ToString();
@@ -83,6 +81,7 @@ public sealed class RequestTraceMiddleware(
                         RequestTraceRequestBodyWriteModel requestBodyModel = new()
                         {
                             StartedAt = startedAt,
+                            RequestBodyAt = DateTime.UtcNow,
                             Direction = RequestTraceDirection.Inbound,
                             Source = source,
                             UserId = userId,
@@ -120,7 +119,6 @@ public sealed class RequestTraceMiddleware(
         {
             try
             {
-                int durationMs = (int)Stopwatch.GetElapsedTime(startTick, Stopwatch.GetTimestamp()).TotalMilliseconds;
                 short? statusCode = (short?)context.Response.StatusCode;
                 string? responseHeaders = RequestTraceHelper.FormatHeaders(
                     context.Response.Headers.Select(x => new KeyValuePair<string, IEnumerable<string>>(x.Key, x.Value.Select(v => v ?? string.Empty))),
@@ -130,13 +128,13 @@ public sealed class RequestTraceMiddleware(
                 RequestTraceResponseHeaderWriteModel responseHeaderModel = new()
                 {
                     StartedAt = startedAt,
+                    ResponseHeaderAt = DateTime.UtcNow,
                     Direction = RequestTraceDirection.Inbound,
                     Source = source,
                     UserId = userId,
                     TraceId = traceId,
                     Method = method,
                     Url = url,
-                    DurationMs = durationMs,
                     ResponseContentType = context.Response.ContentType,
                     StatusCode = statusCode,
                     ErrorType = null,
@@ -164,7 +162,6 @@ public sealed class RequestTraceMiddleware(
             {
                 byte[]? responseBytes = tee?.CapturedBytes;
                 bool responseBodyTruncated = tee?.IsTruncated == true;
-                int durationMs = (int)Stopwatch.GetElapsedTime(startTick, Stopwatch.GetTimestamp()).TotalMilliseconds;
                 short? statusCode = (short?)context.Response.StatusCode;
 
                 (string? responseText, bool responseTextTruncated) = config.Body.CaptureResponseBody
@@ -179,13 +176,13 @@ public sealed class RequestTraceMiddleware(
                 RequestTraceResponseBodyWriteModel responseBodyModel = new()
                 {
                     StartedAt = startedAt,
+                    ResponseBodyAt = DateTime.UtcNow,
                     Direction = RequestTraceDirection.Inbound,
                     Source = source,
                     UserId = userId,
                     TraceId = traceId,
                     Method = method,
                     Url = url,
-                    DurationMs = durationMs,
                     ResponseContentType = context.Response.ContentType,
                     StatusCode = statusCode,
                     ErrorType = exception?.GetType().Name,

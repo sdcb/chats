@@ -19,6 +19,7 @@ public sealed class RequestTraceRequestHeaderWriteModel : RequestTraceWriteModel
 
 public sealed class RequestTraceRequestBodyWriteModel : RequestTraceWriteModel
 {
+    public DateTime RequestBodyAt { get; init; }
     public string? RequestContentType { get; init; }
     public int RawRequestBodyBytes { get; init; }
     public bool IsRequestBodyTruncated { get; init; }
@@ -28,7 +29,7 @@ public sealed class RequestTraceRequestBodyWriteModel : RequestTraceWriteModel
 
 public sealed class RequestTraceResponseHeaderWriteModel : RequestTraceWriteModel
 {
-    public int DurationMs { get; init; }
+    public DateTime ResponseHeaderAt { get; init; }
     public string? ResponseContentType { get; init; }
     public short? StatusCode { get; init; }
     public string? ErrorType { get; init; }
@@ -38,7 +39,7 @@ public sealed class RequestTraceResponseHeaderWriteModel : RequestTraceWriteMode
 
 public sealed class RequestTraceResponseBodyWriteModel : RequestTraceWriteModel
 {
-    public int DurationMs { get; init; }
+    public DateTime ResponseBodyAt { get; init; }
     public string? ResponseContentType { get; init; }
     public short? StatusCode { get; init; }
     public string? ErrorType { get; init; }
