@@ -18,6 +18,7 @@ import {
   IconLayoutSidebar,
   IconMessages,
   IconMoneybag,
+  IconNotes,
   IconSettings,
   IconSettingsCog,
   IconShieldLock,
@@ -171,11 +172,13 @@ const AdminLayout = ({
       ),
       title: t('Security Logs'),
     },
-    /**{
-      url: '/admin/request-logs',
-      icon: (stroke?: string) => <IconNotes strokeWidth={1.2} stroke={stroke} />,
-      title: t('Request Logs'),
-    },**/
+    {
+      url: '/admin/request-trace',
+      icon: (stroke?: string) => (
+        <IconNotes strokeWidth={1.2} stroke={stroke} />
+      ),
+      title: t('Request Trace'),
+    },
     {
       url: '/admin/user-config',
       icon: (stroke?: string) => (

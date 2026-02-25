@@ -53,6 +53,10 @@ import {
   SecurityLogQueryParams,
   SecurityLogExportParams,
   ReorderRequest,
+  RequestTraceDetails,
+  RequestTraceExportParams,
+  RequestTraceListItem,
+  RequestTraceQueryParams,
   StatisticsTimeParams,
   TokenStatisticsByDateResult,
   UpdateModelDto,
@@ -751,4 +755,50 @@ export const clearSmsAttempts = (
   return fetchServer.delete('/api/admin/security-logs/sms-attempts', {
     body: params,
   });
+};
+
+const mapRequestTraceQueryParams = (params: RequestTraceQueryParams) => ({
+  page: params.page,
+  pageSize: params.pageSize,
+  start: params.start,
+  end: params.end,
+  url: params.url,
+  traceId: params.traceId,
+  username: params.username,
+  direction: params.direction,
+  tz: params.tz,
+});
+
+const mapRequestTraceExportParams = (params: RequestTraceExportParams) => ({
+  start: params.start,
+  end: params.end,
+  url: params.url,
+  traceId: params.traceId,
+  username: params.username,
+  direction: params.direction,
+  tz: params.tz,
+  columns: params.columns,
+});
+
+export const getRequestTraceList = (
+  params: RequestTraceQueryParams,
+): Promise<PageResult<RequestTraceListItem[]>> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get('/api/admin/request-trace', {
+    params: mapRequestTraceQueryParams(params),
+  });
+};
+
+export const clearRequestTraceList = (
+  params: RequestTraceExportParams,
+): Promise<number> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.delete('/api/admin/request-trace', {
+    body: mapRequestTraceExportParams(params),
+  });
+};
+
+export const getRequestTraceDetails = (id: number): Promise<RequestTraceDetails> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get(`/api/admin/request-trace/${id}`);
 };
