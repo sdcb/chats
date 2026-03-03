@@ -163,7 +163,7 @@ const RequestTraceCompareDialog = ({
   open,
   onOpenChange,
 }: {
-  ids: number[];
+  ids: string[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) => {
@@ -280,8 +280,8 @@ export default function RequestTracePage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<PageResult<RequestTraceListItem[]>>({ rows: [], count: 0 });
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [detailsId, setDetailsId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [detailsId, setDetailsId] = useState<string | null>(null);
   const [compareOpen, setCompareOpen] = useState(false);
   const lastFetchKeyRef = useRef('');
 
@@ -418,7 +418,7 @@ export default function RequestTracePage() {
     pushQuery(1, next, columns);
   };
 
-  const toggleSelect = (id: number, checked: boolean) => {
+  const toggleSelect = (id: string, checked: boolean) => {
     setSelectedIds((prev) => {
       if (checked) {
         if (prev.includes(id)) return prev;

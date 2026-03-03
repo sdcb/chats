@@ -53,7 +53,7 @@ const InlineCopyButton = ({ value, className }: { value: string; className?: str
 };
 
 type RequestTraceDetailsDialogProps = {
-  traceId: number | null;
+  traceId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };

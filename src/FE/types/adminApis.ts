@@ -345,7 +345,7 @@ export interface RequestTraceExportParams {
 }
 
 export interface RequestTraceListItem {
-  id: number;
+  id: string;
   startedAt: string;
   requestBodyAt: string | null;
   responseHeaderAt: string | null;

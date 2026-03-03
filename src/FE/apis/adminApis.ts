@@ -798,7 +798,7 @@ export const clearRequestTraceList = (
   });
 };
 
-export const getRequestTraceDetails = (id: number): Promise<RequestTraceDetails> => {
+export const getRequestTraceDetails = (id: string): Promise<RequestTraceDetails> => {
   const fetchServer = createFetchClient();
   return fetchServer.get(`/api/admin/request-trace/${id}`);
 };
