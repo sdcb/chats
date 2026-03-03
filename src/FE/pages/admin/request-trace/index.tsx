@@ -510,12 +510,14 @@ export default function RequestTracePage() {
         <div className="flex flex-wrap items-center gap-3">
           <DateTimePopover
             value={filters.start}
+            className="w-[180px]"
             placeholder={t('Start date')!}
             onSelect={(date) => updateFilter('start', formatDateParam(date))}
             onReset={filters.start ? () => updateFilter('start', '') : undefined}
           />
           <DateTimePopover
             value={filters.end}
+            className="w-[180px]"
             placeholder={t('End date')!}
             onSelect={(date) => updateFilter('end', formatDateParam(date))}
             onReset={filters.end ? () => updateFilter('end', '') : undefined}
@@ -561,7 +563,13 @@ export default function RequestTracePage() {
         <div className="flex items-center gap-2 self-end lg:self-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">{t('Columns')}</Button>
+              <div>
+                <Tips
+                  trigger={<Button variant="outline" size="sm">{t('Columns')}</Button>}
+                  side="bottom"
+                  content={t('Select columns')}
+                />
+              </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>{t('Select columns')}</DropdownMenuLabel>
@@ -718,6 +726,7 @@ export default function RequestTracePage() {
         open={compareOpen}
         onOpenChange={setCompareOpen}
       />
+
     </div>
   );
 }

@@ -45,10 +45,13 @@ import { Toaster } from '@/components/ui/toaster';
 import { postChatsVersion } from '@/apis/adminApis';
 import { useUserInfo } from '@/providers/UserProvider';
 
+import RequestTracePageTitle from '@/components/admin/request-trace/RequestTracePageTitle';
+
 interface MenuItem {
   url: string;
   icon: (stroke?: string) => React.ReactNode;
   title: string;
+  headerTitle?: React.ReactNode;
 }
 
 const AdminMenu = ({
@@ -86,6 +89,26 @@ const AdminMenu = ({
         </SidebarMenuItem>
       ))}
     </SidebarMenu>
+  );
+};
+
+const AdminHeaderBar = ({
+  selectedMenu,
+  t,
+}: {
+  selectedMenu?: MenuItem;
+  t: (key: string) => string;
+}) => {
+  return (
+    <div className="flex p-3 items-center border-b">
+      <SidebarTrigger
+        className="mr-2"
+        icon={<IconLayoutSidebar size={26} strokeWidth={1} />}
+      />
+      <h1 className="font-medium">
+        {selectedMenu?.headerTitle || selectedMenu?.title || t('Chats Admin Panel')}
+      </h1>
+    </div>
   );
 };
 
@@ -178,6 +201,7 @@ const AdminLayout = ({
         <IconNotes strokeWidth={1.2} stroke={stroke} />
       ),
       title: t('Request Trace'),
+      headerTitle: <RequestTracePageTitle />,
     },
     {
       url: '/admin/user-config',
@@ -294,15 +318,7 @@ const AdminLayout = ({
           </SidebarFooter>
         </Sidebar>
         <div className="w-full flex flex-col">
-          <div className="flex p-3 items-center border-b">
-            <SidebarTrigger
-              className="mr-2"
-              icon={<IconLayoutSidebar size={26} strokeWidth={1} />}
-            />
-            <h1 className="font-medium">
-              {selectedMenu?.title || t('Chats Admin Panel')}
-            </h1>
-          </div>
+          <AdminHeaderBar selectedMenu={selectedMenu} t={t} />
           <div className="flex-1 overflow-auto p-4">{children}</div>
         </div>
         <Toaster />
