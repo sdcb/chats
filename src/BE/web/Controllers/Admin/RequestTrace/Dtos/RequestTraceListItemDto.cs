@@ -2,7 +2,7 @@ namespace Chats.BE.Controllers.Admin.RequestTrace.Dtos;
 
 public record RequestTraceListItemDto
 {
-    public required long Id { get; init; }
+    public required Guid Id { get; init; }
 
     public required DateTime StartedAt { get; init; }
 

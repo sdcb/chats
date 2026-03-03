@@ -1,17 +1,16 @@
 using Chats.BE.Services.Configs;
-using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.Sessions;
 using Chats.BE.Services.UrlEncryption;
 using System.Security.Claims;
 
-namespace Chats.BE.Infrastructure;
+namespace Chats.BE.Services.RequestTracing;
 
-public sealed class RequestTraceMiddleware(
+public sealed class InboundRequestTraceMiddleware(
     RequestDelegate next,
     IRequestTraceConfigProvider configProvider,
     IRequestTraceQueue queue,
     IUrlEncryptionService idEncryption,
-    ILogger<RequestTraceMiddleware> logger)
+    ILogger<InboundRequestTraceMiddleware> logger)
 {
     public async Task Invoke(HttpContext context)
     {
@@ -22,6 +21,7 @@ public sealed class RequestTraceMiddleware(
             return;
         }
 
+        Guid logId = Guid.CreateVersion7();
         DateTime startedAt = DateTime.UtcNow;
         string method = context.Request.Method;
         string url = context.Request.Path + context.Request.QueryString;
@@ -42,6 +42,7 @@ public sealed class RequestTraceMiddleware(
 
         RequestTraceRequestHeaderWriteModel requestHeaderModel = new()
         {
+            LogId = logId,
             StartedAt = startedAt,
             Direction = RequestTraceDirection.Inbound,
             Source = source,
@@ -55,7 +56,11 @@ public sealed class RequestTraceMiddleware(
 
         if (!queue.TryEnqueueRequestHeader(requestHeaderModel))
         {
-            logger.LogDebug("Request trace queue dropped an inbound request-header event. dropped={dropped}", queue.DroppedCount);
+            logger.LogWarning("Request trace queue dropped an inbound request-header event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
+
+            await next(context);
+            return;
         }
 
         bool captureRequestBody = config.Body.CaptureRequestBody || config.Body.CaptureRawRequestBody;
@@ -81,6 +86,7 @@ public sealed class RequestTraceMiddleware(
 
                         RequestTraceRequestBodyWriteModel requestBodyModel = new()
                         {
+                            LogId = logId,
                             StartedAt = startedAt,
                             RequestBodyAt = DateTime.UtcNow,
                             Direction = RequestTraceDirection.Inbound,
@@ -98,7 +104,8 @@ public sealed class RequestTraceMiddleware(
 
                         if (!queue.TryEnqueueRequestBody(requestBodyModel))
                         {
-                            logger.LogDebug("Request trace queue dropped an inbound request-body event. dropped={dropped}", queue.DroppedCount);
+                            logger.LogWarning("Request trace queue dropped an inbound request-body event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                                logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
                         }
                     }
                     catch (Exception ex)
@@ -128,6 +135,7 @@ public sealed class RequestTraceMiddleware(
 
                 RequestTraceResponseHeaderWriteModel responseHeaderModel = new()
                 {
+                    LogId = logId,
                     StartedAt = startedAt,
                     ResponseHeaderAt = DateTime.UtcNow,
                     Direction = RequestTraceDirection.Inbound,
@@ -145,7 +153,8 @@ public sealed class RequestTraceMiddleware(
 
                 if (!queue.TryEnqueueResponseHeader(responseHeaderModel))
                 {
-                    logger.LogDebug("Request trace queue dropped an inbound response-header event. dropped={dropped}", queue.DroppedCount);
+                    logger.LogWarning("Request trace queue dropped an inbound response-header event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                        logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
                 }
             }
             catch (Exception ex)
@@ -156,7 +165,6 @@ public sealed class RequestTraceMiddleware(
             return Task.CompletedTask;
         });
 
-        Exception? exception = null;
         context.Response.OnCompleted(() =>
         {
             try
@@ -176,6 +184,7 @@ public sealed class RequestTraceMiddleware(
 
                 RequestTraceResponseBodyWriteModel responseBodyModel = new()
                 {
+                    LogId = logId,
                     StartedAt = startedAt,
                     ResponseBodyAt = DateTime.UtcNow,
                     Direction = RequestTraceDirection.Inbound,
@@ -194,7 +203,8 @@ public sealed class RequestTraceMiddleware(
 
                 if (!queue.TryEnqueueResponseBody(responseBodyModel))
                 {
-                    logger.LogDebug("Request trace queue dropped an inbound response-body event. dropped={dropped}", queue.DroppedCount);
+                    logger.LogWarning("Request trace queue dropped an inbound response-body event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                        logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
                 }
             }
             catch (Exception ex)
@@ -211,10 +221,9 @@ public sealed class RequestTraceMiddleware(
         }
         catch (Exception ex)
         {
-            exception = ex;
-
             RequestTraceExceptionWriteModel exceptionModel = new()
             {
+                LogId = logId,
                 StartedAt = startedAt,
                 ExceptionAt = DateTime.UtcNow,
                 Direction = RequestTraceDirection.Inbound,
@@ -231,7 +240,8 @@ public sealed class RequestTraceMiddleware(
 
             if (!queue.TryEnqueueException(exceptionModel))
             {
-                logger.LogDebug("Request trace queue dropped an inbound exception event. dropped={dropped}", queue.DroppedCount);
+                logger.LogWarning("Request trace queue dropped an inbound exception event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                    logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
             }
 
             throw;

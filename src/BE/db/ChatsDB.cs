@@ -360,6 +360,11 @@ public partial class ChatsDB : DbContext
                 .HasConstraintName("FK_Prompt_CreateUserId");
         });
 
+        modelBuilder.Entity<RequestTrace>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedNever();
+        });
+
         modelBuilder.Entity<RequestTracePayload>(entity =>
         {
             entity.Property(e => e.LogId).ValueGeneratedNever();

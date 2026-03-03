@@ -151,7 +151,7 @@ public class Program
 
         app.UseAuthentication();
         app.UseAuthorization();
-        app.UseMiddleware<RequestTraceMiddleware>();
+        app.UseMiddleware<InboundRequestTraceMiddleware>();
         app.MapControllers();
         app.UseMiddleware<FrontendMiddleware>();
         app.UseStaticFiles();

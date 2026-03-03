@@ -61,7 +61,7 @@ public class RequestTraceController(ChatsDB db) : ControllerBase
             return BadRequest(ModelState);
         }
 
-        long[] ids = await FilterRequestTraceEntity(query)
+        Guid[] ids = await FilterRequestTraceEntity(query)
             .Select(x => x.Id)
             .ToArrayAsync(cancellationToken);
 
@@ -81,8 +81,8 @@ public class RequestTraceController(ChatsDB db) : ControllerBase
         return Ok(deleted);
     }
 
-    [HttpGet("{id:long}")]
-    public async Task<ActionResult<RequestTraceDetailsDto>> GetDetails([FromRoute] long id, CancellationToken cancellationToken)
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<RequestTraceDetailsDto>> GetDetails([FromRoute] Guid id, CancellationToken cancellationToken)
     {
         RequestTraceDetailsDto? details = await BuildDetailsQuery()
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -95,8 +95,8 @@ public class RequestTraceController(ChatsDB db) : ControllerBase
         return Ok(details);
     }
 
-    [HttpGet("{id:long}/dump")]
-    public async Task<IActionResult> DownloadDump([FromRoute] long id, CancellationToken cancellationToken)
+    [HttpGet("{id:guid}/dump")]
+    public async Task<IActionResult> DownloadDump([FromRoute] Guid id, CancellationToken cancellationToken)
     {
         RequestTraceDetailsDto? details = await BuildDetailsQuery()
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -144,8 +144,8 @@ public class RequestTraceController(ChatsDB db) : ControllerBase
         return File(bytes, "application/octet-stream", $"request-trace-{id}.dump");
     }
 
-    [HttpGet("{id:long}/raw")]
-    public async Task<IActionResult> DownloadRaw([FromRoute] long id, [FromQuery] string part, CancellationToken cancellationToken)
+    [HttpGet("{id:guid}/raw")]
+    public async Task<IActionResult> DownloadRaw([FromRoute] Guid id, [FromQuery] string part, CancellationToken cancellationToken)
     {
         RequestTracePayload? payload = await db.RequestTracePayloads
             .AsNoTracking()

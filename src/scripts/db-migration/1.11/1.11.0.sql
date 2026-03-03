@@ -9,7 +9,7 @@ IF OBJECT_ID(N'dbo.RequestTrace', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.RequestTrace
     (
-        Id BIGINT NOT NULL IDENTITY(1, 1),                       -- 日志主键（高写入场景使用 BIGINT 自增）
+        Id UNIQUEIDENTIFIER NOT NULL,                            -- 日志主键（由应用层生成有序 GUID，例如 Guid.CreateVersion7()）
         StartedAt DATETIME2(7) NOT NULL,                         -- 请求开始时间（UTC）
         RequestBodyAt DATETIME2(7) NULL,                         -- 请求体读取完成时间（UTC）
         ResponseHeaderAt DATETIME2(7) NULL,                      -- 响应头接收完成时间（UTC）
@@ -112,7 +112,7 @@ IF OBJECT_ID(N'dbo.RequestTracePayload', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.RequestTracePayload
     (
-        LogId BIGINT NOT NULL,                                                     -- 对应主表 RequestTrace.Id（1:1）
+        LogId UNIQUEIDENTIFIER NOT NULL,                                           -- 对应主表 RequestTrace.Id（1:1）
         RequestHeaders VARCHAR(MAX) NOT NULL,                                      -- 请求头原始文本（按原样存储，建议使用 RFC 风格多行 header 文本；由应用层保证写入）
         ResponseHeaders VARCHAR(MAX) NULL,                                         -- 响应头原始文本（按原样存储；无响应时可为空）
         RequestBody NVARCHAR(MAX) NULL,                                            -- 请求体文本（可检索、业务友好）

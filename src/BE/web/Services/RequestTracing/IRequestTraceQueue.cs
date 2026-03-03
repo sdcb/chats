@@ -17,12 +17,17 @@ public interface IRequestTraceQueue
     IAsyncEnumerable<RequestTraceWriteModel> ReadAllAsync(CancellationToken cancellationToken);
 
     long DroppedCount { get; }
+
+    long QueuedCount { get; }
+
+    long QueueHighWatermark { get; }
 }
 
 public sealed class RequestTraceQueue : IRequestTraceQueue
 {
     private readonly Channel<RequestTraceWriteModel> _channel;
     private long _droppedCount;
+    private long _queueHighWatermark;
 
     public RequestTraceQueue()
     {
@@ -35,6 +40,10 @@ public sealed class RequestTraceQueue : IRequestTraceQueue
     }
 
     public long DroppedCount => Interlocked.Read(ref _droppedCount);
+
+    public long QueuedCount => _channel.Reader.CanCount ? _channel.Reader.Count : -1;
+
+    public long QueueHighWatermark => Interlocked.Read(ref _queueHighWatermark);
 
     public bool TryEnqueueRequestHeader(RequestTraceRequestHeaderWriteModel item) => TryWrite(item);
 
@@ -52,11 +61,31 @@ public sealed class RequestTraceQueue : IRequestTraceQueue
         if (!written)
         {
             Interlocked.Increment(ref _droppedCount);
+            return false;
         }
 
-        return written;
+        long currentQueued = QueuedCount;
+        UpdateHighWatermark(currentQueued);
+        return true;
     }
 
     public IAsyncEnumerable<RequestTraceWriteModel> ReadAllAsync(CancellationToken cancellationToken)
         => _channel.Reader.ReadAllAsync(cancellationToken);
+
+    private void UpdateHighWatermark(long currentQueued)
+    {
+        while (true)
+        {
+            long snapshot = Interlocked.Read(ref _queueHighWatermark);
+            if (currentQueued <= snapshot)
+            {
+                return;
+            }
+
+            if (Interlocked.CompareExchange(ref _queueHighWatermark, currentQueued, snapshot) == snapshot)
+            {
+                return;
+            }
+        }
+    }
 }

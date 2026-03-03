@@ -2,6 +2,7 @@ namespace Chats.BE.Services.RequestTracing;
 
 public abstract class RequestTraceWriteModel
 {
+    public Guid LogId { get; init; }
     public DateTime StartedAt { get; init; }
     public RequestTraceDirection Direction { get; init; }
     public string? Source { get; init; }

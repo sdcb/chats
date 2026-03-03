@@ -22,6 +22,7 @@ public sealed class OutboundRequestTraceHandler(
             return await base.SendAsync(request, cancellationToken);
         }
 
+        Guid logId = Guid.CreateVersion7();
         DateTime startedAt = DateTime.UtcNow;
         long startTick = Stopwatch.GetTimestamp();
         string method = request.Method.Method;
@@ -35,10 +36,38 @@ public sealed class OutboundRequestTraceHandler(
             return await base.SendAsync(request, cancellationToken);
         }
 
+        string? requestContentType = request.Content?.Headers.ContentType?.ToString();
+
+        string requestHeaders = RequestTraceHelper.FormatHeaders(
+            EnumerateHeaders(request.Headers, request.Content?.Headers),
+            config.Headers.IncludeRequestHeaders,
+            config.Headers.RedactRequestHeaders);
+
+        RequestTraceRequestHeaderWriteModel requestHeaderModel = new()
+        {
+            LogId = logId,
+            StartedAt = startedAt,
+            Direction = RequestTraceDirection.Outbound,
+            Source = source,
+            UserId = userId,
+            TraceId = traceId,
+            Method = method,
+            Url = url,
+            RequestContentType = request.Content?.Headers.ContentType?.ToString(),
+            RequestHeaders = requestHeaders,
+        };
+
+        if (!queue.TryEnqueueRequestHeader(requestHeaderModel))
+        {
+            logger.LogWarning("Request trace queue dropped an outbound request-header event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
+
+            return await base.SendAsync(request, cancellationToken);
+        }
+
         int rawCaptureLimit = RequestTraceHelper.ResolveRawCaptureLimit(null);
 
         bool captureRequestBody = config.Body.CaptureRequestBody || config.Body.CaptureRawRequestBody;
-        string? requestContentType = request.Content?.Headers.ContentType?.ToString();
         string? requestContentEncoding = request.Content?.Headers.ContentEncoding.FirstOrDefault();
         if (captureRequestBody && request.Content != null)
         {
@@ -61,6 +90,7 @@ public sealed class OutboundRequestTraceHandler(
 
                         RequestTraceRequestBodyWriteModel requestBodyModel = new()
                         {
+                            LogId = logId,
                             StartedAt = startedAt,
                             RequestBodyAt = DateTime.UtcNow,
                             Direction = RequestTraceDirection.Outbound,
@@ -78,7 +108,8 @@ public sealed class OutboundRequestTraceHandler(
 
                         if (!queue.TryEnqueueRequestBody(requestBodyModel))
                         {
-                            logger.LogDebug("Request trace queue dropped an outbound request-body event. dropped={dropped}", queue.DroppedCount);
+                            logger.LogWarning("Request trace queue dropped an outbound request-body event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                                logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
                         }
                     }
                     catch (Exception traceEx)
@@ -88,33 +119,11 @@ public sealed class OutboundRequestTraceHandler(
                 });
         }
 
-        string requestHeaders = RequestTraceHelper.FormatHeaders(
-            EnumerateHeaders(request.Headers, request.Content?.Headers),
-            config.Headers.IncludeRequestHeaders,
-            config.Headers.RedactRequestHeaders);
-
-        RequestTraceRequestHeaderWriteModel requestHeaderModel = new()
-        {
-            StartedAt = startedAt,
-            Direction = RequestTraceDirection.Outbound,
-            Source = source,
-            UserId = userId,
-            TraceId = traceId,
-            Method = method,
-            Url = url,
-            RequestContentType = request.Content?.Headers.ContentType?.ToString(),
-            RequestHeaders = requestHeaders,
-        };
-
-        if (!queue.TryEnqueueRequestHeader(requestHeaderModel))
-        {
-            logger.LogDebug("Request trace queue dropped an outbound request-header event. dropped={dropped}", queue.DroppedCount);
-        }
-
         if (captureRequestBody && request.Content == null)
         {
             RequestTraceRequestBodyWriteModel requestBodyModel = new()
             {
+                LogId = logId,
                 StartedAt = startedAt,
                 RequestBodyAt = DateTime.UtcNow,
                 Direction = RequestTraceDirection.Outbound,
@@ -132,7 +141,8 @@ public sealed class OutboundRequestTraceHandler(
 
             if (!queue.TryEnqueueRequestBody(requestBodyModel))
             {
-                logger.LogDebug("Request trace queue dropped an outbound request-body event. dropped={dropped}", queue.DroppedCount);
+                logger.LogWarning("Request trace queue dropped an outbound request-body event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                    logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
             }
         }
 
@@ -155,6 +165,7 @@ public sealed class OutboundRequestTraceHandler(
 
             RequestTraceResponseHeaderWriteModel responseHeaderModel = new()
             {
+                LogId = logId,
                 StartedAt = startedAt,
                 ResponseHeaderAt = DateTime.UtcNow,
                 Direction = RequestTraceDirection.Outbound,
@@ -172,7 +183,8 @@ public sealed class OutboundRequestTraceHandler(
 
             if (!queue.TryEnqueueResponseHeader(responseHeaderModel))
             {
-                logger.LogDebug("Request trace queue dropped an outbound response-header event. dropped={dropped}", queue.DroppedCount);
+                logger.LogWarning("Request trace queue dropped an outbound response-header event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                    logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
             }
 
             bool captureResponseBody = config.Body.CaptureResponseBody || config.Body.CaptureRawResponseBody;
@@ -199,6 +211,7 @@ public sealed class OutboundRequestTraceHandler(
 
                             RequestTraceResponseBodyWriteModel responseBodyModel = new()
                             {
+                                LogId = logId,
                                 StartedAt = startedAt,
                                 ResponseBodyAt = DateTime.UtcNow,
                                 Direction = RequestTraceDirection.Outbound,
@@ -217,7 +230,8 @@ public sealed class OutboundRequestTraceHandler(
 
                             if (!queue.TryEnqueueResponseBody(responseBodyModel))
                             {
-                                logger.LogDebug("Request trace queue dropped an outbound response-body event. dropped={dropped}", queue.DroppedCount);
+                                logger.LogWarning("Request trace queue dropped an outbound response-body event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                                    logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
                             }
                         }
                         catch (Exception traceEx)
@@ -230,6 +244,7 @@ public sealed class OutboundRequestTraceHandler(
             {
                 RequestTraceResponseBodyWriteModel responseBodyModel = new()
                 {
+                    LogId = logId,
                     StartedAt = startedAt,
                     ResponseBodyAt = DateTime.UtcNow,
                     Direction = RequestTraceDirection.Outbound,
@@ -248,7 +263,8 @@ public sealed class OutboundRequestTraceHandler(
 
                 if (!queue.TryEnqueueResponseBody(responseBodyModel))
                 {
-                    logger.LogDebug("Request trace queue dropped an outbound response-body event. dropped={dropped}", queue.DroppedCount);
+                    logger.LogWarning("Request trace queue dropped an outbound response-body event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                        logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
                 }
             }
 
@@ -265,6 +281,7 @@ public sealed class OutboundRequestTraceHandler(
                 {
                     RequestTraceResponseHeaderWriteModel responseHeaderModel = new()
                     {
+                        LogId = logId,
                         StartedAt = startedAt,
                         ResponseHeaderAt = DateTime.UtcNow,
                         Direction = RequestTraceDirection.Outbound,
@@ -282,7 +299,8 @@ public sealed class OutboundRequestTraceHandler(
 
                     if (!queue.TryEnqueueResponseHeader(responseHeaderModel))
                     {
-                        logger.LogDebug("Request trace queue dropped an outbound response-header event. dropped={dropped}", queue.DroppedCount);
+                        logger.LogWarning("Request trace queue dropped an outbound response-header event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                            logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
                     }
 
                     bool captureResponseBody = config.Body.CaptureResponseBody || config.Body.CaptureRawResponseBody;
@@ -290,6 +308,7 @@ public sealed class OutboundRequestTraceHandler(
                     {
                         RequestTraceResponseBodyWriteModel responseBodyModel = new()
                         {
+                            LogId = logId,
                             StartedAt = startedAt,
                             ResponseBodyAt = DateTime.UtcNow,
                             Direction = RequestTraceDirection.Outbound,
@@ -308,12 +327,14 @@ public sealed class OutboundRequestTraceHandler(
 
                         if (!queue.TryEnqueueResponseBody(responseBodyModel))
                         {
-                            logger.LogDebug("Request trace queue dropped an outbound response-body event. dropped={dropped}", queue.DroppedCount);
+                            logger.LogWarning("Request trace queue dropped an outbound response-body event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                                logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
                         }
                     }
 
                     RequestTraceExceptionWriteModel exceptionModel = new()
                     {
+                        LogId = logId,
                         StartedAt = startedAt,
                         ExceptionAt = DateTime.UtcNow,
                         Direction = RequestTraceDirection.Outbound,
@@ -330,7 +351,8 @@ public sealed class OutboundRequestTraceHandler(
 
                     if (!queue.TryEnqueueException(exceptionModel))
                     {
-                        logger.LogDebug("Request trace queue dropped an outbound exception event. dropped={dropped}", queue.DroppedCount);
+                        logger.LogWarning("Request trace queue dropped an outbound exception event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                            logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
                     }
                 }
             }

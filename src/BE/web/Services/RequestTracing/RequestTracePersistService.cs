@@ -14,29 +14,34 @@ public sealed class RequestTracePersistService(
         {
             try
             {
-                switch (item)
-                {
-                    case RequestTraceRequestHeaderWriteModel requestHeaderItem:
-                        await PersistRequestHeaderAsync(requestHeaderItem, stoppingToken);
-                        break;
-                    case RequestTraceRequestBodyWriteModel requestBodyItem:
-                        await PersistRequestBodyAsync(requestBodyItem, stoppingToken);
-                        break;
-                    case RequestTraceResponseHeaderWriteModel responseHeaderItem:
-                        await PersistResponseHeaderAsync(responseHeaderItem, stoppingToken);
-                        break;
-                    case RequestTraceResponseBodyWriteModel responseBodyItem:
-                        await PersistResponseBodyAsync(responseBodyItem, stoppingToken);
-                        break;
-                    case RequestTraceExceptionWriteModel exceptionItem:
-                        await PersistExceptionAsync(exceptionItem, stoppingToken);
-                        break;
-                }
+                await PersistSingleAsync(item, stoppingToken);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Persist request trace failed.");
             }
+        }
+    }
+
+    internal async Task PersistSingleAsync(RequestTraceWriteModel item, CancellationToken cancellationToken)
+    {
+        switch (item)
+        {
+            case RequestTraceRequestHeaderWriteModel requestHeaderItem:
+                await PersistRequestHeaderAsync(requestHeaderItem, cancellationToken);
+                break;
+            case RequestTraceRequestBodyWriteModel requestBodyItem:
+                await PersistRequestBodyAsync(requestBodyItem, cancellationToken);
+                break;
+            case RequestTraceResponseHeaderWriteModel responseHeaderItem:
+                await PersistResponseHeaderAsync(responseHeaderItem, cancellationToken);
+                break;
+            case RequestTraceResponseBodyWriteModel responseBodyItem:
+                await PersistResponseBodyAsync(responseBodyItem, cancellationToken);
+                break;
+            case RequestTraceExceptionWriteModel exceptionItem:
+                await PersistExceptionAsync(exceptionItem, cancellationToken);
+                break;
         }
     }
 
@@ -47,6 +52,7 @@ public sealed class RequestTracePersistService(
 
         RequestTrace trace = new()
         {
+            Id = item.LogId,
             StartedAt = item.StartedAt,
             RequestBodyAt = null,
             ResponseHeaderAt = null,
@@ -68,6 +74,7 @@ public sealed class RequestTracePersistService(
             IsResponseBodyTruncated = false,
             RequestTracePayload = new RequestTracePayload
             {
+                LogId = item.LogId,
                 RequestHeaders = item.RequestHeaders,
                 ResponseHeaders = null,
                 RequestBody = null,
@@ -86,36 +93,60 @@ public sealed class RequestTracePersistService(
         using IServiceScope scope = scopeFactory.CreateScope();
         ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
 
-        RequestTrace? trace = await QueryCandidate(db, item)
-            .Where(x => x.RequestTracePayload == null || (x.RequestTracePayload.RequestBody == null && x.RequestTracePayload.RequestBodyRaw == null))
-            .OrderByDescending(x => x.Id)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (trace == null)
+        if (db.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
         {
-            logger.LogWarning("No request trace row matched request body update. direction={direction}, method={method}, url={url}, startedAt={startedAt}",
-                item.Direction, item.Method, item.Url, item.StartedAt);
+            RequestTrace? trace = await db.RequestTraces
+                .Include(x => x.RequestTracePayload)
+                .FirstOrDefaultAsync(x => x.Id == item.LogId, cancellationToken);
+
+            if (trace == null)
+            {
+                logger.LogWarning("No request trace row matched request body update. logId={logId}", item.LogId);
+                return;
+            }
+
+            trace.RequestContentType = item.RequestContentType;
+            trace.RequestBodyAt = item.RequestBodyAt;
+            trace.RawRequestBodyBytes = item.RawRequestBodyBytes;
+            trace.IsRequestBodyTruncated = item.IsRequestBodyTruncated;
+
+            if (trace.RequestTracePayload == null)
+            {
+                trace.RequestTracePayload = new RequestTracePayload
+                {
+                    LogId = item.LogId,
+                    RequestHeaders = string.Empty,
+                };
+            }
+
+            trace.RequestTracePayload.RequestBody = item.RequestBody;
+            trace.RequestTracePayload.RequestBodyRaw = item.RequestBodyRaw;
+            await db.SaveChangesAsync(cancellationToken);
             return;
         }
 
-        trace.RequestContentType = item.RequestContentType;
-        trace.RequestBodyAt = item.RequestBodyAt;
-        trace.RawRequestBodyBytes = item.RawRequestBodyBytes;
-        trace.IsRequestBodyTruncated = item.IsRequestBodyTruncated;
+        int traceUpdated = await db.RequestTraces
+            .Where(x => x.Id == item.LogId)
+            .ExecuteUpdateAsync(x => x
+                .SetProperty(v => v.RequestContentType, item.RequestContentType)
+                .SetProperty(v => v.RequestBodyAt, item.RequestBodyAt)
+                .SetProperty(v => v.RawRequestBodyBytes, item.RawRequestBodyBytes)
+                .SetProperty(v => v.IsRequestBodyTruncated, item.IsRequestBodyTruncated), cancellationToken);
 
-        if (trace.RequestTracePayload == null)
+        if (traceUpdated == 0)
         {
-            trace.RequestTracePayload = new RequestTracePayload
-            {
-                LogId = trace.Id,
-                RequestHeaders = string.Empty,
-            };
+            logger.LogWarning("No request trace row matched request body update. logId={logId}", item.LogId);
+            return;
         }
 
-        trace.RequestTracePayload.RequestBody = item.RequestBody;
-        trace.RequestTracePayload.RequestBodyRaw = item.RequestBodyRaw;
-
-        await db.SaveChangesAsync(cancellationToken);
+        if (item.RequestBody != null || item.RequestBodyRaw != null)
+        {
+            await db.RequestTracePayloads
+                .Where(x => x.LogId == item.LogId)
+                .ExecuteUpdateAsync(x => x
+                    .SetProperty(v => v.RequestBody, item.RequestBody)
+                    .SetProperty(v => v.RequestBodyRaw, item.RequestBodyRaw), cancellationToken);
+        }
     }
 
     private async Task PersistResponseHeaderAsync(RequestTraceResponseHeaderWriteModel item, CancellationToken cancellationToken)
@@ -123,44 +154,57 @@ public sealed class RequestTracePersistService(
         using IServiceScope scope = scopeFactory.CreateScope();
         ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
 
-        List<RequestTrace> matches = await QueryCandidate(db, item)
-            .Where(x => x.StatusCode == null && x.ResponseHeaderAt == null)
-            .OrderByDescending(x => x.Id)
-            .Take(2)
-            .ToListAsync(cancellationToken);
-
-        if (matches.Count == 0)
+        if (db.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
         {
-            logger.LogWarning("No request trace row matched response header update. direction={direction}, method={method}, url={url}, startedAt={startedAt}",
-                item.Direction, item.Method, item.Url, item.StartedAt);
+            RequestTrace? trace = await db.RequestTraces
+                .Include(x => x.RequestTracePayload)
+                .FirstOrDefaultAsync(x => x.Id == item.LogId, cancellationToken);
+
+            if (trace == null)
+            {
+                logger.LogWarning("No request trace row matched response header update. logId={logId}", item.LogId);
+                return;
+            }
+
+            trace.ResponseHeaderAt = item.ResponseHeaderAt;
+            trace.ResponseContentType = item.ResponseContentType;
+            trace.StatusCode = item.StatusCode;
+            trace.ErrorType = item.ErrorType;
+            trace.ErrorMessage = item.ErrorMessage;
+
+            if (trace.RequestTracePayload == null)
+            {
+                trace.RequestTracePayload = new RequestTracePayload
+                {
+                    LogId = item.LogId,
+                    RequestHeaders = string.Empty,
+                };
+            }
+
+            trace.RequestTracePayload.ResponseHeaders = item.ResponseHeaders;
+            await db.SaveChangesAsync(cancellationToken);
             return;
         }
 
-        if (matches.Count > 1)
+        int traceUpdated = await db.RequestTraces
+            .Where(x => x.Id == item.LogId)
+            .ExecuteUpdateAsync(x => x
+                .SetProperty(v => v.ResponseHeaderAt, item.ResponseHeaderAt)
+                .SetProperty(v => v.ResponseContentType, item.ResponseContentType)
+                .SetProperty(v => v.StatusCode, item.StatusCode)
+                .SetProperty(v => v.ErrorType, item.ErrorType)
+                .SetProperty(v => v.ErrorMessage, item.ErrorMessage), cancellationToken);
+
+        if (traceUpdated == 0)
         {
-            logger.LogWarning("Multiple request trace rows matched response header update; using latest row. direction={direction}, method={method}, url={url}, startedAt={startedAt}",
-                item.Direction, item.Method, item.Url, item.StartedAt);
+            logger.LogWarning("No request trace row matched response header update. logId={logId}", item.LogId);
+            return;
         }
 
-        RequestTrace trace = matches[0];
-        trace.ResponseHeaderAt = item.ResponseHeaderAt;
-        trace.ResponseContentType = item.ResponseContentType;
-        trace.StatusCode = item.StatusCode;
-        trace.ErrorType = item.ErrorType;
-        trace.ErrorMessage = item.ErrorMessage;
-
-        if (trace.RequestTracePayload == null)
-        {
-            trace.RequestTracePayload = new RequestTracePayload
-            {
-                LogId = trace.Id,
-                RequestHeaders = string.Empty,
-            };
-        }
-
-        trace.RequestTracePayload.ResponseHeaders = item.ResponseHeaders;
-
-        await db.SaveChangesAsync(cancellationToken);
+        await db.RequestTracePayloads
+            .Where(x => x.LogId == item.LogId)
+            .ExecuteUpdateAsync(x => x
+                .SetProperty(v => v.ResponseHeaders, item.ResponseHeaders), cancellationToken);
     }
 
     private async Task PersistResponseBodyAsync(RequestTraceResponseBodyWriteModel item, CancellationToken cancellationToken)
@@ -168,45 +212,62 @@ public sealed class RequestTracePersistService(
         using IServiceScope scope = scopeFactory.CreateScope();
         ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
 
-        List<RequestTrace> matches = await QueryCandidate(db, item)
-            .Where(x => x.RequestTracePayload == null || (x.RequestTracePayload.ResponseBody == null && x.RequestTracePayload.ResponseBodyRaw == null))
-            .OrderByDescending(x => x.Id)
-            .Take(2)
-            .ToListAsync(cancellationToken);
-
-        if (matches.Count == 0)
+        if (db.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
         {
-            logger.LogWarning("No request trace row matched response body update. direction={direction}, method={method}, url={url}, startedAt={startedAt}",
-                item.Direction, item.Method, item.Url, item.StartedAt);
+            RequestTrace? trace = await db.RequestTraces
+                .Include(x => x.RequestTracePayload)
+                .FirstOrDefaultAsync(x => x.Id == item.LogId, cancellationToken);
+
+            if (trace == null)
+            {
+                logger.LogWarning("No request trace row matched response body update. logId={logId}", item.LogId);
+                return;
+            }
+
+            trace.ResponseBodyAt = item.ResponseBodyAt;
+            trace.ResponseContentType = item.ResponseContentType;
+            trace.StatusCode = item.StatusCode;
+            trace.RawResponseBodyBytes = item.RawResponseBodyBytes;
+            trace.IsResponseBodyTruncated = item.IsResponseBodyTruncated;
+
+            if (trace.RequestTracePayload == null)
+            {
+                trace.RequestTracePayload = new RequestTracePayload
+                {
+                    LogId = item.LogId,
+                    RequestHeaders = string.Empty,
+                };
+            }
+
+            trace.RequestTracePayload.ResponseBody = item.ResponseBody;
+            trace.RequestTracePayload.ResponseBodyRaw = item.ResponseBodyRaw;
+            await db.SaveChangesAsync(cancellationToken);
             return;
         }
 
-        if (matches.Count > 1)
+        int traceUpdated = await db.RequestTraces
+            .Where(x => x.Id == item.LogId)
+            .ExecuteUpdateAsync(x => x
+                .SetProperty(v => v.ResponseBodyAt, item.ResponseBodyAt)
+                .SetProperty(v => v.ResponseContentType, item.ResponseContentType)
+                .SetProperty(v => v.StatusCode, item.StatusCode)
+                .SetProperty(v => v.RawResponseBodyBytes, item.RawResponseBodyBytes)
+                .SetProperty(v => v.IsResponseBodyTruncated, item.IsResponseBodyTruncated), cancellationToken);
+
+        if (traceUpdated == 0)
         {
-            logger.LogWarning("Multiple request trace rows matched response body update; using latest row. direction={direction}, method={method}, url={url}, startedAt={startedAt}",
-                item.Direction, item.Method, item.Url, item.StartedAt);
+            logger.LogWarning("No request trace row matched response body update. logId={logId}", item.LogId);
+            return;
         }
 
-        RequestTrace trace = matches[0];
-        trace.ResponseBodyAt = item.ResponseBodyAt;
-        trace.ResponseContentType = item.ResponseContentType;
-        trace.StatusCode = item.StatusCode;
-        trace.RawResponseBodyBytes = item.RawResponseBodyBytes;
-        trace.IsResponseBodyTruncated = item.IsResponseBodyTruncated;
-
-        if (trace.RequestTracePayload == null)
+        if (item.ResponseBody != null || item.ResponseBodyRaw != null)
         {
-            trace.RequestTracePayload = new RequestTracePayload
-            {
-                LogId = trace.Id,
-                RequestHeaders = string.Empty,
-            };
+            await db.RequestTracePayloads
+                .Where(x => x.LogId == item.LogId)
+                .ExecuteUpdateAsync(x => x
+                    .SetProperty(v => v.ResponseBody, item.ResponseBody)
+                    .SetProperty(v => v.ResponseBodyRaw, item.ResponseBodyRaw), cancellationToken);
         }
-
-        trace.RequestTracePayload.ResponseBody = item.ResponseBody;
-        trace.RequestTracePayload.ResponseBodyRaw = item.ResponseBodyRaw;
-
-        await db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task PersistExceptionAsync(RequestTraceExceptionWriteModel item, CancellationToken cancellationToken)
@@ -214,66 +275,36 @@ public sealed class RequestTracePersistService(
         using IServiceScope scope = scopeFactory.CreateScope();
         ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
 
-        List<RequestTrace> matches = await QueryCandidate(db, item)
-            .Where(x => x.ErrorType == null && x.ErrorMessage == null)
-            .OrderByDescending(x => x.Id)
-            .Take(2)
-            .ToListAsync(cancellationToken);
-
-        if (matches.Count == 0)
+        if (db.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
         {
-            logger.LogWarning("No request trace row matched exception update. direction={direction}, method={method}, url={url}, startedAt={startedAt}",
-                item.Direction, item.Method, item.Url, item.StartedAt);
+            RequestTrace? trace = await db.RequestTraces
+                .FirstOrDefaultAsync(x => x.Id == item.LogId, cancellationToken);
+
+            if (trace == null)
+            {
+                logger.LogWarning("No request trace row matched exception update. logId={logId}", item.LogId);
+                return;
+            }
+
+            trace.ResponseContentType ??= item.ResponseContentType;
+            trace.StatusCode ??= item.StatusCode;
+            trace.ErrorType = item.ErrorType;
+            trace.ErrorMessage = item.ErrorMessage;
+            await db.SaveChangesAsync(cancellationToken);
             return;
         }
 
-        if (matches.Count > 1)
+        int updated = await db.RequestTraces
+            .Where(x => x.Id == item.LogId)
+            .ExecuteUpdateAsync(x => x
+                .SetProperty(v => v.ResponseContentType, v => v.ResponseContentType ?? item.ResponseContentType)
+                .SetProperty(v => v.StatusCode, v => v.StatusCode ?? item.StatusCode)
+                .SetProperty(v => v.ErrorType, item.ErrorType)
+                .SetProperty(v => v.ErrorMessage, item.ErrorMessage), cancellationToken);
+
+        if (updated == 0)
         {
-            logger.LogWarning("Multiple request trace rows matched exception update; using latest row. direction={direction}, method={method}, url={url}, startedAt={startedAt}",
-                item.Direction, item.Method, item.Url, item.StartedAt);
+            logger.LogWarning("No request trace row matched exception update. logId={logId}", item.LogId);
         }
-
-        RequestTrace trace = matches[0];
-        trace.ResponseContentType ??= item.ResponseContentType;
-        trace.StatusCode ??= item.StatusCode;
-        trace.ErrorType = item.ErrorType;
-        trace.ErrorMessage = item.ErrorMessage;
-
-        await db.SaveChangesAsync(cancellationToken);
-    }
-
-    private static IQueryable<RequestTrace> QueryCandidate(ChatsDB db, RequestTraceWriteModel item)
-    {
-        IQueryable<RequestTrace> query = db.RequestTraces
-            .Include(x => x.RequestTracePayload)
-            .Where(x =>
-                x.Direction == (byte)item.Direction &&
-                x.Method == item.Method &&
-                x.Url == item.Url &&
-                x.StartedAt == item.StartedAt);
-
-        query = item.UserId.HasValue
-            ? query.Where(x => x.UserId == item.UserId)
-            : query.Where(x => x.UserId == null);
-
-        if (item.TraceId == null)
-        {
-            query = query.Where(x => x.TraceId == null);
-        }
-        else
-        {
-            query = query.Where(x => x.TraceId == item.TraceId);
-        }
-
-        if (item.Source == null)
-        {
-            query = query.Where(x => x.Source == null);
-        }
-        else
-        {
-            query = query.Where(x => x.Source == item.Source);
-        }
-
-        return query;
     }
 }

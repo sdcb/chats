@@ -10,7 +10,7 @@ namespace Chats.DB;
 public partial class RequestTracePayload
 {
     [Key]
-    public long LogId { get; set; }
+    public Guid LogId { get; set; }
 
     [Unicode(false)]
     public string RequestHeaders { get; set; } = null!;

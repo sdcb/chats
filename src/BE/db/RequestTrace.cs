@@ -13,7 +13,7 @@ namespace Chats.DB;
 public partial class RequestTrace
 {
     [Key]
-    public long Id { get; set; }
+    public Guid Id { get; set; }
 
     public DateTime StartedAt { get; set; }
 
