@@ -112,6 +112,7 @@ public class Program
         builder.Services.AddScoped<LoginRateLimiter>();
 
         builder.Services.Configure<CodePodConfig>(builder.Configuration.GetSection("CodePod"));
+        builder.Services.Configure<RequestTraceQueueOptions>(builder.Configuration.GetSection("RequestTraceQueue"));
         builder.Services.Configure<RequestTraceSyncOptions>(builder.Configuration.GetSection("RequestTraceSync"));
         builder.Services.AddSingleton<IDockerService>(sp =>
             new DockerService(

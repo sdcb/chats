@@ -41,6 +41,7 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 | [`CodeInterpreter:MaxArtifactsFilesToUpload`](#69-codeinterpretermaxartifactsfilestoupload)                                      | `50`                                    | 每轮最多上传文件数          |
 | [`CodeInterpreter:MaxSingleUploadBytes`](#610-codeinterpretermaxsingleuploadbytes)                                               | `157286400`                             | 150MB，单文件限制           |
 | [`CodeInterpreter:MaxTotalUploadBytesPerTurn`](#611-codeinterpretermaxtotaluploadbytesperturn)                                   | `314572800`                             | 300MB，单轮总限制           |
+| [`RequestTraceQueue:Capacity`](#91-requesttracequeuecapacity)                                                                    | `1000`                                  | RequestTrace 内存队列容量   |
 | [`JwtValidPeriod`](#71-jwtvalidperiod)                                                                                           | `1.00:00:00`                            | 1天，JWT有效期              |
 | [`JwtSecretKey`](#72-jwtsecretkey)                                                                                               | `null`                                  | 生产环境建议设置稳定密钥    |
 | [`Chat:Retry429Times`](#81-chatretry429times)                                                                                    | `5`                                     | HTTP 429重试次数            |
@@ -360,3 +361,19 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 
 - **环境变量写法**：`Chat__Retry429Times=5`
 - **命令行写法**：`--Chat:Retry429Times=5`
+
+---
+
+## 9. RequestTrace 队列
+
+### 9.1 `RequestTraceQueue:Capacity`
+
+- **类型**：整数
+- **默认值**：`1000`
+- **用途**：限制 RequestTrace 内存有界队列（Channel）的容量。
+- **行为说明**：
+  - 队列满时采用 `DropWrite` 策略。
+  - 配置为 `<= 0` 时，会回退到 `1000`。
+
+- **环境变量写法**：`RequestTraceQueue__Capacity=1000`
+- **命令行写法**：`--RequestTraceQueue:Capacity=1000`

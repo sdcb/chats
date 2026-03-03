@@ -1,4 +1,6 @@
 using System.Threading.Channels;
+using Chats.BE.Services.Options;
+using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Services.RequestTracing;
 
@@ -30,8 +32,20 @@ public sealed class RequestTraceQueue : IRequestTraceQueue
     private long _queueHighWatermark;
 
     public RequestTraceQueue()
+        : this(new RequestTraceQueueOptions())
     {
-        _channel = Channel.CreateBounded<RequestTraceWriteModel>(new BoundedChannelOptions(5000)
+    }
+
+    public RequestTraceQueue(IOptions<RequestTraceQueueOptions> options)
+        : this(options.Value)
+    {
+    }
+
+    private RequestTraceQueue(RequestTraceQueueOptions options)
+    {
+        int capacity = options.Capacity > 0 ? options.Capacity : 1000;
+
+        _channel = Channel.CreateBounded<RequestTraceWriteModel>(new BoundedChannelOptions(capacity)
         {
             FullMode = BoundedChannelFullMode.DropWrite,
             SingleReader = true,
