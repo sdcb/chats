@@ -4,6 +4,7 @@ using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.DB;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
+using Chats.BE.Services.RequestTracing;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Net.ServerSentEvents;
@@ -55,7 +56,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
             httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
 
-            using HttpClient httpClient = httpClientFactory.CreateClient();
+            using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceResponseApi);
             httpClient.Timeout = NetworkTimeout;
 
             using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken);
@@ -83,7 +84,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                     {
                         using HttpRequestMessage cancelRequest = new(HttpMethod.Post, $"{endpoint}/v1/responses/{responseId}/cancel");
                         AddAuthorizationHeader(cancelRequest, request.ChatConfig.Model.ModelKey);
-                        using HttpClient cancelClient = httpClientFactory.CreateClient();
+                        using HttpClient cancelClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceResponseApi);
                         await cancelClient.SendAsync(cancelRequest, default);
                     }
                     catch (Exception ex)
@@ -244,7 +245,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
             httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
-            using HttpClient httpClient = httpClientFactory.CreateClient();
+            using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceResponseApi);
             httpClient.Timeout = NetworkTimeout;
 
             using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
@@ -631,7 +632,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         using HttpRequestMessage request = new(HttpMethod.Get, $"{endpoint}/v1/models");
         AddAuthorizationHeader(request, modelKey);
 
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceResponseApi);
         httpClient.Timeout = NetworkTimeout;
 
         using HttpResponseMessage response = await httpClient.SendAsync(request, cancellationToken);

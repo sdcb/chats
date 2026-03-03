@@ -47,10 +47,15 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
         builder.Services.AddDbContext<ChatsDB>(o => o.Configure(builder.Configuration, builder.Environment));
-        builder.Services.AddHttpClient(string.Empty, httpClient =>
+        foreach (string clientName in HttpClientNames.All)
         {
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd($"Sdcb-Chats/{CurrentVersion}");
-        }).AddHttpMessageHandler<OutboundRequestTraceHandler>();
+            builder.Services.AddHttpClient(clientName, httpClient =>
+            {
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd($"Sdcb-Chats/{CurrentVersion}");
+            })
+            .AddHttpMessageHandler(() => new HttpClientNameStampHandler(clientName))
+            .AddHttpMessageHandler<OutboundRequestTraceHandler>();
+        }
 
         builder.Services.AddSingleton<KeycloakOAuthClient>();
         builder.Services.AddSingleton<InitService>();

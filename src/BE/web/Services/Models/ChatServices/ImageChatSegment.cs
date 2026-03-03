@@ -1,6 +1,7 @@
 using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.Dtos;
+using Chats.BE.Services.RequestTracing;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Services.Models.ChatServices;
@@ -66,7 +67,7 @@ public record UrlImage : ImageChatSegment
 
     public override async Task<DBFileDef> Download(IHttpClientFactory httpClientFactory, CancellationToken cancellationToken = default)
     {
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceImageDownload);
         using HttpResponseMessage resp = await httpClient.GetAsync(Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         resp.EnsureSuccessStatusCode();
 

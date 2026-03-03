@@ -29,6 +29,7 @@ using Chats.DB.Enums;
 using Chats.BE.DB.Extensions;
 using Chats.BE.Services.CodeInterpreter;
 using Chats.BE.Services.Options;
+using Chats.BE.Services.RequestTracing;
 using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Controllers.Chats.Chats;
@@ -734,7 +735,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                     {
                         Endpoint = new Uri(mcpServer.Url),
                         AdditionalHeaders = headers,
-                    }, httpClientFactory.CreateClient(), loggerFactory, ownsHttpClient: true), cancellationToken: cancellationToken);
+                    }, httpClientFactory.CreateClient(HttpClientNames.ChatControllerMcp), loggerFactory, ownsHttpClient: true), cancellationToken: cancellationToken);
 
                     logger.LogInformation("{mcpServer.Label} connected, elapsed={elapsed}ms, Calling tool: {toolName}, parameters: {call.Parameters}",
                         mcpServer.Label, sw.ElapsedMilliseconds, toolName, call.Parameters);

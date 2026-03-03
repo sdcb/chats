@@ -3,6 +3,7 @@ using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
+using Chats.BE.Services.RequestTracing;
 using System.Net.Http.Headers;
 using ChatTokenUsage = Chats.BE.Services.Models.Dtos.ChatTokenUsage;
 using System.Net.ServerSentEvents;
@@ -27,7 +28,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
         httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceAnthropic);
         httpClient.Timeout = NetworkTimeout;
         using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
@@ -326,7 +327,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         using HttpRequestMessage request = new(HttpMethod.Get, url + "/v1/models");
         AddApiKeyHeader(request, apiKey);
 
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceAnthropic);
         httpClient.Timeout = NetworkTimeout;
         using HttpResponseMessage response = await httpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -361,7 +362,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         AddApiKeyHeader(httpRequest, apiKey);
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
 
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceAnthropic);
         httpClient.Timeout = NetworkTimeout;
         using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken);
         response.EnsureSuccessStatusCode();

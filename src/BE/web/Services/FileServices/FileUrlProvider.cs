@@ -3,6 +3,7 @@ using Chats.DB.Enums;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.DB.Extensions;
 using Chats.BE.Services.Models.Neutral;
+using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.EntityFrameworkCore;
 using DBFile = Chats.DB.File;
@@ -13,7 +14,7 @@ public class FileUrlProvider(ChatsDB db, IFileServiceFactory fileServiceFactory,
 {
     public async Task<(byte[] Bytes, string ContentType)> DownloadUrlBytesAsync(string url, CancellationToken cancellationToken)
     {
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.FileServiceUrlProvider);
         using HttpResponseMessage resp = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         resp.EnsureSuccessStatusCode();
 

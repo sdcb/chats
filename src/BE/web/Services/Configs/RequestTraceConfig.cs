@@ -44,7 +44,7 @@ public record RequestTraceConfig
 public record RequestTraceFilters
 {
     /// <summary>
-    /// 限定命中的来源名称模式列表；入站表示IP地址，出站可表示 HttpClient 名称。
+    /// 限定命中的来源名称模式列表；入站表示IP地址，出站表示 HttpClient 注入名称（如 ChatService.Gemini）。
     /// 为 null 表示不按名称限制（允许所有）。
     /// </summary>
     [JsonPropertyName("sourcePatterns")]

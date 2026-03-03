@@ -1,5 +1,6 @@
 using Chats.BE.DB.Jsons;
 using Chats.BE.Services.Common;
+using Chats.BE.Services.RequestTracing;
 
 namespace Chats.BE.Services.Keycloak;
 
@@ -17,7 +18,7 @@ public class KeycloakOAuthClient(IHttpClientFactory httpClientFactory)
     {
         KeycloakOAuthConfig oauth = await LoadWellknown(config.WellKnown, cancellationToken);
 
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.SecurityKeycloakOAuth);
         using HttpResponseMessage resp = await httpClient.PostAsync(oauth.TokenEndpoint, new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["grant_type"] = "authorization_code",
@@ -39,7 +40,7 @@ public class KeycloakOAuthClient(IHttpClientFactory httpClientFactory)
 
     private async Task<KeycloakOAuthConfig> LoadWellknown(string wellKnownUrl, CancellationToken cancellationToken)
     {
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.SecurityKeycloakOAuth);
         using HttpResponseMessage response = await httpClient.GetAsync(wellKnownUrl, cancellationToken);
 
         if (response.IsSuccessStatusCode)

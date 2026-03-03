@@ -897,6 +897,7 @@
   "Details": "详情",
   "Started At": "开始时间",
   "Direction": "方向",
+  "Source": "来源",
   "Trace Id": "Trace Id",
   "Duration (ms)": "耗时(ms)",
   "Error Type": "错误类型",

@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Text.Json;
+using Chats.BE.Services.RequestTracing;
 
 namespace Chats.BE.Controllers.Admin.GlobalConfigs;
 
@@ -7,7 +8,7 @@ public class GitHubReleaseChecker(IHttpClientFactory httpClientFactory)
 {
     public async Task<string> GetLatestReleaseTagNameAsync(CancellationToken cancellationToken)
     {
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.AdminGitHubReleaseChecker);
         httpClient.BaseAddress = new Uri("https://api.github.com");
         httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
 

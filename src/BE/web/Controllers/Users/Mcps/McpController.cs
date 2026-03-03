@@ -8,6 +8,7 @@ using ModelContextProtocol.Client;
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
 using Chats.BE.Services;
+using Chats.BE.Services.RequestTracing;
 
 namespace Chats.BE.Controllers.Users.Mcps;
 
@@ -363,7 +364,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
 
         try
         {
-            McpClient client = await McpClient.CreateAsync(new HttpClientTransport(options, httpClientFactory.CreateClient(), loggerFactory), cancellationToken: cancellationToken);
+            McpClient client = await McpClient.CreateAsync(new HttpClientTransport(options, httpClientFactory.CreateClient(HttpClientNames.McpController), loggerFactory), cancellationToken: cancellationToken);
             List<McpToolBasicInfo> tools = [];
             ListToolsResult mcpToolsResp = await client.ListToolsAsync(new ListToolsRequestParams(), cancellationToken);
             foreach (Tool tool in mcpToolsResp.Tools)

@@ -27,7 +27,7 @@ public sealed class OutboundRequestTraceHandler(
         long startTick = Stopwatch.GetTimestamp();
         string method = request.Method.Method;
         string url = request.RequestUri?.ToString() ?? string.Empty;
-        string? source = request.RequestUri?.Host;
+        string source = HttpClientTracingContext.GetClientName(request);
         int? userId = TryGetUserId(httpContextAccessor.HttpContext?.User, idEncryption);
         string? traceId = httpContextAccessor.HttpContext?.TraceIdentifier;
 
