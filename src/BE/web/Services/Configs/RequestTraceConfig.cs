@@ -36,6 +36,12 @@ public record RequestTraceConfig
     /// </summary>
     [JsonPropertyName("body")]
     public RequestTraceBodyConfig Body { get; init; } = new();
+
+    /// <summary>
+    /// 日志保留天数；null 表示永久保留。
+    /// </summary>
+    [JsonPropertyName("retentionDays")]
+    public int? RetentionDays { get; init; } = null;
 }
 
 /// <summary>

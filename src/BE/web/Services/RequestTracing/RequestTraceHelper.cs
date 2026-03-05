@@ -69,15 +69,16 @@ public static partial class RequestTraceHelper
         return builder.ToString();
     }
 
-    public static (string? text, bool truncated) DecodeTextBody(
+    public static (string? text, int? originalLength) DecodeTextBody(
         byte[]? source,
         int maxTextChars,
         string? contentEncoding,
         string[]? allowedContentTypes,
         string? contentType)
     {
-        if (source == null || source.Length == 0) return (null, false);
-        if (!IsAllowedContentType(contentType, allowedContentTypes)) return (null, false);
+        if (source == null) return (null, null);
+        if (source.Length == 0) return (null, 0);
+        if (!IsAllowedContentType(contentType, allowedContentTypes)) return (null, null);
 
         byte[] bodyBytes = source;
         if (!string.IsNullOrWhiteSpace(contentEncoding))
@@ -87,12 +88,13 @@ public static partial class RequestTraceHelper
 
         Encoding encoding = ResolveEncoding(contentType);
         string text = encoding.GetString(bodyBytes);
+        int originalLength = text.Length;
         if (text.Length <= maxTextChars)
         {
-            return (text, false);
+            return (text, originalLength);
         }
 
-        return (TruncateMiddle(text, maxTextChars), true);
+        return (TruncateMiddle(text, maxTextChars), originalLength);
     }
 
     public static bool IsAllowedContentType(string? contentType, string[]? allowedContentTypes)
@@ -134,6 +136,16 @@ public static partial class RequestTraceHelper
         }
 
         return DefaultRawCaptureMaxBytes;
+    }
+
+    public static DateTime? ResolveScheduledDeleteAt(DateTime startedAtUtc, int? retentionDays)
+    {
+        if (retentionDays is > 0)
+        {
+            return startedAtUtc.AddDays(retentionDays.Value);
+        }
+
+        return null;
     }
 
     public static bool IsSmallKnownLength(long? contentLength, int maxCaptureBytes)

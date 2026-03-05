@@ -364,8 +364,8 @@ export interface RequestTraceListItem {
   errorMessage: string | null;
   rawRequestBodyBytes: number;
   rawResponseBodyBytes: number | null;
-  isRequestBodyTruncated: boolean;
-  isResponseBodyTruncated: boolean;
+  requestBodyLength: number;
+  responseBodyLength: number | null;
   hasPayload: boolean;
   hasRequestBodyRaw: boolean;
   hasResponseBodyRaw: boolean;

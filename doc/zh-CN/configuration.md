@@ -42,6 +42,7 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 | [`CodeInterpreter:MaxSingleUploadBytes`](#610-codeinterpretermaxsingleuploadbytes)                                               | `157286400`                             | 150MB，单文件限制           |
 | [`CodeInterpreter:MaxTotalUploadBytesPerTurn`](#611-codeinterpretermaxtotaluploadbytesperturn)                                   | `314572800`                             | 300MB，单轮总限制           |
 | [`RequestTraceQueue:Capacity`](#91-requesttracequeuecapacity)                                                                    | `1000`                                  | RequestTrace 内存队列容量   |
+| [`RequestTraceCleanup:Enabled`](#92-requesttracecleanupenabled)                                                                  | `true`                                  | 控制定时自动删除是否启用    |
 | [`JwtValidPeriod`](#71-jwtvalidperiod)                                                                                           | `1.00:00:00`                            | 1天，JWT有效期              |
 | [`JwtSecretKey`](#72-jwtsecretkey)                                                                                               | `null`                                  | 生产环境建议设置稳定密钥    |
 | [`Chat:Retry429Times`](#81-chatretry429times)                                                                                    | `5`                                     | HTTP 429重试次数            |
@@ -364,7 +365,7 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 
 ---
 
-## 9. RequestTrace 队列
+## 9. RequestTrace
 
 ### 9.1 `RequestTraceQueue:Capacity`
 
@@ -377,3 +378,16 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 
 - **环境变量写法**：`RequestTraceQueue__Capacity=1000`
 - **命令行写法**：`--RequestTraceQueue:Capacity=1000`
+
+### 9.2 `RequestTraceCleanup:Enabled`
+
+- **类型**：布尔值
+- **默认值**：`true`
+- **用途**：控制 RequestTrace 自动删除后台任务是否启用。
+- **行为说明**：
+  - 启用时，后台服务每 30 分钟执行一次。
+  - 每次执行会删除 `ScheduledDeleteAt <= 当前 UTC 时间` 的 RequestTrace 记录（使用 `ExecuteDeleteAsync`）。
+  - 关闭时，不执行自动删除。
+
+- **环境变量写法**：`RequestTraceCleanup__Enabled=true`
+- **命令行写法**：`--RequestTraceCleanup:Enabled=true`

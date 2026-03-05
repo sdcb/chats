@@ -25,6 +25,7 @@ export const GlobalDefaultConfigs = {
   inboundRequestTrace: {
     enabled: false,
     sampleRate: 1,
+    retentionDays: 30,
     filters: {
       sourcePatterns: null,
       includeUrlPatterns: null,
@@ -52,6 +53,7 @@ export const GlobalDefaultConfigs = {
   outboundRequestTrace: {
     enabled: false,
     sampleRate: 1,
+    retentionDays: 30,
     filters: {
       sourcePatterns: null,
       includeUrlPatterns: null,

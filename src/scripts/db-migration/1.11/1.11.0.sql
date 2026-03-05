@@ -24,13 +24,13 @@ BEGIN
         ResponseContentType VARCHAR(200) NULL,                   -- 响应体 Content-Type
         StatusCode SMALLINT NULL,                                -- 响应状态码；无响应异常场景允许为 NULL（不再使用 HasResponse）
         ErrorType NVARCHAR(50) NULL,                             -- 异常类型（建议枚举字符串，如 Timeout/Dns/Connect/UnhandledException）
-        ErrorMessage NVARCHAR(MAX) NULL,                         -- 异常详情；inbound 可存 Exception.ToString()，outbound 通常为空
         RawRequestBodyBytes INT NOT NULL,                        -- 请求体原始字节数；0 表示无 body 或空 body
         RawResponseBodyBytes INT NULL,                           -- 响应体原始字节数；NULL 表示未知/未拿到响应，0 表示有响应但 body 为空
-        IsRequestBodyTruncated BIT NOT NULL,                     -- 请求体文本是否被 maxTextCharsForTruncate 截断
-        IsResponseBodyTruncated BIT NOT NULL,                    -- 响应体文本是否被 maxTextCharsForTruncate 截断
+        RequestBodyLength INT NOT NULL,                          -- 请求体长度（字符数）
+        ResponseBodyLength INT NULL,                             -- 响应体长度（字符数）；NULL 表示未知/未拿到响应，0 表示有响应但 body 为空
+        ScheduledDeleteAt DATETIME2(7) NULL,                     -- 预约删除时间（UTC）；用于自动删除策略
 
-        CONSTRAINT PK_RequestTrace PRIMARY KEY CLUSTERED (Id),
+        CONSTRAINT PK_RequestTrace PRIMARY KEY NONCLUSTERED (Id),
         CONSTRAINT CK_RequestTrace_Direction CHECK (Direction IN (0, 1))
     );
 
@@ -56,7 +56,7 @@ BEGIN
           AND object_id = OBJECT_ID(N'dbo.RequestTrace')
     )
     BEGIN
-        CREATE INDEX IX_RequestTrace_StartedAt
+        CREATE CLUSTERED INDEX IX_RequestTrace_StartedAt
         ON dbo.RequestTrace (StartedAt);
         PRINT N'    -> 已创建索引 IX_RequestTrace_StartedAt';
     END
@@ -95,6 +95,22 @@ BEGIN
         PRINT N'    -> 索引 IX_RequestTrace_TraceId 已存在，跳过';
     END
 
+    IF NOT EXISTS (
+        SELECT 1 FROM sys.indexes
+        WHERE name = N'IX_RequestTrace_ScheduledDeleteAt_NotNull'
+          AND object_id = OBJECT_ID(N'dbo.RequestTrace')
+    )
+    BEGIN
+        CREATE NONCLUSTERED INDEX IX_RequestTrace_ScheduledDeleteAt_NotNull
+        ON dbo.RequestTrace (ScheduledDeleteAt)
+        WHERE ScheduledDeleteAt IS NOT NULL;
+        PRINT N'    -> 已创建索引 IX_RequestTrace_ScheduledDeleteAt_NotNull';
+    END
+    ELSE
+    BEGIN
+        PRINT N'    -> 索引 IX_RequestTrace_ScheduledDeleteAt_NotNull 已存在，跳过';
+    END
+
 END
 ELSE
 BEGIN
@@ -117,6 +133,7 @@ BEGIN
         ResponseHeaders VARCHAR(MAX) NULL,                                         -- 响应头原始文本（按原样存储；无响应时可为空）
         RequestBody NVARCHAR(MAX) NULL,                                            -- 请求体文本（可检索、业务友好）
         ResponseBody NVARCHAR(MAX) NULL,                                           -- 响应体文本（可检索、业务友好）
+        ErrorMessage NVARCHAR(MAX) NULL,                                           -- 异常详情；inbound 可存 Exception.ToString()，outbound 通常为空
         RequestBodyRaw VARBINARY(MAX) NULL,                                        -- 原始请求体二进制（未解压、未de-chunk、尽量原样；按配置开启）
         ResponseBodyRaw VARBINARY(MAX) NULL,                                       -- 原始响应体二进制（未解压、未de-chunk、尽量原样；按配置开启）
 

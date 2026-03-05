@@ -47,6 +47,7 @@ public sealed class OutboundRequestTraceHandler(
         {
             LogId = logId,
             StartedAt = startedAt,
+            ScheduledDeleteAt = RequestTraceHelper.ResolveScheduledDeleteAt(startedAt, config.RetentionDays),
             Direction = RequestTraceDirection.Outbound,
             Source = source,
             UserId = userId,
@@ -75,18 +76,18 @@ public sealed class OutboundRequestTraceHandler(
             request.Content = new ObservedRequestHttpContent(
                 originalRequestContent,
                 rawCaptureLimit,
-                (rawBytesCount, capturedBytes, rawTruncated) =>
+                (rawBytesCount, capturedBytes, _) =>
                 {
                     try
                     {
-                        (string? requestText, bool requestTextTruncated) = config.Body.CaptureRequestBody
+                        (string? requestText, int? requestBodyLength) = config.Body.CaptureRequestBody
                             ? RequestTraceHelper.DecodeTextBody(
                                 capturedBytes,
                                 config.Body.MaxTextCharsForTruncate,
                                 requestContentEncoding,
                                 config.Body.AllowedContentTypes,
                                 requestContentType)
-                            : (null, false);
+                            : (null, null);
 
                         RequestTraceRequestBodyWriteModel requestBodyModel = new()
                         {
@@ -101,7 +102,7 @@ public sealed class OutboundRequestTraceHandler(
                             Url = url,
                             RequestContentType = requestContentType,
                             RawRequestBodyBytes = rawBytesCount,
-                            IsRequestBodyTruncated = rawTruncated || requestTextTruncated,
+                            RequestBodyLength = requestBodyLength ?? rawBytesCount,
                             RequestBody = requestText,
                             RequestBodyRaw = config.Body.CaptureRawRequestBody ? capturedBytes : null,
                         };
@@ -134,7 +135,7 @@ public sealed class OutboundRequestTraceHandler(
                 Url = url,
                 RequestContentType = null,
                 RawRequestBodyBytes = 0,
-                IsRequestBodyTruncated = false,
+                RequestBodyLength = 0,
                 RequestBody = null,
                 RequestBodyRaw = null,
             };
@@ -196,18 +197,18 @@ public sealed class OutboundRequestTraceHandler(
                 response.Content = new ObservedResponseHttpContent(
                     originalResponseContent,
                     rawCaptureLimit,
-                    (rawBytesCount, capturedBytes, rawTruncated) =>
+                    (rawBytesCount, capturedBytes, _) =>
                     {
                         try
                         {
-                            (string? responseText, bool responseTextTruncated) = config.Body.CaptureResponseBody
+                            (string? responseText, int? responseBodyLength) = config.Body.CaptureResponseBody
                                 ? RequestTraceHelper.DecodeTextBody(
                                     capturedBytes,
                                     config.Body.MaxTextCharsForTruncate,
                                     responseContentEncoding,
                                     config.Body.AllowedContentTypes,
                                     responseContentType)
-                                : (null, false);
+                                : (null, null);
 
                             RequestTraceResponseBodyWriteModel responseBodyModel = new()
                             {
@@ -223,7 +224,7 @@ public sealed class OutboundRequestTraceHandler(
                                 ResponseContentType = responseContentType,
                                 StatusCode = statusCode,
                                 RawResponseBodyBytes = rawBytesCount,
-                                IsResponseBodyTruncated = rawTruncated || responseTextTruncated,
+                                ResponseBodyLength = responseBodyLength ?? rawBytesCount,
                                 ResponseBody = responseText,
                                 ResponseBodyRaw = config.Body.CaptureRawResponseBody ? capturedBytes : null,
                             };
@@ -256,7 +257,7 @@ public sealed class OutboundRequestTraceHandler(
                     ResponseContentType = null,
                     StatusCode = statusCode,
                     RawResponseBodyBytes = 0,
-                    IsResponseBodyTruncated = false,
+                    ResponseBodyLength = 0,
                     ResponseBody = null,
                     ResponseBodyRaw = null,
                 };
@@ -319,8 +320,8 @@ public sealed class OutboundRequestTraceHandler(
                             Url = url,
                             ResponseContentType = null,
                             StatusCode = statusCode,
-                            RawResponseBodyBytes = 0,
-                            IsResponseBodyTruncated = false,
+                            RawResponseBodyBytes = null,
+                            ResponseBodyLength = null,
                             ResponseBody = null,
                             ResponseBodyRaw = null,
                         };

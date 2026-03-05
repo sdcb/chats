@@ -44,6 +44,7 @@ public sealed class InboundRequestTraceMiddleware(
         {
             LogId = logId,
             StartedAt = startedAt,
+            ScheduledDeleteAt = RequestTraceHelper.ResolveScheduledDeleteAt(startedAt, config.RetentionDays),
             Direction = RequestTraceDirection.Inbound,
             Source = source,
             UserId = userId,
@@ -71,18 +72,18 @@ public sealed class InboundRequestTraceMiddleware(
             context.Request.Body = new ReadCaptureStream(
                 originalRequestBody,
                 rawCaptureLimit,
-                (totalBytesRead, capturedBytes, truncated) =>
+                (totalBytesRead, capturedBytes, _) =>
                 {
                     try
                     {
-                        (string? requestText, bool requestTextTruncated) = config.Body.CaptureRequestBody
+                        (string? requestText, int? requestBodyLength) = config.Body.CaptureRequestBody
                             ? RequestTraceHelper.DecodeTextBody(
                                 capturedBytes,
                                 config.Body.MaxTextCharsForTruncate,
                                 context.Request.Headers.ContentEncoding.ToString(),
                                 config.Body.AllowedContentTypes,
                                 context.Request.ContentType)
-                            : (null, false);
+                            : (null, null);
 
                         RequestTraceRequestBodyWriteModel requestBodyModel = new()
                         {
@@ -97,7 +98,7 @@ public sealed class InboundRequestTraceMiddleware(
                             Url = url,
                             RequestContentType = context.Request.ContentType,
                             RawRequestBodyBytes = totalBytesRead,
-                            IsRequestBodyTruncated = truncated || requestTextTruncated,
+                            RequestBodyLength = requestBodyLength ?? totalBytesRead,
                             RequestBody = requestText,
                             RequestBodyRaw = config.Body.CaptureRawRequestBody ? capturedBytes : null,
                         };
@@ -170,17 +171,16 @@ public sealed class InboundRequestTraceMiddleware(
             try
             {
                 byte[]? responseBytes = tee?.CapturedBytes;
-                bool responseBodyTruncated = tee?.IsTruncated == true;
                 short? statusCode = (short?)context.Response.StatusCode;
 
-                (string? responseText, bool responseTextTruncated) = config.Body.CaptureResponseBody
+                (string? responseText, int? responseBodyLength) = config.Body.CaptureResponseBody
                     ? RequestTraceHelper.DecodeTextBody(
                         responseBytes,
                         config.Body.MaxTextCharsForTruncate,
                         context.Response.Headers.ContentEncoding.ToString(),
                         config.Body.AllowedContentTypes,
                         context.Response.ContentType)
-                    : (null, false);
+                    : (null, null);
 
                 RequestTraceResponseBodyWriteModel responseBodyModel = new()
                 {
@@ -196,7 +196,7 @@ public sealed class InboundRequestTraceMiddleware(
                     ResponseContentType = context.Response.ContentType,
                     StatusCode = statusCode,
                     RawResponseBodyBytes = responseBytes?.Length,
-                    IsResponseBodyTruncated = responseBodyTruncated || responseTextTruncated,
+                    ResponseBodyLength = responseBodyLength ?? responseBytes?.Length ?? 0,
                     ResponseBody = responseText,
                     ResponseBodyRaw = config.Body.CaptureRawResponseBody ? responseBytes : null,
                 };

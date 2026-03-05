@@ -40,9 +40,9 @@ public record RequestTraceListItemDto
 
     public int? RawResponseBodyBytes { get; init; }
 
-    public bool IsRequestBodyTruncated { get; init; }
+    public int RequestBodyLength { get; init; }
 
-    public bool IsResponseBodyTruncated { get; init; }
+    public int? ResponseBodyLength { get; init; }
 
     public bool HasPayload { get; init; }
 

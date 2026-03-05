@@ -22,6 +22,8 @@ public partial class RequestTracePayload
 
     public string? ResponseBody { get; set; }
 
+    public string? ErrorMessage { get; set; }
+
     public byte[]? RequestBodyRaw { get; set; }
 
     public byte[]? ResponseBodyRaw { get; set; }

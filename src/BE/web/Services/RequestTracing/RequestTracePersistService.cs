@@ -54,6 +54,7 @@ public sealed class RequestTracePersistService(
         {
             Id = item.LogId,
             StartedAt = item.StartedAt,
+            ScheduledDeleteAt = item.ScheduledDeleteAt,
             RequestBodyAt = null,
             ResponseHeaderAt = null,
             ResponseBodyAt = null,
@@ -67,11 +68,10 @@ public sealed class RequestTracePersistService(
             ResponseContentType = null,
             StatusCode = null,
             ErrorType = null,
-            ErrorMessage = null,
             RawRequestBodyBytes = 0,
             RawResponseBodyBytes = null,
-            IsRequestBodyTruncated = false,
-            IsResponseBodyTruncated = false,
+            RequestBodyLength = 0,
+            ResponseBodyLength = null,
             RequestTracePayload = new RequestTracePayload
             {
                 LogId = item.LogId,
@@ -79,6 +79,7 @@ public sealed class RequestTracePersistService(
                 ResponseHeaders = null,
                 RequestBody = null,
                 ResponseBody = null,
+                ErrorMessage = null,
                 RequestBodyRaw = null,
                 ResponseBodyRaw = null,
             }
@@ -108,7 +109,7 @@ public sealed class RequestTracePersistService(
             trace.RequestContentType = item.RequestContentType;
             trace.RequestBodyAt = item.RequestBodyAt;
             trace.RawRequestBodyBytes = item.RawRequestBodyBytes;
-            trace.IsRequestBodyTruncated = item.IsRequestBodyTruncated;
+            trace.RequestBodyLength = item.RequestBodyLength;
 
             if (trace.RequestTracePayload == null)
             {
@@ -131,7 +132,7 @@ public sealed class RequestTracePersistService(
                 .SetProperty(v => v.RequestContentType, item.RequestContentType)
                 .SetProperty(v => v.RequestBodyAt, item.RequestBodyAt)
                 .SetProperty(v => v.RawRequestBodyBytes, item.RawRequestBodyBytes)
-                .SetProperty(v => v.IsRequestBodyTruncated, item.IsRequestBodyTruncated), cancellationToken);
+                .SetProperty(v => v.RequestBodyLength, item.RequestBodyLength), cancellationToken);
 
         if (traceUpdated == 0)
         {
@@ -170,7 +171,6 @@ public sealed class RequestTracePersistService(
             trace.ResponseContentType = item.ResponseContentType;
             trace.StatusCode = item.StatusCode;
             trace.ErrorType = item.ErrorType;
-            trace.ErrorMessage = item.ErrorMessage;
 
             if (trace.RequestTracePayload == null)
             {
@@ -182,6 +182,7 @@ public sealed class RequestTracePersistService(
             }
 
             trace.RequestTracePayload.ResponseHeaders = item.ResponseHeaders;
+            trace.RequestTracePayload.ErrorMessage = item.ErrorMessage;
             await db.SaveChangesAsync(cancellationToken);
             return;
         }
@@ -192,8 +193,7 @@ public sealed class RequestTracePersistService(
                 .SetProperty(v => v.ResponseHeaderAt, item.ResponseHeaderAt)
                 .SetProperty(v => v.ResponseContentType, item.ResponseContentType)
                 .SetProperty(v => v.StatusCode, item.StatusCode)
-                .SetProperty(v => v.ErrorType, item.ErrorType)
-                .SetProperty(v => v.ErrorMessage, item.ErrorMessage), cancellationToken);
+                .SetProperty(v => v.ErrorType, item.ErrorType), cancellationToken);
 
         if (traceUpdated == 0)
         {
@@ -204,7 +204,8 @@ public sealed class RequestTracePersistService(
         await db.RequestTracePayloads
             .Where(x => x.LogId == item.LogId)
             .ExecuteUpdateAsync(x => x
-                .SetProperty(v => v.ResponseHeaders, item.ResponseHeaders), cancellationToken);
+                .SetProperty(v => v.ResponseHeaders, item.ResponseHeaders)
+                .SetProperty(v => v.ErrorMessage, item.ErrorMessage), cancellationToken);
     }
 
     private async Task PersistResponseBodyAsync(RequestTraceResponseBodyWriteModel item, CancellationToken cancellationToken)
@@ -228,7 +229,7 @@ public sealed class RequestTracePersistService(
             trace.ResponseContentType = item.ResponseContentType;
             trace.StatusCode = item.StatusCode;
             trace.RawResponseBodyBytes = item.RawResponseBodyBytes;
-            trace.IsResponseBodyTruncated = item.IsResponseBodyTruncated;
+            trace.ResponseBodyLength = item.ResponseBodyLength;
 
             if (trace.RequestTracePayload == null)
             {
@@ -252,7 +253,7 @@ public sealed class RequestTracePersistService(
                 .SetProperty(v => v.ResponseContentType, item.ResponseContentType)
                 .SetProperty(v => v.StatusCode, item.StatusCode)
                 .SetProperty(v => v.RawResponseBodyBytes, item.RawResponseBodyBytes)
-                .SetProperty(v => v.IsResponseBodyTruncated, item.IsResponseBodyTruncated), cancellationToken);
+                .SetProperty(v => v.ResponseBodyLength, item.ResponseBodyLength), cancellationToken);
 
         if (traceUpdated == 0)
         {
@@ -278,6 +279,7 @@ public sealed class RequestTracePersistService(
         if (db.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
         {
             RequestTrace? trace = await db.RequestTraces
+                .Include(x => x.RequestTracePayload)
                 .FirstOrDefaultAsync(x => x.Id == item.LogId, cancellationToken);
 
             if (trace == null)
@@ -289,7 +291,17 @@ public sealed class RequestTracePersistService(
             trace.ResponseContentType ??= item.ResponseContentType;
             trace.StatusCode ??= item.StatusCode;
             trace.ErrorType = item.ErrorType;
-            trace.ErrorMessage = item.ErrorMessage;
+
+            if (trace.RequestTracePayload == null)
+            {
+                trace.RequestTracePayload = new RequestTracePayload
+                {
+                    LogId = item.LogId,
+                    RequestHeaders = string.Empty,
+                };
+            }
+
+            trace.RequestTracePayload.ErrorMessage = item.ErrorMessage;
             await db.SaveChangesAsync(cancellationToken);
             return;
         }
@@ -299,8 +311,15 @@ public sealed class RequestTracePersistService(
             .ExecuteUpdateAsync(x => x
                 .SetProperty(v => v.ResponseContentType, v => v.ResponseContentType ?? item.ResponseContentType)
                 .SetProperty(v => v.StatusCode, v => v.StatusCode ?? item.StatusCode)
-                .SetProperty(v => v.ErrorType, item.ErrorType)
-                .SetProperty(v => v.ErrorMessage, item.ErrorMessage), cancellationToken);
+                .SetProperty(v => v.ErrorType, item.ErrorType), cancellationToken);
+
+        if (updated > 0)
+        {
+            await db.RequestTracePayloads
+                .Where(x => x.LogId == item.LogId)
+                .ExecuteUpdateAsync(x => x
+                    .SetProperty(v => v.ErrorMessage, item.ErrorMessage), cancellationToken);
+        }
 
         if (updated == 0)
         {

@@ -4,6 +4,7 @@ public abstract class RequestTraceWriteModel
 {
     public Guid LogId { get; init; }
     public DateTime StartedAt { get; init; }
+    public DateTime? ScheduledDeleteAt { get; init; }
     public RequestTraceDirection Direction { get; init; }
     public string? Source { get; init; }
     public int? UserId { get; init; }
@@ -23,7 +24,7 @@ public sealed class RequestTraceRequestBodyWriteModel : RequestTraceWriteModel
     public DateTime RequestBodyAt { get; init; }
     public string? RequestContentType { get; init; }
     public int RawRequestBodyBytes { get; init; }
-    public bool IsRequestBodyTruncated { get; init; }
+    public int RequestBodyLength { get; init; }
     public string? RequestBody { get; init; }
     public byte[]? RequestBodyRaw { get; init; }
 }
@@ -44,7 +45,7 @@ public sealed class RequestTraceResponseBodyWriteModel : RequestTraceWriteModel
     public string? ResponseContentType { get; init; }
     public short? StatusCode { get; init; }
     public int? RawResponseBodyBytes { get; init; }
-    public bool IsResponseBodyTruncated { get; init; }
+    public int? ResponseBodyLength { get; init; }
     public string? ResponseBody { get; init; }
     public byte[]? ResponseBodyRaw { get; init; }
 }

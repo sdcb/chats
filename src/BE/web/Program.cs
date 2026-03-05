@@ -119,6 +119,7 @@ public class Program
         builder.Services.Configure<CodePodConfig>(builder.Configuration.GetSection("CodePod"));
         builder.Services.Configure<RequestTraceQueueOptions>(builder.Configuration.GetSection("RequestTraceQueue"));
         builder.Services.Configure<RequestTraceSyncOptions>(builder.Configuration.GetSection("RequestTraceSync"));
+        builder.Services.Configure<RequestTraceCleanupOptions>(builder.Configuration.GetSection("RequestTraceCleanup"));
         builder.Services.AddSingleton<IDockerService>(sp =>
             new DockerService(
                 sp.GetRequiredService<IOptions<CodePodConfig>>().Value,
@@ -132,6 +133,7 @@ public class Program
         builder.Services.AddHostedService<ChatDockerSessionCleanupService>();
         builder.Services.AddHostedService<RequestTraceConfigRefreshService>();
         builder.Services.AddHostedService<RequestTracePersistService>();
+        builder.Services.AddHostedService<RequestTraceScheduledDeleteService>();
         builder.Services.Configure<ChatOptions>(builder.Configuration.GetSection("Chat"));
 
         builder.Services.AddUrlEncryption();

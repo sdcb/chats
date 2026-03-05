@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.DB;
 
 [Table("RequestTrace")]
-[Index("StartedAt", Name = "IX_RequestTrace_StartedAt")]
+[Index("ScheduledDeleteAt", Name = "IX_RequestTrace_ScheduledDeleteAt_NotNull")]
 [Index("TraceId", Name = "IX_RequestTrace_TraceId")]
 [Index("UserId", Name = "IX_RequestTrace_UserId")]
 public partial class RequestTrace
@@ -54,15 +54,15 @@ public partial class RequestTrace
     [StringLength(50)]
     public string? ErrorType { get; set; }
 
-    public string? ErrorMessage { get; set; }
-
     public int RawRequestBodyBytes { get; set; }
 
     public int? RawResponseBodyBytes { get; set; }
 
-    public bool IsRequestBodyTruncated { get; set; }
+    public int RequestBodyLength { get; set; }
 
-    public bool IsResponseBodyTruncated { get; set; }
+    public int? ResponseBodyLength { get; set; }
+
+    public DateTime? ScheduledDeleteAt { get; set; }
 
     [InverseProperty("Log")]
     public virtual RequestTracePayload? RequestTracePayload { get; set; }

@@ -64,8 +64,8 @@ type ColumnKey =
   | 'userName'
   | 'source'
   | 'errorType'
-  | 'rawRequestBodyBytes'
-  | 'rawResponseBodyBytes';
+  | 'requestBodyLength'
+  | 'responseBodyLength';
 
 type Filters = {
   start: string;
@@ -86,8 +86,8 @@ const ALL_COLUMNS: { key: ColumnKey; title: string }[] = [
   { key: 'userName', title: 'User Name' },
   { key: 'source', title: 'Source' },
   { key: 'errorType', title: 'Error Type' },
-  { key: 'rawRequestBodyBytes', title: 'Request Bytes' },
-  { key: 'rawResponseBodyBytes', title: 'Response Bytes' },
+  { key: 'requestBodyLength', title: 'Request Body Length' },
+  { key: 'responseBodyLength', title: 'Response Body Length' },
 ];
 
 const DEFAULT_COLUMNS: ColumnKey[] = [
@@ -208,6 +208,8 @@ const RequestTraceCompareDialog = ({
       { label: t('Response Headers'), a: left.responseHeaders || '', b: right.responseHeaders || '' },
       { label: t('Request Body'), a: left.requestBody || '', b: right.requestBody || '' },
       { label: t('Response Body'), a: left.responseBody || '', b: right.responseBody || '' },
+      { label: t('Request Body Length'), a: String(left.requestBodyLength), b: String(right.requestBodyLength) },
+      { label: t('Response Body Length'), a: String(left.responseBodyLength ?? ''), b: String(right.responseBodyLength ?? '') },
       { label: t('Error Type'), a: left.errorType || '', b: right.errorType || '' },
       { label: t('Error Message'), a: left.errorMessage || '', b: right.errorMessage || '' },
     ];
@@ -467,10 +469,10 @@ export default function RequestTracePage() {
         return row.source || '-';
       case 'errorType':
         return row.errorType || '-';
-      case 'rawRequestBodyBytes':
-        return row.rawRequestBodyBytes;
-      case 'rawResponseBodyBytes':
-        return row.rawResponseBodyBytes ?? '-';
+      case 'requestBodyLength':
+        return row.requestBodyLength;
+      case 'responseBodyLength':
+        return row.responseBodyLength ?? '-';
       default:
         return '-';
     }

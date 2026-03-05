@@ -362,6 +362,10 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<RequestTrace>(entity =>
         {
+            entity.HasKey(e => e.Id).IsClustered(false);
+
+            entity.HasIndex(e => e.StartedAt, "IX_RequestTrace_StartedAt").IsClustered();
+
             entity.Property(e => e.Id).ValueGeneratedNever();
         });
 

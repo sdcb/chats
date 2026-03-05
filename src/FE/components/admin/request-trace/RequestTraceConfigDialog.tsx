@@ -25,6 +25,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -62,6 +63,7 @@ interface RequestTraceBodyConfig {
 interface RequestTraceDirectionConfig {
   enabled: boolean;
   sampleRate: number;
+  retentionDays: number | null;
   filters: RequestTraceFilters;
   headers: RequestTraceHeaderConfig;
   body: RequestTraceBodyConfig;
@@ -70,6 +72,7 @@ interface RequestTraceDirectionConfig {
 interface DirectionFormInput {
   enabled: boolean;
   sampleRate: string;
+  retentionDays: '7' | '30' | '90' | 'null';
   sourcePatterns: string;
   includeUrlPatterns: string;
   excludeUrlPatterns: string;
@@ -96,6 +99,7 @@ type TraceDirection = 'inbound' | 'outbound';
 const DEFAULT_DIRECTION_CONFIG: RequestTraceDirectionConfig = {
   enabled: false,
   sampleRate: 1,
+  retentionDays: 30,
   filters: {
     sourcePatterns: null,
     includeUrlPatterns: null,
@@ -156,6 +160,12 @@ const normalizeDirectionConfig = (rawValue: unknown): RequestTraceDirectionConfi
   return {
     enabled: data.enabled ?? DEFAULT_DIRECTION_CONFIG.enabled,
     sampleRate: typeof data.sampleRate === 'number' ? data.sampleRate : DEFAULT_DIRECTION_CONFIG.sampleRate,
+    retentionDays:
+      data.retentionDays === null
+        ? null
+        : typeof data.retentionDays === 'number'
+          ? data.retentionDays
+          : DEFAULT_DIRECTION_CONFIG.retentionDays,
     filters: {
       sourcePatterns: data.filters?.sourcePatterns ?? DEFAULT_DIRECTION_CONFIG.filters.sourcePatterns,
       includeUrlPatterns: data.filters?.includeUrlPatterns ?? DEFAULT_DIRECTION_CONFIG.filters.includeUrlPatterns,
@@ -194,6 +204,14 @@ const parseDirectionConfigFromValue = (value?: string): RequestTraceDirectionCon
 const toFormValues = (config: RequestTraceDirectionConfig): DirectionFormInput => ({
   enabled: config.enabled,
   sampleRate: String(config.sampleRate),
+  retentionDays:
+    config.retentionDays === null
+      ? 'null'
+      : config.retentionDays === 7
+        ? '7'
+        : config.retentionDays === 90
+          ? '90'
+          : '30',
   sourcePatterns: toTextareaValue(config.filters.sourcePatterns),
   includeUrlPatterns: toTextareaValue(config.filters.includeUrlPatterns),
   excludeUrlPatterns: toTextareaValue(config.filters.excludeUrlPatterns),
@@ -216,6 +234,7 @@ const toFormValues = (config: RequestTraceDirectionConfig): DirectionFormInput =
 const toDirectionConfig = (data: DirectionFormInput): RequestTraceDirectionConfig => ({
   enabled: data.enabled,
   sampleRate: Number.parseFloat(data.sampleRate),
+  retentionDays: data.retentionDays === 'null' ? null : Number.parseInt(data.retentionDays, 10),
   filters: {
     sourcePatterns: toNullableArray(data.sourcePatterns),
     includeUrlPatterns: toNullableArray(data.includeUrlPatterns),
@@ -287,9 +306,12 @@ const createSchema = (t: (key: string) => string) => {
       return splitLines(v).every((sc) => /^(\d{3}|[1-5]xx)$/i.test(sc));
     }, t('Status codes must be like 200, 429 or 2xx'));
 
+  const retentionDaysSchema = z.enum(['7', '30', '90', 'null']);
+
   return z.object({
     enabled: z.boolean(),
     sampleRate: sampleRateSchema,
+    retentionDays: retentionDaysSchema,
     sourcePatterns: z.string(),
     includeUrlPatterns: z.string(),
     excludeUrlPatterns: z.string(),
@@ -372,6 +394,15 @@ function BasicSettingsTab({
 }: TabFormProps & { direction: TraceDirection }) {
   const presets = React.useMemo(() => getQuickPresets(direction, t), [direction, t]);
 
+  const formatDaysLabel = (days: '7' | '30' | '90') => t('{} days').replace('{}', days);
+
+  const retentionLabel = (value: DirectionFormInput['retentionDays']) => {
+    if (value === '7') return formatDaysLabel('7');
+    if (value === '30') return formatDaysLabel('30');
+    if (value === '90') return formatDaysLabel('90');
+    return t('Permanent');
+  };
+
   const applyPreset = (preset: QuickPreset) => {
     const defaults = toFormValues(DEFAULT_DIRECTION_CONFIG);
     form.reset({ ...defaults, ...preset.partial });
@@ -404,6 +435,27 @@ function BasicSettingsTab({
               <Input type="number" step="0.01" min={0} max={1} placeholder="0 ~ 1" {...field} />
             </FormControl>
             <FormDescription>{t('Value between 0 and 1')}</FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="retentionDays"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t('Retention Policy')}</FormLabel>
+            <FormControl>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger value={field.value}>{retentionLabel(field.value)}</SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">{formatDaysLabel('7')}</SelectItem>
+                  <SelectItem value="30">{formatDaysLabel('30')}</SelectItem>
+                  <SelectItem value="90">{formatDaysLabel('90')}</SelectItem>
+                  <SelectItem value="null">{t('Permanent')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormControl>
             <FormMessage />
           </FormItem>
         )}

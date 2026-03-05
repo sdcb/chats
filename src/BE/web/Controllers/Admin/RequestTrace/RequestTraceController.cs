@@ -203,11 +203,11 @@ public class RequestTraceController(ChatsDB db) : ControllerBase
                    ResponseContentType = trace.ResponseContentType,
                    StatusCode = trace.StatusCode,
                    ErrorType = trace.ErrorType,
-                   ErrorMessage = trace.ErrorMessage,
+                   ErrorMessage = payload != null ? payload.ErrorMessage : null,
                    RawRequestBodyBytes = trace.RawRequestBodyBytes,
                    RawResponseBodyBytes = trace.RawResponseBodyBytes,
-                   IsRequestBodyTruncated = trace.IsRequestBodyTruncated,
-                   IsResponseBodyTruncated = trace.IsResponseBodyTruncated,
+                   RequestBodyLength = trace.RequestBodyLength,
+                   ResponseBodyLength = trace.ResponseBodyLength,
                    HasPayload = payload != null,
                    HasRequestBodyRaw = payload != null && payload.RequestBodyRaw != null,
                    HasResponseBodyRaw = payload != null && payload.ResponseBodyRaw != null,
@@ -239,11 +239,11 @@ public class RequestTraceController(ChatsDB db) : ControllerBase
                    ResponseContentType = trace.ResponseContentType,
                    StatusCode = trace.StatusCode,
                    ErrorType = trace.ErrorType,
-                   ErrorMessage = trace.ErrorMessage,
+                   ErrorMessage = payload != null ? payload.ErrorMessage : null,
                    RawRequestBodyBytes = trace.RawRequestBodyBytes,
                    RawResponseBodyBytes = trace.RawResponseBodyBytes,
-                   IsRequestBodyTruncated = trace.IsRequestBodyTruncated,
-                   IsResponseBodyTruncated = trace.IsResponseBodyTruncated,
+                   RequestBodyLength = trace.RequestBodyLength,
+                   ResponseBodyLength = trace.ResponseBodyLength,
                    HasPayload = payload != null,
                    HasRequestBodyRaw = payload != null && payload.RequestBodyRaw != null,
                    HasResponseBodyRaw = payload != null && payload.ResponseBodyRaw != null,
@@ -338,8 +338,8 @@ public class RequestTraceController(ChatsDB db) : ControllerBase
         if (Include(selectedColumns, "errorMessage")) export["errorMessage"] = row.ErrorMessage;
         if (Include(selectedColumns, "rawRequestBodyBytes")) export["rawRequestBodyBytes"] = row.RawRequestBodyBytes;
         if (Include(selectedColumns, "rawResponseBodyBytes")) export["rawResponseBodyBytes"] = row.RawResponseBodyBytes;
-        if (Include(selectedColumns, "isRequestBodyTruncated")) export["isRequestBodyTruncated"] = row.IsRequestBodyTruncated;
-        if (Include(selectedColumns, "isResponseBodyTruncated")) export["isResponseBodyTruncated"] = row.IsResponseBodyTruncated;
+        if (Include(selectedColumns, "requestBodyLength")) export["requestBodyLength"] = row.RequestBodyLength;
+        if (Include(selectedColumns, "responseBodyLength")) export["responseBodyLength"] = row.ResponseBodyLength;
 
         return export;
     }

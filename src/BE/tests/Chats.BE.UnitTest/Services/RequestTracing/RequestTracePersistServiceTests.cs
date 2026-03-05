@@ -54,7 +54,7 @@ public sealed class RequestTracePersistServiceTests
             RequestBodyAt = startedAt.AddSeconds(1),
             RequestContentType = "text/plain",
             RawRequestBodyBytes = 11,
-            IsRequestBodyTruncated = true,
+            RequestBodyLength = 11,
             RequestBody = "hello world",
             RequestBodyRaw = [1, 2, 3]
         }, CancellationToken.None);
@@ -89,7 +89,7 @@ public sealed class RequestTracePersistServiceTests
             ResponseContentType = "application/json",
             StatusCode = 201,
             RawResponseBodyBytes = 7,
-            IsResponseBodyTruncated = true,
+            ResponseBodyLength = 4,
             ResponseBody = "resp",
             ResponseBodyRaw = [4, 5, 6]
         }, CancellationToken.None);
@@ -119,21 +119,21 @@ public sealed class RequestTracePersistServiceTests
         Assert.Equal("/v1/test", trace.Url);
         Assert.Equal("text/plain", trace.RequestContentType);
         Assert.Equal(11, trace.RawRequestBodyBytes);
-        Assert.True(trace.IsRequestBodyTruncated);
+        Assert.Equal(11, trace.RequestBodyLength);
 
         Assert.Equal("application/json", trace.ResponseContentType);
         Assert.Equal((short)201, trace.StatusCode);
         Assert.Equal(7, trace.RawResponseBodyBytes);
-        Assert.True(trace.IsResponseBodyTruncated);
+        Assert.Equal(4, trace.ResponseBodyLength);
 
         Assert.Equal("TestException", trace.ErrorType);
-        Assert.Equal("boom", trace.ErrorMessage);
 
         Assert.NotNull(trace.RequestTracePayload);
         Assert.Equal("x-a: 1", trace.RequestTracePayload!.RequestHeaders);
         Assert.Equal("x-b: 2", trace.RequestTracePayload.ResponseHeaders);
         Assert.Equal("hello world", trace.RequestTracePayload.RequestBody);
         Assert.Equal("resp", trace.RequestTracePayload.ResponseBody);
+        Assert.Equal("boom", trace.RequestTracePayload.ErrorMessage);
         Assert.Equal(new byte[] { 1, 2, 3 }, trace.RequestTracePayload.RequestBodyRaw);
         Assert.Equal(new byte[] { 4, 5, 6 }, trace.RequestTracePayload.ResponseBodyRaw);
     }
