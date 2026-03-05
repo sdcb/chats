@@ -361,7 +361,7 @@ function getQuickPresets(direction: TraceDirection, t: (key: string) => string):
     {
       label: t('All Requests'),
       description: t('Trace all requests with default settings'),
-      partial: { enabled: true },
+      partial: { enabled: true, excludeUrlPatterns: '/api/version/check-update\n/api/admin/request-trace*\n/api/admin/global-configs' },
     },
     {
       label: t('All Failed Requests'),

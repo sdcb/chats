@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { useRouter } from 'next/router';
 
 import ExportButton from '@/components/Button/ExportButtom';
-import { IconEye } from '@/components/Icons';
+import { IconEye, IconRefresh, IconSettings } from '@/components/Icons';
 import DateTimePopover from '@/components/Popover/DateTimePopover';
 import DeletePopover from '@/components/Popover/DeletePopover';
 import Tips from '@/components/Tips/Tips';
@@ -508,8 +508,9 @@ export default function RequestTracePage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
+      <Card className="p-3 border-none">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
           <DateTimePopover
             value={filters.start}
             className="w-[180px]"
@@ -560,61 +561,49 @@ export default function RequestTracePage() {
               </SelectContent>
             </Select>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2 self-end lg:self-auto">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div>
-                <Tips
-                  trigger={<Button variant="outline" size="sm">{t('Columns')}</Button>}
-                  side="bottom"
-                  content={t('Select columns')}
-                />
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>{t('Select columns')}</DropdownMenuLabel>
-              {ALL_COLUMNS.map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.key}
-                  checked={columns.includes(column.key)}
-                  onSelect={(event) => event.preventDefault()}
-                  onCheckedChange={(checked) => toggleColumn(column.key, !!checked)}
-                >
-                  {t(column.title)}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <Tips
-            trigger={
-              <div>
-                <ExportButton
-                  exportUrl="/api/admin/request-trace/export"
-                  params={exportParams}
-                  className="h-9 w-9"
-                  disabled={loading}
-                />
-              </div>
-            }
-            side="bottom"
-            content={t('Export to Excel')}
-          />
-
-          <DeletePopover onDelete={handleDeleteByQuery} tooltip={t('Delete by current filters')!} />
 
           <Button
+            type="button"
             variant="outline"
-            size="sm"
-            disabled={selectedIds.length !== 2}
-            onClick={() => setCompareOpen(true)}
+            size="icon"
+            onClick={() => refresh(true)}
+            disabled={loading}
+            aria-label={t('Refresh')}
+            title={t('Refresh')}
           >
-            {t('Compare')}
+            <IconRefresh size={18} />
           </Button>
+          </div>
+
+          <div className="flex items-center gap-2 self-end lg:self-auto">
+            <Tips
+              trigger={
+                <div>
+                  <ExportButton
+                    exportUrl="/api/admin/request-trace/export"
+                    params={exportParams}
+                    className="h-9 w-9"
+                    disabled={loading}
+                  />
+                </div>
+              }
+              side="bottom"
+              content={t('Export to Excel')}
+            />
+
+            <DeletePopover onDelete={handleDeleteByQuery} tooltip={t('Delete by current filters')!} />
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={selectedIds.length !== 2}
+              onClick={() => setCompareOpen(true)}
+            >
+              {t('Compare')}
+            </Button>
+          </div>
         </div>
-      </div>
+      </Card>
 
       <div className="block sm:hidden">
         {loading ? (
@@ -677,7 +666,42 @@ export default function RequestTracePage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[42px]" />
+                <TableHead className="w-[42px] px-1">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <div>
+                        <Tips
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              aria-label={t('Select columns')}
+                              title={t('Select columns')}
+                            >
+                              <IconSettings size={14} />
+                            </Button>
+                          }
+                          side="bottom"
+                          content={t('Select columns')}
+                        />
+                      </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56">
+                      <DropdownMenuLabel>{t('Select columns')}</DropdownMenuLabel>
+                      {ALL_COLUMNS.map((column) => (
+                        <DropdownMenuCheckboxItem
+                          key={column.key}
+                          checked={columns.includes(column.key)}
+                          onSelect={(event) => event.preventDefault()}
+                          onCheckedChange={(checked) => toggleColumn(column.key, !!checked)}
+                        >
+                          {t(column.title)}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableHead>
                 {visibleColumnDefs.map((column) => (
                   <TableHead key={column.key}>{t(column.title)}</TableHead>
                 ))}

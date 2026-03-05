@@ -911,6 +911,8 @@
   "Response Headers": "响应头",
   "Request Body": "请求体",
   "Response Body": "响应体",
+  "Request Body Length": "请求体长度",
+  "Response Body Length": "响应体长度",
   "Download Dump": "下载 Dump",
   "Download Request Raw": "下载请求 Raw",
   "Download Response Raw": "下载响应 Raw",

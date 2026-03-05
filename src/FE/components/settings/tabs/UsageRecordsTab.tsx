@@ -22,6 +22,7 @@ import { PageResult } from '@/types/page';
 
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import DateTimePopover from '@/components/Popover/DateTimePopover';
+import Tips from '@/components/Tips/Tips';
 
 import ExportButton from '@/components/Button/ExportButtom';
 import PaginationContainer from '@/components/Pagination/Pagination';
@@ -312,8 +313,8 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
   return (
     <div className="flex flex-col">
       <Card className="p-3 mb-4 border-none">
-        <div className="flex flex-col sm:flex-row gap-4 items-end">
-          <div className="w-full flex items-center gap-2 flex-wrap">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex items-center gap-2 flex-wrap">
             {fixedSource === undefined && (
               <div className="flex items-center gap-2">
                 <Select
@@ -515,12 +516,6 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
             </div>
 
             <div className="flex items-center gap-2">
-              <ExportButton
-                buttonText={t('Export to Excel')}
-                exportUrl="/api/usage/excel"
-                params={{ ...getUsageParams(true), token: getUserSession() }}
-              />
-
               <Button
                 type="button"
                 variant="outline"
@@ -533,6 +528,23 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
                 <IconRefresh size={18} />
               </Button>
             </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end lg:self-auto">
+            <Tips
+              trigger={
+                <div>
+                  <ExportButton
+                    exportUrl="/api/usage/excel"
+                    params={{ ...getUsageParams(true), token: getUserSession() }}
+                    className="h-9 w-9"
+                    disabled={loading}
+                  />
+                </div>
+              }
+              side="bottom"
+              content={t('Export to Excel')}
+            />
           </div>
         </div>
       </Card>
