@@ -395,10 +395,7 @@ public static partial class RequestTraceHelper
             }
 
             RedactJsonNode(root, redactSet);
-            return root.ToJsonString(new JsonSerializerOptions
-            {
-                WriteIndented = text.Contains('\n')
-            });
+            return root.ToJsonString(JSON.Indented);
         }
         catch
         {
