@@ -379,16 +379,9 @@ type QuickPreset = {
   partial: Partial<DirectionFormInput>;
 };
 
-const INBOUND_API_GATEWAY_URLS = [
-  '/v1/chat/completions',
-  '/v1-cached/chat/completions',
-  '/v1-cached-createOnly/chat/completions',
-  '/v1/images/generations',
-  '/v1/images/edits',
-  '/v1/models',
-  '/v1/messages',
-  '/v1/messages/count_tokens',
-].join('\n');
+const INBOUND_API_GATEWAY_URLS = '/v1*/*';
+
+const OUTBOUND_API_GATEWAY_SOURCE_PATTERNS = 'ChatService.*';
 
 function getQuickPresets(direction: TraceDirection, t: (key: string) => string): QuickPreset[] {
   const base: QuickPreset[] = [
@@ -414,7 +407,7 @@ function getQuickPresets(direction: TraceDirection, t: (key: string) => string):
     base.push({
       label: t('API Gateway Requests'),
       description: t('Trace outbound API gateway calls'),
-      partial: { enabled: true },
+      partial: { enabled: true, includeSourcePatterns: OUTBOUND_API_GATEWAY_SOURCE_PATTERNS },
     });
   }
 
