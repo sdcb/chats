@@ -42,6 +42,7 @@ export const GlobalDefaultConfigs = {
       minDurationMs: null,
     },
     headers: {
+      redactUrlParameters: ['token'],
       includeRequestHeaders: null,
       includeResponseHeaders: null,
       redactRequestHeaders: ['authorization', 'cookie', 'x-api-key', 'proxy-authorization'],
@@ -77,6 +78,7 @@ export const GlobalDefaultConfigs = {
       minDurationMs: null,
     },
     headers: {
+      redactUrlParameters: ['token'],
       includeRequestHeaders: null,
       includeResponseHeaders: null,
       redactRequestHeaders: ['authorization', 'cookie', 'x-api-key', 'proxy-authorization'],

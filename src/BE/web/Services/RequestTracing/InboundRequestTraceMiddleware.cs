@@ -27,12 +27,13 @@ public sealed class InboundRequestTraceMiddleware(
         DateTime startedAt = DateTime.UtcNow;
         long startTick = Stopwatch.GetTimestamp();
         string method = context.Request.Method;
-        string url = context.Request.Path + context.Request.QueryString;
+        string rawUrl = context.Request.Path + context.Request.QueryString;
+        string redactedUrl = RequestTraceHelper.RedactUrlQueryParameters(rawUrl, config.Headers.RedactUrlParameters);
         string? source = context.Connection.RemoteIpAddress?.ToString();
         string? traceId = context.TraceIdentifier;
         int? userId = TryGetUserId(context.User, idEncryption);
 
-        if (!RequestTraceHelper.MatchRequestStageFilters(config.Filters, source, method, url))
+        if (!RequestTraceHelper.MatchRequestStageFilters(config.Filters, source, method, rawUrl))
         {
             await next(context);
             return;
@@ -53,7 +54,7 @@ public sealed class InboundRequestTraceMiddleware(
             UserId = userId,
             TraceId = traceId,
             Method = method,
-            Url = url,
+            Url = redactedUrl,
             RequestContentType = context.Request.ContentType,
             RequestHeaders = requestHeaders,
         };
@@ -91,7 +92,7 @@ public sealed class InboundRequestTraceMiddleware(
                             UserId = userId,
                             TraceId = traceId,
                             Method = method,
-                            Url = url,
+                            Url = redactedUrl,
                             RequestContentType = context.Request.ContentType,
                             RawRequestBodyBytes = totalBytesRead,
                             RequestBodyLength = requestBodyLength ?? totalBytesRead,
@@ -145,7 +146,7 @@ public sealed class InboundRequestTraceMiddleware(
         {
             int durationMs = (int)Stopwatch.GetElapsedTime(startTick, Stopwatch.GetTimestamp()).TotalMilliseconds;
             short? statusCode = (short?)context.Response.StatusCode;
-            bool shouldPersist = RequestTraceHelper.MatchResponseStageFilters(config.Filters, source, method, url, statusCode, durationMs);
+            bool shouldPersist = RequestTraceHelper.MatchResponseStageFilters(config.Filters, source, method, rawUrl, statusCode, durationMs);
             if (shouldPersist)
             {
                 if (!queue.TryEnqueueRequestHeader(requestHeaderModel))
@@ -178,7 +179,7 @@ public sealed class InboundRequestTraceMiddleware(
                             UserId = userId,
                             TraceId = traceId,
                             Method = method,
-                            Url = url,
+                            Url = redactedUrl,
                             ResponseContentType = context.Response.ContentType,
                             StatusCode = statusCode,
                             ErrorType = null,
@@ -212,7 +213,7 @@ public sealed class InboundRequestTraceMiddleware(
                             UserId = userId,
                             TraceId = traceId,
                             Method = method,
-                            Url = url,
+                            Url = redactedUrl,
                             ResponseContentType = context.Response.ContentType,
                             StatusCode = statusCode,
                             RawResponseBodyBytes = responseBytes?.Length,
@@ -239,7 +240,7 @@ public sealed class InboundRequestTraceMiddleware(
                             UserId = userId,
                             TraceId = traceId,
                             Method = method,
-                            Url = url,
+                            Url = redactedUrl,
                             ResponseContentType = context.Response.ContentType,
                             StatusCode = statusCode,
                             ErrorType = pipelineException.GetType().Name,

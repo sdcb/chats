@@ -862,6 +862,7 @@
   "Min Duration (ms)": "最小耗时（毫秒）",
   "Empty means no threshold": "留空表示不限制",
   "Headers": "请求头/响应头",
+  "Redact URL Parameters": "脱敏 URL 参数",
   "Include Request Headers": "包含请求头",
   "Include Response Headers": "包含响应头",
   "Redact Request Headers": "脱敏请求头",

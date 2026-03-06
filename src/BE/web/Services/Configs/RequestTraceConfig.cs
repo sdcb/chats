@@ -106,6 +106,12 @@ public record RequestTraceFilterRuleSet
 public record RequestTraceHeaderConfig
 {
     /// <summary>
+    /// 需要脱敏的 URL 查询参数名称列表（不区分大小写）。
+    /// </summary>
+    [JsonPropertyName("redactUrlParameters")]
+    public string[] RedactUrlParameters { get; init; } = ["token"];
+
+    /// <summary>
     /// 仅包含这些请求头（不区分大小写）；为 null 表示不过滤（允许所有）。
     /// </summary>
     [JsonPropertyName("includeRequestHeaders")]

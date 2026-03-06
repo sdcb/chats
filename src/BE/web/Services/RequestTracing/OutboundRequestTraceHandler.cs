@@ -26,12 +26,13 @@ public sealed class OutboundRequestTraceHandler(
         DateTime startedAt = DateTime.UtcNow;
         long startTick = Stopwatch.GetTimestamp();
         string method = request.Method.Method;
-        string url = request.RequestUri?.ToString() ?? string.Empty;
+        string rawUrl = request.RequestUri?.ToString() ?? string.Empty;
+        string redactedUrl = RequestTraceHelper.RedactUrlQueryParameters(rawUrl, config.Headers.RedactUrlParameters);
         string source = HttpClientTracingContext.GetClientName(request);
         int? userId = TryGetUserId(httpContextAccessor.HttpContext?.User, idEncryption);
         string? traceId = httpContextAccessor.HttpContext?.TraceIdentifier;
 
-        if (!RequestTraceHelper.MatchRequestStageFilters(config.Filters, source, method, url))
+        if (!RequestTraceHelper.MatchRequestStageFilters(config.Filters, source, method, rawUrl))
         {
             return await base.SendAsync(request, cancellationToken);
         }
@@ -53,7 +54,7 @@ public sealed class OutboundRequestTraceHandler(
             UserId = userId,
             TraceId = traceId,
             Method = method,
-            Url = url,
+            Url = redactedUrl,
             RequestContentType = request.Content?.Headers.ContentType?.ToString(),
             RequestHeaders = requestHeaders,
         };
@@ -93,7 +94,7 @@ public sealed class OutboundRequestTraceHandler(
                             UserId = userId,
                             TraceId = traceId,
                             Method = method,
-                            Url = url,
+                            Url = redactedUrl,
                             RequestContentType = requestContentType,
                             RawRequestBodyBytes = rawBytesCount,
                             RequestBodyLength = requestBodyLength ?? rawBytesCount,
@@ -122,7 +123,7 @@ public sealed class OutboundRequestTraceHandler(
                 UserId = userId,
                 TraceId = traceId,
                 Method = method,
-                Url = url,
+                Url = redactedUrl,
                 RequestContentType = null,
                 RawRequestBodyBytes = 0,
                 RequestBodyLength = 0,
@@ -137,7 +138,7 @@ public sealed class OutboundRequestTraceHandler(
 
             int durationMs = (int)Stopwatch.GetElapsedTime(startTick, Stopwatch.GetTimestamp()).TotalMilliseconds;
             short? statusCode = (short?)response.StatusCode;
-            bool shouldPersist = RequestTraceHelper.MatchResponseStageFilters(config.Filters, source, method, url, statusCode, durationMs);
+            bool shouldPersist = RequestTraceHelper.MatchResponseStageFilters(config.Filters, source, method, rawUrl, statusCode, durationMs);
             if (!shouldPersist)
             {
                 return response;
@@ -172,7 +173,7 @@ public sealed class OutboundRequestTraceHandler(
                 UserId = userId,
                 TraceId = traceId,
                 Method = method,
-                Url = url,
+                Url = redactedUrl,
                 ResponseContentType = response.Content?.Headers.ContentType?.ToString(),
                 StatusCode = statusCode,
                 ErrorType = null,
@@ -218,7 +219,7 @@ public sealed class OutboundRequestTraceHandler(
                                 UserId = userId,
                                 TraceId = traceId,
                                 Method = method,
-                                Url = url,
+                                Url = redactedUrl,
                                 ResponseContentType = responseContentType,
                                 StatusCode = statusCode,
                                 RawResponseBodyBytes = rawBytesCount,
@@ -251,7 +252,7 @@ public sealed class OutboundRequestTraceHandler(
                     UserId = userId,
                     TraceId = traceId,
                     Method = method,
-                    Url = url,
+                    Url = redactedUrl,
                     ResponseContentType = null,
                     StatusCode = statusCode,
                     RawResponseBodyBytes = 0,
@@ -275,7 +276,7 @@ public sealed class OutboundRequestTraceHandler(
             {
                 int durationMs = (int)Stopwatch.GetElapsedTime(startTick, Stopwatch.GetTimestamp()).TotalMilliseconds;
                 short? statusCode = null;
-                bool shouldPersist = RequestTraceHelper.MatchResponseStageFilters(config.Filters, source, method, url, statusCode, durationMs);
+                bool shouldPersist = RequestTraceHelper.MatchResponseStageFilters(config.Filters, source, method, rawUrl, statusCode, durationMs);
                 if (shouldPersist)
                 {
                     if (!queue.TryEnqueueRequestHeader(requestHeaderModel))
@@ -302,7 +303,7 @@ public sealed class OutboundRequestTraceHandler(
                         UserId = userId,
                         TraceId = traceId,
                         Method = method,
-                        Url = url,
+                        Url = redactedUrl,
                         ResponseContentType = null,
                         StatusCode = statusCode,
                         ErrorType = null,
@@ -329,7 +330,7 @@ public sealed class OutboundRequestTraceHandler(
                             UserId = userId,
                             TraceId = traceId,
                             Method = method,
-                            Url = url,
+                            Url = redactedUrl,
                             ResponseContentType = null,
                             StatusCode = statusCode,
                             RawResponseBodyBytes = null,
@@ -355,7 +356,7 @@ public sealed class OutboundRequestTraceHandler(
                         UserId = userId,
                         TraceId = traceId,
                         Method = method,
-                        Url = url,
+                        Url = redactedUrl,
                         ResponseContentType = null,
                         StatusCode = statusCode,
                         ErrorType = ex.GetType().Name,

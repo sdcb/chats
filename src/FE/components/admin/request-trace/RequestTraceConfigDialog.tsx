@@ -49,6 +49,7 @@ interface RequestTraceFilters {
 }
 
 interface RequestTraceHeaderConfig {
+  redactUrlParameters: string[];
   includeRequestHeaders: string[] | null;
   includeResponseHeaders: string[] | null;
   redactRequestHeaders: string[];
@@ -87,6 +88,7 @@ interface DirectionFormInput {
   excludeMethods: string;
   excludeStatusCodes: string;
   minDurationMs: string;
+  redactUrlParameters: string;
   includeRequestHeaders: string;
   includeResponseHeaders: string;
   redactRequestHeaders: string;
@@ -124,6 +126,7 @@ const DEFAULT_DIRECTION_CONFIG: RequestTraceDirectionConfig = {
     minDurationMs: null,
   },
   headers: {
+    redactUrlParameters: ['token'],
     includeRequestHeaders: null,
     includeResponseHeaders: null,
     redactRequestHeaders: ['authorization', 'cookie', 'x-api-key', 'proxy-authorization'],
@@ -196,6 +199,7 @@ const normalizeDirectionConfig = (rawValue: unknown): RequestTraceDirectionConfi
       minDurationMs: data.filters?.minDurationMs ?? DEFAULT_DIRECTION_CONFIG.filters.minDurationMs,
     },
     headers: {
+      redactUrlParameters: data.headers?.redactUrlParameters ?? DEFAULT_DIRECTION_CONFIG.headers.redactUrlParameters,
       includeRequestHeaders: data.headers?.includeRequestHeaders ?? DEFAULT_DIRECTION_CONFIG.headers.includeRequestHeaders,
       includeResponseHeaders: data.headers?.includeResponseHeaders ?? DEFAULT_DIRECTION_CONFIG.headers.includeResponseHeaders,
       redactRequestHeaders: data.headers?.redactRequestHeaders ?? DEFAULT_DIRECTION_CONFIG.headers.redactRequestHeaders,
@@ -242,6 +246,7 @@ const toFormValues = (config: RequestTraceDirectionConfig): DirectionFormInput =
   excludeMethods: toTextareaValue(config.filters.exclude.methods),
   excludeStatusCodes: toTextareaValue(config.filters.exclude.statusCodes),
   minDurationMs: config.filters.minDurationMs === null || config.filters.minDurationMs === undefined ? '' : String(config.filters.minDurationMs),
+  redactUrlParameters: toTextareaValue(config.headers.redactUrlParameters),
   includeRequestHeaders: toTextareaValue(config.headers.includeRequestHeaders),
   includeResponseHeaders: toTextareaValue(config.headers.includeResponseHeaders),
   redactRequestHeaders: toTextareaValue(config.headers.redactRequestHeaders),
@@ -275,6 +280,7 @@ const toDirectionConfig = (data: DirectionFormInput): RequestTraceDirectionConfi
     minDurationMs: parseNonNegativeIntOrNull(data.minDurationMs),
   },
   headers: {
+    redactUrlParameters: toRequiredArray(data.redactUrlParameters),
     includeRequestHeaders: toNullableArray(data.includeRequestHeaders),
     includeResponseHeaders: toNullableArray(data.includeResponseHeaders),
     redactRequestHeaders: toRequiredArray(data.redactRequestHeaders),
@@ -352,6 +358,7 @@ const createSchema = (t: (key: string) => string) => {
     excludeMethods: methodsSchema,
     excludeStatusCodes: statusCodesSchema,
     minDurationMs: minDurationMsSchema,
+    redactUrlParameters: z.string(),
     includeRequestHeaders: z.string(),
     includeResponseHeaders: z.string(),
     redactRequestHeaders: z.string(),
@@ -670,6 +677,19 @@ function FiltersTab({ t, form }: TabFormProps) {
 function HeadersTab({ t, form }: TabFormProps) {
   return (
     <div className="space-y-4">
+      <FormField
+        control={form.control}
+        name="redactUrlParameters"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t('Redact URL Parameters')}</FormLabel>
+            <FormControl>
+              <Textarea rows={4} placeholder={t('One item per line')} {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FormField
           control={form.control}

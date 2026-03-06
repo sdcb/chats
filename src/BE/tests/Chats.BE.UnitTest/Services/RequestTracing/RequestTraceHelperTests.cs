@@ -116,4 +116,33 @@ public class RequestTraceHelperTests
         Assert.True(RequestTraceHelper.MatchResponseStageFilters(filters, "source-a", "POST", "/v1/chat/completions", 200, 20));
         Assert.False(RequestTraceHelper.MatchResponseStageFilters(filters, "source-a", "POST", "/v1/internal/cache", 200, 20));
     }
+
+    [Fact]
+    public void RedactUrlQueryParameters_ShouldReturnOriginalWhenNoQueryOrRules()
+    {
+        Assert.Equal("/v1/chat/completions", RequestTraceHelper.RedactUrlQueryParameters("/v1/chat/completions", ["token"]));
+        Assert.Equal("/v1/chat/completions?token=abc", RequestTraceHelper.RedactUrlQueryParameters("/v1/chat/completions?token=abc", []));
+        Assert.Equal("/v1/chat/completions?token=abc", RequestTraceHelper.RedactUrlQueryParameters("/v1/chat/completions?token=abc", null));
+        Assert.Equal("/v1/chat/completions?#fragment", RequestTraceHelper.RedactUrlQueryParameters("/v1/chat/completions?#fragment", ["token"]));
+    }
+
+    [Fact]
+    public void RedactUrlQueryParameters_ShouldRedactMatchedParametersCaseInsensitively()
+    {
+        string url = "https://api.example.com/v1/chat?keep=1&TOKEN=abc&token=def#fragment";
+
+        string redacted = RequestTraceHelper.RedactUrlQueryParameters(url, ["token"]);
+
+        Assert.Equal("https://api.example.com/v1/chat?keep=1&TOKEN=***&token=***#fragment", redacted);
+    }
+
+    [Fact]
+    public void RedactUrlQueryParameters_ShouldPreserveRelativeUrlStructureAndUnmatchedSegments()
+    {
+        string url = "/v1/chat?token=abc&&empty=&token&name=test";
+
+        string redacted = RequestTraceHelper.RedactUrlQueryParameters(url, ["token"]);
+
+        Assert.Equal("/v1/chat?token=***&&empty=&token&name=test", redacted);
+    }
 }

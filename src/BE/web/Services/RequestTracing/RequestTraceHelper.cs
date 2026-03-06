@@ -47,6 +47,88 @@ public static partial class RequestTraceHelper
         return builder.ToString();
     }
 
+    public static string RedactUrlQueryParameters(string url, string[]? redactParameterNames)
+    {
+        if (string.IsNullOrEmpty(url))
+        {
+            return url;
+        }
+
+        HashSet<string>? redactSet = redactParameterNames == null ? null : redactParameterNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (redactSet == null || redactSet.Count == 0)
+        {
+            return url;
+        }
+
+        int queryIndex = url.IndexOf('?');
+        if (queryIndex < 0)
+        {
+            return url;
+        }
+
+        int fragmentIndex = url.IndexOf('#', queryIndex + 1);
+        int queryEnd = fragmentIndex >= 0 ? fragmentIndex : url.Length;
+        string query = url[(queryIndex + 1)..queryEnd];
+        if (query.Length == 0)
+        {
+            return url;
+        }
+
+        bool changed = false;
+        StringBuilder builder = new(url.Length + 8);
+        builder.Append(url, 0, queryIndex + 1);
+
+        for (int segmentStart = 0; segmentStart <= query.Length;)
+        {
+            int ampIndex = query.IndexOf('&', segmentStart);
+            int segmentEnd = ampIndex >= 0 ? ampIndex : query.Length;
+            ReadOnlySpan<char> segment = query.AsSpan(segmentStart, segmentEnd - segmentStart);
+
+            if (!segment.IsEmpty)
+            {
+                int equalsIndex = segment.IndexOf('=');
+                if (equalsIndex >= 0)
+                {
+                    string rawName = segment[..equalsIndex].ToString();
+                    string parameterName = DecodeQueryParameterName(rawName);
+                    if (redactSet.Contains(parameterName))
+                    {
+                        builder.Append(rawName).Append("=***");
+                        changed = true;
+                    }
+                    else
+                    {
+                        builder.Append(segment);
+                    }
+                }
+                else
+                {
+                    builder.Append(segment);
+                }
+            }
+
+            if (ampIndex < 0)
+            {
+                break;
+            }
+
+            builder.Append('&');
+            segmentStart = ampIndex + 1;
+        }
+
+        if (!changed)
+        {
+            return url;
+        }
+
+        if (fragmentIndex >= 0)
+        {
+            builder.Append(url, fragmentIndex, url.Length - fragmentIndex);
+        }
+
+        return builder.ToString();
+    }
+
     public static (string? text, int? originalLength) DecodeTextBody(
         byte[]? source,
         int maxTextChars,
@@ -235,6 +317,23 @@ public static partial class RequestTraceHelper
         regexBuilder.Append('$');
         string regexText = regexBuilder.ToString();
         return Regex.IsMatch(value, regexText, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static string DecodeQueryParameterName(string rawName)
+    {
+        if (rawName.IndexOf('%') < 0 && rawName.IndexOf('+') < 0)
+        {
+            return rawName;
+        }
+
+        try
+        {
+            return Uri.UnescapeDataString(rawName.Replace("+", "%20", StringComparison.Ordinal));
+        }
+        catch
+        {
+            return rawName;
+        }
     }
 
     private static Encoding ResolveEncoding(string? contentType)
