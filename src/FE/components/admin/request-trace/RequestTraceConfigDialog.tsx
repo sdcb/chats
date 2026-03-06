@@ -853,7 +853,6 @@ function BodyTab({ t, form }: TabFormProps) {
               <FormControl>
                 <Textarea rows={4} placeholder={t('One item per line')} {...field} />
               </FormControl>
-              <FormDescription>{t('JSON fields to mask in captured body')}</FormDescription>
               <FormMessage />
             </FormItem>
           )}

@@ -884,7 +884,6 @@
   "Maximum text characters before truncation (text capture only)": "触发截断前允许的最大文本字符数（仅文本采集）",
   "Allowed Content Types": "允许的 Content-Type",
   "Redact JSON Fields": "脱敏 JSON 字段",
-  "JSON fields to mask in captured body": "在采集到的 Body 中需要脱敏的 JSON 字段",
   "Sample rate is required": "采样率为必填项",
   "Sample rate must be between 0 and 1": "采样率必须在 0 到 1 之间",
   "Max text chars is required": "文本截断最大字符数为必填项",
