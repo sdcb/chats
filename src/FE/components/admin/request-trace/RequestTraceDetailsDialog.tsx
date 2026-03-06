@@ -99,7 +99,7 @@ export default function RequestTraceDetailsDialog({
 
     return (
       <div
-        className="group relative h-[360px]"
+        className="group relative h-[360px] overflow-hidden"
         onClick={() => setActiveCopyArea('payload')}
       >
         {hasContent && (
@@ -115,7 +115,7 @@ export default function RequestTraceDetailsDialog({
         )}
 
         {hasContent ? (
-          <pre className="h-full overflow-auto whitespace-pre-wrap break-all p-3 text-xs font-mono">{text}</pre>
+          <pre className="custom-scrollbar h-full overflow-x-auto overflow-y-auto whitespace-pre-wrap break-all p-3 text-xs font-mono">{text}</pre>
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             {t('No data')}
@@ -127,7 +127,7 @@ export default function RequestTraceDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl">
+      <DialogContent className="max-h-[85vh] overflow-hidden sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>
             {`${t('Request Trace Details')}：${details?.traceId || '-'}`}
@@ -141,7 +141,7 @@ export default function RequestTraceDetailsDialog({
             ))}
           </div>
         ) : (
-          <div className="space-y-4 max-h-[75vh] overflow-auto">
+          <div className="custom-scrollbar space-y-4 overflow-x-hidden overflow-y-auto">
             <div
               className="group relative rounded-md border bg-muted/20 p-3 text-sm"
               onClick={() => setActiveCopyArea('url')}
