@@ -21,29 +21,7 @@ public static partial class RequestTraceHelper
     }
 
     public static bool MatchFilters(RequestTraceFilters filters, string? source, string method, string url, short? statusCode, int durationMs)
-    {
-        if (!MatchesPatterns(source, filters.SourcePatterns)) return false;
-        if (!MatchesPatterns(url, filters.IncludeUrlPatterns)) return false;
-        if (MatchesPatterns(url, filters.ExcludeUrlPatterns, emptyPatternsResult: false)) return false;
-
-        if (filters.Methods is { Length: > 0 } && !filters.Methods.Any(x => string.Equals(x, method, StringComparison.OrdinalIgnoreCase)))
-        {
-            return false;
-        }
-
-        if (filters.StatusCodes is { Length: > 0 })
-        {
-            if (!statusCode.HasValue) return false;
-            if (!MatchStatus(statusCode.Value, filters.StatusCodes)) return false;
-        }
-
-        if (filters.MinDurationMs.HasValue && durationMs < filters.MinDurationMs.Value)
-        {
-            return false;
-        }
-
-        return true;
-    }
+        => MatchResponseStageFilters(filters, source, method, url, statusCode, durationMs);
 
     public static string FormatHeaders(
         IEnumerable<KeyValuePair<string, IEnumerable<string>>> headers,
@@ -114,19 +92,24 @@ public static partial class RequestTraceHelper
 
     public static bool MatchRequestStageFilters(RequestTraceFilters filters, string? source, string method, string url)
     {
-        if (!MatchesPatterns(source, filters.SourcePatterns)) return false;
-        if (!MatchesPatterns(url, filters.IncludeUrlPatterns)) return false;
-        if (MatchesPatterns(url, filters.ExcludeUrlPatterns, emptyPatternsResult: false)) return false;
-        if (filters.Methods is { Length: > 0 } && !filters.Methods.Any(x => string.Equals(x, method, StringComparison.OrdinalIgnoreCase)))
+        if (!MatchesRuleSet(filters.Include, source, method, url, statusCode: null, matchStatusCode: false)) return false;
+        if (MatchesRuleSet(filters.Exclude, source, method, url, statusCode: null, emptyRulesResult: false, matchStatusCode: false)) return false;
+
+        return true;
+    }
+
+    public static bool MatchResponseStageFilters(RequestTraceFilters filters, string? source, string method, string url, short? statusCode, int durationMs)
+    {
+        if (!MatchesRuleSet(filters.Include, source, method, url, statusCode)) return false;
+        if (MatchesRuleSet(filters.Exclude, source, method, url, statusCode, emptyRulesResult: false)) return false;
+
+        if (filters.MinDurationMs.HasValue && durationMs < filters.MinDurationMs.Value)
         {
             return false;
         }
 
         return true;
     }
-
-    public static bool MatchResponseStageFilters(RequestTraceFilters filters, string? source, string method, string url, short? statusCode, int durationMs)
-        => MatchFilters(filters, source, method, url, statusCode, durationMs);
 
     public static int ResolveRawCaptureLimit(int? configured)
     {
@@ -174,6 +157,47 @@ public static partial class RequestTraceHelper
                 if (code / 100 == group) return true;
             }
         }
+
+        return false;
+    }
+
+    private static bool MatchesRuleSet(
+        RequestTraceFilterRuleSet ruleSet,
+        string? source,
+        string method,
+        string url,
+        short? statusCode,
+        bool emptyRulesResult = true,
+        bool matchStatusCode = true)
+    {
+        if (!HasRelevantRules(ruleSet, matchStatusCode))
+        {
+            return emptyRulesResult;
+        }
+
+        if (!MatchesPatterns(source, ruleSet.SourcePatterns)) return false;
+        if (!MatchesPatterns(url, ruleSet.UrlPatterns)) return false;
+
+        if (ruleSet.Methods is { Length: > 0 } && !ruleSet.Methods.Any(x => string.Equals(x, method, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        if (matchStatusCode && ruleSet.StatusCodes is { Length: > 0 })
+        {
+            if (!statusCode.HasValue) return false;
+            if (!MatchStatus(statusCode.Value, ruleSet.StatusCodes)) return false;
+        }
+
+        return true;
+    }
+
+    private static bool HasRelevantRules(RequestTraceFilterRuleSet ruleSet, bool matchStatusCode)
+    {
+        if (ruleSet.SourcePatterns is { Length: > 0 }) return true;
+        if (ruleSet.UrlPatterns is { Length: > 0 }) return true;
+        if (ruleSet.Methods is { Length: > 0 }) return true;
+        if (matchStatusCode && ruleSet.StatusCodes is { Length: > 0 }) return true;
 
         return false;
     }

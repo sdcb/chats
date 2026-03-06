@@ -1,6 +1,8 @@
 using Chats.BE.Services.Configs;
 using Chats.BE.Services.Sessions;
 using Chats.BE.Services.UrlEncryption;
+using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using System.Security.Claims;
 
 namespace Chats.BE.Services.RequestTracing;
@@ -23,6 +25,7 @@ public sealed class InboundRequestTraceMiddleware(
 
         Guid logId = Guid.CreateVersion7();
         DateTime startedAt = DateTime.UtcNow;
+        long startTick = Stopwatch.GetTimestamp();
         string method = context.Request.Method;
         string url = context.Request.Path + context.Request.QueryString;
         string? source = context.Connection.RemoteIpAddress?.ToString();
@@ -55,14 +58,7 @@ public sealed class InboundRequestTraceMiddleware(
             RequestHeaders = requestHeaders,
         };
 
-        if (!queue.TryEnqueueRequestHeader(requestHeaderModel))
-        {
-            logger.LogWarning("Request trace queue dropped an inbound request-header event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
-                logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
-
-            await next(context);
-            return;
-        }
+        RequestTraceRequestBodyWriteModel? requestBodyModel = null;
 
         bool captureRequestBody = config.Body.CaptureRequestBody || config.Body.CaptureRawRequestBody;
         if (captureRequestBody && context.Request.Body != Stream.Null && context.Request.Body.CanRead)
@@ -85,7 +81,7 @@ public sealed class InboundRequestTraceMiddleware(
                                 context.Request.ContentType)
                             : (null, null);
 
-                        RequestTraceRequestBodyWriteModel requestBodyModel = new()
+                        RequestTraceRequestBodyWriteModel capturedRequestBodyModel = new()
                         {
                             LogId = logId,
                             StartedAt = startedAt,
@@ -103,11 +99,7 @@ public sealed class InboundRequestTraceMiddleware(
                             RequestBodyRaw = config.Body.CaptureRawRequestBody ? capturedBytes : null,
                         };
 
-                        if (!queue.TryEnqueueRequestBody(requestBodyModel))
-                        {
-                            logger.LogWarning("Request trace queue dropped an inbound request-body event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
-                                logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
-                        }
+                        requestBodyModel = capturedRequestBodyModel;
                     }
                     catch (Exception ex)
                     {
@@ -124,96 +116,7 @@ public sealed class InboundRequestTraceMiddleware(
             context.Response.Body = tee;
         }
 
-        context.Response.OnStarting(() =>
-        {
-            try
-            {
-                short? statusCode = (short?)context.Response.StatusCode;
-                string? responseHeaders = RequestTraceHelper.FormatHeaders(
-                    context.Response.Headers.Select(x => new KeyValuePair<string, IEnumerable<string>>(x.Key, x.Value.Select(v => v ?? string.Empty))),
-                    config.Headers.IncludeResponseHeaders,
-                    config.Headers.RedactResponseHeaders);
-
-                RequestTraceResponseHeaderWriteModel responseHeaderModel = new()
-                {
-                    LogId = logId,
-                    StartedAt = startedAt,
-                    ResponseHeaderAt = DateTime.UtcNow,
-                    Direction = RequestTraceDirection.Inbound,
-                    Source = source,
-                    UserId = userId,
-                    TraceId = traceId,
-                    Method = method,
-                    Url = url,
-                    ResponseContentType = context.Response.ContentType,
-                    StatusCode = statusCode,
-                    ErrorType = null,
-                    ErrorMessage = null,
-                    ResponseHeaders = responseHeaders,
-                };
-
-                if (!queue.TryEnqueueResponseHeader(responseHeaderModel))
-                {
-                    logger.LogWarning("Request trace queue dropped an inbound response-header event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
-                        logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Inbound response-header trace callback failed and is ignored.");
-            }
-
-            return Task.CompletedTask;
-        });
-
-        context.Response.OnCompleted(() =>
-        {
-            try
-            {
-                byte[]? responseBytes = tee?.CapturedBytes;
-                short? statusCode = (short?)context.Response.StatusCode;
-
-                (string? responseText, int? responseBodyLength) = config.Body.CaptureResponseBody
-                    ? RequestTraceHelper.DecodeTextBody(
-                        responseBytes,
-                        config.Body.MaxTextCharsForTruncate,
-                        context.Response.Headers.ContentEncoding.ToString(),
-                        config.Body.AllowedContentTypes,
-                        context.Response.ContentType)
-                    : (null, null);
-
-                RequestTraceResponseBodyWriteModel responseBodyModel = new()
-                {
-                    LogId = logId,
-                    StartedAt = startedAt,
-                    ResponseBodyAt = DateTime.UtcNow,
-                    Direction = RequestTraceDirection.Inbound,
-                    Source = source,
-                    UserId = userId,
-                    TraceId = traceId,
-                    Method = method,
-                    Url = url,
-                    ResponseContentType = context.Response.ContentType,
-                    StatusCode = statusCode,
-                    RawResponseBodyBytes = responseBytes?.Length,
-                    ResponseBodyLength = responseBodyLength ?? responseBytes?.Length ?? 0,
-                    ResponseBody = responseText,
-                    ResponseBodyRaw = config.Body.CaptureRawResponseBody ? responseBytes : null,
-                };
-
-                if (!queue.TryEnqueueResponseBody(responseBodyModel))
-                {
-                    logger.LogWarning("Request trace queue dropped an inbound response-body event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
-                        logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Inbound response-body trace callback failed and is ignored.");
-            }
-
-            return Task.CompletedTask;
-        });
+        Exception? pipelineException = null;
 
         try
         {
@@ -221,30 +124,7 @@ public sealed class InboundRequestTraceMiddleware(
         }
         catch (Exception ex)
         {
-            RequestTraceExceptionWriteModel exceptionModel = new()
-            {
-                LogId = logId,
-                StartedAt = startedAt,
-                ExceptionAt = DateTime.UtcNow,
-                Direction = RequestTraceDirection.Inbound,
-                Source = source,
-                UserId = userId,
-                TraceId = traceId,
-                Method = method,
-                Url = url,
-                ResponseContentType = context.Response.ContentType,
-                StatusCode = (short?)context.Response.StatusCode,
-                ErrorType = ex.GetType().Name,
-                ErrorMessage = ex.ToString(),
-            };
-
-            if (!queue.TryEnqueueException(exceptionModel))
-            {
-                logger.LogWarning("Request trace queue dropped an inbound exception event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
-                    logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
-            }
-
-            throw;
+            pipelineException = ex;
         }
         finally
         {
@@ -259,6 +139,130 @@ public sealed class InboundRequestTraceMiddleware(
             {
                 logger.LogWarning(traceEx, "Inbound request trace post-processing failed and is ignored.");
             }
+        }
+
+        try
+        {
+            int durationMs = (int)Stopwatch.GetElapsedTime(startTick, Stopwatch.GetTimestamp()).TotalMilliseconds;
+            short? statusCode = (short?)context.Response.StatusCode;
+            bool shouldPersist = RequestTraceHelper.MatchResponseStageFilters(config.Filters, source, method, url, statusCode, durationMs);
+            if (shouldPersist)
+            {
+                if (!queue.TryEnqueueRequestHeader(requestHeaderModel))
+                {
+                    logger.LogWarning("Request trace queue dropped an inbound request-header event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                        logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
+                }
+                else
+                {
+                    if (requestBodyModel != null && !queue.TryEnqueueRequestBody(requestBodyModel))
+                    {
+                        logger.LogWarning("Request trace queue dropped an inbound request-body event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                            logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
+                    }
+
+                    if (pipelineException == null)
+                    {
+                        string? responseHeaders = RequestTraceHelper.FormatHeaders(
+                            context.Response.Headers.Select(x => new KeyValuePair<string, IEnumerable<string>>(x.Key, x.Value.Select(v => v ?? string.Empty))),
+                            config.Headers.IncludeResponseHeaders,
+                            config.Headers.RedactResponseHeaders);
+
+                        RequestTraceResponseHeaderWriteModel responseHeaderModel = new()
+                        {
+                            LogId = logId,
+                            StartedAt = startedAt,
+                            ResponseHeaderAt = DateTime.UtcNow,
+                            Direction = RequestTraceDirection.Inbound,
+                            Source = source,
+                            UserId = userId,
+                            TraceId = traceId,
+                            Method = method,
+                            Url = url,
+                            ResponseContentType = context.Response.ContentType,
+                            StatusCode = statusCode,
+                            ErrorType = null,
+                            ErrorMessage = null,
+                            ResponseHeaders = responseHeaders,
+                        };
+
+                        if (!queue.TryEnqueueResponseHeader(responseHeaderModel))
+                        {
+                            logger.LogWarning("Request trace queue dropped an inbound response-header event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                                logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
+                        }
+
+                        byte[]? responseBytes = tee?.CapturedBytes;
+                        (string? responseText, int? responseBodyLength) = config.Body.CaptureResponseBody
+                            ? RequestTraceHelper.DecodeTextBody(
+                                responseBytes,
+                                config.Body.MaxTextCharsForTruncate,
+                                context.Response.Headers.ContentEncoding.ToString(),
+                                config.Body.AllowedContentTypes,
+                                context.Response.ContentType)
+                            : (null, null);
+
+                        RequestTraceResponseBodyWriteModel responseBodyModel = new()
+                        {
+                            LogId = logId,
+                            StartedAt = startedAt,
+                            ResponseBodyAt = DateTime.UtcNow,
+                            Direction = RequestTraceDirection.Inbound,
+                            Source = source,
+                            UserId = userId,
+                            TraceId = traceId,
+                            Method = method,
+                            Url = url,
+                            ResponseContentType = context.Response.ContentType,
+                            StatusCode = statusCode,
+                            RawResponseBodyBytes = responseBytes?.Length,
+                            ResponseBodyLength = responseBodyLength ?? responseBytes?.Length ?? 0,
+                            ResponseBody = responseText,
+                            ResponseBodyRaw = config.Body.CaptureRawResponseBody ? responseBytes : null,
+                        };
+
+                        if (!queue.TryEnqueueResponseBody(responseBodyModel))
+                        {
+                            logger.LogWarning("Request trace queue dropped an inbound response-body event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                                logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
+                        }
+                    }
+                    else
+                    {
+                        RequestTraceExceptionWriteModel exceptionModel = new()
+                        {
+                            LogId = logId,
+                            StartedAt = startedAt,
+                            ExceptionAt = DateTime.UtcNow,
+                            Direction = RequestTraceDirection.Inbound,
+                            Source = source,
+                            UserId = userId,
+                            TraceId = traceId,
+                            Method = method,
+                            Url = url,
+                            ResponseContentType = context.Response.ContentType,
+                            StatusCode = statusCode,
+                            ErrorType = pipelineException.GetType().Name,
+                            ErrorMessage = pipelineException.ToString(),
+                        };
+
+                        if (!queue.TryEnqueueException(exceptionModel))
+                        {
+                            logger.LogWarning("Request trace queue dropped an inbound exception event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                                logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception traceEx)
+        {
+            logger.LogWarning(traceEx, "Inbound request trace post-processing failed and is ignored.");
+        }
+
+        if (pipelineException != null)
+        {
+            ExceptionDispatchInfo.Capture(pipelineException).Throw();
         }
     }
 

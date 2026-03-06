@@ -50,6 +50,30 @@ public record RequestTraceConfig
 public record RequestTraceFilters
 {
     /// <summary>
+    /// 需要命中的过滤规则；为空表示不做包含限制。
+    /// </summary>
+    [JsonPropertyName("include")]
+    public RequestTraceFilterRuleSet Include { get; init; } = new();
+
+    /// <summary>
+    /// 需要排除的过滤规则；为空表示不做排除限制。
+    /// </summary>
+    [JsonPropertyName("exclude")]
+    public RequestTraceFilterRuleSet Exclude { get; init; } = new();
+
+    /// <summary>
+    /// 最小耗时阈值（毫秒），仅记录耗时不低于该值的请求。
+    /// </summary>
+    [JsonPropertyName("minDurationMs")]
+    public int? MinDurationMs { get; init; }
+}
+
+/// <summary>
+/// 请求追踪过滤规则集合。
+/// </summary>
+public record RequestTraceFilterRuleSet
+{
+    /// <summary>
     /// 限定命中的来源名称模式列表；入站表示IP地址，出站表示 HttpClient 注入名称（如 ChatService.Gemini）。
     /// 为 null 表示不按名称限制（允许所有）。
     /// </summary>
@@ -57,35 +81,23 @@ public record RequestTraceFilters
     public string[]? SourcePatterns { get; init; } = null;
 
     /// <summary>
-    /// 仅包含这些 URL 模式（可使用通配符）；为 null 表示不过滤（允许所有）。
+    /// 限定命中的 URL 模式（可使用通配符）；为 null 表示不按 URL 限制（允许所有）。
     /// </summary>
-    [JsonPropertyName("includeUrlPatterns")]
-    public string[]? IncludeUrlPatterns { get; init; } = null;
+    [JsonPropertyName("urlPatterns")]
+    public string[]? UrlPatterns { get; init; } = null;
 
     /// <summary>
-    /// 排除这些 URL 模式（可使用通配符）；为 null 表示不过滤（允许所有）。
-    /// </summary>
-    [JsonPropertyName("excludeUrlPatterns")]
-    public string[]? ExcludeUrlPatterns { get; init; } = null;
-
-    /// <summary>
-    /// 仅包含这些 HTTP 方法（如 GET、POST）；为 null 表示不过滤（允许所有）。
+    /// 限定命中的 HTTP 方法（如 GET、POST）；为 null 表示不按方法限制（允许所有）。
     /// </summary>
     [JsonPropertyName("methods")]
     public string[]? Methods { get; init; } = null;
 
     /// <summary>
-    /// 仅包含这些状态码规则；为 null 表示不过滤（允许所有）。
+    /// 限定命中的状态码规则；为 null 表示不按状态码限制（允许所有）。
     /// 支持精确状态码（如 200、429）和分组写法（如 2xx、4xx、5xx）。
     /// </summary>
     [JsonPropertyName("statusCodes")]
     public string[]? StatusCodes { get; init; } = null;
-
-    /// <summary>
-    /// 最小耗时阈值（毫秒），仅记录耗时不低于该值的请求。
-    /// </summary>
-    [JsonPropertyName("minDurationMs")]
-    public int? MinDurationMs { get; init; }
 }
 
 /// <summary>

@@ -34,12 +34,16 @@ import { cn } from '@/lib/utils';
 
 // ────────────────────────────── types ──────────────────────────────
 
-interface RequestTraceFilters {
+interface RequestTraceFilterRuleSet {
   sourcePatterns: string[] | null;
-  includeUrlPatterns: string[] | null;
-  excludeUrlPatterns: string[] | null;
+  urlPatterns: string[] | null;
   methods: string[] | null;
   statusCodes: string[] | null;
+}
+
+interface RequestTraceFilters {
+  include: RequestTraceFilterRuleSet;
+  exclude: RequestTraceFilterRuleSet;
   minDurationMs: number | null;
 }
 
@@ -73,11 +77,14 @@ interface DirectionFormInput {
   enabled: boolean;
   sampleRate: string;
   retentionDays: '7' | '30' | '90' | 'null';
-  sourcePatterns: string;
+  includeSourcePatterns: string;
   includeUrlPatterns: string;
+  includeMethods: string;
+  includeStatusCodes: string;
+  excludeSourcePatterns: string;
   excludeUrlPatterns: string;
-  methods: string;
-  statusCodes: string;
+  excludeMethods: string;
+  excludeStatusCodes: string;
   minDurationMs: string;
   includeRequestHeaders: string;
   includeResponseHeaders: string;
@@ -101,11 +108,18 @@ const DEFAULT_DIRECTION_CONFIG: RequestTraceDirectionConfig = {
   sampleRate: 1,
   retentionDays: 30,
   filters: {
-    sourcePatterns: null,
-    includeUrlPatterns: null,
-    excludeUrlPatterns: null,
-    methods: null,
-    statusCodes: null,
+    include: {
+      sourcePatterns: null,
+      urlPatterns: null,
+      methods: null,
+      statusCodes: null,
+    },
+    exclude: {
+      sourcePatterns: null,
+      urlPatterns: null,
+      methods: null,
+      statusCodes: null,
+    },
     minDurationMs: null,
   },
   headers: {
@@ -151,6 +165,13 @@ const parseNonNegativeIntOrNull = (value: string): number | null => {
   return parsed;
 };
 
+const normalizeFilterRuleSet = (ruleSet?: Partial<RequestTraceFilterRuleSet>): RequestTraceFilterRuleSet => ({
+  sourcePatterns: ruleSet?.sourcePatterns ?? null,
+  urlPatterns: ruleSet?.urlPatterns ?? null,
+  methods: ruleSet?.methods ?? null,
+  statusCodes: ruleSet?.statusCodes ?? null,
+});
+
 const normalizeDirectionConfig = (rawValue: unknown): RequestTraceDirectionConfig => {
   if (!rawValue || typeof rawValue !== 'object') return DEFAULT_DIRECTION_CONFIG;
 
@@ -167,11 +188,8 @@ const normalizeDirectionConfig = (rawValue: unknown): RequestTraceDirectionConfi
           ? data.retentionDays
           : DEFAULT_DIRECTION_CONFIG.retentionDays,
     filters: {
-      sourcePatterns: data.filters?.sourcePatterns ?? DEFAULT_DIRECTION_CONFIG.filters.sourcePatterns,
-      includeUrlPatterns: data.filters?.includeUrlPatterns ?? DEFAULT_DIRECTION_CONFIG.filters.includeUrlPatterns,
-      excludeUrlPatterns: data.filters?.excludeUrlPatterns ?? DEFAULT_DIRECTION_CONFIG.filters.excludeUrlPatterns,
-      methods: data.filters?.methods ?? DEFAULT_DIRECTION_CONFIG.filters.methods,
-      statusCodes: data.filters?.statusCodes ?? DEFAULT_DIRECTION_CONFIG.filters.statusCodes,
+      include: normalizeFilterRuleSet(data.filters?.include),
+      exclude: normalizeFilterRuleSet(data.filters?.exclude),
       minDurationMs: data.filters?.minDurationMs ?? DEFAULT_DIRECTION_CONFIG.filters.minDurationMs,
     },
     headers: {
@@ -212,11 +230,14 @@ const toFormValues = (config: RequestTraceDirectionConfig): DirectionFormInput =
         : config.retentionDays === 90
           ? '90'
           : '30',
-  sourcePatterns: toTextareaValue(config.filters.sourcePatterns),
-  includeUrlPatterns: toTextareaValue(config.filters.includeUrlPatterns),
-  excludeUrlPatterns: toTextareaValue(config.filters.excludeUrlPatterns),
-  methods: toTextareaValue(config.filters.methods),
-  statusCodes: toTextareaValue(config.filters.statusCodes),
+  includeSourcePatterns: toTextareaValue(config.filters.include.sourcePatterns),
+  includeUrlPatterns: toTextareaValue(config.filters.include.urlPatterns),
+  includeMethods: toTextareaValue(config.filters.include.methods),
+  includeStatusCodes: toTextareaValue(config.filters.include.statusCodes),
+  excludeSourcePatterns: toTextareaValue(config.filters.exclude.sourcePatterns),
+  excludeUrlPatterns: toTextareaValue(config.filters.exclude.urlPatterns),
+  excludeMethods: toTextareaValue(config.filters.exclude.methods),
+  excludeStatusCodes: toTextareaValue(config.filters.exclude.statusCodes),
   minDurationMs: config.filters.minDurationMs === null || config.filters.minDurationMs === undefined ? '' : String(config.filters.minDurationMs),
   includeRequestHeaders: toTextareaValue(config.headers.includeRequestHeaders),
   includeResponseHeaders: toTextareaValue(config.headers.includeResponseHeaders),
@@ -236,11 +257,18 @@ const toDirectionConfig = (data: DirectionFormInput): RequestTraceDirectionConfi
   sampleRate: Number.parseFloat(data.sampleRate),
   retentionDays: data.retentionDays === 'null' ? null : Number.parseInt(data.retentionDays, 10),
   filters: {
-    sourcePatterns: toNullableArray(data.sourcePatterns),
-    includeUrlPatterns: toNullableArray(data.includeUrlPatterns),
-    excludeUrlPatterns: toNullableArray(data.excludeUrlPatterns),
-    methods: toNullableArray(data.methods),
-    statusCodes: toNullableArray(data.statusCodes),
+    include: {
+      sourcePatterns: toNullableArray(data.includeSourcePatterns),
+      urlPatterns: toNullableArray(data.includeUrlPatterns),
+      methods: toNullableArray(data.includeMethods),
+      statusCodes: toNullableArray(data.includeStatusCodes),
+    },
+    exclude: {
+      sourcePatterns: toNullableArray(data.excludeSourcePatterns),
+      urlPatterns: toNullableArray(data.excludeUrlPatterns),
+      methods: toNullableArray(data.excludeMethods),
+      statusCodes: toNullableArray(data.excludeStatusCodes),
+    },
     minDurationMs: parseNonNegativeIntOrNull(data.minDurationMs),
   },
   headers: {
@@ -312,11 +340,14 @@ const createSchema = (t: (key: string) => string) => {
     enabled: z.boolean(),
     sampleRate: sampleRateSchema,
     retentionDays: retentionDaysSchema,
-    sourcePatterns: z.string(),
+    includeSourcePatterns: z.string(),
     includeUrlPatterns: z.string(),
+    includeMethods: methodsSchema,
+    includeStatusCodes: statusCodesSchema,
+    excludeSourcePatterns: z.string(),
     excludeUrlPatterns: z.string(),
-    methods: methodsSchema,
-    statusCodes: statusCodesSchema,
+    excludeMethods: methodsSchema,
+    excludeStatusCodes: statusCodesSchema,
     minDurationMs: minDurationMsSchema,
     includeRequestHeaders: z.string(),
     includeResponseHeaders: z.string(),
@@ -366,7 +397,7 @@ function getQuickPresets(direction: TraceDirection, t: (key: string) => string):
     {
       label: t('All Failed Requests'),
       description: t('Only trace requests with 4xx/5xx status codes'),
-      partial: { enabled: true, statusCodes: '4xx\n5xx' },
+      partial: { enabled: true, includeStatusCodes: '4xx\n5xx' },
     },
   ];
 
@@ -483,15 +514,17 @@ function BasicSettingsTab({
 }
 
 function FiltersTab({ t, form }: TabFormProps) {
+  const prefixedLabel = (prefixKey: 'Include' | 'Exclude', suffixKey: string) => `${t(prefixKey)} ${t(suffixKey)}`;
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FormField
           control={form.control}
-          name="sourcePatterns"
+          name="includeSourcePatterns"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('Source Patterns')}</FormLabel>
+              <FormLabel>{prefixedLabel('Include', 'Source Patterns')}</FormLabel>
               <FormControl>
                 <Textarea rows={4} placeholder={t('One item per line, empty means null')} {...field} />
               </FormControl>
@@ -501,12 +534,12 @@ function FiltersTab({ t, form }: TabFormProps) {
         />
         <FormField
           control={form.control}
-          name="methods"
+          name="excludeSourcePatterns"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('HTTP Methods')}</FormLabel>
+              <FormLabel>{prefixedLabel('Exclude', 'Source Patterns')}</FormLabel>
               <FormControl>
-                <Textarea rows={4} placeholder={`GET\nPOST`} {...field} />
+                <Textarea rows={4} placeholder={t('One item per line, empty means null')} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -517,7 +550,7 @@ function FiltersTab({ t, form }: TabFormProps) {
           name="includeUrlPatterns"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('Include URL Patterns')}</FormLabel>
+              <FormLabel>{prefixedLabel('Include', 'URL Patterns')}</FormLabel>
               <FormControl>
                 <Textarea rows={4} placeholder={t('One item per line, empty means null')} {...field} />
               </FormControl>
@@ -530,7 +563,7 @@ function FiltersTab({ t, form }: TabFormProps) {
           name="excludeUrlPatterns"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('Exclude URL Patterns')}</FormLabel>
+              <FormLabel>{prefixedLabel('Exclude', 'URL Patterns')}</FormLabel>
               <FormControl>
                 <Textarea rows={4} placeholder={t('One item per line, empty means null')} {...field} />
               </FormControl>
@@ -540,32 +573,70 @@ function FiltersTab({ t, form }: TabFormProps) {
         />
         <FormField
           control={form.control}
-          name="statusCodes"
+          name="includeMethods"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('Status Codes')}</FormLabel>
+              <FormLabel>{prefixedLabel('Include', 'HTTP Methods')}</FormLabel>
               <FormControl>
-                <Textarea rows={4} placeholder={`200\n429\n5xx`} {...field} />
+                <Textarea rows={4} placeholder={`GET\nPOST`} {...field} />
               </FormControl>
-              <FormDescription>{t('One item per line, supports exact code and x-group')}</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
         <FormField
           control={form.control}
-          name="minDurationMs"
+          name="excludeMethods"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('Min Duration (ms)')}</FormLabel>
+              <FormLabel>{prefixedLabel('Exclude', 'HTTP Methods')}</FormLabel>
               <FormControl>
-                <Input type="number" min={0} placeholder={t('Empty means no threshold')} {...field} />
+                <Textarea rows={4} placeholder={`GET\nPOST`} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="includeStatusCodes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{prefixedLabel('Include', 'Status Codes')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={`200\n429\n5xx`} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="excludeStatusCodes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{prefixedLabel('Exclude', 'Status Codes')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={`200\n429\n5xx`} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
       </div>
+      <FormField
+        control={form.control}
+        name="minDurationMs"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t('Min Duration (ms)')}</FormLabel>
+            <FormControl>
+              <Input type="number" min={0} placeholder={t('Empty means no threshold')} {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
     </div>
   );
 }
@@ -609,7 +680,6 @@ function HeadersTab({ t, form }: TabFormProps) {
               <FormControl>
                 <Textarea rows={4} placeholder={t('One item per line')} {...field} />
               </FormControl>
-              <FormDescription>{t('Sensitive headers that should be masked')}</FormDescription>
               <FormMessage />
             </FormItem>
           )}

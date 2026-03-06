@@ -27,11 +27,18 @@ export const GlobalDefaultConfigs = {
     sampleRate: 1,
     retentionDays: 30,
     filters: {
-      sourcePatterns: null,
-      includeUrlPatterns: null,
-      excludeUrlPatterns: null,
-      methods: null,
-      statusCodes: null,
+      include: {
+        sourcePatterns: null,
+        urlPatterns: null,
+        methods: null,
+        statusCodes: null,
+      },
+      exclude: {
+        sourcePatterns: null,
+        urlPatterns: null,
+        methods: null,
+        statusCodes: null,
+      },
       minDurationMs: null,
     },
     headers: {
@@ -55,11 +62,18 @@ export const GlobalDefaultConfigs = {
     sampleRate: 1,
     retentionDays: 30,
     filters: {
-      sourcePatterns: null,
-      includeUrlPatterns: null,
-      excludeUrlPatterns: null,
-      methods: null,
-      statusCodes: null,
+      include: {
+        sourcePatterns: null,
+        urlPatterns: null,
+        methods: null,
+        statusCodes: null,
+      },
+      exclude: {
+        sourcePatterns: null,
+        urlPatterns: null,
+        methods: null,
+        statusCodes: null,
+      },
       minDurationMs: null,
     },
     headers: {
