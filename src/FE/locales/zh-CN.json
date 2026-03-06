@@ -850,6 +850,7 @@
   "Basic Settings": "基础设置",
   "Whether this direction trace is enabled": "是否启用该方向的追踪",
   "Sample Rate": "采样率",
+  "0 means none, 100 means all": "0 表示不采样，100 表示全部采样",
   "Value between 0 and 1": "取值范围 0 到 1",
   "Filters": "过滤条件",
   "Source Patterns": "来源匹配模式",

@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -138,6 +139,8 @@ const DEFAULT_DIRECTION_CONFIG: RequestTraceDirectionConfig = {
     redactJsonFields: ['password', 'token', 'secret', 'apiKey', 'access_token', 'refresh_token'],
   },
 };
+
+const SAMPLE_RATE_PERCENT_MAX = 100;
 
 // ────────────────────────────── helpers ──────────────────────────────
 
@@ -461,11 +464,41 @@ function BasicSettingsTab({
         name="sampleRate"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t('Sample Rate')}</FormLabel>
+            <div className="flex items-center justify-between gap-3">
+              <FormLabel>{t('Sample Rate')}</FormLabel>
+              <span className="text-xs text-muted-foreground">{t('0 means none, 100 means all')}</span>
+            </div>
             <FormControl>
-              <Input type="number" step="0.01" min={0} max={1} placeholder="0 ~ 1" {...field} />
+              <div className="space-y-3">
+                <div className="text-center text-sm font-medium text-foreground">
+                  {Math.round(
+                    Math.min(
+                      SAMPLE_RATE_PERCENT_MAX,
+                      Math.max(0, (Number.parseFloat(field.value) || 0) * SAMPLE_RATE_PERCENT_MAX),
+                    ),
+                  )}
+                </div>
+                <Slider
+                  className="cursor-pointer"
+                  min={0}
+                  max={SAMPLE_RATE_PERCENT_MAX}
+                  step={1}
+                  value={[
+                    Math.min(
+                      SAMPLE_RATE_PERCENT_MAX,
+                      Math.max(0, (Number.parseFloat(field.value) || 0) * SAMPLE_RATE_PERCENT_MAX),
+                    ),
+                  ]}
+                  onValueChange={([value]) =>
+                    field.onChange(String(Number((value / SAMPLE_RATE_PERCENT_MAX).toFixed(2))))
+                  }
+                />
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>0</span>
+                  <span>{SAMPLE_RATE_PERCENT_MAX}</span>
+                </div>
+              </div>
             </FormControl>
-            <FormDescription>{t('Value between 0 and 1')}</FormDescription>
             <FormMessage />
           </FormItem>
         )}
