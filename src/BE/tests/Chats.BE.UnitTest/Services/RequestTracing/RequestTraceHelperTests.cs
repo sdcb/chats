@@ -1,5 +1,7 @@
 using Chats.BE.Services.Configs;
 using Chats.BE.Services.RequestTracing;
+using System.Text;
+using System.Text.Json;
 
 namespace Chats.BE.UnitTest.Services.RequestTracing;
 
@@ -145,4 +147,43 @@ public class RequestTraceHelperTests
 
         Assert.Equal("/v1/chat?token=***&&empty=&token&name=test", redacted);
     }
+
+        [Fact]
+        public void DecodeTextBody_ShouldRedactConfiguredJsonFieldsCaseInsensitively()
+        {
+                string json =
+                        """
+                        {
+                            "access_token": "eyJhbGciOiJSU...",
+                            "id_token": "id-value",
+                            "nested": {
+                                "Refresh_Token": "refresh-value"
+                            },
+                            "items": [
+                                {
+                                    "token": "token-value"
+                                }
+                            ],
+                            "keep": "visible"
+                        }
+                        """;
+
+                (string? text, int? originalLength) = RequestTraceHelper.DecodeTextBody(
+                        Encoding.UTF8.GetBytes(json),
+                        4096,
+                        null,
+                        null,
+                        "application/json; charset=utf-8",
+                    ["access_token", "refresh_token", "token", "id_token"]);
+
+                Assert.Equal(json.Length, originalLength);
+                Assert.NotNull(text);
+
+                using JsonDocument doc = JsonDocument.Parse(text);
+                Assert.Equal("***", doc.RootElement.GetProperty("access_token").GetString());
+                Assert.Equal("***", doc.RootElement.GetProperty("id_token").GetString());
+                Assert.Equal("***", doc.RootElement.GetProperty("nested").GetProperty("Refresh_Token").GetString());
+                Assert.Equal("***", doc.RootElement.GetProperty("items")[0].GetProperty("token").GetString());
+                Assert.Equal("visible", doc.RootElement.GetProperty("keep").GetString());
+        }
 }

@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 import { getConfigs, putConfigs } from '@/apis/adminApis';
 import useTranslation from '@/hooks/useTranslation';
+import { createDefaultRequestTraceDirectionConfig } from '@/types/config';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -106,42 +107,7 @@ type TraceDirection = 'inbound' | 'outbound';
 
 // ────────────────────────────── defaults ──────────────────────────────
 
-const DEFAULT_DIRECTION_CONFIG: RequestTraceDirectionConfig = {
-  enabled: false,
-  sampleRate: 1,
-  retentionDays: 30,
-  filters: {
-    include: {
-      sourcePatterns: null,
-      urlPatterns: null,
-      methods: null,
-      statusCodes: null,
-    },
-    exclude: {
-      sourcePatterns: null,
-      urlPatterns: null,
-      methods: null,
-      statusCodes: null,
-    },
-    minDurationMs: null,
-  },
-  headers: {
-    redactUrlParameters: ['token'],
-    includeRequestHeaders: null,
-    includeResponseHeaders: null,
-    redactRequestHeaders: ['authorization', 'cookie', 'x-api-key', 'proxy-authorization'],
-    redactResponseHeaders: ['set-cookie'],
-  },
-  body: {
-    captureRequestBody: true,
-    captureResponseBody: true,
-    captureRawRequestBody: false,
-    captureRawResponseBody: false,
-    maxTextCharsForTruncate: 5 * 1024 * 1024,
-    allowedContentTypes: null,
-    redactJsonFields: ['password', 'token', 'secret', 'apiKey', 'access_token', 'refresh_token'],
-  },
-};
+const DEFAULT_DIRECTION_CONFIG: RequestTraceDirectionConfig = createDefaultRequestTraceDirectionConfig();
 
 const SAMPLE_RATE_PERCENT_MAX = 100;
 

@@ -26,7 +26,8 @@ public class RequestTraceController(ChatsDB db) : ControllerBase
         }
 
         IQueryable<RequestTraceListItemDto> rows = BuildListQuery(query)
-            .OrderByDescending(x => x.Id);
+            .OrderByDescending(x => x.StartedAt)
+            .ThenByDescending(x => x.Id);
 
         return Ok(await PagedResult.FromQuery(rows, query, cancellationToken));
     }
@@ -40,7 +41,8 @@ public class RequestTraceController(ChatsDB db) : ControllerBase
         }
 
         RequestTraceListItemDto[] rows = await BuildListQuery(query)
-            .OrderByDescending(x => x.Id)
+            .OrderByDescending(x => x.StartedAt)
+            .ThenByDescending(x => x.Id)
             .Take(ExportLimit)
             .ToArrayAsync(cancellationToken);
 

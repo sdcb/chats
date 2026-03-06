@@ -79,7 +79,8 @@ public sealed class InboundRequestTraceMiddleware(
                                 config.Body.MaxTextCharsForTruncate,
                                 context.Request.Headers.ContentEncoding.ToString(),
                                 config.Body.AllowedContentTypes,
-                                context.Request.ContentType)
+                                context.Request.ContentType,
+                                config.Body.RedactJsonFields)
                             : (null, null);
 
                         RequestTraceRequestBodyWriteModel capturedRequestBodyModel = new()
@@ -200,7 +201,8 @@ public sealed class InboundRequestTraceMiddleware(
                                 config.Body.MaxTextCharsForTruncate,
                                 context.Response.Headers.ContentEncoding.ToString(),
                                 config.Body.AllowedContentTypes,
-                                context.Response.ContentType)
+                                context.Response.ContentType,
+                                config.Body.RedactJsonFields)
                             : (null, null);
 
                         RequestTraceResponseBodyWriteModel responseBodyModel = new()

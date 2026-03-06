@@ -1,6 +1,8 @@
 using Chats.BE.Services.Configs;
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 namespace Chats.BE.Services.RequestTracing;
@@ -134,7 +136,8 @@ public static partial class RequestTraceHelper
         int maxTextChars,
         string? contentEncoding,
         string[]? allowedContentTypes,
-        string? contentType)
+        string? contentType,
+        string[]? redactJsonFields)
     {
         if (source == null) return (null, null);
         if (source.Length == 0) return (null, 0);
@@ -149,6 +152,11 @@ public static partial class RequestTraceHelper
         Encoding encoding = ResolveEncoding(contentType);
         string text = encoding.GetString(bodyBytes);
         int originalLength = text.Length;
+        if (redactJsonFields is { Length: > 0 } && IsJsonContentType(contentType))
+        {
+            text = TryRedactJsonFields(text, redactJsonFields);
+        }
+
         if (text.Length <= maxTextChars)
         {
             return (text, originalLength);
@@ -351,6 +359,83 @@ public static partial class RequestTraceHelper
         catch
         {
             return Encoding.UTF8;
+        }
+    }
+
+    private static bool IsJsonContentType(string? contentType)
+    {
+        if (string.IsNullOrWhiteSpace(contentType))
+        {
+            return false;
+        }
+
+        string mediaType = contentType.Split(';', 2)[0].Trim();
+        return mediaType.EndsWith("/json", StringComparison.OrdinalIgnoreCase)
+            || mediaType.EndsWith("+json", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string TryRedactJsonFields(string text, string[] redactJsonFields)
+    {
+        HashSet<string> redactSet = redactJsonFields
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (redactSet.Count == 0)
+        {
+            return text;
+        }
+
+        try
+        {
+            JsonNode? root = JsonNode.Parse(text);
+            if (root == null)
+            {
+                return text;
+            }
+
+            RedactJsonNode(root, redactSet);
+            return root.ToJsonString(new JsonSerializerOptions
+            {
+                WriteIndented = text.Contains('\n')
+            });
+        }
+        catch
+        {
+            return text;
+        }
+    }
+
+    private static void RedactJsonNode(JsonNode node, HashSet<string> redactSet)
+    {
+        switch (node)
+        {
+            case JsonObject obj:
+                foreach (string propertyName in obj.Select(x => x.Key).ToArray())
+                {
+                    if (redactSet.Contains(propertyName))
+                    {
+                        obj[propertyName] = "***";
+                        continue;
+                    }
+
+                    JsonNode? child = obj[propertyName];
+                    if (child != null)
+                    {
+                        RedactJsonNode(child, redactSet);
+                    }
+                }
+                break;
+
+            case JsonArray array:
+                foreach (JsonNode? child in array)
+                {
+                    if (child != null)
+                    {
+                        RedactJsonNode(child, redactSet);
+                    }
+                }
+                break;
         }
     }
 

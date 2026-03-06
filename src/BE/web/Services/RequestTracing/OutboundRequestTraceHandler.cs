@@ -81,7 +81,8 @@ public sealed class OutboundRequestTraceHandler(
                                 config.Body.MaxTextCharsForTruncate,
                                 requestContentEncoding,
                                 config.Body.AllowedContentTypes,
-                                requestContentType)
+                                requestContentType,
+                                config.Body.RedactJsonFields)
                             : (null, null);
 
                         RequestTraceRequestBodyWriteModel capturedRequestBodyModel = new()
@@ -206,7 +207,8 @@ public sealed class OutboundRequestTraceHandler(
                                     config.Body.MaxTextCharsForTruncate,
                                     responseContentEncoding,
                                     config.Body.AllowedContentTypes,
-                                    responseContentType)
+                                    responseContentType,
+                                    config.Body.RedactJsonFields)
                                 : (null, null);
 
                             RequestTraceResponseBodyWriteModel responseBodyModel = new()

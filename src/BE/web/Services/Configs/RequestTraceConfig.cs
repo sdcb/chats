@@ -181,5 +181,5 @@ public record RequestTraceBodyConfig
     /// 在 JSON Body 中需要脱敏的字段名列表，默认包含常见敏感字段。
     /// </summary>
     [JsonPropertyName("redactJsonFields")]
-    public string[] RedactJsonFields { get; init; } = ["password", "token", "secret", "apiKey", "access_token", "refresh_token"];
+    public string[] RedactJsonFields { get; init; } = ["password", "token", "secret", "apiKey", "access_token", "refresh_token", "id_token"];
 }
