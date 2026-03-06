@@ -14,6 +14,9 @@ public partial class Model
 
     public byte ClampReasoningEffortId(byte reasoningEffortId)
     {
+        // don't clamp if reasoningEffortId is 0, which indicates that reasoning effort is not specified and the system should use the default
+        if (reasoningEffortId == 0) return 0;
+
         byte[] options = [.. GetReasoningEffortOptionsAsInt32(ReasoningEffortOptions).Select(x => (byte)x)];
 
         if (options.Length == 0)
