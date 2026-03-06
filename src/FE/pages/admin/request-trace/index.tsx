@@ -53,6 +53,8 @@ import { getUserSession } from '@/utils/user';
 import PaginationContainer from '@/components/Pagination/Pagination';
 
 const PAGE_SIZE = 20;
+const FILTER_CONTROL_WIDTH_CLASS = 'w-[180px]';
+const COLUMN_QUERY_SEPARATOR = '~';
 
 type ColumnKey =
   | 'startedAt'
@@ -111,7 +113,7 @@ const parseColumns = (value: string | undefined): ColumnKey[] => {
   }
 
   const keys = value
-    .split(',')
+    .split(COLUMN_QUERY_SEPARATOR)
     .map((x) => x.trim())
     .filter((x): x is ColumnKey => ALL_COLUMNS.some((col) => col.key === x));
 
@@ -129,7 +131,7 @@ const buildQuery = (page: number, filters: Filters, columns: ColumnKey[]) => {
   if (filters.username) query.username = filters.username;
   if (filters.direction) query.direction = filters.direction;
   if (columns.join(',') !== DEFAULT_COLUMNS.join(',')) {
-    query.columns = columns.join(',');
+    query.columns = columns.join(COLUMN_QUERY_SEPARATOR);
   }
 
   return query;
@@ -511,56 +513,56 @@ export default function RequestTracePage() {
       <Card className="p-3 border-none">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-3">
-          <DateTimePopover
-            value={filters.start}
-            className="w-[180px]"
-            placeholder={t('Start date')!}
-            onSelect={(date) => updateFilter('start', formatDateParam(date))}
-            onReset={filters.start ? () => updateFilter('start', '') : undefined}
-          />
-          <DateTimePopover
-            value={filters.end}
-            className="w-[180px]"
-            placeholder={t('End date')!}
-            onSelect={(date) => updateFilter('end', formatDateParam(date))}
-            onReset={filters.end ? () => updateFilter('end', '') : undefined}
-          />
-          <Input
-            className="w-[240px]"
-            placeholder={t('Search by url')!}
-            value={filters.url}
-            onChange={(event) => updateFilter('url', event.target.value, true)}
-          />
-          <Input
-            className="w-[180px]"
-            placeholder={t('Search by traceId')!}
-            value={filters.traceId}
-            onChange={(event) => updateFilter('traceId', event.target.value, true)}
-          />
-          <Input
-            className="w-[180px]"
-            placeholder={t('Search by username')!}
-            value={filters.username}
-            onChange={(event) => updateFilter('username', event.target.value, true)}
-          />
-          <div className="w-[160px]">
-            <Select
-              value={filters.direction}
-              onValueChange={(val) => handleDirectionChange(val as '' | '0' | '1')}
-            >
-              <SelectTrigger onReset={() => handleDirectionChange('')} value={filters.direction}>
-                {filters.direction
-                  ? filters.direction === '0'
-                    ? t('Inbound')
-                    : t('Outbound')
-                  : t('All')}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">{t('Inbound')}</SelectItem>
-                <SelectItem value="1">{t('Outbound')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <div className={FILTER_CONTROL_WIDTH_CLASS}>
+              <Select
+                value={filters.direction}
+                onValueChange={(val) => handleDirectionChange(val as '' | '0' | '1')}
+              >
+                <SelectTrigger onReset={() => handleDirectionChange('')} value={filters.direction}>
+                  {filters.direction
+                    ? filters.direction === '0'
+                      ? t('Inbound')
+                      : t('Outbound')
+                    : `${t('Inbound')} + ${t('Outbound')}`}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">{t('Inbound')}</SelectItem>
+                  <SelectItem value="1">{t('Outbound')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DateTimePopover
+              value={filters.start}
+              className={FILTER_CONTROL_WIDTH_CLASS}
+              placeholder={t('Start date')!}
+              onSelect={(date) => updateFilter('start', formatDateParam(date))}
+              onReset={filters.start ? () => updateFilter('start', '') : undefined}
+            />
+            <DateTimePopover
+              value={filters.end}
+              className={FILTER_CONTROL_WIDTH_CLASS}
+              placeholder={t('End date')!}
+              onSelect={(date) => updateFilter('end', formatDateParam(date))}
+              onReset={filters.end ? () => updateFilter('end', '') : undefined}
+            />
+            <Input
+              className={FILTER_CONTROL_WIDTH_CLASS}
+              placeholder={t('Search by url')!}
+              value={filters.url}
+              onChange={(event) => updateFilter('url', event.target.value, true)}
+            />
+            <Input
+              className={FILTER_CONTROL_WIDTH_CLASS}
+              placeholder={t('Search by traceId')!}
+              value={filters.traceId}
+              onChange={(event) => updateFilter('traceId', event.target.value, true)}
+            />
+            <Input
+              className={FILTER_CONTROL_WIDTH_CLASS}
+              placeholder={t('Search by username')!}
+              value={filters.username}
+              onChange={(event) => updateFilter('username', event.target.value, true)}
+            />
 
           <Button
             type="button"
