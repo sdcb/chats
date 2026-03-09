@@ -362,10 +362,6 @@ public sealed class RequestTracePersistService(
             return;
         }
 
-        await db.RequestTracePayloads
-            .Where(x => x.LogId == item.LogId)
-            .ExecuteDeleteAsync(cancellationToken);
-
         int deleted = await db.RequestTraces
             .Where(x => x.Id == item.LogId)
             .ExecuteDeleteAsync(cancellationToken);
