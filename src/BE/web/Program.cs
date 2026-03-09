@@ -158,8 +158,8 @@ public class Program
         app.UseCORSMiddleware();
 
         app.UseAuthentication();
-        app.UseAuthorization();
         app.UseMiddleware<InboundRequestTraceMiddleware>();
+        app.UseAuthorization();
         app.MapControllers();
         app.UseMiddleware<FrontendMiddleware>();
         app.UseStaticFiles();
