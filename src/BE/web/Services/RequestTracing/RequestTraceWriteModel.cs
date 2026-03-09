@@ -3,6 +3,10 @@ namespace Chats.BE.Services.RequestTracing;
 public abstract class RequestTraceWriteModel
 {
     public Guid LogId { get; init; }
+}
+
+public abstract class RequestTraceHttpWriteModel : RequestTraceWriteModel
+{
     public DateTime StartedAt { get; init; }
     public DateTime? ScheduledDeleteAt { get; init; }
     public RequestTraceDirection Direction { get; init; }
@@ -13,13 +17,13 @@ public abstract class RequestTraceWriteModel
     public string Url { get; init; } = "/";
 }
 
-public sealed class RequestTraceRequestHeaderWriteModel : RequestTraceWriteModel
+public sealed class RequestTraceRequestHeaderWriteModel : RequestTraceHttpWriteModel
 {
     public string? RequestContentType { get; init; }
     public string RequestHeaders { get; init; } = string.Empty;
 }
 
-public sealed class RequestTraceRequestBodyWriteModel : RequestTraceWriteModel
+public sealed class RequestTraceRequestBodyWriteModel : RequestTraceHttpWriteModel
 {
     public DateTime RequestBodyAt { get; init; }
     public string? RequestContentType { get; init; }
@@ -29,7 +33,7 @@ public sealed class RequestTraceRequestBodyWriteModel : RequestTraceWriteModel
     public byte[]? RequestBodyRaw { get; init; }
 }
 
-public sealed class RequestTraceResponseHeaderWriteModel : RequestTraceWriteModel
+public sealed class RequestTraceResponseHeaderWriteModel : RequestTraceHttpWriteModel
 {
     public DateTime ResponseHeaderAt { get; init; }
     public string? ResponseContentType { get; init; }
@@ -39,7 +43,7 @@ public sealed class RequestTraceResponseHeaderWriteModel : RequestTraceWriteMode
     public string? ResponseHeaders { get; init; }
 }
 
-public sealed class RequestTraceResponseBodyWriteModel : RequestTraceWriteModel
+public sealed class RequestTraceResponseBodyWriteModel : RequestTraceHttpWriteModel
 {
     public DateTime ResponseBodyAt { get; init; }
     public string? ResponseContentType { get; init; }
@@ -50,11 +54,15 @@ public sealed class RequestTraceResponseBodyWriteModel : RequestTraceWriteModel
     public byte[]? ResponseBodyRaw { get; init; }
 }
 
-public sealed class RequestTraceExceptionWriteModel : RequestTraceWriteModel
+public sealed class RequestTraceExceptionWriteModel : RequestTraceHttpWriteModel
 {
     public DateTime ExceptionAt { get; init; }
     public string? ResponseContentType { get; init; }
     public short? StatusCode { get; init; }
     public string ErrorType { get; init; } = string.Empty;
     public string ErrorMessage { get; init; } = string.Empty;
+}
+
+public sealed class RequestTraceDeleteWriteModel : RequestTraceWriteModel
+{
 }

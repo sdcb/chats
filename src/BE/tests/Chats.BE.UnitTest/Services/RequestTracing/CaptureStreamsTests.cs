@@ -1,5 +1,6 @@
 using Chats.BE.Services.RequestTracing;
 using System.Text;
+using System.IO.Pipelines;
 
 namespace Chats.BE.UnitTest.Services.RequestTracing;
 
@@ -60,5 +61,37 @@ public class CaptureStreamsTests
         Assert.Equal(payload.Length, totalBytesRead);
         Assert.Equal(Encoding.UTF8.GetBytes("abcd"), capturedBytes);
         Assert.True(truncated);
+    }
+
+    [Fact]
+    public async Task ReadCaptureStream_ShouldIgnoreZeroByteProbeReadsUntilActualEof()
+    {
+        byte[] payload = Encoding.UTF8.GetBytes("hello world");
+        using MemoryStream inner = new(payload);
+
+        int totalBytesRead = 0;
+        byte[]? capturedBytes = null;
+        bool truncated = false;
+
+        using ReadCaptureStream capture = new(
+            inner,
+            64,
+            (total, captured, isTruncated) =>
+            {
+                totalBytesRead = total;
+                capturedBytes = captured;
+                truncated = isTruncated;
+            });
+
+        PipeReader reader = PipeReader.Create(capture, new StreamPipeReaderOptions(useZeroByteReads: true));
+        using MemoryStream sink = new();
+
+        await reader.CopyToAsync(sink);
+        await reader.CompleteAsync();
+
+        Assert.Equal(payload, sink.ToArray());
+        Assert.Equal(payload.Length, totalBytesRead);
+        Assert.Equal(payload, capturedBytes);
+        Assert.False(truncated);
     }
 }

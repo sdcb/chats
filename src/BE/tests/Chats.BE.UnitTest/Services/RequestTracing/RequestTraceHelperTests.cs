@@ -78,6 +78,23 @@ public class RequestTraceHelperTests
     }
 
     [Fact]
+    public void MatchRequestStageFilters_ShouldIgnoreMinDurationUntilResponseStage()
+    {
+        RequestTraceFilters filters = new()
+        {
+            Include = new RequestTraceFilterRuleSet
+            {
+                UrlPatterns = ["/v1/*"]
+            },
+            MinDurationMs = 100
+        };
+
+        Assert.True(RequestTraceHelper.MatchRequestStageFilters(filters, "source-a", "GET", "/v1/models"));
+        Assert.False(RequestTraceHelper.MatchResponseStageFilters(filters, "source-a", "GET", "/v1/models", 200, 99));
+        Assert.True(RequestTraceHelper.MatchResponseStageFilters(filters, "source-a", "GET", "/v1/models", 200, 100));
+    }
+
+    [Fact]
     public void MatchResponseStageFilters_ShouldRespectIncludedStatusAndDuration()
     {
         RequestTraceFilters filters = new()

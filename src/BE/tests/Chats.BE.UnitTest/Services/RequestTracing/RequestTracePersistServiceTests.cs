@@ -137,4 +137,59 @@ public sealed class RequestTracePersistServiceTests
         Assert.Equal(new byte[] { 1, 2, 3 }, trace.RequestTracePayload.RequestBodyRaw);
         Assert.Equal(new byte[] { 4, 5, 6 }, trace.RequestTracePayload.ResponseBodyRaw);
     }
+
+    [Fact]
+    public async Task PersistSingleAsync_DeleteWriteModel_RemovesTraceAndPayload()
+    {
+        ServiceProvider sp = CreateServiceProvider(nameof(PersistSingleAsync_DeleteWriteModel_RemovesTraceAndPayload));
+        RequestTracePersistService service = new(
+            new RequestTraceQueue(),
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<RequestTracePersistService>.Instance);
+
+        Guid logId = Guid.CreateVersion7();
+        DateTime startedAt = DateTime.UtcNow;
+
+        await service.PersistSingleAsync(new RequestTraceRequestHeaderWriteModel
+        {
+            LogId = logId,
+            StartedAt = startedAt,
+            Direction = RequestTraceDirection.Inbound,
+            Source = "127.0.0.1",
+            UserId = 1,
+            TraceId = "trace-delete",
+            Method = "GET",
+            Url = "/v1/delete",
+            RequestContentType = "application/json",
+            RequestHeaders = "x-a: 1"
+        }, CancellationToken.None);
+
+        await service.PersistSingleAsync(new RequestTraceDeleteWriteModel
+        {
+            LogId = logId,
+        }, CancellationToken.None);
+
+        using IServiceScope scope = sp.CreateScope();
+        ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
+
+        Assert.Null(await db.RequestTraces.SingleOrDefaultAsync(x => x.Id == logId));
+        Assert.Null(await db.RequestTracePayloads.SingleOrDefaultAsync(x => x.LogId == logId));
+    }
+
+    [Fact]
+    public async Task PersistSingleAsync_DeleteWriteModel_MissingLogId_DoesNotThrow()
+    {
+        ServiceProvider sp = CreateServiceProvider(nameof(PersistSingleAsync_DeleteWriteModel_MissingLogId_DoesNotThrow));
+        RequestTracePersistService service = new(
+            new RequestTraceQueue(),
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<RequestTracePersistService>.Instance);
+
+        Exception? ex = await Record.ExceptionAsync(() => service.PersistSingleAsync(new RequestTraceDeleteWriteModel
+        {
+            LogId = Guid.CreateVersion7(),
+        }, CancellationToken.None));
+
+        Assert.Null(ex);
+    }
 }

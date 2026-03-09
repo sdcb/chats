@@ -16,6 +16,8 @@ public interface IRequestTraceQueue
 
     bool TryEnqueueException(RequestTraceExceptionWriteModel item);
 
+    bool TryEnqueueDelete(RequestTraceDeleteWriteModel item);
+
     IAsyncEnumerable<RequestTraceWriteModel> ReadAllAsync(CancellationToken cancellationToken);
 
     long DroppedCount { get; }
@@ -47,7 +49,7 @@ public sealed class RequestTraceQueue : IRequestTraceQueue
 
         _channel = Channel.CreateBounded<RequestTraceWriteModel>(new BoundedChannelOptions(capacity)
         {
-            FullMode = BoundedChannelFullMode.DropWrite,
+            FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
             SingleWriter = false,
         });
@@ -68,6 +70,8 @@ public sealed class RequestTraceQueue : IRequestTraceQueue
     public bool TryEnqueueResponseBody(RequestTraceResponseBodyWriteModel item) => TryWrite(item);
 
     public bool TryEnqueueException(RequestTraceExceptionWriteModel item) => TryWrite(item);
+
+    public bool TryEnqueueDelete(RequestTraceDeleteWriteModel item) => TryWrite(item);
 
     private bool TryWrite(RequestTraceWriteModel item)
     {

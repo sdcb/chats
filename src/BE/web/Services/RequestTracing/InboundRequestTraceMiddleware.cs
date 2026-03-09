@@ -59,7 +59,34 @@ public sealed class InboundRequestTraceMiddleware(
             RequestHeaders = requestHeaders,
         };
 
-        RequestTraceRequestBodyWriteModel? requestBodyModel = null;
+        if (!queue.TryEnqueueRequestHeader(requestHeaderModel))
+        {
+            logger.LogWarning("Request trace queue dropped an inbound request-header event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
+            await next(context);
+            return;
+        }
+
+        int traceDeleted = 0;
+
+        bool IsTraceDeleted() => Volatile.Read(ref traceDeleted) != 0;
+
+        void TryDeleteTrace()
+        {
+            if (Interlocked.Exchange(ref traceDeleted, 1) != 0)
+            {
+                return;
+            }
+
+            if (!queue.TryEnqueueDelete(new RequestTraceDeleteWriteModel
+            {
+                LogId = logId,
+            }))
+            {
+                logger.LogWarning("Request trace queue dropped an inbound delete event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                    logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
+            }
+        }
 
         bool captureRequestBody = config.Body.CaptureRequestBody || config.Body.CaptureRawRequestBody;
         if (captureRequestBody && context.Request.Body != Stream.Null && context.Request.Body.CanRead)
@@ -73,6 +100,11 @@ public sealed class InboundRequestTraceMiddleware(
                 {
                     try
                     {
+                        if (IsTraceDeleted())
+                        {
+                            return;
+                        }
+
                         (string? requestText, int? requestBodyLength) = config.Body.CaptureRequestBody
                             ? RequestTraceHelper.DecodeTextBody(
                                 capturedBytes,
@@ -83,7 +115,7 @@ public sealed class InboundRequestTraceMiddleware(
                                 config.Body.RedactJsonFields)
                             : (null, null);
 
-                        RequestTraceRequestBodyWriteModel capturedRequestBodyModel = new()
+                        if (!queue.TryEnqueueRequestBody(new RequestTraceRequestBodyWriteModel
                         {
                             LogId = logId,
                             StartedAt = startedAt,
@@ -99,9 +131,11 @@ public sealed class InboundRequestTraceMiddleware(
                             RequestBodyLength = requestBodyLength ?? totalBytesRead,
                             RequestBody = requestText,
                             RequestBodyRaw = config.Body.CaptureRawRequestBody ? capturedBytes : null,
-                        };
-
-                        requestBodyModel = capturedRequestBodyModel;
+                        }))
+                        {
+                            logger.LogWarning("Request trace queue dropped an inbound request-body event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                                logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -148,113 +182,100 @@ public sealed class InboundRequestTraceMiddleware(
             int durationMs = (int)Stopwatch.GetElapsedTime(startTick, Stopwatch.GetTimestamp()).TotalMilliseconds;
             short? statusCode = (short?)context.Response.StatusCode;
             bool shouldPersist = RequestTraceHelper.MatchResponseStageFilters(config.Filters, source, method, rawUrl, statusCode, durationMs);
-            if (shouldPersist)
+            if (!shouldPersist)
             {
-                if (!queue.TryEnqueueRequestHeader(requestHeaderModel))
+                TryDeleteTrace();
+            }
+            else if (pipelineException == null)
+            {
+                string? responseHeaders = RequestTraceHelper.FormatHeaders(
+                    context.Response.Headers.Select(x => new KeyValuePair<string, IEnumerable<string>>(x.Key, x.Value.Select(v => v ?? string.Empty))),
+                    config.Headers.IncludeResponseHeaders,
+                    config.Headers.RedactResponseHeaders);
+
+                RequestTraceResponseHeaderWriteModel responseHeaderModel = new()
                 {
-                    logger.LogWarning("Request trace queue dropped an inbound request-header event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                    LogId = logId,
+                    StartedAt = startedAt,
+                    ResponseHeaderAt = DateTime.UtcNow,
+                    Direction = RequestTraceDirection.Inbound,
+                    Source = source,
+                    UserId = userId,
+                    TraceId = traceId,
+                    Method = method,
+                    Url = redactedUrl,
+                    ResponseContentType = context.Response.ContentType,
+                    StatusCode = statusCode,
+                    ErrorType = null,
+                    ErrorMessage = null,
+                    ResponseHeaders = responseHeaders,
+                };
+
+                if (!queue.TryEnqueueResponseHeader(responseHeaderModel))
+                {
+                    logger.LogWarning("Request trace queue dropped an inbound response-header event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
                         logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
                 }
-                else
+
+                byte[]? responseBytes = tee?.CapturedBytes;
+                (string? responseText, int? responseBodyLength) = config.Body.CaptureResponseBody
+                    ? RequestTraceHelper.DecodeTextBody(
+                        responseBytes,
+                        config.Body.MaxTextCharsForTruncate,
+                        context.Response.Headers.ContentEncoding.ToString(),
+                        config.Body.AllowedContentTypes,
+                        context.Response.ContentType,
+                        config.Body.RedactJsonFields)
+                    : (null, null);
+
+                RequestTraceResponseBodyWriteModel responseBodyModel = new()
                 {
-                    if (requestBodyModel != null && !queue.TryEnqueueRequestBody(requestBodyModel))
-                    {
-                        logger.LogWarning("Request trace queue dropped an inbound request-body event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
-                            logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
-                    }
+                    LogId = logId,
+                    StartedAt = startedAt,
+                    ResponseBodyAt = DateTime.UtcNow,
+                    Direction = RequestTraceDirection.Inbound,
+                    Source = source,
+                    UserId = userId,
+                    TraceId = traceId,
+                    Method = method,
+                    Url = redactedUrl,
+                    ResponseContentType = context.Response.ContentType,
+                    StatusCode = statusCode,
+                    RawResponseBodyBytes = responseBytes?.Length,
+                    ResponseBodyLength = responseBodyLength ?? responseBytes?.Length ?? 0,
+                    ResponseBody = responseText,
+                    ResponseBodyRaw = config.Body.CaptureRawResponseBody ? responseBytes : null,
+                };
 
-                    if (pipelineException == null)
-                    {
-                        string? responseHeaders = RequestTraceHelper.FormatHeaders(
-                            context.Response.Headers.Select(x => new KeyValuePair<string, IEnumerable<string>>(x.Key, x.Value.Select(v => v ?? string.Empty))),
-                            config.Headers.IncludeResponseHeaders,
-                            config.Headers.RedactResponseHeaders);
+                if (!queue.TryEnqueueResponseBody(responseBodyModel))
+                {
+                    logger.LogWarning("Request trace queue dropped an inbound response-body event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                        logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
+                }
+            }
+            else
+            {
+                RequestTraceExceptionWriteModel exceptionModel = new()
+                {
+                    LogId = logId,
+                    StartedAt = startedAt,
+                    ExceptionAt = DateTime.UtcNow,
+                    Direction = RequestTraceDirection.Inbound,
+                    Source = source,
+                    UserId = userId,
+                    TraceId = traceId,
+                    Method = method,
+                    Url = redactedUrl,
+                    ResponseContentType = context.Response.ContentType,
+                    StatusCode = statusCode,
+                    ErrorType = pipelineException.GetType().Name,
+                    ErrorMessage = pipelineException.ToString(),
+                };
 
-                        RequestTraceResponseHeaderWriteModel responseHeaderModel = new()
-                        {
-                            LogId = logId,
-                            StartedAt = startedAt,
-                            ResponseHeaderAt = DateTime.UtcNow,
-                            Direction = RequestTraceDirection.Inbound,
-                            Source = source,
-                            UserId = userId,
-                            TraceId = traceId,
-                            Method = method,
-                            Url = redactedUrl,
-                            ResponseContentType = context.Response.ContentType,
-                            StatusCode = statusCode,
-                            ErrorType = null,
-                            ErrorMessage = null,
-                            ResponseHeaders = responseHeaders,
-                        };
-
-                        if (!queue.TryEnqueueResponseHeader(responseHeaderModel))
-                        {
-                            logger.LogWarning("Request trace queue dropped an inbound response-header event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
-                                logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
-                        }
-
-                        byte[]? responseBytes = tee?.CapturedBytes;
-                        (string? responseText, int? responseBodyLength) = config.Body.CaptureResponseBody
-                            ? RequestTraceHelper.DecodeTextBody(
-                                responseBytes,
-                                config.Body.MaxTextCharsForTruncate,
-                                context.Response.Headers.ContentEncoding.ToString(),
-                                config.Body.AllowedContentTypes,
-                                context.Response.ContentType,
-                                config.Body.RedactJsonFields)
-                            : (null, null);
-
-                        RequestTraceResponseBodyWriteModel responseBodyModel = new()
-                        {
-                            LogId = logId,
-                            StartedAt = startedAt,
-                            ResponseBodyAt = DateTime.UtcNow,
-                            Direction = RequestTraceDirection.Inbound,
-                            Source = source,
-                            UserId = userId,
-                            TraceId = traceId,
-                            Method = method,
-                            Url = redactedUrl,
-                            ResponseContentType = context.Response.ContentType,
-                            StatusCode = statusCode,
-                            RawResponseBodyBytes = responseBytes?.Length,
-                            ResponseBodyLength = responseBodyLength ?? responseBytes?.Length ?? 0,
-                            ResponseBody = responseText,
-                            ResponseBodyRaw = config.Body.CaptureRawResponseBody ? responseBytes : null,
-                        };
-
-                        if (!queue.TryEnqueueResponseBody(responseBodyModel))
-                        {
-                            logger.LogWarning("Request trace queue dropped an inbound response-body event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
-                                logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
-                        }
-                    }
-                    else
-                    {
-                        RequestTraceExceptionWriteModel exceptionModel = new()
-                        {
-                            LogId = logId,
-                            StartedAt = startedAt,
-                            ExceptionAt = DateTime.UtcNow,
-                            Direction = RequestTraceDirection.Inbound,
-                            Source = source,
-                            UserId = userId,
-                            TraceId = traceId,
-                            Method = method,
-                            Url = redactedUrl,
-                            ResponseContentType = context.Response.ContentType,
-                            StatusCode = statusCode,
-                            ErrorType = pipelineException.GetType().Name,
-                            ErrorMessage = pipelineException.ToString(),
-                        };
-
-                        if (!queue.TryEnqueueException(exceptionModel))
-                        {
-                            logger.LogWarning("Request trace queue dropped an inbound exception event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
-                                logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
-                        }
-                    }
+                if (!queue.TryEnqueueException(exceptionModel))
+                {
+                    logger.LogWarning("Request trace queue dropped an inbound exception event. logId={logId}, traceId={traceId}, dropped={dropped}, queued={queued}, highWatermark={highWatermark}",
+                        logId, traceId, queue.DroppedCount, queue.QueuedCount, queue.QueueHighWatermark);
                 }
             }
         }

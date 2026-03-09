@@ -26,28 +26,28 @@ public sealed class ReadCaptureStream(
     public override int Read(byte[] buffer, int offset, int count)
     {
         int read = _inner.Read(buffer, offset, count);
-        AfterRead(read, buffer.AsSpan(offset, Math.Max(read, 0)));
+        AfterRead(count, read, buffer.AsSpan(offset, Math.Max(read, 0)));
         return read;
     }
 
     public override int Read(Span<byte> buffer)
     {
         int read = _inner.Read(buffer);
-        AfterRead(read, read > 0 ? buffer[..read] : default);
+        AfterRead(buffer.Length, read, read > 0 ? buffer[..read] : default);
         return read;
     }
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         int read = await _inner.ReadAsync(buffer, cancellationToken);
-        AfterRead(read, read > 0 ? buffer.Span[..read] : default);
+        AfterRead(buffer.Length, read, read > 0 ? buffer.Span[..read] : default);
         return read;
     }
 
     public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
         int read = await _inner.ReadAsync(buffer.AsMemory(offset, count), cancellationToken);
-        AfterRead(read, buffer.AsSpan(offset, Math.Max(read, 0)));
+        AfterRead(count, read, buffer.AsSpan(offset, Math.Max(read, 0)));
         return read;
     }
 
@@ -76,10 +76,20 @@ public sealed class ReadCaptureStream(
         base.Dispose(disposing);
     }
 
-    private void AfterRead(int read, ReadOnlySpan<byte> bytes)
+    private void AfterRead(int requestedCount, int read, ReadOnlySpan<byte> bytes)
     {
-        if (read <= 0)
+        if (read < 0)
         {
+            return;
+        }
+
+        if (read == 0)
+        {
+            if (requestedCount == 0)
+            {
+                return;
+            }
+
             CompleteOnce();
             return;
         }

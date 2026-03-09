@@ -42,6 +42,9 @@ public sealed class RequestTracePersistService(
             case RequestTraceExceptionWriteModel exceptionItem:
                 await PersistExceptionAsync(exceptionItem, cancellationToken);
                 break;
+            case RequestTraceDeleteWriteModel deleteItem:
+                await PersistDeleteAsync(deleteItem, cancellationToken);
+                break;
         }
     }
 
@@ -324,6 +327,52 @@ public sealed class RequestTracePersistService(
         if (updated == 0)
         {
             logger.LogWarning("No request trace row matched exception update. logId={logId}", item.LogId);
+        }
+    }
+
+    private async Task PersistDeleteAsync(RequestTraceDeleteWriteModel item, CancellationToken cancellationToken)
+    {
+        using IServiceScope scope = scopeFactory.CreateScope();
+        ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
+
+        if (db.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+        {
+            RequestTracePayload? payload = await db.RequestTracePayloads
+                .FirstOrDefaultAsync(x => x.LogId == item.LogId, cancellationToken);
+            if (payload != null)
+            {
+                db.RequestTracePayloads.Remove(payload);
+            }
+
+            RequestTrace? trace = await db.RequestTraces
+                .FirstOrDefaultAsync(x => x.Id == item.LogId, cancellationToken);
+            if (trace == null)
+            {
+                if (payload != null)
+                {
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+
+                logger.LogDebug("No request trace row matched delete. logId={logId}", item.LogId);
+                return;
+            }
+
+            db.RequestTraces.Remove(trace);
+            await db.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        await db.RequestTracePayloads
+            .Where(x => x.LogId == item.LogId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        int deleted = await db.RequestTraces
+            .Where(x => x.Id == item.LogId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        if (deleted == 0)
+        {
+            logger.LogDebug("No request trace row matched delete. logId={logId}", item.LogId);
         }
     }
 }
