@@ -33,43 +33,9 @@ public static class AnthropicConversions
 
             List<NeutralContent> contents = ParseContent(content);
 
-            // Handle tool results in user messages - they should be separate messages with Tool role
             if (chatRole == NeutralChatRole.User)
             {
-                List<NeutralContent> userContents = [];
-                List<NeutralContent> toolResults = [];
-
-                foreach (NeutralContent c in contents)
-                {
-                    if (c is NeutralToolCallResponseContent)
-                    {
-                        toolResults.Add(c);
-                    }
-                    else
-                    {
-                        userContents.Add(c);
-                    }
-                }
-
-                // Add tool results as Tool role messages
-                if (toolResults.Count > 0)
-                {
-                    messages.Add(new NeutralMessage
-                    {
-                        Role = NeutralChatRole.Tool,
-                        Contents = toolResults
-                    });
-                }
-
-                // Add user content if any
-                if (userContents.Count > 0)
-                {
-                    messages.Add(new NeutralMessage
-                    {
-                        Role = NeutralChatRole.User,
-                        Contents = userContents
-                    });
-                }
+                AppendUserMessageContents(messages, contents);
             }
             else
             {
@@ -82,6 +48,45 @@ public static class AnthropicConversions
         }
 
         return messages;
+    }
+
+    private static void AppendUserMessageContents(List<NeutralMessage> messages, IEnumerable<NeutralContent> contents)
+    {
+        List<NeutralContent> userBuffer = [];
+
+        foreach (NeutralContent content in contents)
+        {
+            if (content is NeutralToolCallResponseContent)
+            {
+                if (userBuffer.Count > 0)
+                {
+                    messages.Add(new NeutralMessage
+                    {
+                        Role = NeutralChatRole.User,
+                        Contents = [.. userBuffer]
+                    });
+                    userBuffer.Clear();
+                }
+
+                messages.Add(new NeutralMessage
+                {
+                    Role = NeutralChatRole.Tool,
+                    Contents = [content]
+                });
+                continue;
+            }
+
+            userBuffer.Add(content);
+        }
+
+        if (userBuffer.Count > 0)
+        {
+            messages.Add(new NeutralMessage
+            {
+                Role = NeutralChatRole.User,
+                Contents = userBuffer
+            });
+        }
     }
 
     /// <summary>

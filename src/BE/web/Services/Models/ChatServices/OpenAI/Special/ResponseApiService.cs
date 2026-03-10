@@ -561,8 +561,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             }
             else if (message.Role == NeutralChatRole.Tool)
             {
-                NeutralToolCallResponseContent? tcr = message.Contents.OfType<NeutralToolCallResponseContent>().FirstOrDefault();
-                if (tcr != null)
+                foreach (NeutralToolCallResponseContent tcr in message.Contents.OfType<NeutralToolCallResponseContent>())
                 {
                     input.Add(new JsonObject
                     {
