@@ -22,6 +22,7 @@ import {
 import Tips from '@/components/Tips/Tips';
 import { touchDockerSession } from '@/apis/dockerSessionsApi';
 import { Button } from '@/components/ui/button';
+import { formatAbsoluteTime, formatRelativeWithinHour } from '@/utils/relativeTime';
 
 type Props = {
   chatId: string;
@@ -35,33 +36,6 @@ function formatBytes(bytes: number | null): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
-
-function formatAbsoluteTime(v: string): string {
-  const date = new Date(v);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
-}
-
-function formatRelativeWithinHour(v: string, now: Date, t: ReturnType<typeof useTranslation>['t']): string {
-  const date = new Date(v);
-  if (Number.isNaN(date.getTime())) return '-';
-
-  const diffMs = date.getTime() - now.getTime();
-  const absMs = Math.abs(diffMs);
-  if (absMs > 60 * 60 * 1000) {
-    return formatAbsoluteTime(v);
-  }
-
-  const mins = Math.floor(absMs / (60 * 1000));
-  if (mins < 1) {
-    return t('<1 minute');
-  }
-
-  if (diffMs >= 0) {
-    return t('In {{count}} minutes', { count: mins });
-  }
-  return t('{{count}} minutes ago', { count: mins });
 }
 
 export default function SessionInfoCard({ chatId, session, onRefreshTimes }: Props) {

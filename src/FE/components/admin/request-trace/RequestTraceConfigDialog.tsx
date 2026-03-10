@@ -1,0 +1,1020 @@
+import React, { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Copy } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { z } from 'zod';
+
+import { getConfigs, putConfigs } from '@/apis/adminApis';
+import useTranslation from '@/hooks/useTranslation';
+import { createDefaultRequestTraceDirectionConfig } from '@/types/config';
+
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+
+import { IconCode, IconFileText, IconFilter, IconSettingsCog } from '@/components/Icons';
+import { cn } from '@/lib/utils';
+
+// ────────────────────────────── types ──────────────────────────────
+
+interface RequestTraceFilterRuleSet {
+  sourcePatterns: string[] | null;
+  urlPatterns: string[] | null;
+  methods: string[] | null;
+  statusCodes: string[] | null;
+}
+
+interface RequestTraceFilters {
+  include: RequestTraceFilterRuleSet;
+  exclude: RequestTraceFilterRuleSet;
+  minDurationMs: number | null;
+}
+
+interface RequestTraceHeaderConfig {
+  redactUrlParameters: string[];
+  includeRequestHeaders: string[] | null;
+  includeResponseHeaders: string[] | null;
+  redactRequestHeaders: string[];
+  redactResponseHeaders: string[];
+}
+
+interface RequestTraceBodyConfig {
+  captureRequestBody: boolean;
+  captureResponseBody: boolean;
+  captureRawRequestBody: boolean;
+  captureRawResponseBody: boolean;
+  maxTextCharsForTruncate: number;
+  allowedContentTypes: string[] | null;
+  redactJsonFields: string[];
+}
+
+interface RequestTraceDirectionConfig {
+  enabled: boolean;
+  sampleRate: number;
+  retentionDays: number | null;
+  filters: RequestTraceFilters;
+  headers: RequestTraceHeaderConfig;
+  body: RequestTraceBodyConfig;
+}
+
+interface DirectionFormInput {
+  enabled: boolean;
+  sampleRate: string;
+  retentionDays: '7' | '30' | '90' | 'null';
+  includeSourcePatterns: string;
+  includeUrlPatterns: string;
+  includeMethods: string;
+  includeStatusCodes: string;
+  excludeSourcePatterns: string;
+  excludeUrlPatterns: string;
+  excludeMethods: string;
+  excludeStatusCodes: string;
+  minDurationMs: string;
+  redactUrlParameters: string;
+  includeRequestHeaders: string;
+  includeResponseHeaders: string;
+  redactRequestHeaders: string;
+  redactResponseHeaders: string;
+  captureRequestBody: boolean;
+  captureResponseBody: boolean;
+  captureRawRequestBody: boolean;
+  captureRawResponseBody: boolean;
+  maxTextCharsForTruncate: string;
+  allowedContentTypes: string;
+  redactJsonFields: string;
+}
+
+type TraceDirection = 'inbound' | 'outbound';
+
+// ────────────────────────────── defaults ──────────────────────────────
+
+const DEFAULT_DIRECTION_CONFIG: RequestTraceDirectionConfig = createDefaultRequestTraceDirectionConfig();
+
+const SAMPLE_RATE_PERCENT_MAX = 100;
+
+// ────────────────────────────── helpers ──────────────────────────────
+
+const splitLines = (value: string) =>
+  value
+    .split('\n')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+const toNullableArray = (value: string): string[] | null => {
+  const list = splitLines(value);
+  return list.length > 0 ? list : null;
+};
+
+const toRequiredArray = (value: string): string[] => splitLines(value);
+
+const toTextareaValue = (value: string[] | null | undefined) =>
+  value && value.length > 0 ? value.join('\n') : '';
+
+const parseNonNegativeIntOrNull = (value: string): number | null => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
+};
+
+const normalizeFilterRuleSet = (ruleSet?: Partial<RequestTraceFilterRuleSet>): RequestTraceFilterRuleSet => ({
+  sourcePatterns: ruleSet?.sourcePatterns ?? null,
+  urlPatterns: ruleSet?.urlPatterns ?? null,
+  methods: ruleSet?.methods ?? null,
+  statusCodes: ruleSet?.statusCodes ?? null,
+});
+
+const normalizeDirectionConfig = (rawValue: unknown): RequestTraceDirectionConfig => {
+  if (!rawValue || typeof rawValue !== 'object') return DEFAULT_DIRECTION_CONFIG;
+
+  const data = rawValue as Partial<RequestTraceDirectionConfig>;
+  const body = (data.body ?? {}) as Partial<RequestTraceBodyConfig>;
+
+  return {
+    enabled: data.enabled ?? DEFAULT_DIRECTION_CONFIG.enabled,
+    sampleRate: typeof data.sampleRate === 'number' ? data.sampleRate : DEFAULT_DIRECTION_CONFIG.sampleRate,
+    retentionDays:
+      data.retentionDays === null
+        ? null
+        : typeof data.retentionDays === 'number'
+          ? data.retentionDays
+          : DEFAULT_DIRECTION_CONFIG.retentionDays,
+    filters: {
+      include: normalizeFilterRuleSet(data.filters?.include),
+      exclude: normalizeFilterRuleSet(data.filters?.exclude),
+      minDurationMs: data.filters?.minDurationMs ?? DEFAULT_DIRECTION_CONFIG.filters.minDurationMs,
+    },
+    headers: {
+      redactUrlParameters: data.headers?.redactUrlParameters ?? DEFAULT_DIRECTION_CONFIG.headers.redactUrlParameters,
+      includeRequestHeaders: data.headers?.includeRequestHeaders ?? DEFAULT_DIRECTION_CONFIG.headers.includeRequestHeaders,
+      includeResponseHeaders: data.headers?.includeResponseHeaders ?? DEFAULT_DIRECTION_CONFIG.headers.includeResponseHeaders,
+      redactRequestHeaders: data.headers?.redactRequestHeaders ?? DEFAULT_DIRECTION_CONFIG.headers.redactRequestHeaders,
+      redactResponseHeaders: data.headers?.redactResponseHeaders ?? DEFAULT_DIRECTION_CONFIG.headers.redactResponseHeaders,
+    },
+    body: {
+      captureRequestBody: body.captureRequestBody ?? DEFAULT_DIRECTION_CONFIG.body.captureRequestBody,
+      captureResponseBody: body.captureResponseBody ?? DEFAULT_DIRECTION_CONFIG.body.captureResponseBody,
+      captureRawRequestBody: body.captureRawRequestBody ?? DEFAULT_DIRECTION_CONFIG.body.captureRawRequestBody,
+      captureRawResponseBody: body.captureRawResponseBody ?? DEFAULT_DIRECTION_CONFIG.body.captureRawResponseBody,
+      maxTextCharsForTruncate: body.maxTextCharsForTruncate ?? DEFAULT_DIRECTION_CONFIG.body.maxTextCharsForTruncate,
+      allowedContentTypes: body.allowedContentTypes ?? DEFAULT_DIRECTION_CONFIG.body.allowedContentTypes,
+      redactJsonFields: body.redactJsonFields ?? DEFAULT_DIRECTION_CONFIG.body.redactJsonFields,
+    },
+  };
+};
+
+const parseDirectionConfigFromValue = (value?: string): RequestTraceDirectionConfig => {
+  if (!value) return DEFAULT_DIRECTION_CONFIG;
+  try {
+    return normalizeDirectionConfig(JSON.parse(value));
+  } catch {
+    return DEFAULT_DIRECTION_CONFIG;
+  }
+};
+
+const toFormValues = (config: RequestTraceDirectionConfig): DirectionFormInput => ({
+  enabled: config.enabled,
+  sampleRate: String(config.sampleRate),
+  retentionDays:
+    config.retentionDays === null
+      ? 'null'
+      : config.retentionDays === 7
+        ? '7'
+        : config.retentionDays === 90
+          ? '90'
+          : '30',
+  includeSourcePatterns: toTextareaValue(config.filters.include.sourcePatterns),
+  includeUrlPatterns: toTextareaValue(config.filters.include.urlPatterns),
+  includeMethods: toTextareaValue(config.filters.include.methods),
+  includeStatusCodes: toTextareaValue(config.filters.include.statusCodes),
+  excludeSourcePatterns: toTextareaValue(config.filters.exclude.sourcePatterns),
+  excludeUrlPatterns: toTextareaValue(config.filters.exclude.urlPatterns),
+  excludeMethods: toTextareaValue(config.filters.exclude.methods),
+  excludeStatusCodes: toTextareaValue(config.filters.exclude.statusCodes),
+  minDurationMs: config.filters.minDurationMs === null || config.filters.minDurationMs === undefined ? '' : String(config.filters.minDurationMs),
+  redactUrlParameters: toTextareaValue(config.headers.redactUrlParameters),
+  includeRequestHeaders: toTextareaValue(config.headers.includeRequestHeaders),
+  includeResponseHeaders: toTextareaValue(config.headers.includeResponseHeaders),
+  redactRequestHeaders: toTextareaValue(config.headers.redactRequestHeaders),
+  redactResponseHeaders: toTextareaValue(config.headers.redactResponseHeaders),
+  captureRequestBody: config.body.captureRequestBody,
+  captureResponseBody: config.body.captureResponseBody,
+  captureRawRequestBody: config.body.captureRawRequestBody,
+  captureRawResponseBody: config.body.captureRawResponseBody,
+  maxTextCharsForTruncate: String(config.body.maxTextCharsForTruncate),
+  allowedContentTypes: toTextareaValue(config.body.allowedContentTypes),
+  redactJsonFields: toTextareaValue(config.body.redactJsonFields),
+});
+
+const toDirectionConfig = (data: DirectionFormInput): RequestTraceDirectionConfig => ({
+  enabled: data.enabled,
+  sampleRate: Number.parseFloat(data.sampleRate),
+  retentionDays: data.retentionDays === 'null' ? null : Number.parseInt(data.retentionDays, 10),
+  filters: {
+    include: {
+      sourcePatterns: toNullableArray(data.includeSourcePatterns),
+      urlPatterns: toNullableArray(data.includeUrlPatterns),
+      methods: toNullableArray(data.includeMethods),
+      statusCodes: toNullableArray(data.includeStatusCodes),
+    },
+    exclude: {
+      sourcePatterns: toNullableArray(data.excludeSourcePatterns),
+      urlPatterns: toNullableArray(data.excludeUrlPatterns),
+      methods: toNullableArray(data.excludeMethods),
+      statusCodes: toNullableArray(data.excludeStatusCodes),
+    },
+    minDurationMs: parseNonNegativeIntOrNull(data.minDurationMs),
+  },
+  headers: {
+    redactUrlParameters: toRequiredArray(data.redactUrlParameters),
+    includeRequestHeaders: toNullableArray(data.includeRequestHeaders),
+    includeResponseHeaders: toNullableArray(data.includeResponseHeaders),
+    redactRequestHeaders: toRequiredArray(data.redactRequestHeaders),
+    redactResponseHeaders: toRequiredArray(data.redactResponseHeaders),
+  },
+  body: {
+    captureRequestBody: data.captureRequestBody,
+    captureResponseBody: data.captureResponseBody,
+    captureRawRequestBody: data.captureRawRequestBody,
+    captureRawResponseBody: data.captureRawResponseBody,
+    maxTextCharsForTruncate: Number.parseInt(data.maxTextCharsForTruncate, 10),
+    allowedContentTypes: toNullableArray(data.allowedContentTypes),
+    redactJsonFields: toRequiredArray(data.redactJsonFields),
+  },
+});
+
+// ────────────────────────────── schema ──────────────────────────────
+
+const createSchema = (t: (key: string) => string) => {
+  const sampleRateSchema = z
+    .string()
+    .trim()
+    .refine((v) => v.length > 0, t('Sample rate is required'))
+    .refine((v) => {
+      const n = Number.parseFloat(v);
+      return Number.isFinite(n) && n >= 0 && n <= 1;
+    }, t('Sample rate must be between 0 and 1'));
+
+  const maxTextCharsSchema = z
+    .string()
+    .trim()
+    .refine((v) => v.length > 0, t('Max text chars is required'))
+    .refine((v) => {
+      const n = Number.parseInt(v, 10);
+      return Number.isInteger(n) && n > 0;
+    }, t('Max text chars must be a positive integer'));
+
+  const minDurationMsSchema = z
+    .string()
+    .trim()
+    .refine((v) => {
+      if (!v) return true;
+      const n = Number.parseInt(v, 10);
+      return Number.isInteger(n) && n >= 0;
+    }, t('Min duration must be an integer greater than or equal to 0'));
+
+  const methodsSchema = z
+    .string()
+    .trim()
+    .refine((v) => {
+      if (!v) return true;
+      return splitLines(v).every((m) => /^[A-Za-z]+$/.test(m));
+    }, t('Methods must contain letters only, one method per line'));
+
+  const statusCodesSchema = z
+    .string()
+    .trim()
+    .refine((v) => {
+      if (!v) return true;
+      return splitLines(v).every((sc) => /^(\d{3}|[1-5]xx)$/i.test(sc));
+    }, t('Status codes must be like 200, 429 or 2xx'));
+
+  const retentionDaysSchema = z.enum(['7', '30', '90', 'null']);
+
+  return z.object({
+    enabled: z.boolean(),
+    sampleRate: sampleRateSchema,
+    retentionDays: retentionDaysSchema,
+    includeSourcePatterns: z.string(),
+    includeUrlPatterns: z.string(),
+    includeMethods: methodsSchema,
+    includeStatusCodes: statusCodesSchema,
+    excludeSourcePatterns: z.string(),
+    excludeUrlPatterns: z.string(),
+    excludeMethods: methodsSchema,
+    excludeStatusCodes: statusCodesSchema,
+    minDurationMs: minDurationMsSchema,
+    redactUrlParameters: z.string(),
+    includeRequestHeaders: z.string(),
+    includeResponseHeaders: z.string(),
+    redactRequestHeaders: z.string(),
+    redactResponseHeaders: z.string(),
+    captureRequestBody: z.boolean(),
+    captureResponseBody: z.boolean(),
+    captureRawRequestBody: z.boolean(),
+    captureRawResponseBody: z.boolean(),
+    maxTextCharsForTruncate: maxTextCharsSchema,
+    allowedContentTypes: z.string(),
+    redactJsonFields: z.string(),
+  });
+};
+
+// ────────────────────────────── tab content components ──────────────────────────────
+
+type TabFormProps = {
+  t: (key: string) => string;
+  form: ReturnType<typeof useForm<DirectionFormInput>>;
+};
+
+type QuickPreset = {
+  label: string;
+  description: string;
+  partial: Partial<DirectionFormInput>;
+};
+
+const INBOUND_API_GATEWAY_URLS = '/v1*/*';
+
+const OUTBOUND_API_GATEWAY_SOURCE_PATTERNS = 'ChatService.*';
+
+const INBOUND_ALL_REQUESTS_EXCLUDE_URL_PATTERNS = '/api/version/check-update\n/api/admin/*';
+
+const OUTBOUND_ALL_REQUESTS_EXCLUDE_SOURCE_PATTERNS = 'Admin.*';
+
+function getQuickPresets(direction: TraceDirection, t: (key: string) => string): QuickPreset[] {
+  const allRequestsPreset: QuickPreset =
+    direction === 'inbound'
+      ? {
+          label: t('All Requests'),
+          description: t('Trace all requests with default settings'),
+          partial: {
+            enabled: true,
+            excludeUrlPatterns: INBOUND_ALL_REQUESTS_EXCLUDE_URL_PATTERNS,
+          },
+        }
+      : {
+          label: t('All Requests'),
+          description: t('Trace all requests with default settings'),
+          partial: {
+            enabled: true,
+            excludeSourcePatterns: OUTBOUND_ALL_REQUESTS_EXCLUDE_SOURCE_PATTERNS,
+            excludeUrlPatterns: '',
+          },
+        };
+
+  const base: QuickPreset[] = [
+    allRequestsPreset,
+    {
+      label: t('All Failed Requests'),
+      description: t('Only trace requests with 4xx/5xx status codes'),
+      partial: { enabled: true, includeStatusCodes: '4xx\n5xx' },
+    },
+  ];
+
+  if (direction === 'inbound') {
+    base.push({
+      label: t('API Gateway Requests'),
+      description: t('Trace OpenAI/Anthropic compatible API gateway endpoints'),
+      partial: { enabled: true, includeUrlPatterns: INBOUND_API_GATEWAY_URLS },
+    });
+  } else {
+    base.push({
+      label: t('API Gateway Requests'),
+      description: t('Trace outbound API gateway calls'),
+      partial: { enabled: true, includeSourcePatterns: OUTBOUND_API_GATEWAY_SOURCE_PATTERNS },
+    });
+  }
+
+  return base;
+}
+
+function BasicSettingsTab({
+  t,
+  form,
+  direction,
+}: TabFormProps & { direction: TraceDirection }) {
+  const presets = React.useMemo(() => getQuickPresets(direction, t), [direction, t]);
+
+  const formatDaysLabel = (days: '7' | '30' | '90') => t('{} days').replace('{}', days);
+
+  const retentionLabel = (value: DirectionFormInput['retentionDays']) => {
+    if (value === '7') return formatDaysLabel('7');
+    if (value === '30') return formatDaysLabel('30');
+    if (value === '90') return formatDaysLabel('90');
+    return t('Permanent');
+  };
+
+  const applyPreset = (preset: QuickPreset) => {
+    const defaults = toFormValues(DEFAULT_DIRECTION_CONFIG);
+    form.reset({ ...defaults, ...preset.partial });
+  };
+
+  return (
+    <div className="space-y-4">
+      <FormField
+        control={form.control}
+        name="enabled"
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-center justify-between">
+            <div className="space-y-0.5">
+              <FormLabel>{t('Enabled')}</FormLabel>
+              <FormDescription>{t('Whether this direction trace is enabled')}</FormDescription>
+            </div>
+            <FormControl>
+              <Switch checked={field.value} onCheckedChange={field.onChange} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="sampleRate"
+        render={({ field }) => (
+          <FormItem>
+            <div className="flex items-center justify-between gap-3">
+              <FormLabel>{t('Sample Rate')}</FormLabel>
+              <span className="text-xs text-muted-foreground">{t('0 means none, 100 means all')}</span>
+            </div>
+            <FormControl>
+              <div className="space-y-3">
+                <div className="text-center text-sm font-medium text-foreground">
+                  {Math.round(
+                    Math.min(
+                      SAMPLE_RATE_PERCENT_MAX,
+                      Math.max(0, (Number.parseFloat(field.value) || 0) * SAMPLE_RATE_PERCENT_MAX),
+                    ),
+                  )}
+                </div>
+                <Slider
+                  className="cursor-pointer"
+                  min={0}
+                  max={SAMPLE_RATE_PERCENT_MAX}
+                  step={1}
+                  value={[
+                    Math.min(
+                      SAMPLE_RATE_PERCENT_MAX,
+                      Math.max(0, (Number.parseFloat(field.value) || 0) * SAMPLE_RATE_PERCENT_MAX),
+                    ),
+                  ]}
+                  onValueChange={([value]) =>
+                    field.onChange(String(Number((value / SAMPLE_RATE_PERCENT_MAX).toFixed(2))))
+                  }
+                />
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>0</span>
+                  <span>{SAMPLE_RATE_PERCENT_MAX}</span>
+                </div>
+              </div>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="retentionDays"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t('Retention Policy')}</FormLabel>
+            <FormControl>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger value={field.value}>{retentionLabel(field.value)}</SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">{formatDaysLabel('7')}</SelectItem>
+                  <SelectItem value="30">{formatDaysLabel('30')}</SelectItem>
+                  <SelectItem value="90">{formatDaysLabel('90')}</SelectItem>
+                  <SelectItem value="null">{t('Permanent')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Quick Presets */}
+      <div className="pt-2">
+        <h4 className="text-sm font-medium mb-2">{t('Quick Presets')}</h4>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+          {presets.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => applyPreset(preset)}
+              className="flex flex-col items-start gap-0.5 rounded-md border p-3 text-left transition-colors hover:bg-accent/50 hover:border-primary/40"
+            >
+              <span className="text-sm font-medium">{preset.label}</span>
+              <span className="text-xs text-muted-foreground">{preset.description}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FiltersTab({ t, form }: TabFormProps) {
+  const prefixedLabel = (prefixKey: 'Include' | 'Exclude', suffixKey: string) => `${t(prefixKey)} ${t(suffixKey)}`;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="includeSourcePatterns"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{prefixedLabel('Include', 'Source Patterns')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={t('One item per line, empty means null')} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="excludeSourcePatterns"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{prefixedLabel('Exclude', 'Source Patterns')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={t('One item per line, empty means null')} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="includeUrlPatterns"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{prefixedLabel('Include', 'URL Patterns')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={t('One item per line, empty means null')} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="excludeUrlPatterns"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{prefixedLabel('Exclude', 'URL Patterns')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={t('One item per line, empty means null')} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="includeMethods"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{prefixedLabel('Include', 'HTTP Methods')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={`GET\nPOST`} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="excludeMethods"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{prefixedLabel('Exclude', 'HTTP Methods')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={`GET\nPOST`} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="includeStatusCodes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{prefixedLabel('Include', 'Status Codes')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={`200\n429\n5xx`} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="excludeStatusCodes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{prefixedLabel('Exclude', 'Status Codes')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={`200\n429\n5xx`} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+      <FormField
+        control={form.control}
+        name="minDurationMs"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t('Min Duration (ms)')}</FormLabel>
+            <FormControl>
+              <Input type="number" min={0} placeholder={t('Empty means no threshold')} {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
+  );
+}
+
+function HeadersTab({ t, form }: TabFormProps) {
+  return (
+    <div className="space-y-4">
+      <FormField
+        control={form.control}
+        name="redactUrlParameters"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t('Redact URL Parameters')}</FormLabel>
+            <FormControl>
+              <Textarea rows={4} placeholder={t('One item per line')} {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="includeRequestHeaders"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('Include Request Headers')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={t('One item per line, empty means null')} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="includeResponseHeaders"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('Include Response Headers')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={t('One item per line, empty means null')} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="redactRequestHeaders"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('Redact Request Headers')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={t('One item per line')} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="redactResponseHeaders"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('Redact Response Headers')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={t('One item per line')} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BodyTab({ t, form }: TabFormProps) {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="captureRequestBody"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-md border p-3">
+              <div className="space-y-0.5">
+                <FormLabel>{t('Capture Request Body')}</FormLabel>
+                <FormDescription>{t('Capture request body in text format')}</FormDescription>
+              </div>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="captureResponseBody"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-md border p-3">
+              <div className="space-y-0.5">
+                <FormLabel>{t('Capture Response Body')}</FormLabel>
+                <FormDescription>{t('Capture response body in text format')}</FormDescription>
+              </div>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="captureRawRequestBody"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-md border p-3">
+              <div className="space-y-0.5">
+                <FormLabel>{t('Capture Raw Request Body')}</FormLabel>
+                <FormDescription>{t('Capture raw binary request body')}</FormDescription>
+              </div>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="captureRawResponseBody"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-md border p-3">
+              <div className="space-y-0.5">
+                <FormLabel>{t('Capture Raw Response Body')}</FormLabel>
+                <FormDescription>{t('Capture raw binary response body')}</FormDescription>
+              </div>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="maxTextCharsForTruncate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('Max Text Chars For Truncate')}</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder={t('Maximum text characters before truncation (text capture only)')}
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>{t('Only affects text body capture, not raw binary capture')}</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="allowedContentTypes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('Allowed Content Types')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={t('One item per line, empty means null')} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="redactJsonFields"
+          render={({ field }) => (
+            <FormItem className="md:col-span-2">
+              <FormLabel>{t('Redact JSON Fields')}</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder={t('One item per line')} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────── main dialog component ──────────────────────────────
+
+type RequestTraceConfigDialogProps = {
+  direction: TraceDirection;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+export default function RequestTraceConfigDialog({
+  direction,
+  open,
+  onOpenChange,
+}: RequestTraceConfigDialogProps) {
+  const { t } = useTranslation();
+  const schema = React.useMemo(() => createSchema(t), [t]);
+  const configKey = direction === 'inbound' ? 'inboundRequestTrace' : 'outboundRequestTrace';
+
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('basic');
+  const [initialValues, setInitialValues] = useState<DirectionFormInput>(toFormValues(DEFAULT_DIRECTION_CONFIG));
+  const [, setForceUpdateTrigger] = useState({});
+
+  const form = useForm<DirectionFormInput>({
+    resolver: zodResolver(schema),
+    defaultValues: initialValues,
+  });
+
+  // Load config when dialog opens
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    setActiveTab('basic');
+    getConfigs()
+      .then((configs) => {
+        const found = configs.find((c) => c.key === configKey);
+        const parsed = parseDirectionConfigFromValue(found?.value);
+        const values = toFormValues(parsed);
+        form.reset(values);
+        setInitialValues(values);
+      })
+      .catch(() => {
+        toast.error(t('Loading failed'));
+      })
+      .finally(() => setLoading(false));
+  }, [open, configKey]);
+
+  // Track changes
+  useEffect(() => {
+    const sub = form.watch(() => setForceUpdateTrigger({}));
+    return () => sub.unsubscribe();
+  }, [form]);
+
+  const hasChanges = JSON.stringify(form.getValues()) !== JSON.stringify(initialValues);
+
+  const copyConfig = () => {
+    const config = toDirectionConfig(form.getValues());
+    navigator.clipboard
+      .writeText(JSON.stringify(config, null, 2))
+      .then(() => toast.success(t('Copied to clipboard')))
+      .catch(() => toast.error(t('Failed to copy')));
+  };
+
+  const onSubmit = async (values: DirectionFormInput) => {
+    setSaving(true);
+    try {
+      await putConfigs({
+        key: configKey,
+        value: JSON.stringify(toDirectionConfig(values)),
+        description: `${direction} request trace configuration`,
+      });
+      setInitialValues(values);
+      onOpenChange(false);
+    } catch {
+      toast.error(t('Failed to save'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const directionLabel = direction === 'inbound' ? t('Inbound') : t('Outbound');
+
+  const tabs = [
+    { id: 'basic', label: t('Basic Settings'), icon: <IconSettingsCog size={16} /> },
+    { id: 'filters', label: t('Filters'), icon: <IconFilter size={16} /> },
+    { id: 'headers', label: t('Headers'), icon: <IconCode size={16} /> },
+    { id: 'body', label: t('Body'), icon: <IconFileText size={16} /> },
+  ];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <DialogTitle>
+              {directionLabel} - {t('Request Trace Configuration')}
+            </DialogTitle>
+            <Button variant="outline" size="sm" onClick={copyConfig} className="h-8 w-8 p-0">
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        </DialogHeader>
+
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">{t('Loading...')}</div>
+        ) : (
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="flex-1 flex flex-col min-h-0 text-foreground [&_input]:text-foreground [&_textarea]:text-foreground"
+            >
+              {/* Top tabs */}
+              <div className="shrink-0 border-b">
+                <div className="flex">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id)}
+                      className={cn(
+                        'flex-1 py-2.5 px-2 text-sm font-medium transition-colors text-center',
+                        'hover:bg-accent/50',
+                        activeTab === tab.id
+                          ? 'text-primary border-b-2 border-primary bg-accent/30'
+                          : 'text-muted-foreground',
+                      )}
+                    >
+                      <span className="inline-flex items-center gap-1.5">
+                        {tab.icon}
+                        {tab.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Content area */}
+              <div className="flex-1 overflow-y-auto px-6 relative">
+                <div className={cn('py-4', activeTab === 'basic' ? 'block' : 'hidden')}>
+                  <BasicSettingsTab t={t} form={form} direction={direction} />
+                </div>
+                <div className={cn('py-4', activeTab === 'filters' ? 'block' : 'hidden')}>
+                  <FiltersTab t={t} form={form} />
+                </div>
+                <div className={cn('py-4', activeTab === 'headers' ? 'block' : 'hidden')}>
+                  <HeadersTab t={t} form={form} />
+                </div>
+                <div className={cn('py-4', activeTab === 'body' ? 'block' : 'hidden')}>
+                  <BodyTab t={t} form={form} />
+                </div>
+              </div>
+
+              {/* Footer: action buttons */}
+              <div className="shrink-0 border-t">
+                <div className="flex justify-end gap-2 px-6 py-3">
+                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                    {t('Cancel')}
+                  </Button>
+                  <Button type="submit" disabled={!hasChanges || saving} className="min-w-24">
+                    {saving ? t('Saving...') : t('Save')}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </Form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

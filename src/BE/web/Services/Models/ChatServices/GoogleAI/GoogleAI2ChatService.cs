@@ -4,6 +4,7 @@ using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
+using Chats.BE.Services.RequestTracing;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
@@ -44,7 +45,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
         httpRequest.Headers.TryAddWithoutValidation("x-goog-api-key", request.ChatConfig.Model.ModelKey.Secret ?? throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Google AI API key is required."));
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
 
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceGemini);
         httpClient.Timeout = NetworkTimeout;
 
         using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);

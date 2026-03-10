@@ -12,22 +12,6 @@ namespace Chats.BE.Controllers.Admin.Statistics;
 [Route("api/admin/statistics"), AuthorizeAdmin]
 public class StatisticsController(ChatsDB db) : ControllerBase
 {
-    [HttpGet("enabled-user-count")]
-    public async Task<int> GetEnabledUserCount(CancellationToken cancellationToken)
-    {
-        return await db.Users
-            .Where(x => x.Enabled)
-            .CountAsync(cancellationToken);
-    }
-
-    [HttpGet("enabled-model-count")]
-    public async Task<int> GetEnabledModelCount(CancellationToken cancellationToken)
-    {
-        return await db.Models
-            .Where(x => x.IsDeleted)
-            .CountAsync(cancellationToken);
-    }
-
     [HttpGet("tokens-during")]
     public async Task<long> GetTotalTokens([FromQuery] StartEndDate query, CancellationToken cancellationToken)
     {
@@ -40,6 +24,23 @@ public class StatisticsController(ChatsDB db) : ControllerBase
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
         return await q.SumAsync(x => x.InputFreshCost + x.InputCachedCost + x.OutputCost, cancellationToken);
+    }
+
+    [HttpGet("chat-count-during")]
+    public async Task<int> GetChatCountDuring([FromQuery] StartEndDate query, CancellationToken cancellationToken)
+    {
+        IQueryable<UserModelUsage> q = GetUserModelQuery(query);
+        return await q.CountAsync(cancellationToken);
+    }
+
+    [HttpGet("active-user-count-during")]
+    public async Task<int> GetActiveUserCountDuring([FromQuery] StartEndDate query, CancellationToken cancellationToken)
+    {
+        IQueryable<UserModelUsage> q = GetUserModelQuery(query);
+        return await q
+            .Select(x => x.UserId)
+            .Distinct()
+            .CountAsync(cancellationToken);
     }
 
     [HttpGet("model-provider-statistics")]

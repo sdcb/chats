@@ -7,7 +7,21 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.10.1](1.10.1.md) - 2026-02-15 ⭐ Latest Release
+## [1.10.2](1.10.2.md) - 2026-03-10 ⭐ Latest Release
+
+**Core Highlights**: Request Trace end-to-end tracing · Admin request trace workspace · Sampling/filtering/redaction/retention policies · Export, compare, and scheduled cleanup · Small UX and compatibility improvements
+
+- 🔍 **Request Trace**: adds inbound and outbound HTTP request tracing with timing points, status codes, errors, body capture, and raw payload downloads
+- 🧑‍💼 **Admin Workspace**: adds a dedicated request trace page with filters, 24-column customization, details, raw downloads, two-trace compare, Excel export, and bulk delete by filters
+- ⚙️ **Trace Governance**: supports separate inbound/outbound settings, sample rate, include/exclude filters, URL parameter redaction, and retention policies
+- ♻️ **Lifecycle Management**: adds bounded queue protection and scheduled cleanup to reduce long-running trace storage pressure
+- 🛠️ **Other Improvements**: updates dashboard summary card metrics, adds long user message collapse, and improves Anthropic protocol compatibility
+
+[View Full Release Notes →](1.10.2.md)
+
+---
+
+## [1.10.1](1.10.1.md) - 2026-02-15
 
 **Core Highlights**: Sandbox Manager Enhancements · Server-side ETag Caching · ChatMiniMap Navigation · API Key Management Upgrades · Code Interpreter Image Pipeline Updates
 

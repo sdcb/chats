@@ -201,6 +201,61 @@ public class AzureResponseApiServiceTests
         Assert.Equal(expectedEncrypted, thinkWithSig!.Signature);
     }
 
+    [Fact]
+    public async Task ResponseApiService_ShouldSendAllFunctionCallOutputs_FromSingleToolMessage()
+    {
+        // Arrange
+        string sse = "event: response.completed\n" +
+                     "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n";
+
+        string? capturedBody = null;
+        var httpClientFactory = new CapturingHttpClientFactory(HttpStatusCode.OK, sse, req =>
+        {
+            capturedBody = req.Content == null ? null : req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        });
+
+        var service = new AzureResponseApiService(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        ChatRequest request = CreateBaseChatRequest() with
+        {
+            Messages =
+            [
+                NeutralMessage.FromAssistant(
+                    NeutralToolCallContent.Create("call_1", "Glob", "{\"pattern\":\"**/*.cs\"}"),
+                    NeutralToolCallContent.Create("call_2", "Glob", "{\"pattern\":\"**/*.{ts,tsx}\"}")
+                ),
+                NeutralMessage.FromTool(
+                    NeutralToolCallResponseContent.Create("call_1", "csharp files"),
+                    NeutralToolCallResponseContent.Create("call_2", "typescript files")
+                )
+            ]
+        };
+
+        // Act
+        await foreach (ChatSegment _ in service.ChatStreamed(request, CancellationToken.None))
+        {
+            // drain
+        }
+
+        // Assert
+        Assert.False(string.IsNullOrWhiteSpace(capturedBody));
+
+        using JsonDocument doc = JsonDocument.Parse(capturedBody!);
+        JsonElement input = doc.RootElement.GetProperty("input");
+
+        List<string> functionCallOutputIds = [];
+        foreach (JsonElement item in input.EnumerateArray())
+        {
+            if (!item.TryGetProperty("type", out JsonElement typeEl) || typeEl.GetString() != "function_call_output")
+            {
+                continue;
+            }
+
+            functionCallOutputIds.Add(item.GetProperty("call_id").GetString()!);
+        }
+
+        Assert.Equal(["call_1", "call_2"], functionCallOutputIds);
+    }
+
     private static string ExtractEncryptedContentFromDump(string dumpFilePath)
     {
         foreach (string line in System.IO.File.ReadLines(dumpFilePath))

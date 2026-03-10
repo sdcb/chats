@@ -323,6 +323,61 @@ export interface SmsAttemptLog {
   createdAt: string;
 }
 
+export interface RequestTraceQueryParams extends Paging {
+  tz?: number;
+  start?: string;
+  end?: string;
+  url?: string;
+  traceId?: string;
+  username?: string;
+  direction?: number;
+}
+
+export interface RequestTraceExportParams {
+  tz?: number;
+  start?: string;
+  end?: string;
+  url?: string;
+  traceId?: string;
+  username?: string;
+  direction?: number;
+  columns?: string;
+}
+
+export interface RequestTraceListItem {
+  id: string;
+  startedAt: string;
+  requestBodyAt: string | null;
+  responseHeaderAt: string | null;
+  responseBodyAt: string | null;
+  direction: number;
+  source: string | null;
+  userId: number | null;
+  userName: string | null;
+  traceId: string | null;
+  method: string;
+  url: string;
+  requestContentType: string | null;
+  responseContentType: string | null;
+  statusCode: number | null;
+  errorType: string | null;
+  rawRequestBodyBytes: number;
+  rawResponseBodyBytes: number | null;
+  requestBodyLength: number;
+  responseBodyLength: number | null;
+  hasPayload: boolean;
+  hasRequestBodyRaw: boolean;
+  hasResponseBodyRaw: boolean;
+}
+
+export interface RequestTraceDetails extends RequestTraceListItem {
+  errorMessage: string | null;
+  requestHeaders: string | null;
+  responseHeaders: string | null;
+  requestBody: string | null;
+  responseBody: string | null;
+}
+
 export interface GetLoginServicesResult {
   id: number;
   type: LoginType;

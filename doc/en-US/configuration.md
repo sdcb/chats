@@ -39,6 +39,8 @@ Chats reads configuration based on the .NET configuration system, with priority 
 | [`CodeInterpreter:MaxArtifactsFilesToUpload`](#69-codeinterpretermaxartifactsfilestoupload)                                      | `50`                                    | Max files to upload per turn                  |
 | [`CodeInterpreter:MaxSingleUploadBytes`](#610-codeinterpretermaxsingleuploadbytes)                                               | `157286400`                             | 150MB, single file limit                      |
 | [`CodeInterpreter:MaxTotalUploadBytesPerTurn`](#611-codeinterpretermaxtotaluploadbytesperturn)                                   | `314572800`                             | 300MB, total limit per turn                   |
+| [`RequestTraceQueue:Capacity`](#91-requesttracequeuecapacity)                                                                    | `1000`                                  | Request trace in-memory queue capacity        |
+| [`RequestTraceCleanup:Enabled`](#92-requesttracecleanupenabled)                                                                  | `true`                                  | Controls whether scheduled auto-delete runs   |
 | [`JwtValidPeriod`](#71-jwtvalidperiod)                                                                                           | `1.00:00:00`                            | 1 day, JWT validity period                    |
 | [`JwtSecretKey`](#72-jwtsecretkey)                                                                                               | `null`                                  | Recommended to set stable key in production   |
 | [`Chat:Retry429Times`](#81-chatretry429times)                                                                                    | `5`                                     | HTTP 429 retry count                          |
@@ -356,3 +358,32 @@ The `CodeInterpreter` configuration group controls: the default sandbox image to
 
 - **Environment variable syntax**: `Chat__Retry429Times=5`
 - **Command-line syntax**: `--Chat:Retry429Times=5`
+
+---
+
+## 9. Request Trace
+
+### 9.1 `RequestTraceQueue:Capacity`
+
+- **Type**: Integer
+- **Default**: `1000`
+- **Purpose**: Limits the in-memory bounded channel capacity used by request trace queue.
+- **Behavior**:
+  - Uses `DropWrite` mode when queue is full.
+  - If set to `<= 0`, the service falls back to `1000`.
+
+- **Environment variable syntax**: `RequestTraceQueue__Capacity=1000`
+- **Command-line syntax**: `--RequestTraceQueue:Capacity=1000`
+
+### 9.2 `RequestTraceCleanup:Enabled`
+
+- **Type**: Boolean
+- **Default**: `true`
+- **Purpose**: Controls whether the RequestTrace scheduled auto-delete background task is enabled.
+- **Behavior**:
+  - When enabled, the background service runs every 30 minutes.
+  - Each run deletes RequestTrace rows where `ScheduledDeleteAt <= current UTC time` (using `ExecuteDeleteAsync`).
+  - When disabled, scheduled auto-delete is skipped.
+
+- **Environment variable syntax**: `RequestTraceCleanup__Enabled=true`
+- **Command-line syntax**: `--RequestTraceCleanup:Enabled=true`

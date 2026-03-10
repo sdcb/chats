@@ -13,6 +13,12 @@ public static class JSON
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
+    public static JsonSerializerOptions Indented { get; } = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        WriteIndented = true,
+    };
+
     /// <summary>
     /// 用于 API 响应的序列化选项，排除 OpenAIFullResponse.Segments 字段
     /// </summary>

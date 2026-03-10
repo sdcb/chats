@@ -20,6 +20,7 @@ using Chats.BE.Services.Options;
 using Chats.DockerInterface;
 using Microsoft.Extensions.Options;
 using Chats.BE.Services.Keycloak;
+using Chats.BE.Services.RequestTracing;
 
 namespace Chats.BE;
 
@@ -46,10 +47,15 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
         builder.Services.AddDbContext<ChatsDB>(o => o.Configure(builder.Configuration, builder.Environment));
-        builder.Services.AddHttpClient(string.Empty, httpClient =>
+        foreach (string clientName in HttpClientNames.All)
         {
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd($"Sdcb-Chats/{CurrentVersion}");
-        });
+            builder.Services.AddHttpClient(clientName, httpClient =>
+            {
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd($"Sdcb-Chats/{CurrentVersion}");
+            })
+            .AddHttpMessageHandler(() => new HttpClientNameStampHandler(clientName))
+            .AddHttpMessageHandler<OutboundRequestTraceHandler>();
+        }
 
         builder.Services.AddSingleton<KeycloakOAuthClient>();
         builder.Services.AddSingleton<InitService>();
@@ -93,6 +99,9 @@ public class Program
         builder.Services.AddSingleton<AsyncClientInfoManager>();
         builder.Services.AddSingleton<AsyncCacheUsageManager>();
         builder.Services.AddSingleton<GitHubReleaseChecker>();
+        builder.Services.AddSingleton<IRequestTraceConfigProvider, RequestTraceConfigProvider>();
+        builder.Services.AddSingleton<IRequestTraceQueue, RequestTraceQueue>();
+        builder.Services.AddTransient<OutboundRequestTraceHandler>();
 
         builder.Services.AddScoped<CurrentUser>();
         builder.Services.AddScoped<CurrentApiKey>();
@@ -108,6 +117,9 @@ public class Program
         builder.Services.AddScoped<LoginRateLimiter>();
 
         builder.Services.Configure<CodePodConfig>(builder.Configuration.GetSection("CodePod"));
+        builder.Services.Configure<RequestTraceQueueOptions>(builder.Configuration.GetSection("RequestTraceQueue"));
+        builder.Services.Configure<RequestTraceSyncOptions>(builder.Configuration.GetSection("RequestTraceSync"));
+        builder.Services.Configure<RequestTraceCleanupOptions>(builder.Configuration.GetSection("RequestTraceCleanup"));
         builder.Services.AddSingleton<IDockerService>(sp =>
             new DockerService(
                 sp.GetRequiredService<IOptions<CodePodConfig>>().Value,
@@ -119,6 +131,9 @@ public class Program
             .ValidateOnStart();
         builder.Services.AddScoped<CodeInterpreterExecutor>();
         builder.Services.AddHostedService<ChatDockerSessionCleanupService>();
+        builder.Services.AddHostedService<RequestTraceConfigRefreshService>();
+        builder.Services.AddHostedService<RequestTracePersistService>();
+        builder.Services.AddHostedService<RequestTraceScheduledDeleteService>();
         builder.Services.Configure<ChatOptions>(builder.Configuration.GetSection("Chat"));
 
         builder.Services.AddUrlEncryption();
@@ -143,6 +158,7 @@ public class Program
         app.UseCORSMiddleware();
 
         app.UseAuthentication();
+        app.UseMiddleware<InboundRequestTraceMiddleware>();
         app.UseAuthorization();
         app.MapControllers();
         app.UseMiddleware<FrontendMiddleware>();

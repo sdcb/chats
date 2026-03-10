@@ -3,9 +3,9 @@ import { useState } from 'react';
 import useTranslation from '@/hooks/useTranslation';
 
 import { IconTrash } from '@/components/Icons';
+import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-// (暂时移除复杂 Tooltip 组合，避免与 Popover ref 冲突)
 import {
   Popover,
   PopoverContent,
@@ -16,13 +16,14 @@ interface Props {
   onDelete: (() => void) | (() => Promise<void>);
   onCancel?: () => void;
   tooltip?: string; // 提示文本，可选
+  description?: string; // 自定义确认弹窗描述文案
   className?: string; // 按钮自定义样式
   iconSize?: number; // 图标尺寸，默认 18
 }
 
 export default function DeletePopover(props: Props) {
   const { t } = useTranslation();
-  const { onDelete, onCancel, tooltip, className, iconSize = 18 } = props;
+  const { onDelete, onCancel, tooltip, description, className, iconSize = 18 } = props;
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -56,24 +57,31 @@ export default function DeletePopover(props: Props) {
     <Button
       variant="ghost"
       size="icon"
-      className={cn("text-destructive", className || "h-9 w-9")}
+      className={cn('text-destructive', className || 'h-9 w-9')}
       disabled={isDeleting}
       onClick={() => !isDeleting && setIsOpen(true)}
-      title={tooltip}
       aria-label={tooltip || t('Delete') || 'Delete'}
     >
       <IconTrash size={iconSize} />
     </Button>
   );
 
+  const triggerContent = tooltip ? (
+    <Tips
+      trigger={<div className="inline-flex">{triggerButton}</div>}
+      content={tooltip}
+      side="bottom"
+    />
+  ) : triggerButton;
+
   return (
     <Popover open={isOpen} onOpenChange={(open) => !isDeleting && setIsOpen(open)}>
       <PopoverTrigger asChild>
-        {triggerButton}
+        <div className="inline-flex">{triggerContent}</div>
       </PopoverTrigger>
       <PopoverContent side="bottom" align="center" className="w-56 pointer-events-auto">
         <div className="pb-2 text-sm leading-relaxed">
-          {t('Are you sure you want to delete it?')}
+          {description || t('Are you sure you want to delete it?')}
         </div>
         <div className="flex justify-end gap-2">
           <Button

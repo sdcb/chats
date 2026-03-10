@@ -3,6 +3,7 @@ using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
+using Chats.BE.Services.RequestTracing;
 using System.Net.Http.Headers;
 using ChatTokenUsage = Chats.BE.Services.Models.Dtos.ChatTokenUsage;
 using System.Net.ServerSentEvents;
@@ -27,7 +28,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
         httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceAnthropic);
         httpClient.Timeout = NetworkTimeout;
         using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
@@ -326,7 +327,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         using HttpRequestMessage request = new(HttpMethod.Get, url + "/v1/models");
         AddApiKeyHeader(request, apiKey);
 
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceAnthropic);
         httpClient.Timeout = NetworkTimeout;
         using HttpResponseMessage response = await httpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -361,7 +362,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         AddApiKeyHeader(httpRequest, apiKey);
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
 
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceAnthropic);
         httpClient.Timeout = NetworkTimeout;
         using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -468,35 +469,26 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         if (request.Source != UsageSource.WebChat) return (true, true);
 
         // https://platform.claude.com/docs/zh-CN/build-with-claude/extended-thinking
-        if (!request.ChatConfig.ThinkingBudget.HasValue)
-        {
-            // 如果禁用了思考，最后的助手转向不能包含任何思考块
-            return (false, false);
-        }
-        else
-        {
-            // 如果启用了思考，最后的助手转向必须以思考块开始
-            IList<NeutralContent> lastAssistantContents = request.Messages
-                .Where(x => x.Role == NeutralChatRole.Assistant)
-                .LastOrDefault()?.Contents ?? [];
+        // 如果启用了思考，最后的助手转向必须以思考块开始
+        IList<NeutralContent> lastAssistantContents = request.Messages
+            .LastOrDefault(x => x.Role == NeutralChatRole.Assistant)?.Contents ?? [];
 
-            // Anthropic has strict policies on thinking blocks
-            bool hasThinkingBlocks = lastAssistantContents
-                .OfType<NeutralThinkContent>()
-                .Any();
+        // Anthropic has strict policies on thinking blocks
+        bool hasThinkingBlocks = lastAssistantContents
+            .OfType<NeutralThinkContent>()
+            .Any();
 
-            bool allThinkingHaveSignature = !hasThinkingBlocks || lastAssistantContents
-                .OfType<NeutralThinkContent>()
-                .All(tc => tc.Signature != null);
+        bool allThinkingHaveSignature = !hasThinkingBlocks || lastAssistantContents
+            .OfType<NeutralThinkContent>()
+            .All(tc => tc.Signature != null);
 
-            bool allowThinkingBlocks = hasThinkingBlocks && allThinkingHaveSignature;
+        bool allowThinkingBlocks = hasThinkingBlocks && allThinkingHaveSignature;
 
-            bool hasToolCall = lastAssistantContents.OfType<NeutralToolCallContent>().Any();
+        bool hasToolCall = lastAssistantContents.OfType<NeutralToolCallContent>().Any();
 
-            bool allowThinking = !hasToolCall || allowThinkingBlocks;
+        bool allowThinking = !hasToolCall || allowThinkingBlocks;
 
-            return (allowThinkingBlocks, allowThinking);
-        }
+        return (allowThinkingBlocks, allowThinking);
     }
 
     private static JsonArray BuildToolsArray(IEnumerable<ChatTool> tools)

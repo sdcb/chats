@@ -5,6 +5,7 @@ using Chats.BE.DB;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
+using Chats.BE.Services.RequestTracing;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Net.ServerSentEvents;
@@ -91,7 +92,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
             httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
-            using HttpClient httpClient = httpClientFactory.CreateClient();
+            using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceImageGeneration);
             httpClient.Timeout = NetworkTimeout;
 
             Stopwatch sw = Stopwatch.StartNew();
@@ -121,7 +122,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             httpRequest.Content = form;
             httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
-            using HttpClient httpClient = httpClientFactory.CreateClient();
+            using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceImageGeneration);
             httpClient.Timeout = NetworkTimeout;
 
             Stopwatch sw = Stopwatch.StartNew();
@@ -147,7 +148,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
         NeutralContent[] images = GetImagesStatic(request.Messages);
         string endpoint = GetEndpoint(request.ChatConfig.Model.ModelKey);
 
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceImageGeneration);
         httpClient.Timeout = NetworkTimeout;
 
         JsonObject rawJson;
@@ -281,7 +282,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
         ChatRequest request,
         CancellationToken cancellationToken)
     {
-        using HttpClient http = httpClientFactory.CreateClient();
+        using HttpClient http = httpClientFactory.CreateClient(HttpClientNames.ChatServiceImageDownload);
         MultipartFormDataContent form = new();
 
         Dictionary<string, HttpResponseMessage> downloadedFiles = (await Task.WhenAll(images

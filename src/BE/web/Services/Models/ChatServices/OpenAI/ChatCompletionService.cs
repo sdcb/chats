@@ -3,6 +3,7 @@ using Chats.DB.Enums;
 using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.DB;
+using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
 using System.Net.Http.Headers;
@@ -32,7 +33,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         using HttpRequestMessage request = new(HttpMethod.Get, url + "/models");
         AddAuthorizationHeader(request, modelKey);
 
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceOpenAI);
         httpClient.Timeout = NetworkTimeout;
         using HttpResponseMessage response = await httpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -189,7 +190,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
         httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceOpenAI);
         httpClient.Timeout = NetworkTimeout;
         using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
@@ -376,7 +377,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
 
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceOpenAI);
         httpClient.Timeout = NetworkTimeout;
         using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken);
 

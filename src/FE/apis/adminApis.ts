@@ -53,6 +53,10 @@ import {
   SecurityLogQueryParams,
   SecurityLogExportParams,
   ReorderRequest,
+  RequestTraceDetails,
+  RequestTraceExportParams,
+  RequestTraceListItem,
+  RequestTraceQueryParams,
   StatisticsTimeParams,
   TokenStatisticsByDateResult,
   UpdateModelDto,
@@ -572,16 +576,6 @@ export const defaultFileConfig: ChatModelFileConfig = {
   maxSize: 10240,
 };
 
-export const getEnabledUserCount = () => {
-  const fetchServer = createFetchClient();
-  return fetchServer.get<number>('/api/admin/statistics/enabled-user-count');
-};
-
-export const getEnabledModelCount = () => {
-  const fetchServer = createFetchClient();
-  return fetchServer.get<number>('/api/admin/statistics/enabled-model-count');
-};
-
 export const getTokensDuring = (params: StatisticsTimeParams) => {
   const fetchServer = createFetchClient();
   return fetchServer.get<number>('/api/admin/statistics/tokens-during', {
@@ -594,6 +588,23 @@ export const getCostDuring = (params: StatisticsTimeParams) => {
   return fetchServer.get<number>('/api/admin/statistics/cost-during', {
     params: params,
   });
+};
+
+export const getChatCountDuring = (params: StatisticsTimeParams) => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get<number>('/api/admin/statistics/chat-count-during', {
+    params: params,
+  });
+};
+
+export const getActiveUserCountDuring = (params: StatisticsTimeParams) => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get<number>(
+    '/api/admin/statistics/active-user-count-during',
+    {
+      params: params,
+    },
+  );
 };
 
 export const getModelProviderStatistics = (params: StatisticsTimeParams) => {
@@ -751,4 +762,50 @@ export const clearSmsAttempts = (
   return fetchServer.delete('/api/admin/security-logs/sms-attempts', {
     body: params,
   });
+};
+
+const mapRequestTraceQueryParams = (params: RequestTraceQueryParams) => ({
+  page: params.page,
+  pageSize: params.pageSize,
+  start: params.start,
+  end: params.end,
+  url: params.url,
+  traceId: params.traceId,
+  username: params.username,
+  direction: params.direction,
+  tz: params.tz,
+});
+
+const mapRequestTraceExportParams = (params: RequestTraceExportParams) => ({
+  start: params.start,
+  end: params.end,
+  url: params.url,
+  traceId: params.traceId,
+  username: params.username,
+  direction: params.direction,
+  tz: params.tz,
+  columns: params.columns,
+});
+
+export const getRequestTraceList = (
+  params: RequestTraceQueryParams,
+): Promise<PageResult<RequestTraceListItem[]>> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get('/api/admin/request-trace', {
+    params: mapRequestTraceQueryParams(params),
+  });
+};
+
+export const clearRequestTraceList = (
+  params: RequestTraceExportParams,
+): Promise<number> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.delete('/api/admin/request-trace', {
+    body: mapRequestTraceExportParams(params),
+  });
+};
+
+export const getRequestTraceDetails = (id: string): Promise<RequestTraceDetails> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get(`/api/admin/request-trace/${id}`);
 };

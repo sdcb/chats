@@ -17,16 +17,16 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 21+ 主流 
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
-## 🆕 最新版本（1.10.1）
+## 🆕 最新版本（1.10.2）
 
-- 📅 发布日期：2026-02-15
-- 🐳 沙箱管理器增强：环境变量管理、会话信息卡片、文件管理与编辑体验升级
-- ⚡ 性能改进：高频接口支持服务端 ETag 缓存与 304，移除前端聊天列表本地缓存
-- 🗺️ 交互优化：新增 ChatMiniMap 导航，滚动控制从输入框迁移
-- 🔐 安全与可用性：API Key 创建后一次性展示完整 Key，列表默认脱敏
-- 📦 Code Interpreter 镜像流水线升级：支持构建运行号标识、预装 ripgrep、非 main 分支发布 latest manifest
+- 📅 发布日期：2026-03-10
+- 🔍 Request Trace：新增入站/出站 HTTP 请求全链路追踪，记录关键时间点、状态码、异常和正文与原始数据
+- 🧑‍💼 管理后台：新增请求跟踪工作台，支持筛选、详情查看、原始下载、双记录对比、Excel 导出和按筛选删除
+- ⚙️ 采集治理：支持采样率、include/exclude 规则、URL 参数脱敏、保留周期和热刷新
+- ♻️ 生命周期管理：新增队列容量保护与定时自动清理，降低持续采集对业务链路的干扰
+- 🛠️ 其它改进：统计卡片按时间范围统计，长用户消息支持折叠，Anthropic 协议兼容性继续改进
 
-👉 [查看 1.10.1 发布说明](./doc/zh-CN/release-notes/1.10.1.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
+👉 [查看 1.10.2 发布说明](./doc/zh-CN/release-notes/1.10.2.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
 
 ## 快速开始
 

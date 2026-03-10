@@ -1,0 +1,497 @@
+using Chats.BE.Services.Configs;
+using System.IO.Compression;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
+
+namespace Chats.BE.Services.RequestTracing;
+
+public static partial class RequestTraceHelper
+{
+    public const int DefaultRawCaptureMaxBytes = 20 * 1024 * 1024;
+
+    private const string TruncateMessageTemplate = "... [content truncated: {0} chars omitted] ...";
+
+    public static bool IsEnabledAndSampled(RequestTraceConfig config)
+    {
+        if (!config.Enabled) return false;
+        double sampleRate = Math.Clamp(config.SampleRate, 0, 1);
+        if (sampleRate <= 0) return false;
+        if (sampleRate >= 1) return true;
+        return Random.Shared.NextDouble() <= sampleRate;
+    }
+
+    public static bool MatchFilters(RequestTraceFilters filters, string? source, string method, string url, short? statusCode, int durationMs)
+        => MatchResponseStageFilters(filters, source, method, url, statusCode, durationMs);
+
+    public static string FormatHeaders(
+        IEnumerable<KeyValuePair<string, IEnumerable<string>>> headers,
+        string[]? includes,
+        string[]? redactHeaders)
+    {
+        HashSet<string>? includeSet = includes == null ? null : includes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        HashSet<string>? redactSet = redactHeaders == null ? null : redactHeaders.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        StringBuilder builder = new();
+        foreach ((string name, IEnumerable<string> values) in headers)
+        {
+            if (includeSet != null && !includeSet.Contains(name))
+            {
+                continue;
+            }
+
+            bool redact = redactSet?.Contains(name) == true;
+            string value = redact ? "***" : string.Join(",", values);
+            builder.Append(name).Append(": ").Append(value).Append('\n');
+        }
+
+        return builder.ToString();
+    }
+
+    public static string RedactUrlQueryParameters(string url, string[]? redactParameterNames)
+    {
+        if (string.IsNullOrEmpty(url))
+        {
+            return url;
+        }
+
+        HashSet<string>? redactSet = redactParameterNames == null ? null : redactParameterNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (redactSet == null || redactSet.Count == 0)
+        {
+            return url;
+        }
+
+        int queryIndex = url.IndexOf('?');
+        if (queryIndex < 0)
+        {
+            return url;
+        }
+
+        int fragmentIndex = url.IndexOf('#', queryIndex + 1);
+        int queryEnd = fragmentIndex >= 0 ? fragmentIndex : url.Length;
+        string query = url[(queryIndex + 1)..queryEnd];
+        if (query.Length == 0)
+        {
+            return url;
+        }
+
+        bool changed = false;
+        StringBuilder builder = new(url.Length + 8);
+        builder.Append(url, 0, queryIndex + 1);
+
+        for (int segmentStart = 0; segmentStart <= query.Length;)
+        {
+            int ampIndex = query.IndexOf('&', segmentStart);
+            int segmentEnd = ampIndex >= 0 ? ampIndex : query.Length;
+            ReadOnlySpan<char> segment = query.AsSpan(segmentStart, segmentEnd - segmentStart);
+
+            if (!segment.IsEmpty)
+            {
+                int equalsIndex = segment.IndexOf('=');
+                if (equalsIndex >= 0)
+                {
+                    string rawName = segment[..equalsIndex].ToString();
+                    string parameterName = DecodeQueryParameterName(rawName);
+                    if (redactSet.Contains(parameterName))
+                    {
+                        builder.Append(rawName).Append("=***");
+                        changed = true;
+                    }
+                    else
+                    {
+                        builder.Append(segment);
+                    }
+                }
+                else
+                {
+                    builder.Append(segment);
+                }
+            }
+
+            if (ampIndex < 0)
+            {
+                break;
+            }
+
+            builder.Append('&');
+            segmentStart = ampIndex + 1;
+        }
+
+        if (!changed)
+        {
+            return url;
+        }
+
+        if (fragmentIndex >= 0)
+        {
+            builder.Append(url, fragmentIndex, url.Length - fragmentIndex);
+        }
+
+        return builder.ToString();
+    }
+
+    public static (string? text, int? originalLength) DecodeTextBody(
+        byte[]? source,
+        int maxTextChars,
+        string? contentEncoding,
+        string[]? allowedContentTypes,
+        string? contentType,
+        string[]? redactJsonFields)
+    {
+        if (source == null) return (null, null);
+        if (source.Length == 0) return (null, 0);
+        if (!IsAllowedContentType(contentType, allowedContentTypes)) return (null, null);
+
+        byte[] bodyBytes = source;
+        if (!string.IsNullOrWhiteSpace(contentEncoding))
+        {
+            bodyBytes = TryDecompress(source, contentEncoding) ?? source;
+        }
+
+        Encoding encoding = ResolveEncoding(contentType);
+        string text = encoding.GetString(bodyBytes);
+        int originalLength = text.Length;
+        if (redactJsonFields is { Length: > 0 } && IsJsonContentType(contentType))
+        {
+            text = TryRedactJsonFields(text, redactJsonFields);
+        }
+
+        if (text.Length <= maxTextChars)
+        {
+            return (text, originalLength);
+        }
+
+        return (TruncateMiddle(text, maxTextChars), originalLength);
+    }
+
+    public static bool IsAllowedContentType(string? contentType, string[]? allowedContentTypes)
+    {
+        if (allowedContentTypes == null || allowedContentTypes.Length == 0)
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(contentType))
+        {
+            return false;
+        }
+
+        return allowedContentTypes.Any(pattern => MatchWildcard(contentType, pattern));
+    }
+
+    public static bool MatchRequestStageFilters(RequestTraceFilters filters, string? source, string method, string url)
+    {
+        if (!MatchesRuleSet(filters.Include, source, method, url, statusCode: null, matchStatusCode: false)) return false;
+        if (MatchesRuleSet(filters.Exclude, source, method, url, statusCode: null, emptyRulesResult: false, matchStatusCode: false)) return false;
+
+        return true;
+    }
+
+    public static bool MatchResponseStageFilters(RequestTraceFilters filters, string? source, string method, string url, short? statusCode, int durationMs)
+    {
+        if (!MatchesRuleSet(filters.Include, source, method, url, statusCode)) return false;
+        if (MatchesRuleSet(filters.Exclude, source, method, url, statusCode, emptyRulesResult: false)) return false;
+
+        if (filters.MinDurationMs.HasValue && durationMs < filters.MinDurationMs.Value)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public static int ResolveRawCaptureLimit(int? configured)
+    {
+        if (configured.HasValue && configured.Value > 0)
+        {
+            return configured.Value;
+        }
+
+        return DefaultRawCaptureMaxBytes;
+    }
+
+    public static DateTime? ResolveScheduledDeleteAt(DateTime startedAtUtc, int? retentionDays)
+    {
+        if (retentionDays is > 0)
+        {
+            return startedAtUtc.AddDays(retentionDays.Value);
+        }
+
+        return null;
+    }
+
+    public static bool IsSmallKnownLength(long? contentLength, int maxCaptureBytes)
+    {
+        if (!contentLength.HasValue) return false;
+        if (contentLength.Value < 0) return false;
+        long cap = Math.Max(maxCaptureBytes, 1024 * 256);
+        return contentLength.Value <= cap;
+    }
+
+    private static bool MatchStatus(short code, string[] patterns)
+    {
+        foreach (string pattern in patterns)
+        {
+            if (string.IsNullOrWhiteSpace(pattern)) continue;
+
+            if (short.TryParse(pattern, out short exact) && exact == code)
+            {
+                return true;
+            }
+
+            string p = pattern.Trim();
+            if (p.Length == 3 && p[1] == 'x' && p[2] == 'x' && char.IsDigit(p[0]))
+            {
+                int group = p[0] - '0';
+                if (code / 100 == group) return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool MatchesRuleSet(
+        RequestTraceFilterRuleSet ruleSet,
+        string? source,
+        string method,
+        string url,
+        short? statusCode,
+        bool emptyRulesResult = true,
+        bool matchStatusCode = true)
+    {
+        if (!HasRelevantRules(ruleSet, matchStatusCode))
+        {
+            return emptyRulesResult;
+        }
+
+        if (!MatchesPatterns(source, ruleSet.SourcePatterns)) return false;
+        if (!MatchesPatterns(url, ruleSet.UrlPatterns)) return false;
+
+        if (ruleSet.Methods is { Length: > 0 } && !ruleSet.Methods.Any(x => string.Equals(x, method, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        if (matchStatusCode && ruleSet.StatusCodes is { Length: > 0 })
+        {
+            if (!statusCode.HasValue) return false;
+            if (!MatchStatus(statusCode.Value, ruleSet.StatusCodes)) return false;
+        }
+
+        return true;
+    }
+
+    private static bool HasRelevantRules(RequestTraceFilterRuleSet ruleSet, bool matchStatusCode)
+    {
+        if (ruleSet.SourcePatterns is { Length: > 0 }) return true;
+        if (ruleSet.UrlPatterns is { Length: > 0 }) return true;
+        if (ruleSet.Methods is { Length: > 0 }) return true;
+        if (matchStatusCode && ruleSet.StatusCodes is { Length: > 0 }) return true;
+
+        return false;
+    }
+
+    private static bool MatchesPatterns(string? value, string[]? patterns, bool emptyPatternsResult = true)
+    {
+        if (patterns == null || patterns.Length == 0)
+        {
+            return emptyPatternsResult;
+        }
+
+        if (string.IsNullOrEmpty(value))
+        {
+            return false;
+        }
+
+        return patterns.Any(pattern => MatchWildcard(value, pattern));
+    }
+
+    private static bool MatchWildcard(string value, string? pattern)
+    {
+        if (string.IsNullOrWhiteSpace(pattern)) return false;
+        if (pattern == "*") return true;
+
+        StringBuilder regexBuilder = new("^");
+        foreach (char c in pattern)
+        {
+            _ = c switch
+            {
+                '*' => regexBuilder.Append(".*"),
+                '?' => regexBuilder.Append('.'),
+                _ => regexBuilder.Append(Regex.Escape(c.ToString())),
+            };
+        }
+        regexBuilder.Append('$');
+        string regexText = regexBuilder.ToString();
+        return Regex.IsMatch(value, regexText, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static string DecodeQueryParameterName(string rawName)
+    {
+        if (rawName.IndexOf('%') < 0 && rawName.IndexOf('+') < 0)
+        {
+            return rawName;
+        }
+
+        try
+        {
+            return Uri.UnescapeDataString(rawName.Replace("+", "%20", StringComparison.Ordinal));
+        }
+        catch
+        {
+            return rawName;
+        }
+    }
+
+    private static Encoding ResolveEncoding(string? contentType)
+    {
+        string? charset = ExtractCharset(contentType);
+        if (string.IsNullOrWhiteSpace(charset))
+        {
+            return Encoding.UTF8;
+        }
+
+        try
+        {
+            return Encoding.GetEncoding(charset.Trim('"', '\''));
+        }
+        catch
+        {
+            return Encoding.UTF8;
+        }
+    }
+
+    private static bool IsJsonContentType(string? contentType)
+    {
+        if (string.IsNullOrWhiteSpace(contentType))
+        {
+            return false;
+        }
+
+        string mediaType = contentType.Split(';', 2)[0].Trim();
+        return mediaType.EndsWith("/json", StringComparison.OrdinalIgnoreCase)
+            || mediaType.EndsWith("+json", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string TryRedactJsonFields(string text, string[] redactJsonFields)
+    {
+        HashSet<string> redactSet = redactJsonFields
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (redactSet.Count == 0)
+        {
+            return text;
+        }
+
+        try
+        {
+            JsonNode? root = JsonNode.Parse(text);
+            if (root == null)
+            {
+                return text;
+            }
+
+            RedactJsonNode(root, redactSet);
+            return root.ToJsonString(JSON.Indented);
+        }
+        catch
+        {
+            return text;
+        }
+    }
+
+    private static void RedactJsonNode(JsonNode node, HashSet<string> redactSet)
+    {
+        switch (node)
+        {
+            case JsonObject obj:
+                foreach (string propertyName in obj.Select(x => x.Key).ToArray())
+                {
+                    if (redactSet.Contains(propertyName))
+                    {
+                        obj[propertyName] = "***";
+                        continue;
+                    }
+
+                    JsonNode? child = obj[propertyName];
+                    if (child != null)
+                    {
+                        RedactJsonNode(child, redactSet);
+                    }
+                }
+                break;
+
+            case JsonArray array:
+                foreach (JsonNode? child in array)
+                {
+                    if (child != null)
+                    {
+                        RedactJsonNode(child, redactSet);
+                    }
+                }
+                break;
+        }
+    }
+
+    private static string TruncateMiddle(string text, int maxChars)
+    {
+        if (maxChars <= 0)
+        {
+            return string.Empty;
+        }
+
+        if (text.Length <= maxChars)
+        {
+            return text;
+        }
+
+        int omitted = text.Length - maxChars;
+        string marker = string.Format(TruncateMessageTemplate, omitted);
+        if (marker.Length >= maxChars)
+        {
+            return text[..maxChars];
+        }
+
+        int remain = maxChars - marker.Length;
+        int head = remain / 2;
+        int tail = remain - head;
+        return text[..head] + marker + text[^tail..];
+    }
+
+    private static string? ExtractCharset(string? contentType)
+    {
+        if (string.IsNullOrWhiteSpace(contentType)) return null;
+
+        Match match = CharsetRegex().Match(contentType);
+        if (!match.Success) return null;
+        return match.Groups["charset"].Value;
+    }
+
+    private static byte[]? TryDecompress(byte[] source, string contentEncoding)
+    {
+        try
+        {
+            using MemoryStream input = new(source);
+            using Stream decoder = contentEncoding.Trim().ToLowerInvariant() switch
+            {
+                "gzip" => new GZipStream(input, CompressionMode.Decompress, leaveOpen: false),
+                "br" => new BrotliStream(input, CompressionMode.Decompress, leaveOpen: false),
+                "deflate" => new DeflateStream(input, CompressionMode.Decompress, leaveOpen: false),
+                _ => throw new NotSupportedException(),
+            };
+            using MemoryStream output = new();
+            decoder.CopyTo(output);
+            return output.ToArray();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    [GeneratedRegex(@"charset\s*=\s*(?<charset>[^;\s]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex CharsetRegex();
+}

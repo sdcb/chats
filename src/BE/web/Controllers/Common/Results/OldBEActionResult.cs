@@ -1,4 +1,5 @@
 ﻿using Chats.BE.Services;
+using Chats.BE.Services.RequestTracing;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
 using System.Text.Json;
@@ -15,7 +16,7 @@ public class OldBEActionResult(object? json) : ActionResult
 
         // 获取 HttpClient
         IHttpClientFactory httpClientFactory = context.HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>();
-        using HttpClient httpClient = httpClientFactory.CreateClient();
+        using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ProxyOldBE);
 
         // 构建请求
         HttpRequest request = context.HttpContext.Request;
