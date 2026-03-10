@@ -82,6 +82,7 @@ const UserMessage = (props: Props) => {
   const textContentRef = useRef<HTMLDivElement>(null);
   const showInlineExpandToggle = !isEditing && isTextOverflowing && !isTextExpanded;
   const showInlineCollapseToggle = !isEditing && isTextOverflowing && isTextExpanded;
+  const showBelowTextToggle = showInlineExpandToggle || showInlineCollapseToggle;
 
   const handleEditMessage = (isOnlySave: boolean = false) => {
     if (isOnlySave) {
@@ -252,7 +253,7 @@ const UserMessage = (props: Props) => {
         sourceElement={sourceImageElement}
       />
 
-      <div className={`flex flex-row-reverse relative ${showInlineCollapseToggle ? 'pb-3' : ''}`}>
+      <div className={`flex flex-row-reverse relative`}>
         {isEditing ? (
           <div className="flex w-full flex-col flex-wrap rounded-md bg-muted shadow-sm mb-3">
             <Textarea
@@ -339,17 +340,11 @@ const UserMessage = (props: Props) => {
               </div>
 
               {showInlineExpandToggle && (
-                <div
-                  className="pointer-events-none absolute inset-x-0 bottom-0 flex h-12 items-end justify-center rounded-b-md"
-                  style={{
-                    background:
-                      'linear-gradient(to bottom, transparent 0%, hsl(var(--card) / 0.84) 56%, hsl(var(--card)) 100%)',
-                  }}
-                >
+                <div className="pointer-events-none absolute inset-x-0 -bottom-6 z-10 flex justify-center">
                   <Button
                     type="button"
                     variant="ghost"
-                    className="pointer-events-auto mb-1.5 h-7 w-7 rounded-full border border-border/70 bg-card/95 p-0 text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground"
+                    className="pointer-events-auto h-7 w-7 rounded-full border border-border/70 bg-card/95 p-0 text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground"
                     aria-label={t('Expand text') || 'Expand text'}
                     aria-expanded={isTextExpanded}
                     title={t('Expand text') || 'Expand text'}
