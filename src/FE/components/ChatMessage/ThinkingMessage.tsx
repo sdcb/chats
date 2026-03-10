@@ -247,21 +247,21 @@ const ThinkingMessage = (props: Props) => {
           <IconChevronRight size={18} stroke="#6b7280" />
         </div>
       </div>
-      <div 
-        className="overflow-hidden transition-all duration-300 ease-in-out"
-        style={{
-          maxHeight: isOpen ? '2000px' : '0',
-          opacity: isOpen ? 1 : 0,
-        }}
+      <div
+        className={`grid overflow-hidden transition-all duration-300 ease-in-out ${
+          isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}
       >
-        <div className="px-2 text-gray-400 text-sm mt-2">
-          <MemoizedReactMarkdown
-            remarkPlugins={[remarkMath, remarkGfm]}
-            rehypePlugins={[rehypeKatex as any, rehypeKatexDataMath]}
-            components={thinkingMarkdownComponents}
-          >
-            {`${preprocessLaTeX(content!)}${finished === false ? '▍' : ''}`}
-          </MemoizedReactMarkdown>
+        <div className="overflow-hidden">
+          <div className="px-2 text-gray-400 text-sm mt-2">
+            <MemoizedReactMarkdown
+              remarkPlugins={[remarkMath, remarkGfm]}
+              rehypePlugins={[rehypeKatex as any, rehypeKatexDataMath]}
+              components={thinkingMarkdownComponents}
+            >
+              {`${preprocessLaTeX(content!)}${finished === false ? '▍' : ''}`}
+            </MemoizedReactMarkdown>
+          </div>
         </div>
       </div>
     </div>
