@@ -205,7 +205,6 @@ public class RequestTraceController(ChatsDB db) : ControllerBase
                    ResponseContentType = trace.ResponseContentType,
                    StatusCode = trace.StatusCode,
                    ErrorType = trace.ErrorType,
-                   ErrorMessage = payload != null ? payload.ErrorMessage : null,
                    RawRequestBodyBytes = trace.RawRequestBodyBytes,
                    RawResponseBodyBytes = trace.RawResponseBodyBytes,
                    RequestBodyLength = trace.RequestBodyLength,
@@ -329,6 +328,7 @@ public class RequestTraceController(ChatsDB db) : ControllerBase
         if (Include(selectedColumns, "responseBodyAt")) export["responseBodyAt"] = row.ResponseBodyAt;
         if (Include(selectedColumns, "direction")) export["direction"] = row.Direction;
         if (Include(selectedColumns, "source")) export["source"] = row.Source;
+        if (Include(selectedColumns, "userId")) export["userId"] = row.UserId;
         if (Include(selectedColumns, "userName")) export["userName"] = row.UserName;
         if (Include(selectedColumns, "traceId")) export["traceId"] = row.TraceId;
         if (Include(selectedColumns, "method")) export["method"] = row.Method;
@@ -337,11 +337,13 @@ public class RequestTraceController(ChatsDB db) : ControllerBase
         if (Include(selectedColumns, "responseContentType")) export["responseContentType"] = row.ResponseContentType;
         if (Include(selectedColumns, "statusCode")) export["statusCode"] = row.StatusCode;
         if (Include(selectedColumns, "errorType")) export["errorType"] = row.ErrorType;
-        if (Include(selectedColumns, "errorMessage")) export["errorMessage"] = row.ErrorMessage;
         if (Include(selectedColumns, "rawRequestBodyBytes")) export["rawRequestBodyBytes"] = row.RawRequestBodyBytes;
         if (Include(selectedColumns, "rawResponseBodyBytes")) export["rawResponseBodyBytes"] = row.RawResponseBodyBytes;
         if (Include(selectedColumns, "requestBodyLength")) export["requestBodyLength"] = row.RequestBodyLength;
         if (Include(selectedColumns, "responseBodyLength")) export["responseBodyLength"] = row.ResponseBodyLength;
+        if (Include(selectedColumns, "hasPayload")) export["hasPayload"] = row.HasPayload;
+        if (Include(selectedColumns, "hasRequestBodyRaw")) export["hasRequestBodyRaw"] = row.HasRequestBodyRaw;
+        if (Include(selectedColumns, "hasResponseBodyRaw")) export["hasResponseBodyRaw"] = row.HasResponseBodyRaw;
 
         return export;
     }

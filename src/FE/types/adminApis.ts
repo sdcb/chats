@@ -361,7 +361,6 @@ export interface RequestTraceListItem {
   responseContentType: string | null;
   statusCode: number | null;
   errorType: string | null;
-  errorMessage: string | null;
   rawRequestBodyBytes: number;
   rawResponseBodyBytes: number | null;
   requestBodyLength: number;
@@ -372,6 +371,7 @@ export interface RequestTraceListItem {
 }
 
 export interface RequestTraceDetails extends RequestTraceListItem {
+  errorMessage: string | null;
   requestHeaders: string | null;
   responseHeaders: string | null;
   requestBody: string | null;

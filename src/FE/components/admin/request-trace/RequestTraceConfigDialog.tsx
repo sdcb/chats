@@ -356,13 +356,33 @@ const INBOUND_API_GATEWAY_URLS = '/v1*/*';
 
 const OUTBOUND_API_GATEWAY_SOURCE_PATTERNS = 'ChatService.*';
 
+const INBOUND_ALL_REQUESTS_EXCLUDE_URL_PATTERNS = '/api/version/check-update\n/api/admin/*';
+
+const OUTBOUND_ALL_REQUESTS_EXCLUDE_SOURCE_PATTERNS = 'Admin.*';
+
 function getQuickPresets(direction: TraceDirection, t: (key: string) => string): QuickPreset[] {
+  const allRequestsPreset: QuickPreset =
+    direction === 'inbound'
+      ? {
+          label: t('All Requests'),
+          description: t('Trace all requests with default settings'),
+          partial: {
+            enabled: true,
+            excludeUrlPatterns: INBOUND_ALL_REQUESTS_EXCLUDE_URL_PATTERNS,
+          },
+        }
+      : {
+          label: t('All Requests'),
+          description: t('Trace all requests with default settings'),
+          partial: {
+            enabled: true,
+            excludeSourcePatterns: OUTBOUND_ALL_REQUESTS_EXCLUDE_SOURCE_PATTERNS,
+            excludeUrlPatterns: '',
+          },
+        };
+
   const base: QuickPreset[] = [
-    {
-      label: t('All Requests'),
-      description: t('Trace all requests with default settings'),
-      partial: { enabled: true, excludeUrlPatterns: '/api/version/check-update\n/api/admin/request-trace*\n/api/admin/global-configs' },
-    },
+    allRequestsPreset,
     {
       label: t('All Failed Requests'),
       description: t('Only trace requests with 4xx/5xx status codes'),

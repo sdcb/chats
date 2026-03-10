@@ -57,17 +57,30 @@ const FILTER_CONTROL_WIDTH_CLASS = 'w-[180px]';
 const COLUMN_QUERY_SEPARATOR = '~';
 
 type ColumnKey =
+  | 'id'
   | 'startedAt'
+  | 'requestBodyAt'
+  | 'responseHeaderAt'
+  | 'responseBodyAt'
   | 'direction'
+  | 'method'
   | 'url'
   | 'statusCode'
   | 'durationMs'
+  | 'userId'
   | 'traceId'
   | 'userName'
   | 'source'
+  | 'requestContentType'
+  | 'responseContentType'
   | 'errorType'
+  | 'rawRequestBodyBytes'
+  | 'rawResponseBodyBytes'
   | 'requestBodyLength'
-  | 'responseBodyLength';
+  | 'responseBodyLength'
+  | 'hasPayload'
+  | 'hasRequestBodyRaw'
+  | 'hasResponseBodyRaw';
 
 type Filters = {
   start: string;
@@ -79,26 +92,39 @@ type Filters = {
 };
 
 const ALL_COLUMNS: { key: ColumnKey; title: string }[] = [
+  { key: 'id', title: 'Id' },
   { key: 'traceId', title: 'Trace Id' },
   { key: 'startedAt', title: 'Started At' },
+  { key: 'requestBodyAt', title: 'Request Body At' },
+  { key: 'responseHeaderAt', title: 'Response Header At' },
+  { key: 'responseBodyAt', title: 'Response Body At' },
   { key: 'direction', title: 'Direction' },
+  { key: 'method', title: 'Method' },
   { key: 'url', title: 'Url' },
   { key: 'statusCode', title: 'Status Code' },
   { key: 'durationMs', title: 'Duration (ms)' },
+  { key: 'userId', title: 'User Id' },
   { key: 'userName', title: 'User Name' },
   { key: 'source', title: 'Source' },
+  { key: 'requestContentType', title: 'Request Content Type' },
+  { key: 'responseContentType', title: 'Response Content Type' },
   { key: 'errorType', title: 'Error Type' },
+  { key: 'rawRequestBodyBytes', title: 'Raw Request Body Bytes' },
+  { key: 'rawResponseBodyBytes', title: 'Raw Response Body Bytes' },
   { key: 'requestBodyLength', title: 'Request Body Length' },
   { key: 'responseBodyLength', title: 'Response Body Length' },
+  { key: 'hasPayload', title: 'Has Payload' },
+  { key: 'hasRequestBodyRaw', title: 'Has Request Body Raw' },
+  { key: 'hasResponseBodyRaw', title: 'Has Response Body Raw' },
 ];
 
 const DEFAULT_COLUMNS: ColumnKey[] = [
   'traceId',
   'startedAt',
   'direction',
+  'method',
   'url',
   'statusCode',
-  'durationMs',
   'userName',
 ];
 
@@ -401,18 +427,20 @@ export default function RequestTracePage() {
   };
 
   const toggleColumn = (key: ColumnKey, checked: boolean) => {
-    let next = columns;
+    const nextSet = new Set(columns);
     if (checked) {
-      next = Array.from(new Set([...columns, key]));
+      nextSet.add(key);
     } else {
-      next = columns.filter((x) => x !== key);
-      if (next.length === 0) {
+      nextSet.delete(key);
+      if (nextSet.size === 0) {
         return;
       }
     }
 
+    const next = ALL_COLUMNS.map((column) => column.key).filter((columnKey) => nextSet.has(columnKey));
+
     setColumns(next);
-    pushQuery(1, filters, next);
+    pushQuery(page, filters, next);
   };
 
   const handleDirectionChange = (value: '' | '0' | '1') => {
@@ -437,25 +465,79 @@ export default function RequestTracePage() {
 
   const visibleColumnDefs = ALL_COLUMNS.filter((x) => columns.includes(x.key));
 
+  const renderTimestampValue = (value: string | null) => {
+    if (!value) {
+      return '-';
+    }
+
+    return (
+      <Tips
+        trigger={<span>{formatRelativeWithinHour(value, now, t)}</span>}
+        side="top"
+        content={formatAbsoluteTime(value)}
+      />
+    );
+  };
+
+  const renderBooleanValue = (value: boolean) => (value ? t('Yes') : t('No'));
+
+  const renderStatusCodeValue = (value: number | null) => {
+    if (value == null) {
+      return '-';
+    }
+
+    const toneClassName =
+      value >= 200 && value < 300
+        ? 'bg-emerald-100 text-emerald-800 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60'
+        : value >= 400
+          ? 'bg-red-100 text-red-800 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900/60'
+          : 'bg-amber-100 text-amber-800 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60';
+
+    return (
+      <span
+        className={cn(
+          'inline-flex min-w-12 items-center justify-center rounded px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset',
+          toneClassName,
+        )}
+      >
+        {value}
+      </span>
+    );
+  };
+
   const renderColumnValue = (row: RequestTraceListItem, key: ColumnKey) => {
     switch (key) {
-      case 'startedAt':
+      case 'id':
         return (
-          <Tips
-            trigger={<span>{formatRelativeWithinHour(row.startedAt, now, t)}</span>}
-            side="top"
-            content={formatAbsoluteTime(row.startedAt)}
-          />
+          <button
+            type="button"
+            className="text-left text-primary underline underline-offset-4 hover:text-primary/80 break-all"
+            onClick={() => setDetailsId(row.id)}
+          >
+            {row.id}
+          </button>
         );
+      case 'startedAt':
+        return renderTimestampValue(row.startedAt);
+      case 'requestBodyAt':
+        return renderTimestampValue(row.requestBodyAt);
+      case 'responseHeaderAt':
+        return renderTimestampValue(row.responseHeaderAt);
+      case 'responseBodyAt':
+        return renderTimestampValue(row.responseBodyAt);
       case 'direction':
         return getDirectionLabel(row.direction, t);
+      case 'method':
+        return row.method;
       case 'url':
-        return <span className="break-all">{row.method} {row.url}</span>;
+        return <span className="break-all">{row.url}</span>;
+      case 'userId':
+        return row.userId ?? '-';
       case 'traceId':
         return row.traceId ? (
           <button
             type="button"
-            className="text-primary underline underline-offset-4 hover:text-primary/80"
+            className="text-left text-primary underline underline-offset-4 hover:text-primary/80 break-all"
             onClick={() => setDetailsId(row.id)}
           >
             {row.traceId}
@@ -463,18 +545,32 @@ export default function RequestTracePage() {
         ) : '-';
       case 'userName':
         return row.userName || '-';
+      case 'requestContentType':
+        return row.requestContentType || '-';
+      case 'responseContentType':
+        return row.responseContentType || '-';
       case 'statusCode':
-        return row.statusCode ?? '-';
+        return renderStatusCodeValue(row.statusCode);
       case 'durationMs':
         return getDurationMs(row) ?? '-';
       case 'source':
         return row.source || '-';
       case 'errorType':
         return row.errorType || '-';
+      case 'rawRequestBodyBytes':
+        return row.rawRequestBodyBytes;
+      case 'rawResponseBodyBytes':
+        return row.rawResponseBodyBytes ?? '-';
       case 'requestBodyLength':
         return row.requestBodyLength;
       case 'responseBodyLength':
         return row.responseBodyLength ?? '-';
+      case 'hasPayload':
+        return renderBooleanValue(row.hasPayload);
+      case 'hasRequestBodyRaw':
+        return renderBooleanValue(row.hasRequestBodyRaw);
+      case 'hasResponseBodyRaw':
+        return renderBooleanValue(row.hasResponseBodyRaw);
       default:
         return '-';
     }
@@ -627,7 +723,8 @@ export default function RequestTracePage() {
                     onCheckedChange={(checked) => toggleSelect(row.id, !!checked)}
                   />
                 </div>
-                <div className="text-xs break-all"><span className="text-muted-foreground">{t('Url')}: </span>{row.method} {row.url}</div>
+                <div className="text-xs"><span className="text-muted-foreground">{t('Method')}: </span>{row.method}</div>
+                <div className="text-xs break-all"><span className="text-muted-foreground">{t('Url')}: </span>{row.url}</div>
                 <div className="text-xs">
                   <span className="text-muted-foreground">{t('Started At')}: </span>
                   <Tips
@@ -705,21 +802,21 @@ export default function RequestTracePage() {
                   </DropdownMenu>
                 </TableHead>
                 {visibleColumnDefs.map((column) => (
-                  <TableHead key={column.key}>{t(column.title)}</TableHead>
+                  <TableHead key={column.key} className="px-1 py-1">{t(column.title)}</TableHead>
                 ))}
               </TableRow>
             </TableHeader>
             <TableBody isLoading={loading} isEmpty={data.rows.length === 0}>
               {data.rows.map((row) => (
                 <TableRow key={row.id}>
-                  <TableCell>
+                  <TableCell className="p-1">
                     <Checkbox
                       checked={selectedIds.includes(row.id)}
                       onCheckedChange={(checked) => toggleSelect(row.id, !!checked)}
                     />
                   </TableCell>
                   {visibleColumnDefs.map((column) => (
-                    <TableCell key={column.key}>{renderColumnValue(row, column.key)}</TableCell>
+                    <TableCell key={column.key} className="p-1">{renderColumnValue(row, column.key)}</TableCell>
                   ))}
                 </TableRow>
               ))}

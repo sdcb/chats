@@ -58,6 +58,13 @@ type RequestTraceDetailsDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+type PayloadTabKey =
+  | 'requestHeaders'
+  | 'responseHeaders'
+  | 'requestBody'
+  | 'responseBody'
+  | 'errorDetails';
+
 export default function RequestTraceDetailsDialog({
   traceId,
   open,
@@ -66,7 +73,7 @@ export default function RequestTraceDetailsDialog({
   const { t } = useTranslation();
   const [details, setDetails] = useState<RequestTraceDetails | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activePayloadTab, setActivePayloadTab] = useState<'requestHeaders' | 'responseHeaders' | 'requestBody' | 'responseBody'>('requestHeaders');
+  const [activePayloadTab, setActivePayloadTab] = useState<PayloadTabKey>('requestHeaders');
   const [activeCopyArea, setActiveCopyArea] = useState<'url' | 'payload' | null>(null);
 
   useEffect(() => {
@@ -161,7 +168,7 @@ export default function RequestTraceDetailsDialog({
             <div className="rounded-md border">
               <Tabs
                 value={activePayloadTab}
-                onValueChange={(value) => setActivePayloadTab(value as 'requestHeaders' | 'responseHeaders' | 'requestBody' | 'responseBody')}
+                onValueChange={(value) => setActivePayloadTab(value as PayloadTabKey)}
                 className="flex-col gap-0 border-0 p-0"
               >
                 <TabsList className="h-auto flex-row flex-wrap items-center justify-start rounded-none border-b bg-transparent p-1">
@@ -169,6 +176,7 @@ export default function RequestTraceDetailsDialog({
                   <TabsTrigger value="responseHeaders">{t('Response Headers')}</TabsTrigger>
                   <TabsTrigger value="requestBody">{t('Request Body')}</TabsTrigger>
                   <TabsTrigger value="responseBody">{t('Response Body')}</TabsTrigger>
+                  <TabsTrigger value="errorDetails">{t('Error Details')}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="requestHeaders" className="m-0">
@@ -182,6 +190,16 @@ export default function RequestTraceDetailsDialog({
                 </TabsContent>
                 <TabsContent value="responseBody" className="m-0">
                   {renderPayloadContent(details.responseBody)}
+                </TabsContent>
+                <TabsContent value="errorDetails" className="m-0">
+                  {renderPayloadContent(
+                    [
+                      details.errorType ? `${t('Error Type')}: ${details.errorType}` : '',
+                      details.errorMessage || '',
+                    ]
+                      .filter(Boolean)
+                      .join('\n\n'),
+                  )}
                 </TabsContent>
               </Tabs>
             </div>

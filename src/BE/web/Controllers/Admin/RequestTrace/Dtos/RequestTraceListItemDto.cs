@@ -34,8 +34,6 @@ public record RequestTraceListItemDto
 
     public string? ErrorType { get; init; }
 
-    public string? ErrorMessage { get; init; }
-
     public int RawRequestBodyBytes { get; init; }
 
     public int? RawResponseBodyBytes { get; init; }
