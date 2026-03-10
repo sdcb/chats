@@ -1,22 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import { useRouter } from 'next/router';
 
 import ExportButton from '@/components/Button/ExportButtom';
-import { IconEye, IconRefresh, IconSettings } from '@/components/Icons';
+import { IconColumns, IconCompare, IconEye, IconRefresh } from '@/components/Icons';
+import RequestTraceCompareDialog from '@/components/admin/request-trace/RequestTraceCompareDialog';
 import DateTimePopover from '@/components/Popover/DateTimePopover';
 import DeletePopover from '@/components/Popover/DeletePopover';
 import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -27,7 +21,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -41,13 +34,19 @@ import useTranslation from '@/hooks/useTranslation';
 import {
   clearRequestTraceList,
   getRequestTraceList,
-  getRequestTraceDetails,
 } from '@/apis/adminApis';
 import RequestTraceDetailsDialog from '@/components/admin/request-trace/RequestTraceDetailsDialog';
+import {
+  ALL_COLUMNS,
+  ColumnKey,
+  DEFAULT_COLUMNS,
+  getDirectionLabel,
+  getDurationMs,
+} from '@/components/admin/request-trace/requestTraceColumns';
 import { cn } from '@/lib/utils';
-import { RequestTraceDetails, RequestTraceListItem } from '@/types/adminApis';
+import { RequestTraceListItem } from '@/types/adminApis';
 import { PageResult } from '@/types/page';
-import { formatDateTime, getTz } from '@/utils/date';
+import { getTz } from '@/utils/date';
 import { formatAbsoluteTime, formatRelativeWithinHour } from '@/utils/relativeTime';
 import { getUserSession } from '@/utils/user';
 import PaginationContainer from '@/components/Pagination/Pagination';
@@ -55,32 +54,6 @@ import PaginationContainer from '@/components/Pagination/Pagination';
 const PAGE_SIZE = 20;
 const FILTER_CONTROL_WIDTH_CLASS = 'w-[180px]';
 const COLUMN_QUERY_SEPARATOR = '~';
-
-type ColumnKey =
-  | 'id'
-  | 'startedAt'
-  | 'requestBodyAt'
-  | 'responseHeaderAt'
-  | 'responseBodyAt'
-  | 'direction'
-  | 'method'
-  | 'url'
-  | 'statusCode'
-  | 'durationMs'
-  | 'userId'
-  | 'traceId'
-  | 'userName'
-  | 'source'
-  | 'requestContentType'
-  | 'responseContentType'
-  | 'errorType'
-  | 'rawRequestBodyBytes'
-  | 'rawResponseBodyBytes'
-  | 'requestBodyLength'
-  | 'responseBodyLength'
-  | 'hasPayload'
-  | 'hasRequestBodyRaw'
-  | 'hasResponseBodyRaw';
 
 type Filters = {
   start: string;
@@ -90,43 +63,6 @@ type Filters = {
   username: string;
   direction: '' | '0' | '1';
 };
-
-const ALL_COLUMNS: { key: ColumnKey; title: string }[] = [
-  { key: 'id', title: 'Id' },
-  { key: 'traceId', title: 'Trace Id' },
-  { key: 'startedAt', title: 'Started At' },
-  { key: 'requestBodyAt', title: 'Request Body At' },
-  { key: 'responseHeaderAt', title: 'Response Header At' },
-  { key: 'responseBodyAt', title: 'Response Body At' },
-  { key: 'direction', title: 'Direction' },
-  { key: 'method', title: 'Method' },
-  { key: 'url', title: 'Url' },
-  { key: 'statusCode', title: 'Status Code' },
-  { key: 'durationMs', title: 'Duration (ms)' },
-  { key: 'userId', title: 'User Id' },
-  { key: 'userName', title: 'User Name' },
-  { key: 'source', title: 'Source' },
-  { key: 'requestContentType', title: 'Request Content Type' },
-  { key: 'responseContentType', title: 'Response Content Type' },
-  { key: 'errorType', title: 'Error Type' },
-  { key: 'rawRequestBodyBytes', title: 'Raw Request Body Bytes' },
-  { key: 'rawResponseBodyBytes', title: 'Raw Response Body Bytes' },
-  { key: 'requestBodyLength', title: 'Request Body Length' },
-  { key: 'responseBodyLength', title: 'Response Body Length' },
-  { key: 'hasPayload', title: 'Has Payload' },
-  { key: 'hasRequestBodyRaw', title: 'Has Request Body Raw' },
-  { key: 'hasResponseBodyRaw', title: 'Has Response Body Raw' },
-];
-
-const DEFAULT_COLUMNS: ColumnKey[] = [
-  'traceId',
-  'startedAt',
-  'direction',
-  'method',
-  'url',
-  'statusCode',
-  'userName',
-];
 
 const formatDateParam = (date: Date) => date.toISOString().split('T')[0];
 
@@ -163,135 +99,8 @@ const buildQuery = (page: number, filters: Filters, columns: ColumnKey[]) => {
   return query;
 };
 
-const getDurationMs = (row: RequestTraceListItem): number | null => {
-  if (!row.responseHeaderAt) {
-    return null;
-  }
-
-  const start = Date.parse(row.startedAt);
-  const responseHeader = Date.parse(row.responseHeaderAt);
-  if (Number.isNaN(start) || Number.isNaN(responseHeader)) {
-    return null;
-  }
-
-  return Math.max(0, responseHeader - start);
-};
-
 const toServerColumns = (columns: ColumnKey[]) =>
   columns.filter((x) => x !== 'durationMs').join(',');
-
-const getDirectionLabel = (value: number, t: (key: string) => string) => {
-  if (value === 0) return t('Inbound');
-  if (value === 1) return t('Outbound');
-  return String(value);
-};
-
-const RequestTraceCompareDialog = ({
-  ids,
-  open,
-  onOpenChange,
-}: {
-  ids: string[];
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) => {
-  const { t } = useTranslation();
-  const [left, setLeft] = useState<RequestTraceDetails | null>(null);
-  const [right, setRight] = useState<RequestTraceDetails | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [hideSame, setHideSame] = useState(false);
-
-  useEffect(() => {
-    if (!open || ids.length !== 2) {
-      return;
-    }
-
-    setLoading(true);
-    Promise.all([getRequestTraceDetails(ids[0]), getRequestTraceDetails(ids[1])])
-      .then(([a, b]) => {
-        setLeft(a);
-        setRight(b);
-      })
-      .catch((error) => {
-        console.error(error);
-        toast.error(t('Operation failed, Please try again later, or contact technical personnel'));
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [open, ids, t]);
-
-  const rows = useMemo(() => {
-    if (!left || !right) return [] as { label: string; a: string; b: string }[];
-
-    const base: { label: string; a: string; b: string }[] = [
-      { label: t('Started At'), a: formatDateTime(left.startedAt), b: formatDateTime(right.startedAt) },
-      { label: t('Direction'), a: String(left.direction), b: String(right.direction) },
-      { label: t('User Name'), a: left.userName || '', b: right.userName || '' },
-      { label: t('Trace Id'), a: left.traceId || '', b: right.traceId || '' },
-      { label: t('Method'), a: left.method || '', b: right.method || '' },
-      { label: t('Url'), a: left.url || '', b: right.url || '' },
-      { label: t('Status Code'), a: String(left.statusCode ?? ''), b: String(right.statusCode ?? '') },
-      { label: t('Request Headers'), a: left.requestHeaders || '', b: right.requestHeaders || '' },
-      { label: t('Response Headers'), a: left.responseHeaders || '', b: right.responseHeaders || '' },
-      { label: t('Request Body'), a: left.requestBody || '', b: right.requestBody || '' },
-      { label: t('Response Body'), a: left.responseBody || '', b: right.responseBody || '' },
-      { label: t('Request Body Length'), a: String(left.requestBodyLength), b: String(right.requestBodyLength) },
-      { label: t('Response Body Length'), a: String(left.responseBodyLength ?? ''), b: String(right.responseBodyLength ?? '') },
-      { label: t('Error Type'), a: left.errorType || '', b: right.errorType || '' },
-      { label: t('Error Message'), a: left.errorMessage || '', b: right.errorMessage || '' },
-    ];
-
-    if (!hideSame) return base;
-    return base.filter((x) => x.a !== x.b);
-  }, [hideSame, left, right, t]);
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-6xl">
-        <DialogHeader>
-          <DialogTitle>{t('Request Trace Compare')}</DialogTitle>
-        </DialogHeader>
-
-        <div className="flex items-center justify-end gap-2 text-sm">
-          <span>{t('Hide same values')}</span>
-          <Switch checked={hideSame} onCheckedChange={setHideSame} />
-        </div>
-
-        {loading ? (
-          <div className="space-y-2 py-4">
-            {Array.from({ length: 6 }).map((_, idx) => (
-              <Skeleton key={idx} className="h-8 w-full" />
-            ))}
-          </div>
-        ) : (
-          <div className="max-h-[70vh] overflow-auto">
-            <div className="grid grid-cols-[220px_1fr_1fr] gap-2 text-xs font-medium text-muted-foreground sticky top-0 bg-background z-10 py-2">
-              <div>{t('Field')}</div>
-              <div>{left?.id ?? '-'}</div>
-              <div>{right?.id ?? '-'}</div>
-            </div>
-            <div className="space-y-2">
-              {rows.map((row) => {
-                const different = row.a !== row.b;
-                return (
-                  <div key={row.label} className="grid grid-cols-[220px_1fr_1fr] gap-2">
-                    <Card className={cn('p-2 text-xs', different && 'border-primary/60')}>{row.label}</Card>
-                    <Card className={cn('p-2 text-xs whitespace-pre-wrap break-all', different && 'border-primary/60')}>{row.a || '-'}</Card>
-                    <Card className={cn('p-2 text-xs whitespace-pre-wrap break-all', different && 'border-primary/60')}>{row.b || '-'}</Card>
-                  </div>
-                );
-              })}
-              {!loading && rows.length === 0 && (
-                <div className="text-center py-8 text-sm text-muted-foreground">{t('No difference')}</div>
-              )}
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 export default function RequestTracePage() {
   const { t } = useTranslation();
@@ -358,11 +167,11 @@ export default function RequestTracePage() {
     setPage((prev) => (prev === pageValue ? prev : pageValue));
     setFilters((prev) =>
       prev.start === nextFilters.start &&
-      prev.end === nextFilters.end &&
-      prev.url === nextFilters.url &&
-      prev.traceId === nextFilters.traceId &&
-      prev.username === nextFilters.username &&
-      prev.direction === nextFilters.direction
+        prev.end === nextFilters.end &&
+        prev.url === nextFilters.url &&
+        prev.traceId === nextFilters.traceId &&
+        prev.username === nextFilters.username &&
+        prev.direction === nextFilters.direction
         ? prev
         : nextFilters,
     );
@@ -512,7 +321,7 @@ export default function RequestTracePage() {
           <button
             type="button"
             className="text-left text-primary underline underline-offset-4 hover:text-primary/80 break-all"
-            onClick={() => setDetailsId(row.id)}
+            onClick={(e) => { e.stopPropagation(); setDetailsId(row.id); }}
           >
             {row.id}
           </button>
@@ -537,8 +346,8 @@ export default function RequestTracePage() {
         return row.traceId ? (
           <button
             type="button"
-            className="text-left text-primary underline underline-offset-4 hover:text-primary/80 break-all"
-            onClick={() => setDetailsId(row.id)}
+            className="text-left underline underline-offset-4 hover:text-foreground break-all"
+            onClick={(e) => { e.stopPropagation(); setDetailsId(row.id); }}
           >
             {row.traceId}
           </button>
@@ -607,58 +416,57 @@ export default function RequestTracePage() {
   return (
     <div className="space-y-4">
       <Card className="p-3 border-none">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className={FILTER_CONTROL_WIDTH_CLASS}>
-              <Select
-                value={filters.direction}
-                onValueChange={(val) => handleDirectionChange(val as '' | '0' | '1')}
-              >
-                <SelectTrigger onReset={() => handleDirectionChange('')} value={filters.direction}>
-                  {filters.direction
-                    ? filters.direction === '0'
-                      ? t('Inbound')
-                      : t('Outbound')
-                    : `${t('Inbound')} + ${t('Outbound')}`}
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">{t('Inbound')}</SelectItem>
-                  <SelectItem value="1">{t('Outbound')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <DateTimePopover
-              value={filters.start}
-              className={FILTER_CONTROL_WIDTH_CLASS}
-              placeholder={t('Start date')!}
-              onSelect={(date) => updateFilter('start', formatDateParam(date))}
-              onReset={filters.start ? () => updateFilter('start', '') : undefined}
-            />
-            <DateTimePopover
-              value={filters.end}
-              className={FILTER_CONTROL_WIDTH_CLASS}
-              placeholder={t('End date')!}
-              onSelect={(date) => updateFilter('end', formatDateParam(date))}
-              onReset={filters.end ? () => updateFilter('end', '') : undefined}
-            />
-            <Input
-              className={FILTER_CONTROL_WIDTH_CLASS}
-              placeholder={t('Search by url')!}
-              value={filters.url}
-              onChange={(event) => updateFilter('url', event.target.value, true)}
-            />
-            <Input
-              className={FILTER_CONTROL_WIDTH_CLASS}
-              placeholder={t('Search by traceId')!}
-              value={filters.traceId}
-              onChange={(event) => updateFilter('traceId', event.target.value, true)}
-            />
-            <Input
-              className={FILTER_CONTROL_WIDTH_CLASS}
-              placeholder={t('Search by username')!}
-              value={filters.username}
-              onChange={(event) => updateFilter('username', event.target.value, true)}
-            />
+        <div className="flex flex-wrap items-end gap-3">
+          <div className={FILTER_CONTROL_WIDTH_CLASS}>
+            <Select
+              value={filters.direction}
+              onValueChange={(val) => handleDirectionChange(val as '' | '0' | '1')}
+            >
+              <SelectTrigger onReset={() => handleDirectionChange('')} value={filters.direction}>
+                {filters.direction
+                  ? filters.direction === '0'
+                    ? t('Inbound')
+                    : t('Outbound')
+                  : `${t('Inbound')} + ${t('Outbound')}`}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">{t('Inbound')}</SelectItem>
+                <SelectItem value="1">{t('Outbound')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DateTimePopover
+            value={filters.start}
+            className={FILTER_CONTROL_WIDTH_CLASS}
+            placeholder={t('Start date')!}
+            onSelect={(date) => updateFilter('start', formatDateParam(date))}
+            onReset={filters.start ? () => updateFilter('start', '') : undefined}
+          />
+          <DateTimePopover
+            value={filters.end}
+            className={FILTER_CONTROL_WIDTH_CLASS}
+            placeholder={t('End date')!}
+            onSelect={(date) => updateFilter('end', formatDateParam(date))}
+            onReset={filters.end ? () => updateFilter('end', '') : undefined}
+          />
+          <Input
+            className={FILTER_CONTROL_WIDTH_CLASS}
+            placeholder={t('Search by url')!}
+            value={filters.url}
+            onChange={(event) => updateFilter('url', event.target.value, true)}
+          />
+          <Input
+            className={FILTER_CONTROL_WIDTH_CLASS}
+            placeholder={t('Search by traceId')!}
+            value={filters.traceId}
+            onChange={(event) => updateFilter('traceId', event.target.value, true)}
+          />
+          <Input
+            className={FILTER_CONTROL_WIDTH_CLASS}
+            placeholder={t('Search by username')!}
+            value={filters.username}
+            onChange={(event) => updateFilter('username', event.target.value, true)}
+          />
 
           <Button
             type="button"
@@ -671,9 +479,8 @@ export default function RequestTracePage() {
           >
             <IconRefresh size={18} />
           </Button>
-          </div>
 
-          <div className="flex items-center gap-2 self-end lg:self-auto">
+          <div className="ml-auto flex items-center gap-2 self-end">
             <Tips
               trigger={
                 <div>
@@ -689,16 +496,72 @@ export default function RequestTracePage() {
               content={t('Export to Excel')}
             />
 
-            <DeletePopover onDelete={handleDeleteByQuery} tooltip={t('Delete by current filters')!} />
+            <DeletePopover
+              onDelete={handleDeleteByQuery}
+              tooltip={t('Delete by current filters')!}
+              description={t('This will delete ALL records matching the current filters, not just selected rows. Continue?')!}
+            />
 
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={selectedIds.length !== 2}
-              onClick={() => setCompareOpen(true)}
-            >
-              {t('Compare')}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="hidden sm:block">
+                  <Tips
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9"
+                        aria-label={t('Select columns')}
+                        title={t('Select columns')}
+                      >
+                        <IconColumns size={18} />
+                      </Button>
+                    }
+                    side="bottom"
+                    content={t('Select columns')}
+                  />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="flex items-center gap-2">
+                  <IconColumns size={16} />
+                  <span>{t('Select columns')}</span>
+                </DropdownMenuLabel>
+                {ALL_COLUMNS.map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.key}
+                    checked={columns.includes(column.key)}
+                    onSelect={(event) => event.preventDefault()}
+                    onCheckedChange={(checked) => toggleColumn(column.key, !!checked)}
+                  >
+                    {t(column.title)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Tips
+              trigger={
+                <div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9"
+                    disabled={selectedIds.length !== 2}
+                    onClick={() => setCompareOpen(true)}
+                    aria-label={t('Compare')}
+                  >
+                    <IconCompare size={18} />
+                  </Button>
+                </div>
+              }
+              side="bottom"
+              content={
+                selectedIds.length === 2
+                  ? `${t('Compare')} (2/2)`
+                  : `${t('Click rows to select for compare')}${selectedIds.length > 0 ? ` (${selectedIds.length}/2)` : ''}`
+              }
+            />
           </div>
         </div>
       </Card>
@@ -714,48 +577,52 @@ export default function RequestTracePage() {
           <div className="text-center py-4 text-sm text-muted-foreground">{t('No data')}</div>
         ) : (
           <div className="space-y-2">
-            {data.rows.map((row) => (
-              <Card key={row.id} className="p-3 space-y-1">
-                <div className="flex items-center justify-between">
-                  <div className="font-medium text-xs">#{row.id}</div>
-                  <Checkbox
-                    checked={selectedIds.includes(row.id)}
-                    onCheckedChange={(checked) => toggleSelect(row.id, !!checked)}
-                  />
-                </div>
-                <div className="text-xs"><span className="text-muted-foreground">{t('Method')}: </span>{row.method}</div>
-                <div className="text-xs break-all"><span className="text-muted-foreground">{t('Url')}: </span>{row.url}</div>
-                <div className="text-xs">
-                  <span className="text-muted-foreground">{t('Started At')}: </span>
-                  <Tips
-                    trigger={<span>{formatRelativeWithinHour(row.startedAt, now, t)}</span>}
-                    side="top"
-                    content={formatAbsoluteTime(row.startedAt)}
-                  />
-                </div>
-                <div className="text-xs"><span className="text-muted-foreground">{t('User Name')}: </span>{row.userName || '-'}</div>
-                <div className="text-xs">
-                  <span className="text-muted-foreground">{t('Trace Id')}: </span>
-                  {row.traceId ? (
-                    <button
-                      type="button"
-                      className="text-primary underline underline-offset-4 hover:text-primary/80"
-                      onClick={() => setDetailsId(row.id)}
-                    >
-                      {row.traceId}
-                    </button>
-                  ) : (
-                    '-'
-                  )}
-                </div>
-                <div className="flex justify-end pt-1">
-                  <Button size="sm" variant="ghost" onClick={() => setDetailsId(row.id)}>
-                    <IconEye size={14} className="mr-1" />
-                    {t('Details')}
-                  </Button>
-                </div>
-              </Card>
-            ))}
+            {data.rows.map((row) => {
+              const isSelected = selectedIds.includes(row.id);
+              return (
+                <Card
+                  key={row.id}
+                  className={cn('p-3 space-y-1 cursor-pointer transition-colors', isSelected && 'border-primary bg-primary/5')}
+                  onClick={() => toggleSelect(row.id, !isSelected)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium text-xs">#{row.id}</div>
+                    {isSelected && <span className="text-xs text-primary font-medium">{t('Selected')}</span>}
+                  </div>
+                  <div className="text-xs"><span className="text-muted-foreground">{t('Method')}: </span>{row.method}</div>
+                  <div className="text-xs break-all"><span className="text-muted-foreground">{t('Url')}: </span>{row.url}</div>
+                  <div className="text-xs">
+                    <span className="text-muted-foreground">{t('Started At')}: </span>
+                    <Tips
+                      trigger={<span>{formatRelativeWithinHour(row.startedAt, now, t)}</span>}
+                      side="top"
+                      content={formatAbsoluteTime(row.startedAt)}
+                    />
+                  </div>
+                  <div className="text-xs"><span className="text-muted-foreground">{t('User Name')}: </span>{row.userName || '-'}</div>
+                  <div className="text-xs">
+                    <span className="text-muted-foreground">{t('Trace Id')}: </span>
+                    {row.traceId ? (
+                      <button
+                        type="button"
+                        className="underline underline-offset-4 hover:text-foreground"
+                        onClick={(e) => { e.stopPropagation(); setDetailsId(row.id); }}
+                      >
+                        {row.traceId}
+                      </button>
+                    ) : (
+                      '-'
+                    )}
+                  </div>
+                  <div className="flex justify-end pt-1">
+                    <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setDetailsId(row.id); }}>
+                      <IconEye size={14} className="mr-1" />
+                      {t('Details')}
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
@@ -765,61 +632,26 @@ export default function RequestTracePage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[42px] px-1">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <div>
-                        <Tips
-                          trigger={
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              aria-label={t('Select columns')}
-                              title={t('Select columns')}
-                            >
-                              <IconSettings size={14} />
-                            </Button>
-                          }
-                          side="bottom"
-                          content={t('Select columns')}
-                        />
-                      </div>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-56">
-                      <DropdownMenuLabel>{t('Select columns')}</DropdownMenuLabel>
-                      {ALL_COLUMNS.map((column) => (
-                        <DropdownMenuCheckboxItem
-                          key={column.key}
-                          checked={columns.includes(column.key)}
-                          onSelect={(event) => event.preventDefault()}
-                          onCheckedChange={(checked) => toggleColumn(column.key, !!checked)}
-                        >
-                          {t(column.title)}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableHead>
                 {visibleColumnDefs.map((column) => (
-                  <TableHead key={column.key} className="px-1 py-1">{t(column.title)}</TableHead>
+                  <TableHead key={column.key} className="px-1 py-1 first:pl-4 last:pr-4 text-foreground">{t(column.title)}</TableHead>
                 ))}
               </TableRow>
             </TableHeader>
             <TableBody isLoading={loading} isEmpty={data.rows.length === 0}>
-              {data.rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell className="p-1">
-                    <Checkbox
-                      checked={selectedIds.includes(row.id)}
-                      onCheckedChange={(checked) => toggleSelect(row.id, !!checked)}
-                    />
-                  </TableCell>
-                  {visibleColumnDefs.map((column) => (
-                    <TableCell key={column.key} className="p-1">{renderColumnValue(row, column.key)}</TableCell>
-                  ))}
-                </TableRow>
-              ))}
+              {data.rows.map((row) => {
+                const isSelected = selectedIds.includes(row.id);
+                return (
+                  <TableRow
+                    key={row.id}
+                    className={cn('cursor-pointer transition-colors', isSelected && 'bg-primary/10 border-l-2 border-l-primary')}
+                    onClick={() => toggleSelect(row.id, !isSelected)}
+                  >
+                    {visibleColumnDefs.map((column) => (
+                      <TableCell key={column.key} className="px-1 py-1 first:pl-4 last:pr-4 text-muted-foreground">{renderColumnValue(row, column.key)}</TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
 
