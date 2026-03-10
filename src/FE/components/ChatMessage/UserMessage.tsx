@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -22,7 +23,6 @@ import { Textarea } from '../ui/textarea';
 import CopyAction from './CopyAction';
 import DeleteAction from './DeleteAction';
 import EditAction from './EditAction';
-import ExpandTextAction from './ExpandTextAction';
 import PaginationAction from './PaginationAction';
 import RegenerateAction from './RegenerateAction';
 import { ANIMATION_DURATION_MS } from '@/constants/animation';
@@ -56,6 +56,10 @@ const UserMessage = (props: Props) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { id: messageId, siblingIds, parentId } = message;
   const content = getMessageContents(message);
+  const fileContents = useMemo(
+    () => content.filter((item) => item.$type === MessageContentType.fileId),
+    [content],
+  );
   const defaultText = useMemo(() => {
     const textContent = content.find((x) => x.$type === MessageContentType.text) as TextContent | undefined;
     return textContent?.c || '';
@@ -68,7 +72,7 @@ const UserMessage = (props: Props) => {
   const [sourceImageElement, setSourceImageElement] = useState<HTMLImageElement | null>(null);
   const { status: chatStatus } = selectedChat;
   const currentMessageIndex = siblingIds.findIndex((x) => x === messageId);
-  const COLLAPSED_MAX_LINES = 5;
+  const COLLAPSED_VISIBLE_LINES = 5.5;
   const [isTextExpanded, setIsTextExpanded] = useState(false);
   const [isTextOverflowing, setIsTextOverflowing] = useState(false);
   const [collapsedMaxHeight, setCollapsedMaxHeight] = useState<number | null>(null);
@@ -76,6 +80,8 @@ const UserMessage = (props: Props) => {
   const [isTextAnimating, setIsTextAnimating] = useState(false);
   const toggleAnimationTimerRef = useRef<number | null>(null);
   const textContentRef = useRef<HTMLDivElement>(null);
+  const showInlineExpandToggle = !isEditing && isTextOverflowing && !isTextExpanded;
+  const showInlineCollapseToggle = !isEditing && isTextOverflowing && isTextExpanded;
 
   const handleEditMessage = (isOnlySave: boolean = false) => {
     if (isOnlySave) {
@@ -165,7 +171,7 @@ const UserMessage = (props: Props) => {
       const lineHeight = Number.parseFloat(window.getComputedStyle(el).lineHeight || '');
       const fallbackLineHeight = 20;
       const resolvedLineHeight = Number.isFinite(lineHeight) ? lineHeight : fallbackLineHeight;
-      const maxHeight = resolvedLineHeight * COLLAPSED_MAX_LINES;
+      const maxHeight = resolvedLineHeight * COLLAPSED_VISIBLE_LINES;
       setCollapsedMaxHeight(maxHeight);
       if (!isTextExpanded && !isTextAnimating) {
         setTextMaxHeight(maxHeight);
@@ -246,7 +252,7 @@ const UserMessage = (props: Props) => {
         sourceElement={sourceImageElement}
       />
 
-      <div className={'flex flex-row-reverse relative'}>
+      <div className={`flex flex-row-reverse relative ${showInlineCollapseToggle ? 'pb-3' : ''}`}>
         {isEditing ? (
           <div className="flex w-full flex-col flex-wrap rounded-md bg-muted shadow-sm mb-3">
             <Textarea
@@ -299,40 +305,82 @@ const UserMessage = (props: Props) => {
             </div>
           </div>
         ) : (
-          <div className="bg-card py-2 px-3 rounded-md overflow-hidden chat-message-bg">
+          <div className="bg-card py-2 px-3 rounded-md overflow-visible chat-message-bg">
             <div className="flex flex-wrap gap-2 justify-end text-right">
-              {content
-                .filter((x) => x.$type === MessageContentType.fileId)
-                .map((file: any, index) => {
-                  return (
-                    <FilePreview
-                      key={'user-file-' + index}
-                      file={file.c}
-                      onImageClick={handleImageClick}
-                    />
-                  );
-                })}
+              {fileContents.map((file: any, index) => {
+                return (
+                  <FilePreview
+                    key={'user-file-' + index}
+                    file={file.c}
+                    onImageClick={handleImageClick}
+                  />
+                );
+              })}
             </div>
-            <div
-              ref={textContentRef}
-              className={`prose whitespace-pre-wrap dark:prose-invert text-sm ${
-                content.filter((x) => x.$type === MessageContentType.fileId).length > 0 ? 'mt-2' : ''
-              }`}
-              style={
-                collapsedMaxHeight
-                  ? {
-                      ...(textMaxHeight != null
-                        ? { maxHeight: `${textMaxHeight}px`, overflow: 'hidden' }
-                        : !isTextExpanded
-                          ? { maxHeight: `${collapsedMaxHeight}px`, overflow: 'hidden' }
-                          : { overflow: 'visible' }),
-                      transition: `max-height ${ANIMATION_DURATION_MS}ms ease`,
-                      willChange: 'max-height',
-                    }
-                  : undefined
-              }
-            >
-              {contentText}
+            <div className={`relative group/user-message-text ${fileContents.length > 0 ? 'mt-2' : ''}`}>
+              <div
+                ref={textContentRef}
+                className="prose whitespace-pre-wrap dark:prose-invert text-sm"
+                style={
+                  collapsedMaxHeight
+                    ? {
+                        ...(textMaxHeight != null
+                          ? { maxHeight: `${textMaxHeight}px`, overflow: 'hidden' }
+                          : !isTextExpanded
+                            ? { maxHeight: `${collapsedMaxHeight}px`, overflow: 'hidden' }
+                            : { overflow: 'visible' }),
+                        transition: `max-height ${ANIMATION_DURATION_MS}ms ease`,
+                        willChange: 'max-height',
+                      }
+                    : undefined
+                }
+              >
+                {contentText}
+              </div>
+
+              {showInlineExpandToggle && (
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0 flex h-12 items-end justify-center rounded-b-md"
+                  style={{
+                    background:
+                      'linear-gradient(to bottom, transparent 0%, hsl(var(--card) / 0.84) 56%, hsl(var(--card)) 100%)',
+                  }}
+                >
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="pointer-events-auto mb-1.5 h-7 w-7 rounded-full border border-border/70 bg-card/95 p-0 text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground"
+                    aria-label={t('Expand text') || 'Expand text'}
+                    aria-expanded={isTextExpanded}
+                    title={t('Expand text') || 'Expand text'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleTextExpanded();
+                    }}
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              {showInlineCollapseToggle && (
+                <div className="pointer-events-none absolute inset-x-0 -bottom-6 z-10 flex justify-center opacity-0 transition-opacity duration-200 group-hover/user-message-text:pointer-events-auto group-hover/user-message-text:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-7 w-7 rounded-full border border-border/70 bg-card/95 p-0 text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground"
+                    aria-label={t('Collapse text') || 'Collapse text'}
+                    aria-expanded={isTextExpanded}
+                    title={t('Collapse text') || 'Collapse text'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleTextExpanded();
+                    }}
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -341,12 +389,6 @@ const UserMessage = (props: Props) => {
       <div className="flex my-1 justify-end">
         {!isEditing && (
           <>
-            <ExpandTextAction
-              expanded={isTextExpanded}
-              hidden={!isTextOverflowing && !isTextExpanded}
-              isHoverVisible
-              onToggle={handleToggleTextExpanded}
-            />
             {!readonly && (
               <EditAction
                 isHoverVisible
