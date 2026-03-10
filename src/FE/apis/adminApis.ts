@@ -576,16 +576,6 @@ export const defaultFileConfig: ChatModelFileConfig = {
   maxSize: 10240,
 };
 
-export const getEnabledUserCount = () => {
-  const fetchServer = createFetchClient();
-  return fetchServer.get<number>('/api/admin/statistics/enabled-user-count');
-};
-
-export const getEnabledModelCount = () => {
-  const fetchServer = createFetchClient();
-  return fetchServer.get<number>('/api/admin/statistics/enabled-model-count');
-};
-
 export const getTokensDuring = (params: StatisticsTimeParams) => {
   const fetchServer = createFetchClient();
   return fetchServer.get<number>('/api/admin/statistics/tokens-during', {
@@ -598,6 +588,23 @@ export const getCostDuring = (params: StatisticsTimeParams) => {
   return fetchServer.get<number>('/api/admin/statistics/cost-during', {
     params: params,
   });
+};
+
+export const getChatCountDuring = (params: StatisticsTimeParams) => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get<number>('/api/admin/statistics/chat-count-during', {
+    params: params,
+  });
+};
+
+export const getActiveUserCountDuring = (params: StatisticsTimeParams) => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get<number>(
+    '/api/admin/statistics/active-user-count-during',
+    {
+      params: params,
+    },
+  );
 };
 
 export const getModelProviderStatistics = (params: StatisticsTimeParams) => {

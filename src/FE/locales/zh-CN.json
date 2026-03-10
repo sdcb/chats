@@ -549,7 +549,7 @@
   "Select Source": "选择来源",
   "Total": "总计",
   "Other": "其他",
-  "User Count": "用户数量",
+  "Active User Count": "活跃用户数",
   "Consumption Tokens": "消费Tokens",
   "Consumption Cost": "消费金额",
   "Model Provider Usage Counts": "模型提供商使用次数",
