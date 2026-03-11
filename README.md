@@ -11,6 +11,7 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 21+ 主流 
 - 🐳 **代码解释器**：Docker 沙箱，内置浏览器/代码执行/Excel 等工具
 - 🔌 **API 网关**：Chat Completions/Messages 兼容，支持 Claude Code
 - 🌐 **标准协议**：Chat Completions/Messages/Responses/Gemini，支持交错思考
+- 🔍 **可观测性**：Request Trace 全链路追踪，快速定位入站/出站请求问题
 - 👁️ **多模态**：视觉输入，图像生成
 - 💾 **灵活存储**：SQLite/SQL Server/PostgreSQL + 本地/AWS S3/Aliyun OSS/Azure Blob
 - 🔐 **企业级安全**：完善的用户权限管理和账户余额控制，限流审计日志，支持 Keycloak SSO 与短信验证码登录
@@ -74,7 +75,7 @@ Chats 使用 `C#`/`TypeScript` 开发，以下是完整的文档资源：
 
 - **GitHub Issues**：[https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
 - **QQ 群**：498452653 [![加入QQ群](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=flat&logo=tencent-qq)](https://qm.qq.com/q/AM8tY9cAsS)
-- **微信群** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0304) 如果微信群已满，请加 QQ 群获取临时入群二维码。
+- **微信群** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0311) 如果微信群已满，请加 QQ 群获取临时入群二维码。
 
 ---
 

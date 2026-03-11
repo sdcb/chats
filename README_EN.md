@@ -11,6 +11,7 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 - 🐳 **Code Interpreter**: Docker sandbox with built-in tools (browser, code execution, Excel, and more)
 - 🔌 **API Gateway**: Chat Completions/Messages compatible, works with Claude Code
 - 🌐 **Standard APIs**: Chat Completions/Messages/Responses/Gemini, with interleaved thinking
+- 🔍 **Observability**: Request Trace provides end-to-end inbound and outbound HTTP tracing for faster troubleshooting
 - 👁️ **Multimodal**: Vision in, images out
 - 💾 **Storage Freedom**: SQLite/SQL Server/PostgreSQL, plus Local/S3/OSS/Azure Blob
 - 🔐 **Enterprise Security**: Permissions & balance control, rate limiting & audit logs, Keycloak SSO & SMS login
@@ -74,7 +75,7 @@ Please submit issues or suggestions via [GitHub Issues](https://github.com/sdcb/
 
 - **GitHub Issues**: [https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
 - **QQ Group**: 498452653 [![Join QQ Group](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=flat&logo=tencent-qq)](https://qm.qq.com/q/AM8tY9cAsS)
-- **WeChat Group** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0304) If the WeChat group is full, please join the QQ group to get a temporary invitation QR code.
+- **WeChat Group** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0311) If the WeChat group is full, please join the QQ group to get a temporary invitation QR code.
 
 ---
 
