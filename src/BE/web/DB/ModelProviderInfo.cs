@@ -1,5 +1,6 @@
-﻿using Chats.DB.Enums;
+using Chats.DB.Enums;
 using Chats.BE.Services.Models.ChatServices.GoogleAI;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
 
 namespace Chats.BE.DB;
 
@@ -143,13 +144,19 @@ public static class ModelProviderInfo
             "https://api.anthropic.com/v1",
             "sk-ant-"
         ),
-        [DBModelProvider.Mimo] = new(
-            DBModelProvider.Mimo,
-            "Xiaomi Mimo",
-            "https://api.xiaomimimo.com/v1",
-            ""
-        ),
-    };
+         [DBModelProvider.Mimo] = new(
+             DBModelProvider.Mimo,
+             "Xiaomi Mimo",
+             "https://api.xiaomimimo.com/v1",
+             ""
+         ),
+         [DBModelProvider.Novita] = new(
+             DBModelProvider.Novita,
+             "Novita AI",
+             "https://api.novita.ai/openai",
+             ""
+         ),
+     };
 
     private static readonly Dictionary<string, DBModelProvider> _nameToIdMap = _providers
         .ToDictionary(kvp => kvp.Value.Name, kvp => kvp.Key, StringComparer.OrdinalIgnoreCase);
