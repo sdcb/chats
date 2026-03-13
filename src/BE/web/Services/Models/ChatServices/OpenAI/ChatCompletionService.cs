@@ -339,6 +339,27 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         return 0;
     }
 
+    private static int GetOutputTokens(JsonElement usage)
+    {
+        int completionTokens = usage.TryGetProperty("completion_tokens", out JsonElement ct) && ct.ValueKind == JsonValueKind.Number
+            ? ct.GetInt32()
+            : 0;
+
+        // Some OpenAI-compatible providers(like Grok in Azure) report completion_tokens without reasoning tokens.
+        // total_tokens remains authoritative for the full output token count used by this app.
+        if (usage.TryGetProperty("total_tokens", out JsonElement total) && total.ValueKind == JsonValueKind.Number &&
+            usage.TryGetProperty("prompt_tokens", out JsonElement prompt) && prompt.ValueKind == JsonValueKind.Number)
+        {
+            int outputTokens = total.GetInt32() - prompt.GetInt32();
+            if (outputTokens >= 0)
+            {
+                return outputTokens;
+            }
+        }
+
+        return completionTokens;
+    }
+
     protected virtual int GetCachedTokens(JsonElement usage)
     {
         // OpenAI style: usage.prompt_tokens_details.cached_tokens
@@ -361,7 +382,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         return new ChatTokenUsage
         {
             InputTokens = usageElement.TryGetProperty("prompt_tokens", out JsonElement pt) ? pt.GetInt32() : 0,
-            OutputTokens = usageElement.TryGetProperty("completion_tokens", out JsonElement ct) ? ct.GetInt32() : 0,
+            OutputTokens = GetOutputTokens(usageElement),
             ReasoningTokens = GetReasoningTokens(usageElement),
             CacheTokens = GetCachedTokens(usageElement)
         };
@@ -454,13 +475,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         // Usage
         if (root.TryGetProperty("usage", out JsonElement u))
         {
-            usage = new ChatTokenUsage
-            {
-                InputTokens = u.TryGetProperty("prompt_tokens", out JsonElement pit) ? pit.GetInt32() : 0,
-                OutputTokens = u.TryGetProperty("completion_tokens", out JsonElement cot) ? cot.GetInt32() : 0,
-                ReasoningTokens = GetReasoningTokens(u),
-                CacheTokens = GetCachedTokens(u)
-            };
+            usage = ParseUsage(u);
         }
 
         foreach (ChatSegment item in items)
