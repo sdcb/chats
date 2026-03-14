@@ -17,12 +17,14 @@ import { cn } from '@/lib/utils';
 interface FilesPopoverProps {
   selectedFiles?: FileDef[];
   onSelect?: (file: GetUserFilesResult) => void;
+  contentTypePrefix?: string;
   trigger: React.ReactNode;
 }
 
 const FilesPopover = ({
   onSelect,
   selectedFiles,
+  contentTypePrefix,
   trigger,
 }: FilesPopoverProps) => {
   const [files, setFiles] = useState<GetUserFilesResult[]>([]);
@@ -40,11 +42,12 @@ const FilesPopover = ({
     getUserFiles({
       page: pagination.page,
       pageSize: pagination.pageSize,
+      ...(contentTypePrefix ? { contentTypePrefix } : {}),
     }).then((res) => {
       setFiles(res.rows);
       setTotalCount(res.count);
     });
-  }, [isOpen, pagination.page, pagination.pageSize]);
+  }, [contentTypePrefix, isOpen, pagination.page, pagination.pageSize]);
 
   const handlePageChange = (page: number) => {
     setPagination({ ...pagination, page });

@@ -340,6 +340,7 @@ export interface GetUsageStatResult {
 
 export interface GetUserFilesParams extends Paging {
   skip?: number;
+  contentTypePrefix?: string;
 }
 
 export interface GetUserFilesResult {
