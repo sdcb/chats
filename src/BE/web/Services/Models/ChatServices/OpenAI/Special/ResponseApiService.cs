@@ -446,8 +446,9 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             body["prompt_cache_key"] = request.EndUserId;
         }
 
-        if (request.ChatConfig.MaxOutputTokens != null)
+        if (request.ChatConfig.MaxOutputTokens != null && request.ChatConfig.MaxOutputTokens.Value >= 16)
         {
+            // Invalid 'max_output_tokens': integer below minimum value. Expected a value >= 16, but got 1 instead.
             body["max_output_tokens"] = request.ChatConfig.MaxOutputTokens.Value;
         }
 
