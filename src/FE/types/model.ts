@@ -27,6 +27,7 @@ export enum DBModelProvider {
   TokenPony = 19,
   Anthropic = 20,
   Mimo = 21,
+  Novita = 22,
 }
 
 export type FEModelProvider = {
@@ -129,6 +130,11 @@ export const feModelProviders: FEModelProvider[] = [
     id: DBModelProvider.Mimo,
     name: 'Xiaomi Mimo',
     icon: 'https://chats.sdcb.pub/model-provider/21/favicon.png',
+  },
+  {
+    id: DBModelProvider.Novita,
+    name: 'Novita AI',
+    icon: '/logos/novita.ico',
   },
 ];
 
