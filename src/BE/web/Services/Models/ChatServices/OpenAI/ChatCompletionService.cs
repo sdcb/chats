@@ -584,6 +584,11 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         return result;
     }
 
+    private static string NormalizeToolCallArguments(string? parameters)
+    {
+        return string.IsNullOrWhiteSpace(parameters) ? "{}" : parameters;
+    }
+
     protected virtual JsonArray BuildMessages(ChatRequest request)
     {
         JsonArray messages = [];
@@ -696,7 +701,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                     ["function"] = new JsonObject
                     {
                         ["name"] = tc.Name,
-                        ["arguments"] = tc.Parameters
+                        ["arguments"] = NormalizeToolCallArguments(tc.Parameters)
                     }
                 });
             }

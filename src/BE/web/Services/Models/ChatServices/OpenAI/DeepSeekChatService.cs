@@ -9,6 +9,19 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 /// </summary>
 public class DeepSeekChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {
+    protected override IEnumerable<JsonObject> ToOpenAIMessages(NeutralMessage message)
+    {
+        foreach (JsonObject upstreamMessage in base.ToOpenAIMessages(message))
+        {
+            yield return NormalizeToolMessageContent(upstreamMessage);
+        }
+    }
+
+    protected override JsonObject ToOpenAIMessage(NeutralMessage message)
+    {
+        return NormalizeToolMessageContent(base.ToOpenAIMessage(message));
+    }
+
     protected override bool TryBuildThinkingContentForRequest(
         NeutralMessage message,
         IReadOnlyList<NeutralThinkContent> thinkingContents,
@@ -42,5 +55,37 @@ public class DeepSeekChatService(IHttpClientFactory httpClientFactory) : ChatCom
         }
 
         return body;
+    }
+
+    private static JsonObject NormalizeToolMessageContent(JsonObject upstreamMessage)
+    {
+        if ((string?)upstreamMessage["role"] != "tool" || upstreamMessage["content"] is not JsonArray contentArray)
+        {
+            return upstreamMessage;
+        }
+
+        List<string> textParts = [];
+        foreach (JsonNode? node in contentArray)
+        {
+            if (node is not JsonObject part || !string.Equals((string?)part["type"], "text", StringComparison.Ordinal))
+            {
+                return upstreamMessage;
+            }
+
+            string? text = (string?)part["text"];
+            if (!string.IsNullOrEmpty(text))
+            {
+                textParts.Add(text);
+            }
+        }
+
+        upstreamMessage["content"] = textParts.Count switch
+        {
+            0 => string.Empty,
+            1 => textParts[0],
+            _ => string.Join("\n", textParts)
+        };
+
+        return upstreamMessage;
     }
 }

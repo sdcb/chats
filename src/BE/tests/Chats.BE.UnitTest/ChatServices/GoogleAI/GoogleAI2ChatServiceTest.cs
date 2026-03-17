@@ -141,6 +141,33 @@ public class GoogleAI2ChatServiceTest
     }
 
     [Fact]
+    public void BuildNativeRequestBody_AssistantToolCallWithEmptyParameters_UsesEmptyArgsObject()
+    {
+        var service = new GoogleAI2ChatService(new DummyHttpClientFactory());
+        ChatRequest request = CreateBaseChatRequest("gemini-3-flash-preview", "create session") with
+        {
+            Messages =
+            [
+                NeutralMessage.FromAssistant(
+                    NeutralToolCallContent.Create("call_1", "create_docker_session", "")
+                )
+            ]
+        };
+
+        JsonObject body = BuildNativeRequestBody(service, request, allowImageGeneration: false);
+        JsonArray contents = Assert.IsType<JsonArray>(body["contents"]);
+
+        JsonObject modelMessage = contents
+            .Select(node => Assert.IsType<JsonObject>(node))
+            .First(content => (string?)content["role"] == "model");
+
+        JsonArray parts = Assert.IsType<JsonArray>(modelMessage["parts"]);
+        JsonObject functionCall = Assert.IsType<JsonObject>(parts[0]?["functionCall"]);
+        JsonObject args = Assert.IsType<JsonObject>(functionCall["args"]);
+        Assert.Empty(args);
+    }
+
+    [Fact]
     public async Task CodeExecute_ShouldReturnCodeExecutionResult()
     {
         // Arrange

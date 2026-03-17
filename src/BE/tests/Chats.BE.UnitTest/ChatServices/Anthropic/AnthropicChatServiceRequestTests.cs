@@ -9,6 +9,33 @@ namespace Chats.BE.UnitTest.ChatServices.Anthropic;
 public class AnthropicChatServiceRequestTests
 {
     [Fact]
+    public void ConvertMessages_AssistantToolCallWithEmptyParameters_UsesEmptyObjectInput()
+    {
+        MethodInfo method = typeof(AnthropicChatService).GetMethod("ConvertMessages", BindingFlags.Static | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("ConvertMessages method not found.");
+
+        IList<NeutralMessage> messages =
+        [
+            NeutralMessage.FromAssistant(
+                NeutralToolCallContent.Create("call_1", "create_docker_session", "")
+            )
+        ];
+
+        JsonArray result = (JsonArray?)method.Invoke(null, [messages, true, UsageSource.Api])
+            ?? throw new InvalidOperationException("ConvertMessages returned null.");
+
+        JsonObject assistantMessage = Assert.IsType<JsonObject>(result[0]);
+        JsonArray content = Assert.IsType<JsonArray>(assistantMessage["content"]);
+        JsonObject toolUse = Assert.IsType<JsonObject>(content[0]);
+
+        Assert.Equal("tool_use", (string?)toolUse["type"]);
+        Assert.Equal("call_1", (string?)toolUse["id"]);
+        Assert.Equal("create_docker_session", (string?)toolUse["name"]);
+        Assert.IsType<JsonObject>(toolUse["input"]);
+        Assert.Empty(Assert.IsType<JsonObject>(toolUse["input"]));
+    }
+
+    [Fact]
     public void ConvertMessages_ToolMessageWithImage_NestsImageInsideToolResult()
     {
         MethodInfo method = typeof(AnthropicChatService).GetMethod("ConvertMessages", BindingFlags.Static | BindingFlags.NonPublic)

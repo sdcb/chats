@@ -310,6 +310,47 @@ public class AzureResponseApiServiceTests
         Assert.Equal("https://example.com/chart.png", parts[1].GetProperty("image_url").GetString());
     }
 
+    [Fact]
+    public async Task ResponseApiService_ShouldSendEmptyJsonObjectString_ForEmptyToolArguments()
+    {
+        // Arrange
+        string sse = "event: response.completed\n" +
+                     "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n";
+
+        string? capturedBody = null;
+        var httpClientFactory = new CapturingHttpClientFactory(HttpStatusCode.OK, sse, req =>
+        {
+            capturedBody = req.Content == null ? null : req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        });
+
+        var service = new AzureResponseApiService(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        ChatRequest request = CreateBaseChatRequest() with
+        {
+            Messages =
+            [
+                NeutralMessage.FromAssistant(
+                    NeutralToolCallContent.Create("call_1", "create_docker_session", "")
+                )
+            ]
+        };
+
+        // Act
+        await foreach (ChatSegment _ in service.ChatStreamed(request, CancellationToken.None))
+        {
+            // drain
+        }
+
+        // Assert
+        Assert.False(string.IsNullOrWhiteSpace(capturedBody));
+
+        using JsonDocument doc = JsonDocument.Parse(capturedBody!);
+        JsonElement input = doc.RootElement.GetProperty("input");
+        JsonElement functionCall = input.EnumerateArray()
+            .First(item => item.GetProperty("type").GetString() == "function_call");
+
+        Assert.Equal("{}", functionCall.GetProperty("arguments").GetString());
+    }
+
     private static string ExtractEncryptedContentFromDump(string dumpFilePath)
     {
         foreach (string line in System.IO.File.ReadLines(dumpFilePath))

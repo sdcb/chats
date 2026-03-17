@@ -524,6 +524,16 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         }
     }
 
+    private static JsonNode ParseToolCallInput(string? parameters)
+    {
+        if (string.IsNullOrWhiteSpace(parameters))
+        {
+            return new JsonObject();
+        }
+
+        return JsonNode.Parse(parameters) ?? new JsonObject();
+    }
+
     private static JsonObject BuildCountTokensRequestBody(ChatRequest request)
     {
         (bool allowThinkingBlocks, bool allowThinking) = DetermineThinkingSettings(request);
@@ -836,7 +846,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                         ["type"] = "tool_use",
                         ["id"] = toolCall.Id,
                         ["name"] = toolCall.Name,
-                        ["input"] = JsonNode.Parse(toolCall.Parameters)
+                        ["input"] = ParseToolCallInput(toolCall.Parameters)
                     },
                     NeutralToolCallResponseContent toolResp => CreateToolResultBlock(new NeutralToolResponseGroup
                     {

@@ -551,7 +551,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                         ["type"] = "function_call",
                         ["call_id"] = tc.Id,
                         ["name"] = tc.Name,
-                        ["arguments"] = tc.Parameters
+                        ["arguments"] = NormalizeToolCallArguments(tc.Parameters)
                     });
                 }
 
@@ -583,6 +583,11 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         }
 
         return input;
+    }
+
+    private static string NormalizeToolCallArguments(string? parameters)
+    {
+        return string.IsNullOrWhiteSpace(parameters) ? "{}" : parameters;
     }
 
     private static JsonObject CreateFunctionCallOutput(NeutralToolResponseGroup group)

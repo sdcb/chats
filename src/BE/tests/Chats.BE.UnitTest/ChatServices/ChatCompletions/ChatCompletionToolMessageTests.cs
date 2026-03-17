@@ -107,4 +107,19 @@ public class ChatCompletionToolMessageTests
                 Assert.Equal("second result", (string?)second?["content"]);
             });
     }
+
+    [Fact]
+    public void ToOpenAIMessage_AssistantToolCallWithEmptyParameters_UsesEmptyJsonObjectString()
+    {
+        var service = new TestableChatCompletionService(new DummyHttpClientFactory());
+
+        NeutralMessage message = NeutralMessage.FromAssistant(
+            NeutralToolCallContent.Create("call_1", "create_docker_session", "")
+        );
+
+        JsonObject upstream = service.ToUpstreamMessage(message);
+
+        JsonArray toolCalls = Assert.IsType<JsonArray>(upstream["tool_calls"]);
+        Assert.Equal("{}", (string?)toolCalls[0]?["function"]?["arguments"]);
+    }
 }
