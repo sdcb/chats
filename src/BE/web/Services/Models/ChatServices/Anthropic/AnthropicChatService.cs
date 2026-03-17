@@ -41,6 +41,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
         int toolCallIndex = -1;
+        ChatTokenUsage? lastKnownUsage = null;
         await foreach (SseItem<string> sseItem in SseParser.Create(stream, (_, bytes) => Encoding.UTF8.GetString(bytes)).EnumerateAsync(cancellationToken))
         {
             if (string.IsNullOrEmpty(sseItem.Data) || sseItem.Data == "[DONE]")
@@ -67,16 +68,8 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                         if (json.TryGetProperty("message", out JsonElement message) &&
                             message.TryGetProperty("usage", out JsonElement usage))
                         {
-                            int inputTokens = usage.TryGetProperty("input_tokens", out JsonElement it) ? it.GetInt32() : 0;
-                            int outputTokens = usage.TryGetProperty("output_tokens", out JsonElement ot) ? ot.GetInt32() : 0;
-                            yield return ChatSegment.FromUsage(new ChatTokenUsage
-                            {
-                                InputTokens = inputTokens,
-                                OutputTokens = outputTokens,
-                                CacheTokens = GetCacheReadTokens(usage),
-                                CacheCreationTokens = GetCacheCreationTokens(usage),
-                                ReasoningTokens = 0
-                            });
+                            lastKnownUsage = MergeUsage(lastKnownUsage, usage);
+                            yield return ChatSegment.FromUsage(lastKnownUsage);
                         }
                         break;
                     }
@@ -195,27 +188,12 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                             };
                         }
 
-                        int inputTokens = 0;
-                        int outputTokens = 0;
                         JsonElement usageElement = default;
-                        bool hasUsage = json.TryGetProperty("usage", out usageElement);
+                        bool hasUsage = json.TryGetProperty("usage", out usageElement) && usageElement.ValueKind == JsonValueKind.Object;
                         if (hasUsage)
                         {
-                            inputTokens = usageElement.TryGetProperty("input_tokens", out JsonElement it) ? it.GetInt32() : 0;
-                            outputTokens = usageElement.TryGetProperty("output_tokens", out JsonElement ot) ? ot.GetInt32() : 0;
-                        }
-
-                        ChatTokenUsage usage = new()
-                        {
-                            InputTokens = inputTokens,
-                            OutputTokens = outputTokens,
-                            CacheTokens = hasUsage ? GetCacheReadTokens(usageElement) : 0,
-                            CacheCreationTokens = hasUsage ? GetCacheCreationTokens(usageElement) : 0,
-                        };
-
-                        if (hasUsage)
-                        {
-                            yield return ChatSegment.FromUsage(usage);
+                            lastKnownUsage = MergeUsage(lastKnownUsage, usageElement);
+                            yield return ChatSegment.FromUsage(lastKnownUsage);
                         }
                         if (finishReason != null)
                         {
@@ -238,6 +216,29 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                     }
             }
         }
+    }
+
+    private static ChatTokenUsage MergeUsage(ChatTokenUsage? previousUsage, JsonElement usage)
+    {
+        ChatTokenUsage baseUsage = previousUsage ?? ChatTokenUsage.Zero;
+
+        return new ChatTokenUsage
+        {
+            InputTokens = GetUsageValueOrFallback(usage, "input_tokens", baseUsage.InputTokens),
+            OutputTokens = GetUsageValueOrFallback(usage, "output_tokens", baseUsage.OutputTokens),
+            CacheTokens = GetUsageValueOrFallback(usage, "cache_read_input_tokens", baseUsage.CacheTokens),
+            CacheCreationTokens = GetUsageValueOrFallback(usage, "cache_creation_input_tokens", baseUsage.CacheCreationTokens),
+            ReasoningTokens = baseUsage.ReasoningTokens,
+        };
+    }
+
+    private static int GetUsageValueOrFallback(JsonElement usage, string propertyName, int fallback)
+    {
+        return usage.TryGetProperty(propertyName, out JsonElement valueElement) &&
+            valueElement.ValueKind == JsonValueKind.Number &&
+            valueElement.TryGetInt32(out int value)
+            ? value
+            : fallback;
     }
 
     /// <summary>
@@ -271,24 +272,6 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             return results.ToJsonString(JSON.JsonSerializerOptions);
         }
         return json.ToString();
-    }
-
-    private static int GetCacheReadTokens(JsonElement usage)
-    {
-        if (usage.TryGetProperty("cache_read_input_tokens", out JsonElement cacheRead))
-        {
-            return cacheRead.GetInt32();
-        }
-        return 0;
-    }
-
-    private static int GetCacheCreationTokens(JsonElement usage)
-    {
-        if (usage.TryGetProperty("cache_creation_input_tokens", out JsonElement cacheCreation))
-        {
-            return cacheCreation.GetInt32();
-        }
-        return 0;
     }
 
     protected virtual (string url, string apiKey) GetEndpointAndKey(ModelKey modelKey)
