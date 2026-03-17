@@ -155,12 +155,6 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
             case 'write_file':
                 headerIcon = '✏️';
                 break;
-            case 'read_file':
-                headerIcon = '📖';
-                break;
-            case 'patch_file':
-                headerIcon = '🩹';
-                break;
             case 'download_chat_files':
                 headerIcon = '📥';
                 break;
@@ -213,8 +207,8 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
             return { header, headerIcon, metadataLine, displayParams };
         }
 
-        // write_file/patch_file: 提取 header, metadata 和内容
-        if (toolCall.n === 'write_file' || toolCall.n === 'patch_file') {
+        // write_file: 提取 header, metadata 和内容
+        if (toolCall.n === 'write_file') {
             let header = toolCall.n;
             let metadataLine: React.ReactNode | null = null;
             let displayParams = toolCall.p;
@@ -235,31 +229,11 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                     );
                 }
 
-                // 提取具体内容
-                if (toolCall.n === 'write_file') {
-                    const text = obj?.text;
-                    displayParams = typeof text === 'string' ? text : toolCall.p;
-                } else {
-                    const patch = obj?.patch;
-                    displayParams = typeof patch === 'string' ? patch : toolCall.p;
-                }
+                const text = obj?.text;
+                displayParams = typeof text === 'string' ? text : toolCall.p;
             }
 
             return { header, headerIcon, metadataLine, displayParams };
-        }
-
-        // read_file: 提取 header
-        if (toolCall.n === 'read_file') {
-            let header = toolCall.n;
-            
-            if (obj) {
-                const path = obj.path;
-                if (typeof path === 'string' && path.trim().length > 0) {
-                    header = `${toolCall.n}: ${path}`;
-                }
-            }
-
-            return { header, headerIcon, metadataLine: null, displayParams: toolCall.p };
         }
 
         // destroy_session: 提取 header
