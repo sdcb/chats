@@ -602,10 +602,33 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         // User/Assistant messages
         foreach (NeutralMessage msg in request.Messages)
         {
-            messages.Add(ToOpenAIMessage(msg));
+            foreach (JsonObject upstreamMessage in ToOpenAIMessages(msg))
+            {
+                messages.Add(upstreamMessage);
+            }
         }
 
         return messages;
+    }
+
+    protected virtual IEnumerable<JsonObject> ToOpenAIMessages(NeutralMessage message)
+    {
+        if (message.Role != NeutralChatRole.Tool)
+        {
+            yield return ToOpenAIMessage(message);
+            yield break;
+        }
+
+        IReadOnlyList<NeutralToolResponseGroup> toolResponseGroups = message.GetToolResponseGroups();
+        if (toolResponseGroups.Count == 0)
+        {
+            throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Tool message does not contain any tool response content.");
+        }
+
+        foreach (NeutralToolResponseGroup group in toolResponseGroups)
+        {
+            yield return ToOpenAIToolMessage(group);
+        }
     }
 
     protected virtual JsonObject ToOpenAIMessage(NeutralMessage message)
@@ -620,12 +643,12 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         if (message.Role == NeutralChatRole.Tool)
         {
-            NeutralToolCallResponseContent toolResp = (NeutralToolCallResponseContent)message.Contents.First();
-            return new JsonObject
+            IReadOnlyList<NeutralToolResponseGroup> toolResponseGroups = message.GetToolResponseGroups();
+            return toolResponseGroups.Count switch
             {
-                ["role"] = "tool",
-                ["tool_call_id"] = toolResp.ToolCallId,
-                ["content"] = toolResp.Response
+                0 => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Tool message does not contain any tool response content."),
+                > 1 => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Tool message contains multiple tool responses and must be split before conversion."),
+                _ => ToOpenAIToolMessage(toolResponseGroups[0])
             };
         }
 
@@ -689,6 +712,43 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             msg[ReasoningContentPropertyName] = thinkingContent;
         }
 
+        return msg;
+    }
+
+    private JsonObject ToOpenAIToolMessage(NeutralToolResponseGroup group)
+    {
+        JsonObject msg = new()
+        {
+            ["role"] = "tool",
+            ["tool_call_id"] = group.ToolResponse.ToolCallId,
+        };
+
+        if (group.AttachedContents.Count == 0)
+        {
+            msg["content"] = group.ToolResponse.Response;
+            return msg;
+        }
+
+        JsonArray contentArray = [];
+        if (!string.IsNullOrEmpty(group.ToolResponse.Response))
+        {
+            contentArray.Add(new JsonObject
+            {
+                ["type"] = "text",
+                ["text"] = group.ToolResponse.Response
+            });
+        }
+
+        foreach (NeutralContent attachedContent in group.AttachedContents)
+        {
+            JsonObject? part = ToOpenAIContentPart(attachedContent);
+            if (part != null)
+            {
+                contentArray.Add(part);
+            }
+        }
+
+        msg["content"] = contentArray.Count > 0 ? contentArray : group.ToolResponse.Response;
         return msg;
     }
 

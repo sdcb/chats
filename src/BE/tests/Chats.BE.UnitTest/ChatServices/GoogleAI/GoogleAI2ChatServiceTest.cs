@@ -7,7 +7,9 @@ using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
 using System.Net;
+using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Chats.BE.UnitTest.ChatServices.Http;
 using Chats.DB;
 using Chats.DB.Enums;
@@ -25,6 +27,11 @@ public class GoogleAI2ChatServiceTest
     {
         var statusCode = (HttpStatusCode)dump.Response.StatusCode;
         return new FiddlerDumpHttpClientFactory(dump.Response.Chunks, statusCode, dump.Request.Body);
+    }
+
+    private sealed class DummyHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new();
     }
 
     private static ChatRequest CreateBaseChatRequest(string modelDeploymentName, string prompt, Action<ChatConfig>? configure = null)
@@ -86,6 +93,51 @@ public class GoogleAI2ChatServiceTest
             ChatConfig = chatConfig,
             Source = UsageSource.Api,
         };
+    }
+
+    private static JsonObject BuildNativeRequestBody(GoogleAI2ChatService service, ChatRequest request, bool allowImageGeneration)
+    {
+        MethodInfo method = typeof(GoogleAI2ChatService).GetMethod("BuildNativeRequestBody", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("BuildNativeRequestBody method not found.");
+
+        return (JsonObject?)method.Invoke(service, [request, allowImageGeneration])
+            ?? throw new InvalidOperationException("BuildNativeRequestBody returned null.");
+    }
+
+    [Fact]
+    public void BuildNativeRequestBody_ToolMessageWithBlobAttachment_EmbedsFunctionResponseParts()
+    {
+        var service = new GoogleAI2ChatService(new DummyHttpClientFactory());
+        ChatRequest request = CreateBaseChatRequest("gemini-3-flash-preview", "show chart") with
+        {
+            Messages =
+            [
+                NeutralMessage.FromAssistant(
+                    NeutralToolCallContent.Create("call_1", "draw_chart", "{}")
+                ),
+                NeutralMessage.FromTool(
+                    NeutralToolCallResponseContent.Create("call_1", "{\"status\":\"ok\"}"),
+                    NeutralFileBlobContent.Create([1, 2, 3], "image/png")
+                )
+            ]
+        };
+
+        JsonObject body = BuildNativeRequestBody(service, request, allowImageGeneration: false);
+        JsonArray contents = Assert.IsType<JsonArray>(body["contents"]);
+
+        JsonObject functionMessage = contents
+            .Select(node => Assert.IsType<JsonObject>(node))
+            .First(content => (string?)content["role"] == "function");
+
+        JsonArray parts = Assert.IsType<JsonArray>(functionMessage["parts"]);
+        JsonObject functionResponsePart = Assert.IsType<JsonObject>(parts[0]);
+        JsonObject functionResponse = Assert.IsType<JsonObject>(functionResponsePart["functionResponse"]);
+        Assert.Equal("call_1", (string?)functionResponse["name"]);
+
+        JsonArray multimodalParts = Assert.IsType<JsonArray>(functionResponse["parts"]);
+        JsonObject inlineData = Assert.IsType<JsonObject>(multimodalParts[0]?["inlineData"]);
+        Assert.Equal("image/png", (string?)inlineData["mimeType"]);
+        Assert.Equal(Convert.ToBase64String([1, 2, 3]), (string?)inlineData["data"]);
     }
 
     [Fact]

@@ -574,7 +574,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
             {
                 NeutralChatRole.User => BuildUserParts(message),
                 NeutralChatRole.Assistant => BuildAssistantParts(message),
-                NeutralChatRole.Tool => [ToolCallMessageToPart(message)],
+                NeutralChatRole.Tool => BuildToolParts(message),
                 _ => throw new NotSupportedException($"Unsupported message role: {message.Role} in {nameof(GoogleAI2ChatService)}"),
             };
 
@@ -662,25 +662,71 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
         }
     }
 
-    private static JsonObject ToolCallMessageToPart(NeutralMessage message)
+    private static JsonArray BuildToolParts(NeutralMessage message)
     {
-        NeutralToolCallResponseContent? responseContent = message.Contents.OfType<NeutralToolCallResponseContent>().FirstOrDefault();
-        if (responseContent == null)
+        IReadOnlyList<NeutralToolResponseGroup> groups = message.GetToolResponseGroups();
+        if (groups.Count == 0)
         {
-            throw new CustomChatServiceException(DBFinishReason.BadParameter, $"{nameof(ToolCallMessageToPart)} expected tool call response content but none found.");
+            throw new CustomChatServiceException(DBFinishReason.BadParameter, $"{nameof(BuildToolParts)} expected tool call response content but none found.");
+        }
+
+        JsonArray parts = [];
+        foreach (NeutralToolResponseGroup group in groups)
+        {
+            parts.Add(ToolCallMessageToPart(group));
+
+            foreach (NeutralContent attachedContent in group.AttachedContents.Where(c => c is not NeutralFileBlobContent))
+            {
+                JsonObject? part = NeutralContentToGooglePart(attachedContent);
+                if (part != null)
+                {
+                    parts.Add(part);
+                }
+            }
+        }
+
+        return parts;
+    }
+
+    private static JsonObject ToolCallMessageToPart(NeutralToolResponseGroup group)
+    {
+        JsonObject functionResponse = new()
+        {
+            ["name"] = group.ToolResponse.ToolCallId,
+            ["response"] = new JsonObject
+            {
+                ["result"] = ParseJson(group.ToolResponse.Response) ?? JsonValue.Create(group.ToolResponse.Response) ?? JsonValue.Create(string.Empty)!
+            }
+        };
+
+        JsonArray multimodalParts = BuildFunctionResponseParts(group.AttachedContents);
+        if (multimodalParts.Count > 0)
+        {
+            functionResponse["parts"] = multimodalParts;
         }
 
         return new JsonObject
         {
-            ["functionResponse"] = new JsonObject
-            {
-                ["name"] = responseContent.ToolCallId,
-                ["response"] = new JsonObject
-                {
-                    ["result"] = ParseJson(responseContent.Response) ?? JsonValue.Create(responseContent.Response) ?? JsonValue.Create(string.Empty)!
-                }
-            }
+            ["functionResponse"] = functionResponse
         };
+    }
+
+    private static JsonArray BuildFunctionResponseParts(IEnumerable<NeutralContent> contents)
+    {
+        JsonArray parts = [];
+        foreach (NeutralFileBlobContent blob in contents.OfType<NeutralFileBlobContent>())
+        {
+            parts.Add(new JsonObject
+            {
+                ["inlineData"] = new JsonObject
+                {
+                    ["data"] = Convert.ToBase64String(blob.Data),
+                    ["mimeType"] = blob.MediaType
+                }
+            });
+        }
+
+        return parts;
     }
 
     private static JsonObject? NeutralContentToGooglePart(NeutralContent content)

@@ -569,19 +569,46 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             }
             else if (message.Role == NeutralChatRole.Tool)
             {
-                foreach (NeutralToolCallResponseContent tcr in message.Contents.OfType<NeutralToolCallResponseContent>())
+                IReadOnlyList<NeutralToolResponseGroup> toolResponseGroups = message.GetToolResponseGroups();
+                if (toolResponseGroups.Count == 0)
                 {
-                    input.Add(new JsonObject
-                    {
-                        ["type"] = "function_call_output",
-                        ["call_id"] = tcr.ToolCallId,
-                        ["output"] = tcr.Response
-                    });
+                    throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Tool message does not contain any tool response content.");
+                }
+
+                foreach (NeutralToolResponseGroup group in toolResponseGroups)
+                {
+                    input.Add(CreateFunctionCallOutput(group));
                 }
             }
         }
 
         return input;
+    }
+
+    private static JsonObject CreateFunctionCallOutput(NeutralToolResponseGroup group)
+    {
+        JsonObject output = new()
+        {
+            ["type"] = "function_call_output",
+            ["call_id"] = group.ToolResponse.ToolCallId,
+        };
+
+        if (group.AttachedContents.Count == 0)
+        {
+            output["output"] = group.ToolResponse.Response;
+            return output;
+        }
+
+        List<NeutralContent> partsContent = [];
+        if (!string.IsNullOrEmpty(group.ToolResponse.Response))
+        {
+            partsContent.Add(NeutralTextContent.Create(group.ToolResponse.Response));
+        }
+        partsContent.AddRange(group.AttachedContents);
+
+        JsonArray parts = ContentToInputParts(partsContent);
+        output["output"] = parts.Count > 0 ? parts : group.ToolResponse.Response;
+        return output;
     }
 
     private static JsonArray ContentToInputParts(IList<NeutralContent> contents)
