@@ -287,6 +287,99 @@ public sealed class CodeInterpreterExecutor(
         return string.Join(',', shellPrefix);
     }
 
+    private string ResolveContainerPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new InvalidOperationException("path is required");
+        }
+
+        string trimmedPath = path.Trim();
+        if (IsAbsoluteContainerPath(trimmedPath))
+        {
+            return NormalizeAbsoluteContainerPath(trimmedPath);
+        }
+
+        return CombineContainerPath(_codePodConfig.WorkDir, trimmedPath);
+    }
+
+    private bool IsAbsoluteContainerPath(string path)
+    {
+        string normalized = path.Replace('\\', '/');
+        if (normalized.StartsWith('/'))
+        {
+            return true;
+        }
+
+        return _codePodConfig.IsWindowsContainer && IsWindowsDriveAbsolutePath(normalized);
+    }
+
+    private static string NormalizeAbsoluteContainerPath(string path)
+    {
+        string normalized = path.Replace('\\', '/').Trim();
+        if (normalized.StartsWith('/'))
+        {
+            return NormalizeRootedContainerPath(normalized);
+        }
+
+        if (!IsWindowsDriveAbsolutePath(normalized))
+        {
+            return normalized;
+        }
+
+        string prefix = normalized[..2];
+        string suffix = normalized[2..];
+        while (suffix.Contains("//", StringComparison.Ordinal))
+        {
+            suffix = suffix.Replace("//", "/", StringComparison.Ordinal);
+        }
+
+        return prefix + suffix;
+    }
+
+    private static bool IsWindowsDriveAbsolutePath(string path)
+        => path.Length >= 3
+            && IsAsciiLetter(path[0])
+            && path[1] == ':'
+            && path[2] == '/';
+
+    private static string CombineContainerPath(string basePathNoTrailing, string relativeNoLeading)
+    {
+        string basePath = NormalizeRootedContainerPath(basePathNoTrailing).TrimEnd('/');
+        string relativePath = relativeNoLeading.Replace('\\', '/').Trim().TrimStart('/');
+
+        if (string.IsNullOrEmpty(basePath) || basePath == "/")
+        {
+            return "/" + relativePath;
+        }
+
+        return basePath + "/" + relativePath;
+    }
+
+    private static string NormalizeRootedContainerPath(string path)
+    {
+        string normalized = path.Replace('\\', '/').Trim();
+        if (string.IsNullOrEmpty(normalized))
+        {
+            return "/";
+        }
+
+        if (!normalized.StartsWith('/'))
+        {
+            normalized = "/" + normalized;
+        }
+
+        while (normalized.Length > 1 && normalized.Contains("//", StringComparison.Ordinal))
+        {
+            normalized = normalized.Replace("//", "/", StringComparison.Ordinal);
+        }
+
+        return normalized;
+    }
+
+    private static bool IsAsciiLetter(char c)
+        => (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+
     public async IAsyncEnumerable<ToolProgressDelta> ExecuteToolCallAsync(
         TurnContext ctx,
         string toolCallId,
@@ -700,14 +793,15 @@ public sealed class CodeInterpreterExecutor(
         TurnContext.SessionState state = ensureResult.Value!;
         state.UsedInThisTurn = true;
 
+        string resolvedPath = ResolveContainerPath(path);
         byte[] bytes = Encoding.UTF8.GetBytes(text);
-        await _docker.UploadFileAsync(state.DbSession.ContainerId, path, bytes, cancellationToken);
+        await _docker.UploadFileAsync(state.DbSession.ContainerId, resolvedPath, bytes, cancellationToken);
         await TouchSession(state.DbSession.Id, cancellationToken);
 
         await SyncArtifactsAfterToolCall(ctx, state, cancellationToken);
 
         int lineCount = string.IsNullOrEmpty(text) ? 0 : text.Split(["\r\n", "\n"], StringSplitOptions.None).Length;
-        return Result.Ok($"Wrote {lineCount} lines to {path}");
+        return Result.Ok($"Wrote {lineCount} lines to {resolvedPath}");
     }
 
     [ToolFunction("Download cloud files (from chat history) into /app")]
@@ -744,7 +838,7 @@ public sealed class CodeInterpreterExecutor(
             await s.CopyToAsync(ms, cancellationToken);
             byte[] bytes = ms.ToArray();
 
-            string targetPath = $"{_codePodConfig.WorkDir}/{file.FileName}";
+            string targetPath = ResolveContainerPath(file.FileName);
             await _docker.UploadFileAsync(state.DbSession.ContainerId, targetPath, bytes, cancellationToken);
 
             downloaded.Add(file);
