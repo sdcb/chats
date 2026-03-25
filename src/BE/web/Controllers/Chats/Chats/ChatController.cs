@@ -562,7 +562,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             {
                 usedToolNames.Add(n);
             }
-            codeInterpreter.AddTools(csr.Tools);
+            codeInterpreter.AddTools(csr.Tools, chatSpan.ChatConfig.Model.AllowVision);
         }
         foreach (McpTool tool in chatSpan.ChatConfig.ChatConfigMcps.SelectMany(x => x.McpServer.McpTools))
         {

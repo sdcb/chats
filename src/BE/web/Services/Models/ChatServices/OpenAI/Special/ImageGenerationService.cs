@@ -426,9 +426,9 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
         }
     }
 
-    protected override Task<NeutralMessage> FilterVision(bool supportsVisionLink, bool allowVision, NeutralMessage message, FileUrlProvider fup, CancellationToken cancellationToken)
+    protected override Task<IList<NeutralMessage>> RewriteVisionMessages(bool supportsVisionLink, bool allowVision, IList<NeutralMessage> messages, FileUrlProvider fup, CancellationToken cancellationToken)
     {
         // enforce vision support but don't use image link
-        return base.FilterVision(supportsVisionLink: false, allowVision: true, message, fup, cancellationToken);
+        return base.RewriteVisionMessages(supportsVisionLink: false, allowVision: true, messages, fup, cancellationToken);
     }
 }

@@ -22,15 +22,19 @@ namespace Chats.BE.Services.CodeInterpreter;
 public sealed class CodeInterpreterExecutor(
     IDockerService docker,
     IFileServiceFactory fileServiceFactory,
+    FileImageInfoService fileImageInfoService,
     IServiceScopeFactory scopeFactory,
     IOptions<CodePodConfig> codePodConfig,
     IOptions<CodeInterpreterOptions> options,
     ILogger<CodeInterpreterExecutor> logger)
 {
     private static readonly AttributedToolRegistry _toolRegistry = new(typeof(CodeInterpreterExecutor));
+    internal const string ViewImageToolName = "view_image";
+    private const string ViewImageDescription = "Attach an image file from the docker session so a vision model can inspect it.";
 
     private readonly IDockerService _docker = docker;
     private readonly IFileServiceFactory _fileServiceFactory = fileServiceFactory;
+    private readonly FileImageInfoService _fileImageInfoService = fileImageInfoService;
     private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
     private readonly CodePodConfig _codePodConfig = codePodConfig.Value;
     private readonly CodeInterpreterOptions _options = options.Value;
@@ -40,11 +44,16 @@ public sealed class CodeInterpreterExecutor(
 
     public static readonly string[] ToolNames = _toolRegistry.ToolNames.ToArray();
 
-    public void AddTools(ICollection<ChatTool> tools)
+    public void AddTools(ICollection<ChatTool> tools, bool allowVision = true)
     {
         Dictionary<string, string> placeholders = BuildPlaceholderReplacements();
         foreach (AttributedToolRegistry.ToolDescriptor d in _toolRegistry.Tools)
         {
+            if (!allowVision && string.Equals(d.ToolName, ViewImageToolName, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             string schemaJson = ReplacePlaceholders(d.SchemaJson, placeholders);
             tools.Add(FunctionTool.Create(d.ToolName, d.Description, schemaJson));
         }
@@ -860,6 +869,101 @@ public sealed class CodeInterpreterExecutor(
         return Result.Ok(sb.ToString().TrimEnd());
     }
 
+    [ToolFunction(ViewImageDescription)]
+    internal async Task<Result<string>> ViewImage(
+        TurnContext ctx,
+        [Required]
+        string sessionId,
+        [ToolParam("Image path inside the docker session. Relative paths are resolved under work directory."), Required]
+        string path,
+        CancellationToken cancellationToken)
+    {
+        Result<TurnContext.SessionState> ensureResult = await EnsureSession(ctx, sessionId, cancellationToken);
+        if (!ensureResult.IsSuccess)
+        {
+            return Result.Fail<string>(ensureResult.Error!);
+        }
+
+        TurnContext.SessionState state = ensureResult.Value!;
+        state.UsedInThisTurn = true;
+
+        string resolvedPath = ResolveContainerPath(path);
+        string fileName = Path.GetFileName(resolvedPath);
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return Result.Fail<string>("view_image expects a file path, not a directory.");
+        }
+
+        string contentType = GuessContentType(fileName);
+        if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return Result.Fail<string>($"'{fileName}' does not look like an image file.");
+        }
+
+        if (contentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
+        {
+            return Result.Fail<string>($"'{fileName}' is not a supported raster image.");
+        }
+
+        FileEntry? fileEntry = await TryGetFileEntry(state.DbSession.ContainerId, resolvedPath, cancellationToken);
+        if (fileEntry != null)
+        {
+            if (fileEntry.IsDirectory)
+            {
+                return Result.Fail<string>("view_image expects a file path, not a directory.");
+            }
+
+            if (fileEntry.Size <= 0)
+            {
+                return Result.Fail<string>($"'{fileName}' is empty.");
+            }
+
+            if (_options.MaxSingleUploadBytes is long maxSingleUploadBytes && fileEntry.Size > maxSingleUploadBytes)
+            {
+                return Result.Fail<string>($"'{fileName}' is too large to view ({HumanizeFileSize(fileEntry.Size)} > {HumanizeFileSize(maxSingleUploadBytes)}).");
+            }
+        }
+
+        byte[] bytes;
+        try
+        {
+            bytes = await _docker.DownloadFileAsync(state.DbSession.ContainerId, resolvedPath, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to download image file from session {sessionId}: {path}", sessionId, resolvedPath);
+            return Result.Fail<string>($"Failed to read '{fileName}' from the docker session.");
+        }
+
+        if (bytes.Length == 0)
+        {
+            return Result.Fail<string>($"'{fileName}' is empty.");
+        }
+
+        if (_options.MaxSingleUploadBytes is long maxBytes && bytes.Length > maxBytes)
+        {
+            return Result.Fail<string>($"'{fileName}' is too large to view ({HumanizeFileSize(bytes.Length)} > {HumanizeFileSize(maxBytes)}).");
+        }
+
+        if (_fileImageInfoService.GetImageInfo(fileName, contentType, bytes) == null)
+        {
+            return Result.Fail<string>($"'{fileName}' is not a valid image file.");
+        }
+
+        if (_options.MaxTotalUploadBytesPerTurn is long maxTotalBytes
+            && state.PendingArtifactsBytesThisTurn + bytes.Length > maxTotalBytes)
+        {
+            return Result.Fail<string>("Image output limit for this turn was exceeded.");
+        }
+
+        state.PendingArtifacts.Add(new PendingFileArtifact(resolvedPath, fileName, contentType, bytes));
+        state.PendingArtifactsBytesThisTurn += bytes.Length;
+
+        await TouchSession(state.DbSession.Id, cancellationToken);
+
+        return Result.Ok(string.Empty);
+    }
+
     internal static List<DBFile> CollectCloudFiles(IEnumerable<Step> steps)
     {
         Dictionary<string, DBFile> result = [];
@@ -1060,6 +1164,23 @@ public sealed class CodeInterpreterExecutor(
         }
 
         return dict;
+    }
+
+    private async Task<FileEntry?> TryGetFileEntry(string containerId, string path, CancellationToken cancellationToken)
+    {
+        string normalizedPath = path.Replace('\\', '/');
+        string directoryPath = Path.GetDirectoryName(normalizedPath.Replace('/', Path.DirectorySeparatorChar))?.Replace('\\', '/');
+        directoryPath = string.IsNullOrWhiteSpace(directoryPath) ? "/" : NormalizeRootedContainerPath(directoryPath);
+
+        try
+        {
+            List<FileEntry> entries = await _docker.ListDirectoryAsync(containerId, directoryPath, cancellationToken);
+            return entries.FirstOrDefault(x => string.Equals(x.Path.Replace('\\', '/'), normalizedPath, StringComparison.Ordinal));
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private async Task SyncArtifactsAfterToolCall(TurnContext ctx, TurnContext.SessionState state, CancellationToken cancellationToken)

@@ -32,6 +32,7 @@ public sealed class CodeInterpreterWriteFileTests
         return new CodeInterpreterExecutor(
             docker,
             fsf,
+            new FileImageInfoService(NullLogger<FileImageInfoService>.Instance),
             sp.GetRequiredService<IServiceScopeFactory>(),
             Options.Create(codePodConfig ?? new CodePodConfig()),
             Options.Create(new CodeInterpreterOptions()),
