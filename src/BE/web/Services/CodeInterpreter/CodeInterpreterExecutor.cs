@@ -1169,7 +1169,7 @@ public sealed class CodeInterpreterExecutor(
     private async Task<FileEntry?> TryGetFileEntry(string containerId, string path, CancellationToken cancellationToken)
     {
         string normalizedPath = path.Replace('\\', '/');
-        string directoryPath = Path.GetDirectoryName(normalizedPath.Replace('/', Path.DirectorySeparatorChar))?.Replace('\\', '/');
+        string? directoryPath = Path.GetDirectoryName(normalizedPath.Replace('/', Path.DirectorySeparatorChar))?.Replace('\\', '/');
         directoryPath = string.IsNullOrWhiteSpace(directoryPath) ? "/" : NormalizeRootedContainerPath(directoryPath);
 
         try
