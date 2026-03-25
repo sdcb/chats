@@ -89,7 +89,7 @@ export const ChatMessage: FC<Props> = memo(
                       <div
                         key={'user-message-' + index}
                         className={cn(
-                          'prose w-full dark:prose-invert rounded-r-md group',
+                          'prose !w-full dark:prose-invert rounded-r-md group',
                           'sm:w-[50vw] xl:w-[50vw]',
                           index > 0 && 'mt-4',
                         )}
