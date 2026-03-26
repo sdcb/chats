@@ -118,7 +118,7 @@ public class FileController(ChatsDB db, IFileServiceFactory fileServiceFactory, 
             FileServiceId = fileService.Id,
             StorageKey = storageKey,
             Size = (int)file.Length,
-            ClientInfo = await clientInfoManager.GetClientInfo(cancellationToken),
+            ClientInfoId = await clientInfoManager.GetClientInfoId(cancellationToken),
             CreateUserId = currentUser.Id,
             CreatedAt = DateTime.UtcNow,
             FileImageInfo = imageInfo

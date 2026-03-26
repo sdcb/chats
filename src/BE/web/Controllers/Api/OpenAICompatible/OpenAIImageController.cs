@@ -28,7 +28,8 @@ public class OpenAIImageController(
     UserModelManager userModelManager,
     ILogger<OpenAIImageController> logger,
     BalanceService balanceService,
-    FileUrlProvider fup) : ControllerBase
+    FileUrlProvider fup,
+    ClientInfoManager clientInfoManager) : ControllerBase
 {
     private static readonly DBApiType[] AllowedApiTypes = [DBApiType.OpenAIImageGeneration];
 
@@ -39,7 +40,6 @@ public class OpenAIImageController(
     [HttpPost("v1/images/generations")]
     public async Task<ActionResult> ImageGeneration(
         [FromBody] ImageGenerationRequest? request,
-        [FromServices] AsyncClientInfoManager clientInfoManager,
         [FromServices] IOptions<ChatOptions> chatOptions,
         CancellationToken cancellationToken)
     {
@@ -53,7 +53,7 @@ public class OpenAIImageController(
             return ErrorMessage(DBFinishReason.BadParameter, "model is required.");
         }
 
-        Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
+        _ = clientInfoManager.GetClientInfoId(cancellationToken);
         UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, request.Model, cancellationToken);
         if (userModel == null) return InvalidModel(request.Model);
 
@@ -64,7 +64,7 @@ public class OpenAIImageController(
 
         bool isStreamed = request.Stream == true;
         int? retry429Times = chatOptions.Value.Retry429Times;
-        return await ProcessImageGeneration(request, userModel, isStreamed, images: null, clientInfoIdTask, retry429Times, cancellationToken);
+        return await ProcessImageGeneration(request, userModel, isStreamed, images: null, retry429Times, cancellationToken);
     }
 
     /// <summary>
@@ -75,7 +75,6 @@ public class OpenAIImageController(
     [HttpPost("v1/images/edits")]
     [Consumes("multipart/form-data")]
     public async Task<ActionResult> ImageEdits(
-        [FromServices] AsyncClientInfoManager clientInfoManager,
         [FromServices] IOptions<ChatOptions> chatOptions,
         CancellationToken cancellationToken)
     {
@@ -101,7 +100,7 @@ public class OpenAIImageController(
             return ErrorMessage(DBFinishReason.BadParameter, "model is required.");
         }
 
-        Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
+        _ = clientInfoManager.GetClientInfoId(cancellationToken);
         UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, model, cancellationToken);
         if (userModel == null) return InvalidModel(model);
 
@@ -140,7 +139,7 @@ public class OpenAIImageController(
         };
 
         int? retry429Times = chatOptions.Value.Retry429Times;
-        return await ProcessImageGeneration(request, userModel, isStreamed, images, clientInfoIdTask, retry429Times, cancellationToken);
+        return await ProcessImageGeneration(request, userModel, isStreamed, images, retry429Times, cancellationToken);
     }
 
     private async Task<ActionResult> ProcessImageGeneration(
@@ -148,7 +147,6 @@ public class OpenAIImageController(
         UserModel userModel,
         bool isStreamed,
         List<(byte[] Data, string ContentType, string FileName, bool IsMask)>? images,
-        Task<int> clientInfoIdTask,
         int? retry429Times,
         CancellationToken cancellationToken)
     {
@@ -334,7 +332,7 @@ public class OpenAIImageController(
         UserApiUsage usage = new()
         {
             ApiKeyId = currentApiKey.ApiKeyId,
-            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, scopedCalc, userModel, await clientInfoIdTask, isApi: true),
+            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, scopedCalc, userModel, await clientInfoManager.GetClientInfoId(), isApi: true),
         };
         db.UserApiUsages.Add(usage);
         await db.SaveChangesAsync(cancellationToken);

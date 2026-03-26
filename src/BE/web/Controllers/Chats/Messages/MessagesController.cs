@@ -260,7 +260,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         ContentRequestItem[] newContent = [.. ContentRequestItem.FromDB([.. message.Steps.SelectMany(x => x.StepContents)], urlEncryption, textContent.Id, content)];
 
         StepContent[] stepContents = await StepContentExtensions.FromRequest(newContent, fup, cancellationToken);
-        ClientInfo clientInfo = await clientInfoManager.GetClientInfo(cancellationToken);
+        int clientInfoId = await clientInfoManager.GetClientInfoId(cancellationToken);
         ChatTurn turn = new()
         {
             SpanId = message.SpanId,
@@ -282,7 +282,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                     InputFreshTokens = message.Steps.First().Usage!.InputFreshTokens,
                     InputCachedTokens = message.Steps.First().Usage!.InputCachedTokens,
                     OutputTokens = ChatService.Tokenizer.CountTokens(content.Text),
-                    ClientInfoId = clientInfo.Id, // Use FK instead of navigation property to avoid EF Core collection modification issue
+                    ClientInfoId = clientInfoId, // Use FK instead of navigation property to avoid EF Core collection modification issue
                     ReasoningTokens = 0,
                     IsUsageReliable = false,
                     PreprocessDurationMs = 0,

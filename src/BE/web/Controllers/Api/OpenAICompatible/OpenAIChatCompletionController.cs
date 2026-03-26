@@ -32,14 +32,14 @@ public partial class OpenAIChatCompletionController(
     ILogger<OpenAIChatCompletionController> logger,
     BalanceService balanceService,
     FileUrlProvider fup,
-    AsyncCacheUsageManager asyncCacheUsageService) : ControllerBase
+    AsyncCacheUsageManager asyncCacheUsageService,
+    ClientInfoManager clientInfoManager) : ControllerBase
 {
     private static readonly DBApiType[] AllowedApiTypes = [DBApiType.OpenAIChatCompletion, DBApiType.OpenAIResponse, DBApiType.AnthropicMessages];
 
     [HttpPost("v1/chat/completions")]
     public async Task<ActionResult> ChatCompletion(
         [FromBody] JsonObject json,
-        [FromServices] AsyncClientInfoManager clientInfoManager,
         [FromServices] IOptions<ChatOptions> chatOptions,
         CancellationToken cancellationToken)
     {
@@ -59,7 +59,7 @@ public partial class OpenAIChatCompletionController(
             return InvalidModel(cco.Model);
         }
 
-        Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
+        _ = clientInfoManager.GetClientInfoId(cancellationToken);
         UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
         if (userModel == null) return InvalidModel(cco.Model);
 
@@ -73,18 +73,17 @@ public partial class OpenAIChatCompletionController(
         {
             cco.CacheControl = null;
             int? retry429Times = chatOptions.Value.Retry429Times;
-            return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, icc, clientInfoIdTask, retry429Times, cancellationToken);
+            return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, icc, retry429Times, cancellationToken);
         }
 
         int? retry429TimesNoCache = chatOptions.Value.Retry429Times;
-        return await ChatCompletionNoCache(cco, userModel, icc, clientInfoIdTask, retry429TimesNoCache, cancellationToken);
+        return await ChatCompletionNoCache(cco, userModel, icc, retry429TimesNoCache, cancellationToken);
     }
 
     [HttpPost("v1-cached/chat/completions")]
     [HttpPost("v1-cached-createOnly/chat/completions")]
     public async Task<ActionResult> ChatCompletionCached(
         [FromBody] JsonObject json,
-        [FromServices] AsyncClientInfoManager clientInfoManager,
         [FromServices] IOptions<ChatOptions> chatOptions,
         CancellationToken cancellationToken)
     {
@@ -105,7 +104,7 @@ public partial class OpenAIChatCompletionController(
                 return InvalidModel(cco.Model);
             }
 
-            Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
+            _ = clientInfoManager.GetClientInfoId(cancellationToken);
             UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
             if (logger.IsEnabled(LogLevel.Information))
             {
@@ -124,7 +123,7 @@ public partial class OpenAIChatCompletionController(
             };
             cco.CacheControl = null;
             int? retry429Times = chatOptions.Value.Retry429Times;
-            return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, icc, clientInfoIdTask, retry429Times, cancellationToken);
+            return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, icc, retry429Times, cancellationToken);
         }
         finally
         {
@@ -140,7 +139,6 @@ public partial class OpenAIChatCompletionController(
         CcoWrapper cco,
         UserModel userModel,
         InChatContext icc,
-        Task<int> clientInfoIdTask,
         int? retry429Times,
         CancellationToken cancellationToken)
     {
@@ -217,7 +215,7 @@ public partial class OpenAIChatCompletionController(
                     {
                         _ = asyncCacheUsageService.SaveCacheUsage(new UserApiCacheUsage()
                         {
-                            ClientInfoId = await clientInfoIdTask,
+                            ClientInfoId = await clientInfoManager.GetClientInfoId(),
                             UsedAt = DateTime.UtcNow,
                             UserApiCacheId = cache.Id,
                         }, default);
@@ -228,7 +226,7 @@ public partial class OpenAIChatCompletionController(
 
         try
         {
-            ActionResult result = await ChatCompletionNoCache(cco, userModel, icc, clientInfoIdTask, retry429Times, cancellationToken);
+            ActionResult result = await ChatCompletionNoCache(cco, userModel, icc, retry429Times, cancellationToken);
             return result;
         }
         finally
@@ -247,7 +245,7 @@ public partial class OpenAIChatCompletionController(
                         Response = toBeCached.SerializeForCache(),
                     },
                     CreatedAt = DateTime.UtcNow,
-                    ClientInfoId = await clientInfoIdTask,
+                    ClientInfoId = await clientInfoManager.GetClientInfoId(),
                     ModelId = userModel.ModelId,
                 };
                 db.UserApiCaches.Add(cache);
@@ -256,7 +254,7 @@ public partial class OpenAIChatCompletionController(
         }
     }
 
-    private async Task<ActionResult> ChatCompletionNoCache(CcoWrapper cco, UserModel userModel, InChatContext icc, Task<int> clientInfoIdTask, int? retry429Times, CancellationToken cancellationToken)
+    private async Task<ActionResult> ChatCompletionNoCache(CcoWrapper cco, UserModel userModel, InChatContext icc, int? retry429Times, CancellationToken cancellationToken)
     {
         Model cm = userModel.Model;
         ChatService s = cf.CreateChatService(cm);
@@ -340,7 +338,7 @@ public partial class OpenAIChatCompletionController(
         UserApiUsage usage = new()
         {
             ApiKeyId = currentApiKey.ApiKeyId,
-            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, scopedCalc, userModel, await clientInfoIdTask, isApi: true),
+            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, scopedCalc, userModel, await clientInfoManager.GetClientInfoId(), isApi: true),
         };
         db.UserApiUsages.Add(usage);
         await db.SaveChangesAsync(cancellationToken);

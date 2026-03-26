@@ -27,14 +27,14 @@ public class AnthropicMessagesController(
     UserModelManager userModelManager,
     ILogger<AnthropicMessagesController> logger,
     BalanceService balanceService,
-    FileUrlProvider fup) : ControllerBase
+    FileUrlProvider fup,
+    ClientInfoManager clientInfoManager) : ControllerBase
 {
     private static readonly DBApiType[] AllowedApiTypes = [DBApiType.OpenAIChatCompletion, DBApiType.OpenAIResponse, DBApiType.AnthropicMessages];
 
     [HttpPost("v1/messages")]
     public async Task<ActionResult> CreateMessage(
         [FromBody] JsonObject json,
-        [FromServices] AsyncClientInfoManager clientInfoManager,
         [FromServices] IOptions<ChatOptions> chatOptions,
         CancellationToken cancellationToken)
     {
@@ -51,7 +51,7 @@ public class AnthropicMessagesController(
             return ErrorMessage(AnthropicErrorTypes.InvalidRequestError, "model is required.");
         }
 
-        Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
+        _ = clientInfoManager.GetClientInfoId(cancellationToken);
         UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, request.Model, cancellationToken);
         if (userModel == null)
         {
@@ -64,14 +64,13 @@ public class AnthropicMessagesController(
         }
 
         int? retry429Times = chatOptions.Value.Retry429Times;
-        return await ProcessMessage(request, userModel, icc, clientInfoIdTask, retry429Times, cancellationToken);
+        return await ProcessMessage(request, userModel, icc, retry429Times, cancellationToken);
     }
 
     private async Task<ActionResult> ProcessMessage(
         AnthropicRequestWrapper request,
         UserModel userModel,
         InChatContext icc,
-        Task<int> clientInfoIdTask,
         int? retry429Times,
         CancellationToken cancellationToken)
     {
@@ -181,7 +180,7 @@ public class AnthropicMessagesController(
         UserApiUsage usage = new()
         {
             ApiKeyId = currentApiKey.ApiKeyId,
-            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, scopedCalc, userModel, await clientInfoIdTask, isApi: true),
+            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, scopedCalc, userModel, await clientInfoManager.GetClientInfoId(), isApi: true),
         };
         db.UserApiUsages.Add(usage);
         await db.SaveChangesAsync(cancellationToken);

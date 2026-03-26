@@ -35,7 +35,7 @@ using Microsoft.Extensions.Options;
 namespace Chats.BE.Controllers.Chats.Chats;
 
 [Route("api/chats"), Authorize]
-public class ChatController(ChatStopService stopService, AsyncClientInfoManager clientInfoManager, IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory) : ControllerBase
+public class ChatController(ChatStopService stopService, ClientInfoManager clientInfoManager, IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory) : ControllerBase
 {
     [HttpPost("regenerate-assistant-message")]
     public async Task<IActionResult> RegenerateOneMessage(
@@ -151,7 +151,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         long firstTick = Stopwatch.GetTimestamp();
         cancellationToken = default; // disallow cancellation token for now for better user experience
 
-        Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
+        _ = clientInfoManager.GetClientInfoId(cancellationToken);
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig)
                 .ThenInclude(x => x.ChatConfigMcps).ThenInclude(x => x.McpServer.McpTools)
@@ -312,7 +312,6 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             messageTree,
             newDbUserTurn,
             cost.WithScoped(span.SpanId.ToString()),
-            clientInfoIdTask,
             imageFileCache,
             fileCache,
             channels[index].Writer,
@@ -396,7 +395,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 try
                 {
                     fs ??= await db.GetDefaultFileService(cancellationToken) ?? throw new InvalidOperationException("Default file service config not found.");
-                    DBFile file = await dbFileService.StoreImage(image, await clientInfoIdTask, fs, cancellationToken: default);
+                    DBFile file = await dbFileService.StoreImage(image, await clientInfoManager.GetClientInfoId(), fs, cancellationToken: default);
                     tcs.SetResult(file);
                     // yield final file dto
                     await YieldResponse(new FileGeneratedLine(tempImageGeneratedLine.SpanId, fup.CreateFileDto(file, tryWithUrl: false)));
@@ -420,7 +419,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                         tempFileGeneratedLine.Bytes,
                         tempFileGeneratedLine.FileName,
                         tempFileGeneratedLine.ContentType,
-                        await clientInfoIdTask,
+                        await clientInfoManager.GetClientInfoId(),
                         fs,
                         cancellationToken);
                     tcs.SetResult(file);
@@ -495,7 +494,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         return [.. noContent.SelectMany(x => x.Steps)];
     }
 
-    private static async Task ProcessChatSpan(
+    private async Task ProcessChatSpan(
         CurrentUser currentUser,
         ILogger<ChatController> logger,
         ChatFactory chatFactory,
@@ -511,7 +510,6 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
         IEnumerable<Step> messageTree,
         ChatTurn? dbUserMessage,
         ScopedBalanceCalculator calc,
-        Task<int> clientInfoIdTask,
         Dictionary<ImageChatSegment, TaskCompletionSource<DBFile>> imageFileCache,
         Dictionary<string, TaskCompletionSource<DBFile>> fileCache,
         ChannelWriter<SseResponseLine> writer,
@@ -616,7 +614,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
                 MessageTurns = contextTurns,
                 MessageSteps = allSteps.ToList(),
                 CurrentAssistantTurn = turn,
-                ClientInfoId = await clientInfoIdTask,
+                ClientInfoId = await clientInfoManager.GetClientInfoId(),
             };
         }
 
@@ -967,7 +965,7 @@ public class ChatController(ChatStopService stopService, AsyncClientInfoManager 
             {
                 ChatRoleId = (byte)DBChatRole.Assistant,
                 CreatedAt = DateTime.UtcNow,
-                Usage = icc.ToUserModelUsage(currentUser.Id, calc, userModel, await clientInfoIdTask, isApi: false),
+                Usage = icc.ToUserModelUsage(currentUser.Id, calc, userModel, await clientInfoManager.GetClientInfoId(), isApi: false),
                 StepContents = [.. StepContentExtensions.FromFullResponse(icc.FullResponse!, errorText, imageFileCache)],
                 Turn = turn,
             };

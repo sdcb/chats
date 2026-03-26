@@ -10,26 +10,28 @@ public class LoginRateLimiter(ChatsDB db, ILogger<LoginRateLimiter> logger)
 	private static readonly RateLimitConfig PasswordLimit = new(5, TimeSpan.FromMinutes(10));
 	private static readonly RateLimitConfig SmsLimit = new(SmsController.MaxAttempts, TimeSpan.FromSeconds(SmsController.SmsExpirationSeconds));
 
-	public async Task<RateLimitCheckResult> CheckPasswordAsync(ClientInfo clientInfo, CancellationToken cancellationToken)
+	public async Task<RateLimitCheckResult> CheckPasswordAsync(int clientInfoId, CancellationToken cancellationToken)
 	{
+		ClientRateLimitContext clientContext = await GetClientRateLimitContext(clientInfoId, cancellationToken);
 		IQueryable<DateTime> query = db.PasswordAttempts
 			.AsNoTracking()
-			.Where(x => x.ClientInfo.ClientIpId == clientInfo.ClientIpId && !x.IsSuccessful)
+			.Where(x => x.ClientInfo.ClientIpId == clientContext.ClientIpId && !x.IsSuccessful)
 			.Select(x => x.CreatedAt);
 
-		return await CheckLimitAsync(query, PasswordLimit, "password", "Too many attempts. Please try again later.", GetRateLimitKey(clientInfo), cancellationToken);
+		return await CheckLimitAsync(query, PasswordLimit, "password", "Too many attempts. Please try again later.", clientContext.RateLimitKey, cancellationToken);
 	}
 
-	public async Task<RateLimitCheckResult> CheckSmsAsync(ClientInfo clientInfo, CancellationToken cancellationToken)
+	public async Task<RateLimitCheckResult> CheckSmsAsync(int clientInfoId, CancellationToken cancellationToken)
 	{
+		ClientRateLimitContext clientContext = await GetClientRateLimitContext(clientInfoId, cancellationToken);
 		IQueryable<DateTime> query = db.SmsAttempts
 			.AsNoTracking()
-			.Where(x => x.ClientInfo.ClientIpId == clientInfo.ClientIpId
+			.Where(x => x.ClientInfo.ClientIpId == clientContext.ClientIpId
 				&& (x.Code != x.SmsRecord.ExpectedCode || x.SmsRecord.CreatedAt.AddSeconds(SmsController.SmsExpirationSeconds) < x.CreatedAt)
 				&& x.SmsRecord.StatusId == (byte)DBSmsStatus.WaitingForVerification)
 			.Select(x => x.CreatedAt);
 
-		return await CheckLimitAsync(query, SmsLimit, "sms", "Too many attempts.", GetRateLimitKey(clientInfo), cancellationToken);
+		return await CheckLimitAsync(query, SmsLimit, "sms", "Too many attempts.", clientContext.RateLimitKey, cancellationToken);
 	}
 
 	public async Task RecordPasswordAttemptAsync(string userName, int clientInfoId, int? userId, bool isSuccessful, string? failureReason, CancellationToken cancellationToken)
@@ -104,12 +106,25 @@ public class LoginRateLimiter(ChatsDB db, ILogger<LoginRateLimiter> logger)
 		return RateLimitCheckResult.Allowed();
 	}
 
-	private static string GetRateLimitKey(ClientInfo clientInfo)
+	private async Task<ClientRateLimitContext> GetClientRateLimitContext(int clientInfoId, CancellationToken cancellationToken)
 	{
-		return clientInfo.ClientIp?.Ipaddress ?? $"IP#{clientInfo.ClientIpId}";
+		ClientRateLimitContext? clientContext = await db.ClientInfos
+			.AsNoTracking()
+			.Where(x => x.Id == clientInfoId)
+			.Select(x => new ClientRateLimitContext(
+				x.ClientIpId,
+				x.ClientIp != null ? x.ClientIp.Ipaddress : null))
+			.FirstOrDefaultAsync(cancellationToken);
+
+		return clientContext ?? throw new InvalidOperationException($"ClientInfo {clientInfoId} not found.");
 	}
 
 	private readonly record struct RateLimitConfig(int MaxAttempts, TimeSpan Window);
+
+	private readonly record struct ClientRateLimitContext(int ClientIpId, string? IpAddress)
+	{
+		public string RateLimitKey => IpAddress ?? $"IP#{ClientIpId}";
+	}
 
 	public readonly record struct RateLimitCheckResult(bool IsAllowed, string? ErrorMessage, TimeSpan? RetryAfter)
 	{
