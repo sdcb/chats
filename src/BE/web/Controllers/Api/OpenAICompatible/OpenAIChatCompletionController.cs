@@ -48,7 +48,7 @@ public partial class OpenAIChatCompletionController(
             return BadRequest(ModelState);
         }
 
-        InChatContext icc = new(Stopwatch.GetTimestamp());
+        ChatRunService runService = new(Stopwatch.GetTimestamp());
         CcoWrapper cco = new(json);
         if (!cco.SeemsValid())
         {
@@ -73,11 +73,11 @@ public partial class OpenAIChatCompletionController(
         {
             cco.CacheControl = null;
             int? retry429Times = chatOptions.Value.Retry429Times;
-            return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, icc, clientInfoIdTask, retry429Times, cancellationToken);
+            return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, runService, clientInfoIdTask, retry429Times, cancellationToken);
         }
 
         int? retry429TimesNoCache = chatOptions.Value.Retry429Times;
-        return await ChatCompletionNoCache(cco, userModel, icc, clientInfoIdTask, retry429TimesNoCache, cancellationToken);
+        return await ChatCompletionNoCache(cco, userModel, runService, clientInfoIdTask, retry429TimesNoCache, cancellationToken);
     }
 
     [HttpPost("v1-cached/chat/completions")]
@@ -88,12 +88,12 @@ public partial class OpenAIChatCompletionController(
         [FromServices] IOptions<ChatOptions> chatOptions,
         CancellationToken cancellationToken)
     {
-        InChatContext icc = new(Stopwatch.GetTimestamp());
+        ChatRunService runService = new(Stopwatch.GetTimestamp());
         try
         {
             if (logger.IsEnabled(LogLevel.Information))
             {
-                logger.LogInformation("{RequestId} [{Elapsed}], Started", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
+                logger.LogInformation("{RequestId} [{Elapsed}], Started", HttpContext.TraceIdentifier, runService.ElapsedTime.TotalMilliseconds);
             }
             CcoWrapper cco = new(json);
             if (!cco.SeemsValid())
@@ -109,7 +109,7 @@ public partial class OpenAIChatCompletionController(
             UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
             if (logger.IsEnabled(LogLevel.Information))
             {
-                logger.LogInformation("{RequestId} [{Elapsed}], GetUserModel", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
+                logger.LogInformation("{RequestId} [{Elapsed}], GetUserModel", HttpContext.TraceIdentifier, runService.ElapsedTime.TotalMilliseconds);
             }
             if (userModel == null) return InvalidModel(cco.Model);
 
@@ -124,13 +124,13 @@ public partial class OpenAIChatCompletionController(
             };
             cco.CacheControl = null;
             int? retry429Times = chatOptions.Value.Retry429Times;
-            return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, icc, clientInfoIdTask, retry429Times, cancellationToken);
+            return await ChatCompletionUseCache(ccoCacheControl, cco, userModel, runService, clientInfoIdTask, retry429Times, cancellationToken);
         }
         finally
         {
             if (logger.IsEnabled(LogLevel.Information))
             {
-                logger.LogInformation("{RequestId} [{Elapsed}], Finish Reason: {FinishReason}", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds, icc.FinishReason.ToString());
+                logger.LogInformation("{RequestId} [{Elapsed}], Finish Reason: {FinishReason}", HttpContext.TraceIdentifier, runService.ElapsedTime.TotalMilliseconds, runService.FinishReason.ToString());
             }
         }
     }
@@ -139,14 +139,14 @@ public partial class OpenAIChatCompletionController(
         CcoCacheControl cacheControl,
         CcoWrapper cco,
         UserModel userModel,
-        InChatContext icc,
+        ChatRunService runService,
         Task<int> clientInfoIdTask,
         int? retry429Times,
         CancellationToken cancellationToken)
     {
         string requestBody = cco.Serialize();
         long requestHashCode = BinaryPrimitives.ReadInt64LittleEndian(SHA256.HashData(Encoding.UTF8.GetBytes(requestBody)));
-        logger.LogInformation("{RequestId} [{Elapsed}], Check Cache", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
+        logger.LogInformation("{RequestId} [{Elapsed}], Check Cache", HttpContext.TraceIdentifier, runService.ElapsedTime.TotalMilliseconds);
 
         if (!cacheControl.CreateOnly)
         {
@@ -158,7 +158,7 @@ public partial class OpenAIChatCompletionController(
                 .FirstOrDefaultAsync(cancellationToken);
             if (logger.IsEnabled(LogLevel.Information))
             {
-                logger.LogInformation("{RequestId} [{Elapsed}], Cache Found: {CacheFound}", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds, cache != null);
+                logger.LogInformation("{RequestId} [{Elapsed}], Cache Found: {CacheFound}", HttpContext.TraceIdentifier, runService.ElapsedTime.TotalMilliseconds, cache != null);
             }
 
             if (cache != null)
@@ -169,7 +169,7 @@ public partial class OpenAIChatCompletionController(
                     FullChatCompletion fullResponse = JsonSerializer.Deserialize<FullChatCompletion>(cache.UserApiCacheBody!.Response)!;
                     if (logger.IsEnabled(LogLevel.Information))
                     {
-                        logger.LogInformation("{RequestId} [{Elapsed}], Cache Deserialized", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
+                        logger.LogInformation("{RequestId} [{Elapsed}], Cache Deserialized", HttpContext.TraceIdentifier, runService.ElapsedTime.TotalMilliseconds);
                     }
 
                     if (cco.Streamed)
@@ -211,7 +211,7 @@ public partial class OpenAIChatCompletionController(
                 {
                     if (logger.IsEnabled(LogLevel.Information))
                     {
-                        logger.LogInformation("{RequestId} [{Elapsed}], Response completed", HttpContext.TraceIdentifier, icc.ElapsedTime.TotalMilliseconds);
+                        logger.LogInformation("{RequestId} [{Elapsed}], Response completed", HttpContext.TraceIdentifier, runService.ElapsedTime.TotalMilliseconds);
                     }
                     if (isSuccess)
                     {
@@ -228,14 +228,14 @@ public partial class OpenAIChatCompletionController(
 
         try
         {
-            ActionResult result = await ChatCompletionNoCache(cco, userModel, icc, clientInfoIdTask, retry429Times, cancellationToken);
+            ActionResult result = await ChatCompletionNoCache(cco, userModel, runService, clientInfoIdTask, retry429Times, cancellationToken);
             return result;
         }
         finally
         {
-            if (icc.FinishReason == DBFinishReason.Success || icc.FinishReason == DBFinishReason.Stop || icc.FinishReason == DBFinishReason.ToolCalls)
+            if (runService.FinishReason == DBFinishReason.Success || runService.FinishReason == DBFinishReason.Stop || runService.FinishReason == DBFinishReason.ToolCalls)
             {
-                FullChatCompletion toBeCached = icc.FullResponse!.ToOpenAIFullChat(cco.Model, HttpContext.TraceIdentifier);
+                FullChatCompletion toBeCached = runService.FullResponse!.ToOpenAIFullChat(cco.Model, HttpContext.TraceIdentifier);
                 UserApiCache cache = new()
                 {
                     UserApiKeyId = currentApiKey.ApiKeyId,
@@ -256,15 +256,14 @@ public partial class OpenAIChatCompletionController(
         }
     }
 
-    private async Task<ActionResult> ChatCompletionNoCache(CcoWrapper cco, UserModel userModel, InChatContext icc, Task<int> clientInfoIdTask, int? retry429Times, CancellationToken cancellationToken)
+    private async Task<ActionResult> ChatCompletionNoCache(CcoWrapper cco, UserModel userModel, ChatRunService runService, Task<int> clientInfoIdTask, int? retry429Times, CancellationToken cancellationToken)
     {
         Model cm = userModel.Model;
         ChatService s = cf.CreateChatService(cm);
         UserBalance userBalance = await db.UserBalances
             .Where(x => x.UserId == currentApiKey.User.Id)
             .FirstOrDefaultAsync(cancellationToken) ?? throw new InvalidOperationException("User balance not found.");
-        UserModelBalanceCalculator calc = new(BalanceInitialInfo.FromDB([userModel], userBalance.Balance), []);
-        ScopedBalanceCalculator scopedCalc = calc.WithScoped("0");
+        BalanceCalculator calc = new(BalanceInitialInfo.FromDB([userModel], userBalance.Balance));
         ActionResult? errorToReturn = null;
         bool hasSuccessYield = false;
         bool streamedFinishSegment = false;
@@ -272,7 +271,7 @@ public partial class OpenAIChatCompletionController(
         {
             ChatRequest csr = ChatRequest.FromOpenAI(currentApiKey.User.Id.ToString(), cm, cco.Streamed, cco.Messages!, cco.ToCleanCco());
 
-            await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, csr, fup, retry429Times, cancellationToken))
+            await foreach (ChatSegment segment in runService.RunAsync(calc, userModel, s, csr, fup, retry429Times, cancellationToken))
             {
                 if (cco.Streamed)
                 {
@@ -297,11 +296,11 @@ public partial class OpenAIChatCompletionController(
             }
 
             // 流式响应完成后，发送最终的 finish_reason chunk
-            if (cco.Streamed && hasSuccessYield && icc.FinishReason != DBFinishReason.Cancelled)
+            if (cco.Streamed && hasSuccessYield && runService.FinishReason != DBFinishReason.Cancelled)
             {
                 if (!streamedFinishSegment)
                 {
-                    ChatCompletionChunk finalChunk = icc.FullResponse!.ToFinalChunk(cco.Model, HttpContext.TraceIdentifier);
+                    ChatCompletionChunk finalChunk = runService.FullResponse!.ToFinalChunk(cco.Model, HttpContext.TraceIdentifier);
                     await YieldResponse(finalChunk, cancellationToken);
                 }
 
@@ -312,24 +311,24 @@ public partial class OpenAIChatCompletionController(
         }
         catch (RawChatServiceException rawEx)
         {
-            icc.FinishReason = rawEx.ErrorCode;
+            runService.FinishReason = rawEx.ErrorCode;
             logger.LogError(rawEx, "Upstream error: {StatusCode}", rawEx.StatusCode);
             errorToReturn = await YieldRawError(hasSuccessYield && cco.Streamed, rawEx.StatusCode, rawEx.Body, cancellationToken);
         }
         catch (ChatServiceException cse)
         {
-            icc.FinishReason = cse.ErrorCode;
+            runService.FinishReason = cse.ErrorCode;
             errorToReturn = await YieldError(hasSuccessYield && cco.Streamed, cse.ErrorCode, cse.Message, cancellationToken);
         }
         catch (TaskCanceledException)
         {
-            icc.FinishReason = DBFinishReason.Cancelled;
+            runService.FinishReason = DBFinishReason.Cancelled;
         }
         catch (Exception e)
         {
-            icc.FinishReason = DBFinishReason.UnknownError;
+            runService.FinishReason = DBFinishReason.UnknownError;
             logger.LogError(e, "Unknown error");
-            errorToReturn = await YieldError(hasSuccessYield && cco.Streamed, icc.FinishReason, "", cancellationToken);
+            errorToReturn = await YieldError(hasSuccessYield && cco.Streamed, runService.FinishReason, "", cancellationToken);
         }
         finally
         {
@@ -340,7 +339,7 @@ public partial class OpenAIChatCompletionController(
         UserApiUsage usage = new()
         {
             ApiKeyId = currentApiKey.ApiKeyId,
-            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, scopedCalc, userModel, await clientInfoIdTask, isApi: true),
+            Usage = runService.ToUserModelUsage(currentApiKey.User.Id, calc, userModel, await clientInfoIdTask, isApi: true),
         };
         db.UserApiUsages.Add(usage);
         await db.SaveChangesAsync(cancellationToken);
@@ -364,7 +363,7 @@ public partial class OpenAIChatCompletionController(
         else
         {
             // non-streamed success
-            FullChatCompletion fullChatCompletion = icc.FullResponse!.ToOpenAIFullChat(cco.Model, HttpContext.TraceIdentifier);
+            FullChatCompletion fullChatCompletion = runService.FullResponse!.ToOpenAIFullChat(cco.Model, HttpContext.TraceIdentifier);
             return Content(fullChatCompletion.SerializeForApi(), "application/json");
         }
     }

@@ -1,32 +1,30 @@
 ﻿using Chats.DB;
 using Chats.BE.DB.Jsons;
-using System.Collections.Concurrent;
 
 namespace Chats.BE.Controllers.Chats.Chats;
 
-public record UserModelBalanceCalculator(BalanceInitialInfo Initial, ConcurrentDictionary<string, BalanceCostInfo> Costs)
+public class BalanceCalculator(BalanceInitialInfo initial)
 {
-    private BalanceCostInfo TotalCost => BalanceCostInfo.CombineAll(Costs.Values);
+    private BalanceCostInfo _cost = new([], 0, 0, 0);
 
-    private BalanceInitialInfo Remaining => Initial - TotalCost;
-
-    public BalanceCostInfo GetTotalCostExcept(string scopeId) => BalanceCostInfo.CombineAll(Costs.Where(x => x.Key != scopeId).Select(x => x.Value));
-
-    private BalanceInitialInfo GetRemainingExcept(string scopeId) => Initial - GetTotalCostExcept(scopeId);
-
-
-    public static UserModelBalanceCalculator Empty => new(new BalanceInitialInfo([], 0), []);
+    private BalanceInitialInfo Remaining => initial - _cost;
 
     public bool IsSufficient => Remaining.IsSufficient;
 
-    public decimal BalanceCost => TotalCost.TotalCost;
+    public BalanceCostInfo Cost => _cost;
 
-    public IEnumerable<BalanceInitialUsageInfo> UsageCosts => TotalCost.UsageInfo.Values.Where(x => x.Counts > 0 || x.Tokens > 0);
+    public decimal BalanceCost => _cost.TotalCost;
 
-    private BalanceCostInfo GetSpanCost(string scopeId, short modelId, int inputTokenCount, int outputTokenCount, int cacheTokenCount, JsonPriceConfig price)
+    public IEnumerable<BalanceInitialUsageInfo> UsageCosts => _cost.UsageInfo.Values.Where(x => x.Counts > 0 || x.Tokens > 0);
+
+    public void SetCost(short modelId, int inputTokenCount, int outputTokenCount, int cacheTokenCount, JsonPriceConfig price)
     {
-        BalanceInitialInfo remaining = GetRemainingExcept(scopeId);
-        BalanceInitialUsageInfo modelUsageInfo = remaining.GetModelUsageInfo(modelId);
+        _cost = GetCost(modelId, inputTokenCount, outputTokenCount, cacheTokenCount, price);
+    }
+
+    private BalanceCostInfo GetCost(short modelId, int inputTokenCount, int outputTokenCount, int cacheTokenCount, JsonPriceConfig price)
+    {
+        BalanceInitialUsageInfo modelUsageInfo = initial.GetModelUsageInfo(modelId);
 
         // price model is based on counts
         if (modelUsageInfo.Counts > 0)
@@ -37,7 +35,6 @@ public record UserModelBalanceCalculator(BalanceInitialInfo Initial, ConcurrentD
         // price model is based on tokens
         if (modelUsageInfo.Tokens > inputTokenCount + outputTokenCount)
         {
-            //return new BalanceCostInfo(CostTokens: inputTokenCount + outputTokenCount);
             return new BalanceCostInfo(new BalanceInitialUsageInfo(modelId, Tokens: inputTokenCount + outputTokenCount));
         }
 
@@ -66,25 +63,6 @@ public record UserModelBalanceCalculator(BalanceInitialInfo Initial, ConcurrentD
         decimal cacheCost = price.InputCachedTokenPrice * cacheTokensCharged;
         decimal outputCost = price.OutputTokenPrice * toBeDeductedOutputTokens;
         return new BalanceCostInfo(new BalanceInitialUsageInfo(modelId, Tokens: modelUsageInfo.Tokens - remainingTokens), inputCost, outputCost, cacheCost);
-    }
-
-    public void SetSpanCost(string scopeId, short modelId, int inputTokenCount, int outputTokenCount, int cacheTokenCount, JsonPriceConfig price)
-    {
-        Costs[scopeId] = GetSpanCost(scopeId, modelId, inputTokenCount, outputTokenCount, cacheTokenCount, price);
-    }
-
-    public ScopedBalanceCalculator WithScoped(string scopeId) => new(this, scopeId);
-}
-
-public class ScopedBalanceCalculator(UserModelBalanceCalculator parent, string scopeId)
-{
-    public bool IsSufficient => parent.IsSufficient;
-
-    public BalanceCostInfo Cost => parent.Costs[scopeId];
-
-    public void SetCost(short modelId, int inputTokenCount, int outputTokenCount, int cacheTokenCount, JsonPriceConfig price)
-    {
-        parent.SetSpanCost(scopeId, modelId, inputTokenCount, outputTokenCount, cacheTokenCount, price);
     }
 }
 

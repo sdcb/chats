@@ -12,7 +12,7 @@ using System.Runtime.CompilerServices;
 
 namespace Chats.BE.Services.Models;
 
-public class InChatContext(long firstTick)
+public class ChatRunService(long firstTick)
 {
     private long _preprocessTick, _firstReasoningTick, _firstResponseTick, _endResponseTick, _finishTick;
     private short _segmentCount;
@@ -20,12 +20,12 @@ public class InChatContext(long firstTick)
     private readonly List<ChatSegment> _segmentsAfterUsage = [];
     private UsageChatSegment? _lastReliableUsageSegment;
     private JsonPriceConfig? _priceConfig;
-    private ScopedBalanceCalculator? _balance;
+    private BalanceCalculator? _balance;
 
     public DBFinishReason FinishReason { get; set; } = DBFinishReason.Success;
 
     internal async IAsyncEnumerable<ChatSegment> RunInternal(
-        ScopedBalanceCalculator balance,
+        BalanceCalculator balance,
         UserModel userModel,
         ChatRequest requestForEstimation,
         IAsyncEnumerable<ChatSegment> segments)
@@ -100,8 +100,8 @@ public class InChatContext(long firstTick)
         }
     }
 
-    public async IAsyncEnumerable<ChatSegment> Run(
-        ScopedBalanceCalculator balance,
+    public async IAsyncEnumerable<ChatSegment> RunAsync(
+        BalanceCalculator balance,
         UserModel userModel,
         ChatService chatService,
         ChatRequest request,
@@ -174,7 +174,7 @@ public class InChatContext(long firstTick)
     {
         if (_priceConfig == null || _balance == null)
         {
-            throw new InvalidOperationException("InChatContext has not been initialized.");
+            throw new InvalidOperationException("ChatRunService has not been initialized.");
         }
 
         _balance.SetCost(userModel.ModelId, usage.Usage.InputTokens, usage.Usage.OutputTokens, usage.Usage.CacheTokens, _priceConfig);
@@ -211,7 +211,7 @@ public class InChatContext(long firstTick)
     {
         if (_priceConfig == null || _balance == null)
         {
-            throw new InvalidOperationException("InChatContext has not been initialized.");
+            throw new InvalidOperationException("ChatRunService has not been initialized.");
         }
 
         ChatTokenUsage baseUsage = _lastReliableUsageSegment?.Usage ?? ChatTokenUsage.Zero;
@@ -272,7 +272,7 @@ public class InChatContext(long firstTick)
         ? (int)Stopwatch.GetElapsedTime(_firstReasoningTick, _firstResponseTick).TotalMilliseconds
         : 0;
 
-    public UserModelUsage ToUserModelUsage(int userId, ScopedBalanceCalculator calc, UserModel userModel, int clientInfoId, bool isApi)
+    public UserModelUsage ToUserModelUsage(int userId, BalanceCalculator calc, UserModel userModel, int clientInfoId, bool isApi)
     {
         if (_finishTick == _preprocessTick) _finishTick = Stopwatch.GetTimestamp();
 

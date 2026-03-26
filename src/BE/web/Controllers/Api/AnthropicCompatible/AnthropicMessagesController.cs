@@ -38,7 +38,7 @@ public class AnthropicMessagesController(
         [FromServices] IOptions<ChatOptions> chatOptions,
         CancellationToken cancellationToken)
     {
-        InChatContext icc = new(Stopwatch.GetTimestamp());
+        ChatRunService runService = new(Stopwatch.GetTimestamp());
         AnthropicRequestWrapper request = new(json);
 
         if (!request.SeemsValid())
@@ -64,13 +64,13 @@ public class AnthropicMessagesController(
         }
 
         int? retry429Times = chatOptions.Value.Retry429Times;
-        return await ProcessMessage(request, userModel, icc, clientInfoIdTask, retry429Times, cancellationToken);
+        return await ProcessMessage(request, userModel, runService, clientInfoIdTask, retry429Times, cancellationToken);
     }
 
     private async Task<ActionResult> ProcessMessage(
         AnthropicRequestWrapper request,
         UserModel userModel,
-        InChatContext icc,
+        ChatRunService runService,
         Task<int> clientInfoIdTask,
         int? retry429Times,
         CancellationToken cancellationToken)
@@ -80,8 +80,7 @@ public class AnthropicMessagesController(
         UserBalance userBalance = await db.UserBalances
             .Where(x => x.UserId == currentApiKey.User.Id)
             .FirstOrDefaultAsync(cancellationToken) ?? throw new InvalidOperationException("User balance not found.");
-        UserModelBalanceCalculator calc = new(BalanceInitialInfo.FromDB([userModel], userBalance.Balance), []);
-        ScopedBalanceCalculator scopedCalc = calc.WithScoped("0");
+        BalanceCalculator calc = new(BalanceInitialInfo.FromDB([userModel], userBalance.Balance));
         ActionResult? errorToReturn = null;
         bool hasSuccessYield = false;
         string messageId = $"msg_{Guid.NewGuid():N}";
@@ -94,7 +93,7 @@ public class AnthropicMessagesController(
         {
             ChatRequest csr = request.ToChatRequest(currentApiKey.User.Id.ToString(), cm);
 
-            await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, csr, fup, retry429Times, cancellationToken))
+            await foreach (ChatSegment segment in runService.RunAsync(calc, userModel, s, csr, fup, retry429Times, cancellationToken))
             {
                 if (request.Streamed)
                 {
@@ -136,7 +135,7 @@ public class AnthropicMessagesController(
             }
 
             // Send final events for streaming
-            if (request.Streamed && hasSuccessYield && icc.FinishReason != DBFinishReason.Cancelled)
+            if (request.Streamed && hasSuccessYield && runService.FinishReason != DBFinishReason.Cancelled)
             {
                 // Close any open content block
                 if (streamingState.CurrentBlockIndex >= 0)
@@ -145,7 +144,7 @@ public class AnthropicMessagesController(
                 }
 
                 // Send message_delta with stop_reason
-                await YieldEvent("message_delta", icc.FullResponse!.ToMessageDeltaEvent(), cancellationToken);
+                await YieldEvent("message_delta", runService.FullResponse!.ToMessageDeltaEvent(), cancellationToken);
 
                 // Send message_stop
                 await YieldEvent("message_stop", new MessageStopEvent(), cancellationToken);
@@ -153,22 +152,22 @@ public class AnthropicMessagesController(
         }
         catch (RawChatServiceException rawEx)
         {
-            icc.FinishReason = rawEx.ErrorCode;
+            runService.FinishReason = rawEx.ErrorCode;
             logger.LogError(rawEx, "Upstream error: {StatusCode}", rawEx.StatusCode);
             errorToReturn = await YieldRawError(hasSuccessYield && request.Streamed, rawEx.StatusCode, rawEx.Body, cancellationToken);
         }
         catch (ChatServiceException cse)
         {
-            icc.FinishReason = cse.ErrorCode;
+            runService.FinishReason = cse.ErrorCode;
             errorToReturn = await YieldError(hasSuccessYield && request.Streamed, MapFinishReasonToErrorType(cse.ErrorCode), cse.Message, cancellationToken);
         }
         catch (TaskCanceledException)
         {
-            icc.FinishReason = DBFinishReason.Cancelled;
+            runService.FinishReason = DBFinishReason.Cancelled;
         }
         catch (Exception e)
         {
-            icc.FinishReason = DBFinishReason.UnknownError;
+            runService.FinishReason = DBFinishReason.UnknownError;
             logger.LogError(e, "Unknown error");
             errorToReturn = await YieldError(hasSuccessYield && request.Streamed, AnthropicErrorTypes.ApiError, "Internal server error", cancellationToken);
         }
@@ -181,7 +180,7 @@ public class AnthropicMessagesController(
         UserApiUsage usage = new()
         {
             ApiKeyId = currentApiKey.ApiKeyId,
-            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, scopedCalc, userModel, await clientInfoIdTask, isApi: true),
+            Usage = runService.ToUserModelUsage(currentApiKey.User.Id, calc, userModel, await clientInfoIdTask, isApi: true),
         };
         db.UserApiUsages.Add(usage);
         await db.SaveChangesAsync(cancellationToken);
@@ -205,7 +204,7 @@ public class AnthropicMessagesController(
         else
         {
             // Non-streamed success response
-            AnthropicResponse response = icc.FullResponse!.ToAnthropicResponse(request.Model!, messageId);
+            AnthropicResponse response = runService.FullResponse!.ToAnthropicResponse(request.Model!, messageId);
             return Ok(response);
         }
     }

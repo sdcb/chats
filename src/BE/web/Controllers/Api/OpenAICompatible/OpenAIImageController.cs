@@ -152,7 +152,7 @@ public class OpenAIImageController(
         int? retry429Times,
         CancellationToken cancellationToken)
     {
-        InChatContext icc = new(Stopwatch.GetTimestamp());
+        ChatRunService runService = new(Stopwatch.GetTimestamp());
         Model cm = userModel.Model;
         ChatService s = cf.CreateChatService(cm);
 
@@ -160,8 +160,7 @@ public class OpenAIImageController(
             .Where(x => x.UserId == currentApiKey.User.Id)
             .FirstOrDefaultAsync(cancellationToken) ?? throw new InvalidOperationException("User balance not found.");
 
-        UserModelBalanceCalculator calc = new(BalanceInitialInfo.FromDB([userModel], userBalance.Balance), []);
-        ScopedBalanceCalculator scopedCalc = calc.WithScoped("0");
+        BalanceCalculator calc = new(BalanceInitialInfo.FromDB([userModel], userBalance.Balance));
 
         ActionResult? errorToReturn = null;
         bool hasSuccessYield = false;
@@ -177,7 +176,7 @@ public class OpenAIImageController(
                 List<Base64Image> pendingFinalImages = [];
                 ChatTokenUsage? latestUsage = null;
 
-                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, chatRequest, fup, retry429Times, cancellationToken))
+                await foreach (ChatSegment segment in runService.RunAsync(calc, userModel, s, chatRequest, fup, retry429Times, cancellationToken))
                 {
                     switch (segment)
                     {
@@ -248,7 +247,7 @@ public class OpenAIImageController(
 
                 if (pendingFinalImages.Count > 0)
                 {
-                    ChatTokenUsage usageFallback = latestUsage ?? icc.FullResponse!.Usage;
+                    ChatTokenUsage usageFallback = latestUsage ?? runService.FullResponse!.Usage;
                     if (!hasSuccessYield)
                     {
                         Response.StatusCode = 200;
@@ -280,7 +279,7 @@ public class OpenAIImageController(
                 // Non-streaming response
                 List<ImageData> imageDataList = [];
 
-                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, chatRequest, fup, retry429Times, cancellationToken))
+                await foreach (ChatSegment segment in runService.RunAsync(calc, userModel, s, chatRequest, fup, retry429Times, cancellationToken))
                 {
                     if (segment is Base64Image image && segment is not Base64PreviewImage)
                     {
@@ -288,7 +287,7 @@ public class OpenAIImageController(
                     }
                 }
 
-                ChatTokenUsage finalUsage = icc.FullResponse!.Usage;
+                ChatTokenUsage finalUsage = runService.FullResponse!.Usage;
 
                 ImageGenerationResponse response = new()
                 {
@@ -306,24 +305,24 @@ public class OpenAIImageController(
         }
         catch (RawChatServiceException rawEx)
         {
-            icc.FinishReason = rawEx.ErrorCode;
+            runService.FinishReason = rawEx.ErrorCode;
             logger.LogError(rawEx, "Upstream error: {StatusCode}", rawEx.StatusCode);
             errorToReturn = await YieldRawError(hasSuccessYield && isStreamed, rawEx.StatusCode, rawEx.Body, cancellationToken);
         }
         catch (ChatServiceException cse)
         {
-            icc.FinishReason = cse.ErrorCode;
+            runService.FinishReason = cse.ErrorCode;
             errorToReturn = await YieldError(hasSuccessYield && isStreamed, cse.ErrorCode, cse.Message, cancellationToken);
         }
         catch (TaskCanceledException)
         {
-            icc.FinishReason = DBFinishReason.Cancelled;
+            runService.FinishReason = DBFinishReason.Cancelled;
         }
         catch (Exception e)
         {
-            icc.FinishReason = DBFinishReason.UnknownError;
+            runService.FinishReason = DBFinishReason.UnknownError;
             logger.LogError(e, "Unknown error");
-            errorToReturn = await YieldError(hasSuccessYield && isStreamed, icc.FinishReason, "", cancellationToken);
+            errorToReturn = await YieldError(hasSuccessYield && isStreamed, runService.FinishReason, "", cancellationToken);
         }
         finally
         {
@@ -334,7 +333,7 @@ public class OpenAIImageController(
         UserApiUsage usage = new()
         {
             ApiKeyId = currentApiKey.ApiKeyId,
-            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, scopedCalc, userModel, await clientInfoIdTask, isApi: true),
+            Usage = runService.ToUserModelUsage(currentApiKey.User.Id, calc, userModel, await clientInfoIdTask, isApi: true),
         };
         db.UserApiUsages.Add(usage);
         await db.SaveChangesAsync(cancellationToken);
