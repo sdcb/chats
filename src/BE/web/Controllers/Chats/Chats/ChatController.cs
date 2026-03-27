@@ -43,10 +43,8 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         [FromServices] ChatsDB db,
         [FromServices] CurrentUser currentUser,
         [FromServices] ILogger<ChatController> logger,
-        [FromServices] IOptions<ChatOptions> chatOptions,
         [FromServices] IUrlEncryptionService idEncryption,
-        [FromServices] BalanceService balanceService,
-        [FromServices] ChatFactory chatFactory,
+        [FromServices] ChatRunService chatRunService,
         [FromServices] UserModelManager userModelManager,
         [FromServices] FileUrlProvider fup,
         [FromServices] ChatConfigService chatConfigService,
@@ -59,11 +57,9 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             return BadRequest(ModelState);
         }
 
-        int? retry429Times = chatOptions.Value.Retry429Times;
-
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, retry429Times, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
+            db, currentUser, logger, idEncryption, chatRunService, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
             cancellationToken);
     }
 
@@ -73,10 +69,8 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
     [FromServices] ChatsDB db,
     [FromServices] CurrentUser currentUser,
     [FromServices] ILogger<ChatController> logger,
-    [FromServices] IOptions<ChatOptions> chatOptions,
     [FromServices] IUrlEncryptionService idEncryption,
-    [FromServices] BalanceService balanceService,
-    [FromServices] ChatFactory chatFactory,
+    [FromServices] ChatRunService chatRunService,
     [FromServices] UserModelManager userModelManager,
     [FromServices] FileUrlProvider fup,
     [FromServices] ChatConfigService chatConfigService,
@@ -89,11 +83,9 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             return BadRequest(ModelState);
         }
 
-        int? retry429Times = chatOptions.Value.Retry429Times;
-
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, retry429Times, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
+            db, currentUser, logger, idEncryption, chatRunService, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
             cancellationToken);
     }
 
@@ -103,10 +95,8 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         [FromServices] ChatsDB db,
         [FromServices] CurrentUser currentUser,
         [FromServices] ILogger<ChatController> logger,
-        [FromServices] IOptions<ChatOptions> chatOptions,
         [FromServices] IUrlEncryptionService idEncryption,
-        [FromServices] BalanceService balanceService,
-        [FromServices] ChatFactory chatFactory,
+        [FromServices] ChatRunService chatRunService,
         [FromServices] UserModelManager userModelManager,
         [FromServices] FileUrlProvider fup,
         [FromServices] ChatConfigService chatConfigService,
@@ -124,11 +114,9 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             return BadRequest("User message must have at least one text content");
         }
 
-        int? retry429Times = chatOptions.Value.Retry429Times;
-
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, retry429Times, idEncryption, balanceService, chatFactory, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
+            db, currentUser, logger, idEncryption, chatRunService, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
             cancellationToken);
     }
 
@@ -137,10 +125,8 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         ChatsDB db,
         CurrentUser currentUser,
         ILogger<ChatController> logger,
-        int? retry429Times,
         IUrlEncryptionService idEncryption,
-        BalanceService balanceService,
-        ChatFactory chatFactory,
+        ChatRunService chatRunService,
         UserModelManager userModelManager,
         FileUrlProvider fup,
         ChatConfigService chatConfigService,
@@ -148,7 +134,6 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         CodeInterpreterExecutor codeInterpreter,
         CancellationToken cancellationToken)
     {
-        long firstTick = Stopwatch.GetTimestamp();
         cancellationToken = default; // disallow cancellation token for now for better user experience
 
         _ = clientInfoManager.GetClientInfoId(cancellationToken);
@@ -284,9 +269,6 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         string stopId = stopService.CreateAndCombineCancellationToken(ref cancellationToken);
         await YieldResponse(new StopIdLine(stopId));
 
-        UserBalance userBalance = await db.UserBalances.Where(x => x.UserId == currentUser.Id).SingleAsync(cancellationToken);
-        UserModelBalanceCalculator cost = new(BalanceInitialInfo.FromDB(userModels.Values, userBalance.Balance), []);
-
         Channel<SseResponseLine>[] channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
         Dictionary<ImageChatSegment, TaskCompletionSource<DBFile>> imageFileCache = [];
         Dictionary<string, TaskCompletionSource<DBFile>> fileCache = new(StringComparer.Ordinal);
@@ -299,11 +281,10 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         Task[] streamTasks = [.. toGenerateSpans.Select((span, index) => ProcessChatSpan(
             currentUser,
             logger,
-            chatFactory,
+            chatRunService,
             fup,
             codeInterpreter,
             span,
-            firstTick,
             req,
             chat,
             userModels[span.ChatConfig.ModelId],
@@ -311,11 +292,9 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             messageTreeNoContent,
             messageTree,
             newDbUserTurn,
-            cost.WithScoped(span.SpanId.ToString()),
             imageFileCache,
             fileCache,
             channels[index].Writer,
-            retry429Times,
             httpClientFactory,
             loggerFactory,
             cancellationToken))];
@@ -446,26 +425,6 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         // not cancellable from here
         await Task.WhenAll(streamTasks);
 
-        // finish costs
-        if (cost.BalanceCost > 0)
-        {
-            await balanceService.UpdateBalance(db, currentUser.Id, cancellationToken);
-        }
-        if (cost.UsageCosts.Any())
-        {
-            foreach (BalanceInitialUsageInfo um in cost.UsageCosts)
-            {
-                if (userModels.TryGetValue(um.ModelId, out UserModel? userModel))
-                {
-                    await balanceService.UpdateUsage(db, userModel.Id, cancellationToken);
-                }
-                else
-                {
-                    logger.LogError("UserModel not found for model id: {modelId}", um.ModelId);
-                }
-            }
-        }
-
         // yield title
         if (isEmptyChat) await YieldTitle(chat.Title);
         return new EmptyResult();
@@ -497,11 +456,10 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
     private async Task ProcessChatSpan(
         CurrentUser currentUser,
         ILogger<ChatController> logger,
-        ChatFactory chatFactory,
+        ChatRunService chatRunService,
         FileUrlProvider fup,
         CodeInterpreterExecutor codeInterpreter,
         ChatSpan chatSpan,
-        long firstTick,
         WebChatRequest req,
         Chat chat,
         UserModel userModel,
@@ -509,11 +467,9 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         IEnumerable<ChatTurn> messageTurns,
         IEnumerable<Step> messageTree,
         ChatTurn? dbUserMessage,
-        ScopedBalanceCalculator calc,
         Dictionary<ImageChatSegment, TaskCompletionSource<DBFile>> imageFileCache,
         Dictionary<string, TaskCompletionSource<DBFile>> fileCache,
         ChannelWriter<SseResponseLine> writer,
-        int? retry429Times,
         IHttpClientFactory httpClientFactory,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
@@ -830,7 +786,6 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             {
                 break;
             }
-            firstTick = Stopwatch.GetTimestamp();
         }
 
         static bool TryGetUnfinishedToolCall(Step step, out List<StepContentToolCall> toolCall)
@@ -866,16 +821,18 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
 
         async Task<Step> RunOne(ChatRequest request, CancellationToken cancellationToken)
         {
-            InChatContext icc = new(firstTick);
-
             string? errorText = null;
-            try
-            {
-                ChatService s = chatFactory.CreateChatService(userModel.Model);
-
-                bool responseStated = false, reasoningStarted = false;
-                await foreach (ChatSegment segment in icc.Run(calc, userModel, s, request, fup, retry429Times, cancellationToken))
+            bool responseStated = false;
+            bool reasoningStarted = false;
+            ChatRunResult runResult = await chatRunService.RunAsync(
+                new ChatRunRequest
                 {
+                    UserModel = userModel,
+                    ChatRequest = request,
+                },
+                async (segmentContext, ct) =>
+                {
+                    ChatSegment segment = segmentContext.Segment;
                     switch (segment)
                     {
                         case ThinkChatSegment thinkSeg:
@@ -889,7 +846,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
                         case TextChatSegment textSeg:
                             if (!responseStated)
                             {
-                                writer.TryWrite(new StartResponseLine(chatSpan.SpanId, icc.ReasoningDurationMs));
+                                writer.TryWrite(new StartResponseLine(chatSpan.SpanId, segmentContext.ReasoningDurationMs));
                                 responseStated = true;
                             }
                             writer.TryWrite(new SegmentLine(chatSpan.SpanId, textSeg.Text));
@@ -918,55 +875,42 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
                         errorText = "Content Filtered";
                     }
 
-                    if (cancellationToken.IsCancellationRequested)
+                    if (ct.IsCancellationRequested)
                     {
                         throw new TaskCanceledException();
                     }
-                }
-            }
-            catch (RawChatServiceException rawEx)
+
+                    await Task.CompletedTask;
+                },
+                cancellationToken);
+
+            switch (runResult.Exception)
             {
-                icc.FinishReason = rawEx.ErrorCode;
-                errorText = rawEx.Body;
-                logger.LogError(rawEx, "Upstream error: {StatusCode}", rawEx.StatusCode);
-            }
-            catch (ChatServiceException cse)
-            {
-                icc.FinishReason = cse.ErrorCode;
-                errorText = cse.Message;
-            }
-            catch (AggregateException e) when (e.InnerException is TaskCanceledException)
-            {
-                // do nothing if cancelled
-                icc.FinishReason = DBFinishReason.Cancelled;
-                errorText = e.InnerException.ToString();
-            }
-            catch (TaskCanceledException)
-            {
-                // do nothing if cancelled
-                icc.FinishReason = DBFinishReason.Cancelled;
-                errorText = "Conversation cancelled";
-            }
-            catch (Exception e)
-            {
-                icc.FinishReason = DBFinishReason.UnknownError;
-                errorText = e.Message;
-                logger.LogError(e, "Error in conversation for message: {userMessageId}", req.LastMessageId);
-            }
-            finally
-            {
-                // cancel the conversation because following code is credit deduction related
-                cancellationToken = CancellationToken.None;
+                case RawChatServiceException rawEx:
+                    errorText = rawEx.Body;
+                    logger.LogError(rawEx, "Upstream error: {StatusCode}", rawEx.StatusCode);
+                    break;
+                case ChatServiceException cse:
+                    errorText = cse.Message;
+                    break;
+                case AggregateException e when (e.InnerException is TaskCanceledException):
+                    errorText = e.InnerException.ToString();
+                    break;
+                case TaskCanceledException:
+                    errorText = "Conversation cancelled";
+                    break;
+                case Exception e:
+                    errorText = e.Message;
+                    logger.LogError(e, "Error in conversation for message: {userMessageId}", req.LastMessageId);
+                    break;
             }
 
-            // success
-            // insert new assistant message
             Step step = new()
             {
                 ChatRoleId = (byte)DBChatRole.Assistant,
                 CreatedAt = DateTime.UtcNow,
-                Usage = icc.ToUserModelUsage(currentUser.Id, calc, userModel, await clientInfoManager.GetClientInfoId(), isApi: false),
-                StepContents = [.. StepContentExtensions.FromFullResponse(icc.FullResponse!, errorText, imageFileCache)],
+                UsageId = runResult.UserModelUsageId,
+                StepContents = [.. StepContentExtensions.FromFullResponse(runResult.FullResponse, errorText, imageFileCache)],
                 Turn = turn,
             };
 

@@ -24,11 +24,9 @@ namespace Chats.BE.Controllers.Api.OpenAICompatible;
 public class OpenAIImageController(
     ChatsDB db,
     CurrentApiKey currentApiKey,
-    ChatFactory cf,
+    ChatRunService chatRunService,
     UserModelManager userModelManager,
     ILogger<OpenAIImageController> logger,
-    BalanceService balanceService,
-    FileUrlProvider fup,
     ClientInfoManager clientInfoManager) : ControllerBase
 {
     private static readonly DBApiType[] AllowedApiTypes = [DBApiType.OpenAIImageGeneration];
@@ -40,7 +38,6 @@ public class OpenAIImageController(
     [HttpPost("v1/images/generations")]
     public async Task<ActionResult> ImageGeneration(
         [FromBody] ImageGenerationRequest? request,
-        [FromServices] IOptions<ChatOptions> chatOptions,
         CancellationToken cancellationToken)
     {
         if (request == null || string.IsNullOrWhiteSpace(request.Prompt))
@@ -63,8 +60,7 @@ public class OpenAIImageController(
         }
 
         bool isStreamed = request.Stream == true;
-        int? retry429Times = chatOptions.Value.Retry429Times;
-        return await ProcessImageGeneration(request, userModel, isStreamed, images: null, retry429Times, cancellationToken);
+        return await ProcessImageGeneration(request, userModel, isStreamed, images: null, cancellationToken);
     }
 
     /// <summary>
@@ -75,7 +71,6 @@ public class OpenAIImageController(
     [HttpPost("v1/images/edits")]
     [Consumes("multipart/form-data")]
     public async Task<ActionResult> ImageEdits(
-        [FromServices] IOptions<ChatOptions> chatOptions,
         CancellationToken cancellationToken)
     {
         IFormCollection form = await Request.ReadFormAsync(cancellationToken);
@@ -138,8 +133,7 @@ public class OpenAIImageController(
             Moderation = moderation
         };
 
-        int? retry429Times = chatOptions.Value.Retry429Times;
-        return await ProcessImageGeneration(request, userModel, isStreamed, images, retry429Times, cancellationToken);
+        return await ProcessImageGeneration(request, userModel, isStreamed, images, cancellationToken);
     }
 
     private async Task<ActionResult> ProcessImageGeneration(
@@ -147,35 +141,25 @@ public class OpenAIImageController(
         UserModel userModel,
         bool isStreamed,
         List<(byte[] Data, string ContentType, string FileName, bool IsMask)>? images,
-        int? retry429Times,
         CancellationToken cancellationToken)
     {
-        InChatContext icc = new(Stopwatch.GetTimestamp());
-        Model cm = userModel.Model;
-        ChatService s = cf.CreateChatService(cm);
-
-        UserBalance userBalance = await db.UserBalances
-            .Where(x => x.UserId == currentApiKey.User.Id)
-            .FirstOrDefaultAsync(cancellationToken) ?? throw new InvalidOperationException("User balance not found.");
-
-        UserModelBalanceCalculator calc = new(BalanceInitialInfo.FromDB([userModel], userBalance.Balance), []);
-        ScopedBalanceCalculator scopedCalc = calc.WithScoped("0");
-
         ActionResult? errorToReturn = null;
         bool hasSuccessYield = false;
+        List<Base64Image> pendingFinalImages = [];
+        ChatTokenUsage? latestUsage = null;
+        List<ImageData> imageDataList = [];
 
-        try
-        {
-            // Build the ChatRequest for image generation
-            ChatRequest chatRequest = BuildImageChatRequest(request, cm, images);
-
-            if (isStreamed)
+        ChatRequest chatRequest = BuildImageChatRequest(request, userModel.Model, images);
+        ChatRunResult runResult = await chatRunService.RunAsync(
+            new ChatRunRequest
             {
-                // Streaming response
-                List<Base64Image> pendingFinalImages = [];
-                ChatTokenUsage? latestUsage = null;
-
-                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, chatRequest, fup, retry429Times, cancellationToken))
+                UserModel = userModel,
+                ChatRequest = chatRequest,
+            },
+            async (segmentContext, ct) =>
+            {
+                ChatSegment segment = segmentContext.Segment;
+                if (isStreamed)
                 {
                     switch (segment)
                     {
@@ -204,7 +188,7 @@ public class OpenAIImageController(
                                         OutputFormat = GetOutputFormatFromContentType(image.ContentType),
                                         Usage = ConvertUsage(latestUsage)
                                     };
-                                    await YieldStreamEvent(completedEvent, cancellationToken);
+                                    await YieldStreamEvent(completedEvent, ct);
                                     hasSuccessYield = true;
                                 }
                                 pendingFinalImages.Clear();
@@ -230,121 +214,76 @@ public class OpenAIImageController(
                                 Background = request.Background ?? "opaque",
                                 OutputFormat = GetOutputFormatFromContentType(previewImage.ContentType)
                             };
-                            await YieldStreamEvent(streamEvent, cancellationToken);
+                            await YieldStreamEvent(streamEvent, ct);
                             hasSuccessYield = true;
                             break;
                         case Base64Image finalImage when segment is not Base64PreviewImage:
                             pendingFinalImages.Add(finalImage);
                             break;
                     }
-
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        throw new TaskCanceledException();
-                    }
                 }
-
-                if (pendingFinalImages.Count > 0)
+                else if (segment is Base64Image image && segment is not Base64PreviewImage)
                 {
-                    ChatTokenUsage usageFallback = latestUsage ?? icc.FullResponse!.Usage;
-                    if (!hasSuccessYield)
-                    {
-                        Response.StatusCode = 200;
-                        Response.Headers.ContentType = "text/event-stream; charset=utf-8";
-                        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
-                        Response.Headers.Connection = "keep-alive";
-                    }
-
-                    foreach (Base64Image image in pendingFinalImages)
-                    {
-                        ImageStreamEvent completedEvent = new()
-                        {
-                            Type = images != null ? "image_edit.completed" : "image_generation.completed",
-                            B64Json = image.Base64,
-                            CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                            Size = request.Size,
-                            Quality = request.Quality,
-                            Background = request.Background ?? "opaque",
-                            OutputFormat = GetOutputFormatFromContentType(image.ContentType),
-                            Usage = ConvertUsage(usageFallback)
-                        };
-                        await YieldStreamEvent(completedEvent, cancellationToken);
-                        hasSuccessYield = true;
-                    }
+                    imageDataList.Add(new ImageData { B64Json = image.Base64 });
                 }
-            }
-            else
+
+                if (ct.IsCancellationRequested)
+                {
+                    throw new TaskCanceledException();
+                }
+            },
+            cancellationToken);
+
+        switch (runResult.Exception)
+        {
+            case RawChatServiceException rawEx:
+                logger.LogError(rawEx, "Upstream error: {StatusCode}", rawEx.StatusCode);
+                errorToReturn = await YieldRawError(hasSuccessYield && isStreamed, rawEx.StatusCode, rawEx.Body, cancellationToken);
+                break;
+            case ChatServiceException cse:
+                errorToReturn = await YieldError(hasSuccessYield && isStreamed, cse.ErrorCode, cse.Message, cancellationToken);
+                break;
+            case Exception e when e is not TaskCanceledException:
+                logger.LogError(e, "Unknown error");
+                errorToReturn = await YieldError(hasSuccessYield && isStreamed, runResult.FinishReason, "", cancellationToken);
+                break;
+        }
+
+        if (isStreamed && pendingFinalImages.Count > 0)
+        {
+            ChatTokenUsage usageFallback = latestUsage ?? runResult.FullResponse.Usage;
+            if (!hasSuccessYield)
             {
-                // Non-streaming response
-                List<ImageData> imageDataList = [];
+                Response.StatusCode = 200;
+                Response.Headers.ContentType = "text/event-stream; charset=utf-8";
+                Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
+                Response.Headers.Connection = "keep-alive";
+            }
 
-                await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, chatRequest, fup, retry429Times, cancellationToken))
+            foreach (Base64Image image in pendingFinalImages)
+            {
+                ImageStreamEvent completedEvent = new()
                 {
-                    if (segment is Base64Image image && segment is not Base64PreviewImage)
-                    {
-                        imageDataList.Add(new ImageData { B64Json = image.Base64 });
-                    }
-                }
-
-                ChatTokenUsage finalUsage = icc.FullResponse!.Usage;
-
-                ImageGenerationResponse response = new()
-                {
-                    Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                    Data = imageDataList,
-                    Background = request.Background ?? "opaque",
-                    OutputFormat = request.OutputFormat ?? "png",
-                    Quality = request.Quality,
+                    Type = images != null ? "image_edit.completed" : "image_generation.completed",
+                    B64Json = image.Base64,
+                    CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                     Size = request.Size,
-                    Usage = ConvertUsage(finalUsage)
+                    Quality = request.Quality,
+                    Background = request.Background ?? "opaque",
+                    OutputFormat = GetOutputFormatFromContentType(image.ContentType),
+                    Usage = ConvertUsage(usageFallback)
                 };
-
-                return Ok(response);
+                await YieldStreamEvent(completedEvent, cancellationToken);
+                hasSuccessYield = true;
             }
         }
-        catch (RawChatServiceException rawEx)
-        {
-            icc.FinishReason = rawEx.ErrorCode;
-            logger.LogError(rawEx, "Upstream error: {StatusCode}", rawEx.StatusCode);
-            errorToReturn = await YieldRawError(hasSuccessYield && isStreamed, rawEx.StatusCode, rawEx.Body, cancellationToken);
-        }
-        catch (ChatServiceException cse)
-        {
-            icc.FinishReason = cse.ErrorCode;
-            errorToReturn = await YieldError(hasSuccessYield && isStreamed, cse.ErrorCode, cse.Message, cancellationToken);
-        }
-        catch (TaskCanceledException)
-        {
-            icc.FinishReason = DBFinishReason.Cancelled;
-        }
-        catch (Exception e)
-        {
-            icc.FinishReason = DBFinishReason.UnknownError;
-            logger.LogError(e, "Unknown error");
-            errorToReturn = await YieldError(hasSuccessYield && isStreamed, icc.FinishReason, "", cancellationToken);
-        }
-        finally
-        {
-            cancellationToken = CancellationToken.None;
-        }
 
-        // Save usage
-        UserApiUsage usage = new()
+        db.UserApiUsages.Add(new UserApiUsage
         {
             ApiKeyId = currentApiKey.ApiKeyId,
-            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, scopedCalc, userModel, await clientInfoManager.GetClientInfoId(), isApi: true),
-        };
-        db.UserApiUsages.Add(usage);
-        await db.SaveChangesAsync(cancellationToken);
-
-        if (calc.BalanceCost > 0)
-        {
-            _ = balanceService.AsyncUpdateBalance(currentApiKey.User.Id, CancellationToken.None);
-        }
-        if (calc.UsageCosts.Any())
-        {
-            _ = balanceService.AsyncUpdateUsage([userModel.Id], CancellationToken.None);
-        }
+            UsageId = runResult.UserModelUsageId,
+        });
+        await db.SaveChangesAsync(CancellationToken.None);
 
         if (hasSuccessYield && isStreamed)
         {
@@ -356,8 +295,18 @@ public class OpenAIImageController(
         }
         else
         {
-            // This shouldn't happen for non-streamed responses as we return early
-            return new EmptyResult();
+            ImageGenerationResponse response = new()
+            {
+                Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Data = imageDataList,
+                Background = request.Background ?? "opaque",
+                OutputFormat = request.OutputFormat ?? "png",
+                Quality = request.Quality,
+                Size = request.Size,
+                Usage = ConvertUsage(runResult.FullResponse.Usage)
+            };
+
+            return Ok(response);
         }
     }
 

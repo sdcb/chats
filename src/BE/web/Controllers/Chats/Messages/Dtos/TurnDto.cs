@@ -148,10 +148,14 @@ public record ChatMessageTemp
         }
         else
         {
-            UserModelUsage[] usages = [.. assistantMessage.Steps
-                .Where(x => x.Usage != null)
-                .Select(x => x.Usage!)];
-            if (usages.Length == 0) throw new InvalidOperationException("Assistant message must have usage data");
+            Model? usageModel = assistantMessage.Steps.Where(x => x.Usage != null).Select(x => x.Usage!).FirstOrDefault()?.Model;
+            Model? chatConfigModel = assistantMessage.ChatConfig?.Model;
+            Model? resolvedModel = usageModel ?? chatConfigModel
+                ?? throw new InvalidOperationException("Assistant message usage model is missing.");
+            if (resolvedModel.ModelKey == null)
+            {
+                throw new InvalidOperationException("Assistant message usage model provider is missing.");
+            }
 
             return new()
             {
@@ -163,9 +167,9 @@ public record ChatMessageTemp
                 SpanId = assistantMessage.SpanId,
                 Usage = new ChatMessageTempUsage()
                 {
-                    ModelId = assistantMessage.Steps.First().Usage!.ModelId,
-                    ModelName = assistantMessage.Steps.First().Usage!.Model.Name,
-                    ModelProviderId = assistantMessage.Steps.First().Usage!.Model.ModelKey.ModelProviderId,
+                    ModelId = resolvedModel.Id,
+                    ModelName = resolvedModel.Name,
+                    ModelProviderId = resolvedModel.ModelKey.ModelProviderId,
                 },
                 Reaction = assistantMessage.ReactionId,
             };

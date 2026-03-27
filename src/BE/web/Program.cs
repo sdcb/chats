@@ -112,6 +112,7 @@ public class Program
         builder.Services.AddScoped<ClientInfoManager>();
         builder.Services.AddScoped<FileUrlProvider>();
         builder.Services.AddScoped<ChatConfigService>();
+        builder.Services.AddScoped<ChatRunService>();
         builder.Services.AddScoped<DBFileService>();
         builder.Services.AddScoped<LoginRateLimiter>();
 
