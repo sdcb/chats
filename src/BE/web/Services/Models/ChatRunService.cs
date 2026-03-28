@@ -31,7 +31,6 @@ public class ChatRunService(
         ArgumentNullException.ThrowIfNull(onSegment);
 
         int userId = request.UserModel.UserId;
-        bool isApi = request.ChatRequest.Source == UsageSource.Api;
 
         await using AsyncServiceScope scope = serviceScopeFactory.CreateAsyncScope();
         ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
@@ -73,7 +72,7 @@ public class ChatRunService(
             runtime.RecordFailure(ex, request.ChatRequest);
         }
 
-        UserModelUsage usage = runtime.CreateUserModelUsage(userId, balance, request.UserModel, clientInfoId, isApi);
+        UserModelUsage usage = runtime.CreateUserModelUsage(userId, balance, request.UserModel, clientInfoId, request.ChatRequest.Source);
         db.UserModelUsages.Add(usage);
         await db.SaveChangesAsync(CancellationToken.None);
 
@@ -189,7 +188,7 @@ public class ChatRunService(
             }
         }
 
-        public UserModelUsage CreateUserModelUsage(int userId, SingleModelBalanceCalculator balance, UserModel model, int clientInfoId, bool isApi)
+        public UserModelUsage CreateUserModelUsage(int userId, SingleModelBalanceCalculator balance, UserModel model, int clientInfoId, UsageSource source)
         {
             if (_finishTick == _preprocessTick)
             {
@@ -219,9 +218,15 @@ public class ChatRunService(
                 OutputCost = balance.Cost.OutputCost,
                 InputCachedCost = balance.Cost.InputCachedCost,
                 ClientInfoId = clientInfoId,
+                SourceId = (byte)source,
             };
 
-            byte transactionTypeId = (byte)(isApi ? DBTransactionType.ApiCost : DBTransactionType.WebChatCost);
+            byte transactionTypeId = (byte)(source switch
+            {
+                UsageSource.Api => DBTransactionType.ApiCost,
+                UsageSource.Summary => DBTransactionType.SummaryCost,
+                _ => DBTransactionType.WebChatCost,
+            });
             if (balance.Cost.TotalCost > 0)
             {
                 usage.BalanceTransaction = new()

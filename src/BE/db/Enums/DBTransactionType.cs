@@ -6,5 +6,5 @@ public enum DBTransactionType : byte
     WebChatCost = 2,
     Initial = 3,
     ApiCost = 4,
-    ValidationCost = 5,
+    SummaryCost = 5,
 }

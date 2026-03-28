@@ -62,6 +62,8 @@ public partial class UserModelUsage
     [Column(TypeName = "decimal(14, 8)")]
     public decimal InputCachedCost { get; set; }
 
+    public byte SourceId { get; set; }
+
     [ForeignKey("BalanceTransactionId")]
     [InverseProperty("UserModelUsage")]
     public virtual BalanceTransaction? BalanceTransaction { get; set; }

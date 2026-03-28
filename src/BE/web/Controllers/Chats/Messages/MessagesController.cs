@@ -261,6 +261,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
 
         StepContent[] stepContents = await StepContentExtensions.FromRequest(newContent, fup, cancellationToken);
         int clientInfoId = await clientInfoManager.GetClientInfoId(cancellationToken);
+        UserModelUsage? sourceUsage = message.Steps.First().Usage;
         ChatTurn turn = new()
         {
             SpanId = message.SpanId,
@@ -273,14 +274,14 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                 Edited = true, // Mark as edited since we are creating a new message
                 ChatRoleId = message.IsUser ? (byte)DBChatRole.User : (byte)DBChatRole.Assistant,
                 CreatedAt = DateTime.UtcNow,
-                Usage = message.Steps.First().Usage != null ? new UserModelUsage()
+                Usage = sourceUsage != null ? new UserModelUsage()
                 {
-                    ModelId = message.Steps.First().Usage!.ModelId,
+                    ModelId = sourceUsage.ModelId,
                     UserId = currentUser.Id,
                     FinishReasonId = (byte)DBFinishReason.Success,
                     SegmentCount = 1,
-                    InputFreshTokens = message.Steps.First().Usage!.InputFreshTokens,
-                    InputCachedTokens = message.Steps.First().Usage!.InputCachedTokens,
+                    InputFreshTokens = sourceUsage.InputFreshTokens,
+                    InputCachedTokens = sourceUsage.InputCachedTokens,
                     OutputTokens = ChatService.Tokenizer.CountTokens(content.Text),
                     ClientInfoId = clientInfoId, // Use FK instead of navigation property to avoid EF Core collection modification issue
                     ReasoningTokens = 0,
@@ -294,6 +295,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                     InputCachedCost = 0,
                     BalanceTransactionId = null,
                     UsageTransactionId = null,
+                    SourceId = sourceUsage.SourceId,
                 } : null,
             })],
             ChatConfigId = message.ChatConfigId,

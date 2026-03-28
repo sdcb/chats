@@ -349,11 +349,14 @@ const UsageRecordsTab = ({ fixedSource, basePath }: UsageRecordsTabProps = {}) =
                     <SelectValue placeholder={t('Select Source')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={String(UsageSource.Web)}>
-                      {t('Web')}
+                    <SelectItem value={String(UsageSource.WebChat)}>
+                      {t('WebChat')}
                     </SelectItem>
-                    <SelectItem value={String(UsageSource.API)}>
-                      {t('API')}
+                    <SelectItem value={String(UsageSource.Api)}>
+                      {t('Api')}
+                    </SelectItem>
+                    <SelectItem value={String(UsageSource.Summary)}>
+                      {t('Summary')}
                     </SelectItem>
                   </SelectContent>
                 </Select>

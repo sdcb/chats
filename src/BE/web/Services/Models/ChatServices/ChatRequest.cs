@@ -99,7 +99,7 @@ public record ChatRequest
             {
                 Model = model,
             },
-            Source = UsageSource.Validate,
+            Source = UsageSource.Api,
         };
     }
 

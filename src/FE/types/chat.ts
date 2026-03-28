@@ -203,6 +203,7 @@ export enum MessageContentType {
 export const EMPTY_ID = 'EMPTY_ID';
 
 export enum UsageSource {
-  Web = 1,
-  API = 2,
+  WebChat = 1,
+  Api = 2,
+  Summary = 3,
 }

@@ -52,6 +52,78 @@ END
 
 GO
 
+-- =============================================
+-- Step 2.1: 为 UserModelUsage 增加 SourceId
+-- UsageSource: WebChat = 1, Api = 2, Validate = 3
+-- =============================================
+PRINT N'[Step 2.1] 为 dbo.UserModelUsage 增加 SourceId';
+
+IF COL_LENGTH(N'dbo.UserModelUsage', N'SourceId') IS NULL
+BEGIN
+    ALTER TABLE dbo.UserModelUsage
+    ADD SourceId TINYINT NULL;
+
+    PRINT N'    -> 已新增 dbo.UserModelUsage.SourceId（TINYINT NULL）';
+END
+ELSE
+BEGIN
+    PRINT N'    -> dbo.UserModelUsage.SourceId 已存在，跳过新增列';
+END
+
+GO
+
+-- =============================================
+-- Step 2.2: 回填历史数据
+-- =============================================
+PRINT N'[Step 2.2] 回填 dbo.UserModelUsage.SourceId 历史数据';
+
+UPDATE umu
+SET SourceId = 2
+FROM dbo.UserModelUsage umu
+INNER JOIN dbo.UserApiUsage uau ON uau.UsageId = umu.Id
+WHERE umu.SourceId IS NULL;
+
+PRINT N'    -> 已将存在 UserApiUsage 的历史记录回填为 Api(2)';
+
+UPDATE umu
+SET SourceId = 1
+FROM dbo.UserModelUsage umu
+LEFT JOIN dbo.UserApiUsage uau ON uau.UsageId = umu.Id
+WHERE umu.SourceId IS NULL
+  AND uau.UsageId IS NULL;
+
+PRINT N'    -> 已将剩余历史记录回填为 WebChat(1)';
+
+GO
+
+-- =============================================
+-- Step 2.3: 将 SourceId 收紧为 NOT NULL
+-- =============================================
+PRINT N'[Step 2.3] 将 dbo.UserModelUsage.SourceId 收紧为 NOT NULL';
+
+IF EXISTS (
+    SELECT 1
+    FROM dbo.UserModelUsage
+    WHERE SourceId IS NULL
+)
+BEGIN
+    THROW 50001, N'[Step 2] dbo.UserModelUsage.SourceId 仍存在 NULL，无法收紧为 NOT NULL', 1;
+END
+
+IF COLUMNPROPERTY(OBJECT_ID(N'dbo.UserModelUsage'), N'SourceId', 'AllowsNull') = 1
+BEGIN
+    ALTER TABLE dbo.UserModelUsage
+    ALTER COLUMN SourceId TINYINT NOT NULL;
+
+    PRINT N'    -> 已将 dbo.UserModelUsage.SourceId 收紧为 NOT NULL';
+END
+ELSE
+BEGIN
+    PRINT N'    -> dbo.UserModelUsage.SourceId 已是 NOT NULL，跳过';
+END
+
+GO
+
 PRINT N'[1.10.3] 数据库迁移任务完成';
 
 GO
