@@ -124,6 +124,27 @@ END
 
 GO
 
+-- =============================================
+-- Step 3: 创建 UserConfig 表
+-- 用于用户级别的字符串配置，主键为 (UserId, Key)
+-- =============================================
+PRINT N'[Step 3] 创建 dbo.UserConfig 表';
+
+CREATE TABLE dbo.UserConfig
+(
+    UserId INT NOT NULL,
+    [Key] VARCHAR(100) NOT NULL,
+    [Value] NVARCHAR(MAX) NOT NULL,
+    [Description] NVARCHAR(50) NULL,
+
+    CONSTRAINT PK_UserConfig PRIMARY KEY CLUSTERED (UserId, [Key]),
+    CONSTRAINT FK_UserConfig_User FOREIGN KEY (UserId) REFERENCES dbo.[User](Id) ON DELETE CASCADE
+);
+
+PRINT N'    -> 已创建 dbo.UserConfig 表';
+
+GO
+
 PRINT N'[1.10.3] 数据库迁移任务完成';
 
 GO

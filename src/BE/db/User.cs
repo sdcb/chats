@@ -90,6 +90,9 @@ public partial class User
     public virtual UserBalance? UserBalance { get; set; }
 
     [InverseProperty("User")]
+    public virtual ICollection<UserConfig> UserConfigs { get; set; } = new List<UserConfig>();
+
+    [InverseProperty("User")]
     public virtual ICollection<UserMcp> UserMcps { get; set; } = new List<UserMcp>();
 
     [InverseProperty("User")]

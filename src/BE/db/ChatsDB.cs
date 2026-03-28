@@ -117,6 +117,8 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<UserBalance> UserBalances { get; set; }
 
+    public virtual DbSet<UserConfig> UserConfigs { get; set; }
+
     public virtual DbSet<UserInitialConfig> UserInitialConfigs { get; set; }
 
     public virtual DbSet<UserMcp> UserMcps { get; set; }
@@ -563,6 +565,11 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.User).WithOne(p => p.UserBalance)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserBalance_UserId");
+        });
+
+        modelBuilder.Entity<UserConfig>(entity =>
+        {
+            entity.HasOne(d => d.User).WithMany(p => p.UserConfigs).HasConstraintName("FK_UserConfig_User");
         });
 
         modelBuilder.Entity<UserInitialConfig>(entity =>
