@@ -1,12 +1,14 @@
 const isDev = process.env?.NODE_ENV === 'development';
+const disablePwa = isDev || process.env.DISABLE_PWA === 'true';
 console.log('NODE_ENV', process.env?.NODE_ENV);
+console.log('DISABLE_PWA', process.env?.DISABLE_PWA);
 console.log('-------------------');
 
 const withPWA = require('next-pwa')({
   dest: 'public',
-  register: !isDev,
-  skipWaiting: !isDev,
-  disable: isDev,
+  register: !disablePwa,
+  skipWaiting: !disablePwa,
+  disable: disablePwa,
 });
 
 /** @type {import('next').NextConfig} */

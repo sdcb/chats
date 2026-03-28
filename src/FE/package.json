@@ -6,6 +6,7 @@
     "export": "next export",
     "dev": "next dev",
     "build": "next build",
+    "build:maui": "cross-env DISABLE_PWA=true next build",
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "format": "prettier --write ."

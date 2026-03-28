@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Chats.Mobile</RootNamespace>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <MauiXamlInflator>SourceGen</MauiXamlInflator>
+    <ApplicationTitle>Chats</ApplicationTitle>
+    <ApplicationId>ai.sdcb.chats.mobile</ApplicationId>
+    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+    <FrontendDistDir Condition="'$(FrontendDistDir)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\..\FE\out'))</FrontendDistDir>
+    <DefaultApiUrl Condition="'$(DefaultApiUrl)' == '' and '$(Configuration)' == 'Debug'">http://10.0.2.2:5146</DefaultApiUrl>
+    <DefaultApiUrl Condition="'$(DefaultApiUrl)' == ''"></DefaultApiUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <MauiIcon Include="..\..\FE\public\icons\512x512.png" Link="Resources\AppIcon\appicon.png" />
+    <MauiSplashScreen Include="..\..\FE\public\icons\logo.png" Link="Resources\Splash\splash.png" Color="#101114" BaseSize="512,512" />
+    <MauiImage Include="Resources\Images\*" />
+    <MauiFont Include="Resources\Fonts\*" />
+    <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+    <MauiAsset Include="$(FrontendDistDir)\**\*" LogicalName="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" Condition="Exists('$(FrontendDistDir)')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>DefaultApiUrl</_Parameter1>
+      <_Parameter2>$(DefaultApiUrl)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <Target Name="EnsureFrontendDistExists" BeforeTargets="Build">
+    <Error Condition="!Exists('$(FrontendDistDir)')" Text="FrontendDistDir '$(FrontendDistDir)' does not exist. Run 'npm run build:maui' in src/FE or pass /p:FrontendDistDir=... ." />
+  </Target>
+
+</Project>

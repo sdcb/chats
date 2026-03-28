@@ -2,6 +2,8 @@
 
 internal static class CORS
 {
+    private const string MobileFrontendOrigin = "https://appassets.androidplatform.net";
+
     public static void AddCORSPolicies(this WebApplicationBuilder builder)
     {
         string frontendUrl = builder.Configuration.GetValue<string>("FE_URL") ?? throw new ArgumentNullException("FE_URL is required in the configuration");
@@ -10,7 +12,7 @@ internal static class CORS
         {
             options.AddPolicy("FrontendCORS", policy =>
             {
-                policy.WithOrigins(frontendUrl, "http://localhost:3000")
+                policy.WithOrigins(frontendUrl, "http://localhost:3000", MobileFrontendOrigin)
                       .AllowAnyMethod()
                       .AllowAnyHeader()
                       .AllowCredentials()

@@ -1,5 +1,13 @@
 import { NextRouter } from 'next/router';
 
+declare global {
+  interface Window {
+    __CHATS_RUNTIME_CONFIG__?: {
+      apiUrl?: string;
+    };
+  }
+}
+
 export const isMobile = () => {
   const userAgent =
     typeof window.navigator === 'undefined' ? '' : navigator.userAgent;
@@ -23,7 +31,16 @@ export function termDateString() {
 export const PhoneRegExp = /^[1][3,4,5,6,7,8,9][0-9]{9}$/;
 export const SmsExpirationSeconds = 300;
 
-export const getApiUrl = () => process.env.API_URL || '';
+export const getApiUrl = () => {
+  if (typeof window !== 'undefined') {
+    const runtimeApiUrl = window.__CHATS_RUNTIME_CONFIG__?.apiUrl;
+    if (typeof runtimeApiUrl === 'string' && runtimeApiUrl.trim() !== '') {
+      return runtimeApiUrl.trim();
+    }
+  }
+
+  return process.env.API_URL || '';
+};
 
 export const getQueryId = (router: NextRouter): string => {
   const { id } = router.query;

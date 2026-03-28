@@ -4,6 +4,7 @@ export default function ChatsDocument() {
   return (
     <Html>
       <Head>
+        <script src="/runtime-config.js"></script>
         <meta name="mobile-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Chats"></meta>
         <link
