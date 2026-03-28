@@ -15,7 +15,6 @@ import BuildLayout from '@/components/build/layout/BuildLayout';
 import './globals.css';
 
 import { ThemeProvider } from '@/providers/ThemeProvider';
-import 'katex/dist/katex.min.css';
 
 function App({ Component, pageProps }: AppProps<{}> | any) {
   const route = useRouter();

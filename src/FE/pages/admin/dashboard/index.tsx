@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 
 import useTranslation from '@/hooks/useTranslation';
@@ -8,12 +9,8 @@ import { formatDate, getTz } from '@/utils/date';
 
 import { StatisticsTimeParams } from '@/types/adminApis';
 
-import ChatCountChart from '@/components/admin/dashboard/charts/ChatCountChart';
-import CostConsumptionChart from '@/components/admin/dashboard/charts/CostConsumptionChart';
 import DateSelector from '@/components/admin/dashboard/charts/DateSelector';
-import PieChartCard from '@/components/admin/dashboard/charts/PieChartCard';
 import StatsCards from '@/components/admin/dashboard/charts/StatsCards';
-import TokenConsumptionChart from '@/components/admin/dashboard/charts/TokenConsumptionChart';
 
 import {
   getModelKeyStatistics,
@@ -32,6 +29,46 @@ import {
 } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
+
+const ChartCardSkeleton = () => (
+  <div className="flex h-[320px] animate-pulse rounded-lg bg-muted" />
+);
+
+const ChartPanelSkeleton = () => (
+  <div className="flex h-[310px] animate-pulse rounded-lg bg-muted" />
+);
+
+const PieChartCard = dynamic(
+  () => import('@/components/admin/dashboard/charts/PieChartCard'),
+  {
+    ssr: false,
+    loading: () => <ChartCardSkeleton />,
+  },
+);
+
+const TokenConsumptionChart = dynamic(
+  () => import('@/components/admin/dashboard/charts/TokenConsumptionChart'),
+  {
+    ssr: false,
+    loading: () => <ChartPanelSkeleton />,
+  },
+);
+
+const CostConsumptionChart = dynamic(
+  () => import('@/components/admin/dashboard/charts/CostConsumptionChart'),
+  {
+    ssr: false,
+    loading: () => <ChartPanelSkeleton />,
+  },
+);
+
+const ChatCountChart = dynamic(
+  () => import('@/components/admin/dashboard/charts/ChatCountChart'),
+  {
+    ssr: false,
+    loading: () => <ChartPanelSkeleton />,
+  },
+);
 
 export default function Dashboard() {
   const { t } = useTranslation();

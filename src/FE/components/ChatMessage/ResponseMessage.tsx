@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import dynamic from 'next/dynamic';
+
 import useTranslation from '@/hooks/useTranslation';
 import useMathCopy from '@/hooks/useMathCopy';
 
@@ -18,9 +20,12 @@ import {
 } from '@/types/chat';
 import { IChatMessage, IStep, getMessageContents } from '@/types/chatMessage';
 
-import { CodeBlock } from '@/components/Markdown/CodeBlock';
-import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
-import ToolCallBlock from '@/components/Markdown/ToolCallBlock';
+import LightMarkdown from '@/components/Markdown/LightMarkdown';
+import {
+  MarkdownLoadingFallback,
+  appendStreamingCursor,
+  hasMathMarkdown,
+} from '@/components/Markdown/markdownShared';
 import ImagePreview from '@/components/ImagePreview/ImagePreview';
 import FilePreview from '@/components/FilePreview/FilePreview';
 import StepInfoBubble from './StepInfoBubble';
@@ -29,21 +34,28 @@ import ChatError from '../ChatError/ChatError';
 import { IconCopy, IconEdit } from '../Icons';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
-import ThinkingMessage from './ThinkingMessage';
 
 import { cn } from '@/lib/utils';
-import rehypeKatex from 'rehype-katex';
-import { rehypeKatexDataMath } from '@/components/Markdown/rehypeKatexWithCopy';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import remarkBreaks from 'remark-breaks';
-import type { Components as MarkdownComponents } from 'react-markdown';
-import type {
-  CodeProps,
-  ReactMarkdownProps,
-  TableDataCellProps,
-  TableHeaderCellProps,
-} from 'react-markdown/lib/ast-to-react';
+
+const RichMarkdown = dynamic(
+  () => import('@/components/Markdown/RichMarkdown'),
+  {
+    loading: () => <MarkdownLoadingFallback />,
+  },
+);
+
+const ToolCallBlock = dynamic(
+  () => import('@/components/Markdown/ToolCallBlock'),
+  {
+    loading: () => (
+      <div className="h-8 w-40 animate-pulse rounded-md bg-muted" />
+    ),
+  },
+);
+
+const ThinkingMessage = dynamic(() => import('./ThinkingMessage'), {
+  loading: () => <MarkdownLoadingFallback />,
+});
 
 // 骨架动画组件
 const SkeletonLine = ({ width = '100%', height = '1rem', delay = '0s' }: { width?: string; height?: string; delay?: string }) => (
@@ -70,59 +82,6 @@ const MessageSkeleton = () => (
     <SkeletonLine width="40%" delay="0.3s" />
   </div>
 );
-
-const markdownComponents = {
-  code({ node, className, inline, children, ...props }: CodeProps) {
-    if (children.length) {
-      if (children[0] == '▍') {
-        return (
-          <span className="animate-pulse cursor-default mt-1">
-            ▍
-          </span>
-        );
-      }
-    }
-
-    const match = /language-(\w+)/.exec(className || '');
-
-    return !inline ? (
-      <CodeBlock
-        key={Math.random()}
-        language={(match && match[1]) || ''}
-        value={String(children).replace(/\n$/, '')}
-        {...props}
-      />
-    ) : (
-      <code className={className} {...props}>
-        {children}
-      </code>
-    );
-  },
-  p({ children }: ReactMarkdownProps) {
-    return <p className="md-p">{children}</p>;
-  },
-  table({ children }: ReactMarkdownProps) {
-    return (
-      <table className="border-collapse border border-black px-3 py-1 dark:border-white">
-        {children}
-      </table>
-    );
-  },
-  th({ children }: TableHeaderCellProps) {
-    return (
-      <th className="break-words border border-black bg-gray-500 px-3 py-1 text-white dark:border-white">
-        {children}
-      </th>
-    );
-  },
-  td({ children }: TableDataCellProps) {
-    return (
-      <td className="break-words border border-black px-3 py-1 dark:border-white">
-        {children}
-      </td>
-    );
-  },
-} as unknown as MarkdownComponents;
 
 interface Props {
   message: IChatMessage;
@@ -539,19 +498,29 @@ const ResponseMessage = (props: Props) => {
                       <div className="whitespace-pre-wrap font-mono">{c.c}</div>
                     </div>
                   ) : (
-                    <MemoizedReactMarkdown
-                      className="prose dark:prose-invert [--tw-prose-body:#000] [--tw-prose-headings:#000] leading-4 font-normal prose-p:text-sm prose-p:leading-4 prose-p:font-normal prose-li:text-sm prose-li:leading-4 prose-li:font-normal"
-                      // 顺序：math -> gfm -> breaks，确保数学与 GFM 处理后，再将 softbreak 转为 <br/>
-                      remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
-                      rehypePlugins={[rehypeKatex as any, rehypeKatexDataMath]}
-                      components={markdownComponents}
-                    >
-                      {`${preprocessLaTeX(c.c!)}${
-                        (messageStatus === ChatSpanStatus.Pending || messageStatus === ChatSpanStatus.Chatting) && 
-                        index === processedContent.length - 1 && 
-                        c.$type === MessageContentType.text ? '▍' : ''
-                      }`}
-                    </MemoizedReactMarkdown>
+                    (() => {
+                      const renderedMarkdown = appendStreamingCursor(
+                        preprocessLaTeX(c.c!),
+                        (messageStatus === ChatSpanStatus.Pending ||
+                          messageStatus === ChatSpanStatus.Chatting) &&
+                          index === processedContent.length - 1 &&
+                          c.$type === MessageContentType.text,
+                      );
+                      const markdownClassName =
+                        'prose dark:prose-invert [--tw-prose-body:#000] [--tw-prose-headings:#000] leading-4 font-normal prose-p:text-sm prose-p:leading-4 prose-p:font-normal prose-li:text-sm prose-li:leading-4 prose-li:font-normal';
+
+                      return hasMathMarkdown(c.c ?? '') ? (
+                        <RichMarkdown
+                          className={markdownClassName}
+                          content={renderedMarkdown}
+                        />
+                      ) : (
+                        <LightMarkdown
+                          className={markdownClassName}
+                          content={renderedMarkdown}
+                        />
+                      );
+                    })()
                   )}
                   <div className="absolute -bottom-0.5 right-0 z-10 flex items-center gap-0.5">
                     {!isChatting(chatStatus) && !readonly && (
