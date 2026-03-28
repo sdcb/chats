@@ -475,6 +475,11 @@ export interface PostAndPutConfigParams {
   description: string;
 }
 
+export interface TitleSummaryAdminSettingsDto {
+  config: import('./clientApis').TitleSummaryConfig | null;
+  defaultPromptTemplate: string;
+}
+
 export interface GetInvitationCodeResult {
   id: string;
   value: string;

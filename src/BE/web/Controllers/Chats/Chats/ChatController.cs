@@ -30,6 +30,7 @@ using Chats.BE.DB.Extensions;
 using Chats.BE.Services.CodeInterpreter;
 using Chats.BE.Services.Options;
 using Chats.BE.Services.RequestTracing;
+using Chats.BE.Services.TitleSummary;
 using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Controllers.Chats.Chats;
@@ -50,6 +51,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         [FromServices] ChatConfigService chatConfigService,
         [FromServices] DBFileService dBFileService,
         [FromServices] CodeInterpreterExecutor codeInterpreter,
+        [FromServices] ChatTitleSummaryService chatTitleSummaryService,
         CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -59,7 +61,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
 
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, chatRunService, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
+            db, currentUser, logger, idEncryption, chatRunService, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter, chatTitleSummaryService,
             cancellationToken);
     }
 
@@ -76,6 +78,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
     [FromServices] ChatConfigService chatConfigService,
     [FromServices] DBFileService dBFileService,
     [FromServices] CodeInterpreterExecutor codeInterpreter,
+    [FromServices] ChatTitleSummaryService chatTitleSummaryService,
     CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -85,7 +88,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
 
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, chatRunService, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
+            db, currentUser, logger, idEncryption, chatRunService, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter, chatTitleSummaryService,
             cancellationToken);
     }
 
@@ -102,6 +105,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         [FromServices] ChatConfigService chatConfigService,
         [FromServices] DBFileService dBFileService,
         [FromServices] CodeInterpreterExecutor codeInterpreter,
+        [FromServices] ChatTitleSummaryService chatTitleSummaryService,
         CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -116,7 +120,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
 
         return await ChatPrivate(
             req.Decrypt(idEncryption),
-            db, currentUser, logger, idEncryption, chatRunService, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter,
+            db, currentUser, logger, idEncryption, chatRunService, userModelManager, fup, chatConfigService, dBFileService, codeInterpreter, chatTitleSummaryService,
             cancellationToken);
     }
 
@@ -132,6 +136,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         ChatConfigService chatConfigService,
         DBFileService dbFileService,
         CodeInterpreterExecutor codeInterpreter,
+        ChatTitleSummaryService chatTitleSummaryService,
         CancellationToken cancellationToken)
     {
         cancellationToken = default; // disallow cancellation token for now for better user experience
@@ -269,7 +274,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         string stopId = stopService.CreateAndCombineCancellationToken(ref cancellationToken);
         await YieldResponse(new StopIdLine(stopId));
 
-        Channel<SseResponseLine>[] channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
+        List<Channel<SseResponseLine>> channels = [.. toGenerateSpans.Select(x => Channel.CreateUnbounded<SseResponseLine>())];
         Dictionary<ImageChatSegment, TaskCompletionSource<DBFile>> imageFileCache = [];
         Dictionary<string, TaskCompletionSource<DBFile>> fileCache = new(StringComparer.Ordinal);
         // Ensure Model navigation is populated on the controller thread to avoid cross-thread mutation of tracked entities.
@@ -278,7 +283,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             span.ChatConfig.Model = userModels[span.ChatConfig.ModelId].Model;
         }
 
-        Task[] streamTasks = [.. toGenerateSpans.Select((span, index) => ProcessChatSpan(
+        List<Task> streamTasks = [.. toGenerateSpans.Select((span, index) => ProcessChatSpan(
             currentUser,
             logger,
             chatRunService,
@@ -299,18 +304,30 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             loggerFactory,
             cancellationToken))];
 
+        bool hasDedicatedTitleStream = false;
         if (isEmptyChat && req is GeneralChatRequest generalChatRequest)
         {
-            string text = generalChatRequest.UserMessage
+            ChatSpan firstSpan = toGenerateSpans
+                .OrderBy(x => x.SpanId)
+                .First();
+            TextContentRequestItem firstTextItem = generalChatRequest.UserMessage
                 .OfType<TextContentRequestItem>()
-                .Single()
-                .Text;
-            chat.Title = text[..Math.Min(50, text.Length)];
+                .First();
+            Channel<SseResponseLine> titleChannel = Channel.CreateUnbounded<SseResponseLine>();
+            channels.Add(titleChannel);
+            streamTasks.Add(chatTitleSummaryService.StreamTitleAsync(
+                chat.Id,
+                firstSpan.ChatConfig.SystemPrompt,
+                userModels[firstSpan.ChatConfig.ModelId],
+                firstTextItem.Text,
+                titleChannel.Writer,
+                cancellationToken));
+            hasDedicatedTitleStream = true;
         }
 
         bool dbUserMessageYield = false;
         FileService fs = null!;
-        await foreach (SseResponseLine line in MergeChannels(channels).Reader.ReadAllAsync(CancellationToken.None))
+        await foreach (SseResponseLine line in MergeChannels([.. channels]).Reader.ReadAllAsync(CancellationToken.None))
         {
             if (line is TempStartTurn startTurn)
             {
@@ -413,6 +430,12 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
                     fileCache.Remove(tempFileGeneratedLine.Token);
                 }
             }
+            else if (line is SetTitleInternal setTitle)
+            {
+                chat.Title = setTitle.Title;
+                chat.UpdatedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync(CancellationToken.None);
+            }
             else
             {
                 await YieldResponse(line);
@@ -426,7 +449,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         await Task.WhenAll(streamTasks);
 
         // yield title
-        if (isEmptyChat) await YieldTitle(chat.Title);
+        if (isEmptyChat && !hasDedicatedTitleStream) await YieldTitle(chat.Title);
         return new EmptyResult();
     }
 

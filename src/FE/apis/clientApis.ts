@@ -48,6 +48,9 @@ import {
   McpToolBasicInfo,
   McpServerListManagementItemDto,
   AssignUsersToMcpRequest,
+  TitleSummarySettingsDto,
+  TitleSummaryDefaultTemplateDto,
+  TitleSummaryConfig,
   UnassignedUserDto,
   AssignedUserDetailsDto,
   AssignedUserNameDto,
@@ -156,6 +159,26 @@ export const singIn = (params: SingInParams): Promise<SingInResult> => {
 export const getUserModels = () => {
   const fetchServer = createFetchClient();
   return fetchServer.get<AdminModelDto[]>(`/api/models`);
+};
+
+export const getTitleSummarySettings = () => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get<TitleSummarySettingsDto>('/api/user-configs/title-summary');
+};
+
+export const getTitleSummaryDefaultTemplate = () => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get<TitleSummaryDefaultTemplateDto>('/api/user-configs/title-summary/default-template');
+};
+
+export const putTitleSummarySettings = (body: TitleSummaryConfig) => {
+  const fetchServer = createFetchClient();
+  return fetchServer.put('/api/user-configs/title-summary', { body });
+};
+
+export const deleteTitleSummarySettings = () => {
+  const fetchServer = createFetchClient();
+  return fetchServer.delete('/api/user-configs/title-summary');
 };
 
 export const getUserBalance = () => {

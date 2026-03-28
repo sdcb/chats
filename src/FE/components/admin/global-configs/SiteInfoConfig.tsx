@@ -5,6 +5,7 @@ import { Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
 
+import { deleteConfigs, getConfig, putConfigs } from '@/apis/adminApis';
 import useTranslation from '@/hooks/useTranslation';
 import { GetConfigsResult } from '@/types/adminApis';
 
@@ -21,15 +22,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 
-import { 
-  SiteInfoFormData, 
-  useConfigManager, 
-  compareSiteInfoData 
-} from '@/utils/globalConfigsShared';
+interface SiteInfoFormData {
+  customizedLine1: string;
+  customizedLine2: string;
+}
 
 interface SiteInfoConfigProps {
-  configs: GetConfigsResult[];
-  onConfigsUpdate: () => void;
 }
 
 // 网站信息配置解析函数
@@ -41,20 +39,27 @@ const parseSiteInfoConfig = (value: string): SiteInfoFormData => {
   };
 };
 
-export default function SiteInfoConfig({ configs, onConfigsUpdate }: SiteInfoConfigProps) {
+export default function SiteInfoConfig({}: SiteInfoConfigProps) {
   const { t } = useTranslation();
   const [forceUpdateTrigger, setForceUpdateTrigger] = useState({});
+  const [config, setConfig] = useState<GetConfigsResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+  const [memoryData, setMemoryData] = useState<SiteInfoFormData>({
+    customizedLine1: '',
+    customizedLine2: '',
+  });
+  const [initialEnabled, setInitialEnabled] = useState(false);
+  const [initialData, setInitialData] = useState<SiteInfoFormData>({
+    customizedLine1: '',
+    customizedLine2: '',
+  });
   
   const defaultData: SiteInfoFormData = {
     customizedLine1: '',
     customizedLine2: '',
   };
-
-  const configManager = useConfigManager(
-    'siteInfo',
-    defaultData,
-    parseSiteInfoConfig
-  );
 
   // 创建网站信息配置的Schema
   const siteInfoSchema = z.object({
@@ -67,30 +72,49 @@ export default function SiteInfoConfig({ configs, onConfigsUpdate }: SiteInfoCon
     defaultValues: defaultData,
   });
 
+  const loadConfig = async () => {
+    setLoading(true);
+    try {
+      const nextConfig = await getConfig('siteInfo');
+      setConfig(nextConfig);
+      const formData = nextConfig ? parseSiteInfoConfig(nextConfig.value) : defaultData;
+      setEnabled(nextConfig != null);
+      setMemoryData(formData);
+      setInitialEnabled(nextConfig != null);
+      setInitialData(formData);
+      form.reset(formData);
+    } catch {
+      toast.error(t('Failed to fetch configs'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 自定义的变化检测函数
   const hasChanges = () => {
-    const configExists = configs.find(item => item.key === 'siteInfo');
+    const configExists = config != null;
     
     // 如果enabled=false且配置不存在，不能保存（防止二次删除）
-    if (!configManager.enabled && !configExists) {
+    if (!enabled && !configExists) {
       return false;
     }
     
     // 检查enabled状态是否有变化
-    const enabledChanged = configManager.enabled !== configManager.initialState.enabled;
+    const enabledChanged = enabled !== initialEnabled;
     
     // 检查表单数据是否有变化
     const currentData = form.getValues();
-    const dataChanged = !compareSiteInfoData(currentData, configManager.initialState.data);
+    const dataChanged = currentData.customizedLine1 !== initialData.customizedLine1
+      || currentData.customizedLine2 !== initialData.customizedLine2;
     
     // enabled=true时总是可以保存，或者有数据变化时可以保存
-    return configManager.enabled || enabledChanged || dataChanged;
+    return enabled || enabledChanged || dataChanged;
   };
 
   // 监听表单变化，触发重新渲染
   useEffect(() => {
     const subscription = form.watch((value) => {
-      configManager.setMemoryData({
+      setMemoryData({
         customizedLine1: value.customizedLine1 || '',
         customizedLine2: value.customizedLine2 || '',
       });
@@ -98,34 +122,44 @@ export default function SiteInfoConfig({ configs, onConfigsUpdate }: SiteInfoCon
     });
 
     return () => subscription.unsubscribe();
-  }, [form, configManager]);
+  }, [form]);
 
   // 监听enabled状态变化
   useEffect(() => {
     setForceUpdateTrigger({});
-  }, [configManager.enabled]);
+  }, [enabled]);
 
-  // 初始化表单数据
   useEffect(() => {
-    const formData = configManager.initializeConfig(configs, defaultData);
-    form.setValue('customizedLine1', formData.customizedLine1);
-    form.setValue('customizedLine2', formData.customizedLine2);
-  }, [configs]); // 移除 form 和 configManager 的依赖
+    void loadConfig();
+  }, []);
 
   const onSubmit = async (values: SiteInfoFormData) => {
-    await configManager.saveConfig(
-      values,
-      'Site information configuration',
-      t,
-      onConfigsUpdate
-    );
+    setSaving(true);
+    try {
+      if (enabled) {
+        await putConfigs({
+          key: 'siteInfo',
+          value: JSON.stringify(values),
+          description: 'Site information configuration',
+        });
+        toast.success(t('Save successful'));
+      } else {
+        try {
+          await deleteConfigs('siteInfo');
+        } catch {
+        }
+        toast.success(t('Save successful'));
+      }
+      await loadConfig();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const copyConfigAsJson = () => {
     let dataToExport = {};
     
-    if (configManager.enabled) {
-      const config = configs.find(item => item.key === 'siteInfo');
+    if (enabled) {
       if (config) {
         try {
           dataToExport = JSON.parse(config.value);
@@ -135,7 +169,7 @@ export default function SiteInfoConfig({ configs, onConfigsUpdate }: SiteInfoCon
         }
       }
     } else {
-      dataToExport = configManager.memoryData;
+      dataToExport = memoryData;
     }
     
     const jsonString = JSON.stringify(dataToExport, null, 2);
@@ -163,14 +197,17 @@ export default function SiteInfoConfig({ configs, onConfigsUpdate }: SiteInfoCon
           </Button>
         </div>
         <div className="flex items-center space-x-2">
-          <span className="text-sm">{configManager.enabled ? t('Enabled') : t('Disabled')}</span>
+          <span className="text-sm">{enabled ? t('Enabled') : t('Disabled')}</span>
           <Switch
-            checked={configManager.enabled}
-            onCheckedChange={configManager.setEnabled}
+            checked={enabled}
+            onCheckedChange={setEnabled}
           />
         </div>
       </CardHeader>
       <CardContent>
+        {loading ? (
+          <div>{t('Loading...')}</div>
+        ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -211,15 +248,16 @@ export default function SiteInfoConfig({ configs, onConfigsUpdate }: SiteInfoCon
               <div className="flex justify-end">
                 <Button 
                   type="submit" 
-                  disabled={configManager.saving}
+                  disabled={saving}
                   className="min-w-24"
                 >
-                  {configManager.saving ? t('Saving...') : t('Save')}
+                  {saving ? t('Saving...') : t('Save')}
                 </Button>
               </div>
             )}
           </form>
         </Form>
+        )}
       </CardContent>
     </Card>
   );

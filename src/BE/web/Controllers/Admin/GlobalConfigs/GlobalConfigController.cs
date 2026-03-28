@@ -2,6 +2,7 @@ using Chats.DB;
 using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Admin.GlobalConfigs.Dtos;
 using Chats.BE.Services.Configs;
+using Chats.BE.Services.TitleSummary;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -9,20 +10,35 @@ using System.Text.Json;
 namespace Chats.BE.Controllers.Admin.GlobalConfigs;
 
 [Route("api/admin/global-configs"), AuthorizeAdmin]
-public class GlobalConfigController(ChatsDB db, IRequestTraceConfigProvider requestTraceConfigProvider) : ControllerBase
+public class GlobalConfigController(
+    ChatsDB db,
+    IRequestTraceConfigProvider requestTraceConfigProvider,
+    TitleSummaryConfigService titleSummaryConfigService) : ControllerBase
 {
-    [HttpGet]
-    public async Task<GlobalConfigDto[]> GetGlobalConfigs(CancellationToken cancellationToken)
+    [HttpGet("{id}")]
+    public async Task<ActionResult<GlobalConfigDto?>> GetGlobalConfig([FromRoute] string id, CancellationToken cancellationToken)
     {
-        GlobalConfigDto[] data = await db.Configs
+        GlobalConfigDto? data = await db.Configs
+            .Where(x => x.Key == id)
             .Select(x => new GlobalConfigDto()
             {
                 Key = x.Key,
                 Value = x.Value,
                 Description = x.Description,
             })
-            .ToArrayAsync(cancellationToken);
-        return data;
+            .SingleOrDefaultAsync(cancellationToken);
+        return Ok(data);
+    }
+
+    [HttpGet("title-summary")]
+    public async Task<ActionResult<TitleSummaryAdminSettingsDto>> GetTitleSummarySettings(CancellationToken cancellationToken)
+    {
+        TitleSummaryConfig? config = await titleSummaryConfigService.GetAdminConfig(cancellationToken);
+        return Ok(new TitleSummaryAdminSettingsDto
+        {
+            Config = config,
+            DefaultPromptTemplate = TitleSummaryConfigService.DefaultPromptTemplate,
+        });
     }
 
     [HttpPut]

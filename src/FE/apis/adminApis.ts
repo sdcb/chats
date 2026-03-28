@@ -59,6 +59,7 @@ import {
   RequestTraceQueryParams,
   StatisticsTimeParams,
   TokenStatisticsByDateResult,
+  TitleSummaryAdminSettingsDto,
   UpdateModelDto,
   UserModelDisplay,
   UserModelDisplayDto,
@@ -483,9 +484,14 @@ export const deleteUserInitialConfig = (id: string) => {
   return fetchServer.delete('/api/admin/user-config/' + id);
 };
 
-export const getConfigs = () => {
+export const getConfig = (key: string) => {
   const fetchServer = createFetchClient();
-  return fetchServer.get<GetConfigsResult[]>('/api/admin/global-configs');
+  return fetchServer.get<GetConfigsResult | null>(`/api/admin/global-configs/${key}`);
+};
+
+export const getTitleSummaryAdminSettings = () => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get<TitleSummaryAdminSettingsDto>('/api/admin/global-configs/title-summary');
 };
 
 export const postConfigs = (params: PostAndPutConfigParams) => {
