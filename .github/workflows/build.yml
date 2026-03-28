@@ -26,7 +26,7 @@ jobs:
       msbuild_args: ${{ steps.get_version.outputs.msbuild_args }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         
       - name: Get Version
         id: get_version
@@ -46,7 +46,7 @@ jobs:
         
       - name: Cache FE build output
         id: fe_build_cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ./src/FE/out
           key: fe-build-${{ hashFiles('src/FE/**') }}
@@ -54,7 +54,7 @@ jobs:
       - name: Cache node_modules
         id: node_modules_cache
         if: steps.fe_build_cache.outputs.cache-hit != 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ./src/FE/node_modules
           key: fe-node_modules-${{ hashFiles('src/FE/package-lock.json') }}
@@ -75,13 +75,13 @@ jobs:
           cp -r ./src/FE/out/* ./src/BE/web/wwwroot
         
       - name: Upload FE build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: chats-fe
           path: ./src/FE/out
 
       - name: Upload BE src folder
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: be-src
           path: |
@@ -122,7 +122,7 @@ jobs:
         run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ vars.DOCKER_USERNAME }} ${{ vars.DOCKER_REGISTRY }} --password-stdin
 
       - name: Download BE src folder
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: be-src
           path: ./be-src
@@ -165,7 +165,7 @@ jobs:
         run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ vars.DOCKER_USERNAME }} ${{ vars.DOCKER_REGISTRY }} --password-stdin
 
       - name: Download BE src folder
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: be-src
           path: ./be-src
@@ -252,7 +252,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Download BE src folder
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: be-src
           path: ./be-src
@@ -260,7 +260,7 @@ jobs:
         run: |
           dotnet publish ./be-src/web/Chats.BE.csproj -c Release -o ./Publish ${{ matrix.args }} ${{ needs.build-fe.outputs.msbuild_args }}
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.id }}
           path: ./Publish
@@ -283,7 +283,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Download BE src folder
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: be-src
           path: ./be-src
@@ -291,7 +291,7 @@ jobs:
         run: |
           dotnet publish ./be-src/web/Chats.BE.csproj -c Release -o ./Publish ${{ matrix.args }} /p:DeleteExistingFiles=True ${{ needs.build-fe.outputs.msbuild_args }}
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.id }}
           path: ./Publish
@@ -312,7 +312,7 @@ jobs:
       release_id: ${{ steps.create_release.outputs.release_id }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
