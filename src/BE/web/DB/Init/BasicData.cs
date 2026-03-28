@@ -7,7 +7,6 @@ internal static class BasicData
     public static void InsertAll(ChatsDB db)
     {
         InsertFinishReasons(db);
-        InsertTransactionTypes(db);
     }
 
     private static void InsertFinishReasons(ChatsDB db)
@@ -29,18 +28,6 @@ internal static class BasicData
             new(){ Id=105, Name="BadParameter",        },
             new(){ Id=106, Name="Cancelled",           },
             new(){ Id=107, Name="InternalConfigIssue", }
-        ]);
-    }
-
-    private static void InsertTransactionTypes(ChatsDB db)
-    {
-        // Generated from data, hash: 03debb1a3f79c1b2fd21af5a0c0ede05a461481794cbe7e0a6a65bd47090e970
-        db.TransactionTypes.AddRange(
-        [
-            new(){ Id=1, Name="Charge",  },
-            new(){ Id=2, Name="Cost",    },
-            new(){ Id=3, Name="Initial", },
-            new(){ Id=4, Name="ApiCost", }
         ]);
     }
 };

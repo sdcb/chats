@@ -29,10 +29,6 @@ public partial class BalanceTransaction
     [InverseProperty("BalanceTransactionCreditUsers")]
     public virtual User CreditUser { get; set; } = null!;
 
-    [ForeignKey("TransactionTypeId")]
-    [InverseProperty("BalanceTransactions")]
-    public virtual TransactionType TransactionType { get; set; } = null!;
-
     [ForeignKey("UserId")]
     [InverseProperty("BalanceTransactionUsers")]
     public virtual User User { get; set; } = null!;

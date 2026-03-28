@@ -34,10 +34,6 @@ public partial class UsageTransaction
     [InverseProperty("UsageTransactions")]
     public virtual Model Model { get; set; } = null!;
 
-    [ForeignKey("TransactionTypeId")]
-    [InverseProperty("UsageTransactions")]
-    public virtual TransactionType TransactionType { get; set; } = null!;
-
     [InverseProperty("UsageTransaction")]
     public virtual UserModelUsage? UserModelUsage { get; set; }
 }
