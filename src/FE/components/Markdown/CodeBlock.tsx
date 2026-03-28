@@ -1,38 +1,67 @@
-import { FC, memo } from 'react';
-
-import dynamic from 'next/dynamic';
+import { ComponentType, FC, memo, useEffect, useState } from 'react';
 
 interface Props {
   language: string;
   value: string;
 }
 
-const CodeBlockLoading = () => (
-  <div className="rounded-md border bg-muted p-3">
-    <div className="h-4 w-24 animate-pulse rounded bg-background/60" />
-    <div className="mt-3 h-4 w-full animate-pulse rounded bg-background/60" />
-    <div className="mt-2 h-4 w-4/5 animate-pulse rounded bg-background/60" />
+const CodeBlockFallback: FC<Props> = ({ language, value }) => (
+  <div className="codeblock relative font-sans text-base group">
+    <div className="relative overflow-hidden border bg-muted">
+      {language ? (
+        <div className="absolute right-2 top-2 text-xs text-muted-foreground">
+          {language}
+        </div>
+      ) : null}
+      <pre className="m-0 overflow-x-auto p-3 text-sm leading-6">
+        <code className="whitespace-pre font-mono">{value}</code>
+      </pre>
+    </div>
   </div>
 );
 
-const LazyCodeBlockCore = dynamic<Props>(
-  () => import('./CodeBlockCore').then((mod) => mod.CodeBlockCore),
-  {
-    loading: () => <CodeBlockLoading />,
-  },
-);
+const useLazyComponent = <TProps extends object>(
+  loader: () => Promise<ComponentType<TProps>>,
+) => {
+  const [component, setComponent] = useState<ComponentType<TProps> | null>(null);
 
-const LazyMermaidBlock = dynamic<{ value: string }>(
-  () => import('./MermaidBlock').then((mod) => mod.MermaidBlock),
-  {
-    loading: () => <CodeBlockLoading />,
-  },
-);
+  useEffect(() => {
+    let mounted = true;
+
+    void loader().then((loadedComponent) => {
+      if (mounted) {
+        setComponent(() => loadedComponent);
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [loader]);
+
+  return component;
+};
 
 export const CodeBlock: FC<Props> = memo(({ language, value }) => {
+  const LazyCodeBlockCore = useLazyComponent<Props>(() =>
+    import('./CodeBlockCore').then((mod) => mod.CodeBlockCore),
+  );
+  const LazyMermaidBlock = useLazyComponent<{ value: string }>(() =>
+    import('./MermaidBlock').then((mod) => mod.MermaidBlock),
+  );
+
   if (language === 'mermaid') {
-    return <LazyMermaidBlock value={value} />;
+    return LazyMermaidBlock ? (
+      <LazyMermaidBlock value={value} />
+    ) : (
+      <CodeBlockFallback language={language} value={value} />
+    );
   }
-  return <LazyCodeBlockCore language={language} value={value} />;
+
+  return LazyCodeBlockCore ? (
+    <LazyCodeBlockCore language={language} value={value} />
+  ) : (
+    <CodeBlockFallback language={language} value={value} />
+  );
 });
 CodeBlock.displayName = 'CodeBlock';
