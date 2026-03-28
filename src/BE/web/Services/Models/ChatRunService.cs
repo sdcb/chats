@@ -221,7 +221,7 @@ public class ChatRunService(
                 ClientInfoId = clientInfoId,
             };
 
-            byte transactionTypeId = (byte)(isApi ? DBTransactionType.ApiCost : DBTransactionType.Cost);
+            byte transactionTypeId = (byte)(isApi ? DBTransactionType.ApiCost : DBTransactionType.WebChatCost);
             if (balance.Cost.TotalCost > 0)
             {
                 usage.BalanceTransaction = new()

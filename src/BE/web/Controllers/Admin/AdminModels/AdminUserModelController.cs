@@ -335,7 +335,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                 ModelId = request.ModelId,
                 CountAmount = request.Counts,
                 TokenAmount = request.Tokens,
-                TransactionTypeId = (byte)DBTransactionType.Charge,
+                TransactionTypeId = (byte)DBTransactionType.AdminCharge,
             });
         }
 
@@ -404,7 +404,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                 CountAmount = request.CountsDelta,
                 TokenAmount = request.TokensDelta,
                 ModelId = userModel.ModelId,
-                TransactionTypeId = (byte)DBTransactionType.Charge,
+                TransactionTypeId = (byte)DBTransactionType.AdminCharge,
             });
         }
 
@@ -487,7 +487,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                 ModelId = userModel.ModelId,
                 CountAmount = -userModel.CountBalance,
                 TokenAmount = -userModel.TokenBalance,
-                TransactionTypeId = (byte)DBTransactionType.Charge,
+                TransactionTypeId = (byte)DBTransactionType.AdminCharge,
             });
         }
 
@@ -745,7 +745,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                     ModelId = userModel.ModelId,
                     CountAmount = -userModel.CountBalance,
                     TokenAmount = -userModel.TokenBalance,
-                    TransactionTypeId = (byte)DBTransactionType.Charge,
+                    TransactionTypeId = (byte)DBTransactionType.AdminCharge,
                 });
             }
         }
@@ -956,7 +956,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                     ModelId = userModel.ModelId,
                     CountAmount = -userModel.CountBalance,
                     TokenAmount = -userModel.TokenBalance,
-                    TransactionTypeId = (byte)DBTransactionType.Charge,
+                    TransactionTypeId = (byte)DBTransactionType.AdminCharge,
                 });
             }
         }
@@ -1173,7 +1173,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                     ModelId = userModel.ModelId,
                     CountAmount = -userModel.CountBalance,
                     TokenAmount = -userModel.TokenBalance,
-                    TransactionTypeId = (byte)DBTransactionType.Charge,
+                    TransactionTypeId = (byte)DBTransactionType.AdminCharge,
                 });
             }
         }
