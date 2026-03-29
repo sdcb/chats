@@ -318,6 +318,8 @@ export interface GetUsageParams {
   user?: string;
   kid?: string;
   provider?: string;
+  modelKey?: string;
+  model?: string;
   start?: string;
   end?: string;
   page?: number;

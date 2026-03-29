@@ -582,15 +582,43 @@ export const responseContentToRequest = (
 
 export const getUsage = (params: GetUsageParams) => {
   const fetchServer = createFetchClient();
+  const queryParams: Record<string, string | number | undefined> = {
+    user: params.user,
+    kid: params.kid,
+    provider: params.provider,
+    'model-key': params.modelKey,
+    model: params.model,
+    start: params.start,
+    end: params.end,
+    page: params.page,
+    pageSize: params.pageSize,
+    skip: params.skip,
+    tz: params.tz,
+    source: params.source,
+  };
   return fetchServer.get<PageResult<GetUsageResult[]>>('/api/usage', {
-    params: params,
+    params: queryParams,
   });
 };
 
 export const getUsageStat = (params: GetUsageParams) => {
   const fetchServer = createFetchClient();
+  const queryParams: Record<string, string | number | undefined> = {
+    user: params.user,
+    kid: params.kid,
+    provider: params.provider,
+    'model-key': params.modelKey,
+    model: params.model,
+    start: params.start,
+    end: params.end,
+    page: params.page,
+    pageSize: params.pageSize,
+    skip: params.skip,
+    tz: params.tz,
+    source: params.source,
+  };
   return fetchServer.get<GetUsageStatResult>('/api/usage/stat', {
-    params: params,
+    params: queryParams,
   });
 };
 

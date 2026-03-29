@@ -1,4 +1,6 @@
-﻿using System.Text.Json.Serialization;
+using Chats.BE.Controllers.Common.Dtos;
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Chats.BE.Controllers.Admin.AdminUser.Dtos;
 
@@ -37,9 +39,6 @@ public record AdminUserDto
     [JsonPropertyName("createdAt")]
     public required DateTime CreatedAt { get; init; }
 
-    //[JsonPropertyName("userModelId")]
-    //public required Guid UserModelId { get; init; }
-
     [JsonPropertyName("userModelCount")]
     public required int UserModelCount { get; init; }
 }
@@ -74,4 +73,43 @@ public record AdminUserDtoTemp
         CreatedAt = CreatedAt,
         UserModelCount = UserModelCount,
     };
+}
+
+public record AdminUserQuery : PagingRequest
+{
+    [FromQuery(Name = "id")]
+    public string? Id { get; init; }
+
+    [FromQuery(Name = "username")]
+    public string? Username { get; init; }
+
+    [FromQuery(Name = "phone")]
+    public string? Phone { get; init; }
+
+    [FromQuery(Name = "email")]
+    public string? Email { get; init; }
+
+    [FromQuery(Name = "loginType")]
+    public string? LoginType { get; init; }
+}
+
+public record AdminUserExportQuery
+{
+    [FromQuery(Name = "id")]
+    public string? Id { get; init; }
+
+    [FromQuery(Name = "username")]
+    public string? Username { get; init; }
+
+    [FromQuery(Name = "phone")]
+    public string? Phone { get; init; }
+
+    [FromQuery(Name = "email")]
+    public string? Email { get; init; }
+
+    [FromQuery(Name = "loginType")]
+    public string? LoginType { get; init; }
+
+    [FromQuery(Name = "columns")]
+    public string? Columns { get; init; }
 }

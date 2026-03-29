@@ -15,34 +15,41 @@ const PasswordAttemptsPanel = () => {
   const columns = useMemo(
     () => [
       {
-        header: t('Recorded Username'),
+        key: 'userName',
+        title: t('Recorded Username'),
         cell: (row: PasswordAttemptLog) => row.userName,
       },
       {
-        header: t('Bound User'),
+        key: 'matchedUserName',
+        title: t('Bound User'),
         cell: (row: PasswordAttemptLog) => row.matchedUserName || '-',
       },
       {
-        header: t('Result'),
+        key: 'result',
+        title: t('Result'),
         cell: (row: PasswordAttemptLog) =>
           row.isSuccessful ? t('Yes') : t('No'),
       },
       {
-        header: t('Failure Reason'),
+        key: 'failureReason',
+        title: t('Failure Reason'),
         className: 'max-w-xs truncate',
         cell: (row: PasswordAttemptLog) => row.failureReason || '-',
       },
       {
-        header: t('IP Address'),
+        key: 'ip',
+        title: t('IP Address'),
         cell: (row: PasswordAttemptLog) => row.ip,
       },
       {
-        header: t('User Agent'),
+        key: 'userAgent',
+        title: t('User Agent'),
         className: 'max-w-sm truncate',
         cell: (row: PasswordAttemptLog) => row.userAgent,
       },
       {
-        header: t('Created Time'),
+        key: 'createdAt',
+        title: t('Created Time'),
         cell: (row: PasswordAttemptLog) => formatDateTime(row.createdAt),
       },
     ],

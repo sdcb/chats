@@ -127,19 +127,37 @@ export interface PutUserBalanceParams {
 }
 
 export interface GetUsersParams {
-  query?: string;
+  id?: string;
+  username?: string;
+  phone?: string;
+  email?: string;
+  loginType?: 'password' | 'phone' | 'keycloak';
   page: number;
   pageSize: number;
 }
+
+export interface GetUsersExportParams {
+  id?: string;
+  username?: string;
+  phone?: string;
+  email?: string;
+  loginType?: 'password' | 'phone' | 'keycloak';
+  columns?: string;
+}
+
+export interface GetUsersForPermissionParams extends Paging {
+  query?: string;
+}
+
 export interface GetUsersResult {
   id: string;
   account: string;
   username: string;
   role: string;
-  email: string;
-  phone: string;
+  email: string | null;
+  phone: string | null;
   balance: number;
-  provider: string;
+  provider: string | null;
   createdAt: string;
   updatedAt: string;
   enabled: boolean;

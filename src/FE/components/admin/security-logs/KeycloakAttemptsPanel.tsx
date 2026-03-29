@@ -12,44 +12,53 @@ const KeycloakAttemptsPanel = () => {
   const columns = useMemo(
     () => [
       {
-        header: t('Provider'),
+        key: 'provider',
+        title: t('Provider'),
         cell: (row: KeycloakAttemptLog) => row.provider,
       },
       {
-        header: t('Subject'),
+        key: 'sub',
+        title: t('Subject'),
         className: 'max-w-xs truncate',
         cell: (row: KeycloakAttemptLog) => row.sub || '-',
       },
       {
-        header: t('E-Mail'),
+        key: 'email',
+        title: t('E-Mail'),
         className: 'max-w-xs truncate',
         cell: (row: KeycloakAttemptLog) => row.email || '-',
       },
       {
-        header: t('User Name'),
+        key: 'userName',
+        title: t('User Name'),
         cell: (row: KeycloakAttemptLog) => row.userName || '-',
       },
       {
-        header: t('Result'),
+        key: 'result',
+        title: t('Result'),
         cell: (row: KeycloakAttemptLog) =>
           row.isSuccessful ? t('Yes') : t('No'),
       },
       {
-        header: t('Failure Reason'),
+        key: 'failureReason',
+        title: t('Failure Reason'),
         className: 'max-w-xs truncate',
         cell: (row: KeycloakAttemptLog) => row.failureReason || '-',
       },
       {
-        header: t('IP Address'),
+        key: 'ip',
+        title: t('IP Address'),
         cell: (row: KeycloakAttemptLog) => row.ip,
       },
       {
-        header: t('User Agent'),
+        key: 'userAgent',
+        title: t('User Agent'),
         className: 'max-w-sm truncate',
         cell: (row: KeycloakAttemptLog) => row.userAgent,
       },
       {
-        header: t('Created Time'),
+        key: 'createdAt',
+        title: t('Created Time'),
         cell: (row: KeycloakAttemptLog) => formatDateTime(row.createdAt),
       },
     ],

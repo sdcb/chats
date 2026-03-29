@@ -4,7 +4,6 @@ import {
   AdminChatsDto,
   AdminModelDto,
   AddUserModelParams,
-  BatchUserModelsParams,
   BatchUserModelsByProviderParams,
   BatchUserModelsByKeyParams,
   BatchUserModelsByModelParams,
@@ -26,6 +25,8 @@ import {
   GetUserInitialConfigResult,
   GetUserMessageParams,
   GetUsersParams,
+  GetUsersExportParams,
+  GetUsersForPermissionParams,
   GetUsersResult,
   UserModelPermissionUserDto,
   UserModelProviderDto,
@@ -178,15 +179,48 @@ export const getUsers = (
   params: GetUsersParams,
 ): Promise<PageResult<GetUsersResult[]>> => {
   const fetchService = createFetchClient();
-  return fetchService.get(
-    `/api/admin/users?page=${params.page}&pageSize=${params.pageSize}&query=${
-      params?.query || ''
-    }`,
-  );
+  return fetchService.get('/api/admin/users', {
+    params: {
+      page: params.page,
+      pageSize: params.pageSize,
+      id: params.id,
+      username: params.username,
+      phone: params.phone,
+      email: params.email,
+      loginType: params.loginType,
+    },
+  });
+};
+
+export const exportUsers = (params: GetUsersExportParams): string => {
+  const searchParams = new URLSearchParams();
+  if (params.id) {
+    searchParams.set('id', params.id);
+  }
+  if (params.username) {
+    searchParams.set('username', params.username);
+  }
+  if (params.phone) {
+    searchParams.set('phone', params.phone);
+  }
+  if (params.email) {
+    searchParams.set('email', params.email);
+  }
+  if (params.loginType) {
+    searchParams.set('loginType', params.loginType);
+  }
+  if (params.columns) {
+    searchParams.set('columns', params.columns);
+  }
+
+  const queryString = searchParams.toString();
+  return queryString
+    ? `/api/admin/users/excel?${queryString}`
+    : '/api/admin/users/excel';
 };
 
 export const getUsersForPermission = (
-  params: GetUsersParams,
+  params: GetUsersForPermissionParams,
 ): Promise<PageResult<UserModelPermissionUserDto[]>> => {
   const fetchService = createFetchClient();
   return fetchService.get(
@@ -273,7 +307,7 @@ export const putUserBalance = (params: PutUserBalanceParams) => {
 export const getMessages = (
   params: GetUserMessageParams,
 ): Promise<PageResult<AdminChatsDto[]>> => {
-  const { user, content, page = 1, pageSize = 12 } = params;
+  const { user, content, page = 1, pageSize = 20 } = params;
   const fetchService = createFetchClient();
   
   // 构建查询参数
