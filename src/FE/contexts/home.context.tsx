@@ -50,6 +50,9 @@ export interface HomeInitialState {
 
   showChatBar: boolean;
   showChatInput: boolean;
+  chatBarWidth: number;
+  effectiveChatBarWidth: number;
+  chatBarMaxWidth: number;
 }
 
 export const initialState: HomeInitialState = {
@@ -72,6 +75,9 @@ export const initialState: HomeInitialState = {
 
   showChatBar: getSettings().showChatBar,
   showChatInput: true,
+  chatBarWidth: getSettings().chatBarWidth,
+  effectiveChatBarWidth: getSettings().chatBarWidth,
+  chatBarMaxWidth: getSettings().chatBarWidth,
 };
 
 export interface HomeContextProps {

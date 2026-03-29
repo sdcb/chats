@@ -1,15 +1,21 @@
-import { ReactNode, useState } from 'react';
+import {
+  PointerEvent as ReactPointerEvent,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
+import { useIsMobile } from '@/hooks/useMobile';
 import useTranslation from '@/hooks/useTranslation';
 
 import {
-  IconCheck,
   IconLayoutSidebar,
   IconLayoutSidebarRight,
   IconLoader,
   IconSearch,
   IconSquarePlus,
-  IconX,
 } from '@/components/Icons/index';
 import Search from '@/components/Search/Search';
 import Tips from '@/components/Tips/Tips';
@@ -36,6 +42,14 @@ interface Props<T> {
   toggleOpen: () => void;
   handleCreateItem: () => void | Promise<void>;
   hasModel: () => boolean;
+  resizable?: boolean;
+  desktopWidth?: number;
+  desktopMinWidth?: number;
+  desktopMaxWidth?: number;
+  onDesktopWidthChange?: (
+    width: number,
+    options?: { persist?: boolean },
+  ) => void;
 }
 
 const Sidebar = <T,>({
@@ -56,9 +70,17 @@ const Sidebar = <T,>({
   toggleOpen,
   handleCreateItem,
   hasModel,
+  resizable = false,
+  desktopWidth,
+  desktopMinWidth = 280,
+  desktopMaxWidth = 520,
+  onDesktopWidthChange,
 }: Props<T>) => {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const [isCreating, setIsCreating] = useState(false);
+  const latestWidthRef = useRef<number>(desktopWidth ?? desktopMinWidth);
+  const dragCleanupRef = useRef<(() => void) | null>(null);
 
   const handleCreate = async () => {
     console.log('handleCreate called, isCreating before:', isCreating);
@@ -82,12 +104,91 @@ const Sidebar = <T,>({
       </div>
     );
 
+  const restoreDragStyles = useCallback(() => {
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }, []);
+
+  useEffect(() => {
+    latestWidthRef.current = desktopWidth ?? desktopMinWidth;
+  }, [desktopMinWidth, desktopWidth]);
+
+  useEffect(() => {
+    return () => {
+      dragCleanupRef.current?.();
+      restoreDragStyles();
+    };
+  }, [restoreDragStyles]);
+
+  const clampDesktopWidth = useCallback(
+    (width: number) => {
+      const maxWidth = Math.max(desktopMinWidth, desktopMaxWidth);
+      return Math.max(desktopMinWidth, Math.min(width, maxWidth));
+    },
+    [desktopMaxWidth, desktopMinWidth],
+  );
+
+  const handleResizeStart = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (!resizable || isMobile || !isOpen || !onDesktopWidthChange) return;
+      if (e.button !== 0) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const startX = e.clientX;
+      const startWidth = latestWidthRef.current;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+
+      const onMove = (event: PointerEvent) => {
+        const delta = side === 'left'
+          ? event.clientX - startX
+          : startX - event.clientX;
+        const nextWidth = clampDesktopWidth(startWidth + delta);
+        latestWidthRef.current = nextWidth;
+        onDesktopWidthChange(nextWidth);
+      };
+
+      const onUp = () => {
+        dragCleanupRef.current?.();
+        dragCleanupRef.current = null;
+        restoreDragStyles();
+        onDesktopWidthChange(latestWidthRef.current, { persist: true });
+      };
+
+      dragCleanupRef.current?.();
+      dragCleanupRef.current = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    },
+    [
+      clampDesktopWidth,
+      isMobile,
+      isOpen,
+      onDesktopWidthChange,
+      resizable,
+      restoreDragStyles,
+      side,
+    ],
+  );
+
+  const desktopSidebarWidth = clampDesktopWidth(desktopWidth ?? desktopMinWidth);
+  const showResizeRail = resizable && isOpen && !isMobile;
+
   return (
     <>
       <div
-        className={`${
-          isOpen ? 'w-full sm:w-[280px]' : 'w-0 hidden'
-        } fixed top-0 ${side}-0 z-40 flex h-full flex-none flex-col bg-card p-2 text-[14px] sm:relative sm:top-0 shadow-md`}
+        className={cn(
+          isOpen ? 'w-full sm:w-auto' : 'w-0 hidden',
+          'fixed top-0 z-40 flex h-full flex-none flex-col bg-card p-2 text-[14px] shadow-md sm:relative sm:top-0',
+          side === 'right' ? 'right-0' : 'left-0',
+        )}
+        style={!isMobile && isOpen ? { width: `${desktopSidebarWidth}px` } : undefined}
       >
         <div className="sticky mt-2">
           <div
@@ -165,6 +266,20 @@ const Sidebar = <T,>({
           {NoDataRender()}
         </div>
         {footerComponent}
+        {showResizeRail && (
+          <div
+            aria-hidden="true"
+            className={cn(
+              'absolute inset-y-0 z-10 hidden w-3 sm:block',
+              side === 'right'
+                ? 'left-0 -translate-x-1/2 cursor-col-resize'
+                : 'right-0 translate-x-1/2 cursor-col-resize',
+            )}
+            onPointerDown={handleResizeStart}
+          >
+            <div className="mx-auto h-full w-[2px] bg-transparent transition-colors hover:bg-border" />
+          </div>
+        )}
       </div>
 
       {!isOpen && showOpenButton && (

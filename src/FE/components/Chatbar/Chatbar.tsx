@@ -14,7 +14,11 @@ import {
   setChats,
   setChatsSelectType,
 } from '@/actions/chat.actions';
-import { setShowChatBar } from '@/actions/setting.actions';
+import {
+  setChatBarWidth,
+  setShowChatBar,
+} from '@/actions/setting.actions';
+import { MIN_CHATBAR_WIDTH } from '@/utils/settings';
 import HomeContext from '@/contexts/home.context';
 import Sidebar from '../Sidebar/Sidebar';
 import ChatActionConfirm from './ChatActionConfirm';
@@ -39,6 +43,9 @@ const Chatbar = () => {
       chatGroups,
       chatPaging,
       showChatBar,
+      effectiveChatBarWidth,
+      chatBarMaxWidth,
+      chatBarWidth,
       isChatsLoading,
       chatsSelectType,
     },
@@ -61,6 +68,13 @@ const Chatbar = () => {
 
   const handleToggleChatbar = () => {
     settingDispatch(setShowChatBar(!showChatBar));
+  };
+
+  const handleDesktopWidthChange = (
+    width: number,
+    options?: { persist?: boolean },
+  ) => {
+    settingDispatch(setChatBarWidth(width, options?.persist ?? false));
   };
 
   const handleAddGroup = () => {
@@ -147,6 +161,11 @@ const Chatbar = () => {
         messageIsStreaming={selectedChat?.status === ChatStatus.Chatting}
         side={'left'}
         isOpen={showChatBar}
+        resizable
+        desktopWidth={effectiveChatBarWidth || chatBarWidth}
+        desktopMinWidth={MIN_CHATBAR_WIDTH}
+        desktopMaxWidth={chatBarMaxWidth}
+        onDesktopWidthChange={handleDesktopWidthChange}
         addItemButtonTitle={t('New chat')}
         hasModel={hasModel}
         folderComponent={<ChatGroups onShowMore={handleShowMore} />}
