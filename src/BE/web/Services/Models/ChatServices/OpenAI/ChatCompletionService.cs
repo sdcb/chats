@@ -332,7 +332,9 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
     private static int GetReasoningTokens(JsonElement usage)
     {
         if (usage.TryGetProperty("completion_tokens_details", out JsonElement ctd) &&
-            ctd.TryGetProperty("reasoning_tokens", out JsonElement rt))
+            ctd.ValueKind == JsonValueKind.Object &&
+            ctd.TryGetProperty("reasoning_tokens", out JsonElement rt) &&
+            rt.ValueKind == JsonValueKind.Number)
         {
             return rt.GetInt32();
         }
@@ -381,7 +383,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         return new ChatTokenUsage
         {
-            InputTokens = usageElement.TryGetProperty("prompt_tokens", out JsonElement pt) ? pt.GetInt32() : 0,
+            InputTokens = usageElement.TryGetProperty("prompt_tokens", out JsonElement pt) && pt.ValueKind == JsonValueKind.Number ? pt.GetInt32() : 0,
             OutputTokens = GetOutputTokens(usageElement),
             ReasoningTokens = GetReasoningTokens(usageElement),
             CacheTokens = GetCachedTokens(usageElement)
