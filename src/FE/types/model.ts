@@ -134,7 +134,7 @@ export const feModelProviders: FEModelProvider[] = [
   {
     id: DBModelProvider.Novita,
     name: 'Novita AI',
-    icon: '/logos/novita.ico',
+    icon: '/logos/novita.svg',
   },
 ];
 

@@ -1,0 +1,17 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      path {
+        fill: #000;
+      }
+      @media ( prefers-color-scheme: dark ) {
+        path {
+          fill: #fff;
+        }
+      }
+    </style>
+  </defs>
+  <g transform="translate(0 2.5837)">
+    <path d="M24 18.8323V18.8326H14.3246L9.16716 13.6751V18.8326H0V18.8314L9.16716 9.66422V4H9.16774L24 18.8323Z"/>
+  </g>
+</svg>
