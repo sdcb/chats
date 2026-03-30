@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import dynamic from 'next/dynamic';
-
 import useTranslation from '@/hooks/useTranslation';
 import useMathCopy from '@/hooks/useMathCopy';
 
@@ -20,6 +18,7 @@ import {
 } from '@/types/chat';
 import { IChatMessage, IStep, getMessageContents } from '@/types/chatMessage';
 
+import { loadComponentOnce } from '@/components/common/loadComponentOnce';
 import LightMarkdown from '@/components/Markdown/LightMarkdown';
 import {
   MarkdownLoadingFallback,
@@ -37,24 +36,43 @@ import { Textarea } from '../ui/textarea';
 
 import { cn } from '@/lib/utils';
 
-const RichMarkdown = dynamic(
-  () => import('@/components/Markdown/RichMarkdown'),
-  {
-    loading: () => <MarkdownLoadingFallback />,
-  },
-);
+interface DeferredMarkdownProps {
+  className?: string;
+  content: string;
+}
 
-const ToolCallBlock = dynamic(
-  () => import('@/components/Markdown/ToolCallBlock'),
-  {
-    loading: () => (
-      <div className="h-8 w-40 animate-pulse rounded-md bg-muted" />
-    ),
-  },
-);
+const RichMarkdown = loadComponentOnce<DeferredMarkdownProps>({
+  cacheKey: 'Markdown/RichMarkdown',
+  loader: () => import('@/components/Markdown/RichMarkdown').then((mod) => mod.default),
+  renderFallback: () => <MarkdownLoadingFallback />,
+});
 
-const ThinkingMessage = dynamic(() => import('./ThinkingMessage'), {
-  loading: () => <MarkdownLoadingFallback />,
+const ToolCallBlock = loadComponentOnce<{
+  toolCall: ToolCallContent;
+  toolResponse?: ToolResponseContent;
+  chatStatus?: ChatSpanStatus;
+  nextMessageContentStarted?: boolean;
+}>({
+  cacheKey: 'Markdown/ToolCallBlock',
+  loader: () => import('@/components/Markdown/ToolCallBlock').then((mod) => mod.default),
+  renderFallback: () => (
+    <div className="h-8 w-40 animate-pulse rounded-md bg-muted" />
+  ),
+});
+
+const ThinkingMessage = loadComponentOnce<{
+  readonly?: boolean;
+  content: string;
+  finished?: boolean;
+  messageId: string;
+  stepId?: string;
+  chatId?: string;
+  chatShareId?: string;
+  chatStatus: ChatStatus;
+}>({
+  cacheKey: 'ChatMessage/ThinkingMessage',
+  loader: () => import('./ThinkingMessage').then((mod) => mod.default),
+  renderFallback: () => <MarkdownLoadingFallback />,
 });
 
 // 骨架动画组件

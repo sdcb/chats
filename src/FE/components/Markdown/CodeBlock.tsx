@@ -1,4 +1,6 @@
-import { ComponentType, FC, memo, useEffect, useState } from 'react';
+import { FC, memo } from 'react';
+
+import { loadComponentOnce } from '@/components/common/loadComponentOnce';
 
 interface Props {
   language: string;
@@ -20,48 +22,27 @@ const CodeBlockFallback: FC<Props> = ({ language, value }) => (
   </div>
 );
 
-const useLazyComponent = <TProps extends object>(
-  loader: () => Promise<ComponentType<TProps>>,
-) => {
-  const [component, setComponent] = useState<ComponentType<TProps> | null>(null);
+const LazyCodeBlockCore = loadComponentOnce<Props>({
+  cacheKey: 'Markdown/CodeBlockCore',
+  loader: () => import('./CodeBlockCore').then((mod) => mod.CodeBlockCore),
+  renderFallback: ({ language, value }) => (
+    <CodeBlockFallback language={language} value={value} />
+  ),
+});
 
-  useEffect(() => {
-    let mounted = true;
-
-    void loader().then((loadedComponent) => {
-      if (mounted) {
-        setComponent(() => loadedComponent);
-      }
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [loader]);
-
-  return component;
-};
+const LazyMermaidBlock = loadComponentOnce<{ value: string }>({
+  cacheKey: 'Markdown/MermaidBlock',
+  loader: () => import('./MermaidBlock').then((mod) => mod.MermaidBlock),
+  renderFallback: ({ value }) => (
+    <CodeBlockFallback language="mermaid" value={value} />
+  ),
+});
 
 export const CodeBlock: FC<Props> = memo(({ language, value }) => {
-  const LazyCodeBlockCore = useLazyComponent<Props>(() =>
-    import('./CodeBlockCore').then((mod) => mod.CodeBlockCore),
-  );
-  const LazyMermaidBlock = useLazyComponent<{ value: string }>(() =>
-    import('./MermaidBlock').then((mod) => mod.MermaidBlock),
-  );
-
   if (language === 'mermaid') {
-    return LazyMermaidBlock ? (
-      <LazyMermaidBlock value={value} />
-    ) : (
-      <CodeBlockFallback language={language} value={value} />
-    );
+    return <LazyMermaidBlock value={value} />;
   }
 
-  return LazyCodeBlockCore ? (
-    <LazyCodeBlockCore language={language} value={value} />
-  ) : (
-    <CodeBlockFallback language={language} value={value} />
-  );
+  return <LazyCodeBlockCore language={language} value={value} />;
 });
 CodeBlock.displayName = 'CodeBlock';

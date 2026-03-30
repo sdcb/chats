@@ -34,7 +34,6 @@ export const markdownComponents = {
 
     return !inline ? (
       <CodeBlock
-        key={Math.random()}
         language={(match && match[1]) || ''}
         value={String(children).replace(/\n$/, '')}
         {...props}

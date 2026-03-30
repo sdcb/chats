@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import dynamic from 'next/dynamic';
-
 import useTranslation from '@/hooks/useTranslation';
 
 import { preprocessLaTeX } from '@/utils/chats';
@@ -15,6 +13,7 @@ import {
 import { ChatStatus } from '@/types/chat';
 import { IStepGenerateInfo, ResponseMessageTempId } from '@/types/chatMessage';
 
+import { loadComponentOnce } from '@/components/common/loadComponentOnce';
 import LightMarkdown from '@/components/Markdown/LightMarkdown';
 import {
   MarkdownLoadingFallback,
@@ -24,12 +23,14 @@ import {
 
 import { IconChevronRight, IconThink } from '../Icons';
 
-const RichMarkdown = dynamic(
-  () => import('@/components/Markdown/RichMarkdown'),
-  {
-    loading: () => <MarkdownLoadingFallback />,
-  },
-);
+const RichMarkdown = loadComponentOnce<{
+  className?: string;
+  content: string;
+}>({
+  cacheKey: 'Markdown/RichMarkdown',
+  loader: () => import('@/components/Markdown/RichMarkdown').then((mod) => mod.default),
+  renderFallback: () => <MarkdownLoadingFallback />,
+});
 
 interface Props {
   readonly?: boolean;
