@@ -223,11 +223,17 @@ export const getUsersForPermission = (
   params: GetUsersForPermissionParams,
 ): Promise<PageResult<UserModelPermissionUserDto[]>> => {
   const fetchService = createFetchClient();
-  return fetchService.get(
-    `/api/admin/user-models/users?page=${params.page}&pageSize=${params.pageSize}&query=${
-      params?.query || ''
-    }`,
-  );
+  return fetchService.get('/api/admin/user-models/users', {
+    params: {
+      page: params.page,
+      pageSize: params.pageSize,
+      id: params.id,
+      username: params.username,
+      phone: params.phone,
+      email: params.email,
+      loginType: params.loginType,
+    },
+  });
 };
 
 export const getModelProvidersForUser = async (

@@ -3,6 +3,7 @@ using Chats.DB.Enums;
 using Chats.BE.Controllers.Admin.AdminModels.Dtos;
 using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Common.Dtos;
+using Chats.BE.Services.Common;
 using Chats.BE.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +14,9 @@ namespace Chats.BE.Controllers.Admin.AdminModels;
 public class AdminUserModelController(ChatsDB db) : ControllerBase
 {
     [HttpGet("users")]
-    public async Task<ActionResult<PagedResult<UserModelPermissionUserDto>>> GetUsersForPermission(QueryPagingRequest pagingRequest, CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<UserModelPermissionUserDto>>> GetUsersForPermission([FromQuery] UserModelPermissionUserQuery pagingRequest, CancellationToken cancellationToken)
     {
-        IQueryable<User> query = db.Users
-            .OrderByDescending(x => x.UpdatedAt);
+        IQueryable<User> query = BuildUserPermissionQuery(pagingRequest);
 
         int totalModelProviderCount = await db.ModelProviderOrders
             .CountAsync(cancellationToken);
@@ -29,20 +29,15 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                 .CountAsync(cancellationToken);
         }
 
-        if (!string.IsNullOrEmpty(pagingRequest.Query))
-        {
-            query = query.Where(x => x.UserName.Contains(pagingRequest.Query) 
-                                  || (x.Email != null && x.Email.Contains(pagingRequest.Query))
-                                  || (x.Phone != null && x.Phone.Contains(pagingRequest.Query)));
-        }
-
         PagedResult<UserModelPermissionUserDto> result = await PagedResult.FromQuery(
             query.Select(x => new UserModelPermissionUserDto
             {
                 Id = x.Id,
-                Username = x.UserName,
+                Username = x.DisplayName ?? x.UserName,
+                Account = x.UserName,
                 Email = x.Email,
                 Phone = x.Phone,
+                Provider = x.Provider,
                 Enabled = x.Enabled,
                 UserModelCount = x.UserModels.Count(um => !um.Model.IsDeleted),
                 ModelProviderCount = totalModelProviderCount,
@@ -52,6 +47,61 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         );
 
         return Ok(result);
+    }
+
+    private IQueryable<User> BuildUserPermissionQuery(UserModelPermissionUserQuery query)
+    {
+        IQueryable<User> rows = db.Users
+            .OrderByDescending(x => x.UpdatedAt);
+
+        if (!string.IsNullOrWhiteSpace(query.Id))
+        {
+            if (!int.TryParse(query.Id.Trim(), out int parsedId))
+            {
+                return rows.Where(_ => false);
+            }
+
+            rows = rows.Where(x => x.Id == parsedId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Username))
+        {
+            string keyword = query.Username.Trim();
+            rows = rows.Where(x =>
+                EF.Functions.Like(x.DisplayName, $"%{keyword}%") ||
+                EF.Functions.Like(x.UserName, $"%{keyword}%"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Phone))
+        {
+            string keyword = query.Phone.Trim();
+            rows = rows.Where(x => x.Phone != null && EF.Functions.Like(x.Phone, $"%{keyword}%"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Email))
+        {
+            string keyword = query.Email.Trim();
+            rows = rows.Where(x => x.Email != null && EF.Functions.Like(x.Email, $"%{keyword}%"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.LoginType))
+        {
+            string normalized = query.LoginType.Trim().ToLowerInvariant();
+            if (normalized == "password")
+            {
+                rows = rows.Where(x => x.Provider == null || x.Provider == "");
+            }
+            else if (normalized == "phone")
+            {
+                rows = rows.Where(x => x.Provider != null && x.Provider.ToLower() == KnownLoginProviders.Phone.ToLower());
+            }
+            else if (normalized == "keycloak")
+            {
+                rows = rows.Where(x => x.Provider != null && x.Provider.ToLower() == KnownLoginProviders.Keycloak.ToLower());
+            }
+        }
+
+        return rows;
     }
 
     [HttpGet("user/{userId:int}/providers")]

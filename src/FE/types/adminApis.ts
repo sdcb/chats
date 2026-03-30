@@ -146,7 +146,11 @@ export interface GetUsersExportParams {
 }
 
 export interface GetUsersForPermissionParams extends Paging {
-  query?: string;
+  id?: string;
+  username?: string;
+  phone?: string;
+  email?: string;
+  loginType?: 'password' | 'phone' | 'keycloak';
 }
 
 export interface GetUsersResult {
@@ -167,8 +171,10 @@ export interface GetUsersResult {
 export interface UserModelPermissionUserDto {
   id: number;
   username: string;
+  account: string;
   email: string | null;
   phone: string | null;
+  provider: string | null;
   enabled: boolean;
   userModelCount: number;
   modelProviderCount: number;
