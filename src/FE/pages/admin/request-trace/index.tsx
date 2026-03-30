@@ -24,7 +24,7 @@ import {
   parseQueryPage,
   UNIFIED_TABLE_PAGE_SIZE,
 } from '@/components/table/UnifiedTable';
-import useDebounce from '@/hooks/useDebounce';
+import { useTextFilterDraft } from '@/components/table/useTextFilterDraft';
 import useTranslation from '@/hooks/useTranslation';
 import {
   clearRequestTraceList,
@@ -56,7 +56,15 @@ type Filters = {
   direction: '' | '0' | '1';
 };
 
+type TextFilters = Pick<Filters, 'url' | 'traceId' | 'username'>;
+
 const formatDateParam = (date: Date) => date.toISOString().split('T')[0];
+
+const pickTextFilters = (filters: Filters): TextFilters => ({
+  url: filters.url,
+  traceId: filters.traceId,
+  username: filters.username,
+});
 
 const buildQuery = (page: number, filters: Filters, columns: ColumnKey[]) => {
   const query: Record<string, string> = {};
@@ -201,19 +209,34 @@ export default function RequestTracePage() {
     refresh();
   }, [refresh]);
 
-  const debouncedTextSync = useDebounce((nextFilters: Filters) => {
-    pushQuery(1, nextFilters, columns);
-  }, 500);
+  const { draft, setDraft, flushDraft, hasPendingDraft } = useTextFilterDraft({
+    committed: pickTextFilters(filters),
+    onCommit: (nextTextFilters) => {
+      pushQuery(
+        1,
+        {
+          ...filters,
+          ...nextTextFilters,
+        },
+        columns,
+      );
+    },
+  });
 
-  const updateFilter = (key: keyof Filters, value: string, debounce = false) => {
-    const next = { ...filters, [key]: value };
-    setFilters(next);
-    setPage(1);
-    if (debounce) {
-      debouncedTextSync(next);
-      return;
-    }
+  const updateImmediateFilter = (key: keyof Omit<Filters, keyof TextFilters>, value: string) => {
+    const next = {
+      ...filters,
+      ...draft,
+      [key]: value,
+    };
     pushQuery(1, next, columns);
+  };
+
+  const updateTextFilter = (key: keyof TextFilters, value: string) => {
+    setDraft((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
   };
 
   const toggleColumn = (key: ColumnKey, checked: boolean) => {
@@ -229,14 +252,18 @@ export default function RequestTracePage() {
 
     const next = ALL_COLUMNS.map((column) => column.key).filter((columnKey) => nextSet.has(columnKey));
 
-    setColumns(next);
-    pushQuery(page, filters, next);
+    pushQuery(
+      page,
+      {
+        ...filters,
+        ...draft,
+      },
+      next,
+    );
   };
 
   const handleDirectionChange = (value: '' | '0' | '1') => {
-    const next = { ...filters, direction: value };
-    setFilters(next);
-    setPage(1);
+    const next = { ...filters, ...draft, direction: value };
     pushQuery(1, next, columns);
   };
 
@@ -427,40 +454,47 @@ export default function RequestTracePage() {
             value={filters.start}
             className={FILTER_CONTROL_WIDTH_CLASS}
             placeholder={t('Start date')!}
-            onSelect={(date) => updateFilter('start', formatDateParam(date))}
-            onReset={filters.start ? () => updateFilter('start', '') : undefined}
+            onSelect={(date) => updateImmediateFilter('start', formatDateParam(date))}
+            onReset={filters.start ? () => updateImmediateFilter('start', '') : undefined}
           />
           <DateTimePopover
             value={filters.end}
             className={FILTER_CONTROL_WIDTH_CLASS}
             placeholder={t('End date')!}
-            onSelect={(date) => updateFilter('end', formatDateParam(date))}
-            onReset={filters.end ? () => updateFilter('end', '') : undefined}
+            onSelect={(date) => updateImmediateFilter('end', formatDateParam(date))}
+            onReset={filters.end ? () => updateImmediateFilter('end', '') : undefined}
           />
           <Input
             className={FILTER_CONTROL_WIDTH_CLASS}
             placeholder={t('Search by url')!}
-            value={filters.url}
-            onChange={(event) => updateFilter('url', event.target.value, true)}
+            value={draft.url}
+            onChange={(event) => updateTextFilter('url', event.target.value)}
           />
           <Input
             className={FILTER_CONTROL_WIDTH_CLASS}
             placeholder={t('Search by traceId')!}
-            value={filters.traceId}
-            onChange={(event) => updateFilter('traceId', event.target.value, true)}
+            value={draft.traceId}
+            onChange={(event) => updateTextFilter('traceId', event.target.value)}
           />
           <Input
             className={FILTER_CONTROL_WIDTH_CLASS}
             placeholder={t('Search by username')!}
-            value={filters.username}
-            onChange={(event) => updateFilter('username', event.target.value, true)}
+            value={draft.username}
+            onChange={(event) => updateTextFilter('username', event.target.value)}
           />
 
           <Button
             type="button"
             variant="outline"
             size="icon"
-            onClick={() => refresh(true)}
+            onClick={() => {
+              if (hasPendingDraft) {
+                flushDraft();
+                return;
+              }
+
+              refresh(true);
+            }}
             disabled={loading}
             aria-label={t('Refresh')}
             title={t('Refresh')}
@@ -544,8 +578,14 @@ export default function RequestTracePage() {
         totalCount={data.count}
         rowKey={(row) => row.id}
         onPageChange={(nextPage) => {
-          setPage(nextPage);
-          pushQuery(nextPage, filters, columns);
+          pushQuery(
+            nextPage,
+            {
+              ...filters,
+              ...draft,
+            },
+            columns,
+          );
         }}
         onRowClick={(row) => toggleSelect(row.id, !selectedIds.includes(row.id))}
         rowClassName={(row) =>

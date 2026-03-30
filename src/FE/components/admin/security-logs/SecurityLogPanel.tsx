@@ -23,7 +23,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import useDebounce from '@/hooks/useDebounce';
+import { useTextFilterDraft } from '@/components/table/useTextFilterDraft';
 import useTranslation from '@/hooks/useTranslation';
 import { PageResult } from '@/types/page';
 import {
@@ -41,6 +41,8 @@ type FiltersState = {
   username: string;
   success: '' | 'true' | 'false';
 };
+
+type TextFilters = Pick<FiltersState, 'username'>;
 
 type SecurityLogPanelProps<T, TColumnKey extends string = string> = {
   tab: SecurityLogTab;
@@ -61,6 +63,10 @@ type PushQueryParams<TColumnKey extends string> = {
 };
 
 const formatDateParam = (date: Date) => date.toISOString().split('T')[0];
+
+const pickTextFilters = (filters: FiltersState): TextFilters => ({
+  username: filters.username,
+});
 
 const buildQueryObject = <TColumnKey extends string>({
   tabValue,
@@ -296,58 +302,47 @@ const SecurityLogPanel = <T, TColumnKey extends string = string>({
     refresh();
   }, [refresh, router.isReady]);
 
-  const debouncedUsernameSync = useDebounce(
-    (
-      value: string,
-      tabValue: SecurityLogTab,
-      startValue: string,
-      endValue: string,
-      successValue: '' | 'true' | 'false',
-      nextColumns: TColumnKey[],
-    ) => {
+  const { draft, setDraft, flushDraft, hasPendingDraft } = useTextFilterDraft({
+    committed: pickTextFilters(filters),
+    onCommit: (nextTextFilters) => {
       pushQuery({
-        tabValue,
+        tabValue: tab,
         pageValue: 1,
         filters: {
-          start: startValue,
-          end: endValue,
-          username: value,
-          success: successValue,
+          ...filters,
+          ...nextTextFilters,
         },
-        columns: nextColumns,
+        columns: selectedColumns,
       });
     },
-    600,
-  );
+  });
 
   const handlePageChange = (pageValue: number) => {
-    setPage(pageValue);
-    pushQuery({ tabValue: tab, pageValue, filters, columns: selectedColumns });
+    pushQuery({
+      tabValue: tab,
+      pageValue,
+      filters: {
+        ...filters,
+        ...draft,
+      },
+      columns: selectedColumns,
+    });
   };
 
   const updateFilters = (nextFilters: FiltersState) => {
-    setFilters(nextFilters);
-    setPage(1);
     pushQuery({
       tabValue: tab,
       pageValue: 1,
-      filters: nextFilters,
+      filters: {
+        ...nextFilters,
+        ...draft,
+      },
       columns: selectedColumns,
     });
   };
 
   const handleUsernameChange = (value: string) => {
-    const nextFilters = { ...filters, username: value };
-    setFilters(nextFilters);
-    setPage(1);
-    debouncedUsernameSync(
-      value,
-      tab,
-      nextFilters.start,
-      nextFilters.end,
-      nextFilters.success,
-      selectedColumns,
-    );
+    setDraft({ username: value });
   };
 
   const handleToggleColumn = (key: TColumnKey, checked: boolean) => {
@@ -365,11 +360,13 @@ const SecurityLogPanel = <T, TColumnKey extends string = string>({
       .map((column) => column.key)
       .filter((columnKey) => nextSet.has(columnKey));
 
-    setSelectedColumns(nextColumns);
     pushQuery({
       tabValue: tab,
       pageValue: page,
-      filters,
+      filters: {
+        ...filters,
+        ...draft,
+      },
       columns: nextColumns,
     });
   };
@@ -447,7 +444,7 @@ const SecurityLogPanel = <T, TColumnKey extends string = string>({
           <Input
             className="w-[180px]"
             placeholder={t('Search by username')!}
-            value={filters.username}
+            value={draft.username}
             onChange={(event) => handleUsernameChange(event.target.value)}
           />
           <div className="w-[180px]">
@@ -480,7 +477,14 @@ const SecurityLogPanel = <T, TColumnKey extends string = string>({
             type="button"
             variant="outline"
             size="icon"
-            onClick={() => refresh({ force: true })}
+            onClick={() => {
+              if (hasPendingDraft) {
+                flushDraft();
+                return;
+              }
+
+              refresh({ force: true });
+            }}
             disabled={loading}
             aria-label={t('Refresh')}
             title={t('Refresh')}

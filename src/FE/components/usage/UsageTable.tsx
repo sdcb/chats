@@ -34,7 +34,7 @@ import {
   TableFooter,
   TableRow,
 } from '@/components/ui/table';
-import useDebounce from '@/hooks/useDebounce';
+import { useTextFilterDraft } from '@/components/table/useTextFilterDraft';
 import useTranslation from '@/hooks/useTranslation';
 import { useUserInfo } from '@/providers/UserProvider';
 import { UsageSource } from '@/types/chat';
@@ -68,6 +68,8 @@ type UsageTableFilters = {
   model: string;
 };
 
+type TextFilters = Pick<UsageTableFilters, 'user' | 'modelKey' | 'model'>;
+
 type UsageColumnKey =
   | 'date'
   | 'account'
@@ -86,6 +88,12 @@ export interface UsageTableProps {
 }
 
 const formatDateParam = (date: Date) => formatDate(date.toLocaleDateString());
+
+const pickTextFilters = (filters: UsageTableFilters): TextFilters => ({
+  user: filters.user,
+  modelKey: filters.modelKey,
+  model: filters.model,
+});
 
 const buildUsageQuery = (
   mode: UsageTableMode,
@@ -404,22 +412,30 @@ const UsageTable = ({ mode, fixedSource, basePath }: UsageTableProps) => {
     refresh();
   }, [refresh]);
 
-  const debouncedFilterSync = useDebounce((nextFilters: UsageTableFilters) => {
-    pushQuery(1, nextFilters, selectedColumns);
-  }, 600);
+  const { draft, setDraft, flushDraft, hasPendingDraft } = useTextFilterDraft({
+    committed: pickTextFilters(filters),
+    onCommit: (nextTextFilters) => {
+      pushQuery(
+        1,
+        {
+          ...filters,
+          ...nextTextFilters,
+        },
+        selectedColumns,
+      );
+    },
+  });
 
   const updateImmediateFilter = (partial: Partial<UsageTableFilters>) => {
-    const nextFilters = { ...filters, ...partial };
-    setFilters(nextFilters);
-    setPage(1);
+    const nextFilters = { ...filters, ...draft, ...partial };
     pushQuery(1, nextFilters, selectedColumns);
   };
 
-  const updateDebouncedFilter = (partial: Partial<UsageTableFilters>) => {
-    const nextFilters = { ...filters, ...partial };
-    setFilters(nextFilters);
-    setPage(1);
-    debouncedFilterSync(nextFilters);
+  const updateTextFilter = (partial: Partial<TextFilters>) => {
+    setDraft((prev) => ({
+      ...prev,
+      ...partial,
+    }));
   };
 
   const toggleColumn = (key: UsageColumnKey, checked: boolean) => {
@@ -437,8 +453,14 @@ const UsageTable = ({ mode, fixedSource, basePath }: UsageTableProps) => {
       .map((column) => column.key)
       .filter((columnKey) => nextSet.has(columnKey));
 
-    setSelectedColumns(nextColumns);
-    pushQuery(page, filters, nextColumns);
+    pushQuery(
+      page,
+      {
+        ...filters,
+        ...draft,
+      },
+      nextColumns,
+    );
   };
 
   const exportParams = useMemo(() => {
@@ -553,9 +575,9 @@ const UsageTable = ({ mode, fixedSource, basePath }: UsageTableProps) => {
             <Input
               className="w-[180px] placeholder:text-neutral-400"
               placeholder={t('Account')}
-              value={filters.user}
+              value={draft.user}
               onChange={(event) =>
-                updateDebouncedFilter({ user: event.target.value })
+                updateTextFilter({ user: event.target.value })
               }
             />
           )}
@@ -564,9 +586,9 @@ const UsageTable = ({ mode, fixedSource, basePath }: UsageTableProps) => {
             <Input
               className="w-[180px] placeholder:text-neutral-400"
               placeholder={t('Model Key')}
-              value={filters.modelKey}
+              value={draft.modelKey}
               onChange={(event) =>
-                updateDebouncedFilter({ modelKey: event.target.value })
+                updateTextFilter({ modelKey: event.target.value })
               }
             />
           )}
@@ -575,9 +597,9 @@ const UsageTable = ({ mode, fixedSource, basePath }: UsageTableProps) => {
             <Input
               className="w-[180px] placeholder:text-neutral-400"
               placeholder={t('Model')}
-              value={filters.model}
+              value={draft.model}
               onChange={(event) =>
-                updateDebouncedFilter({ model: event.target.value })
+                updateTextFilter({ model: event.target.value })
               }
             />
           )}
@@ -606,7 +628,14 @@ const UsageTable = ({ mode, fixedSource, basePath }: UsageTableProps) => {
             type="button"
             variant="outline"
             size="icon"
-            onClick={() => refresh(true)}
+            onClick={() => {
+              if (mode === 'admin' && hasPendingDraft) {
+                flushDraft();
+                return;
+              }
+
+              refresh(true);
+            }}
             disabled={loading}
             aria-label={t('Refresh')}
             title={t('Refresh')}
@@ -658,8 +687,14 @@ const UsageTable = ({ mode, fixedSource, basePath }: UsageTableProps) => {
         `${row.usagedCreatedAt}-${row.modelName}-${row.ip}-${row.inputTokens}-${row.outputTokens}`
       }
       onPageChange={(nextPage) => {
-        setPage(nextPage);
-        pushQuery(nextPage, filters, selectedColumns);
+        pushQuery(
+          nextPage,
+          {
+            ...filters,
+            ...draft,
+          },
+          selectedColumns,
+        );
       }}
       footer={
         mode === 'user' && totalCount > 0 ? (

@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import useDebounce from '@/hooks/useDebounce';
+import { useTextFilterDraft } from '@/components/table/useTextFilterDraft';
 import useTranslation from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { GetUsersResult } from '@/types/adminApis';
@@ -44,6 +44,8 @@ type Filters = {
   email: string;
   loginType: UserLoginTypeFilter;
 };
+
+type TextFilters = Omit<Filters, 'loginType'>;
 
 const ALL_COLUMN_KEYS: UserTableColumnKey[] = [
   'id',
@@ -121,6 +123,13 @@ const areFiltersEqual = (left: Filters, right: Filters) =>
 
 const parseLoginTypeFilter = (value: string | undefined): UserLoginTypeFilter =>
   value === 'password' || value === 'phone' || value === 'keycloak' ? value : '';
+
+const pickTextFilters = (filters: Filters): TextFilters => ({
+  id: filters.id,
+  username: filters.username,
+  phone: filters.phone,
+  email: filters.email,
+});
 
 export default function Users() {
   const { t } = useTranslation();
@@ -279,37 +288,40 @@ export default function Users() {
     refresh(true);
   }, [handleClose, refresh]);
 
-  const updateFiltersWithDebounce = useDebounce(
-    (nextFilters: Filters, nextColumns: UserTableColumnKey[]) => {
-      pushQuery(1, nextFilters, nextColumns);
+  const { draft, setDraft, flushDraft, hasPendingDraft } = useTextFilterDraft({
+    committed: pickTextFilters(filters),
+    onCommit: (nextTextFilters) => {
+      pushQuery(
+        1,
+        {
+          ...filters,
+          ...nextTextFilters,
+        },
+        selectedColumns,
+      );
     },
-    600,
-  );
+  });
 
   const handleTextFilterChange = useCallback(
-    (key: keyof Omit<Filters, 'loginType'>, value: string) => {
-      const nextFilters = {
-        ...filters,
+    (key: keyof TextFilters, value: string) => {
+      setDraft((prev) => ({
+        ...prev,
         [key]: value,
-      };
-      setFilters(nextFilters);
-      setPage(1);
-      updateFiltersWithDebounce(nextFilters, selectedColumns);
+      }));
     },
-    [filters, selectedColumns, updateFiltersWithDebounce],
+    [setDraft],
   );
 
   const handleLoginTypeChange = useCallback(
     (value: UserLoginTypeFilter) => {
       const nextFilters = {
         ...filters,
+        ...draft,
         loginType: value,
       };
-      setFilters(nextFilters);
-      setPage(1);
       pushQuery(1, nextFilters, selectedColumns);
     },
-    [filters, pushQuery, selectedColumns],
+    [draft, filters, pushQuery, selectedColumns],
   );
 
   const handleShowAddModal = () => {
@@ -350,8 +362,14 @@ export default function Users() {
     }
 
     const nextColumns = ALL_COLUMN_KEYS.filter((column) => nextSet.has(column));
-    setSelectedColumns(nextColumns);
-    pushQuery(page, filters, nextColumns);
+    pushQuery(
+      page,
+      {
+        ...filters,
+        ...draft,
+      },
+      nextColumns,
+    );
   };
 
   const allColumns = useMemo<
@@ -487,13 +505,13 @@ export default function Users() {
             <Input
               className="w-[140px]"
               placeholder={t('User Id')!}
-              value={filters.id}
+              value={draft.id}
               onChange={(event) => handleTextFilterChange('id', event.target.value)}
             />
             <Input
               className="w-[180px]"
               placeholder={t('User Name')!}
-              value={filters.username}
+              value={draft.username}
               onChange={(event) =>
                 handleTextFilterChange('username', event.target.value)
               }
@@ -501,13 +519,13 @@ export default function Users() {
             <Input
               className="w-[180px]"
               placeholder={t('Phone')!}
-              value={filters.phone}
+              value={draft.phone}
               onChange={(event) => handleTextFilterChange('phone', event.target.value)}
             />
             <Input
               className="w-[200px]"
               placeholder={t('E-Mail')!}
-              value={filters.email}
+              value={draft.email}
               onChange={(event) => handleTextFilterChange('email', event.target.value)}
             />
             <div className="w-[180px]">
@@ -538,7 +556,14 @@ export default function Users() {
               type="button"
               variant="outline"
               size="icon"
-              onClick={() => refresh(true)}
+              onClick={() => {
+                if (hasPendingDraft) {
+                  flushDraft();
+                  return;
+                }
+
+                refresh(true);
+              }}
               disabled={loading}
               aria-label={t('Refresh')}
               title={t('Refresh')}
@@ -617,8 +642,14 @@ export default function Users() {
         totalCount={users.count}
         rowKey={(item) => item.id}
         onPageChange={(nextPage) => {
-          setPage(nextPage);
-          pushQuery(nextPage, filters, selectedColumns);
+          pushQuery(
+            nextPage,
+            {
+              ...filters,
+              ...draft,
+            },
+            selectedColumns,
+          );
         }}
         mobileContent={
           loading ? (

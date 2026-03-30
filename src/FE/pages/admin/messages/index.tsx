@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import useDebounce from '@/hooks/useDebounce';
+import { useTextFilterDraft } from '@/components/table/useTextFilterDraft';
 import useTranslation from '@/hooks/useTranslation';
 import { AdminChatsDto } from '@/types/adminApis';
 import { PageResult } from '@/types/page';
@@ -153,15 +153,15 @@ export default function Messages() {
     refresh();
   }, [refresh, router.isReady]);
 
-  const debouncedQuerySync = useDebounce((nextFilters: Filters) => {
-    pushQuery(1, nextFilters, selectedColumns);
-  }, 600);
+  const { draft, setDraft, flushDraft, hasPendingDraft } = useTextFilterDraft({
+    committed: filters,
+    onCommit: (nextFilters) => {
+      pushQuery(1, nextFilters, selectedColumns);
+    },
+  });
 
   const updateFilter = (key: keyof Filters, value: string) => {
-    const nextFilters = { ...filters, [key]: value };
-    setFilters(nextFilters);
-    setPage(1);
-    debouncedQuerySync(nextFilters);
+    setDraft((prev) => ({ ...prev, [key]: value }));
   };
 
   const toggleColumn = (key: MessageColumnKey, checked: boolean) => {
@@ -176,8 +176,7 @@ export default function Messages() {
     }
 
     const nextColumns = DEFAULT_COLUMNS.filter((column) => nextSet.has(column));
-    setSelectedColumns(nextColumns);
-    pushQuery(page, filters, nextColumns);
+    pushQuery(page, draft, nextColumns);
   };
 
   const allColumns = useMemo<UnifiedTableColumn<AdminChatsDto, MessageColumnKey>[]>(
@@ -261,23 +260,30 @@ export default function Messages() {
     <UnifiedTable
       filters={
         <>
-          <Input
-            className="w-[180px]"
-            placeholder={`${t('User Name')}...`}
-            value={filters.user}
-            onChange={(event) => updateFilter('user', event.target.value)}
-          />
-          <Input
-            className="w-[180px]"
-            placeholder={`${t('Message Content')}...`}
-            value={filters.content}
-            onChange={(event) => updateFilter('content', event.target.value)}
-          />
+            <Input
+              className="w-[180px]"
+              placeholder={`${t('User Name')}...`}
+              value={draft.user}
+              onChange={(event) => updateFilter('user', event.target.value)}
+            />
+            <Input
+              className="w-[180px]"
+              placeholder={`${t('Message Content')}...`}
+              value={draft.content}
+              onChange={(event) => updateFilter('content', event.target.value)}
+            />
           <Button
             type="button"
             variant="outline"
             size="icon"
-            onClick={() => refresh(true)}
+            onClick={() => {
+              if (hasPendingDraft) {
+                flushDraft();
+                return;
+              }
+
+              refresh(true);
+            }}
             disabled={loading}
             aria-label={t('Refresh')}
             title={t('Refresh')}
@@ -308,8 +314,7 @@ export default function Messages() {
       totalCount={messages.count}
       rowKey={(item) => item.id}
       onPageChange={(nextPage) => {
-        setPage(nextPage);
-        pushQuery(nextPage, filters, selectedColumns);
+        pushQuery(nextPage, draft, selectedColumns);
       }}
       mobileContent={
         loading ? (
