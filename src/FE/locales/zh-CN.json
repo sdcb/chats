@@ -187,6 +187,8 @@
   "Output Price (/ 1M tokens)": "输出价格（1M tokens）",
   "Free": "免费",
   "No models available": "暂无可用模型",
+  "Search models...": "搜索模型...",
+  "No models found": "未找到匹配的模型",
   "Theme": "主题",
   "zh": "简体中文",
   "en": "英语",

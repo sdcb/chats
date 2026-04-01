@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -10,7 +10,7 @@ import { getUserModels } from '@/apis/clientApis';
 import { AdminModelDto } from '@/types/adminApis';
 import { feModelProviders } from '@/types/model';
 
-import { IconArrowDown, IconMoneybag } from '@/components/Icons';
+import { IconArrowDown, IconMoneybag, IconSearch, IconX } from '@/components/Icons';
 
 interface ProviderGroup {
   providerId: number;
@@ -22,7 +22,8 @@ interface ProviderGroup {
 const ModelPricesPage = () => {
   const { t } = useTranslation();
   const [groups, setGroups] = useState<ProviderGroup[]>([]);
-  const [selectedProviderId, setSelectedProviderId] = useState<number | null>(null);
+  const [selectedProviderId, setSelectedProviderId] = useState<number>(-1); // -1 = All
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -50,14 +51,36 @@ const ModelPricesPage = () => {
           a.providerName.localeCompare(b.providerName),
         );
         setGroups(sortedGroups);
-        if (sortedGroups.length > 0) {
-          setSelectedProviderId(sortedGroups[0].providerId);
-        }
       })
       .finally(() => setLoading(false));
   }, []);
 
-  const selectedGroup = groups.find((g) => g.providerId === selectedProviderId) ?? null;
+  // Get all models if selectedProviderId === 0, otherwise get models from selected provider
+  const selectedGroup = useMemo(() => {
+    if (selectedProviderId === -1) {
+      // Combine all models from all providers
+      const allModels = groups.flatMap((g) => g.models);
+      return {
+        providerId: -1,
+        providerName: t('All'),
+        providerIcon: '',
+        models: allModels,
+      };
+    }
+    return groups.find((g) => g.providerId === selectedProviderId) ?? null;
+  }, [selectedProviderId, groups, t]);
+
+  // Filter models based on search query
+  const filteredModels = useMemo(() => {
+    if (!selectedGroup) return [];
+    if (!searchQuery.trim()) return selectedGroup.models;
+
+    const query = searchQuery.toLowerCase();
+    return selectedGroup.models.filter(
+      (model) =>
+        model.name.toLowerCase().includes(query),
+    );
+  }, [selectedGroup, searchQuery]);
 
   const formatPrice = (price: number) => {
     if (price === 0) return t('Free');
@@ -89,10 +112,32 @@ const ModelPricesPage = () => {
         <div className="flex flex-1 gap-4 overflow-hidden">
           {/* Left panel: provider list */}
           <aside className="w-52 shrink-0 flex flex-col gap-1 overflow-y-auto rounded-lg border bg-card p-2">
+            {/* All button */}
+            <button
+              onClick={() => {
+                setSelectedProviderId(-1);
+                setSearchQuery('');
+              }}
+              className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left transition-colors hover:bg-accent hover:text-accent-foreground ${
+                selectedProviderId === -1
+                  ? 'bg-accent text-accent-foreground font-medium'
+                  : ''
+              }`}
+            >
+              <span className="truncate">{t('All')}</span>
+              <span className="ml-auto text-xs text-muted-foreground shrink-0">
+                {groups.reduce((sum, g) => sum + g.models.length, 0)}
+              </span>
+            </button>
+
+            {/* Provider buttons */}
             {groups.map((group) => (
               <button
                 key={group.providerId}
-                onClick={() => setSelectedProviderId(group.providerId)}
+                onClick={() => {
+                  setSelectedProviderId(group.providerId);
+                  setSearchQuery('');
+                }}
                 className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left transition-colors hover:bg-accent hover:text-accent-foreground ${
                   selectedProviderId === group.providerId
                     ? 'bg-accent text-accent-foreground font-medium'
@@ -118,44 +163,71 @@ const ModelPricesPage = () => {
           </aside>
 
           {/* Right panel: model price table */}
-          <main className="flex-1 overflow-auto rounded-lg border bg-card">
-            {selectedGroup ? (
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-card border-b z-10">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-semibold">{t('Model Name')}</th>
-                    <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">
-                      {t('Input Price (/ 1M tokens)')}
-                    </th>
-                    <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">
-                      {t('Cached Input Price (/ 1M tokens)')}
-                    </th>
-                    <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">
-                      {t('Output Price (/ 1M tokens)')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedGroup.models.map((model, idx) => (
-                    <tr
-                      key={model.modelId}
-                      className={idx % 2 === 0 ? '' : 'bg-muted/40'}
-                    >
-                      <td className="px-4 py-3 font-medium">{model.name}</td>
-                      <td className="px-4 py-3 text-right tabular-nums">
-                        {formatPrice(model.inputFreshTokenPrice1M)}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
-                        {formatPrice(model.inputCachedTokenPrice1M)}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
-                        {formatPrice(model.outputTokenPrice1M)}
-                      </td>
+          <main className="flex-1 flex flex-col overflow-hidden rounded-lg border bg-card">
+            {/* Search box */}
+            <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-b bg-card">
+              <IconSearch size={18} className="text-muted-foreground shrink-0" />
+              <input
+                type="text"
+                placeholder={t('Search models...')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="p-1 hover:bg-accent rounded transition-colors"
+                >
+                  <IconX size={16} className="text-muted-foreground" />
+                </button>
+              )}
+            </div>
+
+            {/* Models table */}
+            <div className="flex-1 overflow-auto">
+              {filteredModels.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                  {searchQuery ? t('No models found') : t('No models available')}
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-card border-b z-10">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold">{t('Model Name')}</th>
+                      <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">
+                        {t('Input Price (/ 1M tokens)')}
+                      </th>
+                      <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">
+                        {t('Cached Input Price (/ 1M tokens)')}
+                      </th>
+                      <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">
+                        {t('Output Price (/ 1M tokens)')}
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : null}
+                  </thead>
+                  <tbody>
+                    {filteredModels.map((model, idx) => (
+                      <tr
+                        key={model.modelId}
+                        className={idx % 2 === 0 ? '' : 'bg-muted/40'}
+                      >
+                        <td className="px-4 py-3 font-medium">{model.name}</td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          {formatPrice(model.inputFreshTokenPrice1M)}
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          {formatPrice(model.inputCachedTokenPrice1M)}
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          {formatPrice(model.outputTokenPrice1M)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </main>
         </div>
       )}
