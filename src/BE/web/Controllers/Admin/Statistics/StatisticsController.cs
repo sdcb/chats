@@ -89,7 +89,13 @@ public class StatisticsController(ChatsDB db) : ControllerBase
             .ToArrayAsync(cancellationToken);
 
         SingleValueStatisticsEntry[] r = sourceStats
-            .Select(x => new SingleValueStatisticsEntry(((UsageSource)x.SourceId).ToString(), x.Count))
+            .Select(x =>
+            {
+                string sourceName = Enum.IsDefined(typeof(UsageSource), (int)x.SourceId)
+                    ? ((UsageSource)x.SourceId).ToString()
+                    : $"Unknown({x.SourceId})";
+                return new SingleValueStatisticsEntry(sourceName, x.Count);
+            })
             .ToArray();
         return Ok(r);
     }

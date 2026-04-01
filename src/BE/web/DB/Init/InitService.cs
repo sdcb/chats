@@ -3,6 +3,8 @@ using Chats.DB.Enums;
 using Chats.BE.Services;
 using Chats.BE.Services.Configs;
 using Chats.BE.Services.Models.ChatServices.Test;
+using Microsoft.EntityFrameworkCore;
+using System.Data.Common;
 using System.Text.Json;
 
 namespace Chats.BE.DB.Init;
@@ -21,6 +23,56 @@ public class InitService(IServiceScopeFactory scopeFactory)
             Console.WriteLine("Database created, inserting initial data...");
             await InsertInitialData(scope, db, cancellationToken);
             Console.WriteLine("Initial data inserted.");
+        }
+
+        await EnsureBackwardCompatibleSchemaAsync(db, cancellationToken);
+    }
+
+    private static async Task EnsureBackwardCompatibleSchemaAsync(ChatsDB db, CancellationToken cancellationToken)
+    {
+        if (!db.Database.IsSqlite())
+        {
+            return;
+        }
+
+        DbConnection connection = db.Database.GetDbConnection();
+        bool shouldClose = connection.State != System.Data.ConnectionState.Open;
+        if (shouldClose)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try
+        {
+            bool hasSourceId = false;
+            await using (DbCommand command = connection.CreateCommand())
+            {
+                command.CommandText = "PRAGMA table_info(\"UserModelUsage\");";
+                await using DbDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    if (string.Equals(reader.GetString(1), "SourceId", StringComparison.OrdinalIgnoreCase))
+                    {
+                        hasSourceId = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!hasSourceId)
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"UserModelUsage\" ADD COLUMN \"SourceId\" INTEGER NOT NULL DEFAULT 0;",
+                    cancellationToken);
+                Console.WriteLine("Applied SQLite compatibility schema update: added UserModelUsage.SourceId.");
+            }
+        }
+        finally
+        {
+            if (shouldClose)
+            {
+                await connection.CloseAsync();
+            }
         }
     }
 
