@@ -66,6 +66,29 @@ public class InitService(IServiceScopeFactory scopeFactory)
                     cancellationToken);
                 Console.WriteLine("Applied SQLite compatibility schema update: added UserModelUsage.SourceId.");
             }
+
+            // Backfill historical rows that were defaulted to 0 before SourceId existed.
+            int apiFromApiUsage = await db.Database.ExecuteSqlRawAsync(
+                "UPDATE \"UserModelUsage\" SET \"SourceId\" = 2 WHERE \"SourceId\" = 0 AND EXISTS (SELECT 1 FROM \"UserApiUsage\" uau WHERE uau.\"UsageId\" = \"UserModelUsage\".\"Id\");",
+                cancellationToken);
+
+            int summaryFromTransactions = await db.Database.ExecuteSqlRawAsync(
+                "UPDATE \"UserModelUsage\" SET \"SourceId\" = 3 WHERE \"SourceId\" = 0 AND (EXISTS (SELECT 1 FROM \"BalanceTransaction\" bt WHERE bt.\"Id\" = \"UserModelUsage\".\"BalanceTransactionId\" AND bt.\"TransactionTypeId\" = 5) OR EXISTS (SELECT 1 FROM \"UsageTransaction\" ut WHERE ut.\"Id\" = \"UserModelUsage\".\"UsageTransactionId\" AND ut.\"TransactionTypeId\" = 5));",
+                cancellationToken);
+
+            int apiFromTransactions = await db.Database.ExecuteSqlRawAsync(
+                "UPDATE \"UserModelUsage\" SET \"SourceId\" = 2 WHERE \"SourceId\" = 0 AND (EXISTS (SELECT 1 FROM \"BalanceTransaction\" bt WHERE bt.\"Id\" = \"UserModelUsage\".\"BalanceTransactionId\" AND bt.\"TransactionTypeId\" = 4) OR EXISTS (SELECT 1 FROM \"UsageTransaction\" ut WHERE ut.\"Id\" = \"UserModelUsage\".\"UsageTransactionId\" AND ut.\"TransactionTypeId\" = 4));",
+                cancellationToken);
+
+            int webChatDefaulted = await db.Database.ExecuteSqlRawAsync(
+                "UPDATE \"UserModelUsage\" SET \"SourceId\" = 1 WHERE \"SourceId\" = 0;",
+                cancellationToken);
+
+            int totalBackfilled = apiFromApiUsage + summaryFromTransactions + apiFromTransactions + webChatDefaulted;
+            if (totalBackfilled > 0)
+            {
+                Console.WriteLine($"Backfilled UserModelUsage.SourceId for {totalBackfilled} historical records.");
+            }
         }
         finally
         {
