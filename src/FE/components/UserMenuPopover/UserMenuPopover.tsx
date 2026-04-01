@@ -10,6 +10,7 @@ import {
   IconCode,
   IconLogout,
   IconMessage,
+  IconMoneybag,
   IconSettings,
   IconUserCog,
 } from '@/components/Icons/index';
@@ -109,6 +110,15 @@ const UserMenuPopover = ({
           onClick={(e) => {
             e.preventDefault();
             router.push('/settings');
+          }}
+        />
+        <SidebarLink
+          text={t('Model Prices')}
+          href="/model-prices"
+          icon={<IconMoneybag />}
+          onClick={(e) => {
+            e.preventDefault();
+            router.push('/model-prices');
           }}
         />
         <Separator className="my-2" />
