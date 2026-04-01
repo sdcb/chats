@@ -186,6 +186,8 @@
   "Cached Input Price (/ 1M tokens)": "缓存输入价格（1M tokens）",
   "Output Price (/ 1M tokens)": "输出价格（1M tokens）",
   "Free": "免费",
+  "Free Only": "仅免费",
+  "Show only free models": "仅显示免费模型",
   "No models available": "暂无可用模型",
   "Search models...": "搜索模型...",
   "No models found": "未找到匹配的模型",

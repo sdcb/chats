@@ -24,6 +24,7 @@ const ModelPricesPage = () => {
   const [groups, setGroups] = useState<ProviderGroup[]>([]);
   const [selectedProviderId, setSelectedProviderId] = useState<number>(-1); // -1 = All
   const [searchQuery, setSearchQuery] = useState('');
+  const [showFreeOnly, setShowFreeOnly] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -70,17 +71,30 @@ const ModelPricesPage = () => {
     return groups.find((g) => g.providerId === selectedProviderId) ?? null;
   }, [selectedProviderId, groups, t]);
 
-  // Filter models based on search query
+  // Filter models based on search query and free-only toggle
   const filteredModels = useMemo(() => {
     if (!selectedGroup) return [];
-    if (!searchQuery.trim()) return selectedGroup.models;
+
+    let filtered = selectedGroup.models;
+
+    // Apply free-only filter
+    if (showFreeOnly) {
+      filtered = filtered.filter(
+        (model) =>
+          model.inputFreshTokenPrice1M === 0 &&
+          model.inputCachedTokenPrice1M === 0 &&
+          model.outputTokenPrice1M === 0,
+      );
+    }
+
+    // Apply search query filter
+    if (!searchQuery.trim()) return filtered;
 
     const query = searchQuery.toLowerCase();
-    return selectedGroup.models.filter(
-      (model) =>
-        model.name.toLowerCase().includes(query),
+    return filtered.filter(
+      (model) => model.name.toLowerCase().includes(query),
     );
-  }, [selectedGroup, searchQuery]);
+  }, [selectedGroup, searchQuery, showFreeOnly]);
 
   const formatPrice = (price: number) => {
     if (price === 0) return t('Free');
@@ -164,7 +178,7 @@ const ModelPricesPage = () => {
 
           {/* Right panel: model price table */}
           <main className="flex-1 flex flex-col overflow-hidden rounded-lg border bg-card">
-            {/* Search box */}
+            {/* Search box and filters */}
             <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-b bg-card">
               <IconSearch size={18} className="text-muted-foreground shrink-0" />
               <input
@@ -182,6 +196,18 @@ const ModelPricesPage = () => {
                   <IconX size={16} className="text-muted-foreground" />
                 </button>
               )}
+              <div className="shrink-0 h-5 w-px bg-border" />
+              <button
+                onClick={() => setShowFreeOnly(!showFreeOnly)}
+                className={`flex items-center gap-2 px-3 py-1 rounded text-sm transition-colors whitespace-nowrap ${
+                  showFreeOnly
+                    ? 'bg-accent text-accent-foreground font-medium'
+                    : 'hover:bg-accent hover:text-accent-foreground text-muted-foreground'
+                }`}
+                title={t('Show only free models')}
+              >
+                <span>{t('Free Only')}</span>
+              </button>
             </div>
 
             {/* Models table */}
