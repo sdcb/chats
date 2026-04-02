@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 
 import Link from 'next/link';
-import Image from 'next/image';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -10,12 +9,27 @@ import { getUserModels } from '@/apis/clientApis';
 import { AdminModelDto } from '@/types/adminApis';
 import { feModelProviders } from '@/types/model';
 
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import { IconArrowDown, IconMoneybag, IconSearch, IconX } from '@/components/Icons';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+
+import { cn } from '@/lib/utils';
 
 interface ProviderGroup {
   providerId: number;
   providerName: string;
-  providerIcon: string;
   models: AdminModelDto[];
 }
 
@@ -41,7 +55,6 @@ const ModelPricesPage = () => {
             groupMap.set(model.modelProviderId, {
               providerId: model.modelProviderId,
               providerName: provider?.name ?? `Provider ${model.modelProviderId}`,
-              providerIcon: provider?.icon ?? '/icons/logo.png',
               models: [],
             });
           }
@@ -96,6 +109,11 @@ const ModelPricesPage = () => {
     );
   }, [selectedGroup, searchQuery, showFreeOnly]);
 
+  const totalModelCount = useMemo(
+    () => groups.reduce((sum, group) => sum + group.models.length, 0),
+    [groups],
+  );
+
   const formatPrice = (price: number) => {
     if (price === 0) return t('Free');
     return price.toFixed(4);
@@ -103,158 +121,173 @@ const ModelPricesPage = () => {
 
   return (
     <div className="container max-w-screen-xl mx-auto py-6 px-4 sm:px-6 h-screen flex flex-col">
-      <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-        <Link
-          href="/"
-          className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 w-10"
-        >
-          <IconArrowDown className="rotate-90" size={20} />
-        </Link>
+      <h1 className="mb-6 flex items-center gap-2 text-2xl font-bold">
+        <Button asChild variant="ghost" size="icon" className="rounded-md">
+          <Link href="/" aria-label={t('Back')}>
+            <IconArrowDown className="rotate-90" size={20} />
+          </Link>
+        </Button>
         <IconMoneybag size={22} />
         {t('Model Prices')}
       </h1>
 
       {loading ? (
-        <div className="flex items-center justify-center flex-1 text-muted-foreground">
+        <Card className="flex flex-1 items-center justify-center text-muted-foreground">
           {t('Loading...')}
-        </div>
+        </Card>
       ) : groups.length === 0 ? (
-        <div className="flex items-center justify-center flex-1 text-muted-foreground">
+        <Card className="flex flex-1 items-center justify-center text-muted-foreground">
           {t('No models available')}
-        </div>
+        </Card>
       ) : (
         <div className="flex flex-1 gap-4 overflow-hidden">
-          {/* Left panel: provider list */}
-          <aside className="w-52 shrink-0 flex flex-col gap-1 overflow-y-auto rounded-lg border bg-card p-2">
-            {/* All button */}
-            <button
-              onClick={() => {
-                setSelectedProviderId(-1);
-                setSearchQuery('');
-              }}
-              className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left transition-colors hover:bg-accent hover:text-accent-foreground ${
-                selectedProviderId === -1
-                  ? 'bg-accent text-accent-foreground font-medium'
-                  : ''
-              }`}
-            >
-              <span className="truncate">{t('All')}</span>
-              <span className="ml-auto text-xs text-muted-foreground shrink-0">
-                {groups.reduce((sum, g) => sum + g.models.length, 0)}
-              </span>
-            </button>
+          <Card className="flex w-56 shrink-0 flex-col overflow-hidden">
+            <CardContent className="min-h-0 flex-1 p-2">
+              <ScrollArea className="h-full">
+                <div className="space-y-1 pr-2">
+                  <Button
+                    variant={selectedProviderId === -1 ? 'secondary' : 'ghost'}
+                    className="h-auto w-full justify-start px-3 py-2 text-left"
+                    onClick={() => {
+                      setSelectedProviderId(-1);
+                      setSearchQuery('');
+                    }}
+                  >
+                    <span className="truncate">{t('All')}</span>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'ml-auto min-w-8 justify-center border-transparent text-xs',
+                        selectedProviderId === -1
+                          ? 'bg-background text-foreground'
+                          : 'bg-muted text-muted-foreground',
+                      )}
+                    >
+                      {totalModelCount}
+                    </Badge>
+                  </Button>
 
-            {/* Provider buttons */}
-            {groups.map((group) => (
-              <button
-                key={group.providerId}
-                onClick={() => {
-                  setSelectedProviderId(group.providerId);
-                  setSearchQuery('');
-                }}
-                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left transition-colors hover:bg-accent hover:text-accent-foreground ${
-                  selectedProviderId === group.providerId
-                    ? 'bg-accent text-accent-foreground font-medium'
-                    : ''
-                }`}
-              >
-                <Image
-                  src={group.providerIcon}
-                  alt={group.providerName}
-                  width={18}
-                  height={18}
-                  className="shrink-0 rounded-sm object-contain"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                  }}
+                  {groups.map((group) => {
+                    const isSelected = selectedProviderId === group.providerId;
+
+                    return (
+                      <Button
+                        key={group.providerId}
+                        variant={isSelected ? 'secondary' : 'ghost'}
+                        className="h-auto w-full justify-start gap-2 px-3 py-2 text-left"
+                        onClick={() => {
+                          setSelectedProviderId(group.providerId);
+                          setSearchQuery('');
+                        }}
+                      >
+                        <ModelProviderIcon
+                          providerId={group.providerId}
+                          className="h-[18px] w-[18px] shrink-0 rounded-sm"
+                        />
+                        <span className="truncate">{group.providerName}</span>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'ml-auto min-w-8 justify-center border-transparent text-xs',
+                            isSelected
+                              ? 'bg-background text-foreground'
+                              : 'bg-muted text-muted-foreground',
+                          )}
+                        >
+                          {group.models.length}
+                        </Badge>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+
+          <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-3">
+              <div className="relative min-w-[240px] flex-1">
+                <IconSearch
+                  size={18}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                 />
-                <span className="truncate">{group.providerName}</span>
-                <span className="ml-auto text-xs text-muted-foreground shrink-0">
-                  {group.models.length}
-                </span>
-              </button>
-            ))}
-          </aside>
+                <Input
+                  type="text"
+                  placeholder={t('Search models...')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pr-10 pl-9"
+                />
+                {searchQuery && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
+                    onClick={() => setSearchQuery('')}
+                    aria-label={t('Clear search')}
+                  >
+                    <IconX size={16} className="text-muted-foreground" />
+                  </Button>
+                )}
+              </div>
 
-          {/* Right panel: model price table */}
-          <main className="flex-1 flex flex-col overflow-hidden rounded-lg border bg-card">
-            {/* Search box and filters */}
-            <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-b bg-card">
-              <IconSearch size={18} className="text-muted-foreground shrink-0" />
-              <input
-                type="text"
-                placeholder={t('Search models...')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="p-1 hover:bg-accent rounded transition-colors"
-                >
-                  <IconX size={16} className="text-muted-foreground" />
-                </button>
-              )}
-              <div className="shrink-0 h-5 w-px bg-border" />
-              <button
+              <Button
+                type="button"
+                variant={showFreeOnly ? 'secondary' : 'outline'}
+                size="sm"
                 onClick={() => setShowFreeOnly(!showFreeOnly)}
-                className={`flex items-center gap-2 px-3 py-1 rounded text-sm transition-colors whitespace-nowrap ${
-                  showFreeOnly
-                    ? 'bg-accent text-accent-foreground font-medium'
-                    : 'hover:bg-accent hover:text-accent-foreground text-muted-foreground'
-                }`}
                 title={t('Show only free models')}
               >
-                <span>{t('Free Only')}</span>
-              </button>
+                {t('Free Only')}
+              </Button>
             </div>
 
-            {/* Models table */}
-            <div className="flex-1 overflow-auto">
-              {filteredModels.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                  {searchQuery ? t('No models found') : t('No models available')}
-                </div>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-card border-b z-10">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold">{t('Model Name')}</th>
-                      <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">
-                        {t('Input Price (/ 1M tokens)')}
-                      </th>
-                      <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">
-                        {t('Cached Input Price (/ 1M tokens)')}
-                      </th>
-                      <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">
-                        {t('Output Price (/ 1M tokens)')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredModels.map((model, idx) => (
-                      <tr
-                        key={model.modelId}
-                        className={idx % 2 === 0 ? '' : 'bg-muted/40'}
-                      >
-                        <td className="px-4 py-3 font-medium">{model.name}</td>
-                        <td className="px-4 py-3 text-right tabular-nums">
-                          {formatPrice(model.inputFreshTokenPrice1M)}
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums">
-                          {formatPrice(model.inputCachedTokenPrice1M)}
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums">
-                          {formatPrice(model.outputTokenPrice1M)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </main>
+            <CardContent className="min-h-0 flex-1 p-0 [&>div]:h-full">
+              <Table>
+                <TableHeader className="sticky top-0 z-10 [&_tr]:border-b">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="bg-card font-semibold text-foreground">
+                      {t('Model Name')}
+                    </TableHead>
+                    <TableHead className="bg-card text-right font-semibold text-foreground whitespace-nowrap">
+                      {t('Input Price (/ 1M tokens)')}
+                    </TableHead>
+                    <TableHead className="bg-card text-right font-semibold text-foreground whitespace-nowrap">
+                      {t('Cached Input Price (/ 1M tokens)')}
+                    </TableHead>
+                    <TableHead className="bg-card text-right font-semibold text-foreground whitespace-nowrap">
+                      {t('Output Price (/ 1M tokens)')}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody
+                  isEmpty={filteredModels.length === 0}
+                  emptyText={searchQuery ? t('No models found') : t('No models available')}
+                >
+                  {filteredModels.map((model, idx) => (
+                    <TableRow
+                      key={model.modelId}
+                      className={idx % 2 === 0 ? undefined : 'bg-muted/40'}
+                    >
+                      <TableCell className="font-medium text-foreground">
+                        {model.name}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatPrice(model.inputFreshTokenPrice1M)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatPrice(model.inputCachedTokenPrice1M)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatPrice(model.outputTokenPrice1M)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
