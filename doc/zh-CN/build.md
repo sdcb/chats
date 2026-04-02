@@ -174,9 +174,6 @@ echo "API_URL=http://localhost:5146" > .env.local
 # 安装依赖
 npm install
 
-# 或使用 pnpm（推荐，速度更快）
-# pnpm install
-
 # 启动开发服务器
 npm run dev
 ```
