@@ -140,6 +140,15 @@ const ModelPricesPage = () => {
     return price.toFixed(4);
   };
 
+  const apiTypeMap = useMemo(() => {
+    return {
+      0: t('OpenAI Chat Completion'),
+      1: t('OpenAI Response'),
+      2: t('OpenAI Image Generation'),
+      3: t('Anthropic Messages'),
+    } as Record<number, string>;
+  }, [t]);
+
   return (
     <div className="container max-w-screen-xl mx-auto py-6 px-4 sm:px-6 h-screen flex flex-col">
       <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
@@ -361,6 +370,7 @@ const ModelPricesPage = () => {
                           />
                         </span>
                       </th>
+                      <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">{t('API Type')}</th>
                       <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">{t('Context Window')}</th>
                       <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">{t('Max Response Tokens')}</th>
                       <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">{t('Temperature')}</th>
@@ -386,6 +396,7 @@ const ModelPricesPage = () => {
                         <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">
                           {formatPrice(model.outputTokenPrice1M)}
                         </td>
+                        <td className="px-4 py-3 text-left whitespace-nowrap">{apiTypeMap[model.apiType] ?? model.apiType}</td>
                         <td className="px-4 py-3 text-right whitespace-nowrap">{model.contextWindow ?? '-'}</td>
                         <td className="px-4 py-3 text-right whitespace-nowrap">{model.maxResponseTokens ?? '-'}</td>
                         <td className="px-4 py-3 text-right whitespace-nowrap">{`${model.minTemperature ?? '-'} / ${model.maxTemperature ?? '-'}`}</td>
