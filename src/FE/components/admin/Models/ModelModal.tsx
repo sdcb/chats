@@ -656,7 +656,7 @@ const ModelModal = (props: IProps) => {
                         render={({ field }) => (
                           <FormInput
                             type="number"
-                            label={t('1M input tokens price')!}
+                            label={t('Input Price (/ 1M tokens)')!}
                             field={field}
                           />
                         )}
@@ -668,7 +668,7 @@ const ModelModal = (props: IProps) => {
                         render={({ field }) => (
                           <FormInput
                             type="number"
-                            label={t('1M input cached tokens price')!}
+                            label={t('Cached Input Price (/ 1M tokens)')!}
                             field={field}
                           />
                         )}
@@ -680,7 +680,7 @@ const ModelModal = (props: IProps) => {
                         render={({ field }) => (
                           <FormInput
                             type="number"
-                            label={t('1M output tokens price')!}
+                            label={t('Output Price (/ 1M tokens)')!}
                             field={field}
                           />
                         )}
