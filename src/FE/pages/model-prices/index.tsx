@@ -26,6 +26,8 @@ const ModelPricesPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFreeOnly, setShowFreeOnly] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<'name' | 'inputFresh' | 'inputCached' | 'output'>('output');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     getUserModels()
@@ -95,6 +97,43 @@ const ModelPricesPage = () => {
       (model) => model.name.toLowerCase().includes(query),
     );
   }, [selectedGroup, searchQuery, showFreeOnly]);
+
+  // Apply sorting to the filtered models
+  const sortedModels = useMemo(() => {
+    const arr = [...filteredModels];
+
+    const getValue = (m: AdminModelDto) => {
+      switch (sortBy) {
+        case 'name':
+          return m.name?.toLowerCase() ?? '';
+        case 'inputFresh':
+          return m.inputFreshTokenPrice1M ?? 0;
+        case 'inputCached':
+          return m.inputCachedTokenPrice1M ?? 0;
+        case 'output':
+        default:
+          return m.outputTokenPrice1M ?? 0;
+      }
+    };
+
+    arr.sort((a, b) => {
+      const va = getValue(a) as any;
+      const vb = getValue(b) as any;
+
+      if (typeof va === 'string' && typeof vb === 'string') {
+        const cmp = va.localeCompare(vb);
+        return sortDir === 'asc' ? cmp : -cmp;
+      }
+
+      // numeric compare
+      const na = Number(va ?? 0);
+      const nb = Number(vb ?? 0);
+      if (na === nb) return 0;
+      return sortDir === 'asc' ? na - nb : nb - na;
+    });
+
+    return arr;
+  }, [filteredModels, sortBy, sortDir]);
 
   const formatPrice = (price: number) => {
     if (price === 0) return t('Free');
@@ -212,7 +251,7 @@ const ModelPricesPage = () => {
 
             {/* Models table */}
             <div className="flex-1 overflow-auto">
-              {filteredModels.length === 0 ? (
+              {sortedModels.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
                   {searchQuery ? t('No models found') : t('No models available')}
                 </div>
@@ -220,20 +259,89 @@ const ModelPricesPage = () => {
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-card border-b z-10">
                     <tr>
-                      <th className="px-4 py-3 text-left font-semibold">{t('Model Name')}</th>
-                      <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">
-                        {t('Input Price (/ 1M tokens)')}
+                      <th
+                        className="px-4 py-3 text-left font-semibold cursor-pointer"
+                        onClick={() => {
+                          if (sortBy === 'name') setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+                          else {
+                            setSortBy('name');
+                            setSortDir('asc');
+                          }
+                        }}
+                        aria-sort={sortBy === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          {t('Model Name')}
+                          <IconArrowDown
+                            size={14}
+                            className={`transition-transform ${sortBy === 'name' ? (sortDir === 'desc' ? '' : 'rotate-180') : 'opacity-30'}`}
+                          />
+                        </span>
                       </th>
-                      <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">
-                        {t('Cached Input Price (/ 1M tokens)')}
+
+                      <th
+                        className="px-4 py-3 text-right font-semibold whitespace-nowrap cursor-pointer"
+                        onClick={() => {
+                          if (sortBy === 'inputFresh') setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+                          else {
+                            setSortBy('inputFresh');
+                            setSortDir('desc');
+                          }
+                        }}
+                        aria-sort={sortBy === 'inputFresh' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          {t('Input Price (/ 1M tokens)')}
+                          <IconArrowDown
+                            size={14}
+                            className={`transition-transform ${sortBy === 'inputFresh' ? (sortDir === 'desc' ? '' : 'rotate-180') : 'opacity-30'}`}
+                          />
+                        </span>
                       </th>
-                      <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">
-                        {t('Output Price (/ 1M tokens)')}
+
+                      <th
+                        className="px-4 py-3 text-right font-semibold whitespace-nowrap cursor-pointer"
+                        onClick={() => {
+                          if (sortBy === 'inputCached') setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+                          else {
+                            setSortBy('inputCached');
+                            setSortDir('desc');
+                          }
+                        }}
+                        aria-sort={sortBy === 'inputCached' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          {t('Cached Input Price (/ 1M tokens)')}
+                          <IconArrowDown
+                            size={14}
+                            className={`transition-transform ${sortBy === 'inputCached' ? (sortDir === 'desc' ? '' : 'rotate-180') : 'opacity-30'}`}
+                          />
+                        </span>
+                      </th>
+
+                      <th
+                        className="px-4 py-3 text-right font-semibold whitespace-nowrap cursor-pointer"
+                        onClick={() => {
+                          if (sortBy === 'output') setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+                          else {
+                            setSortBy('output');
+                            setSortDir('desc');
+                          }
+                        }}
+                        aria-sort={sortBy === 'output' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          {t('Output Price (/ 1M tokens)')}
+                          <IconArrowDown
+                            size={14}
+                            className={`transition-transform ${sortBy === 'output' ? (sortDir === 'desc' ? '' : 'rotate-180') : 'opacity-30'}`}
+                          />
+                        </span>
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredModels.map((model, idx) => (
+                    {sortedModels.map((model, idx) => (
                       <tr
                         key={model.modelId}
                         className={idx % 2 === 0 ? '' : 'bg-muted/40'}
