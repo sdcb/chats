@@ -44,6 +44,38 @@ public class InitService(IServiceScopeFactory scopeFactory)
 
         try
         {
+            static async Task<bool> TableExistsAsync(DbConnection connection, string tableName, CancellationToken ct)
+            {
+                await using DbCommand command = connection.CreateCommand();
+                command.CommandText = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = $name LIMIT 1;";
+                DbParameter parameter = command.CreateParameter();
+                parameter.ParameterName = "$name";
+                parameter.Value = tableName;
+                command.Parameters.Add(parameter);
+                object? result = await command.ExecuteScalarAsync(ct);
+                return result != null;
+            }
+
+            bool hasUserConfig = await TableExistsAsync(connection, "UserConfig", cancellationToken);
+            if (!hasUserConfig)
+            {
+                bool hasLegacyUserConfigs = await TableExistsAsync(connection, "UserConfigs", cancellationToken);
+                if (hasLegacyUserConfigs)
+                {
+                    await db.Database.ExecuteSqlRawAsync(
+                        "ALTER TABLE \"UserConfigs\" RENAME TO \"UserConfig\";",
+                        cancellationToken);
+                    Console.WriteLine("Applied SQLite compatibility schema update: renamed UserConfigs to UserConfig.");
+                }
+                else
+                {
+                    await db.Database.ExecuteSqlRawAsync(
+                        "CREATE TABLE IF NOT EXISTS \"UserConfig\" (\"UserId\" INTEGER NOT NULL, \"Key\" TEXT NOT NULL, \"Value\" TEXT NOT NULL, \"Description\" TEXT NULL, CONSTRAINT \"PK_UserConfig\" PRIMARY KEY (\"UserId\", \"Key\"), CONSTRAINT \"FK_UserConfig_User\" FOREIGN KEY (\"UserId\") REFERENCES \"User\" (\"Id\"));",
+                        cancellationToken);
+                    Console.WriteLine("Applied SQLite compatibility schema update: created missing UserConfig table.");
+                }
+            }
+
             bool hasSourceId = false;
             await using (DbCommand command = connection.CreateCommand())
             {
