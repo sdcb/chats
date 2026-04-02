@@ -10,7 +10,7 @@ import { getUserModels } from '@/apis/clientApis';
 import { AdminModelDto } from '@/types/adminApis';
 import { feModelProviders } from '@/types/model';
 
-import { IconArrowDown, IconMoneybag, IconSearch, IconX } from '@/components/Icons';
+import { ChevronDown, DollarSign, Search, X, Check } from 'lucide-react';
 
 interface ProviderGroup {
   providerId: number;
@@ -147,9 +147,9 @@ const ModelPricesPage = () => {
           href="/"
           className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 w-10"
         >
-          <IconArrowDown className="rotate-90" size={20} />
+          <ChevronDown className="rotate-90" size={20} />
         </Link>
-        <IconMoneybag size={22} />
+        <DollarSign size={22} />
         {t('Model Prices')}
       </h1>
 
@@ -219,7 +219,7 @@ const ModelPricesPage = () => {
           <main className="flex-1 flex flex-col overflow-hidden rounded-lg border bg-card">
             {/* Search box and filters */}
             <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-b bg-card">
-              <IconSearch size={18} className="text-muted-foreground shrink-0" />
+              <Search size={18} className="text-muted-foreground shrink-0" />
               <input
                 type="text"
                 placeholder={t('Search models...')}
@@ -232,7 +232,7 @@ const ModelPricesPage = () => {
                   onClick={() => setSearchQuery('')}
                   className="p-1 hover:bg-accent rounded transition-colors"
                 >
-                  <IconX size={16} className="text-muted-foreground" />
+                  <X size={16} className="text-muted-foreground" />
                 </button>
               )}
               <div className="shrink-0 h-5 w-px bg-border" />
@@ -260,7 +260,7 @@ const ModelPricesPage = () => {
                   <thead className="sticky top-0 bg-card border-b z-10">
                     <tr>
                       <th
-                        className="px-4 py-3 text-left font-semibold cursor-pointer"
+                        className="px-4 py-3 text-left font-semibold cursor-pointer min-w-[220px]"
                         onClick={() => {
                           if (sortBy === 'name') setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
                           else {
@@ -272,7 +272,7 @@ const ModelPricesPage = () => {
                       >
                         <span className="inline-flex items-center gap-2">
                           {t('Model Name')}
-                          <IconArrowDown
+                          <ChevronDown
                             size={14}
                             className={`transition-transform ${sortBy === 'name' ? (sortDir === 'desc' ? '' : 'rotate-180') : 'opacity-30'}`}
                           />
@@ -292,7 +292,7 @@ const ModelPricesPage = () => {
                       >
                         <span className="inline-flex items-center gap-2">
                           {t('Input Price (/ 1M tokens)')}
-                          <IconArrowDown
+                          <ChevronDown
                             size={14}
                             className={`transition-transform ${sortBy === 'inputFresh' ? (sortDir === 'desc' ? '' : 'rotate-180') : 'opacity-30'}`}
                           />
@@ -312,7 +312,7 @@ const ModelPricesPage = () => {
                       >
                         <span className="inline-flex items-center gap-2">
                           {t('Cached Input Price (/ 1M tokens)')}
-                          <IconArrowDown
+                          <ChevronDown
                             size={14}
                             className={`transition-transform ${sortBy === 'inputCached' ? (sortDir === 'desc' ? '' : 'rotate-180') : 'opacity-30'}`}
                           />
@@ -332,12 +332,19 @@ const ModelPricesPage = () => {
                       >
                         <span className="inline-flex items-center gap-2">
                           {t('Output Price (/ 1M tokens)')}
-                          <IconArrowDown
+                          <ChevronDown
                             size={14}
                             className={`transition-transform ${sortBy === 'output' ? (sortDir === 'desc' ? '' : 'rotate-180') : 'opacity-30'}`}
                           />
                         </span>
                       </th>
+                      <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">{t('Context Window')}</th>
+                      <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">{t('Max Response Tokens')}</th>
+                      <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">{t('Temperature')}</th>
+                      <th className="px-4 py-3 text-center font-semibold whitespace-nowrap">{t('Streaming')}</th>
+                      <th className="px-4 py-3 text-center font-semibold whitespace-nowrap">{t('Code Exec')}</th>
+                      <th className="px-4 py-3 text-center font-semibold whitespace-nowrap">{t('Tool Call')}</th>
+                      <th className="px-4 py-3 text-center font-semibold whitespace-nowrap">{t('Legacy')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -346,7 +353,7 @@ const ModelPricesPage = () => {
                         key={model.modelId}
                         className={idx % 2 === 0 ? '' : 'bg-muted/40'}
                       >
-                        <td className="px-4 py-3 font-medium">{model.name}</td>
+                        <td className="px-4 py-3 font-medium max-w-[36rem] truncate">{model.name}</td>
                         <td className="px-4 py-3 text-right tabular-nums">
                           {formatPrice(model.inputFreshTokenPrice1M)}
                         </td>
@@ -355,6 +362,37 @@ const ModelPricesPage = () => {
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">
                           {formatPrice(model.outputTokenPrice1M)}
+                        </td>
+                        <td className="px-4 py-3 text-right">{model.contextWindow ?? '-'}</td>
+                        <td className="px-4 py-3 text-right">{model.maxResponseTokens ?? '-'}</td>
+                        <td className="px-4 py-3 text-right">{`${model.minTemperature ?? '-'} / ${model.maxTemperature ?? '-'}`}</td>
+                        <td className="px-4 py-3 text-center">
+                          {model.allowStreaming ? (
+                            <Check size={18} className="text-green-600" aria-label={t('Yes')} />
+                          ) : (
+                            <X size={18} className="text-muted-foreground" aria-label={t('No')} />
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {model.allowCodeExecution ? (
+                            <Check size={18} className="text-green-600" aria-label={t('Yes')} />
+                          ) : (
+                            <X size={18} className="text-muted-foreground" aria-label={t('No')} />
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {model.allowToolCall ? (
+                            <Check size={18} className="text-green-600" aria-label={t('Yes')} />
+                          ) : (
+                            <X size={18} className="text-muted-foreground" aria-label={t('No')} />
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {model.isLegacy ? (
+                            <X size={18} className="text-yellow-600" aria-label={t('Yes')} />
+                          ) : (
+                            <Check size={18} className="text-muted-foreground" aria-label={t('No')} />
+                          )}
                         </td>
                       </tr>
                     ))}
