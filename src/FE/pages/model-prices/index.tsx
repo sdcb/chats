@@ -250,14 +250,37 @@ const ModelPricesPage = () => {
             </div>
 
             {/* Models table */}
-            <div className="flex-1 overflow-auto">
+            <div
+              className="flex-1 overflow-auto relative model-prices-scrollbar"
+              style={{ WebkitOverflowScrolling: 'touch' as any, scrollbarGutter: 'stable' as any }}
+            >
+              <style jsx>{`
+                .model-prices-scrollbar::-webkit-scrollbar {
+                  width: 12px;
+                  height: 12px;
+                }
+                .model-prices-scrollbar::-webkit-scrollbar-thumb {
+                  background: rgba(15,23,42,0.12); /* match muted-foreground */
+                  border-radius: 9999px;
+                  border: 3px solid transparent;
+                  background-clip: padding-box;
+                }
+                .model-prices-scrollbar::-webkit-scrollbar-track {
+                  background: transparent;
+                }
+                .model-prices-scrollbar {
+                  scrollbar-width: thin;
+                  scrollbar-color: rgba(15,23,42,0.12) transparent;
+                  -ms-overflow-style: auto;
+                }
+              `}</style>
               {sortedModels.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
                   {searchQuery ? t('No models found') : t('No models available')}
                 </div>
               ) : (
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-card border-b z-10">
+                <table className="w-full text-sm min-w-max">
+                  <thead className="sticky top-0 bg-card/95 border-b z-20 backdrop-blur-sm">
                     <tr>
                       <th
                         className="px-4 py-3 text-left font-semibold cursor-pointer min-w-[220px]"
@@ -354,18 +377,18 @@ const ModelPricesPage = () => {
                         className={idx % 2 === 0 ? '' : 'bg-muted/40'}
                       >
                         <td className="px-4 py-3 font-medium max-w-[36rem] truncate">{model.name}</td>
-                        <td className="px-4 py-3 text-right tabular-nums">
+                        <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">
                           {formatPrice(model.inputFreshTokenPrice1M)}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums">
+                        <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">
                           {formatPrice(model.inputCachedTokenPrice1M)}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums">
+                        <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">
                           {formatPrice(model.outputTokenPrice1M)}
                         </td>
-                        <td className="px-4 py-3 text-right">{model.contextWindow ?? '-'}</td>
-                        <td className="px-4 py-3 text-right">{model.maxResponseTokens ?? '-'}</td>
-                        <td className="px-4 py-3 text-right">{`${model.minTemperature ?? '-'} / ${model.maxTemperature ?? '-'}`}</td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">{model.contextWindow ?? '-'}</td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">{model.maxResponseTokens ?? '-'}</td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">{`${model.minTemperature ?? '-'} / ${model.maxTemperature ?? '-'}`}</td>
                         <td className="px-4 py-3 text-center">
                           {model.allowStreaming ? (
                             <Check size={18} className="text-green-600" aria-label={t('Yes')} />
