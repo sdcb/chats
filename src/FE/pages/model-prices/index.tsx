@@ -17,7 +17,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import {
   Table,
@@ -229,17 +228,17 @@ const ModelPricesPage = () => {
   const desktopSidebar = (
     <Card className="hidden w-64 shrink-0 overflow-hidden md:flex md:min-h-0 md:flex-col">
       <CardContent className="min-h-0 flex-1 p-3">
-        <ScrollArea className="h-full pr-2">
-          <div className="space-y-5">
-            <section className="space-y-2">
-              <div className="px-1">
-                <h2 className="text-sm font-semibold text-foreground">{t('Model Provider')}</h2>
-              </div>
+        <div className="space-y-5">
+          <section className="space-y-2">
+            <div className="px-1">
+              <h2 className="text-sm font-semibold text-foreground">{t('Model Provider')}</h2>
+            </div>
 
+            <div className="max-h-[284px] overflow-y-auto pr-1">
               <div className="space-y-1">
                 <Button
                   variant={selectedProviderId === ALL_PROVIDER_ID ? 'secondary' : 'ghost'}
-                  className="h-auto w-full justify-start px-3 py-2 text-left"
+                  className="h-10 w-full justify-start px-3 py-2 text-left"
                   onClick={() => setSelectedProviderId(ALL_PROVIDER_ID)}
                 >
                   <span className="truncate">{t('All')}</span>
@@ -263,7 +262,7 @@ const ModelPricesPage = () => {
                     <Button
                       key={group.providerId}
                       variant={isSelected ? 'secondary' : 'ghost'}
-                      className="h-auto w-full justify-start gap-2 px-3 py-2 text-left"
+                      className="h-10 w-full justify-start gap-2 px-3 py-2 text-left"
                       onClick={() => setSelectedProviderId(group.providerId)}
                     >
                       <ModelProviderIcon
@@ -286,34 +285,34 @@ const ModelPricesPage = () => {
                   );
                 })}
               </div>
-            </section>
+            </div>
+          </section>
 
-            <section className="space-y-2">
-              <div className="px-1">
-                <h2 className="text-sm font-semibold text-foreground">{t('API Type')}</h2>
-              </div>
+          <section className="space-y-2">
+            <div className="px-1">
+              <h2 className="text-sm font-semibold text-foreground">{t('API Type')}</h2>
+            </div>
 
-              <ToggleGroup
-                type="multiple"
-                value={selectedApiTypes.map(String)}
-                onValueChange={(values) => setSelectedApiTypes(values.map(Number))}
-                className="flex-wrap justify-start gap-2"
-              >
-                {API_TYPE_OPTIONS.map((option) => (
-                  <ToggleGroupItem
-                    key={option.value}
-                    value={String(option.value)}
-                    variant="outline"
-                    className="h-auto rounded-full px-3 py-1.5 text-xs data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-                    aria-label={getApiTypeLabel(option.value, t)}
-                  >
-                    {getApiTypeLabel(option.value, t)} ({apiTypeCounts.get(option.value) ?? 0})
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            </section>
-          </div>
-        </ScrollArea>
+            <ToggleGroup
+              type="multiple"
+              value={selectedApiTypes.map(String)}
+              onValueChange={(values) => setSelectedApiTypes(values.map(Number))}
+              className="flex-wrap justify-start gap-2"
+            >
+              {API_TYPE_OPTIONS.map((option) => (
+                <ToggleGroupItem
+                  key={option.value}
+                  value={String(option.value)}
+                  variant="outline"
+                  className="h-auto rounded-full px-3 py-1.5 text-xs data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                  aria-label={getApiTypeLabel(option.value, t)}
+                >
+                  {getApiTypeLabel(option.value, t)} ({apiTypeCounts.get(option.value) ?? 0})
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </section>
+        </div>
       </CardContent>
     </Card>
   );
@@ -334,7 +333,7 @@ const ModelPricesPage = () => {
         </Button>
       </div>
 
-      <CardContent className="min-h-0 flex-1 p-0">
+      <CardContent className="min-h-0 flex-1 overflow-hidden p-0 [&>div]:h-full">
         <Table>
           <TableHeader className="sticky top-0 z-10 [&_tr]:border-b">
             <TableRow className="hover:bg-transparent">
@@ -544,7 +543,7 @@ const ModelPricesPage = () => {
   );
 
   return (
-    <div className="container mx-auto flex min-h-screen max-w-screen-xl flex-col px-4 py-6 sm:px-6">
+    <div className="container mx-auto flex min-h-screen max-w-screen-xl flex-col px-4 py-6 sm:px-6 md:h-screen md:overflow-hidden">
       <h1 className="mb-6 flex items-center gap-2 text-2xl font-bold">
         <Button asChild variant="ghost" size="icon" className="rounded-md">
           <Link href="/" aria-label={t('Back')}>
