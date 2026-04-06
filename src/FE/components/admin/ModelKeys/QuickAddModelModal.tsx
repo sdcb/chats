@@ -233,7 +233,7 @@ const QuickAddModelModal = (props: IProps) => {
             />
           </div>
         </DialogHeader>
-  <div className="min-h-0 max-h-[65vh] overflow-y-auto pr-2 custom-scrollbar">
+  <div className="scroller min-h-0 max-h-[65vh] overflow-y-auto pr-2">
           {error ? (
             <div className="flex items-center justify-center w-full h-full text-muted-foreground">
               <div className="text-center max-w-2xl">

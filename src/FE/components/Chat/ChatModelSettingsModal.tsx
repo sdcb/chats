@@ -248,7 +248,7 @@ const ChatModelSettingModal = (props: Props) => {
                   triggerClassName={
                     'hover:bg-transparent px-4 border w-full h-10'
                   }
-                  groupClassName="overflow-y-scroll max-h-80 sm:max-h-full custom-scrollbar"
+                  groupClassName="overflow-y-scroll max-h-80 sm:max-h-full scroller"
                   models={models}
                   content={
                     <div className="flex gap-2 items-center">

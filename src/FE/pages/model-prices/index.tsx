@@ -234,7 +234,7 @@ const ModelPricesPage = () => {
               <h2 className="text-sm font-semibold text-foreground">{t('Model Provider')}</h2>
             </div>
 
-            <div className="max-h-[284px] overflow-y-auto pr-1">
+              <div className="scroller max-h-[284px] overflow-y-auto pr-1">
               <div className="space-y-1">
                 <Button
                   variant={selectedProviderId === ALL_PROVIDER_ID ? 'secondary' : 'ghost'}
@@ -333,8 +333,8 @@ const ModelPricesPage = () => {
         </Button>
       </div>
 
-      <CardContent className="min-h-0 flex-1 overflow-hidden p-0 [&>div]:h-full">
-        <Table>
+      <CardContent className="min-h-0 flex-1 overflow-hidden p-0">
+        <Table containerClassName="scroller h-full">
           <TableHeader className="sticky top-0 z-10 [&_tr]:border-b">
             <TableRow className="hover:bg-transparent">
               <TableHead className="bg-card font-semibold text-foreground">
