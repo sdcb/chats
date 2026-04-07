@@ -2,11 +2,11 @@
 
 [English](README_EN.md) | **简体中文** 
 
-Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 21+ 主流 AI 模型服务商。无论您是希望统一管理多种模型接口，还是需要一个简单易用的部署方案，Sdcb Chats 都能满足您的需求。
+Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 22+ 主流 AI 模型服务商。无论您是希望统一管理多种模型接口，还是需要一个简单易用的部署方案，Sdcb Chats 都能满足您的需求。
 
 ## ✨ 为什么选择 Sdcb Chats
 
-- 🚀 **一站式**：21+ 模型服务商，一个入口
+- 🚀 **一站式**：22+ 模型服务商，一个入口
 - 🎯 **分钟级上手**：一条命令 Docker 部署，8 平台原生可执行
 - 🐳 **代码解释器**：Docker 沙箱，内置浏览器/代码执行/Excel 等工具
 - 🔌 **API 网关**：Chat Completions/Messages 兼容，支持 Claude Code
@@ -18,16 +18,17 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 21+ 主流 
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
-## 🆕 最新版本（1.10.2）
+## 🆕 最新版本（1.11.0）
 
-- 📅 发布日期：2026-03-10
-- 🔍 Request Trace：新增入站/出站 HTTP 请求全链路追踪，记录关键时间点、状态码、异常和正文与原始数据
-- 🧑‍💼 管理后台：新增请求跟踪工作台，支持筛选、详情查看、原始下载、双记录对比、Excel 导出和按筛选删除
-- ⚙️ 采集治理：支持采样率、include/exclude 规则、URL 参数脱敏、保留周期和热刷新
-- ♻️ 生命周期管理：新增队列容量保护与定时自动清理，降低持续采集对业务链路的干扰
-- 🛠️ 其它改进：统计卡片按时间范围统计，长用户消息支持折叠，Anthropic 协议兼容性继续改进
+- 📅 发布日期：2026-04-07
+- 🧠 智能标题摘要：新增首轮 AI 自动命名，支持管理员全局配置、个人覆盖、指定模型与 Prompt Template，并将标题生成单独记为 `Summary` 来源
+- 💵 模型定价页：新增模型价格总览页，支持按提供商、API 类型、免费模型和关键字筛选，并展示上下文窗口与多种价格口径
+- 📊 用量来源细分：`UserModelUsage` 新增 `SourceId`，支持 `WebChat` / `Api` / `Summary` 分类筛选和后台来源统计
+- 🆕 新模型提供商：新增第 22 个模型提供商 Novita AI，支持思考信息回传
+- ↔️ 体验与性能：桌面聊天侧边栏支持拖拽调宽并持久化，Markdown/KaTeX/图表延迟加载，聊天页初始负载约从 3.5MB/3.6MB 降到 1.7MB
+- 🛠️ 升级重点：迁移脚本会删除 `TransactionType` 表、回填 `UserModelUsage.SourceId`，并新增 `UserConfig` 表承载用户级配置
 
-👉 [查看 1.10.2 发布说明](./doc/zh-CN/release-notes/1.10.2.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
+👉 [查看 1.11.0 发布说明](./doc/zh-CN/release-notes/1.11.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
 
 ## 快速开始
 
@@ -49,7 +50,7 @@ Chats 使用 `C#`/`TypeScript` 开发，以下是完整的文档资源：
 
 - [🚀 快速开始](./doc/zh-CN/quick-start.md) - 部署指南、Docker 配置、数据库设置
 - [💾 下载地址](./doc/zh-CN/downloads.md) - Docker 镜像和可执行文件下载
-- [🤖 支持的模型提供商](./doc/zh-CN/model-providers.md) - 21+ 模型服务商列表及支持情况
+- [🤖 支持的模型提供商](./doc/zh-CN/model-providers.md) - 22+ 模型服务商列表及支持情况
 - [🛠️ 开发指南](./doc/zh-CN/build.md) - 如何编译和开发 Chats
 - [⚙️ 配置说明](./doc/zh-CN/configuration.md) - 详细配置参数说明
 - [📝 更新日志](./doc/zh-CN/release-notes/README.md) - 版本更新记录

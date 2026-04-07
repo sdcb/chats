@@ -2,7 +2,7 @@
 
 [English](../en-US/model-providers.md) | **简体中文**
 
-Sdcb Chats 支持 21+ 主流 AI 模型服务商，以下是完整列表：
+Sdcb Chats 支持 22+ 主流 AI 模型服务商，以下是完整列表：
 
 | Id  | Name             | 加入时间                                                    | 交错思考 |
 | --- | ---------------- | ----------------------------------------------------------- | -------- |
@@ -28,6 +28,7 @@ Sdcb Chats 支持 21+ 主流 AI 模型服务商，以下是完整列表：
 | 19  | 小马算力         | [2025-11-07](https://github.com/sdcb/chats/commit/32e4a0d5) | ❓        |
 | 20  | Anthropic        | [2025-11-24](https://github.com/sdcb/chats/commit/22ebef98) | ✅        |
 | 21  | 小米Mimo         | [2025-12-17](https://github.com/sdcb/chats/commit/026f1a4e) | ✅        |
+| 22  | Novita AI        | [2026-03-13](https://github.com/sdcb/chats/commit/cecfc66d) | ✅        |
 
 ## 注意事项
 

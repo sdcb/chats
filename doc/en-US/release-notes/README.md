@@ -7,7 +7,21 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.10.2](1.10.2.md) - 2026-03-10 ⭐ Latest Release
+## [1.11.0](1.11.0.md) - 2026-04-07 ⭐ Latest Release
+
+**Core Highlights**: AI chat title summary · Model pricing page · WebChat/Api/Summary usage source tracking · Novita AI provider · Frontend lazy-loading and desktop UX improvements
+
+- 🧠 **Smart Title Summary**: adds first-turn AI title generation with admin defaults, per-user overrides, dedicated model modes, and separate `Summary` usage billing
+- 💵 **Model Pricing Page**: adds a `/model-prices` overview with provider, API type, free-model, and keyword filters, plus context windows and multi-dimensional pricing
+- 📊 **Usage Source Tracking**: adds `SourceId` on `UserModelUsage` so users and admins can distinguish `WebChat`, `Api`, and `Summary`
+- 🆕 **Novita AI Provider**: adds Novita AI as the 22nd provider, with reasoning information round-tripping support
+- ⚡ **Frontend Performance & UX**: lazy-loads Markdown, KaTeX, charts, and session UI, adds resizable desktop sidebar, and improves admin table consistency
+
+[View Full Release Notes →](1.11.0.md)
+
+---
+
+## [1.10.2](1.10.2.md) - 2026-03-10
 
 **Core Highlights**: Request Trace end-to-end tracing · Admin request trace workspace · Sampling/filtering/redaction/retention policies · Export, compare, and scheduled cleanup · Small UX and compatibility improvements
 
