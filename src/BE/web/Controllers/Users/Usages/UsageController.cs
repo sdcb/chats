@@ -115,13 +115,10 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
             usagesQuery = usagesQuery.Where(u => u.CreatedAt < localEnd);
         }
 
-        if (query.Source == UsageSource.WebChat)
+        if (query.Source != null)
         {
-            usagesQuery = usagesQuery.Where(u => u.UserApiUsage == null);
-        }
-        if (query.Source == UsageSource.Api)
-        {
-            usagesQuery = usagesQuery.Where(u => u.UserApiUsage != null);
+            byte sourceId = (byte)query.Source.Value;
+            usagesQuery = usagesQuery.Where(u => u.SourceId == sourceId);
         }
 
         IQueryable<UsageDto> rows = usagesQuery

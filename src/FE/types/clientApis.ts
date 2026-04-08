@@ -92,6 +92,31 @@ export interface ChatSpanDto {
   mcps: ChatSpanMcp[];
 }
 
+export type TitleSummaryModelMode = 'truncate' | 'current' | 'specified';
+
+export interface TitleSummaryConfig {
+  modelMode: TitleSummaryModelMode;
+  modelId: number | null;
+  promptTemplate: string | null;
+}
+
+export interface ResolvedTitleSummaryConfig {
+  enabled: boolean;
+  modelMode: TitleSummaryModelMode;
+  modelId: number | null;
+  promptTemplate: string;
+}
+
+export interface TitleSummarySettingsDto {
+  adminConfig: TitleSummaryConfig | null;
+  userConfig: TitleSummaryConfig | null;
+  resolvedConfig: ResolvedTitleSummaryConfig;
+}
+
+export interface TitleSummaryDefaultTemplateDto {
+  promptTemplate: string;
+}
+
 export interface PostChatParams {
   title: string;
   groupId: string | null;
@@ -293,6 +318,8 @@ export interface GetUsageParams {
   user?: string;
   kid?: string;
   provider?: string;
+  modelKey?: string;
+  model?: string;
   start?: string;
   end?: string;
   page?: number;
@@ -340,6 +367,7 @@ export interface GetUsageStatResult {
 
 export interface GetUserFilesParams extends Paging {
   skip?: number;
+  contentTypePrefix?: string;
 }
 
 export interface GetUserFilesResult {

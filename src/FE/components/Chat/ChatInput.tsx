@@ -262,6 +262,17 @@ const ChatInput = ({
     return null;
   }
 
+  const hasVisionUploadCapability = selectedChat.spans.some(
+    (span) => modelMap[span.modelId]?.allowVision,
+  );
+  const hasCodeExecutionUploadCapability = selectedChat.spans.some(
+    (span) =>
+      modelMap[span.modelId]?.allowCodeExecution &&
+      span.codeExecutionEnabled,
+  );
+  const hasUploadCapability =
+    hasVisionUploadCapability || hasCodeExecutionUploadCapability;
+
   const filteredPrompts = prompts.filter((prompt) =>
     prompt.name.toLowerCase().includes(promptInputValue.toLowerCase()),
   );
@@ -434,9 +445,9 @@ const ChatInput = ({
 
   const canUploadFile = () => {
     return (
+      hasUploadCapability &&
       !uploading &&
-      contentFiles.length < defaultFileConfig.count &&
-      selectedChat.spans.filter((x) => modelMap[x.modelId]?.allowVision || x.codeExecutionEnabled).length > 0
+      contentFiles.length < defaultFileConfig.count
     );
   };
 
@@ -507,7 +518,7 @@ const ChatInput = ({
 
   const canUpload = canUploadFile();
   const showDeviceUpload = canUpload;
-  const showCameraUpload = canUpload && isMobile();
+  const showCameraUpload = canUpload && hasVisionUploadCapability && isMobile();
   const showRemoteFiles = canUpload;
   const showUploadMenu = showDeviceUpload || showCameraUpload || showRemoteFiles;
   const isMobileDevice = isMobile();
@@ -693,6 +704,11 @@ const ChatInput = ({
                               onUploading={handleUploading}
                               onFailed={handleUploadFailed}
                               onSuccessful={handleUploadSuccessful}
+                              accept={
+                                hasCodeExecutionUploadCapability
+                                  ? undefined
+                                  : 'image/*'
+                              }
                               capture={false}
                               inputId="upload-device"
                               buttonProps={{
@@ -712,6 +728,11 @@ const ChatInput = ({
                             <FilesPopover
                               onSelect={handleFileSelect}
                               selectedFiles={contentFiles}
+                              contentTypePrefix={
+                                hasCodeExecutionUploadCapability
+                                  ? undefined
+                                  : 'image/'
+                              }
                               trigger={
                                 <Button
                                   size="sm"
@@ -732,6 +753,7 @@ const ChatInput = ({
                               onUploading={handleUploading}
                               onFailed={handleUploadFailed}
                               onSuccessful={handleUploadSuccessful}
+                              accept="image/*"
                               capture={true}
                               inputId="upload-camera"
                               buttonProps={{
@@ -765,7 +787,7 @@ const ChatInput = ({
                   {canUpload && (
                     <PasteUpload
                       fileConfig={defaultFileConfig}
-                      allowAllFiles={selectedChat.spans.some((x) => x.codeExecutionEnabled)}
+                      allowAllFiles={hasCodeExecutionUploadCapability}
                       onUploading={handleUploading}
                       onFailed={handleUploadFailed}
                       onSuccessful={handleUploadSuccessful}
@@ -774,7 +796,7 @@ const ChatInput = ({
                   {canUpload && (
                     <DragUpload
                       fileConfig={defaultFileConfig}
-                      allowAllFiles={selectedChat.spans.some((x) => x.codeExecutionEnabled)}
+                      allowAllFiles={hasCodeExecutionUploadCapability}
                       onUploading={handleUploading}
                       onFailed={handleUploadFailed}
                       onSuccessful={handleUploadSuccessful}

@@ -101,8 +101,6 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<StepContentToolCallResponse> StepContentToolCallResponses { get; set; }
 
-    public virtual DbSet<TransactionType> TransactionTypes { get; set; }
-
     public virtual DbSet<UsageTransaction> UsageTransactions { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
@@ -118,6 +116,8 @@ public partial class ChatsDB : DbContext
     public virtual DbSet<UserApiUsage> UserApiUsages { get; set; }
 
     public virtual DbSet<UserBalance> UserBalances { get; set; }
+
+    public virtual DbSet<UserConfig> UserConfigs { get; set; }
 
     public virtual DbSet<UserInitialConfig> UserInitialConfigs { get; set; }
 
@@ -136,10 +136,6 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.CreditUser).WithMany(p => p.BalanceTransactionCreditUsers)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_BalanceTransaction_CreditUserId");
-
-            entity.HasOne(d => d.TransactionType).WithMany(p => p.BalanceTransactions)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_BalanceLog2_BalanceLogType");
 
             entity.HasOne(d => d.User).WithMany(p => p.BalanceTransactionUsers)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -468,11 +464,6 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentToolCallResponse).HasConstraintName("FK_MessageContentToolCallResponse_MessageContent");
         });
 
-        modelBuilder.Entity<TransactionType>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK_BalanceLogType");
-        });
-
         modelBuilder.Entity<UsageTransaction>(entity =>
         {
             entity.HasOne(d => d.CreditUser).WithMany(p => p.UsageTransactions)
@@ -482,10 +473,6 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.Model).WithMany(p => p.UsageTransactions)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UsageTransaction_Model");
-
-            entity.HasOne(d => d.TransactionType).WithMany(p => p.UsageTransactions)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_UsageTransaction_TransactionType");
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -578,6 +565,11 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.User).WithOne(p => p.UserBalance)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserBalance_UserId");
+        });
+
+        modelBuilder.Entity<UserConfig>(entity =>
+        {
+            entity.HasOne(d => d.User).WithMany(p => p.UserConfigs).HasConstraintName("FK_UserConfig_User");
         });
 
         modelBuilder.Entity<UserInitialConfig>(entity =>

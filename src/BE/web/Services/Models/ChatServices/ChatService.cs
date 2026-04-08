@@ -112,12 +112,14 @@ public abstract partial class ChatService
         final = final with
         {
             ChatConfig = final.ChatConfig.WithClamps(temperature, reasoningEffortId),
-            Messages = await (request.Source == UsageSource.WebChat
+            Messages = await RewriteVisionMessages(
+                request.ChatConfig.Model.SupportsVisionLink,
+                request.ChatConfig.Model.AllowVision,
+                request.Source == UsageSource.WebChat
                     ? RemoveNonCurrentTurnThinkingBlocks(final.Messages)
-                    : final.Messages)
-                .ToAsyncEnumerable()
-                .Select(async (m, ct) => await FilterVision(request.ChatConfig.Model.SupportsVisionLink, request.ChatConfig.Model.AllowVision, m, fup, ct))
-                .ToListAsync(cancellationToken)
+                    : final.Messages,
+                fup,
+                cancellationToken)
         };
 
         return final;
@@ -173,46 +175,141 @@ public abstract partial class ChatService
         return updated ?? messages;
     }
 
-    protected virtual async Task<NeutralMessage> FilterVision(bool supportsVisionLink, bool allowVision, NeutralMessage message, FileUrlProvider fup, CancellationToken cancellationToken)
+    protected virtual async Task<IList<NeutralMessage>> RewriteVisionMessages(bool supportsVisionLink, bool allowVision, IList<NeutralMessage> messages, FileUrlProvider fup, CancellationToken cancellationToken)
     {
-        List<NeutralContent> processedContents = [];
+        List<NeutralMessage> filteredMessages = new(messages.Count);
 
-        foreach (NeutralContent content in message.Contents)
+        for (int i = 0; i < messages.Count; i++)
         {
-            NeutralContent? toAdd = content switch
+            NeutralMessage message = messages[i];
+            if (message.Role == NeutralChatRole.Tool)
             {
-                NeutralFileContent file => allowVision switch
+                filteredMessages.Add(message with
                 {
-                    true => file.File.MediaType switch
-                    {
-                        var x when SupportedContentTypes.Contains("*") || SupportedContentTypes.Contains(x ?? "") => supportsVisionLink switch
-                        {
-                            true => fup.CreateNeutralImagePart(file.File),
-                            false => fup.CreateNeutralImagePartForceDownload(file.File),
-                        },
-                        _ => null
-                    },
-                    false => fup.CreateNeutralTextUrl(file.File),
-                },
-                NeutralFileUrlContent fileUrl => allowVision switch
-                {
-                    true => supportsVisionLink switch
-                    {
-                        true => content,
-                        false => await DownloadImagePart(fileUrl.Url, cancellationToken),
-                    },
-                    false => NeutralTextContent.Create(fileUrl.Url),
-                },
-                _ => content
-            };
-
-            if (toAdd != null)
-            {
-                processedContents.Add(toAdd);
+                    Contents = await FilterToolMessageContents(messages, i, message, supportsVisionLink, allowVision, fup, cancellationToken)
+                });
+                continue;
             }
+
+            List<NeutralContent> processedContents = [];
+
+            foreach (NeutralContent content in message.Contents)
+            {
+                NeutralContent? toAdd = await FilterSingleContent(
+                    content,
+                    supportsVisionLink,
+                    allowVision && message.Role == NeutralChatRole.User,
+                    fup,
+                    cancellationToken);
+
+                if (toAdd != null)
+                {
+                    processedContents.Add(toAdd);
+                }
+            }
+
+            filteredMessages.Add(message with { Contents = processedContents });
         }
 
-        return message with { Contents = processedContents };
+        return filteredMessages;
+
+        async Task<List<NeutralContent>> FilterToolMessageContents(
+            IList<NeutralMessage> allMessages,
+            int toolMessageIndex,
+            NeutralMessage toolMessage,
+            bool supportsVisionLink,
+            bool allowVision,
+            FileUrlProvider fileUrlProvider,
+            CancellationToken ct)
+        {
+            List<NeutralContent> contents = [];
+            IReadOnlyList<NeutralToolResponseGroup> groups = toolMessage.GetToolResponseGroups();
+
+            if (groups.Count == 0)
+            {
+                foreach (NeutralContent toolContent in toolMessage.Contents)
+                {
+                    NeutralContent? filtered = await FilterSingleContent(toolContent, supportsVisionLink, allowVision: false, fileUrlProvider, ct);
+                    if (filtered != null)
+                    {
+                        contents.Add(filtered);
+                    }
+                }
+
+                return contents;
+            }
+
+            foreach (NeutralToolResponseGroup group in groups)
+            {
+                contents.Add(group.ToolResponse);
+
+                bool allowGroupImages = allowVision
+                    && IsViewImageResponse(allMessages, toolMessageIndex, group.ToolResponse.ToolCallId);
+
+                foreach (NeutralContent attachedContent in group.AttachedContents)
+                {
+                    NeutralContent? filtered = await FilterSingleContent(attachedContent, supportsVisionLink, allowGroupImages, fileUrlProvider, ct);
+                    if (filtered != null)
+                    {
+                        contents.Add(filtered);
+                    }
+                }
+            }
+
+            return contents;
+        }
+
+        async Task<NeutralContent?> FilterSingleContent(
+            NeutralContent content,
+            bool supportsVisionLink,
+            bool allowVision,
+            FileUrlProvider fileUrlProvider,
+            CancellationToken ct)
+        {
+            return content switch
+            {
+                NeutralFileContent file when allowVision => file.File.MediaType switch
+                {
+                    var x when SupportedContentTypes.Contains("*") || SupportedContentTypes.Contains(x ?? "") => supportsVisionLink
+                        ? fileUrlProvider.CreateNeutralImagePart(file.File)
+                        : fileUrlProvider.CreateNeutralImagePartForceDownload(file.File),
+                    _ => null
+                },
+                NeutralFileContent => null,
+                NeutralFileUrlContent fileUrl when allowVision => supportsVisionLink
+                    ? content
+                    : await DownloadImagePart(fileUrl.Url, ct),
+                NeutralFileUrlContent => null,
+                _ => content
+            };
+        }
+
+        static bool IsViewImageResponse(IList<NeutralMessage> allMessages, int toolMessageIndex, string toolCallId)
+        {
+            if (string.IsNullOrWhiteSpace(toolCallId) || toolMessageIndex <= 0)
+            {
+                return false;
+            }
+
+            for (int i = toolMessageIndex - 1; i >= 0; i--)
+            {
+                NeutralMessage previous = allMessages[i];
+                if (previous.Role != NeutralChatRole.Assistant)
+                {
+                    continue;
+                }
+
+                NeutralToolCallContent? toolCall = previous.Contents
+                    .OfType<NeutralToolCallContent>()
+                    .FirstOrDefault(x => string.Equals(x.Id, toolCallId, StringComparison.Ordinal));
+                if (toolCall != null)
+                {
+                    return string.Equals(toolCall.Name, "view_image", StringComparison.Ordinal);
+                }
+            }
+
+            return false;
+        }
 
         async Task<NeutralContent> DownloadImagePart(string url, CancellationToken cancellationToken)
         {

@@ -1,31 +1,46 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import { useRouter } from 'next/router';
 
-import useDebounce from '@/hooks/useDebounce';
-import useTranslation from '@/hooks/useTranslation';
-
-import { formatDateTime } from '@/utils/date';
-
-import { AdminChatsDto } from '@/types/adminApis';
-import { PageResult, Paging } from '@/types/page';
-
-import PaginationContainer from '../../../components/Pagination/Pagination';
-import ModelProviderIcon from '@/components/common/ModelProviderIcon';
-import Tips from '@/components/Tips/Tips';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-
 import { getMessages } from '@/apis/adminApis';
+import Tips from '@/components/Tips/Tips';
+import {
+  UnifiedColumnSelector,
+  UnifiedTable,
+  UnifiedTableColumn,
+  buildColumnQuery,
+  getFirstQueryValue,
+  parseColumnQuery,
+  parseQueryPage,
+  UNIFIED_TABLE_PAGE_SIZE,
+} from '@/components/table/UnifiedTable';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
+import { IconRefresh } from '@/components/Icons';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useTextFilterDraft } from '@/components/table/useTextFilterDraft';
+import useTranslation from '@/hooks/useTranslation';
+import { AdminChatsDto } from '@/types/adminApis';
+import { PageResult } from '@/types/page';
+import { formatDateTime } from '@/utils/date';
 import { cn } from '@/lib/utils';
+
+type MessageColumnKey = 'title' | 'model' | 'username' | 'createdAt' | 'status';
+
+type Filters = {
+  user: string;
+  content: string;
+};
+
+const DEFAULT_COLUMNS: MessageColumnKey[] = [
+  'title',
+  'model',
+  'username',
+  'createdAt',
+  'status',
+];
 
 export default function Messages() {
   const { t } = useTranslation();
@@ -35,206 +50,303 @@ export default function Messages() {
     count: 0,
     rows: [],
   });
-  
-  // 本地搜索输入状态（用于防抖）
-  const [userInput, setUserInput] = useState('');
-  const [contentInput, setContentInput] = useState('');
+  const [filters, setFilters] = useState<Filters>({ user: '', content: '' });
+  const [page, setPage] = useState(1);
+  const [selectedColumns, setSelectedColumns] = useState<MessageColumnKey[]>(DEFAULT_COLUMNS);
+  const lastFetchKeyRef = useRef('');
 
-  // 从 URL 中读取状态
-  const user = (router.query.user as string) || '';
-  const content = (router.query.content as string) || '';
-  const page = parseInt((router.query.p as string) || '1', 10);
-  const pageSize = parseInt((router.query.pageSize as string) || '12', 10);
-  const defaultPageSize = 12;
+  const pushQuery = useCallback(
+    (nextPage: number, nextFilters: Filters, nextColumns: MessageColumnKey[]) => {
+      const query: Record<string, string> = {};
 
-  // 更新 URL 的函数
-  const updateUrl = (params: { user?: string; content?: string; page?: number; pageSize?: number }) => {
-    const newQuery: Record<string, string> = {};
-    
-    // 复制现有的 query 参数（只保留 string 类型）
-    Object.keys(router.query).forEach(key => {
-      const value = router.query[key];
-      if (typeof value === 'string') {
-        newQuery[key] = value;
+      if (nextPage > 1) {
+        query.page = nextPage.toString();
       }
-    });
-    
-    // 更新或删除 user 参数
-    if (params.user !== undefined) {
-      if (params.user) {
-        newQuery.user = params.user;
-      } else {
-        delete newQuery.user;
+
+      if (nextFilters.user) {
+        query.user = nextFilters.user;
       }
-    }
-    
-    // 更新或删除 content 参数
-    if (params.content !== undefined) {
-      if (params.content) {
-        newQuery.content = params.content;
-      } else {
-        delete newQuery.content;
+
+      if (nextFilters.content) {
+        query.content = nextFilters.content;
       }
-    }
-    
-    // 更新 p (page)，第一页时不显示
-    if (params.page !== undefined) {
-      if (params.page === 1) {
-        delete newQuery.p;
-      } else {
-        newQuery.p = params.page.toString();
+
+      const columnsQuery = buildColumnQuery(nextColumns, DEFAULT_COLUMNS);
+      if (columnsQuery) {
+        query.columns = columnsQuery;
       }
-    }
-    
-    // 更新 pageSize，默认值 12 时不显示
-    if (params.pageSize !== undefined) {
-      if (params.pageSize === defaultPageSize) {
-        delete newQuery.pageSize;
-      } else {
-        newQuery.pageSize = params.pageSize.toString();
-      }
-    }
 
-    router.push(
-      {
-        pathname: router.pathname,
-        query: newQuery,
-      },
-      undefined,
-      { shallow: true }
-    );
-  };
+      router.push(
+        {
+          pathname: router.pathname,
+          query,
+        },
+        undefined,
+        { shallow: true },
+      );
+    },
+    [router],
+  );
 
-  const updateUserWithDebounce = useDebounce((searchUser: string) => {
-    updateUrl({ user: searchUser, page: 1 }); // 搜索时重置到第一页
-  }, 1000);
-
-  const updateContentWithDebounce = useDebounce((searchContent: string) => {
-    updateUrl({ content: searchContent, page: 1 }); // 搜索时重置到第一页
-  }, 1000);
-
-  const init = useCallback(() => {
-    setLoading(true);
-    getMessages({ page, pageSize, user, content }).then((data) => {
-      setMessages(data);
-      setLoading(false);
-    });
-  }, [page, pageSize, user, content]);
-
-  useEffect(() => {
-    // 只有当 router 准备好时才执行
-    if (router.isReady) {
-      init();
-    }
-  }, [init, router.isReady]);
-
-  // 当 URL 参数变化（如刷新、前进后退）时，同步到输入框
   useEffect(() => {
     if (!router.isReady) {
       return;
     }
 
-    setUserInput(user);
-    setContentInput(content);
-  }, [router.isReady, user, content]);
+    const nextFilters = {
+      user: getFirstQueryValue(router.query.user) || '',
+      content: getFirstQueryValue(router.query.content) || '',
+    };
+    const nextPage = parseQueryPage(
+      getFirstQueryValue(router.query.page) || getFirstQueryValue(router.query.p),
+    );
+    const allColumns: Array<{ key: MessageColumnKey }> = DEFAULT_COLUMNS.map((key) => ({ key }));
+    const nextColumns = parseColumnQuery(
+      getFirstQueryValue(router.query.columns),
+      allColumns,
+      DEFAULT_COLUMNS,
+    );
+
+    setFilters((prev) =>
+      prev.user === nextFilters.user && prev.content === nextFilters.content
+        ? prev
+        : nextFilters,
+    );
+    setPage((prev) => (prev === nextPage ? prev : nextPage));
+    setSelectedColumns((prev) =>
+      prev.join(',') === nextColumns.join(',') ? prev : nextColumns,
+    );
+  }, [router.isReady, router.query]);
+
+  const refresh = useCallback(
+    (force = false) => {
+      const params = {
+        page,
+        pageSize: UNIFIED_TABLE_PAGE_SIZE,
+        user: filters.user,
+        content: filters.content,
+      };
+      const fetchKey = JSON.stringify(params);
+      if (!force && fetchKey === lastFetchKeyRef.current) {
+        return;
+      }
+
+      setLoading(true);
+      lastFetchKeyRef.current = fetchKey;
+
+      getMessages(params)
+        .then((data) => {
+          setMessages(data);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    },
+    [filters.content, filters.user, page],
+  );
+
+  useEffect(() => {
+    if (!router.isReady) {
+      return;
+    }
+
+    refresh();
+  }, [refresh, router.isReady]);
+
+  const { draft, setDraft, flushDraft, hasPendingDraft } = useTextFilterDraft({
+    committed: filters,
+    onCommit: (nextFilters) => {
+      pushQuery(1, nextFilters, selectedColumns);
+    },
+  });
+
+  const updateFilter = (key: keyof Filters, value: string) => {
+    setDraft((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const toggleColumn = (key: MessageColumnKey, checked: boolean) => {
+    const nextSet = new Set(selectedColumns);
+    if (checked) {
+      nextSet.add(key);
+    } else {
+      nextSet.delete(key);
+      if (nextSet.size === 0) {
+        return;
+      }
+    }
+
+    const nextColumns = DEFAULT_COLUMNS.filter((column) => nextSet.has(column));
+    pushQuery(page, draft, nextColumns);
+  };
+
+  const allColumns = useMemo<UnifiedTableColumn<AdminChatsDto, MessageColumnKey>[]>(
+    () => [
+      {
+        key: 'title',
+        title: t('Title'),
+        cell: (item) => (
+          <button
+            type="button"
+            onClick={() => window.open('/message/' + item.id, '_blank')}
+            className="truncate text-left underline-offset-4 hover:underline"
+          >
+            {item.title}
+          </button>
+        ),
+      },
+      {
+        key: 'model',
+        title: t('Model'),
+        cell: (item) => (
+          <div className="flex overflow-hidden">
+            {item.spans.map((span, index) => (
+              <div
+                key={`message-chat-icon-wrapper-${span.modelId}`}
+                className={cn('relative flex-shrink-0', index > 0 && '-ml-2.5')}
+                style={{ zIndex: item.spans.length - index }}
+              >
+                <Tips
+                  trigger={
+                    <div>
+                      <ModelProviderIcon
+                        className="cursor-pointer"
+                        providerId={span.modelProviderId}
+                      />
+                    </div>
+                  }
+                  side="bottom"
+                  content={span.modelName}
+                />
+              </div>
+            ))}
+          </div>
+        ),
+      },
+      {
+        key: 'username',
+        title: t('User Name'),
+        cell: (item) => item.username,
+      },
+      {
+        key: 'createdAt',
+        title: t('Created Time'),
+        cell: (item) => formatDateTime(item.createdAt),
+      },
+      {
+        key: 'status',
+        title: t('Status'),
+        cell: (item) => (
+          <div className="flex flex-wrap items-center gap-2">
+            {item.isDeleted && (
+              <Badge variant="destructive">{t('Deleted')}</Badge>
+            )}
+            {item.isShared && (
+              <Badge className="bg-green-600">{t('Shared')}</Badge>
+            )}
+            {!item.isDeleted && !item.isShared && '-'}
+          </div>
+        ),
+      },
+    ],
+    [t],
+  );
+
+  const visibleColumns = useMemo(
+    () => allColumns.filter((column) => selectedColumns.includes(column.key)),
+    [allColumns, selectedColumns],
+  );
 
   return (
-    <>
-      <div className="flex flex-wrap gap-4 mb-4">
-        <Input
-          className="max-w-[238px] w-full"
-          placeholder={t('User Name') + '...'}
-          value={userInput}
-          onChange={(e) => {
-            setUserInput(e.target.value);
-            updateUserWithDebounce(e.target.value);
-          }}
-        />
-        <Input
-          className="max-w-[238px] w-full"
-          placeholder={t('Message Content') + '...'}
-          value={contentInput}
-          onChange={(e) => {
-            setContentInput(e.target.value);
-            updateContentWithDebounce(e.target.value);
-          }}
-        />
-      </div>
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('Title')}</TableHead>
-              <TableHead>{t('Model')}</TableHead>
-              <TableHead>{t('User Name')}</TableHead>
-              <TableHead>{t('Created Time')}</TableHead>
-              <TableHead>{t('Status')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody isLoading={loading} isEmpty={messages.count === 0}>
-            {messages?.rows.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell
-                  onClick={() => {
-                    window.open('/message/' + item.id, '_blank');
-                  }}
-                  className="truncate cursor-pointer"
-                >
-                  {item.title}
-                </TableCell>
-                <TableCell>
-                  <div className="flex overflow-hidden">
-                    {item.spans.map((x, index) => (
-                      <div
-                        key={'message-chat-icon-wrapper-' + x.modelId}
-                        className={cn(
-                          "flex-shrink-0 relative",
-                          index > 0 && "-ml-2.5"
-                        )}
-                        style={{ zIndex: item.spans.length - index }}
-                      >
-                        <Tips
-                          trigger={
-                            <div>
-                              <ModelProviderIcon
-                                className="cursor-pointer"
-                                providerId={x.modelProviderId}
-                              />
-                            </div>
-                          }
-                          side="bottom"
-                          content={x.modelName}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell>{item.username}</TableCell>
-                <TableCell>{formatDateTime(item.createdAt)}</TableCell>
-                <TableCell>
-                  {item.isDeleted && (
-                    <Badge variant="destructive">{t('Deleted')}</Badge>
-                  )}
-                  {item.isShared && (
-                    <Badge className=" bg-green-600">{t('Shared')}</Badge>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        {messages.count !== 0 && (
-          <PaginationContainer
-            page={page}
-            pageSize={pageSize}
-            currentCount={messages.rows.length}
-            totalCount={messages.count}
-            onPagingChange={(newPage, newPageSize) => {
-              updateUrl({ page: newPage, pageSize: newPageSize });
+    <UnifiedTable
+      filters={
+        <>
+            <Input
+              className="w-[180px]"
+              placeholder={`${t('User Name')}...`}
+              value={draft.user}
+              onChange={(event) => updateFilter('user', event.target.value)}
+            />
+            <Input
+              className="w-[180px]"
+              placeholder={`${t('Message Content')}...`}
+              value={draft.content}
+              onChange={(event) => updateFilter('content', event.target.value)}
+            />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => {
+              if (hasPendingDraft) {
+                flushDraft();
+                return;
+              }
+
+              refresh(true);
             }}
-          />
-        )}
-      </Card>
-    </>
+            disabled={loading}
+            aria-label={t('Refresh')}
+            title={t('Refresh')}
+          >
+            <IconRefresh size={18} />
+          </Button>
+        </>
+      }
+      actions={[
+        {
+          key: 'columns',
+          element: (
+            <UnifiedColumnSelector
+              allColumns={allColumns.map((column) => ({
+                key: column.key,
+                title: column.title,
+              }))}
+              selectedColumns={selectedColumns}
+              onToggleColumn={toggleColumn}
+            />
+          ),
+        },
+      ]}
+      columns={visibleColumns}
+      rows={messages.rows}
+      loading={loading}
+      page={page}
+      totalCount={messages.count}
+      rowKey={(item) => item.id}
+      onPageChange={(nextPage) => {
+        pushQuery(nextPage, draft, selectedColumns);
+      }}
+      mobileContent={
+        loading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-28 w-full" />
+            ))}
+          </div>
+        ) : messages.rows.length === 0 ? (
+          <div className="py-4 text-center text-sm text-muted-foreground">
+            {t('No data')}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {messages.rows.map((item) => (
+              <div key={item.id} className="space-y-2 rounded-md bg-card p-3 shadow-sm">
+                {visibleColumns.map((column) => (
+                  <div
+                    key={column.key}
+                    className="flex items-start justify-between gap-3 text-xs"
+                  >
+                    <div className="shrink-0 font-medium text-muted-foreground">
+                      {column.title}
+                    </div>
+                    <div className="text-right text-foreground">{column.cell(item)}</div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )
+      }
+    />
   );
 }

@@ -4,5 +4,5 @@ public enum UsageSource
 {
     WebChat = 1,
     Api = 2,
-    Validate = 3, 
+    Summary = 3,
 }

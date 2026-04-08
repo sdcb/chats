@@ -10,6 +10,16 @@ public class FileImageInfoService(ILogger<FileImageInfoService> logger)
     /// </summary>
     public FileImageInfo? GetImageInfo(string fileName, string contentType, byte[] imageBytes)
     {
+        if (imageBytes.Length == 0)
+        {
+            return null;
+        }
+
+        if (contentType == "image/svg+xml")
+        {
+            return null;
+        }
+
         // Only process image files
         if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
         {

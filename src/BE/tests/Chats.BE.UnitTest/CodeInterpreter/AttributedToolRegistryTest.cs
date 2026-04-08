@@ -44,7 +44,7 @@ public sealed class AttributedToolRegistryTest
     [Fact]
     public void ToSnakeCase_ShouldFollowRule()
     {
-        Assert.Equal("read_file", AttributedToolRegistry.ToSnakeCase("ReadFile"));
+        Assert.Equal("download_chat_files", AttributedToolRegistry.ToSnakeCase("DownloadChatFiles"));
         Assert.Equal("create_session", AttributedToolRegistry.ToSnakeCase("CreateSession"));
         Assert.Equal("a1_b2", AttributedToolRegistry.ToSnakeCase("A1B2"));
     }

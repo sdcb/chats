@@ -338,7 +338,7 @@ const UserInitialConfigModal = (props: IProps) => {
                                     </span>
                                   </DropdownMenuSubTrigger>
                                   <DropdownMenuPortal>
-                                    <DropdownMenuSubContent className="max-h-96 overflow-y-auto custom-scrollbar max-w-[64px] md:max-w-[256px]">
+                                    <DropdownMenuSubContent className="max-h-96 overflow-y-auto scroller max-w-[64px] md:max-w-[256px]">
                                       {providerModels.map((model) => (
                                         <DropdownMenuItem
                                           key={model.modelId}

@@ -2,8 +2,9 @@
 
 public enum DBTransactionType : byte
 {
-    Charge = 1,
-    Cost = 2,
+    AdminCharge = 1,
+    WebChatCost = 2,
     Initial = 3,
     ApiCost = 4,
+    SummaryCost = 5,
 }

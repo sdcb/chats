@@ -32,7 +32,7 @@ public record JsonTokenBalance
                 CountAmount = Counts - existingItem.CountBalance,
                 TokenAmount = Tokens - existingItem.TokenBalance,
                 ModelId = ModelId,
-                TransactionTypeId = (byte)DBTransactionType.Charge,
+                TransactionTypeId = (byte)DBTransactionType.AdminCharge,
             };
             ApplyCreditUser(existingItem, creditUserId, usageTransaction);
         }

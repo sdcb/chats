@@ -448,7 +448,15 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
 
         if (request.ChatConfig.MaxOutputTokens != null)
         {
-            body["max_output_tokens"] = request.ChatConfig.MaxOutputTokens.Value;
+            if (request.ChatConfig.MaxOutputTokens.Value < 16)
+            {
+                // Invalid 'max_output_tokens': integer below minimum value. Expected a value >= 16, but got 1 instead.
+                body["max_output_tokens"] = 16;
+            }
+            else
+            {
+                body["max_output_tokens"] = request.ChatConfig.MaxOutputTokens.Value;
+            }
         }
 
         // Reasoning options - only add if explicitly specified
@@ -543,7 +551,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                         ["type"] = "function_call",
                         ["call_id"] = tc.Id,
                         ["name"] = tc.Name,
-                        ["arguments"] = tc.Parameters
+                        ["arguments"] = NormalizeToolCallArguments(tc.Parameters)
                     });
                 }
 
@@ -561,19 +569,51 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             }
             else if (message.Role == NeutralChatRole.Tool)
             {
-                foreach (NeutralToolCallResponseContent tcr in message.Contents.OfType<NeutralToolCallResponseContent>())
+                IReadOnlyList<NeutralToolResponseGroup> toolResponseGroups = message.GetToolResponseGroups();
+                if (toolResponseGroups.Count == 0)
                 {
-                    input.Add(new JsonObject
-                    {
-                        ["type"] = "function_call_output",
-                        ["call_id"] = tcr.ToolCallId,
-                        ["output"] = tcr.Response
-                    });
+                    throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Tool message does not contain any tool response content.");
+                }
+
+                foreach (NeutralToolResponseGroup group in toolResponseGroups)
+                {
+                    input.Add(CreateFunctionCallOutput(group));
                 }
             }
         }
 
         return input;
+    }
+
+    private static string NormalizeToolCallArguments(string? parameters)
+    {
+        return string.IsNullOrWhiteSpace(parameters) ? "{}" : parameters;
+    }
+
+    private static JsonObject CreateFunctionCallOutput(NeutralToolResponseGroup group)
+    {
+        JsonObject output = new()
+        {
+            ["type"] = "function_call_output",
+            ["call_id"] = group.ToolResponse.ToolCallId,
+        };
+
+        if (group.AttachedContents.Count == 0)
+        {
+            output["output"] = group.ToolResponse.Response;
+            return output;
+        }
+
+        List<NeutralContent> partsContent = [];
+        if (!string.IsNullOrEmpty(group.ToolResponse.Response))
+        {
+            partsContent.Add(NeutralTextContent.Create(group.ToolResponse.Response));
+        }
+        partsContent.AddRange(group.AttachedContents);
+
+        JsonArray parts = ContentToInputParts(partsContent);
+        output["output"] = parts.Count > 0 ? parts : group.ToolResponse.Response;
+        return output;
     }
 
     private static JsonArray ContentToInputParts(IList<NeutralContent> contents)

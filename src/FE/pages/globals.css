@@ -125,21 +125,30 @@ html {
   display: none;
 }
 
-.custom-scrollbar::-webkit-scrollbar {
+.scroller {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.45) transparent;
+}
+
+.scroller::-webkit-scrollbar {
   background-color: var(--scrollbar);
   border-radius   : 10px;
-  width           : 6px;
-  height          : 6px;
+  width           : 8px;
+  height          : 8px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
+.scroller::-webkit-scrollbar-track {
   border-radius: 10px;
-  background   : var(--scrollbar);
+  background   : transparent;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  border-radius: 10px;
-  background   : hsl(var(--muted));
+.scroller::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: hsl(var(--muted-foreground) / 0.35);
+}
+
+.scroller::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.55);
 }
 
 @layer utilities {

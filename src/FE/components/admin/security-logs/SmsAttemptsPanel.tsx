@@ -12,36 +12,44 @@ const SmsAttemptsPanel = () => {
   const columns = useMemo(
     () => [
       {
-        header: t('Phone Number'),
+        key: 'phoneNumber',
+        title: t('Phone Number'),
         cell: (row: SmsAttemptLog) => row.phoneNumber,
       },
       {
-        header: t('Code'),
+        key: 'code',
+        title: t('Code'),
         cell: (row: SmsAttemptLog) => row.code,
       },
       {
-        header: t('User Name'),
+        key: 'userName',
+        title: t('User Name'),
         cell: (row: SmsAttemptLog) => row.userName || '-',
       },
       {
-        header: t('Type'),
+        key: 'type',
+        title: t('Type'),
         cell: (row: SmsAttemptLog) => row.type || '-',
       },
       {
-        header: t('Status'),
+        key: 'status',
+        title: t('Status'),
         cell: (row: SmsAttemptLog) => row.status || '-',
       },
       {
-        header: t('IP Address'),
+        key: 'ip',
+        title: t('IP Address'),
         cell: (row: SmsAttemptLog) => row.ip,
       },
       {
-        header: t('User Agent'),
+        key: 'userAgent',
+        title: t('User Agent'),
         className: 'max-w-sm truncate',
         cell: (row: SmsAttemptLog) => row.userAgent,
       },
       {
-        header: t('Created Time'),
+        key: 'createdAt',
+        title: t('Created Time'),
         cell: (row: SmsAttemptLog) => formatDateTime(row.createdAt),
       },
     ],

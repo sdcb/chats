@@ -306,7 +306,7 @@ const UserMessage = (props: Props) => {
             </div>
           </div>
         ) : (
-          <div className="bg-card py-2 px-3 rounded-md overflow-visible chat-message-bg">
+          <div className="ml-auto bg-card py-2 px-3 rounded-md overflow-visible chat-message-bg">
             <div className="flex flex-wrap gap-2 justify-end text-right">
               {fileContents.map((file: any, index) => {
                 return (
@@ -321,7 +321,7 @@ const UserMessage = (props: Props) => {
             <div className={`relative group/user-message-text ${fileContents.length > 0 ? 'mt-2' : ''}`}>
               <div
                 ref={textContentRef}
-                className="prose whitespace-pre-wrap dark:prose-invert text-sm"
+                className="max-w-full whitespace-pre-wrap break-words text-sm leading-[1.6]"
                 style={
                   collapsedMaxHeight
                     ? {

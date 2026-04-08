@@ -22,15 +22,19 @@ namespace Chats.BE.Services.CodeInterpreter;
 public sealed class CodeInterpreterExecutor(
     IDockerService docker,
     IFileServiceFactory fileServiceFactory,
+    FileImageInfoService fileImageInfoService,
     IServiceScopeFactory scopeFactory,
     IOptions<CodePodConfig> codePodConfig,
     IOptions<CodeInterpreterOptions> options,
     ILogger<CodeInterpreterExecutor> logger)
 {
     private static readonly AttributedToolRegistry _toolRegistry = new(typeof(CodeInterpreterExecutor));
+    internal const string ViewImageToolName = "view_image";
+    private const string ViewImageDescription = "Attach an image file from the docker session so a vision model can inspect it.";
 
     private readonly IDockerService _docker = docker;
     private readonly IFileServiceFactory _fileServiceFactory = fileServiceFactory;
+    private readonly FileImageInfoService _fileImageInfoService = fileImageInfoService;
     private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
     private readonly CodePodConfig _codePodConfig = codePodConfig.Value;
     private readonly CodeInterpreterOptions _options = options.Value;
@@ -40,11 +44,16 @@ public sealed class CodeInterpreterExecutor(
 
     public static readonly string[] ToolNames = _toolRegistry.ToolNames.ToArray();
 
-    public void AddTools(ICollection<ChatTool> tools)
+    public void AddTools(ICollection<ChatTool> tools, bool allowVision = true)
     {
         Dictionary<string, string> placeholders = BuildPlaceholderReplacements();
         foreach (AttributedToolRegistry.ToolDescriptor d in _toolRegistry.Tools)
         {
+            if (!allowVision && string.Equals(d.ToolName, ViewImageToolName, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             string schemaJson = ReplacePlaceholders(d.SchemaJson, placeholders);
             tools.Add(FunctionTool.Create(d.ToolName, d.Description, schemaJson));
         }
@@ -286,6 +295,99 @@ public sealed class CodeInterpreterExecutor(
         }
         return string.Join(',', shellPrefix);
     }
+
+    private string ResolveContainerPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new InvalidOperationException("path is required");
+        }
+
+        string trimmedPath = path.Trim();
+        if (IsAbsoluteContainerPath(trimmedPath))
+        {
+            return NormalizeAbsoluteContainerPath(trimmedPath);
+        }
+
+        return CombineContainerPath(_codePodConfig.WorkDir, trimmedPath);
+    }
+
+    private bool IsAbsoluteContainerPath(string path)
+    {
+        string normalized = path.Replace('\\', '/');
+        if (normalized.StartsWith('/'))
+        {
+            return true;
+        }
+
+        return _codePodConfig.IsWindowsContainer && IsWindowsDriveAbsolutePath(normalized);
+    }
+
+    private static string NormalizeAbsoluteContainerPath(string path)
+    {
+        string normalized = path.Replace('\\', '/').Trim();
+        if (normalized.StartsWith('/'))
+        {
+            return NormalizeRootedContainerPath(normalized);
+        }
+
+        if (!IsWindowsDriveAbsolutePath(normalized))
+        {
+            return normalized;
+        }
+
+        string prefix = normalized[..2];
+        string suffix = normalized[2..];
+        while (suffix.Contains("//", StringComparison.Ordinal))
+        {
+            suffix = suffix.Replace("//", "/", StringComparison.Ordinal);
+        }
+
+        return prefix + suffix;
+    }
+
+    private static bool IsWindowsDriveAbsolutePath(string path)
+        => path.Length >= 3
+            && IsAsciiLetter(path[0])
+            && path[1] == ':'
+            && path[2] == '/';
+
+    private static string CombineContainerPath(string basePathNoTrailing, string relativeNoLeading)
+    {
+        string basePath = NormalizeRootedContainerPath(basePathNoTrailing).TrimEnd('/');
+        string relativePath = relativeNoLeading.Replace('\\', '/').Trim().TrimStart('/');
+
+        if (string.IsNullOrEmpty(basePath) || basePath == "/")
+        {
+            return "/" + relativePath;
+        }
+
+        return basePath + "/" + relativePath;
+    }
+
+    private static string NormalizeRootedContainerPath(string path)
+    {
+        string normalized = path.Replace('\\', '/').Trim();
+        if (string.IsNullOrEmpty(normalized))
+        {
+            return "/";
+        }
+
+        if (!normalized.StartsWith('/'))
+        {
+            normalized = "/" + normalized;
+        }
+
+        while (normalized.Length > 1 && normalized.Contains("//", StringComparison.Ordinal))
+        {
+            normalized = normalized.Replace("//", "/", StringComparison.Ordinal);
+        }
+
+        return normalized;
+    }
+
+    private static bool IsAsciiLetter(char c)
+        => (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 
     public async IAsyncEnumerable<ToolProgressDelta> ExecuteToolCallAsync(
         TurnContext ctx,
@@ -700,308 +802,15 @@ public sealed class CodeInterpreterExecutor(
         TurnContext.SessionState state = ensureResult.Value!;
         state.UsedInThisTurn = true;
 
+        string resolvedPath = ResolveContainerPath(path);
         byte[] bytes = Encoding.UTF8.GetBytes(text);
-        await _docker.UploadFileAsync(state.DbSession.ContainerId, path, bytes, cancellationToken);
+        await _docker.UploadFileAsync(state.DbSession.ContainerId, resolvedPath, bytes, cancellationToken);
         await TouchSession(state.DbSession.Id, cancellationToken);
 
         await SyncArtifactsAfterToolCall(ctx, state, cancellationToken);
 
         int lineCount = string.IsNullOrEmpty(text) ? 0 : text.Split(["\r\n", "\n"], StringSplitOptions.None).Length;
-        return Result.Ok($"Wrote {lineCount} lines to {path}");
-    }
-
-    [ToolFunction("Read a file under /app")]
-    internal async Task<Result<string>> ReadFile(
-        TurnContext ctx,
-        [Required]
-        string sessionId,
-        [ToolParam("Absolute path to the file (must be under /app).")]
-        [Required]
-        string path,
-        [ToolParam("Optional start line (1-based, inclusive).")]
-        int? startLine,
-        [ToolParam("Optional end line (1-based, inclusive).")]
-        int? endLine,
-        [ToolParam("Optional (default false). If true, prefix each line with its line number; the first line will be the total line count.")]
-        bool? withLineNumbers,
-        CancellationToken cancellationToken)
-    {
-        Result<TurnContext.SessionState> ensureResult = await EnsureSession(ctx, sessionId, cancellationToken);
-        if (!ensureResult.IsSuccess)
-        {
-            return Result.Fail<string>(ensureResult.Error!);
-        }
-        TurnContext.SessionState state = ensureResult.Value!;
-        state.UsedInThisTurn = true;
-
-        byte[] bytes = await _docker.DownloadFileAsync(state.DbSession.ContainerId, path, cancellationToken);
-
-        string output;
-        bool wantsLineNumbers = withLineNumbers == true;
-
-        // Try decode as UTF-8 text first; fallback to base64 summary for binary.
-        string? fullText = null;
-        try
-        {
-            fullText = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true).GetString(bytes);
-        }
-        catch
-        {
-            // ignore
-        }
-
-        if (fullText != null)
-        {
-            string[] lines = fullText.Split(["\r\n", "\n"], StringSplitOptions.None);
-            int totalLines = lines.Length;
-
-            if (startLine is < 1)
-            {
-                return Result.Fail<string>("startLine must be >= 1");
-            }
-            if (endLine is < 1)
-            {
-                return Result.Fail<string>("endLine must be >= 1");
-            }
-            if (startLine != null && endLine != null && endLine.Value < startLine.Value)
-            {
-                return Result.Fail<string>("endLine must be >= startLine");
-            }
-
-            if (totalLines == 0)
-            {
-                output = wantsLineNumbers ? $"TotalLines: {totalLines}" : string.Empty;
-            }
-            else
-            {
-                int effectiveStart = startLine ?? 1;
-                int effectiveEnd = endLine ?? totalLines;
-
-                // If start is beyond EOF, return empty content.
-                if (effectiveStart > totalLines)
-                {
-                    output = wantsLineNumbers ? $"TotalLines: {totalLines}" : string.Empty;
-                }
-                else
-                {
-                    effectiveStart = Math.Clamp(effectiveStart, 1, totalLines);
-                    effectiveEnd = Math.Clamp(effectiveEnd, 1, totalLines);
-
-                    // If range collapses, return empty content.
-                    if (effectiveStart > effectiveEnd)
-                    {
-                        output = wantsLineNumbers ? $"TotalLines: {totalLines}" : string.Empty;
-                    }
-                    else
-                    {
-                        StringBuilder sb = new();
-                        if (wantsLineNumbers)
-                        {
-                            sb.Append("TotalLines: ").Append(totalLines).Append('\n');
-                        }
-
-                        for (int i = effectiveStart; i <= effectiveEnd; i++)
-                        {
-                            string line = lines[i - 1];
-                            if (wantsLineNumbers)
-                            {
-                                sb.Append(i).Append(": ");
-                            }
-                            sb.Append(line);
-
-                            if (i != effectiveEnd)
-                            {
-                                sb.Append('\n');
-                            }
-                        }
-
-                        output = sb.ToString();
-                    }
-                }
-            }
-        }
-        else
-        {
-            // Binary: return a base64 preview; line ranges are not applicable.
-            OutputOptions binaryOptions = _codePodConfig.OutputOptions;
-            string prefix = wantsLineNumbers ? "TotalLines: 0\n" : string.Empty;
-
-            // Try to keep the preview *useful* under MaxOutputBytes by accounting for base64 expansion.
-            // We still apply TruncateText later as a final safety net.
-            string headerTemplate = $"{prefix}Path: {path}\nSize: {bytes.Length}\nBase64(first {{0}} bytes):\n";
-
-            int budget = Math.Max(1, binaryOptions.MaxOutputBytes);
-            int minHeaderBytes = Encoding.UTF8.GetByteCount(string.Format(headerTemplate, 0));
-            int availableForBase64Chars = Math.Max(0, budget - minHeaderBytes);
-
-            // base64 chars are ASCII; chars == bytes in UTF-8 for this portion.
-            int maxRawBytesFromBase64 = availableForBase64Chars / 4 * 3;
-            int previewBytes = Math.Clamp(maxRawBytesFromBase64, 0, bytes.Length);
-
-            // Ensure we return at least some data when possible.
-            if (previewBytes == 0 && bytes.Length > 0 && availableForBase64Chars > 0)
-            {
-                previewBytes = 1;
-            }
-
-            byte[] slice = previewBytes == bytes.Length ? bytes : bytes[..previewBytes];
-            string base64 = slice.Length == 0 ? string.Empty : Convert.ToBase64String(slice);
-
-            string header = string.Format(headerTemplate, slice.Length);
-            output = header + base64;
-        }
-
-        await TouchSession(state.DbSession.Id, cancellationToken);
-
-        // Apply truncation based on CodePod OutputOptions (same positioning semantics as run_command).
-        OutputOptions options = _codePodConfig.OutputOptions;
-
-        // Preserve the first line (TotalLines) when withLineNumbers is enabled.
-        if (wantsLineNumbers)
-        {
-            int newlineIdx = output.IndexOf('\n');
-            string prefix = newlineIdx >= 0 ? output[..(newlineIdx + 1)] : output;
-            string rest = newlineIdx >= 0 ? output[(newlineIdx + 1)..] : string.Empty;
-
-            int prefixBytes = Encoding.UTF8.GetByteCount(prefix);
-            int restBudget = Math.Max(1, options.MaxOutputBytes - prefixBytes);
-            OutputOptions restOptions = new()
-            {
-                MaxOutputBytes = restBudget,
-                Strategy = options.Strategy,
-                TruncationMessage = options.TruncationMessage,
-            };
-
-            (string truncatedRest, _, _) = TruncateText(rest, restOptions);
-            return Result.Ok(prefix + truncatedRest);
-        }
-
-        (string truncatedOutput, _, _) = TruncateText(output, options);
-        return Result.Ok(truncatedOutput);
-    }
-
-    private static (string output, bool truncated, int omittedLines) TruncateText(string output, OutputOptions options)
-    {
-        if (options.MaxOutputBytes <= 0)
-        {
-            return (output, false, 0);
-        }
-
-        byte[] bytes = Encoding.UTF8.GetBytes(output ?? string.Empty);
-        if (bytes.Length <= options.MaxOutputBytes)
-        {
-            return (output ?? string.Empty, false, 0);
-        }
-
-        int halfSize = options.MaxOutputBytes / 2;
-        
-        string truncatedOutput;
-        switch (options.Strategy)
-        {
-            case TruncationStrategy.Head:
-                truncatedOutput = Encoding.UTF8.GetString(bytes, 0, options.MaxOutputBytes);
-                break;
-            case TruncationStrategy.Tail:
-                truncatedOutput = Encoding.UTF8.GetString(bytes, bytes.Length - options.MaxOutputBytes, options.MaxOutputBytes);
-                break;
-            case TruncationStrategy.HeadAndTail:
-                truncatedOutput = Encoding.UTF8.GetString(bytes, 0, halfSize) +
-                                Encoding.UTF8.GetString(bytes, bytes.Length - halfSize, halfSize);
-                break;
-            default:
-                return (output ?? string.Empty, false, 0);
-        }
-
-        // Calculate omitted lines
-        int totalLines = string.IsNullOrEmpty(output) ? 0 : output.Split(["\r\n", "\n"], StringSplitOptions.None).Length;
-        int keptLines = string.IsNullOrEmpty(truncatedOutput) ? 0 : truncatedOutput.Split(["\r\n", "\n"], StringSplitOptions.None).Length;
-        int omittedLines = Math.Max(0, totalLines - keptLines);
-        
-        string note = string.Format(options.TruncationMessage, omittedLines);
-
-        return options.Strategy switch
-        {
-            TruncationStrategy.Head => (
-                Encoding.UTF8.GetString(bytes, 0, options.MaxOutputBytes) +
-                note,
-                true,
-                omittedLines),
-
-            TruncationStrategy.Tail => (
-                note +
-                Encoding.UTF8.GetString(bytes, bytes.Length - options.MaxOutputBytes, options.MaxOutputBytes),
-                true,
-                omittedLines),
-
-            TruncationStrategy.HeadAndTail => (
-                Encoding.UTF8.GetString(bytes, 0, halfSize) +
-                note +
-                Encoding.UTF8.GetString(bytes, bytes.Length - halfSize, halfSize),
-                true,
-                omittedLines),
-
-            _ => (output ?? string.Empty, false, 0)
-        };
-    }
-
-    [ToolFunction("""
-        Apply a patch to a file under /app.
-        The target file is specified by the 'path' argument.
-        The 'patch' argument MUST be unified-diff hunks ONLY (no headers/wrappers).
-        """)]
-    internal async Task<Result<string>> PatchFile(
-        TurnContext ctx,
-        [Required] string sessionId,
-        [ToolParam("Target file path under /app."), Required] string path,
-        [ToolParam("""
-            Patch text (RAW, no markdown). MUST contain unified-diff hunks ONLY.
-
-            Supported input:
-            - One or more hunks.
-            - Each hunk header MUST be exactly:
-                @@ -oldStart,oldCount +newStart,newCount @@
-                (full ranges required)
-            - Inside hunks, each line must start with:
-                - ' ' (context)
-                - '+' (add)
-                - '-' (delete)
-                - or be exactly: \\ No newline at end of file
-
-            Not supported (do NOT include):
-            - diff --git / index / --- / +++
-            - *** Begin Patch/*** End Patch wrappers
-            - markdown code fences (```)
-            - any extra commentary text
-
-            Notes:
-            - An empty context line must be represented as a single space ' ' line (no empty lines inside hunks).
-            - Recommended workflow: call read_file(withLineNumbers=true) first, then generate hunks with enough context.
-            """), Required] string patch,
-        CancellationToken cancellationToken)
-    {
-        if (!UnifiedDiffPatchToolValidator.TryValidate(patch, out string validationError))
-        {
-            return Result.Fail<string>(validationError);
-        }
-
-        Result<TurnContext.SessionState> ensureResult = await EnsureSession(ctx, sessionId, cancellationToken);
-        if (!ensureResult.IsSuccess)
-        {
-            return Result.Fail<string>(ensureResult.Error!);
-        }
-        TurnContext.SessionState state = ensureResult.Value!;
-        state.UsedInThisTurn = true;
-
-        byte[] originalBytes = await _docker.DownloadFileAsync(state.DbSession.ContainerId, path, cancellationToken);
-        string originalText = Encoding.UTF8.GetString(originalBytes);
-
-        string patched = UnifiedDiffApplier.Apply(originalText, patch);
-        byte[] newBytes = Encoding.UTF8.GetBytes(patched);
-
-        await _docker.UploadFileAsync(state.DbSession.ContainerId, path, newBytes, cancellationToken);
-        await TouchSession(state.DbSession.Id, cancellationToken);
-
-        return Result.Ok($"Patched {path} ({newBytes.Length} bytes)");
+        return Result.Ok($"Wrote {lineCount} lines to {resolvedPath}");
     }
 
     [ToolFunction("Download cloud files (from chat history) into /app")]
@@ -1038,7 +847,7 @@ public sealed class CodeInterpreterExecutor(
             await s.CopyToAsync(ms, cancellationToken);
             byte[] bytes = ms.ToArray();
 
-            string targetPath = $"{_codePodConfig.WorkDir}/{file.FileName}";
+            string targetPath = ResolveContainerPath(file.FileName);
             await _docker.UploadFileAsync(state.DbSession.ContainerId, targetPath, bytes, cancellationToken);
 
             downloaded.Add(file);
@@ -1058,6 +867,101 @@ public sealed class CodeInterpreterExecutor(
             sb.AppendLine($"- {ToAIModelReadable(file)}");
         }
         return Result.Ok(sb.ToString().TrimEnd());
+    }
+
+    [ToolFunction(ViewImageDescription)]
+    internal async Task<Result<string>> ViewImage(
+        TurnContext ctx,
+        [Required]
+        string sessionId,
+        [ToolParam("Image path inside the docker session. Relative paths are resolved under work directory."), Required]
+        string path,
+        CancellationToken cancellationToken)
+    {
+        Result<TurnContext.SessionState> ensureResult = await EnsureSession(ctx, sessionId, cancellationToken);
+        if (!ensureResult.IsSuccess)
+        {
+            return Result.Fail<string>(ensureResult.Error!);
+        }
+
+        TurnContext.SessionState state = ensureResult.Value!;
+        state.UsedInThisTurn = true;
+
+        string resolvedPath = ResolveContainerPath(path);
+        string fileName = Path.GetFileName(resolvedPath);
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return Result.Fail<string>("view_image expects a file path, not a directory.");
+        }
+
+        string contentType = GuessContentType(fileName);
+        if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return Result.Fail<string>($"'{fileName}' does not look like an image file.");
+        }
+
+        if (contentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
+        {
+            return Result.Fail<string>($"'{fileName}' is not a supported raster image.");
+        }
+
+        FileEntry? fileEntry = await TryGetFileEntry(state.DbSession.ContainerId, resolvedPath, cancellationToken);
+        if (fileEntry != null)
+        {
+            if (fileEntry.IsDirectory)
+            {
+                return Result.Fail<string>("view_image expects a file path, not a directory.");
+            }
+
+            if (fileEntry.Size <= 0)
+            {
+                return Result.Fail<string>($"'{fileName}' is empty.");
+            }
+
+            if (_options.MaxSingleUploadBytes is long maxSingleUploadBytes && fileEntry.Size > maxSingleUploadBytes)
+            {
+                return Result.Fail<string>($"'{fileName}' is too large to view ({HumanizeFileSize(fileEntry.Size)} > {HumanizeFileSize(maxSingleUploadBytes)}).");
+            }
+        }
+
+        byte[] bytes;
+        try
+        {
+            bytes = await _docker.DownloadFileAsync(state.DbSession.ContainerId, resolvedPath, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to download image file from session {sessionId}: {path}", sessionId, resolvedPath);
+            return Result.Fail<string>($"Failed to read '{fileName}' from the docker session.");
+        }
+
+        if (bytes.Length == 0)
+        {
+            return Result.Fail<string>($"'{fileName}' is empty.");
+        }
+
+        if (_options.MaxSingleUploadBytes is long maxBytes && bytes.Length > maxBytes)
+        {
+            return Result.Fail<string>($"'{fileName}' is too large to view ({HumanizeFileSize(bytes.Length)} > {HumanizeFileSize(maxBytes)}).");
+        }
+
+        if (_fileImageInfoService.GetImageInfo(fileName, contentType, bytes) == null)
+        {
+            return Result.Fail<string>($"'{fileName}' is not a valid image file.");
+        }
+
+        if (_options.MaxTotalUploadBytesPerTurn is long maxTotalBytes
+            && state.PendingArtifactsBytesThisTurn + bytes.Length > maxTotalBytes)
+        {
+            return Result.Fail<string>("Image output limit for this turn was exceeded.");
+        }
+
+        state.PendingArtifacts.Add(new PendingFileArtifact(resolvedPath, fileName, contentType, bytes));
+        state.PendingArtifactsBytesThisTurn += bytes.Length;
+
+        await TouchSession(state.DbSession.Id, cancellationToken);
+
+        return Result.Ok(string.Empty);
     }
 
     internal static List<DBFile> CollectCloudFiles(IEnumerable<Step> steps)
@@ -1260,6 +1164,23 @@ public sealed class CodeInterpreterExecutor(
         }
 
         return dict;
+    }
+
+    private async Task<FileEntry?> TryGetFileEntry(string containerId, string path, CancellationToken cancellationToken)
+    {
+        string normalizedPath = path.Replace('\\', '/');
+        string? directoryPath = Path.GetDirectoryName(normalizedPath.Replace('/', Path.DirectorySeparatorChar))?.Replace('\\', '/');
+        directoryPath = string.IsNullOrWhiteSpace(directoryPath) ? "/" : NormalizeRootedContainerPath(directoryPath);
+
+        try
+        {
+            List<FileEntry> entries = await _docker.ListDirectoryAsync(containerId, directoryPath, cancellationToken);
+            return entries.FirstOrDefault(x => string.Equals(x.Path.Replace('\\', '/'), normalizedPath, StringComparison.Ordinal));
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private async Task SyncArtifactsAfterToolCall(TurnContext ctx, TurnContext.SessionState state, CancellationToken cancellationToken)

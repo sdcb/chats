@@ -332,11 +332,34 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
     private static int GetReasoningTokens(JsonElement usage)
     {
         if (usage.TryGetProperty("completion_tokens_details", out JsonElement ctd) &&
-            ctd.TryGetProperty("reasoning_tokens", out JsonElement rt))
+            ctd.ValueKind == JsonValueKind.Object &&
+            ctd.TryGetProperty("reasoning_tokens", out JsonElement rt) &&
+            rt.ValueKind == JsonValueKind.Number)
         {
             return rt.GetInt32();
         }
         return 0;
+    }
+
+    private static int GetOutputTokens(JsonElement usage)
+    {
+        int completionTokens = usage.TryGetProperty("completion_tokens", out JsonElement ct) && ct.ValueKind == JsonValueKind.Number
+            ? ct.GetInt32()
+            : 0;
+
+        // Some OpenAI-compatible providers(like Grok in Azure) report completion_tokens without reasoning tokens.
+        // total_tokens remains authoritative for the full output token count used by this app.
+        if (usage.TryGetProperty("total_tokens", out JsonElement total) && total.ValueKind == JsonValueKind.Number &&
+            usage.TryGetProperty("prompt_tokens", out JsonElement prompt) && prompt.ValueKind == JsonValueKind.Number)
+        {
+            int outputTokens = total.GetInt32() - prompt.GetInt32();
+            if (outputTokens >= 0)
+            {
+                return outputTokens;
+            }
+        }
+
+        return completionTokens;
     }
 
     protected virtual int GetCachedTokens(JsonElement usage)
@@ -360,8 +383,8 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         return new ChatTokenUsage
         {
-            InputTokens = usageElement.TryGetProperty("prompt_tokens", out JsonElement pt) ? pt.GetInt32() : 0,
-            OutputTokens = usageElement.TryGetProperty("completion_tokens", out JsonElement ct) ? ct.GetInt32() : 0,
+            InputTokens = usageElement.TryGetProperty("prompt_tokens", out JsonElement pt) && pt.ValueKind == JsonValueKind.Number ? pt.GetInt32() : 0,
+            OutputTokens = GetOutputTokens(usageElement),
             ReasoningTokens = GetReasoningTokens(usageElement),
             CacheTokens = GetCachedTokens(usageElement)
         };
@@ -454,13 +477,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         // Usage
         if (root.TryGetProperty("usage", out JsonElement u))
         {
-            usage = new ChatTokenUsage
-            {
-                InputTokens = u.TryGetProperty("prompt_tokens", out JsonElement pit) ? pit.GetInt32() : 0,
-                OutputTokens = u.TryGetProperty("completion_tokens", out JsonElement cot) ? cot.GetInt32() : 0,
-                ReasoningTokens = GetReasoningTokens(u),
-                CacheTokens = GetCachedTokens(u)
-            };
+            usage = ParseUsage(u);
         }
 
         foreach (ChatSegment item in items)
@@ -569,6 +586,11 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         return result;
     }
 
+    private static string NormalizeToolCallArguments(string? parameters)
+    {
+        return string.IsNullOrWhiteSpace(parameters) ? "{}" : parameters;
+    }
+
     protected virtual JsonArray BuildMessages(ChatRequest request)
     {
         JsonArray messages = [];
@@ -587,10 +609,33 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         // User/Assistant messages
         foreach (NeutralMessage msg in request.Messages)
         {
-            messages.Add(ToOpenAIMessage(msg));
+            foreach (JsonObject upstreamMessage in ToOpenAIMessages(msg))
+            {
+                messages.Add(upstreamMessage);
+            }
         }
 
         return messages;
+    }
+
+    protected virtual IEnumerable<JsonObject> ToOpenAIMessages(NeutralMessage message)
+    {
+        if (message.Role != NeutralChatRole.Tool)
+        {
+            yield return ToOpenAIMessage(message);
+            yield break;
+        }
+
+        IReadOnlyList<NeutralToolResponseGroup> toolResponseGroups = message.GetToolResponseGroups();
+        if (toolResponseGroups.Count == 0)
+        {
+            throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Tool message does not contain any tool response content.");
+        }
+
+        foreach (NeutralToolResponseGroup group in toolResponseGroups)
+        {
+            yield return ToOpenAIToolMessage(group);
+        }
     }
 
     protected virtual JsonObject ToOpenAIMessage(NeutralMessage message)
@@ -605,12 +650,12 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         if (message.Role == NeutralChatRole.Tool)
         {
-            NeutralToolCallResponseContent toolResp = (NeutralToolCallResponseContent)message.Contents.First();
-            return new JsonObject
+            IReadOnlyList<NeutralToolResponseGroup> toolResponseGroups = message.GetToolResponseGroups();
+            return toolResponseGroups.Count switch
             {
-                ["role"] = "tool",
-                ["tool_call_id"] = toolResp.ToolCallId,
-                ["content"] = toolResp.Response
+                0 => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Tool message does not contain any tool response content."),
+                > 1 => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Tool message contains multiple tool responses and must be split before conversion."),
+                _ => ToOpenAIToolMessage(toolResponseGroups[0])
             };
         }
 
@@ -658,7 +703,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                     ["function"] = new JsonObject
                     {
                         ["name"] = tc.Name,
-                        ["arguments"] = tc.Parameters
+                        ["arguments"] = NormalizeToolCallArguments(tc.Parameters)
                     }
                 });
             }
@@ -674,6 +719,43 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             msg[ReasoningContentPropertyName] = thinkingContent;
         }
 
+        return msg;
+    }
+
+    private JsonObject ToOpenAIToolMessage(NeutralToolResponseGroup group)
+    {
+        JsonObject msg = new()
+        {
+            ["role"] = "tool",
+            ["tool_call_id"] = group.ToolResponse.ToolCallId,
+        };
+
+        if (group.AttachedContents.Count == 0)
+        {
+            msg["content"] = group.ToolResponse.Response;
+            return msg;
+        }
+
+        JsonArray contentArray = [];
+        if (!string.IsNullOrEmpty(group.ToolResponse.Response))
+        {
+            contentArray.Add(new JsonObject
+            {
+                ["type"] = "text",
+                ["text"] = group.ToolResponse.Response
+            });
+        }
+
+        foreach (NeutralContent attachedContent in group.AttachedContents)
+        {
+            JsonObject? part = ToOpenAIContentPart(attachedContent);
+            if (part != null)
+            {
+                contentArray.Add(part);
+            }
+        }
+
+        msg["content"] = contentArray.Count > 0 ? contentArray : group.ToolResponse.Response;
         return msg;
     }
 

@@ -1,4 +1,8 @@
-import { saveSettings, getSettings } from '@/utils/settings';
+import {
+  clampChatbarWidth,
+  getSettings,
+  saveSettings,
+} from '@/utils/settings';
 import {
   SettingActionTypes,
   SettingsAction,
@@ -12,6 +16,23 @@ export const setShowChatBar = (showChatBar: boolean): SettingsAction => {
   return {
     type: SettingActionTypes.SHOW_CHAT_BAR,
     payload: showChatBar,
+  };
+};
+
+export const setChatBarWidth = (
+  chatBarWidth: number,
+  persist: boolean = true,
+): SettingsAction => {
+  const nextWidth = clampChatbarWidth(chatBarWidth);
+
+  if (persist) {
+    const currentSettings = getSettings();
+    saveSettings({ ...currentSettings, chatBarWidth: nextWidth });
+  }
+
+  return {
+    type: SettingActionTypes.CHAT_BAR_WIDTH,
+    payload: nextWidth,
   };
 };
 

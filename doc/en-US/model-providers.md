@@ -2,7 +2,7 @@
 
 **English** | [简体中文](../zh-CN/model-providers.md)
 
-Sdcb Chats supports 21+ mainstream AI model providers. Here is the complete list:
+Sdcb Chats supports 22+ mainstream AI model providers. Here is the complete list:
 
 | Id  | Name             | Added                                                       | Interleaved Thinking |
 | --- | ---------------- | ----------------------------------------------------------- | -------------------- |
@@ -28,6 +28,7 @@ Sdcb Chats supports 21+ mainstream AI model providers. Here is the complete list
 | 19  | Token Pony       | [2025-11-07](https://github.com/sdcb/chats/commit/32e4a0d5) | ❓                    |
 | 20  | Anthropic        | [2025-11-24](https://github.com/sdcb/chats/commit/22ebef98) | ✅                    |
 | 21  | Xiaomi Mimo      | [2025-12-17](https://github.com/sdcb/chats/commit/026f1a4e) | ✅                    |
+| 22  | Novita AI        | [2026-03-13](https://github.com/sdcb/chats/commit/cecfc66d) | ✅                    |
 
 ## Notes
 

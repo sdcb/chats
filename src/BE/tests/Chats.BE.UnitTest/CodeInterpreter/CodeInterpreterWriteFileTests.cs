@@ -23,7 +23,7 @@ public sealed class CodeInterpreterWriteFileTests
         return services.BuildServiceProvider();
     }
 
-    private static CodeInterpreterExecutor CreateExecutor(ServiceProvider sp, FakeDockerService docker)
+    private static CodeInterpreterExecutor CreateExecutor(ServiceProvider sp, FakeDockerService docker, CodePodConfig? codePodConfig = null)
     {
         IHttpContextAccessor accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
         HostUrlService host = new(accessor);
@@ -32,8 +32,9 @@ public sealed class CodeInterpreterWriteFileTests
         return new CodeInterpreterExecutor(
             docker,
             fsf,
+            new FileImageInfoService(NullLogger<FileImageInfoService>.Instance),
             sp.GetRequiredService<IServiceScopeFactory>(),
-            Options.Create(new CodePodConfig()),
+            Options.Create(codePodConfig ?? new CodePodConfig()),
             Options.Create(new CodeInterpreterOptions()),
             NullLogger<CodeInterpreterExecutor>.Instance);
     }
@@ -209,5 +210,75 @@ public sealed class CodeInterpreterWriteFileTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.Contains("Wrote 4 lines", result.Value);
+    }
+
+    [Fact]
+    public async Task WriteFile_RelativePath_ShouldAnchorToConfiguredWorkDir()
+    {
+        // Arrange
+        ServiceProvider sp = CreateServiceProvider(nameof(WriteFile_RelativePath_ShouldAnchorToConfiguredWorkDir));
+        FakeDockerService docker = new();
+        CodeInterpreterExecutor executor = CreateExecutor(sp, docker, new CodePodConfig { WorkDir = "/workspace" });
+
+        const string sessionLabel = "s1";
+        const string containerId = "container-123";
+        ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, sessionLabel, containerId);
+
+        CodeInterpreterExecutor.TurnContext ctx = new()
+        {
+            MessageTurns = [new ChatTurn { Id = 1, ChatDockerSessions = [session] }],
+            MessageSteps = [],
+            CurrentAssistantTurn = new ChatTurn { Id = 1 },
+            ClientInfoId = 1
+        };
+
+        // Act
+        Result<string> result = await executor.WriteFile(
+            ctx,
+            sessionLabel,
+            "test.py",
+            "print('hello')",
+            CancellationToken.None
+        );
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal("/workspace/test.py", docker.LastUploadedPath);
+        Assert.Contains("/workspace/test.py", result.Value);
+    }
+
+    [Fact]
+    public async Task WriteFile_AbsolutePath_ShouldUsePathAsIs()
+    {
+        // Arrange
+        ServiceProvider sp = CreateServiceProvider(nameof(WriteFile_AbsolutePath_ShouldUsePathAsIs));
+        FakeDockerService docker = new();
+        CodeInterpreterExecutor executor = CreateExecutor(sp, docker, new CodePodConfig { WorkDir = "/workspace" });
+
+        const string sessionLabel = "s1";
+        const string containerId = "container-123";
+        ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, sessionLabel, containerId);
+
+        CodeInterpreterExecutor.TurnContext ctx = new()
+        {
+            MessageTurns = [new ChatTurn { Id = 1, ChatDockerSessions = [session] }],
+            MessageSteps = [],
+            CurrentAssistantTurn = new ChatTurn { Id = 1 },
+            ClientInfoId = 1
+        };
+
+        // Act
+        Result<string> result = await executor.WriteFile(
+            ctx,
+            sessionLabel,
+            "/tmp/test.py",
+            "print('hello')",
+            CancellationToken.None
+        );
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal("/tmp/test.py", docker.LastUploadedPath);
+        Assert.Contains("/tmp/test.py", result.Value);
     }
 }

@@ -48,10 +48,8 @@ import {
   ResponseMessageTempId,
   SseResponseKind,
   SseResponseLine,
-  getMessageContents,
 } from '@/types/chatMessage';
 import { ChatSpanDto } from '@/types/clientApis';
-import { Prompt } from '@/types/prompt';
 
 import {
   setChats,
@@ -73,7 +71,6 @@ import NoModel from './NoModel';
 
 import {
   deleteMessage,
-  getTurnGenerateInfo,
   putChats,
   putMessageReactionClear,
   putMessageReactionUp,
@@ -82,7 +79,6 @@ import {
   responseContentToRequest,
 } from '@/apis/clientApis';
 import { streamGeneralChat, streamRegenerateAssistant, streamRegenerateAllAssistant, ChatApiError } from '@/apis/chatApi';
-import { cn } from '@/lib/utils';
 
 const ChatView = memo(() => {
   const { t } = useTranslation();
@@ -94,7 +90,7 @@ const ChatView = memo(() => {
       models,
       modelMap,
       showChatBar,
-      showChatInput,
+      effectiveChatBarWidth,
       isMessagesLoading,
     },
     selectedChat,
@@ -505,15 +501,6 @@ const ChatView = memo(() => {
   };
 
   // Helper to add a new step to a message (used when EndStep is received)
-  const addNewStepToMessage = (
-    msg: IChatMessage,
-    stepData: IStep,
-  ): IChatMessage => {
-    return {
-      ...msg,
-      steps: [...msg.steps, { ...stepData, contents: [] }],
-    };
-  };
 
   // Handle EndStep event: finalize current step and start a new one
   const changeSelectedResponseEndStep = (
@@ -1076,7 +1063,7 @@ const ChatView = memo(() => {
     if (!selectedChat) return;
     if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
     startChat();
-    let { id: chatId, spans: chatSpans } = selectedChat;
+    let { id: chatId } = selectedChat;
     let index = selectedMessages.findIndex(
       (x) => x.findIndex((m) => m.id === messageId) !== -1,
     );
@@ -1275,7 +1262,7 @@ const ChatView = memo(() => {
     ],
   );
 
-  const handleChangePrompt = (prompt: Prompt) => {
+  const handleChangePrompt = () => {
     // to do
   };
 
@@ -1684,7 +1671,7 @@ const ChatView = memo(() => {
                 <div
                   className="sm:w-full chat-container"
                   style={{
-                    width: `calc(100vw - ${showChatBar ? 280 : 0}px)`,
+                    width: `calc(100vw - ${showChatBar ? effectiveChatBarWidth : 0}px)`,
                   }}
                 >
                   {selectedMessages.length === 0 && <ChatPresetList />}

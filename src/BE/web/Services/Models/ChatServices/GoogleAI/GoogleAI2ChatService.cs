@@ -231,7 +231,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
         };
     }
 
-    private static ChatTokenUsage? GetUsage(JsonElement usageMetadata)
+    internal static ChatTokenUsage? GetUsage(JsonElement usageMetadata)
     {
         if (usageMetadata.ValueKind != JsonValueKind.Object)
         {
@@ -239,20 +239,18 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
         }
 
         int promptTokens = usageMetadata.TryGetProperty("promptTokenCount", out JsonElement promptElement) ? promptElement.GetInt32() : 0;
-        int totalTokens = usageMetadata.TryGetProperty("totalTokenCount", out JsonElement totalElement) ? totalElement.GetInt32() : 0;
-        int outputTokens = totalTokens >= promptTokens ? totalTokens - promptTokens : 0;
-        if (outputTokens == 0 && usageMetadata.TryGetProperty("candidatesTokenCount", out JsonElement candidateElement))
-        {
-            outputTokens = candidateElement.GetInt32();
-        }
+        int totalTokens = usageMetadata.TryGetProperty("totalTokenCount", out JsonElement totalElement) ? totalElement.GetInt32() : 0; // not used
+        int candidatesTokens = usageMetadata.TryGetProperty("candidatesTokenCount", out JsonElement candidateElement) ? candidateElement.GetInt32() : 0;
         int reasoningTokens = usageMetadata.TryGetProperty("thoughtsTokenCount", out JsonElement reasoningElement) ? reasoningElement.GetInt32() : 0;
+        int outputTokens = candidatesTokens + reasoningTokens;
+        int usageTokens = usageMetadata.TryGetProperty("cachedContentTokenCount", out JsonElement cachedElement) ? cachedElement.GetInt32() : 0;
 
         return new ChatTokenUsage
         {
             InputTokens = promptTokens,
             OutputTokens = outputTokens,
             ReasoningTokens = reasoningTokens,
-            CacheTokens = 0,
+            CacheTokens = usageTokens,
         };
     }
 
@@ -491,27 +489,62 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
             return schema;
         }
 
-        if (root.TryGetPropertyValue("properties", out JsonNode? propsNode) && propsNode is JsonObject props)
+        return ConvertSchema(root);
+    }
+
+    private static JsonObject ConvertSchema(JsonObject source)
+    {
+        JsonObject schema = new()
+        {
+            ["type"] = GetSchemaType(source, out bool isNullable)
+        };
+
+        if (isNullable)
+        {
+            schema["nullable"] = true;
+        }
+
+        if (TryGetStringValue(source, "description", out string? description))
+        {
+            schema["description"] = description;
+        }
+
+        if (source.TryGetPropertyValue("nullable", out JsonNode? nullableNode) && nullableNode is JsonValue nullableValue && nullableValue.TryGetValue(out bool explicitNullable) && explicitNullable)
+        {
+            schema["nullable"] = true;
+        }
+
+        if (source.TryGetPropertyValue("enum", out JsonNode? enumNode) && enumNode is JsonArray enumArray)
+        {
+            JsonArray convertedEnum = [];
+            foreach (JsonNode? node in enumArray)
+            {
+                if (node is JsonValue enumValue && enumValue.TryGetValue(out string? enumItem) && enumItem != null)
+                {
+                    convertedEnum.Add(enumItem);
+                }
+            }
+
+            if (convertedEnum.Count > 0)
+            {
+                schema["enum"] = convertedEnum;
+            }
+        }
+
+        if (source.TryGetPropertyValue("items", out JsonNode? itemsNode) && itemsNode is JsonObject itemsObject)
+        {
+            schema["items"] = ConvertSchema(itemsObject);
+        }
+
+        if (source.TryGetPropertyValue("properties", out JsonNode? propsNode) && propsNode is JsonObject props)
         {
             JsonObject properties = [];
             foreach ((string key, JsonNode? value) in props)
             {
-                if (value is not JsonObject propertyObject)
+                if (value is JsonObject propertyObject)
                 {
-                    continue;
+                    properties[key] = ConvertSchema(propertyObject);
                 }
-
-                JsonObject property = new()
-                {
-                    ["type"] = ConvertSchemaType(propertyObject.TryGetPropertyValue("type", out JsonNode? typeNode) ? typeNode?.GetValue<string>() : null)
-                };
-
-                if (propertyObject.TryGetPropertyValue("description", out JsonNode? descriptionNode) && descriptionNode is JsonValue descriptionValue && descriptionValue.TryGetValue(out string? description) && description != null)
-                {
-                    property["description"] = description;
-                }
-
-                properties[key] = property;
             }
 
             if (properties.Count > 0)
@@ -520,23 +553,136 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
             }
         }
 
-        if (root.TryGetPropertyValue("required", out JsonNode? requiredNode) && requiredNode is JsonArray requiredArray)
+        CopyStringArrayProperty(source, schema, "required");
+        CopyInt64Property(source, schema, "minItems");
+        CopyInt64Property(source, schema, "maxItems");
+        CopyInt64Property(source, schema, "minProperties");
+        CopyInt64Property(source, schema, "maxProperties");
+        CopyInt64Property(source, schema, "minLength");
+        CopyInt64Property(source, schema, "maxLength");
+        CopyNumberProperty(source, schema, "minimum");
+        CopyNumberProperty(source, schema, "maximum");
+
+        if (TryGetStringValue(source, "pattern", out string? pattern))
         {
-            JsonArray required = [];
-            foreach (JsonNode? node in requiredArray)
-            {
-                if (node is JsonValue value && value.TryGetValue(out string? str) && str != null)
-                {
-                    required.Add(str);
-                }
-            }
-            if (required.Count > 0)
-            {
-                schema["required"] = required;
-            }
+            schema["pattern"] = pattern;
         }
 
         return schema;
+    }
+
+    private static string GetSchemaType(JsonObject source, out bool isNullable)
+    {
+        isNullable = false;
+
+        if (source.TryGetPropertyValue("type", out JsonNode? typeNode))
+        {
+            if (typeNode is JsonValue typeValue && typeValue.TryGetValue(out string? singleType) && !string.IsNullOrWhiteSpace(singleType))
+            {
+                return ConvertSchemaType(singleType);
+            }
+
+            if (typeNode is JsonArray typeArray)
+            {
+                string? resolvedType = null;
+                foreach (JsonNode? node in typeArray)
+                {
+                    if (node is not JsonValue value || !value.TryGetValue(out string? currentType) || string.IsNullOrWhiteSpace(currentType))
+                    {
+                        continue;
+                    }
+
+                    if (string.Equals(currentType, "null", StringComparison.OrdinalIgnoreCase))
+                    {
+                        isNullable = true;
+                        continue;
+                    }
+
+                    resolvedType ??= currentType;
+                }
+
+                if (resolvedType != null)
+                {
+                    return ConvertSchemaType(resolvedType);
+                }
+
+                if (isNullable)
+                {
+                    return "NULL";
+                }
+            }
+        }
+
+        if (source.ContainsKey("properties"))
+        {
+            return "OBJECT";
+        }
+
+        if (source.ContainsKey("items"))
+        {
+            return "ARRAY";
+        }
+
+        return "STRING";
+    }
+
+    private static bool TryGetStringValue(JsonObject source, string propertyName, out string? value)
+    {
+        value = null;
+
+        if (source.TryGetPropertyValue(propertyName, out JsonNode? node) && node is JsonValue jsonValue && jsonValue.TryGetValue(out string? stringValue) && stringValue != null)
+        {
+            value = stringValue;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void CopyStringArrayProperty(JsonObject source, JsonObject target, string propertyName)
+    {
+        if (source.TryGetPropertyValue(propertyName, out JsonNode? node) && node is JsonArray sourceArray)
+        {
+            JsonArray targetArray = [];
+            foreach (JsonNode? item in sourceArray)
+            {
+                if (item is JsonValue value && value.TryGetValue(out string? stringItem) && stringItem != null)
+                {
+                    targetArray.Add(stringItem);
+                }
+            }
+
+            if (targetArray.Count > 0)
+            {
+                target[propertyName] = targetArray;
+            }
+        }
+    }
+
+    private static void CopyInt64Property(JsonObject source, JsonObject target, string propertyName)
+    {
+        if (!source.TryGetPropertyValue(propertyName, out JsonNode? node) || node is not JsonValue value)
+        {
+            return;
+        }
+
+        if (value.TryGetValue(out long int64Value))
+        {
+            target[propertyName] = int64Value.ToString();
+        }
+    }
+
+    private static void CopyNumberProperty(JsonObject source, JsonObject target, string propertyName)
+    {
+        if (!source.TryGetPropertyValue(propertyName, out JsonNode? node) || node is not JsonValue value)
+        {
+            return;
+        }
+
+        if (value.TryGetValue(out decimal decimalValue))
+        {
+            target[propertyName] = decimalValue;
+        }
     }
 
     private static string ConvertSchemaType(string? type)
@@ -574,7 +720,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
             {
                 NeutralChatRole.User => BuildUserParts(message),
                 NeutralChatRole.Assistant => BuildAssistantParts(message),
-                NeutralChatRole.Tool => [ToolCallMessageToPart(message)],
+                NeutralChatRole.Tool => BuildToolParts(message),
                 _ => throw new NotSupportedException($"Unsupported message role: {message.Role} in {nameof(GoogleAI2ChatService)}"),
             };
 
@@ -662,25 +808,72 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
         }
     }
 
-    private static JsonObject ToolCallMessageToPart(NeutralMessage message)
+    private static JsonArray BuildToolParts(NeutralMessage message)
     {
-        NeutralToolCallResponseContent? responseContent = message.Contents.OfType<NeutralToolCallResponseContent>().FirstOrDefault();
-        if (responseContent == null)
+        IReadOnlyList<NeutralToolResponseGroup> groups = message.GetToolResponseGroups();
+        if (groups.Count == 0)
         {
-            throw new CustomChatServiceException(DBFinishReason.BadParameter, $"{nameof(ToolCallMessageToPart)} expected tool call response content but none found.");
+            throw new CustomChatServiceException(DBFinishReason.BadParameter, $"{nameof(BuildToolParts)} expected tool call response content but none found.");
+        }
+
+        JsonArray parts = [];
+        foreach (NeutralToolResponseGroup group in groups)
+        {
+            parts.Add(ToolCallMessageToPart(group));
+
+            foreach (NeutralContent attachedContent in group.AttachedContents.Where(c => c is not NeutralFileBlobContent))
+            {
+                JsonObject? part = NeutralContentToGooglePart(attachedContent);
+                if (part != null)
+                {
+                    parts.Add(part);
+                }
+            }
+        }
+
+        return parts;
+    }
+
+    private static JsonObject ToolCallMessageToPart(NeutralToolResponseGroup group)
+    {
+        JsonObject functionResponse = new()
+        {
+            ["name"] = group.ToolResponse.ToolCallId,
+            ["response"] = new JsonObject
+            {
+                ["result"] = group.ToolResponse.Response,
+                ["success"] = group.ToolResponse.IsSuccess
+            }
+        };
+
+        JsonArray multimodalParts = BuildFunctionResponseParts(group.AttachedContents);
+        if (multimodalParts.Count > 0)
+        {
+            functionResponse["parts"] = multimodalParts;
         }
 
         return new JsonObject
         {
-            ["functionResponse"] = new JsonObject
-            {
-                ["name"] = responseContent.ToolCallId,
-                ["response"] = new JsonObject
-                {
-                    ["result"] = ParseJson(responseContent.Response) ?? JsonValue.Create(responseContent.Response) ?? JsonValue.Create(string.Empty)!
-                }
-            }
+            ["functionResponse"] = functionResponse
         };
+    }
+
+    private static JsonArray BuildFunctionResponseParts(IEnumerable<NeutralContent> contents)
+    {
+        JsonArray parts = [];
+        foreach (NeutralFileBlobContent blob in contents.OfType<NeutralFileBlobContent>())
+        {
+            parts.Add(new JsonObject
+            {
+                ["inlineData"] = new JsonObject
+                {
+                    ["data"] = Convert.ToBase64String(blob.Data),
+                    ["mimeType"] = blob.MediaType
+                }
+            });
+        }
+
+        return parts;
     }
 
     private static JsonObject? NeutralContentToGooglePart(NeutralContent content)

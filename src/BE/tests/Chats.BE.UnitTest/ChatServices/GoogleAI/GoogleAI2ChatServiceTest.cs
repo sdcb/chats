@@ -7,7 +7,9 @@ using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
 using System.Net;
+using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Chats.BE.UnitTest.ChatServices.Http;
 using Chats.DB;
 using Chats.DB.Enums;
@@ -25,6 +27,11 @@ public class GoogleAI2ChatServiceTest
     {
         var statusCode = (HttpStatusCode)dump.Response.StatusCode;
         return new FiddlerDumpHttpClientFactory(dump.Response.Chunks, statusCode, dump.Request.Body);
+    }
+
+    private sealed class DummyHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new();
     }
 
     private static ChatRequest CreateBaseChatRequest(string modelDeploymentName, string prompt, Action<ChatConfig>? configure = null)
@@ -88,6 +95,163 @@ public class GoogleAI2ChatServiceTest
         };
     }
 
+    private static JsonObject BuildNativeRequestBody(GoogleAI2ChatService service, ChatRequest request, bool allowImageGeneration)
+    {
+        MethodInfo method = typeof(GoogleAI2ChatService).GetMethod("BuildNativeRequestBody", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("BuildNativeRequestBody method not found.");
+
+        return (JsonObject?)method.Invoke(service, [request, allowImageGeneration])
+            ?? throw new InvalidOperationException("BuildNativeRequestBody returned null.");
+    }
+
+    [Fact]
+    public void BuildNativeRequestBody_ToolMessageWithBlobAttachment_EmbedsFunctionResponseParts()
+    {
+        var service = new GoogleAI2ChatService(new DummyHttpClientFactory());
+        ChatRequest request = CreateBaseChatRequest("gemini-3-flash-preview", "show chart") with
+        {
+            Messages =
+            [
+                NeutralMessage.FromAssistant(
+                    NeutralToolCallContent.Create("call_1", "draw_chart", "{}")
+                ),
+                NeutralMessage.FromTool(
+                    NeutralToolCallResponseContent.Create("call_1", "{\"status\":\"ok\"}"),
+                    NeutralFileBlobContent.Create([1, 2, 3], "image/png")
+                )
+            ]
+        };
+
+        JsonObject body = BuildNativeRequestBody(service, request, allowImageGeneration: false);
+        JsonArray contents = Assert.IsType<JsonArray>(body["contents"]);
+
+        JsonObject functionMessage = contents
+            .Select(node => Assert.IsType<JsonObject>(node))
+            .First(content => (string?)content["role"] == "function");
+
+        JsonArray parts = Assert.IsType<JsonArray>(functionMessage["parts"]);
+        JsonObject functionResponsePart = Assert.IsType<JsonObject>(parts[0]);
+        JsonObject functionResponse = Assert.IsType<JsonObject>(functionResponsePart["functionResponse"]);
+        Assert.Equal("call_1", (string?)functionResponse["name"]);
+
+        JsonArray multimodalParts = Assert.IsType<JsonArray>(functionResponse["parts"]);
+        JsonObject inlineData = Assert.IsType<JsonObject>(multimodalParts[0]?["inlineData"]);
+        Assert.Equal("image/png", (string?)inlineData["mimeType"]);
+        Assert.Equal(Convert.ToBase64String([1, 2, 3]), (string?)inlineData["data"]);
+    }
+
+    [Fact]
+    public void BuildNativeRequestBody_AssistantToolCallWithEmptyParameters_UsesEmptyArgsObject()
+    {
+        var service = new GoogleAI2ChatService(new DummyHttpClientFactory());
+        ChatRequest request = CreateBaseChatRequest("gemini-3-flash-preview", "create session") with
+        {
+            Messages =
+            [
+                NeutralMessage.FromAssistant(
+                    NeutralToolCallContent.Create("call_1", "create_docker_session", "")
+                )
+            ]
+        };
+
+        JsonObject body = BuildNativeRequestBody(service, request, allowImageGeneration: false);
+        JsonArray contents = Assert.IsType<JsonArray>(body["contents"]);
+
+        JsonObject modelMessage = contents
+            .Select(node => Assert.IsType<JsonObject>(node))
+            .First(content => (string?)content["role"] == "model");
+
+        JsonArray parts = Assert.IsType<JsonArray>(modelMessage["parts"]);
+        JsonObject functionCall = Assert.IsType<JsonObject>(parts[0]?["functionCall"]);
+        JsonObject args = Assert.IsType<JsonObject>(functionCall["args"]);
+        Assert.Empty(args);
+    }
+
+    [Fact]
+    public void BuildNativeRequestBody_FunctionToolWithNullableSchema_UsesGoogleNullableFields()
+    {
+        var service = new GoogleAI2ChatService(new DummyHttpClientFactory());
+        ChatRequest request = CreateBaseChatRequest("gemini-3-flash-preview", "create session") with
+        {
+            Tools =
+                [
+                        new FunctionTool
+                                {
+                                        FunctionName = "create_docker_session",
+                                        FunctionDescription = "Create a docker session.",
+                                        FunctionParameters =
+                                        """
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "image": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Docker image to use."
+                                                },
+                                                "networkMode": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Network mode.",
+                                                    "enum": [
+                                                        "none",
+                                                        "bridge",
+                                                        "host"
+                                                    ]
+                                                }
+                                            }
+                                        }
+                                        """
+                                }
+                ]
+        };
+
+        JsonObject body = BuildNativeRequestBody(service, request, allowImageGeneration: false);
+        JsonArray tools = Assert.IsType<JsonArray>(body["tools"]);
+        JsonObject functionTool = Assert.IsType<JsonObject>(tools[0]);
+        JsonArray declarations = Assert.IsType<JsonArray>(functionTool["functionDeclarations"]);
+        JsonObject declaration = Assert.IsType<JsonObject>(declarations[0]);
+        JsonObject parameters = Assert.IsType<JsonObject>(declaration["parameters"]);
+        JsonObject properties = Assert.IsType<JsonObject>(parameters["properties"]);
+
+        JsonObject image = Assert.IsType<JsonObject>(properties["image"]);
+        Assert.Equal("STRING", image["type"]!.GetValue<string>());
+        Assert.True(image["nullable"]!.GetValue<bool>());
+        Assert.Equal("Docker image to use.", image["description"]!.GetValue<string>());
+
+        JsonObject networkMode = Assert.IsType<JsonObject>(properties["networkMode"]);
+        Assert.Equal("STRING", networkMode["type"]!.GetValue<string>());
+        Assert.True(networkMode["nullable"]!.GetValue<bool>());
+        JsonArray enumValues = Assert.IsType<JsonArray>(networkMode["enum"]);
+        Assert.Equal(["none", "bridge", "host"], enumValues.Select(node => node!.GetValue<string>()).ToArray());
+    }
+
+    [Fact]
+    public void GetUsage_WithCachedContentTokenCount_UsesCachedTokens()
+    {
+        JsonObject usageMetadata = new()
+        {
+            ["promptTokenCount"] = 14347,
+            ["candidatesTokenCount"] = 215,
+            ["totalTokenCount"] = 14598,
+            ["cachedContentTokenCount"] = 8010,
+            ["thoughtsTokenCount"] = 36
+        };
+
+        using JsonDocument doc = JsonDocument.Parse(usageMetadata.ToJsonString());
+        ChatTokenUsage usage = GoogleAI2ChatService.GetUsage(doc.RootElement)
+            ?? throw new InvalidOperationException("GetUsage returned null.");
+
+        Assert.Equal(14347, usage.InputTokens);
+        Assert.Equal(8010, usage.CacheTokens);
+        Assert.Equal(36, usage.ReasoningTokens);
+        Assert.Equal(6337, usage.InputFreshTokens);
+    }
+
     [Fact]
     public async Task CodeExecute_ShouldReturnCodeExecutionResult()
     {
@@ -95,7 +259,7 @@ public class GoogleAI2ChatServiceTest
         var filePath = Path.Combine(TestDataPath, "CodeExecute.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump);
-        
+
         var chatCompletionService = new ChatCompletionService(httpClientFactory);
         var service = new GoogleAI2ChatService(httpClientFactory);
 
@@ -114,11 +278,11 @@ public class GoogleAI2ChatServiceTest
 
         // Assert
         Assert.NotEmpty(segments);
-        
+
         // 应该有思考内容（thought）
         var thinkSegments = segments.OfType<ThinkChatSegment>().ToList();
         Assert.NotEmpty(thinkSegments);
-        
+
         // 应该有代码执行工具调用
         var toolCallSegments = segments.OfType<ToolCallSegment>().ToList();
         Assert.NotEmpty(toolCallSegments);
@@ -126,22 +290,22 @@ public class GoogleAI2ChatServiceTest
         Assert.Equal("PYTHON", codeExecCall.Name);
         Assert.Contains("1234", codeExecCall.Arguments);
         Assert.Contains("5432", codeExecCall.Arguments);
-        
+
         // 应该有代码执行结果
         var toolResponseSegments = segments.OfType<ToolCallResponseSegment>().ToList();
         Assert.NotEmpty(toolResponseSegments);
         Assert.True(toolResponseSegments.First().IsSuccess);
         Assert.Contains("0.227", toolResponseSegments.First().Response);
-        
+
         // 应该有文本输出
         var textSegments = segments.OfType<TextChatSegment>().ToList();
         Assert.NotEmpty(textSegments);
-        
+
         // 应该有usage信息
         var usageSegments = segments.OfType<UsageChatSegment>().ToList();
         Assert.NotEmpty(usageSegments);
         Assert.True(usageSegments.Last().Usage.InputTokens > 0);
-        
+
         // 应该有finish reason
         var finishSegments = segments.OfType<FinishReasonChatSegment>().ToList();
         Assert.NotEmpty(finishSegments);
@@ -155,7 +319,7 @@ public class GoogleAI2ChatServiceTest
         var filePath = Path.Combine(TestDataPath, "ToolCall.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump);
-        
+
         var chatCompletionService = new ChatCompletionService(httpClientFactory);
         var service = new GoogleAI2ChatService(httpClientFactory);
 
@@ -186,7 +350,7 @@ public class GoogleAI2ChatServiceTest
 
         // Assert
         Assert.NotEmpty(segments);
-        
+
         // 应该有函数调用
         var toolCallSegments = segments.OfType<ToolCallSegment>().ToList();
         Assert.NotEmpty(toolCallSegments);
@@ -194,7 +358,7 @@ public class GoogleAI2ChatServiceTest
         Assert.Equal("run_code", functionCall.Name);
         Assert.Contains("1234", functionCall.Arguments);
         Assert.Contains("5432", functionCall.Arguments);
-        
+
         // 应该有usage信息
         var usageSegments = segments.OfType<UsageChatSegment>().ToList();
         Assert.NotEmpty(usageSegments);
@@ -207,7 +371,7 @@ public class GoogleAI2ChatServiceTest
         var filePath = Path.Combine(TestDataPath, "WebSearch.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump);
-        
+
         var chatCompletionService = new ChatCompletionService(httpClientFactory);
         var service = new GoogleAI2ChatService(httpClientFactory);
 
@@ -226,19 +390,19 @@ public class GoogleAI2ChatServiceTest
 
         // Assert
         Assert.NotEmpty(segments);
-        
+
         // 应该有思考内容
         var thinkSegments = segments.OfType<ThinkChatSegment>().ToList();
         Assert.NotEmpty(thinkSegments);
-        
+
         // 应该有文本输出
         var textSegments = segments.OfType<TextChatSegment>().ToList();
         Assert.NotEmpty(textSegments);
-        
+
         // 应该有usage信息
         var usageSegments = segments.OfType<UsageChatSegment>().ToList();
         Assert.NotEmpty(usageSegments);
-        
+
         // 应该有finish reason
         var finishSegments = segments.OfType<FinishReasonChatSegment>().ToList();
         Assert.NotEmpty(finishSegments);
@@ -252,7 +416,7 @@ public class GoogleAI2ChatServiceTest
         var filePath = Path.Combine(TestDataPath, "ImageGenerate.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump);
-        
+
         var chatCompletionService = new ChatCompletionService(httpClientFactory);
         var service = new GoogleAI2ChatService(httpClientFactory);
 
@@ -268,11 +432,11 @@ public class GoogleAI2ChatServiceTest
 
         // Assert
         Assert.NotEmpty(segments);
-        
+
         // 应该有文本输出
         var textSegments = segments.OfType<TextChatSegment>().ToList();
         Assert.NotEmpty(textSegments);
-        
+
         // 应该有图片输出
         var imageSegments = segments.OfType<ImageChatSegment>().ToList();
         Assert.NotEmpty(imageSegments);
@@ -280,7 +444,7 @@ public class GoogleAI2ChatServiceTest
         Assert.NotNull(image);
         Assert.Equal("image/png", image.ContentType);
         Assert.NotEmpty(image.Base64);
-        
+
         // 应该有usage信息
         var usageSegments = segments.OfType<UsageChatSegment>().ToList();
         Assert.NotEmpty(usageSegments);
@@ -293,7 +457,7 @@ public class GoogleAI2ChatServiceTest
         var filePath = Path.Combine(TestDataPath, "Error_404.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump);
-        
+
         var chatCompletionService = new ChatCompletionService(httpClientFactory);
         var service = new GoogleAI2ChatService(httpClientFactory);
 
@@ -331,7 +495,7 @@ public class GoogleAI2ChatServiceTest
         var filePath = Path.Combine(TestDataPath, "Error_429.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump);
-        
+
         var chatCompletionService = new ChatCompletionService(httpClientFactory);
         var service = new GoogleAI2ChatService(httpClientFactory);
 
@@ -389,7 +553,7 @@ public class GoogleAI2ChatServiceTest
         // Assert
         var thinkSegments = segments.OfType<ThinkChatSegment>().ToList();
         var textSegments = segments.OfType<TextChatSegment>().ToList();
-        
+
         Assert.NotEmpty(thinkSegments);
         Assert.NotEmpty(textSegments);
 

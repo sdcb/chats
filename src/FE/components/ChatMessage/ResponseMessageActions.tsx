@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatSpanDto } from '@/types/clientApis';
-import { ChatStatus, IChat, MessageContentType, TextContent } from '@/types/chat';
+import { ChatStatus, IChat, MessageContentType } from '@/types/chat';
 import { IChatMessage, ReactionMessageType, getMessageContents, isAllStepsEdited } from '@/types/chatMessage';
 
 import CopyAction from './CopyAction';
@@ -12,6 +12,20 @@ import TurnInfoBubble from './TurnInfoBubble';
 import PaginationAction from './PaginationAction';
 import ReactionAction from './ReactionAction';
 import RegenerateWithModelAction from './RegenerateWithModelAction';
+
+const getCopyableMessageText = (message: IChatMessage): string => {
+  const contents = getMessageContents(message);
+  const textContent = contents
+    .filter((content) => content.$type === MessageContentType.text)
+    .map((content) => content.c)
+    .join('');
+  const errorContent = contents
+    .filter((content) => content.$type === MessageContentType.error)
+    .map((content) => content.c)
+    .join('\n');
+
+  return [textContent, errorContent].filter(Boolean).join('\n\n');
+};
 
 interface Props {
   models: AdminModelDto[];
@@ -91,10 +105,7 @@ const ResponseMessageActions = (props: Props) => {
       />
       <div className="flex gap-0 items-center">
         <CopyAction
-          text={getMessageContents(message)
-            .filter((x) => x.$type === MessageContentType.text)
-            .map((x) => (x as TextContent).c)
-            .join('')}
+          text={getCopyableMessageText(message)}
         />
 
         <DeleteAction

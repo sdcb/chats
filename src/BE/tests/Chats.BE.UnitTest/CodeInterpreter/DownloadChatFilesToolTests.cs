@@ -65,15 +65,16 @@ public sealed class DownloadChatFilesToolTests
         return services.BuildServiceProvider();
     }
 
-    private static CodeInterpreterExecutor CreateExecutor(ServiceProvider sp, FakeDockerService docker, IReadOnlyDictionary<string, byte[]> blobs)
+    private static CodeInterpreterExecutor CreateExecutor(ServiceProvider sp, FakeDockerService docker, IReadOnlyDictionary<string, byte[]> blobs, CodePodConfig? codePodConfig = null)
     {
         IFileServiceFactory fsf = new FakeFileServiceFactory(blobs);
 
         return new CodeInterpreterExecutor(
             docker,
             fsf,
+            new FileImageInfoService(NullLogger<FileImageInfoService>.Instance),
             sp.GetRequiredService<IServiceScopeFactory>(),
-            Options.Create(new CodePodConfig()),
+            Options.Create(codePodConfig ?? new CodePodConfig()),
             Options.Create(new CodeInterpreterOptions()),
             NullLogger<CodeInterpreterExecutor>.Instance);
     }
@@ -196,7 +197,7 @@ public sealed class DownloadChatFilesToolTests
         }
 
         FakeDockerService docker = new();
-        CodeInterpreterExecutor exec = CreateExecutor(sp, docker, blobs);
+        CodeInterpreterExecutor exec = CreateExecutor(sp, docker, blobs, new CodePodConfig { WorkDir = "/workspace" });
         CodeInterpreterExecutor.TurnContext ctx = CreateCtx(session, [step]);
 
         Result<string> done = await exec.DownloadChatFiles(ctx, session.Label, ["maze_game.zip"], CancellationToken.None);
@@ -207,7 +208,7 @@ public sealed class DownloadChatFilesToolTests
 
         Assert.Single(docker.Uploads);
         Assert.Equal("container-1", docker.Uploads[0].ContainerId);
-        Assert.EndsWith("maze_game.zip", docker.Uploads[0].Path, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("/workspace/maze_game.zip", docker.Uploads[0].Path);
         Assert.Equal(zipBytes, docker.Uploads[0].Content);
     }
 }
