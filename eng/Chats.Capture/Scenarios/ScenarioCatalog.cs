@@ -92,21 +92,21 @@ public static class ScenarioCatalog
         await context.CaptureAsync();
       }, "feature", "dialog"),
 
-      Feature("home.chat.model-settings-dialog", "home", "chat", "model-settings-dialog", async (context, cancellationToken) =>
+      Feature("home.chat.config-dialog", "home", "chat", "config-dialog", async (context, cancellationToken) =>
       {
         string chatId = await context.StatePreparation.EnsureBlankChatAsync(context.Page);
         await context.NavigateAsync($"/home#/{chatId}", cancellationToken);
         await context.OpenFirstChatModelSettingsAsync();
         await context.CaptureAsync();
       }, "feature", "dialog", "chat"),
-      Feature("home.chat.preset-create-dialog", "home", "chat", "preset-create-dialog", async (context, cancellationToken) =>
+      Feature("home.chat.preset-first-item", "home", "chat", "preset-first-item", async (context, cancellationToken) =>
       {
         string chatId = await context.StatePreparation.EnsureBlankChatAsync(context.Page);
+        await context.StatePreparation.EnsureChatPresetAsync(context.Page);
         await context.NavigateAsync($"/home#/{chatId}", cancellationToken);
-        await context.WaitForTextsAsync(["Add a preset model group", "添加一个预设模型组"]);
-        await context.ClickButtonByTextsAsync(["Add a preset model group", "添加一个预设模型组"]);
+        await context.ClickFirstChatPresetCardAsync();
         await context.CaptureAsync();
-      }, "feature", "dialog", "chat"),
+      }, "feature", "page", "chat"),
       Feature("home.chat.variable-dialog", "home", "chat", "variable-dialog", async (context, cancellationToken) =>
       {
         string chatId = await context.StatePreparation.EnsureBlankChatAsync(context.Page);

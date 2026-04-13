@@ -346,35 +346,46 @@ public sealed class ScenarioContext
     await WaitForUiSettledAsync(waitForNetworkIdle: false, CancellationToken.None);
   }
 
+  public async Task ClickFirstChatPresetCardAsync()
+  {
+    ILocator card = Page.Locator("div.rounded-sm.p-4.cursor-grab").First;
+    if (await card.CountAsync() == 0)
+    {
+      bool clicked = await Page.EvaluateAsync<bool>("""
+        () => {
+          const card = document.querySelector('div.rounded-sm.p-4.cursor-grab');
+          if (!card) {
+            return false;
+          }
+
+          card.click();
+          return true;
+        }
+        """);
+
+      if (!clicked)
+      {
+        throw new InvalidOperationException("Unable to click the first chat preset card.");
+      }
+    }
+    else
+    {
+      await card.ClickAsync();
+    }
+
+    await WaitForUiSettledAsync(waitForNetworkIdle: false, CancellationToken.None);
+  }
+
   public async Task OpenFirstChatModelSettingsAsync()
   {
-    bool clicked = await Page.EvaluateAsync<bool>("""
-      () => {
-        const header = Array.from(document.querySelectorAll('button'))
-          .find(button => {
-            const text = (button.textContent || '').trim();
-            const rect = button.getBoundingClientRect();
-            return text.length === 0
-              && button.getAttribute('role') !== 'switch'
-              && rect.width > 0
-              && rect.height > 0
-              && rect.top < 160;
-          });
-
-        if (!header) {
-          return false;
-        }
-
-        header.click();
-        return true;
-      }
-      """);
-
-    if (!clicked)
+    ILocator button = Page.Locator("div.absolute.top-0.left-0.w-full button:has(svg.rotate-90)").First;
+    if (await button.CountAsync() == 0)
     {
       throw new InvalidOperationException("Unable to open the first chat model settings dialog.");
     }
 
+    await button.ClickAsync();
+    await Page.Locator("[role='dialog']").First.WaitForAsync();
     await WaitForUiSettledAsync(waitForNetworkIdle: false, CancellationToken.None);
   }
 

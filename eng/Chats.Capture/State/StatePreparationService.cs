@@ -17,6 +17,7 @@ public sealed class StatePreparationService
 {
   private const string BlankChatTitle = "Capture Blank Chat";
   private const string VariablePromptName = "capture_variable_prompt";
+  private const string CapturePresetName = "capture-preset";
   private const string SessionLabel = "capture-session";
   private const string SessionFilePath = "/app/copilot-capture.txt";
   private static readonly Regex PromptVariablePattern = new("{{.*?}}", RegexOptions.Compiled);
@@ -91,6 +92,44 @@ public sealed class StatePreparationService
     });
 
     _logger.LogInformation("Created variable prompt {PromptName}", created.Name);
+    return created.Name;
+  }
+
+  public async Task<string> EnsureChatPresetAsync(IPage page)
+  {
+    string sessionId = await GetRequiredSessionIdAsync(page);
+    using HttpClient client = CreateApiClient(sessionId);
+
+    List<ChatPresetRecord> presets = await GetJsonAsync<List<ChatPresetRecord>>(client, "/api/chat-preset");
+    ChatPresetRecord? existing = presets.FirstOrDefault();
+    if (existing is not null)
+    {
+      return existing.Name;
+    }
+
+    string blankChatId = await EnsureBlankChatAsync(page);
+    ChatRecord sourceChat = (await GetRecentChatsAsync(client, 50)).First(chat => chat.Id == blankChatId);
+
+    ChatPresetRecord created = await PostJsonAsync<ChatPresetRecord>(client, "/api/chat-preset", new
+    {
+      name = CapturePresetName,
+      spans = sourceChat.Spans.Select(span => new
+      {
+        modelId = span.ModelId,
+        enabled = span.Enabled,
+        systemPrompt = span.SystemPrompt,
+        temperature = span.Temperature,
+        webSearchEnabled = span.WebSearchEnabled,
+        codeExecutionEnabled = span.CodeExecutionEnabled,
+        maxOutputTokens = span.MaxOutputTokens,
+        reasoningEffort = span.ReasoningEffort,
+        imageSize = span.ImageSize,
+        thinkingBudget = span.ThinkingBudget,
+        mcps = span.Mcps,
+      }).ToList(),
+    });
+
+    _logger.LogInformation("Created capture preset {PresetName}", created.Name);
     return created.Name;
   }
 
@@ -421,6 +460,8 @@ public sealed class StatePreparationService
   private sealed record ChatSpanMcpRecord(int Id, string? CustomHeaders);
 
   private sealed record PromptRecord(int Id, string Name, string Content);
+
+  private sealed record ChatPresetRecord(string Id, string Name);
 
   private sealed record UserModelRecord(int ModelId, bool AllowCodeExecution);
 
