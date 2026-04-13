@@ -59,6 +59,9 @@ logs.txt
 /**/chats.db-wal
 /Publish
 /src/BE/web/AppData/*
-/AzureFileMigrator/bin
-/AzureFileMigrator/obj
+/eng/**/bin
+/eng/**/obj
 .claude
+eng/Chats.Capture/.state
+eng/Chats.Capture/State/StatePreparationService.cs
+eng/Chats.Capture/Output/*
