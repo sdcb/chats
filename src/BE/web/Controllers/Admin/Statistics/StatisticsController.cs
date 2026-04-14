@@ -83,10 +83,14 @@ public class StatisticsController(ChatsDB db) : ControllerBase
     public async Task<ActionResult<SingleValueStatisticsEntry[]>> GetSourceStatistics([FromQuery] StartEndDate query, CancellationToken cancellationToken)
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
-        SingleValueStatisticsEntry[] r = await q
-            .GroupBy(x => x.UserApiUsage != null ? UsageSource.Api : UsageSource.WebChat)
-            .Select(x => new SingleValueStatisticsEntry(x.Key.ToString(), x.Count()))
+        var sourceStats = await q
+            .GroupBy(x => x.SourceId)
+            .Select(x => new { SourceId = x.Key, Count = x.Count() })
             .ToArrayAsync(cancellationToken);
+
+        SingleValueStatisticsEntry[] r = sourceStats
+            .Select(x => new SingleValueStatisticsEntry(((UsageSource)x.SourceId).ToString(), x.Count))
+            .ToArray();
         return Ok(r);
     }
 

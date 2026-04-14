@@ -34,9 +34,16 @@ interface IProps {
   isExpanded: boolean;
   onToggle: () => void;
   onUserModelCountChange?: (userId: string, modelCount: number) => void;
+  contentOnly?: boolean;
 }
 
-export default function UserModelTree({ user, isExpanded, onToggle, onUserModelCountChange }: IProps) {
+export default function UserModelTree({
+  user,
+  isExpanded,
+  onToggle,
+  onUserModelCountChange,
+  contentOnly = false,
+}: IProps) {
   const { t } = useTranslation();
   const userId = user.id.toString();
   
@@ -55,10 +62,10 @@ export default function UserModelTree({ user, isExpanded, onToggle, onUserModelC
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (isExpanded && providers.length === 0) {
+    if ((contentOnly || isExpanded) && providers.length === 0) {
       loadProviders();
     }
-  }, [isExpanded]);
+  }, [contentOnly, isExpanded, providers.length]);
 
   const loadProviders = async () => {
     try {
@@ -567,38 +574,42 @@ export default function UserModelTree({ user, isExpanded, onToggle, onUserModelC
   const userModelCount = user.userModelCount;
 
   return (
-    <div className="border-b last:border-0">
-      <div
-        className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer"
-        onClick={onToggle}
-      >
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className={cn("transition-transform duration-200", isExpanded && "rotate-0", !isExpanded && "-rotate-90")}>
-              <IconChevronDown size={16} />
+    <div className={cn(!contentOnly && 'border-b last:border-0')}>
+      {!contentOnly && (
+        <div
+          className="flex cursor-pointer items-center justify-between p-4 hover:bg-muted/50"
+          onClick={onToggle}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className={cn("transition-transform duration-200", isExpanded && "rotate-0", !isExpanded && "-rotate-90")}>
+                <IconChevronDown size={16} />
+              </div>
+              <div className={`w-2 h-2 rounded-full ${user.enabled ? 'bg-green-400' : 'bg-gray-400'}`} />
             </div>
-            <div className={`w-2 h-2 rounded-full ${user.enabled ? 'bg-green-400' : 'bg-gray-400'}`} />
+            <div>
+              <div className="font-medium">{user.username}</div>
+              <div className="text-sm text-muted-foreground">{user.email || user.phone}</div>
+            </div>
           </div>
-          <div>
-            <div className="font-medium">{user.username}</div>
-            <div className="text-sm text-muted-foreground">{user.email || user.phone}</div>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">
+              {t('{{count}} models', { count: userModelCount })}
+            </Badge>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary">
-            {t('{{count}} models', { count: userModelCount })}
-          </Badge>
-        </div>
-      </div>
+      )}
 
-      <div 
+      <div
         className={cn(
-          "grid transition-all duration-300 ease-in-out",
-          isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          contentOnly
+            ? 'space-y-1'
+            : 'grid transition-all duration-300 ease-in-out',
+          !contentOnly && (isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'),
         )}
       >
-        <div className="overflow-hidden">
-          <div className="pl-8 pr-4 pb-4">
+        <div className={cn(!contentOnly && 'overflow-hidden')}>
+          <div className={cn(!contentOnly && 'pl-8 pr-4 pb-4')}>
           {loading ? (
             <div className="space-y-1">
               {Array.from({ length: user.modelProviderCount || 2 }).map((_, idx) => (

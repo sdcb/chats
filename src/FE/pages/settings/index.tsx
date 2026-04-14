@@ -9,6 +9,7 @@ import {
   IconArrowDown,
   IconBulb,
   IconMoneybag,
+  IconNotes,
   IconSettings,
   IconUser,
   IconRobot,
@@ -19,6 +20,7 @@ import AccountTab from '@/components/settings/tabs/AccountTab';
 import GeneralTab from '@/components/settings/tabs/GeneralTab';
 import PromptsTab from '@/components/settings/tabs/PromptsTab';
 import McpTab from '@/components/settings/tabs/McpTab';
+import TitleSummaryTab from '@/components/settings/tabs/TitleSummaryTab';
 import UsageRecordsTab from '@/components/settings/tabs/UsageRecordsTab';
 
 const SettingsPage = () => {
@@ -70,6 +72,12 @@ const SettingsPage = () => {
             <IconBulb /> {t('Prompts')}
           </TabsTrigger>
           <TabsTrigger
+            value="summary"
+            className="flex-1 justify-center items-center sm:flex-none gap-1"
+          >
+            <IconNotes /> {t('Title Summary')}
+          </TabsTrigger>
+          <TabsTrigger
             value="mcp"
             className="flex-1 justify-center items-center sm:flex-none gap-1"
           >
@@ -99,6 +107,9 @@ const SettingsPage = () => {
           </TabsContent>
           <TabsContent value="mcp" className="m-0 h-full">
             <McpTab />
+          </TabsContent>
+          <TabsContent value="summary" className="m-0 h-full">
+            <TitleSummaryTab />
           </TabsContent>
           <TabsContent value="usage" className="m-0 h-full">
             <UsageRecordsTab />

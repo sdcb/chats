@@ -173,6 +173,10 @@ public sealed record TempStartTurn(
     [property: JsonPropertyName("r")] ChatTurn Turn
 ) : SseResponseLine;
 
+public sealed record SetTitleInternal(
+    string Title
+) : SseResponseLine;
+
 #endregion
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]

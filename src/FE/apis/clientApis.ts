@@ -48,6 +48,9 @@ import {
   McpToolBasicInfo,
   McpServerListManagementItemDto,
   AssignUsersToMcpRequest,
+  TitleSummarySettingsDto,
+  TitleSummaryDefaultTemplateDto,
+  TitleSummaryConfig,
   UnassignedUserDto,
   AssignedUserDetailsDto,
   AssignedUserNameDto,
@@ -156,6 +159,26 @@ export const singIn = (params: SingInParams): Promise<SingInResult> => {
 export const getUserModels = () => {
   const fetchServer = createFetchClient();
   return fetchServer.get<AdminModelDto[]>(`/api/models`);
+};
+
+export const getTitleSummarySettings = () => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get<TitleSummarySettingsDto>('/api/user-configs/title-summary');
+};
+
+export const getTitleSummaryDefaultTemplate = () => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get<TitleSummaryDefaultTemplateDto>('/api/user-configs/title-summary/default-template');
+};
+
+export const putTitleSummarySettings = (body: TitleSummaryConfig) => {
+  const fetchServer = createFetchClient();
+  return fetchServer.put('/api/user-configs/title-summary', { body });
+};
+
+export const deleteTitleSummarySettings = () => {
+  const fetchServer = createFetchClient();
+  return fetchServer.delete('/api/user-configs/title-summary');
 };
 
 export const getUserBalance = () => {
@@ -559,15 +582,43 @@ export const responseContentToRequest = (
 
 export const getUsage = (params: GetUsageParams) => {
   const fetchServer = createFetchClient();
+  const queryParams: Record<string, string | number | undefined> = {
+    user: params.user,
+    kid: params.kid,
+    provider: params.provider,
+    'model-key': params.modelKey,
+    model: params.model,
+    start: params.start,
+    end: params.end,
+    page: params.page,
+    pageSize: params.pageSize,
+    skip: params.skip,
+    tz: params.tz,
+    source: params.source,
+  };
   return fetchServer.get<PageResult<GetUsageResult[]>>('/api/usage', {
-    params: params,
+    params: queryParams,
   });
 };
 
 export const getUsageStat = (params: GetUsageParams) => {
   const fetchServer = createFetchClient();
+  const queryParams: Record<string, string | number | undefined> = {
+    user: params.user,
+    kid: params.kid,
+    provider: params.provider,
+    'model-key': params.modelKey,
+    model: params.model,
+    start: params.start,
+    end: params.end,
+    page: params.page,
+    pageSize: params.pageSize,
+    skip: params.skip,
+    tz: params.tz,
+    source: params.source,
+  };
   return fetchServer.get<GetUsageStatResult>('/api/usage/stat', {
-    params: params,
+    params: queryParams,
   });
 };
 

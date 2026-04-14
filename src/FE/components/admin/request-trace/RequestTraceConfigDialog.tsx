@@ -5,7 +5,7 @@ import { Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
 
-import { getConfigs, putConfigs } from '@/apis/adminApis';
+import { getConfig, putConfigs } from '@/apis/adminApis';
 import useTranslation from '@/hooks/useTranslation';
 import { createDefaultRequestTraceDirectionConfig } from '@/types/config';
 
@@ -881,10 +881,9 @@ export default function RequestTraceConfigDialog({
     if (!open) return;
     setLoading(true);
     setActiveTab('basic');
-    getConfigs()
-      .then((configs) => {
-        const found = configs.find((c) => c.key === configKey);
-        const parsed = parseDirectionConfigFromValue(found?.value);
+    getConfig(configKey)
+      .then((config) => {
+        const parsed = parseDirectionConfigFromValue(config?.value);
         const values = toFormValues(parsed);
         form.reset(values);
         setInitialValues(values);

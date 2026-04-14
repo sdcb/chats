@@ -118,7 +118,7 @@ public class FileController(ChatsDB db, IFileServiceFactory fileServiceFactory, 
             FileServiceId = fileService.Id,
             StorageKey = storageKey,
             Size = (int)file.Length,
-            ClientInfo = await clientInfoManager.GetClientInfo(cancellationToken),
+            ClientInfoId = await clientInfoManager.GetClientInfoId(cancellationToken),
             CreateUserId = currentUser.Id,
             CreatedAt = DateTime.UtcNow,
             FileImageInfo = imageInfo
@@ -211,6 +211,7 @@ public class FileController(ChatsDB db, IFileServiceFactory fileServiceFactory, 
 
     [HttpGet("file")]
     public async Task<ActionResult<PagedResult<FileDto>>> QueryFiles(PagingRequest query,
+        string? contentTypePrefix,
         [FromServices] CurrentUser currentUser,
         [FromServices] FileUrlProvider fdup,
         CancellationToken cancellationToken)
@@ -218,6 +219,13 @@ public class FileController(ChatsDB db, IFileServiceFactory fileServiceFactory, 
         IQueryable<DBFile> queryable = db.Files
             .Where(x => x.CreateUserId == currentUser.Id)
             .OrderByDescending(x => x.Id);
+
+        if (!string.IsNullOrWhiteSpace(contentTypePrefix))
+        {
+            string normalizedContentTypePrefix = contentTypePrefix.Trim();
+            queryable = queryable.Where(x => x.MediaType.StartsWith(normalizedContentTypePrefix));
+        }
+
         PagedResult<FileDto> pagedResult = await PagedResult.FromTempQuery(queryable, query, f => fdup.CreateFileDto(f), cancellationToken);
         return Ok(pagedResult);
     }

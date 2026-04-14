@@ -19,7 +19,7 @@ public class UserBalancesController(ChatsDB db, CurrentUser currentUser, Balance
         {
             UserId = request.UserId,
             Amount = request.Amount,
-            TransactionTypeId = (byte)DBTransactionType.Charge,
+            TransactionTypeId = (byte)DBTransactionType.AdminCharge,
             CreatedAt = DateTime.UtcNow,
             CreditUserId = currentUser.Id,
         });

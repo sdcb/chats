@@ -127,19 +127,41 @@ export interface PutUserBalanceParams {
 }
 
 export interface GetUsersParams {
-  query?: string;
+  id?: string;
+  username?: string;
+  phone?: string;
+  email?: string;
+  loginType?: 'password' | 'phone' | 'keycloak';
   page: number;
   pageSize: number;
 }
+
+export interface GetUsersExportParams {
+  id?: string;
+  username?: string;
+  phone?: string;
+  email?: string;
+  loginType?: 'password' | 'phone' | 'keycloak';
+  columns?: string;
+}
+
+export interface GetUsersForPermissionParams extends Paging {
+  id?: string;
+  username?: string;
+  phone?: string;
+  email?: string;
+  loginType?: 'password' | 'phone' | 'keycloak';
+}
+
 export interface GetUsersResult {
   id: string;
   account: string;
   username: string;
   role: string;
-  email: string;
-  phone: string;
+  email: string | null;
+  phone: string | null;
   balance: number;
-  provider: string;
+  provider: string | null;
   createdAt: string;
   updatedAt: string;
   enabled: boolean;
@@ -149,8 +171,10 @@ export interface GetUsersResult {
 export interface UserModelPermissionUserDto {
   id: number;
   username: string;
+  account: string;
   email: string | null;
   phone: string | null;
+  provider: string | null;
   enabled: boolean;
   userModelCount: number;
   modelProviderCount: number;
@@ -473,6 +497,11 @@ export interface PostAndPutConfigParams {
   key: string;
   value: string;
   description: string;
+}
+
+export interface TitleSummaryAdminSettingsDto {
+  config: import('./clientApis').TitleSummaryConfig | null;
+  defaultPromptTemplate: string;
 }
 
 export interface GetInvitationCodeResult {

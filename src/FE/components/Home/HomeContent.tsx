@@ -3,11 +3,11 @@ import { useEffect, useReducer, useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
 
 import { useCreateReducer } from '@/hooks/useCreateReducer';
+import { useIsMobile } from '@/hooks/useMobile';
 import useTranslation from '@/hooks/useTranslation';
 
 import { currentISODateString } from '@/utils/date';
 import { findSelectedMessageByLeafId } from '@/utils/message';
-import { getSettings } from '@/utils/settings';
 import { getUserSession, redirectToLoginPage } from '@/utils/user';
 
 import {
@@ -36,6 +36,7 @@ import {
 import { setModelMap, setModels } from '@/actions/model.actions';
 import { setDefaultPrompt, setPrompts } from '@/actions/prompt.actions';
 import {
+  setChatBarWidth,
   setShowChatBar,
 } from '@/actions/setting.actions';
 import HomeContext, {
@@ -67,10 +68,16 @@ import {
   postChats,
   stopChat,
 } from '@/apis/clientApis';
+import {
+  getDesktopChatbarMaxWidth,
+  getEffectiveChatbarWidth,
+  getSettings,
+} from '@/utils/settings';
 
 const HomeContent = () => {
   const router = useRouter();
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const [chatState, chatDispatch] = useReducer(chatReducer, chatInitialState);
   const [messageState, messageDispatch] = useReducer(
     messageReducer,
@@ -88,9 +95,27 @@ const HomeContent = () => {
     promptReducer,
     promptInitialState,
   );
+  const [viewportWidth, setViewportWidth] = useState<number>(
+    typeof window !== 'undefined' ? window.innerWidth : 1200,
+  );
 
   const { chats, chatPaging, stopIds, selectedChatId, chatGroups } = chatState;
   const { models } = modelState;
+  const { showChatBar, chatBarWidth } = settingState;
+  const chatBarMaxWidth = useMemo(
+    () => getDesktopChatbarMaxWidth(viewportWidth),
+    [viewportWidth],
+  );
+  const effectiveChatBarWidth = useMemo(
+    () =>
+      getEffectiveChatbarWidth({
+        preferredWidth: chatBarWidth,
+        viewportWidth,
+        isMobileView: isMobile,
+        isOpen: showChatBar,
+      }),
+    [chatBarWidth, isMobile, showChatBar, viewportWidth],
+  );
 
   // 解析 hash 中的 chatId，例如 "#/abc" -> "abc"
   const getHashChatId = (): string | undefined => {
@@ -378,8 +403,24 @@ const HomeContent = () => {
 
   useEffect(() => {
     // 加载设置
-    const { showChatBar } = getSettings();
-    settingDispatch(setShowChatBar(showChatBar));
+    const settings = getSettings();
+    settingDispatch(setShowChatBar(settings.showChatBar));
+    settingDispatch(setChatBarWidth(settings.chatBarWidth, false));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleResize = () => {
+      setViewportWidth(window.innerWidth);
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   useEffect(() => {
@@ -438,6 +479,8 @@ const HomeContent = () => {
           ...modelState,
           ...settingState,
           ...promptState,
+          effectiveChatBarWidth,
+          chatBarMaxWidth,
         },
         selectedChat,
         chatDispatch: chatDispatch,

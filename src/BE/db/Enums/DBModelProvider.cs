@@ -1,4 +1,4 @@
-﻿namespace Chats.DB.Enums;
+namespace Chats.DB.Enums;
 
 public enum DBModelProvider
 {
@@ -24,4 +24,5 @@ public enum DBModelProvider
     TokenPony = 19,
     Anthropic = 20,
     Mimo = 21,
+    Novita = 22,
 }

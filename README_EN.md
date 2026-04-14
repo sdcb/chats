@@ -2,11 +2,11 @@
 
 **English** | [简体中文](README.md)
 
-Sdcb Chats is a powerful and flexible frontend for large language models, supporting 21+ mainstream AI model providers. Whether you want to unify the management of multiple model interfaces or need a simple and easy-to-use deployment solution, Sdcb Chats can meet your needs.
+Sdcb Chats is a powerful and flexible frontend for large language models, supporting 22+ mainstream AI model providers. Whether you want to unify the management of multiple model interfaces or need a simple and easy-to-use deployment solution, Sdcb Chats can meet your needs.
 
 ## ✨ Why Choose Sdcb Chats
 
-- 🚀 **All-in-One**: One hub for 21+ AI model providers
+- 🚀 **All-in-One**: One hub for 22+ AI model providers
 - 🎯 **Ready in Minutes**: One-command Docker deploy, plus native executables for 8 platforms
 - 🐳 **Code Interpreter**: Docker sandbox with built-in tools (browser, code execution, Excel, and more)
 - 🔌 **API Gateway**: Chat Completions/Messages compatible, works with Claude Code
@@ -18,16 +18,16 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 
 <img alt="chats-en" src="https://github.com/user-attachments/assets/40d2376e-58a0-4309-a2f5-5ed8262a0c2e" />
 
-## 🆕 Latest Release (1.10.2)
+## 🆕 Latest Release (1.11.0)
 
-- 📅 Release Date: 2026-03-10
-- 🔍 Request Trace: adds end-to-end inbound and outbound HTTP tracing with timing points, status codes, errors, body capture, and raw payload storage
-- 🧑‍💼 Admin workspace: adds a dedicated request trace page with filtering, details, raw downloads, compare view, Excel export, and bulk delete by filters
-- ⚙️ Trace governance: adds sampling, include/exclude rules, URL parameter redaction, retention policies, and hot-refreshable configuration
-- ♻️ Lifecycle management: adds bounded queue protection and scheduled cleanup to reduce long-running trace pressure
-- 🛠️ Other improvements: dashboard summary cards now follow the selected time range, long user messages can collapse, and Anthropic compatibility is improved further
+- 📅 Release Date: 2026-04-07
+- 🧠 Smart title summary: adds first-turn AI-generated chat titles with admin defaults, per-user overrides, dedicated model modes, and separate `Summary` usage billing
+- 💵 Model pricing page: adds a searchable `/model-prices` overview with provider, API type, free-model filters, context windows, and multiple price dimensions
+- 📊 Usage source breakdown: adds `SourceId` on `UserModelUsage` to distinguish `WebChat`, `Api`, and `Summary` in both user exports and admin statistics
+- 🆕 New model provider: adds Novita AI as the 22nd provider, with reasoning information round-tripping support
+- ↔️ UX and performance: adds resizable desktop sidebar and lazy-loads Markdown, KaTeX, charts, and session UI, cutting initial chat payload to around 1.7MB
 
-👉 [View 1.10.2 Release Notes](./doc/en-US/release-notes/1.10.2.md) · [View All Releases](./doc/en-US/release-notes/README.md)
+👉 [View 1.11.0 Release Notes](./doc/en-US/release-notes/1.11.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
 
 ## Quick Start
 
@@ -49,7 +49,7 @@ Chats is developed using `C#`/`TypeScript`. Here are the complete documentation 
 
 - [🚀 Quick Start](./doc/en-US/quick-start.md) - Deployment guide, Docker configuration, database setup
 - [💾 Downloads](./doc/en-US/downloads.md) - Docker images and executable file downloads
-- [🤖 Supported Model Providers](./doc/en-US/model-providers.md) - 21+ model providers list and support status
+- [🤖 Supported Model Providers](./doc/en-US/model-providers.md) - 22+ model providers list and support status
 - [🛠️ Development Guide](./doc/en-US/build.md) - How to compile and develop Chats
 - [⚙️ Configuration Guide](./doc/en-US/configuration.md) - Detailed configuration parameters
 - [📝 Release Notes](./doc/en-US/release-notes/README.md) - Version update history

@@ -1,3 +1,5 @@
+using Chats.BE.Controllers.Common.Dtos;
+using Microsoft.AspNetCore.Mvc;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Admin.AdminModels.Dtos;
@@ -20,6 +22,12 @@ public record UserModelPermissionUserDto
     public required string Username { get; init; }
 
     /// <summary>
+    /// 帐号
+    /// </summary>
+    [JsonPropertyName("account")]
+    public required string Account { get; init; }
+
+    /// <summary>
     /// 邮箱
     /// </summary>
     [JsonPropertyName("email")]
@@ -30,6 +38,12 @@ public record UserModelPermissionUserDto
     /// </summary>
     [JsonPropertyName("phone")]
     public string? Phone { get; init; }
+
+    /// <summary>
+    /// 登录提供方
+    /// </summary>
+    [JsonPropertyName("provider")]
+    public string? Provider { get; init; }
 
     /// <summary>
     /// 是否启用
@@ -48,4 +62,22 @@ public record UserModelPermissionUserDto
     /// </summary>
     [JsonPropertyName("modelProviderCount")]
     public required int ModelProviderCount { get; init; }
+}
+
+public record UserModelPermissionUserQuery : PagingRequest
+{
+    [FromQuery(Name = "id")]
+    public string? Id { get; init; }
+
+    [FromQuery(Name = "username")]
+    public string? Username { get; init; }
+
+    [FromQuery(Name = "phone")]
+    public string? Phone { get; init; }
+
+    [FromQuery(Name = "email")]
+    public string? Email { get; init; }
+
+    [FromQuery(Name = "loginType")]
+    public string? LoginType { get; init; }
 }

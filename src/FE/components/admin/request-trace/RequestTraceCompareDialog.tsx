@@ -242,7 +242,7 @@ export default function RequestTraceCompareDialog({
         </div>
 
         {loading ? (
-          <div className="custom-scrollbar min-h-0 h-full overflow-y-auto pr-1">
+          <div className="scroller min-h-0 h-full overflow-y-auto pr-1">
             <div className="space-y-2 py-4">
               {Array.from({ length: 6 }).map((_, idx) => (
                 <Skeleton key={idx} className="h-8 w-full" />
@@ -250,7 +250,7 @@ export default function RequestTraceCompareDialog({
             </div>
           </div>
         ) : (
-          <div className="custom-scrollbar min-h-0 h-full overflow-x-auto overflow-y-scroll pr-1">
+          <div className="scroller min-h-0 h-full overflow-x-auto overflow-y-scroll pr-1">
             <div className="space-y-2">
               {rows.map((row) => {
                 const different = row.a !== row.b;

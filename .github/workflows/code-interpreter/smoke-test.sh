@@ -22,7 +22,14 @@ echo "=== FFmpeg Version ==="
 ffmpeg -version | head -n 1
 
 echo "=== Python Version ==="
+python --version
 python3 --version
+
+python_path="$(readlink -f "$(command -v python)")"
+python3_path="$(readlink -f "$(command -v python3)")"
+echo "python -> ${python_path}"
+echo "python3 -> ${python3_path}"
+test "${python_path}" = "${python3_path}"
 
 echo "=== GCC Version ==="
 gcc --version | head -n 1
@@ -37,7 +44,7 @@ echo "=== SQLite Version ==="
 sqlite3 --version
 
 echo "=== Python Packages ==="
-python3 -c "import numpy, pandas, matplotlib, scipy, PIL, requests, openpyxl; print('All packages imported successfully')"
+python -c "import numpy, pandas, matplotlib, scipy, PIL, requests, openpyxl; print('All packages imported successfully')"
 
 echo "=== NuGet Local Cache ==="
 ls /opt/nuget-local

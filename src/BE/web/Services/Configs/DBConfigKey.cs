@@ -6,6 +6,8 @@ public static class DBConfigKey
 
     public const string SiteInfo = "siteInfo";
 
+    public const string ChatTitleSummary = "chatTitleSummary";
+
     public const string InboundRequestTrace = "inboundRequestTrace";
 
     public const string OutboundRequestTrace = "outboundRequestTrace";

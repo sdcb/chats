@@ -1,5 +1,11 @@
 namespace Chats.BE.Services.Models.Neutral;
 
+public sealed record NeutralToolResponseGroup
+{
+    public required NeutralToolCallResponseContent ToolResponse { get; init; }
+    public required IList<NeutralContent> AttachedContents { get; init; }
+}
+
 /// <summary>
 /// Extension methods for NeutralMessage.
 /// </summary>
@@ -79,5 +85,49 @@ public static class NeutralMessageExtensions
     public static NeutralToolCallResponseContent? GetFirstToolCallResponse(this NeutralMessage message)
     {
         return message.Contents.OfType<NeutralToolCallResponseContent>().FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Groups tool response contents with the content blocks that immediately follow them.
+    /// This preserves associations such as tool result text plus generated artifact images.
+    /// </summary>
+    public static IReadOnlyList<NeutralToolResponseGroup> GetToolResponseGroups(this NeutralMessage message)
+    {
+        List<NeutralToolResponseGroup> groups = [];
+        List<NeutralContent> leadingContents = [];
+        NeutralToolResponseGroup? currentGroup = null;
+
+        foreach (NeutralContent content in message.Contents)
+        {
+            if (content is NeutralToolCallResponseContent toolResponse)
+            {
+                currentGroup = new NeutralToolResponseGroup
+                {
+                    ToolResponse = toolResponse,
+                    AttachedContents = []
+                };
+                groups.Add(currentGroup);
+                continue;
+            }
+
+            if (currentGroup == null)
+            {
+                leadingContents.Add(content);
+            }
+            else
+            {
+                currentGroup.AttachedContents.Add(content);
+            }
+        }
+
+        if (groups.Count > 0 && leadingContents.Count > 0)
+        {
+            for (int i = leadingContents.Count - 1; i >= 0; i--)
+            {
+                groups[0].AttachedContents.Insert(0, leadingContents[i]);
+            }
+        }
+
+        return groups;
     }
 }

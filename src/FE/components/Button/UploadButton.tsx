@@ -14,6 +14,7 @@ interface Props {
   children?: React.ReactNode;
   fileConfig: ChatModelFileConfig;
   maxFileSize?: number;
+  accept?: string;
   // 是否启用相机拍照，移动端设置为 true 会优先调起相机；为 false 则仅选择相册（不拍照）
   capture?: boolean;
   // 可选的 input 元素 id，避免多个按钮时冲突
@@ -27,6 +28,7 @@ const UploadButton: React.FunctionComponent<Props> = ({
   onFailed,
   fileConfig,
   children,
+  accept,
   capture = true,
   inputId = 'upload',
   buttonProps,
@@ -78,7 +80,7 @@ const UploadButton: React.FunctionComponent<Props> = ({
         style={{ display: 'none' }}
         id={inputId}
         type="file"
-        accept="image/*"
+        accept={accept}
         {...(capture ? { capture: true } : {})}
       />
     </div>

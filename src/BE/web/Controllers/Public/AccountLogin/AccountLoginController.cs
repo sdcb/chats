@@ -49,12 +49,12 @@ public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> 
 
     private async Task<ActionResult> KeycloakLogin(GlobalDBConfig kcStore, UserManager userManager, SsoLoginRequest sso, HostUrlService hostUrl, CancellationToken cancellationToken)
     {
-        ClientInfo clientInfo = await clientInfoService.GetClientInfo(cancellationToken);
+        int clientInfoId = await clientInfoService.GetClientInfoId(cancellationToken);
 
         JsonKeycloakConfig? kcConfig = await kcStore.GetKeycloakConfig(cancellationToken);
         if (kcConfig == null)
         {
-            await loginRateLimiter.RecordKeycloakAttemptAsync(KnownLoginProviders.Keycloak, clientInfo.Id, null, false, null, null, "config-not-found", cancellationToken);
+            await loginRateLimiter.RecordKeycloakAttemptAsync(KnownLoginProviders.Keycloak, clientInfoId, null, false, null, null, "config-not-found", cancellationToken);
             return NotFound("Keycloak config not found");
         }
 
@@ -63,25 +63,25 @@ public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> 
             AccessTokenInfo token = await keycloakClient.GetUserInfo(kcConfig, sso.Code, hostUrl.GetKeycloakSsoRedirectUrl(), cancellationToken);
             User user = await userManager.EnsureKeycloakUser(token, cancellationToken);
             ActionResult sessionResult = Ok(await sessionManager.GenerateSessionForUser(user, cancellationToken));
-            await loginRateLimiter.RecordKeycloakAttemptAsync(KnownLoginProviders.Keycloak, clientInfo.Id, user.Id, true, token.Sub, token.Email, null, cancellationToken);
+            await loginRateLimiter.RecordKeycloakAttemptAsync(KnownLoginProviders.Keycloak, clientInfoId, user.Id, true, token.Sub, token.Email, null, cancellationToken);
             return sessionResult;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Keycloak login failed. ClientInfoId: {ClientInfoId}", clientInfo.Id);
-            await loginRateLimiter.RecordKeycloakAttemptAsync(KnownLoginProviders.Keycloak, clientInfo.Id, null, false, null, null, ex.Message, cancellationToken);
+            logger.LogError(ex, "Keycloak login failed. ClientInfoId: {ClientInfoId}", clientInfoId);
+            await loginRateLimiter.RecordKeycloakAttemptAsync(KnownLoginProviders.Keycloak, clientInfoId, null, false, null, null, ex.Message, cancellationToken);
             throw;
         }
     }
 
     private async Task<ActionResult> PasswordLogin(PasswordHasher passwordHasher, PasswordLoginRequest passwordDto, CancellationToken cancellationToken)
     {
-        ClientInfo clientInfo = await clientInfoService.GetClientInfo(cancellationToken);
+        int clientInfoId = await clientInfoService.GetClientInfoId(cancellationToken);
 
-        LoginRateLimiter.RateLimitCheckResult limitResult = await loginRateLimiter.CheckPasswordAsync(clientInfo, cancellationToken);
+        LoginRateLimiter.RateLimitCheckResult limitResult = await loginRateLimiter.CheckPasswordAsync(clientInfoId, cancellationToken);
         if (!limitResult.IsAllowed)
         {
-            logger.LogWarning("Password login rate limit reached. User: {UserName}, ClientInfoId: {ClientInfoId}", passwordDto.UserName, clientInfo.Id);
+            logger.LogWarning("Password login rate limit reached. User: {UserName}, ClientInfoId: {ClientInfoId}", passwordDto.UserName, clientInfoId);
             return BadRequest(limitResult.ErrorMessage ?? "Too many attempts. Please try again later.");
         }
 
@@ -90,23 +90,23 @@ public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> 
         if (dbUser == null)
         {
             logger.LogWarning("User not found: {UserName}", passwordDto.UserName);
-            await loginRateLimiter.RecordPasswordAttemptAsync(passwordDto.UserName, clientInfo.Id, null, false, "user-not-found", cancellationToken);
+            await loginRateLimiter.RecordPasswordAttemptAsync(passwordDto.UserName, clientInfoId, null, false, "user-not-found", cancellationToken);
             return BadRequest("Invalid username or password");
         }
         if (!dbUser.Enabled)
         {
             logger.LogWarning("User disabled: {UserName}", passwordDto.UserName);
-            await loginRateLimiter.RecordPasswordAttemptAsync(passwordDto.UserName, clientInfo.Id, dbUser.Id, false, "user-disabled", cancellationToken);
+            await loginRateLimiter.RecordPasswordAttemptAsync(passwordDto.UserName, clientInfoId, dbUser.Id, false, "user-disabled", cancellationToken);
             return BadRequest("Invalid username or password");
         }
         if (!passwordHasher.VerifyPassword(passwordDto.Password, dbUser.PasswordHash))
         {
             logger.LogWarning("Invalid password: {UserName}", passwordDto.UserName);
-            await loginRateLimiter.RecordPasswordAttemptAsync(passwordDto.UserName, clientInfo.Id, dbUser.Id, false, "password-mismatch", cancellationToken);
+            await loginRateLimiter.RecordPasswordAttemptAsync(passwordDto.UserName, clientInfoId, dbUser.Id, false, "password-mismatch", cancellationToken);
             return BadRequest("Invalid username or password");
         }
 
-        await loginRateLimiter.RecordPasswordAttemptAsync(passwordDto.UserName, clientInfo.Id, dbUser.Id, true, null, cancellationToken);
+        await loginRateLimiter.RecordPasswordAttemptAsync(passwordDto.UserName, clientInfoId, dbUser.Id, true, null, cancellationToken);
         return Ok(await sessionManager.GenerateSessionForUser(dbUser, cancellationToken));
     }
 
@@ -155,12 +155,12 @@ public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> 
 
     private async Task<BadRequestObjectResult?> PushAttemptCheck(string phoneNumber, string requestSmsCode, SmsRecord existingSms, CancellationToken cancellationToken)
     {
-        ClientInfo clientInfo = await clientInfoService.GetClientInfo(cancellationToken);
+        int clientInfoId = await clientInfoService.GetClientInfoId(cancellationToken);
 
-        LoginRateLimiter.RateLimitCheckResult limitResult = await loginRateLimiter.CheckSmsAsync(clientInfo, cancellationToken);
+        LoginRateLimiter.RateLimitCheckResult limitResult = await loginRateLimiter.CheckSmsAsync(clientInfoId, cancellationToken);
         if (!limitResult.IsAllowed)
         {
-            logger.LogWarning("SMS attempt rate limit reached. Phone: {Phone}, ClientInfoId: {ClientInfoId}", phoneNumber, clientInfo.Id);
+            logger.LogWarning("SMS attempt rate limit reached. Phone: {Phone}, ClientInfoId: {ClientInfoId}", phoneNumber, clientInfoId);
             return BadRequest(limitResult.ErrorMessage ?? "Too many attempts.");
         }
 
@@ -174,8 +174,7 @@ public class AccountLoginController(ChatsDB db, ILogger<AccountLoginController> 
             SmsRecordId = existingSms.Id,
             CreatedAt = utcNow,
             Code = requestSmsCode,
-            ClientInfoId = clientInfo.Id,
-            ClientInfo = clientInfo,
+            ClientInfoId = clientInfoId,
         };
 
         if (isSuccess)

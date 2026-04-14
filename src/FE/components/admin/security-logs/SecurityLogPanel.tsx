@@ -1,48 +1,39 @@
-import {
-  Dispatch,
-  ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { Dispatch, ReactNode, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import { useRouter } from 'next/router';
 
+import ExportButton from '@/components/Button/ExportButtom';
+import { IconRefresh } from '@/components/Icons';
 import DateTimePopover from '@/components/Popover/DateTimePopover';
 import DeletePopover from '@/components/Popover/DeletePopover';
-import ExportButton from '@/components/Button/ExportButtom';
 import Tips from '@/components/Tips/Tips';
-import PaginationContainer from '@/components/Pagination/Pagination';
+import {
+  UnifiedColumnSelector,
+  UnifiedTable,
+  UnifiedTableColumn,
+  buildColumnQuery,
+  getFirstQueryValue,
+  parseColumnQuery,
+  parseQueryPage,
+  UNIFIED_TABLE_PAGE_SIZE,
+} from '@/components/table/UnifiedTable';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import useDebounce from '@/hooks/useDebounce';
+import { useTextFilterDraft } from '@/components/table/useTextFilterDraft';
 import useTranslation from '@/hooks/useTranslation';
+import { PageResult } from '@/types/page';
 import {
   SecurityLogExportParams,
   SecurityLogQueryParams,
 } from '@/types/adminApis';
-import { PageResult } from '@/types/page';
 import { getTz } from '@/utils/date';
 import { getUserSession } from '@/utils/user';
 
 export type SecurityLogTab = 'password' | 'keycloak' | 'sms';
-
-const PAGE_SIZE = 20;
-
-const formatDateParam = (date: Date) => date.toISOString().split('T')[0];
 
 type FiltersState = {
   start: string;
@@ -51,31 +42,41 @@ type FiltersState = {
   success: '' | 'true' | 'false';
 };
 
-type ColumnConfig<T> = {
-  header: ReactNode;
-  className?: string;
-  cell: (row: T) => React.ReactNode;
-};
+type TextFilters = Pick<FiltersState, 'username'>;
 
-type SecurityLogPanelProps<T> = {
+type SecurityLogPanelProps<T, TColumnKey extends string = string> = {
   tab: SecurityLogTab;
   fetchList: (params: SecurityLogQueryParams) => Promise<PageResult<T[]>>;
   clearList: (params: SecurityLogExportParams) => Promise<number>;
   exportUrl: string;
-  columns: ColumnConfig<T>[];
+  columns: UnifiedTableColumn<T, TColumnKey>[];
+  defaultColumns?: TColumnKey[];
   getRowKey: (row: T) => string | number;
-  renderEmpty?: () => React.ReactNode;
-  pageSize?: number;
-  childrenAboveTable?: React.ReactNode;
+  renderEmpty?: () => ReactNode;
 };
 
-type PushQueryParams = {
+type PushQueryParams<TColumnKey extends string> = {
   tabValue: SecurityLogTab;
   pageValue: number;
   filters: FiltersState;
+  columns: TColumnKey[];
 };
 
-const buildQueryObject = ({ tabValue, pageValue, filters }: PushQueryParams) => {
+const formatDateParam = (date: Date) => date.toISOString().split('T')[0];
+
+const pickTextFilters = (filters: FiltersState): TextFilters => ({
+  username: filters.username,
+});
+
+const buildQueryObject = <TColumnKey extends string>({
+  tabValue,
+  pageValue,
+  filters,
+  columns,
+  defaultColumns,
+}: PushQueryParams<TColumnKey> & {
+  defaultColumns: TColumnKey[];
+}) => {
   const query: Record<string, string> = {};
 
   if (tabValue !== 'password') {
@@ -102,30 +103,50 @@ const buildQueryObject = ({ tabValue, pageValue, filters }: PushQueryParams) => 
     query.success = filters.success;
   }
 
+  const columnsQuery = buildColumnQuery(columns, defaultColumns);
+  if (columnsQuery) {
+    query.columns = columnsQuery;
+  }
+
   return query;
 };
 
-const useQueryState = (
+const useQueryState = <TColumnKey extends string>(
   tab: SecurityLogTab,
-  pageSize: number,
+  columns: UnifiedTableColumn<unknown, TColumnKey>[],
+  defaultColumns: TColumnKey[],
 ): [
   FiltersState,
-  Dispatch<React.SetStateAction<FiltersState>>,
+  Dispatch<SetStateAction<FiltersState>>,
   number,
-  Dispatch<React.SetStateAction<number>>,
-  (params: PushQueryParams) => void,
+  Dispatch<SetStateAction<number>>,
+  TColumnKey[],
+  Dispatch<SetStateAction<TColumnKey[]>>,
+  (params: PushQueryParams<TColumnKey>) => void,
 ] => {
   const router = useRouter();
-  const [filters, setFilters] = useState<FiltersState>({ start: '', end: '', username: '', success: '' });
+  const [filters, setFilters] = useState<FiltersState>({
+    start: '',
+    end: '',
+    username: '',
+    success: '',
+  });
   const [page, setPage] = useState(1);
+  const [selectedColumns, setSelectedColumns] = useState<TColumnKey[]>(defaultColumns);
 
   const pushQuery = useCallback(
-    ({ tabValue, pageValue, filters: nextFilters }: PushQueryParams) => {
+    ({ tabValue, pageValue, filters: nextFilters, columns: nextColumns }: PushQueryParams<TColumnKey>) => {
       if (!router.isReady) {
         return;
       }
 
-      const query = buildQueryObject({ tabValue, pageValue, filters: nextFilters });
+      const query = buildQueryObject({
+        tabValue,
+        pageValue,
+        filters: nextFilters,
+        columns: nextColumns,
+        defaultColumns,
+      });
 
       router.push(
         {
@@ -136,7 +157,7 @@ const useQueryState = (
         { shallow: true },
       );
     },
-    [router],
+    [defaultColumns, router],
   );
 
   useEffect(() => {
@@ -144,100 +165,87 @@ const useQueryState = (
       return;
     }
 
-  const { page: pageQueryParam, start, end, username, success } = router.query;
+    setPage((prev) => {
+      const nextPage = parseQueryPage(getFirstQueryValue(router.query.page));
+      return prev === nextPage ? prev : nextPage;
+    });
 
-    const pageQueryValue = Array.isArray(pageQueryParam)
-      ? pageQueryParam[0]
-      : pageQueryParam;
-    const parsedPage = pageQueryValue ? parseInt(pageQueryValue, 10) || 1 : 1;
-
-    setPage((prev) => (prev === parsedPage ? prev : parsedPage));
-
-    const startQuery = typeof start === 'string' ? start : '';
-    const endQuery = typeof end === 'string' ? end : '';
-    const usernameQuery = typeof username === 'string' ? username : '';
-    const successQuery =
-      typeof success === 'string' && (success === 'true' || success === 'false')
-        ? success
-        : '';
+    const start = getFirstQueryValue(router.query.start) || '';
+    const end = getFirstQueryValue(router.query.end) || '';
+    const username = getFirstQueryValue(router.query.username) || '';
+    const successValue = getFirstQueryValue(router.query.success);
+    const success =
+      successValue === 'true' || successValue === 'false' ? successValue : '';
 
     setFilters((prev) => {
       if (
-        prev.start === startQuery &&
-        prev.end === endQuery &&
-        prev.username === usernameQuery &&
-        prev.success === successQuery
+        prev.start === start &&
+        prev.end === end &&
+        prev.username === username &&
+        prev.success === success
       ) {
         return prev;
       }
-      return {
-        start: startQuery,
-        end: endQuery,
-        username: usernameQuery,
-        success: successQuery,
-      };
+
+      return { start, end, username, success };
     });
-  }, [router.isReady, router.query]);
+
+    const nextColumns = parseColumnQuery(
+      getFirstQueryValue(router.query.columns),
+      columns,
+      defaultColumns,
+    );
+    setSelectedColumns((prev) =>
+      prev.join(',') === nextColumns.join(',') ? prev : nextColumns,
+    );
+  }, [columns, defaultColumns, router.isReady, router.query]);
 
   useEffect(() => {
-    setPage(1);
-  }, [pageSize]);
+    setSelectedColumns(defaultColumns);
+  }, [defaultColumns]);
 
-  return [filters, setFilters, page, setPage, pushQuery];
+  return [
+    filters,
+    setFilters,
+    page,
+    setPage,
+    selectedColumns,
+    setSelectedColumns,
+    pushQuery,
+  ];
 };
 
-const TableSkeleton = ({
-  columns,
-  rowCount = 10,
-}: {
-  columns: ColumnConfig<any>[];
-  rowCount?: number;
-}) => (
-  <Table>
-    <TableHeader>
-      <TableRow>
-        {columns.map((column, index) => (
-          <TableHead key={index} className={column.className}>
-            {column.header}
-          </TableHead>
-        ))}
-      </TableRow>
-    </TableHeader>
-    <TableBody>
-      {Array.from({ length: rowCount }).map((_, rowIndex) => (
-        <TableRow key={`skeleton-${rowIndex}`}>
-          {columns.map((column, columnIndex) => (
-            <TableCell key={columnIndex} className={column.className}>
-              <Skeleton className="h-5 w-full" />
-            </TableCell>
-          ))}
-        </TableRow>
-      ))}
-    </TableBody>
-  </Table>
-);
-
-const SecurityLogPanel = <T,>({
+const SecurityLogPanel = <T, TColumnKey extends string = string>({
   tab,
   fetchList,
   clearList,
   exportUrl,
   columns,
+  defaultColumns,
   getRowKey,
   renderEmpty,
-  pageSize = PAGE_SIZE,
-  childrenAboveTable,
-}: SecurityLogPanelProps<T>) => {
+}: SecurityLogPanelProps<T, TColumnKey>) => {
   const { t } = useTranslation();
   const router = useRouter();
-
-  const [filters, setFilters, page, setPage, pushQuery] = useQueryState(
-    tab,
-    pageSize,
+  const resolvedDefaultColumns = useMemo(
+    () => defaultColumns ?? columns.map((column) => column.key),
+    [columns, defaultColumns],
   );
+
+  const [filters, setFilters, page, setPage, selectedColumns, setSelectedColumns, pushQuery] =
+    useQueryState(
+      tab,
+      columns as UnifiedTableColumn<unknown, TColumnKey>[],
+      resolvedDefaultColumns,
+    );
   const [data, setData] = useState<PageResult<T[]>>({ rows: [], count: 0 });
   const [loading, setLoading] = useState(false);
   const lastFetchKeyRef = useRef('');
+
+  const visibleColumns = useMemo(
+    () => columns.filter((column) => selectedColumns.includes(column.key)),
+    [columns, selectedColumns],
+  );
 
   const refresh = useCallback(
     (options?: { force?: boolean }) => {
@@ -247,7 +255,7 @@ const SecurityLogPanel = <T,>({
 
       const params: SecurityLogQueryParams = {
         page,
-        pageSize,
+        pageSize: UNIFIED_TABLE_PAGE_SIZE,
         tz: getTz(),
         start: filters.start || undefined,
         end: filters.end || undefined,
@@ -258,9 +266,6 @@ const SecurityLogPanel = <T,>({
       const fetchKey = JSON.stringify({
         tab,
         ...params,
-        start: params.start ?? '',
-        end: params.end ?? '',
-        username: params.username ?? '',
         success: filters.success,
       });
 
@@ -286,7 +291,7 @@ const SecurityLogPanel = <T,>({
           setLoading(false);
         });
     },
-  [fetchList, filters.end, filters.start, filters.username, filters.success, page, pageSize, router.isReady, t, tab],
+    [fetchList, filters.end, filters.start, filters.success, filters.username, page, router.isReady, t, tab],
   );
 
   useEffect(() => {
@@ -297,81 +302,73 @@ const SecurityLogPanel = <T,>({
     refresh();
   }, [refresh, router.isReady]);
 
-  const debouncedUsernameSync = useDebounce(
-    (
-      value: string,
-      tabValue: SecurityLogTab,
-      startValue: string,
-      endValue: string,
-      successValue: '' | 'true' | 'false',
-    ) => {
+  const { draft, setDraft, flushDraft, hasPendingDraft } = useTextFilterDraft({
+    committed: pickTextFilters(filters),
+    onCommit: (nextTextFilters) => {
       pushQuery({
-        tabValue,
+        tabValue: tab,
         pageValue: 1,
         filters: {
-          start: startValue,
-          end: endValue,
-          username: value,
-          success: successValue,
+          ...filters,
+          ...nextTextFilters,
         },
+        columns: selectedColumns,
       });
     },
-    600,
-  );
+  });
 
   const handlePageChange = (pageValue: number) => {
-    setPage(pageValue);
-    pushQuery({ tabValue: tab, pageValue, filters });
+    pushQuery({
+      tabValue: tab,
+      pageValue,
+      filters: {
+        ...filters,
+        ...draft,
+      },
+      columns: selectedColumns,
+    });
   };
 
-  const handleStartChange = (date: Date) => {
-    const value = formatDateParam(date);
-    const nextFilters = { ...filters, start: value };
-    setFilters(nextFilters);
-    setPage(1);
-    pushQuery({ tabValue: tab, pageValue: 1, filters: nextFilters });
-  };
-
-  const handleEndChange = (date: Date) => {
-    const value = formatDateParam(date);
-    const nextFilters = { ...filters, end: value };
-    setFilters(nextFilters);
-    setPage(1);
-    pushQuery({ tabValue: tab, pageValue: 1, filters: nextFilters });
-  };
-
-  const handleResetStart = () => {
-    const nextFilters = { ...filters, start: '' };
-    setFilters(nextFilters);
-    setPage(1);
-    pushQuery({ tabValue: tab, pageValue: 1, filters: nextFilters });
-  };
-
-  const handleResetEnd = () => {
-    const nextFilters = { ...filters, end: '' };
-    setFilters(nextFilters);
-    setPage(1);
-    pushQuery({ tabValue: tab, pageValue: 1, filters: nextFilters });
+  const updateFilters = (nextFilters: FiltersState) => {
+    pushQuery({
+      tabValue: tab,
+      pageValue: 1,
+      filters: {
+        ...nextFilters,
+        ...draft,
+      },
+      columns: selectedColumns,
+    });
   };
 
   const handleUsernameChange = (value: string) => {
-    const nextFilters = { ...filters, username: value };
-    setFilters(nextFilters);
-    setPage(1);
-    debouncedUsernameSync(
-      value,
-      tab,
-      nextFilters.start,
-      nextFilters.end,
-      nextFilters.success,
-    );
+    setDraft({ username: value });
   };
 
-  const handleSuccessChange = (value: '' | 'true' | 'false') => {
-    const nextFilters = { ...filters, success: value };
-    setFilters(nextFilters);
-    setPage(1);
-    pushQuery({ tabValue: tab, pageValue: 1, filters: nextFilters });
+  const handleToggleColumn = (key: TColumnKey, checked: boolean) => {
+    const nextSet = new Set(selectedColumns);
+    if (checked) {
+      nextSet.add(key);
+    } else {
+      nextSet.delete(key);
+      if (nextSet.size === 0) {
+        return;
+      }
+    }
+
+    const nextColumns = columns
+      .map((column) => column.key)
+      .filter((columnKey) => nextSet.has(columnKey));
+
+    pushQuery({
+      tabValue: tab,
+      pageValue: page,
+      filters: {
+        ...filters,
+        ...draft,
+      },
+      columns: nextColumns,
+    });
   };
 
   const getExportParams = useCallback(() => {
@@ -397,7 +394,7 @@ const SecurityLogPanel = <T,>({
     }
 
     return params;
-  }, [filters.end, filters.start, filters.username, filters.success]);
+  }, [filters.end, filters.start, filters.success, filters.username]);
 
   const handleClear = useCallback(async () => {
     const params: SecurityLogExportParams = {
@@ -411,7 +408,6 @@ const SecurityLogPanel = <T,>({
     try {
       await clearList(params);
       toast.success(t('Deleted successful'));
-      // 强制生成新的 fetchKey 以触发刷新
       lastFetchKeyRef.current = '';
       refresh({ force: true });
     } catch (error) {
@@ -421,39 +417,50 @@ const SecurityLogPanel = <T,>({
       );
       throw error;
     }
-  }, [clearList, filters.end, filters.start, filters.username, filters.success, refresh, t]);
-
-  const rows = useMemo(() => data?.rows ?? [], [data?.rows]);
-  const totalCount = data?.count ?? 0;
+  }, [clearList, filters.end, filters.start, filters.success, filters.username, refresh, t]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
+    <UnifiedTable
+      filters={
+        <>
           <DateTimePopover
             value={filters.start}
+            className="w-[180px]"
             placeholder={t('Start date')!}
-            onSelect={handleStartChange}
-            onReset={filters.start ? handleResetStart : undefined}
+            onSelect={(date) =>
+              updateFilters({ ...filters, start: formatDateParam(date) })
+            }
+            onReset={filters.start ? () => updateFilters({ ...filters, start: '' }) : undefined}
           />
           <DateTimePopover
             value={filters.end}
+            className="w-[180px]"
             placeholder={t('End date')!}
-            onSelect={handleEndChange}
-            onReset={filters.end ? handleResetEnd : undefined}
+            onSelect={(date) =>
+              updateFilters({ ...filters, end: formatDateParam(date) })
+            }
+            onReset={filters.end ? () => updateFilters({ ...filters, end: '' }) : undefined}
           />
           <Input
-            className="w-[240px]"
+            className="w-[180px]"
             placeholder={t('Search by username')!}
-            value={filters.username}
+            value={draft.username}
             onChange={(event) => handleUsernameChange(event.target.value)}
           />
-          <div className="w-[160px]">
+          <div className="w-[180px]">
             <Select
               value={filters.success}
-              onValueChange={(val) => handleSuccessChange(val as '' | 'true' | 'false')}
+              onValueChange={(value) =>
+                updateFilters({
+                  ...filters,
+                  success: value as '' | 'true' | 'false',
+                })
+              }
             >
-              <SelectTrigger onReset={() => handleSuccessChange('')} value={filters.success}>
+              <SelectTrigger
+                onReset={() => updateFilters({ ...filters, success: '' })}
+                value={filters.success}
+              >
                 {filters.success
                   ? filters.success === 'true'
                     ? t('Success')
@@ -466,75 +473,108 @@ const SecurityLogPanel = <T,>({
               </SelectContent>
             </Select>
           </div>
-        </div>
-        <div className="flex items-center gap-2 self-end lg:self-auto">
-          <Tips
-            trigger={
-              <div>
-                <ExportButton
-                  exportUrl={exportUrl}
-                  params={getExportParams()}
-                  className="h-9 w-9"
-                  disabled={loading}
-                />
-              </div>
-            }
-            side="bottom"
-            content={t('Export to Excel')}
-          />
-          <DeletePopover onDelete={handleClear} tooltip={t('Clear all logs')!} />
-        </div>
-      </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => {
+              if (hasPendingDraft) {
+                flushDraft();
+                return;
+              }
 
-      {childrenAboveTable}
-
-      <Card>
-        {loading ? (
-          <div className="py-6">
-            <TableSkeleton columns={columns} />
+              refresh({ force: true });
+            }}
+            disabled={loading}
+            aria-label={t('Refresh')}
+            title={t('Refresh')}
+          >
+            <IconRefresh size={18} />
+          </Button>
+        </>
+      }
+      actions={[
+        {
+          key: 'export',
+          element: (
+            <Tips
+              trigger={
+                <div>
+                  <ExportButton
+                    exportUrl={exportUrl}
+                    params={getExportParams()}
+                    className="h-9 w-9"
+                    disabled={loading}
+                  />
+                </div>
+              }
+              side="bottom"
+              content={t('Export to Excel')}
+            />
+          ),
+        },
+        {
+          key: 'delete',
+          element: (
+            <DeletePopover
+              onDelete={handleClear}
+              tooltip={t('Clear all logs')!}
+            />
+          ),
+        },
+        {
+          key: 'columns',
+          element: (
+            <UnifiedColumnSelector
+              allColumns={columns.map((column) => ({
+                key: column.key,
+                title: column.title,
+              }))}
+              selectedColumns={selectedColumns}
+              onToggleColumn={handleToggleColumn}
+            />
+          ),
+        },
+      ]}
+      columns={visibleColumns}
+      rows={data.rows}
+      loading={loading}
+      page={page}
+      totalCount={data.count}
+      rowKey={getRowKey}
+      onPageChange={handlePageChange}
+      emptyText={renderEmpty ? renderEmpty() : t('No data')}
+      mobileContent={
+        loading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-28 w-full" />
+            ))}
           </div>
-        ) : rows.length === 0 ? (
-          <div className="py-10 text-center text-sm text-muted-foreground">
+        ) : data.rows.length === 0 ? (
+          <div className="py-4 text-center text-sm text-muted-foreground">
             {renderEmpty ? renderEmpty() : t('No data')}
           </div>
         ) : (
-          <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {columns.map((column, index) => (
-                    <TableHead key={index} className={column.className}>
-                      {column.header}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={getRowKey(row)}>
-                    {columns.map((column, index) => (
-                      <TableCell key={index} className={column.className}>
-                        {column.cell(row)}
-                      </TableCell>
-                    ))}
-                  </TableRow>
+          <div className="space-y-2">
+            {data.rows.map((row) => (
+              <Card key={getRowKey(row)} className="space-y-2 border-none p-3 shadow-sm">
+                {visibleColumns.map((column) => (
+                  <div key={column.key} className="flex items-start justify-between gap-3 text-xs">
+                    <div className="shrink-0 font-medium text-muted-foreground">
+                      {column.title}
+                    </div>
+                    <div className="text-right text-foreground">
+                      {column.cell(row)}
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
-
-            {rows.length > 0 && (
-              <PaginationContainer
-                page={page}
-                pageSize={pageSize}
-                currentCount={rows.length}
-                totalCount={totalCount}
-                onPagingChange={handlePageChange}
-              />
-            )}
-          </>
-        )}
-      </Card>
-    </div>
+              </Card>
+            ))}
+          </div>
+        )
+      }
+    />
   );
 };
 

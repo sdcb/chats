@@ -41,6 +41,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
         int toolCallIndex = -1;
+        ChatTokenUsage? lastKnownUsage = null;
         await foreach (SseItem<string> sseItem in SseParser.Create(stream, (_, bytes) => Encoding.UTF8.GetString(bytes)).EnumerateAsync(cancellationToken))
         {
             if (string.IsNullOrEmpty(sseItem.Data) || sseItem.Data == "[DONE]")
@@ -67,16 +68,8 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                         if (json.TryGetProperty("message", out JsonElement message) &&
                             message.TryGetProperty("usage", out JsonElement usage))
                         {
-                            int inputTokens = usage.TryGetProperty("input_tokens", out JsonElement it) ? it.GetInt32() : 0;
-                            int outputTokens = usage.TryGetProperty("output_tokens", out JsonElement ot) ? ot.GetInt32() : 0;
-                            yield return ChatSegment.FromUsage(new ChatTokenUsage
-                            {
-                                InputTokens = inputTokens,
-                                OutputTokens = outputTokens,
-                                CacheTokens = GetCacheReadTokens(usage),
-                                CacheCreationTokens = GetCacheCreationTokens(usage),
-                                ReasoningTokens = 0
-                            });
+                            lastKnownUsage = MergeUsage(lastKnownUsage, usage);
+                            yield return ChatSegment.FromUsage(lastKnownUsage);
                         }
                         break;
                     }
@@ -195,27 +188,12 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                             };
                         }
 
-                        int inputTokens = 0;
-                        int outputTokens = 0;
                         JsonElement usageElement = default;
-                        bool hasUsage = json.TryGetProperty("usage", out usageElement);
+                        bool hasUsage = json.TryGetProperty("usage", out usageElement) && usageElement.ValueKind == JsonValueKind.Object;
                         if (hasUsage)
                         {
-                            inputTokens = usageElement.TryGetProperty("input_tokens", out JsonElement it) ? it.GetInt32() : 0;
-                            outputTokens = usageElement.TryGetProperty("output_tokens", out JsonElement ot) ? ot.GetInt32() : 0;
-                        }
-
-                        ChatTokenUsage usage = new()
-                        {
-                            InputTokens = inputTokens,
-                            OutputTokens = outputTokens,
-                            CacheTokens = hasUsage ? GetCacheReadTokens(usageElement) : 0,
-                            CacheCreationTokens = hasUsage ? GetCacheCreationTokens(usageElement) : 0,
-                        };
-
-                        if (hasUsage)
-                        {
-                            yield return ChatSegment.FromUsage(usage);
+                            lastKnownUsage = MergeUsage(lastKnownUsage, usageElement);
+                            yield return ChatSegment.FromUsage(lastKnownUsage);
                         }
                         if (finishReason != null)
                         {
@@ -238,6 +216,29 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                     }
             }
         }
+    }
+
+    private static ChatTokenUsage MergeUsage(ChatTokenUsage? previousUsage, JsonElement usage)
+    {
+        ChatTokenUsage baseUsage = previousUsage ?? ChatTokenUsage.Zero;
+
+        return new ChatTokenUsage
+        {
+            InputTokens = GetUsageValueOrFallback(usage, "input_tokens", baseUsage.InputTokens),
+            OutputTokens = GetUsageValueOrFallback(usage, "output_tokens", baseUsage.OutputTokens),
+            CacheTokens = GetUsageValueOrFallback(usage, "cache_read_input_tokens", baseUsage.CacheTokens),
+            CacheCreationTokens = GetUsageValueOrFallback(usage, "cache_creation_input_tokens", baseUsage.CacheCreationTokens),
+            ReasoningTokens = baseUsage.ReasoningTokens,
+        };
+    }
+
+    private static int GetUsageValueOrFallback(JsonElement usage, string propertyName, int fallback)
+    {
+        return usage.TryGetProperty(propertyName, out JsonElement valueElement) &&
+            valueElement.ValueKind == JsonValueKind.Number &&
+            valueElement.TryGetInt32(out int value)
+            ? value
+            : fallback;
     }
 
     /// <summary>
@@ -271,24 +272,6 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             return results.ToJsonString(JSON.JsonSerializerOptions);
         }
         return json.ToString();
-    }
-
-    private static int GetCacheReadTokens(JsonElement usage)
-    {
-        if (usage.TryGetProperty("cache_read_input_tokens", out JsonElement cacheRead))
-        {
-            return cacheRead.GetInt32();
-        }
-        return 0;
-    }
-
-    private static int GetCacheCreationTokens(JsonElement usage)
-    {
-        if (usage.TryGetProperty("cache_creation_input_tokens", out JsonElement cacheCreation))
-        {
-            return cacheCreation.GetInt32();
-        }
-        return 0;
     }
 
     protected virtual (string url, string apiKey) GetEndpointAndKey(ModelKey modelKey)
@@ -541,6 +524,16 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         }
     }
 
+    private static JsonNode ParseToolCallInput(string? parameters)
+    {
+        if (string.IsNullOrWhiteSpace(parameters))
+        {
+            return new JsonObject();
+        }
+
+        return JsonNode.Parse(parameters) ?? new JsonObject();
+    }
+
     private static JsonObject BuildCountTokensRequestBody(ChatRequest request)
     {
         (bool allowThinkingBlocks, bool allowThinking) = DetermineThinkingSettings(request);
@@ -596,26 +589,52 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                 }
                 else
                 {
-                    if (toolBuffer.Count > 0)
+                    foreach (NeutralMessage mergedToolMessage in FlushToolBuffer(toolBuffer))
                     {
-                        yield return new NeutralMessage
-                        {
-                            Role = NeutralChatRole.User,
-                            Contents = [.. toolBuffer],
-                        };
-                        toolBuffer.Clear();
+                        yield return mergedToolMessage;
                     }
+                    toolBuffer.Clear();
                     yield return msg;
                 }
             }
 
-            if (toolBuffer.Count > 0)
+            foreach (NeutralMessage mergedToolMessage in FlushToolBuffer(toolBuffer))
             {
-                yield return new NeutralMessage
+                yield return mergedToolMessage;
+            }
+
+            static IEnumerable<NeutralMessage> FlushToolBuffer(IList<NeutralContent> toolBuffer)
+            {
+                if (toolBuffer.Count == 0)
                 {
-                    Role = NeutralChatRole.User,
+                    yield break;
+                }
+
+                NeutralMessage toolMessage = new()
+                {
+                    Role = NeutralChatRole.Tool,
                     Contents = [.. toolBuffer],
                 };
+
+                IReadOnlyList<NeutralToolResponseGroup> toolResponseGroups = toolMessage.GetToolResponseGroups();
+                if (toolResponseGroups.Count == 0)
+                {
+                    yield return new NeutralMessage
+                    {
+                        Role = NeutralChatRole.User,
+                        Contents = [.. toolBuffer],
+                    };
+                    yield break;
+                }
+
+                foreach (NeutralToolResponseGroup group in toolResponseGroups)
+                {
+                    yield return new NeutralMessage
+                    {
+                        Role = NeutralChatRole.User,
+                        Contents = [group.ToolResponse, .. group.AttachedContents],
+                    };
+                }
             }
         }
 
@@ -693,12 +712,26 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             };
 
             JsonArray content = [];
-            foreach (NeutralContent c in message.Contents)
+            IReadOnlyList<NeutralToolResponseGroup> toolResponseGroups = anthropicRole == "user"
+                ? message.GetToolResponseGroups()
+                : [];
+
+            if (toolResponseGroups.Count > 0)
             {
-                JsonObject? contentBlock = ToAnthropicContent(c, allowThinkingBlocks);
-                if (contentBlock != null)
+                foreach (NeutralToolResponseGroup group in toolResponseGroups)
                 {
-                    content.Add(contentBlock);
+                    content.Add(CreateToolResultMessageBlock(group));
+                }
+            }
+            else
+            {
+                foreach (NeutralContent c in message.Contents)
+                {
+                    JsonObject? contentBlock = ToAnthropicContent(c, allowThinkingBlocks);
+                    if (contentBlock != null)
+                    {
+                        content.Add(contentBlock);
+                    }
                 }
             }
 
@@ -707,6 +740,83 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                 ["role"] = anthropicRole,
                 ["content"] = content
             };
+
+            static JsonObject CreateToolResultMessageBlock(NeutralToolResponseGroup group)
+            {
+                JsonObject result = new()
+                {
+                    ["type"] = "tool_result",
+                    ["tool_use_id"] = group.ToolResponse.ToolCallId,
+                    ["content"] = BuildToolResultMessageContent(group)
+                };
+                if (!group.ToolResponse.IsSuccess)
+                {
+                    result["is_error"] = true;
+                }
+                return result;
+            }
+
+            static JsonNode BuildToolResultMessageContent(NeutralToolResponseGroup group)
+            {
+                if (group.AttachedContents.Count == 0)
+                {
+                    return group.ToolResponse.Response;
+                }
+
+                JsonArray blocks = [];
+                if (!string.IsNullOrEmpty(group.ToolResponse.Response))
+                {
+                    blocks.Add(new JsonObject
+                    {
+                        ["type"] = "text",
+                        ["text"] = group.ToolResponse.Response
+                    });
+                }
+
+                foreach (NeutralContent attachedContent in group.AttachedContents)
+                {
+                    JsonObject? block = ToAnthropicToolResultPart(attachedContent);
+                    if (block != null)
+                    {
+                        blocks.Add(block);
+                    }
+                }
+
+                return blocks.Count > 0 ? blocks : group.ToolResponse.Response;
+            }
+
+            static JsonObject? ToAnthropicToolResultPart(NeutralContent content)
+            {
+                JsonObject? result = content switch
+                {
+                    NeutralTextContent text => new JsonObject { ["type"] = "text", ["text"] = text.Content },
+                    NeutralErrorContent error => new JsonObject { ["type"] = "text", ["text"] = error.Content },
+                    NeutralFileUrlContent fileUrl => new JsonObject
+                    {
+                        ["type"] = "image",
+                        ["source"] = new JsonObject { ["type"] = "url", ["url"] = fileUrl.Url }
+                    },
+                    NeutralFileBlobContent fileBlob => new JsonObject
+                    {
+                        ["type"] = "image",
+                        ["source"] = new JsonObject
+                        {
+                            ["type"] = "base64",
+                            ["media_type"] = fileBlob.MediaType,
+                            ["data"] = Convert.ToBase64String(fileBlob.Data)
+                        }
+                    },
+                    NeutralFileContent => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "FileId should be converted to FileUrl/FileBlob before conversion."),
+                    _ => null
+                };
+
+                if (result != null && content.CacheControl != null)
+                {
+                    result["cache_control"] = new JsonObject { ["type"] = content.CacheControl.Type };
+                }
+
+                return result;
+            }
 
             static JsonObject? ToAnthropicContent(NeutralContent content, bool allowThinkingBlocks)
             {
@@ -736,9 +846,13 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                         ["type"] = "tool_use",
                         ["id"] = toolCall.Id,
                         ["name"] = toolCall.Name,
-                        ["input"] = JsonNode.Parse(toolCall.Parameters)
+                        ["input"] = ParseToolCallInput(toolCall.Parameters)
                     },
-                    NeutralToolCallResponseContent toolResp => CreateToolResultBlock(toolResp),
+                    NeutralToolCallResponseContent toolResp => CreateToolResultBlock(new NeutralToolResponseGroup
+                    {
+                        ToolResponse = toolResp,
+                        AttachedContents = []
+                    }),
                     NeutralFileContent => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "FileId should be converted to FileUrl/FileBlob before conversion."),
                     _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Unsupported content type: {content.GetType().Name}")
                 };
@@ -751,19 +865,9 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
                 return result;
 
-                static JsonObject CreateToolResultBlock(NeutralToolCallResponseContent toolResp)
+                static JsonObject CreateToolResultBlock(NeutralToolResponseGroup group)
                 {
-                    JsonObject result = new()
-                    {
-                        ["type"] = "tool_result",
-                        ["tool_use_id"] = toolResp.ToolCallId,
-                        ["content"] = toolResp.Response
-                    };
-                    if (!toolResp.IsSuccess)
-                    {
-                        result["is_error"] = true;
-                    }
-                    return result;
+                    return CreateToolResultMessageBlock(group);
                 }
 
                 static JsonObject CreateThinkingBlock(NeutralThinkContent think)

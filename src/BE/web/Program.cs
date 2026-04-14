@@ -21,6 +21,7 @@ using Chats.DockerInterface;
 using Microsoft.Extensions.Options;
 using Chats.BE.Services.Keycloak;
 using Chats.BE.Services.RequestTracing;
+using Chats.BE.Services.TitleSummary;
 
 namespace Chats.BE;
 
@@ -89,6 +90,7 @@ public class Program
         builder.Services.AddSingleton<Services.Models.ChatServices.Anthropic.MimoAnthropicService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.MimoChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.MoonshotChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.NovitaChatService>();
 
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.ImageGenerationService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.AzureImageGenerationService>();
@@ -96,7 +98,6 @@ public class Program
         builder.Services.AddSingleton<IFileServiceFactory, FileServiceFactory>();
         builder.Services.AddSingleton<ChatStopService>();
         builder.Services.AddSingleton<FileImageInfoService>();
-        builder.Services.AddSingleton<AsyncClientInfoManager>();
         builder.Services.AddSingleton<AsyncCacheUsageManager>();
         builder.Services.AddSingleton<GitHubReleaseChecker>();
         builder.Services.AddSingleton<IRequestTraceConfigProvider, RequestTraceConfigProvider>();
@@ -113,8 +114,11 @@ public class Program
         builder.Services.AddScoped<ClientInfoManager>();
         builder.Services.AddScoped<FileUrlProvider>();
         builder.Services.AddScoped<ChatConfigService>();
+        builder.Services.AddScoped<ChatRunService>();
         builder.Services.AddScoped<DBFileService>();
         builder.Services.AddScoped<LoginRateLimiter>();
+        builder.Services.AddScoped<TitleSummaryConfigService>();
+        builder.Services.AddScoped<ChatTitleSummaryService>();
 
         builder.Services.Configure<CodePodConfig>(builder.Configuration.GetSection("CodePod"));
         builder.Services.Configure<RequestTraceQueueOptions>(builder.Configuration.GetSection("RequestTraceQueue"));

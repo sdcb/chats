@@ -11,25 +11,20 @@ import DeletePopover from '@/components/Popover/DeletePopover';
 import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import useDebounce from '@/hooks/useDebounce';
+  UnifiedColumnSelector,
+  UnifiedTable,
+  UnifiedTableColumn,
+  buildColumnQuery,
+  getFirstQueryValue,
+  parseColumnQuery,
+  parseQueryPage,
+  UNIFIED_TABLE_PAGE_SIZE,
+} from '@/components/table/UnifiedTable';
+import { useTextFilterDraft } from '@/components/table/useTextFilterDraft';
 import useTranslation from '@/hooks/useTranslation';
 import {
   clearRequestTraceList,
@@ -49,11 +44,8 @@ import { PageResult } from '@/types/page';
 import { getTz } from '@/utils/date';
 import { formatAbsoluteTime, formatRelativeWithinHour } from '@/utils/relativeTime';
 import { getUserSession } from '@/utils/user';
-import PaginationContainer from '@/components/Pagination/Pagination';
 
-const PAGE_SIZE = 20;
 const FILTER_CONTROL_WIDTH_CLASS = 'w-[180px]';
-const COLUMN_QUERY_SEPARATOR = '~';
 
 type Filters = {
   start: string;
@@ -64,23 +56,15 @@ type Filters = {
   direction: '' | '0' | '1';
 };
 
+type TextFilters = Pick<Filters, 'url' | 'traceId' | 'username'>;
+
 const formatDateParam = (date: Date) => date.toISOString().split('T')[0];
 
-const firstQuery = (value: string | string[] | undefined) =>
-  Array.isArray(value) ? value[0] : value;
-
-const parseColumns = (value: string | undefined): ColumnKey[] => {
-  if (!value) {
-    return DEFAULT_COLUMNS;
-  }
-
-  const keys = value
-    .split(COLUMN_QUERY_SEPARATOR)
-    .map((x) => x.trim())
-    .filter((x): x is ColumnKey => ALL_COLUMNS.some((col) => col.key === x));
-
-  return keys.length > 0 ? keys : DEFAULT_COLUMNS;
-};
+const pickTextFilters = (filters: Filters): TextFilters => ({
+  url: filters.url,
+  traceId: filters.traceId,
+  username: filters.username,
+});
 
 const buildQuery = (page: number, filters: Filters, columns: ColumnKey[]) => {
   const query: Record<string, string> = {};
@@ -92,8 +76,9 @@ const buildQuery = (page: number, filters: Filters, columns: ColumnKey[]) => {
   if (filters.traceId) query.traceId = filters.traceId;
   if (filters.username) query.username = filters.username;
   if (filters.direction) query.direction = filters.direction;
-  if (columns.join(',') !== DEFAULT_COLUMNS.join(',')) {
-    query.columns = columns.join(COLUMN_QUERY_SEPARATOR);
+  const columnsQuery = buildColumnQuery(columns, DEFAULT_COLUMNS);
+  if (columnsQuery) {
+    query.columns = columnsQuery;
   }
 
   return query;
@@ -150,19 +135,23 @@ export default function RequestTracePage() {
   useEffect(() => {
     if (!router.isReady) return;
 
-    const pageValue = parseInt(firstQuery(router.query.page) || '1', 10) || 1;
+    const pageValue = parseQueryPage(getFirstQueryValue(router.query.page));
     const nextFilters: Filters = {
-      start: firstQuery(router.query.start) || '',
-      end: firstQuery(router.query.end) || '',
-      url: firstQuery(router.query.url) || '',
-      traceId: firstQuery(router.query.traceId) || '',
-      username: firstQuery(router.query.username) || '',
+      start: getFirstQueryValue(router.query.start) || '',
+      end: getFirstQueryValue(router.query.end) || '',
+      url: getFirstQueryValue(router.query.url) || '',
+      traceId: getFirstQueryValue(router.query.traceId) || '',
+      username: getFirstQueryValue(router.query.username) || '',
       direction:
-        firstQuery(router.query.direction) === '0' || firstQuery(router.query.direction) === '1'
-          ? (firstQuery(router.query.direction) as '0' | '1')
+        getFirstQueryValue(router.query.direction) === '0' || getFirstQueryValue(router.query.direction) === '1'
+          ? (getFirstQueryValue(router.query.direction) as '0' | '1')
           : '',
     };
-    const nextColumns = parseColumns(firstQuery(router.query.columns));
+    const nextColumns = parseColumnQuery(
+      getFirstQueryValue(router.query.columns),
+      ALL_COLUMNS,
+      DEFAULT_COLUMNS,
+    );
 
     setPage((prev) => (prev === pageValue ? prev : pageValue));
     setFilters((prev) =>
@@ -184,7 +173,7 @@ export default function RequestTracePage() {
 
       const params = {
         page,
-        pageSize: PAGE_SIZE,
+        pageSize: UNIFIED_TABLE_PAGE_SIZE,
         tz: getTz(),
         start: filters.start || undefined,
         end: filters.end || undefined,
@@ -220,19 +209,34 @@ export default function RequestTracePage() {
     refresh();
   }, [refresh]);
 
-  const debouncedTextSync = useDebounce((nextFilters: Filters) => {
-    pushQuery(1, nextFilters, columns);
-  }, 500);
+  const { draft, setDraft, flushDraft, hasPendingDraft } = useTextFilterDraft({
+    committed: pickTextFilters(filters),
+    onCommit: (nextTextFilters) => {
+      pushQuery(
+        1,
+        {
+          ...filters,
+          ...nextTextFilters,
+        },
+        columns,
+      );
+    },
+  });
 
-  const updateFilter = (key: keyof Filters, value: string, debounce = false) => {
-    const next = { ...filters, [key]: value };
-    setFilters(next);
-    setPage(1);
-    if (debounce) {
-      debouncedTextSync(next);
-      return;
-    }
+  const updateImmediateFilter = (key: keyof Omit<Filters, keyof TextFilters>, value: string) => {
+    const next = {
+      ...filters,
+      ...draft,
+      [key]: value,
+    };
     pushQuery(1, next, columns);
+  };
+
+  const updateTextFilter = (key: keyof TextFilters, value: string) => {
+    setDraft((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
   };
 
   const toggleColumn = (key: ColumnKey, checked: boolean) => {
@@ -248,14 +252,18 @@ export default function RequestTracePage() {
 
     const next = ALL_COLUMNS.map((column) => column.key).filter((columnKey) => nextSet.has(columnKey));
 
-    setColumns(next);
-    pushQuery(page, filters, next);
+    pushQuery(
+      page,
+      {
+        ...filters,
+        ...draft,
+      },
+      next,
+    );
   };
 
   const handleDirectionChange = (value: '' | '0' | '1') => {
-    const next = { ...filters, direction: value };
-    setFilters(next);
-    setPage(1);
+    const next = { ...filters, ...draft, direction: value };
     pushQuery(1, next, columns);
   };
 
@@ -271,8 +279,6 @@ export default function RequestTracePage() {
       return prev.filter((x) => x !== id);
     });
   };
-
-  const visibleColumnDefs = ALL_COLUMNS.filter((x) => columns.includes(x.key));
 
   const renderTimestampValue = (value: string | null) => {
     if (!value) {
@@ -385,6 +391,14 @@ export default function RequestTracePage() {
     }
   };
 
+  const visibleColumns: UnifiedTableColumn<RequestTraceListItem, ColumnKey>[] = ALL_COLUMNS
+    .filter((column) => columns.includes(column.key))
+    .map((column) => ({
+      key: column.key,
+      title: t(column.title),
+      cell: (row) => renderColumnValue(row, column.key),
+    }));
+
   const handleDeleteByQuery = async () => {
     await clearRequestTraceList({
       tz: getTz(),
@@ -414,9 +428,10 @@ export default function RequestTracePage() {
   };
 
   return (
-    <div className="space-y-4">
-      <Card className="p-3 border-none">
-        <div className="flex flex-wrap items-end gap-3">
+    <>
+      <UnifiedTable
+        filters={
+          <>
           <div className={FILTER_CONTROL_WIDTH_CLASS}>
             <Select
               value={filters.direction}
@@ -439,135 +454,148 @@ export default function RequestTracePage() {
             value={filters.start}
             className={FILTER_CONTROL_WIDTH_CLASS}
             placeholder={t('Start date')!}
-            onSelect={(date) => updateFilter('start', formatDateParam(date))}
-            onReset={filters.start ? () => updateFilter('start', '') : undefined}
+            onSelect={(date) => updateImmediateFilter('start', formatDateParam(date))}
+            onReset={filters.start ? () => updateImmediateFilter('start', '') : undefined}
           />
           <DateTimePopover
             value={filters.end}
             className={FILTER_CONTROL_WIDTH_CLASS}
             placeholder={t('End date')!}
-            onSelect={(date) => updateFilter('end', formatDateParam(date))}
-            onReset={filters.end ? () => updateFilter('end', '') : undefined}
+            onSelect={(date) => updateImmediateFilter('end', formatDateParam(date))}
+            onReset={filters.end ? () => updateImmediateFilter('end', '') : undefined}
           />
           <Input
             className={FILTER_CONTROL_WIDTH_CLASS}
             placeholder={t('Search by url')!}
-            value={filters.url}
-            onChange={(event) => updateFilter('url', event.target.value, true)}
+            value={draft.url}
+            onChange={(event) => updateTextFilter('url', event.target.value)}
           />
           <Input
             className={FILTER_CONTROL_WIDTH_CLASS}
             placeholder={t('Search by traceId')!}
-            value={filters.traceId}
-            onChange={(event) => updateFilter('traceId', event.target.value, true)}
+            value={draft.traceId}
+            onChange={(event) => updateTextFilter('traceId', event.target.value)}
           />
           <Input
             className={FILTER_CONTROL_WIDTH_CLASS}
             placeholder={t('Search by username')!}
-            value={filters.username}
-            onChange={(event) => updateFilter('username', event.target.value, true)}
+            value={draft.username}
+            onChange={(event) => updateTextFilter('username', event.target.value)}
           />
 
           <Button
             type="button"
             variant="outline"
             size="icon"
-            onClick={() => refresh(true)}
+            onClick={() => {
+              if (hasPendingDraft) {
+                flushDraft();
+                return;
+              }
+
+              refresh(true);
+            }}
             disabled={loading}
             aria-label={t('Refresh')}
             title={t('Refresh')}
           >
             <IconRefresh size={18} />
           </Button>
-
-          <div className="ml-auto flex items-center gap-2 self-end">
-            <Tips
-              trigger={
-                <div>
-                  <ExportButton
-                    exportUrl="/api/admin/request-trace/export"
-                    params={exportParams}
-                    className="h-9 w-9"
-                    disabled={loading}
-                  />
-                </div>
-              }
-              side="bottom"
-              content={t('Export to Excel')}
-            />
-
-            <DeletePopover
-              onDelete={handleDeleteByQuery}
-              tooltip={t('Delete by current filters')!}
-              description={t('This will delete ALL records matching the current filters, not just selected rows. Continue?')!}
-            />
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="hidden sm:block">
-                  <Tips
-                    trigger={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9"
-                        aria-label={t('Select columns')}
-                        title={t('Select columns')}
-                      >
-                        <IconColumns size={18} />
-                      </Button>
-                    }
-                    side="bottom"
-                    content={t('Select columns')}
-                  />
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="flex items-center gap-2">
-                  <IconColumns size={16} />
-                  <span>{t('Select columns')}</span>
-                </DropdownMenuLabel>
-                {ALL_COLUMNS.map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.key}
-                    checked={columns.includes(column.key)}
-                    onSelect={(event) => event.preventDefault()}
-                    onCheckedChange={(checked) => toggleColumn(column.key, !!checked)}
-                  >
-                    {t(column.title)}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Tips
-              trigger={
-                <div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9"
-                    disabled={selectedIds.length !== 2}
-                    onClick={() => setCompareOpen(true)}
-                    aria-label={t('Compare')}
-                  >
-                    <IconCompare size={18} />
-                  </Button>
-                </div>
-              }
-              side="bottom"
-              content={
-                selectedIds.length === 2
-                  ? `${t('Compare')} (2/2)`
-                  : `${t('Click rows to select for compare')}${selectedIds.length > 0 ? ` (${selectedIds.length}/2)` : ''}`
-              }
-            />
-          </div>
-        </div>
-      </Card>
-
-      <div className="block sm:hidden">
-        {loading ? (
+          </>
+        }
+        actions={[
+          {
+            key: 'export',
+            element: (
+              <Tips
+                trigger={
+                  <div>
+                    <ExportButton
+                      exportUrl="/api/admin/request-trace/export"
+                      params={exportParams}
+                      className="h-9 w-9"
+                      disabled={loading}
+                    />
+                  </div>
+                }
+                side="bottom"
+                content={t('Export to Excel')}
+              />
+            ),
+          },
+          {
+            key: 'delete',
+            element: (
+              <DeletePopover
+                onDelete={handleDeleteByQuery}
+                tooltip={t('Delete by current filters')!}
+                description={t('This will delete ALL records matching the current filters, not just selected rows. Continue?')!}
+              />
+            ),
+          },
+          {
+            key: 'columns',
+            element: (
+              <UnifiedColumnSelector
+                allColumns={ALL_COLUMNS}
+                selectedColumns={columns}
+                onToggleColumn={toggleColumn}
+              />
+            ),
+          },
+          {
+            key: 'compare',
+            element: (
+              <Tips
+                trigger={
+                  <div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9"
+                      disabled={selectedIds.length !== 2}
+                      onClick={() => setCompareOpen(true)}
+                      aria-label={t('Compare')}
+                    >
+                      <IconCompare size={18} />
+                    </Button>
+                  </div>
+                }
+                side="bottom"
+                content={
+                  selectedIds.length === 2
+                    ? `${t('Compare')} (2/2)`
+                    : `${t('Click rows to select for compare')}${selectedIds.length > 0 ? ` (${selectedIds.length}/2)` : ''}`
+                }
+              />
+            ),
+          },
+        ]}
+        columns={visibleColumns}
+        rows={data.rows}
+        loading={loading}
+        page={page}
+        totalCount={data.count}
+        rowKey={(row) => row.id}
+        onPageChange={(nextPage) => {
+          pushQuery(
+            nextPage,
+            {
+              ...filters,
+              ...draft,
+            },
+            columns,
+          );
+        }}
+        onRowClick={(row) => toggleSelect(row.id, !selectedIds.includes(row.id))}
+        rowClassName={(row) =>
+          cn(
+            'transition-colors',
+            selectedIds.includes(row.id) && 'border-l-2 border-l-primary bg-primary/10',
+          )
+        }
+        mobileContent={
+          loading ? (
           <div className="space-y-2">
             {Array.from({ length: 4 }).map((_, idx) => (
               <Skeleton key={idx} className="h-24 w-full" />
@@ -625,50 +653,7 @@ export default function RequestTracePage() {
             })}
           </div>
         )}
-      </div>
-
-      <div className="hidden sm:block">
-        <Card className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {visibleColumnDefs.map((column) => (
-                  <TableHead key={column.key} className="px-1 py-1 first:pl-4 last:pr-4 text-foreground">{t(column.title)}</TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody isLoading={loading} isEmpty={data.rows.length === 0}>
-              {data.rows.map((row) => {
-                const isSelected = selectedIds.includes(row.id);
-                return (
-                  <TableRow
-                    key={row.id}
-                    className={cn('cursor-pointer transition-colors', isSelected && 'bg-primary/10 border-l-2 border-l-primary')}
-                    onClick={() => toggleSelect(row.id, !isSelected)}
-                  >
-                    {visibleColumnDefs.map((column) => (
-                      <TableCell key={column.key} className="px-1 py-1 first:pl-4 last:pr-4 text-muted-foreground">{renderColumnValue(row, column.key)}</TableCell>
-                    ))}
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-
-          {data.rows.length > 0 && (
-            <PaginationContainer
-              page={page}
-              pageSize={PAGE_SIZE}
-              currentCount={data.rows.length}
-              totalCount={data.count}
-              onPagingChange={(nextPage) => {
-                setPage(nextPage);
-                pushQuery(nextPage, filters, columns);
-              }}
-            />
-          )}
-        </Card>
-      </div>
+      />
 
       <RequestTraceDetailsDialog
         traceId={detailsId}
@@ -683,7 +668,6 @@ export default function RequestTracePage() {
         open={compareOpen}
         onOpenChange={setCompareOpen}
       />
-
-    </div>
+    </>
   );
 }

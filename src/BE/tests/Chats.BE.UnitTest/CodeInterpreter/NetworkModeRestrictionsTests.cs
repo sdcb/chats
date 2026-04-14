@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Services.CodeInterpreter;
+using Chats.BE.Services.FileServices;
 using Chats.DockerInterface;
 using Chats.DB;
 using Microsoft.Extensions.DependencyInjection;
@@ -89,6 +90,7 @@ public sealed class NetworkModeRestrictionsTests
         return new CodeInterpreterExecutor(
             docker,
             fileServiceFactory: null!,
+            fileImageInfoService: new FileImageInfoService(NullLogger<FileImageInfoService>.Instance),
             scopeFactory: new ThrowingScopeFactory(),
             codePodConfig: Options.Create(new CodePodConfig()),
             options: Options.Create(options),
