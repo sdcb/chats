@@ -29,7 +29,68 @@ public static class NeutralConversions
                 result.Add(message);
             }
         }
-        return result;
+        return EnsureToolResponseIntegrity(result);
+    }
+
+    /// <summary>
+    /// Ensures all tool_calls in assistant messages have corresponding tool response messages.
+    /// Adds empty tool responses for any missing tool_call_ids to prevent upstream API errors.
+    /// This handles cases where tool messages are silently dropped during parsing (e.g., missing tool_call_id).
+    /// </summary>
+    public static IList<NeutralMessage> EnsureToolResponseIntegrity(IList<NeutralMessage> messages)
+    {
+        if (messages.Count == 0) return messages;
+
+        // Quick check: if no assistant messages with tool_calls, nothing to do
+        bool hasToolCalls = false;
+        for (int i = 0; i < messages.Count; i++)
+        {
+            if (messages[i].Role == NeutralChatRole.Assistant &&
+                messages[i].Contents.Any(c => c is NeutralToolCallContent))
+            {
+                hasToolCalls = true;
+                break;
+            }
+        }
+        if (!hasToolCalls) return messages;
+
+        List<NeutralMessage> result = new(messages.Count);
+        bool modified = false;
+
+        for (int i = 0; i < messages.Count; i++)
+        {
+            result.Add(messages[i]);
+
+            if (messages[i].Role != NeutralChatRole.Assistant) continue;
+
+            List<NeutralToolCallContent> toolCalls = messages[i].Contents.OfType<NeutralToolCallContent>().ToList();
+            if (toolCalls.Count == 0) continue;
+
+            // Collect tool_call_ids from immediately following tool messages
+            HashSet<string> respondedIds = new();
+            int j = i + 1;
+            while (j < messages.Count && messages[j].Role == NeutralChatRole.Tool)
+            {
+                foreach (NeutralToolCallResponseContent resp in messages[j].Contents.OfType<NeutralToolCallResponseContent>())
+                {
+                    respondedIds.Add(resp.ToolCallId);
+                }
+                j++;
+            }
+
+            // Find missing tool_call_ids and add empty responses
+            foreach (NeutralToolCallContent tc in toolCalls)
+            {
+                if (!respondedIds.Contains(tc.Id))
+                {
+                    modified = true;
+                    result.Add(NeutralMessage.FromTool(
+                        NeutralToolCallResponseContent.Create(tc.Id, "")));
+                }
+            }
+        }
+
+        return modified ? result : messages;
     }
 
     /// <summary>
