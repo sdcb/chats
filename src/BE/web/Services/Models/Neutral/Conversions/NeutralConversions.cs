@@ -29,7 +29,102 @@ public static class NeutralConversions
                 result.Add(message);
             }
         }
-        return result;
+        return EnsureToolResponseIntegrity(result);
+    }
+
+    /// <summary>
+    /// Ensures tool_calls/tool_response chain integrity in the message list.
+    /// 1. Adds empty tool responses for any missing tool_call_ids (orphaned tool_calls).
+    /// 2. Removes tool response messages that don't follow an assistant message with matching tool_calls (orphaned responses).
+    /// This handles cases where messages are silently dropped during parsing.
+    /// </summary>
+    public static IList<NeutralMessage> EnsureToolResponseIntegrity(IList<NeutralMessage> messages)
+    {
+        if (messages.Count == 0) return messages;
+
+        // Quick check: any tool interaction at all?
+        bool hasToolInteraction = false;
+        for (int i = 0; i < messages.Count; i++)
+        {
+            if (messages[i].Role == NeutralChatRole.Tool ||
+                (messages[i].Role == NeutralChatRole.Assistant && messages[i].Contents.Any(c => c is NeutralToolCallContent)))
+            {
+                hasToolInteraction = true;
+                break;
+            }
+        }
+        if (!hasToolInteraction) return messages;
+
+        List<NeutralMessage> result = new(messages.Count);
+        bool modified = false;
+
+        for (int i = 0; i < messages.Count; i++)
+        {
+            NeutralMessage msg = messages[i];
+
+            // Remove orphaned tool responses: tool messages that don't follow an assistant with matching tool_calls
+            if (msg.Role == NeutralChatRole.Tool)
+            {
+                bool isOrphaned = true;
+                for (int r = result.Count - 1; r >= 0; r--)
+                {
+                    if (result[r].Role == NeutralChatRole.Tool) continue; // skip over tool messages
+
+                    if (result[r].Role == NeutralChatRole.Assistant)
+                    {
+                        // Check if any response ID matches this assistant's tool_calls
+                        HashSet<string> expectedIds = result[r].Contents
+                            .OfType<NeutralToolCallContent>()
+                            .Select(tc => tc.Id)
+                            .ToHashSet();
+                        isOrphaned = !msg.Contents
+                            .OfType<NeutralToolCallResponseContent>()
+                            .Any(resp => expectedIds.Contains(resp.ToolCallId));
+                    }
+                    break; // only check the nearest non-tool preceding message
+                }
+
+                if (isOrphaned)
+                {
+                    modified = true;
+                    continue;
+                }
+            }
+
+            result.Add(msg);
+
+            // For assistant messages with tool_calls, add missing tool responses
+            if (msg.Role == NeutralChatRole.Assistant)
+            {
+                List<NeutralToolCallContent> toolCalls = msg.Contents.OfType<NeutralToolCallContent>().ToList();
+                if (toolCalls.Count == 0) continue;
+
+                // Collect tool_call_ids from immediately following tool messages in the original list
+                HashSet<string> respondedIds = new();
+                int j = i + 1;
+                while (j < messages.Count && messages[j].Role == NeutralChatRole.Tool)
+                {
+                    foreach (NeutralToolCallResponseContent resp in messages[j].Contents.OfType<NeutralToolCallResponseContent>())
+                    {
+                        respondedIds.Add(resp.ToolCallId);
+                    }
+                    j++;
+                }
+
+                // Add empty responses for missing tool_call_ids
+                foreach (NeutralToolCallContent tc in toolCalls)
+                {
+                    if (!respondedIds.Contains(tc.Id))
+                    {
+                        modified = true;
+                        result.Add(NeutralMessage.FromTool(
+                            NeutralToolCallResponseContent.Create(tc.Id, "")));
+                    }
+                }
+            }
+        }
+
+        return modified ? result : messages;
     }
 
     /// <summary>
