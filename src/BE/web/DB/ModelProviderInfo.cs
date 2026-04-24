@@ -156,6 +156,12 @@ public static class ModelProviderInfo
              "https://api.novita.ai/openai",
              ""
          ),
+         [DBModelProvider.Qiniu] = new(
+             DBModelProvider.Qiniu,
+             "Qiniu",
+             "https://api.qnaigc.com/v1",
+             "sk-"
+         ),
      };
 
     private static readonly Dictionary<string, DBModelProvider> _nameToIdMap = _providers

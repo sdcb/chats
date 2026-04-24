@@ -91,6 +91,7 @@ public class Program
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.MimoChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.MoonshotChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.NovitaChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.QiniuChatService>();
 
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.ImageGenerationService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.AzureImageGenerationService>();

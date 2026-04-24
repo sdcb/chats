@@ -25,4 +25,5 @@ public enum DBModelProvider
     Anthropic = 20,
     Mimo = 21,
     Novita = 22,
+    Qiniu = 23,
 }
