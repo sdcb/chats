@@ -84,7 +84,12 @@ export const ChatMessage: FC<Props> = memo(
             >
               {isUserMessageGroup ? (
                 messages.map((message, index) => (
-                  <div key={`message-${message.id}`} data-message-id={message.id} data-message-role={message.role}>
+                  <div
+                    key={`message-${message.id}`}
+                    className={message.role === ChatRole.User ? 'w-full sm:w-[50vw] xl:w-[50vw]' : undefined}
+                    data-message-id={message.id}
+                    data-message-role={message.role}
+                  >
                     {message.role === ChatRole.User && (
                       <div
                         key={'user-message-' + index}
