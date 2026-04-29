@@ -540,7 +540,7 @@ const ChatInput = ({
         >
           <div
             className={cn(
-              'stretch flex flex-row rounded-md mx-auto w-full px-2 md:px-4',
+              'stretch flex flex-row rounded-md mx-auto w-full md:max-w-4xl xl:max-w-5xl',
             )}
           >
             <div

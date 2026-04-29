@@ -64,6 +64,7 @@ export const ChatMessage: FC<Props> = memo(
       <div
         className={cn(
           'w-full m-auto p-2 md:p-4 overflow-x-hidden',
+          !isMultiSpan && 'md:max-w-6xl',
           className,
         )}
       >
@@ -86,7 +87,13 @@ export const ChatMessage: FC<Props> = memo(
                 messages.map((message, index) => (
                   <div
                     key={`message-${message.id}`}
-                    className={message.role === ChatRole.User ? 'w-full sm:w-[50vw] xl:w-[50vw]' : undefined}
+                    className={cn(
+                      message.role === ChatRole.User && 'w-full',
+                      message.role === ChatRole.User &&
+                        (isMultiSpan
+                          ? 'sm:w-[50vw] xl:w-[50vw]'
+                          : 'md:ml-auto md:max-w-3xl xl:max-w-4xl'),
+                    )}
                     data-message-id={message.id}
                     data-message-role={message.role}
                   >
@@ -95,7 +102,9 @@ export const ChatMessage: FC<Props> = memo(
                         key={'user-message-' + index}
                         className={cn(
                           'w-full rounded-r-md group',
-                          'sm:w-[50vw] xl:w-[50vw]',
+                          isMultiSpan
+                            ? 'sm:w-[50vw] xl:w-[50vw]'
+                            : 'md:ml-auto md:max-w-3xl xl:max-w-4xl',
                           index > 0 && 'mt-4',
                         )}
                         data-user-message-id={message.id}
@@ -117,7 +126,12 @@ export const ChatMessage: FC<Props> = memo(
               ) : (
                 <>
                   <div
-                    className="md:grid md:grid-cols-[repeat(auto-fit,minmax(375px,1fr))] gap-4"
+                    className={cn(
+                      'gap-4',
+                      isMultiSpan
+                        ? 'md:grid md:grid-cols-[repeat(auto-fit,minmax(375px,1fr))]'
+                        : 'w-full md:mx-auto md:max-w-4xl xl:max-w-5xl',
+                    )}
                     data-response-content="true"
                     data-response-group-index={groupIndex}
                   >

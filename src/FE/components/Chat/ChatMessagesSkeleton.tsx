@@ -10,15 +10,21 @@ interface Props {
 const ChatMessagesSkeleton = ({ selectedChat }: Props) => {
   const spans = selectedChat?.spans || [];
   const isMultiSpan = spans.length > 1;
+  const userSkeletonClass = isMultiSpan
+    ? 'sm:w-[50vw] xl:w-[50vw]'
+    : 'md:ml-auto md:max-w-3xl xl:max-w-4xl';
+  const responseSkeletonClass = isMultiSpan
+    ? 'md:grid md:grid-cols-[repeat(auto-fit,minmax(375px,1fr))] gap-4'
+    : 'w-full md:mx-auto md:max-w-4xl xl:max-w-5xl';
 
   return (
     <div className={cn(
       'w-full m-auto p-2 md:p-4',
-      !isMultiSpan && 'w-full lg:w-11/12',
+      !isMultiSpan && 'md:max-w-6xl',
     )}>
       {/* 用户消息骨骼屏 */}
       <div className="flex w-full justify-end mb-4">
-        <div className="prose w-full dark:prose-invert rounded-r-md sm:w-[50vw] xl:w-[50vw]">
+        <div className={cn('prose w-full dark:prose-invert rounded-r-md', userSkeletonClass)}>
           <div className="bg-card py-2 px-3 rounded-md">
             <div className="space-y-2">
               <Skeleton className="h-4 w-3/4 ml-auto" />
@@ -34,10 +40,7 @@ const ChatMessagesSkeleton = ({ selectedChat }: Props) => {
       </div>
 
       {/* 助手消息骨骼屏 - 根据 spans 数量显示 */}
-      <div className={cn(
-        'mb-4',
-        isMultiSpan && 'md:grid md:grid-cols-[repeat(auto-fit,minmax(375px,1fr))] gap-4'
-      )}>
+      <div className={cn('mb-4', responseSkeletonClass)}>
         {spans.map((span, index) => (
           <div key={`assistant-skeleton-1-${span.spanId}`} className="group/item">
             {/* Header - 显示真实的图标和模型名称 */}
@@ -77,7 +80,7 @@ const ChatMessagesSkeleton = ({ selectedChat }: Props) => {
 
       {/* 用户消息骨骼屏 */}
       <div className="flex w-full justify-end mb-4">
-        <div className="prose w-full dark:prose-invert rounded-r-md sm:w-[50vw] xl:w-[50vw]">
+        <div className={cn('prose w-full dark:prose-invert rounded-r-md', userSkeletonClass)}>
           <div className="bg-card py-2 px-3 rounded-md">
             <div className="space-y-2">
               <Skeleton className="h-4 w-4/5 ml-auto" />
@@ -94,10 +97,7 @@ const ChatMessagesSkeleton = ({ selectedChat }: Props) => {
       </div>
 
       {/* 助手消息骨骼屏 - 根据 spans 数量显示 */}
-      <div className={cn(
-        'mb-4',
-        isMultiSpan && 'md:grid md:grid-cols-[repeat(auto-fit,minmax(375px,1fr))] gap-4'
-      )}>
+      <div className={cn('mb-4', responseSkeletonClass)}>
         {spans.map((span, index) => (
           <div key={`assistant-skeleton-2-${span.spanId}`} className="group/item">
             {/* Header - 显示真实的图标和模型名称 */}
@@ -138,7 +138,7 @@ const ChatMessagesSkeleton = ({ selectedChat }: Props) => {
 
       {/* 用户消息骨骼屏 */}
       <div className="flex w-full justify-end mb-4">
-        <div className="prose w-full dark:prose-invert rounded-r-md sm:w-[50vw] xl:w-[50vw]">
+        <div className={cn('prose w-full dark:prose-invert rounded-r-md', userSkeletonClass)}>
           <div className="bg-card py-2 px-3 rounded-md">
             <div className="space-y-2">
               <Skeleton className="h-4 w-2/3 ml-auto" />
@@ -153,10 +153,7 @@ const ChatMessagesSkeleton = ({ selectedChat }: Props) => {
       </div>
 
       {/* 助手消息骨骼屏 - 根据 spans 数量显示 */}
-      <div className={cn(
-        'mb-4',
-        isMultiSpan && 'md:grid md:grid-cols-[repeat(auto-fit,minmax(375px,1fr))] gap-4'
-      )}>
+      <div className={cn('mb-4', responseSkeletonClass)}>
         {spans.map((span, index) => (
           <div key={`assistant-skeleton-3-${span.spanId}`} className="group/item">
             {/* Header - 显示真实的图标和模型名称 */}
