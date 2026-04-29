@@ -31,6 +31,7 @@ import StepInfoBubble from './StepInfoBubble';
 
 import ChatError from '../ChatError/ChatError';
 import { IconCopy, IconEdit } from '../Icons';
+import Tips from '../Tips/Tips';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 
@@ -236,15 +237,17 @@ const ResponseMessage = (props: Props) => {
         />
         {showStepInfo && (
           <div className={cn(
-            'absolute -bottom-0.5 right-2 z-10 invisible group-hover/item:visible hover:bg-muted rounded-full',
+            'pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-end pr-1',
             isChatting(chatStatus) && 'hidden',
           )}>
-            <StepInfoBubble
-              stepId={stepInfo!.step.id}
-              edited={stepInfo!.step.edited}
-              chatId={chatId}
-              chatShareId={chatShareId}
-            />
+            <div className="pointer-events-auto invisible group-hover/item:visible">
+              <StepInfoBubble
+                stepId={stepInfo!.step.id}
+                edited={stepInfo!.step.edited}
+                chatId={chatId}
+                chatShareId={chatShareId}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -510,7 +513,7 @@ const ResponseMessage = (props: Props) => {
               const contentInfo = contentStepMap.get(c.i);
               const showStepInfo = contentInfo?.isLastInStep && !contentInfo.step.edited && contentInfo.step.id;
               return (
-                <div key={'text-' + index} className="relative group/item">
+                <div key={'text-' + index} className="relative group/item w-full min-w-0">
                   {message.displayType === 'Raw' ? (
                     <div className="prose dark:prose-invert [--tw-prose-body:#000] [--tw-prose-headings:#000] rounded-r-md flex-1 overflow-auto text-sm leading-4 font-normal py-2 px-3 group/item">
                       <div className="whitespace-pre-wrap font-mono">{c.c}</div>
@@ -540,44 +543,58 @@ const ResponseMessage = (props: Props) => {
                       );
                     })()
                   )}
-                  <div className="absolute -bottom-0.5 right-0 z-10 flex items-center gap-0.5">
-                    {!isChatting(chatStatus) && !readonly && (
-                      <>
-                        <button
-                          disabled={isChatting(messageStatus)}
-                          className="invisible group-hover/item:visible bg-card rounded-full p-1 hover:bg-accent transition-colors"
-                          onClick={(e) => {
-                            handleCopy(c.c);
-                            e.stopPropagation();
-                          }}
-                        >
-                          <IconCopy size={20} className="hover:opacity-50" />
-                        </button>
-                        <button
-                          disabled={isChatting(messageStatus)}
-                          className="invisible group-hover/item:visible bg-card rounded-full p-1 hover:bg-accent transition-colors"
-                          onClick={(e) => {
-                            handleToggleEditing(c.i, c.c);
-                            e.stopPropagation();
-                          }}
-                        >
-                          <IconEdit size={20} className="hover:opacity-50" />
-                        </button>
-                      </>
-                    )}
-                    {showStepInfo && (
-                      <div className={cn(
-                        'invisible group-hover/item:visible bg-card rounded-full',
-                        isChatting(chatStatus) && 'hidden',
-                      )}>
-                        <StepInfoBubble
-                          stepId={contentInfo!.step.id}
-                          edited={contentInfo!.step.edited}
-                          chatId={chatId}
-                          chatShareId={chatShareId}
-                        />
-                      </div>
-                    )}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-end pr-1">
+                    <div className="pointer-events-auto flex items-center gap-px">
+                      {!isChatting(chatStatus) && !readonly && (
+                        <>
+                          <Tips
+                            side="top"
+                            content={t('Copy')}
+                            trigger={
+                              <button
+                                disabled={isChatting(messageStatus)}
+                                className="invisible group-hover/item:visible rounded-full p-0.5 transition-opacity hover:opacity-60"
+                                onClick={(e) => {
+                                  handleCopy(c.c);
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <IconCopy size={16} />
+                              </button>
+                            }
+                          />
+                          <Tips
+                            side="top"
+                            content={t('Edit')}
+                            trigger={
+                              <button
+                                disabled={isChatting(messageStatus)}
+                                className="invisible group-hover/item:visible rounded-full p-0.5 transition-opacity hover:opacity-60"
+                                onClick={(e) => {
+                                  handleToggleEditing(c.i, c.c);
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <IconEdit size={16} />
+                              </button>
+                            }
+                          />
+                        </>
+                      )}
+                      {showStepInfo && (
+                        <div className={cn(
+                          'invisible group-hover/item:visible',
+                          isChatting(chatStatus) && 'hidden',
+                        )}>
+                          <StepInfoBubble
+                            stepId={contentInfo!.step.id}
+                            edited={contentInfo!.step.edited}
+                            chatId={chatId}
+                            chatShareId={chatShareId}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

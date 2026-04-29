@@ -74,7 +74,7 @@ export const StepInfoBubble = ({ stepId, edited, chatId, chatShareId, className 
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
-          className={`p-1 m-0 h-7 w-7 hover:bg-accent hover:text-accent-foreground transition-colors ${className || ''}`}
+          className={`p-0.5 m-0 h-6 w-6 bg-transparent hover:bg-transparent hover:text-inherit focus-visible:bg-transparent transition-opacity hover:opacity-60 ${className || ''}`}
           onClick={(e) => {
             e.stopPropagation();
             // 移动端点击时也需要加载数据
@@ -98,9 +98,9 @@ export const StepInfoBubble = ({ stepId, edited, chatId, chatShareId, className 
           }}
         >
           {loading ? (
-            <IconInfo size={20} className="animate-pulse opacity-50" />
+            <IconInfo size={16} className="animate-pulse opacity-50" />
           ) : (
-            <IconInfo size={20} />
+            <IconInfo size={16} />
           )}
         </Button>
       </PopoverTrigger>
