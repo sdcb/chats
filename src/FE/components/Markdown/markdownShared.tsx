@@ -25,6 +25,9 @@ export const appendStreamingCursor = (
 ) => `${value}${showCursor ? '▍' : ''}`;
 
 export const markdownComponents = {
+  pre({ children }: ReactMarkdownProps) {
+    return <div className="not-prose my-4">{children}</div>;
+  },
   code({ className, inline, children, ...props }: CodeProps) {
     if (children.length && children[0] == '▍') {
       return <span className="mt-1 animate-pulse cursor-default">▍</span>;
