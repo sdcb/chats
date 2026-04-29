@@ -52,7 +52,7 @@ const ChatMessagesSkeleton = ({ selectedChat }: Props) => {
             </div>
             {/* Message content */}
             <div className={cn(
-              'border-[1px] border-background rounded-md flex w-full bg-card mb-1',
+              'border-[1px] border-background rounded-md flex w-full bg-background mb-1',
               isMultiSpan && 'p-1 md:p-2',
               !isMultiSpan && 'border-none'
             )}>
@@ -112,7 +112,7 @@ const ChatMessagesSkeleton = ({ selectedChat }: Props) => {
             </div>
             {/* Message content */}
             <div className={cn(
-              'border-[1px] border-background rounded-md flex w-full bg-card mb-1',
+              'border-[1px] border-background rounded-md flex w-full bg-background mb-1',
               isMultiSpan && 'p-1 md:p-2',
               !isMultiSpan && 'border-none'
             )}>
@@ -171,7 +171,7 @@ const ChatMessagesSkeleton = ({ selectedChat }: Props) => {
             </div>
             {/* Message content */}
             <div className={cn(
-              'border-[1px] border-background rounded-md flex w-full bg-card mb-1',
+              'border-[1px] border-background rounded-md flex w-full bg-background mb-1',
               isMultiSpan && 'p-1 md:p-2',
               !isMultiSpan && 'border-none'
             )}>

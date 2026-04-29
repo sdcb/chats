@@ -45,10 +45,10 @@ const CodeBlockFallback: FC<Props> = ({ language, value }) => {
 
   return (
     <div className="codeblock relative font-sans text-base">
-      <div className="overflow-hidden border bg-muted">
+      <div className="overflow-hidden rounded-md border border-slate-300/80 bg-slate-50 shadow-sm dark:border-[#1b1d22] dark:bg-[#07090d]">
         <div
-          className={`flex h-7 cursor-pointer select-none items-center justify-between gap-2 bg-muted-foreground/10 px-2 text-xs text-muted-foreground ${
-            isExpanded ? 'border-b' : ''
+          className={`flex h-8 cursor-pointer select-none items-center justify-between gap-2 bg-slate-200/95 px-2.5 text-xs text-slate-700 dark:bg-[#010101] dark:text-slate-300 ${
+            isExpanded ? 'border-b border-slate-300/80 dark:border-[#181a1f]' : ''
           }`}
           role="button"
           tabIndex={0}
@@ -72,7 +72,7 @@ const CodeBlockFallback: FC<Props> = ({ language, value }) => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  className="flex shrink-0 items-center rounded p-1 text-xs text-muted-foreground transition-colors hover:bg-muted-foreground/10 hover:text-foreground"
+                  className="flex shrink-0 items-center rounded p-1 text-xs text-slate-600 transition-colors hover:bg-slate-900/10 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
                   onClick={copyToClipboard}
                   aria-label={isCopied ? t('Copied') : t('Click Copy')}
                 >
@@ -94,8 +94,8 @@ const CodeBlockFallback: FC<Props> = ({ language, value }) => {
           className="grid transition-[grid-template-rows] duration-200 ease-in-out"
           style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
         >
-          <div className="min-h-0 overflow-hidden">
-            <pre className="m-0 overflow-x-auto p-3 text-sm leading-6">
+          <div className="min-h-0 overflow-hidden bg-slate-50 dark:bg-[#07090d]">
+            <pre className="m-0 overflow-x-auto bg-transparent p-3 text-sm leading-6 text-slate-900 dark:text-slate-100">
               <code className="whitespace-pre font-mono">{value}</code>
             </pre>
           </div>

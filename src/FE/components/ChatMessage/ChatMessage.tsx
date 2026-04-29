@@ -138,7 +138,7 @@ export const ChatMessage: FC<Props> = memo(
                               }
                               key={'response-group-message-' + index}
                               className={cn(
-                                'border-[1px] border-background rounded-md flex w-full bg-card mb-1 chat-message-bg',
+                                'border-[1px] border-background rounded-md flex w-full bg-background mb-1',
                                 isMultiSpan &&
                                   message.isActive &&
                                   'border-primary/50 border-gray-300 dark:border-gray-600',
@@ -146,7 +146,7 @@ export const ChatMessage: FC<Props> = memo(
                                 !isMultiSpan && 'border-none',
                               )}
                             >
-                              <div className="rounded-r-md flex-1 leading-4 font-normal py-2 px-3">
+                              <div className="rounded-r-md flex-1 leading-4 font-normal px-2">
                                 <ResponseMessage
                                   key={'response-message-' + message.id + '-' + message.spanId}
                                   chatStatus={selectedChat.status}
