@@ -17,11 +17,69 @@ public class MimoChatServiceTest
 
     private static IHttpClientFactory CreateMockHttpClientFactory(FiddlerHttpDumpParser.HttpDump dump, bool validateRequest = true)
     {
-        var statusCode = (HttpStatusCode)dump.Response.StatusCode;
+        HttpStatusCode statusCode = (HttpStatusCode)dump.Response.StatusCode;
         // SSE requires newlines between events, but FiddlerHttpDumpParser strips them.
         // We add them back here for the mock stream.
-        var chunksWithNewlines = dump.Response.Chunks.Select(c => c + "\n").ToList();
+        List<string> chunksWithNewlines = dump.Response.Chunks.Select(c => c + "\n").ToList();
         return new FiddlerDumpHttpClientFactory(chunksWithNewlines, statusCode, validateRequest ? dump.Request.Body : null);
+    }
+
+    private static ChatConfig CreateChatConfig()
+    {
+        DateTime now = DateTime.UtcNow;
+
+        ModelKeySnapshot modelKeySnapshot = new()
+        {
+            Id = 11,
+            ModelKeyId = 1,
+            Name = "TestKey",
+            Secret = "test-api-key",
+            ModelProviderId = (short)DBModelProvider.OpenAI,
+            CreatedAt = now,
+        };
+
+        ModelKey modelKey = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelKeySnapshot.Id,
+            CurrentSnapshot = modelKeySnapshot,
+        };
+
+        modelKeySnapshot.ModelKey = modelKey;
+
+        ModelSnapshot modelSnapshot = new()
+        {
+            Id = 21,
+            ModelId = 1,
+            Name = "Test Model",
+            DeploymentName = "mimo-v2-flash",
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKeySnapshot.Id,
+            ModelKeySnapshot = modelKeySnapshot,
+            AllowStreaming = true,
+            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+            CreatedAt = now,
+        };
+
+        Model model = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelSnapshot.Id,
+            CurrentSnapshot = modelSnapshot,
+        };
+
+        modelSnapshot.Model = model;
+
+        return new ChatConfig
+        {
+            Id = 1,
+            ModelId = 1,
+            Model = model,
+        };
     }
 
     [Fact]
@@ -31,35 +89,12 @@ public class MimoChatServiceTest
         var filePath = Path.Combine(TestDataPath, "XiaomiMimo-NonStream.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump);
-        
-        var service = new MimoChatService(httpClientFactory);
 
-        var modelKey = new ModelKey
-        {
-            Id = 1,
-            Name = "TestKey",
-            Secret = "test-api-key",
-            ModelProviderId = (int)DBModelProvider.OpenAI,
-        };
+        MimoChatService service = new(httpClientFactory);
 
-        var model = new Model
-        {
-            Id = 1,
-            Name = "Test Model",
-            DeploymentName = "mimo-v2-flash",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
-            AllowStreaming = true,
-        };
+        var chatConfig = CreateChatConfig();
 
-        var chatConfig = new ChatConfig
-        {
-            Id = 1,
-            ModelId = 1,
-            Model = model,
-        };
-
-        var request = new ChatRequest
+        ChatRequest request = new()
         {
             Messages = [NeutralMessage.FromUserText("hello")],
             ChatConfig = chatConfig,
@@ -69,7 +104,7 @@ public class MimoChatServiceTest
         };
 
         // Act
-        var segments = new List<ChatSegment>();
+        List<ChatSegment> segments = new();
         await foreach (var segment in service.ChatStreamed(request, CancellationToken.None))
         {
             segments.Add(segment);
@@ -90,34 +125,11 @@ public class MimoChatServiceTest
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump, validateRequest: false);
 
-        var service = new MimoChatService(httpClientFactory);
+        MimoChatService service = new(httpClientFactory);
 
-        var modelKey = new ModelKey
-        {
-            Id = 1,
-            Name = "TestKey",
-            Secret = "test-api-key",
-            ModelProviderId = (int)DBModelProvider.OpenAI,
-        };
+        var chatConfig = CreateChatConfig();
 
-        var model = new Model
-        {
-            Id = 1,
-            Name = "Test Model",
-            DeploymentName = "mimo-v2-flash",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
-            AllowStreaming = true,
-        };
-
-        var chatConfig = new ChatConfig
-        {
-            Id = 1,
-            ModelId = 1,
-            Model = model,
-        };
-
-        var request = new ChatRequest
+        ChatRequest request = new()
         {
             Messages = [NeutralMessage.FromUserText("hello")],
             ChatConfig = chatConfig,
@@ -127,7 +139,7 @@ public class MimoChatServiceTest
         };
 
         // Act
-        var segments = new List<ChatSegment>();
+        List<ChatSegment> segments = new();
         await foreach (var segment in service.ChatStreamed(request, CancellationToken.None))
         {
             segments.Add(segment);
@@ -135,7 +147,7 @@ public class MimoChatServiceTest
 
         // Assert
         // Currently, this will fail because it will only find ThinkChatSegments and no ToolCallSegments
-        var toolCalls = segments.OfType<ToolCallSegment>().ToList();
+        List<ToolCallSegment> toolCalls = segments.OfType<ToolCallSegment>().ToList();
         Assert.NotEmpty(toolCalls);
         
         var firstToolCall = toolCalls.First(tc => tc.Name != null);
@@ -160,34 +172,11 @@ public class MimoChatServiceTest
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump, validateRequest: false);
 
-        var service = new MimoChatService(httpClientFactory);
+        MimoChatService service = new(httpClientFactory);
 
-        var modelKey = new ModelKey
-        {
-            Id = 1,
-            Name = "TestKey",
-            Secret = "test-api-key",
-            ModelProviderId = (int)DBModelProvider.OpenAI,
-        };
+        var chatConfig = CreateChatConfig();
 
-        var model = new Model
-        {
-            Id = 1,
-            Name = "Test Model",
-            DeploymentName = "mimo-v2-flash",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
-            AllowStreaming = true,
-        };
-
-        var chatConfig = new ChatConfig
-        {
-            Id = 1,
-            ModelId = 1,
-            Model = model,
-        };
-
-        var request = new ChatRequest
+        ChatRequest request = new()
         {
             Messages = [NeutralMessage.FromUserText("hello")],
             ChatConfig = chatConfig,
@@ -197,14 +186,14 @@ public class MimoChatServiceTest
         };
 
         // Act
-        var segments = new List<ChatSegment>();
+        List<ChatSegment> segments = new();
         await foreach (var segment in service.ChatStreamed(request, CancellationToken.None))
         {
             segments.Add(segment);
         }
 
         // Assert
-        var toolCalls = segments.OfType<ToolCallSegment>().ToList();
+        List<ToolCallSegment> toolCalls = segments.OfType<ToolCallSegment>().ToList();
         Assert.NotEmpty(toolCalls);
         
         var toolCall = toolCalls.First(tc => tc.Id != null);

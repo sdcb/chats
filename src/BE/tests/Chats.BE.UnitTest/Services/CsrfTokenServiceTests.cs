@@ -9,12 +9,12 @@ public class CsrfTokenServiceTests
     public void Constructor_SigningKeyNotSet_GeneratesNewKeyAndLogsWarning()
     {
         // Arrange
-        DictionaryConfiguration config = new DictionaryConfiguration([]);
-        StringLogger<CsrfTokenService> logger = new StringLogger<CsrfTokenService>();
-        FixedTimeProvider timeProvider = new FixedTimeProvider(DateTimeOffset.UtcNow);
+        DictionaryConfiguration config = new([]);
+        StringLogger<CsrfTokenService> logger = new();
+        FixedTimeProvider timeProvider = new(DateTimeOffset.UtcNow);
 
         // Act
-        CsrfTokenService service = new CsrfTokenService(config, logger, timeProvider);
+        CsrfTokenService service = new(config, logger, timeProvider);
 
         // Assert
         string logs = logger.GetLogs();
@@ -26,12 +26,12 @@ public class CsrfTokenServiceTests
     public void Constructor_SigningKeySet_ThrowsIfIncorrectLength()
     {
         // Arrange
-        DictionaryConfiguration config = new DictionaryConfiguration(new Dictionary<string, string>
+        DictionaryConfiguration config = new(new Dictionary<string, string>
             {
                 { "SigningKey", "TooShort" }
             });
-        StringLogger<CsrfTokenService> logger = new StringLogger<CsrfTokenService>();
-        FixedTimeProvider timeProvider = new FixedTimeProvider(DateTimeOffset.UtcNow);
+        StringLogger<CsrfTokenService> logger = new();
+        FixedTimeProvider timeProvider = new(DateTimeOffset.UtcNow);
 
         // Act & Assert
         Assert.Throws<ArgumentException>(() => new CsrfTokenService(config, logger, timeProvider));
@@ -41,13 +41,13 @@ public class CsrfTokenServiceTests
     public void GenerateToken_CreatesValidToken()
     {
         // Arrange
-        DictionaryConfiguration config = new DictionaryConfiguration(new Dictionary<string, string>
+        DictionaryConfiguration config = new(new Dictionary<string, string>
             {
                 { "SigningKey", "0UrY1tx6Z6GAQKX/xsC1xjQ3uaMHaEs3cRf8kwgEz+Q=" } // This should be a 32-byte base64 encoded key
             });
-        StringLogger<CsrfTokenService> logger = new StringLogger<CsrfTokenService>();
-        FixedTimeProvider timeProvider = new FixedTimeProvider(DateTimeOffset.UtcNow);
-        CsrfTokenService service = new CsrfTokenService(config, logger, timeProvider);
+        StringLogger<CsrfTokenService> logger = new();
+        FixedTimeProvider timeProvider = new(DateTimeOffset.UtcNow);
+        CsrfTokenService service = new(config, logger, timeProvider);
 
         // Act
         string token = service.GenerateToken();
@@ -62,13 +62,13 @@ public class CsrfTokenServiceTests
     public void VerifyToken_ValidToken_ReturnsTrue()
     {
         // Arrange
-        DictionaryConfiguration config = new DictionaryConfiguration(new Dictionary<string, string>
+        DictionaryConfiguration config = new(new Dictionary<string, string>
             {
                 { "SigningKey", "0UrY1tx6Z6GAQKX/xsC1xjQ3uaMHaEs3cRf8kwgEz+Q=" }
             });
-        StringLogger<CsrfTokenService> logger = new StringLogger<CsrfTokenService>();
-        FixedTimeProvider timeProvider = new FixedTimeProvider(DateTimeOffset.UtcNow);
-        CsrfTokenService service = new CsrfTokenService(config, logger, timeProvider);
+        StringLogger<CsrfTokenService> logger = new();
+        FixedTimeProvider timeProvider = new(DateTimeOffset.UtcNow);
+        CsrfTokenService service = new(config, logger, timeProvider);
         string token = service.GenerateToken();
 
         // Act
@@ -82,13 +82,13 @@ public class CsrfTokenServiceTests
     public void VerifyToken_InvalidToken_ReturnsFalse()
     {
         // Arrange
-        DictionaryConfiguration config = new DictionaryConfiguration(new Dictionary<string, string>
+        DictionaryConfiguration config = new(new Dictionary<string, string>
             {
                 { "SigningKey", "0UrY1tx6Z6GAQKX/xsC1xjQ3uaMHaEs3cRf8kwgEz+Q=" }
             });
-        StringLogger<CsrfTokenService> logger = new StringLogger<CsrfTokenService>();
-        FixedTimeProvider timeProvider = new FixedTimeProvider(DateTimeOffset.UtcNow);
-        CsrfTokenService service = new CsrfTokenService(config, logger, timeProvider);
+        StringLogger<CsrfTokenService> logger = new();
+        FixedTimeProvider timeProvider = new(DateTimeOffset.UtcNow);
+        CsrfTokenService service = new(config, logger, timeProvider);
         string token = service.GenerateToken(); // A valid token
 
         // Act
@@ -103,13 +103,13 @@ public class CsrfTokenServiceTests
     public void VerifyToken_ExpiredToken_ReturnsFalse()
     {
         // Arrange
-        DictionaryConfiguration config = new DictionaryConfiguration(new Dictionary<string, string>
+        DictionaryConfiguration config = new(new Dictionary<string, string>
             {
                 { "SigningKey", "0UrY1tx6Z6GAQKX/xsC1xjQ3uaMHaEs3cRf8kwgEz+Q=" }
             });
-        StringLogger<CsrfTokenService> logger = new StringLogger<CsrfTokenService>();
-        FixedTimeProvider timeProvider = new FixedTimeProvider(DateTimeOffset.UtcNow);
-        CsrfTokenService service = new CsrfTokenService(config, logger, timeProvider);
+        StringLogger<CsrfTokenService> logger = new();
+        FixedTimeProvider timeProvider = new(DateTimeOffset.UtcNow);
+        CsrfTokenService service = new(config, logger, timeProvider);
         string token = service.GenerateToken();
 
         // Simulate expiration by advancing the clock

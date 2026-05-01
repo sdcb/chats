@@ -8,8 +8,8 @@ public class UpdateModelRequestValidationTests
 {
     private static List<ValidationResult> ValidateModel(UpdateModelRequest request)
     {
-        ValidationContext context = new ValidationContext(request);
-        List<ValidationResult> results = new List<ValidationResult>();
+        ValidationContext context = new(request);
+        List<ValidationResult> results = new();
         Validator.TryValidateObject(request, context, results, validateAllProperties: true);
         return results;
     }

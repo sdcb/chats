@@ -16,10 +16,10 @@ public class MoonshotChatUsageTests
 
     private static IHttpClientFactory CreateMockHttpClientFactory(FiddlerHttpDumpParser.HttpDump dump, bool validateRequest = true)
     {
-        var statusCode = (HttpStatusCode)dump.Response.StatusCode;
+        HttpStatusCode statusCode = (HttpStatusCode)dump.Response.StatusCode;
         // SSE requires newlines between events, but FiddlerHttpDumpParser strips them.
         // We add them back here for the mock stream.
-        var chunksWithNewlines = dump.Response.Chunks.Select(c => c + "\n").ToList();
+        List<string> chunksWithNewlines = dump.Response.Chunks.Select(c => c + "\n").ToList();
         return new FiddlerDumpHttpClientFactory(chunksWithNewlines, statusCode, validateRequest ? dump.Request.Body : null);
     }
 
@@ -29,36 +29,64 @@ public class MoonshotChatUsageTests
         var filePath = Path.Combine(TestDataPath, "Moonshot.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         var httpClientFactory = CreateMockHttpClientFactory(dump, validateRequest: false);
+        DateTime now = DateTime.UtcNow;
 
-        var service = new MoonshotChatService(httpClientFactory);
+        MoonshotChatService service = new(httpClientFactory);
 
-        var modelKey = new ModelKey
+        ModelKeySnapshot modelKeySnapshot = new()
         {
-            Id = 1,
+            Id = 11,
+            ModelKeyId = 1,
             Name = "TestKey",
             Secret = "test-api-key",
-            ModelProviderId = (int)DBModelProvider.Moonshot,
+            ModelProviderId = (short)DBModelProvider.Moonshot,
+            CreatedAt = now,
         };
 
-        var model = new Model
+        ModelKey modelKey = new()
         {
             Id = 1,
-            Name = "Test Model",
-            DeploymentName = "kimi-k2-thinking-turbo",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
-            AllowStreaming = true,
-            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelKeySnapshot.Id,
+            CurrentSnapshot = modelKeySnapshot,
         };
 
-        var chatConfig = new ChatConfig
+        modelKeySnapshot.ModelKey = modelKey;
+
+        ModelSnapshot modelSnapshot = new()
+        {
+            Id = 21,
+            ModelId = 1,
+            Name = "Test Model",
+            DeploymentName = "kimi-k2-thinking-turbo",
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKeySnapshot.Id,
+            ModelKeySnapshot = modelKeySnapshot,
+            AllowStreaming = true,
+            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+            CreatedAt = now,
+        };
+
+        Model model = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelSnapshot.Id,
+            CurrentSnapshot = modelSnapshot,
+        };
+
+        modelSnapshot.Model = model;
+
+        ChatConfig chatConfig = new()
         {
             Id = 1,
             ModelId = 1,
             Model = model,
         };
 
-        var request = new ChatRequest
+        ChatRequest request = new()
         {
             Messages = [NeutralMessage.FromUserText("hello")],
             ChatConfig = chatConfig,
@@ -67,7 +95,7 @@ public class MoonshotChatUsageTests
             EndUserId = "8"
         };
 
-        var segments = new List<ChatSegment>();
+        List<ChatSegment> segments = new();
         await foreach (var segment in service.ChatStreamed(request, CancellationToken.None))
         {
             segments.Add(segment);

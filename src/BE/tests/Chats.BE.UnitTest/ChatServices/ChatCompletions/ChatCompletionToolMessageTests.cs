@@ -24,29 +24,58 @@ public class ChatCompletionToolMessageTests
 
     private static ChatRequest CreateBaseChatRequest(params NeutralMessage[] messages)
     {
-        var modelKey = new ModelKey
+        DateTime now = DateTime.UtcNow;
+
+        ModelKeySnapshot modelKeySnapshot = new()
         {
-            Id = 1,
+            Id = 11,
+            ModelKeyId = 1,
             Name = "TestKey",
             Secret = "test-api-key",
             Host = "https://api.openai.com/v1",
             ModelProviderId = (short)DBModelProvider.OpenAI,
+            CreatedAt = now,
         };
 
-        var model = new Model
+        ModelKey modelKey = new()
         {
             Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelKeySnapshot.Id,
+            CurrentSnapshot = modelKeySnapshot,
+        };
+
+        modelKeySnapshot.ModelKey = modelKey;
+
+        ModelSnapshot modelSnapshot = new()
+        {
+            Id = 21,
+            ModelId = 1,
             Name = "Test Model",
             DeploymentName = "gpt-4.1",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKeySnapshot.Id,
+            ModelKeySnapshot = modelKeySnapshot,
             AllowVision = true,
             AllowToolCall = true,
             AllowStreaming = true,
             ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+            CreatedAt = now,
         };
 
-        var chatConfig = new ChatConfig
+        Model model = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelSnapshot.Id,
+            CurrentSnapshot = modelSnapshot,
+        };
+
+        modelSnapshot.Model = model;
+
+        ChatConfig chatConfig = new()
         {
             Id = 1,
             ModelId = 1,
@@ -64,7 +93,7 @@ public class ChatCompletionToolMessageTests
     [Fact]
     public void ToOpenAIMessage_ToolMessageWithImage_UsesMultipartContent()
     {
-        var service = new TestableChatCompletionService(new DummyHttpClientFactory());
+        TestableChatCompletionService service = new(new DummyHttpClientFactory());
 
         NeutralMessage message = NeutralMessage.FromTool(
             NeutralToolCallResponseContent.Create("call_1", "tool output"),
@@ -85,7 +114,7 @@ public class ChatCompletionToolMessageTests
     [Fact]
     public void BuildMessages_ToolMessageWithMultipleResponses_SplitsThem()
     {
-        var service = new TestableChatCompletionService(new DummyHttpClientFactory());
+        TestableChatCompletionService service = new(new DummyHttpClientFactory());
         ChatRequest request = CreateBaseChatRequest(
             NeutralMessage.FromTool(
                 NeutralToolCallResponseContent.Create("call_1", "first result"),
@@ -111,7 +140,7 @@ public class ChatCompletionToolMessageTests
     [Fact]
     public void ToOpenAIMessage_AssistantToolCallWithEmptyParameters_UsesEmptyJsonObjectString()
     {
-        var service = new TestableChatCompletionService(new DummyHttpClientFactory());
+        TestableChatCompletionService service = new(new DummyHttpClientFactory());
 
         NeutralMessage message = NeutralMessage.FromAssistant(
             NeutralToolCallContent.Create("call_1", "create_docker_session", "")

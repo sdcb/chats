@@ -14,12 +14,12 @@ public class FiddlerDumpHttpClientFactoryTests
         // Arrange
         var filePath = Path.Combine(TestDataPath, "CodeExecute.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        var statusCode = (HttpStatusCode)dump.Response.StatusCode;
+        HttpStatusCode statusCode = (HttpStatusCode)dump.Response.StatusCode;
 
         IHttpClientFactory factory = new FiddlerDumpHttpClientFactory(dump.Response.Chunks, statusCode, dump.Request.Body);
         using HttpClient client = factory.CreateClient("test");
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, dump.Request.Url)
+        using HttpRequestMessage request = new(HttpMethod.Post, dump.Request.Url)
         {
             Content = new StringContent(dump.Request.Body, Encoding.UTF8, "application/json")
         };
@@ -46,7 +46,7 @@ public class FiddlerDumpHttpClientFactoryTests
         using HttpClient client = factory.CreateClient("test");
 
         string actualBody = dump.Request.Body.Replace("\"temperature\":1", "\"temperature\":2", StringComparison.Ordinal);
-        using var request = new HttpRequestMessage(HttpMethod.Post, dump.Request.Url)
+        using HttpRequestMessage request = new(HttpMethod.Post, dump.Request.Url)
         {
             Content = new StringContent(actualBody, Encoding.UTF8, "application/json")
         };
@@ -69,7 +69,7 @@ public class FiddlerDumpHttpClientFactoryTests
         IHttpClientFactory factory = new FiddlerDumpHttpClientFactory(dump.Response.Chunks, (HttpStatusCode)dump.Response.StatusCode, dump.Request.Body);
         using HttpClient client = factory.CreateClient("test");
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, dump.Request.Url)
+        using HttpRequestMessage request = new(HttpMethod.Post, dump.Request.Url)
         {
             Content = new StringContent("{}", Encoding.UTF8, "application/json")
         };
@@ -92,7 +92,7 @@ public class FiddlerDumpHttpClientFactoryTests
         IHttpClientFactory factory = new FiddlerDumpHttpClientFactory(dump.Response.Chunks, (HttpStatusCode)dump.Response.StatusCode, dump.Request.Body);
         using HttpClient client = factory.CreateClient("test");
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, dump.Request.Url)
+        using HttpRequestMessage request = new(HttpMethod.Post, dump.Request.Url)
         {
             Content = new StringContent("{", Encoding.UTF8, "application/json")
         };
@@ -114,7 +114,7 @@ public class FiddlerDumpHttpClientFactoryTests
         IHttpClientFactory factory = new FiddlerDumpHttpClientFactory(dump.Response.Chunks, (HttpStatusCode)dump.Response.StatusCode, expectedRequestBody: "not-json");
         using HttpClient client = factory.CreateClient("test");
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, dump.Request.Url)
+        using HttpRequestMessage request = new(HttpMethod.Post, dump.Request.Url)
         {
             Content = new StringContent(dump.Request.Body, Encoding.UTF8, "application/json")
         };
@@ -140,7 +140,7 @@ public class FiddlerDumpHttpClientFactoryTests
 
         using HttpClient client = factory.CreateClient("test");
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "https://example.test/")
+        using HttpRequestMessage request = new(HttpMethod.Post, "https://example.test/")
         {
             Content = new StringContent(actualJson, Encoding.UTF8, "application/json")
         };

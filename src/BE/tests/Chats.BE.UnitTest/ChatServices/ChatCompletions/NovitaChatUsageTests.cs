@@ -20,37 +20,65 @@ public class NovitaChatUsageTests
             "data: {\"id\":\"39ee1a70fb6afde81f5dba5c89d20989\",\"object\":\"chat.completion.chunk\",\"created\":1774790827,\"model\":\"qwen/qwen3.5-397b-a17b\",\"choices\":[],\"system_fingerprint\":\"\",\"usage\":{\"prompt_tokens\":1771,\"completion_tokens\":58,\"total_tokens\":1829,\"prompt_tokens_details\":null,\"completion_tokens_details\":null},\"sla_metrics\":{\"ttft_ms\":810,\"ts_us\":1774790828250010}}\n\n",
             "data: [DONE]\n\n",
         ];
+        DateTime now = DateTime.UtcNow;
 
-        var httpClientFactory = new FiddlerDumpHttpClientFactory(chunks, HttpStatusCode.OK);
-        var service = new NovitaChatService(httpClientFactory);
+        FiddlerDumpHttpClientFactory httpClientFactory = new(chunks, HttpStatusCode.OK);
+        NovitaChatService service = new(httpClientFactory);
 
-        var modelKey = new ModelKey
+        ModelKeySnapshot modelKeySnapshot = new()
         {
-            Id = 1,
+            Id = 11,
+            ModelKeyId = 1,
             Name = "TestKey",
             Secret = "test-api-key",
-            ModelProviderId = (int)DBModelProvider.Novita,
+            ModelProviderId = (short)DBModelProvider.Novita,
+            CreatedAt = now,
         };
 
-        var model = new Model
+        ModelKey modelKey = new()
         {
             Id = 1,
-            Name = "Test Model",
-            DeploymentName = "qwen/qwen3.5-397b-a17b",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
-            AllowStreaming = true,
-            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelKeySnapshot.Id,
+            CurrentSnapshot = modelKeySnapshot,
         };
 
-        var chatConfig = new ChatConfig
+        modelKeySnapshot.ModelKey = modelKey;
+
+        ModelSnapshot modelSnapshot = new()
+        {
+            Id = 21,
+            ModelId = 1,
+            Name = "Test Model",
+            DeploymentName = "qwen/qwen3.5-397b-a17b",
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKeySnapshot.Id,
+            ModelKeySnapshot = modelKeySnapshot,
+            AllowStreaming = true,
+            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+            CreatedAt = now,
+        };
+
+        Model model = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelSnapshot.Id,
+            CurrentSnapshot = modelSnapshot,
+        };
+
+        modelSnapshot.Model = model;
+
+        ChatConfig chatConfig = new()
         {
             Id = 1,
             ModelId = 1,
             Model = model,
         };
 
-        var request = new ChatRequest
+        ChatRequest request = new()
         {
             Messages = [NeutralMessage.FromUserText("hello")],
             ChatConfig = chatConfig,
@@ -59,7 +87,7 @@ public class NovitaChatUsageTests
             EndUserId = "8"
         };
 
-        var segments = new List<ChatSegment>();
+        List<ChatSegment> segments = new();
         await foreach (var segment in service.ChatStreamed(request, CancellationToken.None))
         {
             segments.Add(segment);

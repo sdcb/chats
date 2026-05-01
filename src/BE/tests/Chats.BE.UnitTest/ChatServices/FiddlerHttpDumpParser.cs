@@ -91,7 +91,7 @@ public class FiddlerHttpDumpParser
         var httpVersion = requestLine[2];
 
         // 解析请求头
-        var headers = new Dictionary<string, string>();
+        Dictionary<string, string> headers = new();
         int bodyStartIndex = 1;
         
         for (int i = 1; i < lines.Length; i++)
@@ -132,7 +132,7 @@ public class FiddlerHttpDumpParser
         var statusText = statusLine.Length > 2 ? statusLine[2] : "";
 
         // 解析响应头
-        var headers = new Dictionary<string, string>();
+        Dictionary<string, string> headers = new();
         int bodyStartLineIndex = 1;
         
         for (int i = 1; i < lines.Length; i++)
@@ -204,7 +204,7 @@ public class FiddlerHttpDumpParser
     /// </summary>
     private static List<string> ParseChunkedBody(byte[] bytes, int startOffset)
     {
-        var chunks = new List<string>();
+        List<string> chunks = new();
         int position = startOffset;
         
         while (position < bytes.Length)

@@ -30,7 +30,7 @@ public class AzureResponseApiServiceTests
             {
                 onRequest(request);
 
-                var resp = new HttpResponseMessage(statusCode)
+                HttpResponseMessage resp = new(statusCode)
                 {
                     Content = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes(responseBody)))
                 };
@@ -47,28 +47,57 @@ public class AzureResponseApiServiceTests
 
     private static ChatRequest CreateBaseChatRequest()
     {
-        var modelKey = new ModelKey
+        DateTime now = DateTime.UtcNow;
+
+        ModelKeySnapshot modelKeySnapshot = new()
         {
-            Id = 1,
+            Id = 11,
+            ModelKeyId = 1,
             Name = "TestKey",
             Secret = "test-api-key",
             Host = "https://redacted.openai.azure.com",
             ModelProviderId = (short)DBModelProvider.AzureAIFoundry,
+            CreatedAt = now,
         };
 
-        var model = new Model
+        ModelKey modelKey = new()
         {
             Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelKeySnapshot.Id,
+            CurrentSnapshot = modelKeySnapshot,
+        };
+
+        modelKeySnapshot.ModelKey = modelKey;
+
+        ModelSnapshot modelSnapshot = new()
+        {
+            Id = 21,
+            ModelId = 1,
             Name = "Test Model",
             DeploymentName = "gpt-5.2",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKeySnapshot.Id,
+            ModelKeySnapshot = modelKeySnapshot,
             AllowStreaming = true,
             ApiTypeId = (byte)DBApiType.OpenAIResponse,
             UseAsyncApi = false,
+            CreatedAt = now,
         };
 
-        var chatConfig = new ChatConfig
+        Model model = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelSnapshot.Id,
+            CurrentSnapshot = modelSnapshot,
+        };
+
+        modelSnapshot.Model = model;
+
+        ChatConfig chatConfig = new()
         {
             Id = 1,
             ModelId = 1,
@@ -96,12 +125,12 @@ public class AzureResponseApiServiceTests
 
         string? capturedBody = null;
 
-        var httpClientFactory = new CapturingHttpClientFactory(HttpStatusCode.OK, sse, req =>
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
         {
             capturedBody = req.Content == null ? null : req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
         });
 
-        var service = new AzureResponseApiService(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest();
 
         // Act
@@ -117,7 +146,7 @@ public class AzureResponseApiServiceTests
         Assert.True(doc.RootElement.TryGetProperty("include", out JsonElement includeEl), "Request body should contain include.");
         Assert.Equal(JsonValueKind.Array, includeEl.ValueKind);
 
-        var items = includeEl.EnumerateArray().Select(x => x.GetString()).ToList();
+        List<string?> items = includeEl.EnumerateArray().Select(x => x.GetString()).ToList();
         Assert.Contains("reasoning.encrypted_content", items);
     }
 
@@ -129,12 +158,12 @@ public class AzureResponseApiServiceTests
                      "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n";
 
         string? capturedBody = null;
-        var httpClientFactory = new CapturingHttpClientFactory(HttpStatusCode.OK, sse, req =>
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
         {
             capturedBody = req.Content == null ? null : req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
         });
 
-        var service = new AzureResponseApiService(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest() with
         {
             Messages =
@@ -180,10 +209,10 @@ public class AzureResponseApiServiceTests
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
 
         // SSE requires newlines between events, but FiddlerHttpDumpParser strips them.
-        var chunksWithNewlines = dump.Response.Chunks.Select(c => c + "\n").ToList();
-        var httpClientFactory = new FiddlerDumpHttpClientFactory(chunksWithNewlines, (HttpStatusCode)dump.Response.StatusCode, expectedRequestBody: null);
+        List<string> chunksWithNewlines = dump.Response.Chunks.Select(c => c + "\n").ToList();
+        FiddlerDumpHttpClientFactory httpClientFactory = new(chunksWithNewlines, (HttpStatusCode)dump.Response.StatusCode, expectedRequestBody: null);
 
-        var service = new AzureResponseApiService(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest();
 
         string expectedEncrypted = ExtractEncryptedContentFromDump(filePath);
@@ -209,12 +238,12 @@ public class AzureResponseApiServiceTests
                      "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n";
 
         string? capturedBody = null;
-        var httpClientFactory = new CapturingHttpClientFactory(HttpStatusCode.OK, sse, req =>
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
         {
             capturedBody = req.Content == null ? null : req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
         });
 
-        var service = new AzureResponseApiService(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest() with
         {
             Messages =
@@ -264,12 +293,12 @@ public class AzureResponseApiServiceTests
                      "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n";
 
         string? capturedBody = null;
-        var httpClientFactory = new CapturingHttpClientFactory(HttpStatusCode.OK, sse, req =>
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
         {
             capturedBody = req.Content == null ? null : req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
         });
 
-        var service = new AzureResponseApiService(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest() with
         {
             Messages =
@@ -318,12 +347,12 @@ public class AzureResponseApiServiceTests
                      "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n";
 
         string? capturedBody = null;
-        var httpClientFactory = new CapturingHttpClientFactory(HttpStatusCode.OK, sse, req =>
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
         {
             capturedBody = req.Content == null ? null : req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
         });
 
-        var service = new AzureResponseApiService(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest() with
         {
             Messages =

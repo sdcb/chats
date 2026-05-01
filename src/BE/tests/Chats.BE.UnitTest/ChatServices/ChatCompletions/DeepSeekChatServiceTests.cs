@@ -28,29 +28,58 @@ public class DeepSeekChatServiceTests
 
     private static ChatRequest CreateBaseChatRequest(params NeutralMessage[] messages)
     {
-        var modelKey = new ModelKey
+        DateTime now = DateTime.UtcNow;
+
+        ModelKeySnapshot modelKeySnapshot = new()
         {
-            Id = 1,
+            Id = 11,
+            ModelKeyId = 1,
             Name = "TestKey",
             Secret = "test-api-key",
             Host = "https://api.deepseek.com",
             ModelProviderId = (short)DBModelProvider.DeepSeek,
+            CreatedAt = now,
         };
 
-        var model = new Model
+        ModelKey modelKey = new()
         {
             Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelKeySnapshot.Id,
+            CurrentSnapshot = modelKeySnapshot,
+        };
+
+        modelKeySnapshot.ModelKey = modelKey;
+
+        ModelSnapshot modelSnapshot = new()
+        {
+            Id = 21,
+            ModelId = 1,
             Name = "Test Model",
             DeploymentName = "deepseek-reasoner",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKeySnapshot.Id,
+            ModelKeySnapshot = modelKeySnapshot,
             AllowVision = false,
             AllowToolCall = true,
             AllowStreaming = true,
             ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+            CreatedAt = now,
         };
 
-        var chatConfig = new ChatConfig
+        Model model = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelSnapshot.Id,
+            CurrentSnapshot = modelSnapshot,
+        };
+
+        modelSnapshot.Model = model;
+
+        ChatConfig chatConfig = new()
         {
             Id = 1,
             ModelId = 1,
@@ -69,7 +98,7 @@ public class DeepSeekChatServiceTests
     public void ToOpenAIMessage_AssistantToolCall_WithThinking_AttachesReasoningContent()
     {
         // Arrange
-        var svc = new TestableDeepSeekChatService(new DummyHttpClientFactory());
+        TestableDeepSeekChatService svc = new(new DummyHttpClientFactory());
 
         NeutralMessage msg = NeutralMessage.FromAssistant(
             NeutralThinkContent.Create("thought-1"),
@@ -89,7 +118,7 @@ public class DeepSeekChatServiceTests
     public void ToOpenAIMessage_AssistantNoToolCall_WithThinking_DoesNotAttachReasoningContent()
     {
         // Arrange
-        var svc = new TestableDeepSeekChatService(new DummyHttpClientFactory());
+        TestableDeepSeekChatService svc = new(new DummyHttpClientFactory());
 
         NeutralMessage msg = NeutralMessage.FromAssistant(
             NeutralThinkContent.Create("thought-1"),
@@ -108,7 +137,7 @@ public class DeepSeekChatServiceTests
     [Fact]
     public void ToOpenAIMessage_ToolMessageWithTextOnlyParts_CollapsesContentToString()
     {
-        var svc = new TestableDeepSeekChatService(new DummyHttpClientFactory());
+        TestableDeepSeekChatService svc = new(new DummyHttpClientFactory());
 
         NeutralMessage msg = NeutralMessage.FromTool(
             NeutralToolCallResponseContent.Create("call_1", "exit code: 0"),
@@ -125,7 +154,7 @@ public class DeepSeekChatServiceTests
     [Fact]
     public void BuildMessages_ToolMessageWithTextOnlyParts_CollapsesContentToString()
     {
-        var svc = new TestableDeepSeekChatService(new DummyHttpClientFactory());
+        TestableDeepSeekChatService svc = new(new DummyHttpClientFactory());
         ChatRequest request = CreateBaseChatRequest(
             NeutralMessage.FromTool(
                 NeutralToolCallResponseContent.Create("call_1", "exit code: 0"),

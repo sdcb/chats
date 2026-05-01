@@ -23,7 +23,7 @@ public class MoonshotChatServiceTests
     [Fact]
     public void ToOpenAIMessage_AssistantToolCall_WithThinking_AttachesReasoningContent()
     {
-        var svc = new TestableMoonshotChatService(new DummyHttpClientFactory());
+        TestableMoonshotChatService svc = new(new DummyHttpClientFactory());
 
         NeutralMessage msg = NeutralMessage.FromAssistant(
             NeutralThinkContent.Create("thought-1"),
@@ -40,7 +40,7 @@ public class MoonshotChatServiceTests
     [Fact]
     public void ToOpenAIMessage_AssistantNoToolCall_WithThinking_DoesNotAttachReasoningContent()
     {
-        var svc = new TestableMoonshotChatService(new DummyHttpClientFactory());
+        TestableMoonshotChatService svc = new(new DummyHttpClientFactory());
 
         NeutralMessage msg = NeutralMessage.FromAssistant(
             NeutralThinkContent.Create("thought-1"),

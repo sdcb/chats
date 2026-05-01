@@ -23,7 +23,7 @@ public sealed class FiddlerDumpHttpClientFactory : IHttpClientFactory
 
     public HttpClient CreateClient(string name)
     {
-        var handler = new FiddlerDumpHttpMessageHandler(chunks, statusCode, expectedRequestBody);
+        FiddlerDumpHttpMessageHandler handler = new(chunks, statusCode, expectedRequestBody);
         return new HttpClient(handler);
     }
 }
@@ -49,7 +49,7 @@ internal sealed class FiddlerDumpHttpMessageHandler : HttpMessageHandler
             JsonRequestAssertions.AssertSameJson(expectedRequestBody, actualBody);
         }
 
-        var response = new HttpResponseMessage(statusCode)
+        HttpResponseMessage response = new(statusCode)
         {
             Content = new StreamContent(new ChunkedMemoryStream(chunks))
         };

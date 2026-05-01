@@ -19,26 +19,55 @@ public class DeepSeekAnthropicServiceTests
 
     private static ChatRequest CreateRequest()
     {
-        ModelKey modelKey = new()
+        DateTime now = DateTime.UtcNow;
+
+        ModelKeySnapshot modelKeySnapshot = new()
         {
-            Id = 1,
+            Id = 11,
+            ModelKeyId = 1,
             Name = "TestKey",
             Secret = "test-api-key",
             Host = "https://api.deepseek.com/anthropic",
-            ModelProviderId = (int)DBModelProvider.DeepSeek,
+            ModelProviderId = (short)DBModelProvider.DeepSeek,
+            CreatedAt = now,
+        };
+
+        ModelKey modelKey = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelKeySnapshot.Id,
+            CurrentSnapshot = modelKeySnapshot,
+        };
+
+        modelKeySnapshot.ModelKey = modelKey;
+
+        ModelSnapshot modelSnapshot = new()
+        {
+            Id = 21,
+            ModelId = 1,
+            Name = "Test Model",
+            DeploymentName = "deepseek-reasoner",
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKeySnapshot.Id,
+            ModelKeySnapshot = modelKeySnapshot,
+            AllowStreaming = true,
+            MaxResponseTokens = 2048,
+            ApiTypeId = (byte)DBApiType.AnthropicMessages,
+            CreatedAt = now,
         };
 
         Model model = new()
         {
             Id = 1,
-            Name = "Test Model",
-            DeploymentName = "deepseek-reasoner",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
-            AllowStreaming = true,
-            MaxResponseTokens = 2048,
-            ApiTypeId = (byte)DBApiType.AnthropicMessages,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelSnapshot.Id,
+            CurrentSnapshot = modelSnapshot,
         };
+
+        modelSnapshot.Model = model;
 
         ChatConfig chatConfig = new()
         {

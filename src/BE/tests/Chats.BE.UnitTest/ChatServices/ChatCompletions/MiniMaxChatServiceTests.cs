@@ -23,22 +23,39 @@ public class MiniMaxChatServiceTests
 
     private static ChatRequest CreateBaseChatRequest()
     {
-        var modelKey = new ModelKey
+        DateTime now = DateTime.UtcNow;
+
+        ModelKeySnapshot modelKeySnapshot = new()
         {
-            Id = 1,
+            Id = 11,
+            ModelKeyId = 1,
             Name = "TestKey",
             Secret = "test-api-key",
             Host = "https://api.minimax.chat/v1",
             ModelProviderId = (short)DBModelProvider.MiniMax,
+            CreatedAt = now,
         };
 
-        var model = new Model
+        ModelKey modelKey = new()
         {
             Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelKeySnapshot.Id,
+            CurrentSnapshot = modelKeySnapshot,
+        };
+
+        modelKeySnapshot.ModelKey = modelKey;
+
+        ModelSnapshot modelSnapshot = new()
+        {
+            Id = 21,
+            ModelId = 1,
             Name = "Test Model",
             DeploymentName = "MiniMax-M2",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKeySnapshot.Id,
+            ModelKeySnapshot = modelKeySnapshot,
             AllowSearch = false,
             AllowVision = false,
             AllowStreaming = true,
@@ -49,9 +66,21 @@ public class MiniMaxChatServiceTests
             MinTemperature = 0,
             MaxTemperature = 2,
             ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+            CreatedAt = now,
         };
 
-        var chatConfig = new ChatConfig
+        Model model = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelSnapshot.Id,
+            CurrentSnapshot = modelSnapshot,
+        };
+
+        modelSnapshot.Model = model;
+
+        ChatConfig chatConfig = new()
         {
             Id = 1,
             ModelId = 1,
@@ -69,7 +98,7 @@ public class MiniMaxChatServiceTests
     [Fact]
     public void AssistantToolCall_WithThinking_ShouldIncludeReasoningDetailsArray()
     {
-        var service = new TestMiniMaxChatService(new DummyHttpClientFactory());
+        TestMiniMaxChatService service = new(new DummyHttpClientFactory());
 
         NeutralMessage msg = NeutralMessage.FromAssistant(
             NeutralThinkContent.Create("t1"),
@@ -90,7 +119,7 @@ public class MiniMaxChatServiceTests
     [Fact]
     public void AssistantWithoutToolCall_WithThinking_ShouldNotIncludeReasoningDetails()
     {
-        var service = new TestMiniMaxChatService(new DummyHttpClientFactory());
+        TestMiniMaxChatService service = new(new DummyHttpClientFactory());
 
         NeutralMessage msg = NeutralMessage.FromAssistant(
             NeutralThinkContent.Create("t1"),
@@ -104,7 +133,7 @@ public class MiniMaxChatServiceTests
     [Fact]
     public void BuildRequestBody_ShouldIncludeReasoningSplitTrue()
     {
-        var service = new TestMiniMaxChatService(new DummyHttpClientFactory());
+        TestMiniMaxChatService service = new(new DummyHttpClientFactory());
         ChatRequest req = CreateBaseChatRequest();
 
         JsonObject body = service.ToUpstreamRequestBody(req, stream: true);

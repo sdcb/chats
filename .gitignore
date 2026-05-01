@@ -51,17 +51,16 @@ logs.txt
 # backend
 /.vs
 *.user
-/src/**/obj
-/src/**/bin
 /src/BE/web/wwwroot
 /**/chats.db
 /**/chats.db-shm
 /**/chats.db-wal
 /Publish
 /src/BE/web/AppData/*
-/eng/**/bin
-/eng/**/obj
+**/bin
+**/obj
 .claude
 eng/Chats.Capture/.state
 eng/Chats.Capture/State/StatePreparationService.cs
 eng/Chats.Capture/Output/*
+**/artifacts
