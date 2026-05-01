@@ -156,11 +156,10 @@ export const ChatMessage: FC<Props> = memo(
                                 isMultiSpan &&
                                   message.isActive &&
                                   'border-primary/50 border-gray-300 dark:border-gray-600',
-                                isMultiSpan && 'p-1 md:p-2',
                                 !isMultiSpan && 'border-none',
                               )}
                             >
-                              <div className="rounded-r-md min-w-0 flex-1 leading-4 font-normal px-2">
+                              <div className="rounded-r-md min-w-0 flex-1 leading-4 font-normal px-1">
                                 <ResponseMessage
                                   key={'response-message-' + message.id + '-' + message.spanId}
                                   chatStatus={selectedChat.status}
