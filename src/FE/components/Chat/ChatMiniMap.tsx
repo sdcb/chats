@@ -233,7 +233,7 @@ const ChatMiniMap = memo(({ messages, containerRef }: ChatMiniMapProps) => {
   const showArrows = isMobile() || isHovered;
 
   return (
-    <div className="pointer-events-none absolute right-2 top-1/2 z-10 -translate-y-1/2">
+    <div className="pointer-events-none absolute right-0 top-1/2 z-10 -translate-y-1/2">
       <div
         className="pointer-events-auto flex flex-col items-end gap-1"
         onMouseEnter={() => setIsHovered(true)}
@@ -253,8 +253,9 @@ const ChatMiniMap = memo(({ messages, containerRef }: ChatMiniMapProps) => {
         <div className="flex max-h-[50vh] flex-col items-end gap-0.5 overflow-y-auto pr-0">
           {indicators.map((indicator, index) => {
             const isActive = activeIndex === index;
+            const isUserMessage = indicator.role === ChatRole.User;
             const roleLabel =
-              indicator.role === ChatRole.User ? t('User') : t('Assistant');
+              isUserMessage ? t('User') : t('Assistant');
             const tooltipContent = indicator.preview ? (
               <div className="max-w-[240px] space-y-1">
                 <div className="text-xs text-muted-foreground">{roleLabel}</div>
@@ -280,8 +281,12 @@ const ChatMiniMap = memo(({ messages, containerRef }: ChatMiniMapProps) => {
                   >
                     <span
                       className={cn(
-                        'h-[2px] w-full rounded-full bg-muted-foreground/40 transition-colors',
-                        isActive && 'bg-primary',
+                        'w-full rounded-full transition-all',
+                        isUserMessage
+                          ? 'h-[3px] bg-primary/55 ring-1 ring-primary/20'
+                          : 'h-[2px] bg-muted-foreground/40 transition-colors',
+                        isUserMessage && isActive && 'bg-primary ring-primary/40',
+                        !isUserMessage && isActive && 'bg-primary',
                       )}
                     />
                   </button>
