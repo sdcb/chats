@@ -177,7 +177,6 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             return NotFound();
         }
 
-        db.ModelKeySnapshots.RemoveRange(db.ModelKeySnapshots.Where(x => x.ModelKeyId == modelKeyId));
         db.ModelKeys.Remove(modelKey);
         await db.SaveChangesAsync(cancellationToken);
 

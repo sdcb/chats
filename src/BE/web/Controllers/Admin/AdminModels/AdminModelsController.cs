@@ -131,21 +131,14 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
     [HttpDelete("{modelId:int}")]
     public async Task<ActionResult<DeleteModelResponse>> DeleteModel(short modelId, CancellationToken cancellationToken)
     {
-        Model? cm = await db.Models.FindAsync([modelId], cancellationToken);
+        Model? cm = await db.Models
+            .Include(x => x.ApiKeys)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(x => x.Id == modelId, cancellationToken);
         if (cm == null) return NotFound();
 
-        var refInfo = await db.Models
-            .Where(x => x.Id == modelId)
-            .Select(x => new
-            {
-                ChatConfigs = x.ChatConfigs.Any(),
-                UserModels = x.UserModels.Any(),
-                ApiKeys = x.ApiKeys.Any(),
-                UserApiCache = x.UserApiCaches.Any(),
-            })
-            .SingleAsync(cancellationToken);
-
-        if (refInfo.ChatConfigs || refInfo.UserModels || refInfo.ApiKeys || refInfo.UserApiCache)
+        bool hasChatConfigs = await db.ChatConfigs.AnyAsync(x => x.ModelId == modelId, cancellationToken);
+        if (hasChatConfigs)
         {
             cm.Enabled = false;
             cm.UpdatedAt = DateTime.UtcNow;
@@ -153,13 +146,14 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
             
             return Ok(DeleteModelResponse.CreateSoftDeleted());
         }
-        else
-        {
-            db.ModelSnapshots.RemoveRange(db.ModelSnapshots.Where(x => x.ModelId == cm.Id));
-            db.Models.Remove(cm);
-            await db.SaveChangesAsync(cancellationToken);
-            return Ok(DeleteModelResponse.CreateHardDeleted());
-        }
+
+        db.UserModels.RemoveRange(db.UserModels.Where(x => x.ModelId == modelId));
+        db.UserApiCaches.RemoveRange(db.UserApiCaches.Where(x => x.ModelId == modelId));
+        cm.ApiKeys.Clear();
+
+        db.Models.Remove(cm);
+        await db.SaveChangesAsync(cancellationToken);
+        return Ok(DeleteModelResponse.CreateHardDeleted());
     }
 
     [HttpPost("validate")]
