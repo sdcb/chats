@@ -52,9 +52,11 @@ export const markdownComponents = {
   },
   table({ children }: ReactMarkdownProps) {
     return (
-      <table className="border-collapse border border-black px-3 py-1 dark:border-white">
-        {children}
-      </table>
+      <div className="not-prose my-4 w-full max-w-full overflow-x-auto">
+        <table className="w-full border-collapse border border-black dark:border-white">
+          {children}
+        </table>
+      </div>
     );
   },
   th({ children }: TableHeaderCellProps) {
