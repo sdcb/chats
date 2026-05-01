@@ -8,7 +8,7 @@ namespace Chats.DB;
 
 [Table("UsageTransaction")]
 [Index("CreditUserId", Name = "IX_UsageTransaction_CreditUser")]
-[Index("ModelId", Name = "IX_UsageTransaction_ModelId")]
+[Index("ModelSnapshotId", Name = "IX_UsageTransaction_ModelSnapshotId")]
 public partial class UsageTransaction
 {
     [Key]
@@ -24,15 +24,15 @@ public partial class UsageTransaction
 
     public DateTime CreatedAt { get; set; }
 
-    public short ModelId { get; set; }
+    public int ModelSnapshotId { get; set; }
 
     [ForeignKey("CreditUserId")]
     [InverseProperty("UsageTransactions")]
     public virtual User CreditUser { get; set; } = null!;
 
-    [ForeignKey("ModelId")]
+    [ForeignKey("ModelSnapshotId")]
     [InverseProperty("UsageTransactions")]
-    public virtual Model Model { get; set; } = null!;
+    public virtual ModelSnapshot ModelSnapshot { get; set; } = null!;
 
     [InverseProperty("UsageTransaction")]
     public virtual UserModelUsage? UserModelUsage { get; set; }

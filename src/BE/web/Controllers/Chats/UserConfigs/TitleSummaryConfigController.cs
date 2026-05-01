@@ -56,7 +56,7 @@ public sealed class TitleSummaryConfigController(
                 return BadRequest("Invalid model permission");
             }
 
-            if (userModel.Model.ApiType == DBApiType.OpenAIImageGeneration)
+            if ((DBApiType)userModel.Model.CurrentSnapshot.ApiTypeId == DBApiType.OpenAIImageGeneration)
             {
                 return BadRequest("Image generation model is not allowed.");
             }

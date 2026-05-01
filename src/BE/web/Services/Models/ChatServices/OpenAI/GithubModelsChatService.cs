@@ -8,7 +8,7 @@ public class GithubModelsChatService(IHttpClientFactory httpClientFactory) : Cha
     {
         JsonObject body = base.BuildRequestBody(request, stream);
 
-        if (request.ChatConfig.Model.DeploymentName.Contains("Mistral", StringComparison.OrdinalIgnoreCase))
+        if (request.ChatConfig.Model.CurrentSnapshot.DeploymentName.Contains("Mistral", StringComparison.OrdinalIgnoreCase))
         {
             // Mistral model does not support user field
             body.Remove("user");

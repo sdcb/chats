@@ -6,7 +6,7 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
 public class AzureImageGenerationService(IHttpClientFactory httpClientFactory) : ImageGenerationService(httpClientFactory)
 {
-    protected override string GetEndpoint(ModelKey modelKey)
+    protected override string GetEndpoint(ModelKeySnapshot modelKey)
     {
         // Image API uses /v1/images/generations, so we only need to add /openai prefix
         // Result: {host}/openai/v1/images/generations

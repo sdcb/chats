@@ -40,9 +40,9 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                 SpanId = x.SpanId,
                 Usage = x.IsUser || x.Steps.First().Usage == null ? null : new ChatMessageTempUsage()
                 {
-                    ModelId = x.Steps.First().Usage!.ModelId,
-                    ModelName = x.Steps.First().Usage!.Model.Name,
-                    ModelProviderId = x.Steps.First().Usage!.Model.ModelKey.ModelProviderId,
+                    ModelId = x.Steps.First().Usage!.ModelSnapshot.ModelId,
+                    ModelName = x.Steps.First().Usage!.ModelSnapshot.Name,
+                    ModelProviderId = x.Steps.First().Usage!.ModelSnapshot.ModelKeySnapshot.ModelProviderId,
                 },
                 Reaction = x.ReactionId,
             })
@@ -237,7 +237,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile)
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCallResponse)
-            .Include(x => x.Steps).ThenInclude(x => x.Usage!.Model.ModelKey)
+            .Include(x => x.Steps).ThenInclude(x => x.Usage!).ThenInclude(x => x.ModelSnapshot).ThenInclude(x => x.ModelKeySnapshot)
             .FirstOrDefaultAsync(x => x.Id == urlEncryption.DecryptTurnId(turnId), cancellationToken);
         if (message == null)
         {
@@ -276,7 +276,8 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                 CreatedAt = DateTime.UtcNow,
                 Usage = sourceUsage != null ? new UserModelUsage()
                 {
-                    ModelId = sourceUsage.ModelId,
+                    ModelSnapshotId = sourceUsage.ModelSnapshotId,
+                    ModelSnapshot = sourceUsage.ModelSnapshot,
                     UserId = currentUser.Id,
                     FinishReasonId = (byte)DBFinishReason.Success,
                     SegmentCount = 1,
@@ -298,7 +299,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                     SourceId = sourceUsage.SourceId,
                 } : null,
             })],
-            ChatConfigId = message.ChatConfigId,
+            ChatConfigSnapshotId = message.ChatConfigSnapshotId,
         };
         db.ChatTurns.Add(turn);
         message.Chat.UpdatedAt = DateTime.UtcNow;

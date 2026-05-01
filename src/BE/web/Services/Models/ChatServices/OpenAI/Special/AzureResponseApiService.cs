@@ -6,7 +6,7 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
 public class AzureResponseApiService(IHttpClientFactory httpClientFactory, ILogger<AzureResponseApiService> logger) : ResponseApiService(httpClientFactory, logger)
 {
-    protected override string GetEndpoint(ModelKey modelKey)
+    protected override string GetEndpoint(ModelKeySnapshot modelKey)
     {
         // Response API uses /v1/responses, so we only need to add /openai prefix
         // Result: {host}/openai/v1/responses

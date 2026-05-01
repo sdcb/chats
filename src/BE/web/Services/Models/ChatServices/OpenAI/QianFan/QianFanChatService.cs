@@ -8,7 +8,7 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI.QianFan;
 
 public class QianFanChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {
-    protected override void AddAuthorizationHeader(HttpRequestMessage request, ModelKey modelKey)
+    protected override void AddAuthorizationHeader(HttpRequestMessage request, ModelKeySnapshot modelKey)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
 
@@ -23,7 +23,7 @@ public class QianFanChatService(IHttpClientFactory httpClientFactory) : ChatComp
     {
         JsonObject body = base.BuildRequestBody(request, stream);
 
-        if (request.ChatConfig.Model.AllowSearch && request.ChatConfig.WebSearchEnabled)
+        if (request.ChatConfig.Model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
             body["web_search"] = new JsonObject
             {

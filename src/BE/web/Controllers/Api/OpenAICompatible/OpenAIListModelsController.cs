@@ -21,10 +21,10 @@ public class OpenAIListModelsController(
             Object = "list",
             Data = [.. models.Select(x => new ModelListItemDto
             {
-                Id = x.Model.Name,
+                Id = x.Model.CurrentSnapshot.Name,
                 Created = new DateTimeOffset(x.CreatedAt, TimeSpan.Zero).ToUnixTimeSeconds(),
                 Object = "model",
-                OwnedBy = x.Model.ModelKey.Name
+                OwnedBy = x.Model.CurrentSnapshot.ModelKeySnapshot.Name
             })]
         });
     }

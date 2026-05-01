@@ -26,7 +26,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         "image/webp",
     ];
 
-    protected virtual string GetEndpoint(ModelKey modelKey)
+    protected virtual string GetEndpoint(ModelKeySnapshot modelKey)
     {
         string? host = modelKey.Host;
         if (string.IsNullOrWhiteSpace(host))
@@ -36,24 +36,26 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         return host?.TrimEnd('/') ?? "";
     }
 
-    protected virtual void AddAuthorizationHeader(HttpRequestMessage request, ModelKey modelKey)
+    protected virtual void AddAuthorizationHeader(HttpRequestMessage request, ModelKeySnapshot modelKey)
     {
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelKey.Secret);
     }
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        string endpoint = GetEndpoint(request.ChatConfig.Model.ModelKey);
+        Model model = request.ChatConfig.Model;
+        ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
+        string endpoint = GetEndpoint(modelKey);
         bool hasTools = false;
 
-        if (request.ChatConfig.Model.UseAsyncApi)
+        if (request.ChatConfig.Model.CurrentSnapshot.UseAsyncApi)
         {
             // Background mode
             Stopwatch sw = Stopwatch.StartNew();
             JsonObject requestBody = BuildRequestBody(request, stream: false, background: true);
 
             using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/responses");
-            AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
+            AddAuthorizationHeader(httpRequest, modelKey);
             httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
 
             using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceResponseApi);
@@ -83,7 +85,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                     try
                     {
                         using HttpRequestMessage cancelRequest = new(HttpMethod.Post, $"{endpoint}/v1/responses/{responseId}/cancel");
-                        AddAuthorizationHeader(cancelRequest, request.ChatConfig.Model.ModelKey);
+                        AddAuthorizationHeader(cancelRequest, modelKey);
                         using HttpClient cancelClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceResponseApi);
                         await cancelClient.SendAsync(cancelRequest, default);
                     }
@@ -103,7 +105,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                     await Task.Delay(2000, cancellationToken);
 
                     using HttpRequestMessage getRequest = new(HttpMethod.Get, $"{endpoint}/v1/responses/{responseId}");
-                    AddAuthorizationHeader(getRequest, request.ChatConfig.Model.ModelKey);
+                    AddAuthorizationHeader(getRequest, modelKey);
 
                     using HttpResponseMessage getResponse = await httpClient.SendAsync(getRequest, cancellationToken);
                     responseJson = await getResponse.Content.ReadAsStringAsync(cancellationToken);
@@ -241,7 +243,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             JsonObject requestBody = BuildRequestBody(request, stream: true, background: false);
 
             using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/responses");
-            AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
+            AddAuthorizationHeader(httpRequest, modelKey);
             httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
             httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
@@ -431,7 +433,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
     {
         JsonObject body = new()
         {
-            ["model"] = request.ChatConfig.Model.DeploymentName,
+            ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
             ["input"] = BuildInputArray(request),
             ["stream"] = stream,
         };
@@ -662,7 +664,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         return parts;
     }
 
-    public override async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
+    public override async Task<string[]> ListModels(ModelKeySnapshot modelKey, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
 

@@ -68,12 +68,18 @@ public class UserManager(ChatsDB db)
         {
             newUser.UserBalance.Balance = config.Price;
             JsonTokenBalance[] models = JsonSerializer.Deserialize<JsonTokenBalance[]>(config.Models)!;
+            Dictionary<short, Model> modelMap = await db.Models
+                .Where(x => models.Select(m => m.ModelId).Contains(x.Id))
+                .Include(x => x.CurrentSnapshot)
+                .ToDictionaryAsync(x => x.Id, cancellationToken);
             newUser.UserModels = models
                 .Select(m =>
                 {
+                    Model model = modelMap[m.ModelId];
                     UserModel toReturn = new()
                     {
                         ModelId = m.ModelId,
+                        Model = model,
                         CreatedAt = DateTime.UtcNow,
                         User = newUser,
                     };

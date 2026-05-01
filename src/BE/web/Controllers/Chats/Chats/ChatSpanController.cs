@@ -27,7 +27,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
 
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans.OrderBy(x => x.SpanId)).ThenInclude(x => x.ChatConfig.ChatConfigMcps)
-            .Include(x => x.ChatSpans.OrderBy(x => x.SpanId)).ThenInclude(x => x.ChatConfig.Model.ModelKey)
+            .Include(x => x.ChatSpans.OrderBy(x => x.SpanId)).ThenInclude(x => x.ChatConfig.Model.CurrentSnapshot).ThenInclude(x => x.ModelKeySnapshot)
             .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == idEncryption.DecryptChatId(encryptedChatId) && x.UserId == currentUser.Id && !x.IsArchived, cancellationToken);
         if (chat == null)
@@ -174,14 +174,14 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
 
         span.ChatConfig.Model = um.Model;
         span.ChatConfig.ModelId = um.ModelId;
-        span.ChatConfig.WebSearchEnabled = um.Model.AllowSearch && span.ChatConfig.WebSearchEnabled;
+        span.ChatConfig.WebSearchEnabled = um.Model.CurrentSnapshot.AllowSearch && span.ChatConfig.WebSearchEnabled;
         if (span.ChatConfig.Temperature != null)
         {
-            span.ChatConfig.Temperature = (float)Math.Clamp((decimal)span.ChatConfig.Temperature.Value, um.Model.MinTemperature, um.Model.MaxTemperature);
+            span.ChatConfig.Temperature = (float)Math.Clamp((decimal)span.ChatConfig.Temperature.Value, um.Model.CurrentSnapshot.MinTemperature, um.Model.CurrentSnapshot.MaxTemperature);
         }
         if (span.ChatConfig.MaxOutputTokens != null)
         {
-            span.ChatConfig.MaxOutputTokens = Math.Min(span.ChatConfig.MaxOutputTokens.Value, um.Model.MaxResponseTokens);
+            span.ChatConfig.MaxOutputTokens = Math.Min(span.ChatConfig.MaxOutputTokens.Value, um.Model.CurrentSnapshot.MaxResponseTokens);
         }
         await db.SaveChangesAsync(cancellationToken);
         return Ok(ChatSpanDto.FromDB(span));

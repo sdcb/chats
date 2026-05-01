@@ -360,10 +360,10 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
                 // This avoids cross-thread mutations of EF tracked entities (DbContext is not thread-safe).
                 endLine.Step.Turn.Steps.Add(endLine.Step);
 
-                if (endLine.Step.Turn.ChatConfig == null)
+                if (endLine.Step.Turn.ChatConfigSnapshot == null)
                 {
                     ChatSpan chatSpan = toGenerateSpans.Single(x => x.SpanId == endLine.SpanId);
-                    endLine.Step.Turn.ChatConfig = await chatConfigService.GetOrCreateChatConfig(chatSpan.ChatConfig, default);
+                    endLine.Step.Turn.ChatConfigSnapshot = await chatConfigService.GetOrCreateChatConfigSnapshot(chatSpan.ChatConfig, default);
                 }
                 chat.UpdatedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync(CancellationToken.None);
@@ -539,7 +539,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             {
                 usedToolNames.Add(n);
             }
-            codeInterpreter.AddTools(csr.Tools, chatSpan.ChatConfig.Model.AllowVision);
+            codeInterpreter.AddTools(csr.Tools, chatSpan.ChatConfig.Model.CurrentSnapshot.AllowVision);
         }
         foreach (McpTool tool in chatSpan.ChatConfig.ChatConfigMcps.SelectMany(x => x.McpServer.McpTools))
         {

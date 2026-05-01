@@ -54,7 +54,7 @@ public class OpenAIImageController(
         UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, request.Model, cancellationToken);
         if (userModel == null) return InvalidModel(request.Model);
 
-        if (!AllowedApiTypes.Contains(userModel.Model.ApiType))
+        if (!AllowedApiTypes.Contains((DBApiType)userModel.Model.CurrentSnapshot.ApiTypeId))
         {
             return ErrorMessage(DBFinishReason.BadParameter, $"The model `{request.Model}` does not support image generation API.");
         }
@@ -99,7 +99,7 @@ public class OpenAIImageController(
         UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, model, cancellationToken);
         if (userModel == null) return InvalidModel(model);
 
-        if (!AllowedApiTypes.Contains(userModel.Model.ApiType))
+        if (!AllowedApiTypes.Contains((DBApiType)userModel.Model.CurrentSnapshot.ApiTypeId))
         {
             return ErrorMessage(DBFinishReason.BadParameter, $"The model `{model}` does not support image generation API.");
         }

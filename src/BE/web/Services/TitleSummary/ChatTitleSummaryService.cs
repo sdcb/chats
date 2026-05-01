@@ -55,7 +55,7 @@ public sealed class ChatTitleSummaryService(
                 return;
             }
 
-            if (userModel.Model.ApiType == DBApiType.OpenAIImageGeneration)
+            if ((DBApiType)userModel.Model.CurrentSnapshot.ApiTypeId == DBApiType.OpenAIImageGeneration)
             {
                 EmitFallback(fallbackTitle);
                 return;

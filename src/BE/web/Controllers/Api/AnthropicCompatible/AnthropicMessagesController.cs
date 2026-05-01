@@ -50,7 +50,7 @@ public class AnthropicMessagesController(
             return ErrorMessage(AnthropicErrorTypes.NotFoundError, $"The model `{request.Model}` does not exist or you do not have access to it.");
         }
 
-        if (!AllowedApiTypes.Contains(userModel.Model.ApiType))
+        if (!AllowedApiTypes.Contains((DBApiType)userModel.Model.CurrentSnapshot.ApiTypeId))
         {
             return ErrorMessage(AnthropicErrorTypes.InvalidRequestError, $"The model `{request.Model}` does not support messages API.");
         }

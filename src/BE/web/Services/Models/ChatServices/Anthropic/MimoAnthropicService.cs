@@ -9,7 +9,7 @@ namespace Chats.BE.Services.Models.ChatServices.Anthropic;
 /// </summary>
 public class MimoAnthropicService(IHttpClientFactory httpClientFactory) : AnthropicChatService(httpClientFactory)
 {
-    protected override (string url, string apiKey) GetEndpointAndKey(ModelKey modelKey)
+    protected override (string url, string apiKey) GetEndpointAndKey(ModelKeySnapshot modelKey)
     {
         return (
             modelKey.Host ?? "https://api.xiaomimimo.com/anthropic",

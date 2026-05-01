@@ -25,7 +25,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         "image/webp",
     ];
 
-    public override async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
+    public override async Task<string[]> ListModels(ModelKeySnapshot modelKey, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
 
@@ -59,7 +59,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         return [.. models];
     }
 
-    protected virtual string GetEndpoint(ModelKey modelKey)
+    protected virtual string GetEndpoint(ModelKeySnapshot modelKey)
     {
         string? host = modelKey.Host;
         if (string.IsNullOrWhiteSpace(host))
@@ -69,7 +69,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         return host?.TrimEnd('/') ?? "";
     }
 
-    protected virtual void AddAuthorizationHeader(HttpRequestMessage request, ModelKey modelKey)
+    protected virtual void AddAuthorizationHeader(HttpRequestMessage request, ModelKeySnapshot modelKey)
     {
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelKey.Secret);
     }
@@ -173,7 +173,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        if (!request.ChatConfig.Model.AllowStreaming || !request.Streamed)
+        if (!request.ChatConfig.Model.CurrentSnapshot.AllowStreaming || !request.Streamed)
         {
             await foreach (ChatSegment segment in ChatNonStreaming(request, cancellationToken))
             {
@@ -182,11 +182,13 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             yield break;
         }
 
-        string url = GetEndpoint(request.ChatConfig.Model.ModelKey);
+        Model model = request.ChatConfig.Model;
+        ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
+        string url = GetEndpoint(modelKey);
         JsonObject requestBody = BuildRequestBody(request, stream: true);
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/chat/completions");
-        AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
+        AddAuthorizationHeader(httpRequest, modelKey);
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
         httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
@@ -393,11 +395,13 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
     private async IAsyncEnumerable<ChatSegment> ChatNonStreaming(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        string url = GetEndpoint(request.ChatConfig.Model.ModelKey);
+        Model model = request.ChatConfig.Model;
+        ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
+        string url = GetEndpoint(modelKey);
         JsonObject requestBody = BuildRequestBody(request, stream: false);
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/chat/completions");
-        AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
+        AddAuthorizationHeader(httpRequest, modelKey);
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
 
         using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceOpenAI);
@@ -503,7 +507,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
     {
         JsonObject body = new()
         {
-            ["model"] = request.ChatConfig.Model.DeploymentName,
+            ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
             ["messages"] = BuildMessages(request),
             ["stream"] = stream,
         };
@@ -520,7 +524,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         if (request.ChatConfig.MaxOutputTokens.HasValue)
         {
-            if (request.ChatConfig.Model.UseMaxCompletionTokens)
+            if (request.ChatConfig.Model.CurrentSnapshot.UseMaxCompletionTokens)
             {
                 body["max_completion_tokens"] = request.ChatConfig.MaxOutputTokens.Value;
             }

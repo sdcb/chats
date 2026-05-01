@@ -28,21 +28,21 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
 
     internal const string DefaultEndpoint = "https://generativelanguage.googleapis.com/v1beta";
 
-    public bool AllowImageGeneration(Model model) => model.DeploymentName.Contains("gemini-2.0-flash-exp") ||
-                                                     model.DeploymentName.Contains("gemini-2.0-flash-exp-image-generation") ||
-                                                     model.DeploymentName.Contains("gemini-2.5-flash-image");
+    public bool AllowImageGeneration(Model model) => model.CurrentSnapshot.DeploymentName.Contains("gemini-2.0-flash-exp") ||
+                                                     model.CurrentSnapshot.DeploymentName.Contains("gemini-2.0-flash-exp-image-generation") ||
+                                                     model.CurrentSnapshot.DeploymentName.Contains("gemini-2.5-flash-image");
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         bool allowImageGeneration = AllowImageGeneration(request.ChatConfig.Model);
         JsonObject requestBody = BuildNativeRequestBody(request, allowImageGeneration);
 
-        string modelPath = NormalizeModelName(request.ChatConfig.Model.DeploymentName);
-        string endpoint = $"{GetBaseUrl(request.ChatConfig.Model.ModelKey)}/{modelPath}:streamGenerateContent";
+        string modelPath = NormalizeModelName(request.ChatConfig.Model.CurrentSnapshot.DeploymentName);
+        string endpoint = $"{GetBaseUrl(request.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot)}/{modelPath}:streamGenerateContent";
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, endpoint);
         httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        httpRequest.Headers.TryAddWithoutValidation("x-goog-api-key", request.ChatConfig.Model.ModelKey.Secret ?? throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Google AI API key is required."));
+        httpRequest.Headers.TryAddWithoutValidation("x-goog-api-key", request.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.Secret ?? throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Google AI API key is required."));
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
 
         using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceGemini);
@@ -282,7 +282,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
     {
         JsonObject body = new()
         {
-            ["model"] = NormalizeModelName(request.ChatConfig.Model.DeploymentName),
+            ["model"] = NormalizeModelName(request.ChatConfig.Model.CurrentSnapshot.DeploymentName),
             ["contents"] = ConvertMessages(request.Messages),
             ["safetySettings"] = BuildSafetySettings()
         };
@@ -345,18 +345,18 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
             config["topP"] = topP;
         }
 
-        int? maxTokens = request.ChatConfig.MaxOutputTokens ?? request.ChatConfig.Model.MaxResponseTokens;
+        int? maxTokens = request.ChatConfig.MaxOutputTokens ?? request.ChatConfig.Model.CurrentSnapshot.MaxResponseTokens;
         if (maxTokens.HasValue && maxTokens.Value > 0)
         {
             config["maxOutputTokens"] = maxTokens.Value;
         }
 
-        if (!allowImageGeneration && !request.ChatConfig.Model.DeploymentName.Contains("2.5-pro", StringComparison.OrdinalIgnoreCase))
+        if (!allowImageGeneration && !request.ChatConfig.Model.CurrentSnapshot.DeploymentName.Contains("2.5-pro", StringComparison.OrdinalIgnoreCase))
         {
             config["enableEnhancedCivicAnswers"] = true;
         }
 
-        if (Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.ReasoningEffortOptions).Length > 0)
+        if (Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.CurrentSnapshot.ReasoningEffortOptions).Length > 0)
         {
             JsonObject thinkingConfig = new()
             {
@@ -407,7 +407,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
             tools.Add(functionTool);
         }
 
-        if (request.ModelProviderCodeExecutionEnabled && request.ChatConfig.Model.AllowCodeExecution)
+        if (request.ModelProviderCodeExecutionEnabled && request.ChatConfig.Model.CurrentSnapshot.AllowCodeExecution)
         {
             tools.Add(new JsonObject
             {
@@ -415,7 +415,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
             });
         }
 
-        if (request.ChatConfig.WebSearchEnabled && request.ChatConfig.Model.AllowSearch)
+        if (request.ChatConfig.WebSearchEnabled && request.ChatConfig.Model.CurrentSnapshot.AllowSearch)
         {
             tools.Add(new JsonObject
             {
@@ -428,7 +428,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
 
     private static JsonObject? BuildFunctionDeclarations(ChatRequest request)
     {
-        if (!request.ChatConfig.Model.AllowToolCall)
+        if (!request.ChatConfig.Model.CurrentSnapshot.AllowToolCall)
         {
             return null;
         }
@@ -923,7 +923,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
             : $"models/{deploymentName}";
     }
 
-    private static string GetBaseUrl(ModelKey modelKey)
+    private static string GetBaseUrl(ModelKeySnapshot modelKey)
     {
         return string.IsNullOrWhiteSpace(modelKey.Host) ? DefaultEndpoint : modelKey.Host.TrimEnd('/');
     }
@@ -941,7 +941,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
         }
     }
 
-    protected override string GetEndpoint(ModelKey modelKey)
+    protected override string GetEndpoint(ModelKeySnapshot modelKey)
     {
         // for gemini, this method is only used for extract models
         var url = base.GetEndpoint(modelKey).TrimEnd('/');

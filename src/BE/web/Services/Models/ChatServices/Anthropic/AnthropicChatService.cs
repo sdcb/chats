@@ -20,7 +20,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 {
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        (string url, string apiKey) = GetEndpointAndKey(request.ChatConfig.Model.ModelKey);
+        (string url, string apiKey) = GetEndpointAndKey(request.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot);
         JsonObject requestBody = BuildRequestBody(request);
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/v1/messages");
@@ -274,7 +274,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         return json.ToString();
     }
 
-    protected virtual (string url, string apiKey) GetEndpointAndKey(ModelKey modelKey)
+    protected virtual (string url, string apiKey) GetEndpointAndKey(ModelKeySnapshot modelKey)
     {
         string url = (modelKey.Host ?? "https://api.anthropic.com").TrimEnd('/');
         if (url.EndsWith(".ai.azure.com")) // Azure AI Foundry Anthropic
@@ -303,7 +303,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         return null;
     }
 
-    public override async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
+    public override async Task<string[]> ListModels(ModelKeySnapshot modelKey, CancellationToken cancellationToken)
     {
         (string url, string apiKey) = GetEndpointAndKey(modelKey);
 
@@ -338,7 +338,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
     public override async Task<int> CountTokenAsync(ChatRequest request, CancellationToken cancellationToken)
     {
-        (string url, string apiKey) = GetEndpointAndKey(request.ChatConfig.Model.ModelKey);
+        (string url, string apiKey) = GetEndpointAndKey(request.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot);
         JsonObject requestBody = BuildCountTokensRequestBody(request);
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/v1/messages/count_tokens");
@@ -368,8 +368,8 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
         JsonObject body = new()
         {
-            ["max_tokens"] = request.ChatConfig.Model.MaxResponseTokens,
-            ["model"] = request.ChatConfig.Model.DeploymentName,
+            ["max_tokens"] = request.ChatConfig.Model.CurrentSnapshot.MaxResponseTokens,
+            ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
             ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks, request.Source),
             ["stream"] = true,
         };
@@ -540,7 +540,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
         JsonObject body = new()
         {
-            ["model"] = request.ChatConfig.Model.DeploymentName,
+            ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
             ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks, request.Source),
         };
 

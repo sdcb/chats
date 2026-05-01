@@ -20,7 +20,7 @@ public abstract partial class ChatService
 
     public abstract IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, CancellationToken cancellationToken);
 
-    public virtual Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken) => Task.FromResult(Array.Empty<string>());
+    public virtual Task<string[]> ListModels(ModelKeySnapshot modelKey, CancellationToken cancellationToken) => Task.FromResult(Array.Empty<string>());
 
     public virtual Task<int> CountTokenAsync(ChatRequest request, CancellationToken cancellationToken)
     {
@@ -32,7 +32,7 @@ public abstract partial class ChatService
         ChatRequest finalRequest = await PreProcess(request, fup, cancellationToken);
         IAsyncEnumerable<ChatSegment> stream = ChatStreamed(finalRequest, cancellationToken);
 
-        if (request.ChatConfig.Model.ThinkTagParserEnabled)
+        if (request.ChatConfig.Model.CurrentSnapshot.ThinkTagParserEnabled)
         {
             stream = ApplyThinkTagParser(stream, cancellationToken);
         }
@@ -69,7 +69,7 @@ public abstract partial class ChatService
             if (effectiveSystemPrompt != null)
             {
                 string processedPrompt = effectiveSystemPrompt
-                    .Replace("{{MODEL_NAME}}", request.ChatConfig.Model.Name)
+                    .Replace("{{MODEL_NAME}}", request.ChatConfig.Model.CurrentSnapshot.Name)
                     .Replace("{{CURRENT_DATE}}", DateTime.UtcNow.ToString("yyyy/MM/dd"))
                     .Replace("{{CURRENT_TIME}}", DateTime.UtcNow.ToString("HH:mm:ss"));
 
@@ -99,7 +99,7 @@ public abstract partial class ChatService
         {
             temperature = request.ChatConfig.Model.ClampTemperature(temperature);
             reasoningEffortId = request.ChatConfig.Model.ClampReasoningEffortId(reasoningEffortId);
-            if (request.ChatConfig.Model.ApiType == DBApiType.AnthropicMessages && final.ChatConfig.ThinkingBudget != null)
+            if ((DBApiType)request.ChatConfig.Model.CurrentSnapshot.ApiTypeId == DBApiType.AnthropicMessages && final.ChatConfig.ThinkingBudget != null)
             {
                 // invalid_request_error
                 // `temperature` may only be set to 1 when thinking is enabled.
@@ -113,8 +113,8 @@ public abstract partial class ChatService
         {
             ChatConfig = final.ChatConfig.WithClamps(temperature, reasoningEffortId),
             Messages = await RewriteVisionMessages(
-                request.ChatConfig.Model.SupportsVisionLink,
-                request.ChatConfig.Model.AllowVision,
+                request.ChatConfig.Model.CurrentSnapshot.SupportsVisionLink,
+                request.ChatConfig.Model.CurrentSnapshot.AllowVision,
                 request.Source == UsageSource.WebChat
                     ? RemoveNonCurrentTurnThinkingBlocks(final.Messages)
                     : final.Messages,

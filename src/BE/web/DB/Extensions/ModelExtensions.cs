@@ -9,9 +9,9 @@ public static class ModelExtensions
     {
         public JsonPriceConfig ToPriceConfig() => new()
         {
-            InputFreshTokenPrice = model.InputFreshTokenPrice1M / 100_0000,
-            OutputTokenPrice = model.OutputTokenPrice1M / 100_0000,
-            InputCachedTokenPrice = model.InputCachedTokenPrice1M / 100_0000,
+            InputFreshTokenPrice = model.CurrentSnapshot.InputFreshTokenPrice1M / 100_0000,
+            OutputTokenPrice = model.CurrentSnapshot.OutputTokenPrice1M / 100_0000,
+            InputCachedTokenPrice = model.CurrentSnapshot.InputCachedTokenPrice1M / 100_0000,
         };
     }
 }

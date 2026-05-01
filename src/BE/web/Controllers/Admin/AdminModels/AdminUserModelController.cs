@@ -24,7 +24,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         if (totalModelProviderCount == 0)
         {
             totalModelProviderCount = await db.ModelKeys
-                .Select(x => x.ModelProviderId)
+                .Select(x => x.CurrentSnapshot.ModelProviderId)
                 .Distinct()
                 .CountAsync(cancellationToken);
         }
@@ -39,7 +39,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                 Phone = x.Phone,
                 Provider = x.Provider,
                 Enabled = x.Enabled,
-                UserModelCount = x.UserModels.Count(um => !um.Model.IsDeleted),
+                UserModelCount = x.UserModels.Count(um => um.Model.Enabled),
                 ModelProviderCount = totalModelProviderCount,
             }),
             pagingRequest,
@@ -116,10 +116,10 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         // 获取所有提供商的统计信息
         UserModelProviderDto[] providers = await (
             from mk in db.ModelKeys
-            join m in db.Models on mk.Id equals m.ModelKeyId into models
+            join m in db.Models on mk.Id equals m.CurrentSnapshot.ModelKeyId into models
             from m in models.DefaultIfEmpty()
-            where m == null || !m.IsDeleted
-            group new { mk, m } by mk.ModelProviderId into g
+            where m == null || m.Enabled
+            group new { mk, m } by mk.CurrentSnapshot.ModelProviderId into g
             orderby g.Key
             select new UserModelProviderDto
             {
@@ -145,11 +145,11 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         // 获取该提供商下所有密钥的统计信息
         UserModelKeyDto[] keys = await (
             from mk in db.ModelKeys
-            where mk.ModelProviderId == providerId
-            join m in db.Models on mk.Id equals m.ModelKeyId into models
+            where mk.CurrentSnapshot.ModelProviderId == providerId
+            join m in db.Models on mk.Id equals m.CurrentSnapshot.ModelKeyId into models
             from m in models.DefaultIfEmpty()
-            where m == null || !m.IsDeleted
-            group new { mk, m } by new { mk.Id, mk.Name, mk.Order } into g
+            where m == null || m.Enabled
+            group new { mk, m } by new { mk.Id, Name = mk.CurrentSnapshot.Name, mk.Order } into g
             orderby g.Key.Order
             select new UserModelKeyDto
             {
@@ -185,14 +185,14 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
 
         // 获取该密钥下的所有模型
         var models = await db.Models
-            .Where(x => x.ModelKeyId == keyId)
+            .Where(x => x.CurrentSnapshot.ModelKeyId == keyId)
             .OrderBy(x => x.Order)
             .Select(x => new
             {
                 x.Id,
-                x.Name,
+                Name = x.CurrentSnapshot.Name,
                 x.Order,
-                x.IsDeleted
+                IsDeleted = !x.Enabled
             })
             .ToArrayAsync(cancellationToken);
 
@@ -226,16 +226,16 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
     {
         UserModelDto[] userModels = await db.UserModels
             .Where(x => x.UserId == userId)
-            .Include(x => x.Model)
-            .Include(x => x.Model.ModelKey)
+            .Include(x => x.Model.CurrentSnapshot)
+            .ThenInclude(x => x.ModelKeySnapshot)
             .OrderByDescending(x => x.Id)
             .Select(x => new UserModelDto()
             {
                 Id = x.Id,
                 ModelId = x.Model.Id,
-                DisplayName = x.Model.Name,
-                ModelKeyName = x.Model.ModelKey.Name,
-                ModelProviderId = x.Model.ModelKey.ModelProviderId,
+                DisplayName = x.Model.CurrentSnapshot.Name,
+                ModelKeyName = x.Model.CurrentSnapshot.ModelKeySnapshot.Name,
+                ModelProviderId = x.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
                 Counts = x.CountBalance,
                 Expires = x.ExpiresAt,
                 Tokens = x.TokenBalance,
@@ -279,39 +279,39 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         // 获取未分配给用户的模型
         AdminModelDto[] unassignedModels = await (
             from m in db.Models
-            where !m.IsDeleted && !assignedModelIds.Contains(m.Id)
-            join mpo in db.ModelProviderOrders on m.ModelKey.ModelProviderId equals mpo.ModelProviderId into mpoGroup
+            where m.Enabled && !assignedModelIds.Contains(m.Id)
+            join mpo in db.ModelProviderOrders on m.CurrentSnapshot.ModelKeySnapshot.ModelProviderId equals mpo.ModelProviderId into mpoGroup
             from mpo in mpoGroup.DefaultIfEmpty()
-            orderby mpo != null ? mpo.Order : int.MaxValue, m.ModelKey.Order, m.Order
+            orderby mpo != null ? mpo.Order : int.MaxValue, m.CurrentSnapshot.ModelKeySnapshot.ModelKey!.Order, m.Order
             select new AdminModelDto
             {
                 ModelId = m.Id,
-                Name = m.Name,
-                Enabled = !m.IsDeleted,
-                ModelKeyId = m.ModelKeyId,
-                ModelProviderId = m.ModelKey.ModelProviderId,
-                InputFreshTokenPrice1M = m.InputFreshTokenPrice1M,
-                OutputTokenPrice1M = m.OutputTokenPrice1M,
-                InputCachedTokenPrice1M = m.InputCachedTokenPrice1M,
-                DeploymentName = m.DeploymentName,
-                AllowSearch = m.AllowSearch,
-                AllowVision = m.AllowVision,
-                AllowStreaming = m.AllowStreaming,
-                AllowCodeExecution = m.AllowCodeExecution,
-                ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(m.ReasoningEffortOptions),
-                MinTemperature = m.MinTemperature,
-                MaxTemperature = m.MaxTemperature,
-                ContextWindow = m.ContextWindow,
-                MaxResponseTokens = m.MaxResponseTokens,
-                AllowToolCall = m.AllowToolCall,
-                SupportedImageSizes = Model.GetSupportedImageSizesAsArray(m.SupportedImageSizes),
-                ApiType = (DBApiType)m.ApiTypeId,
-                UseAsyncApi = m.UseAsyncApi,
-                UseMaxCompletionTokens = m.UseMaxCompletionTokens,
-                IsLegacy = m.IsLegacy,
-                ThinkTagParserEnabled = m.ThinkTagParserEnabled,
-                MaxThinkingBudget = m.MaxThinkingBudget,
-                SupportsVisionLink = m.SupportsVisionLink,
+                Name = m.CurrentSnapshot.Name,
+                Enabled = m.Enabled,
+                ModelKeyId = m.CurrentSnapshot.ModelKeyId,
+                ModelProviderId = m.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
+                InputFreshTokenPrice1M = m.CurrentSnapshot.InputFreshTokenPrice1M,
+                OutputTokenPrice1M = m.CurrentSnapshot.OutputTokenPrice1M,
+                InputCachedTokenPrice1M = m.CurrentSnapshot.InputCachedTokenPrice1M,
+                DeploymentName = m.CurrentSnapshot.DeploymentName,
+                AllowSearch = m.CurrentSnapshot.AllowSearch,
+                AllowVision = m.CurrentSnapshot.AllowVision,
+                AllowStreaming = m.CurrentSnapshot.AllowStreaming,
+                AllowCodeExecution = m.CurrentSnapshot.AllowCodeExecution,
+                ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(m.CurrentSnapshot.ReasoningEffortOptions),
+                MinTemperature = m.CurrentSnapshot.MinTemperature,
+                MaxTemperature = m.CurrentSnapshot.MaxTemperature,
+                ContextWindow = m.CurrentSnapshot.ContextWindow,
+                MaxResponseTokens = m.CurrentSnapshot.MaxResponseTokens,
+                AllowToolCall = m.CurrentSnapshot.AllowToolCall,
+                SupportedImageSizes = Model.GetSupportedImageSizesAsArray(m.CurrentSnapshot.SupportedImageSizes),
+                ApiType = (DBApiType)m.CurrentSnapshot.ApiTypeId,
+                UseAsyncApi = m.CurrentSnapshot.UseAsyncApi,
+                UseMaxCompletionTokens = m.CurrentSnapshot.UseMaxCompletionTokens,
+                IsLegacy = m.CurrentSnapshot.IsLegacy,
+                ThinkTagParserEnabled = m.CurrentSnapshot.ThinkTagParserEnabled,
+                MaxThinkingBudget = m.CurrentSnapshot.MaxThinkingBudget,
+                SupportsVisionLink = m.CurrentSnapshot.SupportsVisionLink,
             })
             .ToArrayAsync(cancellationToken);
 
@@ -341,12 +341,13 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             .Select(m => new
             {
                 m.Id,
-                m.Name,
+                m.CurrentSnapshotId,
+                Name = m.CurrentSnapshot.Name,
                 m.Order,
-                m.IsDeleted,
-                m.ModelKeyId,
-                ModelKeyName = m.ModelKey.Name,
-                ModelProviderId = m.ModelKey.ModelProviderId
+                IsDeleted = !m.Enabled,
+                ModelKeyId = m.CurrentSnapshot.ModelKeyId,
+                ModelKeyName = m.CurrentSnapshot.ModelKeySnapshot.Name,
+                ModelProviderId = m.CurrentSnapshot.ModelKeySnapshot.ModelProviderId
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -382,7 +383,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             {
                 CreditUserId = request.UserId,
                 CreatedAt = DateTime.UtcNow,
-                ModelId = request.ModelId,
+                ModelSnapshotId = modelInfo.CurrentSnapshotId,
                 CountAmount = request.Counts,
                 TokenAmount = request.Tokens,
                 TransactionTypeId = (byte)DBTransactionType.AdminCharge,
@@ -434,8 +435,8 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
 
         UserModel? userModel = await db.UserModels
             .Include(x => x.Model)
-            .Include(x => x.Model.UsageTransactions)
-            .Include(x => x.Model.ModelKey)
+            .Include(x => x.Model.CurrentSnapshot)
+            .ThenInclude(x => x.ModelKeySnapshot)
             .FirstOrDefaultAsync(um => um.Id == userModelId, cancellationToken);
         if (userModel == null)
         {
@@ -453,7 +454,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                 CreatedAt = DateTime.UtcNow,
                 CountAmount = request.CountsDelta,
                 TokenAmount = request.TokensDelta,
-                ModelId = userModel.ModelId,
+                ModelSnapshotId = userModel.Model.CurrentSnapshotId,
                 TransactionTypeId = (byte)DBTransactionType.AdminCharge,
             });
         }
@@ -473,8 +474,8 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
 
         int userId = userModel.UserId;
         short modelId = userModel.ModelId;
-        short modelKeyId = userModel.Model.ModelKeyId;
-        short modelProviderId = userModel.Model.ModelKey.ModelProviderId;
+        short modelKeyId = userModel.Model.CurrentSnapshot.ModelKeyId;
+        short modelProviderId = userModel.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId;
 
         // 获取更新后的统计信息
         int userModelCount = await GetUserModelCount(userId, cancellationToken);
@@ -490,13 +491,13 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             Model = new UserModelPermissionModelDto
             {
                 ModelId = modelId,
-                Name = userModel.Model.Name,
+                Name = userModel.Model.CurrentSnapshot.Name,
                 IsAssigned = true,
                 UserModelId = userModelId,
                 Counts = userModel.CountBalance,
                 Tokens = userModel.TokenBalance,
                 Expires = userModel.ExpiresAt,
-                IsDeleted = userModel.Model.IsDeleted
+                IsDeleted = !userModel.Model.Enabled
             }
         };
 
@@ -510,8 +511,8 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
     {
         UserModel? userModel = await db.UserModels
             .Include(x => x.Model)
-            .Include(x => x.Model.UsageTransactions)
-            .Include(x => x.Model.ModelKey)
+            .Include(x => x.Model.CurrentSnapshot)
+            .ThenInclude(x => x.ModelKeySnapshot)
             .FirstOrDefaultAsync(um => um.Id == userModelId, cancellationToken);
         if (userModel == null)
         {
@@ -520,21 +521,21 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
 
         int userId = userModel.UserId;
         short modelId = userModel.ModelId;
-        short modelKeyId = userModel.Model.ModelKeyId;
-        short modelProviderId = userModel.Model.ModelKey.ModelProviderId;
-        string modelName = userModel.Model.Name;
-        bool modelIsDeleted = userModel.Model.IsDeleted;
+        short modelKeyId = userModel.Model.CurrentSnapshot.ModelKeyId;
+        short modelProviderId = userModel.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId;
+        string modelName = userModel.Model.CurrentSnapshot.Name;
+        bool modelIsDeleted = !userModel.Model.Enabled;
 
         db.UserModels.Remove(userModel);
 
         // 如果有余额，需要创建退款记录
         if (userModel.TokenBalance != 0 || userModel.CountBalance != 0)
         {
-            userModel.Model.UsageTransactions.Add(new UsageTransaction()
+            db.UsageTransactions.Add(new UsageTransaction()
             {
                 CreditUserId = userModel.UserId,
                 CreatedAt = DateTime.UtcNow,
-                ModelId = userModel.ModelId,
+                ModelSnapshotId = userModel.Model.CurrentSnapshotId,
                 CountAmount = -userModel.CountBalance,
                 TokenAmount = -userModel.TokenBalance,
                 TransactionTypeId = (byte)DBTransactionType.AdminCharge,
@@ -578,7 +579,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
     private async Task<int> GetUserModelCount(int userId, CancellationToken cancellationToken)
     {
         return await db.UserModels
-            .Where(x => x.UserId == userId && !x.Model.IsDeleted)
+            .Where(x => x.UserId == userId && x.Model.Enabled)
             .CountAsync(cancellationToken);
     }
 
@@ -592,11 +593,11 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
 
         return await (
             from mk in db.ModelKeys
-            where mk.ModelProviderId == providerId
-            join m in db.Models on mk.Id equals m.ModelKeyId into models
+            where mk.CurrentSnapshot.ModelProviderId == providerId
+            join m in db.Models on mk.Id equals m.CurrentSnapshot.ModelKeyId into models
             from m in models.DefaultIfEmpty()
-            where m == null || !m.IsDeleted
-            group new { mk, m } by mk.ModelProviderId into g
+            where m == null || m.Enabled
+            group new { mk, m } by mk.CurrentSnapshot.ModelProviderId into g
             select new UserModelProviderDto
             {
                 ProviderId = g.Key,
@@ -618,10 +619,10 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         return await (
             from mk in db.ModelKeys
             where mk.Id == keyId
-            join m in db.Models on mk.Id equals m.ModelKeyId into models
+            join m in db.Models on mk.Id equals m.CurrentSnapshot.ModelKeyId into models
             from m in models.DefaultIfEmpty()
-            where m == null || !m.IsDeleted
-            group new { mk, m } by new { mk.Id, mk.Name, mk.Order } into g
+            where m == null || m.Enabled
+            group new { mk, m } by new { mk.Id, Name = mk.CurrentSnapshot.Name, mk.Order } into g
             select new UserModelKeyDto
             {
                 Id = g.Key.Id,
@@ -651,7 +652,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
 
         // 获取该Provider下所有模型ID
         List<short> modelIds = await db.Models
-            .Where(m => m.ModelKey.ModelProviderId == request.ProviderId && !m.IsDeleted)
+            .Where(m => m.CurrentSnapshot.ModelKeySnapshot.ModelProviderId == request.ProviderId && m.Enabled)
             .Select(m => m.Id)
             .ToListAsync(cancellationToken);
 
@@ -739,7 +740,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
 
         // 获取该Provider下所有未删除的模型ID
         List<short> modelIds = await db.Models
-            .Where(m => m.ModelKey.ModelProviderId == request.ProviderId && !m.IsDeleted)
+            .Where(m => m.CurrentSnapshot.ModelKeySnapshot.ModelProviderId == request.ProviderId && m.Enabled)
             .Select(m => m.Id)
             .ToListAsync(cancellationToken);
 
@@ -759,7 +760,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
 
         // 查找需要删除的用户模型
         List<UserModel> userModels = await db.UserModels
-            .Include(x => x.Model.UsageTransactions)
+            .Include(x => x.Model)
             .Where(um => um.UserId == request.UserId && modelIds.Contains(um.ModelId))
             .ToListAsync(cancellationToken);
 
@@ -788,11 +789,11 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             // 如果有余额，需要创建退款记录
             if (userModel.TokenBalance != 0 || userModel.CountBalance != 0)
             {
-                userModel.Model.UsageTransactions.Add(new UsageTransaction
+                db.UsageTransactions.Add(new UsageTransaction
                 {
                     CreditUserId = userModel.UserId,
                     CreatedAt = createdTime,
-                    ModelId = userModel.ModelId,
+                    ModelSnapshotId = userModel.Model.CurrentSnapshotId,
                     CountAmount = -userModel.CountBalance,
                     TokenAmount = -userModel.TokenBalance,
                     TransactionTypeId = (byte)DBTransactionType.AdminCharge,
@@ -836,7 +837,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         // 获取 Key 的 ProviderId
         var keyInfo = await db.ModelKeys
             .Where(k => k.Id == request.KeyId)
-            .Select(k => new { k.ModelProviderId })
+            .Select(k => new { ModelProviderId = k.CurrentSnapshot.ModelProviderId })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (keyInfo == null)
@@ -846,7 +847,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
 
         // 获取该Key下所有模型ID
         List<short> modelIds = await db.Models
-            .Where(m => m.ModelKeyId == request.KeyId && !m.IsDeleted)
+            .Where(m => m.CurrentSnapshot.ModelKeyId == request.KeyId && m.Enabled)
             .Select(m => m.Id)
             .ToListAsync(cancellationToken);
 
@@ -938,7 +939,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
         // 获取 Key 的 ProviderId
         var keyInfo = await db.ModelKeys
             .Where(k => k.Id == request.KeyId)
-            .Select(k => new { k.ModelProviderId })
+            .Select(k => new { ModelProviderId = k.CurrentSnapshot.ModelProviderId })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (keyInfo == null)
@@ -948,7 +949,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
 
         // 获取该Key下所有未删除的模型ID
         List<short> modelIds = await db.Models
-            .Where(m => m.ModelKeyId == request.KeyId && !m.IsDeleted)
+            .Where(m => m.CurrentSnapshot.ModelKeyId == request.KeyId && m.Enabled)
             .Select(m => m.Id)
             .ToListAsync(cancellationToken);
 
@@ -969,7 +970,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
 
         // 查找需要删除的用户模型
         List<UserModel> userModels = await db.UserModels
-            .Include(x => x.Model.UsageTransactions)
+            .Include(x => x.Model)
             .Where(um => um.UserId == request.UserId && modelIds.Contains(um.ModelId))
             .ToListAsync(cancellationToken);
 
@@ -999,11 +1000,11 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             // 如果有余额，需要创建退款记录
             if (userModel.TokenBalance != 0 || userModel.CountBalance != 0)
             {
-                userModel.Model.UsageTransactions.Add(new UsageTransaction
+                db.UsageTransactions.Add(new UsageTransaction
                 {
                     CreditUserId = userModel.UserId,
                     CreatedAt = createdTime,
-                    ModelId = userModel.ModelId,
+                    ModelSnapshotId = userModel.Model.CurrentSnapshotId,
                     CountAmount = -userModel.CountBalance,
                     TokenAmount = -userModel.TokenBalance,
                     TransactionTypeId = (byte)DBTransactionType.AdminCharge,
@@ -1114,9 +1115,9 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             .Select(m => new
             {
                 m.Id,
-                m.IsDeleted,
-                m.ModelKeyId,
-                ModelProviderId = m.ModelKey.ModelProviderId
+                IsDeleted = !m.Enabled,
+                ModelKeyId = m.CurrentSnapshot.ModelKeyId,
+                ModelProviderId = m.CurrentSnapshot.ModelKeySnapshot.ModelProviderId
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -1198,7 +1199,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
 
         // 查找需要删除的用户模型（仅删除指定的用户ID）
         List<UserModel> userModels = await db.UserModels
-            .Include(x => x.Model.UsageTransactions)
+            .Include(x => x.Model)
             .Where(um => um.ModelId == request.ModelId && request.UserIds.Contains(um.UserId))
             .ToListAsync(cancellationToken);
 
@@ -1216,11 +1217,11 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
             // 如果有余额，需要创建退款记录
             if (userModel.TokenBalance != 0 || userModel.CountBalance != 0)
             {
-                userModel.Model.UsageTransactions.Add(new UsageTransaction
+                db.UsageTransactions.Add(new UsageTransaction
                 {
                     CreditUserId = userModel.UserId,
                     CreatedAt = createdTime,
-                    ModelId = userModel.ModelId,
+                    ModelSnapshotId = userModel.Model.CurrentSnapshotId,
                     CountAmount = -userModel.CountBalance,
                     TokenAmount = -userModel.TokenBalance,
                     TransactionTypeId = (byte)DBTransactionType.AdminCharge,

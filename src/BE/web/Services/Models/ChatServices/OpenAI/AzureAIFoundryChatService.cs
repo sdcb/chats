@@ -6,7 +6,7 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 public class AzureAIFoundryChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {
-    protected override string GetEndpoint(ModelKey modelKey)
+    protected override string GetEndpoint(ModelKeySnapshot modelKey)
     {
         string? host = modelKey.Host;
         if (string.IsNullOrWhiteSpace(host))
@@ -34,18 +34,17 @@ public class AzureAIFoundryChatService(IHttpClientFactory httpClientFactory) : C
         return host.TrimEnd('/') + "/openai/v1";
     }
 
-    public static ModelKey CreateTransformedModelKey(ModelKey modelKey)
+    public static ModelKeySnapshot CreateTransformedModelKey(ModelKeySnapshot modelKey)
     {
-        return new ModelKey
+        return new ModelKeySnapshot
         {
             Id = modelKey.Id,
+            ModelKeyId = modelKey.ModelKeyId,
             ModelProviderId = modelKey.ModelProviderId,
             Name = modelKey.Name,
             Host = TransformAzureAIFoundryHost(modelKey.Host),
             Secret = modelKey.Secret,
             CreatedAt = modelKey.CreatedAt,
-            UpdatedAt = modelKey.UpdatedAt,
-            Order = modelKey.Order,
         };
     }
 }

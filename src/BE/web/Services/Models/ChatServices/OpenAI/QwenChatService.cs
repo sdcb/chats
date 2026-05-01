@@ -10,12 +10,12 @@ public class QwenChatService(IHttpClientFactory httpClientFactory) : ChatComplet
     {
         JsonObject body = base.BuildRequestBody(request, stream);
 
-        if (request.ChatConfig.Model.AllowSearch && request.ChatConfig.WebSearchEnabled)
+        if (request.ChatConfig.Model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
             body["enable_search"] = true;
         }
 
-        if (Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.ReasoningEffortOptions).Length != 0)
+        if (Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.CurrentSnapshot.ReasoningEffortOptions).Length != 0)
         {
             if (request.ChatConfig.ReasoningEffort.IsLowOrMinimal())
             {

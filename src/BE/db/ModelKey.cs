@@ -7,24 +7,11 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.DB;
 
 [Table("ModelKey")]
-[Index("ModelProviderId", Name = "IX_ModelKey2_ModelProviderId")]
+[Index("CurrentSnapshotId", Name = "UX_ModelKey_CurrentSnapshotId", IsUnique = true)]
 public partial class ModelKey
 {
     [Key]
     public short Id { get; set; }
-
-    public short ModelProviderId { get; set; }
-
-    [StringLength(50)]
-    public string Name { get; set; } = null!;
-
-    [StringLength(500)]
-    [Unicode(false)]
-    public string? Host { get; set; }
-
-    [StringLength(1000)]
-    [Unicode(false)]
-    public string? Secret { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
@@ -32,6 +19,9 @@ public partial class ModelKey
 
     public short Order { get; set; }
 
+    public int CurrentSnapshotId { get; set; }
+
+    [ForeignKey("CurrentSnapshotId")]
     [InverseProperty("ModelKey")]
-    public virtual ICollection<Model> Models { get; set; } = new List<Model>();
+    public virtual ModelKeySnapshot CurrentSnapshot { get; set; } = null!;
 }

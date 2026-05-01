@@ -24,13 +24,13 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             .Select(x => new ModelKeyDto
             {
                 Id = x.Id,
-                ModelProviderId = x.ModelProviderId,
-                Name = x.Name,
-                Host = x.Host,
-                Secret = x.Secret,
+                ModelProviderId = x.CurrentSnapshot.ModelProviderId,
+                Name = x.CurrentSnapshot.Name,
+                Host = x.CurrentSnapshot.Host,
+                Secret = x.CurrentSnapshot.Secret,
                 CreatedAt = x.CreatedAt,
-                EnabledModelCount = x.Models.Count(x => !x.IsDeleted),
-                TotalModelCount = x.Models.Count
+                EnabledModelCount = db.Models.Count(m => m.Enabled && m.CurrentSnapshot.ModelKeyId == x.Id),
+                TotalModelCount = db.Models.Count(m => m.CurrentSnapshot.ModelKeyId == x.Id)
             })
             .ToArrayAsync(cancellationToken);
 
@@ -47,6 +47,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
     public async Task<ActionResult> UpdateModelKey(short modelKeyId, [FromBody] UpdateModelKeyRequest request, CancellationToken cancellationToken)
     {
         ModelKey? modelKey = await db.ModelKeys
+            .Include(x => x.CurrentSnapshot)
             .FirstOrDefaultAsync(x => x.Id == modelKeyId, cancellationToken);
         if (modelKey == null)
         {
@@ -58,16 +59,40 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
         {
             return BadRequest("Invalid model provider");
         }
-        modelKey.ModelProviderId = request.ModelProviderId;
-        modelKey.Name = request.Name;
-        if (!modelKey.Secret.IsMaskedEquals(request.Secret))
+        string? secret = modelKey.CurrentSnapshot.Secret;
+        if (!secret.IsMaskedEquals(request.Secret))
         {
-            modelKey.Secret = request.Secret;
+            secret = request.Secret;
         }
-        modelKey.Host = request.Host;
-        if (db.ChangeTracker.HasChanges())
+
+        if (modelKey.CurrentSnapshot.ModelProviderId != request.ModelProviderId
+            || modelKey.CurrentSnapshot.Name != request.Name
+            || modelKey.CurrentSnapshot.Host != request.Host
+            || modelKey.CurrentSnapshot.Secret != secret)
         {
-            modelKey.UpdatedAt = DateTime.UtcNow;
+            DateTime now = DateTime.UtcNow;
+            modelKey.CurrentSnapshot = new ModelKeySnapshot
+            {
+                ModelKeyId = modelKey.Id,
+                ModelProviderId = request.ModelProviderId,
+                Name = request.Name,
+                Host = request.Host,
+                Secret = secret,
+                CreatedAt = now,
+            };
+            modelKey.UpdatedAt = now;
+
+            Model[] affectedModels = await db.Models
+                .Include(x => x.CurrentSnapshot)
+                .Where(x => x.CurrentSnapshot.ModelKeyId == modelKey.Id)
+                .ToArrayAsync(cancellationToken);
+
+            foreach (Model model in affectedModels)
+            {
+                model.CurrentSnapshot = CloneModelSnapshot(model, modelKey, now);
+                model.UpdatedAt = now;
+            }
+
             await db.SaveChangesAsync(cancellationToken);
         }
 
@@ -113,17 +138,25 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             }
         }
 
+        DateTime now = DateTime.UtcNow;
         ModelKey newModelKey = new()
         {
-            ModelProviderId = request.ModelProviderId,
-            Name = request.Name,
-            Host = request.Host,
-            Secret = request.Secret,
             Order = (short)newOrder,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshot = new ModelKeySnapshot
+            {
+                ModelProviderId = request.ModelProviderId,
+                Name = request.Name,
+                Host = request.Host,
+                Secret = request.Secret,
+                CreatedAt = now,
+            },
         };
         db.ModelKeys.Add(newModelKey);
+        await db.SaveChangesAsync(cancellationToken);
+
+        newModelKey.CurrentSnapshot.ModelKeyId = newModelKey.Id;
         await db.SaveChangesAsync(cancellationToken);
 
         return Created(default(string), value: newModelKey.Id);
@@ -132,7 +165,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
     [HttpDelete("{modelKeyId}")]
     public async Task<ActionResult> DeleteModelKey(short modelKeyId, CancellationToken cancellationToken)
     {
-        if (await db.Models.AnyAsync(m => m.ModelKeyId == modelKeyId, cancellationToken))
+        if (await db.Models.AnyAsync(m => m.CurrentSnapshot.ModelKeyId == modelKeyId, cancellationToken))
         {
             return BadRequest("Model key is in use");
         }
@@ -144,6 +177,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             return NotFound();
         }
 
+        db.ModelKeySnapshots.RemoveRange(db.ModelKeySnapshots.Where(x => x.ModelKeyId == modelKeyId));
         db.ModelKeys.Remove(modelKey);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -157,7 +191,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
         {
             ModelKey? modelKey = await db
                .ModelKeys
-               .Include(x => x.Models)
+               .Include(x => x.CurrentSnapshot)
                .AsSplitQuery()
                .FirstOrDefaultAsync(x => x.Id == modelKeyId, cancellationToken);
 
@@ -166,30 +200,41 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
                 return NotFound();
             }
 
-            DBModelProvider modelProvider = (DBModelProvider)modelKey.ModelProviderId;
+            DBModelProvider modelProvider = (DBModelProvider)modelKey.CurrentSnapshot.ModelProviderId;
 
-            DBApiType apiType = modelKey.Host switch
+            DBApiType apiType = modelKey.CurrentSnapshot.Host switch
             {
                 null => DBApiType.OpenAIChatCompletion,
                 var x when x.Contains("anthropic", StringComparison.OrdinalIgnoreCase) => DBApiType.AnthropicMessages,
                 var x when x.Contains("claude", StringComparison.OrdinalIgnoreCase) => DBApiType.AnthropicMessages,
                 _ => DBApiType.OpenAIChatCompletion,
             };
+            DateTime now = DateTime.UtcNow;
             Model dummyModel = new()
             {
-                ModelKey = modelKey,
-                ModelKeyId = modelKey.Id,
-                ApiTypeId = (byte)apiType,
-                Name = "dummy",
-                DeploymentName = "dummy",
+                Enabled = true,
+                CurrentSnapshot = new ModelSnapshot
+                {
+                    ModelId = 0,
+                    ModelKeyId = modelKey.Id,
+                    ModelKeySnapshotId = modelKey.CurrentSnapshotId,
+                    ModelKeySnapshot = modelKey.CurrentSnapshot,
+                    ApiTypeId = (byte)apiType,
+                    Name = "dummy",
+                    DeploymentName = "dummy",
+                    CreatedAt = now,
+                },
             };
             ChatService service = cf.CreateChatService(dummyModel);
-            string[] models = await service.ListModels(modelKey, cancellationToken);
+            string[] models = await service.ListModels(modelKey.CurrentSnapshot, cancellationToken);
             
             // 构建 deploymentName -> Model 的映射
-            Dictionary<string, Model[]> existingModelsMap = modelKey.Models
-                .GroupBy(x => x.DeploymentName, StringComparer.Ordinal)
-                .ToDictionary(x => x.Key, v => v.ToArray());
+            Dictionary<string, Model[]> existingModelsMap = await db.Models
+                .Include(x => x.CurrentSnapshot)
+                .ThenInclude(x => x.ModelKeySnapshot)
+                .Where(x => x.CurrentSnapshot.ModelKeyId == modelKey.Id)
+                .GroupBy(x => x.CurrentSnapshot.DeploymentName, StringComparer.Ordinal)
+                .ToDictionaryAsync(x => x.Key, v => v.ToArray(), cancellationToken);
 
             PossibleModelDto[] result = [.. models.Select(model => 
             {
@@ -201,32 +246,32 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
                     existingModelDto = new AdminModelDto
                     {
                         ModelId = existingModel.Id,
-                        Name = existingModel.Name,
-                        Enabled = !existingModel.IsDeleted,
-                        ModelKeyId = existingModel.ModelKeyId,
-                        ModelProviderId = existingModel.ModelKey.ModelProviderId,
-                        InputFreshTokenPrice1M = existingModel.InputFreshTokenPrice1M,
-                        OutputTokenPrice1M = existingModel.OutputTokenPrice1M,
-                        InputCachedTokenPrice1M = existingModel.InputCachedTokenPrice1M,
-                        DeploymentName = existingModel.DeploymentName,
-                        AllowSearch = existingModel.AllowSearch,
-                        AllowVision = existingModel.AllowVision,
-                        AllowStreaming = existingModel.AllowStreaming,
-                        AllowCodeExecution = existingModel.AllowCodeExecution,
-                        ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(existingModel.ReasoningEffortOptions),
-                        MinTemperature = existingModel.MinTemperature,
-                        MaxTemperature = existingModel.MaxTemperature,
-                        ContextWindow = existingModel.ContextWindow,
-                        MaxResponseTokens = existingModel.MaxResponseTokens,
-                        AllowToolCall = existingModel.AllowToolCall,
-                        SupportedImageSizes = Model.GetSupportedImageSizesAsArray(existingModel.SupportedImageSizes),
-                        ApiType = existingModel.ApiType,
-                        UseAsyncApi = existingModel.UseAsyncApi,
-                        UseMaxCompletionTokens = existingModel.UseMaxCompletionTokens,
-                        IsLegacy = existingModel.IsLegacy,
-                        ThinkTagParserEnabled = existingModel.ThinkTagParserEnabled,
-                        MaxThinkingBudget = existingModel.MaxThinkingBudget,
-                        SupportsVisionLink = existingModel.SupportsVisionLink,
+                        Name = existingModel.CurrentSnapshot.Name,
+                        Enabled = existingModel.Enabled,
+                        ModelKeyId = existingModel.CurrentSnapshot.ModelKeyId,
+                        ModelProviderId = existingModel.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
+                        InputFreshTokenPrice1M = existingModel.CurrentSnapshot.InputFreshTokenPrice1M,
+                        OutputTokenPrice1M = existingModel.CurrentSnapshot.OutputTokenPrice1M,
+                        InputCachedTokenPrice1M = existingModel.CurrentSnapshot.InputCachedTokenPrice1M,
+                        DeploymentName = existingModel.CurrentSnapshot.DeploymentName,
+                        AllowSearch = existingModel.CurrentSnapshot.AllowSearch,
+                        AllowVision = existingModel.CurrentSnapshot.AllowVision,
+                        AllowStreaming = existingModel.CurrentSnapshot.AllowStreaming,
+                        AllowCodeExecution = existingModel.CurrentSnapshot.AllowCodeExecution,
+                        ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(existingModel.CurrentSnapshot.ReasoningEffortOptions),
+                        MinTemperature = existingModel.CurrentSnapshot.MinTemperature,
+                        MaxTemperature = existingModel.CurrentSnapshot.MaxTemperature,
+                        ContextWindow = existingModel.CurrentSnapshot.ContextWindow,
+                        MaxResponseTokens = existingModel.CurrentSnapshot.MaxResponseTokens,
+                        AllowToolCall = existingModel.CurrentSnapshot.AllowToolCall,
+                        SupportedImageSizes = Model.GetSupportedImageSizesAsArray(existingModel.CurrentSnapshot.SupportedImageSizes),
+                        ApiType = (DBApiType)existingModel.CurrentSnapshot.ApiTypeId,
+                        UseAsyncApi = existingModel.CurrentSnapshot.UseAsyncApi,
+                        UseMaxCompletionTokens = existingModel.CurrentSnapshot.UseMaxCompletionTokens,
+                        IsLegacy = existingModel.CurrentSnapshot.IsLegacy,
+                        ThinkTagParserEnabled = existingModel.CurrentSnapshot.ThinkTagParserEnabled,
+                        MaxThinkingBudget = existingModel.CurrentSnapshot.MaxThinkingBudget,
+                        SupportsVisionLink = existingModel.CurrentSnapshot.SupportsVisionLink,
                     };
                 }
                 
@@ -329,5 +374,41 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
     private static void ReorderModelKeys(ModelKey[] existingModelKeys)
     {
         ReorderHelper.Default.ReorderEntities(existingModelKeys);
+    }
+
+    private static ModelSnapshot CloneModelSnapshot(Model model, ModelKey modelKey, DateTime createdAt)
+    {
+        ModelSnapshot current = model.CurrentSnapshot;
+        return new ModelSnapshot
+        {
+            ModelId = model.Id,
+            Name = current.Name,
+            DeploymentName = current.DeploymentName,
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKey.CurrentSnapshotId,
+            ModelKeySnapshot = modelKey.CurrentSnapshot,
+            ApiTypeId = current.ApiTypeId,
+            InputFreshTokenPrice1M = current.InputFreshTokenPrice1M,
+            InputCachedTokenPrice1M = current.InputCachedTokenPrice1M,
+            OutputTokenPrice1M = current.OutputTokenPrice1M,
+            AllowSearch = current.AllowSearch,
+            AllowVision = current.AllowVision,
+            AllowStreaming = current.AllowStreaming,
+            AllowToolCall = current.AllowToolCall,
+            AllowCodeExecution = current.AllowCodeExecution,
+            ThinkTagParserEnabled = current.ThinkTagParserEnabled,
+            MinTemperature = current.MinTemperature,
+            MaxTemperature = current.MaxTemperature,
+            ContextWindow = current.ContextWindow,
+            MaxResponseTokens = current.MaxResponseTokens,
+            ReasoningEffortOptions = current.ReasoningEffortOptions,
+            SupportedImageSizes = current.SupportedImageSizes,
+            UseAsyncApi = current.UseAsyncApi,
+            UseMaxCompletionTokens = current.UseMaxCompletionTokens,
+            IsLegacy = current.IsLegacy,
+            MaxThinkingBudget = current.MaxThinkingBudget,
+            SupportsVisionLink = current.SupportsVisionLink,
+            CreatedAt = createdAt,
+        };
     }
 }

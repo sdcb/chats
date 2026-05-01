@@ -196,10 +196,11 @@ public class ChatRunService(
             }
 
             ChatCompletionSnapshot snapshot = FullResponse ?? throw new InvalidOperationException("FullResponse is not available.");
+            int modelSnapshotId = model.Model.CurrentSnapshotId;
 
             UserModelUsage usage = new()
             {
-                ModelId = model.ModelId,
+                ModelSnapshotId = modelSnapshotId,
                 UserId = userId,
                 CreatedAt = DateTime.UtcNow,
                 FinishReasonId = (byte)FinishReason,
@@ -242,7 +243,7 @@ public class ChatRunService(
             {
                 usage.UsageTransaction = new()
                 {
-                    ModelId = model.ModelId,
+                    ModelSnapshotId = modelSnapshotId,
                     CreditUserId = userId,
                     CreatedAt = usage.CreatedAt,
                     CountAmount = -balance.Cost.Counts,

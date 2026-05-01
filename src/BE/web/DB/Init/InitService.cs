@@ -29,57 +29,80 @@ public class InitService(IServiceScopeFactory scopeFactory)
         BasicData.InsertAll(db);
         await db.SaveChangesAsync(cancellationToken);
 
-        Model model = new()
-        {
-            Name = "Hello-World Model",
-            UpdatedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            DeploymentName = Test2ChatService.ModelName,
-            AllowStreaming = true, 
-            ContextWindow = 64000,
-            MaxResponseTokens = 16000,
-        };
+        DateTime now = DateTime.UtcNow;
+
         ModelKey modelKey = new()
         {
-            ModelProviderId = (byte)DBModelProvider.Test,
-            Name = "Hello-World Key",
-            UpdatedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            Models = [model],
+            UpdatedAt = now,
+            CreatedAt = now,
+            CurrentSnapshot = new ModelKeySnapshot
+            {
+                ModelProviderId = (short)DBModelProvider.Test,
+                Name = "Hello-World Key",
+                CreatedAt = now,
+            },
         };
         db.ModelKeys.Add(modelKey);
+        await db.SaveChangesAsync(cancellationToken);
+
+        modelKey.CurrentSnapshot.ModelKeyId = modelKey.Id;
+
+        Model model = new()
+        {
+            Enabled = true,
+            UpdatedAt = now,
+            CreatedAt = now,
+            CurrentSnapshot = new ModelSnapshot
+            {
+                ModelId = 0,
+                Name = "Hello-World Model",
+                DeploymentName = Test2ChatService.ModelName,
+                ModelKeyId = modelKey.Id,
+                ModelKeySnapshotId = modelKey.CurrentSnapshotId,
+                ModelKeySnapshot = modelKey.CurrentSnapshot,
+                ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+                AllowStreaming = true,
+                ContextWindow = 64000,
+                MaxResponseTokens = 16000,
+                CreatedAt = now,
+            },
+        };
+        db.Models.Add(model);
+        await db.SaveChangesAsync(cancellationToken);
+
+        model.CurrentSnapshot.ModelId = model.Id;
         await db.SaveChangesAsync(cancellationToken);
 
         User adminUser = new()
         {
             UserName = "chats",
             DisplayName = "chats",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = now,
             PasswordHash = scope.ServiceProvider.GetRequiredService<PasswordHasher>().HashPassword("RESET!!!"),
             Enabled = true,
             Role = "admin",
-            UpdatedAt = DateTime.UtcNow,
+            UpdatedAt = now,
             UserModels =
             [
                 new UserModel
                 {
                     ModelId = model.Id,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    ExpiresAt = DateTime.UtcNow.AddYears(10),
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                    ExpiresAt = now.AddYears(10),
                 }
             ],
             UserBalance = new UserBalance
             {
                 Balance = 100,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = now,
+                UpdatedAt = now,
             },
         };
         BalanceTransaction balanceTransaction = new()
         {
             Amount = 100,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = now,
             TransactionTypeId = (byte)DBTransactionType.Initial,
             User = adminUser,
             CreditUser = adminUser,
@@ -89,8 +112,8 @@ public class InitService(IServiceScopeFactory scopeFactory)
         db.Prompts.Add(new Prompt
         {
             CreateUser = adminUser,
-            UpdatedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = now,
+            CreatedAt = now,
             Content = DefaultPrompt,
             IsDefault = true,
             IsSystem = true,
@@ -100,15 +123,15 @@ public class InitService(IServiceScopeFactory scopeFactory)
         {
             Configs = "./AppData/Files",
             FileServiceTypeId = (byte)DBFileServiceType.Local,
-            IsDefault = true, 
+            IsDefault = true,
             Name = "Local Files",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
+            CreatedAt = now,
+            UpdatedAt = now,
         });
         db.Configs.Add(new()
         {
             Key = DBConfigKey.SiteInfo,
-            Value = JsonSerializer.Serialize(new SiteInfo()
+            Value = JsonSerializer.Serialize(new SiteInfo
             {
                 CustomizedLine1 = "Default UserName/Password(PLEASE RESET ASAP): chats/RESET!!!",
                 CustomizedLine2 = "Text here can be customized in Admin -> Global Config -> siteInfo",

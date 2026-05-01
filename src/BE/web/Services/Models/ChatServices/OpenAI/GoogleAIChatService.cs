@@ -11,7 +11,7 @@ public class GoogleAIChatService(IHttpClientFactory httpClientFactory) : ChatCom
     {
         JsonObject body = base.BuildRequestBody(request, stream);
 
-        if (request.ChatConfig.Model.AllowSearch && request.ChatConfig.WebSearchEnabled)
+        if (request.ChatConfig.Model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
             body["tools"] = new JsonArray
             {

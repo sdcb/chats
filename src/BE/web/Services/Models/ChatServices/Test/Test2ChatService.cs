@@ -152,7 +152,7 @@ public class Test2ChatService : ChatService
     }
 
     internal const string ModelName = "test-model";
-    public override Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
+    public override Task<string[]> ListModels(ModelKeySnapshot modelKey, CancellationToken cancellationToken)
     {
         return Task.FromResult(new[] { ModelName });
     }

@@ -19,7 +19,7 @@ public class ModelProvidersController(ChatsDB db) : ControllerBase
         // 单次查询（EF 可翻译）：先将 GroupBy 投影为可连接的匿名对象，再 LEFT JOIN 排序，并使用相关子查询统计模型数量
         var providersWithKeyCounts =
             from mk in db.ModelKeys
-            group mk by mk.ModelProviderId into g
+            group mk by mk.CurrentSnapshot.ModelProviderId into g
             select new { ProviderId = g.Key, KeyCount = g.Count() };
 
         ModelProviderDto[] data = await (
@@ -27,7 +27,7 @@ public class ModelProvidersController(ChatsDB db) : ControllerBase
             join mpo in db.ModelProviderOrders on k.ProviderId equals mpo.ModelProviderId into j
             from mpo in j.DefaultIfEmpty()
             let sortOrder = (int?)mpo.Order
-            let modelCount = db.Models.Count(m => !m.IsDeleted && m.ModelKey.ModelProviderId == k.ProviderId)
+            let modelCount = db.Models.Count(m => m.Enabled && m.CurrentSnapshot.ModelKeySnapshot.ModelProviderId == k.ProviderId)
             orderby (sortOrder ?? short.MaxValue), k.ProviderId
             select new ModelProviderDto
             {
@@ -50,18 +50,18 @@ public class ModelProvidersController(ChatsDB db) : ControllerBase
         }
 
         ModelKeyDto[] result = await db.ModelKeys
-            .Where(x => x.ModelProviderId == providerId)
+            .Where(x => x.CurrentSnapshot.ModelProviderId == providerId)
             .OrderBy(x => x.Order).ThenByDescending(x => x.Id)
             .Select(x => new ModelKeyDto
             {
                 Id = x.Id,
-                ModelProviderId = x.ModelProviderId,
-                Name = x.Name,
-                Host = x.Host,
-                Secret = x.Secret,
+                ModelProviderId = x.CurrentSnapshot.ModelProviderId,
+                Name = x.CurrentSnapshot.Name,
+                Host = x.CurrentSnapshot.Host,
+                Secret = x.CurrentSnapshot.Secret,
                 CreatedAt = x.CreatedAt,
-                EnabledModelCount = x.Models.Count(m => !m.IsDeleted),
-                TotalModelCount = x.Models.Count
+                EnabledModelCount = db.Models.Count(m => m.Enabled && m.CurrentSnapshot.ModelKeyId == x.Id),
+                TotalModelCount = db.Models.Count(m => m.CurrentSnapshot.ModelKeyId == x.Id)
             })
             .ToArrayAsync(cancellationToken);
 
@@ -86,37 +86,37 @@ public class ModelProvidersController(ChatsDB db) : ControllerBase
         }
         
         AdminModelDto[] result = await db.Models
-            .Where(x => x.ModelKeyId == modelKeyId)
+            .Where(x => x.CurrentSnapshot.ModelKeyId == modelKeyId)
             .OrderBy(x => x.Order).ThenByDescending(x => x.Id)
             .Select(x => new AdminModelDto
             {
                 ModelId = x.Id,
-                ModelProviderId = x.ModelKey.ModelProviderId,
-                Name = x.Name,
-                Enabled = !x.IsDeleted,
-                ModelKeyId = x.ModelKeyId,
-                DeploymentName = x.DeploymentName,
-                AllowSearch = x.AllowSearch,
-                AllowVision = x.AllowVision,
-                AllowCodeExecution = x.AllowCodeExecution,
-                ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(x.ReasoningEffortOptions),
-                AllowStreaming = x.AllowStreaming,
-                MinTemperature = x.MinTemperature,
-                MaxTemperature = x.MaxTemperature,
-                ContextWindow = x.ContextWindow,
-                MaxResponseTokens = x.MaxResponseTokens,
-                AllowToolCall = x.AllowToolCall,
-                SupportedImageSizes = Model.GetSupportedImageSizesAsArray(x.SupportedImageSizes),
-                InputFreshTokenPrice1M = x.InputFreshTokenPrice1M,
-                OutputTokenPrice1M = x.OutputTokenPrice1M,
-                InputCachedTokenPrice1M = x.InputCachedTokenPrice1M,
-                ApiType = (DBApiType)x.ApiTypeId,
-                UseAsyncApi = x.UseAsyncApi,
-                UseMaxCompletionTokens = x.UseMaxCompletionTokens,
-                IsLegacy = x.IsLegacy,
-                ThinkTagParserEnabled = x.ThinkTagParserEnabled,
-                MaxThinkingBudget = x.MaxThinkingBudget,
-                SupportsVisionLink = x.SupportsVisionLink,
+                ModelProviderId = x.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
+                Name = x.CurrentSnapshot.Name,
+                Enabled = x.Enabled,
+                ModelKeyId = x.CurrentSnapshot.ModelKeyId,
+                DeploymentName = x.CurrentSnapshot.DeploymentName,
+                AllowSearch = x.CurrentSnapshot.AllowSearch,
+                AllowVision = x.CurrentSnapshot.AllowVision,
+                AllowCodeExecution = x.CurrentSnapshot.AllowCodeExecution,
+                ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(x.CurrentSnapshot.ReasoningEffortOptions),
+                AllowStreaming = x.CurrentSnapshot.AllowStreaming,
+                MinTemperature = x.CurrentSnapshot.MinTemperature,
+                MaxTemperature = x.CurrentSnapshot.MaxTemperature,
+                ContextWindow = x.CurrentSnapshot.ContextWindow,
+                MaxResponseTokens = x.CurrentSnapshot.MaxResponseTokens,
+                AllowToolCall = x.CurrentSnapshot.AllowToolCall,
+                SupportedImageSizes = Model.GetSupportedImageSizesAsArray(x.CurrentSnapshot.SupportedImageSizes),
+                InputFreshTokenPrice1M = x.CurrentSnapshot.InputFreshTokenPrice1M,
+                OutputTokenPrice1M = x.CurrentSnapshot.OutputTokenPrice1M,
+                InputCachedTokenPrice1M = x.CurrentSnapshot.InputCachedTokenPrice1M,
+                ApiType = (DBApiType)x.CurrentSnapshot.ApiTypeId,
+                UseAsyncApi = x.CurrentSnapshot.UseAsyncApi,
+                UseMaxCompletionTokens = x.CurrentSnapshot.UseMaxCompletionTokens,
+                IsLegacy = x.CurrentSnapshot.IsLegacy,
+                ThinkTagParserEnabled = x.CurrentSnapshot.ThinkTagParserEnabled,
+                MaxThinkingBudget = x.CurrentSnapshot.MaxThinkingBudget,
+                SupportsVisionLink = x.CurrentSnapshot.SupportsVisionLink,
             })
             .ToArrayAsync(cancellationToken);
 

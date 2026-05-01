@@ -33,9 +33,6 @@ public partial class ChatConfig
     public int? ThinkingBudget { get; set; }
 
     [InverseProperty("ChatConfig")]
-    public virtual ChatConfigArchived? ChatConfigArchived { get; set; }
-
-    [InverseProperty("ChatConfig")]
     public virtual ICollection<ChatConfigMcp> ChatConfigMcps { get; set; } = new List<ChatConfigMcp>();
 
     [InverseProperty("ChatConfig")]
@@ -43,9 +40,6 @@ public partial class ChatConfig
 
     [InverseProperty("ChatConfig")]
     public virtual ICollection<ChatSpan> ChatSpans { get; set; } = new List<ChatSpan>();
-
-    [InverseProperty("ChatConfig")]
-    public virtual ICollection<ChatTurn> ChatTurns { get; set; } = new List<ChatTurn>();
 
     [ForeignKey("ModelId")]
     [InverseProperty("ChatConfigs")]

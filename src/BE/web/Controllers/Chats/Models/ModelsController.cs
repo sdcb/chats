@@ -18,41 +18,41 @@ public class ModelsController : ControllerBase
     {
         AdminModelDto[] data = await (
             from um in db.UserModels
-            where um.UserId == currentUser.Id && !um.Model.IsDeleted
-            join mpo in db.ModelProviderOrders on um.Model.ModelKey.ModelProviderId equals mpo.ModelProviderId into mpoGroup
+            where um.UserId == currentUser.Id && um.Model.Enabled
+            join mpo in db.ModelProviderOrders on um.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId equals mpo.ModelProviderId into mpoGroup
             from mpo in mpoGroup.DefaultIfEmpty()
-            orderby mpo != null ? mpo.Order : int.MaxValue, um.Model.ModelKey.Order, um.Model.Order
+            orderby mpo != null ? mpo.Order : int.MaxValue, um.Model.CurrentSnapshot.ModelKeySnapshot.ModelKey!.Order, um.Model.Order
             select um.Model
         )
         .Select(x => new AdminModelDto
         {
             ModelId = x.Id,
-            Name = x.Name,
-            Enabled = !x.IsDeleted,
-            ModelKeyId = x.ModelKeyId,
-            ModelProviderId = x.ModelKey.ModelProviderId,
-            InputFreshTokenPrice1M = x.InputFreshTokenPrice1M,
-            OutputTokenPrice1M = x.OutputTokenPrice1M,
-            InputCachedTokenPrice1M = x.InputCachedTokenPrice1M,
-            DeploymentName = x.DeploymentName,
-            AllowSearch = x.AllowSearch,
-            AllowVision = x.AllowVision,
-            AllowStreaming = x.AllowStreaming,
-            AllowCodeExecution = x.AllowCodeExecution,
-            ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(x.ReasoningEffortOptions),
-            MinTemperature = x.MinTemperature,
-            MaxTemperature = x.MaxTemperature,
-            ContextWindow = x.ContextWindow,
-            MaxResponseTokens = x.MaxResponseTokens,
-            AllowToolCall = x.AllowToolCall,
-            SupportedImageSizes = Model.GetSupportedImageSizesAsArray(x.SupportedImageSizes),
-            ApiType = (DBApiType)x.ApiTypeId,
-            UseAsyncApi = x.UseAsyncApi,
-            UseMaxCompletionTokens = x.UseMaxCompletionTokens,
-            IsLegacy = x.IsLegacy,
-            ThinkTagParserEnabled = x.ThinkTagParserEnabled,
-            MaxThinkingBudget = x.MaxThinkingBudget,
-            SupportsVisionLink = x.SupportsVisionLink,
+            Name = x.CurrentSnapshot.Name,
+            Enabled = x.Enabled,
+            ModelKeyId = x.CurrentSnapshot.ModelKeyId,
+            ModelProviderId = x.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
+            InputFreshTokenPrice1M = x.CurrentSnapshot.InputFreshTokenPrice1M,
+            OutputTokenPrice1M = x.CurrentSnapshot.OutputTokenPrice1M,
+            InputCachedTokenPrice1M = x.CurrentSnapshot.InputCachedTokenPrice1M,
+            DeploymentName = x.CurrentSnapshot.DeploymentName,
+            AllowSearch = x.CurrentSnapshot.AllowSearch,
+            AllowVision = x.CurrentSnapshot.AllowVision,
+            AllowStreaming = x.CurrentSnapshot.AllowStreaming,
+            AllowCodeExecution = x.CurrentSnapshot.AllowCodeExecution,
+            ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(x.CurrentSnapshot.ReasoningEffortOptions),
+            MinTemperature = x.CurrentSnapshot.MinTemperature,
+            MaxTemperature = x.CurrentSnapshot.MaxTemperature,
+            ContextWindow = x.CurrentSnapshot.ContextWindow,
+            MaxResponseTokens = x.CurrentSnapshot.MaxResponseTokens,
+            AllowToolCall = x.CurrentSnapshot.AllowToolCall,
+            SupportedImageSizes = Model.GetSupportedImageSizesAsArray(x.CurrentSnapshot.SupportedImageSizes),
+            ApiType = (DBApiType)x.CurrentSnapshot.ApiTypeId,
+            UseAsyncApi = x.CurrentSnapshot.UseAsyncApi,
+            UseMaxCompletionTokens = x.CurrentSnapshot.UseMaxCompletionTokens,
+            IsLegacy = x.CurrentSnapshot.IsLegacy,
+            ThinkTagParserEnabled = x.CurrentSnapshot.ThinkTagParserEnabled,
+            MaxThinkingBudget = x.CurrentSnapshot.MaxThinkingBudget,
+            SupportsVisionLink = x.CurrentSnapshot.SupportsVisionLink,
         })
             .ToArrayAsync(cancellationToken);
 

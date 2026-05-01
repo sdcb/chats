@@ -59,7 +59,7 @@ public partial class OpenAIChatCompletionController(
         UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, cco.Model, cancellationToken);
         if (userModel == null) return InvalidModel(cco.Model);
 
-        if (!AllowedApiTypes.Contains(userModel.Model.ApiType))
+        if (!AllowedApiTypes.Contains((DBApiType)userModel.Model.CurrentSnapshot.ApiTypeId))
         {
             return ErrorMessage(DBFinishReason.BadParameter, $"The model `{cco.Model}` does not support chat completions API.");
         }
@@ -108,7 +108,7 @@ public partial class OpenAIChatCompletionController(
             }
             if (userModel == null) return InvalidModel(cco.Model);
 
-            if (!AllowedApiTypes.Contains(userModel.Model.ApiType))
+            if (!AllowedApiTypes.Contains((DBApiType)userModel.Model.CurrentSnapshot.ApiTypeId))
             {
                 return ErrorMessage(DBFinishReason.BadParameter, $"The model `{cco.Model}` does not support chat completions API.");
             }

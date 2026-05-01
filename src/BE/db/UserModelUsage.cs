@@ -10,7 +10,7 @@ namespace Chats.DB;
 [Index("BalanceTransactionId", Name = "IX_ModelUsage_BalanceTransaction", IsUnique = true)]
 [Index("CreatedAt", Name = "IX_ModelUsage_CreatedAt")]
 [Index("UsageTransactionId", Name = "IX_ModelUsage_UsageTransaction", IsUnique = true)]
-[Index("ModelId", Name = "IX_UserModelUsage_ModelId")]
+[Index("ModelSnapshotId", Name = "IX_UserModelUsage_ModelSnapshotId")]
 [Index("UserId", Name = "IX_UserModelUsage_UserId")]
 public partial class UserModelUsage
 {
@@ -55,14 +55,14 @@ public partial class UserModelUsage
 
     public int UserId { get; set; }
 
-    public short ModelId { get; set; }
-
     public int InputCachedTokens { get; set; }
 
     [Column(TypeName = "decimal(14, 8)")]
     public decimal InputCachedCost { get; set; }
 
     public byte SourceId { get; set; }
+
+    public int ModelSnapshotId { get; set; }
 
     [ForeignKey("BalanceTransactionId")]
     [InverseProperty("UserModelUsage")]
@@ -76,9 +76,9 @@ public partial class UserModelUsage
     [InverseProperty("UserModelUsages")]
     public virtual FinishReason FinishReason { get; set; } = null!;
 
-    [ForeignKey("ModelId")]
+    [ForeignKey("ModelSnapshotId")]
     [InverseProperty("UserModelUsages")]
-    public virtual Model Model { get; set; } = null!;
+    public virtual ModelSnapshot ModelSnapshot { get; set; } = null!;
 
     [InverseProperty("Usage")]
     public virtual ICollection<Step> Steps { get; set; } = new List<Step>();

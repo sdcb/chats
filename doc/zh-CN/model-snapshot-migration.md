@@ -230,6 +230,7 @@ live 路径读取当前配置时，应继续沿着 head 表读取其 CurrentSnap
 
 - ChatTurn 作为事实表，应从 ChatConfig 切换为引用 ChatConfigSnapshot。
 - 迁移执行时可以先增加可空的 ChatConfigSnapshotId 用于回填。
+- 由于当前库中存在大量 ChatTurn.ChatConfigId 为空的历史记录，最终结构中的 ChatConfigSnapshotId 也必须保持可空，不能强行收紧为非空。
 - 在完成回填与校验后，应删除旧的 ChatTurn.ChatConfigId 及其外键。
 
 ## 7. 将 UsageTransaction 改为引用 ModelSnapshot
@@ -381,6 +382,7 @@ ModelKey 硬删除的前置条件：
 - ModelSnapshot 作为事实表可以不做内容去重，迁移阶段只需保证同一条旧 Model 记录能稳定映射到一条新快照记录。
 - 由于迁移阶段会存在大量 HashCode 为 null 的历史记录，索引和唯一性约束应采用 filtered index，而不是对全表生效的普通唯一约束。
 - 这一阶段不移动任何旧数据，确保 schema 变更可独立发布。
+- 若实现脚本采用单次全量发布，也可以在一个脚本内串行完成扩表、回填、收口和最终校验；本节描述的是逻辑阶段，而不是必须拆分的发布次数。
 
 ## 阶段 2：回填 ModelKeySnapshot
 
@@ -593,6 +595,7 @@ ModelKey 硬删除的前置条件：
 - 这里也允许某个 live Model 当前经由 ModelKey.CurrentSnapshotId 读取到的密钥版本，在未来晚于该 ModelSnapshot 内固化保存的 ModelKeySnapshotId。
 - 但在首次迁移回填时，两边应尽量一致。
 - 由于不保留 custom headers，核对范围只包括 MCP 名称集合，不包括 headers 内容。
+- 实际执行脚本至少应校验所有新外键列都能解析到合法快照；若脚本未覆盖上述全部字段级内容比对，则仍应在迁移验收时补做人工抽样核对。
 
 ## 阶段 8：迁移收口
 
@@ -605,14 +608,14 @@ ModelKey 硬删除的前置条件：
 - 为 ModelKey.CurrentSnapshotId 建非空约束
 - 为 Model.CurrentSnapshotId 建非空约束
 - 为 ChatTurn.ChatConfigSnapshotId 建外键
-- 为 ChatTurn.ChatConfigSnapshotId 建非空约束
 - 为 UsageTransaction.ModelSnapshotId 建外键回 ModelSnapshot（无 FK 回 head）
 - 为 UsageTransaction.ModelSnapshotId 建非空约束
 - 为 UserModelUsage.ModelSnapshotId 建外键回 ModelSnapshot（无 FK 回 head）
 - 为 UserModelUsage.ModelSnapshotId 建非空约束
 - 删除 ModelKey 上已迁出的重复配置列
-- 将 Model.IsDeleted 重命名为 Model.Enabled 并反转布尔值
+- 为 Model.Enabled 回填数据，规则为 IsDeleted = 0 -> Enabled = 1，IsDeleted = 1 -> Enabled = 0
 - 删除 Model 上已迁出的重复配置列
+- 删除 Model.IsDeleted
 - 删除 UsageTransaction.ModelId 及其外键
 - 删除 UserModelUsage.ModelId 及其外键
 - 删除 ChatTurn.ChatConfigId
@@ -626,6 +629,7 @@ ModelKey 硬删除的前置条件：
 
 - ChatSpan 与 ChatPresetSpan 仍然需要通过 ChatConfig 关联 live Model，因此 ChatConfig -> Model 的外键仍应保留。
 - 本次迁移收口的核心是让所有事实表脱离 live head 表，并让 ChatConfigArchived 退出数据模型。
+- ChatTurn.ChatConfigSnapshotId 在最终结构中仍允许为 null，用于承接原本 ChatConfigId 就为空的历史消息。
 
 ## 建议的数据迁移顺序
 
@@ -690,6 +694,10 @@ ModelKey 硬删除的前置条件：
 - UserModelUsage 中 ModelId 非空数等于 ModelSnapshotId 非空数
 - 任意抽样一批 ChatTurn，快照内容与原 ChatConfig 内容一致
 
+补充说明：
+
+- 若执行脚本只实现了引用完整性与数量级校验，而没有完整覆盖字段级内容比对，上述最后一条应作为迁移验收时的人工抽样检查项保留。
+
 ### 2. 收口后校验
 
 在阶段 8 删除旧列之后，至少执行以下校验：
@@ -702,7 +710,7 @@ ModelKey 硬删除的前置条件：
 - 每个 ModelSnapshot 都存在合法 ModelKeySnapshotId
 - 每个 ModelSnapshot 都存在合法 ModelId
 - 每个 ChatConfigSnapshot 都存在合法 ModelSnapshotId
-- 每个 ChatTurn 都存在合法的 ChatConfigSnapshotId
+- 每个 ChatTurn 在 ChatConfigSnapshotId 非 null 时都存在合法的 ChatConfigSnapshotId
 - 每个 UsageTransaction 都存在合法的 ModelSnapshotId
 - 每个 UserModelUsage 都存在合法的 ModelSnapshotId
 - 任意抽样一批 ChatTurn，快照内容与对应 ChatConfigSnapshot 一致

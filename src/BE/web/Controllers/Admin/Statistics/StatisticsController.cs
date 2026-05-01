@@ -48,7 +48,7 @@ public class StatisticsController(ChatsDB db) : ControllerBase
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
         Dictionary<string, int> r = await q
-            .GroupBy(x => x.Model.ModelKey.ModelProviderId)
+            .GroupBy(x => x.ModelSnapshot.ModelKeySnapshot.ModelProviderId)
             .Select(g => new { ProviderId = g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken)
             .ContinueWith(t => t.Result.ToDictionary(
@@ -62,7 +62,7 @@ public class StatisticsController(ChatsDB db) : ControllerBase
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
         SingleValueStatisticsEntry[] r = await q
-            .GroupBy(x => x.Model.DeploymentName)
+            .GroupBy(x => x.ModelSnapshot.DeploymentName)
             .Select(x => new SingleValueStatisticsEntry(x.Key, x.Count()))
             .ToArrayAsync(cancellationToken);
         return Ok(r);
@@ -73,7 +73,7 @@ public class StatisticsController(ChatsDB db) : ControllerBase
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
         SingleValueStatisticsEntry[] r = await q
-            .GroupBy(x => x.Model.ModelKey.Name)
+            .GroupBy(x => x.ModelSnapshot.ModelKeySnapshot.Name)
             .Select(x => new SingleValueStatisticsEntry(x.Key, x.Count()))
             .ToArrayAsync(cancellationToken);
         return Ok(r);

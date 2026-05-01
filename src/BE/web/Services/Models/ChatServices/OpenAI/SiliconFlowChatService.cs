@@ -10,7 +10,7 @@ public class SiliconFlowChatService(IHttpClientFactory httpClientFactory) : Chat
     {
         JsonObject body = base.BuildRequestBody(request, stream);
 
-        if (Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.ReasoningEffortOptions).Length != 0)
+        if (Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.CurrentSnapshot.ReasoningEffortOptions).Length != 0)
         {
             if (request.ChatConfig.ReasoningEffort.IsLowOrMinimal())
             {

@@ -5,12 +5,19 @@ namespace Chats.BE.Services;
 
 public class UserModelManager(ChatsDB db)
 {
+    private static IQueryable<UserModel> IncludeModelSnapshotChain(IQueryable<UserModel> query)
+    {
+        return query
+            .Include(x => x.Model)
+                .ThenInclude(x => x.CurrentSnapshot)
+                    .ThenInclude(x => x.ModelKeySnapshot)
+                        .ThenInclude(x => x.ModelKey);
+    }
+
     public async Task<UserModel?> GetUserModel(int userId, short modelId, CancellationToken cancellationToken)
     {
-        UserModel? balances = await db.UserModels
-            .Include(x => x.Model)
-            .Include(x => x.Model.ModelKey)
-            .Where(x => x.UserId == userId && !x.Model.IsDeleted && x.ModelId == modelId)
+        UserModel? balances = await IncludeModelSnapshotChain(db.UserModels)
+            .Where(x => x.UserId == userId && x.Model.Enabled && x.ModelId == modelId)
             .FirstOrDefaultAsync(cancellationToken);
 
         return balances;
@@ -18,10 +25,8 @@ public class UserModelManager(ChatsDB db)
 
     public async Task<Dictionary<short, UserModel>> GetUserModels(int userId, HashSet<short> modelIds, CancellationToken cancellationToken)
     {
-        Dictionary<short, UserModel> balances = await db.UserModels
-            .Include(x => x.Model)
-            .Include(x => x.Model.ModelKey)
-            .Where(x => x.UserId == userId && !x.Model.IsDeleted && modelIds.Contains(x.ModelId))
+        Dictionary<short, UserModel> balances = await IncludeModelSnapshotChain(db.UserModels)
+            .Where(x => x.UserId == userId && x.Model.Enabled && modelIds.Contains(x.ModelId))
             .ToDictionaryAsync(k => k.ModelId, v => v, cancellationToken);
 
         return balances;
@@ -29,10 +34,8 @@ public class UserModelManager(ChatsDB db)
 
     private async Task<UserModel?> GetUserModel(int userId, string modelName, CancellationToken cancellationToken)
     {
-        UserModel? balances = await db.UserModels
-            .Include(x => x.Model)
-            .Include(x => x.Model.ModelKey)
-            .Where(x => x.UserId == userId && !x.Model.IsDeleted && x.Model.Name == modelName)
+        UserModel? balances = await IncludeModelSnapshotChain(db.UserModels)
+            .Where(x => x.UserId == userId && x.Model.Enabled && x.Model.CurrentSnapshot.Name == modelName)
             .FirstOrDefaultAsync(cancellationToken);
 
         return balances;
@@ -59,10 +62,8 @@ public class UserModelManager(ChatsDB db)
 
     public IOrderedQueryable<UserModel> GetValidModelsByUserId(int userId)
     {
-        return db.UserModels
-            .Include(x => x.Model)
-            .Include(x => x.Model.ModelKey)
-            .Where(x => x.UserId == userId && !x.Model.IsDeleted)
+        return IncludeModelSnapshotChain(db.UserModels)
+            .Where(x => x.UserId == userId && x.Model.Enabled)
             .OrderBy(x => x.Model.Order);
     }
 

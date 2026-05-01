@@ -19,44 +19,44 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
     public async Task<ActionResult<AdminModelDto[]>> GetAdminModels(bool all, CancellationToken cancellationToken)
     {
         IQueryable<Model> query = db.Models;
-        if (!all) query = query.Where(x => !x.IsDeleted);
+        if (!all) query = query.Where(x => x.Enabled);
 
         AdminModelDto[] data = await (
             from m in query
-            join mpo in db.ModelProviderOrders on m.ModelKey.ModelProviderId equals mpo.ModelProviderId into mpoGroup
+            join mpo in db.ModelProviderOrders on m.CurrentSnapshot.ModelKeySnapshot.ModelProviderId equals mpo.ModelProviderId into mpoGroup
             from mpo in mpoGroup.DefaultIfEmpty()
-            orderby mpo != null ? mpo.Order : int.MaxValue, m.ModelKey.Order, m.Order
+            orderby mpo != null ? mpo.Order : int.MaxValue, m.CurrentSnapshot.ModelKeySnapshot.ModelKey!.Order, m.Order
             select m
         )
         .Select(x => new AdminModelDto
             {
                 ModelId = x.Id,
-                Name = x.Name,
-                Enabled = !x.IsDeleted,
-                ModelKeyId = x.ModelKeyId,
-                ModelProviderId = x.ModelKey.ModelProviderId,
-                InputFreshTokenPrice1M = x.InputFreshTokenPrice1M,
-                OutputTokenPrice1M = x.OutputTokenPrice1M,
-                InputCachedTokenPrice1M = x.InputCachedTokenPrice1M,
-                DeploymentName = x.DeploymentName,
-                AllowSearch = x.AllowSearch,
-                AllowVision = x.AllowVision,
-                AllowStreaming = x.AllowStreaming,
-                AllowCodeExecution = x.AllowCodeExecution,
-                ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(x.ReasoningEffortOptions),
-                MinTemperature = x.MinTemperature,
-                MaxTemperature = x.MaxTemperature,
-                ContextWindow = x.ContextWindow,
-                MaxResponseTokens = x.MaxResponseTokens,
-                AllowToolCall = x.AllowToolCall,
-                SupportedImageSizes = Model.GetSupportedImageSizesAsArray(x.SupportedImageSizes),
-                ApiType = (DBApiType)x.ApiTypeId,
-                UseAsyncApi = x.UseAsyncApi,
-                UseMaxCompletionTokens = x.UseMaxCompletionTokens,
-                IsLegacy = x.IsLegacy,
-                ThinkTagParserEnabled = x.ThinkTagParserEnabled,
-                MaxThinkingBudget = x.MaxThinkingBudget,
-                SupportsVisionLink = x.SupportsVisionLink,
+                Name = x.CurrentSnapshot.Name,
+                Enabled = x.Enabled,
+                ModelKeyId = x.CurrentSnapshot.ModelKeyId,
+                ModelProviderId = x.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
+                InputFreshTokenPrice1M = x.CurrentSnapshot.InputFreshTokenPrice1M,
+                OutputTokenPrice1M = x.CurrentSnapshot.OutputTokenPrice1M,
+                InputCachedTokenPrice1M = x.CurrentSnapshot.InputCachedTokenPrice1M,
+                DeploymentName = x.CurrentSnapshot.DeploymentName,
+                AllowSearch = x.CurrentSnapshot.AllowSearch,
+                AllowVision = x.CurrentSnapshot.AllowVision,
+                AllowStreaming = x.CurrentSnapshot.AllowStreaming,
+                AllowCodeExecution = x.CurrentSnapshot.AllowCodeExecution,
+                ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(x.CurrentSnapshot.ReasoningEffortOptions),
+                MinTemperature = x.CurrentSnapshot.MinTemperature,
+                MaxTemperature = x.CurrentSnapshot.MaxTemperature,
+                ContextWindow = x.CurrentSnapshot.ContextWindow,
+                MaxResponseTokens = x.CurrentSnapshot.MaxResponseTokens,
+                AllowToolCall = x.CurrentSnapshot.AllowToolCall,
+                SupportedImageSizes = Model.GetSupportedImageSizesAsArray(x.CurrentSnapshot.SupportedImageSizes),
+                ApiType = (DBApiType)x.CurrentSnapshot.ApiTypeId,
+                UseAsyncApi = x.CurrentSnapshot.UseAsyncApi,
+                UseMaxCompletionTokens = x.CurrentSnapshot.UseMaxCompletionTokens,
+                IsLegacy = x.CurrentSnapshot.IsLegacy,
+                ThinkTagParserEnabled = x.CurrentSnapshot.ThinkTagParserEnabled,
+                MaxThinkingBudget = x.CurrentSnapshot.MaxThinkingBudget,
+                SupportsVisionLink = x.CurrentSnapshot.SupportsVisionLink,
         })
             .ToArrayAsync(cancellationToken);
         return data;
@@ -70,13 +70,25 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
             return BadRequest(ModelState);
         }
 
-        Model? cm = await db.Models.FindAsync([modelId], cancellationToken);
+        Model? cm = await db.Models
+            .Include(x => x.CurrentSnapshot)
+            .FirstOrDefaultAsync(x => x.Id == modelId, cancellationToken);
         if (cm == null) return NotFound();
 
-        req.ApplyTo(cm);
-        if (db.ChangeTracker.HasChanges())
+        ModelKey? modelKey = await db.ModelKeys
+            .Include(x => x.CurrentSnapshot)
+            .SingleOrDefaultAsync(x => x.Id == req.ModelKeyId, cancellationToken);
+        if (modelKey == null)
         {
-            cm.UpdatedAt = DateTime.UtcNow;
+            return BadRequest($"Model key id: {req.ModelKeyId} not found");
+        }
+
+        if (!req.Matches(cm, modelKey))
+        {
+            DateTime now = DateTime.UtcNow;
+            req.ApplyTo(cm);
+            cm.CurrentSnapshot = req.ToSnapshot(cm.Id, modelKey, now);
+            cm.UpdatedAt = now;
             await db.SaveChangesAsync(cancellationToken);
         }
 
@@ -91,13 +103,26 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
             return BadRequest(ModelState);
         }
 
+        DateTime now = DateTime.UtcNow;
+        ModelKey? modelKey = await db.ModelKeys
+            .Include(x => x.CurrentSnapshot)
+            .SingleOrDefaultAsync(x => x.Id == req.ModelKeyId, cancellationToken);
+        if (modelKey == null)
+        {
+            return BadRequest($"Model key id: {req.ModelKeyId} not found");
+        }
+
         Model toCreate = new()
         {
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshot = req.ToSnapshot(0, modelKey, now),
         };
         req.ApplyTo(toCreate);
         db.Models.Add(toCreate);
+        await db.SaveChangesAsync(cancellationToken);
+
+        toCreate.CurrentSnapshot.ModelId = toCreate.Id;
         await db.SaveChangesAsync(cancellationToken);
 
         return Created(default(string), toCreate.Id);
@@ -122,15 +147,15 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
 
         if (refInfo.ChatConfigs || refInfo.UserModels || refInfo.ApiKeys || refInfo.UserApiCache)
         {
-            // 如果模型被引用，则标记为已删除（软删除）
-            cm.IsDeleted = true;
+            cm.Enabled = false;
+            cm.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
             
             return Ok(DeleteModelResponse.CreateSoftDeleted());
         }
         else
         {
-            // 如果没有被引用，则直接删除
+            db.ModelSnapshots.RemoveRange(db.ModelSnapshots.Where(x => x.ModelId == cm.Id));
             db.Models.Remove(cm);
             await db.SaveChangesAsync(cancellationToken);
             return Ok(DeleteModelResponse.CreateHardDeleted());
@@ -158,26 +183,11 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
         }
 
         // 创建临时 Model 对象用于验证
+        DateTime now = DateTime.UtcNow;
         Model tempModel = new()
         {
-            ModelKey = modelKey,
-            ModelKeyId = req.ModelKeyId,
-            DeploymentName = req.DeploymentName,
-            AllowSearch = req.AllowSearch,
-            AllowVision = req.AllowVision,
-            AllowStreaming = req.AllowStreaming,
-            AllowCodeExecution = req.AllowCodeExecution,
-            ReasoningEffortOptions = string.Join(',', req.ReasoningEffortOptions),
-            MinTemperature = req.MinTemperature,
-            MaxTemperature = req.MaxTemperature,
-            ContextWindow = req.ContextWindow,
-            MaxResponseTokens = req.MaxResponseTokens,
-            AllowToolCall = req.AllowToolCall,
-            SupportedImageSizes = string.Join(',', req.SupportedImageSizes),
-            ApiTypeId = (byte)req.ApiType,
-            UseAsyncApi = req.UseAsyncApi,
-            ThinkTagParserEnabled = req.ThinkTagParserEnabled,
-            MaxThinkingBudget = req.MaxThinkingBudget,
+            Enabled = req.Enabled,
+            CurrentSnapshot = req.ToSnapshot(0, modelKey, now),
         };
 
         ModelValidateResult result = await chatFactory.ValidateModel(tempModel, fup, cancellationToken);
@@ -189,6 +199,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
     {
         // 验证被移动的 Model 是否存在
         Model? sourceModel = await db.Models
+            .Include(x => x.CurrentSnapshot)
             .FirstOrDefaultAsync(x => x.Id == request.SourceId, cancellationToken);
         if (sourceModel == null)
         {
@@ -202,6 +213,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
         if (request.PreviousId != null)
         {
             previousModel = await db.Models
+                .Include(x => x.CurrentSnapshot)
                 .FirstOrDefaultAsync(x => x.Id == request.PreviousId, cancellationToken);
             if (previousModel == null)
             {
@@ -209,7 +221,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
             }
             
             // 验证 previous 与 source 属于同一个 ModelKey
-            if (previousModel.ModelKeyId != sourceModel.ModelKeyId)
+            if (previousModel.CurrentSnapshot.ModelKeyId != sourceModel.CurrentSnapshot.ModelKeyId)
             {
                 return BadRequest("Previous model must belong to the same ModelKey");
             }
@@ -218,6 +230,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
         if (request.NextId != null)
         {
             nextModel = await db.Models
+                .Include(x => x.CurrentSnapshot)
                 .FirstOrDefaultAsync(x => x.Id == request.NextId, cancellationToken);
             if (nextModel == null)
             {
@@ -225,7 +238,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
             }
             
             // 验证 next 与 source 属于同一个 ModelKey
-            if (nextModel.ModelKeyId != sourceModel.ModelKeyId)
+            if (nextModel.CurrentSnapshot.ModelKeyId != sourceModel.CurrentSnapshot.ModelKeyId)
             {
                 return BadRequest("Next model must belong to the same ModelKey");
             }
@@ -250,7 +263,8 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
         {
             // 需要重新排序，但只重排序同一个 ModelKey 下的 Models
             Model[] modelsInSameKey = await db.Models
-                .Where(x => x.ModelKeyId == sourceModel.ModelKeyId)
+                .Include(x => x.CurrentSnapshot)
+                .Where(x => x.CurrentSnapshot.ModelKeyId == sourceModel.CurrentSnapshot.ModelKeyId)
                 .OrderBy(x => x.Order).ThenByDescending(x => x.Id)
                 .ToArrayAsync(cancellationToken);
             

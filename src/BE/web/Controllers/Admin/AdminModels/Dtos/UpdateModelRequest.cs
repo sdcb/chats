@@ -100,32 +100,77 @@ public record UpdateModelRequest
     [JsonPropertyName("maxThinkingBudget")]
     public int? MaxThinkingBudget { get; init; }
 
-    public void ApplyTo(Model cm)
+    public void ApplyTo(Model model)
     {
-        cm.Name = Name;
-        cm.IsDeleted = !Enabled;
-        cm.ModelKeyId = ModelKeyId;
-        cm.InputFreshTokenPrice1M = InputFreshTokenPrice1M;
-        cm.OutputTokenPrice1M = OutputTokenPrice1M;
-        cm.InputCachedTokenPrice1M = InputCachedTokenPrice1M;
-        cm.DeploymentName = DeploymentName;
-        cm.AllowSearch = AllowSearch;
-        cm.AllowVision = AllowVision;
-        cm.SupportsVisionLink = SupportsVisionLink;
-        cm.AllowStreaming = AllowStreaming;
-        cm.AllowCodeExecution = AllowCodeExecution;
-        cm.ReasoningEffortOptions = ReasoningEffortOptions.Length > 0 ? string.Join(',', ReasoningEffortOptions) : null;
-        cm.MinTemperature = MinTemperature;
-        cm.MaxTemperature = MaxTemperature;
-        cm.ContextWindow = ContextWindow;
-        cm.MaxResponseTokens = MaxResponseTokens;
-        cm.AllowToolCall = AllowToolCall;
-        cm.SupportedImageSizes = SupportedImageSizes.Length > 0 ? string.Join(',', SupportedImageSizes) : null;
-        cm.ApiTypeId = (byte)ApiType;
-        cm.UseAsyncApi = UseAsyncApi;
-        cm.UseMaxCompletionTokens = UseMaxCompletionTokens;
-        cm.IsLegacy = IsLegacy;
-        cm.ThinkTagParserEnabled = ThinkTagParserEnabled;
-        cm.MaxThinkingBudget = MaxThinkingBudget;
+        model.Enabled = Enabled;
+    }
+
+    public bool Matches(Model model, ModelKey modelKey)
+    {
+        string? reasoningEffortOptions = ReasoningEffortOptions.Length > 0 ? string.Join(',', ReasoningEffortOptions) : null;
+        string? supportedImageSizes = SupportedImageSizes.Length > 0 ? string.Join(',', SupportedImageSizes) : null;
+        ModelSnapshot snapshot = model.CurrentSnapshot;
+
+        return model.Enabled == Enabled
+            && snapshot.Name == Name
+            && snapshot.DeploymentName == DeploymentName
+            && snapshot.ModelKeyId == modelKey.Id
+            && snapshot.ModelKeySnapshotId == modelKey.CurrentSnapshotId
+            && snapshot.InputFreshTokenPrice1M == InputFreshTokenPrice1M
+            && snapshot.OutputTokenPrice1M == OutputTokenPrice1M
+            && snapshot.InputCachedTokenPrice1M == InputCachedTokenPrice1M
+            && snapshot.AllowSearch == AllowSearch
+            && snapshot.AllowVision == AllowVision
+            && snapshot.SupportsVisionLink == SupportsVisionLink
+            && snapshot.AllowStreaming == AllowStreaming
+            && snapshot.AllowCodeExecution == AllowCodeExecution
+            && snapshot.ReasoningEffortOptions == reasoningEffortOptions
+            && snapshot.MinTemperature == MinTemperature
+            && snapshot.MaxTemperature == MaxTemperature
+            && snapshot.ContextWindow == ContextWindow
+            && snapshot.MaxResponseTokens == MaxResponseTokens
+            && snapshot.AllowToolCall == AllowToolCall
+            && snapshot.SupportedImageSizes == supportedImageSizes
+            && snapshot.ApiTypeId == (byte)ApiType
+            && snapshot.UseAsyncApi == UseAsyncApi
+            && snapshot.UseMaxCompletionTokens == UseMaxCompletionTokens
+            && snapshot.IsLegacy == IsLegacy
+            && snapshot.ThinkTagParserEnabled == ThinkTagParserEnabled
+            && snapshot.MaxThinkingBudget == MaxThinkingBudget;
+    }
+
+    public ModelSnapshot ToSnapshot(short modelId, ModelKey modelKey, DateTime createdAt)
+    {
+        return new ModelSnapshot
+        {
+            ModelId = modelId,
+            Name = Name,
+            DeploymentName = DeploymentName,
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKey.CurrentSnapshotId,
+            ModelKeySnapshot = modelKey.CurrentSnapshot,
+            InputFreshTokenPrice1M = InputFreshTokenPrice1M,
+            OutputTokenPrice1M = OutputTokenPrice1M,
+            InputCachedTokenPrice1M = InputCachedTokenPrice1M,
+            AllowSearch = AllowSearch,
+            AllowVision = AllowVision,
+            SupportsVisionLink = SupportsVisionLink,
+            AllowStreaming = AllowStreaming,
+            AllowCodeExecution = AllowCodeExecution,
+            ReasoningEffortOptions = ReasoningEffortOptions.Length > 0 ? string.Join(',', ReasoningEffortOptions) : null,
+            MinTemperature = MinTemperature,
+            MaxTemperature = MaxTemperature,
+            ContextWindow = ContextWindow,
+            MaxResponseTokens = MaxResponseTokens,
+            AllowToolCall = AllowToolCall,
+            SupportedImageSizes = SupportedImageSizes.Length > 0 ? string.Join(',', SupportedImageSizes) : null,
+            ApiTypeId = (byte)ApiType,
+            UseAsyncApi = UseAsyncApi,
+            UseMaxCompletionTokens = UseMaxCompletionTokens,
+            IsLegacy = IsLegacy,
+            ThinkTagParserEnabled = ThinkTagParserEnabled,
+            MaxThinkingBudget = MaxThinkingBudget,
+            CreatedAt = createdAt,
+        };
     }
 }

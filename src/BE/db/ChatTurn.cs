@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.DB;
 
 [Table("ChatTurn")]
+[Index("ChatConfigSnapshotId", Name = "IX_ChatTurn_ChatConfigSnapshotId")]
 [Index("ChatId", "SpanId", Name = "IX_Message_ChatSpan")]
 public partial class ChatTurn
 {
@@ -23,15 +24,15 @@ public partial class ChatTurn
 
     public bool? ReactionId { get; set; }
 
-    public int? ChatConfigId { get; set; }
+    public int? ChatConfigSnapshotId { get; set; }
 
     [ForeignKey("ChatId")]
     [InverseProperty("ChatTurns")]
     public virtual Chat Chat { get; set; } = null!;
 
-    [ForeignKey("ChatConfigId")]
+    [ForeignKey("ChatConfigSnapshotId")]
     [InverseProperty("ChatTurns")]
-    public virtual ChatConfig? ChatConfig { get; set; }
+    public virtual ChatConfigSnapshot? ChatConfigSnapshot { get; set; }
 
     [InverseProperty("OwnerTurn")]
     public virtual ICollection<ChatDockerSession> ChatDockerSessions { get; set; } = new List<ChatDockerSession>();

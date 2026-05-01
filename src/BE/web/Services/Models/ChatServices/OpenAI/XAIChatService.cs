@@ -8,7 +8,7 @@ public class XAIChatService(IHttpClientFactory httpClientFactory) : ChatCompleti
     {
         JsonObject body = base.BuildRequestBody(request, stream);
 
-        if (request.ChatConfig.Model.AllowSearch)
+        if (request.ChatConfig.Model.CurrentSnapshot.AllowSearch)
         {
             body["search_parameters"] = new JsonObject
             {

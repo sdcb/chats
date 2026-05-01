@@ -16,14 +16,14 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
 {
     public ChatService CreateChatService(Model model)
     {
-        DBModelProvider modelProvider = (DBModelProvider)model.ModelKey.ModelProviderId;
+        DBModelProvider modelProvider = (DBModelProvider)model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId;
         if (modelProvider == DBModelProvider.Test)
         {
             // Special case for Test model provider
             return sp.GetRequiredService<Test2ChatService>();
         }
 
-        DBApiType apiType = model.ApiType;
+        DBApiType apiType = (DBApiType)model.CurrentSnapshot.ApiTypeId;
 
         // 先按 API 类型分类，再按 ModelProvider 分类
         return apiType switch
