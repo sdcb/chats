@@ -1,4 +1,5 @@
-﻿using Chats.DB.Enums;
+﻿using Chats.DB;
+using Chats.DB.Enums;
 using Chats.BE.Controllers.Admin.AdminModels.Dtos;
 using System.ComponentModel.DataAnnotations;
 
@@ -403,7 +404,7 @@ public class UpdateModelRequestValidationTests
             AllowCodeExecution = false,
             AllowToolCall = true,
             ThinkTagParserEnabled = false,
-            ReasoningEffortOptions = [1, 2, 3, 4],
+            SupportedEfforts = [ReasoningEfforts.Minimal, ReasoningEfforts.Low, ReasoningEfforts.Medium, ReasoningEfforts.High],
             MinTemperature = 0.0m,
             MaxTemperature = 2.0m,
             ContextWindow = 128000,
@@ -435,7 +436,7 @@ public class UpdateModelRequestValidationTests
             AllowCodeExecution = false,
             AllowToolCall = false,
             ThinkTagParserEnabled = false,
-            ReasoningEffortOptions = [2, 3, 4],
+            SupportedEfforts = [ReasoningEfforts.Low, ReasoningEfforts.Medium, ReasoningEfforts.High],
             MinTemperature = 0.0m,
             MaxTemperature = 2.0m,
             ContextWindow = 0,

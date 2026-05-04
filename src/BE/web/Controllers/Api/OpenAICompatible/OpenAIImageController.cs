@@ -348,7 +348,7 @@ public class OpenAIImageController(
             Model = model,
             ModelId = model.Id,
             MaxOutputTokens = request.N ?? 1,
-            ReasoningEffortId = (byte)ParseQualityToReasoningEffort(request.Quality),
+            Effort = ParseQualityToEffort(request.Quality),
             ImageSize = request.Size,
         };
 
@@ -364,15 +364,16 @@ public class OpenAIImageController(
         };
     }
 
-    private static DBReasoningEffort ParseQualityToReasoningEffort(string? quality)
+    private static string? ParseQualityToEffort(string? quality)
     {
-        return quality?.ToLowerInvariant() switch
+        return quality?.Trim().ToLowerInvariant() switch
         {
-            "low" => DBReasoningEffort.Low,
-            "medium" => DBReasoningEffort.Medium,
-            "high" => DBReasoningEffort.High,
-            "auto" => DBReasoningEffort.Default,
-            _ => DBReasoningEffort.Default
+            "low" => ReasoningEfforts.Low,
+            "medium" => ReasoningEfforts.Medium,
+            "high" => ReasoningEfforts.High,
+            "auto" => null,
+            null => null,
+            _ => null,
         };
     }
 

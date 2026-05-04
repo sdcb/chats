@@ -99,7 +99,7 @@ public class ModelProvidersController(ChatsDB db) : ControllerBase
                 AllowSearch = x.CurrentSnapshot.AllowSearch,
                 AllowVision = x.CurrentSnapshot.AllowVision,
                 AllowCodeExecution = x.CurrentSnapshot.AllowCodeExecution,
-                ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(x.CurrentSnapshot.ReasoningEffortOptions),
+                SupportedEfforts = Model.GetSupportedEffortsAsArray(x.CurrentSnapshot.SupportedEfforts),
                 AllowStreaming = x.CurrentSnapshot.AllowStreaming,
                 MinTemperature = x.CurrentSnapshot.MinTemperature,
                 MaxTemperature = x.CurrentSnapshot.MaxTemperature,

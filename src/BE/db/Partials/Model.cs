@@ -1,6 +1,4 @@
-﻿using Chats.DB.Enums;
-
-namespace Chats.DB;
+﻿namespace Chats.DB;
 
 public partial class Model
 {
@@ -10,33 +8,14 @@ public partial class Model
         return (float)Math.Clamp(temperature.Value, (float)CurrentSnapshot.MinTemperature, (float)CurrentSnapshot.MaxTemperature);
     }
 
-    public byte ClampReasoningEffortId(byte reasoningEffortId)
+    public string? ClampEffort(string? effort)
     {
-        // don't clamp if reasoningEffortId is 0, which indicates that reasoning effort is not specified and the system should use the default
-        if (reasoningEffortId == 0) return 0;
-
-        byte[] options = [.. GetReasoningEffortOptionsAsInt32(CurrentSnapshot.ReasoningEffortOptions).Select(x => (byte)x)];
-
-        if (options.Length == 0)
-        {
-            return 0;
-        }
-
-        if (options.Contains(reasoningEffortId))
-        {
-            return reasoningEffortId;
-        }
-
-        return options[0];
+        return ReasoningEfforts.Clamp(effort, CurrentSnapshot.SupportedEfforts);
     }
 
-    public static int[] GetReasoningEffortOptionsAsInt32(string? reasoningEffortOptionsInDB)
+    public static string[] GetSupportedEffortsAsArray(string? supportedEffortsInDb)
     {
-        if (string.IsNullOrEmpty(reasoningEffortOptionsInDB))
-        {
-            return [];
-        }
-        return [.. reasoningEffortOptionsInDB.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse)];
+        return ReasoningEfforts.ParseSupportedEfforts(supportedEffortsInDb);
     }
 
     public static string[] GetSupportedImageSizesAsArray(string? supportedImageSizesInDB)

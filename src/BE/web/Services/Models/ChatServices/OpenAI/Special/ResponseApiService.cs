@@ -462,7 +462,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         }
 
         // Reasoning options - only add if explicitly specified
-        string? reasoningEffort = request.ChatConfig.ReasoningEffort.ToReasoningEffortString();
+        string? reasoningEffort = request.ChatConfig.Effort;
         if (reasoningEffort != null)
         {
             body["reasoning"] = new JsonObject

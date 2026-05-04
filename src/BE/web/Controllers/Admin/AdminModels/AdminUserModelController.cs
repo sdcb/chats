@@ -298,7 +298,7 @@ public class AdminUserModelController(ChatsDB db) : ControllerBase
                 AllowVision = m.CurrentSnapshot.AllowVision,
                 AllowStreaming = m.CurrentSnapshot.AllowStreaming,
                 AllowCodeExecution = m.CurrentSnapshot.AllowCodeExecution,
-                ReasoningEffortOptions = Model.GetReasoningEffortOptionsAsInt32(m.CurrentSnapshot.ReasoningEffortOptions),
+                SupportedEfforts = Model.GetSupportedEffortsAsArray(m.CurrentSnapshot.SupportedEfforts),
                 MinTemperature = m.CurrentSnapshot.MinTemperature,
                 MaxTemperature = m.CurrentSnapshot.MaxTemperature,
                 ContextWindow = m.CurrentSnapshot.ContextWindow,

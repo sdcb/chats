@@ -60,8 +60,9 @@ public partial class ModelSnapshot
 
     public int MaxResponseTokens { get; set; }
 
-    [StringLength(100)]
-    public string? ReasoningEffortOptions { get; set; }
+    [StringLength(200)]
+    [Unicode(false)]
+    public string? SupportedEfforts { get; set; }
 
     [StringLength(400)]
     public string? SupportedImageSizes { get; set; }
@@ -77,6 +78,20 @@ public partial class ModelSnapshot
     public bool SupportsVisionLink { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    [StringLength(100)]
+    [Unicode(false)]
+    public string? SupportedFormats { get; set; }
+
+    [StringLength(1000)]
+    [Unicode(false)]
+    public string? OverrideUrl { get; set; }
+
+    [Unicode(false)]
+    public string? CustomHeaders { get; set; }
+
+    [Unicode(false)]
+    public string? CustomBody { get; set; }
 
     [InverseProperty("ModelSnapshot")]
     public virtual ICollection<ChatConfigSnapshot> ChatConfigSnapshots { get; set; } = new List<ChatConfigSnapshot>();

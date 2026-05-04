@@ -19,7 +19,7 @@ public partial class ChatPresetSpan
         config.Temperature = ChatConfig.Temperature;
         config.WebSearchEnabled = ChatConfig.WebSearchEnabled;
         config.MaxOutputTokens = ChatConfig.MaxOutputTokens;
-        config.ReasoningEffortId = ChatConfig.ReasoningEffortId;
+        config.Effort = ChatConfig.Effort;
         config.ImageSize = ChatConfig.ImageSize;
         config.ThinkingBudget = ChatConfig.ThinkingBudget;
 
@@ -56,7 +56,7 @@ public partial class ChatPresetSpan
             Temperature = ChatConfig.Temperature,
             WebSearchEnabled = ChatConfig.WebSearchEnabled,
             MaxOutputTokens = ChatConfig.MaxOutputTokens,
-            ReasoningEffortId = ChatConfig.ReasoningEffortId,
+            Effort = ChatConfig.Effort,
             ImageSize = ChatConfig.ImageSize,
             ThinkingBudget = ChatConfig.ThinkingBudget,
         };

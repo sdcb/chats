@@ -1,5 +1,4 @@
 using Chats.DB;
-using Chats.DB.Enums;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Neutral;
@@ -108,6 +107,8 @@ public record ChatRequest
     /// </summary>
     public static ChatRequest FromOpenAI(string endUserId, Model model, bool streamed, IList<NeutralMessage> messages, CcoWrapper cco)
     {
+        ReasoningEfforts.ThrowIfInvalid(cco.ReasoningEffort);
+
         return new ChatRequest
         {
             EndUserId = endUserId,
@@ -128,7 +129,7 @@ public record ChatRequest
                 CodeExecutionEnabled = cco.EnableCodeExecution ?? false,
                 SystemPrompt = cco.SystemPrompt,
                 ImageSize = cco.ImageSize,
-                ReasoningEffortId = (byte)DBReasoningEffortExtensions.FromString(cco.ReasoningEffort),
+                Effort = cco.ReasoningEffort,
             }
         };
     }

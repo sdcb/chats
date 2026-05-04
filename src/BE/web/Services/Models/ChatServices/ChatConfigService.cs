@@ -20,7 +20,7 @@ public class ChatConfigService(ChatsDB db)
                 c.ModelSnapshotId == modelSnapshotId &&
                 c.SystemPrompt == raw.SystemPrompt &&
                 c.WebSearchEnabled == raw.WebSearchEnabled &&
-                c.ReasoningEffortId == raw.ReasoningEffortId &&
+                c.Effort == raw.Effort &&
                 c.Temperature == raw.Temperature &&
                 c.ImageSize == raw.ImageSize &&
                 c.CodeExecutionEnabled == raw.CodeExecutionEnabled &&
@@ -42,7 +42,7 @@ public class ChatConfigService(ChatsDB db)
             Temperature = raw.Temperature,
             WebSearchEnabled = raw.WebSearchEnabled,
             MaxOutputTokens = raw.MaxOutputTokens,
-            ReasoningEffortId = raw.ReasoningEffortId,
+            Effort = raw.Effort,
             CodeExecutionEnabled = raw.CodeExecutionEnabled,
             ImageSize = raw.ImageSize,
             ThinkingBudget = raw.ThinkingBudget,

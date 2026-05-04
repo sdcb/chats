@@ -103,7 +103,7 @@ public class AzureResponseApiServiceTests
             ModelId = 1,
             Model = model,
             Temperature = 1,
-            ReasoningEffortId = (byte)DBReasoningEffort.High,
+            Effort = ReasoningEfforts.High,
             SystemPrompt = "你是AI助手Sdcb Chats\n当前日期: 2026/01/07，当前模型：gpt-5.2",
         };
 

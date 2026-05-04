@@ -84,7 +84,7 @@ public class GoogleAI2ChatServiceTest
             MaxResponseTokens = isImageGenerationExp ? 8192 : (isFlashExp ? 8000 : (isFlashImage ? 8192 : 0)),
             MinTemperature = 0,
             MaxTemperature = 2,
-            ReasoningEffortOptions = isFlash ? "1" : null,
+            SupportedEfforts = isFlash ? ReasoningEfforts.Minimal : null,
             CreatedAt = now,
         };
 
@@ -105,7 +105,7 @@ public class GoogleAI2ChatServiceTest
             ModelId = 1,
             Model = model,
             Temperature = 1.0f,
-            ReasoningEffortId = isFlash ? (byte)DBReasoningEffort.Minimal : (byte)DBReasoningEffort.Default,
+            Effort = isFlash ? ReasoningEfforts.Minimal : null,
             SystemPrompt = null,
         };
 
@@ -564,7 +564,7 @@ public class GoogleAI2ChatServiceTest
         {
             cfg.SystemPrompt = GoogleAiDumpExtractors.TryGetSystemPrompt(dump.Request.Body);
             cfg.MaxOutputTokens = 65536;
-            cfg.ReasoningEffortId = (byte)DBReasoningEffort.Minimal;
+            cfg.Effort = ReasoningEfforts.Minimal;
         });
 
         // Act

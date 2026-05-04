@@ -1,4 +1,4 @@
-PRINT N'[1.12.0] 开始执行 Model Snapshot 数据迁移';
+PRINT N'[1.12.0] 开始执行 1.12 数据迁移';
 
 GO
 
@@ -8,9 +8,9 @@ SET NOCOUNT ON;
 GO
 
 -- =============================================
--- Step 1: 扩表与建表
+-- Step 1.1: 扩表与建表
 -- =============================================
-PRINT N'[Step 1] 扩表与建表';
+PRINT N'[Step 1.1] 扩表与建表';
 
 IF COL_LENGTH(N'dbo.ModelKey', N'CurrentSnapshotId') IS NULL
 BEGIN
@@ -94,6 +94,8 @@ BEGIN
         [Name] NVARCHAR(100) NOT NULL,
         Host VARCHAR(500) NULL,
         Secret VARCHAR(1000) NULL,
+        CustomHeaders VARCHAR(MAX) NULL,
+        CustomBody VARCHAR(MAX) NULL,
         CreatedAt DATETIME2(7) NOT NULL,
         CONSTRAINT PK_ModelKeySnapshot PRIMARY KEY CLUSTERED (Id)
     );
@@ -103,6 +105,30 @@ END
 ELSE
 BEGIN
     PRINT N'    -> dbo.ModelKeySnapshot 已存在，跳过';
+END
+
+IF COL_LENGTH(N'dbo.ModelKeySnapshot', N'CustomHeaders') IS NULL
+BEGIN
+    ALTER TABLE dbo.ModelKeySnapshot
+    ADD CustomHeaders VARCHAR(MAX) NULL;
+
+    PRINT N'    -> 已新增 dbo.ModelKeySnapshot.CustomHeaders';
+END
+ELSE
+BEGIN
+    PRINT N'    -> dbo.ModelKeySnapshot.CustomHeaders 已存在，跳过';
+END
+
+IF COL_LENGTH(N'dbo.ModelKeySnapshot', N'CustomBody') IS NULL
+BEGIN
+    ALTER TABLE dbo.ModelKeySnapshot
+    ADD CustomBody VARCHAR(MAX) NULL;
+
+    PRINT N'    -> 已新增 dbo.ModelKeySnapshot.CustomBody';
+END
+ELSE
+BEGIN
+    PRINT N'    -> dbo.ModelKeySnapshot.CustomBody 已存在，跳过';
 END
 
 IF OBJECT_ID(N'dbo.ModelSnapshot', N'U') IS NULL
@@ -193,11 +219,17 @@ END
 GO
 
 -- =============================================
--- Step 2: 回填 ModelKeySnapshot
+-- Step 1.2: 回填 ModelKeySnapshot
 -- =============================================
-PRINT N'[Step 2] 回填 dbo.ModelKeySnapshot';
+PRINT N'[Step 1.2] 回填 dbo.ModelKeySnapshot';
 
-IF OBJECT_ID(N'tempdb..#InsertedModelKeySnapshot', N'U') IS NOT NULL
+IF COL_LENGTH(N'dbo.ModelKey', N'ModelProviderId') IS NOT NULL
+   AND COL_LENGTH(N'dbo.ModelKey', N'Name') IS NOT NULL
+   AND COL_LENGTH(N'dbo.ModelKey', N'Host') IS NOT NULL
+   AND COL_LENGTH(N'dbo.ModelKey', N'Secret') IS NOT NULL
+BEGIN
+    EXEC sp_executesql N'
+IF OBJECT_ID(N''tempdb..#InsertedModelKeySnapshot'', N''U'') IS NOT NULL
 BEGIN
     DROP TABLE #InsertedModelKeySnapshot;
 END
@@ -268,7 +300,7 @@ END
 CLOSE ModelKeyCursor;
 DEALLOCATE ModelKeyCursor;
 
-PRINT N'    -> 已回填缺失的 dbo.ModelKeySnapshot';
+PRINT N''    -> 已回填缺失的 dbo.ModelKeySnapshot'';
 
 IF EXISTS (
     SELECT 1
@@ -276,19 +308,29 @@ IF EXISTS (
     WHERE mk.CurrentSnapshotId IS NULL
 )
 BEGIN
-    THROW 51200, N'[Step 2] 仍存在 CurrentSnapshotId 为空的 ModelKey', 1;
+    THROW 51200, N''[Step 1.2] 仍存在 CurrentSnapshotId 为空的 ModelKey'', 1;
 END
 
-PRINT N'    -> dbo.ModelKey.CurrentSnapshotId 校验通过';
+PRINT N''    -> dbo.ModelKey.CurrentSnapshotId 校验通过'';';
+END
+ELSE
+BEGIN
+    PRINT N'    -> dbo.ModelKey 已收缩，跳过旧结构回填';
+END
 
 GO
 
 -- =============================================
--- Step 3: 回填 ModelSnapshot
+-- Step 1.3: 回填 ModelSnapshot
 -- =============================================
-PRINT N'[Step 3] 回填 dbo.ModelSnapshot';
+PRINT N'[Step 1.3] 回填 dbo.ModelSnapshot';
 
-IF OBJECT_ID(N'tempdb..#InsertedModelSnapshot', N'U') IS NOT NULL
+IF COL_LENGTH(N'dbo.Model', N'ModelKeyId') IS NOT NULL
+   AND COL_LENGTH(N'dbo.Model', N'Name') IS NOT NULL
+   AND COL_LENGTH(N'dbo.Model', N'DeploymentName') IS NOT NULL
+BEGIN
+    EXEC sp_executesql N'
+IF OBJECT_ID(N''tempdb..#InsertedModelSnapshot'', N''U'') IS NOT NULL
 BEGIN
     DROP TABLE #InsertedModelSnapshot;
 END
@@ -396,7 +438,7 @@ WHILE @@FETCH_STATUS = 0
 BEGIN
     IF @CurrentModelKeySnapshotId IS NULL
     BEGIN
-        THROW 51201, N'[Step 3] Model 对应的 ModelKey.CurrentSnapshotId 为空，无法回填 ModelSnapshot', 1;
+        THROW 51201, N''[Step 1.3] Model 对应的 ModelKey.CurrentSnapshotId 为空，无法回填 ModelSnapshot'', 1;
     END
 
     INSERT INTO dbo.ModelSnapshot
@@ -503,7 +545,7 @@ END
 CLOSE ModelCursor;
 DEALLOCATE ModelCursor;
 
-PRINT N'    -> 已回填缺失的 dbo.ModelSnapshot';
+PRINT N''    -> 已回填缺失的 dbo.ModelSnapshot'';
 
 IF EXISTS (
     SELECT 1
@@ -511,7 +553,7 @@ IF EXISTS (
     WHERE m.CurrentSnapshotId IS NULL
 )
 BEGIN
-    THROW 51202, N'[Step 3] 仍存在 CurrentSnapshotId 为空的 Model', 1;
+    THROW 51202, N''[Step 1.3] 仍存在 CurrentSnapshotId 为空的 Model'', 1;
 END
 
 IF EXISTS (
@@ -520,17 +562,22 @@ IF EXISTS (
     WHERE ms.ModelKeySnapshotId IS NULL
 )
 BEGIN
-    THROW 51203, N'[Step 3] 存在 ModelSnapshot.ModelKeySnapshotId 为空的记录', 1;
+    THROW 51203, N''[Step 1.3] 存在 ModelSnapshot.ModelKeySnapshotId 为空的记录'', 1;
 END
 
-PRINT N'    -> dbo.Model.CurrentSnapshotId 校验通过';
+PRINT N''    -> dbo.Model.CurrentSnapshotId 校验通过'';';
+END
+ELSE
+BEGIN
+    PRINT N'    -> dbo.Model 已收缩，跳过旧结构回填';
+END
 
 GO
 
 -- =============================================
--- Step 4: 回填 ChatConfigSnapshot 与映射表
+-- Step 1.4: 回填 ChatConfigSnapshot 与映射表
 -- =============================================
-PRINT N'[Step 4] 回填 dbo.ChatConfigSnapshot 与 dbo.__Migration_112_ChatConfigMap';
+PRINT N'[Step 1.4] 回填 dbo.ChatConfigSnapshot 与 dbo.__Migration_112_ChatConfigMap';
 
 IF COL_LENGTH(N'dbo.ChatConfig', N'Id') IS NOT NULL
    AND COL_LENGTH(N'dbo.ChatTurn', N'ChatConfigId') IS NOT NULL
@@ -605,24 +652,31 @@ BEGIN
     PRINT N'    -> 旧列 dbo.ChatTurn.ChatConfigId 已不存在，跳过 ChatConfigSnapshot 初始回填';
 END
 
-IF EXISTS (
-    SELECT 1
-    FROM dbo.ChatConfig cc
-    LEFT JOIN dbo.__Migration_112_ChatConfigMap map ON map.ChatConfigId = cc.Id
-    WHERE map.ChatConfigId IS NULL
-)
+IF COL_LENGTH(N'dbo.ChatTurn', N'ChatConfigId') IS NOT NULL
 BEGIN
-    THROW 51204, N'[Step 4] 仍存在未建立快照映射的 ChatConfig', 1;
-END
+    IF EXISTS (
+        SELECT 1
+        FROM dbo.ChatConfig cc
+        LEFT JOIN dbo.__Migration_112_ChatConfigMap map ON map.ChatConfigId = cc.Id
+        WHERE map.ChatConfigId IS NULL
+    )
+    BEGIN
+        THROW 51204, N'[Step 1.4] 仍存在未建立快照映射的 ChatConfig', 1;
+    END
 
-PRINT N'    -> dbo.ChatConfig 与 dbo.ChatConfigSnapshot 映射校验通过';
+    PRINT N'    -> dbo.ChatConfig 与 dbo.ChatConfigSnapshot 映射校验通过';
+END
+ELSE
+BEGIN
+    PRINT N'    -> 已完成收口后的库不再校验临时映射表';
+END
 
 GO
 
 -- =============================================
--- Step 5: 回填 ChatTurn.ChatConfigSnapshotId
+-- Step 1.5: 回填 ChatTurn.ChatConfigSnapshotId
 -- =============================================
-PRINT N'[Step 5] 回填 dbo.ChatTurn.ChatConfigSnapshotId';
+PRINT N'[Step 1.5] 回填 dbo.ChatTurn.ChatConfigSnapshotId';
 
 IF COL_LENGTH(N'dbo.ChatTurn', N'ChatConfigId') IS NOT NULL
 BEGIN
@@ -642,7 +696,7 @@ BEGIN
           AND ct.ChatConfigSnapshotId IS NULL
     )
     BEGIN
-        THROW 51205, N'[Step 5] 存在 ChatConfigId 非空但 ChatConfigSnapshotId 仍为空的 ChatTurn', 1;
+        THROW 51205, N'[Step 1.5] 存在 ChatConfigId 非空但 ChatConfigSnapshotId 仍为空的 ChatTurn', 1;
     END
 END
 ELSE
@@ -655,9 +709,9 @@ PRINT N'    -> dbo.ChatTurn.ChatConfigSnapshotId 校验通过';
 GO
 
 -- =============================================
--- Step 6: 回填 UsageTransaction / UserModelUsage 的 ModelSnapshotId
+-- Step 1.6: 回填 UsageTransaction / UserModelUsage 的 ModelSnapshotId
 -- =============================================
-PRINT N'[Step 6] 回填 dbo.UsageTransaction.ModelSnapshotId 与 dbo.UserModelUsage.ModelSnapshotId';
+PRINT N'[Step 1.6] 回填 dbo.UsageTransaction.ModelSnapshotId 与 dbo.UserModelUsage.ModelSnapshotId';
 
 IF COL_LENGTH(N'dbo.UsageTransaction', N'ModelId') IS NOT NULL
 BEGIN
@@ -673,7 +727,7 @@ BEGIN
         WHERE ut.ModelSnapshotId IS NULL
     )
     BEGIN
-        THROW 51206, N'[Step 6] 存在 UsageTransaction.ModelSnapshotId 仍为空的记录', 1;
+        THROW 51206, N'[Step 1.6] 存在 UsageTransaction.ModelSnapshotId 仍为空的记录', 1;
     END
 END
 ELSE
@@ -695,7 +749,7 @@ BEGIN
         WHERE umu.ModelSnapshotId IS NULL
     )
     BEGIN
-        THROW 51207, N'[Step 6] 存在 UserModelUsage.ModelSnapshotId 仍为空的记录', 1;
+        THROW 51207, N'[Step 1.6] 存在 UserModelUsage.ModelSnapshotId 仍为空的记录', 1;
     END
 END
 ELSE
@@ -708,9 +762,9 @@ PRINT N'    -> dbo.UsageTransaction / dbo.UserModelUsage 回填校验通过';
 GO
 
 -- =============================================
--- Step 7: 数据收紧与一致性校验
+-- Step 1.7: 数据收紧与一致性校验
 -- =============================================
-PRINT N'[Step 7] 数据收紧与一致性校验';
+PRINT N'[Step 1.7] 数据收紧与一致性校验';
 
 IF EXISTS (
     SELECT 1
@@ -720,7 +774,7 @@ IF EXISTS (
        OR mks.Id IS NULL
 )
 BEGIN
-    THROW 51208, N'[Step 7] ModelKey.CurrentSnapshotId 无法完整解析到 ModelKeySnapshot', 1;
+    THROW 51208, N'[Step 1.7] ModelKey.CurrentSnapshotId 无法完整解析到 ModelKeySnapshot', 1;
 END
 
 IF EXISTS (
@@ -731,7 +785,7 @@ IF EXISTS (
        OR ms.Id IS NULL
 )
 BEGIN
-    THROW 51209, N'[Step 7] Model.CurrentSnapshotId 无法完整解析到 ModelSnapshot', 1;
+    THROW 51209, N'[Step 1.7] Model.CurrentSnapshotId 无法完整解析到 ModelSnapshot', 1;
 END
 
 IF EXISTS (
@@ -741,7 +795,7 @@ IF EXISTS (
     WHERE mks.Id IS NULL
 )
 BEGIN
-    THROW 51210, N'[Step 7] ModelSnapshot.ModelKeySnapshotId 存在无效引用', 1;
+    THROW 51210, N'[Step 1.7] ModelSnapshot.ModelKeySnapshotId 存在无效引用', 1;
 END
 
 IF EXISTS (
@@ -751,7 +805,7 @@ IF EXISTS (
     WHERE ms.Id IS NULL
 )
 BEGIN
-    THROW 51211, N'[Step 7] ChatConfigSnapshot.ModelSnapshotId 存在无效引用', 1;
+    THROW 51211, N'[Step 1.7] ChatConfigSnapshot.ModelSnapshotId 存在无效引用', 1;
 END
 
 IF EXISTS (
@@ -762,7 +816,7 @@ IF EXISTS (
       AND ccs.Id IS NULL
 )
 BEGIN
-    THROW 51212, N'[Step 7] ChatTurn.ChatConfigSnapshotId 存在无效引用', 1;
+    THROW 51212, N'[Step 1.7] ChatTurn.ChatConfigSnapshotId 存在无效引用', 1;
 END
 
 IF EXISTS (
@@ -772,7 +826,7 @@ IF EXISTS (
     WHERE ms.Id IS NULL
 )
 BEGIN
-    THROW 51213, N'[Step 7] UsageTransaction.ModelSnapshotId 存在无效引用', 1;
+    THROW 51213, N'[Step 1.7] UsageTransaction.ModelSnapshotId 存在无效引用', 1;
 END
 
 IF EXISTS (
@@ -782,7 +836,7 @@ IF EXISTS (
     WHERE ms.Id IS NULL
 )
 BEGIN
-    THROW 51214, N'[Step 7] UserModelUsage.ModelSnapshotId 存在无效引用', 1;
+    THROW 51214, N'[Step 1.7] UserModelUsage.ModelSnapshotId 存在无效引用', 1;
 END
 
 IF EXISTS (
@@ -802,7 +856,7 @@ IF EXISTS (
     WHERE Enabled IS NULL
 )
 BEGIN
-    THROW 51215, N'[Step 7] dbo.Model.Enabled 仍存在 NULL，无法收紧', 1;
+    THROW 51215, N'[Step 1.7] dbo.Model.Enabled 仍存在 NULL，无法收紧', 1;
 END
 
 PRINT N'    -> 一致性校验通过';
@@ -810,9 +864,9 @@ PRINT N'    -> 一致性校验通过';
 GO
 
 -- =============================================
--- Step 8: 索引与外键
+-- Step 1.8: 索引与外键
 -- =============================================
-PRINT N'[Step 8] 建立索引与外键';
+PRINT N'[Step 1.8] 建立索引与外键';
 
 IF COLUMNPROPERTY(OBJECT_ID(N'dbo.ModelKey'), N'CurrentSnapshotId', 'AllowsNull') = 1
 BEGIN
@@ -1074,9 +1128,9 @@ PRINT N'    -> 索引与外键建立完成';
 GO
 
 -- =============================================
--- Step 9: 删除旧外键、旧索引、旧列和旧表
+-- Step 1.9: 删除旧外键、旧索引、旧列和旧表
 -- =============================================
-PRINT N'[Step 9] 删除旧外键、旧索引、旧列和旧表';
+PRINT N'[Step 1.9] 删除旧外键、旧索引、旧列和旧表';
 
 IF OBJECT_ID(N'dbo.FK_ChatTurn_ChatConfig', N'F') IS NOT NULL
 BEGIN
@@ -1323,9 +1377,9 @@ PRINT N'    -> 旧结构已清理';
 GO
 
 -- =============================================
--- Step 10: 收口后校验
+-- Step 1.10: 收口后校验
 -- =============================================
-PRINT N'[Step 10] 收口后校验';
+PRINT N'[Step 1.10] 收口后校验';
 
 IF EXISTS (
     SELECT 1
@@ -1334,7 +1388,7 @@ IF EXISTS (
     WHERE mks.Id IS NULL
 )
 BEGIN
-    THROW 51216, N'[Step 10] 收口后仍存在无法解析的 ModelKey.CurrentSnapshotId', 1;
+    THROW 51216, N'[Step 1.10] 收口后仍存在无法解析的 ModelKey.CurrentSnapshotId', 1;
 END
 
 IF EXISTS (
@@ -1348,7 +1402,7 @@ IF EXISTS (
        OR mks.Id IS NULL
 )
 BEGIN
-    THROW 51217, N'[Step 10] 收口后仍存在无法沿 live 链路解析的 Model 当前版本', 1;
+    THROW 51217, N'[Step 1.10] 收口后仍存在无法沿 live 链路解析的 Model 当前版本', 1;
 END
 
 IF EXISTS (
@@ -1363,7 +1417,7 @@ IF EXISTS (
       )
 )
 BEGIN
-    THROW 51218, N'[Step 10] 收口后仍存在无效的 ChatTurn.ChatConfigSnapshotId', 1;
+    THROW 51218, N'[Step 1.10] 收口后仍存在无效的 ChatTurn.ChatConfigSnapshotId', 1;
 END
 
 IF EXISTS (
@@ -1377,7 +1431,7 @@ IF EXISTS (
     )
 )
 BEGIN
-    THROW 51219, N'[Step 10] 收口后仍存在无效的 UsageTransaction.ModelSnapshotId', 1;
+    THROW 51219, N'[Step 1.10] 收口后仍存在无效的 UsageTransaction.ModelSnapshotId', 1;
 END
 
 IF EXISTS (
@@ -1391,13 +1445,306 @@ IF EXISTS (
     )
 )
 BEGIN
-    THROW 51220, N'[Step 10] 收口后仍存在无效的 UserModelUsage.ModelSnapshotId', 1;
+    THROW 51220, N'[Step 1.10] 收口后仍存在无效的 UserModelUsage.ModelSnapshotId', 1;
 END
 
 PRINT N'    -> 收口后校验通过';
 
 GO
 
-PRINT N'[1.12.0] Model Snapshot 数据迁移完成';
+-- =============================================
+-- Step 2: Model / ChatConfig 配置迁移
+-- =============================================
+PRINT N'[Step 2] 执行 Model / ChatConfig 配置迁移';
+
+IF COL_LENGTH(N'dbo.ModelSnapshot', N'ReasoningEffortOptions') IS NOT NULL
+   AND COL_LENGTH(N'dbo.ModelSnapshot', N'SupportedEfforts') IS NULL
+BEGIN
+    EXEC sp_rename N'dbo.ModelSnapshot.ReasoningEffortOptions', N'SupportedEfforts', N'COLUMN';
+    PRINT N'    -> 已将 dbo.ModelSnapshot.ReasoningEffortOptions 重命名为 SupportedEfforts';
+END
+
+IF COL_LENGTH(N'dbo.ModelSnapshot', N'SupportedFormats') IS NULL
+BEGIN
+    ALTER TABLE dbo.ModelSnapshot
+    ADD SupportedFormats VARCHAR(100) NULL;
+
+    PRINT N'    -> 已新增 dbo.ModelSnapshot.SupportedFormats';
+END
+
+IF COL_LENGTH(N'dbo.ModelSnapshot', N'OverrideUrl') IS NULL
+BEGIN
+    ALTER TABLE dbo.ModelSnapshot
+    ADD OverrideUrl VARCHAR(1000) NULL;
+
+    PRINT N'    -> 已新增 dbo.ModelSnapshot.OverrideUrl';
+END
+
+IF COL_LENGTH(N'dbo.ModelSnapshot', N'CustomHeaders') IS NULL
+BEGIN
+    ALTER TABLE dbo.ModelSnapshot
+    ADD CustomHeaders VARCHAR(MAX) NULL;
+
+    PRINT N'    -> 已新增 dbo.ModelSnapshot.CustomHeaders';
+END
+
+IF COL_LENGTH(N'dbo.ModelSnapshot', N'CustomBody') IS NULL
+BEGIN
+    ALTER TABLE dbo.ModelSnapshot
+    ADD CustomBody VARCHAR(MAX) NULL;
+
+    PRINT N'    -> 已新增 dbo.ModelSnapshot.CustomBody';
+END
+
+IF COL_LENGTH(N'dbo.ChatConfig', N'ReasoningEffortId') IS NOT NULL
+   AND COL_LENGTH(N'dbo.ChatConfig', N'Effort') IS NULL
+BEGIN
+    EXEC sp_rename N'dbo.ChatConfig.ReasoningEffortId', N'Effort', N'COLUMN';
+    PRINT N'    -> 已将 dbo.ChatConfig.ReasoningEffortId 重命名为 Effort';
+END
+
+IF COL_LENGTH(N'dbo.ChatConfig', N'Format') IS NULL
+BEGIN
+    ALTER TABLE dbo.ChatConfig
+    ADD [Format] VARCHAR(20) NULL;
+
+    PRINT N'    -> 已新增 dbo.ChatConfig.Format';
+END
+
+IF COL_LENGTH(N'dbo.ChatConfig', N'Compression') IS NULL
+BEGIN
+    ALTER TABLE dbo.ChatConfig
+    ADD Compression TINYINT NULL;
+
+    PRINT N'    -> 已新增 dbo.ChatConfig.Compression';
+END
+
+IF COL_LENGTH(N'dbo.ChatConfigSnapshot', N'ReasoningEffortId') IS NOT NULL
+   AND COL_LENGTH(N'dbo.ChatConfigSnapshot', N'Effort') IS NULL
+BEGIN
+    EXEC sp_rename N'dbo.ChatConfigSnapshot.ReasoningEffortId', N'Effort', N'COLUMN';
+    PRINT N'    -> 已将 dbo.ChatConfigSnapshot.ReasoningEffortId 重命名为 Effort';
+END
+
+IF COL_LENGTH(N'dbo.ChatConfigSnapshot', N'Format') IS NULL
+BEGIN
+    ALTER TABLE dbo.ChatConfigSnapshot
+    ADD [Format] VARCHAR(20) NULL;
+
+    PRINT N'    -> 已新增 dbo.ChatConfigSnapshot.Format';
+END
+
+IF COL_LENGTH(N'dbo.ChatConfigSnapshot', N'Compression') IS NULL
+BEGIN
+    ALTER TABLE dbo.ChatConfigSnapshot
+    ADD Compression TINYINT NULL;
+
+    PRINT N'    -> 已新增 dbo.ChatConfigSnapshot.Compression';
+END
+
+GO
+
+PRINT N'[Step 2] 规范化 Model / ChatConfig 配置字段';
+
+IF COL_LENGTH(N'dbo.ModelSnapshot', N'SupportedEfforts') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM dbo.ModelSnapshot ms
+        CROSS APPLY OPENJSON(
+            CONCAT(
+                '["',
+                REPLACE(REPLACE(REPLACE(CAST(ms.SupportedEfforts AS NVARCHAR(MAX)), N'\', N'\\'), N'"', N'\"'), N',', N'","'),
+                '"]'
+            )
+        ) j
+        WHERE NULLIF(LTRIM(RTRIM(CAST(ms.SupportedEfforts AS NVARCHAR(MAX)))), N'') IS NOT NULL
+          AND LTRIM(RTRIM(j.[value])) <> N''
+          AND LOWER(LTRIM(RTRIM(j.[value]))) NOT IN (N'1', N'2', N'3', N'4', N'minimal', N'low', N'medium', N'high', N'xhigh', N'max')
+    )
+    BEGIN
+        THROW 51221, N'[Step 2] dbo.ModelSnapshot.SupportedEfforts 存在无法识别的 token', 1;
+    END
+
+    UPDATE ms
+    SET SupportedEfforts = normalized.SupportedEfforts
+    FROM dbo.ModelSnapshot ms
+    CROSS APPLY
+    (
+        SELECT CASE
+            WHEN NULLIF(LTRIM(RTRIM(CAST(ms.SupportedEfforts AS NVARCHAR(MAX)))), N'') IS NULL THEN NULL
+            ELSE
+            (
+                SELECT STRING_AGG(mapped.Token, ',') WITHIN GROUP (ORDER BY mapped.Ordinal)
+                FROM
+                (
+                    SELECT TRY_CAST(j.[key] AS INT) AS Ordinal,
+                           CASE LOWER(LTRIM(RTRIM(j.[value])))
+                               WHEN N'1' THEN 'minimal'
+                               WHEN N'2' THEN 'low'
+                               WHEN N'3' THEN 'medium'
+                               WHEN N'4' THEN 'high'
+                               ELSE LOWER(LTRIM(RTRIM(j.[value])))
+                           END AS Token
+                    FROM OPENJSON(
+                        CONCAT(
+                            '["',
+                            REPLACE(REPLACE(REPLACE(CAST(ms.SupportedEfforts AS NVARCHAR(MAX)), N'\', N'\\'), N'"', N'\"'), N',', N'","'),
+                            '"]'
+                        )
+                    ) j
+                    WHERE LTRIM(RTRIM(j.[value])) <> N''
+                ) mapped
+                WHERE mapped.Token IS NOT NULL
+            )
+        END AS SupportedEfforts
+    ) normalized
+    WHERE ISNULL(CAST(ms.SupportedEfforts AS NVARCHAR(MAX)), N'') <> ISNULL(CAST(normalized.SupportedEfforts AS NVARCHAR(MAX)), N'');
+
+    ALTER TABLE dbo.ModelSnapshot
+    ALTER COLUMN SupportedEfforts VARCHAR(200) NULL;
+
+    UPDATE dbo.ModelSnapshot
+    SET SupportedEfforts = NULL
+    WHERE LTRIM(RTRIM(ISNULL(SupportedEfforts, ''))) = '';
+
+    PRINT N'    -> 已完成 dbo.ModelSnapshot.SupportedEfforts 规范化';
+END
+
+IF COL_LENGTH(N'dbo.ChatConfig', N'Effort') IS NOT NULL
+BEGIN
+    DECLARE @ChatConfigEffortDefault SYSNAME;
+    SELECT @ChatConfigEffortDefault = dc.name
+    FROM sys.default_constraints dc
+    INNER JOIN sys.columns c
+        ON c.object_id = dc.parent_object_id
+       AND c.column_id = dc.parent_column_id
+    WHERE dc.parent_object_id = OBJECT_ID(N'dbo.ChatConfig')
+      AND c.name = N'Effort';
+
+    IF @ChatConfigEffortDefault IS NOT NULL
+    BEGIN
+        DECLARE @DropChatConfigEffortDefaultSql NVARCHAR(MAX);
+        SET @DropChatConfigEffortDefaultSql = N'ALTER TABLE dbo.ChatConfig DROP CONSTRAINT ' + QUOTENAME(@ChatConfigEffortDefault) + N';';
+        EXEC(@DropChatConfigEffortDefaultSql);
+    END
+
+    ALTER TABLE dbo.ChatConfig
+    ALTER COLUMN Effort VARCHAR(50) NULL;
+
+    IF EXISTS (
+        SELECT 1
+        FROM dbo.ChatConfig
+        WHERE NULLIF(LTRIM(RTRIM(Effort)), '') IS NOT NULL
+          AND LOWER(LTRIM(RTRIM(Effort))) NOT IN ('0', '1', '2', '3', '4', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max')
+    )
+    BEGIN
+        THROW 51222, N'[Step 2] dbo.ChatConfig.Effort 存在无法识别的值', 1;
+    END
+
+    UPDATE dbo.ChatConfig
+    SET Effort = CASE LOWER(LTRIM(RTRIM(Effort)))
+        WHEN '0' THEN NULL
+        WHEN '1' THEN 'minimal'
+        WHEN '2' THEN 'low'
+        WHEN '3' THEN 'medium'
+        WHEN '4' THEN 'high'
+        WHEN '' THEN NULL
+        ELSE LOWER(LTRIM(RTRIM(Effort)))
+    END;
+
+    PRINT N'    -> 已完成 dbo.ChatConfig.Effort 规范化';
+END
+
+IF COL_LENGTH(N'dbo.ChatConfigSnapshot', N'Effort') IS NOT NULL
+BEGIN
+    DECLARE @ChatConfigSnapshotEffortDefault SYSNAME;
+    SELECT @ChatConfigSnapshotEffortDefault = dc.name
+    FROM sys.default_constraints dc
+    INNER JOIN sys.columns c
+        ON c.object_id = dc.parent_object_id
+       AND c.column_id = dc.parent_column_id
+    WHERE dc.parent_object_id = OBJECT_ID(N'dbo.ChatConfigSnapshot')
+      AND c.name = N'Effort';
+
+    IF @ChatConfigSnapshotEffortDefault IS NOT NULL
+    BEGIN
+        DECLARE @DropChatConfigSnapshotEffortDefaultSql NVARCHAR(MAX);
+        SET @DropChatConfigSnapshotEffortDefaultSql = N'ALTER TABLE dbo.ChatConfigSnapshot DROP CONSTRAINT ' + QUOTENAME(@ChatConfigSnapshotEffortDefault) + N';';
+        EXEC(@DropChatConfigSnapshotEffortDefaultSql);
+    END
+
+    ALTER TABLE dbo.ChatConfigSnapshot
+    ALTER COLUMN Effort VARCHAR(50) NULL;
+
+    IF EXISTS (
+        SELECT 1
+        FROM dbo.ChatConfigSnapshot
+        WHERE NULLIF(LTRIM(RTRIM(Effort)), '') IS NOT NULL
+          AND LOWER(LTRIM(RTRIM(Effort))) NOT IN ('0', '1', '2', '3', '4', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max')
+    )
+    BEGIN
+        THROW 51224, N'[Step 2] dbo.ChatConfigSnapshot.Effort 存在无法识别的值', 1;
+    END
+
+    UPDATE dbo.ChatConfigSnapshot
+    SET Effort = CASE LOWER(LTRIM(RTRIM(Effort)))
+        WHEN '0' THEN NULL
+        WHEN '1' THEN 'minimal'
+        WHEN '2' THEN 'low'
+        WHEN '3' THEN 'medium'
+        WHEN '4' THEN 'high'
+        WHEN '' THEN NULL
+        ELSE LOWER(LTRIM(RTRIM(Effort)))
+    END;
+
+    PRINT N'    -> 已完成 dbo.ChatConfigSnapshot.Effort 规范化';
+END
+
+IF COL_LENGTH(N'dbo.ChatConfig', N'Compression') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM dbo.ChatConfig
+        WHERE Compression IS NOT NULL
+          AND (Compression < 0 OR Compression > 100)
+    )
+    BEGIN
+        THROW 51223, N'[Step 2] dbo.ChatConfig.Compression 超出 0-100 范围', 1;
+    END
+
+    ALTER TABLE dbo.ChatConfig
+    ALTER COLUMN Compression TINYINT NULL;
+
+    PRINT N'    -> 已将 dbo.ChatConfig.Compression 调整为 TINYINT';
+END
+
+IF COL_LENGTH(N'dbo.ChatConfigSnapshot', N'Compression') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM dbo.ChatConfigSnapshot
+        WHERE Compression IS NOT NULL
+          AND (Compression < 0 OR Compression > 100)
+    )
+    BEGIN
+        THROW 51225, N'[Step 2] dbo.ChatConfigSnapshot.Compression 超出 0-100 范围', 1;
+    END
+
+    ALTER TABLE dbo.ChatConfigSnapshot
+    ALTER COLUMN Compression TINYINT NULL;
+
+    PRINT N'    -> 已将 dbo.ChatConfigSnapshot.Compression 调整为 TINYINT';
+END
+
+UPDATE dbo.ChatConfigSnapshot
+SET HashCode = NULL
+WHERE HashCode IS NOT NULL;
+
+PRINT N'    -> 已将 dbo.ChatConfigSnapshot.HashCode 置空以等待新语义重建';
+
+GO
+
+PRINT N'[1.12.0] 1.12 数据迁移完成';
 
 GO

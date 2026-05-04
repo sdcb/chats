@@ -1,5 +1,4 @@
 ﻿using Chats.DB;
-using Chats.DB.Enums;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
 using System.Text.Json.Serialization;
 
@@ -91,7 +90,7 @@ public record ChatSpanDto
     public required int? MaxOutputTokens { get; init; }
 
     [JsonPropertyName("reasoningEffort")]
-    public required DBReasoningEffort? ReasoningEffort { get; init; }
+    public required string? ReasoningEffort { get; init; }
 
     [JsonPropertyName("imageSize")]
     public required string? ImageSize { get; init; }
@@ -114,7 +113,7 @@ public record ChatSpanDto
         WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
         CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
         MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-        ReasoningEffort = span.ChatConfig.ReasoningEffort,
+        ReasoningEffort = span.ChatConfig.Effort,
         ImageSize = span.ChatConfig.ImageSize,
         ThinkingBudget = span.ChatConfig.ThinkingBudget,
         Mcps = [.. span.ChatConfig.ChatConfigMcps.Select(
@@ -137,7 +136,7 @@ public record ChatSpanDto
         WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
         CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
         MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-        ReasoningEffort = span.ChatConfig.ReasoningEffort,
+        ReasoningEffort = span.ChatConfig.Effort,
         ImageSize = span.ChatConfig.ImageSize,
         ThinkingBudget = span.ChatConfig.ThinkingBudget,
         Mcps = [.. span.ChatConfig.ChatConfigMcps.Select(

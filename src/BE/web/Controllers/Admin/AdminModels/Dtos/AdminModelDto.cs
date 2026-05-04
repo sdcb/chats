@@ -32,8 +32,8 @@ public record AdminModelDto
     [JsonPropertyName("allowCodeExecution")]
     public required bool AllowCodeExecution { get; init; }
 
-    [JsonPropertyName("reasoningEffortOptions")]
-    public required int[] ReasoningEffortOptions { get; init; }
+    [JsonPropertyName("supportedEfforts")]
+    public required string[] SupportedEfforts { get; init; }
 
     [JsonPropertyName("allowStreaming")]
     public required bool AllowStreaming { get; init; }

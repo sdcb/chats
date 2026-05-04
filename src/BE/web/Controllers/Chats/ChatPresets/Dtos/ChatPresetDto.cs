@@ -38,7 +38,7 @@ public record ChatPresetDto
                 WebSearchEnabled = x.ChatConfig.WebSearchEnabled,
                 CodeExecutionEnabled = x.ChatConfig.CodeExecutionEnabled,
                 MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
-                ReasoningEffort = x.ChatConfig.ReasoningEffort,
+                ReasoningEffort = x.ChatConfig.Effort,
                 ImageSize = x.ChatConfig.ImageSize,
                 ThinkingBudget = x.ChatConfig.ThinkingBudget,
                 Mcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp

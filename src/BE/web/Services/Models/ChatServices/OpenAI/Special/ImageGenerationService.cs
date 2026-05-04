@@ -74,9 +74,9 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
                 ["moderation"] = "low"
             };
 
-            if (request.ChatConfig.ReasoningEffort != DBReasoningEffort.Default)
+            if (request.ChatConfig.Effort != null)
             {
-                requestBody["quality"] = request.ChatConfig.ReasoningEffort.ToGeneratedImageQualityText();
+                requestBody["quality"] = request.ChatConfig.Effort;
             }
 
             if (!string.IsNullOrEmpty(request.ChatConfig.ImageSize))
@@ -166,9 +166,9 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
                 ["moderation"] = "low"
             };
 
-            if (request.ChatConfig.ReasoningEffort != DBReasoningEffort.Default)
+            if (request.ChatConfig.Effort != null)
             {
-                requestBody["quality"] = request.ChatConfig.ReasoningEffort.ToGeneratedImageQualityText();
+                requestBody["quality"] = request.ChatConfig.Effort;
             }
 
             if (!string.IsNullOrEmpty(request.ChatConfig.ImageSize))
@@ -341,9 +341,9 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
 
         form.Add(new StringContent("low"), "moderation");
 
-        if (request.ChatConfig.ReasoningEffort != DBReasoningEffort.Default)
+        if (request.ChatConfig.Effort != null)
         {
-            form.Add(new StringContent(request.ChatConfig.ReasoningEffort.ToGeneratedImageQualityText()!), "quality");
+            form.Add(new StringContent(request.ChatConfig.Effort), "quality");
         }
 
         return form;

@@ -94,11 +94,11 @@ public abstract partial class ChatService
         }
 
         float? temperature = final.ChatConfig.Temperature;
-        byte reasoningEffortId = final.ChatConfig.ReasoningEffortId;
+        string? effort = final.ChatConfig.Effort;
         if (request.Source == UsageSource.WebChat)
         {
             temperature = request.ChatConfig.Model.ClampTemperature(temperature);
-            reasoningEffortId = request.ChatConfig.Model.ClampReasoningEffortId(reasoningEffortId);
+            effort = request.ChatConfig.Model.ClampEffort(effort);
             if ((DBApiType)request.ChatConfig.Model.CurrentSnapshot.ApiTypeId == DBApiType.AnthropicMessages && final.ChatConfig.ThinkingBudget != null)
             {
                 // invalid_request_error
@@ -111,7 +111,7 @@ public abstract partial class ChatService
 
         final = final with
         {
-            ChatConfig = final.ChatConfig.WithClamps(temperature, reasoningEffortId),
+            ChatConfig = final.ChatConfig.WithClamps(temperature, effort),
             Messages = await RewriteVisionMessages(
                 request.ChatConfig.Model.CurrentSnapshot.SupportsVisionLink,
                 request.ChatConfig.Model.CurrentSnapshot.AllowVision,

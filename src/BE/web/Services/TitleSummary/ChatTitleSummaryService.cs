@@ -84,7 +84,7 @@ public sealed class ChatTitleSummaryService(
                             Temperature = null,
                             WebSearchEnabled = false,
                             MaxOutputTokens = null,
-                            ReasoningEffortId = 0,
+                            Effort = null,
                             CodeExecutionEnabled = false,
                             SystemPrompt = null,
                             ImageSize = null,

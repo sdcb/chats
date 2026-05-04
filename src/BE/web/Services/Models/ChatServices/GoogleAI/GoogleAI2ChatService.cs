@@ -356,16 +356,16 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
             config["enableEnhancedCivicAnswers"] = true;
         }
 
-        if (Model.GetReasoningEffortOptionsAsInt32(request.ChatConfig.Model.CurrentSnapshot.ReasoningEffortOptions).Length > 0)
+        if (Model.GetSupportedEffortsAsArray(request.ChatConfig.Model.CurrentSnapshot.SupportedEfforts).Length > 0)
         {
             JsonObject thinkingConfig = new()
             {
                 ["includeThoughts"] = true
             };
 
-            int? thinkingBudget = request.ChatConfig.ReasoningEffort switch
+            int? thinkingBudget = request.ChatConfig.Effort switch
             {
-                var effort when effort.IsLowOrMinimal() => 1024,
+                var effort when ReasoningEfforts.IsLowOrMinimal(effort) => 1024,
                 _ => request.ChatConfig.ThinkingBudget
             };
 

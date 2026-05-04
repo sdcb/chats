@@ -25,7 +25,9 @@ public partial class ChatConfigSnapshot
 
     public int? MaxOutputTokens { get; set; }
 
-    public byte ReasoningEffortId { get; set; }
+    [StringLength(50)]
+    [Unicode(false)]
+    public string? Effort { get; set; }
 
     public bool CodeExecutionEnabled { get; set; }
 
@@ -39,6 +41,12 @@ public partial class ChatConfigSnapshot
     public long? HashCode { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    [StringLength(20)]
+    [Unicode(false)]
+    public string? Format { get; set; }
+
+    public byte? Compression { get; set; }
 
     [InverseProperty("ChatConfigSnapshot")]
     public virtual ICollection<ChatTurn> ChatTurns { get; set; } = new List<ChatTurn>();

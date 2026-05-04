@@ -57,8 +57,8 @@ public record UpdateModelRequest
     [JsonPropertyName("allowCodeExecution")]
     public required bool AllowCodeExecution { get; init; }
 
-    [JsonPropertyName("reasoningEffortOptions")]
-    public required int[] ReasoningEffortOptions { get; init; }
+    [JsonPropertyName("supportedEfforts")]
+    public required string[] SupportedEfforts { get; init; }
 
     [JsonPropertyName("minTemperature")]
     [Range(0, 2, ErrorMessage = "Minimum temperature must be between 0 and 2")]
@@ -107,7 +107,7 @@ public record UpdateModelRequest
 
     public bool Matches(Model model, ModelKey modelKey)
     {
-        string? reasoningEffortOptions = ReasoningEffortOptions.Length > 0 ? string.Join(',', ReasoningEffortOptions) : null;
+        string? supportedEfforts = ToSupportedEffortsCsv(SupportedEfforts);
         string? supportedImageSizes = SupportedImageSizes.Length > 0 ? string.Join(',', SupportedImageSizes) : null;
         ModelSnapshot snapshot = model.CurrentSnapshot;
 
@@ -124,7 +124,7 @@ public record UpdateModelRequest
             && snapshot.SupportsVisionLink == SupportsVisionLink
             && snapshot.AllowStreaming == AllowStreaming
             && snapshot.AllowCodeExecution == AllowCodeExecution
-            && snapshot.ReasoningEffortOptions == reasoningEffortOptions
+            && snapshot.SupportedEfforts == supportedEfforts
             && snapshot.MinTemperature == MinTemperature
             && snapshot.MaxTemperature == MaxTemperature
             && snapshot.ContextWindow == ContextWindow
@@ -157,7 +157,7 @@ public record UpdateModelRequest
             SupportsVisionLink = SupportsVisionLink,
             AllowStreaming = AllowStreaming,
             AllowCodeExecution = AllowCodeExecution,
-            ReasoningEffortOptions = ReasoningEffortOptions.Length > 0 ? string.Join(',', ReasoningEffortOptions) : null,
+            SupportedEfforts = ToSupportedEffortsCsv(SupportedEfforts),
             MinTemperature = MinTemperature,
             MaxTemperature = MaxTemperature,
             ContextWindow = ContextWindow,
@@ -172,5 +172,19 @@ public record UpdateModelRequest
             MaxThinkingBudget = MaxThinkingBudget,
             CreatedAt = createdAt,
         };
+    }
+
+    private static string? ToSupportedEffortsCsv(IEnumerable<string> supportedEfforts)
+    {
+        string[] exactValues = [..
+            supportedEfforts
+                .Where(static value => value is not null)];
+
+        foreach (string effort in exactValues)
+        {
+            ReasoningEfforts.ThrowIfInvalid(effort);
+        }
+
+        return exactValues.Length == 0 ? null : string.Join(',', exactValues);
     }
 }

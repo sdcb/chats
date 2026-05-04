@@ -28,6 +28,12 @@ public partial class ModelKeySnapshot
     [Unicode(false)]
     public string? Secret { get; set; }
 
+    [Unicode(false)]
+    public string? CustomHeaders { get; set; }
+
+    [Unicode(false)]
+    public string? CustomBody { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     [InverseProperty("CurrentSnapshot")]

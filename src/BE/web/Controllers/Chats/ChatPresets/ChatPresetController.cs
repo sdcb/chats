@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Chats.DB;
-using Chats.DB.Enums;
 
 namespace Chats.BE.Controllers.Chats.ChatPresets;
 
@@ -41,7 +40,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     WebSearchEnabled = x.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = x.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = (DBReasoningEffort)x.ChatConfig.ReasoningEffortId,
+                    ReasoningEffort = x.ChatConfig.Effort,
                     ImageSize = x.ChatConfig.ImageSize,
                     ThinkingBudget = x.ChatConfig.ThinkingBudget,
                     Mcps = x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
@@ -221,7 +220,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     WebSearchEnabled = x.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = x.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
-                    ReasoningEffortId = x.ChatConfig.ReasoningEffortId,
+                    Effort = x.ChatConfig.Effort,
                     ImageSize = x.ChatConfig.ImageSize,
                     ChatConfigMcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatConfigMcp
                     {
@@ -273,7 +272,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                 WebSearchEnabled = false,
                 CodeExecutionEnabled = false,
                 MaxOutputTokens = null,
-                ReasoningEffortId = 0,
+                Effort = null,
                 SystemPrompt = defaultPrompt.Content,
                 ImageSize = null,
             }
