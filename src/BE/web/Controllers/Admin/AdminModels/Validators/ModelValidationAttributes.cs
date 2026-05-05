@@ -2,6 +2,8 @@
 using Chats.BE.Controllers.Admin.AdminModels.Dtos;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
+using System.Text.Json;
+using Json.Patch;
 
 namespace Chats.BE.Controllers.Admin.AdminModels.Validators;
 
@@ -161,5 +163,99 @@ public class ValidateMaxThinkingBudgetAttribute : ValidationAttribute
         }
 
         return ValidationResult.Success;
+    }
+}
+
+public static class ModelOverrideValidators
+{
+    public static ValidationResult? ValidateCustomHeaders(string? customHeaders, string memberName)
+    {
+        if (string.IsNullOrWhiteSpace(customHeaders))
+        {
+            return ValidationResult.Success;
+        }
+
+        string[] lines = customHeaders.Replace("\r", string.Empty, StringComparison.Ordinal).Split('\n');
+        foreach (string line in lines)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+
+            int separatorIndex = line.IndexOf(':');
+            if (separatorIndex <= 0)
+            {
+                return new ValidationResult("Custom headers must use one 'Header-Name: value' pair per line.", [memberName]);
+            }
+
+            string name = line[..separatorIndex].Trim();
+            if (name.Length == 0)
+            {
+                return new ValidationResult("Custom headers must use one 'Header-Name: value' pair per line.", [memberName]);
+            }
+        }
+
+        return ValidationResult.Success;
+    }
+
+    public static ValidationResult? ValidateCustomBodyPatch(string? customBody, string memberName)
+    {
+        if (string.IsNullOrWhiteSpace(customBody))
+        {
+            return ValidationResult.Success;
+        }
+
+        try
+        {
+            JsonPatch? patch = JsonSerializer.Deserialize<JsonPatch>(customBody);
+            if (patch is null)
+            {
+                return new ValidationResult("Custom body must be a valid RFC 6902 JSON Patch array.", [memberName]);
+            }
+        }
+        catch (JsonException)
+        {
+            return new ValidationResult("Custom body must be a valid RFC 6902 JSON Patch array.", [memberName]);
+        }
+
+        return ValidationResult.Success;
+    }
+}
+
+[AttributeUsage(AttributeTargets.Property)]
+public class ValidateCustomHeadersAttribute : ValidationAttribute
+{
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
+    {
+        return ModelOverrideValidators.ValidateCustomHeaders(value as string, validationContext.MemberName ?? string.Empty);
+    }
+}
+
+[AttributeUsage(AttributeTargets.Property)]
+public class ValidateCustomBodyPatchAttribute : ValidationAttribute
+{
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
+    {
+        return ModelOverrideValidators.ValidateCustomBodyPatch(value as string, validationContext.MemberName ?? string.Empty);
+    }
+}
+
+public class ValidateCustomOverridesAttribute : ValidationAttribute
+{
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
+    {
+        if (validationContext.ObjectInstance is not UpdateModelRequest request)
+        {
+            return new ValidationResult("Invalid object type for custom override validation");
+        }
+
+        ValidationResult? headerValidation = ModelOverrideValidators.ValidateCustomHeaders(request.CustomHeaders, nameof(UpdateModelRequest.CustomHeaders));
+        if (headerValidation != ValidationResult.Success)
+        {
+            return headerValidation;
+        }
+
+        return ModelOverrideValidators.ValidateCustomBodyPatch(request.CustomBody, nameof(UpdateModelRequest.CustomBody));
     }
 }

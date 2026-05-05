@@ -48,6 +48,11 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
     [HttpPut("{modelKeyId}")]
     public async Task<ActionResult> UpdateModelKey(short modelKeyId, [FromBody] UpdateModelKeyRequest request, CancellationToken cancellationToken)
     {
+        if (!TryValidateModel(request))
+        {
+            return BadRequest(ModelState);
+        }
+
         ModelKey? modelKey = await db.ModelKeys
             .Include(x => x.CurrentSnapshot)
             .FirstOrDefaultAsync(x => x.Id == modelKeyId, cancellationToken);
@@ -108,6 +113,11 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
     [HttpPost]
     public async Task<ActionResult> CreateModelKey([FromBody] UpdateModelKeyRequest request, CancellationToken cancellationToken)
     {
+        if (!TryValidateModel(request))
+        {
+            return BadRequest(ModelState);
+        }
+
         // 验证 ModelProviderId 是否有效
         if (!Enum.IsDefined(typeof(DBModelProvider), (int)request.ModelProviderId))
         {

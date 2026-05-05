@@ -133,10 +133,10 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
         else
         {
             // Image edits API with streaming
-            using MultipartFormDataContent form = await BuildImageEditFormAsync(images, prompt, request, cancellationToken);
+            using MultipartFormDataContent baseForm = await BuildImageEditFormAsync(images, prompt, request, cancellationToken);
+            using MultipartFormDataContent form = ModelRequestOverrides.ApplyMultipartBody(baseForm, model.CurrentSnapshot);
             form.Add(new StringContent("true"), "stream");
             form.Add(new StringContent("3"), "partial_images");
-            ModelRequestOverrides.ApplyMultipartBody(form, model.CurrentSnapshot);
 
             using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/images/edits");
             AddAuthorizationHeader(httpRequest, modelKey);
@@ -230,8 +230,8 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
         }
         else
         {
-            using MultipartFormDataContent form = await BuildImageEditFormAsync(images, prompt, request, cancellationToken);
-            ModelRequestOverrides.ApplyMultipartBody(form, model.CurrentSnapshot);
+            using MultipartFormDataContent baseForm = await BuildImageEditFormAsync(images, prompt, request, cancellationToken);
+            using MultipartFormDataContent form = ModelRequestOverrides.ApplyMultipartBody(baseForm, model.CurrentSnapshot);
 
             using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/images/edits");
             AddAuthorizationHeader(httpRequest, modelKey);

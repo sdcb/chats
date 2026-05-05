@@ -11,6 +11,7 @@ namespace Chats.BE.Controllers.Admin.AdminModels.Dtos;
 [ValidateImageSizes]
 [ValidateImageBatchCount]
 [ValidateMaxThinkingBudget]
+[ValidateCustomOverrides]
 public record UpdateModelRequest
 {
     [JsonPropertyName("name")]
@@ -67,9 +68,11 @@ public record UpdateModelRequest
     public string? OverrideUrl { get; init; }
 
     [JsonPropertyName("customHeaders")]
+    [ValidateCustomHeaders]
     public string? CustomHeaders { get; init; }
 
     [JsonPropertyName("customBody")]
+    [ValidateCustomBodyPatch]
     public string? CustomBody { get; init; }
 
     [JsonPropertyName("minTemperature")]

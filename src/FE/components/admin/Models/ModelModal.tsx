@@ -808,7 +808,7 @@ const ModelModal = (props: IProps) => {
                       <FormTextarea
                         rows={4}
                         label={t('Custom Headers')}
-                        options={{ placeholder: '{\n  "Authorization": "Bearer <token>"\n}' }}
+                        options={{ placeholder: 'Authorization: Bearer <token>\nX-Trace-Id: demo-request' }}
                         field={field}
                       />
                     )}
@@ -820,7 +820,7 @@ const ModelModal = (props: IProps) => {
                       <FormTextarea
                         rows={6}
                         label={t('Custom Body')}
-                        options={{ placeholder: '{\n  "temperature": 0.7\n}' }}
+                        options={{ placeholder: '[\n  { "op": "replace", "path": "/temperature", "value": 0.7 },\n  { "op": "add", "path": "/metadata/source", "value": "admin" }\n]' }}
                         field={field}
                       />
                     )}

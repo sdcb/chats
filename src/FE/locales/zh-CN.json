@@ -683,6 +683,8 @@
   "Custom URL": "自定义 URL",
   "Custom Headers": "自定义请求头",
   "Custom Body": "自定义请求体",
+  "Optional custom headers (line format)": "可选的自定义请求头（每行一个 Header-Name: value）",
+  "Optional custom body (RFC 6902 JSON Patch)": "可选的自定义请求体（RFC 6902 JSON Patch）",
   "Optional custom headers (JSON format)": "可选的自定义请求头（JSON格式）",
   "Failed to load user data": "加载用户数据失败",
   "User assignments saved successfully": "用户分配保存成功",

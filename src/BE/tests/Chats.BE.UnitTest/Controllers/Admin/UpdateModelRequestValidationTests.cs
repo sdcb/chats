@@ -383,6 +383,50 @@ public class UpdateModelRequestValidationTests
         Assert.Empty(results);
     }
 
+    [Fact]
+    public void CustomHeaders_InvalidLine_ShouldFail()
+    {
+        UpdateModelRequest request = CreateValidChatRequest() with
+        {
+            CustomHeaders = "Authorization Bearer token"
+        };
+
+        List<ValidationResult> results = ValidateModel(request);
+
+        Assert.Contains(results, r =>
+            r.MemberNames.Contains(nameof(UpdateModelRequest.CustomHeaders)) &&
+            r.ErrorMessage!.Contains("Header-Name: value"));
+    }
+
+    [Fact]
+    public void CustomBody_NonPatchJson_ShouldFail()
+    {
+        UpdateModelRequest request = CreateValidChatRequest() with
+        {
+            CustomBody = "{\"temperature\":0.7}"
+        };
+
+        List<ValidationResult> results = ValidateModel(request);
+
+        Assert.Contains(results, r =>
+            r.MemberNames.Contains(nameof(UpdateModelRequest.CustomBody)) &&
+            r.ErrorMessage!.Contains("RFC 6902 JSON Patch"));
+    }
+
+    [Fact]
+    public void CustomOverrides_ValidHeadersAndJsonPatch_ShouldPass()
+    {
+        UpdateModelRequest request = CreateValidChatRequest() with
+        {
+            CustomHeaders = "Authorization: Bearer token\nX-Trace-Id: demo",
+            CustomBody = "[{\"op\":\"replace\",\"path\":\"/temperature\",\"value\":0.7}]"
+        };
+
+        List<ValidationResult> results = ValidateModel(request);
+
+        Assert.Empty(results);
+    }
+
     #endregion
 
     #region 辅助方法

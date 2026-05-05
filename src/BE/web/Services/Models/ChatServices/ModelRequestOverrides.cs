@@ -1,6 +1,9 @@
 using Chats.DB;
 using Chats.DB.Enums;
 using Chats.BE.DB;
+using Json.Patch;
+using System.Net.Http.Headers;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Chats.BE.Services.Models.ChatServices;
@@ -92,36 +95,28 @@ internal static class ModelRequestOverrides
 
     public static void ApplyBody(JsonObject body, ModelSnapshot snapshot)
     {
-        JsonObject? mergedPatch = MergeCustomBodies(snapshot.ModelKeySnapshot.CustomBody, snapshot.CustomBody);
+        JsonPatch? mergedPatch = MergeCustomBodies(snapshot.ModelKeySnapshot.CustomBody, snapshot.CustomBody);
         if (mergedPatch is null)
         {
             return;
         }
 
-        MergeInto(body, mergedPatch);
+        ApplyJsonPatch(body, mergedPatch);
     }
 
-    public static void ApplyMultipartBody(MultipartFormDataContent form, ModelSnapshot snapshot)
+    public static MultipartFormDataContent ApplyMultipartBody(MultipartFormDataContent form, ModelSnapshot snapshot)
     {
-        JsonObject? mergedPatch = MergeCustomBodies(snapshot.ModelKeySnapshot.CustomBody, snapshot.CustomBody);
+        JsonPatch? mergedPatch = MergeCustomBodies(snapshot.ModelKeySnapshot.CustomBody, snapshot.CustomBody);
         if (mergedPatch is null)
         {
-            return;
+            return form;
         }
 
-        foreach (KeyValuePair<string, JsonNode?> item in mergedPatch)
-        {
-            if (item.Value is null)
-            {
-                continue;
-            }
+        JsonObject textFields = ExtractMultipartTextFields(form);
+        ApplyJsonPatch(textFields, mergedPatch);
 
-            string value = item.Value is JsonValue jsonValue && jsonValue.TryGetValue<string>(out string? stringValue)
-                ? stringValue ?? string.Empty
-                : item.Value.ToJsonString();
-
-            form.Add(new StringContent(value), item.Key);
-        }
+        MultipartFormDataContent patchedForm = RebuildMultipartForm(form, textFields);
+        return patchedForm;
     }
 
     public static void ApplyHeaders(HttpRequestMessage request, ModelSnapshot snapshot)
@@ -129,13 +124,28 @@ internal static class ModelRequestOverrides
         IReadOnlyDictionary<string, string> mergedHeaders = MergeHeaders(snapshot.ModelKeySnapshot.CustomHeaders, snapshot.CustomHeaders);
         foreach (KeyValuePair<string, string> header in mergedHeaders)
         {
-            request.Headers.Remove(header.Key);
-            request.Content?.Headers.Remove(header.Key);
+            TryRemoveHeader(request.Headers, header.Key);
+            if (request.Content is not null)
+            {
+                TryRemoveHeader(request.Content.Headers, header.Key);
+            }
 
             if (!request.Headers.TryAddWithoutValidation(header.Key, header.Value))
             {
                 request.Content?.Headers.TryAddWithoutValidation(header.Key, header.Value);
             }
+        }
+    }
+
+    private static void TryRemoveHeader(HttpHeaders headers, string headerName)
+    {
+        try
+        {
+            headers.Remove(headerName);
+        }
+        catch (InvalidOperationException)
+        {
+            // Header belongs to a different header collection type.
         }
     }
 
@@ -188,52 +198,143 @@ internal static class ModelRequestOverrides
         }
     }
 
-    private static JsonObject? MergeCustomBodies(string? keyBody, string? modelBody)
+    private static JsonPatch? MergeCustomBodies(string? keyBody, string? modelBody)
     {
-        JsonObject? merged = ParseJsonObject(keyBody);
-        JsonObject? modelPatch = ParseJsonObject(modelBody);
+        JsonPatch? keyPatch = ParseJsonPatch(keyBody);
+        JsonPatch? modelPatch = ParseJsonPatch(modelBody);
 
-        if (merged is null)
+        if (keyPatch is null)
         {
             return modelPatch;
         }
 
         if (modelPatch is null)
         {
-            return merged;
+            return keyPatch;
         }
 
-        MergeInto(merged, modelPatch);
-        return merged;
+        JsonNode? mergedPatchNode = JsonSerializer.SerializeToNode(keyPatch, JSON.JsonSerializerOptions)?.DeepClone();
+        JsonArray mergedPatchArray = mergedPatchNode as JsonArray ?? [];
+
+        JsonArray? modelPatchArray = JsonSerializer.SerializeToNode(modelPatch, JSON.JsonSerializerOptions) as JsonArray;
+        if (modelPatchArray is not null)
+        {
+            foreach (JsonNode? operation in modelPatchArray)
+            {
+                if (operation is not null)
+                {
+                    mergedPatchArray.Add(operation.DeepClone());
+                }
+            }
+        }
+
+        return JsonSerializer.Deserialize<JsonPatch>(mergedPatchArray.ToJsonString(JSON.JsonSerializerOptions), JSON.JsonSerializerOptions);
     }
 
-    private static JsonObject? ParseJsonObject(string? rawJson)
+    private static JsonPatch? ParseJsonPatch(string? rawJson)
     {
         if (string.IsNullOrWhiteSpace(rawJson))
         {
             return null;
         }
 
-        JsonNode? parsed = JsonNode.Parse(rawJson);
-        if (parsed is not JsonObject parsedObject)
+        JsonPatch? patch = JsonSerializer.Deserialize<JsonPatch>(rawJson, JSON.JsonSerializerOptions);
+        if (patch is null)
         {
-            throw new InvalidOperationException("CustomBody must be a JSON object.");
+            throw new InvalidOperationException("CustomBody must be a valid RFC 6902 JSON Patch array.");
         }
 
-        return (JsonObject)parsedObject.DeepClone();
+        return patch;
     }
 
-    private static void MergeInto(JsonObject target, JsonObject patch)
+    private static void ApplyJsonPatch(JsonObject target, JsonPatch patch)
     {
-        foreach (KeyValuePair<string, JsonNode?> property in patch)
+        PatchResult result = patch.Apply(target);
+        if (!result.IsSuccess)
         {
-            if (property.Value is JsonObject patchObject && target[property.Key] is JsonObject targetObject)
+            string errorMessage = result.Error?.ToString() ?? "Unknown JSON Patch error.";
+            throw new InvalidOperationException($"Failed to apply custom body JSON Patch: {errorMessage}");
+        }
+
+        if (result.Result is JsonObject patchedObject)
+        {
+            target.Clear();
+            foreach (KeyValuePair<string, JsonNode?> property in patchedObject)
             {
-                MergeInto(targetObject, patchObject);
+                target[property.Key] = property.Value?.DeepClone();
+            }
+            return;
+        }
+
+        throw new InvalidOperationException("Custom body JSON Patch must produce a JSON object.");
+    }
+
+    private static JsonObject ExtractMultipartTextFields(MultipartFormDataContent form)
+    {
+        JsonObject fields = [];
+        foreach (HttpContent content in form)
+        {
+            if (content is not StringContent)
+            {
                 continue;
             }
 
-            target[property.Key] = property.Value?.DeepClone();
+            string? name = content.Headers.ContentDisposition?.Name?.Trim('"');
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                continue;
+            }
+
+            string value = content.ReadAsStringAsync().GetAwaiter().GetResult();
+            fields[name] = value;
         }
+
+        return fields;
+    }
+
+    private static MultipartFormDataContent RebuildMultipartForm(MultipartFormDataContent originalForm, JsonObject textFields)
+    {
+        MultipartFormDataContent patchedForm = new();
+
+        foreach (HttpContent content in originalForm)
+        {
+            if (content is StringContent)
+            {
+                continue;
+            }
+
+            string? name = content.Headers.ContentDisposition?.Name?.Trim('"');
+            string? fileName = content.Headers.ContentDisposition?.FileName?.Trim('"');
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                patchedForm.Add(content);
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                patchedForm.Add(content, name);
+                continue;
+            }
+
+            patchedForm.Add(content, name, fileName);
+        }
+
+        foreach (KeyValuePair<string, JsonNode?> item in textFields)
+        {
+            if (item.Value is null)
+            {
+                continue;
+            }
+
+            string value = item.Value is JsonValue jsonValue && jsonValue.TryGetValue<string>(out string? stringValue)
+                ? stringValue ?? string.Empty
+                : item.Value.ToJsonString();
+
+            patchedForm.Add(new StringContent(value), item.Key);
+        }
+
+        return patchedForm;
     }
 }
