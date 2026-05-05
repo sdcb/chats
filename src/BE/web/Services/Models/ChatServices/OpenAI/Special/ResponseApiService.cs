@@ -36,6 +36,11 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         return host?.TrimEnd('/') ?? "";
     }
 
+    protected virtual string GetEndpoint(Model model)
+    {
+        return ModelRequestOverrides.ResolveEndpoint(model.CurrentSnapshot);
+    }
+
     protected virtual void AddAuthorizationHeader(HttpRequestMessage request, ModelKeySnapshot modelKey)
     {
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelKey.Secret);
@@ -45,7 +50,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
     {
         Model model = request.ChatConfig.Model;
         ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
-        string endpoint = GetEndpoint(modelKey);
+        string endpoint = GetEndpoint(model);
         bool hasTools = false;
 
         if (request.ChatConfig.Model.CurrentSnapshot.UseAsyncApi)
@@ -53,10 +58,12 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             // Background mode
             Stopwatch sw = Stopwatch.StartNew();
             JsonObject requestBody = BuildRequestBody(request, stream: false, background: true);
+            ModelRequestOverrides.ApplyBody(requestBody, model.CurrentSnapshot);
 
             using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/responses");
             AddAuthorizationHeader(httpRequest, modelKey);
             httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+            ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
 
             using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceResponseApi);
             httpClient.Timeout = NetworkTimeout;
@@ -241,10 +248,12 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         {
             // Streaming mode
             JsonObject requestBody = BuildRequestBody(request, stream: true, background: false);
+            ModelRequestOverrides.ApplyBody(requestBody, model.CurrentSnapshot);
 
             using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/responses");
             AddAuthorizationHeader(httpRequest, modelKey);
             httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+            ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
             httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
             using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceResponseApi);

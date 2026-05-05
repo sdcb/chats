@@ -7,11 +7,132 @@ using Chats.BE.UnitTest.ChatServices.Http;
 using Chats.DB;
 using Chats.DB.Enums;
 using System.Net;
+using System.Text;
 
 namespace Chats.BE.UnitTest.ChatServices.ChatCompletions;
 
 public class AzureAIFoundryChatServiceTests
 {
+    private sealed class CapturingHttpClientFactory(HttpStatusCode statusCode, string responseBody, Action<HttpRequestMessage> onRequest) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name)
+        {
+            return new HttpClient(new CapturingHandler(statusCode, responseBody, onRequest));
+        }
+
+        private sealed class CapturingHandler(HttpStatusCode statusCode, string responseBody, Action<HttpRequestMessage> onRequest) : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                onRequest(request);
+
+                HttpResponseMessage response = new(statusCode)
+                {
+                    Content = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes(responseBody)))
+                };
+
+                response.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/event-stream")
+                {
+                    CharSet = "utf-8"
+                };
+
+                return Task.FromResult(response);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Streaming_ShouldUseAzureOpenAIPrefixInRequestUri()
+    {
+        // Arrange
+        string sse =
+            "data: {\"id\":\"chatcmpl-test\",\"object\":\"chat.completion.chunk\",\"created\":1773405995,\"model\":\"grok-4-1-fast-reasoning\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"hello\"},\"finish_reason\":null}]}\n\n" +
+            "data: {\"id\":\"chatcmpl-test\",\"object\":\"chat.completion.chunk\",\"created\":1773405995,\"model\":\"grok-4-1-fast-reasoning\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n" +
+            "data: [DONE]\n\n";
+
+        Uri? requestUri = null;
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
+        {
+            requestUri = req.RequestUri;
+        });
+
+        AzureAIFoundryChatService service = new(httpClientFactory);
+        DateTime now = DateTime.UtcNow;
+
+        ModelKeySnapshot modelKeySnapshot = new()
+        {
+            Id = 11,
+            ModelKeyId = 1,
+            Name = "TestKey",
+            Secret = "test-api-key",
+            Host = "https://rich-east-us2.openai.azure.com/",
+            ModelProviderId = (short)DBModelProvider.AzureAIFoundry,
+            CreatedAt = now,
+        };
+
+        ModelKey modelKey = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelKeySnapshot.Id,
+            CurrentSnapshot = modelKeySnapshot,
+        };
+
+        modelKeySnapshot.ModelKey = modelKey;
+
+        ModelSnapshot modelSnapshot = new()
+        {
+            Id = 21,
+            ModelId = 1,
+            Name = "Grok",
+            DeploymentName = "grok-4-1-fast-reasoning",
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKeySnapshot.Id,
+            ModelKeySnapshot = modelKeySnapshot,
+            AllowStreaming = true,
+            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+            CreatedAt = now,
+        };
+
+        Model model = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelSnapshot.Id,
+            CurrentSnapshot = modelSnapshot,
+        };
+
+        modelSnapshot.Model = model;
+
+        ChatConfig chatConfig = new()
+        {
+            Id = 1,
+            ModelId = 1,
+            Model = model,
+        };
+
+        ChatRequest request = new()
+        {
+            Messages = [NeutralMessage.FromUserText("hello")],
+            ChatConfig = chatConfig,
+            Source = UsageSource.Api,
+            Streamed = true,
+            EndUserId = "8"
+        };
+
+        // Act
+        await foreach (var _ in service.ChatStreamed(request, CancellationToken.None))
+        {
+            // drain
+        }
+
+        // Assert
+        Assert.NotNull(requestUri);
+        Assert.Equal("https://rich-east-us2.openai.azure.com/openai/v1/chat/completions", requestUri!.ToString());
+    }
+
     [Fact]
     public async Task Streaming_GrokUsageShouldRespectTotalTokens()
     {

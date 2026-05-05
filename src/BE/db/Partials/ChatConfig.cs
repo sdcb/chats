@@ -158,6 +158,24 @@ public partial class ChatConfig
             AppendField(intBuffer);
         }
 
+        if (!string.IsNullOrEmpty(Format))
+        {
+            int formatLength = Format.Length;
+            BitConverter.TryWriteBytes(intBuffer, formatLength);
+            AppendField(intBuffer);
+
+            ReadOnlySpan<byte> formatBytes = MemoryMarshal.AsBytes(Format.AsSpan());
+            AppendField(formatBytes);
+        }
+
+        flagBuffer[0] = (byte)(Compression.HasValue ? 1 : 0);
+        AppendField(flagBuffer, withSeparator: false);
+        if (Compression.HasValue)
+        {
+            flagBuffer[0] = Compression.Value;
+            AppendField(flagBuffer);
+        }
+
         // 计算 SHA256 哈希，取前 8 字节转换为 long 类型
         byte[] fullHash = incrementalHash.GetHashAndReset();
         long hashCode = BinaryPrimitives.ReadInt64LittleEndian(fullHash);

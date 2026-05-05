@@ -36,6 +36,12 @@ public record UpdateChatSpanRequest
     [JsonPropertyName("imageSize")]
     public string? ImageSize { get; init; }
 
+    [JsonPropertyName("format")]
+    public string? Format { get; init; }
+
+    [JsonPropertyName("compression")]
+    public byte? Compression { get; init; }
+
     [JsonPropertyName("mcps")]
     public ChatSpanMcp[] Mcps { get; init; } = [];
 
@@ -54,6 +60,8 @@ public record UpdateChatSpanRequest
         config.Effort = ReasoningEffort;
         config.ThinkingBudget = ThinkingBudget;
         config.ImageSize = ImageSize;
+        config.Format = Format;
+        config.Compression = Compression;
         
         // Update ChatConfigMcp associations
         UpdateMcpAssociations(config);
@@ -79,6 +87,8 @@ public record UpdateChatSpanRequest
         config.Effort = ReasoningEffort;
         config.ThinkingBudget = ThinkingBudget;
         config.ImageSize = ImageSize;
+        config.Format = Format;
+        config.Compression = Compression;
         
         // Update ChatConfigMcp associations
         UpdateMcpAssociations(config);
@@ -104,6 +114,8 @@ public record UpdateChatSpanRequest
             Effort = ReasoningEffort,
             ThinkingBudget = ThinkingBudget,
             ImageSize = ImageSize,
+            Format = Format,
+            Compression = Compression,
         };
 
         ChatPresetSpan presetSpan = new ChatPresetSpan()

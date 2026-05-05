@@ -94,6 +94,9 @@ const CodeExecutionControl: React.FC<CodeExecutionControlProps> = ({
             codeExecutionEnabled: newValue,
             maxOutputTokens: span.maxOutputTokens,
             reasoningEffort: span.reasoningEffort,
+            imageSize: span.imageSize,
+            format: span.format,
+            compression: span.compression,
             thinkingBudget: span.thinkingBudget,
             mcps: span.mcps,
           })

@@ -7,31 +7,31 @@ import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 
 interface Props {
-  value?: string;
+  value?: string | null;
   onValueChange: (value: string) => void;
-  availableOptions: number[]; // 可用的选项值
+  availableOptions: string[];
 }
 
 const ImageQualityRadio: FC<Props> = ({
-  value = '0',
+  value = null,
   onValueChange,
   availableOptions,
 }) => {
   const { t } = useTranslation();
+  const defaultValue = '__default__';
 
-  // 定义所有可能的选项（图片质量）
   const allOptions = [
-    { value: '0', id: 'default', label: t('Default') },
-    { value: '2', id: 'low', label: t('Low') },
-    { value: '3', id: 'medium', label: t('Medium') },
-    { value: '4', id: 'high', label: t('High') },
+    { value: defaultValue, id: 'default', label: t('Default') },
+    { value: 'low', id: 'low', label: t('Low') },
+    { value: 'medium', id: 'medium', label: t('Medium') },
+    { value: 'high', id: 'high', label: t('High') },
   ];
 
-  // 根据后端返回的选项过滤
-  // Default(0) 总是显示，其他选项根据 availableOptions 决定
   const filteredOptions = allOptions.filter(option => {
-    if (option.value === '0') return true; // Default 总是显示
-    return availableOptions.includes(parseInt(option.value));
+    if (option.value === defaultValue) {
+      return true;
+    }
+    return availableOptions.includes(option.value);
   });
 
   return (
@@ -47,9 +47,10 @@ const ImageQualityRadio: FC<Props> = ({
 
       <RadioGroup
         className="flex gap-4"
-        defaultValue={'0'}
-        value={value}
-        onValueChange={onValueChange}
+        value={value ?? defaultValue}
+        onValueChange={(nextValue) => {
+          onValueChange(nextValue === defaultValue ? '' : nextValue);
+        }}
       >
         {filteredOptions.map((option) => (
           <div key={option.value} className="flex items-center space-x-2">

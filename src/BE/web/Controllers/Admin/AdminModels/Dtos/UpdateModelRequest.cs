@@ -60,6 +60,18 @@ public record UpdateModelRequest
     [JsonPropertyName("supportedEfforts")]
     public required string[] SupportedEfforts { get; init; }
 
+    [JsonPropertyName("supportedFormats")]
+    public required string[] SupportedFormats { get; init; }
+
+    [JsonPropertyName("overrideUrl")]
+    public string? OverrideUrl { get; init; }
+
+    [JsonPropertyName("customHeaders")]
+    public string? CustomHeaders { get; init; }
+
+    [JsonPropertyName("customBody")]
+    public string? CustomBody { get; init; }
+
     [JsonPropertyName("minTemperature")]
     [Range(0, 2, ErrorMessage = "Minimum temperature must be between 0 and 2")]
     public required decimal MinTemperature { get; init; }
@@ -108,6 +120,7 @@ public record UpdateModelRequest
     public bool Matches(Model model, ModelKey modelKey)
     {
         string? supportedEfforts = ToSupportedEffortsCsv(SupportedEfforts);
+        string? supportedFormats = ToCsvOrNull(SupportedFormats);
         string? supportedImageSizes = SupportedImageSizes.Length > 0 ? string.Join(',', SupportedImageSizes) : null;
         ModelSnapshot snapshot = model.CurrentSnapshot;
 
@@ -125,6 +138,10 @@ public record UpdateModelRequest
             && snapshot.AllowStreaming == AllowStreaming
             && snapshot.AllowCodeExecution == AllowCodeExecution
             && snapshot.SupportedEfforts == supportedEfforts
+            && snapshot.SupportedFormats == supportedFormats
+            && snapshot.OverrideUrl == NullIfWhiteSpace(OverrideUrl)
+            && snapshot.CustomHeaders == NullIfWhiteSpace(CustomHeaders)
+            && snapshot.CustomBody == NullIfWhiteSpace(CustomBody)
             && snapshot.MinTemperature == MinTemperature
             && snapshot.MaxTemperature == MaxTemperature
             && snapshot.ContextWindow == ContextWindow
@@ -158,6 +175,10 @@ public record UpdateModelRequest
             AllowStreaming = AllowStreaming,
             AllowCodeExecution = AllowCodeExecution,
             SupportedEfforts = ToSupportedEffortsCsv(SupportedEfforts),
+            SupportedFormats = ToCsvOrNull(SupportedFormats),
+            OverrideUrl = NullIfWhiteSpace(OverrideUrl),
+            CustomHeaders = NullIfWhiteSpace(CustomHeaders),
+            CustomBody = NullIfWhiteSpace(CustomBody),
             MinTemperature = MinTemperature,
             MaxTemperature = MaxTemperature,
             ContextWindow = ContextWindow,
@@ -178,7 +199,8 @@ public record UpdateModelRequest
     {
         string[] exactValues = [..
             supportedEfforts
-                .Where(static value => value is not null)];
+                .Where(static value => value is not null)
+                .Select(static value => value!)];
 
         foreach (string effort in exactValues)
         {
@@ -186,5 +208,16 @@ public record UpdateModelRequest
         }
 
         return exactValues.Length == 0 ? null : string.Join(',', exactValues);
+    }
+
+    private static string? ToCsvOrNull(IEnumerable<string> values)
+    {
+        string[] cleaned = [.. values.Where(static value => !string.IsNullOrWhiteSpace(value))];
+        return cleaned.Length == 0 ? null : string.Join(',', cleaned);
+    }
+
+    private static string? NullIfWhiteSpace(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 }

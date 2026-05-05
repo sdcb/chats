@@ -28,6 +28,8 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
                 Name = x.CurrentSnapshot.Name,
                 Host = x.CurrentSnapshot.Host,
                 Secret = x.CurrentSnapshot.Secret,
+                CustomHeaders = x.CurrentSnapshot.CustomHeaders,
+                CustomBody = x.CurrentSnapshot.CustomBody,
                 CreatedAt = x.CreatedAt,
                 EnabledModelCount = db.Models.Count(m => m.Enabled && m.CurrentSnapshot.ModelKeyId == x.Id),
                 TotalModelCount = db.Models.Count(m => m.CurrentSnapshot.ModelKeyId == x.Id)
@@ -68,7 +70,9 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
         if (modelKey.CurrentSnapshot.ModelProviderId != request.ModelProviderId
             || modelKey.CurrentSnapshot.Name != request.Name
             || modelKey.CurrentSnapshot.Host != request.Host
-            || modelKey.CurrentSnapshot.Secret != secret)
+            || modelKey.CurrentSnapshot.Secret != secret
+            || modelKey.CurrentSnapshot.CustomHeaders != request.CustomHeaders
+            || modelKey.CurrentSnapshot.CustomBody != request.CustomBody)
         {
             DateTime now = DateTime.UtcNow;
             modelKey.CurrentSnapshot = new ModelKeySnapshot
@@ -78,6 +82,8 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
                 Name = request.Name,
                 Host = request.Host,
                 Secret = secret,
+                CustomHeaders = request.CustomHeaders,
+                CustomBody = request.CustomBody,
                 CreatedAt = now,
             };
             modelKey.UpdatedAt = now;
@@ -150,6 +156,8 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
                 Name = request.Name,
                 Host = request.Host,
                 Secret = request.Secret,
+                CustomHeaders = request.CustomHeaders,
+                CustomBody = request.CustomBody,
                 CreatedAt = now,
             },
         };
@@ -258,6 +266,10 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
                         AllowStreaming = existingModel.CurrentSnapshot.AllowStreaming,
                         AllowCodeExecution = existingModel.CurrentSnapshot.AllowCodeExecution,
                         SupportedEfforts = Model.GetSupportedEffortsAsArray(existingModel.CurrentSnapshot.SupportedEfforts),
+                        SupportedFormats = Model.GetSupportedFormatsAsArray(existingModel.CurrentSnapshot.SupportedFormats),
+                        OverrideUrl = existingModel.CurrentSnapshot.OverrideUrl,
+                        CustomHeaders = existingModel.CurrentSnapshot.CustomHeaders,
+                        CustomBody = existingModel.CurrentSnapshot.CustomBody,
                         MinTemperature = existingModel.CurrentSnapshot.MinTemperature,
                         MaxTemperature = existingModel.CurrentSnapshot.MaxTemperature,
                         ContextWindow = existingModel.CurrentSnapshot.ContextWindow,
@@ -401,6 +413,10 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             ContextWindow = current.ContextWindow,
             MaxResponseTokens = current.MaxResponseTokens,
             SupportedEfforts = current.SupportedEfforts,
+            SupportedFormats = current.SupportedFormats,
+            OverrideUrl = current.OverrideUrl,
+            CustomHeaders = current.CustomHeaders,
+            CustomBody = current.CustomBody,
             SupportedImageSizes = current.SupportedImageSizes,
             UseAsyncApi = current.UseAsyncApi,
             UseMaxCompletionTokens = current.UseMaxCompletionTokens,

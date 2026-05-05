@@ -21,6 +21,8 @@ public partial class ChatPresetSpan
         config.MaxOutputTokens = ChatConfig.MaxOutputTokens;
         config.Effort = ChatConfig.Effort;
         config.ImageSize = ChatConfig.ImageSize;
+        config.Format = ChatConfig.Format;
+        config.Compression = ChatConfig.Compression;
         config.ThinkingBudget = ChatConfig.ThinkingBudget;
 
         // Update ChatConfigMcp associations
@@ -58,6 +60,8 @@ public partial class ChatPresetSpan
             MaxOutputTokens = ChatConfig.MaxOutputTokens,
             Effort = ChatConfig.Effort,
             ImageSize = ChatConfig.ImageSize,
+            Format = ChatConfig.Format,
+            Compression = ChatConfig.Compression,
             ThinkingBudget = ChatConfig.ThinkingBudget,
         };
 

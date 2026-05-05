@@ -26,7 +26,7 @@ interface ChatResponsePresetConfigProps {
   prompts: PromptSlim[];
   webSearchEnabled: boolean;
   codeExecutionEnabled: boolean;
-  reasoningEffort: number;
+  reasoningEffort: string | null;
   thinkingBudget: number | null;
   mcps: ChatSpanMcp[];
   temperature: number | null;
@@ -104,11 +104,11 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
       )}
 
       {/* Reasoning Effort */}
-      {Array.isArray(model.reasoningEffortOptions) &&
-        model.reasoningEffortOptions.length > 0 && (
+      {Array.isArray(model.supportedEfforts) &&
+        model.supportedEfforts.length > 0 && (
         <ReasoningEffortRadio
-          value={`${reasoningEffort}`}
-          availableOptions={model.reasoningEffortOptions}
+          value={reasoningEffort}
+          availableOptions={model.supportedEfforts}
           onValueChange={onChangeReasoningEffort}
         />
       )}

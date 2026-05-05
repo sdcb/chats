@@ -113,10 +113,12 @@ const ChatPresetModal = (props: Props) => {
             ...s,
             maxOutputTokens: null,
             temperature: null,
-            reasoningEffort: 0,
+            reasoningEffort: null,
             webSearchEnabled: false,
             codeExecutionEnabled: false,
             imageSize: null,
+            format: null,
+            compression: null,
             mcps: [],
             thinkingBudget: null,
           });
@@ -164,6 +166,8 @@ const ChatPresetModal = (props: Props) => {
         webSearchEnabled: !!span.webSearchEnabled,
         codeExecutionEnabled: !!span.codeExecutionEnabled,
         imageSize: span.imageSize,
+        format: span.format,
+        compression: span.compression,
         thinkingBudget: span.thinkingBudget,
         mcps: span.mcps || [],
       })),
@@ -198,10 +202,12 @@ const ChatPresetModal = (props: Props) => {
       systemPrompt: defaultPrompt?.content || '',
       maxOutputTokens: null,
       temperature: null,
-      reasoningEffort: 0,
+      reasoningEffort: null,
       webSearchEnabled: false,
       codeExecutionEnabled: false,
       imageSize: null,
+      format: null,
+      compression: null,
       mcps: [],
       thinkingBudget: null,
     };
@@ -308,7 +314,7 @@ const ChatPresetModal = (props: Props) => {
         if (selectedSpan?.spanId === span.spanId) {
           const s = {
             ...span!,
-            reasoningEffort: Number(value),
+            reasoningEffort: value === '' ? null : value,
           };
           setSelectedSpan({
             ...s,
@@ -326,7 +332,7 @@ const ChatPresetModal = (props: Props) => {
         if (selectedSpan?.spanId === span.spanId) {
           const s = {
             ...span!,
-            reasoningEffort: Number(value),
+            reasoningEffort: value === '' ? null : value,
           };
           setSelectedSpan({
             ...s,
@@ -417,6 +423,43 @@ const ChatPresetModal = (props: Props) => {
           const s = {
             ...span!,
             enabled: value,
+          };
+          setSelectedSpan({
+            ...s,
+          });
+          return s;
+        }
+        return span;
+      });
+    });
+  };
+
+  const onChangeFormat = (value: string | null) => {
+    setSpans((prev) => {
+      return prev.map((span) => {
+        if (selectedSpan?.spanId === span.spanId) {
+          const s = {
+            ...span!,
+            format: value,
+            compression: value === null ? null : span.compression,
+          };
+          setSelectedSpan({
+            ...s,
+          });
+          return s;
+        }
+        return span;
+      });
+    });
+  };
+
+  const onChangeCompression = (value: number | null) => {
+    setSpans((prev) => {
+      return prev.map((span) => {
+        if (selectedSpan?.spanId === span.spanId) {
+          const s = {
+            ...span!,
+            compression: value,
           };
           setSelectedSpan({
             ...s,
@@ -593,9 +636,13 @@ const ChatPresetModal = (props: Props) => {
                             model={modelMap[selectedSpan.modelId]}
                             imageSize={selectedSpan.imageSize}
                             reasoningEffort={selectedSpan.reasoningEffort}
+                            format={selectedSpan.format}
+                            compression={selectedSpan.compression}
                             maxOutputTokens={selectedSpan.maxOutputTokens}
                             onChangeImageSize={onChangeImageSize}
                             onChangeImageQuality={onChangeImageQuality}
+                            onChangeFormat={onChangeFormat}
+                            onChangeCompression={onChangeCompression}
                             onChangeMaxOutputTokens={onChangeMaxOutputTokens}
                           />
                         )}

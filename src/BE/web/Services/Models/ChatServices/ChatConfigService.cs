@@ -23,6 +23,8 @@ public class ChatConfigService(ChatsDB db)
                 c.Effort == raw.Effort &&
                 c.Temperature == raw.Temperature &&
                 c.ImageSize == raw.ImageSize &&
+                c.Format == raw.Format &&
+                c.Compression == raw.Compression &&
                 c.CodeExecutionEnabled == raw.CodeExecutionEnabled &&
                 c.MaxOutputTokens == raw.MaxOutputTokens &&
                 c.ThinkingBudget == raw.ThinkingBudget &&
@@ -45,6 +47,8 @@ public class ChatConfigService(ChatsDB db)
             Effort = raw.Effort,
             CodeExecutionEnabled = raw.CodeExecutionEnabled,
             ImageSize = raw.ImageSize,
+            Format = raw.Format,
+            Compression = raw.Compression,
             ThinkingBudget = raw.ThinkingBudget,
             EnabledMcpNames = enabledMcpNames,
             HashCode = null,

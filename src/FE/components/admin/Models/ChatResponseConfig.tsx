@@ -4,13 +4,11 @@ import useTranslation from '@/hooks/useTranslation';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import FormInput from '@/components/ui/form/input';
 import { LabelSwitch } from '@/components/ui/label-switch';
-import OptionButtonGroup from './OptionButtonGroup';
 import { Input } from '@/components/ui/input';
 import Tips from '@/components/Tips/Tips';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { feModelProviders } from '@/types/model';
-import { ApiType } from '@/constants/modelDefaults';
 
 interface ChatResponseConfigProps {
   control: Control<any>;
@@ -29,7 +27,6 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
   const allowVision = watch('allowVision');
   const allowToolCall = watch('allowToolCall');
 
-  // 根据 modelProviderId 获取是否支持 WebSearch
   const provider = feModelProviders.find(p => p.id === modelProviderId);
   const providerCapabilities = {
     allowWebSearch: provider?.allowWebSearch ?? false,
@@ -213,7 +210,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
           // ChatCompletion API: 显示三种模式选择
           <FormField
             control={control}
-            name="reasoningEffortOptions"
+            name="supportedEfforts"
             render={({ field: effortField }) => (
               <FormField
                 control={control}
@@ -235,7 +232,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                       effortField.onChange('');
                       budgetField.onChange(null);
                     } else if (mode === 'effort') {
-                      effortField.onChange('2, 3, 4');
+                      effortField.onChange('low, medium, high');
                       budgetField.onChange(null);
                       setValue('minTemperature', 1.0);
                       setValue('maxTemperature', 1.0);
@@ -294,16 +291,10 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                       </div>
                       
                       {thinkingMode === 'effort' && (
-                        <OptionButtonGroup
+                        <FormInput
                           label={t('Reasoning Effort Options')!}
-                          options={[
-                            { label: t('Minimal')!, value: '1' },
-                            { label: t('Low')!, value: '2' },
-                            { label: t('Medium')!, value: '3' },
-                            { label: t('High')!, value: '4' },
-                          ]}
-                          value={effortField.value || ''}
-                          onChange={effortField.onChange}
+                          field={effortField}
+                          options={{ placeholder: t('e.g. minimal, low, medium, high')! }}
                         />
                       )}
                       
@@ -337,13 +328,13 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
           // Response API: 是否为推理模型 + 推理努力选项
           <FormField
             control={control}
-            name="reasoningEffortOptions"
+            name="supportedEfforts"
             render={({ field }) => {
               const isReasoningModel = field.value && field.value.trim() !== '';
               
               const handleToggleReasoning = (enabled: boolean) => {
                 if (enabled) {
-                  field.onChange('2, 3, 4');
+                  field.onChange('low, medium, high');
                   setValue('minTemperature', 1.0);
                   setValue('maxTemperature', 1.0);
                 } else {
@@ -360,16 +351,10 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                   />
                   
                   {isReasoningModel && (
-                    <OptionButtonGroup
+                    <FormInput
                       label={t('Reasoning Effort Options')!}
-                      options={[
-                        { label: t('Minimal')!, value: '1' },
-                        { label: t('Low')!, value: '2' },
-                        { label: t('Medium')!, value: '3' },
-                        { label: t('High')!, value: '4' },
-                      ]}
-                      value={field.value || ''}
-                      onChange={field.onChange}
+                      field={field}
+                      options={{ placeholder: t('e.g. minimal, low, medium, high')! }}
                     />
                   )}
                 </div>

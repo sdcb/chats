@@ -69,6 +69,11 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         return host?.TrimEnd('/') ?? "";
     }
 
+    protected virtual string GetEndpoint(Model model)
+    {
+        return ModelRequestOverrides.ResolveEndpoint(model.CurrentSnapshot);
+    }
+
     protected virtual void AddAuthorizationHeader(HttpRequestMessage request, ModelKeySnapshot modelKey)
     {
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelKey.Secret);
@@ -184,12 +189,14 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         Model model = request.ChatConfig.Model;
         ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
-        string url = GetEndpoint(modelKey);
+        string url = GetEndpoint(model);
         JsonObject requestBody = BuildRequestBody(request, stream: true);
+        ModelRequestOverrides.ApplyBody(requestBody, model.CurrentSnapshot);
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/chat/completions");
         AddAuthorizationHeader(httpRequest, modelKey);
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+        ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
         httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
         using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceOpenAI);
@@ -397,12 +404,14 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
     {
         Model model = request.ChatConfig.Model;
         ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
-        string url = GetEndpoint(modelKey);
+        string url = GetEndpoint(model);
         JsonObject requestBody = BuildRequestBody(request, stream: false);
+        ModelRequestOverrides.ApplyBody(requestBody, model.CurrentSnapshot);
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/chat/completions");
         AddAuthorizationHeader(httpRequest, modelKey);
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+        ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
 
         using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceOpenAI);
         httpClient.Timeout = NetworkTimeout;

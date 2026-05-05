@@ -95,6 +95,12 @@ public record ChatSpanDto
     [JsonPropertyName("imageSize")]
     public required string? ImageSize { get; init; }
 
+    [JsonPropertyName("format")]
+    public required string? Format { get; init; }
+
+    [JsonPropertyName("compression")]
+    public required byte? Compression { get; init; }
+
     [JsonPropertyName("thinkingBudget")]
     public required int? ThinkingBudget { get; init; }
 
@@ -115,6 +121,8 @@ public record ChatSpanDto
         MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
         ReasoningEffort = span.ChatConfig.Effort,
         ImageSize = span.ChatConfig.ImageSize,
+        Format = span.ChatConfig.Format,
+        Compression = span.ChatConfig.Compression,
         ThinkingBudget = span.ChatConfig.ThinkingBudget,
         Mcps = [.. span.ChatConfig.ChatConfigMcps.Select(
             x => new ChatSpanMcp
@@ -138,6 +146,8 @@ public record ChatSpanDto
         MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
         ReasoningEffort = span.ChatConfig.Effort,
         ImageSize = span.ChatConfig.ImageSize,
+        Format = span.ChatConfig.Format,
+        Compression = span.ChatConfig.Compression,
         ThinkingBudget = span.ChatConfig.ThinkingBudget,
         Mcps = [.. span.ChatConfig.ChatConfigMcps.Select(
             x => new ChatSpanMcp

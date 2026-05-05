@@ -68,8 +68,12 @@ export interface AdminModelDto {
   maxResponseTokens: number;
   maxThinkingBudget: number | null;
   
-  reasoningEffortOptions: number[];
+  supportedEfforts: string[];
   supportedImageSizes: string[];
+  supportedFormats: string[];
+  overrideUrl: string | null;
+  customHeaders: string | null;
+  customBody: string | null;
   
   apiType: number;
   useAsyncApi: boolean;
@@ -102,8 +106,12 @@ export interface UpdateModelDto {
   maxResponseTokens: number;
   maxThinkingBudget: number | null;
   
-  reasoningEffortOptions: number[];
+  supportedEfforts: string[];
   supportedImageSizes: string[];
+  supportedFormats: string[];
+  overrideUrl: string | null;
+  customHeaders: string | null;
+  customBody: string | null;
   
   apiType: number;
   useAsyncApi: boolean;
@@ -448,6 +456,8 @@ export class GetModelKeysResult {
   totalModelCount: number;
   host: string | null;
   secret: string | null;
+  customHeaders: string | null;
+  customBody: string | null;
   createdAt: string;
 
   constructor(dto: any) {
@@ -458,6 +468,8 @@ export class GetModelKeysResult {
     this.totalModelCount = dto.totalModelCount;
     this.host = dto.host;
     this.secret = dto.secret;
+    this.customHeaders = dto.customHeaders;
+    this.customBody = dto.customBody;
     this.createdAt = dto.createdAt;
   }
 
@@ -469,6 +481,12 @@ export class GetModelKeysResult {
     if (this.secret !== null) {
       configs.secret = this.secret;
     }
+    if (this.customHeaders !== null) {
+      configs.customHeaders = this.customHeaders;
+    }
+    if (this.customBody !== null) {
+      configs.customBody = this.customBody;
+    }
     return configs;
   }
 }
@@ -478,6 +496,8 @@ export interface PostModelKeysParams {
   name: string;
   host: string | null;
   secret: string | null;
+  customHeaders: string | null;
+  customBody: string | null;
 }
 
 export interface PostPromptParams {

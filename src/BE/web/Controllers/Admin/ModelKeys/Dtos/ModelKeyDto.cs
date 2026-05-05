@@ -26,6 +26,12 @@ public record ModelKeyDto
     [JsonPropertyName("secret")]
     public required string? Secret { get; init; }
 
+    [JsonPropertyName("customHeaders")]
+    public required string? CustomHeaders { get; init; }
+
+    [JsonPropertyName("customBody")]
+    public required string? CustomBody { get; init; }
+
     [JsonPropertyName("createdAt")]
     public required DateTime CreatedAt { get; init; }
 

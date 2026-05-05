@@ -69,6 +69,8 @@ const ModelKeysModal = (props: IProps) => {
     name: z.string().min(1, `${t('This field is require')}`),
     host: z.string().optional(),
     secret: z.string().optional(),
+    customHeaders: z.string().optional(),
+    customBody: z.string().optional(),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -78,6 +80,8 @@ const ModelKeysModal = (props: IProps) => {
       name: '',
       host: '',
       secret: '',
+      customHeaders: '',
+      customBody: '',
     },
   });
 
@@ -91,6 +95,8 @@ const ModelKeysModal = (props: IProps) => {
       name: values.name,
       host: values.host || null,
       secret: values.secret || null,
+      customHeaders: values.customHeaders || null,
+      customBody: values.customBody || null,
     };
 
     try {
@@ -173,11 +179,13 @@ const ModelKeysModal = (props: IProps) => {
       form.reset();
       form.formState.isValid;
       if (selected) {
-        const { name, modelProviderId, host, secret } = selected;
+        const { name, modelProviderId, host, secret, customHeaders, customBody } = selected;
         form.setValue('name', name);
         form.setValue('modelProviderId', modelProviderId.toString());
         form.setValue('host', host || undefined);
         form.setValue('secret', secret || undefined);
+        form.setValue('customHeaders', customHeaders || undefined);
+        form.setValue('customBody', customBody || undefined);
       } else if (defaultModelProviderId !== undefined) {
         // Preselect provider when creating a new key
         form.setValue('modelProviderId', defaultModelProviderId.toString());
@@ -283,6 +291,32 @@ const ModelKeysModal = (props: IProps) => {
                 )}
               />
             )}
+            <FormField
+              key="customHeaders"
+              control={form.control}
+              name="customHeaders"
+              render={({ field }) => (
+                <FormTextarea
+                  rows={4}
+                  label={t('Custom Headers')}
+                  options={{ placeholder: '{\n  "Authorization": "Bearer <token>"\n}' }}
+                  field={field}
+                />
+              )}
+            />
+            <FormField
+              key="customBody"
+              control={form.control}
+              name="customBody"
+              render={({ field }) => (
+                <FormTextarea
+                  rows={6}
+                  label={t('Custom Body')}
+                  options={{ placeholder: '{\n  "temperature": 0.7\n}' }}
+                  field={field}
+                />
+              )}
+            />
             <DialogFooter className="pt-4">
               <div className="flex gap-4">
                 {selected && (

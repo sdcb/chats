@@ -6,6 +6,7 @@ import {
   IconTokens
 } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import ImageSizeRadio from '@/components/ImageSizeRadio/ImageSizeRadio';
 import ImageQualityRadio from '@/components/ImageQualityRadio/ImageQualityRadio';
@@ -13,10 +14,14 @@ import ImageQualityRadio from '@/components/ImageQualityRadio/ImageQualityRadio'
 interface ImageGenerationPresetConfigProps {
   model: AdminModelDto;
   imageSize: string | null;
-  reasoningEffort: number;
+  reasoningEffort: string | null;
+  format: string | null;
+  compression: number | null;
   maxOutputTokens: number | null;
   onChangeImageSize: (value: string | null) => void;
   onChangeImageQuality: (value: string) => void;
+  onChangeFormat: (value: string | null) => void;
+  onChangeCompression: (value: number | null) => void;
   onChangeMaxOutputTokens: (value: number | null) => void;
 }
 
@@ -27,9 +32,13 @@ const ImageGenerationPresetConfig: React.FC<ImageGenerationPresetConfigProps> = 
   model,
   imageSize,
   reasoningEffort,
+  format,
+  compression,
   maxOutputTokens,
   onChangeImageSize,
   onChangeImageQuality,
+  onChangeFormat,
+  onChangeCompression,
   onChangeMaxOutputTokens,
 }) => {
   const { t } = useTranslation();
@@ -46,13 +55,100 @@ const ImageGenerationPresetConfig: React.FC<ImageGenerationPresetConfigProps> = 
       )}
 
       {/* Image Quality (使用 reasoningEffort 字段存储) */}
-      {model.reasoningEffortOptions && 
-       model.reasoningEffortOptions.length > 0 && (
+      {model.supportedEfforts && 
+       model.supportedEfforts.length > 0 && (
         <ImageQualityRadio
-          value={`${reasoningEffort}`}
-          availableOptions={model.reasoningEffortOptions}
+          value={reasoningEffort}
+          availableOptions={model.supportedEfforts}
           onValueChange={onChangeImageQuality}
         />
+      )}
+
+      {model.supportedFormats?.length > 0 && (
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-between">
+            <div className="text-neutral-700 dark:text-neutral-400">
+              {t('Output Format')}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (format === null) {
+                  onChangeFormat(model.supportedFormats[0] ?? null);
+                } else {
+                  onChangeFormat(null);
+                }
+              }}
+              className="h-6 px-2 text-sm"
+            >
+              {format === null ? t('Default') : t('Custom')}
+            </Button>
+          </div>
+          {format !== null && (
+            <div className="flex flex-wrap gap-2 px-2">
+              {model.supportedFormats.map((item) => (
+                <Button
+                  key={item}
+                  type="button"
+                  variant={format === item ? 'default' : 'outline'}
+                  onClick={() => onChangeFormat(item)}
+                  className="capitalize"
+                >
+                  {item}
+                </Button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {model.supportedFormats?.length > 0 && (
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-between">
+            <div className="text-neutral-700 dark:text-neutral-400">
+              {t('Output Compression')}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (compression === null) {
+                  onChangeCompression(100);
+                } else {
+                  onChangeCompression(null);
+                }
+              }}
+              className="h-6 px-2 text-sm"
+            >
+              {compression === null ? t('Default') : t('Custom')}
+            </Button>
+          </div>
+          {compression !== null && (
+            <div className="px-2 space-y-2">
+              <Slider
+                className="cursor-pointer"
+                min={0}
+                max={100}
+                step={1}
+                value={[compression]}
+                onValueChange={(values) => {
+                  onChangeCompression(values[0]);
+                }}
+              />
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={compression}
+                onChange={(event) => {
+                  const raw = event.target.value;
+                  onChangeCompression(raw === '' ? null : Number(raw));
+                }}
+              />
+            </div>
+          )}
+        </div>
       )}
 
       {/* Batch Image Count (使用 maxOutputTokens 字段存储) */}

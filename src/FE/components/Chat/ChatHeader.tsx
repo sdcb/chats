@@ -83,6 +83,8 @@ const ChatHeader = () => {
           reasoningEffort: span?.reasoningEffort,
           systemPrompt: defaultPrompt?.content!,
           imageSize: span?.imageSize || null,
+          format: span?.format || null,
+          compression: span?.compression ?? null,
           mcps: span?.mcps || [],
           thinkingBudget: span?.thinkingBudget ?? null,
         }))
@@ -117,7 +119,13 @@ const ChatHeader = () => {
                 temperature: data.temperature,
                 webSearchEnabled: data.webSearchEnabled,
                 codeExecutionEnabled: data.codeExecutionEnabled,
+                reasoningEffort: data.reasoningEffort,
+                maxOutputTokens: data.maxOutputTokens,
+                imageSize: data.imageSize,
+                format: data.format,
+                compression: data.compression,
                 thinkingBudget: data.thinkingBudget,
+                mcps: data.mcps,
               };
             }
             return s;

@@ -26,4 +26,14 @@ public partial class Model
         }
         return supportedImageSizesInDB.Split(',', StringSplitOptions.RemoveEmptyEntries);
     }
+
+    public static string[] GetSupportedFormatsAsArray(string? supportedFormatsInDb)
+    {
+        if (string.IsNullOrEmpty(supportedFormatsInDb))
+        {
+            return [];
+        }
+
+        return supportedFormatsInDb.Split(',', StringSplitOptions.RemoveEmptyEntries);
+    }
 }

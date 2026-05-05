@@ -35,6 +35,18 @@ public record AdminModelDto
     [JsonPropertyName("supportedEfforts")]
     public required string[] SupportedEfforts { get; init; }
 
+    [JsonPropertyName("supportedFormats")]
+    public required string[] SupportedFormats { get; init; }
+
+    [JsonPropertyName("overrideUrl")]
+    public required string? OverrideUrl { get; init; }
+
+    [JsonPropertyName("customHeaders")]
+    public required string? CustomHeaders { get; init; }
+
+    [JsonPropertyName("customBody")]
+    public required string? CustomBody { get; init; }
+
     [JsonPropertyName("allowStreaming")]
     public required bool AllowStreaming { get; init; }
 

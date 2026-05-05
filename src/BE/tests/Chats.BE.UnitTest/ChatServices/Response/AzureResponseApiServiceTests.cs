@@ -117,6 +117,33 @@ public class AzureResponseApiServiceTests
     }
 
     [Fact]
+    public async Task ResponseApiService_ShouldUseAzureOpenAIPrefixInRequestUri()
+    {
+        // Arrange
+        string sse = "event: response.completed\n" +
+                     "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n";
+
+        Uri? requestUri = null;
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
+        {
+            requestUri = req.RequestUri;
+        });
+
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        ChatRequest request = CreateBaseChatRequest();
+
+        // Act
+        await foreach (ChatSegment _ in service.ChatStreamed(request, CancellationToken.None))
+        {
+            // drain
+        }
+
+        // Assert
+        Assert.NotNull(requestUri);
+        Assert.Equal("https://redacted.openai.azure.com/openai/v1/responses", requestUri!.ToString());
+    }
+
+    [Fact]
     public async Task ResponseApiService_ShouldSendIncludeReasoningEncryptedContent()
     {
         // Arrange

@@ -23,8 +23,8 @@ import {
 import { Form, FormField } from '@/components/ui/form';
 import FormInput from '@/components/ui/form/input';
 import FormSelect from '@/components/ui/form/select';
+import FormTextarea from '@/components/ui/form/textarea';
 import { LabelSwitch } from '@/components/ui/label-switch';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import ChatResponseConfig from './ChatResponseConfig';
 import ImageGenerationConfig from './ImageGenerationConfig';
@@ -49,14 +49,19 @@ import Tips from '@/components/Tips/Tips';
 
 // 表单类型：基于 UpdateModelDto，但因 HTML 表单和自定义组件的限制，需要做以下调整：
 // 1. modelKeyId: number → string (FormSelect 组件要求 select value 必须是 string)
-// 2. reasoningEffortOptions: number[] → string (OptionButtonGroup 组件使用逗号分隔的字符串)
+// 2. supportedEfforts/supportedImageSizes/supportedFormats: string[] → string
 // 3. supportedImageSizes: string[] → string (Input 组件接收用户输入的逗号分隔字符串)
-// 4. 添加 modelId?: string (仅编辑模式需要，用于标识要更新的模型)
-type ModelFormValues = Omit<UpdateModelDto, 'modelKeyId' | 'reasoningEffortOptions' | 'supportedImageSizes'> & {
+// 4. overrideUrl/customHeaders/customBody 在表单中统一使用 string
+// 5. 添加 modelId?: string (仅编辑模式需要，用于标识要更新的模型)
+type ModelFormValues = Omit<UpdateModelDto, 'modelKeyId' | 'supportedEfforts' | 'supportedImageSizes' | 'supportedFormats' | 'overrideUrl' | 'customHeaders' | 'customBody'> & {
   modelId?: string;
   modelKeyId: string;
-  reasoningEffortOptions: string;
+  supportedEfforts: string;
   supportedImageSizes: string;
+  supportedFormats: string;
+  overrideUrl: string;
+  customHeaders: string;
+  customBody: string;
 };
 
 interface IProps {
@@ -87,6 +92,14 @@ const ModelModal = (props: IProps) => {
 
   // Determine if this is edit mode
   const isEditMode = !!selected;
+
+  const parseCsv = (value: string) =>
+    value
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item !== '');
+
+  const nullIfEmpty = (value: string) => (value === '' ? null : value);
 
   // 创建 form schema
   const formSchema = useMemo(() => z.object({
@@ -119,8 +132,12 @@ const ModelModal = (props: IProps) => {
     maxThinkingBudget: z.number().min(0).nullable(),
     
     // === 数组字段（表单中用字符串） ===
-    reasoningEffortOptions: z.string(),
+    supportedEfforts: z.string(),
     supportedImageSizes: z.string(),
+    supportedFormats: z.string(),
+    overrideUrl: z.string(),
+    customHeaders: z.string(),
+    customBody: z.string(),
     
     // === API 配置 ===
     apiType: z.coerce.number(),
@@ -236,8 +253,12 @@ const ModelModal = (props: IProps) => {
       contextWindow: 0,
       maxResponseTokens: 0,
       maxThinkingBudget: null,
-      reasoningEffortOptions: '',
+      supportedEfforts: '',
       supportedImageSizes: '',
+      supportedFormats: '',
+      overrideUrl: '',
+      customHeaders: '',
+      customBody: '',
       useAsyncApi: false,
       useMaxCompletionTokens: false,
       isLegacy: false,
@@ -271,20 +292,12 @@ const ModelModal = (props: IProps) => {
       maxThinkingBudget: values.maxThinkingBudget,
       
       // 数组字段：从逗号分隔的字符串转为数组
-      reasoningEffortOptions: (() => {
-        const items = values.reasoningEffortOptions
-          .split(',')
-          .map((x) => parseInt(x.trim()))
-          .filter((x) => !isNaN(x));
-        return items;
-      })(),
-      supportedImageSizes: (() => {
-        const items = values.supportedImageSizes
-          .split(',')
-          .map((x) => x.trim())
-          .filter((x) => x !== '');
-        return items;
-      })(),
+      supportedEfforts: parseCsv(values.supportedEfforts),
+      supportedImageSizes: parseCsv(values.supportedImageSizes),
+      supportedFormats: parseCsv(values.supportedFormats),
+      overrideUrl: nullIfEmpty(values.overrideUrl),
+      customHeaders: nullIfEmpty(values.customHeaders),
+      customBody: nullIfEmpty(values.customBody),
       
       apiType: values.apiType,
       useAsyncApi: values.useAsyncApi,
@@ -347,20 +360,12 @@ const ModelModal = (props: IProps) => {
         maxResponseTokens: values.maxResponseTokens,
         maxThinkingBudget: values.maxThinkingBudget,
         
-        reasoningEffortOptions: (() => {
-          const items = values.reasoningEffortOptions
-            .split(',')
-            .map((x) => parseInt(x.trim()))
-            .filter((x) => !isNaN(x));
-          return items;
-        })(),
-        supportedImageSizes: (() => {
-          const items = values.supportedImageSizes
-            .split(',')
-            .map((x) => x.trim())
-            .filter((x) => x !== '');
-          return items;
-        })(),
+        supportedEfforts: parseCsv(values.supportedEfforts),
+        supportedImageSizes: parseCsv(values.supportedImageSizes),
+        supportedFormats: parseCsv(values.supportedFormats),
+        overrideUrl: nullIfEmpty(values.overrideUrl),
+        customHeaders: nullIfEmpty(values.customHeaders),
+        customBody: nullIfEmpty(values.customBody),
         
         apiType: values.apiType,
         useAsyncApi: values.useAsyncApi,
@@ -416,8 +421,12 @@ const ModelModal = (props: IProps) => {
           contextWindow,
           maxResponseTokens,
           maxThinkingBudget,
-          reasoningEffortOptions,
+          supportedEfforts,
           supportedImageSizes,
+          supportedFormats,
+          overrideUrl,
+          customHeaders,
+          customBody,
           apiType,
           useAsyncApi,
           useMaxCompletionTokens,
@@ -449,13 +458,20 @@ const ModelModal = (props: IProps) => {
         form.setValue('maxThinkingBudget', maxThinkingBudget);
         
         form.setValue(
-          'reasoningEffortOptions',
-          reasoningEffortOptions ? reasoningEffortOptions.join(', ') : '',
+          'supportedEfforts',
+          supportedEfforts ? supportedEfforts.join(', ') : '',
         );
         form.setValue(
           'supportedImageSizes',
           supportedImageSizes ? supportedImageSizes.join(', ') : '',
         );
+        form.setValue(
+          'supportedFormats',
+          supportedFormats ? supportedFormats.join(', ') : '',
+        );
+        form.setValue('overrideUrl', overrideUrl ?? '');
+        form.setValue('customHeaders', customHeaders ?? '');
+        form.setValue('customBody', customBody ?? '');
         
         form.setValue('apiType', apiType);
         form.setValue('useAsyncApi', useAsyncApi);
@@ -482,7 +498,14 @@ const ModelModal = (props: IProps) => {
                 form.setValue(key as any, value.join(', '));
               } else if (
                 value === null &&
-                (key === 'reasoningEffortOptions' || key === 'supportedImageSizes')
+                (
+                  key === 'supportedEfforts' ||
+                  key === 'supportedImageSizes' ||
+                  key === 'supportedFormats' ||
+                  key === 'overrideUrl' ||
+                  key === 'customHeaders' ||
+                  key === 'customBody'
+                )
               ) {
                 form.setValue(key as any, '');
               } else if (key === 'modelKeyId' && typeof value === 'number') {
@@ -546,12 +569,22 @@ const ModelModal = (props: IProps) => {
     // 根据 API 类型应用默认配置
     const defaults = getDefaultConfigByApiType(currentApiType as ApiType);
     Object.entries(defaults).forEach(([key, value]) => {
-      if (key === 'reasoningEffortOptions' || key === 'supportedImageSizes') {
+      if (
+        key === 'supportedEfforts' ||
+        key === 'supportedImageSizes' ||
+        key === 'supportedFormats'
+      ) {
         if (Array.isArray(value)) {
           form.setValue(key as any, value.join(', '));
         } else {
           form.setValue(key as any, '');
         }
+      } else if (
+        key === 'overrideUrl' ||
+        key === 'customHeaders' ||
+        key === 'customBody'
+      ) {
+        form.setValue(key as any, value ?? '');
       } else if (value !== undefined) {
         form.setValue(key as any, value);
       }
@@ -758,6 +791,42 @@ const ModelModal = (props: IProps) => {
               {apiType === 2 && (
                 <ImageGenerationConfig control={form.control} />
               )}
+
+              <div className="border-t pt-4">
+                <div className="grid grid-cols-1 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="overrideUrl"
+                    render={({ field }) => (
+                      <FormInput label={t('Custom URL')!} field={field} />
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="customHeaders"
+                    render={({ field }) => (
+                      <FormTextarea
+                        rows={4}
+                        label={t('Custom Headers')}
+                        options={{ placeholder: '{\n  "Authorization": "Bearer <token>"\n}' }}
+                        field={field}
+                      />
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="customBody"
+                    render={({ field }) => (
+                      <FormTextarea
+                        rows={6}
+                        label={t('Custom Body')}
+                        options={{ placeholder: '{\n  "temperature": 0.7\n}' }}
+                        field={field}
+                      />
+                    )}
+                  />
+                </div>
+              </div>
             </div>
             
             <DialogFooter className="pt-4 mt-4 border-t">

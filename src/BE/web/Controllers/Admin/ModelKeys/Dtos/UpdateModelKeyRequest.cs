@@ -15,4 +15,10 @@ public record UpdateModelKeyRequest
 
     [JsonPropertyName("secret")]
     public string? Secret { get; init; }
+
+    [JsonPropertyName("customHeaders")]
+    public string? CustomHeaders { get; init; }
+
+    [JsonPropertyName("customBody")]
+    public string? CustomBody { get; init; }
 }

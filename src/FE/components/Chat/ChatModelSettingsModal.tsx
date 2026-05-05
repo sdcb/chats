@@ -83,6 +83,9 @@ const ChatModelSettingModal = (props: Props) => {
       ...originalSpan,
       mcps: originalSpan.mcps || [],
       thinkingBudget: originalSpan.thinkingBudget ?? null,
+      reasoningEffort: originalSpan.reasoningEffort ?? null,
+      format: originalSpan.format ?? null,
+      compression: originalSpan.compression ?? null,
     };
     setSpan(normalizedSpan);
     setModel(modelMap[normalizedSpan.modelId]);
@@ -115,11 +118,27 @@ const ChatModelSettingModal = (props: Props) => {
       }
       return Math.min(span.thinkingBudget, model.maxThinkingBudget);
     })();
+    const nextReasoningEffort =
+      span?.reasoningEffort && model.supportedEfforts.includes(span.reasoningEffort)
+        ? span.reasoningEffort
+        : null;
+    const nextImageSize =
+      span?.imageSize && model.supportedImageSizes.includes(span.imageSize)
+        ? span.imageSize
+        : null;
+    const nextFormat =
+      span?.format && model.supportedFormats.includes(span.format)
+        ? span.format
+        : null;
     setSpan({
       ...span!,
       modelId: model.modelId,
       modelName: model.name,
       modelProviderId: model.modelProviderId,
+      reasoningEffort: nextReasoningEffort,
+      imageSize: nextImageSize,
+      format: nextFormat,
+      compression: nextFormat ? span?.compression ?? null : null,
       thinkingBudget: nextThinkingBudget,
     });
   };
@@ -151,15 +170,27 @@ const ChatModelSettingModal = (props: Props) => {
   };
 
   const onChangeReasoningEffort = (value: string) => {
-    setSpan({ ...span!, reasoningEffort: Number(value) });
+    setSpan({ ...span!, reasoningEffort: value === '' ? null : value });
   };
 
   const onChangeImageQuality = (value: string) => {
-    setSpan({ ...span!, reasoningEffort: Number(value) });
+    setSpan({ ...span!, reasoningEffort: value === '' ? null : value });
   };
 
   const onChangeImageSize = (value: string | null) => {
     setSpan({ ...span!, imageSize: value });
+  };
+
+  const onChangeFormat = (value: string | null) => {
+    setSpan({
+      ...span!,
+      format: value,
+      compression: value === null ? null : span?.compression ?? null,
+    });
+  };
+
+  const onChangeCompression = (value: number | null) => {
+    setSpan({ ...span!, compression: value });
   };
 
   const onChangeThinkingBudget = (value: number | null) => {
@@ -213,6 +244,8 @@ const ChatModelSettingModal = (props: Props) => {
         webSearchEnabled: !!span.webSearchEnabled,
         codeExecutionEnabled: !!span.codeExecutionEnabled,
         imageSize: span.imageSize ?? null,
+        format: span.format ?? null,
+        compression: span.compression ?? null,
         thinkingBudget: span.thinkingBudget ?? null,
         mcps: span.mcps,
       });
@@ -300,9 +333,13 @@ const ChatModelSettingModal = (props: Props) => {
                       model={model}
                       imageSize={span.imageSize}
                       reasoningEffort={span.reasoningEffort}
+                      format={span.format}
+                      compression={span.compression}
                       maxOutputTokens={span.maxOutputTokens}
                       onChangeImageSize={onChangeImageSize}
                       onChangeImageQuality={onChangeImageQuality}
+                      onChangeFormat={onChangeFormat}
+                      onChangeCompression={onChangeCompression}
                       onChangeMaxOutputTokens={onChangeMaxOutputTokens}
                     />
                   )}

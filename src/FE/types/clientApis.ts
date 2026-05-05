@@ -85,9 +85,11 @@ export interface ChatSpanDto {
   temperature: number | null;
   webSearchEnabled: boolean;
   codeExecutionEnabled: boolean;
-  reasoningEffort: number;
+  reasoningEffort: string | null;
   maxOutputTokens: number | null;
   imageSize: string | null;
+  format: string | null;
+  compression: number | null;
   thinkingBudget: number | null;
   mcps: ChatSpanMcp[];
 }
@@ -164,6 +166,11 @@ export interface PostUserChatSpanParams {
   temperature?: number | null;
   webSearchEnabled?: boolean;
   codeExecutionEnabled?: boolean;
+  reasoningEffort?: string | null;
+  maxOutputTokens?: number | null;
+  imageSize?: string | null;
+  format?: string | null;
+  compression?: number | null;
   thinkingBudget?: number | null;
 }
 
@@ -173,12 +180,14 @@ export interface PostUserChatSpanResult {
   modelId: number;
   modelName: string;
   modelProviderId: number;
-  temperature: number;
+  temperature: number | null;
   webSearchEnabled: boolean;
   codeExecutionEnabled: boolean;
-  reasoningEffort: number;
-  maxOutputTokens: number;
+  reasoningEffort: string | null;
+  maxOutputTokens: number | null;
   imageSize: string | null;
+  format: string | null;
+  compression: number | null;
   thinkingBudget: number | null;
   mcps: ChatSpanMcp[];
 }
@@ -276,8 +285,10 @@ export interface PutChatSpanParams {
   webSearchEnabled?: boolean;
   codeExecutionEnabled?: boolean;
   maxOutputTokens: number | null;
-  reasoningEffort?: number | null;
+  reasoningEffort?: string | null;
   imageSize?: string | null;
+  format?: string | null;
+  compression?: number | null;
   thinkingBudget?: number | null;
   mcps?: ChatSpanMcp[];
 }
@@ -302,8 +313,10 @@ export interface PutChatPresetSpanParams {
   webSearchEnabled?: boolean;
   codeExecutionEnabled?: boolean;
   maxOutputTokens: number | null;
-  reasoningEffort?: number | null;
+  reasoningEffort?: string | null;
   imageSize?: string | null;
+  format?: string | null;
+  compression?: number | null;
   thinkingBudget?: number | null;
   mcps?: ChatSpanMcp[];
 }

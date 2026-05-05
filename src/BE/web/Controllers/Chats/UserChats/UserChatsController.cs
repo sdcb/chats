@@ -42,6 +42,8 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.Effort,
                     ImageSize = span.ChatConfig.ImageSize,
+                    Format = span.ChatConfig.Format,
+                    Compression = span.ChatConfig.Compression,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps
                         .Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders })
@@ -94,6 +96,8 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.Effort,
                     ImageSize = span.ChatConfig.ImageSize,
+                    Format = span.ChatConfig.Format,
+                    Compression = span.ChatConfig.Compression,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders }).ToArray(),
                 }).ToArray(),
@@ -139,6 +143,8 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
                     ReasoningEffort = span.ChatConfig.Effort,
                     ImageSize = span.ChatConfig.ImageSize,
+                    Format = span.ChatConfig.Format,
+                    Compression = span.ChatConfig.Compression,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders }).ToArray()
                 }).ToArray(),
