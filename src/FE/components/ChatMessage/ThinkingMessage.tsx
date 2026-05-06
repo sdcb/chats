@@ -175,7 +175,7 @@ const ThinkingMessage = (props: Props) => {
   }, [canLoadDuration, ensureDurationLoaded, isOpen]);
 
   return (
-    <div className="my-2">
+    <div className="my-0.5">
       <div
         className="inline-flex items-center h-8 px-2.5 py-1 text-xs gap-1 rounded-sm leading-none"
         onClick={toggleOpen}
