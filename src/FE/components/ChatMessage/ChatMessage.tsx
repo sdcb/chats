@@ -152,11 +152,7 @@ export const ChatMessage: FC<Props> = memo(
                               }
                               key={'response-group-message-' + index}
                               className={cn(
-                                'border-[1px] border-background rounded-md flex w-full bg-background mb-1',
-                                isMultiSpan &&
-                                  message.isActive &&
-                                  'border-primary/50 border-gray-300 dark:border-gray-600',
-                                !isMultiSpan && 'border-none',
+                                'flex w-full bg-background mb-1 rounded-md',
                               )}
                             >
                               <div className="rounded-r-md min-w-0 flex-1 leading-4 font-normal px-1">
