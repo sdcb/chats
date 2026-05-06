@@ -74,29 +74,45 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedProviderId, setExpandedProviderId] = useState<number | null>(null);
 
-  let modelGroup = [] as { providerId: number; child: AdminModelDto[] }[];
-  const groupModel = () => {
-    const modelList = searchTerm
-      ? models.filter((model) => model.name.toLowerCase().includes(searchTerm))
-      : models;
-    modelList.forEach((m) => {
-      const model = modelGroup.find((x) => x.providerId === m.modelProviderId);
-      if (model) {
-        model.child.push(m);
-      } else {
-        modelGroup.push({
-          providerId: m.modelProviderId,
-          child: [m],
-        });
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+  const modelGroup = models.reduce((groups, model) => {
+    const existingGroup = groups.find((group) => group.providerId === model.modelProviderId);
+
+    if (existingGroup) {
+      existingGroup.child.push(model);
+    } else {
+      groups.push({
+        providerId: model.modelProviderId,
+        child: [model],
+      });
+    }
+
+    return groups;
+  }, [] as { providerId: number; child: AdminModelDto[] }[])
+    .map((group) => {
+      if (!normalizedSearchTerm) {
+        return group;
       }
-    });
-  };
-  groupModel();
+
+      const providerName = feModelProviders[group.providerId]?.name ?? '';
+      const translatedProviderName = t(providerName);
+      const providerMatched = providerName.toLowerCase().includes(normalizedSearchTerm)
+        || translatedProviderName.toLowerCase().includes(normalizedSearchTerm);
+
+      if (providerMatched) {
+        return group;
+      }
+
+      return {
+        ...group,
+        child: group.child.filter(model => model.name.toLowerCase().includes(normalizedSearchTerm)),
+      };
+    })
+    .filter(group => group.child.length > 0);
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
     setExpandedProviderId(null);
-    groupModel();
   };
 
   const handleOpenMenu = (open: boolean) => {
@@ -130,7 +146,7 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
   };
 
   const renderNoModel = () => {
-    if (models.length > 0) {
+    if (modelGroup.length > 0) {
       return null;
     }
     return (
