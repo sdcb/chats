@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+import { ANIMATION_DURATION_MS } from '@/constants/animation';
 import { cn } from '@/lib/utils';
 
 // Helper function to get icon based on API type
@@ -202,13 +203,24 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
                     <IconChevronDown
                       size={16}
                       className={cn('flex-shrink-0 transition-transform', isExpanded && 'rotate-180')}
+                      style={{ transitionDuration: `${ANIMATION_DURATION_MS}ms` }}
                     />
                   </button>
-                  {isExpanded && (
-                    <div className="max-h-[min(16rem,50vh)] overflow-y-auto px-1 scroller">
+                  <div
+                    className="grid overflow-hidden"
+                    style={{
+                      gridTemplateRows: isExpanded ? '1fr' : '0fr',
+                      opacity: isExpanded ? 1 : 0,
+                      transition: `grid-template-rows ${ANIMATION_DURATION_MS}ms ease, opacity ${ANIMATION_DURATION_MS}ms ease`,
+                    }}
+                  >
+                    <div
+                      className="min-h-0 max-h-[min(16rem,50vh)] overflow-y-auto px-1 scroller"
+                      style={{ pointerEvents: isExpanded ? 'auto' : 'none' }}
+                    >
                       {renderModelItems(m.providerId, m.child)}
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 <div className="hidden md:block">
