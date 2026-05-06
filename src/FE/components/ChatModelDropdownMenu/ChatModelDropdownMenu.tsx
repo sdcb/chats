@@ -1,4 +1,4 @@
-import { forwardRef, useState, ReactNode } from 'react';
+import { Fragment, forwardRef, useState, ReactNode } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -13,6 +13,10 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
@@ -159,7 +163,8 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="w-[min(13.5rem,calc(100vw-1rem))] md:w-[13.5rem]"
+        alignOffset={-6}
+        className="w-[min(13rem,calc(100vw-0.5rem))] md:w-52"
         onClick={(e) => e.stopPropagation()}
       >
         <Search
@@ -180,30 +185,56 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
             const isExpanded = expandedProviderId === m.providerId;
 
             return (
-              <div key={m.providerId}>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors hover:bg-accent focus:bg-accent"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setExpandedProviderId(current => current === m.providerId ? null : m.providerId);
-                  }}
-                >
-                  <ModelProviderIcon providerId={m.providerId} />
-                  <span className="min-w-0 flex-1 text-nowrap overflow-hidden text-ellipsis whitespace-nowrap">
-                    {t(feModelProviders[m.providerId].name)}
-                  </span>
-                  <IconChevronDown
-                    size={16}
-                    className={cn('flex-shrink-0 transition-transform', isExpanded && 'rotate-180')}
-                  />
-                </button>
-                {isExpanded && (
-                  <div className="mx-1 mb-1 ml-3 max-h-[min(16rem,50vh)] overflow-y-auto scroller md:max-h-80">
-                    {renderModelItems(m.providerId, m.child)}
-                  </div>
-                )}
-              </div>
+              <Fragment key={m.providerId}>
+                <div className="md:hidden">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors hover:bg-accent focus:bg-accent"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandedProviderId(current => current === m.providerId ? null : m.providerId);
+                    }}
+                  >
+                    <ModelProviderIcon providerId={m.providerId} />
+                    <span className="min-w-0 flex-1 text-nowrap overflow-hidden text-ellipsis whitespace-nowrap">
+                      {t(feModelProviders[m.providerId].name)}
+                    </span>
+                    <IconChevronDown
+                      size={16}
+                      className={cn('flex-shrink-0 transition-transform', isExpanded && 'rotate-180')}
+                    />
+                  </button>
+                  {isExpanded && (
+                    <div className="max-h-[min(16rem,50vh)] overflow-y-auto px-1 scroller">
+                      {renderModelItems(m.providerId, m.child)}
+                    </div>
+                  )}
+                </div>
+
+                <div className="hidden md:block">
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger
+                      key={`trigger-${m.providerId}`}
+                      className="p-2 flex gap-2"
+                    >
+                      <ModelProviderIcon providerId={m.providerId} />
+                      <span className="w-full text-nowrap overflow-hidden text-ellipsis whitespace-nowrap">
+                        {t(feModelProviders[m.providerId].name)}
+                      </span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent
+                        sideOffset={4}
+                        alignOffset={-4}
+                        className="max-h-96 w-fit min-w-[10rem] max-w-[min(18rem,calc(var(--radix-popper-available-width)-0.5rem),calc(100vw-1rem))] overflow-y-auto scroller"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {renderModelItems(m.providerId, m.child)}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                </div>
+              </Fragment>
             );
           })}
         </DropdownMenuGroup>
