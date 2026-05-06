@@ -20,20 +20,17 @@ const ReasoningEffortRadio: FC<Props> = ({
   const { t } = useTranslation();
   const defaultValue = '__default__';
 
-  const allOptions = [
-    { value: defaultValue, id: 'default', label: t('Default') },
-    { value: 'minimal', id: 'minimal', label: t('Minimal') },
-    { value: 'low', id: 'low', label: t('Low') },
-    { value: 'medium', id: 'medium', label: t('Medium') },
-    { value: 'high', id: 'high', label: t('High') },
-  ];
+  const optionValues = [
+    defaultValue,
+    ...availableOptions,
+    ...(value && value.trim() !== '' ? [value] : []),
+  ].filter((optionValue, index, items) => items.indexOf(optionValue) === index);
 
-  const filteredOptions = allOptions.filter(option => {
-    if (option.value === defaultValue) {
-      return true;
-    }
-    return availableOptions.includes(option.value);
-  });
+  const renderedOptions = optionValues.map(optionValue => ({
+    value: optionValue,
+    id: optionValue === defaultValue ? 'default' : `reasoning-effort-${optionValue}`,
+    label: optionValue === defaultValue ? t('Default') : t(optionValue),
+  }));
 
   return (
     <div className="flex justify-between items-center">
@@ -53,7 +50,7 @@ const ReasoningEffortRadio: FC<Props> = ({
           onValueChange(nextValue === defaultValue ? '' : nextValue);
         }}
       >
-        {filteredOptions.map((option) => (
+        {renderedOptions.map((option) => (
           <div key={option.value} className="flex items-center space-x-2">
             <RadioGroupItem value={option.value} id={option.id} />
             <Label className="text-base" htmlFor={option.id}>
