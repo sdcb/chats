@@ -13,10 +13,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuPortal,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
@@ -34,6 +30,17 @@ const getApiTypeIcon = (apiType: number) => {
     default:
       return IconMessage;
   }
+};
+
+const truncateMiddle = (text: string, maxLength = 28, prefixLength = 4, suffixLength = 12) => {
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  const safePrefixLength = Math.max(1, Math.min(prefixLength, maxLength - 4));
+  const safeSuffixLength = Math.max(1, Math.min(suffixLength, maxLength - safePrefixLength - 3));
+
+  return `${text.slice(0, safePrefixLength)}...${text.slice(-safeSuffixLength)}`;
 };
 
 const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
@@ -60,6 +67,7 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
 }, ref) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedProviderId, setExpandedProviderId] = useState<number | null>(null);
 
   let modelGroup = [] as { providerId: number; child: AdminModelDto[] }[];
   const groupModel = () => {
@@ -82,11 +90,38 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
+    setExpandedProviderId(null);
     groupModel();
   };
 
-  const handleOpenMenu = () => {
-    setSearchTerm('');
+  const handleOpenMenu = (open: boolean) => {
+    if (open) {
+      setSearchTerm('');
+    }
+    setExpandedProviderId(null);
+  };
+
+  const renderModelItems = (providerId: number, items: AdminModelDto[]) => {
+    return items.map((model) => {
+      const ApiIcon = getApiTypeIcon(model.apiType);
+
+      return (
+        <DropdownMenuItem
+          key={model.modelId}
+          onClick={(e) => {
+            setExpandedProviderId(null);
+            onChangeModel(model);
+            e.stopPropagation();
+          }}
+          className="flex max-w-full items-center gap-1"
+        >
+          <ApiIcon className="w-4 h-4 flex-shrink-0" />
+          <span className="block min-w-0 truncate text-sm" title={model.name}>
+            {truncateMiddle(model.name)}
+          </span>
+        </DropdownMenuItem>
+      );
+    });
   };
 
   const renderNoModel = () => {
@@ -123,7 +158,8 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
         </>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="w-40 md:w-52"
+        align="start"
+        className="w-[min(13.5rem,calc(100vw-1rem))] md:w-[13.5rem]"
         onClick={(e) => e.stopPropagation()}
       >
         <Search
@@ -134,43 +170,40 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
           onSearch={handleSearch}
         />
         {renderNoModel()}
-        <DropdownMenuGroup className={groupClassName}>
+        <DropdownMenuGroup
+          className={cn(
+            'max-h-[14.75rem] overflow-y-auto scroller md:max-h-none md:overflow-visible',
+            groupClassName,
+          )}
+        >
           {modelGroup.map((m) => {
+            const isExpanded = expandedProviderId === m.providerId;
+
             return (
-              <DropdownMenuSub key={m.providerId}>
-                <DropdownMenuSubTrigger
-                  key={`trigger-${m.providerId}`}
-                  className="p-2 flex gap-2"
+              <div key={m.providerId}>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors hover:bg-accent focus:bg-accent"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpandedProviderId(current => current === m.providerId ? null : m.providerId);
+                  }}
                 >
                   <ModelProviderIcon providerId={m.providerId} />
-                  <span className="w-full text-nowrap overflow-hidden text-ellipsis whitespace-nowrap">
+                  <span className="min-w-0 flex-1 text-nowrap overflow-hidden text-ellipsis whitespace-nowrap">
                     {t(feModelProviders[m.providerId].name)}
                   </span>
-                </DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                  <DropdownMenuSubContent
-                    className="max-h-96 overflow-y-auto scroller max-w-[64px] md:max-w-[256px]"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {m.child.map((x) => {
-                      const ApiIcon = getApiTypeIcon(x.apiType);
-                      return (
-                        <DropdownMenuItem
-                          key={x.modelId}
-                          onClick={(e) => {
-                            onChangeModel(x);
-                            e.stopPropagation();
-                          }}
-                          className="flex items-center gap-1"
-                        >
-                          <ApiIcon className="w-4 h-4 flex-shrink-0" />
-                          <span className="truncate text-sm">{x.name}</span>
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-              </DropdownMenuSub>
+                  <IconChevronDown
+                    size={16}
+                    className={cn('flex-shrink-0 transition-transform', isExpanded && 'rotate-180')}
+                  />
+                </button>
+                {isExpanded && (
+                  <div className="mx-1 mb-1 ml-3 max-h-[min(16rem,50vh)] overflow-y-auto scroller md:max-h-80">
+                    {renderModelItems(m.providerId, m.child)}
+                  </div>
+                )}
+              </div>
             );
           })}
         </DropdownMenuGroup>

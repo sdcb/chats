@@ -501,7 +501,7 @@ const ChatPresetModal = (props: Props) => {
               <ChatModelDropdownMenu
                 className="p-0"
                 triggerClassName={'hover:bg-transparent p-0 h-10'}
-                groupClassName="overflow-y-scroll max-h-60 sm:max-h-full scroller"
+                groupClassName="scroller md:!max-h-60 md:!overflow-y-auto"
                 models={models}
                 content={
                   <Button
@@ -541,7 +541,7 @@ const ChatPresetModal = (props: Props) => {
                   <ChatModelDropdownMenu
                     className="p-0"
                     triggerClassName={'hover:bg-transparent p-0 h-10'}
-                    groupClassName="overflow-y-scroll max-h-60 sm:max-h-full scroller"
+                    groupClassName="scroller md:!max-h-60 md:!overflow-y-auto"
                     models={models}
                     content={
                       <Button variant="ghost" className="bg-muted">
@@ -565,7 +565,7 @@ const ChatPresetModal = (props: Props) => {
                           triggerClassName={
                             'hover:bg-transparent px-2 border w-full h-10'
                           }
-                          groupClassName="overflow-y-scroll max-h-60 sm:max-h-full scroller"
+                          groupClassName="scroller md:!max-h-60 md:!overflow-y-auto"
                           models={models}
                           content={
                             <div className="flex gap-2 items-center">
