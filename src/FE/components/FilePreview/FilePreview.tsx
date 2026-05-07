@@ -22,6 +22,7 @@ interface FilePreviewProps {
   showDelete?: boolean;  // 是否显示删除按钮
   onDelete?: () => void;  // 删除回调
   onImageClick?: (imageUrl: string, allImages: string[], event: React.MouseEvent<HTMLImageElement>) => void;
+  imageGallery?: string[];
 }
 
 // 判断是否为图片类型
@@ -89,7 +90,7 @@ const formatFileSize = (bytes?: number): string => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', interactive = true, showDelete = false, onDelete, onImageClick }: FilePreviewProps) => {
+const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', interactive = true, showDelete = false, onDelete, onImageClick, imageGallery }: FilePreviewProps) => {
   // 处理降级场景：如果传入的是 string，显示为未知文件类型的警告状态
   if (typeof file === 'string') {
     return (
@@ -121,6 +122,7 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', in
   const { contentType, fileName } = file;
 
   const canPreviewImage = interactive && !!onImageClick;
+  const previewImages = imageGallery && imageGallery.length > 0 ? imageGallery : [fileUrl];
 
   // 图片类型 - 可点击预览
   if (isImageType(contentType)) {
@@ -139,7 +141,7 @@ const FilePreview = ({ file, maxWidth = 300, maxHeight = 300, className = '', in
           style={imageStyle}
           src={fileUrl}
           alt={fileName || 'Image'}
-          onClick={canPreviewImage ? (e) => onImageClick?.(fileUrl, [fileUrl], e) : undefined}
+          onClick={canPreviewImage ? (e) => onImageClick?.(fileUrl, previewImages, e) : undefined}
         />
         {showDelete && onDelete && (
           <button

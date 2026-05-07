@@ -1681,6 +1681,7 @@ const ChatView = memo(() => {
                   selectedChat={selectedChat}
                   selectedMessages={selectedMessages}
                   models={models}
+                  enableGroupImagePreview={true}
                   responseMessageMinHeight={responseMessageMinHeight}
                   responseMessageMinHeightGroupIndex={responseMessageMinHeightGroupIndex}
                   onChangeChatLeafMessageId={handleChangeChatLeafMessageId}

@@ -3,8 +3,16 @@ import { FC, memo } from 'react';
 import { hasMultipleSpans } from '@/utils/chats';
 
 import { AdminModelDto } from '@/types/adminApis';
-import { ChatRole, IChat, Message, ResponseContent } from '@/types/chat';
-import { IChatMessage, MessageDisplayType, ReactionMessageType } from '@/types/chatMessage';
+import {
+  ChatRole,
+  FileDef,
+  IChat,
+  Message,
+  MessageContentType,
+  ResponseContent,
+  getFileUrl,
+} from '@/types/chat';
+import { IChatMessage, MessageDisplayType, ReactionMessageType, getMessageContents } from '@/types/chatMessage';
 
 import ChatMessageHeader from './ChatMessageHeader';
 import ResponseMessage from './ResponseMessage';
@@ -21,6 +29,7 @@ export interface Props {
   className?: string;
   chatShareId?: string;
   isAdminView?: boolean;
+  enableGroupImagePreview?: boolean;
   responseMessageMinHeight?: string;
   responseMessageMinHeightGroupIndex?: number;
   onChangeChatLeafMessageId?: (messageId: string) => void;
@@ -38,6 +47,39 @@ export interface Props {
   onRegenerateAllAssistant?: (messageId: string, modelId: number) => void;
 }
 
+const collectMessageImageUrls = (message: IChatMessage): string[] => {
+  return getMessageContents(message)
+    .filter(
+      (content): content is ResponseContent & { c: FileDef } =>
+        (content.$type === MessageContentType.fileId ||
+          content.$type === MessageContentType.tempFileId) &&
+        (content.c as FileDef).contentType.startsWith('image/'),
+    )
+    .map((content) => getFileUrl(content.c));
+};
+
+const collectResponseGroupImageUrls = (messages: IChatMessage[]): string[] => {
+  const imageUrls: string[] = [];
+  const seen = new Set<string>();
+
+  messages.forEach((message) => {
+    if (message.role !== ChatRole.Assistant) {
+      return;
+    }
+
+    collectMessageImageUrls(message).forEach((imageUrl) => {
+      if (seen.has(imageUrl)) {
+        return;
+      }
+
+      seen.add(imageUrl);
+      imageUrls.push(imageUrl);
+    });
+  });
+
+  return imageUrls;
+};
+
 export const ChatMessage: FC<Props> = memo(
   ({
     selectedMessages,
@@ -47,6 +89,7 @@ export const ChatMessage: FC<Props> = memo(
     className,
     chatShareId,
     isAdminView,
+    enableGroupImagePreview = false,
     responseMessageMinHeight,
     responseMessageMinHeightGroupIndex,
     onChangeChatLeafMessageId,
@@ -69,6 +112,9 @@ export const ChatMessage: FC<Props> = memo(
         )}
       >
         {selectedMessages.map((messages, groupIndex) => {
+          const responseGroupImageUrls = enableGroupImagePreview
+            ? collectResponseGroupImageUrls(messages)
+            : [];
           const isUserMessageGroup = messages.find((x) => x.role === ChatRole.User);
           const shouldRenderResponseSpacer =
             !!responseMessageMinHeight &&
@@ -163,6 +209,7 @@ export const ChatMessage: FC<Props> = memo(
                                   readonly={readonly}
                                   chatId={selectedChat.id}
                                   chatShareId={chatShareId}
+                                  groupImageUrls={responseGroupImageUrls}
                                   onEditResponseMessage={onEditResponseMessage}
                                 />
                               </div>
