@@ -2,6 +2,9 @@ import { useEffect, useState, useRef } from 'react';
 import { IconX, IconChevronLeft, IconChevronRight } from '../Icons';
 import { cn } from '@/lib/utils';
 
+const MIN_SCALE = 1;
+const MAX_SCALE = 5;
+
 interface ImagePreviewProps {
   images: string[];
   initialIndex: number;
@@ -15,7 +18,32 @@ const ImagePreview = ({ images, initialIndex, isOpen, onClose, sourceElement }: 
   const [isAnimating, setIsAnimating] = useState(false);
   const [hasEnterStarted, setHasEnterStarted] = useState(false);
   const [animationStyle, setAnimationStyle] = useState<React.CSSProperties>({});
+  const [scale, setScale] = useState(MIN_SCALE);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [lastPosition, setLastPosition] = useState({ x: 0, y: 0 });
+  const [isPinching, setIsPinching] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pinchStart = useRef({ distance: 0, scale: MIN_SCALE });
+
+  const resetTransform = () => {
+    setScale(MIN_SCALE);
+    setPosition({ x: 0, y: 0 });
+    setIsDragging(false);
+    setIsPinching(false);
+  };
+
+  const clampScale = (nextScale: number) => {
+    return Math.min(Math.max(MIN_SCALE, nextScale), MAX_SCALE);
+  };
+
+  const getDistance = (touch1: React.Touch, touch2: React.Touch) => {
+    const dx = touch2.clientX - touch1.clientX;
+    const dy = touch2.clientY - touch1.clientY;
+    return Math.hypot(dx, dy);
+  };
 
   const handleClose = () => {
     // 简单的淡出效果
@@ -24,7 +52,14 @@ const ImagePreview = ({ images, initialIndex, isOpen, onClose, sourceElement }: 
 
   useEffect(() => {
     setCurrentIndex(initialIndex);
+    resetTransform();
   }, [initialIndex]);
+
+  useEffect(() => {
+    if (isOpen) {
+      resetTransform();
+    }
+  }, [currentIndex, isOpen]);
 
   useEffect(() => {
     if (isOpen && sourceElement) {
@@ -99,12 +134,123 @@ const ImagePreview = ({ images, initialIndex, isOpen, onClose, sourceElement }: 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, currentIndex, images.length]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - dragStart.x;
+      const deltaY = e.clientY - dragStart.y;
+
+      setPosition({
+        x: lastPosition.x + deltaX,
+        y: lastPosition.y + deltaY,
+      });
+    };
+
+    const handleGlobalMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [dragStart, isDragging, lastPosition]);
+
   const handlePrevious = () => {
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
   };
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (isAnimating || !containerRef.current) return;
+
+    e.preventDefault();
+    const delta = e.deltaY * -0.002;
+    setScale((prev) => clampScale(prev + delta));
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isAnimating || scale <= MIN_SCALE || e.button !== 0) return;
+
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+    setLastPosition(position);
+    e.preventDefault();
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (isAnimating || !containerRef.current) return;
+
+    if (e.touches.length === 2) {
+      const distance = getDistance(e.touches[0], e.touches[1]);
+      pinchStart.current = { distance, scale };
+      setIsPinching(true);
+      setIsDragging(false);
+      return;
+    }
+
+    if (e.touches.length === 1 && scale > MIN_SCALE) {
+      setIsDragging(true);
+      setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+      setLastPosition(position);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (isAnimating || !containerRef.current) return;
+
+    if (isPinching && e.touches.length >= 2) {
+      e.preventDefault();
+      const distance = getDistance(e.touches[0], e.touches[1]);
+      const factor = distance / pinchStart.current.distance;
+      setScale(clampScale(pinchStart.current.scale * factor));
+      return;
+    }
+
+    if (isDragging && e.touches.length === 1 && scale > MIN_SCALE) {
+      e.preventDefault();
+      const deltaX = e.touches[0].clientX - dragStart.x;
+      const deltaY = e.touches[0].clientY - dragStart.y;
+      setPosition({
+        x: lastPosition.x + deltaX,
+        y: lastPosition.y + deltaY,
+      });
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length < 2) {
+      setIsPinching(false);
+    }
+
+    if (e.touches.length === 1 && scale > MIN_SCALE) {
+      setIsDragging(true);
+      setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+      setLastPosition(position);
+      return;
+    }
+
+    if (e.touches.length === 0) {
+      setIsDragging(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -165,16 +311,34 @@ const ImagePreview = ({ images, initialIndex, isOpen, onClose, sourceElement }: 
 
         {/* 图片 */}
         <div
-          className="max-w-[90vw] max-h-[90vh] flex items-center justify-center pointer-events-auto"
+          ref={containerRef}
+          className="max-w-[90vw] max-h-[90vh] flex items-center justify-center pointer-events-auto overflow-hidden touch-none select-none"
           onClick={(e) => e.stopPropagation()}
+          onWheel={handleWheel}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          style={{ cursor: scale > MIN_SCALE ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
         >
-          <img
-            ref={imageRef}
-            src={images[currentIndex]}
-            alt={`Preview ${currentIndex + 1}`}
-            className="max-w-full max-h-[90vh] object-contain"
-            style={{ ...(isAnimating ? animationStyle : {}), visibility: hasEnterStarted ? 'visible' : 'hidden' }}
-          />
+          <div
+            className="flex items-center justify-center"
+            style={{
+              transform: isAnimating
+                ? undefined
+                : `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+              transformOrigin: 'center center',
+              transition: isAnimating || isDragging || isPinching ? 'none' : 'transform 0.15s ease-out',
+            }}
+          >
+            <img
+              ref={imageRef}
+              src={images[currentIndex]}
+              alt={`Preview ${currentIndex + 1}`}
+              className="max-w-full max-h-[90vh] object-contain"
+              style={{ ...(isAnimating ? animationStyle : {}), visibility: hasEnterStarted ? 'visible' : 'hidden' }}
+            />
+          </div>
         </div>
 
         {/* 右箭头 */}
