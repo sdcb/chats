@@ -173,8 +173,8 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
         }
 
         ModelKey? modelKey = await db.ModelKeys
-            .Where(x => x.Id == req.ModelKeyId)
-            .SingleOrDefaultAsync(cancellationToken);
+            .Include(x => x.CurrentSnapshot)
+            .SingleOrDefaultAsync(x => x.Id == req.ModelKeyId, cancellationToken);
         if (modelKey == null)
         {
             return BadRequest($"Model key id: {req.ModelKeyId} not found");

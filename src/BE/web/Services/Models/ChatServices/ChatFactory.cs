@@ -77,9 +77,9 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
 
     public async Task<ModelValidateResult> ValidateModel(Model model, FileUrlProvider fup, CancellationToken cancellationToken)
     {
-        ChatService cs = CreateChatService(model);
         try
         {
+            ChatService cs = CreateChatService(model);
             await foreach (ChatSegment _ in cs.ChatEntry(ChatRequest.SimpleValidate("1+1=?", model), fup, cancellationToken))
             {
                 return ModelValidateResult.Success();
