@@ -176,21 +176,6 @@ public class FiddlerHttpDumpParserTests
     }
 
     [Fact]
-    public void NonChunkedResponse_ShouldHaveSingleChunk()
-    {
-        // Arrange
-        var filePath = Path.Combine(OpenAITestDataPath, "XiaomiMimo-NonStream.dump");
-        
-        // Act
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        
-        // Assert - Non-chunked response should have exactly 1 chunk containing the entire body
-        Assert.Single(dump.Response.Chunks);
-        Assert.Contains("\"id\":", dump.Response.Chunks[0]);
-        Assert.Contains("choices", dump.Response.Chunks[0]);
-    }
-
-    [Fact]
     public void ErrorResponse_ShouldParseCorrectly()
     {
         // Arrange

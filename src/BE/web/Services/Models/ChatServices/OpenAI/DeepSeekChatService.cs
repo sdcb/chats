@@ -40,23 +40,6 @@ public class DeepSeekChatService(IHttpClientFactory httpClientFactory) : ChatCom
         return !string.IsNullOrEmpty(thinkingContent);
     }
 
-    protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
-    {
-        JsonObject body = base.BuildRequestBody(request, stream);
-
-        // DeepSeek enables thinking mode via `thinking: { type: "enabled" }`.
-        // We map ChatConfig.ThinkingBudget presence to "enabled" (budget is provider-specific, so we don't send it).
-        if (request.ChatConfig.ThinkingBudget.HasValue)
-        {
-            body["thinking"] = new JsonObject
-            {
-                ["type"] = "enabled"
-            };
-        }
-
-        return body;
-    }
-
     private static JsonObject NormalizeToolMessageContent(JsonObject upstreamMessage)
     {
         if ((string?)upstreamMessage["role"] != "tool" || upstreamMessage["content"] is not JsonArray contentArray)
