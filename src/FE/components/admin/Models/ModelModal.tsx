@@ -820,7 +820,7 @@ const ModelModal = (props: IProps) => {
                       <FormTextarea
                         rows={6}
                         label={t('Custom Body')}
-                        options={{ placeholder: '[\n  { "op": "replace", "path": "/temperature", "value": 0.7 },\n  { "op": "add", "path": "/metadata/source", "value": "admin" }\n]' }}
+                        options={{ placeholder: '[\n  { "op": "replace", "path": "/temperature", "value": 0.7 },\n  { "op": "add", "path": "/thinking", "value": { "type": "disabled" } }\n]' }}
                         field={field}
                       />
                     )}
