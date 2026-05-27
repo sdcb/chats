@@ -20,10 +20,10 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 {
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        (string url, string apiKey) = GetEndpointAndKey(request.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot);
+        (string url, string apiKey) = GetMessagesEndpointAndKey(request.ChatConfig.Model.CurrentSnapshot);
         JsonObject requestBody = BuildRequestBody(request);
 
-        using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/v1/messages");
+        using HttpRequestMessage httpRequest = new(HttpMethod.Post, url);
         AddApiKeyHeader(httpRequest, apiKey);
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
         httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
@@ -284,6 +284,25 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         return (url, modelKey.Secret ?? throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "API key is required for Anthropic"));
     }
 
+    protected virtual (string url, string apiKey) GetMessagesEndpointAndKey(ModelSnapshot snapshot)
+    {
+        string apiKey = snapshot.ModelKeySnapshot.Secret ?? throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "API key is required for Anthropic");
+
+        if (!string.IsNullOrWhiteSpace(snapshot.OverrideUrl))
+        {
+            return (ModelRequestOverrides.ResolveEndpoint(snapshot), apiKey);
+        }
+
+        (string baseUrl, _) = GetEndpointAndKey(snapshot.ModelKeySnapshot);
+        return (baseUrl + "/v1/messages", apiKey);
+    }
+
+    protected virtual (string url, string apiKey) GetCountTokensEndpointAndKey(ModelSnapshot snapshot)
+    {
+        (string messagesUrl, string apiKey) = GetMessagesEndpointAndKey(snapshot);
+        return (messagesUrl + "/count_tokens", apiKey);
+    }
+
     protected virtual void AddApiKeyHeader(HttpRequestMessage request, string apiKey)
     {
         request.Headers.Add("x-api-key", apiKey);
@@ -338,10 +357,10 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
     public override async Task<int> CountTokenAsync(ChatRequest request, CancellationToken cancellationToken)
     {
-        (string url, string apiKey) = GetEndpointAndKey(request.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot);
+        (string url, string apiKey) = GetCountTokensEndpointAndKey(request.ChatConfig.Model.CurrentSnapshot);
         JsonObject requestBody = BuildCountTokensRequestBody(request);
 
-        using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/v1/messages/count_tokens");
+        using HttpRequestMessage httpRequest = new(HttpMethod.Post, url);
         AddApiKeyHeader(httpRequest, apiKey);
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
 
