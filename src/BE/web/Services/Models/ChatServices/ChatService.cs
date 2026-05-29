@@ -115,64 +115,12 @@ public abstract partial class ChatService
             Messages = await RewriteVisionMessages(
                 request.ChatConfig.Model.CurrentSnapshot.SupportsVisionLink,
                 request.ChatConfig.Model.CurrentSnapshot.AllowVision,
-                request.Source == UsageSource.WebChat
-                    ? RemoveNonCurrentTurnThinkingBlocks(final.Messages)
-                    : final.Messages,
+                final.Messages,
                 fup,
                 cancellationToken)
         };
 
         return final;
-    }
-
-    /// <summary>
-    /// WebChat 场景下，历史 turn 的 thinking 对继续对话基本无用，
-    /// 还会增加 prompt 体积；部分上游（例如 Anthropic thinking 规则）
-    /// 也会对 thinking 的出现位置更敏感。
-    /// 因此只保留「最后一个 user 消息之后（含 tool call 循环）」的 thinking，
-    /// 其它（即历史 turn）消息中的 thinking 全部移除。
-    /// </summary>
-    internal static IList<NeutralMessage> RemoveNonCurrentTurnThinkingBlocks(IList<NeutralMessage> messages)
-    {
-        if (messages.Count == 0)
-        {
-            return messages;
-        }
-
-        // DeepSeek (thinking mode + tool calls) requires reasoning_content to be passed back
-        // during the same user turn. Therefore, only remove thinking content from messages
-        // BEFORE the last user message (i.e., previous turns). Keep everything after it.
-        int lastUserIndex = -1;
-        for (int i = messages.Count - 1; i >= 0; i--)
-        {
-            if (messages[i].Role == NeutralChatRole.User)
-            {
-                lastUserIndex = i;
-                break;
-            }
-        }
-
-        if (lastUserIndex <= 0)
-        {
-            return messages;
-        }
-
-        List<NeutralMessage>? updated = null;
-        for (int i = 0; i < messages.Count; i++)
-        {
-            NeutralMessage msg = messages[i];
-
-            if (i < lastUserIndex && msg.Contents.Any(c => c is NeutralThinkContent))
-            {
-                updated ??= [.. messages];
-                updated[i] = msg with
-                {
-                    Contents = [.. msg.Contents.Where(c => c is not NeutralThinkContent)]
-                };
-            }
-        }
-
-        return updated ?? messages;
     }
 
     protected virtual async Task<IList<NeutralMessage>> RewriteVisionMessages(bool supportsVisionLink, bool allowVision, IList<NeutralMessage> messages, FileUrlProvider fup, CancellationToken cancellationToken)

@@ -591,10 +591,9 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         JsonArray result = [];
         foreach (NeutralMessage msg in mergedMessages)
         {
-            // 非当前 turn 的 thinking 已在 ChatService.PreProcess 中统一清理；
-            // 这里仅根据 WebChat + allowThinkingBlocks 决定是否允许 thinking block 出现在上游 payload 中。
-            bool reallyAllowThinkingBlocks = allowThinkingBlocks && source == UsageSource.WebChat;
-            result.Add(ToAnthropicMessage(msg, reallyAllowThinkingBlocks));
+            // WebChat 的历史 thinking 裁剪已经在 ChatController 按 turn/model 完成；
+            // API 入口应尊重用户传入的 thinking/redacted_thinking，不再因为来源是 API 而删除。
+            result.Add(ToAnthropicMessage(msg, allowThinkingBlocks));
         }
         return result;
 

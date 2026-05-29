@@ -9,6 +9,32 @@ namespace Chats.BE.UnitTest.ChatServices.Anthropic;
 public class AnthropicChatServiceRequestTests
 {
     [Fact]
+    public void ConvertMessages_ApiSource_PreservesThinkingBlocks()
+    {
+        MethodInfo method = typeof(AnthropicChatService).GetMethod("ConvertMessages", BindingFlags.Static | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("ConvertMessages method not found.");
+
+        IList<NeutralMessage> messages =
+        [
+            NeutralMessage.FromAssistant(
+                NeutralThinkContent.Create("thinking text", "thinking-signature"),
+                NeutralTextContent.Create("answer")
+            )
+        ];
+
+        JsonArray result = (JsonArray?)method.Invoke(null, [messages, true, UsageSource.Api])
+            ?? throw new InvalidOperationException("ConvertMessages returned null.");
+
+        JsonObject assistantMessage = Assert.IsType<JsonObject>(result[0]);
+        JsonArray content = Assert.IsType<JsonArray>(assistantMessage["content"]);
+        JsonObject thinking = Assert.IsType<JsonObject>(content[0]);
+
+        Assert.Equal("thinking", (string?)thinking["type"]);
+        Assert.Equal("thinking text", (string?)thinking["thinking"]);
+        Assert.Equal("thinking-signature", (string?)thinking["signature"]);
+    }
+
+    [Fact]
     public void ConvertMessages_AssistantToolCallWithEmptyParameters_UsesEmptyObjectInput()
     {
         MethodInfo method = typeof(AnthropicChatService).GetMethod("ConvertMessages", BindingFlags.Static | BindingFlags.NonPublic)

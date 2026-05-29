@@ -146,6 +146,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig)
                 .ThenInclude(x => x.ChatConfigMcps).ThenInclude(x => x.McpServer.McpTools)
             .Include(x => x.ChatTurns).ThenInclude(x => x.ChatDockerSessions.Where(s => s.TerminatedAt == null && s.ExpiresAt > DateTime.UtcNow))
+            .Include(x => x.ChatTurns).ThenInclude(x => x.ChatConfigSnapshot).ThenInclude(x => x!.ModelSnapshot)
             .Include(x => x.ChatDockerSessions.Where(s => s.TerminatedAt == null && s.ExpiresAt > DateTime.UtcNow))
             .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == req.ChatId && x.UserId == currentUser.Id, cancellationToken);
@@ -511,8 +512,9 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             ? codeInterpreter.BuildCodeInterpreterContextPrefix(allTurns)
             : null;
 
+        IReadOnlyList<Step> filteredHistorySteps = RemoveNonMatchingHistoricalTurnThinkingBlocks(messageTurns, userModel.ModelId);
         IList<NeutralMessage> neutralMessages = CodeInterpreterContextMessageBuilder.BuildMessages(
-            historySteps: messageTree,
+            historySteps: filteredHistorySteps,
             currentRoundSteps: dbUserMessage?.Steps ?? [],
             codeExecutionEnabled: codeExecutionEnabled,
             contextPrefix: ciPrefix);
@@ -942,6 +944,60 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
                 writer.TryWrite(new ErrorLine(chatSpan.SpanId, errorText));
             }
             return step;
+        }
+    }
+
+    internal static IReadOnlyList<Step> RemoveNonMatchingHistoricalTurnThinkingBlocks(IEnumerable<ChatTurn> historyTurns, short currentModelId)
+    {
+        ChatTurn[] turns = [.. historyTurns];
+        HashSet<long> preservedAssistantTurnIds = [];
+        bool stillInSameModelSuffix = true;
+
+        for (int i = turns.Length - 1; i >= 0; i--)
+        {
+            ChatTurn turn = turns[i];
+            if (turn.IsUser)
+            {
+                continue;
+            }
+
+            short? turnModelId = turn.ChatConfigSnapshot?.ModelSnapshot.ModelId;
+            if (stillInSameModelSuffix && turnModelId == currentModelId)
+            {
+                preservedAssistantTurnIds.Add(turn.Id);
+                continue;
+            }
+
+            // 只保留历史末尾连续使用当前模型的 assistant turn 的思考信息；
+            // 一旦遇到不同模型，说明上游思考上下文已经断开，更早的 thinking/signature 都不能继续带给当前模型。
+            stillInSameModelSuffix = false;
+        }
+
+        List<Step> result = [];
+        foreach (ChatTurn turn in turns)
+        {
+            bool preserveThinking = turn.IsUser || preservedAssistantTurnIds.Contains(turn.Id);
+            foreach (Step step in turn.Steps.OrderBy(s => s.Id))
+            {
+                result.Add(preserveThinking ? step : RemoveThinkingBlocks(step));
+            }
+        }
+
+        return result;
+
+        static Step RemoveThinkingBlocks(Step step)
+        {
+            if (!step.StepContents.Any(c => c.ContentType == DBStepContentType.Think))
+            {
+                return step;
+            }
+
+            Step clone = step.WithNoMessage();
+            foreach (StepContent content in step.StepContents.Where(c => c.ContentType != DBStepContentType.Think))
+            {
+                clone.StepContents.Add(content.Clone());
+            }
+            return clone;
         }
     }
 

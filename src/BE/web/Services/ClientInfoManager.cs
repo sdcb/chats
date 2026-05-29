@@ -106,8 +106,8 @@ public class ClientInfoManager(IHttpContextAccessor httpContextAccessor, IServic
 
         ClientInfo clientInfo = new()
         {
-            ClientIpId = clientIpId.Value,
-            ClientUserAgentId = clientUserAgentId.Value,
+            ClientIpId = clientIpId!.Value,
+            ClientUserAgentId = clientUserAgentId!.Value,
         };
         db.ClientInfos.Add(clientInfo);
         try
