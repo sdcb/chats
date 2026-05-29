@@ -141,9 +141,38 @@ public class DeepSeekAnthropicServiceTests
 
         Assert.Equal(2, usageSegments.Count);
         UsageChatSegment finalUsage = usageSegments[1];
-        Assert.Equal(36, finalUsage.Usage.InputTokens);
+        Assert.Equal(43, finalUsage.Usage.InputTokens);
+        Assert.Equal(36, finalUsage.Usage.InputFreshTokens);
         Assert.Equal(151, finalUsage.Usage.OutputTokens);
         Assert.Equal(7, finalUsage.Usage.CacheTokens);
         Assert.Equal(9, finalUsage.Usage.CacheCreationTokens);
+    }
+
+    [Fact]
+    public async Task ChatStreamed_MessageStartWithCacheReadTokens_TreatsInputTokensAsTotalPromptTokens()
+    {
+        IHttpClientFactory httpClientFactory = CreateMockHttpClientFactory(
+            "data: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_1\",\"type\":\"message\",\"role\":\"assistant\",\"model\":\"deepseek-reasoner\",\"content\":[],\"stop_reason\":null,\"stop_sequence\":null,\"usage\":{\"input_tokens\":36,\"cache_creation_input_tokens\":9,\"cache_read_input_tokens\":7,\"output_tokens\":0}}}\n\n",
+            "data: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\",\"stop_sequence\":null},\"usage\":{\"output_tokens\":151}}\n\n",
+            "data: {\"type\":\"message_stop\"}\n\n"
+        );
+        DeepSeekAnthropicService service = new(httpClientFactory);
+        ChatRequest request = CreateRequest();
+
+        List<UsageChatSegment> usageSegments = [];
+        await foreach (ChatSegment segment in service.ChatStreamed(request, CancellationToken.None))
+        {
+            if (segment is UsageChatSegment usage)
+            {
+                usageSegments.Add(usage);
+            }
+        }
+
+        Assert.Equal(2, usageSegments.Count);
+        Assert.Equal(43, usageSegments[0].Usage.InputTokens);
+        Assert.Equal(43, usageSegments[1].Usage.InputTokens);
+        Assert.Equal(36, usageSegments[1].Usage.InputFreshTokens);
+        Assert.Equal(7, usageSegments[1].Usage.CacheTokens);
+        Assert.Equal(9, usageSegments[1].Usage.CacheCreationTokens);
     }
 }

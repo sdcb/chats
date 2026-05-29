@@ -95,7 +95,7 @@ public class AnthropicMessagesController(
                     {
                         if (!messageStarted)
                         {
-                            await YieldEvent("message_start", CreateMessageStartEvent(request.Model!, messageId, usageSegment.Usage.InputTokens), ct);
+                            await YieldEvent("message_start", CreateMessageStartEvent(request.Model!, messageId, usageSegment.Usage), ct);
                             await YieldEvent("ping", new PingEvent(), ct);
                             messageStarted = true;
                             hasSuccessYield = true;
@@ -105,7 +105,7 @@ public class AnthropicMessagesController(
 
                     if (!messageStarted)
                     {
-                        await YieldEvent("message_start", CreateMessageStartEvent(request.Model!, messageId, 0), ct);
+                        await YieldEvent("message_start", CreateMessageStartEvent(request.Model!, messageId, ChatTokenUsage.Zero), ct);
                         await YieldEvent("ping", new PingEvent(), ct);
                         messageStarted = true;
                         hasSuccessYield = true;
@@ -279,7 +279,7 @@ public class AnthropicMessagesController(
         }
     }
 
-    private static MessageStartEvent CreateMessageStartEvent(string model, string messageId, int inputTokens)
+    private static MessageStartEvent CreateMessageStartEvent(string model, string messageId, ChatTokenUsage usage)
     {
         return new MessageStartEvent
         {
@@ -289,7 +289,9 @@ public class AnthropicMessagesController(
                 Model = model,
                 Usage = new MessageStartUsage
                 {
-                    InputTokens = inputTokens
+                    InputTokens = usage.InputFreshTokens,
+                    CacheCreationInputTokens = usage.CacheCreationTokens > 0 ? usage.CacheCreationTokens : null,
+                    CacheReadInputTokens = usage.CacheTokens > 0 ? usage.CacheTokens : null
                 }
             }
         };

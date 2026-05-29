@@ -7,6 +7,10 @@ namespace Chats.BE.Services.Models.Dtos;
 
 public static class AnthropicSegmentExtensions
 {
+    private static int ToAnthropicInputTokens(this ChatTokenUsage usage) => usage.InputFreshTokens;
+
+    private static int? ToNullableAnthropicToken(this int value) => value > 0 ? value : null;
+
     /// <summary>
     /// Converts DBFinishReason to Anthropic stop_reason
     /// Anthropic supports: end_turn, max_tokens, stop_sequence, tool_use, pause_turn, refusal
@@ -66,10 +70,10 @@ public static class AnthropicSegmentExtensions
             StopReason = snapshot.FinishReason.ToAnthropicStopReason(),
             Usage = new AnthropicUsage
             {
-                InputTokens = snapshot.Usage.InputTokens,
+                InputTokens = snapshot.Usage.ToAnthropicInputTokens(),
                 OutputTokens = snapshot.Usage.OutputTokens,
-                CacheCreationInputTokens = snapshot.Usage.CacheCreationTokens,
-                CacheReadInputTokens = snapshot.Usage.CacheTokens
+                CacheCreationInputTokens = snapshot.Usage.CacheCreationTokens.ToNullableAnthropicToken(),
+                CacheReadInputTokens = snapshot.Usage.CacheTokens.ToNullableAnthropicToken()
             }
         };
     }
@@ -87,9 +91,9 @@ public static class AnthropicSegmentExtensions
                 Model = model,
                 Usage = new MessageStartUsage
                 {
-                    InputTokens = snapshot.Usage.InputTokens,
-                    CacheCreationInputTokens = snapshot.Usage.CacheCreationTokens,
-                    CacheReadInputTokens = snapshot.Usage.CacheTokens
+                    InputTokens = snapshot.Usage.ToAnthropicInputTokens(),
+                    CacheCreationInputTokens = snapshot.Usage.CacheCreationTokens.ToNullableAnthropicToken(),
+                    CacheReadInputTokens = snapshot.Usage.CacheTokens.ToNullableAnthropicToken()
                 }
             }
         };
@@ -108,10 +112,10 @@ public static class AnthropicSegmentExtensions
             },
             Usage = new MessageDeltaUsage
             {
-                InputTokens = snapshot.Usage.InputTokens,
+                InputTokens = snapshot.Usage.ToAnthropicInputTokens(),
                 OutputTokens = snapshot.Usage.OutputTokens,
-                CacheCreationInputTokens = snapshot.Usage.CacheCreationTokens,
-                CacheReadInputTokens = snapshot.Usage.CacheTokens
+                CacheCreationInputTokens = snapshot.Usage.CacheCreationTokens.ToNullableAnthropicToken(),
+                CacheReadInputTokens = snapshot.Usage.CacheTokens.ToNullableAnthropicToken()
             }
         };
     }

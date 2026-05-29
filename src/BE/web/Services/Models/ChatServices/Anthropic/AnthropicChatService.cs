@@ -221,12 +221,14 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
     private static ChatTokenUsage MergeUsage(ChatTokenUsage? previousUsage, JsonElement usage)
     {
         ChatTokenUsage baseUsage = previousUsage ?? ChatTokenUsage.Zero;
+        int cacheTokens = GetUsageValueOrFallback(usage, "cache_read_input_tokens", baseUsage.CacheTokens);
+        int freshInputTokens = GetUsageValueOrFallback(usage, "input_tokens", baseUsage.InputFreshTokens);
 
         return new ChatTokenUsage
         {
-            InputTokens = GetUsageValueOrFallback(usage, "input_tokens", baseUsage.InputTokens),
+            InputTokens = freshInputTokens + cacheTokens,
             OutputTokens = GetUsageValueOrFallback(usage, "output_tokens", baseUsage.OutputTokens),
-            CacheTokens = GetUsageValueOrFallback(usage, "cache_read_input_tokens", baseUsage.CacheTokens),
+            CacheTokens = cacheTokens,
             CacheCreationTokens = GetUsageValueOrFallback(usage, "cache_creation_input_tokens", baseUsage.CacheCreationTokens),
             ReasoningTokens = baseUsage.ReasoningTokens,
         };
