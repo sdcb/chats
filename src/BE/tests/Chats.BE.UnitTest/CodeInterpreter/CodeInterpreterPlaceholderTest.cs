@@ -20,110 +20,36 @@ public sealed class CodeInterpreterPlaceholderTest
         Assert.Equal(expected, result);
     }
 
-    [Fact]
-    public void FormatResourceLimits_WithAllValues_ShouldFormatCorrectly()
+    [Theory]
+    [InlineData(512 * 1024 * 1024L, 1.0, 100, "memory=512MB, cpu=1 cores, maxProcesses=100")]
+    [InlineData(0L, 0.0, 0, "memory=unlimited, cpu=unlimited, maxProcesses=unlimited")]
+    [InlineData(1024L * 1024 * 1024, 0.0, 50, "memory=1GB, cpu=unlimited, maxProcesses=50")]
+    [InlineData(256 * 1024 * 1024L, 0.5, 200, "memory=256MB, cpu=0.5 cores, maxProcesses=200")]
+    public void FormatResourceLimits_ShouldFormatCorrectly(long memoryBytes, double cpuCores, int maxProcesses, string expected)
     {
         ResourceLimits limits = new()
         {
-            MemoryBytes = 512 * 1024 * 1024,
-            CpuCores = 1.0,
-            MaxProcesses = 100
+            MemoryBytes = memoryBytes,
+            CpuCores = cpuCores,
+            MaxProcesses = maxProcesses
         };
 
         string result = CodeInterpreterExecutor.FormatResourceLimits(limits);
 
-        Assert.Equal("memory=512MB, cpu=1 cores, maxProcesses=100", result);
+        Assert.Equal(expected, result);
     }
 
-    [Fact]
-    public void FormatResourceLimits_WithUnlimitedValues_ShouldShowUnlimited()
+    [Theory]
+    [InlineData("Timeout: {defaultTimeoutSeconds}, Network: {defaultNetworkMode}, Limits: memory={defaultMemoryBytes}, cpu={defaultCpuCores}, maxProcesses={defaultMaxProcesses}", "Timeout: 300, Network: none, Limits: memory=536870912 (512MB), cpu=1, maxProcesses=100")]
+    [InlineData("No placeholders here", "No placeholders here")]
+    [InlineData("{defaultTimeoutSeconds} and again {defaultTimeoutSeconds}", "300 and again 300")]
+    public void ReplacePlaceholders_ShouldReplaceConfiguredTokens(string input, string expected)
     {
-        ResourceLimits limits = new()
-        {
-            MemoryBytes = 0,
-            CpuCores = 0,
-            MaxProcesses = 0
-        };
-
-        string result = CodeInterpreterExecutor.FormatResourceLimits(limits);
-
-        Assert.Equal("memory=unlimited, cpu=unlimited, maxProcesses=unlimited", result);
-    }
-
-    [Fact]
-    public void FormatResourceLimits_WithMixedValues_ShouldFormatCorrectly()
-    {
-        ResourceLimits limits = new()
-        {
-            MemoryBytes = 1024L * 1024 * 1024,
-            CpuCores = 0,
-            MaxProcesses = 50
-        };
-
-        string result = CodeInterpreterExecutor.FormatResourceLimits(limits);
-
-        Assert.Equal("memory=1GB, cpu=unlimited, maxProcesses=50", result);
-    }
-
-    [Fact]
-    public void FormatResourceLimits_WithFractionalCpu_ShouldFormatCorrectly()
-    {
-        ResourceLimits limits = new()
-        {
-            MemoryBytes = 256 * 1024 * 1024,
-            CpuCores = 0.5,
-            MaxProcesses = 200
-        };
-
-        string result = CodeInterpreterExecutor.FormatResourceLimits(limits);
-
-        Assert.Equal("memory=256MB, cpu=0.5 cores, maxProcesses=200", result);
-    }
-
-    [Fact]
-    public void ReplacePlaceholders_ShouldReplaceAllOccurrences()
-    {
-        string input = "Timeout: {defaultTimeoutSeconds}, Network: {defaultNetworkMode}, Limits: memory={defaultMemoryBytes}, cpu={defaultCpuCores}, maxProcesses={defaultMaxProcesses}";
-        Dictionary<string, string> placeholders = new(StringComparer.Ordinal)
-        {
-            ["{defaultTimeoutSeconds}"] = "300",
-            ["{defaultNetworkMode}"] = "none",
-            ["{defaultMemoryBytes}"] = "536870912 (512MB)",
-            ["{defaultCpuCores}"] = "1",
-            ["{defaultMaxProcesses}"] = "100"
-        };
+        Dictionary<string, string> placeholders = CreateDefaultPlaceholders();
 
         string result = CodeInterpreterExecutor.ReplacePlaceholders(input, placeholders);
 
-        Assert.Equal("Timeout: 300, Network: none, Limits: memory=536870912 (512MB), cpu=1, maxProcesses=100", result);
-    }
-
-    [Fact]
-    public void ReplacePlaceholders_WithNoPlaceholders_ShouldReturnOriginal()
-    {
-        string input = "No placeholders here";
-        Dictionary<string, string> placeholders = new(StringComparer.Ordinal)
-        {
-            ["{defaultTimeoutSeconds}"] = "300"
-        };
-
-        string result = CodeInterpreterExecutor.ReplacePlaceholders(input, placeholders);
-
-        Assert.Equal("No placeholders here", result);
-    }
-
-    [Fact]
-    public void ReplacePlaceholders_WithMultipleSamePlaceholder_ShouldReplaceAll()
-    {
-        string input = "{defaultTimeoutSeconds} and again {defaultTimeoutSeconds}";
-        Dictionary<string, string> placeholders = new(StringComparer.Ordinal)
-        {
-            ["{defaultTimeoutSeconds}"] = "300"
-        };
-
-        string result = CodeInterpreterExecutor.ReplacePlaceholders(input, placeholders);
-
-        Assert.Equal("300 and again 300", result);
+        Assert.Equal(expected, result);
     }
 
     [Fact]
@@ -164,5 +90,17 @@ public sealed class CodeInterpreterPlaceholderTest
         Assert.DoesNotContain("{defaultTimeoutSeconds}", result);
         Assert.DoesNotContain("{defaultNetworkMode}", result);
         Assert.DoesNotContain("{defaultImage}", result);
+    }
+
+    private static Dictionary<string, string> CreateDefaultPlaceholders()
+    {
+        return new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["{defaultTimeoutSeconds}"] = "300",
+            ["{defaultNetworkMode}"] = "none",
+            ["{defaultMemoryBytes}"] = "536870912 (512MB)",
+            ["{defaultCpuCores}"] = "1",
+            ["{defaultMaxProcesses}"] = "100"
+        };
     }
 }

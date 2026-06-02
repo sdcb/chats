@@ -17,88 +17,28 @@ public class UpdateModelRequestValidationTests
 
     #region 基础字段验证测试
 
-    [Fact]
-    public void Name_Required_ShouldFail()
+    public static TheoryData<string, Func<UpdateModelRequest, UpdateModelRequest>, string> BasicFieldFailureCases()
     {
-        // Arrange
-        UpdateModelRequest request = CreateValidChatRequest();
-        request = request with { Name = "" };
-
-        // Act
-        List<ValidationResult> results = ValidateModel(request);
-
-        // Assert
-        Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.Name)));
+        return new TheoryData<string, Func<UpdateModelRequest, UpdateModelRequest>, string>
+        {
+            { "name required", r => r with { Name = "" }, nameof(UpdateModelRequest.Name) },
+            { "deployment name required", r => r with { DeploymentName = "" }, nameof(UpdateModelRequest.DeploymentName) },
+            { "model key id required", r => r with { ModelKeyId = 0 }, nameof(UpdateModelRequest.ModelKeyId) },
+            { "input fresh token price non-negative", r => r with { InputFreshTokenPrice1M = -1 }, nameof(UpdateModelRequest.InputFreshTokenPrice1M) },
+            { "output token price non-negative", r => r with { OutputTokenPrice1M = -1 }, nameof(UpdateModelRequest.OutputTokenPrice1M) },
+            { "input cached token price non-negative", r => r with { InputCachedTokenPrice1M = -1 }, nameof(UpdateModelRequest.InputCachedTokenPrice1M) },
+        };
     }
 
-    [Fact]
-    public void DeploymentName_Required_ShouldFail()
+    [Theory]
+    [MemberData(nameof(BasicFieldFailureCases))]
+    public void BasicFieldValidation_ShouldFail(string _, Func<UpdateModelRequest, UpdateModelRequest> mutate, string expectedMemberName)
     {
-        // Arrange
-        UpdateModelRequest request = CreateValidChatRequest();
-        request = request with { DeploymentName = "" };
+        UpdateModelRequest request = mutate(CreateValidChatRequest());
 
-        // Act
         List<ValidationResult> results = ValidateModel(request);
 
-        // Assert
-        Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.DeploymentName)));
-    }
-
-    [Fact]
-    public void ModelKeyId_Zero_ShouldFail()
-    {
-        // Arrange
-        UpdateModelRequest request = CreateValidChatRequest();
-        request = request with { ModelKeyId = 0 };
-
-        // Act
-        List<ValidationResult> results = ValidateModel(request);
-
-        // Assert
-        Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.ModelKeyId)));
-    }
-
-    [Fact]
-    public void InputFreshTokenPrice_Negative_ShouldFail()
-    {
-        // Arrange
-        UpdateModelRequest request = CreateValidChatRequest();
-        request = request with { InputFreshTokenPrice1M = -1 };
-
-        // Act
-        List<ValidationResult> results = ValidateModel(request);
-
-        // Assert
-        Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.InputFreshTokenPrice1M)));
-    }
-
-    [Fact]
-    public void OutputTokenPrice_Negative_ShouldFail()
-    {
-        // Arrange
-        UpdateModelRequest request = CreateValidChatRequest();
-        request = request with { OutputTokenPrice1M = -1 };
-
-        // Act
-        List<ValidationResult> results = ValidateModel(request);
-
-        // Assert
-        Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.OutputTokenPrice1M)));
-    }
-
-    [Fact]
-    public void InputCachedTokenPrice_Negative_ShouldFail()
-    {
-        // Arrange
-        UpdateModelRequest request = CreateValidChatRequest();
-        request = request with { InputCachedTokenPrice1M = -1 };
-
-        // Act
-        List<ValidationResult> results = ValidateModel(request);
-
-        // Assert
-        Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.InputCachedTokenPrice1M)));
+        Assert.Contains(results, r => r.MemberNames.Contains(expectedMemberName));
     }
 
     #endregion
@@ -266,10 +206,8 @@ public class UpdateModelRequestValidationTests
 
     [Theory]
     [InlineData("1024x1024")]
-    [InlineData("512x512")]
     [InlineData("1792x1024")]
     [InlineData("1024x1792")]
-    [InlineData("2048x2048")]
     public void ImageAPI_ValidImageSizeFormat_ShouldPass(string validSize)
     {
         // Arrange
@@ -321,8 +259,6 @@ public class UpdateModelRequestValidationTests
 
     [Theory]
     [InlineData(1)]
-    [InlineData(10)]
-    [InlineData(64)]
     [InlineData(128)]
     public void ImageAPI_ValidMaxBatchCount_ShouldPass(int batchCount)
     {

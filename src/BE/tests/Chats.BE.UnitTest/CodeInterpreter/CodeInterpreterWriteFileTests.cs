@@ -73,87 +73,46 @@ public sealed class CodeInterpreterWriteFileTests
         return await db.ChatDockerSessions.AsNoTracking().OrderByDescending(x => x.Id).FirstAsync();
     }
 
-    [Fact]
-    public async Task WriteFile_ReturnsLineCount_NotByteCount()
+    [Theory]
+    [InlineData("multiple-lines", "line1\nline2\nline3", "Wrote 3 lines")]
+    [InlineData("empty", "", "Wrote 0 lines")]
+    [InlineData("single-line", "single line", "Wrote 1 lines")]
+    [InlineData("crlf", "line1\r\nline2\r\nline3\r\nline4", "Wrote 4 lines")]
+    public async Task WriteFile_ShouldReportLineCount(string caseName, string textContent, string expectedMessage)
     {
-        // Arrange
-        ServiceProvider sp = CreateServiceProvider(nameof(WriteFile_ReturnsLineCount_NotByteCount));
-        FakeDockerService docker = new();
-        CodeInterpreterExecutor executor = CreateExecutor(sp, docker);
+        (CodeInterpreterExecutor executor, CodeInterpreterExecutor.TurnContext ctx, string sessionLabel, _) = await CreateWriteFileScenarioAsync(caseName);
 
-        const string sessionLabel = "s1";
-        const string containerId = "container-123";
-        ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, sessionLabel, containerId);
+        Result<string> result = await executor.WriteFile(ctx, sessionLabel, "/app/test.txt", textContent, CancellationToken.None);
 
-        CodeInterpreterExecutor.TurnContext ctx = new()
-        {
-            MessageTurns = [new ChatTurn { Id = 1, ChatDockerSessions = [session] }],
-            MessageSteps = [],
-            CurrentAssistantTurn = new ChatTurn { Id = 1 },
-            ClientInfoId = 1
-        };
-
-        // Act: Write file with multiple lines
-        string textContent = "line1\nline2\nline3";
-        Result<string> result = await executor.WriteFile(
-            ctx,
-            sessionLabel,
-            "/app/test.txt",
-            textContent,
-            CancellationToken.None
-        );
-
-        // Assert
         Assert.True(result.IsSuccess);
-        Assert.Contains("Wrote 3 lines", result.Value);
+        Assert.Contains(expectedMessage, result.Value);
         Assert.DoesNotContain("bytes", result.Value);
     }
 
-    [Fact]
-    public async Task WriteFile_EmptyText_Returns0Lines()
+    [Theory]
+    [InlineData("relative", "test.py", "/workspace/test.py")]
+    [InlineData("absolute", "/tmp/test.py", "/tmp/test.py")]
+    public async Task WriteFile_ShouldResolvePathAgainstWorkDir(string caseName, string filePath, string expectedPath)
     {
-        // Arrange
-        ServiceProvider sp = CreateServiceProvider(nameof(WriteFile_EmptyText_Returns0Lines));
-        FakeDockerService docker = new();
-        CodeInterpreterExecutor executor = CreateExecutor(sp, docker);
+        (CodeInterpreterExecutor executor, CodeInterpreterExecutor.TurnContext ctx, string sessionLabel, FakeDockerService docker) =
+            await CreateWriteFileScenarioAsync(caseName, new CodePodConfig { WorkDir = "/workspace" });
 
-        const string sessionLabel = "s1";
-        const string containerId = "container-123";
-        ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, sessionLabel, containerId);
+        Result<string> result = await executor.WriteFile(ctx, sessionLabel, filePath, "print('hello')", CancellationToken.None);
 
-        CodeInterpreterExecutor.TurnContext ctx = new()
-        {
-            MessageTurns = [new ChatTurn { Id = 1, ChatDockerSessions = [session] }],
-            MessageSteps = [],
-            CurrentAssistantTurn = new ChatTurn { Id = 1 },
-            ClientInfoId = 1
-        };
-
-        // Act: Write empty file
-        Result<string> result = await executor.WriteFile(
-            ctx,
-            sessionLabel,
-            "/app/empty.txt",
-            "",
-            CancellationToken.None
-        );
-
-        // Assert
         Assert.True(result.IsSuccess);
-        Assert.Contains("Wrote 0 lines", result.Value);
+        Assert.Equal(expectedPath, docker.LastUploadedPath);
+        Assert.Contains(expectedPath, result.Value);
     }
 
-    [Fact]
-    public async Task WriteFile_SingleLine_Returns1Line()
+    private static async Task<(CodeInterpreterExecutor Executor, CodeInterpreterExecutor.TurnContext Context, string SessionLabel, FakeDockerService Docker)>
+        CreateWriteFileScenarioAsync(string dbName, CodePodConfig? codePodConfig = null)
     {
-        // Arrange
-        ServiceProvider sp = CreateServiceProvider(nameof(WriteFile_SingleLine_Returns1Line));
+        ServiceProvider sp = CreateServiceProvider($"{nameof(CodeInterpreterWriteFileTests)}_{dbName}");
         FakeDockerService docker = new();
-        CodeInterpreterExecutor executor = CreateExecutor(sp, docker);
+        CodeInterpreterExecutor executor = CreateExecutor(sp, docker, codePodConfig);
 
         const string sessionLabel = "s1";
-        const string containerId = "container-123";
-        ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, sessionLabel, containerId);
+        ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, sessionLabel, "container-123");
 
         CodeInterpreterExecutor.TurnContext ctx = new()
         {
@@ -163,122 +122,6 @@ public sealed class CodeInterpreterWriteFileTests
             ClientInfoId = 1
         };
 
-        // Act: Write single line file
-        Result<string> result = await executor.WriteFile(
-            ctx,
-            sessionLabel,
-            "/app/single.txt",
-            "single line",
-            CancellationToken.None
-        );
-
-        // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Contains("Wrote 1 lines", result.Value);
-    }
-
-    [Fact]
-    public async Task WriteFile_MultiLineWithCRLF_CountsCorrectly()
-    {
-        // Arrange
-        ServiceProvider sp = CreateServiceProvider(nameof(WriteFile_MultiLineWithCRLF_CountsCorrectly));
-        FakeDockerService docker = new();
-        CodeInterpreterExecutor executor = CreateExecutor(sp, docker);
-
-        const string sessionLabel = "s1";
-        const string containerId = "container-123";
-        ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, sessionLabel, containerId);
-
-        CodeInterpreterExecutor.TurnContext ctx = new()
-        {
-            MessageTurns = [new ChatTurn { Id = 1, ChatDockerSessions = [session] }],
-            MessageSteps = [],
-            CurrentAssistantTurn = new ChatTurn { Id = 1 },
-            ClientInfoId = 1
-        };
-
-        // Act: Write file with CRLF line endings
-        string textContent = "line1\r\nline2\r\nline3\r\nline4";
-        Result<string> result = await executor.WriteFile(
-            ctx,
-            sessionLabel,
-            "/app/crlf.txt",
-            textContent,
-            CancellationToken.None
-        );
-
-        // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Contains("Wrote 4 lines", result.Value);
-    }
-
-    [Fact]
-    public async Task WriteFile_RelativePath_ShouldAnchorToConfiguredWorkDir()
-    {
-        // Arrange
-        ServiceProvider sp = CreateServiceProvider(nameof(WriteFile_RelativePath_ShouldAnchorToConfiguredWorkDir));
-        FakeDockerService docker = new();
-        CodeInterpreterExecutor executor = CreateExecutor(sp, docker, new CodePodConfig { WorkDir = "/workspace" });
-
-        const string sessionLabel = "s1";
-        const string containerId = "container-123";
-        ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, sessionLabel, containerId);
-
-        CodeInterpreterExecutor.TurnContext ctx = new()
-        {
-            MessageTurns = [new ChatTurn { Id = 1, ChatDockerSessions = [session] }],
-            MessageSteps = [],
-            CurrentAssistantTurn = new ChatTurn { Id = 1 },
-            ClientInfoId = 1
-        };
-
-        // Act
-        Result<string> result = await executor.WriteFile(
-            ctx,
-            sessionLabel,
-            "test.py",
-            "print('hello')",
-            CancellationToken.None
-        );
-
-        // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal("/workspace/test.py", docker.LastUploadedPath);
-        Assert.Contains("/workspace/test.py", result.Value);
-    }
-
-    [Fact]
-    public async Task WriteFile_AbsolutePath_ShouldUsePathAsIs()
-    {
-        // Arrange
-        ServiceProvider sp = CreateServiceProvider(nameof(WriteFile_AbsolutePath_ShouldUsePathAsIs));
-        FakeDockerService docker = new();
-        CodeInterpreterExecutor executor = CreateExecutor(sp, docker, new CodePodConfig { WorkDir = "/workspace" });
-
-        const string sessionLabel = "s1";
-        const string containerId = "container-123";
-        ChatDockerSession session = await SeedSessionAsync(sp, ownerTurnId: 1, sessionLabel, containerId);
-
-        CodeInterpreterExecutor.TurnContext ctx = new()
-        {
-            MessageTurns = [new ChatTurn { Id = 1, ChatDockerSessions = [session] }],
-            MessageSteps = [],
-            CurrentAssistantTurn = new ChatTurn { Id = 1 },
-            ClientInfoId = 1
-        };
-
-        // Act
-        Result<string> result = await executor.WriteFile(
-            ctx,
-            sessionLabel,
-            "/tmp/test.py",
-            "print('hello')",
-            CancellationToken.None
-        );
-
-        // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal("/tmp/test.py", docker.LastUploadedPath);
-        Assert.Contains("/tmp/test.py", result.Value);
+        return (executor, ctx, sessionLabel, docker);
     }
 }
