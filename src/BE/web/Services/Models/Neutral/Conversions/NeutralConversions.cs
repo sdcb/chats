@@ -9,19 +9,24 @@ public static class NeutralConversions
 {
     /// <summary>
     /// Parses OpenAI format messages JSON array to a list of NeutralMessages.
-    /// Excludes system messages (they should be handled separately).
+    /// Excludes only the leading system/developer prefix because it is handled separately as the outer system prompt.
     /// </summary>
     public static IList<NeutralMessage> ParseOpenAIMessages(JsonArray? messages)
     {
         if (messages == null) return [];
 
         List<NeutralMessage> result = [];
+        bool inLeadingSystemPrefix = true;
         foreach (JsonNode? msgNode in messages)
         {
             if (msgNode == null) continue;
 
             string? role = (string?)msgNode["role"];
-            if (role == "system" || role == "developer") continue; // Skip system messages
+            if (inLeadingSystemPrefix && IsSystemLikeRole(role))
+            {
+                continue;
+            }
+            inLeadingSystemPrefix = false;
 
             NeutralMessage? message = ParseSingleMessage(msgNode, role);
             if (message != null)
@@ -33,7 +38,7 @@ public static class NeutralConversions
     }
 
     /// <summary>
-    /// Extracts system prompt from OpenAI format messages JSON array.
+    /// Extracts the leading system/developer prefix from OpenAI format messages JSON array.
     /// </summary>
     public static string? ExtractSystemPrompt(JsonArray? messages)
     {
@@ -45,7 +50,10 @@ public static class NeutralConversions
             if (msgNode == null) continue;
 
             string? role = (string?)msgNode["role"];
-            if (role != "system" && role != "developer") continue;
+            if (!IsSystemLikeRole(role))
+            {
+                break;
+            }
 
             JsonNode? content = msgNode["content"];
             if (content == null) continue;
@@ -75,6 +83,11 @@ public static class NeutralConversions
         return systemPrompts.Count > 0 ? string.Join("\r\n", systemPrompts) : null;
     }
 
+    private static bool IsSystemLikeRole(string? role)
+    {
+        return role is "system" or "developer";
+    }
+
     private static NeutralMessage? ParseSingleMessage(JsonNode msgNode, string? role)
     {
         NeutralChatRole neutralRole = role switch
@@ -82,6 +95,7 @@ public static class NeutralConversions
             "user" => NeutralChatRole.User,
             "assistant" => NeutralChatRole.Assistant,
             "tool" => NeutralChatRole.Tool,
+            "system" or "developer" => NeutralChatRole.System,
             _ => throw new NotSupportedException($"Role '{role}' is not supported.")
         };
 

@@ -229,6 +229,52 @@ public class AzureResponseApiServiceTests
     }
 
     [Fact]
+    public async Task ResponseApiService_ShouldSendOuterAndInnerSystemMessagesInOrder()
+    {
+        // Arrange
+        string sse = "event: response.completed\n" +
+                     "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n";
+
+        string? capturedBody = null;
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
+        {
+            capturedBody = req.Content == null ? null : req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        });
+
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        ChatRequest request = CreateBaseChatRequest() with
+        {
+            Messages =
+            [
+                NeutralMessage.FromUserText("first user"),
+                NeutralMessage.FromSystemText("inner system"),
+                NeutralMessage.FromUserText("second user")
+            ]
+        };
+
+        // Act
+        await foreach (ChatSegment _ in service.ChatStreamed(request, CancellationToken.None))
+        {
+            // drain
+        }
+
+        // Assert
+        Assert.False(string.IsNullOrWhiteSpace(capturedBody));
+
+        using JsonDocument doc = JsonDocument.Parse(capturedBody!);
+        JsonElement input = doc.RootElement.GetProperty("input");
+        JsonElement[] messages = input.EnumerateArray()
+            .Where(item => item.GetProperty("type").GetString() == "message")
+            .ToArray();
+
+        Assert.Equal(["system", "user", "system", "user"], messages.Select(x => x.GetProperty("role").GetString()!).ToArray());
+        Assert.Equal("你是AI助手Sdcb Chats\n当前日期: 2026/01/07，当前模型：gpt-5.2", messages[0].GetProperty("content")[0].GetProperty("text").GetString());
+        Assert.Equal("first user", messages[1].GetProperty("content")[0].GetProperty("text").GetString());
+        Assert.Equal("inner system", messages[2].GetProperty("content")[0].GetProperty("text").GetString());
+        Assert.Equal("second user", messages[3].GetProperty("content")[0].GetProperty("text").GetString());
+    }
+
+    [Fact]
     public async Task ResponseApiService_ShouldPutEncryptedContentIntoThinkChatSegmentSignature_OnOutputItemDone()
     {
         // Arrange

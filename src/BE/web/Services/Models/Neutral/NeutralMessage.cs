@@ -35,6 +35,15 @@ public record NeutralMessage
         };
     }
 
+    public static NeutralMessage FromSystem(params NeutralContent[] contents)
+    {
+        return new NeutralMessage
+        {
+            Role = NeutralChatRole.System,
+            Contents = contents
+        };
+    }
+
     public static NeutralMessage FromUserText(string text, NeutralCacheControl? cacheControl = null)
     {
         return FromUser(NeutralTextContent.Create(text, cacheControl));
@@ -43,5 +52,10 @@ public record NeutralMessage
     public static NeutralMessage FromAssistantText(string text, NeutralCacheControl? cacheControl = null)
     {
         return FromAssistant(NeutralTextContent.Create(text, cacheControl));
+    }
+
+    public static NeutralMessage FromSystemText(string text, NeutralCacheControl? cacheControl = null)
+    {
+        return FromSystem(NeutralTextContent.Create(text, cacheControl));
     }
 }

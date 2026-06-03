@@ -727,6 +727,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             {
                 NeutralChatRole.User => "user",
                 NeutralChatRole.Assistant => "assistant",
+                NeutralChatRole.System => "system",
                 NeutralChatRole.Tool => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Tool messages should be merged into user messages before conversion."),
                 _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Unknown message role: {message.Role}"),
             };

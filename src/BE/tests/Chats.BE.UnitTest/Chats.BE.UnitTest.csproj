@@ -42,6 +42,9 @@
     <None Update="ChatServices\Response\FiddlerDump\*.dump">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="ChatServices\Anthropic\claude-code.req.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
