@@ -61,9 +61,7 @@ const UserMenuPopover = ({
 
   return (
     <Popover onOpenChange={handleOpenChange}>
-      <PopoverTrigger className="w-full hover:bg-muted rounded-md">
-        {trigger}
-      </PopoverTrigger>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
         side="top"
         align="start"
