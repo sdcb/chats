@@ -28,6 +28,7 @@ public static class AnthropicConversions
             {
                 "user" => NeutralChatRole.User,
                 "assistant" => NeutralChatRole.Assistant,
+                "system" => NeutralChatRole.System,
                 _ => throw new ArgumentException($"Unknown role: {role}")
             };
 

@@ -139,4 +139,31 @@ public class MiniMaxChatServiceTests
         JsonObject body = service.ToUpstreamRequestBody(req, stream: true);
         Assert.True((bool?)body["reasoning_split"]);
     }
+
+    [Fact]
+    public void BuildRequestBody_WithOuterAndInnerSystem_ShouldKeepOuterFirstAndInnerOrdered()
+    {
+        TestMiniMaxChatService service = new(new DummyHttpClientFactory());
+        ChatRequest baseRequest = CreateBaseChatRequest();
+        baseRequest.ChatConfig.SystemPrompt = "outer system";
+
+        ChatRequest request = baseRequest with
+        {
+            Messages =
+            [
+                NeutralMessage.FromUserText("first user"),
+                NeutralMessage.FromSystemText("inner system"),
+                NeutralMessage.FromAssistantText("answer")
+            ]
+        };
+
+        JsonObject body = service.ToUpstreamRequestBody(request, stream: true);
+        JsonArray messages = Assert.IsType<JsonArray>(body["messages"]);
+
+        Assert.Equal(["system", "user", "system", "assistant"], messages.Select(x => x!["role"]!.GetValue<string>()).ToArray());
+        Assert.Equal("outer system", (string?)messages[0]?["content"]);
+        Assert.Equal("first user", (string?)messages[1]?["content"]);
+        Assert.Equal("inner system", (string?)messages[2]?["content"]);
+        Assert.Equal("answer", (string?)messages[3]?["content"]);
+    }
 }

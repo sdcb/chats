@@ -658,6 +658,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             NeutralChatRole.User => "user",
             NeutralChatRole.Assistant => "assistant",
             NeutralChatRole.Tool => "tool",
+            NeutralChatRole.System => "system",
             _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Role {message.Role} is not supported")
         };
 

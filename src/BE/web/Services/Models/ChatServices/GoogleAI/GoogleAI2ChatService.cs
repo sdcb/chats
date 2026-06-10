@@ -712,6 +712,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
                     NeutralChatRole.User => "user",
                     NeutralChatRole.Assistant => "model",
                     NeutralChatRole.Tool => "function",
+                    NeutralChatRole.System => "user",
                     _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Unsupported message role: {message.Role} in {nameof(GoogleAI2ChatService)}"),
                 }
             };
@@ -721,6 +722,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
                 NeutralChatRole.User => BuildUserParts(message),
                 NeutralChatRole.Assistant => BuildAssistantParts(message),
                 NeutralChatRole.Tool => BuildToolParts(message),
+                NeutralChatRole.System => BuildUserParts(message),
                 _ => throw new NotSupportedException($"Unsupported message role: {message.Role} in {nameof(GoogleAI2ChatService)}"),
             };
 

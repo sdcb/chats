@@ -192,6 +192,36 @@ public class GoogleAI2ChatServiceTest
     }
 
     [Fact]
+    public void BuildNativeRequestBody_WithOuterAndInnerSystem_KeepsSystemInstructionAndInnerText()
+    {
+        GoogleAI2ChatService service = new(new DummyHttpClientFactory());
+        ChatRequest request = CreateBaseChatRequest("gemini-3-flash-preview", "first user", cfg =>
+        {
+            cfg.SystemPrompt = "outer system";
+        }) with
+        {
+            Messages =
+            [
+                NeutralMessage.FromUserText("first user"),
+                NeutralMessage.FromSystemText("inner system"),
+                NeutralMessage.FromUserText("second user")
+            ]
+        };
+
+        JsonObject body = BuildNativeRequestBody(service, request, allowImageGeneration: false);
+
+        JsonObject systemInstruction = Assert.IsType<JsonObject>(body["systemInstruction"]);
+        JsonArray systemParts = Assert.IsType<JsonArray>(systemInstruction["parts"]);
+        Assert.Equal("outer system", (string?)systemParts[0]?["text"]);
+
+        JsonArray contents = Assert.IsType<JsonArray>(body["contents"]);
+        Assert.Equal(["user", "user", "user"], contents.Select(x => x!["role"]!.GetValue<string>()).ToArray());
+        Assert.Equal("first user", (string?)contents[0]?["parts"]?[0]?["text"]);
+        Assert.Equal("inner system", (string?)contents[1]?["parts"]?[0]?["text"]);
+        Assert.Equal("second user", (string?)contents[2]?["parts"]?[0]?["text"]);
+    }
+
+    [Fact]
     public void BuildNativeRequestBody_FunctionToolWithNullableSchema_UsesGoogleNullableFields()
     {
         GoogleAI2ChatService service = new(new DummyHttpClientFactory());

@@ -529,7 +529,16 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
 
         foreach (NeutralMessage message in request.Messages)
         {
-            if (message.Role == NeutralChatRole.User)
+            if (message.Role == NeutralChatRole.System)
+            {
+                input.Add(new JsonObject
+                {
+                    ["type"] = "message",
+                    ["role"] = "system",
+                    ["content"] = ContentToInputParts(message.Contents)
+                });
+            }
+            else if (message.Role == NeutralChatRole.User)
             {
                 input.Add(new JsonObject
                 {
