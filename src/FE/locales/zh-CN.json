@@ -727,6 +727,8 @@
   "Return Intermediate Preview Images": "返回中间状态预览图片",
   "Max Batch Image Count": "最大批量生成图片数量",
   "Batch Image Count": "同时生成图片数",
+  "Output Format": "输出格式",
+  "Output Compression": "输出压缩",
   "Supported Image Sizes": "支持的图片尺寸",
   "Supported Output Formats": "支持的输出格式",
   "e.g. 1024x1024, 1536x1024": "例如：1024x1024, 1536x1024",
