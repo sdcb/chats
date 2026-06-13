@@ -125,6 +125,7 @@ const ResponseMessage = (props: Props) => {
 
   const { id: messageId, status: messageStatus } = message;
   const content = useMemo(() => getMessageContents(message), [message.steps]);
+  const showPerStepActions = message.steps.length > 1;
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [editId, setEditId] = useState(EMPTY_ID);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -226,7 +227,7 @@ const ResponseMessage = (props: Props) => {
 
   const renderToolGroup = (toolGroup: ToolGroupContent, index: number, stepInfo?: { step: IStep; isLastInStep: boolean }) => {
     const { toolCall, toolResponse } = toolGroup;
-    const showStepInfo = stepInfo?.isLastInStep && !stepInfo.step.edited && stepInfo.step.id;
+    const showStepInfo = showPerStepActions && stepInfo?.isLastInStep && !stepInfo.step.edited && stepInfo.step.id;
 
     // 用于驱动 ToolCallBlock 的“自动收起”行为：
     // 在该 toolGroup 之后有任何内容（包括另一个 toolGroup）时，自动收起。
@@ -522,7 +523,7 @@ const ResponseMessage = (props: Props) => {
           ) : (
             (() => {
               const contentInfo = contentStepMap.get(c.i);
-              const showStepInfo = contentInfo?.isLastInStep && !contentInfo.step.edited && contentInfo.step.id;
+              const showStepInfo = showPerStepActions && contentInfo?.isLastInStep && !contentInfo.step.edited && contentInfo.step.id;
               return (
                 <div key={'text-' + index} className="relative group/item w-full min-w-0">
                   {message.displayType === 'Raw' ? (
@@ -558,22 +559,24 @@ const ResponseMessage = (props: Props) => {
                     <div className="pointer-events-auto flex items-center gap-px">
                       {!isChatting(chatStatus) && !readonly && (
                         <>
-                          <Tips
-                            side="top"
-                            content={t('Copy')}
-                            trigger={
-                              <button
-                                disabled={isChatting(messageStatus)}
-                                className="invisible group-hover/item:visible rounded-full p-0.5 transition-opacity hover:opacity-60"
-                                onClick={(e) => {
-                                  handleCopy(c.c);
-                                  e.stopPropagation();
-                                }}
-                              >
-                                <IconCopy size={16} />
-                              </button>
-                            }
-                          />
+                          {showPerStepActions && (
+                            <Tips
+                              side="top"
+                              content={t('Copy')}
+                              trigger={
+                                <button
+                                  disabled={isChatting(messageStatus)}
+                                  className="invisible group-hover/item:visible rounded-full p-0.5 transition-opacity hover:opacity-60"
+                                  onClick={(e) => {
+                                    handleCopy(c.c);
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  <IconCopy size={16} />
+                                </button>
+                              }
+                            />
+                          )}
                           <Tips
                             side="top"
                             content={t('Edit')}
