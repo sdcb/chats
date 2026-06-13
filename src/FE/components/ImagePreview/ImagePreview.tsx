@@ -269,7 +269,7 @@ const ImagePreview = ({ images, initialIndex, isOpen, onClose, sourceElement }: 
         {hasEnterStarted && (
         <button
           className={cn(
-            "absolute top-4 right-4 text-white hover:text-gray-300 transition-all z-10 pointer-events-auto",
+            "absolute top-4 right-4 z-20 text-white hover:text-gray-300 transition-all pointer-events-auto",
             isAnimating ? "opacity-0 scale-50" : "opacity-100 scale-100"
           )}
           onClick={handleClose}
@@ -283,7 +283,7 @@ const ImagePreview = ({ images, initialIndex, isOpen, onClose, sourceElement }: 
         {hasEnterStarted && images.length > 1 && (
           <div 
             className={cn(
-              "absolute top-4 left-1/2 -translate-x-1/2 text-white text-sm bg-black/50 px-3 py-1 rounded-full transition-all",
+              "absolute top-4 left-1/2 z-20 -translate-x-1/2 text-white text-sm bg-black/50 px-3 py-1 rounded-full transition-all",
               isAnimating ? "opacity-0 -translate-y-4" : "opacity-100 translate-y-0"
             )}
             style={{ transitionDuration: '300ms', transitionDelay: isAnimating ? '0ms' : '150ms' }}
@@ -296,7 +296,7 @@ const ImagePreview = ({ images, initialIndex, isOpen, onClose, sourceElement }: 
         {hasEnterStarted && images.length > 1 && (
           <button
             className={cn(
-              "absolute left-4 text-white hover:text-gray-300 transition-all z-10 p-2 bg-black/50 rounded-full pointer-events-auto",
+              "absolute left-4 z-20 text-white hover:text-gray-300 transition-all p-2 bg-black/50 rounded-full pointer-events-auto",
               isAnimating ? "opacity-0 -translate-x-4" : "opacity-100 translate-x-0"
             )}
             onClick={(e) => {
@@ -312,7 +312,7 @@ const ImagePreview = ({ images, initialIndex, isOpen, onClose, sourceElement }: 
         {/* 图片 */}
         <div
           ref={containerRef}
-          className="max-w-[90vw] max-h-[90vh] flex items-center justify-center pointer-events-auto overflow-hidden touch-none select-none"
+          className="relative z-10 max-w-[90vw] max-h-[90vh] flex items-center justify-center pointer-events-auto overflow-visible touch-none select-none"
           onClick={(e) => e.stopPropagation()}
           onWheel={handleWheel}
           onMouseDown={handleMouseDown}
@@ -345,7 +345,7 @@ const ImagePreview = ({ images, initialIndex, isOpen, onClose, sourceElement }: 
         {hasEnterStarted && images.length > 1 && (
           <button
             className={cn(
-              "absolute right-4 text-white hover:text-gray-300 transition-all z-10 p-2 bg-black/50 rounded-full pointer-events-auto",
+              "absolute right-4 z-20 text-white hover:text-gray-300 transition-all p-2 bg-black/50 rounded-full pointer-events-auto",
               isAnimating ? "opacity-0 translate-x-4" : "opacity-100 translate-x-0"
             )}
             onClick={(e) => {
@@ -362,7 +362,7 @@ const ImagePreview = ({ images, initialIndex, isOpen, onClose, sourceElement }: 
         {hasEnterStarted && images.length > 1 && (
           <div 
             className={cn(
-              "absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/50 p-2 rounded-lg max-w-[90vw] overflow-x-auto transition-all pointer-events-auto",
+              "absolute bottom-4 left-1/2 z-20 -translate-x-1/2 flex gap-2 bg-black/50 p-2 rounded-lg max-w-[90vw] overflow-x-auto transition-all pointer-events-auto",
               isAnimating ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
             )}
             style={{ transitionDuration: '300ms', transitionDelay: isAnimating ? '0ms' : '180ms' }}
