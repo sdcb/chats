@@ -21,7 +21,7 @@ public class ModelsController : ControllerBase
             where um.UserId == currentUser.Id && um.Model.Enabled
             join mpo in db.ModelProviderOrders on um.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId equals mpo.ModelProviderId into mpoGroup
             from mpo in mpoGroup.DefaultIfEmpty()
-            orderby mpo != null ? mpo.Order : int.MaxValue, um.Model.CurrentSnapshot.ModelKeySnapshot.ModelKey!.Order, um.Model.Order
+            orderby mpo != null ? mpo.Order : int.MaxValue, um.Model.CurrentSnapshot.ModelKeySnapshot.ModelKey!.Order, um.Model.Order, um.Model.Id descending
             select um.Model
         )
         .Select(x => new AdminModelDto
