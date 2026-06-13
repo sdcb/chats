@@ -36,7 +36,10 @@ env:
     fonts-cascadia-code
     fonts-roboto
     imagemagick
+    pngquant
     ripgrep
+  # Keep Python and npm Playwright pinned to the same version so they resolve
+  # the same Chromium revision and can share the browser cache on disk.
   PIP_PACKAGES: >-
     numpy
     pandas
@@ -54,7 +57,7 @@ env:
     markitdown[pptx]
     pdf2image
     pdfplumber
-    playwright==1.58.0
+    playwright==1.60.0
     pypdf
     pypdfium2
     pytesseract
@@ -70,7 +73,7 @@ env:
     react-dom
     react-icons
     sharp
-    playwright@1.58.2
+    playwright@1.60.0
   NUGET_PRECACHE: >-
     ClosedXML
     SixLabors.ImageSharp
