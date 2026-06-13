@@ -11,6 +11,11 @@ public static class EtagCacheHelper
 {
     public static bool TryHandleNotModified(ControllerBase controller, string resourceName, object? responseBody)
     {
+        return TryHandleNotModified(controller, resourceName, responseBody, varyBy: null);
+    }
+
+    public static bool TryHandleNotModified(ControllerBase controller, string resourceName, object? responseBody, object? varyBy)
+    {
         ValidateResourceName(resourceName);
 
         XxHash128 hasher = new();
@@ -19,6 +24,11 @@ public static class EtagCacheHelper
 
         using HashWriteStream hashWriteStream = new(hasher);
         JsonSerializer.Serialize(hashWriteStream, responseBody, JSON.EtagJsonSerializerOptions);
+        if (varyBy is not null)
+        {
+            hasher.Append([(byte)':']);
+            JsonSerializer.Serialize(hashWriteStream, varyBy, JSON.EtagJsonSerializerOptions);
+        }
         Span<byte> hash = stackalloc byte[hasher.HashLengthInBytes];
         hasher.GetHashAndReset(hash);
         string etagText = $"\"{resourceName}:{Base64Url.EncodeToString(hash)}\"";

@@ -50,7 +50,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             .Select(x => x.ToDto(urlEncryption, fup))
             .ToArrayAsync(cancellationToken);
 
-        if (EtagCacheHelper.TryHandleNotModified(this, "messages-turns", messages))
+        if (EtagCacheHelper.TryHandleNotModified(this, "messages-turns", messages, CreateDownloadUrlRequest.GetCurrentRefreshBucket()))
         {
             return StatusCode(StatusCodes.Status304NotModified);
         }

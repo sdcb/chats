@@ -36,9 +36,27 @@ public record CreateDownloadUrlRequest
     public required string StorageKey { get; init; }
     public required string FileName { get; init; }
     public TimeSpan ValidPeriod { get; init; } = DefaultValidPeriod;
-    public DateTimeOffset ValidEnd => DateTimeOffset.UtcNow + ValidPeriod;
+    public DateTimeOffset ValidEnd => GetValidEnd(DateTimeOffset.UtcNow, ValidPeriod);
 
-    public static TimeSpan DefaultValidPeriod { get; } = TimeSpan.FromHours(2);
+    public static TimeSpan DefaultValidPeriod { get; } = TimeSpan.FromDays(2);
+    public static TimeSpan DefaultRefreshPeriod { get; } = TimeSpan.FromDays(1);
+
+    public static long GetCurrentRefreshBucket()
+    {
+        return GetRefreshBucket(DateTimeOffset.UtcNow);
+    }
+
+    internal static long GetRefreshBucket(DateTimeOffset now)
+    {
+        return now.UtcDateTime.Ticks / DefaultRefreshPeriod.Ticks;
+    }
+
+    internal static DateTimeOffset GetValidEnd(DateTimeOffset now, TimeSpan validPeriod)
+    {
+        long nextBucketTicks = (GetRefreshBucket(now) + 1) * DefaultRefreshPeriod.Ticks;
+        DateTime nextBucketStart = new(nextBucketTicks, DateTimeKind.Utc);
+        return new DateTimeOffset(nextBucketStart, TimeSpan.Zero).Add(validPeriod);
+    }
 
     public static CreateDownloadUrlRequest FromFile(DBFile file)
     {
