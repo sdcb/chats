@@ -18,16 +18,17 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 
 <img alt="chats-en" src="https://github.com/user-attachments/assets/40d2376e-58a0-4309-a2f5-5ed8262a0c2e" />
 
-## 🆕 Latest Release (1.11.0)
+## 🆕 Latest Release (1.12.0)
 
-- 📅 Release Date: 2026-04-07
-- 🧠 Smart title summary: adds first-turn AI-generated chat titles with admin defaults, per-user overrides, dedicated model modes, and separate `Summary` usage billing
-- 💵 Model pricing page: adds a searchable `/model-prices` overview with provider, API type, free-model filters, context windows, and multiple price dimensions
-- 📊 Usage source breakdown: adds `SourceId` on `UserModelUsage` to distinguish `WebChat`, `Api`, and `Summary` in both user exports and admin statistics
-- 🆕 New model provider: adds Novita AI as the 22nd provider, with reasoning information round-tripping support
-- ↔️ UX and performance: adds resizable desktop sidebar and lazy-loads Markdown, KaTeX, charts, and session UI, cutting initial chat payload to around 1.7MB
+- 📅 Release Date: 2026-06-14
+- 🧩 Request customization: Model Key and Model support custom headers and RFC 6902 JSON Patch body patches, with Model-level settings overriding Key-level settings
+- 🌐 Custom URL: Model adds `Custom URL` with `{baseUrl}` placeholder support for gateways, proxies, and provider-specific endpoints
+- 🧾 Configuration snapshots: adds `ModelKeySnapshot`, `ModelSnapshot`, and `ChatConfigSnapshot` so historical chats, usage, and billing reference immutable configuration facts
+- 🤖 Claude Code compatibility: Anthropic Messages supports in-message `role=system`, matching the latest Claude Code request structure
+- 🖼️ Image and UX fixes: image generation supports output format/compression, with fixes for image preview, model ordering, signed file URL caching, and protocol compatibility
+- 🛠️ Upgrade focus: the migration restructures model configuration references and removes old mutable config columns and `ChatConfigArchived`; custom SQL/reports should read snapshot tables instead
 
-👉 [View 1.11.0 Release Notes](./doc/en-US/release-notes/1.11.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
+👉 [View 1.12.0 Release Notes](./doc/en-US/release-notes/1.12.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
 
 ## Quick Start
 

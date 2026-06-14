@@ -18,17 +18,17 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 22+ 主流 
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
-## 🆕 最新版本（1.11.0）
+## 🆕 最新版本（1.12.0）
 
-- 📅 发布日期：2026-04-07
-- 🧠 智能标题摘要：新增首轮 AI 自动命名，支持管理员全局配置、个人覆盖、指定模型与 Prompt Template，并将标题生成单独记为 `Summary` 来源
-- 💵 模型定价页：新增模型价格总览页，支持按提供商、API 类型、免费模型和关键字筛选，并展示上下文窗口与多种价格口径
-- 📊 用量来源细分：`UserModelUsage` 新增 `SourceId`，支持 `WebChat` / `Api` / `Summary` 分类筛选和后台来源统计
-- 🆕 新模型提供商：新增第 22 个模型提供商 Novita AI，支持思考信息回传
-- ↔️ 体验与性能：桌面聊天侧边栏支持拖拽调宽并持久化，Markdown/KaTeX/图表延迟加载，聊天页初始负载约从 3.5MB/3.6MB 降到 1.7MB
-- 🛠️ 升级重点：迁移脚本会删除 `TransactionType` 表、回填 `UserModelUsage.SourceId`，并新增 `UserConfig` 表承载用户级配置
+- 📅 发布日期：2026-06-14
+- 🧩 请求自定义：Model Key 和 Model 支持自定义 Header 与 RFC 6902 JSON Patch 请求体补丁，Model 层可以覆盖 Key 层配置
+- 🌐 自定义 URL：Model 新增 `Custom URL`，支持 `{baseUrl}` 占位符，便于适配网关、代理和厂商私有 endpoint
+- 🧾 配置快照化：新增 `ModelKeySnapshot`、`ModelSnapshot`、`ChatConfigSnapshot`，历史会话、用量和账单引用不可变配置事实
+- 🤖 Claude Code 兼容：Anthropic Messages 支持消息中的 `role=system`，兼容最新 Claude Code 请求结构
+- 🖼️ 图像与体验：图像生成支持输出格式/压缩，修复图片预览、模型排序、签名文件 URL 缓存和多项协议兼容问题
+- 🛠️ 升级重点：迁移脚本会重构模型配置引用关系，删除旧的可变配置列和 `ChatConfigArchived` 表；自定义 SQL/报表需要改读 snapshot 表
 
-👉 [查看 1.11.0 发布说明](./doc/zh-CN/release-notes/1.11.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
+👉 [查看 1.12.0 发布说明](./doc/zh-CN/release-notes/1.12.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
 
 ## 快速开始
 

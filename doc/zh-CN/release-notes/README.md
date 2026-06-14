@@ -7,7 +7,21 @@
 
 ---
 
-## [1.11.0](1.11.0.md) - 2026-04-07 ⭐ 最新版本
+## [1.12.0](1.12.0.md) - 2026-06-14 ⭐ 最新版本
+
+**核心亮点**：Model Key/Model 自定义 Header 与 Body · Model 自定义 URL · 模型配置快照化 · 最新 Claude Code 兼容 · 图像输出格式/压缩 · 多项体验修复
+
+- 🧩 **请求自定义**：Model Key 和 Model 支持自定义请求头与 RFC 6902 JSON Patch 请求体补丁，Model 层可覆盖同名 Header 或后置覆盖同一路径补丁
+- 🌐 **模型 URL 覆盖**：Model 新增 `Custom URL`，支持 `{baseUrl}` 占位符，便于适配网关、代理和厂商私有 endpoint
+- 🧾 **配置快照化**：新增 `ModelKeySnapshot`、`ModelSnapshot`、`ChatConfigSnapshot`，历史会话、用量和账单引用不可变配置事实
+- 🤖 **Claude Code 兼容**：Anthropic Messages 支持消息中的 `role=system`，并修复 API thinking blocks 与 cached read token 统计
+- 🖼️ **图像与体验**：图像生成支持输出格式/压缩，图片预览、模型排序、Request Trace 详情窗口和聊天模型选择继续打磨
+
+[查看完整发布说明 →](1.12.0.md)
+
+---
+
+## [1.11.0](1.11.0.md) - 2026-04-07
 
 **核心亮点**：AI 自动会话命名 · 模型定价页面 · WebChat/Api/Summary 用量来源细分 · Novita AI 提供商 · 前端性能与后台表格一致性
 
@@ -303,5 +317,5 @@
 ---
 
 <p align="center">
-  <sub>上次更新：2025-12-21</sub>
+  <sub>上次更新：2026-06-14</sub>
 </p>

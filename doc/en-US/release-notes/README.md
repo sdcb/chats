@@ -7,7 +7,21 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.11.0](1.11.0.md) - 2026-04-07 ⭐ Latest Release
+## [1.12.0](1.12.0.md) - 2026-06-14 ⭐ Latest Release
+
+**Core Highlights**: Model Key/Model custom Header and Body · Model custom URL · Model configuration snapshots · Latest Claude Code compatibility · Image output format/compression · Stability fixes
+
+- 🧩 **Request Customization**: Model Key and Model support custom headers and RFC 6902 JSON Patch body patches, with Model-level overrides applied after Key-level settings
+- 🌐 **Model URL Override**: Model adds `Custom URL` with `{baseUrl}` placeholder support for gateways, proxies, and provider-specific endpoints
+- 🧾 **Configuration Snapshots**: adds `ModelKeySnapshot`, `ModelSnapshot`, and `ChatConfigSnapshot` so historical chats, usage, and billing reference immutable configuration facts
+- 🤖 **Claude Code Compatibility**: Anthropic Messages supports in-message `role=system`, with fixes for API thinking blocks and cached read token accounting
+- 🖼️ **Image & UX Improvements**: image generation supports output format/compression, with improvements to image preview, model ordering, Request Trace details, and model picker search
+
+[View Full Release Notes →](1.12.0.md)
+
+---
+
+## [1.11.0](1.11.0.md) - 2026-04-07
 
 **Core Highlights**: AI chat title summary · Model pricing page · WebChat/Api/Summary usage source tracking · Novita AI provider · Frontend lazy-loading and desktop UX improvements
 
@@ -303,5 +317,5 @@ Starting from 1.0.0, Chats follows Semantic Versioning:
 ---
 
 <p align="center">
-  <sub>Last updated: 2025-12-21</sub>
+  <sub>Last updated: 2026-06-14</sub>
 </p>
