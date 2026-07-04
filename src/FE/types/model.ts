@@ -28,6 +28,7 @@ export enum DBModelProvider {
   Anthropic = 20,
   Mimo = 21,
   Novita = 22,
+  Requesty = 23,
 }
 
 export type FEModelProvider = {
@@ -135,6 +136,12 @@ export const feModelProviders: FEModelProvider[] = [
     id: DBModelProvider.Novita,
     name: 'Novita AI',
     icon: '/logos/novita.svg',
+  },
+  {
+    id: DBModelProvider.Requesty,
+    name: 'Requesty',
+    icon: '/logos/requesty.svg',
+    allowWebSearch: true,
   },
 ];
 
