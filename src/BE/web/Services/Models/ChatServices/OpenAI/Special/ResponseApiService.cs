@@ -18,6 +18,29 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
 public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<ResponseApiService> logger) : ChatService
 {
+    private const string WebSearchHostedToolName = "web_search";
+    private const string WebSearchCallType = "web_search_call";
+    private const string WebSearchContextSize = "low";
+
+    private sealed record WebSearchCall(string Id, string Status, JsonObject? Action)
+    {
+        public bool IsSearch => string.Equals(Action?["type"]?.GetValue<string>(), "search", StringComparison.Ordinal);
+
+        public string ToToolArguments()
+        {
+            JsonObject args = new()
+            {
+                ["type"] = WebSearchCallType,
+                ["status"] = Status,
+            };
+            if (Action != null)
+            {
+                args["action"] = Action.DeepClone();
+            }
+            return args.ToJsonString(JSON.JsonSerializerOptions);
+        }
+    }
+
     protected override HashSet<string> SupportedContentTypes =>
     [
         "image/jpeg",
@@ -164,6 +187,8 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             {
                 // Completed - parse output items
                 int fcIndex = 0;
+                int webSearchIndex = 100000;
+                List<WebSearchCall> webSearchCalls = [];
                 JsonArray? outputItems = responseObj?["output"]?.AsArray();
                 if (outputItems != null)
                 {
@@ -210,6 +235,21 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                                 Arguments = arguments ?? "",
                             };
                         }
+                        else if (itemType == WebSearchCallType)
+                        {
+                            WebSearchCall? call = ParseWebSearchCall(item);
+                            if (call != null)
+                            {
+                                AddOrReplaceWebSearchCall(webSearchCalls, call);
+                                yield return new ToolCallSegment
+                                {
+                                    Index = webSearchIndex++,
+                                    Id = call.Id,
+                                    Name = WebSearchCallType,
+                                    Arguments = call.ToToolArguments(),
+                                };
+                            }
+                        }
                         else if (itemType == "message")
                         {
                             JsonArray? contentArray = item?["content"]?.AsArray();
@@ -235,6 +275,11 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                             }
                         }
                     }
+                }
+
+                foreach (ChatSegment segment in CreateWebSearchToolResponses(webSearchCalls, ExtractUrlCitations(outputItems)))
+                {
+                    yield return segment;
                 }
 
                 if (usage != null)
@@ -268,8 +313,12 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
 
             await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             int fcIndex = 0;
+            int webSearchIndex = 100000;
             string? currentFcId = null;
             string? currentFcName = null;
+            List<WebSearchCall> webSearchCalls = [];
+            JsonArray webSearchCitations = [];
+            bool emittedWebSearchResponses = false;
 
             await foreach (SseItem<string> sseItem in SseParser.Create(stream, (_, bytes) => Encoding.UTF8.GetString(bytes)).EnumerateAsync(cancellationToken))
             {
@@ -291,6 +340,8 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                 string? eventType = json.TryGetProperty("type", out JsonElement typeEl) ? typeEl.GetString() : null;
                 if (eventType == null) continue;
 
+                AppendJsonArray(webSearchCitations, ExtractUrlCitationsRecursive(json));
+
                 if (eventType == "error")
                 {
                     string? errorMessage = json.TryGetProperty("error", out JsonElement errorEl) ? errorEl.ToString() : "Unknown error";
@@ -302,6 +353,16 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                     if (!string.IsNullOrEmpty(delta))
                     {
                         yield return ChatSegment.FromText(delta);
+                    }
+                }
+                else if (eventType == "response.output_text.annotation.added")
+                {
+                    if (json.TryGetProperty("annotation", out JsonElement annotationEl)
+                        && annotationEl.TryGetProperty("type", out JsonElement annotationTypeEl)
+                        && annotationTypeEl.GetString() == "url_citation")
+                    {
+                        JsonArray singleCitation = [CreateWebSearchResult(annotationEl)];
+                        AppendJsonArray(webSearchCitations, singleCitation);
                     }
                 }
                 else if (eventType == "response.completed")
@@ -318,6 +379,21 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                         "incomplete" => DBFinishReason.Length,
                         _ => null,
                     };
+
+                    if (responseEl?.TryGetProperty("output", out JsonElement outputEl) == true)
+                    {
+                        AddWebSearchCallsFromOutput(outputEl, webSearchCalls);
+                        AppendJsonArray(webSearchCitations, ExtractUrlCitations(outputEl));
+                    }
+
+                    if (!emittedWebSearchResponses)
+                    {
+                        foreach (ChatSegment segment in CreateWebSearchToolResponses(webSearchCalls, webSearchCitations))
+                        {
+                            yield return segment;
+                        }
+                        emittedWebSearchResponses = true;
+                    }
 
                     if (usage != null)
                     {
@@ -362,6 +438,33 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                         {
                             fcIndex++;
                         }
+                        else if (itemType == WebSearchCallType)
+                        {
+                            WebSearchCall? call = ParseWebSearchCall(itemEl);
+                            if (call != null)
+                            {
+                                AddOrReplaceWebSearchCall(webSearchCalls, call);
+                                yield return new ToolCallSegment
+                                {
+                                    Index = webSearchIndex++,
+                                    Id = call.Id,
+                                    Name = WebSearchCallType,
+                                    Arguments = call.ToToolArguments(),
+                                };
+                            }
+                        }
+                        else if (itemType == "message")
+                        {
+                            AppendJsonArray(webSearchCitations, ExtractUrlCitationsFromMessage(itemEl));
+                            if (!emittedWebSearchResponses)
+                            {
+                                foreach (ChatSegment segment in CreateWebSearchToolResponses(webSearchCalls, webSearchCitations))
+                                {
+                                    yield return segment;
+                                }
+                                emittedWebSearchResponses = true;
+                            }
+                        }
                         else if (itemType == "reasoning")
                         {
                             // When include contains reasoning.encrypted_content, the server can return an encrypted signature for thinking.
@@ -389,7 +492,340 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                 {
                     yield return ChatSegment.FromThink("\n\n");
                 }
+                else if (eventType == "response.content_part.done")
+                {
+                    if (json.TryGetProperty("part", out JsonElement partEl))
+                    {
+                        AppendJsonArray(webSearchCitations, ExtractUrlCitationsFromContentPart(partEl));
+                    }
+                }
             }
+        }
+    }
+
+    private static WebSearchCall? ParseWebSearchCall(JsonNode? item)
+    {
+        if (item?["type"]?.GetValue<string>() != WebSearchCallType)
+        {
+            return null;
+        }
+
+        string? id = item["id"]?.GetValue<string>();
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return null;
+        }
+
+        string status = item["status"]?.GetValue<string>() ?? "completed";
+        JsonObject? action = item["action"]?.DeepClone() as JsonObject;
+        return new WebSearchCall(id, status, action);
+    }
+
+    private static WebSearchCall? ParseWebSearchCall(JsonElement item)
+    {
+        if (!item.TryGetProperty("type", out JsonElement typeEl) || typeEl.GetString() != WebSearchCallType)
+        {
+            return null;
+        }
+
+        string? id = item.TryGetProperty("id", out JsonElement idEl) ? idEl.GetString() : null;
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return null;
+        }
+
+        string status = item.TryGetProperty("status", out JsonElement statusEl) ? statusEl.GetString() ?? "completed" : "completed";
+        JsonObject? action = null;
+        if (item.TryGetProperty("action", out JsonElement actionEl) && actionEl.ValueKind == JsonValueKind.Object)
+        {
+            action = JsonNode.Parse(actionEl.GetRawText()) as JsonObject;
+        }
+
+        return new WebSearchCall(id, status, action);
+    }
+
+    private static void AddOrReplaceWebSearchCall(List<WebSearchCall> calls, WebSearchCall call)
+    {
+        int index = calls.FindIndex(x => x.Id == call.Id);
+        if (index >= 0)
+        {
+            calls[index] = call;
+        }
+        else
+        {
+            calls.Add(call);
+        }
+    }
+
+    private static void AddWebSearchCallsFromOutput(JsonElement outputEl, List<WebSearchCall> calls)
+    {
+        if (outputEl.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        foreach (JsonElement item in outputEl.EnumerateArray())
+        {
+            WebSearchCall? call = ParseWebSearchCall(item);
+            if (call != null)
+            {
+                AddOrReplaceWebSearchCall(calls, call);
+            }
+        }
+    }
+
+    private static JsonArray ExtractUrlCitations(JsonArray? outputItems)
+    {
+        JsonArray citations = [];
+        if (outputItems == null)
+        {
+            return citations;
+        }
+
+        foreach (JsonNode? item in outputItems)
+        {
+            if (item?["type"]?.GetValue<string>() != "message")
+            {
+                continue;
+            }
+
+            JsonArray? contentArray = item["content"]?.AsArray();
+            if (contentArray == null)
+            {
+                continue;
+            }
+
+            foreach (JsonNode? content in contentArray)
+            {
+                JsonArray? annotations = content?["annotations"]?.AsArray();
+                if (annotations == null)
+                {
+                    continue;
+                }
+
+                foreach (JsonNode? annotation in annotations)
+                {
+                    if (annotation?["type"]?.GetValue<string>() == "url_citation")
+                    {
+                        citations.Add(CreateWebSearchResult(annotation));
+                    }
+                }
+            }
+        }
+
+        return citations;
+    }
+
+    private static JsonArray ExtractUrlCitations(JsonElement outputEl)
+    {
+        JsonArray citations = [];
+        if (outputEl.ValueKind != JsonValueKind.Array)
+        {
+            return citations;
+        }
+
+        foreach (JsonElement item in outputEl.EnumerateArray())
+        {
+            if (!item.TryGetProperty("type", out JsonElement typeEl) || typeEl.GetString() != "message")
+            {
+                continue;
+            }
+
+            if (!item.TryGetProperty("content", out JsonElement contentEl) || contentEl.ValueKind != JsonValueKind.Array)
+            {
+                continue;
+            }
+
+            foreach (JsonElement content in contentEl.EnumerateArray())
+            {
+                if (!content.TryGetProperty("annotations", out JsonElement annotationsEl) || annotationsEl.ValueKind != JsonValueKind.Array)
+                {
+                    continue;
+                }
+
+                foreach (JsonElement annotation in annotationsEl.EnumerateArray())
+                {
+                    if (annotation.TryGetProperty("type", out JsonElement annotationTypeEl) && annotationTypeEl.GetString() == "url_citation")
+                    {
+                        citations.Add(CreateWebSearchResult(annotation));
+                    }
+                }
+            }
+        }
+
+        return citations;
+    }
+
+    private static JsonArray ExtractUrlCitationsFromMessage(JsonElement messageEl)
+    {
+        JsonArray citations = [];
+        if (!messageEl.TryGetProperty("content", out JsonElement contentEl) || contentEl.ValueKind != JsonValueKind.Array)
+        {
+            return citations;
+        }
+
+        foreach (JsonElement content in contentEl.EnumerateArray())
+        {
+            AppendJsonArray(citations, ExtractUrlCitationsFromContentPart(content));
+        }
+
+        return citations;
+    }
+
+    private static JsonArray ExtractUrlCitationsFromContentPart(JsonElement content)
+    {
+        JsonArray citations = [];
+        if (!content.TryGetProperty("annotations", out JsonElement annotationsEl) || annotationsEl.ValueKind != JsonValueKind.Array)
+        {
+            return citations;
+        }
+
+        foreach (JsonElement annotation in annotationsEl.EnumerateArray())
+        {
+            if (annotation.TryGetProperty("type", out JsonElement annotationTypeEl) && annotationTypeEl.GetString() == "url_citation")
+            {
+                citations.Add(CreateWebSearchResult(annotation));
+            }
+        }
+
+        return citations;
+    }
+
+    private static JsonArray ExtractUrlCitationsRecursive(JsonElement element)
+    {
+        JsonArray citations = [];
+        AddUrlCitationsRecursive(element, citations);
+        return citations;
+    }
+
+    private static void AddUrlCitationsRecursive(JsonElement element, JsonArray citations)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            if (element.TryGetProperty("type", out JsonElement typeEl) && typeEl.GetString() == "url_citation")
+            {
+                citations.Add(CreateWebSearchResult(element));
+                return;
+            }
+
+            foreach (JsonProperty property in element.EnumerateObject())
+            {
+                AddUrlCitationsRecursive(property.Value, citations);
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement item in element.EnumerateArray())
+            {
+                AddUrlCitationsRecursive(item, citations);
+            }
+        }
+    }
+
+    private static void AppendJsonArray(JsonArray target, JsonArray source)
+    {
+        foreach (JsonNode? item in source)
+        {
+            string? itemJson = item?.ToJsonString(JSON.JsonSerializerOptions);
+            if (itemJson != null && target.Any(existing => existing?.ToJsonString(JSON.JsonSerializerOptions) == itemJson))
+            {
+                continue;
+            }
+            target.Add(item?.DeepClone());
+        }
+    }
+
+    private static JsonObject CreateWebSearchResult(JsonNode annotation)
+    {
+        JsonObject result = new()
+        {
+            ["type"] = "web_search_result",
+            ["title"] = annotation["title"]?.GetValue<string>(),
+            ["url"] = annotation["url"]?.GetValue<string>(),
+            ["page_age"] = null,
+        };
+        if (annotation["start_index"] != null)
+        {
+            result["start_index"] = annotation["start_index"]!.GetValue<int>();
+        }
+        if (annotation["end_index"] != null)
+        {
+            result["end_index"] = annotation["end_index"]!.GetValue<int>();
+        }
+        return result;
+    }
+
+    private static JsonObject CreateWebSearchResult(JsonElement annotation)
+    {
+        JsonObject result = new()
+        {
+            ["type"] = "web_search_result",
+            ["title"] = annotation.TryGetProperty("title", out JsonElement titleEl) ? titleEl.GetString() : null,
+            ["url"] = annotation.TryGetProperty("url", out JsonElement urlEl) ? urlEl.GetString() : null,
+            ["page_age"] = null,
+        };
+        if (annotation.TryGetProperty("start_index", out JsonElement startEl) && startEl.ValueKind == JsonValueKind.Number)
+        {
+            result["start_index"] = startEl.GetInt32();
+        }
+        if (annotation.TryGetProperty("end_index", out JsonElement endEl) && endEl.ValueKind == JsonValueKind.Number)
+        {
+            result["end_index"] = endEl.GetInt32();
+        }
+        return result;
+    }
+
+    private static IEnumerable<ChatSegment> CreateWebSearchToolResponses(IReadOnlyList<WebSearchCall> calls, JsonArray citations)
+    {
+        if (calls.Count == 0)
+        {
+            yield break;
+        }
+
+        WebSearchCall citationOwner = calls.FirstOrDefault(x => x.IsSearch) ?? calls[0];
+        foreach (WebSearchCall call in calls)
+        {
+            JsonArray response = call.Id == citationOwner.Id ? CloneJsonArray(citations) : [];
+            yield return ChatSegment.FromToolCallResponse(call.Id, response.ToJsonString(JSON.JsonSerializerOptions), 0, true);
+        }
+    }
+
+    private static JsonArray CloneJsonArray(JsonArray array)
+    {
+        JsonArray clone = [];
+        foreach (JsonNode? item in array)
+        {
+            clone.Add(item?.DeepClone());
+        }
+        return clone;
+    }
+
+    private static bool TryCreateWebSearchCallInput(NeutralToolCallContent toolCall, out JsonObject? webSearchCall)
+    {
+        webSearchCall = null;
+        try
+        {
+            JsonNode? node = JsonNode.Parse(NormalizeToolCallArguments(toolCall.Parameters));
+            if (node is not JsonObject args || args["type"]?.GetValue<string>() != WebSearchCallType)
+            {
+                return false;
+            }
+
+            webSearchCall = new JsonObject
+            {
+                ["type"] = WebSearchCallType,
+                ["id"] = toolCall.Id,
+                ["status"] = args["status"]?.GetValue<string>() ?? "completed",
+            };
+            if (args["action"] is JsonObject action)
+            {
+                webSearchCall["action"] = action.DeepClone();
+            }
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
         }
     }
 
@@ -445,6 +881,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
             ["input"] = BuildInputArray(request),
             ["stream"] = stream,
+            ["store"] = false,
         };
 
         if (request.ChatConfig.Temperature != null)
@@ -455,6 +892,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         if (request.EndUserId != null)
         {
             body["prompt_cache_key"] = request.EndUserId;
+            body["prompt_cache_retention"] = "24h";
         }
 
         if (request.ChatConfig.MaxOutputTokens != null)
@@ -499,6 +937,14 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         {
             functionTools.Add(tool.ToResponseToolCall());
         }
+        if (request.ChatConfig.Model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
+        {
+            functionTools.Add(new JsonObject
+            {
+                ["type"] = WebSearchHostedToolName,
+                ["search_context_size"] = WebSearchContextSize,
+            });
+        }
         if (functionTools.Count > 0)
         {
             body["tools"] = functionTools;
@@ -515,6 +961,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
     private static JsonArray BuildInputArray(ChatRequest request)
     {
         JsonArray input = [];
+        HashSet<string> webSearchToolCallIds = [];
 
         string? effectiveSystemPrompt = request.GetEffectiveSystemPrompt();
         if (effectiveSystemPrompt != null)
@@ -566,6 +1013,16 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                 // Handle tool calls in assistant message
                 foreach (NeutralToolCallContent tc in message.Contents.OfType<NeutralToolCallContent>())
                 {
+                    if (string.Equals(tc.Name, WebSearchCallType, StringComparison.Ordinal))
+                    {
+                        if (TryCreateWebSearchCallInput(tc, out JsonObject? webSearchCall))
+                        {
+                            webSearchToolCallIds.Add(tc.Id);
+                            input.Add(webSearchCall);
+                        }
+                        continue;
+                    }
+
                     input.Add(new JsonObject
                     {
                         ["type"] = "function_call",
@@ -597,6 +1054,10 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
 
                 foreach (NeutralToolResponseGroup group in toolResponseGroups)
                 {
+                    if (webSearchToolCallIds.Contains(group.ToolResponse.ToolCallId))
+                    {
+                        continue;
+                    }
                     input.Add(CreateFunctionCallOutput(group));
                 }
             }

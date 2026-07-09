@@ -43,6 +43,7 @@ export const feModelProviders: FEModelProvider[] = [
     id: DBModelProvider.AzureAIFoundry,
     name: 'Azure AI Foundry',
     icon: '/logos/azure-ai-foundry.svg',
+    allowWebSearch: true,
   },
   {
     id: DBModelProvider.HunYuan,
@@ -56,7 +57,12 @@ export const feModelProviders: FEModelProvider[] = [
     name: 'Moonshot',
     icon: '/logos/moonshot.svg',
   },
-  { id: DBModelProvider.OpenAI, name: 'OpenAI', icon: '/logos/openai.svg' },
+  {
+    id: DBModelProvider.OpenAI,
+    name: 'OpenAI',
+    icon: '/logos/openai.svg',
+    allowWebSearch: true,
+  },
   {
     id: DBModelProvider.QianFan,
     name: 'Wenxin Qianfan',

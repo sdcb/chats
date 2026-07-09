@@ -26,6 +26,14 @@ interface WebSearchResult {
     page_age?: string;
 }
 
+interface WebSearchCallAction {
+    type?: string;
+    query?: string;
+    queries?: string[];
+    url?: string;
+    pattern?: string;
+}
+
 export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolResponse, chatStatus, nextMessageContentStarted }) => {
     const { t } = useTranslation();
     const { resolvedTheme } = useTheme();
@@ -79,6 +87,21 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         return null;
     };
 
+    const getResponseWebSearchResults = (): WebSearchResult[] | null => {
+        if (toolCall.n !== 'web_search_call' || !toolResponse) {
+            return null;
+        }
+        try {
+            const parsed = JSON.parse(toolResponse.r);
+            if (Array.isArray(parsed) && parsed.every(item => item?.type === 'web_search_result')) {
+                return parsed as WebSearchResult[];
+            }
+        } catch {
+            return null;
+        }
+        return null;
+    };
+
     const getToolProgressDeltas = (): ToolProgressDelta[] | null => {
         const deltas = toolResponse?.progress;
         return deltas && deltas.length > 0 ? deltas : null;
@@ -103,6 +126,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
 
     const code = getCodeIfAvailable();
     const webSearchResults = getWebSearchResults();
+    const responseWebSearchResults = getResponseWebSearchResults();
     const toolProgressDeltas = getToolProgressDeltas();
 
     const deltaToText = (delta: ToolProgressDelta): string => {
@@ -128,6 +152,18 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         return obj as Record<string, unknown>;
     };
 
+    const getWebSearchCallAction = (): WebSearchCallAction | null => {
+        if (toolCall.n !== 'web_search_call') {
+            return null;
+        }
+        const obj = getToolCallJsonObject();
+        const action = obj?.action;
+        if (!action || typeof action !== 'object' || Array.isArray(action)) {
+            return null;
+        }
+        return action as WebSearchCallAction;
+    };
+
     const hasSessionId = (obj: Record<string, unknown> | null): boolean => {
         return !!obj && Object.prototype.hasOwnProperty.call(obj, 'sessionId');
     };
@@ -143,6 +179,9 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         // 根据工具名称选择图标
         let headerIcon = '🔧'; // 默认图标
         switch (toolCall.n) {
+            case 'web_search_call':
+                headerIcon = '🔎';
+                break;
             case 'create_docker_session':
                 headerIcon = '🐳';
                 break;
@@ -158,6 +197,29 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
             case 'download_chat_files':
                 headerIcon = '📥';
                 break;
+        }
+
+        if (toolCall.n === 'web_search_call') {
+            const action = getWebSearchCallAction();
+            const status = typeof obj?.status === 'string' ? obj.status : null;
+            const actionType = action?.type ?? 'web_search_call';
+            const metadataLine = status ? (
+                <span className='text-foreground font-sans font-semibold text-gray-600 dark:text-gray-100 text-sm'>
+                    {t('Status')}: <span className='font-normal'>{status}</span>
+                </span>
+            ) : null;
+
+            let header = `web_search_call: ${actionType}`;
+            if (actionType === 'search' && action?.query) {
+                header = `${t('Web Search')}: ${action.query}`;
+            } else if (actionType === 'open_page' && action?.url) {
+                header = `${t('Open Page')}: ${action.url}`;
+            } else if (actionType === 'find_in_page') {
+                header = `${t('Find in Page')}: ${action?.pattern ?? action?.url ?? ''}`.trim();
+            }
+
+            const displayParams = JSON.stringify(action ?? obj ?? {}, null, 2);
+            return { header, headerIcon, metadataLine, displayParams };
         }
         
         // run_command: 提取 header, metadata 和 command
@@ -275,6 +337,51 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         setIsOpen(!isOpen);
         setIsManuallyToggled(true);
     };
+
+    const renderWebSearchResultsTable = (results: WebSearchResult[], includeAge: boolean) => (
+        <table className="w-full border-collapse text-left m-0">
+            <thead>
+                <tr className="border-b border-border">
+                    <th className="py-1 pr-3 font-medium">{t('Title')}</th>
+                    {includeAge && (
+                        <th className="py-1 px-3 font-medium whitespace-nowrap">{t('Age')}</th>
+                    )}
+                </tr>
+            </thead>
+            <tbody>
+                {results.length === 0 ? (
+                    <tr>
+                        <td className="py-1 pr-3 text-muted-foreground" colSpan={includeAge ? 2 : 1}>
+                            {t('No sources')}
+                        </td>
+                    </tr>
+                ) : (
+                    results.map((result, index) => (
+                        <tr key={index} className="border-b border-border last:border-b-0 hover:bg-muted/60">
+                            <td className="py-1 pr-3" title={result.url}>
+                                {result.url ? (
+                                    <a
+                                        href={result.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 dark:text-blue-400 hover:underline"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        {result.title || result.url}
+                                    </a>
+                                ) : (result.title || '-')}
+                            </td>
+                            {includeAge && (
+                                <td className="py-1 px-3 whitespace-nowrap">
+                                    {result.page_age || '-'}
+                                </td>
+                            )}
+                        </tr>
+                    ))
+                )}
+            </tbody>
+        </table>
+    );
 
     return (
         <div className="codeblock relative font-sans text-base">
@@ -452,37 +559,10 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                                 </Tooltip>
                             </TooltipProvider>
                         </div>
-                        {webSearchResults ? (
-                            <table className="w-full border-collapse text-left m-0">
-                                <thead>
-                                    <tr className="border-b border-border">
-                                        <th className="py-1 pr-3 font-medium">{t('Title')}</th>
-                                        <th className="py-1 px-3 font-medium whitespace-nowrap">{t('Age')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {webSearchResults.map((result, index) => (
-                                        <tr key={index} className="border-b border-border last:border-b-0 hover:bg-muted/60">
-                                            <td className="py-1 pr-3" title={result.url}>
-                                                {result.url ? (
-                                                    <a
-                                                        href={result.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-blue-600 dark:text-blue-400 hover:underline"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        {result.title || result.url}
-                                                    </a>
-                                                ) : (result.title || '-')}
-                                            </td>
-                                            <td className="py-1 px-3 whitespace-nowrap">
-                                                {result.page_age || '-'}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        {responseWebSearchResults ? (
+                            renderWebSearchResultsTable(responseWebSearchResults, false)
+                        ) : webSearchResults ? (
+                            renderWebSearchResultsTable(webSearchResults, true)
                         ) : (
                             toolProgressDeltas ? (
                                 <pre className="not-prose whitespace-pre-wrap break-words font-mono">

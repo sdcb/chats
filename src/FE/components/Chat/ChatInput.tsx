@@ -54,6 +54,7 @@ import { defaultFileConfig } from '@/apis/adminApis';
 import { getUserPromptDetail } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 import CodeExecutionControl from './CodeExecutionControl';
+import WebSearchControl from './WebSearchControl';
 import { ANIMATION_DURATION_MS } from '@/constants/animation';
 
 // 文本框配置
@@ -682,9 +683,9 @@ const ChatInput = ({
                 )}
               </div>
 
-              {/* 底部工具行 - Agent控制 + 发送按钮 */}
+              {/* 底部工具行 - 智能搜索/Agent控制 + 发送按钮 */}
               <div className="flex items-center px-2 py-2 border-t border-border/40">
-                {/* 左侧: Agent 代码执行控制 */}
+                {/* 左侧: 智能搜索 + Agent 代码执行控制 */}
                 <div className="flex items-center gap-2 flex-1">
                   {showUploadMenu && (
                     <Popover>
@@ -803,6 +804,12 @@ const ChatInput = ({
                       containerRef={inputContainerRef as React.RefObject<HTMLElement>}
                     />
                   )}
+                  <WebSearchControl
+                    chatId={selectedChat.id}
+                    spans={selectedChat.spans}
+                    modelMap={modelMap}
+                    disabled={selectedChat.status === ChatStatus.Chatting}
+                  />
                   <CodeExecutionControl
                     chatId={selectedChat.id}
                     spans={selectedChat.spans}
