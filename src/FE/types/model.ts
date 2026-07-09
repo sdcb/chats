@@ -129,7 +129,7 @@ export const feModelProviders: FEModelProvider[] = [
   {
     id: DBModelProvider.Mimo,
     name: 'Xiaomi Mimo',
-    icon: 'https://chats.sdcb.pub/model-provider/21/favicon.png',
+    icon: 'https://chats.io.sdcb.ai/model-provider/21/favicon.png',
   },
   {
     id: DBModelProvider.Novita,

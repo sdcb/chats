@@ -12,6 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: write
 
 jobs:
@@ -108,6 +109,12 @@ jobs:
       - name: Upload to Cloudflare R2
         run: |
           aws s3 cp . s3://chats/latest --recursive --exclude "*" --include "*.zip" --endpoint-url ${{ secrets.R2_HOST }}
+
+      - name: Upload release FE artifacts to Cloudflare R2
+        if: needs.build-fe.outputs.is_release == 'true'
+        run: |
+          aws s3 cp chats-fe.zip s3://chats/release/latest/chats-fe.zip --endpoint-url ${{ secrets.R2_HOST }}
+          aws s3 cp be-src.zip s3://chats/release/latest/be-src.zip --endpoint-url ${{ secrets.R2_HOST }}
 
     env:
         AWS_ACCESS_KEY_ID: ${{ secrets.R2_KEY }}
@@ -306,7 +313,7 @@ jobs:
 
   create-release:
     if: github.ref_name == 'main'
-    needs: [build-binaries, build-primary-container, build-fe]
+    needs: [build-binaries, build-primary-container, build-fe, upload-fe-to-r2]
     runs-on: ubuntu-24.04
     outputs:
       release_id: ${{ steps.create_release.outputs.release_id }}

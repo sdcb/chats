@@ -9,7 +9,7 @@ async Task Main()
 	string wwwroot = Path.Combine(new DirectoryInfo(Path.GetDirectoryName(Util.CurrentQueryPath)!).Parent!.Parent!.ToString(), "BE", "web", "wwwroot");
 	Directory.Delete(wwwroot, recursive: true);
 	using HttpClient http = new();
-	using ZipArchive zip = new(await http.GetStreamAsync("https://chats.sdcb.pub/latest/chats-fe.zip"), ZipArchiveMode.Read, leaveOpen: false);
+	using ZipArchive zip = new(await http.GetStreamAsync("https://chats.io.sdcb.ai/latest/chats-fe.zip"), ZipArchiveMode.Read, leaveOpen: false);
 	foreach (ZipArchiveEntry entry in zip.Entries)
 	{
 		entry.Uncapsulate()._storedEntryName = entry.FullName.Replace("chats-fe/", "");

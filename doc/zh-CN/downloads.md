@@ -63,15 +63,15 @@ docker pull sdcb/chats:1.8.1-linux-x64
 
 | 平台                   | GitHub 下载（最新稳定版）                                                                                       | 镜像下载（最新稳定版）                                                                         | 镜像下载（最新开发版）                                     |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| Windows 64位           | [chats-win-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-win-x64.zip)                   | [chats-win-x64.zip](https://chats.sdcb.pub/release/latest/chats-win-x64.zip)                   | -                                                          |
-| Linux 64位             | [chats-linux-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-x64.zip)               | [chats-linux-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-x64.zip)               | -                                                          |
-| Linux ARM64            | [chats-linux-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-arm64.zip)           | [chats-linux-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-arm64.zip)           | -                                                          |
-| Linux musl x64         | [chats-linux-musl-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-x64.zip)     | [chats-linux-musl-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-x64.zip)     | -                                                          |
-| Linux musl ARM64       | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip) | [chats-linux-musl-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-arm64.zip) | -                                                          |
-| macOS ARM64            | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)               | [chats-osx-arm64.zip](https://chats.sdcb.pub/release/latest/chats-osx-arm64.zip)               | -                                                          |
-| macOS x64              | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)                   | [chats-osx-x64.zip](https://chats.sdcb.pub/release/latest/chats-osx-x64.zip)                   | -                                                          |
-| 通用包（需要 .NET 10） | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                                   | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                                   | [chats.zip](https://chats.sdcb.pub/latest/chats.zip)       |
-| 纯前端文件             | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                             | [chats-fe.zip](https://chats.sdcb.pub/release/latest/chats-fe.zip)                             | [chats-fe.zip](https://chats.sdcb.pub/latest/chats-fe.zip) |
+| Windows 64位           | [chats-win-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-win-x64.zip)                   | [chats-win-x64.zip](https://chats.io.sdcb.ai/release/latest/chats-win-x64.zip)                   | -                                                          |
+| Linux 64位             | [chats-linux-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-x64.zip)               | [chats-linux-x64.zip](https://chats.io.sdcb.ai/release/latest/chats-linux-x64.zip)               | -                                                          |
+| Linux ARM64            | [chats-linux-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-arm64.zip)           | [chats-linux-arm64.zip](https://chats.io.sdcb.ai/release/latest/chats-linux-arm64.zip)           | -                                                          |
+| Linux musl x64         | [chats-linux-musl-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-x64.zip)     | [chats-linux-musl-x64.zip](https://chats.io.sdcb.ai/release/latest/chats-linux-musl-x64.zip)     | -                                                          |
+| Linux musl ARM64       | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip) | [chats-linux-musl-arm64.zip](https://chats.io.sdcb.ai/release/latest/chats-linux-musl-arm64.zip) | -                                                          |
+| macOS ARM64            | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)               | [chats-osx-arm64.zip](https://chats.io.sdcb.ai/release/latest/chats-osx-arm64.zip)               | -                                                          |
+| macOS x64              | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)                   | [chats-osx-x64.zip](https://chats.io.sdcb.ai/release/latest/chats-osx-x64.zip)                   | -                                                          |
+| 通用包（需要 .NET 10） | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                                   | [chats.zip](https://chats.io.sdcb.ai/release/latest/chats.zip)                                   | [chats.zip](https://chats.io.sdcb.ai/latest/chats.zip)       |
+| 纯前端文件             | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                             | [chats-fe.zip](https://chats.io.sdcb.ai/release/latest/chats-fe.zip)                             | [chats-fe.zip](https://chats.io.sdcb.ai/latest/chats-fe.zip) |
 
 ### 下载说明
 
@@ -85,9 +85,9 @@ docker pull sdcb/chats:1.8.1-linux-x64
 - **最新版本**：访问 [Releases](https://github.com/sdcb/chats/releases) 页面查看最新版本和更新日志
 - **替代下载**：在 GitHub 访问不便时，可使用以下格式的国内镜像地址：
   ```
-  https://chats.sdcb.pub/release/latest/{artifact-id}.zip
+  https://chats.io.sdcb.ai/release/latest/{artifact-id}.zip
   ```
-  例如：`https://chats.sdcb.pub/release/latest/chats-win-x64.zip`
+  例如：`https://chats.io.sdcb.ai/release/latest/chats-win-x64.zip`
 
 ---
 

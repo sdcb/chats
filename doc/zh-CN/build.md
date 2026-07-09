@@ -230,10 +230,10 @@ Remove-Item -Path "chats-fe.zip"
 
 ```bash
 # Linux/macOS
-curl -L -O https://chats.sdcb.pub/release/latest/chats-fe.zip
+curl -L -O https://chats.io.sdcb.ai/release/latest/chats-fe.zip
 
 # Windows PowerShell
-Invoke-WebRequest -Uri "https://chats.sdcb.pub/release/latest/chats-fe.zip" -OutFile "chats-fe.zip"
+Invoke-WebRequest -Uri "https://chats.io.sdcb.ai/release/latest/chats-fe.zip" -OutFile "chats-fe.zip"
 ```
 
 > **📌 注意事项**：
