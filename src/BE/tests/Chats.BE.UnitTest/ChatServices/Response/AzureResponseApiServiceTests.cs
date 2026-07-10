@@ -489,6 +489,38 @@ public class AzureResponseApiServiceTests
     }
 
     [Fact]
+    public async Task ResponseApiService_ShouldIgnoreArrayTypeProperties_WhenScanningUrlCitations()
+    {
+        // Arrange
+        string sse =
+            "event: response.output_item.done\n" +
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"ws_1\",\"type\":\"web_search_call\",\"status\":\"completed\",\"action\":{\"type\":\"search\",\"query\":\"q\",\"queries\":[\"q\"]}},\"output_index\":0}\n\n" +
+            "event: response.completed\n" +
+            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"tools\":[{\"type\":\"function\",\"parameters\":{\"properties\":{\"file\":{\"type\":[\"string\",\"null\"]}}}}],\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"answer\",\"annotations\":[{\"type\":\"url_citation\",\"title\":\"Source\",\"url\":\"https://example.com\",\"start_index\":0,\"end_index\":6}]}]}],\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}}\n\n";
+
+        FiddlerDumpHttpClientFactory httpClientFactory = new([sse], HttpStatusCode.OK, expectedRequestBody: null);
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        ChatRequest request = CreateBaseChatRequest();
+
+        // Act
+        List<ChatSegment> segments = [];
+        await foreach (ChatSegment segment in service.ChatStreamed(request, CancellationToken.None))
+        {
+            segments.Add(segment);
+        }
+
+        // Assert
+        ToolCallResponseSegment response = Assert.Single(segments.OfType<ToolCallResponseSegment>());
+        using JsonDocument responseJson = JsonDocument.Parse(response.Response!);
+        JsonElement result = Assert.Single(responseJson.RootElement.EnumerateArray());
+        Assert.Equal("Source", result.GetProperty("title").GetString());
+        Assert.Equal("https://example.com", result.GetProperty("url").GetString());
+
+        FinishReasonChatSegment finish = Assert.IsType<FinishReasonChatSegment>(segments.Last(x => x is FinishReasonChatSegment));
+        Assert.Equal(DBFinishReason.Success, finish.FinishReason);
+    }
+
+    [Fact]
     public async Task ResponseApiService_ShouldSendAllFunctionCallOutputs_FromSingleToolMessage()
     {
         // Arrange

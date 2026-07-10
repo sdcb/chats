@@ -645,7 +645,9 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
 
                 foreach (JsonElement annotation in annotationsEl.EnumerateArray())
                 {
-                    if (annotation.TryGetProperty("type", out JsonElement annotationTypeEl) && annotationTypeEl.GetString() == "url_citation")
+                    if (annotation.TryGetProperty("type", out JsonElement annotationTypeEl)
+                        && annotationTypeEl.ValueKind == JsonValueKind.String
+                        && annotationTypeEl.GetString() == "url_citation")
                     {
                         citations.Add(CreateWebSearchResult(annotation));
                     }
@@ -682,7 +684,9 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
 
         foreach (JsonElement annotation in annotationsEl.EnumerateArray())
         {
-            if (annotation.TryGetProperty("type", out JsonElement annotationTypeEl) && annotationTypeEl.GetString() == "url_citation")
+            if (annotation.TryGetProperty("type", out JsonElement annotationTypeEl)
+                && annotationTypeEl.ValueKind == JsonValueKind.String
+                && annotationTypeEl.GetString() == "url_citation")
             {
                 citations.Add(CreateWebSearchResult(annotation));
             }
@@ -702,7 +706,9 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
     {
         if (element.ValueKind == JsonValueKind.Object)
         {
-            if (element.TryGetProperty("type", out JsonElement typeEl) && typeEl.GetString() == "url_citation")
+            if (element.TryGetProperty("type", out JsonElement typeEl)
+                && typeEl.ValueKind == JsonValueKind.String
+                && typeEl.GetString() == "url_citation")
             {
                 citations.Add(CreateWebSearchResult(element));
                 return;
