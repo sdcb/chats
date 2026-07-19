@@ -397,7 +397,7 @@ jobs:
           artifacts: "*.zip, sha256sum.txt"
       
   deploy:
-    runs-on: host7-runner
+    runs-on: [self-hosted, Linux, X64, home-runner]
     needs: [build-primary-container, build-fe]
     steps:
       - run: |
