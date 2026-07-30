@@ -43,12 +43,12 @@
     "lucide-react": "^0.556.0",
     "mermaid": "^11.11.0",
     "monaco-editor": "^0.55.1",
-    "next": "^16.2.2",
+    "next": "^16.2.12",
     "next-pwa": "^5.6.0",
     "next-themes": "^0.4.6",
-    "react": "^19.2.4",
+    "react": "^19.2.8",
     "react-day-picker": "^9.10.0",
-    "react-dom": "^19.2.4",
+    "react-dom": "^19.2.8",
     "react-hook-form": "^7.62.0",
     "react-hot-toast": "^2.6.0",
     "react-markdown": "^8.0.7",
@@ -65,14 +65,14 @@
     "@tailwindcss/typography": "^0.5.13",
     "@trivago/prettier-plugin-sort-imports": "^4.1.1",
     "@types/hast": "^3.0.4",
-    "@types/node": "^20.16.11",
-    "@types/react": "^19.2.7",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/react-syntax-highlighter": "^15.5.11",
     "autoprefixer": "10.4.22",
     "cross-env": "^7.0.3",
     "eslint": "^9.39.1",
-    "eslint-config-next": "^16.2.2",
+    "eslint-config-next": "^16.2.12",
     "postcss": "^8.4.41",
     "prettier": "^2.8.7",
     "prettier-plugin-tailwindcss": "^0.2.5",
@@ -80,7 +80,12 @@
     "ts-node-dev": "^2.0.0",
     "typescript": "6.0.2"
   },
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=12.0.0"
+  },
   "volta": {
-    "node": "20.16.0"
+    "node": "24.18.0",
+    "npm": "12.0.1"
   }
 }

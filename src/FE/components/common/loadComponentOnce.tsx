@@ -106,7 +106,7 @@ export const loadComponentOnce = <TProps extends object>({
       };
     }, [cacheKey, component, loader]);
 
-    const ResolvedComponent = component ?? getLoadedComponent<TProps>(cacheKey);
+    const ResolvedComponent = component;
 
     if (ResolvedComponent) {
       return <ResolvedComponent {...props} />;
