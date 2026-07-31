@@ -28,6 +28,7 @@ using DBFile = Chats.DB.File;
 using Chats.DB.Enums;
 using Chats.BE.DB.Extensions;
 using Chats.BE.Services.CodeInterpreter;
+using Chats.BE.Services.Mcp;
 using Chats.BE.Services.Options;
 using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.TitleSummary;
@@ -518,14 +519,20 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             currentRoundSteps: dbUserMessage?.Steps ?? [],
             codeExecutionEnabled: codeExecutionEnabled,
             contextPrefix: ciPrefix);
+        NeutralSystemMessage? systemMessage = chatSpan.ChatConfig.CodeExecutionEnabled
+            ? codeInterpreter.BuildSystemMessage(chatSpan.ChatConfig.SystemPrompt)
+            : null;
+        systemMessage = McpServerInstructionsBuilder.MergeSystemMessage(
+            systemMessage,
+            chatSpan.ChatConfig.SystemPrompt,
+            chatSpan.ChatConfig.ChatConfigMcps.Select(x => x.McpServer));
+
         ChatRequest csr = new()
         {
             EndUserId = $"{chat.Id}-{chatSpan.SpanId}",
             Messages = neutralMessages,
             ChatConfig = chatSpan.ChatConfig,
-            System = chatSpan.ChatConfig.CodeExecutionEnabled
-                ? codeInterpreter.BuildSystemMessage(chatSpan.ChatConfig.SystemPrompt)
-                : null,
+            System = systemMessage,
             Tools = [],
             Source = UsageSource.WebChat,
         };
@@ -710,16 +717,25 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
                     logger.LogInformation("Using MCP Server {mcpServer.Label} ({mcpServer.Url}) for tool call {call.Name} with headers: {headers}",
                         mcpServer.Label, mcpServer.Url, call.Name, headers);
                     Stopwatch sw = Stopwatch.StartNew();
-                    McpClient mcpClient = await McpClient.CreateAsync(new HttpClientTransport(new HttpClientTransportOptions
+                    bool isSuccess;
+                    string toolResult;
+                    await using (HttpClientTransport transport = new(
+                        new HttpClientTransportOptions
+                        {
+                            Endpoint = new Uri(mcpServer.Url),
+                            AdditionalHeaders = headers,
+                        },
+                        httpClientFactory.CreateClient(HttpClientNames.ChatControllerMcp),
+                        loggerFactory,
+                        ownsHttpClient: false))
+                    await using (McpClient mcpClient = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken))
                     {
-                        Endpoint = new Uri(mcpServer.Url),
-                        AdditionalHeaders = headers,
-                    }, httpClientFactory.CreateClient(HttpClientNames.ChatControllerMcp), loggerFactory, ownsHttpClient: true), cancellationToken: cancellationToken);
+                        logger.LogInformation("{mcpServer.Label} connected, elapsed={elapsed}ms, Calling tool: {toolName}, parameters: {call.Parameters}",
+                            mcpServer.Label, sw.ElapsedMilliseconds, toolName, call.Parameters);
 
-                    logger.LogInformation("{mcpServer.Label} connected, elapsed={elapsed}ms, Calling tool: {toolName}, parameters: {call.Parameters}",
-                        mcpServer.Label, sw.ElapsedMilliseconds, toolName, call.Parameters);
+                        (isSuccess, toolResult) = await CallMcp(mcpClient, cancellationToken);
+                    }
 
-                    (bool isSuccess, string toolResult) = await CallMcp(cancellationToken);
                     logger.LogInformation("Tool {call.Name} completed, success: {success}, result: {result}", call.Name, isSuccess, toolResult);
                     writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, true, call.ToolCallId!, toolResult));
                     WriteStep(new Step()
@@ -744,7 +760,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
                         ],
                     });
 
-                    async Task<(bool success, string result)> CallMcp(CancellationToken cancellationToken)
+                    async Task<(bool success, string result)> CallMcp(McpClient mcpClient, CancellationToken cancellationToken)
                     {
                         try
                         {

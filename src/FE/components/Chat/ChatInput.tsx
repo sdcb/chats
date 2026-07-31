@@ -54,6 +54,7 @@ import { defaultFileConfig } from '@/apis/adminApis';
 import { getUserPromptDetail } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 import CodeExecutionControl from './CodeExecutionControl';
+import McpShortcutControl from './McpShortcutControl';
 import WebSearchControl from './WebSearchControl';
 import { ANIMATION_DURATION_MS } from '@/constants/animation';
 
@@ -804,6 +805,12 @@ const ChatInput = ({
                       containerRef={inputContainerRef as React.RefObject<HTMLElement>}
                     />
                   )}
+                  <McpShortcutControl
+                    chatId={selectedChat.id}
+                    spans={selectedChat.spans}
+                    modelMap={modelMap}
+                    disabled={selectedChat.status === ChatStatus.Chatting}
+                  />
                   <WebSearchControl
                     chatId={selectedChat.id}
                     spans={selectedChat.spans}

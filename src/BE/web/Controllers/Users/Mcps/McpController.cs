@@ -28,17 +28,21 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             return false;
         }
     }
+
+    private static string? NormalizeOptionalText(string? text)
+        => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+
     [HttpGet]
     public async Task<ActionResult<McpServerListItemDto[]>> ListAllMcpServers(CancellationToken cancellationToken)
     {
-        IQueryable<McpServer> query = db.McpServers.Where(x => x.UserMcps.Any(um => um.UserId == currentUser.Id));
-
-        McpServerListItemDto[] data = await query
-            .OrderByDescending(x => x.Id)
-            .Select(x => new McpServerListItemDto
+        McpServerListItemDto[] data = await db.UserMcps
+            .Where(um => um.UserId == currentUser.Id)
+            .OrderByDescending(um => um.McpServerId)
+            .Select(um => new McpServerListItemDto
             {
-                Id = x.Id,
-                Label = x.Label,
+                Id = um.McpServer.Id,
+                Label = um.McpServer.Label,
+                ShowShortcut = um.ShowShortcut,
             })
             .ToArrayAsync(cancellationToken);
         return Ok(data);
@@ -64,6 +68,11 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
                     Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id, // admin or owner can edit
                     Owner = x.OwnerUser.DisplayName,
                     AssignedUserCount = x.UserMcps.Count,
+                    AssignedToMe = x.UserMcps.Any(um => um.UserId == currentUser.Id),
+                    ShowShortcut = x.UserMcps
+                        .Where(um => um.UserId == currentUser.Id)
+                        .Select(um => (bool?)um.ShowShortcut)
+                        .FirstOrDefault() ?? false,
                 })
                 .ToArrayAsync(cancellationToken);
         return Ok(data);
@@ -92,12 +101,18 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
                 Label = x.Label,
                 Url = x.Url,
                 Headers = x.Headers,
+                ServerInstructions = x.ServerInstructions,
                 Owner = x.OwnerUser.DisplayName,
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt,
                 ToolsCount = x.McpTools.Count,
                 Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id,
                 AssignedUserCount = x.UserMcps.Count,
+                AssignedToMe = x.UserMcps.Any(um => um.UserId == currentUser.Id),
+                ShowShortcut = x.UserMcps
+                    .Where(um => um.UserId == currentUser.Id)
+                    .Select(um => (bool?)um.ShowShortcut)
+                    .FirstOrDefault() ?? false,
                 Tools = x.McpTools
                     .OrderBy(t => t.Id)
                     .Select(t => new McpToolBasicInfo
@@ -167,7 +182,8 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
         {
             Label = request.Label,
             Url = request.Url,
-            Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers,
+            Headers = NormalizeOptionalText(request.Headers),
+            ServerInstructions = NormalizeOptionalText(request.ServerInstructions),
             OwnerUserId = currentUser.Id,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -176,6 +192,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
                 new UserMcp
                 {
                     UserId = currentUser.Id, // auto-assign to creator
+                    ShowShortcut = false,
                 }
             ]
         };
@@ -256,12 +273,14 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
 
         server.Label = request.Label;
         server.Url = request.Url;
-        server.Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers;
+        server.Headers = NormalizeOptionalText(request.Headers);
+        server.ServerInstructions = NormalizeOptionalText(request.ServerInstructions);
         if (!server.UserMcps.Any(um => um.UserId == currentUser.Id))
         {
             server.UserMcps.Add(new UserMcp
             {
                 UserId = currentUser.Id,
+                ShowShortcut = false,
             });
         }
 
@@ -328,8 +347,8 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
     }
 
     [HttpPost("fetch-tools")]
-    public async Task<ActionResult<List<McpToolBasicInfo>>> FetchMcpTools(
-        [FromBody] FetchToolsRequest req, 
+    public async Task<ActionResult<FetchToolsResponse>> FetchMcpTools(
+        [FromBody] FetchToolsRequest req,
         [FromServices] ILogger<McpController> logger,
         [FromServices] IHttpClientFactory httpClientFactory,
         [FromServices] ILoggerFactory loggerFactory,
@@ -364,7 +383,12 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
 
         try
         {
-            McpClient client = await McpClient.CreateAsync(new HttpClientTransport(options, httpClientFactory.CreateClient(HttpClientNames.McpController), loggerFactory), cancellationToken: cancellationToken);
+            await using HttpClientTransport transport = new(
+                options,
+                httpClientFactory.CreateClient(HttpClientNames.McpController),
+                loggerFactory,
+                ownsHttpClient: false);
+            await using McpClient client = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken);
             List<McpToolBasicInfo> tools = [];
             ListToolsResult mcpToolsResp = await client.ListToolsAsync(new ListToolsRequestParams(), cancellationToken);
             foreach (Tool tool in mcpToolsResp.Tools)
@@ -376,9 +400,13 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
                     Parameters = JSON.Serialize(tool.InputSchema),
                 });
             }
-            return Ok(tools);
+            return Ok(new FetchToolsResponse
+            {
+                Tools = tools,
+                ServerInstructions = NormalizeOptionalText(client.ServerInstructions),
+            });
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex) when (ex is HttpRequestException or TimeoutException or JsonException or IOException or InvalidOperationException)
         {
             logger.LogWarning(ex, "Failed to fetch MCP tools from {Url}", req.ServerUrl);
             return BadRequest(ex.Message);
@@ -404,7 +432,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
         McpServer? server = await db.McpServers
             .Include(x => x.UserMcps)
             .FirstOrDefaultAsync(x => x.Id == mcpId, cancellationToken);
-        
+
         if (server == null)
         {
             return NotFound();
@@ -421,12 +449,16 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             .Where(u => allUserIds.Contains(u.Id))
             .Select(u => u.Id)
             .ToListAsync(cancellationToken);
-        
+
         if (existingUserIds.Count != allUserIds.Count)
         {
             List<int> missingUserIds = [.. allUserIds.Except(existingUserIds)];
             return BadRequest($"User IDs not found: {string.Join(", ", missingUserIds)}");
         }
+
+        bool assignerShowShortcut = server.UserMcps
+            .FirstOrDefault(um => um.UserId == currentUser.Id)
+            ?.ShowShortcut ?? false;
 
         // 处理新分配的用户
         foreach (AssignedUserInfo userInfo in request.ToAssignedUsers)
@@ -447,6 +479,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             {
                 UserId = userInfo.Id,
                 CustomHeaders = userInfo.CustomHeaders,
+                ShowShortcut = userInfo.ShowShortcut ?? assignerShowShortcut,
                 McpServerId = mcpId
             });
         }
@@ -466,6 +499,10 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             }
 
             existingAssignment.CustomHeaders = userInfo.CustomHeaders;
+            if (userInfo.ShowShortcut.HasValue)
+            {
+                existingAssignment.ShowShortcut = userInfo.ShowShortcut.Value;
+            }
         }
 
         // 处理删除的用户
@@ -491,9 +528,9 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
 
     [HttpGet("{mcpId:int}/get-unassigned-users")]
     public async Task<ActionResult<UnassignedUserDto[]>> GetUnassignedUsers(
-        int mcpId, 
-        [FromQuery] string? search = null, 
-        [FromQuery] int limit = 10, 
+        int mcpId,
+        [FromQuery] string? search = null,
+        [FromQuery] int limit = 10,
         CancellationToken cancellationToken = default)
     {
         // 只有管理员可以调用此API
@@ -558,11 +595,39 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             {
                 Id = um.UserId,
                 UserName = um.User.DisplayName,
-                CustomHeaders = um.CustomHeaders
+                CustomHeaders = um.CustomHeaders,
+                ShowShortcut = um.ShowShortcut,
             })
             .ToArrayAsync(cancellationToken);
 
         return Ok(assignedUsers);
+    }
+
+    [HttpPut("{mcpId:int}/my-assignment")]
+    public async Task<ActionResult> UpdateMyMcpAssignment(
+        int mcpId,
+        [FromBody] UpdateMyMcpAssignmentRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        UserMcp? assignment = await db.UserMcps
+            .FirstOrDefaultAsync(um => um.McpServerId == mcpId && um.UserId == currentUser.Id, cancellationToken);
+        if (assignment is null)
+        {
+            return NotFound();
+        }
+
+        if (assignment.ShowShortcut != request.ShowShortcut)
+        {
+            assignment.ShowShortcut = request.ShowShortcut;
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return Ok();
     }
 
     [HttpGet("{mcpId:int}/assigned-user-names")]

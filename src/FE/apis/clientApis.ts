@@ -45,6 +45,7 @@ import {
   McpServerDetailsDto,
   UpdateMcpServerRequest,
   FetchToolsRequest,
+  FetchToolsResponse,
   McpToolBasicInfo,
   McpServerListManagementItemDto,
   AssignUsersToMcpRequest,
@@ -54,6 +55,7 @@ import {
   UnassignedUserDto,
   AssignedUserDetailsDto,
   AssignedUserNameDto,
+  UpdateMyMcpAssignmentRequest,
 } from '@/types/clientApis';
 import { SiteInfoConfig } from '@/types/config';
 import { IChatGroup } from '@/types/group';
@@ -660,7 +662,7 @@ export const deleteMcpServer = (mcpId: number) => {
   return fetchService.delete(`/api/mcp/${mcpId}`);
 };
 
-export const fetchMcpTools = (params: FetchToolsRequest): Promise<McpToolBasicInfo[]> => {
+export const fetchMcpTools = (params: FetchToolsRequest): Promise<FetchToolsResponse> => {
   const fetchService = createFetchClient();
   return fetchService.post('/api/mcp/fetch-tools', { body: params });
 };
@@ -669,6 +671,14 @@ export const fetchMcpTools = (params: FetchToolsRequest): Promise<McpToolBasicIn
 export const assignUsersToMcp = (mcpId: number, params: AssignUsersToMcpRequest): Promise<void> => {
   const fetchService = createFetchClient();
   return fetchService.post(`/api/mcp/${mcpId}/assign-to-users`, { body: params });
+};
+
+export const updateMyMcpAssignment = (
+  mcpId: number,
+  params: UpdateMyMcpAssignmentRequest
+): Promise<void> => {
+  const fetchService = createFetchClient();
+  return fetchService.put(`/api/mcp/${mcpId}/my-assignment`, { body: params });
 };
 
 export const getUnassignedUsers = (mcpId: number, search?: string, limit: number = 10): Promise<UnassignedUserDto[]> => {

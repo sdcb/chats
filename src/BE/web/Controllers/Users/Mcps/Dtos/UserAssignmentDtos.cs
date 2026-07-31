@@ -15,6 +15,7 @@ public record AssignedUserInfo
 {
     [JsonPropertyName("id")] public required int Id { get; init; }
     [JsonPropertyName("customHeaders")] public string? CustomHeaders { get; init; }
+    [JsonPropertyName("showShortcut")] public bool? ShowShortcut { get; init; }
 }
 
 // 未分配用户信息
@@ -30,6 +31,13 @@ public record AssignedUserDetailsDto
     [JsonPropertyName("id")] public required int Id { get; init; }
     [JsonPropertyName("userName")] public required string UserName { get; init; }
     [JsonPropertyName("customHeaders")] public string? CustomHeaders { get; init; }
+    [JsonPropertyName("showShortcut")] public required bool ShowShortcut { get; init; }
+}
+
+// 当前用户更新自己的 MCP 赋权偏好
+public record UpdateMyMcpAssignmentRequest
+{
+    [JsonPropertyName("showShortcut")] public required bool ShowShortcut { get; init; }
 }
 
 // 用于快速获取用户名的DTO
