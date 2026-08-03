@@ -11,8 +11,6 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 /// </summary>
 public class MiniMaxChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {
-    protected override string ReasoningContentPropertyName => "reasoning_details";
-
     protected override bool TryCreateThinkingSegmentForStorage(string thinkingContent, string? thinkingSignature, out ChatSegment? segment)
     {
         if (string.IsNullOrEmpty(thinkingContent))
@@ -29,17 +27,18 @@ public class MiniMaxChatService(IHttpClientFactory httpClientFactory) : ChatComp
         return true;
     }
 
-    protected override bool TryBuildThinkingNodeForRequest(
+    private static bool TryBuildReasoningDetailsForRequest(
         NeutralMessage message,
-        IReadOnlyList<NeutralThinkContent> thinkingContents,
-        IReadOnlyList<NeutralToolCallContent> toolCalls,
-        out JsonNode? thinkingNode)
+        out JsonNode? reasoningDetails)
     {
+        List<NeutralThinkContent> thinkingContents = message.Contents.OfType<NeutralThinkContent>().ToList();
+        List<NeutralToolCallContent> toolCalls = message.Contents.OfType<NeutralToolCallContent>().ToList();
+
         // MiniMax interleaved thinking compatible format requires preserving `reasoning_details`.
         // Only attach it for assistant messages that contain tool calls.
         if (message.Role != NeutralChatRole.Assistant || toolCalls.Count == 0 || thinkingContents.Count == 0)
         {
-            thinkingNode = null;
+            reasoningDetails = null;
             return false;
         }
 
@@ -76,18 +75,18 @@ public class MiniMaxChatService(IHttpClientFactory httpClientFactory) : ChatComp
 
         if (preserved.Count > 0)
         {
-            thinkingNode = preserved;
+            reasoningDetails = preserved;
             return true;
         }
 
         string combined = string.Join("", thinkingContents.Select(t => t.Content));
         if (string.IsNullOrEmpty(combined))
         {
-            thinkingNode = null;
+            reasoningDetails = null;
             return false;
         }
 
-        thinkingNode = new JsonArray
+        reasoningDetails = new JsonArray
         {
             new JsonObject
             {
@@ -119,6 +118,11 @@ public class MiniMaxChatService(IHttpClientFactory httpClientFactory) : ChatComp
         if (message.Role == NeutralChatRole.Assistant && msg["tool_calls"] != null && msg["content"] == null)
         {
             msg["content"] = "";
+        }
+
+        if (TryBuildReasoningDetailsForRequest(message, out JsonNode? reasoningDetails) && reasoningDetails != null)
+        {
+            msg["reasoning_details"] = reasoningDetails;
         }
 
         return msg;
