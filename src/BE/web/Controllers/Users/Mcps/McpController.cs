@@ -108,11 +108,6 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
                 ToolsCount = x.McpTools.Count,
                 Editable = currentUser.IsAdmin || x.OwnerUserId == currentUser.Id,
                 AssignedUserCount = x.UserMcps.Count,
-                AssignedToMe = x.UserMcps.Any(um => um.UserId == currentUser.Id),
-                ShowShortcut = x.UserMcps
-                    .Where(um => um.UserId == currentUser.Id)
-                    .Select(um => (bool?)um.ShowShortcut)
-                    .FirstOrDefault() ?? false,
                 Tools = x.McpTools
                     .OrderBy(t => t.Id)
                     .Select(t => new McpToolBasicInfo
@@ -182,7 +177,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
         {
             Label = request.Label,
             Url = request.Url,
-            Headers = NormalizeOptionalText(request.Headers),
+            Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers,
             ServerInstructions = NormalizeOptionalText(request.ServerInstructions),
             OwnerUserId = currentUser.Id,
             CreatedAt = DateTime.UtcNow,
@@ -273,7 +268,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
 
         server.Label = request.Label;
         server.Url = request.Url;
-        server.Headers = NormalizeOptionalText(request.Headers);
+        server.Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers;
         server.ServerInstructions = NormalizeOptionalText(request.ServerInstructions);
         if (!server.UserMcps.Any(um => um.UserId == currentUser.Id))
         {

@@ -3,7 +3,7 @@ import { useContext, useEffect, useMemo, useState } from 'react';
 import useTranslation from '@/hooks/useTranslation';
 
 import { AdminModelDto } from '@/types/adminApis';
-import { ChatSpanDto, McpServerListItemDto } from '@/types/clientApis';
+import { ChatSpanDto, ChatSpanMcp, McpServerListItemDto } from '@/types/clientApis';
 
 import Tips from '@/components/Tips/Tips';
 
@@ -11,6 +11,20 @@ import HomeContext from '@/contexts/home.context';
 import { setChats } from '@/actions/chat.actions';
 import { getMcpServers, putChatSpan } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
+
+const getNextMcps = (
+  currentMcps: ChatSpanMcp[],
+  mcpId: number,
+  enable: boolean,
+): ChatSpanMcp[] => {
+  if (!enable) {
+    return currentMcps.filter((mcp) => mcp.id !== mcpId);
+  }
+
+  return currentMcps.some((mcp) => mcp.id === mcpId)
+    ? currentMcps
+    : [...currentMcps, { id: mcpId }];
+};
 
 interface McpShortcutControlProps {
   chatId: string;
@@ -33,7 +47,7 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
   } = useContext(HomeContext);
 
   const [mcpServers, setMcpServers] = useState<McpServerListItemDto[]>([]);
-  const [updatingMcpId, setUpdatingMcpId] = useState<number | null>(null);
+  const [updatingMcpIds, setUpdatingMcpIds] = useState<Set<number>>(() => new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -84,20 +98,16 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
   };
 
   const handleToggleMcp = async (mcpId: number) => {
-    if (!selectedChat || disabled || updatingMcpId !== null) return;
+    if (!selectedChat || disabled || updatingMcpIds.has(mcpId)) return;
 
-    setUpdatingMcpId(mcpId);
+    setUpdatingMcpIds((current) => new Set(current).add(mcpId));
     const enable = !isMcpEnabled(mcpId);
 
     try {
       await Promise.all(
         toolCapableSpans.map((span) => {
           const currentMcps = span.mcps || [];
-          const nextMcps = enable
-            ? currentMcps.some((mcp) => mcp.id === mcpId)
-              ? currentMcps
-              : [...currentMcps, { id: mcpId }]
-            : currentMcps.filter((mcp) => mcp.id !== mcpId);
+          const nextMcps = getNextMcps(currentMcps, mcpId, enable);
 
           return putChatSpan(span.spanId, chatId, {
             modelId: span.modelId,
@@ -126,11 +136,7 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
           }
 
           const currentMcps = span.mcps || [];
-          const nextMcps = enable
-            ? currentMcps.some((mcp) => mcp.id === mcpId)
-              ? currentMcps
-              : [...currentMcps, { id: mcpId }]
-            : currentMcps.filter((mcp) => mcp.id !== mcpId);
+          const nextMcps = getNextMcps(currentMcps, mcpId, enable);
 
           return { ...span, mcps: nextMcps };
         }),
@@ -143,7 +149,11 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
     } catch (error) {
       console.error('Failed to toggle MCP shortcut:', error);
     } finally {
-      setUpdatingMcpId(null);
+      setUpdatingMcpIds((current) => {
+        const next = new Set(current);
+        next.delete(mcpId);
+        return next;
+      });
     }
   };
 
@@ -151,7 +161,7 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
     <div className="flex items-center gap-2 h-9">
       {shortcutServers.map((server) => {
         const enabled = isMcpEnabled(server.id);
-        const isUpdating = updatingMcpId === server.id;
+        const isUpdating = updatingMcpIds.has(server.id);
 
         return (
           <Tips

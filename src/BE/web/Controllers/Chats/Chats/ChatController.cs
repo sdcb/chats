@@ -521,10 +521,11 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             contextPrefix: ciPrefix);
         NeutralSystemMessage? systemMessage = chatSpan.ChatConfig.CodeExecutionEnabled
             ? codeInterpreter.BuildSystemMessage(chatSpan.ChatConfig.SystemPrompt)
-            : null;
+            : string.IsNullOrWhiteSpace(chatSpan.ChatConfig.SystemPrompt)
+                ? null
+                : NeutralSystemMessage.FromText(chatSpan.ChatConfig.SystemPrompt);
         systemMessage = McpServerInstructionsBuilder.MergeSystemMessage(
             systemMessage,
-            chatSpan.ChatConfig.SystemPrompt,
             chatSpan.ChatConfig.ChatConfigMcps.Select(x => x.McpServer));
 
         ChatRequest csr = new()
