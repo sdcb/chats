@@ -22,6 +22,7 @@ import {
 import Tips from '@/components/Tips/Tips';
 import { touchDockerSession } from '@/apis/dockerSessionsApi';
 import { Button } from '@/components/ui/button';
+import { copyTextToClipboard } from '@/utils/clipboard';
 import { formatAbsoluteTime, formatRelativeWithinHour } from '@/utils/relativeTime';
 
 type Props = {
@@ -181,8 +182,9 @@ export default function SessionInfoCard({ chatId, session, onRefreshTimes }: Pro
     ].filter((section) => section.items.length > 0);
   }, [basicItems, t]);
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(copyText);
+  const handleCopy = useCallback(async () => {
+    if (!(await copyTextToClipboard(copyText))) return;
+
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [copyText]);

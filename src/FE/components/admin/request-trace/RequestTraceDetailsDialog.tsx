@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic';
 import useTranslation from '@/hooks/useTranslation';
 
 import { getApiUrl } from '@/utils/common';
+import { copyTextToClipboard } from '@/utils/clipboard';
 import { getUserSession } from '@/utils/user';
 
 import { RequestTraceDetails } from '@/types/adminApis';
@@ -140,17 +141,13 @@ const InlineCopyButton = ({
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
-    if (!navigator.clipboard || !navigator.clipboard.writeText) {
-      return;
-    }
+  const handleCopy = async () => {
+    if (!(await copyTextToClipboard(value))) return;
 
-    navigator.clipboard.writeText(value).then(() => {
-      setCopied(true);
-      setTimeout(() => {
-        setCopied(false);
-      }, 1200);
-    });
+    setCopied(true);
+    setTimeout(() => {
+      setCopied(false);
+    }, 1200);
   };
 
   return (

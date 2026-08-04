@@ -7,6 +7,7 @@ import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
 
 import { cn } from '@/lib/utils';
+import { copyTextToClipboard } from '@/utils/clipboard';
 
 interface Props {
   triggerClassName?: string;
@@ -20,9 +21,9 @@ const CopyAction = (props: Props) => {
   const [messagedCopied, setMessageCopied] = useState(false);
 
   const copyOnClick = (content?: string) => {
-    if (!navigator.clipboard) return;
+    copyTextToClipboard(content || '').then((copied) => {
+      if (!copied) return;
 
-    navigator.clipboard.writeText(content || '').then(() => {
       setMessageCopied(true);
       setTimeout(() => {
         setMessageCopied(false);

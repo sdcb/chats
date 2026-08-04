@@ -7,6 +7,7 @@ import useTranslation from '@/hooks/useTranslation';
 import { ChatSpanStatus, ToolCallContent, ToolResponseContent, ToolProgressDelta } from '@/types/chat';
 import { IconCheck, IconChevronRight, IconClipboard } from '@/components/Icons/index';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { copyTextToClipboard } from '@/utils/clipboard';
 
 interface ToolCallBlockProps {
     toolCall: ToolCallContent;
@@ -108,11 +109,9 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
     };
 
     const copyToClipboard = (text: string, isParams: boolean) => (e: React.MouseEvent) => {
-        if (!navigator.clipboard || !navigator.clipboard.writeText) {
-            return;
-        }
+        copyTextToClipboard(text).then((copied) => {
+            if (!copied) return;
 
-        navigator.clipboard.writeText(text).then(() => {
             if (isParams) {
                 setIsParamsCopied(true);
                 setTimeout(() => setIsParamsCopied(false), 2000);

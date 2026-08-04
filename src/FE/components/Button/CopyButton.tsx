@@ -5,6 +5,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { IconCheck, IconClipboard } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
+import { copyTextToClipboard } from '@/utils/clipboard';
 
 interface Props {
   value: string;
@@ -16,16 +17,15 @@ export default function CopyButton(props: Props) {
   const { value, onCopy } = props;
   const [isCopied, setIsCopied] = useState<Boolean>(false);
 
-  const handleCopy = () => {
-    if (!navigator.clipboard) return;
-    navigator.clipboard.writeText(value).then(() => {
-      setIsCopied(true);
-      onCopy && onCopy();
-      setTimeout(() => {
-        setIsCopied(false);
-      }, 1000);
-      toast.success(t('Copy Successful'));
-    });
+  const handleCopy = async () => {
+    if (!(await copyTextToClipboard(value))) return;
+
+    setIsCopied(true);
+    onCopy && onCopy();
+    setTimeout(() => {
+      setIsCopied(false);
+    }, 1000);
+    toast.success(t('Copy Successful'));
   };
 
   return (

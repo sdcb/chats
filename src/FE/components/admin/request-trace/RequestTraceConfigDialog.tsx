@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { z } from 'zod';
 
 import { getConfig, putConfigs } from '@/apis/adminApis';
+import { copyTextToClipboard } from '@/utils/clipboard';
 import useTranslation from '@/hooks/useTranslation';
 import { createDefaultRequestTraceDirectionConfig } from '@/types/config';
 
@@ -902,12 +903,14 @@ export default function RequestTraceConfigDialog({
 
   const hasChanges = JSON.stringify(form.getValues()) !== JSON.stringify(initialValues);
 
-  const copyConfig = () => {
+  const copyConfig = async () => {
     const config = toDirectionConfig(form.getValues());
-    navigator.clipboard
-      .writeText(JSON.stringify(config, null, 2))
-      .then(() => toast.success(t('Copied to clipboard')))
-      .catch(() => toast.error(t('Failed to copy')));
+    const copied = await copyTextToClipboard(JSON.stringify(config, null, 2));
+    if (copied) {
+      toast.success(t('Copied to clipboard'));
+    } else {
+      toast.error(t('Failed to copy'));
+    }
   };
 
   const onSubmit = async (values: DirectionFormInput) => {

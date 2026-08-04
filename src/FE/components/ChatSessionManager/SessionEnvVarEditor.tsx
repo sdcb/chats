@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
+import { copyTextToClipboard } from '@/utils/clipboard';
 import { cn } from '@/lib/utils';
 import Tips from '@/components/Tips/Tips';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -314,26 +315,29 @@ export default function SessionEnvVarEditor({
     }
   }, [chatId, editMode, encryptedSessionId, rawText, t, userVars]);
 
-  const handleCopyRow = useCallback((id: string, key: string, value: string) => {
-    navigator.clipboard.writeText(`${key}=${value}`);
+  const handleCopyRow = useCallback(async (id: string, key: string, value: string) => {
+    if (!(await copyTextToClipboard(`${key}=${value}`))) return;
+
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   }, []);
 
-  const handleCopyAll = useCallback((blockId: string, vars: EnvironmentVariable[]) => {
+  const handleCopyAll = useCallback(async (blockId: string, vars: EnvironmentVariable[]) => {
     const text = vars.map((v) => `${v.key}=${v.value}`).join('\n');
-    navigator.clipboard.writeText(text);
+    if (!(await copyTextToClipboard(text))) return;
+
     setCopiedId(blockId);
     setTimeout(() => setCopiedId(null), 2000);
   }, []);
 
   const handleCopyAllKeys = useCallback(
-    (blockId: string, vars: EnvironmentVariable[]) => {
+    async (blockId: string, vars: EnvironmentVariable[]) => {
       const keys = vars
         .map((v) => v.key.trim())
         .filter((key) => key !== '')
         .join('\n');
-      navigator.clipboard.writeText(keys);
+      if (!(await copyTextToClipboard(keys))) return;
+
       setCopiedId(blockId);
       setTimeout(() => setCopiedId(null), 2000);
     },

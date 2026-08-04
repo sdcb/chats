@@ -19,6 +19,7 @@ import {
   getUserChatShare,
   postUserChatShare,
 } from '@/apis/clientApis';
+import { copyTextToClipboard } from '@/utils/clipboard';
 
 interface IProps {
   chat: ChatResult;
@@ -63,8 +64,9 @@ const SharedMessageModal = (props: IProps) => {
   };
 
   const handleCopySharedUrl = (url: string) => {
-    if (!navigator.clipboard) return;
-    navigator.clipboard.writeText(url).then(() => {
+    copyTextToClipboard(url).then((copied) => {
+      if (!copied) return;
+
       toast.success(t('Copy Successful'));
     });
   };

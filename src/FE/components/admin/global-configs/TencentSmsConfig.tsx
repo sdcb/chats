@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { z } from 'zod';
 
 import { deleteConfigs, getConfig, putConfigs } from '@/apis/adminApis';
+import { copyTextToClipboard } from '@/utils/clipboard';
 import useTranslation from '@/hooks/useTranslation';
 import { GetConfigsResult } from '@/types/adminApis';
 
@@ -181,7 +182,7 @@ export default function TencentSmsConfig({}: TencentSmsConfigProps) {
     }
   };
 
-  const copyConfigAsJson = () => {
+  const copyConfigAsJson = async () => {
     let dataToExport = {};
     
     if (enabled) {
@@ -198,11 +199,12 @@ export default function TencentSmsConfig({}: TencentSmsConfigProps) {
     }
     
     const jsonString = JSON.stringify(dataToExport, null, 2);
-    navigator.clipboard.writeText(jsonString).then(() => {
+    const copied = await copyTextToClipboard(jsonString);
+    if (copied) {
       toast.success(t('Copied to clipboard'));
-    }).catch(() => {
+    } else {
       toast.error(t('Failed to copy'));
-    });
+    }
   };
 
   return (

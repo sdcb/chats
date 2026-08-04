@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { copyTextToClipboard } from '@/utils/clipboard';
 
 interface Props {
   language: string;
@@ -33,20 +34,16 @@ export const CodeBlockCore: FC<Props> = memo(({ language, value }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
   const baseTheme = resolvedTheme === 'dark' ? oneDark : oneLight;
 
-  const copyToClipboard = (e: React.MouseEvent) => {
+  const copyToClipboard = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    if (!navigator.clipboard || !navigator.clipboard.writeText) {
-      return;
-    }
+    if (!(await copyTextToClipboard(value))) return;
 
-    navigator.clipboard.writeText(value).then(() => {
-      setIsCopied(true);
+    setIsCopied(true);
 
-      setTimeout(() => {
-        setIsCopied(false);
-      }, 2000);
-    });
+    setTimeout(() => {
+      setIsCopied(false);
+    }, 2000);
   };
 
   const toggleExpanded = () => {
