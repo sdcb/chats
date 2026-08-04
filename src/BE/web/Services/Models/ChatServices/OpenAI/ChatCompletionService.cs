@@ -212,6 +212,8 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
         DBFinishReason? finishReason = null;
+        string? responseId = null;
+        bool emittedHostedWebSearch = false;
 
         await foreach (SseItem<string> sseItem in SseParser.Create(stream, (_, bytes) => Encoding.UTF8.GetString(bytes)).EnumerateAsync(cancellationToken))
         {
@@ -225,9 +227,15 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             {
                 json = JsonDocument.Parse(sseItem.Data).RootElement;
             }
+
             catch (JsonException)
             {
                 continue;
+            }
+
+            if (json.TryGetProperty("id", out JsonElement responseIdEl) && responseIdEl.ValueKind == JsonValueKind.String)
+            {
+                responseId = responseIdEl.GetString();
             }
 
             // Parse choices
@@ -249,6 +257,20 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
             JsonElement choice = choices[0];
             JsonElement delta = choice.TryGetProperty("delta", out JsonElement d) ? d : default;
+
+            if (delta.ValueKind == JsonValueKind.Object
+                && delta.TryGetProperty("annotations", out JsonElement annotationsEl))
+            {
+                JsonArray hostedResults = ParseHostedWebSearchAnnotations(annotationsEl);
+                if (!emittedHostedWebSearch && hostedResults.Count > 0)
+                {
+                    foreach (ChatSegment segment in CreateHostedWebSearchSegments(responseId, hostedResults))
+                    {
+                        yield return segment;
+                    }
+                    emittedHostedWebSearch = true;
+                }
+            }
 
             // Parse content
             string? content = delta.TryGetProperty("content", out JsonElement c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
@@ -436,6 +458,19 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             JsonElement choice = choices[0];
             if (choice.TryGetProperty("message", out JsonElement message))
             {
+                if (message.TryGetProperty("annotations", out JsonElement annotationsEl))
+                {
+                    JsonArray hostedResults = ParseHostedWebSearchAnnotations(annotationsEl);
+                    if (hostedResults.Count > 0)
+                    {
+                        string? responseId = root.TryGetProperty("id", out JsonElement responseIdEl)
+                            && responseIdEl.ValueKind == JsonValueKind.String
+                            ? responseIdEl.GetString()
+                            : null;
+                        items.AddRange(CreateHostedWebSearchSegments(responseId, hostedResults));
+                    }
+                }
+
                 // Content
                 if (message.TryGetProperty("content", out JsonElement content) && content.ValueKind == JsonValueKind.String)
                 {
@@ -478,6 +513,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                         });
                     }
                 }
+
             }
 
             // Finish reason
@@ -584,6 +620,33 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         }
 
         return body;
+    }
+
+    protected virtual JsonArray ParseHostedWebSearchAnnotations(JsonElement annotations)
+    {
+        return [];
+    }
+
+    private static IEnumerable<ChatSegment> CreateHostedWebSearchSegments(string? responseId, JsonArray results)
+    {
+        string callId = $"web_search_{responseId ?? "response"}";
+        yield return new ToolCallSegment
+        {
+            Index = 100000,
+            Id = callId,
+            Name = "web_search_call",
+            Arguments = new JsonObject
+            {
+                ["type"] = "web_search_call",
+                ["status"] = "completed",
+                ["action"] = new JsonObject { ["type"] = "search" },
+            }.ToJsonString(JSON.JsonSerializerOptions),
+        };
+        yield return ChatSegment.FromToolCallResponse(
+            callId,
+            results.ToJsonString(JSON.JsonSerializerOptions),
+            0,
+            true);
     }
 
     private static JsonArray BuildFunctionToolsArray(IEnumerable<ChatTool> tools)

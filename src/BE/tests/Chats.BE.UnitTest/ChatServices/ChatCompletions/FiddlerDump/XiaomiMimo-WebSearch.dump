@@ -1,0 +1,1213 @@
+POST https://api.xiaomimimo.com/v1/chat/completions HTTP/1.1
+Host: api.xiaomimimo.com
+Authorization: Bearer [REDACTED]
+Accept: text/event-stream
+User-Agent: Sdcb-Chats/1.13.0.0
+traceparent: 00-5b4cf054a5018caf9e817c1f09967232-0326020bc48184f8-00
+Content-Type: application/json; charset=utf-8
+Content-Length: 343
+
+{"model":"mimo-v2.5","messages":[{"role":"system","content":"你是AI助手Sdcb Chats\n当前日期: 2026/08/04，当前模型：mimo-v2.5"},{"role":"user","content":"明天长沙天气怎么样？"}],"stream":true,"stream_options":{"include_usage":true},"temperature":0.7,"user":"23054-0","tools":[{"type":"web_search"}],"tool_choice":"auto"}
+HTTP/1.1 200 OK
+Date: Tue, 04 Aug 2026 03:04:31 GMT
+Content-Type: text/event-stream
+Transfer-Encoding: chunked
+Connection: keep-alive
+Vary: Origin
+Vary: Access-Control-Request-Method
+Vary: Access-Control-Request-Headers
+Server: MiFE/3.4.34
+X-MiFE-Upstream-Status: 200
+
+334e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"index":0,"delta":{"annotations":[{"logo_url":"https://qq.com/favicon.ico","publish_time":"2026-08-04T07:21:11.0000000","site_name":"腾讯新闻","summary":"长沙晚报掌上长沙8月4日讯 长沙市,8月4日,白天,雷阵雨,气温35摄氏度,夜晚,小雨,气温24摄氏度。\n长沙市,8月5日,白天,雷阵雨,气温33摄氏度,夜晚,小雨,气温25摄氏度。\n(以上资讯由写稿机器人系统自动撰写)\n点击下图查阅更多资讯↓↓↓","title":"镰刀妹AI智能播报 | 8月4日长沙天气和明日预报_腾讯新闻","type":"url_citation","url":"https://news.qq.com/rain/a/20260804A03T8200"},{"logo_url":"https://tianqi.com/favicon.ico","publish_time":"2026-07-29T00:00:00.0000000","site_name":"天气网","summary":"\n26~32° 小雨转中雨  22 优 \n 穿衣指数:建议穿棉麻面料的衬衫、薄长裙、薄T恤等清凉透气的衣服。 \n  08月05日 星期三  交易 立券 会友 签约 纳畜  \n 农历六月 廿三  种植 置业 卖田 掘井 造船\n今天是2026年08月05日 星期三。\n 长沙天气的关键词是“小雨转中雨”。今天白天长沙 小雨转中雨,最高气温32℃, 最低气温26℃。风的方面,今天白天到夜间,本地有东北风 2级, 相对湿度85%,紫外线弱 ,空气质量22。 预报信息,根据天气和气温变化调整出行时间哦!","title":"长沙天气预报_2026年08月05日长沙市天气_长沙最高气温_长沙最低气温 - 天气网","type":"url_citation","url":"https://www.tianqi.com/tianqi/changsha/20260805.html"},{"logo_url":"https://tianqi.com/favicon.ico","publish_time":"2026-07-29T00:00:00.0000000","site_name":"天气网","summary":"\n26~32° 小雨转中雨  22 优 \n 穿衣指数:建议穿棉麻面料的衬衫、薄长裙、薄T恤等清凉透气的衣服。 \n  08月05日 星期三  交易 立券 会友 签约 纳畜  \n 农历六月 廿三  种植 置业 卖田 掘井 造船\n今天是2026年08月05日 星期三。\n 长沙天气的关键词是“小雨转中雨”。今天白天长沙 小雨转中雨,最高气温32℃, 最低气温26℃。风的方面,今天白天到夜间,本地有东北风 2级, 相对湿度85%,紫外线弱 ,空气质量22。 预报信息,根据天气和气温变化调整出行时间哦!","title":"长沙天气预报_2026年08月05日长沙市天气_长沙最高气温_长沙最低气温 - 天气网","type":"url_citation","url":"https://www.tianqi.com/tianqi/changsha/20260805.html"},{"logo_url":"https://tqw3.com/favicon.ico","publish_time":"2026-07-29T00:00:00.0000000","site_name":"无","summary":"更新时间:2026-08-03 08月03日 星期一 小雨 转 多云26~35℃ 08月04日 星期二 小雨 转 多云26~34℃ 08月05日 星期三 小雨 转 多云26~33℃ 08月06日 星期四 小雨25~33℃ 08月07日 星期五 小雨 转 多云27~32℃ 08月08日 星期六 小雨25~33℃ 08月09日 星期日 大雨 转 多云25~29℃ 08月10日 星期一 雨25~32℃ ","title":"长沙市40天天气预报","type":"url_citation","url":"http://m.tqw3.com/changshashi_40.shtml"},{"logo_url":"https://weather.com.cn/favicon.ico","publish_time":"2026-08-04T08:04:30.0000000","site_name":"中国天气网","summary":" 南方多地强降雨持续局地有大暴雨 重庆新疆等地高温持久 今明天（7月21日至22日），南方降雨总体减少减弱，但地质灾 …","title":"长沙天气预报,长沙7天天气预报,长沙15天天气预报,长沙天气查询","type":"url_citation","url":"https://www.weather.com.cn/weather/101250101.shtml"},{"logo_url":"https://weather.com.cn/favicon.ico","publish_time":"2026-07-29T11:18:00.0000000","site_name":"天气网","summary":"长沙 2026/08/03 ~ 2026/08/17 今天 08/03 阴转多云 35/27℃ 周二 08/04 雷阵雨转小雨 35/24℃ 周三 08/05 雷阵雨转小雨 33/25℃ 周四 08/06 雷阵雨转小雨 32/26℃ 周五 08/07 小雨 31/26℃ 周六 08/08 小雨转多云 34/27℃ 周日 08/09 小雨 30/26℃ 周一 08/10 小雨转多云 31/26℃ 周","title":"【长沙天气预报15天_长沙天气预报15天查询】-中国天气网","type":"url_citation","url":"https://m.weather.com.cn/mweather15d/101250101.shtml#!/stealingyourhistory"},{"logo_url":"https://weather.com.cn/favicon.ico","publish_time":"2026-08-04T08:04:30.0000000","site_name":"中国天气网","summary":" 蓝天预报综合天气现象、能见度、空气质量等因子，预测未来一周的天空状况。 天空蔚蓝可见透彻蓝天，或有蓝天白云美景。 天空淡蓝天空不够清澈，以浅蓝色为主。 天空阴沉阴天或有雨 …","title":"长沙天气预报,长沙7天天气预报,长沙15天天气预报,长沙天气查询","type":"url_citation","url":"https://www.weather.com.cn/weather/101250101.shtml"},{"logo_url":"https://weather.com.cn/favicon.ico","publish_time":"2026-08-04T08:04:30.0000000","site_name":"中国天气网","summary":" 蓝天预报综合天气现象、能见度、空气质量等因子，预测未来一周的天空状况。 天空蔚蓝可见透彻蓝天，或有蓝天白云美 …","title":"长沙天气预报,长沙7天天气预报,长沙15天天气预报,长沙天气查询","type":"url_citation","url":"https://www.weather.com.cn/weather/101250101.shtml"},{"logo_url":"https://tianqi.com/favicon.ico","publish_time":"2026-07-29T00:00:00.0000000","site_name":"天气网","summary":"\n26~32° 小雨转中雨  22 优 \n 穿衣指数:建议穿棉麻面料的衬衫、薄长裙、薄T恤等清凉透气的衣服。 \n  08月05日 星期三  交易 立券 会友 签约 纳畜  \n 农历六月 廿三  种植 置业 卖田 掘井 造船\n今天是2026年08月05日 星期三。\n 长沙天气的关键词是“小雨转中雨”。今天白天长沙 小雨转中雨,最高气温32℃, 最低气温26℃。风的方面,今天白天到夜间,本地有东北风 2级, 相对湿度85%,紫外线弱 ,空气质量22。 预报信息,根据天气和气温变化调整出行时间哦!","title":"长沙天气预报_2026年08月05日长沙市天气_长沙最高气温_长沙最低气温 - 天气网","type":"url_citation","url":"https://www.tianqi.com/tianqi/changsha/20260805.html"},{"logo_url":"https://www.yzqxj.com/favicon.ico","publish_time":"2026-07-18T00:00:00.0000000","site_name":"永州气象信息网","summary":"湖南省长沙市天气预报网为您提供2026年08月天气天气预报服务，实时发布长沙气温、降水、风力等气象信息，精准预测长沙 ...","title":"长沙天气预报2026年08月天气 湖南省长沙市2026年08月天气 ...","type":"url_citation","url":"https://www.yzqxj.com/guonei/hunan-changsha/202608.html"},{"logo_url":"https://weather.com.cn/favicon.ico","publish_time":"2026-07-29T11:18:00.0000000","site_name":"天气网","summary":"长沙 2026/08/03 ~ 2026/08/17 今天 08/03 阴转多云 35/27℃ 周二 08/04 雷阵雨转小雨 35/24℃ 周三 08/05 雷阵雨转小雨 33/25℃ 周四 08/06 雷阵雨转小雨 32/26℃ 周五 08/07 小雨 31/26℃ 周六 08/08 小雨转多云 34/27℃ 周日 08/09 小雨 30/26℃ 周一 08/10 小雨转多云 31/26℃ 周","title":"【长沙天气预报15天_长沙天气预报15天查询】-中国天气网","type":"url_citation","url":"https://m.weather.com.cn/mweather15d/101250101.shtml#!/stealingyourhistory"},{"logo_url":"https://2345.com/favicon.ico","publish_time":"2026-08-03T11:04:30.0000000","site_name":"2345天气预报","summary":" 2345天气预报，为您提供长沙明天天气详情，包括温度、风力风向、降水概率、日照时数、紫外线强度、日出和日落数据，每 …","title":"【长沙明日天气查询】_长沙明天白天,夜间天气预报查询 ...","type":"url_citation","url":"https://tianqi.2345.com/tomorrow-57687.htm"},{"logo_url":"https://toutiao.com/favicon.ico","publish_time":"2026-07-30T02:35:06.0000000","site_name":"今日头条","summary":"根据气象预报信息,未来一周,长沙天气变化将由副热带高压的进退主导,整体呈现前期晴热、午后多发对流阵雨,中期气温冲高,后期弱冷空气抵达带来降雨的演变路径。 8月1日至4日 副热带高压逐步东撤,大气不稳定条件增加,全市多阵雨或雷阵雨; 全文总结 7月30日至8月5日,长沙天气受副热带高压进退调控,天气节奏清晰。","title":"注意!湖南长沙高温步步攀升,8月5日弱冷空气携小雨到访 - 今日头条","type":"url_citation","url":"https://www.toutiao.com/article/7667885534223827500/"},{"logo_url":"https://weather.com.cn/favicon.ico","publish_time":"2026-08-04T08:04:30.0000000","site_name":"中国天气网","summary":" 16-40天预报数据来源于国家气候中心，是根据全球数值天气预报模式客观预报系统加工而成，未经预报员主观订正，反应未来一段时间内天气变化趋势，具有一定的不确定性，供公众参考，欲 …","title":"【长沙天气】长沙40天天气预报,长沙更长预报,长沙天气日历 ...","type":"url_citation","url":"https://www.weather.com.cn/weather40d/101250101.shtml"},{"logo_url":"https://weather.com.cn/favicon.ico","publish_time":"2026-08-04T08:04:30.0000000","site_name":"中国天气网","summary":" 长沙天气预报，及时准确发布中央气象台天气信息，便捷查询北京今日天气，长沙周末天气，长沙一周天气预报，长沙15 …","title":"长沙天气预报,长沙7天天气预报,长沙15天天气预报,长沙天气 ...","type":"url_citation","url":"https://www.weather.com.cn/weathern/101250101.shtml"},{"logo_url":"https://2345.com/favicon.ico","publish_time":"2026-08-03T11:04:30.0000000","site_name":"2345天气预报","summary":" 2345天气预报，为您提供长沙明天天气详情，包括温度、风力风向、降水概率、日照时数、紫外线强度、日出和日落数据，每 …","title":"【长沙明日天气查询】_长沙明天白天,夜间天气预报查询 ...","type":"url_citation","url":"https://tianqi.2345.com/tomorrow-57687.htm"},{"logo_url":"https://2345.com/favicon.ico","publish_time":"2026-08-03T11:04:30.0000000","site_name":"2345天气预报","summary":" 2345天气预报，为您提供长沙明天天气详情，包括温度、风力风向、降水概率、日照时数、紫外线强度、日出和日落数据，每小时更新一次！","title":"【长沙明日天气查询】_长沙明天白天,夜间天气预报查询 ...","type":"url_citation","url":"https://tianqi.2345.com/tomorrow-57687.htm"},{"logo_url":"https://tianqi.com/favicon.ico","publish_time":"2026-08-04T08:04:30.0000000","site_name":"天气网","summary":" 天气网提供长沙天气预报15天,30天,今日天气,明天天气,长沙未来一周的天气预报,湖南长沙天气,长沙实时天气查询,长沙天 …","title":"【长沙天气预报】长沙天气预报一周,长沙天气预报15天,30天 ...","type":"url_citation","url":"https://www.tianqi.com/changsha/"},{"logo_url":"https://weather.com.cn/favicon.ico","publish_time":"2026-08-04T08:04:30.0000000","site_name":"中国天气网","summary":" 长沙天气预报，及时准确发布中央气象台天气信息，便捷查询长沙今日天气，长沙周末天气，长沙一周天气预报，长沙蓝天预报，长沙天气预报，长沙40日天气预报，还提供长沙的生活指数、 …","title":"长沙天气预报,长沙7天天气预报,长沙15天天气预报,长沙天气查询","type":"url_citation","url":"https://www.weather.com.cn/weather/101250101.shtml"},{"logo_url":"https://tianqi.com/favicon.ico","publish_time":"2026-08-04T08:04:30.0000000","site_name":"天气网","summary":" 天气网提供长沙天气预报15天,30天,今日天气,明天天气,长沙未来一周的天气预报,湖南长沙天气,长沙实时天气查询,长沙天气预报一周,7天,10天,40天的天气情况。旅游出行,从天气网开始！","title":"【长沙天气预报】长沙天气预报一周,长沙天气预报15天,30天 ...","type":"url_citation","url":"https://www.tianqi.com/changsha/"},{"logo_url":"http://www.zuzuche.com/favicon.ico","publish_time":"2026-07-25T00:00:00.0000000","site_name":"租租车","summary":"长沙8月天气：为您提供中国长沙8月05日的天气预报、气温查询，以及长沙8月05日的平均气温、最低温度、最高温度、平均降雨量、 …","title":"长沙8月天气_长沙8月05日天气 - 长沙天气","type":"url_citation","url":"https://weather.zuzuche.com/c237_d2026-08-05.html"},{"logo_url":"https://tianqi.com/favicon.ico","publish_time":"2026-08-04T08:04:30.0000000","site_name":"天气网","summary":" 10月1日至4日，全省大部分市县晴到多云，局部地区可能有雷阵雨，白天气温较高。 未来两天，台风影响将持续。 陆地 …","title":"【长沙天气预报】长沙天气预报一周,长沙天气预报15天,30天 ...","type":"url_citation","url":"https://www.tianqi.com/changsha/"},{"logo_url":"https://weather.com.cn/favicon.ico","publish_time":"2026-08-04T08:04:30.0000000","site_name":"中国天气网","summary":" 长沙天气预报
+795
+，及时准确发布中央气象台天气信息，便捷查询北京今日天气，长沙周末天气，长沙一周天气预报，长沙15日天气预报，长沙40日天气预报，长沙天气预报还提供长沙各区县的生 …","title":"长沙天气预报,长沙7天天气预报,长沙15天天气预报,长沙天气 ...","type":"url_citation","url":"https://www.weather.com.cn/weathern/101250101.shtml"},{"logo_url":"https://weather.com.cn/favicon.ico","publish_time":"2026-08-04T08:04:30.0000000","site_name":"中国天气网","summary":" 长沙天气预报，及时准确发布中央气象台天气信息，便捷查询北京今日天气，长沙周末天气，长沙一周天气预报，长沙15 …","title":"长沙天气预报,长沙7天天气预报,长沙15天天气预报,长沙天气 ...","type":"url_citation","url":"https://www.weather.com.cn/weathern/101250101.shtml"},{"logo_url":"https://weather.com.cn/favicon.ico","publish_time":"2026-07-29T11:18:00.0000000","site_name":"天气网","summary":"长沙 2026/08/03 ~ 2026/08/17 今天 08/03 阴转多云 35/27℃ 周二 08/04 雷阵雨转小雨 35/24℃ 周三 08/05 雷阵雨转小雨 33/25℃ 周四 08/06 雷阵雨转小雨 32/26℃ 周五 08/07 小雨 31/26℃ 周六 08/08 小雨转多云 34/27℃ 周日 08/09 小雨 30/26℃ 周一 08/10 小雨转多云 31/26℃ 周","title":"【长沙天气预报15天_长沙天气预报15天查询】-中国天气网","type":"url_citation","url":"https://m.weather.com.cn/mweather15d/101250101.shtml#!/stealingyourhistory"}],"role":"assistant","content":""}}],"created":1785812671,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"","role":"assistant","tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812671,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"嗯"},"finish_reason":null,"index":0}],"created":1785812671,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"，用户想"},"finish_reason":null,"index":0}],"created":1785812671,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"了解明天（"},"finish_reason":null,"index":0}],"created":1785812671,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11c
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"2"},"finish_reason":null,"index":0}],"created":1785812671,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"026年"},"finish_reason":null,"index":0}],"created":1785812671,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+123
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"8月5日"},"finish_reason":null,"index":0}],"created":1785812671,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"）长沙"},"finish_reason":null,"index":0}],"created":1785812671,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"的天气情况。"},"finish_reason":null,"index":0}],"created":1785812671,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"这"},"finish_reason":null,"index":0}],"created":1785812671,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"是一"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"条关于"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"天气预报"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"的查询，需要"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"从"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"多个信息"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"源中筛选"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"出最"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"相关、最新的"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"天气"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"预报"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+131
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"数据。\n\n我需要"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"从"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+130
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"搜索结果中找到"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11c
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"2"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"026"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+123
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"年8月5"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"日长沙的具体"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"天气信息"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+130
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"。搜索结果中有"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+130
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"多个来源提供了"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"这一天"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"的天气预报，"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"我"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"需要仔细"},"finish_reason":null,"index":0}],"created":1785812672,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"核"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"对日期"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"和数据"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"的一"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12b
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"致性。\n\n我"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"看到了"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"几个相关"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"的结果"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"。第一个"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"结果"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"来自"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"“"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"镰"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+129
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"刀妹AI智能"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"播报”，提到"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+123
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"8月5日"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"长沙白天"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"是"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"雷阵雨，"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+126
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"气温33摄"},"finish_reason":null,"index":0}],"created":1785812673,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"氏度，夜晚"},"finish_reason":null,"index":0}],"created":1785812674,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"是小雨，"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+126
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"气温25摄"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+112
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"role":null,"tool_calls":null,"reasoning_content":"氏度"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+10f
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"role":null,"tool_calls":null,"reasoning_content":"。"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"这个信息"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"看起来"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"很具体，有"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"白天"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"和夜晚的区分"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+128
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"。\n\n我还"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"看到"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"“天气网”的"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"结果，也"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"提"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+126
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"到了8月5"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"日长沙"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"天气"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"是“晴转"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"多云”，最高"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+122
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"气温3"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+128
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"4℃，最低"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+126
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"气温25℃"},"finish_reason":null,"index":0}],"created":1785812675,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"。这个"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"结果还"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"提供了更详细"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"的信息，如风"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"向"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"是"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+128
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"西北风2级"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12b
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"，相对湿度8"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12c
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"2%，紫外线中"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"等，空气质量2"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11f
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"6，"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"穿衣建议是"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"穿棉麻面料"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"的衬衫、薄"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"长裙、薄"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+128
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"T恤等清凉"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11b
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"role":null,"tool_calls":null,"reasoning_content":"透气的衣服"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+128
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"。\n\n另外"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"，“234"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+122
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"5天气"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+130
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"”的结果也显示"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"了"},"finish_reason":null,"index":0}],"created":1785812676,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+123
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"8月5日"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"的"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"天气是“雷"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"阵雨转小"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12b
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"雨”，气温2"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11f
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"6~33"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+129
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"°，西北风"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+110
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"role":null,"tool_calls":null,"reasoning_content":"2级"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+2f2
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"role":null,"tool_calls":null,"reasoning_content":"。\n\n","annotations":[{"logo_url":"https://2345.com/favicon.ico","publish_time":"2026-08-03T11:04:30.0000000","site_name":"2345天气预报","summary":" 2345天气预报，为您提供长沙明天天气详情，包括温度、风力风向、降水概率、日照时数、紫外线强度、日出和日落数据，每 …","title":"【长沙明日天气查询】_长沙明天白天,夜间天气预报查询 ...","type":"url_citation","url":"https://tianqi.2345.com/tomorrow-57687.htm"}]},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"还有一个"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"“"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+136
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"今日头条”的结果提"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+126
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"到了8月5"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"日长沙"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"会受到弱冷"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+130
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"空气影响，迎来"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+118
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"role":null,"tool_calls":null,"reasoning_content":"小雨天气"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+2f5
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"role":null,"tool_calls":null,"reasoning_content":"。\n\n我","annotations":[{"logo_url":"https://2345.com/favicon.ico","publish_time":"2026-08-03T11:04:30.0000000","site_name":"2345天气预报","summary":" 2345天气预报，为您提供长沙明天天气详情，包括温度、风力风向、降水概率、日照时数、紫外线强度、日出和日落数据，每 …","title":"【长沙明日天气查询】_长沙明天白天,夜间天气预报查询 ...","type":"url_citation","url":"https://tianqi.2345.com/tomorrow-57687.htm"}]},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+133
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"需要综合这些信息"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"来"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"给出"},"finish_reason":null,"index":0}],"created":1785812677,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+133
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"一个全面的回答。"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"虽然各个"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"来源的"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+133
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"天气描述略有不同"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"，"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"但都"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"提"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"到了降雨"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"和温度"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"范围。我可以"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+130
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"将这些信息整合"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+254
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"起来，给出一个"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"综合的"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"天气预报。\n\n"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"考虑到"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"用户可能需要"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"根据"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"天气安排"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+130
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"出行，我还可以"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"补充"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"一些实用"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+130
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"建议，比如携带"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"雨具、注意"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"防暑等"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"。这样"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"回答"},"finish_reason":null,"index":0}],"created":1785812678,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"会更实用"},"finish_reason":null,"index":0}],"created":1785812679,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+122
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"。\n\n"},"finish_reason":null,"index":0}],"created":1785812679,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"我"},"finish_reason":null,"index":0}],"created":1785812679,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"注意到"},"finish_reason":null,"index":0}],"created":1785812679,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"搜索"},"finish_reason":null,"index":0}],"created":1785812679,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+130
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"结果中还有一些"},"finish_reason":null,"index":0}],"created":1785812680,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"其他日期"},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"的信息，但"},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"用户只"},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"询问"},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"了"},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"明天的情况"},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+130
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"，所以我只需要"},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+126
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"关注8月5"},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"日的信息"},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"即可"},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":"。"},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"根据多个","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"气象","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"信息来源","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"的","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"综合，","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812681,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+126
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"明天（20","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"26年8","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+125
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"月5日，","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"星期三）长沙","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"的天气预报","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+130
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"如下：\n\n**综合","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"天气概况","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"：","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"**\n明天长沙的","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+129
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"天气以**雷","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"阵雨或","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+129
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"小雨**为主","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"，气温依然","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"较高，体","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"感闷","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"热，","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"需","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"注意防暑与","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+108
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"防雨","role":null,"tool_calls":null},"finish_reason":null,"index":0}],"created":1785812682,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+2e8
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"。\n\n","role":null,"tool_calls":null,"annotations":[{"logo_url":"https://2345.com/favicon.ico","publish_time":"2026-08-03T11:04:30.0000000","site_name":"2345天气预报","summary":" 2345天气预报，为您提供长沙明天天气详情，包括温度、风力风向、降水概率、日照时数、紫外线强度、日出和日落数据，每 …","title":"【长沙明日天气查询】_长沙明天白天,夜间天气预报查询 ...","type":"url_citation","url":"https://tianqi.2345.com/tomorrow-57687.htm"}]},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+129
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"**具体预报","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"细节","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+125
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"：**\n*  ","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12c
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":" **天气状况**","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"：白天到","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"夜间均有","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"降雨","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"可能","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"，天气","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"现象","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"描述包括","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"“雷阵雨","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"”","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"、“小","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"雨”或“","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"晴转多云","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+105
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"”","role":null,"tool_calls":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+39e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"。","role":null,"tool_calls":null,"annotations":[{"logo_url":"https://weather.com.cn/favicon.ico","publish_time":"2026-07-29T11:18:00.0000000","site_name":"天气网","summary":"长沙 2026/08/03 ~ 2026/08/17 今天 08/03 阴转多云 35/27℃ 周二 08/04 雷阵雨转小雨 35/24℃ 周三 08/05 雷阵雨转小雨 33/25℃ 周四 08/06 雷阵雨转小雨 32/26℃ 周五 08/07 小雨 31/26℃ 周六 08/08 小雨转多云 34/27℃ 周日 08/09 小雨 30/26℃ 周一 08/10 小雨转多云 31/26℃ 周","title":"【长沙天气预报15天_长沙天气预报15天查询】-中国天气网","type":"url_citation","url":"https://m.weather.com.cn/mweather15d/101250101.shtml#!/stealingyourhistory"}]},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"这与","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"今日头条","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"预测","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812683,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"的“","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812684,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+123
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"8月5日","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812684,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"受到","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812684,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"弱冷空气影响","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812684,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"，长沙迎来小","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812684,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"雨天气”相","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812684,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+108
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"吻合","role":null,"tool_calls":null},"finish_reason":null,"index":0}],"created":1785812684,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+126
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"。\n*   **","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812684,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12c
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"气温范围**：","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812684,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"**","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812684,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"最高气温在","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812684,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+120
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"33℃","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812684,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+123
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"至34℃","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812684,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+128
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"之间**，**","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812684,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"最低气温在","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812684,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+123
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"25℃至","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+126
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"26℃之间","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+104
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"**","role":null,"tool_calls":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+3a0
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"。\n","role":null,"tool_calls":null,"annotations":[{"logo_url":"https://weather.com.cn/favicon.ico","publish_time":"2026-07-29T11:18:00.0000000","site_name":"天气网","summary":"长沙 2026/08/03 ~ 2026/08/17 今天 08/03 阴转多云 35/27℃ 周二 08/04 雷阵雨转小雨 35/24℃ 周三 08/05 雷阵雨转小雨 33/25℃ 周四 08/06 雷阵雨转小雨 32/26℃ 周五 08/07 小雨 31/26℃ 周六 08/08 小雨转多云 34/27℃ 周日 08/09 小雨 30/26℃ 周一 08/10 小雨转多云 31/26℃ 周","title":"【长沙天气预报15天_长沙天气预报15天查询】-中国天气网","type":"url_citation","url":"https://m.weather.com.cn/mweather15d/101250101.shtml#!/stealingyourhistory"}]},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"*   **风","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+129
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"力与湿度**","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"：预计将","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+129
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"有**西北风","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"2级**，","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"相对湿度较高","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"，约为","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+105
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"82%","role":null,"tool_calls":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+3a1
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"。\n*","role":null,"tool_calls":null,"annotations":[{"logo_url":"https://weather.com.cn/favicon.ico","publish_time":"2026-07-29T11:18:00.0000000","site_name":"天气网","summary":"长沙 2026/08/03 ~ 2026/08/17 今天 08/03 阴转多云 35/27℃ 周二 08/04 雷阵雨转小雨 35/24℃ 周三 08/05 雷阵雨转小雨 33/25℃ 周四 08/06 雷阵雨转小雨 32/26℃ 周五 08/07 小雨 31/26℃ 周六 08/08 小雨转多云 34/27℃ 周日 08/09 小雨 30/26℃ 周一 08/10 小雨转多云 31/26℃ 周","title":"【长沙天气预报15天_长沙天气预报15天查询】-中国天气网","type":"url_citation","url":"https://m.weather.com.cn/mweather15d/101250101.shtml#!/stealingyourhistory"}]},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+126
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"   **其他","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"指标","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12f
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"**：空气质量为","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"**","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+129
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"优**（指数","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11c
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"2","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+122
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"6），","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"紫外线强度","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812685,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"为中","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+105
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"等","role":null,"tool_calls":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+3a4
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"。\n\n**","role":null,"tool_calls":null,"annotations":[{"logo_url":"https://weather.com.cn/favicon.ico","publish_time":"2026-07-29T11:18:00.0000000","site_name":"天气网","summary":"长沙 2026/08/03 ~ 2026/08/17 今天 08/03 阴转多云 35/27℃ 周二 08/04 雷阵雨转小雨 35/24℃ 周三 08/05 雷阵雨转小雨 33/25℃ 周四 08/06 雷阵雨转小雨 32/26℃ 周五 08/07 小雨 31/26℃ 周六 08/08 小雨转多云 34/27℃ 周日 08/09 小雨 30/26℃ 周一 08/10 小雨转多云 31/26℃ 周","title":"【长沙天气预报15天_长沙天气预报15天查询】-中国天气网","type":"url_citation","url":"https://m.weather.com.cn/mweather15d/101250101.shtml#!/stealingyourhistory"}]},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"出行","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"建议","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"与","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"穿衣指南","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+128
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"：**\n鉴于","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"有","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"雨且","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+130
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"气温较高，建议","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"您","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"：\n*","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+126
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"   **携带","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+126
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"雨具**：","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"出行","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"时","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"请随身携带","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"雨伞或雨","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+105
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"衣","role":null,"tool_calls":null},"finish_reason":null,"index":0}],"created":1785812686,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+2e7
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"。\n*","role":null,"tool_calls":null,"annotations":[{"logo_url":"https://2345.com/favicon.ico","publish_time":"2026-08-03T11:04:30.0000000","site_name":"2345天气预报","summary":" 2345天气预报，为您提供长沙明天天气详情，包括温度、风力风向、降水概率、日照时数、紫外线强度、日出和日落数据，每 …","title":"【长沙明日天气查询】_长沙明天白天,夜间天气预报查询 ...","type":"url_citation","url":"https://tianqi.2345.com/tomorrow-57687.htm"}]},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+126
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"   **穿着","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"透气","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12c
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"衣物**：天气","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"网","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"建议穿着","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"棉","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"麻面料的衬衫","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"、薄长裙","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+125
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"、薄T恤","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+133
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"等清凉透气的衣服","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"。中国天气网","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11e
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"则","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"提示","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+121
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"适合","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+11f
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"穿T","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"恤、短薄","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+130
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"外套等夏季服装","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+368
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"。\n*  ","role":null,"tool_calls":null,"annotations":[{"logo_url":"https://tqw3.com/favicon.ico","publish_time":"2026-07-29T00:00:00.0000000","site_name":"无","summary":"更新时间:2026-08-03 08月03日 星期一 小雨 转 多云26~35℃ 08月04日 星期二 小雨 转 多云26~34℃ 08月05日 星期三 小雨 转 多云26~33℃ 08月06日 星期四 小雨25~33℃ 08月07日 星期五 小雨 转 多云27~32℃ 08月08日 星期六 小雨25~33℃ 08月09日 星期日 大雨 转 多云25~29℃ 08月10日 星期一 雨25~32℃ ","title":"长沙市40天天气预报","type":"url_citation","url":"http://m.tqw3.com/changshashi_40.shtml"}]},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":" **注意防暑","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812687,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12c
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"降温**：高温","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812688,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"天气下，请","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812688,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"注意补充","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812688,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12a
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"水分，避免","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812688,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+127
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"长时间在","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812688,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+124
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"户外暴","role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":null,"index":0}],"created":1785812688,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+105
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"晒","role":null,"tool_calls":null},"finish_reason":null,"index":0}],"created":1785812688,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+2e4
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":"。","role":null,"tool_calls":null,"annotations":[{"logo_url":"https://2345.com/favicon.ico","publish_time":"2026-08-03T11:04:30.0000000","site_name":"2345天气预报","summary":" 2345天气预报，为您提供长沙明天天气详情，包括温度、风力风向、降水概率、日照时数、紫外线强度、日出和日落数据，每 …","title":"【长沙明日天气查询】_长沙明天白天,夜间天气预报查询 ...","type":"url_citation","url":"https://tianqi.2345.com/tomorrow-57687.htm"}]},"finish_reason":null,"index":0}],"created":1785812688,"model":"mimo-v2.5","object":"chat.completion.chunk"}
+
+
+12c
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[{"delta":{"content":null,"role":null,"tool_calls":null,"reasoning_content":null},"finish_reason":"stop","index":0}],"created":1785812688,"model":"mimo-v2.5","object":"chat.completion.chunk","usage":null}
+
+
+17d
+data: {"id":"7db9a334-a0d6-43e5-814d-2ba4c117bd64_0bb1e106ad434a69ad6d9cd806994801","choices":[],"created":1785812688,"model":"mimo-v2.5","object":"chat.completion.chunk","usage":{"completion_tokens":871,"prompt_tokens":9739,"total_tokens":10610,"completion_tokens_details":{"reasoning_tokens":452},"prompt_tokens_details":{},"web_search_usage":{"tool_usage":5,"page_usage":25}}}
+
+
+e
+data: [DONE]
+
+
+0
+

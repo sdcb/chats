@@ -8,6 +8,8 @@ using System.Net;
 using Chats.BE.UnitTest.ChatServices.Http;
 using Chats.DB;
 using Chats.DB.Enums;
+using System.Text;
+using System.Text.Json;
 
 namespace Chats.BE.UnitTest.ChatServices.ChatCompletions;
 
@@ -15,13 +17,35 @@ public class MimoChatServiceTest
 {
     private const string TestDataPath = "ChatServices/ChatCompletions/FiddlerDump";
 
+    private sealed class CapturingHttpClientFactory(string responseBody, Action<HttpRequestMessage> onRequest) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new(new Handler(responseBody, onRequest));
+
+        private sealed class Handler(string responseBody, Action<HttpRequestMessage> onRequest) : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                onRequest(request);
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes(responseBody))),
+                });
+            }
+        }
+    }
+
     private static IHttpClientFactory CreateMockHttpClientFactory(FiddlerHttpDumpParser.HttpDump dump, bool validateRequest = true)
     {
         HttpStatusCode statusCode = (HttpStatusCode)dump.Response.StatusCode;
-        // SSE requires newlines between events, but FiddlerHttpDumpParser strips them.
-        // We add them back here for the mock stream.
-        List<string> chunksWithNewlines = dump.Response.Chunks.Select(c => c + "\n").ToList();
-        return new FiddlerDumpHttpClientFactory(chunksWithNewlines, statusCode, validateRequest ? dump.Request.Body : null);
+        // This capture uses the HTTP chunk delimiter's CRLF as the second newline
+        // between SSE events. The dump parser correctly removes that delimiter,
+        // so restore it only after chunks that already end a complete SSE line.
+        // A chunk without a trailing newline may split a JSON payload and must be
+        // concatenated byte-for-byte with the next chunk.
+        List<string> replayChunks = dump.Response.Chunks
+            .Select(chunk => chunk.EndsWith('\n') ? chunk + "\n" : chunk)
+            .ToList();
+        return new FiddlerDumpHttpClientFactory(replayChunks, statusCode, validateRequest ? dump.Request.Body : null);
     }
 
     private static ChatConfig CreateChatConfig()
@@ -34,7 +58,7 @@ public class MimoChatServiceTest
             ModelKeyId = 1,
             Name = "TestKey",
             Secret = "test-api-key",
-            ModelProviderId = (short)DBModelProvider.OpenAI,
+            ModelProviderId = (short)DBModelProvider.Mimo,
             CreatedAt = now,
         };
 
@@ -54,7 +78,7 @@ public class MimoChatServiceTest
             Id = 21,
             ModelId = 1,
             Name = "Test Model",
-            DeploymentName = "mimo-v2-flash",
+            DeploymentName = "mimo-v2.5-pro",
             ModelKeyId = modelKey.Id,
             ModelKeySnapshotId = modelKeySnapshot.Id,
             ModelKeySnapshot = modelKeySnapshot,
@@ -124,5 +148,149 @@ public class MimoChatServiceTest
         var finishReason = segments.OfType<FinishReasonChatSegment>().LastOrDefault();
         Assert.NotNull(finishReason);
         Assert.Equal(DBFinishReason.ToolCalls, finishReason.FinishReason);
+    }
+
+    [Fact]
+    public async Task SearchEnabled_ShouldAddMinimalHostedWebSearchTool()
+    {
+        string sse = "data: {\"id\":\"chat_1\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n" +
+                     "data: [DONE]\n\n";
+        string? capturedBody = null;
+        CapturingHttpClientFactory factory = new(sse, request =>
+            capturedBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult());
+        ChatConfig config = CreateChatConfig();
+        config.Model.CurrentSnapshot.AllowSearch = true;
+        config.WebSearchEnabled = true;
+        MimoChatService service = new(factory);
+
+        await foreach (ChatSegment _ in service.ChatStreamed(new ChatRequest
+        {
+            Messages = [NeutralMessage.FromUserText("news")],
+            ChatConfig = config,
+            Source = UsageSource.Api,
+            Streamed = true,
+            Tools = [FunctionTool.Create("lookup", "Lookup", "{\"type\":\"object\"}")],
+        }, CancellationToken.None))
+        {
+        }
+
+        Assert.NotNull(capturedBody);
+        using JsonDocument doc = JsonDocument.Parse(capturedBody);
+        JsonElement[] tools = doc.RootElement.GetProperty("tools").EnumerateArray().ToArray();
+        Assert.Equal(2, tools.Length);
+        JsonElement searchTool = Assert.Single(tools,
+            x => x.GetProperty("type").GetString() == "web_search");
+        Assert.Single(tools, x => x.GetProperty("type").GetString() == "function");
+        Assert.Single(searchTool.EnumerateObject());
+        Assert.Equal("auto", doc.RootElement.GetProperty("tool_choice").GetString());
+    }
+
+    [Fact]
+    public async Task Streaming_SearchAnnotations_ShouldCreateStructuredToolResponse()
+    {
+        string sse =
+            "data: {\"id\":\"chat_1\",\"choices\":[{\"index\":0,\"delta\":{\"annotations\":[{\"type\":\"url_citation\",\"title\":\"Source\",\"url\":\"https://example.com\",\"summary\":\"Summary\",\"site_name\":\"Example\"}]},\"finish_reason\":null}]}\n\n" +
+            "data: {\"id\":\"chat_1\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"answer\"},\"finish_reason\":\"stop\"}]}\n\n" +
+            "data: [DONE]\n\n";
+        CapturingHttpClientFactory factory = new(sse, _ => { });
+        ChatConfig config = CreateChatConfig();
+        config.Model.CurrentSnapshot.AllowSearch = true;
+        config.WebSearchEnabled = true;
+        MimoChatService service = new(factory);
+        List<ChatSegment> segments = [];
+
+        await foreach (ChatSegment segment in service.ChatStreamed(new ChatRequest
+        {
+            Messages = [NeutralMessage.FromUserText("news")],
+            ChatConfig = config,
+            Source = UsageSource.Api,
+            Streamed = true,
+        }, CancellationToken.None))
+        {
+            segments.Add(segment);
+        }
+
+        ToolCallSegment call = Assert.Single(segments.OfType<ToolCallSegment>());
+        Assert.Equal("web_search_call", call.Name);
+        ToolCallResponseSegment response = Assert.Single(segments.OfType<ToolCallResponseSegment>());
+        Assert.Equal(call.Id, response.ToolCallId);
+        Assert.True(segments.IndexOf(call) < segments.FindIndex(x => x is TextChatSegment));
+        Assert.Equal(segments.IndexOf(call) + 1, segments.IndexOf(response));
+        using JsonDocument result = JsonDocument.Parse(response.Response!);
+        JsonElement citation = Assert.Single(result.RootElement.EnumerateArray());
+        Assert.Equal("web_search_result", citation.GetProperty("type").GetString());
+        Assert.Equal("https://example.com", citation.GetProperty("url").GetString());
+        Assert.Equal(DBFinishReason.Stop, segments.OfType<FinishReasonChatSegment>().Single().FinishReason);
+    }
+
+    [Fact]
+    public async Task NonStreaming_SearchAnnotations_ShouldCreateStructuredToolResponse()
+    {
+        string responseJson = """
+            {"id":"chat_2","choices":[{"index":0,"message":{"role":"assistant","content":"answer","annotations":[{"type":"url_citation","title":"Source","url":"https://example.com"}]},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}
+            """;
+        CapturingHttpClientFactory factory = new(responseJson, _ => { });
+        ChatConfig config = CreateChatConfig();
+        config.Model.CurrentSnapshot.AllowStreaming = false;
+        config.Model.CurrentSnapshot.AllowSearch = true;
+        config.WebSearchEnabled = true;
+        MimoChatService service = new(factory);
+        List<ChatSegment> segments = [];
+
+        await foreach (ChatSegment segment in service.ChatStreamed(new ChatRequest
+        {
+            Messages = [NeutralMessage.FromUserText("news")],
+            ChatConfig = config,
+            Source = UsageSource.Api,
+            Streamed = false,
+        }, CancellationToken.None))
+        {
+            segments.Add(segment);
+        }
+
+        Assert.Single(segments.OfType<ToolCallSegment>());
+        ToolCallResponseSegment response = Assert.Single(segments.OfType<ToolCallResponseSegment>());
+        using JsonDocument result = JsonDocument.Parse(response.Response!);
+        Assert.Equal("https://example.com", Assert.Single(result.RootElement.EnumerateArray()).GetProperty("url").GetString());
+    }
+
+    [Fact]
+    public async Task Streaming_WebSearchDump_ShouldEmitSourcesBeforeReasoningAndAnswer()
+    {
+        string filePath = Path.Combine(TestDataPath, "XiaomiMimo-WebSearch.dump");
+        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
+        IHttpClientFactory factory = CreateMockHttpClientFactory(dump, validateRequest: false);
+        ChatConfig config = CreateChatConfig();
+        config.Model.CurrentSnapshot.AllowSearch = true;
+        config.WebSearchEnabled = true;
+        MimoChatService service = new(factory);
+        List<ChatSegment> segments = [];
+
+        await foreach (ChatSegment segment in service.ChatStreamed(new ChatRequest
+        {
+            Messages = [NeutralMessage.FromUserText("明天长沙天气怎么样？")],
+            ChatConfig = config,
+            Source = UsageSource.Api,
+            Streamed = true,
+        }, CancellationToken.None))
+        {
+            segments.Add(segment);
+        }
+
+        int callIndex = segments.FindIndex(x => x is ToolCallSegment { Name: "web_search_call" });
+        int responseIndex = segments.FindIndex(x => x is ToolCallResponseSegment);
+        int reasoningIndex = segments.FindIndex(x => x is ThinkChatSegment think && !string.IsNullOrEmpty(think.Think));
+        int answerIndex = segments.FindIndex(x => x is TextChatSegment);
+        Assert.True(callIndex >= 0);
+        Assert.Equal(callIndex + 1, responseIndex);
+        string order = string.Join(",", segments.Select((segment, index) => $"{index}:{segment.GetType().Name}"));
+        Assert.True(responseIndex < reasoningIndex, order);
+        Assert.True(responseIndex < answerIndex, order);
+
+        ToolCallResponseSegment searchResponse = Assert.IsType<ToolCallResponseSegment>(segments[responseIndex]);
+        using JsonDocument results = JsonDocument.Parse(searchResponse.Response!);
+        string[] urls = results.RootElement.EnumerateArray().Select(x => x.GetProperty("url").GetString()!).ToArray();
+        Assert.NotEmpty(urls);
+        Assert.Equal(urls.Distinct(StringComparer.Ordinal).Count(), urls.Length);
     }
 }

@@ -6,6 +6,7 @@ using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
 using Chats.BE.UnitTest.ChatServices.Http;
 using Chats.BE.Controllers.Users.Usages.Dtos;
+using Chats.BE.Controllers.Chats.Chats;
 using Chats.DB;
 using Chats.DB.Enums;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -414,6 +415,7 @@ public class AzureResponseApiServiceTests
         var filePath = Path.Combine(TestDataPath, "AzureResponseWebSearch-Attempt2.dump");
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
         List<string> chunksWithNewlines = dump.Response.Chunks.Select(c => c + "\n").ToList();
+        chunksWithNewlines.Add("event: response.completed\ndata: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}}\n\n");
         FiddlerDumpHttpClientFactory httpClientFactory = new(chunksWithNewlines, (HttpStatusCode)dump.Response.StatusCode, expectedRequestBody: null);
 
         AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
@@ -729,6 +731,112 @@ public class AzureResponseApiServiceTests
             .First(item => item.GetProperty("type").GetString() == "function_call");
 
         Assert.Equal("{}", functionCall.GetProperty("arguments").GetString());
+    }
+
+    [Fact]
+    public async Task ResponseApiService_ShouldNotDuplicateV1InRequestUri()
+    {
+        string sse = "event: response.completed\n" +
+                     "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}}\n\n";
+        Uri? requestUri = null;
+        CapturingHttpClientFactory factory = new(HttpStatusCode.OK, sse, request => requestUri = request.RequestUri);
+        ChatRequest request = CreateBaseChatRequest();
+        request.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId = (short)DBModelProvider.DeepSeek;
+        request.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.Host = "https://api.deepseek.com/v1";
+        ResponseApiService service = new(factory, NullLogger<ResponseApiService>.Instance);
+
+        await foreach (ChatSegment _ in service.ChatStreamed(request, CancellationToken.None))
+        {
+        }
+
+        Assert.Equal("https://api.deepseek.com/v1/responses", requestUri?.ToString());
+    }
+
+    [Fact]
+    public async Task ResponseApiService_ShouldParseDirectReasoningText()
+    {
+        string sse =
+            "event: response.reasoning_text.delta\n" +
+            "data: {\"type\":\"response.reasoning_text.delta\",\"delta\":\"direct reasoning\"}\n\n" +
+            "event: response.output_text.delta\n" +
+            "data: {\"type\":\"response.output_text.delta\",\"delta\":\"answer\"}\n\n" +
+            "event: response.completed\n" +
+            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":2,\"output_tokens\":3,\"output_tokens_details\":{\"reasoning_tokens\":1}}}}\n\n";
+        CapturingHttpClientFactory factory = new(HttpStatusCode.OK, sse, _ => { });
+        ResponseApiService service = new(factory, NullLogger<ResponseApiService>.Instance);
+        List<ChatSegment> segments = [];
+
+        await foreach (ChatSegment segment in service.ChatStreamed(CreateBaseChatRequest(), CancellationToken.None))
+        {
+            segments.Add(segment);
+        }
+
+        Assert.Equal("direct reasoning", string.Concat(segments.OfType<ThinkChatSegment>().Select(x => x.Think)));
+        Assert.Equal("answer", string.Concat(segments.OfType<TextChatSegment>().Select(x => x.Text)));
+        Assert.Equal(1, Assert.Single(segments.OfType<UsageChatSegment>()).Usage.ReasoningTokens);
+        Assert.Equal(DBFinishReason.Success, Assert.Single(segments.OfType<FinishReasonChatSegment>()).FinishReason);
+    }
+
+    [Fact]
+    public async Task ResponseApiService_ShouldMapIncompleteTerminalEventToLength()
+    {
+        string sse = "event: response.incomplete\n" +
+                     "data: {\"type\":\"response.incomplete\",\"response\":{\"status\":\"incomplete\",\"usage\":{\"input_tokens\":4,\"output_tokens\":5}}}\n\n";
+        CapturingHttpClientFactory factory = new(HttpStatusCode.OK, sse, _ => { });
+        ResponseApiService service = new(factory, NullLogger<ResponseApiService>.Instance);
+        List<ChatSegment> segments = [];
+
+        await foreach (ChatSegment segment in service.ChatStreamed(CreateBaseChatRequest(), CancellationToken.None))
+        {
+            segments.Add(segment);
+        }
+
+        Assert.Equal(4, Assert.Single(segments.OfType<UsageChatSegment>()).Usage.InputTokens);
+        Assert.Equal(DBFinishReason.Length, Assert.Single(segments.OfType<FinishReasonChatSegment>()).FinishReason);
+    }
+
+    [Fact]
+    public async Task ResponseApiService_ShouldThrowUpstreamErrorForFailedTerminalEvent()
+    {
+        string sse = "event: response.failed\n" +
+                     "data: {\"type\":\"response.failed\",\"response\":{\"status\":\"failed\",\"error\":{\"type\":\"server_error\",\"message\":\"upstream failed\"},\"usage\":{\"input_tokens\":6,\"output_tokens\":0}}}\n\n";
+        CapturingHttpClientFactory factory = new(HttpStatusCode.OK, sse, _ => { });
+        ResponseApiService service = new(factory, NullLogger<ResponseApiService>.Instance);
+        List<ChatSegment> segments = [];
+
+        CustomChatServiceException exception = await Assert.ThrowsAsync<CustomChatServiceException>(async () =>
+        {
+            await foreach (ChatSegment segment in service.ChatStreamed(CreateBaseChatRequest(), CancellationToken.None))
+            {
+                segments.Add(segment);
+            }
+        });
+
+        Assert.Contains("upstream failed", exception.Message);
+        Assert.Equal(6, Assert.Single(segments.OfType<UsageChatSegment>()).Usage.InputTokens);
+        Assert.Equal(DBFinishReason.UpstreamError, Assert.Single(segments.OfType<FinishReasonChatSegment>()).FinishReason);
+    }
+
+    [Fact]
+    public async Task ResponseApiService_BackgroundShouldPreferSummaryAndKeepSignature()
+    {
+        string responseJson = """
+            {"id":"resp_1","status":"completed","output":[{"type":"reasoning","summary":[{"type":"summary_text","text":"summary"}],"content":[{"type":"reasoning_text","text":"direct"}],"encrypted_content":"signature"},{"type":"message","content":[{"type":"output_text","text":"answer"}]}],"usage":{"input_tokens":1,"output_tokens":2}}
+            """;
+        CapturingHttpClientFactory factory = new(HttpStatusCode.OK, responseJson, _ => { });
+        ResponseApiService service = new(factory, NullLogger<ResponseApiService>.Instance);
+        ChatRequest request = CreateBaseChatRequest();
+        request.ChatConfig.Model.CurrentSnapshot.UseAsyncApi = true;
+        List<ChatSegment> segments = [];
+
+        await foreach (ChatSegment segment in service.ChatStreamed(request, CancellationToken.None))
+        {
+            segments.Add(segment);
+        }
+
+        ThinkChatSegment think = Assert.Single(segments.OfType<ThinkChatSegment>());
+        Assert.Equal("summary", think.Think);
+        Assert.Equal("signature", think.Signature);
     }
 
     private static string ExtractEncryptedContentFromDump(string dumpFilePath)

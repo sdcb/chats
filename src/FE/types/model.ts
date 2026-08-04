@@ -89,6 +89,7 @@ export const feModelProviders: FEModelProvider[] = [
     id: DBModelProvider.DeepSeek,
     name: 'DeepSeek',
     icon: '/logos/deepseek.svg',
+    allowWebSearch: true,
   },
   {
     id: DBModelProvider.X_AI,
@@ -136,6 +137,7 @@ export const feModelProviders: FEModelProvider[] = [
     id: DBModelProvider.Mimo,
     name: 'Xiaomi Mimo',
     icon: 'https://chats.io.sdcb.ai/model-provider/21/favicon.png',
+    allowWebSearch: true,
   },
   {
     id: DBModelProvider.Novita,

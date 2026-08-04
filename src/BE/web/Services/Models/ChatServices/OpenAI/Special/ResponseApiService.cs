@@ -22,6 +22,13 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
     private const string WebSearchCallType = "web_search_call";
     private const string WebSearchContextSize = "low";
 
+    private enum ReasoningTextMode
+    {
+        None,
+        Summary,
+        Direct,
+    }
+
     private sealed record WebSearchCall(string Id, string Status, JsonObject? Action)
     {
         public bool IsSearch => string.Equals(Action?["type"]?.GetValue<string>(), "search", StringComparison.Ordinal);
@@ -69,11 +76,26 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelKey.Secret);
     }
 
+    private static string BuildApiUrl(string endpoint, string resource)
+    {
+        string trimmed = endpoint.TrimEnd('/');
+        if (trimmed.EndsWith($"/{resource}", StringComparison.OrdinalIgnoreCase))
+        {
+            return trimmed;
+        }
+        if (trimmed.EndsWith("/v1", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{trimmed}/{resource}";
+        }
+        return $"{trimmed}/v1/{resource}";
+    }
+
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         Model model = request.ChatConfig.Model;
         ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
         string endpoint = GetEndpoint(model);
+        string responsesUrl = BuildApiUrl(endpoint, "responses");
         bool hasTools = false;
 
         if (request.ChatConfig.Model.CurrentSnapshot.UseAsyncApi)
@@ -83,7 +105,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             JsonObject requestBody = BuildRequestBody(request, stream: false, background: true);
             ModelRequestOverrides.ApplyBody(requestBody, model.CurrentSnapshot);
 
-            using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/responses");
+            using HttpRequestMessage httpRequest = new(HttpMethod.Post, responsesUrl);
             AddAuthorizationHeader(httpRequest, modelKey);
             httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
             ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
@@ -114,7 +136,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                 {
                     try
                     {
-                        using HttpRequestMessage cancelRequest = new(HttpMethod.Post, $"{endpoint}/v1/responses/{responseId}/cancel");
+                        using HttpRequestMessage cancelRequest = new(HttpMethod.Post, $"{responsesUrl}/{responseId}/cancel");
                         AddAuthorizationHeader(cancelRequest, modelKey);
                         using HttpClient cancelClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceResponseApi);
                         await cancelClient.SendAsync(cancelRequest, default);
@@ -134,7 +156,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                     logger.LogInformation("{responseId} status: {status}, elapsed: {sw.ElapsedMilliseconds:N0}ms", responseId, status, sw.ElapsedMilliseconds);
                     await Task.Delay(2000, cancellationToken);
 
-                    using HttpRequestMessage getRequest = new(HttpMethod.Get, $"{endpoint}/v1/responses/{responseId}");
+                    using HttpRequestMessage getRequest = new(HttpMethod.Get, $"{responsesUrl}/{responseId}");
                     AddAuthorizationHeader(getRequest, modelKey);
 
                     using HttpResponseMessage getResponse = await httpClient.SendAsync(getRequest, cancellationToken);
@@ -163,13 +185,16 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             }
             else if (status == "failed")
             {
-                string? errorMessage = responseObj?["error"]?.ToString() ?? "Response failed";
+                string errorMessage = ExtractResponseError(responseObj);
+                DBFinishReason failedReason = IsContentFilterError(responseObj)
+                    ? DBFinishReason.ContentFilter
+                    : DBFinishReason.UpstreamError;
                 if (usage != null)
                 {
                     yield return ChatSegment.FromUsage(usage);
                 }
-                yield return ChatSegment.FromFinishReason(DBFinishReason.ContentFilter);
-                throw new CustomChatServiceException(DBFinishReason.ContentFilter, errorMessage);
+                yield return ChatSegment.FromFinishReason(failedReason);
+                throw new CustomChatServiceException(failedReason, errorMessage);
             }
             else if (status == "cancelled" || cancelled)
             {
@@ -198,27 +223,15 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
 
                         if (itemType == "reasoning")
                         {
-                            JsonArray? summaryArray = item?["summary"]?.AsArray();
-                            if (summaryArray != null)
+                            string reasoningText = ExtractReasoningText(item);
+                            string? encryptedContent = item?["encrypted_content"]?.GetValue<string>();
+                            if (!string.IsNullOrEmpty(reasoningText) || !string.IsNullOrEmpty(encryptedContent))
                             {
-                                StringBuilder thinkText = new();
-                                foreach (JsonNode? summaryPart in summaryArray)
+                                yield return new ThinkChatSegment
                                 {
-                                    string? partType = summaryPart?["type"]?.GetValue<string>();
-                                    if (partType == "summary_text")
-                                    {
-                                        string? text = summaryPart?["text"]?.GetValue<string>();
-                                        if (!string.IsNullOrEmpty(text))
-                                        {
-                                            if (thinkText.Length > 0) thinkText.Append("\n\n");
-                                            thinkText.Append(text);
-                                        }
-                                    }
-                                }
-                                if (thinkText.Length > 0)
-                                {
-                                    yield return ChatSegment.FromThink(thinkText.ToString());
-                                }
+                                    Think = reasoningText,
+                                    Signature = encryptedContent,
+                                };
                             }
                         }
                         else if (itemType == "function_call")
@@ -295,7 +308,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             JsonObject requestBody = BuildRequestBody(request, stream: true, background: false);
             ModelRequestOverrides.ApplyBody(requestBody, model.CurrentSnapshot);
 
-            using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/responses");
+            using HttpRequestMessage httpRequest = new(HttpMethod.Post, responsesUrl);
             AddAuthorizationHeader(httpRequest, modelKey);
             httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
             ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
@@ -319,6 +332,8 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             List<WebSearchCall> webSearchCalls = [];
             JsonArray webSearchCitations = [];
             bool emittedWebSearchResponses = false;
+            bool terminalEventSeen = false;
+            ReasoningTextMode reasoningTextMode = ReasoningTextMode.None;
 
             await foreach (SseItem<string> sseItem in SseParser.Create(stream, (_, bytes) => Encoding.UTF8.GetString(bytes)).EnumerateAsync(cancellationToken))
             {
@@ -365,16 +380,21 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                         AppendJsonArray(webSearchCitations, singleCitation);
                     }
                 }
-                else if (eventType == "response.completed")
+                else if (eventType is "response.completed" or "response.incomplete" or "response.failed")
                 {
+                    terminalEventSeen = true;
                     JsonElement? responseEl = json.TryGetProperty("response", out JsonElement respEl) ? respEl : null;
-                    ChatTokenUsage? usage = ParseUsage(responseEl?.GetProperty("usage"));
-                    string? status = responseEl?.GetProperty("status").GetString();
+                    JsonElement? usageEl = responseEl?.TryGetProperty("usage", out JsonElement responseUsageEl) == true
+                        ? responseUsageEl
+                        : null;
+                    ChatTokenUsage? usage = ParseUsage(usageEl);
+                    string? status = responseEl?.TryGetProperty("status", out JsonElement statusEl) == true
+                        ? statusEl.GetString()
+                        : eventType["response.".Length..];
 
                     DBFinishReason? finishReason = status switch
                     {
                         null => null,
-                        "failed" => DBFinishReason.ContentFilter,
                         "completed" => hasTools ? DBFinishReason.ToolCalls : DBFinishReason.Success,
                         "incomplete" => DBFinishReason.Length,
                         _ => null,
@@ -398,6 +418,15 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                     if (usage != null)
                     {
                         yield return ChatSegment.FromUsage(usage);
+                    }
+                    if (status == "failed")
+                    {
+                        string errorMessage = ExtractResponseError(responseEl);
+                        DBFinishReason failedReason = IsContentFilterError(responseEl)
+                            ? DBFinishReason.ContentFilter
+                            : DBFinishReason.UpstreamError;
+                        yield return ChatSegment.FromFinishReason(failedReason);
+                        throw new CustomChatServiceException(failedReason, errorMessage);
                     }
                     if (finishReason != null)
                     {
@@ -482,15 +511,34 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                 }
                 else if (eventType == "response.reasoning_summary_text.delta")
                 {
-                    string? delta = json.TryGetProperty("delta", out JsonElement deltaEl) ? deltaEl.GetString() : null;
-                    if (!string.IsNullOrEmpty(delta))
+                    if (reasoningTextMode is ReasoningTextMode.None or ReasoningTextMode.Summary)
                     {
-                        yield return ChatSegment.FromThink(delta);
+                        reasoningTextMode = ReasoningTextMode.Summary;
+                        string? delta = json.TryGetProperty("delta", out JsonElement deltaEl) ? deltaEl.GetString() : null;
+                        if (!string.IsNullOrEmpty(delta))
+                        {
+                            yield return ChatSegment.FromThink(delta);
+                        }
                     }
                 }
                 else if (eventType == "response.reasoning_summary_text.done")
                 {
-                    yield return ChatSegment.FromThink("\n\n");
+                    if (reasoningTextMode == ReasoningTextMode.Summary)
+                    {
+                        yield return ChatSegment.FromThink("\n\n");
+                    }
+                }
+                else if (eventType == "response.reasoning_text.delta")
+                {
+                    if (reasoningTextMode is ReasoningTextMode.None or ReasoningTextMode.Direct)
+                    {
+                        reasoningTextMode = ReasoningTextMode.Direct;
+                        string? delta = json.TryGetProperty("delta", out JsonElement deltaEl) ? deltaEl.GetString() : null;
+                        if (!string.IsNullOrEmpty(delta))
+                        {
+                            yield return ChatSegment.FromThink(delta);
+                        }
+                    }
                 }
                 else if (eventType == "response.content_part.done")
                 {
@@ -500,7 +548,93 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                     }
                 }
             }
+
+            if (!terminalEventSeen && !cancellationToken.IsCancellationRequested)
+            {
+                throw new CustomChatServiceException(DBFinishReason.UpstreamError, "Responses stream ended without a terminal event.");
+            }
         }
+    }
+
+    private static string ExtractReasoningText(JsonNode? item)
+    {
+        StringBuilder text = new();
+        JsonArray? summary = item?["summary"]?.AsArray();
+        if (summary != null)
+        {
+            foreach (JsonNode? part in summary)
+            {
+                if (part?["type"]?.GetValue<string>() == "summary_text")
+                {
+                    AppendReasoningPart(text, part["text"]?.GetValue<string>());
+                }
+            }
+        }
+        if (text.Length > 0)
+        {
+            return text.ToString();
+        }
+
+        JsonArray? content = item?["content"]?.AsArray();
+        if (content != null)
+        {
+            foreach (JsonNode? part in content)
+            {
+                if (part?["type"]?.GetValue<string>() == "reasoning_text")
+                {
+                    AppendReasoningPart(text, part["text"]?.GetValue<string>());
+                }
+            }
+        }
+        return text.ToString();
+    }
+
+    private static void AppendReasoningPart(StringBuilder target, string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return;
+        if (target.Length > 0) target.Append("\n\n");
+        target.Append(value);
+    }
+
+    private static string ExtractResponseError(JsonElement? responseEl)
+    {
+        if (responseEl?.TryGetProperty("error", out JsonElement errorEl) == true)
+        {
+            if (errorEl.ValueKind == JsonValueKind.Object
+                && errorEl.TryGetProperty("message", out JsonElement messageEl)
+                && messageEl.ValueKind == JsonValueKind.String)
+            {
+                return messageEl.GetString() ?? "Response failed";
+            }
+            return errorEl.ToString();
+        }
+        return "Response failed";
+    }
+
+    private static string ExtractResponseError(JsonObject? response)
+    {
+        JsonNode? error = response?["error"];
+        return error?["message"]?.GetValue<string>() ?? error?.ToString() ?? "Response failed";
+    }
+
+    private static bool IsContentFilterError(JsonElement? responseEl)
+    {
+        if (responseEl?.TryGetProperty("error", out JsonElement errorEl) != true)
+        {
+            return false;
+        }
+        string error = errorEl.ToString();
+        return error.Contains("content_filter", StringComparison.OrdinalIgnoreCase)
+            || error.Contains("content filter", StringComparison.OrdinalIgnoreCase)
+            || error.Contains("safety", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsContentFilterError(JsonObject? response)
+    {
+        string error = response?["error"]?.ToString() ?? string.Empty;
+        return error.Contains("content_filter", StringComparison.OrdinalIgnoreCase)
+            || error.Contains("content filter", StringComparison.OrdinalIgnoreCase)
+            || error.Contains("safety", StringComparison.OrdinalIgnoreCase);
     }
 
     private static WebSearchCall? ParseWebSearchCall(JsonNode? item)
@@ -1155,7 +1289,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
 
         string endpoint = GetEndpoint(modelKey);
 
-        using HttpRequestMessage request = new(HttpMethod.Get, $"{endpoint}/v1/models");
+        using HttpRequestMessage request = new(HttpMethod.Get, BuildApiUrl(endpoint, "models"));
         AddAuthorizationHeader(request, modelKey);
 
         using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceResponseApi);
