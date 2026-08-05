@@ -96,9 +96,15 @@ public sealed record AnthropicBuiltInTool : ChatTool
 {
     public required string Name { get; init; }
     public required string Type { get; init; }
+    public JsonObject? Definition { get; init; }
 
     public JsonObject ToJsonObject()
     {
+        if (Definition != null)
+        {
+            return (JsonObject)Definition.DeepClone();
+        }
+
         JsonObject result = new()
         {
             ["name"] = Name,

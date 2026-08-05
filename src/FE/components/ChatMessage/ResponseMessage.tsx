@@ -4,6 +4,7 @@ import useTranslation from '@/hooks/useTranslation';
 import useMathCopy from '@/hooks/useMathCopy';
 
 import { isChatting, preprocessLaTeX } from '@/utils/chats';
+import { copyTextToClipboard } from '@/utils/clipboard';
 
 import {
   ChatSpanStatus,
@@ -167,7 +168,7 @@ const ResponseMessage = (props: Props) => {
   };
 
   const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text || '');
+    void copyTextToClipboard(text || '');
   };
 
   const handleImageClick = (imageUrl: string, allImages: string[], event: React.MouseEvent<HTMLImageElement>) => {

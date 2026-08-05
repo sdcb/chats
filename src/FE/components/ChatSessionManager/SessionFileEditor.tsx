@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
+import { copyTextToClipboard } from '@/utils/clipboard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { IconCheck, IconClipboard, IconEdit, IconLoader, IconX } from '@/components/Icons';
 import {
@@ -74,9 +75,11 @@ export default function SessionFileEditor({
 
   const dirty = useMemo(() => isText && text !== original, [isText, original, text]);
 
-  const handleCopy = useCallback(() => {
+  const handleCopy = useCallback(async () => {
     if (!text) return;
-    navigator.clipboard.writeText(text);
+
+    if (!(await copyTextToClipboard(text))) return;
+
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [text]);

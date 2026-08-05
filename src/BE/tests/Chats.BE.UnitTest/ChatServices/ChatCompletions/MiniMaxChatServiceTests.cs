@@ -109,6 +109,7 @@ public class MiniMaxChatServiceTests
         Assert.Equal("assistant", (string?)upstream["role"]);
         Assert.NotNull(upstream["tool_calls"]);
         Assert.NotNull(upstream["content"]);
+        Assert.Null(upstream["reasoning_content"]);
 
         JsonArray? reasoningDetails = upstream["reasoning_details"] as JsonArray;
         Assert.NotNull(reasoningDetails);

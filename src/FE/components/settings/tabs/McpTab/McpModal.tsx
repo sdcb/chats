@@ -55,6 +55,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
     label: '',
     url: '',
     headers: '',
+    serverInstructions: '',
   });
   const [tools, setTools] = useState<McpToolBasicInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -72,6 +73,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
         label: server.label,
         url: server.url,
         headers: server.headers || '',
+        serverInstructions: server.serverInstructions || '',
       });
       setTools(server.tools);
     } else {
@@ -79,6 +81,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
         label: '',
         url: '',
         headers: '',
+        serverInstructions: '',
       });
       setTools([]);
     }
@@ -108,16 +111,22 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
 
     setFetchingTools(true);
     try {
-      const fetchedTools = await fetchMcpTools({
+      const response = await fetchMcpTools({
         serverUrl: formData.url,
         headers: formData.headers || undefined,
       });
 
-      const newTools: McpToolBasicInfo[] = fetchedTools.map(tool => ({
+      const newTools: McpToolBasicInfo[] = (response.tools || []).map(tool => ({
         ...tool,
       }));
 
       setTools(newTools);
+      if (response.serverInstructions !== undefined && response.serverInstructions !== null) {
+        setFormData(prev => ({
+          ...prev,
+          serverInstructions: response.serverInstructions || '',
+        }));
+      }
       if (!silent) toast.success(t('Tools fetched successfully'));
       return newTools;
     } catch (error) {
@@ -218,6 +227,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
         label: formData.label.trim(),
         url: formData.url.trim(),
         headers: formData.headers.trim() || undefined,
+        serverInstructions: formData.serverInstructions.trim() || undefined,
         tools: toolsToSave,
       });
     } catch (error) {
@@ -294,6 +304,21 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
                   {formData.headers && !validateJSON(formData.headers) && (
                     <p className="text-xs text-red-500 mt-1">{t('Headers must be empty or a valid JSON object')}</p>
                   )}
+                </div>
+
+                <div>
+                  <Label htmlFor="serverInstructions">{t('Server Instructions')}</Label>
+                  <Textarea
+                    id="serverInstructions"
+                    value={formData.serverInstructions}
+                    onChange={(e) => handleInputChange('serverInstructions', e.target.value)}
+                    placeholder={t('Optional MCP server instructions for the model')}
+                    rows={4}
+                    disabled={isReadOnly}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('Fetched automatically when available. You can edit before saving.')}
+                  </p>
                 </div>
               </div>
             </Card>

@@ -2,6 +2,7 @@
 using Chats.DB.Enums;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.UrlEncryption;
+using Chats.BE.Services.Models.ChatServices.Anthropic;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Messages.Dtos;
@@ -48,16 +49,28 @@ public abstract record ContentResponseItem
                 Id = encryptedMessageContentId,
                 Name = content.StepContentToolCall!.Name,
                 ToolCallId = content.StepContentToolCall!.ToolCallId!,
-                Parameters = content.StepContentToolCall!.Parameters,
+                Parameters = CreateToolCallPresentation(content.StepContentToolCall),
             },
             DBStepContentType.ToolCallResponse => new ToolCallResponseItem()
             {
                 Id = encryptedMessageContentId,
                 ToolCallId = content.StepContentToolCallResponse!.ToolCallId!,
-                Response = content.StepContentToolCallResponse!.Response,
+                Response = DeepSeekHostedWebSearch.TryCreatePresentationResponse(
+                    content.StepContentToolCallResponse.Response,
+                    out string presentationResponse)
+                    ? presentationResponse
+                    : content.StepContentToolCallResponse.Response,
             },
             _ => throw new NotSupportedException(),
         };
+
+        static string CreateToolCallPresentation(StepContentToolCall toolCall)
+        {
+            return toolCall.Name == DeepSeekHostedWebSearch.InternalToolName
+                && DeepSeekHostedWebSearch.TryCreatePresentationCall(toolCall.Parameters, out string presentationCall)
+                    ? presentationCall
+                    : toolCall.Parameters;
+        }
     }
 
     public static ContentResponseItem[] FromContent(StepContent[] contents, FileUrlProvider fup, IUrlEncryptionService urlEncryption)

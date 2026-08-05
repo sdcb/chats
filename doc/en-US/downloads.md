@@ -63,15 +63,15 @@ For environments where using Docker is inconvenient, Chats provides native execu
 
 | Platform                   | GitHub Download (Latest Stable)                                                                                 | Mirror (Latest Stable)                                                                         | Mirror (Latest Development)                                |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| Windows 64-bit             | [chats-win-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-win-x64.zip)                   | [chats-win-x64.zip](https://chats.sdcb.pub/release/latest/chats-win-x64.zip)                   | -                                                          |
-| Linux 64-bit               | [chats-linux-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-x64.zip)               | [chats-linux-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-x64.zip)               | -                                                          |
-| Linux ARM64                | [chats-linux-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-arm64.zip)           | [chats-linux-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-arm64.zip)           | -                                                          |
-| Linux musl x64             | [chats-linux-musl-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-x64.zip)     | [chats-linux-musl-x64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-x64.zip)     | -                                                          |
-| Linux musl ARM64           | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip) | [chats-linux-musl-arm64.zip](https://chats.sdcb.pub/release/latest/chats-linux-musl-arm64.zip) | -                                                          |
-| macOS ARM64                | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)               | [chats-osx-arm64.zip](https://chats.sdcb.pub/release/latest/chats-osx-arm64.zip)               | -                                                          |
-| macOS x64                  | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)                   | [chats-osx-x64.zip](https://chats.sdcb.pub/release/latest/chats-osx-x64.zip)                   | -                                                          |
-| Generic (Requires .NET 10) | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                                   | [chats.zip](https://chats.sdcb.pub/release/latest/chats.zip)                                   | [chats.zip](https://chats.sdcb.pub/latest/chats.zip)       |
-| Frontend Only              | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                             | [chats-fe.zip](https://chats.sdcb.pub/release/latest/chats-fe.zip)                             | [chats-fe.zip](https://chats.sdcb.pub/latest/chats-fe.zip) |
+| Windows 64-bit             | [chats-win-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-win-x64.zip)                   | [chats-win-x64.zip](https://chats.io.sdcb.ai/release/latest/chats-win-x64.zip)                   | -                                                          |
+| Linux 64-bit               | [chats-linux-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-x64.zip)               | [chats-linux-x64.zip](https://chats.io.sdcb.ai/release/latest/chats-linux-x64.zip)               | -                                                          |
+| Linux ARM64                | [chats-linux-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-arm64.zip)           | [chats-linux-arm64.zip](https://chats.io.sdcb.ai/release/latest/chats-linux-arm64.zip)           | -                                                          |
+| Linux musl x64             | [chats-linux-musl-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-x64.zip)     | [chats-linux-musl-x64.zip](https://chats.io.sdcb.ai/release/latest/chats-linux-musl-x64.zip)     | -                                                          |
+| Linux musl ARM64           | [chats-linux-musl-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-linux-musl-arm64.zip) | [chats-linux-musl-arm64.zip](https://chats.io.sdcb.ai/release/latest/chats-linux-musl-arm64.zip) | -                                                          |
+| macOS ARM64                | [chats-osx-arm64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-arm64.zip)               | [chats-osx-arm64.zip](https://chats.io.sdcb.ai/release/latest/chats-osx-arm64.zip)               | -                                                          |
+| macOS x64                  | [chats-osx-x64.zip](https://github.com/sdcb/chats/releases/latest/download/chats-osx-x64.zip)                   | [chats-osx-x64.zip](https://chats.io.sdcb.ai/release/latest/chats-osx-x64.zip)                   | -                                                          |
+| Generic (Requires .NET 10) | [chats.zip](https://github.com/sdcb/chats/releases/latest/download/chats.zip)                                   | [chats.zip](https://chats.io.sdcb.ai/release/latest/chats.zip)                                   | [chats.zip](https://chats.io.sdcb.ai/latest/chats.zip)       |
+| Frontend Only              | [chats-fe.zip](https://github.com/sdcb/chats/releases/latest/download/chats-fe.zip)                             | [chats-fe.zip](https://chats.io.sdcb.ai/release/latest/chats-fe.zip)                             | [chats-fe.zip](https://chats.io.sdcb.ai/latest/chats-fe.zip) |
 
 ### Download Notes
 
@@ -85,9 +85,9 @@ For environments where using Docker is inconvenient, Chats provides native execu
 - **Latest Version**: Visit the [Releases](https://github.com/sdcb/chats/releases) page to view the latest version and changelog
 - **Alternative Download**: When GitHub access is inconvenient, use mirror URLs in this format:
   ```
-  https://chats.sdcb.pub/release/latest/{artifact-id}.zip
+  https://chats.io.sdcb.ai/release/latest/{artifact-id}.zip
   ```
-  Example: `https://chats.sdcb.pub/release/latest/chats-win-x64.zip`
+  Example: `https://chats.io.sdcb.ai/release/latest/chats-win-x64.zip`
 
 ---
 

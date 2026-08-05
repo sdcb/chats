@@ -400,6 +400,7 @@ export interface McpToolBasicInfo {
 export interface McpServerListItemDto {
   id: number;
   label: string;
+  showShortcut: boolean;
 }
 
 export interface McpServerListManagementItemDto {
@@ -412,10 +413,13 @@ export interface McpServerListManagementItemDto {
   owner: string;
   editable: boolean;
   assignedUserCount: number;
+  assignedToMe: boolean;
+  showShortcut: boolean;
 }
 
 export interface McpServerDetailsDto extends McpServerListManagementItemDto {
   headers?: string;
+  serverInstructions?: string;
   tools: McpToolBasicInfo[];
 }
 
@@ -423,6 +427,7 @@ export interface UpdateMcpServerRequest {
   label: string;
   url: string;
   headers?: string;
+  serverInstructions?: string;
   tools: McpToolBasicInfo[];
 }
 
@@ -431,10 +436,16 @@ export interface FetchToolsRequest {
   headers?: string;
 }
 
+export interface FetchToolsResponse {
+  tools: McpToolBasicInfo[];
+  serverInstructions?: string;
+}
+
 // MCP用户分配相关类型
 export interface AssignedUserInfo {
   id: number;
   customHeaders?: string;
+  showShortcut?: boolean;
 }
 
 export interface AssignUsersToMcpRequest {
@@ -452,6 +463,11 @@ export interface AssignedUserDetailsDto {
   id: number;
   userName: string;
   customHeaders?: string;
+  showShortcut: boolean;
+}
+
+export interface UpdateMyMcpAssignmentRequest {
+  showShortcut: boolean;
 }
 
 export interface AssignedUserNameDto {

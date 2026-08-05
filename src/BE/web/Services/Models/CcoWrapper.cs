@@ -118,7 +118,7 @@ public class CcoWrapper(JsonObject json)
 
     public long? Seed => (long?)json["seed"];
 
-    public bool? EnableSearch => (bool?)json["enable_search"];
+    public bool? EnableSearch => (bool?)json["enable_search"] ?? (HasHostedWebSearchTool() ? true : null);
 
     public string? ImageSize => (string?)json["image_size"];
 
@@ -134,6 +134,23 @@ public class CcoWrapper(JsonObject json)
         {
             json[key] = value;
         }
+    }
+
+    private bool HasHostedWebSearchTool()
+    {
+        JsonArray? toolsArray = json["tools"]?.AsArray();
+        if (toolsArray == null) return false;
+
+        foreach (JsonNode? toolNode in toolsArray)
+        {
+            if (toolNode == null) continue;
+            string? type = (string?)toolNode["type"];
+            if (type == "web_search")
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public string Serialize()

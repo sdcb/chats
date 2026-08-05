@@ -1,12 +1,18 @@
 using System.Net;
+using Chats.BE.Controllers.Api.AnthropicCompatible.Dtos;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices.Anthropic;
+using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
 using Chats.BE.UnitTest.ChatServices.Http;
 using Chats.DB;
 using Chats.DB.Enums;
+using Chats.BE.Services.Models.ChatServices.OpenAI;
+using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace Chats.BE.UnitTest.ChatServices.Anthropic;
 
@@ -174,5 +180,190 @@ public class DeepSeekAnthropicServiceTests
         Assert.Equal(36, usageSegments[1].Usage.InputFreshTokens);
         Assert.Equal(7, usageSegments[1].Usage.CacheTokens);
         Assert.Equal(9, usageSegments[1].Usage.CacheCreationTokens);
+    }
+
+    [Fact]
+    public void BuildRequestBody_SearchEnabled_AddsDeepSeekHostedWebSearchTool()
+    {
+        DeepSeekAnthropicService service = new(CreateMockHttpClientFactory());
+        ChatRequest request = CreateRequest();
+        request.ChatConfig.Model.CurrentSnapshot.AllowSearch = true;
+        request.ChatConfig.WebSearchEnabled = true;
+
+        MethodInfo method = typeof(AnthropicChatService).GetMethod("BuildRequestBody", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("BuildRequestBody method not found.");
+        JsonObject body = Assert.IsType<JsonObject>(method.Invoke(service, [request]));
+
+        JsonObject tool = Assert.IsType<JsonObject>(Assert.Single(Assert.IsType<JsonArray>(body["tools"])));
+        Assert.Equal("web_search_20250305", (string?)tool["type"]);
+        Assert.Equal("web_search", (string?)tool["name"]);
+    }
+
+    [Fact]
+    public void BuildRequestBody_ClientHostedWebSearchTool_PreservesAllDefinitionFields()
+    {
+        DeepSeekAnthropicService service = new(CreateMockHttpClientFactory());
+        ChatRequest request = CreateRequest();
+        request.Tools.Add(new AnthropicBuiltInTool
+        {
+            Name = "web_search",
+            Type = "web_search_20250305",
+            Definition = new JsonObject
+            {
+                ["type"] = "web_search_20250305",
+                ["name"] = "web_search",
+                ["max_uses"] = 3,
+                ["allowed_domains"] = new JsonArray("api-docs.deepseek.com"),
+            },
+        });
+
+        MethodInfo method = typeof(AnthropicChatService).GetMethod("BuildRequestBody", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("BuildRequestBody method not found.");
+        JsonObject body = Assert.IsType<JsonObject>(method.Invoke(service, [request]));
+        JsonObject tool = Assert.IsType<JsonObject>(Assert.Single(Assert.IsType<JsonArray>(body["tools"])));
+
+        Assert.Equal(3, (int?)tool["max_uses"]);
+        Assert.Equal("api-docs.deepseek.com", (string?)tool["allowed_domains"]?[0]);
+    }
+
+    [Fact]
+    public async Task ChatStreamed_HostedWebSearch_PreservesRawBlocksForStorage()
+    {
+        IHttpClientFactory factory = CreateMockHttpClientFactory(
+            "data: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":10,\"output_tokens\":0}}}\n\n",
+            "data: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"server_tool_use\",\"id\":\"srv_1\",\"name\":\"web_search\",\"input\":{},\"caller\":{\"type\":\"direct\"}}}\n\n",
+            "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"{\\\"query\\\":\\\"DeepSeek\\\"}\"}}\n\n",
+            "data: {\"type\":\"content_block_stop\",\"index\":0}\n\n",
+            "data: {\"type\":\"content_block_start\",\"index\":1,\"content_block\":{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srv_1\",\"content\":[{\"type\":\"web_search_result\",\"title\":\"DeepSeek\",\"url\":\"https://api-docs.deepseek.com\",\"encrypted_content\":\"opaque-cache-data\",\"page_age\":\"today\"}]}}\n\n",
+            "data: {\"type\":\"content_block_stop\",\"index\":1}\n\n",
+            "data: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"},\"usage\":{\"output_tokens\":20}}\n\n",
+            "data: {\"type\":\"message_stop\"}\n\n");
+        DeepSeekAnthropicService service = new(factory);
+        List<ChatSegment> segments = [];
+
+        await foreach (ChatSegment segment in service.ChatStreamed(CreateRequest(), CancellationToken.None))
+        {
+            segments.Add(segment);
+        }
+
+        ToolCallSegment call = Assert.Single(segments.OfType<ToolCallSegment>());
+        Assert.Equal("web_search_call", call.Name);
+        using JsonDocument callJson = JsonDocument.Parse(call.Arguments!);
+        Assert.Equal("server_tool_use", callJson.RootElement.GetProperty("type").GetString());
+        Assert.Equal("direct", callJson.RootElement.GetProperty("caller").GetProperty("type").GetString());
+        Assert.Equal("DeepSeek", callJson.RootElement.GetProperty("input").GetProperty("query").GetString());
+
+        ToolCallResponseSegment response = Assert.Single(segments.OfType<ToolCallResponseSegment>());
+        using JsonDocument responseJson = JsonDocument.Parse(response.Response!);
+        Assert.Equal("web_search_tool_result", responseJson.RootElement.GetProperty("type").GetString());
+        Assert.Equal("opaque-cache-data", responseJson.RootElement.GetProperty("content")[0].GetProperty("encrypted_content").GetString());
+    }
+
+    [Fact]
+    public void ConvertMessages_DeepSeekHostedWebSearch_RebuildsNativeAssistantBlocksInOrder()
+    {
+        MethodInfo method = typeof(AnthropicChatService).GetMethod("ConvertMessages", BindingFlags.Static | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("ConvertMessages method not found.");
+        const string rawCall = "{\"type\":\"server_tool_use\",\"id\":\"srv_1\",\"name\":\"web_search\",\"input\":{\"query\":\"DeepSeek\"},\"caller\":{\"type\":\"direct\"}}";
+        const string rawResult = "{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srv_1\",\"content\":[{\"type\":\"web_search_result\",\"title\":\"DeepSeek\",\"url\":\"https://api-docs.deepseek.com\",\"encrypted_content\":\"opaque-cache-data\"}]}";
+        IList<NeutralMessage> messages =
+        [
+            NeutralMessage.FromAssistant(
+                NeutralThinkContent.Create("first thought", "sig-1"),
+                NeutralToolCallContent.Create("srv_1", "web_search_call", rawCall),
+                NeutralToolCallResponseContent.Create("srv_1", rawResult),
+                NeutralThinkContent.Create("second thought", "sig-2"),
+                NeutralTextContent.Create("answer"))
+        ];
+
+        JsonArray converted = Assert.IsType<JsonArray>(method.Invoke(null, [messages, true, UsageSource.Api, true]));
+        JsonArray content = Assert.IsType<JsonArray>(converted[0]!["content"]);
+
+        Assert.Equal(
+            ["thinking", "server_tool_use", "web_search_tool_result", "thinking", "text"],
+            content.Select(x => x!["type"]!.GetValue<string>()).ToArray());
+        Assert.Equal("direct", (string?)content[1]?["caller"]?["type"]);
+        Assert.Equal("opaque-cache-data", (string?)content[2]?["content"]?[0]?["encrypted_content"]);
+        Assert.Equal("sig-1", (string?)content[0]?["signature"]);
+        Assert.Equal("sig-2", (string?)content[3]?["signature"]);
+    }
+
+    [Fact]
+    public void AnthropicResponse_DeepSeekHostedWebSearch_PreservesNativeBlocks()
+    {
+        const string rawCall = "{\"type\":\"server_tool_use\",\"id\":\"srv_1\",\"name\":\"web_search\",\"input\":{\"query\":\"DeepSeek\"},\"caller\":{\"type\":\"direct\"}}";
+        const string rawResult = "{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srv_1\",\"content\":[{\"type\":\"web_search_result\",\"title\":\"DeepSeek\",\"url\":\"https://api-docs.deepseek.com\",\"encrypted_content\":\"opaque-cache-data\"}]}";
+        ChatCompletionSnapshot snapshot = new()
+        {
+            Segments =
+            [
+                new ToolCallSegment { Index = 0, Id = "srv_1", Name = "web_search_call", Arguments = rawCall },
+                ChatSegment.FromToolCallResponse("srv_1", rawResult, 0, true),
+            ],
+            Usage = ChatTokenUsage.Zero,
+            IsUsageReliable = true,
+            FinishReason = DBFinishReason.Success,
+        };
+
+        var response = snapshot.ToAnthropicResponse("deepseek-v4-flash", "msg_1");
+
+        Assert.Equal(["server_tool_use", "web_search_tool_result"], response.Content.Select(x => x.Type));
+        Assert.Equal("direct", response.Content[0].Caller?["type"]?.GetValue<string>());
+        Assert.Equal("opaque-cache-data", response.Content[1].Content?[0]?["encrypted_content"]?.GetValue<string>());
+    }
+
+    [Fact]
+    public void AnthropicStreamEvent_DeepSeekHostedWebSearch_PreservesNativeResultContent()
+    {
+        JsonNode content = JsonNode.Parse("[{\"type\":\"web_search_result\",\"encrypted_content\":\"opaque-cache-data\"}]")!;
+        ContentBlockStartEvent streamEvent = new()
+        {
+            Index = 2,
+            ContentBlock = new ContentBlockStartData
+            {
+                Type = "web_search_tool_result",
+                ToolUseId = "srv_1",
+                Content = content,
+            },
+        };
+
+        string json = JsonSerializer.Serialize<AnthropicStreamEvent>(streamEvent);
+        using JsonDocument document = JsonDocument.Parse(json);
+        JsonElement block = document.RootElement.GetProperty("content_block");
+
+        Assert.Equal("web_search_tool_result", block.GetProperty("type").GetString());
+        Assert.Equal("srv_1", block.GetProperty("tool_use_id").GetString());
+        Assert.Equal("opaque-cache-data", block.GetProperty("content")[0].GetProperty("encrypted_content").GetString());
+    }
+
+    [Fact]
+    public void Presentation_DeepSeekHostedWebSearch_RemovesOnlyEncryptedContent()
+    {
+        const string rawCall = "{\"type\":\"server_tool_use\",\"id\":\"srv_1\",\"name\":\"web_search\",\"input\":{\"query\":\"DeepSeek\"},\"caller\":{\"type\":\"direct\"}}";
+        const string rawResult = "{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srv_1\",\"content\":[{\"type\":\"web_search_result\",\"title\":\"DeepSeek\",\"url\":\"https://api-docs.deepseek.com\",\"encrypted_content\":\"opaque-cache-data\",\"page_age\":\"today\"}]}";
+
+        Assert.True(DeepSeekHostedWebSearch.TryCreatePresentationCall(rawCall, out string presentationCall));
+        using JsonDocument call = JsonDocument.Parse(presentationCall);
+        Assert.Equal("web_search_call", call.RootElement.GetProperty("type").GetString());
+        Assert.Equal("DeepSeek", call.RootElement.GetProperty("action").GetProperty("query").GetString());
+
+        Assert.True(DeepSeekHostedWebSearch.TryCreatePresentationResponse(rawResult, out string presentationResponse));
+        using JsonDocument result = JsonDocument.Parse(presentationResponse);
+        JsonElement item = Assert.Single(result.RootElement.EnumerateArray());
+        Assert.False(item.TryGetProperty("encrypted_content", out _));
+        Assert.Equal("today", item.GetProperty("page_age").GetString());
+        Assert.Equal("https://api-docs.deepseek.com", item.GetProperty("url").GetString());
+    }
+
+    [Fact]
+    public void Presentation_ResponsesWebSearch_RemainsUntouched()
+    {
+        const string responsesCall = "{\"type\":\"web_search_call\",\"status\":\"completed\",\"action\":{\"type\":\"search\",\"queries\":[\"GitHub Copilot CLI open source\"]}}";
+        const string responsesResult = "[{\"type\":\"web_search_result\",\"title\":\"GitHub Copilot CLI\",\"url\":\"https://github.com/github/copilot-cli\"}]";
+
+        Assert.False(DeepSeekHostedWebSearch.TryCreatePresentationCall(responsesCall, out string callPresentation));
+        Assert.Equal(responsesCall, callPresentation);
+        Assert.False(DeepSeekHostedWebSearch.TryCreatePresentationResponse(responsesResult, out string responsePresentation));
+        Assert.Equal(responsesResult, responsePresentation);
     }
 }

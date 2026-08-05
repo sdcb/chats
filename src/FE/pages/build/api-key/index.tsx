@@ -8,6 +8,7 @@ import useTranslation from '@/hooks/useTranslation';
 import { IconPencil } from '@/components/Icons';
 
 import { getApiUrl } from '@/utils/common';
+import { copyTextToClipboard } from '@/utils/clipboard';
 import { formatDate } from '@/utils/date';
 
 import { GetUserApiKeyResult } from '@/types/clientApis';
@@ -110,8 +111,10 @@ export default function BuildApiKeyPage() {
 
   const copyCreatedKey = async () => {
     if (!createdKey) return;
-    await navigator.clipboard.writeText(createdKey);
-    toast.success(t('Copied to clipboard'));
+
+    if (await copyTextToClipboard(createdKey)) {
+      toast.success(t('Copied to clipboard'));
+    }
   };
 
   const openEditDialog = (apiKey: GetUserApiKeyResult) => {

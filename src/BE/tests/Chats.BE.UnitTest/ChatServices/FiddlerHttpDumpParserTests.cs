@@ -4,6 +4,7 @@ public class FiddlerHttpDumpParserTests
 {
     private const string TestDataPath = "ChatServices/GoogleAI/FiddlerDump";
     private const string OpenAITestDataPath = "ChatServices/ChatCompletions/FiddlerDump";
+    private const string ResponseTestDataPath = "ChatServices/Response/FiddlerDump";
 
     [Fact]
     public void CanParseCodeExecuteDump()
@@ -70,6 +71,36 @@ public class FiddlerHttpDumpParserTests
         Assert.Equal(200, dump.Response.StatusCode);
         Assert.Contains("groundingMetadata", dump.Response.Body);
         Assert.Contains("webSearchQueries", dump.Response.Body);
+    }
+
+    [Fact]
+    public void CanParseAzureResponseWebSearchDump()
+    {
+        // Arrange
+        var filePath = Path.Combine(ResponseTestDataPath, "AzureResponseWebSearch-Attempt2.dump");
+
+        // Act
+        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
+
+        // Assert - Request
+        Assert.Equal("POST", dump.Request.Method);
+        Assert.Equal("https://redacted.openai.azure.com/openai/v1/responses", dump.Request.Url);
+        Assert.Contains("\"model\":\"gpt-5.5\"", dump.Request.Body);
+        Assert.Contains("\"type\":\"web_search\"", dump.Request.Body);
+        Assert.Contains("\"search_context_size\":\"low\"", dump.Request.Body);
+        Assert.Contains("\"store\":false", dump.Request.Body);
+        Assert.Contains("\"prompt_cache_key\":\"sdcb-chats-web-search-fixture\"", dump.Request.Body);
+        Assert.Contains("\"prompt_cache_retention\":\"24h\"", dump.Request.Body);
+
+        // Assert - Response
+        Assert.Equal(200, dump.Response.StatusCode);
+        Assert.True(dump.Response.Chunks.Count > 1);
+        Assert.Contains("\"type\":\"web_search_call\"", dump.Response.Body);
+        Assert.Contains("\"type\":\"search\"", dump.Response.Body);
+        Assert.Contains("\"type\":\"open_page\"", dump.Response.Body);
+        Assert.Contains("\"type\":\"find_in_page\"", dump.Response.Body);
+        Assert.Contains("\"type\":\"url_citation\"", dump.Response.Body);
+        Assert.Contains("\"cached_tokens\":16000", dump.Response.Body);
     }
 
     [Fact]

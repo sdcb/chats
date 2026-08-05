@@ -28,6 +28,8 @@ public partial class McpServer
 
     public DateTime UpdatedAt { get; set; }
 
+    public string? ServerInstructions { get; set; }
+
     [InverseProperty("McpServer")]
     public virtual ICollection<ChatConfigMcp> ChatConfigMcps { get; set; } = new List<ChatConfigMcp>();
 

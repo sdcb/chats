@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
+import { copyTextToClipboard } from '@/utils/clipboard';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { IconBolt, IconCheck, IconClipboard, IconLoader } from '@/components/Icons';
@@ -107,9 +108,11 @@ export default function SessionCommandRunner({
       .join('\n');
   }, [output]);
 
-  const handleCopy = useCallback(() => {
+  const handleCopy = useCallback(async () => {
     if (!outputText) return;
-    navigator.clipboard.writeText(outputText);
+
+    if (!(await copyTextToClipboard(outputText))) return;
+
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [outputText]);

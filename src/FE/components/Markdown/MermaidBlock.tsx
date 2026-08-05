@@ -8,6 +8,7 @@ import useTranslation from '@/hooks/useTranslation';
 import { IconCheck, IconClipboard, IconArrowsDiagonal } from '@/components/Icons/index';
 import { MermaidFullscreenDialog } from './MermaidFullscreenDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { copyTextToClipboard } from '@/utils/clipboard';
 // Removed chat status dependency to always attempt rendering
 import { CodeBlockCore } from './CodeBlockCore';
 
@@ -239,6 +240,7 @@ export const MermaidBlock: FC<Props> = memo(({ value }) => {
                 }
               });
           }
+
         }
       } else {
         // code changed during timer; skip render
@@ -335,33 +337,26 @@ export const MermaidBlock: FC<Props> = memo(({ value }) => {
 
   
 
-  const copyToClipboard = (e: React.MouseEvent) => {
-    if (!navigator.clipboard || !navigator.clipboard.writeText) {
-      return;
-    }
-
-    navigator.clipboard.writeText(value).then(() => {
-      setIsCopied(true);
-
-      setTimeout(() => {
-        setIsCopied(false);
-      }, 2000);
-    });
+  const copyToClipboard = async (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    if (!(await copyTextToClipboard(value))) return;
+
+    setIsCopied(true);
+
+    setTimeout(() => {
+      setIsCopied(false);
+    }, 2000);
   };
 
-  const handleCopy = () => {
-    if (!navigator.clipboard || !navigator.clipboard.writeText) {
-      return;
-    }
+  const handleCopy = async () => {
+    if (!(await copyTextToClipboard(value))) return;
 
-    navigator.clipboard.writeText(value).then(() => {
-      setIsCopied(true);
+    setIsCopied(true);
 
-      setTimeout(() => {
-        setIsCopied(false);
-      }, 2000);
-    });
+    setTimeout(() => {
+      setIsCopied(false);
+    }, 2000);
   };
 
   // 只有在没有任何 SVG 可展示时才回退到代码块

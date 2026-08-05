@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-// import { useTheme } from 'next-themes';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { 
-  McpServerDetailsDto, 
+import {
+  McpServerDetailsDto,
   McpServerListManagementItemDto,
-  AssignedUserNameDto 
+  AssignedUserNameDto,
 } from '@/types/clientApis';
 
 import DeletePopover from '@/components/Popover/DeletePopover';
@@ -33,8 +32,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import Tips from '@/components/Tips/Tips';
-// Tooltips are handled via <Tips /> component
-// Use Radix Tooltip primitives locally to avoid changing shared Tips/tooltip components
+import { LabelSwitch } from '@/components/ui/label-switch';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 
 import McpModal from './McpTab/McpModal';
@@ -47,6 +45,7 @@ import {
   updateMcpServer,
   deleteMcpServer,
   getAssignedUserNames,
+  updateMyMcpAssignment,
 } from '@/apis/clientApis';
 import { useUserInfo } from '@/providers/UserProvider';
 
@@ -57,8 +56,8 @@ const AssignedUsersTooltip = ({ mcpId, assignedUserCount, editable }: { mcpId: n
 
   const loadAssignedUsers = async () => {
     if (assignedUserCount === 0) return;
-    if (!editable) return; // 如果不可编辑，则说明没有权限查看分配的用户
-    
+    if (!editable) return;
+
     setLoadingUsers(true);
     try {
       const users = await getAssignedUserNames(mcpId);
@@ -114,7 +113,6 @@ const AssignedUsersTooltip = ({ mcpId, assignedUserCount, editable }: { mcpId: n
 
 const McpTab = () => {
   const { t } = useTranslation();
-  // const { theme } = useTheme();
   const [mcpServers, setMcpServers] = useState<McpServerListManagementItemDto[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredServers, setFilteredServers] = useState<McpServerListManagementItemDto[]>([]);
@@ -163,10 +161,10 @@ const McpTab = () => {
   };
 
   const handleEditServer = async (serverId: number) => {
-    setSelectedServer(null); // 先清空数据
+    setSelectedServer(null);
     setIsCreateMode(false);
     setIsReadOnly(false);
-    setShowModal(true); // 立即显示Modal
+    setShowModal(true);
 
     setLoadingServerDetails(true);
     try {
@@ -175,17 +173,17 @@ const McpTab = () => {
     } catch (error) {
       console.error('Failed to fetch server details:', error);
       toast.error(t('Failed to fetch server details'));
-      setShowModal(false); // 加载失败时关闭Modal
+      setShowModal(false);
     } finally {
       setLoadingServerDetails(false);
     }
   };
 
   const handleViewServer = async (serverId: number) => {
-    setSelectedServer(null); // 先清空数据
+    setSelectedServer(null);
     setIsCreateMode(false);
     setIsReadOnly(true);
-    setShowModal(true); // 立即显示Modal
+    setShowModal(true);
 
     setLoadingServerDetails(true);
     try {
@@ -194,7 +192,7 @@ const McpTab = () => {
     } catch (error) {
       console.error('Failed to fetch server details:', error);
       toast.error(t('Failed to fetch server details'));
-      setShowModal(false); // 加载失败时关闭Modal
+      setShowModal(false);
     } finally {
       setLoadingServerDetails(false);
     }
@@ -205,6 +203,28 @@ const McpTab = () => {
     setShowAssignModal(true);
   };
 
+  const handleToggleMyShowShortcut = async (server: McpServerListManagementItemDto, checked: boolean) => {
+    const previous = server.showShortcut;
+    setMcpServers((prev) =>
+      prev.map((item) =>
+        item.id === server.id ? { ...item, showShortcut: checked } : item
+      )
+    );
+
+    try {
+      await updateMyMcpAssignment(server.id, { showShortcut: checked });
+      toast.success(t('Show shortcut updated'));
+    } catch (error) {
+      console.error('Failed to update show shortcut:', error);
+      toast.error(t('Failed to update show shortcut'));
+      setMcpServers((prev) =>
+        prev.map((item) =>
+          item.id === server.id ? { ...item, showShortcut: previous } : item
+        )
+      );
+    }
+  };
+
   const handleDeleteServer = async (serverId: number) => {
     try {
       await deleteMcpServer(serverId);
@@ -213,7 +233,7 @@ const McpTab = () => {
     } catch (error) {
       console.error('Failed to delete MCP server:', error);
       toast.error(t('Failed to delete MCP server'));
-      throw error; // 重新抛出错误，让 DeletePopover 知道删除失败
+      throw error;
     }
   };
 
@@ -238,13 +258,11 @@ const McpTab = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  // 渲染编辑和分配用户的组合按钮
   const renderEditAssignComboButton = (server: McpServerListManagementItemDto) => {
     if (!server.editable) return null;
-    
+
     return (
       <div className="flex">
-        {/* 左侧编辑按钮 */}
         <Tips
           trigger={
             <Button
@@ -260,7 +278,6 @@ const McpTab = () => {
           content={t('Edit')!}
         />
 
-        {/* 右侧分配用户按钮 */}
         <Tips
           trigger={
             <Button
@@ -280,7 +297,7 @@ const McpTab = () => {
   };
 
   return (
-      <div className="space-y-4">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">{t('MCP Management')}</h2>
         <div className="flex items-center gap-2">
@@ -323,6 +340,7 @@ const McpTab = () => {
                   <TableHead>{t('Tool Count')}</TableHead>
                   <TableHead>{t('Assigned Users')}</TableHead>
                   {isAdmin && <TableHead>{t('Owner')}</TableHead>}
+                  <TableHead>{t('Show Shortcut')}</TableHead>
                   <TableHead className="hidden md:table-cell">{t('Created')}</TableHead>
                   <TableHead className="hidden md:table-cell">{t('Updated')}</TableHead>
                   <TableHead>{t('Actions')}</TableHead>
@@ -331,7 +349,7 @@ const McpTab = () => {
               <TableBody>
                 {filteredServers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isAdmin ? 8 : 7} className="text-center py-8">
+                    <TableCell colSpan={isAdmin ? 9 : 8} className="text-center py-8">
                       {searchTerm ? t('No MCP servers found') : t('No MCP servers yet')}
                     </TableCell>
                   </TableRow>
@@ -346,23 +364,33 @@ const McpTab = () => {
                         <Badge variant="outline">{server.toolsCount}</Badge>
                       </TableCell>
                       <TableCell>
-                        <AssignedUsersTooltip 
-                          mcpId={server.id} 
+                        <AssignedUsersTooltip
+                          mcpId={server.id}
                           assignedUserCount={server.assignedUserCount}
                           editable={server.editable}
                         />
                       </TableCell>
                       {isAdmin && <TableCell>{server.owner || t('System')}</TableCell>}
+                      <TableCell>
+                        {server.assignedToMe ? (
+                          <LabelSwitch
+                            checked={!!server.showShortcut}
+                            onCheckedChange={(checked) => handleToggleMyShowShortcut(server, checked)}
+                            label=""
+                            tooltip={t('Show this MCP as a shortcut button in chat input')}
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell className="hidden md:table-cell">{formatDate(server.createdAt)}</TableCell>
                       <TableCell className="hidden md:table-cell">
                         {formatDate(server.updatedAt)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {/* 编辑和分配用户组合按钮 */}
                           {renderEditAssignComboButton(server)}
-                          
-                          {/* 查看按钮（非editable时显示） */}
+
                           {!server.editable && (
                             <Button
                               variant="ghost"
@@ -373,8 +401,7 @@ const McpTab = () => {
                               <IconEye size={16} />
                             </Button>
                           )}
-                          
-                          {/* 删除按钮 */}
+
                           {server.editable && (
                             <DeletePopover
                               onDelete={() => handleDeleteServer(server.id)}
@@ -409,8 +436,11 @@ const McpTab = () => {
         mcpId={assignMcpId}
         onSuccess={fetchMcpServers}
         isAdmin={isAdmin}
+        defaultShowShortcut={
+          mcpServers.find((server) => server.id === assignMcpId)?.showShortcut ?? false
+        }
       />
-      </div>
+    </div>
   );
 };
 

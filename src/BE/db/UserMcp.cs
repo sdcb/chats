@@ -20,6 +20,8 @@ public partial class UserMcp
 
     public int UserId { get; set; }
 
+    public bool ShowShortcut { get; set; }
+
     [ForeignKey("McpServerId")]
     [InverseProperty("UserMcps")]
     public virtual McpServer McpServer { get; set; } = null!;

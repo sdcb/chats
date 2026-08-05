@@ -18,17 +18,17 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 
 <img alt="chats-en" src="https://github.com/user-attachments/assets/40d2376e-58a0-4309-a2f5-5ed8262a0c2e" />
 
-## 🆕 Latest Release (1.12.0)
+## 🆕 Latest Release (1.13.0)
 
-- 📅 Release Date: 2026-06-14
-- 🧩 Request customization: Model Key and Model support custom headers and RFC 6902 JSON Patch body patches, with Model-level settings overriding Key-level settings
-- 🌐 Custom URL: Model adds `Custom URL` with `{baseUrl}` placeholder support for gateways, proxies, and provider-specific endpoints
-- 🧾 Configuration snapshots: adds `ModelKeySnapshot`, `ModelSnapshot`, and `ChatConfigSnapshot` so historical chats, usage, and billing reference immutable configuration facts
-- 🤖 Claude Code compatibility: Anthropic Messages supports in-message `role=system`, matching the latest Claude Code request structure
-- 🖼️ Image and UX fixes: image generation supports output format/compression, with fixes for image preview, model ordering, signed file URL caching, and protocol compatibility
-- 🛠️ Upgrade focus: the migration restructures model configuration references and removes old mutable config columns and `ChatConfigArchived`; custom SQL/reports should read snapshot tables instead
+- 📅 Release Date: 2026-08-05
+- ⚡ MCP shortcuts: pin frequently used MCP servers to the chat input, with independent visibility preferences for each user
+- 🧠 MCP Server Instructions: automatically fetch server instructions and append them to the model context when an MCP is enabled
+- 🌐 Smart Search: native web search and citation presentation for OpenAI/Azure Responses, DeepSeek Messages, and Xiaomi MiMo
+- 🛠️ Stability fixes: corrects interleaved search pairing, reasoning-segment order, and clipboard failures on LAN HTTP deployments
+- 📦 Engineering upgrades: updates Node.js 24, npm 12, MCP SDK 2.0, and multiple frontend and backend dependencies
+- ⬆️ Upgrade focus: SQL Server and SQLite deployments must run the 1.13.0 migration, which adds `McpServer.ServerInstructions` and `UserMcp.ShowShortcut`
 
-👉 [View 1.12.0 Release Notes](./doc/en-US/release-notes/1.12.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
+👉 [View 1.13.0 Release Notes](./doc/en-US/release-notes/1.13.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
 
 ## Quick Start
 
@@ -76,7 +76,7 @@ Please submit issues or suggestions via [GitHub Issues](https://github.com/sdcb/
 
 - **GitHub Issues**: [https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
 - **QQ Group**: 498452653 [![Join QQ Group](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=flat&logo=tencent-qq)](https://qm.qq.com/q/AM8tY9cAsS)
-- **WeChat Group** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0730a) If the WeChat group is full, please join the QQ group to get a temporary invitation QR code.
+- **WeChat Group** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0805) If the WeChat group is full, please join the QQ group to get a temporary invitation QR code.
 
 ---
 

@@ -16,6 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import useTranslation from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { RequestTraceDetails } from '@/types/adminApis';
+import { copyTextToClipboard } from '@/utils/clipboard';
 import { formatDateTime } from '@/utils/date';
 
 import {
@@ -137,24 +138,20 @@ const CompareCopyButton = ({ value, className }: { value: string; className?: st
     };
   }, []);
 
-  const handleCopy = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleCopy = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
 
-    if (!navigator.clipboard || !navigator.clipboard.writeText) {
-      return;
+    if (!(await copyTextToClipboard(value))) return;
+
+    setCopied(true);
+
+    if (timeoutRef.current !== null) {
+      window.clearTimeout(timeoutRef.current);
     }
 
-    navigator.clipboard.writeText(value).then(() => {
-      setCopied(true);
-
-      if (timeoutRef.current !== null) {
-        window.clearTimeout(timeoutRef.current);
-      }
-
-      timeoutRef.current = window.setTimeout(() => {
-        setCopied(false);
-      }, 1200);
-    });
+    timeoutRef.current = window.setTimeout(() => {
+      setCopied(false);
+    }, 1200);
   };
 
   return (

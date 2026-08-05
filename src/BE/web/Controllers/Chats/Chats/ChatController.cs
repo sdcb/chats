@@ -18,6 +18,7 @@ using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
+using Chats.BE.Services.Models.ChatServices.Anthropic;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -28,6 +29,7 @@ using DBFile = Chats.DB.File;
 using Chats.DB.Enums;
 using Chats.BE.DB.Extensions;
 using Chats.BE.Services.CodeInterpreter;
+using Chats.BE.Services.Mcp;
 using Chats.BE.Services.Options;
 using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.TitleSummary;
@@ -518,14 +520,21 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             currentRoundSteps: dbUserMessage?.Steps ?? [],
             codeExecutionEnabled: codeExecutionEnabled,
             contextPrefix: ciPrefix);
+        NeutralSystemMessage? systemMessage = chatSpan.ChatConfig.CodeExecutionEnabled
+            ? codeInterpreter.BuildSystemMessage(chatSpan.ChatConfig.SystemPrompt)
+            : string.IsNullOrWhiteSpace(chatSpan.ChatConfig.SystemPrompt)
+                ? null
+                : NeutralSystemMessage.FromText(chatSpan.ChatConfig.SystemPrompt);
+        systemMessage = McpServerInstructionsBuilder.MergeSystemMessage(
+            systemMessage,
+            chatSpan.ChatConfig.ChatConfigMcps.Select(x => x.McpServer));
+
         ChatRequest csr = new()
         {
             EndUserId = $"{chat.Id}-{chatSpan.SpanId}",
             Messages = neutralMessages,
             ChatConfig = chatSpan.ChatConfig,
-            System = chatSpan.ChatConfig.CodeExecutionEnabled
-                ? codeInterpreter.BuildSystemMessage(chatSpan.ChatConfig.SystemPrompt)
-                : null,
+            System = systemMessage,
             Tools = [],
             Source = UsageSource.WebChat,
         };
@@ -710,16 +719,25 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
                     logger.LogInformation("Using MCP Server {mcpServer.Label} ({mcpServer.Url}) for tool call {call.Name} with headers: {headers}",
                         mcpServer.Label, mcpServer.Url, call.Name, headers);
                     Stopwatch sw = Stopwatch.StartNew();
-                    McpClient mcpClient = await McpClient.CreateAsync(new HttpClientTransport(new HttpClientTransportOptions
+                    bool isSuccess;
+                    string toolResult;
+                    await using (HttpClientTransport transport = new(
+                        new HttpClientTransportOptions
+                        {
+                            Endpoint = new Uri(mcpServer.Url),
+                            AdditionalHeaders = headers,
+                        },
+                        httpClientFactory.CreateClient(HttpClientNames.ChatControllerMcp),
+                        loggerFactory,
+                        ownsHttpClient: false))
+                    await using (McpClient mcpClient = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken))
                     {
-                        Endpoint = new Uri(mcpServer.Url),
-                        AdditionalHeaders = headers,
-                    }, httpClientFactory.CreateClient(HttpClientNames.ChatControllerMcp), loggerFactory, ownsHttpClient: true), cancellationToken: cancellationToken);
+                        logger.LogInformation("{mcpServer.Label} connected, elapsed={elapsed}ms, Calling tool: {toolName}, parameters: {call.Parameters}",
+                            mcpServer.Label, sw.ElapsedMilliseconds, toolName, call.Parameters);
 
-                    logger.LogInformation("{mcpServer.Label} connected, elapsed={elapsed}ms, Calling tool: {toolName}, parameters: {call.Parameters}",
-                        mcpServer.Label, sw.ElapsedMilliseconds, toolName, call.Parameters);
+                        (isSuccess, toolResult) = await CallMcp(mcpClient, cancellationToken);
+                    }
 
-                    (bool isSuccess, string toolResult) = await CallMcp(cancellationToken);
                     logger.LogInformation("Tool {call.Name} completed, success: {success}, result: {result}", call.Name, isSuccess, toolResult);
                     writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, true, call.ToolCallId!, toolResult));
                     WriteStep(new Step()
@@ -744,7 +762,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
                         ],
                     });
 
-                    async Task<(bool success, string result)> CallMcp(CancellationToken cancellationToken)
+                    async Task<(bool success, string result)> CallMcp(McpClient mcpClient, CancellationToken cancellationToken)
                     {
                         try
                         {
@@ -849,6 +867,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             string? errorText = null;
             bool responseStated = false;
             bool reasoningStarted = false;
+            HashSet<string> hostedWebSearchCallIds = new(StringComparer.Ordinal);
             ChatRunResult runResult = await chatRunService.RunAsync(
                 new ChatRunRequest
                 {
@@ -881,10 +900,24 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
                             {
                                 responseStated = true;
                             }
-                            writer.TryWrite(new CallingToolLine(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolCall.Arguments!));
+                            string toolArguments = toolCall.Arguments!;
+                            if (toolCall.Name == DeepSeekHostedWebSearch.InternalToolName
+                                && toolCall.Id != null
+                                && DeepSeekHostedWebSearch.TryCreatePresentationCall(toolArguments, out string presentationCall))
+                            {
+                                hostedWebSearchCallIds.Add(toolCall.Id);
+                                toolArguments = presentationCall;
+                            }
+                            writer.TryWrite(new CallingToolLine(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolArguments));
                             break;
                         case ToolCallResponseSegment toolCallResponse:
-                            writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, toolCallResponse.IsSuccess, toolCallResponse.ToolCallId!, toolCallResponse.Response!));
+                            string toolResponse = toolCallResponse.Response!;
+                            if (hostedWebSearchCallIds.Contains(toolCallResponse.ToolCallId)
+                                && DeepSeekHostedWebSearch.TryCreatePresentationResponse(toolResponse, out string presentationResponse))
+                            {
+                                toolResponse = presentationResponse;
+                            }
+                            writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, toolCallResponse.IsSuccess, toolCallResponse.ToolCallId!, toolResponse));
                             break;
                         case Base64PreviewImage preview:
                             writer.TryWrite(new FileGeneratingLine(chatSpan.SpanId, preview.ToTempFileDto()));

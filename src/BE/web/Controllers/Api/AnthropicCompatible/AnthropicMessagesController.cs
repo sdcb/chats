@@ -5,6 +5,7 @@ using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.Services;
 using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.Services.Models.ChatServices.Anthropic;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.OpenAIApiKeySession;
 using Microsoft.AspNetCore.Authorization;
@@ -242,6 +243,63 @@ public class AnthropicMessagesController(
                 }
                 break;
 
+            case ToolCallSegment tool when tool.Id != null
+                && tool.Name == DeepSeekHostedWebSearch.InternalToolName
+                && DeepSeekHostedWebSearch.TryParseBlock(tool.Arguments, DeepSeekHostedWebSearch.ServerToolUseType, out JsonObject? serverToolUse)
+                && serverToolUse != null:
+                if (state.CurrentBlockIndex >= 0)
+                {
+                    await YieldEvent("content_block_stop", new ContentBlockStopEvent { Index = state.CurrentBlockIndex }, cancellationToken);
+                }
+
+                state.CurrentBlockIndex++;
+                state.CurrentBlockType = $"server_tool_{tool.Index}";
+                state.HostedWebSearchCallIds.Add(tool.Id);
+                await YieldEvent("content_block_start", new ContentBlockStartEvent
+                {
+                    Index = state.CurrentBlockIndex,
+                    ContentBlock = new ContentBlockStartData
+                    {
+                        Type = DeepSeekHostedWebSearch.ServerToolUseType,
+                        Id = serverToolUse["id"]?.GetValue<string>(),
+                        Name = serverToolUse["name"]?.GetValue<string>(),
+                        Input = new JsonObject(),
+                        Caller = serverToolUse["caller"]?.DeepClone(),
+                    }
+                }, cancellationToken);
+
+                if (serverToolUse["input"] is JsonNode input)
+                {
+                    await YieldEvent("content_block_delta", new ContentBlockDeltaEvent
+                    {
+                        Index = state.CurrentBlockIndex,
+                        Delta = ContentBlockDelta.InputJsonDelta(input.ToJsonString(JSON.JsonSerializerOptions))
+                    }, cancellationToken);
+                }
+                break;
+
+            case ToolCallResponseSegment response when state.HostedWebSearchCallIds.Contains(response.ToolCallId)
+                && DeepSeekHostedWebSearch.TryParseBlock(response.Response, DeepSeekHostedWebSearch.ToolResultType, out JsonObject? webSearchResult)
+                && webSearchResult != null:
+                if (state.CurrentBlockIndex >= 0)
+                {
+                    await YieldEvent("content_block_stop", new ContentBlockStopEvent { Index = state.CurrentBlockIndex }, cancellationToken);
+                }
+
+                state.CurrentBlockIndex++;
+                state.CurrentBlockType = $"server_tool_result_{response.ToolCallId}";
+                await YieldEvent("content_block_start", new ContentBlockStartEvent
+                {
+                    Index = state.CurrentBlockIndex,
+                    ContentBlock = new ContentBlockStartData
+                    {
+                        Type = DeepSeekHostedWebSearch.ToolResultType,
+                        ToolUseId = webSearchResult["tool_use_id"]?.GetValue<string>(),
+                        Content = webSearchResult["content"]?.DeepClone(),
+                    }
+                }, cancellationToken);
+                break;
+
             case ToolCallSegment tool:
                 // Handle tool use blocks
                 string toolBlockId = $"tool_{tool.Index}";
@@ -301,6 +359,7 @@ public class AnthropicMessagesController(
     {
         public int CurrentBlockIndex { get; set; } = -1;
         public string? CurrentBlockType { get; set; }
+        public HashSet<string> HostedWebSearchCallIds { get; } = new(StringComparer.Ordinal);
     }
 
     private static readonly ReadOnlyMemory<byte> eventU8 = "event: "u8.ToArray();

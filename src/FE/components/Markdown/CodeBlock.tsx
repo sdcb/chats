@@ -10,6 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { copyTextToClipboard } from '@/utils/clipboard';
 
 interface Props {
   language: string;
@@ -21,17 +22,13 @@ const CodeBlockFallback: FC<Props> = ({ language, value }) => {
   const [isCopied, setIsCopied] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
 
-  const copyToClipboard = (e: React.MouseEvent) => {
+  const copyToClipboard = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    if (!navigator.clipboard || !navigator.clipboard.writeText) {
-      return;
-    }
+    if (!(await copyTextToClipboard(value))) return;
 
-    navigator.clipboard.writeText(value).then(() => {
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    });
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
   };
 
   const toggleExpanded = () => setIsExpanded((value) => !value);

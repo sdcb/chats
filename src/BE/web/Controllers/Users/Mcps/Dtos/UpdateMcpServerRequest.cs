@@ -7,6 +7,7 @@ public record UpdateMcpServerRequest
     [JsonPropertyName("label")] public required string Label { get; init; }
     [JsonPropertyName("url")] public required string Url { get; init; }
     [JsonPropertyName("headers")] public string? Headers { get; init; }
+    [JsonPropertyName("serverInstructions")] public string? ServerInstructions { get; init; }
     [JsonPropertyName("tools")] public required List<McpToolBasicInfo> Tools { get; init; }
 
     public bool ValidateToolNameUnique()
