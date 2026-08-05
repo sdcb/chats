@@ -331,7 +331,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             string? currentFcName = null;
             List<WebSearchCall> webSearchCalls = [];
             JsonArray webSearchCitations = [];
-            bool emittedWebSearchResponses = false;
+            HashSet<string> emittedWebSearchResponseIds = new(StringComparer.Ordinal);
             bool terminalEventSeen = false;
             ReasoningTextMode reasoningTextMode = ReasoningTextMode.None;
 
@@ -355,7 +355,14 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                 string? eventType = json.TryGetProperty("type", out JsonElement typeEl) ? typeEl.GetString() : null;
                 if (eventType == null) continue;
 
-                AppendJsonArray(webSearchCitations, ExtractUrlCitationsRecursive(json));
+                // Terminal events contain the complete response and therefore repeat all
+                // citations from earlier messages. Do not mix those old citations into a
+                // later DeepSeek search batch; terminal output is used only as a fallback
+                // when no search response has been emitted yet.
+                if (eventType is not ("response.completed" or "response.incomplete" or "response.failed"))
+                {
+                    AppendJsonArray(webSearchCitations, ExtractUrlCitationsRecursive(json));
+                }
 
                 if (eventType == "error")
                 {
@@ -403,16 +410,18 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                     if (responseEl?.TryGetProperty("output", out JsonElement outputEl) == true)
                     {
                         AddWebSearchCallsFromOutput(outputEl, webSearchCalls);
-                        AppendJsonArray(webSearchCitations, ExtractUrlCitations(outputEl));
+                        if (emittedWebSearchResponseIds.Count == 0)
+                        {
+                            AppendJsonArray(webSearchCitations, ExtractUrlCitations(outputEl));
+                        }
                     }
 
-                    if (!emittedWebSearchResponses)
+                    foreach (ChatSegment segment in CreatePendingWebSearchToolResponses(
+                        webSearchCalls,
+                        webSearchCitations,
+                        emittedWebSearchResponseIds))
                     {
-                        foreach (ChatSegment segment in CreateWebSearchToolResponses(webSearchCalls, webSearchCitations))
-                        {
-                            yield return segment;
-                        }
-                        emittedWebSearchResponses = true;
+                        yield return segment;
                     }
 
                     if (usage != null)
@@ -485,13 +494,12 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                         else if (itemType == "message")
                         {
                             AppendJsonArray(webSearchCitations, ExtractUrlCitationsFromMessage(itemEl));
-                            if (!emittedWebSearchResponses)
+                            foreach (ChatSegment segment in CreatePendingWebSearchToolResponses(
+                                webSearchCalls,
+                                webSearchCitations,
+                                emittedWebSearchResponseIds))
                             {
-                                foreach (ChatSegment segment in CreateWebSearchToolResponses(webSearchCalls, webSearchCitations))
-                                {
-                                    yield return segment;
-                                }
-                                emittedWebSearchResponses = true;
+                                yield return segment;
                             }
                         }
                         else if (itemType == "reasoning")
@@ -928,6 +936,30 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             JsonArray response = call.Id == citationOwner.Id ? CloneJsonArray(citations) : [];
             yield return ChatSegment.FromToolCallResponse(call.Id, response.ToJsonString(JSON.JsonSerializerOptions), 0, true);
         }
+    }
+
+    private static IReadOnlyList<ChatSegment> CreatePendingWebSearchToolResponses(
+        IReadOnlyList<WebSearchCall> calls,
+        JsonArray citations,
+        HashSet<string> emittedResponseIds)
+    {
+        WebSearchCall[] pendingCalls = [.. calls.Where(call => !emittedResponseIds.Contains(call.Id))];
+        if (pendingCalls.Length == 0)
+        {
+            return [];
+        }
+
+        List<ChatSegment> segments = [.. CreateWebSearchToolResponses(pendingCalls, citations)];
+        foreach (WebSearchCall call in pendingCalls)
+        {
+            emittedResponseIds.Add(call.Id);
+        }
+
+        // Citations collected since the previous message belong to this batch.
+        // DeepSeek can emit additional web_search_call items after a message, so
+        // keeping old citations would incorrectly attach them to later searches.
+        citations.Clear();
+        return segments;
     }
 
     private static JsonArray CloneJsonArray(JsonArray array)

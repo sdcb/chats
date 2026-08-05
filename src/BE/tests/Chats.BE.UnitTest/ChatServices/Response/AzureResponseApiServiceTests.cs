@@ -491,6 +491,49 @@ public class AzureResponseApiServiceTests
     }
 
     [Fact]
+    public async Task ResponseApiService_ShouldPairInterleavedDeepSeekWebSearchCallsWithResponses()
+    {
+        string sse =
+            "event: response.output_item.done\n" +
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"ws_1\",\"type\":\"web_search_call\",\"status\":\"completed\",\"action\":{\"type\":\"search\",\"query\":\"first\"}}}\n\n" +
+            "event: response.output_item.done\n" +
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"msg_1\",\"type\":\"message\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"partial\",\"annotations\":[{\"type\":\"url_citation\",\"title\":\"First\",\"url\":\"https://example.com/first\"}]}]}}\n\n" +
+            "event: response.output_item.done\n" +
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"ws_2\",\"type\":\"web_search_call\",\"status\":\"completed\",\"action\":{\"type\":\"search\",\"query\":\"second\"}}}\n\n" +
+            "event: response.output_item.done\n" +
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"ws_3\",\"type\":\"web_search_call\",\"status\":\"completed\",\"action\":{\"type\":\"open_page\",\"url\":\"https://example.com/second\"}}}\n\n" +
+            "event: response.output_item.done\n" +
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"msg_2\",\"type\":\"message\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"answer\",\"annotations\":[{\"type\":\"url_citation\",\"title\":\"Second\",\"url\":\"https://example.com/second\"}]}]}}\n\n" +
+            "event: response.completed\n" +
+            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}}\n\n";
+
+        FiddlerDumpHttpClientFactory httpClientFactory = new([sse], HttpStatusCode.OK, expectedRequestBody: null);
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        List<ChatSegment> segments = [];
+
+        await foreach (ChatSegment segment in service.ChatStreamed(CreateBaseChatRequest(), CancellationToken.None))
+        {
+            segments.Add(segment);
+        }
+
+        ToolCallSegment[] calls = segments.OfType<ToolCallSegment>()
+            .Where(x => x.Name == "web_search_call")
+            .ToArray();
+        ToolCallResponseSegment[] responses = segments.OfType<ToolCallResponseSegment>().ToArray();
+
+        Assert.Equal(["ws_1", "ws_2", "ws_3"], calls.Select(x => x.Id));
+        Assert.Equal(calls.Select(x => x.Id).Order(), responses.Select(x => x.ToolCallId).Order());
+        Assert.True(
+            segments.IndexOf(responses.Single(x => x.ToolCallId == "ws_1"))
+            < segments.IndexOf(calls.Single(x => x.Id == "ws_2")));
+
+        ToolCallResponseSegment secondResponse = responses.Single(x => x.ToolCallId == "ws_2");
+        using JsonDocument secondResult = JsonDocument.Parse(secondResponse.Response!);
+        Assert.Equal("https://example.com/second", Assert.Single(secondResult.RootElement.EnumerateArray()).GetProperty("url").GetString());
+        Assert.Equal("[]", responses.Single(x => x.ToolCallId == "ws_3").Response);
+    }
+
+    [Fact]
     public async Task ResponseApiService_ShouldIgnoreArrayTypeProperties_WhenScanningUrlCitations()
     {
         // Arrange
