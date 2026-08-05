@@ -18,17 +18,17 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 22+ 主流 
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
-## 🆕 最新版本（1.12.0）
+## 🆕 最新版本（1.13.0）
 
-- 📅 发布日期：2026-06-14
-- 🧩 请求自定义：Model Key 和 Model 支持自定义 Header 与 RFC 6902 JSON Patch 请求体补丁，Model 层可以覆盖 Key 层配置
-- 🌐 自定义 URL：Model 新增 `Custom URL`，支持 `{baseUrl}` 占位符，便于适配网关、代理和厂商私有 endpoint
-- 🧾 配置快照化：新增 `ModelKeySnapshot`、`ModelSnapshot`、`ChatConfigSnapshot`，历史会话、用量和账单引用不可变配置事实
-- 🤖 Claude Code 兼容：Anthropic Messages 支持消息中的 `role=system`，兼容最新 Claude Code 请求结构
-- 🖼️ 图像与体验：图像生成支持输出格式/压缩，修复图片预览、模型排序、签名文件 URL 缓存和多项协议兼容问题
-- 🛠️ 升级重点：迁移脚本会重构模型配置引用关系，删除旧的可变配置列和 `ChatConfigArchived` 表；自定义 SQL/报表需要改读 snapshot 表
+- 📅 发布日期：2026-08-05
+- ⚡ MCP 快捷按钮：常用 MCP 可固定到聊天输入框，并按用户分别管理是否显示
+- 🧠 MCP Server Instructions：自动获取服务端指令，并追加到启用该 MCP 的模型上下文
+- 🌐 智能搜索：支持 OpenAI/Azure Responses、DeepSeek Messages 和小米 MiMo 的原生联网搜索与引用展示
+- 🛠️ 稳定性修复：修复多次搜索配对、推理片段顺序和局域网 HTTP 环境复制失败问题
+- 📦 工程升级：升级 Node.js 24、npm 12、MCP SDK 2.0 以及多项前后端依赖
+- ⬆️ 升级重点：SQL Server 和 SQLite 均需运行 1.13.0 迁移，新增 `McpServer.ServerInstructions` 与 `UserMcp.ShowShortcut`
 
-👉 [查看 1.12.0 发布说明](./doc/zh-CN/release-notes/1.12.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
+👉 [查看 1.13.0 发布说明](./doc/zh-CN/release-notes/1.13.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
 
 ## 快速开始
 
@@ -76,7 +76,7 @@ Chats 使用 `C#`/`TypeScript` 开发，以下是完整的文档资源：
 
 - **GitHub Issues**：[https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
 - **QQ 群**：498452653 [![加入QQ群](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=flat&logo=tencent-qq)](https://qm.qq.com/q/AM8tY9cAsS)
-- **微信群** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0710) 如果微信群已满，请加 QQ 群获取临时入群二维码。
+- **微信群** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0805) 如果微信群已满，请加 QQ 群获取临时入群二维码。
 
 ---
 

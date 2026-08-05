@@ -7,7 +7,21 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.12.0](1.12.0.md) - 2026-06-14 ⭐ Latest Release
+## [1.13.0](1.13.0.md) - 2026-08-05 ⭐ Latest Release
+
+**Core Highlights**: MCP shortcuts and Server Instructions · Smart Search for OpenAI/Azure Responses, DeepSeek, and MiMo · Reasoning order and LAN clipboard fixes · Node.js 24 and MCP SDK 2.0 · SQL Server/SQLite migrations
+
+- ⚡ **MCP Shortcuts**: pin frequently used MCP servers as chat input buttons with per-user visibility preferences
+- 🧠 **MCP Server Instructions**: automatically fetch, edit, and inject Server Instructions into chats where the MCP is enabled
+- 🌐 **Expanded Smart Search**: native web search, citations, and history round-tripping for OpenAI/Azure Responses, DeepSeek Messages, and Xiaomi MiMo
+- 🛠️ **Compatibility Fixes**: corrects reasoning-segment order, interleaved Responses search pairing, and clipboard failures on LAN HTTP deployments
+- ⬆️ **Engineering & Upgrades**: updates Node.js 24, npm 12, MCP SDK 2.0, and other dependencies, with new SQL Server and SQLite migrations
+
+[View Full Release Notes →](1.13.0.md)
+
+---
+
+## [1.12.0](1.12.0.md) - 2026-06-14
 
 **Core Highlights**: Model Key/Model custom Header and Body · Model custom URL · Model configuration snapshots · Latest Claude Code compatibility · Image output format/compression · Stability fixes
 
@@ -317,5 +331,5 @@ Starting from 1.0.0, Chats follows Semantic Versioning:
 ---
 
 <p align="center">
-  <sub>Last updated: 2026-06-14</sub>
+  <sub>Last updated: 2026-08-05</sub>
 </p>

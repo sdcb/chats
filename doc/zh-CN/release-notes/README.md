@@ -7,7 +7,21 @@
 
 ---
 
-## [1.12.0](1.12.0.md) - 2026-06-14 ⭐ 最新版本
+## [1.13.0](1.13.0.md) - 2026-08-05 ⭐ 最新版本
+
+**核心亮点**：MCP 快捷按钮与 Server Instructions · OpenAI/Azure Responses、DeepSeek、MiMo 智能搜索 · 推理顺序与局域网复制修复 · Node.js 24 与 MCP SDK 2.0 · SQL Server/SQLite 迁移
+
+- ⚡ **MCP 快捷操作**：常用 MCP 可显示为聊天输入框快捷按钮，并支持按用户管理显示偏好
+- 🧠 **MCP 服务端指令**：自动获取、编辑并将 Server Instructions 注入启用该 MCP 的聊天上下文
+- 🌐 **智能搜索扩展**：支持 OpenAI/Azure Responses、DeepSeek Messages 和小米 MiMo 的原生联网搜索、引用与历史还原
+- 🛠️ **兼容性修复**：修复推理片段顺序、Responses 多次搜索配对及局域网 HTTP 环境复制失败问题
+- ⬆️ **工程与升级**：升级 Node.js 24、npm 12、MCP SDK 2.0 和多项依赖，新增 SQL Server/SQLite 迁移脚本
+
+[查看完整发布说明 →](1.13.0.md)
+
+---
+
+## [1.12.0](1.12.0.md) - 2026-06-14
 
 **核心亮点**：Model Key/Model 自定义 Header 与 Body · Model 自定义 URL · 模型配置快照化 · 最新 Claude Code 兼容 · 图像输出格式/压缩 · 多项体验修复
 
@@ -317,5 +331,5 @@
 ---
 
 <p align="center">
-  <sub>上次更新：2026-06-14</sub>
+  <sub>上次更新：2026-08-05</sub>
 </p>
