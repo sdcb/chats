@@ -22,7 +22,7 @@ public class AnthropicChatServiceRequestTests
             )
         ];
 
-        JsonArray result = (JsonArray?)method.Invoke(null, [messages, true, UsageSource.Api])
+        JsonArray result = (JsonArray?)method.Invoke(null, [messages, true, UsageSource.Api, false])
             ?? throw new InvalidOperationException("ConvertMessages returned null.");
 
         JsonObject assistantMessage = Assert.IsType<JsonObject>(result[0]);
@@ -47,7 +47,7 @@ public class AnthropicChatServiceRequestTests
             NeutralMessage.FromAssistantText("answer")
         ];
 
-        JsonArray result = (JsonArray?)method.Invoke(null, [messages, true, UsageSource.Api])
+        JsonArray result = (JsonArray?)method.Invoke(null, [messages, true, UsageSource.Api, false])
             ?? throw new InvalidOperationException("ConvertMessages returned null.");
 
         Assert.Equal(["user", "system", "assistant"], result.Select(x => x!["role"]!.GetValue<string>()).ToArray());
@@ -71,7 +71,7 @@ public class AnthropicChatServiceRequestTests
             )
         ];
 
-        JsonArray result = (JsonArray?)method.Invoke(null, [messages, true, UsageSource.Api])
+        JsonArray result = (JsonArray?)method.Invoke(null, [messages, true, UsageSource.Api, false])
             ?? throw new InvalidOperationException("ConvertMessages returned null.");
 
         JsonObject assistantMessage = Assert.IsType<JsonObject>(result[0]);
@@ -102,7 +102,7 @@ public class AnthropicChatServiceRequestTests
             )
         ];
 
-        JsonArray result = (JsonArray?)method.Invoke(null, [messages, true, UsageSource.Api])
+        JsonArray result = (JsonArray?)method.Invoke(null, [messages, true, UsageSource.Api, false])
             ?? throw new InvalidOperationException("ConvertMessages returned null.");
 
         JsonObject userMessage = Assert.IsType<JsonObject>(result[1]);

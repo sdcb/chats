@@ -2,6 +2,7 @@
 using Chats.DB.Enums;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.UrlEncryption;
+using Chats.BE.Services.Models.ChatServices.Anthropic;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Messages.Dtos;
@@ -19,6 +20,13 @@ public abstract record ContentResponseItem
     public required string Id { get; init; }
 
     public static ContentResponseItem FromContent(StepContent content, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
+        => FromContent(content, fup, urlEncryption, null);
+
+    private static ContentResponseItem FromContent(
+        StepContent content,
+        FileUrlProvider fup,
+        IUrlEncryptionService urlEncryption,
+        IReadOnlyDictionary<string, string>? toolNames)
     {
         string encryptedMessageContentId = urlEncryption.EncryptMessageContentId(content.Id);
         return (DBStepContentType)content.ContentTypeId switch
@@ -48,13 +56,22 @@ public abstract record ContentResponseItem
                 Id = encryptedMessageContentId,
                 Name = content.StepContentToolCall!.Name,
                 ToolCallId = content.StepContentToolCall!.ToolCallId!,
-                Parameters = content.StepContentToolCall!.Parameters,
+                Parameters = content.StepContentToolCall.Name == DeepSeekHostedWebSearch.InternalToolName
+                    ? DeepSeekHostedWebSearch.CreatePresentationCall(content.StepContentToolCall.Parameters)
+                    : content.StepContentToolCall.Parameters,
             },
             DBStepContentType.ToolCallResponse => new ToolCallResponseItem()
             {
                 Id = encryptedMessageContentId,
                 ToolCallId = content.StepContentToolCallResponse!.ToolCallId!,
-                Response = content.StepContentToolCallResponse!.Response,
+                Response = toolNames?.GetValueOrDefault(content.StepContentToolCallResponse!.ToolCallId)
+                    == DeepSeekHostedWebSearch.InternalToolName
+                    || DeepSeekHostedWebSearch.TryParseBlock(
+                        content.StepContentToolCallResponse.Response,
+                        DeepSeekHostedWebSearch.ToolResultType,
+                        out _)
+                    ? DeepSeekHostedWebSearch.CreatePresentationResponse(content.StepContentToolCallResponse.Response)
+                    : content.StepContentToolCallResponse.Response,
             },
             _ => throw new NotSupportedException(),
         };
@@ -62,7 +79,14 @@ public abstract record ContentResponseItem
 
     public static ContentResponseItem[] FromContent(StepContent[] contents, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
     {
-        return [.. contents.Select(x => FromContent(x, fup, urlEncryption))];
+        Dictionary<string, string> toolNames = new(StringComparer.Ordinal);
+        foreach (StepContent content in contents.Where(x =>
+            x.ContentTypeId == (byte)DBStepContentType.ToolCall
+            && x.StepContentToolCall != null))
+        {
+            toolNames[content.StepContentToolCall!.ToolCallId] = content.StepContentToolCall.Name;
+        }
+        return [.. contents.Select(x => FromContent(x, fup, urlEncryption, toolNames))];
     }
 }
 

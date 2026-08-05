@@ -1,6 +1,7 @@
 using Chats.DB.Enums;
 using Chats.BE.Controllers.Api.AnthropicCompatible.Dtos;
 using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.Services.Models.ChatServices.Anthropic;
 using System.Text.Json;
 
 namespace Chats.BE.Services.Models.Dtos;
@@ -33,6 +34,7 @@ public static class AnthropicSegmentExtensions
     public static AnthropicResponse ToAnthropicResponse(this ChatCompletionSnapshot snapshot, string model, string messageId)
     {
         List<AnthropicResponseContentBlock> content = [];
+        HashSet<string> hostedWebSearchCallIds = new(StringComparer.Ordinal);
 
         foreach (ChatSegment item in snapshot.Segments)
         {
@@ -43,6 +45,18 @@ public static class AnthropicSegmentExtensions
                     break;
                 case TextChatSegment text:
                     content.Add(AnthropicResponseContentBlock.FromText(text.Text));
+                    break;
+                case ToolCallSegment tool when tool.Id != null
+                    && tool.Name == DeepSeekHostedWebSearch.InternalToolName
+                    && DeepSeekHostedWebSearch.TryParseBlock(tool.Arguments, DeepSeekHostedWebSearch.ServerToolUseType, out System.Text.Json.Nodes.JsonObject? serverToolUse)
+                    && serverToolUse != null:
+                    hostedWebSearchCallIds.Add(tool.Id);
+                    content.Add(AnthropicResponseContentBlock.FromServerToolUse(serverToolUse));
+                    break;
+                case ToolCallResponseSegment response when hostedWebSearchCallIds.Contains(response.ToolCallId)
+                    && DeepSeekHostedWebSearch.TryParseBlock(response.Response, DeepSeekHostedWebSearch.ToolResultType, out System.Text.Json.Nodes.JsonObject? webSearchResult)
+                    && webSearchResult != null:
+                    content.Add(AnthropicResponseContentBlock.FromWebSearchToolResult(webSearchResult));
                     break;
                 case ToolCallSegment tool when tool.Id != null && tool.Name != null:
                     object input = new { };

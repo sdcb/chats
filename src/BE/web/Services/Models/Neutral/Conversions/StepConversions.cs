@@ -16,7 +16,7 @@ public static class StepConversions
         return new NeutralMessage
         {
             Role = step.ChatRole.ToNeutral(),
-            Contents = step.StepContents.Select(sc => sc.ToNeutral()).ToList()
+            Contents = step.StepContents.OrderBy(sc => sc.Id).Select(sc => sc.ToNeutral()).ToList()
         };
     }
 

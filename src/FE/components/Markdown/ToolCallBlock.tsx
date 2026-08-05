@@ -72,22 +72,6 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         return null;
     };
 
-    // 检查是否为web_search工具的结果数组
-    const getWebSearchResults = (): WebSearchResult[] | null => {
-        if (toolCall.n !== 'web_search' || !toolResponse) {
-            return null;
-        }
-        try {
-            const parsed = JSON.parse(toolResponse.r);
-            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].type === 'web_search_result') {
-                return parsed as WebSearchResult[];
-            }
-        } catch {
-            return null;
-        }
-        return null;
-    };
-
     const getResponseWebSearchResults = (): WebSearchResult[] | null => {
         if (toolCall.n !== 'web_search_call' || !toolResponse) {
             return null;
@@ -124,7 +108,6 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
     };
 
     const code = getCodeIfAvailable();
-    const webSearchResults = getWebSearchResults();
     const responseWebSearchResults = getResponseWebSearchResults();
     const toolProgressDeltas = getToolProgressDeltas();
 
@@ -337,7 +320,9 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         setIsManuallyToggled(true);
     };
 
-    const renderWebSearchResultsTable = (results: WebSearchResult[], includeAge: boolean) => (
+    const renderWebSearchResultsTable = (results: WebSearchResult[]) => {
+        const includeAge = results.some(result => !!result.page_age);
+        return (
         <table className="w-full border-collapse text-left m-0">
             <thead>
                 <tr className="border-b border-border">
@@ -380,7 +365,8 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                 )}
             </tbody>
         </table>
-    );
+        );
+    };
 
     return (
         <div className="codeblock relative font-sans text-base">
@@ -559,9 +545,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                             </TooltipProvider>
                         </div>
                         {responseWebSearchResults ? (
-                            renderWebSearchResultsTable(responseWebSearchResults, false)
-                        ) : webSearchResults ? (
-                            renderWebSearchResultsTable(webSearchResults, true)
+                            renderWebSearchResultsTable(responseWebSearchResults)
                         ) : (
                             toolProgressDeltas ? (
                                 <pre className="not-prose whitespace-pre-wrap break-words font-mono">

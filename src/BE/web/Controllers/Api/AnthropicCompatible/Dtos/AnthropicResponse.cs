@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.Text.Json.Nodes;
 
 namespace Chats.BE.Controllers.Api.AnthropicCompatible.Dtos;
 
@@ -51,6 +52,15 @@ public record AnthropicResponseContentBlock
     [JsonPropertyName("input"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public object? Input { get; init; }
 
+    [JsonPropertyName("caller"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public JsonNode? Caller { get; init; }
+
+    [JsonPropertyName("tool_use_id"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ToolUseId { get; init; }
+
+    [JsonPropertyName("content"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public JsonNode? Content { get; init; }
+
     // For thinking blocks
     [JsonPropertyName("thinking"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Thinking { get; init; }
@@ -85,6 +95,28 @@ public record AnthropicResponseContentBlock
             Id = id,
             Name = name,
             Input = input
+        };
+    }
+
+    public static AnthropicResponseContentBlock FromServerToolUse(JsonObject block)
+    {
+        return new AnthropicResponseContentBlock
+        {
+            Type = block["type"]?.GetValue<string>() ?? "server_tool_use",
+            Id = block["id"]?.GetValue<string>(),
+            Name = block["name"]?.GetValue<string>(),
+            Input = block["input"]?.DeepClone(),
+            Caller = block["caller"]?.DeepClone(),
+        };
+    }
+
+    public static AnthropicResponseContentBlock FromWebSearchToolResult(JsonObject block)
+    {
+        return new AnthropicResponseContentBlock
+        {
+            Type = block["type"]?.GetValue<string>() ?? "web_search_tool_result",
+            ToolUseId = block["tool_use_id"]?.GetValue<string>(),
+            Content = block["content"]?.DeepClone(),
         };
     }
 }

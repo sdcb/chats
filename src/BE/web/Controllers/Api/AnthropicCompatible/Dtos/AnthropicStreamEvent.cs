@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.Text.Json.Nodes;
 
 namespace Chats.BE.Controllers.Api.AnthropicCompatible.Dtos;
 
@@ -97,6 +98,15 @@ public record ContentBlockStartData
 
     [JsonPropertyName("input"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public object? Input { get; init; }
+
+    [JsonPropertyName("caller"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public JsonNode? Caller { get; init; }
+
+    [JsonPropertyName("tool_use_id"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ToolUseId { get; init; }
+
+    [JsonPropertyName("content"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public JsonNode? Content { get; init; }
 
     // For thinking blocks
     [JsonPropertyName("thinking"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

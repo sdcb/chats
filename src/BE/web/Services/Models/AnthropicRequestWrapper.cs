@@ -109,7 +109,8 @@ public class AnthropicRequestWrapper(JsonObject json)
                 tools.Add(new AnthropicBuiltInTool
                 {
                     Name = name,
-                    Type = type
+                    Type = type,
+                    Definition = (JsonObject)toolNode.DeepClone(),
                 });
             }
         }

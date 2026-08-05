@@ -18,6 +18,7 @@ using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
+using Chats.BE.Services.Models.ChatServices.Anthropic;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -866,6 +867,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             string? errorText = null;
             bool responseStated = false;
             bool reasoningStarted = false;
+            HashSet<string> hostedWebSearchCallIds = new(StringComparer.Ordinal);
             ChatRunResult runResult = await chatRunService.RunAsync(
                 new ChatRunRequest
                 {
@@ -898,10 +900,19 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
                             {
                                 responseStated = true;
                             }
-                            writer.TryWrite(new CallingToolLine(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolCall.Arguments!));
+                            string toolArguments = toolCall.Arguments!;
+                            if (toolCall.Name == DeepSeekHostedWebSearch.InternalToolName && toolCall.Id != null)
+                            {
+                                hostedWebSearchCallIds.Add(toolCall.Id);
+                                toolArguments = DeepSeekHostedWebSearch.CreatePresentationCall(toolArguments);
+                            }
+                            writer.TryWrite(new CallingToolLine(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolArguments));
                             break;
                         case ToolCallResponseSegment toolCallResponse:
-                            writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, toolCallResponse.IsSuccess, toolCallResponse.ToolCallId!, toolCallResponse.Response!));
+                            string toolResponse = hostedWebSearchCallIds.Contains(toolCallResponse.ToolCallId)
+                                ? DeepSeekHostedWebSearch.CreatePresentationResponse(toolCallResponse.Response!)
+                                : toolCallResponse.Response!;
+                            writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, toolCallResponse.IsSuccess, toolCallResponse.ToolCallId!, toolResponse));
                             break;
                         case Base64PreviewImage preview:
                             writer.TryWrite(new FileGeneratingLine(chatSpan.SpanId, preview.ToTempFileDto()));

@@ -18,6 +18,15 @@ namespace Chats.BE.Services.Models.ChatServices.Anthropic;
 
 public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatService
 {
+    protected virtual bool SupportsHostedWebSearch => false;
+
+    private sealed class HostedWebSearchCallState
+    {
+        public required int SegmentIndex { get; init; }
+        public required JsonObject Block { get; init; }
+        public StringBuilder PartialInput { get; } = new();
+    }
+
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         (string url, string apiKey) = GetMessagesEndpointAndKey(request.ChatConfig.Model.CurrentSnapshot);
@@ -40,7 +49,9 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
         using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
-        int toolCallIndex = -1;
+        int nextToolCallIndex = 0;
+        Dictionary<int, int> toolCallIndexes = [];
+        Dictionary<int, HostedWebSearchCallState> hostedWebSearchCalls = [];
         ChatTokenUsage? lastKnownUsage = null;
         await foreach (SseItem<string> sseItem in SseParser.Create(stream, (_, bytes) => Encoding.UTF8.GetString(bytes)).EnumerateAsync(cancellationToken))
         {
@@ -78,11 +89,13 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                     {
                         if (json.TryGetProperty("content_block", out JsonElement contentBlock))
                         {
+                            int blockIndex = json.TryGetProperty("index", out JsonElement indexEl) ? indexEl.GetInt32() : -1;
                             string? blockType = contentBlock.TryGetProperty("type", out JsonElement bt) ? bt.GetString() : null;
 
                             if (blockType == "tool_use")
                             {
-                                ++toolCallIndex;
+                                int toolCallIndex = nextToolCallIndex++;
+                                toolCallIndexes[blockIndex] = toolCallIndex;
                                 string? id = contentBlock.TryGetProperty("id", out JsonElement idEl) ? idEl.GetString() : null;
                                 string? name = contentBlock.TryGetProperty("name", out JsonElement nameEl) ? nameEl.GetString() : null;
                                 yield return new ToolCallSegment
@@ -93,26 +106,24 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                                     Name = name,
                                 };
                             }
-                            else if (blockType == "server_tool_use")
+                            else if (SupportsHostedWebSearch && blockType == DeepSeekHostedWebSearch.ServerToolUseType)
                             {
-                                ++toolCallIndex;
-                                string? id = contentBlock.TryGetProperty("id", out JsonElement idEl) ? idEl.GetString() : null;
-                                string? name = contentBlock.TryGetProperty("name", out JsonElement nameEl) ? nameEl.GetString() : null;
-                                yield return new ToolCallSegment
+                                JsonObject? rawBlock = JsonNode.Parse(contentBlock.GetRawText()) as JsonObject;
+                                if (rawBlock != null)
                                 {
-                                    Arguments = "",
-                                    Index = toolCallIndex,
-                                    Id = id,
-                                    Name = name,
-                                };
+                                    hostedWebSearchCalls[blockIndex] = new HostedWebSearchCallState
+                                    {
+                                        SegmentIndex = nextToolCallIndex++,
+                                        Block = rawBlock,
+                                    };
+                                }
                             }
-                            else if (blockType == "web_search_tool_result")
+                            else if (SupportsHostedWebSearch && blockType == DeepSeekHostedWebSearch.ToolResultType)
                             {
                                 string? toolUseId = contentBlock.TryGetProperty("tool_use_id", out JsonElement tuidEl) ? tuidEl.GetString() : null;
-                                if (contentBlock.TryGetProperty("content", out JsonElement content) && toolUseId != null)
+                                if (toolUseId != null)
                                 {
-                                    string responseText = RemoveEncryptedContent(content);
-                                    yield return ChatSegment.FromToolCallResponse(toolUseId, responseText, 0, true);
+                                    yield return ChatSegment.FromToolCallResponse(toolUseId, contentBlock.GetRawText(), 0, true);
                                 }
                             }
                             // text block start - do nothing, wait for delta
@@ -146,11 +157,19 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                             else if (deltaType == "input_json_delta")
                             {
                                 string? partialJson = delta.TryGetProperty("partial_json", out JsonElement pj) ? pj.GetString() : null;
-                                yield return new ToolCallSegment
+                                int blockIndex = json.TryGetProperty("index", out JsonElement indexEl) ? indexEl.GetInt32() : -1;
+                                if (hostedWebSearchCalls.TryGetValue(blockIndex, out HostedWebSearchCallState? hostedCall))
                                 {
-                                    Arguments = partialJson ?? "",
-                                    Index = toolCallIndex,
-                                };
+                                    hostedCall.PartialInput.Append(partialJson);
+                                }
+                                else if (toolCallIndexes.TryGetValue(blockIndex, out int toolCallIndex))
+                                {
+                                    yield return new ToolCallSegment
+                                    {
+                                        Arguments = partialJson ?? "",
+                                        Index = toolCallIndex,
+                                    };
+                                }
                             }
                             else if (deltaType == "signature_delta")
                             {
@@ -166,8 +185,26 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                     }
 
                 case "content_block_stop":
-                    // no additional data needed
-                    break;
+                    {
+                        int blockIndex = json.TryGetProperty("index", out JsonElement indexEl) ? indexEl.GetInt32() : -1;
+                        if (hostedWebSearchCalls.Remove(blockIndex, out HostedWebSearchCallState? hostedCall))
+                        {
+                            if (hostedCall.PartialInput.Length > 0)
+                            {
+                                hostedCall.Block["input"] = JsonNode.Parse(hostedCall.PartialInput.ToString());
+                            }
+
+                            string? id = hostedCall.Block["id"]?.GetValue<string>();
+                            yield return new ToolCallSegment
+                            {
+                                Arguments = hostedCall.Block.ToJsonString(JSON.JsonSerializerOptions),
+                                Index = hostedCall.SegmentIndex,
+                                Id = id,
+                                Name = DeepSeekHostedWebSearch.InternalToolName,
+                            };
+                        }
+                        break;
+                    }
 
                 case "message_delta":
                     {
@@ -241,39 +278,6 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             valueElement.TryGetInt32(out int value)
             ? value
             : fallback;
-    }
-
-    /// <summary>
-    /// Removes the encrypted_content field from web search results as it's very long,
-    /// cannot be understood by the model, and wastes storage/bandwidth.
-    /// </summary>
-    private static string RemoveEncryptedContent(JsonElement json)
-    {
-        if (json.ValueKind == JsonValueKind.Array)
-        {
-            JsonArray results = [];
-            foreach (JsonElement item in json.EnumerateArray())
-            {
-                if (item.ValueKind == JsonValueKind.Object)
-                {
-                    JsonObject obj = [];
-                    foreach (JsonProperty prop in item.EnumerateObject())
-                    {
-                        if (prop.Name != "encrypted_content")
-                        {
-                            obj[prop.Name] = JsonNode.Parse(prop.Value.GetRawText());
-                        }
-                    }
-                    results.Add(obj);
-                }
-                else
-                {
-                    results.Add(JsonNode.Parse(item.GetRawText()));
-                }
-            }
-            return results.ToJsonString(JSON.JsonSerializerOptions);
-        }
-        return json.ToString();
     }
 
     protected virtual (string url, string apiKey) GetEndpointAndKey(ModelKeySnapshot modelKey)
@@ -391,7 +395,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         {
             ["max_tokens"] = request.ChatConfig.Model.CurrentSnapshot.MaxResponseTokens,
             ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
-            ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks, request.Source),
+            ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks, request.Source, SupportsHostedWebSearch),
             ["stream"] = true,
         };
 
@@ -415,6 +419,13 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         }
 
         JsonArray tools = BuildToolsArray(request.Tools);
+        if (SupportsHostedWebSearch
+            && request.ChatConfig.Model.CurrentSnapshot.AllowSearch
+            && request.ChatConfig.WebSearchEnabled
+            && !tools.Any(DeepSeekHostedWebSearch.IsToolDefinition))
+        {
+            tools.Add(DeepSeekHostedWebSearch.CreateTool().ToJsonObject());
+        }
         if (tools.Count > 0)
         {
             body["tools"] = tools;
@@ -555,14 +566,14 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         return JsonNode.Parse(parameters) ?? new JsonObject();
     }
 
-    private static JsonObject BuildCountTokensRequestBody(ChatRequest request)
+    private JsonObject BuildCountTokensRequestBody(ChatRequest request)
     {
         (bool allowThinkingBlocks, bool allowThinking) = DetermineThinkingSettings(request);
 
         JsonObject body = new()
         {
             ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
-            ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks, request.Source),
+            ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks, request.Source, SupportsHostedWebSearch),
         };
 
         AddSystemPrompt(body, request);
@@ -577,6 +588,13 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         }
 
         JsonArray tools = BuildToolsArray(request.Tools);
+        if (SupportsHostedWebSearch
+            && request.ChatConfig.Model.CurrentSnapshot.AllowSearch
+            && request.ChatConfig.WebSearchEnabled
+            && !tools.Any(DeepSeekHostedWebSearch.IsToolDefinition))
+        {
+            tools.Add(DeepSeekHostedWebSearch.CreateTool().ToJsonObject());
+        }
         if (tools.Count > 0)
         {
             body["tools"] = tools;
@@ -585,15 +603,19 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         return body;
     }
 
-    private static JsonArray ConvertMessages(IList<NeutralMessage> messages, bool allowThinkingBlocks, UsageSource source)
+    private static JsonArray ConvertMessages(
+        IList<NeutralMessage> messages,
+        bool allowThinkingBlocks,
+        UsageSource source,
+        bool supportsHostedWebSearch)
     {
-        List<NeutralMessage> mergedMessages = [.. SwitchServerToolResponsesAsUser(MergeToolMessages(messages))];
+        List<NeutralMessage> mergedMessages = [.. MergeToolMessages(messages)];
         JsonArray result = [];
         foreach (NeutralMessage msg in mergedMessages)
         {
             // WebChat 的历史 thinking 裁剪已经在 ChatController 按 turn/model 完成；
             // API 入口应尊重用户传入的 thinking/redacted_thinking，不再因为来源是 API 而删除。
-            result.Add(ToAnthropicMessage(msg, allowThinkingBlocks));
+            result.Add(ToAnthropicMessage(msg, allowThinkingBlocks, supportsHostedWebSearch));
         }
         return result;
 
@@ -658,70 +680,10 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             }
         }
 
-        static IEnumerable<NeutralMessage> SwitchServerToolResponsesAsUser(IEnumerable<NeutralMessage> messages)
-        {
-            foreach (NeutralMessage msg in messages)
-            {
-                if (msg.Role != NeutralChatRole.Assistant)
-                {
-                    yield return msg;
-                    continue;
-                }
-
-                List<NeutralContent> assistantBuffer = [];
-                List<NeutralContent> userBuffer = [];
-
-                foreach (NeutralContent content in msg.Contents)
-                {
-                    if (content is NeutralToolCallResponseContent)
-                    {
-                        if (assistantBuffer.Count > 0)
-                        {
-                            yield return new NeutralMessage
-                            {
-                                Role = NeutralChatRole.Assistant,
-                                Contents = [.. assistantBuffer],
-                            };
-                            assistantBuffer.Clear();
-                        }
-                        userBuffer.Add(content);
-                    }
-                    else
-                    {
-                        if (userBuffer.Count > 0)
-                        {
-                            yield return new NeutralMessage
-                            {
-                                Role = NeutralChatRole.User,
-                                Contents = [.. userBuffer],
-                            };
-                            userBuffer.Clear();
-                        }
-                        assistantBuffer.Add(content);
-                    }
-                }
-
-                if (assistantBuffer.Count > 0)
-                {
-                    yield return new NeutralMessage
-                    {
-                        Role = NeutralChatRole.Assistant,
-                        Contents = [.. assistantBuffer],
-                    };
-                }
-
-                if (userBuffer.Count > 0)
-                {
-                    yield return new NeutralMessage
-                    {
-                        Role = NeutralChatRole.User,
-                        Contents = [.. userBuffer],
-                    };
-                }
-            }
-        }
-
-        static JsonObject ToAnthropicMessage(NeutralMessage message, bool allowThinkingBlocks)
+        static JsonObject ToAnthropicMessage(
+            NeutralMessage message,
+            bool allowThinkingBlocks,
+            bool supportsHostedWebSearch)
         {
             string anthropicRole = message.Role switch
             {
@@ -748,7 +710,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             {
                 foreach (NeutralContent c in message.Contents)
                 {
-                    JsonObject? contentBlock = ToAnthropicContent(c, allowThinkingBlocks);
+                    JsonObject? contentBlock = ToAnthropicContent(c, allowThinkingBlocks, supportsHostedWebSearch);
                     if (contentBlock != null)
                     {
                         content.Add(contentBlock);
@@ -839,44 +801,63 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                 return result;
             }
 
-            static JsonObject? ToAnthropicContent(NeutralContent content, bool allowThinkingBlocks)
+            static JsonObject? ToAnthropicContent(
+                NeutralContent content,
+                bool allowThinkingBlocks,
+                bool supportsHostedWebSearch)
             {
-                JsonObject? result = content switch
+                JsonObject? result;
+                if (supportsHostedWebSearch
+                    && content is NeutralToolCallContent { Name: DeepSeekHostedWebSearch.InternalToolName } hostedCall
+                    && DeepSeekHostedWebSearch.TryParseBlock(hostedCall.Parameters, DeepSeekHostedWebSearch.ServerToolUseType, out JsonObject? serverToolUse))
                 {
-                    NeutralTextContent text => new JsonObject { ["type"] = "text", ["text"] = text.Content },
-                    NeutralErrorContent error => new JsonObject { ["type"] = "text", ["text"] = error.Content },
-                    NeutralFileUrlContent fileUrl => new JsonObject
+                    result = serverToolUse;
+                }
+                else if (supportsHostedWebSearch
+                    && content is NeutralToolCallResponseContent hostedResponse
+                    && DeepSeekHostedWebSearch.TryParseBlock(hostedResponse.Response, DeepSeekHostedWebSearch.ToolResultType, out JsonObject? toolResult))
+                {
+                    result = toolResult;
+                }
+                else
+                {
+                    result = content switch
                     {
-                        ["type"] = "image",
-                        ["source"] = new JsonObject { ["type"] = "url", ["url"] = fileUrl.Url }
-                    },
-                    NeutralFileBlobContent fileBlob => new JsonObject
-                    {
-                        ["type"] = "image",
-                        ["source"] = new JsonObject
+                        NeutralTextContent text => new JsonObject { ["type"] = "text", ["text"] = text.Content },
+                        NeutralErrorContent error => new JsonObject { ["type"] = "text", ["text"] = error.Content },
+                        NeutralFileUrlContent fileUrl => new JsonObject
                         {
-                            ["type"] = "base64",
-                            ["media_type"] = fileBlob.MediaType,
-                            ["data"] = Convert.ToBase64String(fileBlob.Data)
-                        }
-                    },
-                    NeutralThinkContent think when allowThinkingBlocks => CreateThinkingBlock(think),
-                    NeutralThinkContent => null, // Drop thinking blocks when not allowed
-                    NeutralToolCallContent toolCall => new JsonObject
-                    {
-                        ["type"] = "tool_use",
-                        ["id"] = toolCall.Id,
-                        ["name"] = toolCall.Name,
-                        ["input"] = ParseToolCallInput(toolCall.Parameters)
-                    },
-                    NeutralToolCallResponseContent toolResp => CreateToolResultBlock(new NeutralToolResponseGroup
-                    {
-                        ToolResponse = toolResp,
-                        AttachedContents = []
-                    }),
-                    NeutralFileContent => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "FileId should be converted to FileUrl/FileBlob before conversion."),
-                    _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Unsupported content type: {content.GetType().Name}")
-                };
+                            ["type"] = "image",
+                            ["source"] = new JsonObject { ["type"] = "url", ["url"] = fileUrl.Url }
+                        },
+                        NeutralFileBlobContent fileBlob => new JsonObject
+                        {
+                            ["type"] = "image",
+                            ["source"] = new JsonObject
+                            {
+                                ["type"] = "base64",
+                                ["media_type"] = fileBlob.MediaType,
+                                ["data"] = Convert.ToBase64String(fileBlob.Data)
+                            }
+                        },
+                        NeutralThinkContent think when allowThinkingBlocks => CreateThinkingBlock(think),
+                        NeutralThinkContent => null, // Drop thinking blocks when not allowed
+                        NeutralToolCallContent toolCall => new JsonObject
+                        {
+                            ["type"] = "tool_use",
+                            ["id"] = toolCall.Id,
+                            ["name"] = toolCall.Name,
+                            ["input"] = ParseToolCallInput(toolCall.Parameters)
+                        },
+                        NeutralToolCallResponseContent toolResp => CreateToolResultBlock(new NeutralToolResponseGroup
+                        {
+                            ToolResponse = toolResp,
+                            AttachedContents = []
+                        }),
+                        NeutralFileContent => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "FileId should be converted to FileUrl/FileBlob before conversion."),
+                        _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Unsupported content type: {content.GetType().Name}")
+                    };
+                }
 
                 // Add cache control if present
                 if (result != null && content.CacheControl != null)
