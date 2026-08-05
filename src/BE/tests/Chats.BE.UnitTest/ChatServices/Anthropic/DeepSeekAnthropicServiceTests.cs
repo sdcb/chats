@@ -342,14 +342,28 @@ public class DeepSeekAnthropicServiceTests
         const string rawCall = "{\"type\":\"server_tool_use\",\"id\":\"srv_1\",\"name\":\"web_search\",\"input\":{\"query\":\"DeepSeek\"},\"caller\":{\"type\":\"direct\"}}";
         const string rawResult = "{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srv_1\",\"content\":[{\"type\":\"web_search_result\",\"title\":\"DeepSeek\",\"url\":\"https://api-docs.deepseek.com\",\"encrypted_content\":\"opaque-cache-data\",\"page_age\":\"today\"}]}";
 
-        using JsonDocument call = JsonDocument.Parse(DeepSeekHostedWebSearch.CreatePresentationCall(rawCall));
+        Assert.True(DeepSeekHostedWebSearch.TryCreatePresentationCall(rawCall, out string presentationCall));
+        using JsonDocument call = JsonDocument.Parse(presentationCall);
         Assert.Equal("web_search_call", call.RootElement.GetProperty("type").GetString());
         Assert.Equal("DeepSeek", call.RootElement.GetProperty("action").GetProperty("query").GetString());
 
-        using JsonDocument result = JsonDocument.Parse(DeepSeekHostedWebSearch.CreatePresentationResponse(rawResult));
+        Assert.True(DeepSeekHostedWebSearch.TryCreatePresentationResponse(rawResult, out string presentationResponse));
+        using JsonDocument result = JsonDocument.Parse(presentationResponse);
         JsonElement item = Assert.Single(result.RootElement.EnumerateArray());
         Assert.False(item.TryGetProperty("encrypted_content", out _));
         Assert.Equal("today", item.GetProperty("page_age").GetString());
         Assert.Equal("https://api-docs.deepseek.com", item.GetProperty("url").GetString());
+    }
+
+    [Fact]
+    public void Presentation_ResponsesWebSearch_RemainsUntouched()
+    {
+        const string responsesCall = "{\"type\":\"web_search_call\",\"status\":\"completed\",\"action\":{\"type\":\"search\",\"queries\":[\"GitHub Copilot CLI open source\"]}}";
+        const string responsesResult = "[{\"type\":\"web_search_result\",\"title\":\"GitHub Copilot CLI\",\"url\":\"https://github.com/github/copilot-cli\"}]";
+
+        Assert.False(DeepSeekHostedWebSearch.TryCreatePresentationCall(responsesCall, out string callPresentation));
+        Assert.Equal(responsesCall, callPresentation);
+        Assert.False(DeepSeekHostedWebSearch.TryCreatePresentationResponse(responsesResult, out string responsePresentation));
+        Assert.Equal(responsesResult, responsePresentation);
     }
 }

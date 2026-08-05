@@ -192,8 +192,11 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
             ) : null;
 
             let header = `web_search_call: ${actionType}`;
-            if (actionType === 'search' && action?.query) {
-                header = `${t('Web Search')}: ${action.query}`;
+            const searchQuery = action?.query
+                ?? action?.queries?.find(query => !query.startsWith('ws_call_id='))
+                ?? action?.queries?.[0];
+            if (actionType === 'search' && searchQuery) {
+                header = `${t('Web Search')}: ${searchQuery}`;
             } else if (actionType === 'open_page' && action?.url) {
                 header = `${t('Open Page')}: ${action.url}`;
             } else if (actionType === 'find_in_page') {

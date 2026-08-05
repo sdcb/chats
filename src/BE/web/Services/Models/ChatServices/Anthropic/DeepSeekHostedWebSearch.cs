@@ -49,11 +49,12 @@ internal static class DeepSeekHostedWebSearch
         }
     }
 
-    public static string CreatePresentationCall(string rawCall)
+    public static bool TryCreatePresentationCall(string rawCall, out string presentationCall)
     {
+        presentationCall = rawCall;
         if (!TryParseBlock(rawCall, ServerToolUseType, out JsonObject? block) || block == null)
         {
-            return "{}";
+            return false;
         }
 
         JsonObject action = new() { ["type"] = "search" };
@@ -65,20 +66,22 @@ internal static class DeepSeekHostedWebSearch
             }
         }
 
-        return new JsonObject
+        presentationCall = new JsonObject
         {
             ["type"] = InternalToolName,
             ["status"] = "completed",
             ["action"] = action,
         }.ToJsonString(JSON.JsonSerializerOptions);
+        return true;
     }
 
-    public static string CreatePresentationResponse(string rawResponse)
+    public static bool TryCreatePresentationResponse(string rawResponse, out string presentationResponse)
     {
+        presentationResponse = rawResponse;
         if (!TryParseBlock(rawResponse, ToolResultType, out JsonObject? block)
             || block?["content"] is not JsonArray content)
         {
-            return "[]";
+            return false;
         }
 
         JsonArray sanitized = [];
@@ -100,6 +103,7 @@ internal static class DeepSeekHostedWebSearch
             }
             sanitized.Add(clone);
         }
-        return sanitized.ToJsonString(JSON.JsonSerializerOptions);
+        presentationResponse = sanitized.ToJsonString(JSON.JsonSerializerOptions);
+        return true;
     }
 }

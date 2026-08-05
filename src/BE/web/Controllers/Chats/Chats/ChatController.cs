@@ -901,17 +901,22 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
                                 responseStated = true;
                             }
                             string toolArguments = toolCall.Arguments!;
-                            if (toolCall.Name == DeepSeekHostedWebSearch.InternalToolName && toolCall.Id != null)
+                            if (toolCall.Name == DeepSeekHostedWebSearch.InternalToolName
+                                && toolCall.Id != null
+                                && DeepSeekHostedWebSearch.TryCreatePresentationCall(toolArguments, out string presentationCall))
                             {
                                 hostedWebSearchCallIds.Add(toolCall.Id);
-                                toolArguments = DeepSeekHostedWebSearch.CreatePresentationCall(toolArguments);
+                                toolArguments = presentationCall;
                             }
                             writer.TryWrite(new CallingToolLine(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolArguments));
                             break;
                         case ToolCallResponseSegment toolCallResponse:
-                            string toolResponse = hostedWebSearchCallIds.Contains(toolCallResponse.ToolCallId)
-                                ? DeepSeekHostedWebSearch.CreatePresentationResponse(toolCallResponse.Response!)
-                                : toolCallResponse.Response!;
+                            string toolResponse = toolCallResponse.Response!;
+                            if (hostedWebSearchCallIds.Contains(toolCallResponse.ToolCallId)
+                                && DeepSeekHostedWebSearch.TryCreatePresentationResponse(toolResponse, out string presentationResponse))
+                            {
+                                toolResponse = presentationResponse;
+                            }
                             writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, toolCallResponse.IsSuccess, toolCallResponse.ToolCallId!, toolResponse));
                             break;
                         case Base64PreviewImage preview:
