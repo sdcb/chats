@@ -157,7 +157,7 @@ This page indexes all major version release notes for the Chats project, from th
 - 🎨 **UI Optimizations**: Admin on-demand lazy loading, skeleton screens, separated preset configs
 - 🛠️ **Image Processing Refactor**: ImageSharp replaces hand-written parsers (-1,217 lines)
 
-[View Full Release Notes →](1.8.0.md) | [API Changes](../1.8.0-api-changes.md)
+[View Full Release Notes →](1.8.0.md)
 
 ---
 
