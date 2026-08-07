@@ -2,6 +2,8 @@ import { FC, useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { toFixed } from '@/utils/common';
+
 import { Slider } from '@/components/ui/slider';
 
 import { IconInfo } from '../Icons';
@@ -9,7 +11,6 @@ import Tips from '../Tips/Tips';
 import { Button } from '../ui/button';
 
 import { cn } from '@/lib/utils';
-import { toFixed } from '@/utils/common';
 
 interface Props {
   label: string;
@@ -18,6 +19,7 @@ interface Props {
   min: number;
   max: number;
   onChangeTemperature: (temperature: number) => void;
+  disabled?: boolean;
 }
 
 const TemperatureSlider: FC<Props> = ({
@@ -27,6 +29,7 @@ const TemperatureSlider: FC<Props> = ({
   min,
   max,
   onChangeTemperature,
+  disabled = false,
 }) => {
   const [temperature, setTemperature] = useState(defaultTemperature);
   const { t } = useTranslation();
@@ -65,12 +68,15 @@ const TemperatureSlider: FC<Props> = ({
         {toFixed(temperature)}
       </span>
       <Slider
-        className="cursor-pointer"
+        className={cn(
+          disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+        )}
         min={min}
         max={max}
         step={0.01}
         value={[temperature]}
         onValueChange={handleChange}
+        disabled={disabled}
       />
       <ul className="mt-2 flex justify-between">
         <span>{t('Precise')}</span>

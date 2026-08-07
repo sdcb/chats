@@ -43,6 +43,7 @@ const PromptModal = (props: IProps) => {
     onClose,
   } = props;
   const user = useUserInfo();
+  const isReadOnly = prompt.isSystem && user?.role !== UserRole.admin;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formSchema = z.object({
@@ -67,6 +68,8 @@ const PromptModal = (props: IProps) => {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (isReadOnly) return;
+
     setIsSubmitting(true);
     try {
       const updatedPrompt: Prompt = {
@@ -97,7 +100,11 @@ const PromptModal = (props: IProps) => {
       <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="p-4 pb-0">
           <DialogTitle>
-            {isCreate ? t('Create Prompt') : t('Edit Prompt')}
+            {isReadOnly
+              ? prompt.name
+              : isCreate
+              ? t('Create Prompt')
+              : t('Edit Prompt')}
           </DialogTitle>
         </DialogHeader>
 
@@ -108,14 +115,23 @@ const PromptModal = (props: IProps) => {
                 control={form.control}
                 name="name"
                 render={({ field }) => (
-                  <FormInput label={t('Name')} field={field} />
+                  <FormInput
+                    label={t('Name')}
+                    field={field}
+                    disabled={isReadOnly}
+                  />
                 )}
               />
               <FormField
                 control={form.control}
                 name="content"
                 render={({ field }) => (
-                  <FormTextarea label={t('Prompt')} field={field} rows={5} />
+                  <FormTextarea
+                    label={t('Prompt')}
+                    field={field}
+                    rows={5}
+                    disabled={isReadOnly}
+                  />
                 )}
               />
 
@@ -124,7 +140,11 @@ const PromptModal = (props: IProps) => {
                   control={form.control}
                   name="setsTemperature"
                   render={({ field }) => (
-                    <FormSwitch field={field} label={t('Sets Temperature')} />
+                    <FormSwitch
+                      field={field}
+                      label={t('Sets Temperature')}
+                      disabled={isReadOnly}
+                    />
                   )}
                 />
                 {form.getValues('setsTemperature') && (
@@ -141,6 +161,7 @@ const PromptModal = (props: IProps) => {
                     onChangeTemperature={(temperature) =>
                       form.setValue('temperature', temperature)
                     }
+                    disabled={isReadOnly}
                   />
                 )}
               </div>
@@ -150,7 +171,11 @@ const PromptModal = (props: IProps) => {
                   control={form.control}
                   name="isDefault"
                   render={({ field }) => (
-                    <FormSwitch field={field} label={t('Is Default')} />
+                    <FormSwitch
+                      field={field}
+                      label={t('Is Default')}
+                      disabled={isReadOnly}
+                    />
                   )}
                 />
                 {user?.role === UserRole.admin && (
@@ -168,9 +193,15 @@ const PromptModal = (props: IProps) => {
         </div>
 
         <DialogFooter className="px-4 py-3 border-t">
-          <Button type="submit" form="promptForm" disabled={isSubmitting}>
-            {isSubmitting ? t('Saving...') : t('Save')}
-          </Button>
+          {isReadOnly ? (
+            <Button type="button" onClick={onClose}>
+              {t('Close')}
+            </Button>
+          ) : (
+            <Button type="submit" form="promptForm" disabled={isSubmitting}>
+              {isSubmitting ? t('Saving...') : t('Save')}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -3,15 +3,11 @@ import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { UserRole } from '@/types/adminApis';
 import { Prompt, PromptSlim } from '@/types/prompt';
 
+import { IconBulbFilled, IconCheck, IconSearch } from '@/components/Icons';
 import DeletePopover from '@/components/Popover/DeletePopover';
-
-import {
-  IconBulbFilled,
-  IconCheck,
-  IconSearch,
-} from '@/components/Icons';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -33,9 +29,11 @@ import {
   postUserPrompts,
   putUserPrompts,
 } from '@/apis/clientApis';
+import { useUserInfo } from '@/providers/UserProvider';
 
 const PromptsTab = () => {
   const { t } = useTranslation();
+  const user = useUserInfo();
   const [prompts, setPrompts] = useState<PromptSlim[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPrompts, setFilteredPrompts] = useState<PromptSlim[]>([]);
@@ -147,6 +145,9 @@ const PromptsTab = () => {
     }
   };
 
+  const canManagePrompt = (prompt: PromptSlim) =>
+    !prompt.isSystem || user?.role === UserRole.admin;
+
   const sortedPrompts = [...filteredPrompts].reverse();
 
   const EmptyState = () => (
@@ -214,14 +215,16 @@ const PromptsTab = () => {
                   </div>
                 </div>
 
-                <div
-                  className="absolute right-2 top-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <DeletePopover
-                    onDelete={() => handleDeletePrompt(prompt.id)}
-                  />
-                </div>
+                {canManagePrompt(prompt) && (
+                  <div
+                    className="absolute right-2 top-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <DeletePopover
+                      onDelete={() => handleDeletePrompt(prompt.id)}
+                    />
+                  </div>
+                )}
               </Card>
             ))}
           </div>
@@ -241,7 +244,10 @@ const PromptsTab = () => {
                 </TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody isEmpty={filteredPrompts.length === 0} isLoading={loading}>
+            <TableBody
+              isEmpty={filteredPrompts.length === 0}
+              isLoading={loading}
+            >
               {sortedPrompts.map((prompt) => (
                 <TableRow
                   key={prompt.id}
@@ -257,7 +263,7 @@ const PromptsTab = () => {
                       <span>{prompt.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className='[&:has([role=checkbox])]:pr-0 py-2'>
+                  <TableCell className="[&:has([role=checkbox])]:pr-0 py-2">
                     {prompt.isDefault && (
                       <div className="flex items-center gap-1 text-green-600">
                         <IconCheck size={18} />
@@ -265,7 +271,7 @@ const PromptsTab = () => {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className='[&:has([role=checkbox])]:pr-0 py-2'>
+                  <TableCell className="[&:has([role=checkbox])]:pr-0 py-2">
                     {prompt.isSystem && (
                       <div className="flex items-center gap-1 text-green-600">
                         <IconCheck size={18} />
@@ -277,9 +283,11 @@ const PromptsTab = () => {
                     className="text-right [&:has([role=checkbox])]:pr-0 py-2"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <DeletePopover
-                      onDelete={() => handleDeletePrompt(prompt.id)}
-                    />
+                    {canManagePrompt(prompt) && (
+                      <DeletePopover
+                        onDelete={() => handleDeletePrompt(prompt.id)}
+                      />
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

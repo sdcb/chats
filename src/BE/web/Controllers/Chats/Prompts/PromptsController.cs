@@ -16,7 +16,7 @@ public class PromptsController(ChatsDB db, CurrentUser currentUser) : Controller
     public async Task<ActionResult<PromptDto[]>> GetPrompts(CancellationToken cancellationToken)
     {
         PromptDto[] prompts = await db.Prompts
-            .Where(x => x.CreateUserId == currentUser.Id || currentUser.IsAdmin && x.IsSystem)
+            .Where(x => x.CreateUserId == currentUser.Id || x.IsSystem)
             .OrderBy(x => x.IsSystem)
             .ThenBy(x => x.IsDefault)
             .ThenBy(x => x.UpdatedAt)
@@ -38,7 +38,7 @@ public class PromptsController(ChatsDB db, CurrentUser currentUser) : Controller
     public async Task<ActionResult<BriefPromptDto[]>> GetBriefPrompts(CancellationToken cancellationToken)
     {
         BriefPromptDto[] prompts = await db.Prompts
-            .Where(x => x.CreateUserId == currentUser.Id || currentUser.IsAdmin && x.IsSystem)
+            .Where(x => x.CreateUserId == currentUser.Id || x.IsSystem)
             .OrderBy(x => x.IsSystem)
             .ThenBy(x => x.IsDefault)
             .ThenBy(x => x.UpdatedAt)
@@ -148,7 +148,9 @@ public class PromptsController(ChatsDB db, CurrentUser currentUser) : Controller
     [HttpDelete]
     public async Task<ActionResult> DeletePrompt([FromQuery] int id, CancellationToken cancellationToken)
     {
-        Prompt? prompt = await db.Prompts.FirstOrDefaultAsync(x => x.Id == id && (x.CreateUserId == currentUser.Id || currentUser.IsAdmin), cancellationToken);
+        Prompt? prompt = await db.Prompts.FirstOrDefaultAsync(
+            x => x.Id == id && (currentUser.IsAdmin || !x.IsSystem && x.CreateUserId == currentUser.Id),
+            cancellationToken);
         if (prompt == null)
         {
             return NotFound();
@@ -161,7 +163,9 @@ public class PromptsController(ChatsDB db, CurrentUser currentUser) : Controller
     [HttpPut("{promptId:int}")]
     public async Task<ActionResult<PromptDto>> UpdatePrompt(int promptId, [FromBody] CreatePromptDto request, CancellationToken cancellationToken)
     {
-        Prompt? prompt = await db.Prompts.FirstOrDefaultAsync(x => x.Id == promptId && (x.CreateUserId == currentUser.Id || currentUser.IsAdmin), cancellationToken);
+        Prompt? prompt = await db.Prompts.FirstOrDefaultAsync(
+            x => x.Id == promptId && (currentUser.IsAdmin || !x.IsSystem && x.CreateUserId == currentUser.Id),
+            cancellationToken);
         if (prompt == null)
         {
             return NotFound();
