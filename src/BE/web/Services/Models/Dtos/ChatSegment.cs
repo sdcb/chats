@@ -175,6 +175,25 @@ public static class ChatSegmentExtensions
 {
     public static void AddMerged(this List<ChatSegment> items, ChatSegment item)
     {
+        if (item is ToolCallSegment curTool)
+        {
+            for (int i = items.Count - 1; i >= 0; i--)
+            {
+                if (items[i] is not ToolCallSegment existingTool || existingTool.Index != curTool.Index)
+                {
+                    continue;
+                }
+
+                items[i] = existingTool with
+                {
+                    Arguments = (existingTool.Arguments ?? "") + (curTool.Arguments ?? ""),
+                    Id = existingTool.Id ?? curTool.Id,
+                    Name = existingTool.Name ?? curTool.Name
+                };
+                return;
+            }
+        }
+
         if (items.Count == 0)
         {
             items.Add(item);
@@ -198,15 +217,6 @@ public static class ChatSegmentExtensions
                 {
                     Think = lastThink.Think + curThink.Think,
                     Signature = signature
-                };
-                break;
-
-            case ToolCallSegment lastTool when item is ToolCallSegment curTool && lastTool.Index == curTool.Index:
-                items[^1] = lastTool with
-                {
-                    Arguments = (lastTool.Arguments ?? "") + (curTool.Arguments ?? ""),
-                    Id = lastTool.Id ?? curTool.Id,
-                    Name = lastTool.Name ?? curTool.Name
                 };
                 break;
 
