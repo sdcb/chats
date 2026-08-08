@@ -19,6 +19,7 @@ namespace Chats.BE.Services.Models.ChatServices.Anthropic;
 public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatService
 {
     protected virtual bool SupportsHostedWebSearch => false;
+    protected virtual bool SupportsRedactedThinking => true;
 
     private sealed class HostedWebSearchCallState
     {
@@ -395,7 +396,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         {
             ["max_tokens"] = request.ChatConfig.Model.CurrentSnapshot.MaxResponseTokens,
             ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
-            ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks, request.Source, SupportsHostedWebSearch),
+            ["messages"] = ConvertMessages(FilterUnsupportedThinkingBlocks(request.Messages), allowThinkingBlocks, request.Source, SupportsHostedWebSearch),
             ["stream"] = true,
         };
 
@@ -573,7 +574,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         JsonObject body = new()
         {
             ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
-            ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks, request.Source, SupportsHostedWebSearch),
+            ["messages"] = ConvertMessages(FilterUnsupportedThinkingBlocks(request.Messages), allowThinkingBlocks, request.Source, SupportsHostedWebSearch),
         };
 
         AddSystemPrompt(body, request);
@@ -894,5 +895,21 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                 }
             }
         }
+    }
+
+    private IList<NeutralMessage> FilterUnsupportedThinkingBlocks(IList<NeutralMessage> messages)
+    {
+        if (SupportsRedactedThinking)
+        {
+            return messages;
+        }
+
+        return [.. messages
+            .Select(message => message with
+            {
+                Contents = [.. message.Contents.Where(content =>
+                    content is not NeutralThinkContent think || !string.IsNullOrEmpty(think.Content))]
+            })
+            .Where(message => message.Contents.Count > 0)];
     }
 }
