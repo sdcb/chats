@@ -653,31 +653,11 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                     yield break;
                 }
 
-                NeutralMessage toolMessage = new()
+                yield return new NeutralMessage
                 {
-                    Role = NeutralChatRole.Tool,
+                    Role = NeutralChatRole.User,
                     Contents = [.. toolBuffer],
                 };
-
-                IReadOnlyList<NeutralToolResponseGroup> toolResponseGroups = toolMessage.GetToolResponseGroups();
-                if (toolResponseGroups.Count == 0)
-                {
-                    yield return new NeutralMessage
-                    {
-                        Role = NeutralChatRole.User,
-                        Contents = [.. toolBuffer],
-                    };
-                    yield break;
-                }
-
-                foreach (NeutralToolResponseGroup group in toolResponseGroups)
-                {
-                    yield return new NeutralMessage
-                    {
-                        Role = NeutralChatRole.User,
-                        Contents = [group.ToolResponse, .. group.AttachedContents],
-                    };
-                }
             }
         }
 
