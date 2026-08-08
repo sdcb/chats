@@ -1,5 +1,6 @@
 ﻿using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.Services.UrlEncryption;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Chats.Dtos;
@@ -10,6 +11,7 @@ public abstract record EncryptedWebChatRequest
     public required string EncryptedChatId { get; init; }
 
     [JsonPropertyName("timezoneOffset")]
+    [Range(-840, 840)]
     public required short TimezoneOffset { get; init; }
 
     public abstract WebChatRequest Decrypt(IUrlEncryptionService urlEncryption);

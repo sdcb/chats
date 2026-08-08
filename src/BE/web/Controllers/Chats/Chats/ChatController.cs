@@ -33,6 +33,7 @@ using Chats.BE.Services.Mcp;
 using Chats.BE.Services.Options;
 using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.TitleSummary;
+using Chats.BE.Services.UserContext;
 using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Controllers.Chats.Chats;
@@ -271,6 +272,44 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         LinkedList<ChatTurn> messageTreeNoContent = GetMessageTree(existingMessages, req.LastMessageId);
         Step[] messageTree = await FillContents(messageTreeNoContent, db, cancellationToken);
 
+        if (newDbUserTurn != null)
+        {
+            DateTime utcNow = DateTime.UtcNow;
+            TimeSpan userOffset = TimeSpan.FromMinutes(-req.TimezoneOffset);
+            DateTimeOffset userLocalTime = new DateTimeOffset(utcNow, TimeSpan.Zero).ToOffset(userOffset);
+
+            List<UserContextContribution> contributions = [.. toGenerateSpans.Select(span =>
+                new UserContextContribution(
+                    "model",
+                    userModels[span.ChatConfig.ModelId].Model.CurrentSnapshot.Name,
+                    [span.SpanId]))];
+            byte[] codeInterpreterSpanIds = [.. toGenerateSpans
+                .Where(x => x.ChatConfig.CodeExecutionEnabled)
+                .Select(x => x.SpanId)
+                .Distinct()
+                .Order()];
+
+            if (codeInterpreterSpanIds.Length > 0)
+            {
+                IEnumerable<ChatTurn> contextTurns = messageTreeNoContent.Append(newDbUserTurn);
+                string? codeInterpreterContext = CodeInterpreterExecutor.BuildCodeInterpreterContextPrefix(contextTurns, utcNow);
+                if (!string.IsNullOrWhiteSpace(codeInterpreterContext))
+                {
+                    contributions.Add(new UserContextContribution(
+                        "code_interpreter",
+                        codeInterpreterContext,
+                        codeInterpreterSpanIds));
+                }
+            }
+
+            StepContentText primaryText = newDbUserTurn.Steps
+                .SelectMany(x => x.StepContents)
+                .Where(x => x.ContentType == DBStepContentType.Text)
+                .Select(x => x.StepContentText!)
+                .First();
+            primaryText.ContextTemplate = UserContextTemplate.Build(userLocalTime, contributions);
+        }
+
         Response.Headers.ContentType = "text/event-stream";
         Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
         Response.Headers.Connection = "keep-alive";
@@ -503,23 +542,12 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         // Combine message tree and user message steps, then convert to neutral format
         List<Step> allSteps = [.. messageTree, .. dbUserMessage?.Steps ?? []];
 
-        // Include dbUserMessage in the turns for CollectActiveSessions to find dangling sessions bound to it
-        IEnumerable<ChatTurn> allTurns = dbUserMessage != null
-            ? messageTurns.Append(dbUserMessage)
-            : messageTurns;
-
         bool codeExecutionEnabled = chatSpan.ChatConfig.CodeExecutionEnabled;
 
-        string? ciPrefix = codeExecutionEnabled
-            ? codeInterpreter.BuildCodeInterpreterContextPrefix(allTurns)
-            : null;
-
         IReadOnlyList<Step> filteredHistorySteps = RemoveNonMatchingHistoricalTurnThinkingBlocks(messageTurns, userModel.ModelId);
-        IList<NeutralMessage> neutralMessages = CodeInterpreterContextMessageBuilder.BuildMessages(
-            historySteps: filteredHistorySteps,
-            currentRoundSteps: dbUserMessage?.Steps ?? [],
-            codeExecutionEnabled: codeExecutionEnabled,
-            contextPrefix: ciPrefix);
+        IList<NeutralMessage> neutralMessages = filteredHistorySteps
+            .Concat(dbUserMessage?.Steps ?? [])
+            .ToNeutral(chatSpan.SpanId);
         NeutralSystemMessage? systemMessage = chatSpan.ChatConfig.CodeExecutionEnabled
             ? codeInterpreter.BuildSystemMessage(chatSpan.ChatConfig.SystemPrompt)
             : string.IsNullOrWhiteSpace(chatSpan.ChatConfig.SystemPrompt)
@@ -858,7 +886,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
 
         void WriteStep(Step step)
         {
-            csr.Messages.Add(step.ToNeutral());
+            csr.Messages.Add(step.ToNeutral(chatSpan.SpanId));
             writer.TryWrite(new EndStepInternal(chatSpan.SpanId, step));
         }
 

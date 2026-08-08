@@ -14,6 +14,8 @@ public partial class StepContentText
 
     public string Content { get; set; } = null!;
 
+    public string? ContextTemplate { get; set; }
+
     [ForeignKey("Id")]
     [InverseProperty("StepContentText")]
     public virtual StepContent IdNavigation { get; set; } = null!;

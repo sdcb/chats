@@ -7,6 +7,7 @@ public partial class StepContentText
         return new StepContentText
         {
             Content = Content,
+            ContextTemplate = ContextTemplate,
         };
     }
 }

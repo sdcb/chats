@@ -26,7 +26,11 @@ public abstract record ContentRequestItem
     {
         return (DBStepContentType)mc.ContentTypeId switch
         {
-            DBStepContentType.Text => new TextContentRequestItem { Text = mc.StepContentText!.Content },
+            DBStepContentType.Text => new TextContentRequestItem
+            {
+                Text = mc.StepContentText!.Content,
+                ContextTemplate = mc.StepContentText.ContextTemplate,
+            },
             DBStepContentType.FileId => new FileContentRequestItem { FileId = idEncryption.EncryptFileId(mc.StepContentFile!.FileId) },
             _ => throw new NotSupportedException(),
         };
@@ -51,7 +55,10 @@ public abstract record ContentRequestItem
             .Where(x => AllowedContentTypes.Contains((DBStepContentType)x.ContentTypeId))
             .Select(mc => mc.Id switch 
             {
-                var x when x == patchContentId => patchText,
+                var x when x == patchContentId => patchText with
+                {
+                    ContextTemplate = mc.StepContentText?.ContextTemplate,
+                },
                 _ => FromDB(mc, idEncryption),
             })];
     }
@@ -62,9 +69,12 @@ public record TextContentRequestItem : ContentRequestItem
     [JsonPropertyName("c")]
     public required string Text { get; init; }
 
+    [JsonIgnore]
+    public string? ContextTemplate { get; init; }
+
     public override Task<StepContent> ToMessageContent(FileUrlProvider fup, CancellationToken cancellationToken)
     {
-        return Task.FromResult(StepContent.FromText(Text));
+        return Task.FromResult(StepContent.FromText(Text, ContextTemplate));
     }
 }
 

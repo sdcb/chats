@@ -7,6 +7,19 @@
 
 ---
 
+## [1.14.0](1.14.0.md) - TBD 🚧 开发中
+
+**当前已加入**：用户原文与模型上下文模板分离 · 当前时间/模型/Code Interpreter 上下文冻结 · 按 Span 条件渲染与自动去重 · Prompt Cache 前缀稳定性改进
+
+- 🧊 **上下文模板快照**：`Content` 保留 UI 原文，`ContextTemplate` 保存模型实际使用的冻结上下文，旧消息无需数据回填
+- 🎯 **按 Span 渲染**：通过轻量 `spans` 条件块为不同模型分支提供不同上下文，并自动合并内容相同的 span
+- 🕒 **动态信息后移**：当前时间、模型名称和 Code Interpreter 状态进入用户上下文，默认 system prompt 不再包含当前日期
+- ⚠️ **1.15 弃用预告**：1.14 仅兼容保留 system prompt 的时间/模型变量替换，1.15 将彻底删除该能力
+
+[查看开发中的发布说明 →](1.14.0.md)
+
+---
+
 ## [1.13.0](1.13.0.md) - 2026-08-05 ⭐ 最新版本
 
 **核心亮点**：MCP 快捷按钮与 Server Instructions · OpenAI/Azure Responses、DeepSeek、MiMo 智能搜索 · 推理顺序与局域网复制修复 · Node.js 24 与 MCP SDK 2.0 · SQL Server/SQLite 迁移

@@ -115,9 +115,17 @@ public partial class StepContent
         return false;
     }
 
-    public static StepContent FromText(string text)
+    public static StepContent FromText(string text, string? contextTemplate = null)
     {
-        return new StepContent { StepContentText = new() { Content = text }, ContentTypeId = (byte)DBStepContentType.Text };
+        return new StepContent
+        {
+            StepContentText = new()
+            {
+                Content = text,
+                ContextTemplate = contextTemplate,
+            },
+            ContentTypeId = (byte)DBStepContentType.Text
+        };
     }
 
     public static StepContent FromThink(string text, string? signature = null)
