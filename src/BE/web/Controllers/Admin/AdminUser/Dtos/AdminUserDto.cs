@@ -33,6 +33,12 @@ public record AdminUserDto
     [JsonPropertyName("provider")]
     public required string? Provider { get; init; }
 
+    [JsonPropertyName("sub")]
+    public required string? Sub { get; init; }
+
+    [JsonPropertyName("apiKeyEnabled")]
+    public required bool ApiKeyEnabled { get; init; }
+
     [JsonPropertyName("enabled")]
     public required bool Enabled { get; init; }
 
@@ -54,6 +60,8 @@ public record AdminUserDtoTemp
     public required string? Phone { get; init; }
     public required string? Email { get; init; }
     public required string? Provider { get; init; }
+    public required string? Sub { get; init; }
+    public required bool ApiKeyEnabled { get; init; }
     public required bool Enabled { get; init; }
     public required DateTime CreatedAt { get; init; }
     public required int UserModelCount { get; init; }
@@ -69,6 +77,8 @@ public record AdminUserDtoTemp
         Phone = Phone,
         Email = Email,
         Provider = Provider,
+        Sub = Sub,
+        ApiKeyEnabled = ApiKeyEnabled,
         Enabled = Enabled,
         CreatedAt = CreatedAt,
         UserModelCount = UserModelCount,

@@ -80,6 +80,7 @@ public class InitService(IServiceScopeFactory scopeFactory)
             CreatedAt = now,
             PasswordHash = scope.ServiceProvider.GetRequiredService<PasswordHasher>().HashPassword("RESET!!!"),
             Enabled = true,
+            ApiKeyEnabled = true,
             Role = "admin",
             UpdatedAt = now,
             UserModels =

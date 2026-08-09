@@ -43,6 +43,7 @@ public class UserManager(ChatsDB db)
 
     public async Task InitializeUserWithoutSave(User newUser, string? provider, string? invitationCode, int? creditUserId, CancellationToken cancellationToken)
     {
+        newUser.ApiKeyEnabled = true;
         newUser.UserBalance = new()
         {
             User = newUser,

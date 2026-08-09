@@ -6,5 +6,7 @@ public record UpdateChatPresetRequest
 {
     public required string Name { get; init; }
 
+    public bool IsSystem { get; init; }
+
     public required UpdateChatSpanRequest[] Spans { get; init; }
 }

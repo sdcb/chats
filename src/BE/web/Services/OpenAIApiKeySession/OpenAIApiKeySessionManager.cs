@@ -13,12 +13,13 @@ public class OpenAIApiKeySessionManager(ChatsDB db)
     {
         ApiKeyEntry? sessionEntry = await db.UserApiKeys
             .Include(x => x.User)
-            .Where(x => x.Key == apiKey && !x.IsDeleted)
+            .Where(x => x.Key == apiKey && !x.IsDeleted && !x.IsRevoked && x.User.Enabled && x.User.ApiKeyEnabled)
             .Select(x => new ApiKeyEntry()
             {
                 UserId = x.User.Id,
                 UserName = x.User.DisplayName,
                 Role = x.User.Role,
+                ApiKeyEnabled = true,
                 ApiKey = apiKey,
                 ApiKeyId = x.Id,
                 Expires = x.Expires
@@ -43,5 +44,22 @@ public class OpenAIApiKeySessionManager(ChatsDB db)
             });
         }
         return sessionEntry;
+    }
+
+    public void InvalidateApiKey(string apiKey)
+    {
+        _cache.Remove(apiKey);
+    }
+
+    public void InvalidateUser(int userId)
+    {
+        string[] keys = _cache
+            .Where(x => x.Value is ApiKeyEntry entry && entry.UserId == userId)
+            .Select(x => x.Key)
+            .ToArray();
+        foreach (string key in keys)
+        {
+            _cache.Remove(key);
+        }
     }
 }

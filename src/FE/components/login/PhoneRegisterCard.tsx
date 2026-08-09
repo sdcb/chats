@@ -109,6 +109,7 @@ const PhoneRegisterCard = (props: {
           saveUserInfo({
             role: response.role,
             username: response.username,
+            apiKeyEnabled: response.apiKeyEnabled,
           });
           router.push('/');
         })
@@ -128,7 +129,7 @@ const PhoneRegisterCard = (props: {
               render={({ field }) => (
                 <FormItem className="flex flex-col items-start">
                   <FormControl className="w-full">
-                    <div className='mt-4'>
+                    <div className="mt-4">
                       <div className="py-2.5 text-sm font-medium leading-none">
                         {t('Invitation Code')}
                       </div>

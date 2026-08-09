@@ -1,15 +1,12 @@
-import { useContext, useEffect, useState } from 'react';
-import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
-import { SortableContext, rectSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
+import { useContext, useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { UserRole } from '@/types/adminApis';
 import { MAX_CREATE_PRESET_CHAT_COUNT } from '@/types/chat';
 import { GetChatPresetResult } from '@/types/clientApis';
 
-import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import {
   IconCopy,
   IconDots,
@@ -17,6 +14,7 @@ import {
   IconPlus,
   IconTrash,
 } from '@/components/Icons';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,10 +28,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-import { setChats } from '@/actions/chat.actions';
-import HomeContext from '@/contexts/home.context';
 import ChatPresetModal from './ChatPresetModal';
+import SystemPresetBadge from './SystemPresetBadge';
 
+import { setChats } from '@/actions/chat.actions';
 import {
   deleteChatPreset,
   getChatPreset,
@@ -41,7 +39,24 @@ import {
   postCloneChatPreset,
   reorderChatPresets,
 } from '@/apis/clientApis';
+import HomeContext from '@/contexts/home.context';
 import { cn } from '@/lib/utils';
+import { useUserInfo } from '@/providers/UserProvider';
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  closestCorners,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface SortableChatPresetItemProps {
   item: GetChatPresetResult;
@@ -52,6 +67,7 @@ interface SortableChatPresetItemProps {
   onClone: (id: string) => void;
   onDelete: (id: string) => void;
   t: (key: string) => string;
+  canManage: boolean;
 }
 
 const SortableChatPresetItem = ({
@@ -63,6 +79,7 @@ const SortableChatPresetItem = ({
   onClone,
   onDelete,
   t,
+  canManage,
 }: SortableChatPresetItemProps) => {
   const {
     attributes,
@@ -71,7 +88,7 @@ const SortableChatPresetItem = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id });
+  } = useSortable({ id: item.id, disabled: !canManage });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -85,30 +102,37 @@ const SortableChatPresetItem = ({
       {...attributes}
       className={cn(
         // touch-pan-y 允许在移动端默认纵向滚动；只有真正进入拖拽后才会“占用”手势
-        'rounded-sm p-4 h-24 md:h-32 hover:bg-muted cursor-grab active:cursor-grabbing shadow-sm bg-card touch-pan-y select-none',
+        'rounded-sm p-4 h-24 md:h-32 hover:bg-muted shadow-sm bg-card touch-pan-y select-none',
+        canManage && 'cursor-grab active:cursor-grabbing',
         selectedChatPresetId === item.id && 'bg-muted',
-        isDragging && 'opacity-50'
+        isDragging && 'opacity-50',
       )}
       onClick={() => onSelect(item)}
     >
       <div className="flex justify-between">
         <div className="flex items-center gap-1">
           {/* 拖拽手柄：仅在此元素上启用拖拽，避免与滚动冲突 */}
-          <button
-            className="-ml-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
-            {...listeners}
-            aria-label={t('Drag to reorder')}
-            onClick={(e) => e.preventDefault()}
-          >
-            <GripVertical size={16} />
-          </button>
+          {canManage && (
+            <button
+              className="-ml-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
+              {...listeners}
+              aria-label={t('Drag to reorder')}
+              onClick={(e) => e.preventDefault()}
+            >
+              <GripVertical size={16} />
+            </button>
+          )}
+          <SystemPresetBadge
+            isSystem={item.isSystem}
+            className="inline-flex shrink-0"
+          />
           <span className="text-ellipsis whitespace-nowrap overflow-hidden">
             {item.name}
           </span>
         </div>
         <span>
           <DropdownMenu>
-            <DropdownMenuTrigger 
+            <DropdownMenuTrigger
               className="focus:outline-none p-[6px]"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
@@ -116,16 +140,18 @@ const SortableChatPresetItem = ({
               <IconDots className="hover:opacity-50" size={16} />
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-42 border-none">
-              <DropdownMenuItem
-                className="flex justify-start gap-3"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(item);
-                }}
-              >
-                <IconPencil size={18} />
-                {t('Edit')}
-              </DropdownMenuItem>
+              {canManage && (
+                <DropdownMenuItem
+                  className="flex justify-start gap-3"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(item);
+                  }}
+                >
+                  <IconPencil size={18} />
+                  {t('Edit')}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 className="flex justify-start gap-3"
                 onClick={(e) => {
@@ -136,16 +162,18 @@ const SortableChatPresetItem = ({
                 <IconCopy size={18} />
                 {t('Clone')}
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="flex justify-start gap-3"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(item.id);
-                }}
-              >
-                <IconTrash size={18} />
-                {t('Delete')}
-              </DropdownMenuItem>
+              {canManage && (
+                <DropdownMenuItem
+                  className="flex justify-start gap-3"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(item.id);
+                  }}
+                >
+                  <IconTrash size={18} />
+                  {t('Delete')}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </span>
@@ -192,6 +220,10 @@ const ChatPresetList = () => {
   const [selectedChatPresetId, setSelectedChatPresetId] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
+  const user = useUserInfo();
+  const isAdmin = user?.role === UserRole.admin;
+  const systemPresets = chatPresets.filter((x) => x.isSystem);
+  const privatePresets = chatPresets.filter((x) => !x.isSystem);
 
   // 统一拖拽激活规则：
   // 使用较小距离阈值以避免误触，同时不影响移动端滚动（结合手柄触发）
@@ -200,7 +232,7 @@ const ChatPresetList = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 4 },
-    })
+    }),
   );
 
   const getChatPresetList = () => {
@@ -232,7 +264,7 @@ const ChatPresetList = () => {
 
   const handleSelectChatPreset = (item: GetChatPresetResult) => {
     if (!selectedChat || item.spans.length === 0) return;
-    
+
     setSelectedChatPresetId(item.id);
     postApplyChatPreset(selectedChat.id, item.id).then(() => {
       const updatedChats = chats.map((c) => {
@@ -247,25 +279,44 @@ const ChatPresetList = () => {
 
   const onDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     if (!over || active.id === over.id) {
       return;
     }
 
-    const activeIndex = chatPresets.findIndex((preset) => preset.id === active.id);
-    const overIndex = chatPresets.findIndex((preset) => preset.id === over.id);
+    const activePreset = chatPresets.find((preset) => preset.id === active.id);
+    const overPreset = chatPresets.find((preset) => preset.id === over.id);
+    if (
+      !activePreset ||
+      !overPreset ||
+      activePreset.isSystem !== overPreset.isSystem
+    )
+      return;
+    if (activePreset.isSystem && !isAdmin) return;
+
+    const scopePresets = activePreset.isSystem ? systemPresets : privatePresets;
+    const activeIndex = scopePresets.findIndex(
+      (preset) => preset.id === active.id,
+    );
+    const overIndex = scopePresets.findIndex((preset) => preset.id === over.id);
 
     if (activeIndex !== -1 && overIndex !== -1) {
       try {
         // 1) 乐观更新，先本地移动，避免回弹闪烁
-        const newPresets = arrayMove(chatPresets, activeIndex, overIndex);
+        const reorderedScope = arrayMove(scopePresets, activeIndex, overIndex);
+        const newPresets = activePreset.isSystem
+          ? [...reorderedScope, ...privatePresets]
+          : [...systemPresets, ...reorderedScope];
         setChatPresets(newPresets);
 
         // 2) 基于新顺序计算前后邻居
         const movedId = active.id as string;
-        const newIdx = newPresets.findIndex(p => p.id === movedId);
-        const previousId = newIdx > 0 ? newPresets[newIdx - 1].id : null;
-        const nextId = newIdx < newPresets.length - 1 ? newPresets[newIdx + 1].id : null;
+        const newIdx = reorderedScope.findIndex((p) => p.id === movedId);
+        const previousId = newIdx > 0 ? reorderedScope[newIdx - 1].id : null;
+        const nextId =
+          newIdx < reorderedScope.length - 1
+            ? reorderedScope[newIdx + 1].id
+            : null;
 
         // 3) 通知后端；失败则回滚（重新拉取）
         await reorderChatPresets({ sourceId: movedId, previousId, nextId });
@@ -277,37 +328,46 @@ const ChatPresetList = () => {
     }
   };
 
+  const renderPreset = (item: GetChatPresetResult, canManage: boolean) => (
+    <SortableChatPresetItem
+      key={item.id}
+      item={item}
+      selectedChatPresetId={selectedChatPresetId}
+      modelMap={modelMap}
+      onSelect={handleSelectChatPreset}
+      onEdit={(selected) => {
+        setChatPreset(selected);
+        setIsOpen(true);
+      }}
+      onClone={handleCloneChatPreset}
+      onDelete={handleDeleteChatPreset}
+      t={t}
+      canManage={canManage}
+    />
+  );
+
   return (
     <div className={cn('px-0 md:px-8 pt-6')}>
-      {hasModel() && (
-        <DndContext
-          sensors={sensors}
-          onDragEnd={onDragEnd}
-          collisionDetection={closestCorners}
-        >
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,240px))] place-content-center gap-4 w-full">
-            <SortableContext
-              items={chatPresets.map(preset => preset.id)}
-              strategy={rectSortingStrategy}
-            >
-              {chatPresets?.map((item) => (
-                <SortableChatPresetItem
-                  key={item.id}
-                  item={item}
-                  selectedChatPresetId={selectedChatPresetId}
-                  modelMap={modelMap}
-                  onSelect={handleSelectChatPreset}
-                  onEdit={(item) => {
-                    setChatPreset(item);
-                    setIsOpen(true);
-                  }}
-                  onClone={handleCloneChatPreset}
-                  onDelete={handleDeleteChatPreset}
-                  t={t}
-                />
-              ))}
-            </SortableContext>
-            {chatPresets.length < MAX_CREATE_PRESET_CHAT_COUNT && (
+      <DndContext
+        sensors={sensors}
+        onDragEnd={onDragEnd}
+        collisionDetection={closestCorners}
+      >
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,240px))] place-content-center gap-4 w-full">
+          <SortableContext
+            items={systemPresets.map((preset) => preset.id)}
+            strategy={rectSortingStrategy}
+          >
+            {systemPresets.map((item) => renderPreset(item, isAdmin))}
+          </SortableContext>
+          <SortableContext
+            items={privatePresets.map((preset) => preset.id)}
+            strategy={rectSortingStrategy}
+          >
+            {privatePresets.map((item) => renderPreset(item, true))}
+          </SortableContext>
+          {hasModel() &&
+            privatePresets.length < MAX_CREATE_PRESET_CHAT_COUNT && (
               <div
                 className="rounded-sm px-4 flex justify-center items-center h-24 md:h-32 cursor-pointer hover:bg-muted bg-card"
                 onClick={handleCreateChatPreset}
@@ -316,9 +376,8 @@ const ChatPresetList = () => {
                 {t('Add a preset model group')}
               </div>
             )}
-          </div>
-        </DndContext>
-      )}
+        </div>
+      </DndContext>
       <ChatPresetModal
         chatPreset={chatPreset}
         isOpen={isOpen}

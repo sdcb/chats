@@ -15,6 +15,7 @@ export interface SingInResult {
   sessionId: string;
   username: string;
   role: string;
+  apiKeyEnabled: boolean;
 }
 
 export interface LoginConfigsResult {
@@ -298,10 +299,12 @@ export interface GetChatPresetResult {
   name: string;
   updatedAt: string;
   spans: ChatSpanDto[];
+  isSystem: boolean;
 }
 
 export interface PutChatPresetParams {
   name: string;
+  isSystem?: boolean;
   spans: PutChatPresetSpanParams[];
 }
 
@@ -324,7 +327,7 @@ export interface PutChatPresetSpanParams {
 export interface ChatPresetReorderRequest {
   sourceId: string;
   previousId: string | null; // 新位置的前一个元素
-  nextId: string | null;     // 新位置的后一个元素
+  nextId: string | null; // 新位置的后一个元素
 }
 
 export interface GetUsageParams {

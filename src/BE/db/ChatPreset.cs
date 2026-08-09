@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.DB;
 
 [Table("ChatPreset")]
+[Index("IsSystem", "Order", "Id", Name = "IX_ChatPreset_IsSystem_Order")]
 [Index("Name", Name = "IX_ChatPreset_Name")]
 [Index("UserId", Name = "IX_ChatPreset_UserId")]
 public partial class ChatPreset
@@ -22,6 +23,8 @@ public partial class ChatPreset
     public DateTime UpdatedAt { get; set; }
 
     public short Order { get; set; }
+
+    public bool IsSystem { get; set; }
 
     [InverseProperty("ChatPreset")]
     public virtual ICollection<ChatPresetSpan> ChatPresetSpans { get; set; } = new List<ChatPresetSpan>();

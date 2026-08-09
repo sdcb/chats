@@ -4,6 +4,7 @@ using Chats.BE.Infrastructure;
 using Chats.BE.Services.Common;
 using Chats.BE.Services;
 using Chats.BE.Services.UrlEncryption;
+using Chats.BE.Services.OpenAIApiKeySession;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,11 +15,13 @@ using System.Text;
 namespace Chats.BE.Controllers.Users.ApiKeys;
 
 [Authorize, Route("api/user/api-key")]
-public class ApiKeyController(ChatsDB db, CurrentUser currentUser, IUrlEncryptionService idEncryption) : ControllerBase
+public class ApiKeyController(ChatsDB db, CurrentUser currentUser, IUrlEncryptionService idEncryption,
+    OpenAIApiKeySessionManager apiKeySessions) : ControllerBase
 {
     [HttpGet]
-    public async Task<ListApiKeyDto[]> ListMyApiKeys(CancellationToken cancellationToken)
+    public async Task<ActionResult<ListApiKeyDto[]>> ListMyApiKeys(CancellationToken cancellationToken)
     {
+        if (!await IsApiKeyEnabled(cancellationToken)) return Forbid();
         ListApiKeyDto[] result = await db.UserApiKeys
             .Where(x => x.UserId == currentUser.Id && !x.IsDeleted)
             .Select(x => new ListApiKeyDto
@@ -36,12 +39,13 @@ public class ApiKeyController(ChatsDB db, CurrentUser currentUser, IUrlEncryptio
                 ModelCount = x.Models.Count
             })
             .ToArrayAsync(cancellationToken);
-        return result;
+        return Ok(result);
     }
 
     [HttpGet("{apiKeyId}")]
     public async Task<ActionResult<short[]>> GetApiKeySupportedModels(string apiKeyId, [FromServices] UserModelManager userModelManager, CancellationToken cancellationToken)
     {
+        if (!await IsApiKeyEnabled(cancellationToken)) return Forbid();
         UserApiKey? dbEntry = await db.UserApiKeys
             .Where(x => x.UserId == currentUser.Id && !x.IsDeleted)
             .Where(x => x.Id == idEncryption.DecryptApiKeyId(apiKeyId))
@@ -64,6 +68,7 @@ public class ApiKeyController(ChatsDB db, CurrentUser currentUser, IUrlEncryptio
     [HttpPost]
     public async Task<ActionResult<ListApiKeyDto>> CreateApiKey([FromBody] CreateApiKeyDto dto, CancellationToken cancellationToken)
     {
+        if (!await IsApiKeyEnabled(cancellationToken)) return Forbid();
         string comment = dto.Comment.Trim();
         if (comment.Length == 0)
         {
@@ -137,11 +142,13 @@ public class ApiKeyController(ChatsDB db, CurrentUser currentUser, IUrlEncryptio
     [HttpDelete("{apiKeyId}")]
     public async Task<ActionResult> DeleteApiKey(string apiKeyId, CancellationToken cancellationToken)
     {
+        if (!await IsApiKeyEnabled(cancellationToken)) return Forbid();
         UserApiKey? dbEntry = await db.UserApiKeys
             .Where(x => x.UserId == currentUser.Id && !x.IsDeleted)
             .Where(x => x.Id == idEncryption.DecryptApiKeyId(apiKeyId))
             .FirstOrDefaultAsync(cancellationToken);
         if (dbEntry == null) return NotFound();
+        string key = dbEntry.Key;
 
         bool everUsed = await db.UserApiUsages
             .AnyAsync(x => x.ApiKeyId == idEncryption.DecryptApiKeyId(apiKeyId), cancellationToken);
@@ -157,12 +164,15 @@ public class ApiKeyController(ChatsDB db, CurrentUser currentUser, IUrlEncryptio
             await db.SaveChangesAsync(cancellationToken);
         }
 
+        apiKeySessions.InvalidateApiKey(key);
+
         return NoContent();
     }
 
     [HttpPut("{apiKeyId}")]
     public async Task<ActionResult> UpdateApiKey(string apiKeyId, [FromBody] UpdateApiKeyDto dto, CancellationToken cancellationToken)
     {
+        if (!await IsApiKeyEnabled(cancellationToken)) return Forbid();
         UserApiKey? dbEntry = await db.UserApiKeys
             .Include(x => x.Models)
             .Where(x => x.UserId == currentUser.Id && !x.IsDeleted)
@@ -170,14 +180,29 @@ public class ApiKeyController(ChatsDB db, CurrentUser currentUser, IUrlEncryptio
             .FirstOrDefaultAsync(cancellationToken);
 
         if (dbEntry is null) return NotFound();
+        string key = dbEntry.Key;
 
         dto.ApplyTo(dbEntry);
         if (db.ChangeTracker.HasChanges())
         {
             dbEntry.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
+            apiKeySessions.InvalidateApiKey(key);
         }
 
         return NoContent();
+    }
+
+    private Task<bool> IsApiKeyEnabled(CancellationToken cancellationToken)
+    {
+        if (!currentUser.ApiKeyEnabled)
+        {
+            return Task.FromResult(false);
+        }
+
+        return db.Users
+            .Where(x => x.Id == currentUser.Id && x.Enabled)
+            .Select(x => x.ApiKeyEnabled)
+            .SingleOrDefaultAsync(cancellationToken);
     }
 }

@@ -47,6 +47,26 @@ const UserModal = (props: IProps) => {
   const { user, isOpen, onClose, onSuccessful } = props;
   const [submit, setSubmit] = useState(false);
   const formFields: IFormFieldOption[] = [
+    ...(user
+      ? [
+          {
+            name: 'account',
+            label: t('Account'),
+            defaultValue: '',
+            render: (options: IFormFieldOption, field: FormFieldType) => (
+              <FormInput options={options} field={field} disabled />
+            ),
+          },
+          {
+            name: 'provider',
+            label: t('Login Type'),
+            defaultValue: '',
+            render: (options: IFormFieldOption, field: FormFieldType) => (
+              <FormInput options={options} field={field} disabled />
+            ),
+          },
+        ]
+      : []),
     {
       name: 'username',
       label: t('User Name'),
@@ -65,17 +85,24 @@ const UserModal = (props: IProps) => {
     },
     {
       name: 'password',
-      label: t('Password'),
+      label: user ? t('New Password') : t('Password'),
       defaultValue: '',
       render: (options: IFormFieldOption, field: FormFieldType) => (
-        <FormInput
-          type="password"
-          hidden={!!user}
-          options={options}
-          field={field}
-        />
+        <FormInput type="password" options={options} field={field} />
       ),
     },
+    ...(user
+      ? [
+          {
+            name: 'confirmPassword',
+            label: t('Confirm Password'),
+            defaultValue: '',
+            render: (options: IFormFieldOption, field: FormFieldType) => (
+              <FormInput type="password" options={options} field={field} />
+            ),
+          },
+        ]
+      : []),
     {
       name: 'role',
       label: t('Role'),
@@ -100,37 +127,92 @@ const UserModal = (props: IProps) => {
         <FormInput options={options} field={field} />
       ),
     },
+    ...(user
+      ? [
+          {
+            name: 'sub',
+            label: 'SSO Sub',
+            defaultValue: '',
+            render: (options: IFormFieldOption, field: FormFieldType) => (
+              <FormInput
+                options={options}
+                field={field}
+                disabled={user.provider?.toLowerCase() !== 'keycloak'}
+              />
+            ),
+          },
+          {
+            name: 'apiKeyEnabled',
+            label: t('Allow API Key'),
+            defaultValue: true,
+            render: (options: IFormFieldOption, field: FormFieldType) => (
+              <FormSwitch options={options} field={field} />
+            ),
+          },
+        ]
+      : []),
   ];
 
-  const formSchema = z.object({
-    username: z
-      .string()
-      .min(
-        2,
-        t('Must contain at least {{length}} character(s)', {
-          length: 2,
-        })!,
-      )
-      .max(20, t('Contain at most {{length}} character(s)', { length: 20 })!),
-    enabled: z.boolean().optional(),
-    phone: z.string().nullable().default(null),
-    email: z.string().nullable().default(null),
-    password: !user
-      ? z
-          .string()
-          .min(
-            6,
-            t('Must contain at least {{length}} character(s)', {
-              length: 6,
-            })!,
-          )
-          .max(
-            18,
-            t('Contain at most {{length}} character(s)', { length: 18 })!,
-          )
-      : z.string(),
-    role: z.string().optional(),
-  });
+  const isStrongPassword = (value: string) => {
+    if (value.length < 8) return false;
+    const types = [
+      /[a-z]/.test(value),
+      /[A-Z]/.test(value),
+      /\d/.test(value),
+      /[^A-Za-z0-9]/.test(value),
+    ];
+    return types.filter(Boolean).length >= 3;
+  };
+  const formSchema = z
+    .object({
+      account: z.string().optional(),
+      provider: z.string().optional(),
+      username: z
+        .string()
+        .min(
+          2,
+          t('Must contain at least {{length}} character(s)', {
+            length: 2,
+          })!,
+        )
+        .max(20, t('Contain at most {{length}} character(s)', { length: 20 })!),
+      enabled: z.boolean().optional(),
+      phone: z.string().nullable().default(null),
+      email: z.string().nullable().default(null),
+      password: !user
+        ? z
+            .string()
+            .min(
+              6,
+              t('Must contain at least {{length}} character(s)', {
+                length: 6,
+              })!,
+            )
+            .max(
+              18,
+              t('Contain at most {{length}} character(s)', { length: 18 })!,
+            )
+        : z
+            .string()
+            .refine(
+              (value) => !value || isStrongPassword(value),
+              t(
+                'Password should be at least 8 characters and contain at least three character types.',
+              )!,
+            ),
+      confirmPassword: z.string().optional(),
+      sub: z.string().optional(),
+      apiKeyEnabled: z.boolean().optional(),
+      role: z.string().optional(),
+    })
+    .refine(
+      (values) =>
+        !user || !values.password || values.password === values.confirmPassword,
+      {
+        path: ['confirmPassword'],
+        message: t('The two password inputs are inconsistent')!,
+      },
+    );
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -150,6 +232,12 @@ const UserModal = (props: IProps) => {
       form.setValue('phone', user.phone);
       form.setValue('email', user.email);
       form.setValue('role', user.role);
+      form.setValue('account', user.account);
+      form.setValue('provider', user.provider || t('Account password login'));
+      form.setValue('sub', user.sub || '');
+      form.setValue('apiKeyEnabled', user.apiKeyEnabled);
+      form.setValue('password', '');
+      form.setValue('confirmPassword', '');
     }
   }, [isOpen]);
 
@@ -157,13 +245,22 @@ const UserModal = (props: IProps) => {
     if (!form.formState.isValid) return;
     setSubmit(true);
     let p = null;
-    let params = {
+    const params: any = {
       ...values,
       username: values.username!,
       password: values.password!,
       role: values.role!,
     };
     if (user) {
+      delete params.account;
+      delete params.provider;
+      if (!params.password) {
+        delete params.password;
+        delete params.confirmPassword;
+      }
+      if (user.provider?.toLowerCase() !== 'keycloak') {
+        delete params.sub;
+      }
       p = putUser({
         id: user.id,
         ...params,

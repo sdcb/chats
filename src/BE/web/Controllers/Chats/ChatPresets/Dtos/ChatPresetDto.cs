@@ -12,6 +12,8 @@ public record ChatPresetDto
 
     public required DateTime UpdatedAt { get; init; }
 
+    public required bool IsSystem { get; init; }
+
     public required ChatSpanDto[] Spans { get; init; }
 
     public static ChatPresetDto FromDB(ChatPreset preset, IUrlEncryptionService idEncryption)
@@ -26,6 +28,7 @@ public record ChatPresetDto
             Id = idEncryption.EncryptChatPresetId(preset.Id),
             Name = preset.Name,
             UpdatedAt = preset.UpdatedAt,
+            IsSystem = preset.IsSystem,
             Spans = [.. preset.ChatPresetSpans.Select(x => new ChatSpanDto
             {
                 SpanId = x.SpanId,

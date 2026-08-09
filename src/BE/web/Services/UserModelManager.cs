@@ -45,7 +45,7 @@ public class UserModelManager(ChatsDB db)
     {
         UserApiKey? key = await db.UserApiKeys
             .Include(x => x.Models)
-            .Where(x => x.Key == apiKey && x.Expires > DateTime.UtcNow)
+            .Where(x => x.Key == apiKey && x.Expires > DateTime.UtcNow && !x.IsDeleted && !x.IsRevoked && x.User.Enabled && x.User.ApiKeyEnabled)
             .FirstOrDefaultAsync(cancellationToken);
         if (key == null) return null;
 
@@ -71,7 +71,7 @@ public class UserModelManager(ChatsDB db)
     {
         UserApiKey? key = await db.UserApiKeys
             .Include(x => x.Models)
-            .Where(x => x.Key == apiKey && x.Expires > DateTime.UtcNow)
+            .Where(x => x.Key == apiKey && x.Expires > DateTime.UtcNow && !x.IsDeleted && !x.IsRevoked && x.User.Enabled && x.User.ApiKeyEnabled)
             .FirstOrDefaultAsync(cancellationToken);
         if (key == null) return [];
 

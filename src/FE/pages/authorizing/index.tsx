@@ -32,7 +32,9 @@ export default function Authorizing() {
     }).then((response) => {
       setUserSession(response.sessionId);
       saveUserInfo({
-        ...response,
+        role: response.role,
+        username: response.username,
+        apiKeyEnabled: response.apiKeyEnabled,
       });
       router.push('/');
     });

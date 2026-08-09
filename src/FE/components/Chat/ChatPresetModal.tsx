@@ -4,27 +4,36 @@ import toast from 'react-hot-toast';
 import useTranslation from '@/hooks/useTranslation';
 
 import { AdminModelDto } from '@/types/adminApis';
+import { UserRole } from '@/types/adminApis';
 import { DEFAULT_TEMPERATURE, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
-import { ChatSpanDto, ChatSpanMcp, GetChatPresetResult } from '@/types/clientApis';
+import {
+  ChatSpanDto,
+  ChatSpanMcp,
+  GetChatPresetResult,
+} from '@/types/clientApis';
 import { Prompt } from '@/types/prompt';
 
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
-import {
-  IconPlus,
-} from '@/components/Icons';
+import { IconPlus } from '@/components/Icons';
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 
-import HomeContext from '@/contexts/home.context';
 import ChatModelInfo from './ChatModelInfo';
 import ChatResponsePresetConfig from './ChatResponsePresetConfig';
 import ImageGenerationPresetConfig from './ImageGenerationPresetConfig';
 
 import { postChatPreset, putChatPreset } from '@/apis/clientApis';
+import HomeContext from '@/contexts/home.context';
 import { cn } from '@/lib/utils';
+import { useUserInfo } from '@/providers/UserProvider';
 
 interface Props {
   chatPreset?: GetChatPresetResult;
@@ -39,6 +48,7 @@ const ChatPresetModal = (props: Props) => {
     selectedChat,
   } = useContext(HomeContext);
   const { t } = useTranslation();
+  const user = useUserInfo();
   const newPresetGroupLabel = t('New preset model group');
   const [spans, setSpans] = useState<ChatSpanDto[]>([]);
   const [selectedSpan, setSelectedSpan] = useState<ChatSpanDto>();
@@ -47,6 +57,7 @@ const ChatPresetModal = (props: Props) => {
   const [isLoading, setIsLoading] = useState(false);
   const [mcpServersLoaded, setMcpServersLoaded] = useState(false);
   const [mcpLoadingTriggered, setMcpLoadingTriggered] = useState(false);
+  const [isSystem, setIsSystem] = useState(false);
 
   // JSON 验证函数
   const validateJSON = (jsonString: string): boolean => {
@@ -62,7 +73,7 @@ const ChatPresetModal = (props: Props) => {
   // 检查是否需要在初始化时加载MCP
   const shouldLoadMcpOnInit = (preset?: GetChatPresetResult) => {
     if (!preset) return false;
-    return preset.spans.some(span => span.mcps && span.mcps.length > 0);
+    return preset.spans.some((span) => span.mcps && span.mcps.length > 0);
   };
 
   // 加载MCP服务器数据
@@ -80,17 +91,21 @@ const ChatPresetModal = (props: Props) => {
       }));
       setName(chatPreset.name);
       setSpans(normalizedSpans);
-      setSelectedSpan(normalizedSpans.length > 0 ? normalizedSpans[0] : undefined);
+      setSelectedSpan(
+        normalizedSpans.length > 0 ? normalizedSpans[0] : undefined,
+      );
       setPresetSpanCount(normalizedSpans.length);
+      setIsSystem(chatPreset.isSystem);
     } else {
       setName(newPresetGroupLabel);
       setSpans([]);
       setSelectedSpan(undefined);
       setPresetSpanCount(0);
+      setIsSystem(false);
     }
     setMcpServersLoaded(false);
     setMcpLoadingTriggered(false);
-    
+
     // 只在以下情况加载MCP服务器数据：
     // A. 当前ChatPreset拥有至少一个MCP时
     if (isOpen && shouldLoadMcpOnInit(chatPreset)) {
@@ -144,7 +159,7 @@ const ChatPresetModal = (props: Props) => {
             toast.error(t('All MCP tools must have a valid tool name'));
             return;
           }
-          
+
           // 验证自定义headers是否为有效的JSON
           if (mcp.customHeaders && !validateJSON(mcp.customHeaders)) {
             toast.error(t('Invalid JSON format in MCP custom headers'));
@@ -156,6 +171,7 @@ const ChatPresetModal = (props: Props) => {
 
     const params = {
       name: name!,
+      isSystem: user?.role === UserRole.admin && isSystem,
       spans: spans.map((span) => ({
         enabled: span.enabled,
         modelId: span.modelId,
@@ -537,23 +553,24 @@ const ChatPresetModal = (props: Props) => {
                     {span.modelName}
                   </div>
                 ))}
-                {selectedChat && selectedChat.spans.length < MAX_SELECT_MODEL_COUNT && (
-                  <ChatModelDropdownMenu
-                    className="p-0"
-                    triggerClassName={'hover:bg-transparent p-0 h-10'}
-                    groupClassName="scroller md:!max-h-60 md:!overflow-y-auto"
-                    models={models}
-                    content={
-                      <Button variant="ghost" className="bg-muted">
-                        <IconPlus size={20} />
-                      </Button>
-                    }
-                    hideIcon={true}
-                    onChangeModel={(model) => {
-                      handleAddChatModel(model.modelId);
-                    }}
-                  />
-                )}
+                {selectedChat &&
+                  selectedChat.spans.length < MAX_SELECT_MODEL_COUNT && (
+                    <ChatModelDropdownMenu
+                      className="p-0"
+                      triggerClassName={'hover:bg-transparent p-0 h-10'}
+                      groupClassName="scroller md:!max-h-60 md:!overflow-y-auto"
+                      models={models}
+                      content={
+                        <Button variant="ghost" className="bg-muted">
+                          <IconPlus size={20} />
+                        </Button>
+                      }
+                      hideIcon={true}
+                      onChangeModel={(model) => {
+                        handleAddChatModel(model.modelId);
+                      }}
+                    />
+                  )}
               </div>
               <div className="flex flex-col">
                 {selectedSpan && (
@@ -597,12 +614,12 @@ const ChatPresetModal = (props: Props) => {
                         <ChatModelInfo modelId={selectedSpan.modelId} />
                       </div>
                     </div>
-                    
+
                     {/* 根据模型的 API 类型显示不同的配置组件 */}
                     {modelMap[selectedSpan.modelId] && (
                       <>
                         {/* Chat/Response/AnthropicMessages API 配置 (apiType=0/1/3) */}
-                        {(modelMap[selectedSpan.modelId].apiType === 0 || 
+                        {(modelMap[selectedSpan.modelId].apiType === 0 ||
                           modelMap[selectedSpan.modelId].apiType === 1 ||
                           modelMap[selectedSpan.modelId].apiType === 3) && (
                           <ChatResponsePresetConfig
@@ -610,7 +627,9 @@ const ChatPresetModal = (props: Props) => {
                             systemPrompt={selectedSpan.systemPrompt}
                             prompts={prompts}
                             webSearchEnabled={selectedSpan.webSearchEnabled}
-                            codeExecutionEnabled={selectedSpan.codeExecutionEnabled}
+                            codeExecutionEnabled={
+                              selectedSpan.codeExecutionEnabled
+                            }
                             reasoningEffort={selectedSpan.reasoningEffort}
                             thinkingBudget={selectedSpan.thinkingBudget}
                             mcps={selectedSpan.mcps || []}
@@ -629,7 +648,7 @@ const ChatPresetModal = (props: Props) => {
                             onRequestMcpLoad={loadMcpServers}
                           />
                         )}
-                        
+
                         {/* ImageGeneration API 配置 (apiType=2) */}
                         {modelMap[selectedSpan.modelId].apiType === 2 && (
                           <ImageGenerationPresetConfig
@@ -654,8 +673,26 @@ const ChatPresetModal = (props: Props) => {
             </>
           )}
         </div>
-        <DialogFooter className="px-4 py-3 border-t">
-          <div className="flex gap-4 justify-end items-center">
+        <DialogFooter
+          className="grid-cols-2 items-center px-4 py-3 border-t space-x-0"
+          style={{ display: 'grid' }}
+        >
+          <div className="flex min-w-0 items-center justify-start">
+            {user?.role === UserRole.admin && (
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium whitespace-nowrap">
+                    {t('System preset')}
+                  </div>
+                  <div className="hidden text-xs text-muted-foreground sm:block whitespace-nowrap">
+                    {t('Visible to all users')}
+                  </div>
+                </div>
+                <Switch checked={isSystem} onCheckedChange={setIsSystem} />
+              </div>
+            )}
+          </div>
+          <div className="flex items-center justify-end">
             <Button
               variant="default"
               disabled={presetSpanCount === 0 || isLoading}
