@@ -1,27 +1,30 @@
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
 
 import {
+  AssignedUserNameDto,
   McpServerDetailsDto,
   McpServerListManagementItemDto,
-  AssignedUserNameDto,
 } from '@/types/clientApis';
 
-import DeletePopover from '@/components/Popover/DeletePopover';
-
 import {
-  IconPlus,
-  IconSearch,
   IconEdit,
-  IconRefresh,
   IconEye,
+  IconPlus,
+  IconRefresh,
+  IconSearch,
   IconUserPlus,
 } from '@/components/Icons';
+import DeletePopover from '@/components/Popover/DeletePopover';
+import Tips from '@/components/Tips/Tips';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { LabelSwitch } from '@/components/ui/label-switch';
 import {
   Table,
   TableBody,
@@ -30,26 +33,30 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import Tips from '@/components/Tips/Tips';
-import { LabelSwitch } from '@/components/ui/label-switch';
-import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 
-import McpModal from './McpTab/McpModal';
 import AssignUsersModal from './McpTab/AssignUsersModal';
+import McpModal from './McpTab/McpModal';
 
 import {
-  getMcpServersForManagement,
-  getMcpServerDetails,
   createMcpServer,
-  updateMcpServer,
   deleteMcpServer,
   getAssignedUserNames,
+  getMcpServerDetails,
+  getMcpServersForManagement,
+  updateMcpServer,
   updateMyMcpAssignment,
 } from '@/apis/clientApis';
 import { useUserInfo } from '@/providers/UserProvider';
 
-const AssignedUsersTooltip = ({ mcpId, assignedUserCount, editable }: { mcpId: number; assignedUserCount: number; editable: boolean }) => {
+const AssignedUsersTooltip = ({
+  mcpId,
+  assignedUserCount,
+  editable,
+}: {
+  mcpId: number;
+  assignedUserCount: number;
+  editable: boolean;
+}) => {
   const { t } = useTranslation();
   const [assignedUsers, setAssignedUsers] = useState<AssignedUserNameDto[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -78,10 +85,7 @@ const AssignedUsersTooltip = ({ mcpId, assignedUserCount, editable }: { mcpId: n
       <TooltipPrimitive.Root>
         <TooltipPrimitive.Trigger asChild>
           <span onMouseEnter={loadAssignedUsers} className="inline-block">
-            <Badge
-              variant="outline"
-              className="cursor-pointer hover:bg-muted"
-            >
+            <Badge variant="outline" className="cursor-pointer hover:bg-muted">
               {assignedUserCount}
             </Badge>
           </span>
@@ -113,10 +117,15 @@ const AssignedUsersTooltip = ({ mcpId, assignedUserCount, editable }: { mcpId: n
 
 const McpTab = () => {
   const { t } = useTranslation();
-  const [mcpServers, setMcpServers] = useState<McpServerListManagementItemDto[]>([]);
+  const [mcpServers, setMcpServers] = useState<
+    McpServerListManagementItemDto[]
+  >([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredServers, setFilteredServers] = useState<McpServerListManagementItemDto[]>([]);
-  const [selectedServer, setSelectedServer] = useState<McpServerDetailsDto | null>(null);
+  const [filteredServers, setFilteredServers] = useState<
+    McpServerListManagementItemDto[]
+  >([]);
+  const [selectedServer, setSelectedServer] =
+    useState<McpServerDetailsDto | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false);
@@ -124,26 +133,27 @@ const McpTab = () => {
   const [loadingServerDetails, setLoadingServerDetails] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignMcpId, setAssignMcpId] = useState<number | null>(null);
+  const [showAllServers, setShowAllServers] = useState(false);
   const user = useUserInfo();
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     setLoading(true);
     fetchMcpServers();
-  }, []);
+  }, [showAllServers]);
 
   useEffect(() => {
     const filtered = mcpServers.filter(
       (server) =>
         server.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        server.url.toLowerCase().includes(searchTerm.toLowerCase())
+        server.url.toLowerCase().includes(searchTerm.toLowerCase()),
     );
     setFilteredServers(filtered);
   }, [mcpServers, searchTerm]);
 
   const fetchMcpServers = async () => {
     try {
-      const data = await getMcpServersForManagement();
+      const data = await getMcpServersForManagement(!showAllServers);
       setMcpServers(data);
     } catch (error) {
       console.error('Failed to fetch MCP servers:', error);
@@ -203,12 +213,15 @@ const McpTab = () => {
     setShowAssignModal(true);
   };
 
-  const handleToggleMyShowShortcut = async (server: McpServerListManagementItemDto, checked: boolean) => {
+  const handleToggleMyShowShortcut = async (
+    server: McpServerListManagementItemDto,
+    checked: boolean,
+  ) => {
     const previous = server.showShortcut;
     setMcpServers((prev) =>
       prev.map((item) =>
-        item.id === server.id ? { ...item, showShortcut: checked } : item
-      )
+        item.id === server.id ? { ...item, showShortcut: checked } : item,
+      ),
     );
 
     try {
@@ -219,8 +232,8 @@ const McpTab = () => {
       toast.error(t('Failed to update show shortcut'));
       setMcpServers((prev) =>
         prev.map((item) =>
-          item.id === server.id ? { ...item, showShortcut: previous } : item
-        )
+          item.id === server.id ? { ...item, showShortcut: previous } : item,
+        ),
       );
     }
   };
@@ -258,7 +271,9 @@ const McpTab = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const renderEditAssignComboButton = (server: McpServerListManagementItemDto) => {
+  const renderEditAssignComboButton = (
+    server: McpServerListManagementItemDto,
+  ) => {
     if (!server.editable) return null;
 
     return (
@@ -301,15 +316,32 @@ const McpTab = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">{t('MCP Management')}</h2>
         <div className="flex items-center gap-2">
-          <Button onClick={fetchMcpServers} variant="outline" size="sm">
+          {isAdmin && (
+            <div className="flex rounded-md border p-0.5">
+              <Button
+                type="button"
+                variant={!showAllServers ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowAllServers(false)}
+              >
+                {t('My MCPs')}
+              </Button>
+              <Button
+                type="button"
+                variant={showAllServers ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowAllServers(true)}
+              >
+                {t('All MCPs')}
+              </Button>
+            </div>
+          )}
+          <Button onClick={() => fetchMcpServers()} variant="outline" size="sm">
             <IconRefresh size={16} className="mr-2" />
             {t('Refresh')}
           </Button>
           <Button onClick={handleCreateServer}>
-            <IconPlus
-              size={16}
-              className="mr-2 stroke-primary-foreground"
-            />
+            <IconPlus size={16} className="mr-2 stroke-primary-foreground" />
             {t('Add MCP Server')}
           </Button>
         </div>
@@ -341,23 +373,37 @@ const McpTab = () => {
                   <TableHead>{t('Assigned Users')}</TableHead>
                   {isAdmin && <TableHead>{t('Owner')}</TableHead>}
                   <TableHead>{t('Show Shortcut')}</TableHead>
-                  <TableHead className="hidden md:table-cell">{t('Created')}</TableHead>
-                  <TableHead className="hidden md:table-cell">{t('Updated')}</TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    {t('Created')}
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    {t('Updated')}
+                  </TableHead>
                   <TableHead>{t('Actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredServers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isAdmin ? 9 : 8} className="text-center py-8">
-                      {searchTerm ? t('No MCP servers found') : t('No MCP servers yet')}
+                    <TableCell
+                      colSpan={isAdmin ? 9 : 8}
+                      className="text-center py-8"
+                    >
+                      {searchTerm
+                        ? t('No MCP servers found')
+                        : t('No MCP servers yet')}
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredServers.map((server) => (
                     <TableRow key={server.id}>
-                      <TableCell className="font-medium">{server.label}</TableCell>
-                      <TableCell className="max-w-xs truncate" title={server.url}>
+                      <TableCell className="font-medium">
+                        {server.label}
+                      </TableCell>
+                      <TableCell
+                        className="max-w-xs truncate"
+                        title={server.url}
+                      >
                         {server.url}
                       </TableCell>
                       <TableCell>
@@ -370,20 +416,30 @@ const McpTab = () => {
                           editable={server.editable}
                         />
                       </TableCell>
-                      {isAdmin && <TableCell>{server.owner || t('System')}</TableCell>}
+                      {isAdmin && (
+                        <TableCell>{server.owner || t('System')}</TableCell>
+                      )}
                       <TableCell>
                         {server.assignedToMe ? (
                           <LabelSwitch
                             checked={!!server.showShortcut}
-                            onCheckedChange={(checked) => handleToggleMyShowShortcut(server, checked)}
+                            onCheckedChange={(checked) =>
+                              handleToggleMyShowShortcut(server, checked)
+                            }
                             label=""
-                            tooltip={t('Show this MCP as a shortcut button in chat input')}
+                            tooltip={t(
+                              'Show this MCP as a shortcut button in chat input',
+                            )}
                           />
                         ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <span className="text-xs text-muted-foreground">
+                            —
+                          </span>
                         )}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">{formatDate(server.createdAt)}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {formatDate(server.createdAt)}
+                      </TableCell>
                       <TableCell className="hidden md:table-cell">
                         {formatDate(server.updatedAt)}
                       </TableCell>
@@ -437,7 +493,8 @@ const McpTab = () => {
         onSuccess={fetchMcpServers}
         isAdmin={isAdmin}
         defaultShowShortcut={
-          mcpServers.find((server) => server.id === assignMcpId)?.showShortcut ?? false
+          mcpServers.find((server) => server.id === assignMcpId)
+            ?.showShortcut ?? false
         }
       />
     </div>

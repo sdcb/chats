@@ -20,7 +20,6 @@ using ModelContextProtocol.Protocol;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.ChatServices.Anthropic;
 using System.Diagnostics;
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Channels;
 using EmptyResult = Microsoft.AspNetCore.Mvc.EmptyResult;
@@ -567,37 +566,24 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             Source = UsageSource.WebChat,
         };
 
-        // Build a name mapping for tools to avoid collisions while keeping names clean
+        // Build a stable name mapping for tools to avoid collisions while keeping names clean.
         Dictionary<string, (int serverId, string originalToolName)> toolNameMap = new(StringComparer.Ordinal);
-        HashSet<string> usedToolNames = new(StringComparer.Ordinal);
+        string[] reservedToolNames = codeExecutionEnabled ? CodeInterpreterExecutor.ToolNames : [];
 
         if (codeExecutionEnabled)
         {
-            // Reserve CI tool names to avoid collisions with MCP tools.
-            foreach (string n in CodeInterpreterExecutor.ToolNames)
-            {
-                usedToolNames.Add(n);
-            }
             codeInterpreter.AddTools(csr.Tools, chatSpan.ChatConfig.Model.CurrentSnapshot.AllowVision);
         }
-        foreach (McpTool tool in chatSpan.ChatConfig.ChatConfigMcps.SelectMany(x => x.McpServer.McpTools))
+        IReadOnlyList<McpToolNameMapping> mcpToolMappings = McpToolNameMapper.Build(
+            chatSpan.ChatConfig.ChatConfigMcps.SelectMany(x => x.McpServer.McpTools),
+            reservedToolNames);
+        foreach (McpToolNameMapping mapping in mcpToolMappings)
         {
-            string finalName = tool.ToolName;
-            if (!usedToolNames.Add(finalName))
-            {
-                // Duplicate detected, generate a non-digit-leading 8-char random prefix
-                string prefix;
-                do
-                {
-                    prefix = GenerateAlphaFirstToken(8);
-                    finalName = prefix + "_" + tool.ToolName;
-                } while (!usedToolNames.Add(finalName));
-            }
-
-            toolNameMap[finalName] = (tool.McpServerId, tool.ToolName);
+            McpTool tool = mapping.Tool;
+            toolNameMap[mapping.ExposedName] = (tool.McpServerId, tool.ToolName);
             csr.Tools.Add(new FunctionTool
             {
-                FunctionName = finalName,
+                FunctionName = mapping.ExposedName,
                 FunctionDescription = tool.Description,
                 FunctionParameters = tool.Parameters,
             });
@@ -1141,18 +1127,4 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         }
     }
 
-    private static string GenerateAlphaFirstToken(int length)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
-        const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-        const string alphanum = letters + "0123456789";
-
-        Span<char> buffer = stackalloc char[length];
-        buffer[0] = letters[RandomNumberGenerator.GetInt32(letters.Length)];
-        for (int i = 1; i < length; i++)
-        {
-            buffer[i] = alphanum[RandomNumberGenerator.GetInt32(alphanum.Length)];
-        }
-        return new string(buffer);
-    }
 }

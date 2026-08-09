@@ -7,6 +7,7 @@ import useTranslation from '@/hooks/useTranslation';
 import { termDateString } from '@/utils/common';
 import { formatDate } from '@/utils/date';
 import { isEmptyOrJsonObject } from '@/utils/json';
+import { getMcpDisplayLabel } from '@/utils/mcp';
 
 import {
   AdminModelDto,
@@ -580,7 +581,7 @@ const UserInitialConfigModal = (props: IProps) => {
                             key={server.id}
                             onClick={() => addMcp(server.id)}
                           >
-                            {server.label}
+                            {getMcpDisplayLabel(server, mcpServers)}
                           </DropdownMenuItem>
                         ))
                       )}
@@ -616,7 +617,9 @@ const UserInitialConfigModal = (props: IProps) => {
                           return (
                             <TableRow key={mcp.mcpServerId}>
                               <TableCell>
-                                {server?.label ?? `MCP #${mcp.mcpServerId}`}
+                                {server
+                                  ? getMcpDisplayLabel(server, mcpServers)
+                                  : `MCP #${mcp.mcpServerId}`}
                               </TableCell>
                               <TableCell>
                                 <Switch

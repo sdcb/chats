@@ -173,6 +173,80 @@ END
 
 GO
 
+-- =============================================
+-- Step 6: MCP 标签改为同一所有者内唯一
+-- 不同用户可以创建相同标签的 MCP；同一所有者仍不能创建重名 MCP。
+-- 新复合索引同时覆盖按 OwnerUserId 查询，因此删除原单列索引。
+-- =============================================
+PRINT N'[Step 6] MCP 标签唯一范围';
+
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.key_constraints
+    WHERE parent_object_id = OBJECT_ID(N'dbo.McpServer')
+      AND name = N'UX_McpServer_Label'
+)
+BEGIN
+    ALTER TABLE dbo.McpServer
+    DROP CONSTRAINT UX_McpServer_Label;
+
+    PRINT N'    -> 已删除全局标签唯一约束 UX_McpServer_Label';
+END
+ELSE IF EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.McpServer')
+      AND name = N'UX_McpServer_Label'
+)
+BEGIN
+    DROP INDEX UX_McpServer_Label ON dbo.McpServer;
+
+    PRINT N'    -> 已删除全局标签唯一索引 UX_McpServer_Label';
+END
+ELSE
+BEGIN
+    PRINT N'    -> UX_McpServer_Label 已不存在，跳过';
+END
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.McpServer')
+      AND name = N'UX_McpServer_Owner_Label'
+)
+BEGIN
+    CREATE UNIQUE INDEX UX_McpServer_Owner_Label
+    ON dbo.McpServer(OwnerUserId, Label);
+
+    PRINT N'    -> 已创建 UX_McpServer_Owner_Label';
+END
+ELSE
+BEGIN
+    PRINT N'    -> UX_McpServer_Owner_Label 已存在，跳过';
+END
+
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.McpServer')
+      AND name = N'IX_McpServer_OwnerUserId'
+)
+BEGIN
+    DROP INDEX IX_McpServer_OwnerUserId ON dbo.McpServer;
+
+    PRINT N'    -> 已删除被复合索引覆盖的 IX_McpServer_OwnerUserId';
+END
+ELSE
+BEGIN
+    PRINT N'    -> IX_McpServer_OwnerUserId 已不存在，跳过';
+END
+
+GO
+
 PRINT N'[1.14.0] 迁移完成';
 
 GO

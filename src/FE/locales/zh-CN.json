@@ -590,6 +590,8 @@
   "raw": "原始",
   "The number of attachments sent has reached the maximum limit": "发送的附件数量已达到最大限制",
   "MCP Management": "MCP管理",
+  "My MCPs": "我的MCP",
+  "All MCPs": "全部MCP",
   "Add MCP Server": "添加MCP服务器",
   "Edit MCP Server": "编辑MCP服务器",
   "View MCP Server": "查看MCP服务器",

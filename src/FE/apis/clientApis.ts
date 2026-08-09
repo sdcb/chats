@@ -653,11 +653,13 @@ export const getMcpServers = (): Promise<McpServerListItemDto[]> => {
   return fetchService.get('/api/mcp');
 };
 
-export const getMcpServersForManagement = (): Promise<
-  McpServerListManagementItemDto[]
-> => {
+export const getMcpServersForManagement = (
+  mineOnly: boolean = true,
+): Promise<McpServerListManagementItemDto[]> => {
   const fetchService = createFetchClient();
-  return fetchService.get('/api/mcp/management');
+  return fetchService.get('/api/mcp/management', {
+    params: { mineOnly },
+  });
 };
 
 export const getMcpServerDetails = (

@@ -63,7 +63,7 @@ export default function UserInitialConfig() {
   }, [t]);
 
   const loadOptions = useCallback(() => {
-    Promise.all([getModels(), getMcpServersForManagement()])
+    Promise.all([getModels(), getMcpServersForManagement(false)])
       .then(([modelData, mcpData]) => {
         setModels(modelData.filter((x) => x.enabled === true));
         setMcpServers(mcpData);

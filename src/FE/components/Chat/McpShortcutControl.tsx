@@ -2,14 +2,20 @@ import { useContext, useEffect, useMemo, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
+import { getMcpDisplayLabel } from '@/utils/mcp';
+
 import { AdminModelDto } from '@/types/adminApis';
-import { ChatSpanDto, ChatSpanMcp, McpServerListItemDto } from '@/types/clientApis';
+import {
+  ChatSpanDto,
+  ChatSpanMcp,
+  McpServerListItemDto,
+} from '@/types/clientApis';
 
 import Tips from '@/components/Tips/Tips';
 
-import HomeContext from '@/contexts/home.context';
 import { setChats } from '@/actions/chat.actions';
 import { getMcpServers, putChatSpan } from '@/apis/clientApis';
+import HomeContext from '@/contexts/home.context';
 import { cn } from '@/lib/utils';
 
 const getNextMcps = (
@@ -47,7 +53,9 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
   } = useContext(HomeContext);
 
   const [mcpServers, setMcpServers] = useState<McpServerListItemDto[]>([]);
-  const [updatingMcpIds, setUpdatingMcpIds] = useState<Set<number>>(() => new Set());
+  const [updatingMcpIds, setUpdatingMcpIds] = useState<Set<number>>(
+    () => new Set(),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -84,7 +92,7 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
     return mcpServers
       .filter((server) => server.showShortcut)
       .slice()
-      .sort((a, b) => a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label) || a.id - b.id);
   }, [mcpServers]);
 
   if (toolCapableSpans.length === 0 || shortcutServers.length === 0) {
@@ -93,7 +101,7 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
 
   const isMcpEnabled = (mcpId: number) => {
     return toolCapableSpans.some((span) =>
-      (span.mcps || []).some((mcp) => mcp.id === mcpId)
+      (span.mcps || []).some((mcp) => mcp.id === mcpId),
     );
   };
 
@@ -124,7 +132,7 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
             thinkingBudget: span.thinkingBudget,
             mcps: nextMcps,
           });
-        })
+        }),
       );
 
       const updatedChat = {
@@ -143,7 +151,7 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
       };
 
       const updatedChats = chats.map((chat) =>
-        chat.id === chatId ? updatedChat : chat
+        chat.id === chatId ? updatedChat : chat,
       );
       chatDispatch(setChats(updatedChats));
     } catch (error) {
@@ -162,6 +170,7 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
       {shortcutServers.map((server) => {
         const enabled = isMcpEnabled(server.id);
         const isUpdating = updatingMcpIds.has(server.id);
+        const displayLabel = getMcpDisplayLabel(server, shortcutServers);
 
         return (
           <Tips
@@ -174,18 +183,18 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
                   'text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed',
                   enabled
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : 'bg-transparent border border-input hover:bg-accent hover:text-accent-foreground'
+                    : 'bg-transparent border border-input hover:bg-accent hover:text-accent-foreground',
                 )}
                 onClick={() => handleToggleMcp(server.id)}
               >
-                <span>{server.label}</span>
+                <span>{displayLabel}</span>
               </button>
             }
             side="top"
             content={
               enabled
-                ? t('MCP shortcut enabled: {{label}}', { label: server.label })
-                : t('MCP shortcut disabled: {{label}}', { label: server.label })
+                ? t('MCP shortcut enabled: {{label}}', { label: displayLabel })
+                : t('MCP shortcut disabled: {{label}}', { label: displayLabel })
             }
           />
         );

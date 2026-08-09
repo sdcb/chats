@@ -7,8 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.DB;
 
 [Table("McpServer")]
-[Index("OwnerUserId", Name = "IX_McpServer_OwnerUserId")]
-[Index("Label", Name = "UX_McpServer_Label", IsUnique = true)]
+[Index("OwnerUserId", "Label", Name = "UX_McpServer_Owner_Label", IsUnique = true)]
 public partial class McpServer
 {
     [Key]
