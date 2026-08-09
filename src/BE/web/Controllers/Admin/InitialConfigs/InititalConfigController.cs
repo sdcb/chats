@@ -2,6 +2,7 @@
 using Chats.BE.Controllers.Admin.Common;
 using Chats.BE.Controllers.Admin.InitialConfigs.Dtos;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Chats.BE.Controllers.Admin.InitialConfigs;
 
@@ -22,6 +23,8 @@ public class InititalConfigController(ChatsDB db) : ControllerBase
                 Price = x.Price,
                 InvitationCodeId = x.InvitationCodeId,
                 InvitationCode = x.InvitationCode!.Value ?? "-",
+                Mcps = x.Mcps,
+                ApiKeyEnabled = x.ApiKeyEnabled,
             })
             .AsEnumerable()
             .Select(x => x.ToDto())
@@ -36,6 +39,12 @@ public class InititalConfigController(ChatsDB db) : ControllerBase
         if (existingConfig == null)
         {
             return NotFound();
+        }
+
+        string? validationError = await ValidateMcps(req, cancellationToken);
+        if (validationError != null)
+        {
+            return BadRequest(validationError);
         }
 
         req.ApplyTo(existingConfig);
@@ -70,6 +79,12 @@ public class InititalConfigController(ChatsDB db) : ControllerBase
             return BadRequest(ModelState);
         }
 
+        string? validationError = await ValidateMcps(req, cancellationToken);
+        if (validationError != null)
+        {
+            return BadRequest(validationError);
+        }
+
         UserInitialConfig newOne = new()
         {
             CreatedAt = DateTime.UtcNow, 
@@ -80,5 +95,30 @@ public class InititalConfigController(ChatsDB db) : ControllerBase
         await db.UserInitialConfigs.AddAsync(newOne, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         return Ok();
+    }
+
+    private async Task<string?> ValidateMcps(UserInitialConfigRequest req, CancellationToken cancellationToken)
+    {
+        if (req.Mcps.Any(x => x.McpServerId <= 0))
+        {
+            return "MCP server ID must be positive";
+        }
+
+        int[] mcpServerIds = [.. req.Mcps.Select(x => x.McpServerId).Distinct()];
+        if (mcpServerIds.Length != req.Mcps.Length)
+        {
+            return "MCP server IDs must be unique";
+        }
+
+        if (req.Mcps.Any(x => !x.HasValidCustomHeaders()))
+        {
+            return "MCP custom headers must be empty or a valid JSON object";
+        }
+
+        int existingCount = await db.McpServers
+            .CountAsync(x => mcpServerIds.Contains(x.Id), cancellationToken);
+        return existingCount == mcpServerIds.Length
+            ? null
+            : "One or more MCP servers do not exist";
     }
 }

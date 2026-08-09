@@ -98,6 +98,81 @@ END
 
 GO
 
+-- =============================================
+-- Step 4: UserInitialConfig.Mcps
+-- 保存新用户初始化时授予的 MCP 权限及其用户级配置。
+-- 存量配置不授予任何 MCP；DEFAULT 仅用于回填，随后删除。
+-- =============================================
+PRINT N'[Step 4] UserInitialConfig.Mcps';
+
+IF COL_LENGTH(N'dbo.UserInitialConfig', N'Mcps') IS NULL
+BEGIN
+    ALTER TABLE dbo.UserInitialConfig
+    ADD Mcps NVARCHAR(MAX) NOT NULL
+        CONSTRAINT DF_UserInitialConfig_Mcps DEFAULT (N'[]');
+
+    ALTER TABLE dbo.UserInitialConfig
+    DROP CONSTRAINT DF_UserInitialConfig_Mcps;
+
+    PRINT N'    -> 已新增 dbo.UserInitialConfig.Mcps，存量配置设为 []';
+END
+ELSE
+BEGIN
+    PRINT N'    -> dbo.UserInitialConfig.Mcps 已存在，跳过';
+END
+
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.check_constraints
+    WHERE parent_object_id = OBJECT_ID(N'dbo.UserInitialConfig')
+      AND name = N'CK_UserInitialConfig_Mcps_JsonArray'
+)
+BEGIN
+    ALTER TABLE dbo.UserInitialConfig WITH CHECK
+    ADD CONSTRAINT CK_UserInitialConfig_Mcps_JsonArray
+        CHECK
+        (
+            ISJSON(Mcps) = 1
+            AND LEFT(LTRIM(Mcps), 1) = N'['
+        );
+
+    PRINT N'    -> 已创建 CK_UserInitialConfig_Mcps_JsonArray';
+END
+ELSE
+BEGIN
+    PRINT N'    -> CK_UserInitialConfig_Mcps_JsonArray 已存在，跳过';
+END
+
+GO
+
+-- =============================================
+-- Step 5: UserInitialConfig.ApiKeyEnabled
+-- 控制按该配置创建的新用户是否允许使用 API Key。
+-- 存量配置保持启用；DEFAULT 仅用于回填，随后删除。
+-- =============================================
+PRINT N'[Step 5] UserInitialConfig.ApiKeyEnabled';
+
+IF COL_LENGTH(N'dbo.UserInitialConfig', N'ApiKeyEnabled') IS NULL
+BEGIN
+    ALTER TABLE dbo.UserInitialConfig
+    ADD ApiKeyEnabled BIT NOT NULL
+        CONSTRAINT DF_UserInitialConfig_ApiKeyEnabled DEFAULT (1);
+
+    ALTER TABLE dbo.UserInitialConfig
+    DROP CONSTRAINT DF_UserInitialConfig_ApiKeyEnabled;
+
+    PRINT N'    -> 已新增 dbo.UserInitialConfig.ApiKeyEnabled，存量配置设为 1';
+END
+ELSE
+BEGIN
+    PRINT N'    -> dbo.UserInitialConfig.ApiKeyEnabled 已存在，跳过';
+END
+
+GO
+
 PRINT N'[1.14.0] 迁移完成';
 
 GO

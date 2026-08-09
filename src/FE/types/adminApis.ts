@@ -558,6 +558,8 @@ export interface GetUserInitialConfigResult {
   invitationCodeId: string;
   invitationCode: string;
   models: UserInitialModel[];
+  mcps: UserInitialMcp[];
+  apiKeyEnabled: boolean;
 }
 
 export interface PostUserInitialConfigParams {
@@ -566,6 +568,8 @@ export interface PostUserInitialConfigParams {
   loginType: string;
   invitationCodeId: string | null;
   models: UserInitialModel[];
+  mcps: UserInitialMcp[];
+  apiKeyEnabled: boolean;
 }
 
 export interface PutUserInitialConfigParams {
@@ -575,6 +579,8 @@ export interface PutUserInitialConfigParams {
   loginType: string;
   invitationCodeId: string | null;
   models: UserInitialModel[];
+  mcps: UserInitialMcp[];
+  apiKeyEnabled: boolean;
 }
 
 export interface UserInitialModel {
@@ -582,6 +588,12 @@ export interface UserInitialModel {
   tokens: number;
   counts: number;
   expires: string;
+}
+
+export interface UserInitialMcp {
+  mcpServerId: number;
+  showShortcut: boolean;
+  customHeaders: string | null;
 }
 
 export interface UserModelDisplayDto {
