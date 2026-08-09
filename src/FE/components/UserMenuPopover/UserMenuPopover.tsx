@@ -7,6 +7,7 @@ import { clearUserInfo, clearUserSession, getLoginUrl } from '@/utils/user';
 import { UserRole } from '@/types/adminApis';
 
 import {
+  IconCode,
   IconLogout,
   IconMessage,
   IconMoneybag,
@@ -86,6 +87,17 @@ const UserMenuPopover = ({
             onClick={(e) => {
               e.preventDefault();
               router.push('/admin/dashboard');
+            }}
+          />
+        )}
+        {pageType !== PageType.Build && user?.apiKeyEnabled && (
+          <SidebarLink
+            text="API"
+            href="/build/api-key"
+            icon={<IconCode />}
+            onClick={(e) => {
+              e.preventDefault();
+              router.push('/build/api-key');
             }}
           />
         )}
