@@ -80,15 +80,20 @@ Please submit issues or suggestions via [GitHub Issues](https://github.com/sdcb/
 
 ---
 
-## License
+## Special Thanks
 
-This project is licensed under the [Apache 2.0](LICENSE).
+<div align="left">
+  <h1>RoutinAI</h1>
+  <img width="154" height="151" src="https://routin.ai/favicon.png"/>
+</div>
+
+[RoutinAI](https://routin.ai/) is an enterprise-grade unified LLM API gateway that provides a single, type-safe interface to access over 100 leading large language models from the GPT, Claude, and Gemini families, including models such as gpt-5.6-sol, claude-opus-5 and gemini-3.1-pro-preview. It eliminates the complexity of managing multiple AI vendors by providing zero-latency edge routing, seamless model switching without code modifications, unified billing, and centralized governance with spending caps and access policies.
 
 ---
 
-## Star History
+## License
 
-[![Star History Chart](https://api.star-history.com/svg?repos=sdcb/chats&type=Date)](https://star-history.com/#sdcb/chats&Date)
+This project is licensed under the [Apache 2.0](LICENSE).
 
 ---
 

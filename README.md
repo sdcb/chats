@@ -80,15 +80,20 @@ Chats 使用 `C#`/`TypeScript` 开发，以下是完整的文档资源：
 
 ---
 
-## 许可证
+## 特别感谢
 
-本项目采用 [Apache 2.0](LICENSE) 开源许可证。
+<div align="left">
+  <h1>RoutinAI</h1>
+  <img width="154" height="151" src="https://routin.ai/favicon.png"/>
+</div>
+
+[RoutinAI](https://routin.ai/) 是一个企业级统一 LLM API 网关，提供单一、类型安全的接口，可访问来自 GPT、Claude 和 Gemini 系列的 100 多个主流大语言模型，包括 gpt-5.6-sol、claude-opus-5 和 gemini-3.1-pro-preview 等模型。它通过提供零延迟边缘路由、无需修改代码即可无缝切换模型、统一计费以及带有消费上限和访问策略的集中治理，消除了管理多个 AI 供应商的复杂性。
 
 ---
 
-## Star History
+## 许可证
 
-[![Star History Chart](https://api.star-history.com/svg?repos=sdcb/chats&type=Date)](https://star-history.com/#sdcb/chats&Date)
+本项目采用 [Apache 2.0](LICENSE) 开源许可证。
 
 ---
 
