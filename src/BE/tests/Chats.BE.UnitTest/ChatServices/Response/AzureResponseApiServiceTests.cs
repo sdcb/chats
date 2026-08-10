@@ -18,8 +18,6 @@ namespace Chats.BE.UnitTest.ChatServices.Response;
 
 public class AzureResponseApiServiceTests
 {
-    private const string TestDataPath = "ChatServices/Response/FiddlerDump";
-
     private sealed class CapturingHttpClientFactory(HttpStatusCode statusCode, string responseBody, Action<HttpRequestMessage> onRequest) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name)
@@ -382,18 +380,18 @@ public class AzureResponseApiServiceTests
     [Fact]
     public async Task ResponseApiService_ShouldPutEncryptedContentIntoThinkChatSegmentSignature_OnOutputItemDone()
     {
-        // Arrange
-        var filePath = Path.Combine(TestDataPath, "AzureResponse.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-
-        // SSE requires newlines between events, but FiddlerHttpDumpParser strips them.
-        List<string> chunksWithNewlines = dump.Response.Chunks.Select(c => c + "\n").ToList();
-        FiddlerDumpHttpClientFactory httpClientFactory = new(chunksWithNewlines, (HttpStatusCode)dump.Response.StatusCode, expectedRequestBody: null);
+        const string expectedEncrypted = "encrypted-reasoning";
+        const string sse =
+            "event: response.reasoning_summary_text.delta\n" +
+            "data: {\"type\":\"response.reasoning_summary_text.delta\",\"delta\":\"reasoning\"}\n\n" +
+            "event: response.output_item.done\n" +
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"rs_1\",\"type\":\"reasoning\",\"encrypted_content\":\"encrypted-reasoning\"}}\n\n" +
+            "event: response.completed\n" +
+            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}}\n\n";
+        ReplayHttpClientFactory httpClientFactory = new(sse);
 
         AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest();
-
-        string expectedEncrypted = ExtractEncryptedContentFromDump(filePath);
 
         // Act
         List<ChatSegment> segments = [];
@@ -409,14 +407,20 @@ public class AzureResponseApiServiceTests
     }
 
     [Fact]
-    public async Task ResponseApiService_ShouldParseHostedWebSearchDumpIntoSegments()
+    public async Task ResponseApiService_ShouldParseHostedWebSearchIntoSegments()
     {
-        // Arrange
-        var filePath = Path.Combine(TestDataPath, "AzureResponseWebSearch-Attempt2.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        List<string> chunksWithNewlines = dump.Response.Chunks.Select(c => c + "\n").ToList();
-        chunksWithNewlines.Add("event: response.completed\ndata: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}}\n\n");
-        FiddlerDumpHttpClientFactory httpClientFactory = new(chunksWithNewlines, (HttpStatusCode)dump.Response.StatusCode, expectedRequestBody: null);
+        const string sse =
+            "event: response.output_item.done\n" +
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"ws_1\",\"type\":\"web_search_call\",\"status\":\"completed\",\"action\":{\"type\":\"search\",\"query\":\"q\"}}}\n\n" +
+            "event: response.output_item.done\n" +
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"ws_2\",\"type\":\"web_search_call\",\"status\":\"completed\",\"action\":{\"type\":\"open_page\",\"url\":\"https://example.com\"}}}\n\n" +
+            "event: response.output_item.done\n" +
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"ws_3\",\"type\":\"web_search_call\",\"status\":\"completed\",\"action\":{\"type\":\"find_in_page\",\"url\":\"https://example.com\",\"pattern\":\"answer\"}}}\n\n" +
+            "event: response.output_item.done\n" +
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"ws_4\",\"type\":\"web_search_call\",\"status\":\"completed\",\"action\":{\"type\":\"open_page\",\"url\":\"https://example.org\"}}}\n\n" +
+            "event: response.completed\n" +
+            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}}\n\n";
+        ReplayHttpClientFactory httpClientFactory = new(sse);
 
         AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest();
@@ -461,7 +465,7 @@ public class AzureResponseApiServiceTests
             "event: response.completed\n" +
             "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":1,\"input_tokens_details\":{\"cached_tokens\":16000},\"output_tokens\":1}}}\n\n";
 
-        FiddlerDumpHttpClientFactory httpClientFactory = new([sse], HttpStatusCode.OK, expectedRequestBody: null);
+        ReplayHttpClientFactory httpClientFactory = new(sse, HttpStatusCode.OK, expectedRequestBody: null);
         AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest();
 
@@ -507,7 +511,7 @@ public class AzureResponseApiServiceTests
             "event: response.completed\n" +
             "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}}\n\n";
 
-        FiddlerDumpHttpClientFactory httpClientFactory = new([sse], HttpStatusCode.OK, expectedRequestBody: null);
+        ReplayHttpClientFactory httpClientFactory = new(sse, HttpStatusCode.OK, expectedRequestBody: null);
         AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         List<ChatSegment> segments = [];
 
@@ -543,7 +547,7 @@ public class AzureResponseApiServiceTests
             "event: response.completed\n" +
             "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"tools\":[{\"type\":\"function\",\"parameters\":{\"properties\":{\"file\":{\"type\":[\"string\",\"null\"]}}}}],\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"answer\",\"annotations\":[{\"type\":\"url_citation\",\"title\":\"Source\",\"url\":\"https://example.com\",\"start_index\":0,\"end_index\":6}]}]}],\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}}\n\n";
 
-        FiddlerDumpHttpClientFactory httpClientFactory = new([sse], HttpStatusCode.OK, expectedRequestBody: null);
+        ReplayHttpClientFactory httpClientFactory = new(sse, HttpStatusCode.OK, expectedRequestBody: null);
         AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest();
 
@@ -882,42 +886,4 @@ public class AzureResponseApiServiceTests
         Assert.Equal("signature", think.Signature);
     }
 
-    private static string ExtractEncryptedContentFromDump(string dumpFilePath)
-    {
-        foreach (string line in System.IO.File.ReadLines(dumpFilePath))
-        {
-            if (!line.StartsWith("data: ", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            if (!line.Contains("\"type\":\"response.output_item.done\"", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            if (!line.Contains("\"encrypted_content\"", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            string json = line["data: ".Length..];
-            using JsonDocument doc = JsonDocument.Parse(json);
-
-            JsonElement item = doc.RootElement.GetProperty("item");
-            string? itemType = item.TryGetProperty("type", out JsonElement typeEl) ? typeEl.GetString() : null;
-            if (!string.Equals(itemType, "reasoning", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            string? encrypted = item.TryGetProperty("encrypted_content", out JsonElement encEl) ? encEl.GetString() : null;
-            if (!string.IsNullOrEmpty(encrypted))
-            {
-                return encrypted;
-            }
-        }
-
-        throw new InvalidOperationException("Could not find reasoning encrypted_content in response.output_item.done event.");
-    }
 }

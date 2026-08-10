@@ -145,7 +145,7 @@ public class AzureAIFoundryChatServiceTests
         };
         DateTime now = DateTime.UtcNow;
 
-        FiddlerDumpHttpClientFactory httpClientFactory = new(chunks, HttpStatusCode.OK);
+        ReplayHttpClientFactory httpClientFactory = new(string.Concat(chunks), HttpStatusCode.OK);
         AzureAIFoundryChatService service = new(httpClientFactory);
 
         ModelKeySnapshot modelKeySnapshot = new()

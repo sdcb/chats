@@ -22,7 +22,7 @@ public class NovitaChatUsageTests
         ];
         DateTime now = DateTime.UtcNow;
 
-        FiddlerDumpHttpClientFactory httpClientFactory = new(chunks, HttpStatusCode.OK);
+        ReplayHttpClientFactory httpClientFactory = new(string.Concat(chunks), HttpStatusCode.OK);
         NovitaChatService service = new(httpClientFactory);
 
         ModelKeySnapshot modelKeySnapshot = new()

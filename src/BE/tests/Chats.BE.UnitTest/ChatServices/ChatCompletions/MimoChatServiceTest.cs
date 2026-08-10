@@ -15,8 +15,6 @@ namespace Chats.BE.UnitTest.ChatServices.ChatCompletions;
 
 public class MimoChatServiceTest
 {
-    private const string TestDataPath = "ChatServices/ChatCompletions/FiddlerDump";
-
     private sealed class CapturingHttpClientFactory(string responseBody, Action<HttpRequestMessage> onRequest) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => new(new Handler(responseBody, onRequest));
@@ -32,20 +30,6 @@ public class MimoChatServiceTest
                 });
             }
         }
-    }
-
-    private static IHttpClientFactory CreateMockHttpClientFactory(FiddlerHttpDumpParser.HttpDump dump, bool validateRequest = true)
-    {
-        HttpStatusCode statusCode = (HttpStatusCode)dump.Response.StatusCode;
-        // This capture uses the HTTP chunk delimiter's CRLF as the second newline
-        // between SSE events. The dump parser correctly removes that delimiter,
-        // so restore it only after chunks that already end a complete SSE line.
-        // A chunk without a trailing newline may split a JSON payload and must be
-        // concatenated byte-for-byte with the next chunk.
-        List<string> replayChunks = dump.Response.Chunks
-            .Select(chunk => chunk.EndsWith('\n') ? chunk + "\n" : chunk)
-            .ToList();
-        return new FiddlerDumpHttpClientFactory(replayChunks, statusCode, validateRequest ? dump.Request.Body : null);
     }
 
     private static ChatConfig CreateChatConfig()
@@ -109,10 +93,17 @@ public class MimoChatServiceTest
     [Fact]
     public async Task Streaming_NormalToolCall_ShouldParseCorrectly()
     {
-        // Arrange
-        var filePath = Path.Combine(TestDataPath, "XiaomiMimo-ToolCall.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        var httpClientFactory = CreateMockHttpClientFactory(dump, validateRequest: false);
+        const string sse = """
+            data: {"id":"chat_1","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_13f2f94b48d240a8ae062fe0","function":{"name":"run_csharp","arguments":"1234.0 / "}}]},"finish_reason":null}]}
+
+            data: {"id":"chat_1","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"5432.0"}}]},"finish_reason":null}]}
+
+            data: {"id":"chat_1","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}
+
+            data: [DONE]
+
+            """;
+        var httpClientFactory = new ReplayHttpClientFactory(sse);
 
         MimoChatService service = new(httpClientFactory);
 
@@ -257,9 +248,17 @@ public class MimoChatServiceTest
     [Fact]
     public async Task Streaming_WebSearchDump_ShouldEmitSourcesBeforeReasoningAndAnswer()
     {
-        string filePath = Path.Combine(TestDataPath, "XiaomiMimo-WebSearch.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        IHttpClientFactory factory = CreateMockHttpClientFactory(dump, validateRequest: false);
+        const string sse = """
+            data: {"id":"chat_search","choices":[{"index":0,"delta":{"annotations":[{"type":"url_citation","title":"Weather","url":"https://weather.example/","summary":"Sunny"},{"type":"url_citation","title":"Forecast","url":"https://forecast.example/","summary":"Warm"}]},"finish_reason":null}]}
+
+            data: {"id":"chat_search","choices":[{"index":0,"delta":{"reasoning_content":"Looking up the forecast."},"finish_reason":null}]}
+
+            data: {"id":"chat_search","choices":[{"index":0,"delta":{"content":"Tomorrow will be sunny."},"finish_reason":"stop"}]}
+
+            data: [DONE]
+
+            """;
+        IHttpClientFactory factory = new ReplayHttpClientFactory(sse);
         ChatConfig config = CreateChatConfig();
         config.Model.CurrentSnapshot.AllowSearch = true;
         config.WebSearchEnabled = true;

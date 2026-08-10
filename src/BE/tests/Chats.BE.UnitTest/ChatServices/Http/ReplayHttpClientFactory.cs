@@ -5,42 +5,30 @@ using System.Text.Json;
 namespace Chats.BE.UnitTest.ChatServices.Http;
 
 /// <summary>
-/// HttpClientFactory test double that replays a chunked response captured from a Fiddler dump,
-/// and optionally validates the outgoing request JSON against the captured request body.
+/// HttpClientFactory test double that returns an inline response body and optionally validates
+/// the outgoing request JSON.
 /// </summary>
-public sealed class FiddlerDumpHttpClientFactory : IHttpClientFactory
+public sealed class ReplayHttpClientFactory : IHttpClientFactory
 {
-    private readonly List<string> chunks;
+    private readonly string responseBody;
     private readonly HttpStatusCode statusCode;
     private readonly string? expectedRequestBody;
 
-    public FiddlerDumpHttpClientFactory(List<string> chunks, HttpStatusCode statusCode = HttpStatusCode.OK, string? expectedRequestBody = null)
+    public ReplayHttpClientFactory(string responseBody, HttpStatusCode statusCode = HttpStatusCode.OK, string? expectedRequestBody = null)
     {
-        this.chunks = chunks;
+        this.responseBody = responseBody;
         this.statusCode = statusCode;
         this.expectedRequestBody = expectedRequestBody;
     }
 
     public HttpClient CreateClient(string name)
     {
-        FiddlerDumpHttpMessageHandler handler = new(chunks, statusCode, expectedRequestBody);
-        return new HttpClient(handler);
+        return new HttpClient(new ReplayHttpMessageHandler(responseBody, statusCode, expectedRequestBody));
     }
 }
 
-internal sealed class FiddlerDumpHttpMessageHandler : HttpMessageHandler
+internal sealed class ReplayHttpMessageHandler(string responseBody, HttpStatusCode statusCode, string? expectedRequestBody) : HttpMessageHandler
 {
-    private readonly List<string> chunks;
-    private readonly HttpStatusCode statusCode;
-    private readonly string? expectedRequestBody;
-
-    public FiddlerDumpHttpMessageHandler(List<string> chunks, HttpStatusCode statusCode = HttpStatusCode.OK, string? expectedRequestBody = null)
-    {
-        this.chunks = chunks;
-        this.statusCode = statusCode;
-        this.expectedRequestBody = expectedRequestBody;
-    }
-
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         if (!string.IsNullOrWhiteSpace(expectedRequestBody))
@@ -49,57 +37,10 @@ internal sealed class FiddlerDumpHttpMessageHandler : HttpMessageHandler
             JsonRequestAssertions.AssertSameJson(expectedRequestBody, actualBody);
         }
 
-        HttpResponseMessage response = new(statusCode)
+        return new HttpResponseMessage(statusCode)
         {
-            Content = new StreamContent(new ChunkedMemoryStream(chunks))
+            Content = new StringContent(responseBody, Encoding.UTF8, "application/json")
         };
-        response.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json")
-        {
-            CharSet = "UTF-8"
-        };
-        return response;
-    }
-}
-
-/// <summary>
-/// Simulates chunked stream response. Converts a list of chunks into a readable stream.
-/// Now that FiddlerHttpDumpParser correctly parses HTTP chunks, we just need to concatenate them.
-/// </summary>
-public sealed class ChunkedMemoryStream : Stream
-{
-    private readonly MemoryStream innerStream;
-
-    public ChunkedMemoryStream(List<string> chunks)
-    {
-        // Chunks 现在已经是正确解析的内容，直接拼接即可
-        var content = string.Concat(chunks);
-        var bytes = Encoding.UTF8.GetBytes(content);
-        innerStream = new MemoryStream(bytes);
-    }
-
-    public override bool CanRead => true;
-    public override bool CanSeek => innerStream.CanSeek;
-    public override bool CanWrite => false;
-    public override long Length => innerStream.Length;
-    public override long Position
-    {
-        get => innerStream.Position;
-        set => innerStream.Position = value;
-    }
-
-    public override void Flush() => innerStream.Flush();
-    public override int Read(byte[] buffer, int offset, int count) => innerStream.Read(buffer, offset, count);
-    public override long Seek(long offset, SeekOrigin origin) => innerStream.Seek(offset, origin);
-    public override void SetLength(long value) => throw new NotSupportedException();
-    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            innerStream.Dispose();
-        }
-        base.Dispose(disposing);
     }
 }
 

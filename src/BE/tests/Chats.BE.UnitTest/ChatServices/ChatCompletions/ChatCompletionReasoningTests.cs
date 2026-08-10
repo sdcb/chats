@@ -89,7 +89,7 @@ public class ChatCompletionReasoningTests
             "data: [DONE]\n\n",
         ];
 
-        FiddlerDumpHttpClientFactory httpClientFactory = new(chunks, HttpStatusCode.OK);
+        ReplayHttpClientFactory httpClientFactory = new(string.Concat(chunks), HttpStatusCode.OK);
         ChatCompletionService service = new(httpClientFactory);
         ChatRequest request = CreateRequest(streamed: true);
 
@@ -113,7 +113,7 @@ public class ChatCompletionReasoningTests
             "{\"id\":\"chatcmpl-test\",\"object\":\"chat.completion\",\"created\":1785739215,\"model\":\"Coding\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"123\",\"reasoning_content\":null,\"reasoning\":\"5 decimal places).\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":1,\"completion_tokens\":2,\"total_tokens\":3}}",
         ];
 
-        FiddlerDumpHttpClientFactory httpClientFactory = new(chunks, HttpStatusCode.OK);
+        ReplayHttpClientFactory httpClientFactory = new(string.Concat(chunks), HttpStatusCode.OK);
         ChatCompletionService service = new(httpClientFactory);
         ChatRequest request = CreateRequest(streamed: false);
 

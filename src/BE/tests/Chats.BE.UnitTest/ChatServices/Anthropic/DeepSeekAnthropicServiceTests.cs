@@ -20,7 +20,7 @@ public class DeepSeekAnthropicServiceTests
 {
     private static IHttpClientFactory CreateMockHttpClientFactory(params string[] chunks)
     {
-        return new FiddlerDumpHttpClientFactory([.. chunks], HttpStatusCode.OK);
+        return new ReplayHttpClientFactory(string.Concat(chunks), HttpStatusCode.OK);
     }
 
     private static ChatRequest CreateRequest()
