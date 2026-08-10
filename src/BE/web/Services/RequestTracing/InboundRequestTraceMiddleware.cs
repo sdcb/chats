@@ -180,7 +180,12 @@ public sealed class InboundRequestTraceMiddleware(
         try
         {
             int durationMs = (int)Stopwatch.GetElapsedTime(startTick, Stopwatch.GetTimestamp()).TotalMilliseconds;
-            short? statusCode = (short?)context.Response.StatusCode;
+            // The exception is rethrown after tracing so ASP.NET Core can generate the
+            // final error response. At this point Response.StatusCode is still its
+            // default (200), even though the client will receive a 500.
+            short? statusCode = pipelineException == null
+                ? (short?)context.Response.StatusCode
+                : StatusCodes.Status500InternalServerError;
             bool shouldPersist = RequestTraceHelper.MatchResponseStageFilters(config.Filters, source, method, rawUrl, statusCode, durationMs);
             if (!shouldPersist)
             {
