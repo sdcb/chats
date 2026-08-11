@@ -16,6 +16,7 @@ import {
   AssignedUserNameDto,
   ChatPresetReorderRequest,
   ChatResult,
+  ChatSpanDto,
   FetchToolsRequest,
   FetchToolsResponse,
   GetBalance7DaysUsageResult,
@@ -531,6 +532,26 @@ export const putChatSpan = (
   return fetchServer.put(`/api/chat/${encryptedChatId}/span/${spanId}`, {
     body: params,
   });
+};
+
+export const putChatMcp = (
+  encryptedChatId: string,
+  mcpServerId: number,
+): Promise<ChatSpanDto[]> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.put(
+    `/api/chat/${encryptedChatId}/mcp/${mcpServerId}`,
+  );
+};
+
+export const deleteChatMcp = (
+  encryptedChatId: string,
+  mcpServerId: number,
+): Promise<ChatSpanDto[]> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.delete(
+    `/api/chat/${encryptedChatId}/mcp/${mcpServerId}`,
+  );
 };
 
 export const getChatPreset = () => {
