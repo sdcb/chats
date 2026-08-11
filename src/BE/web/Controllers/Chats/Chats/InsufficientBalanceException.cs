@@ -33,11 +33,36 @@ public class SubscriptionExpiredException(DateTime expiresAt) : ChatServiceExcep
     public override string Message => "Subscription has expired";
 }
 
-public class RawChatServiceException(int statusCode, string body) : ChatServiceException(DBFinishReason.UpstreamError)
+public class RawChatServiceException(int statusCode, string body, TimeSpan? retryAfter = null) : ChatServiceException(DBFinishReason.UpstreamError)
 {
     public int StatusCode => statusCode;
 
     public string Body => body;
 
+    public TimeSpan? RetryAfter => retryAfter;
+
     public override string Message => Body;
+
+    public static async Task<RawChatServiceException> CreateAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        string body = await response.Content.ReadAsStringAsync(cancellationToken);
+        TimeSpan? retryAfter = GetRetryAfter(response);
+        return new RawChatServiceException((int)response.StatusCode, body, retryAfter);
+    }
+
+    private static TimeSpan? GetRetryAfter(HttpResponseMessage response)
+    {
+        if (response.Headers.RetryAfter?.Delta is TimeSpan delta)
+        {
+            return delta;
+        }
+
+        if (response.Headers.RetryAfter?.Date is DateTimeOffset retryAt)
+        {
+            TimeSpan delay = retryAt - DateTimeOffset.UtcNow;
+            return delay > TimeSpan.Zero ? delay : TimeSpan.Zero;
+        }
+
+        return null;
+    }
 }

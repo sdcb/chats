@@ -44,8 +44,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
         if (!response.IsSuccessStatusCode)
         {
-            string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new RawChatServiceException((int)response.StatusCode, errorBody);
+            throw await RawChatServiceException.CreateAsync(response, cancellationToken);
         }
 
         using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);

@@ -198,8 +198,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         if (!response.IsSuccessStatusCode)
         {
-            string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new RawChatServiceException((int)response.StatusCode, errorBody);
+            throw await RawChatServiceException.CreateAsync(response, cancellationToken);
         }
 
         using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -436,8 +435,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         if (!response.IsSuccessStatusCode)
         {
-            string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new RawChatServiceException((int)response.StatusCode, errorBody);
+            throw await RawChatServiceException.CreateAsync(response, cancellationToken);
         }
 
         string jsonResponse = await response.Content.ReadAsStringAsync(cancellationToken);
