@@ -18,17 +18,18 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 
 <img alt="chats-en" src="https://github.com/user-attachments/assets/40d2376e-58a0-4309-a2f5-5ed8262a0c2e" />
 
-## 🆕 Latest Release (1.13.0)
+## 🆕 Latest Release (1.14.0)
 
-- 📅 Release Date: 2026-08-05
-- ⚡ MCP shortcuts: pin frequently used MCP servers to the chat input, with independent visibility preferences for each user
-- 🧠 MCP Server Instructions: automatically fetch server instructions and append them to the model context when an MCP is enabled
-- 🌐 Smart Search: native web search and citation presentation for OpenAI/Azure Responses, DeepSeek Messages, and Xiaomi MiMo
-- 🛠️ Stability fixes: corrects interleaved search pairing, reasoning-segment order, and clipboard failures on LAN HTTP deployments
-- 📦 Engineering upgrades: updates Node.js 24, npm 12, MCP SDK 2.0, and multiple frontend and backend dependencies
-- ⬆️ Upgrade focus: SQL Server and SQLite deployments must run the 1.13.0 migration, which adds `McpServer.ServerInstructions` and `UserMcp.ShowShortcut`
+- 📅 Release Date: 2026-08-13
+- 🧊 Context snapshots: separates original user text from model context and freezes dynamic time, model, and Code Interpreter information
+- 🌐 System presets: administrators can maintain preset model groups visible to every user, while regular users can apply and clone them
+- 👤 User management: expands SSO Sub, password reset, API Key permission, and initial account configuration controls
+- 🧩 MCP reliability: provides deterministic aliases for duplicate tool names and atomically updates chat-level shortcut associations
+- 🔁 Request retries: retries 408, 429, common 5xx responses, and transient network errors before the first text output
+- 🛠️ Provider fixes: improves OpenAI-compatible streaming tool calls, DeepSeek multi-turn tool calls, and Anthropic parallel tool results
+- ⬆️ Upgrade focus: SQL Server and SQLite deployments must run the corresponding `1.14.0` database migration
 
-👉 [View 1.13.0 Release Notes](./doc/en-US/release-notes/1.13.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
+👉 [View 1.14.0 Release Notes](./doc/en-US/release-notes/1.14.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
 
 ## Quick Start
 
