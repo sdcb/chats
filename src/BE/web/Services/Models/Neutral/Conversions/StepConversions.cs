@@ -1,5 +1,6 @@
 using Chats.DB;
 using Chats.DB.Enums;
+using Chats.BE.Services.UserContext;
 
 namespace Chats.BE.Services.Models.Neutral.Conversions;
 
@@ -11,21 +12,35 @@ public static class StepConversions
     /// <summary>
     /// Converts a Step to a NeutralMessage.
     /// </summary>
-    public static NeutralMessage ToNeutral(this Step step)
+    public static NeutralMessage ToNeutral(this Step step, byte? targetSpanId = null)
     {
+        List<StepContent> orderedContents = [.. step.StepContents.OrderBy(sc => sc.Id)];
+        if (targetSpanId != null)
+        {
+            int templatedTextIndex = orderedContents.FindIndex(sc =>
+                sc.ContentType == DBStepContentType.Text
+                && sc.StepContentText?.ContextTemplate != null);
+            if (templatedTextIndex > 0)
+            {
+                StepContent templatedText = orderedContents[templatedTextIndex];
+                orderedContents.RemoveAt(templatedTextIndex);
+                orderedContents.Insert(0, templatedText);
+            }
+        }
+
         return new NeutralMessage
         {
             Role = step.ChatRole.ToNeutral(),
-            Contents = step.StepContents.OrderBy(sc => sc.Id).Select(sc => sc.ToNeutral()).ToList()
+            Contents = orderedContents.Select(sc => sc.ToNeutral(targetSpanId)).ToList()
         };
     }
 
     /// <summary>
     /// Converts a collection of Steps to a list of NeutralMessages.
     /// </summary>
-    public static IList<NeutralMessage> ToNeutral(this IEnumerable<Step> steps)
+    public static IList<NeutralMessage> ToNeutral(this IEnumerable<Step> steps, byte? targetSpanId = null)
     {
-        return steps.Select(s => s.ToNeutral()).ToList();
+        return steps.Select(s => s.ToNeutral(targetSpanId)).ToList();
     }
 
     /// <summary>
@@ -45,11 +60,16 @@ public static class StepConversions
     /// <summary>
     /// Converts a StepContent to a NeutralContent.
     /// </summary>
-    public static NeutralContent ToNeutral(this StepContent stepContent)
+    public static NeutralContent ToNeutral(this StepContent stepContent, byte? targetSpanId = null)
     {
         return (DBStepContentType)stepContent.ContentTypeId switch
         {
-            DBStepContentType.Text => NeutralTextContent.Create(stepContent.StepContentText!.Content),
+            DBStepContentType.Text => NeutralTextContent.Create(targetSpanId == null
+                ? stepContent.StepContentText!.Content
+                : UserContextTemplate.Render(
+                    stepContent.StepContentText!.ContextTemplate,
+                    stepContent.StepContentText.Content,
+                    targetSpanId.Value)),
             DBStepContentType.Error => NeutralErrorContent.Create(stepContent.StepContentText!.Content),
             DBStepContentType.FileUrl => NeutralFileUrlContent.Create(stepContent.StepContentText!.Content),
             DBStepContentType.FileBlob => NeutralFileBlobContent.Create(

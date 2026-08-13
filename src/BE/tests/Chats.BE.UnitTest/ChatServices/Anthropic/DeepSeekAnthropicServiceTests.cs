@@ -20,7 +20,7 @@ public class DeepSeekAnthropicServiceTests
 {
     private static IHttpClientFactory CreateMockHttpClientFactory(params string[] chunks)
     {
-        return new FiddlerDumpHttpClientFactory([.. chunks], HttpStatusCode.OK);
+        return new ReplayHttpClientFactory(string.Concat(chunks), HttpStatusCode.OK);
     }
 
     private static ChatRequest CreateRequest()
@@ -224,6 +224,37 @@ public class DeepSeekAnthropicServiceTests
 
         Assert.Equal(3, (int?)tool["max_uses"]);
         Assert.Equal("api-docs.deepseek.com", (string?)tool["allowed_domains"]?[0]);
+    }
+
+    [Fact]
+    public void BuildRequestBody_EmptyThinkingWithSignature_DropsUnsupportedRedactedThinkingBlock()
+    {
+        DeepSeekAnthropicService service = new(CreateMockHttpClientFactory());
+        ChatRequest request = CreateRequest() with
+        {
+            Messages =
+            [
+                NeutralMessage.FromAssistant(
+                    NeutralThinkContent.Create("", "9c976d06-9de1-4a07-a0b0-1c48e8b3b4f3"),
+                    NeutralTextContent.Create("会话创建成功。"),
+                    NeutralToolCallContent.Create("call_1", "write_file", "{}")),
+                NeutralMessage.FromTool(
+                    NeutralToolCallResponseContent.Create("call_1", "Wrote file")),
+            ]
+        };
+
+        MethodInfo method = typeof(AnthropicChatService).GetMethod("BuildRequestBody", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("BuildRequestBody method not found.");
+        JsonObject body = Assert.IsType<JsonObject>(method.Invoke(service, [request]));
+        string json = body.ToJsonString();
+        JsonArray messages = Assert.IsType<JsonArray>(body["messages"]);
+        JsonArray assistantContent = Assert.IsType<JsonArray>(messages[0]!["content"]);
+
+        Assert.DoesNotContain("redacted_thinking", json);
+        Assert.DoesNotContain("9c976d06-9de1-4a07-a0b0-1c48e8b3b4f3", json);
+        Assert.Equal(["text", "tool_use"], assistantContent.Select(x => (string?)x!["type"]));
+        Assert.Equal("会话创建成功。", (string?)assistantContent[0]?["text"]);
+        Assert.Equal("write_file", (string?)assistantContent[1]?["name"]);
     }
 
     [Fact]

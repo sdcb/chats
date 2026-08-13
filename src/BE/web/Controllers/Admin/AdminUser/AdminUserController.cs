@@ -4,6 +4,7 @@ using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.Infrastructure;
 using Chats.BE.Services.Common;
 using Chats.BE.Services;
+using Chats.BE.Services.OpenAIApiKeySession;
 using Chats.DB;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -49,13 +50,46 @@ public class AdminUserController(ChatsDB db, CurrentUser adminUser) : Controller
     }
 
     [HttpPut]
-    public async Task<IActionResult> UpdateUser([FromBody] UpdateUserDto dto, [FromServices] PasswordHasher passwordHasher, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateUser([FromBody] UpdateUserDto dto,
+        [FromServices] PasswordHasher passwordHasher,
+        [FromServices] OpenAIApiKeySessionManager apiKeySessions,
+        CancellationToken cancellationToken)
     {
         User? user = await db.Users.FindAsync([dto.UserId], cancellationToken);
         if (user == null)
         {
             return NotFound();
         }
+
+        if (!string.IsNullOrEmpty(dto.Password))
+        {
+            if (dto.Password != dto.ConfirmPassword)
+            {
+                return BadRequest("New password and confirm password do not match");
+            }
+            if (!PasswordPolicy.IsStrongEnough(dto.Password))
+            {
+                return BadRequest(PasswordPolicy.ErrorMessage);
+            }
+        }
+
+        if (dto.Sub != null)
+        {
+            if (!string.Equals(user.Provider, KnownLoginProviders.Keycloak, StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest("Only Keycloak users can change Sub");
+            }
+
+            string? normalizedSub = string.IsNullOrWhiteSpace(dto.Sub) ? null : dto.Sub.Trim();
+            if (normalizedSub != null && await db.Users.AnyAsync(x => x.Id != user.Id && x.Sub == normalizedSub, cancellationToken))
+            {
+                return Conflict("Sub already exists");
+            }
+            user.Sub = normalizedSub;
+        }
+
+        bool invalidateApiKeys = dto.Enabled.HasValue && dto.Enabled.Value != user.Enabled ||
+            dto.ApiKeyEnabled.HasValue && dto.ApiKeyEnabled.Value != user.ApiKeyEnabled;
 
         dto.ApplyToUser(user, passwordHasher);
         if (db.ChangeTracker.HasChanges())
@@ -64,6 +98,10 @@ public class AdminUserController(ChatsDB db, CurrentUser adminUser) : Controller
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        if (invalidateApiKeys)
+        {
+            apiKeySessions.InvalidateUser(user.Id);
+        }
         return NoContent();
     }
 
@@ -170,6 +208,8 @@ public class AdminUserController(ChatsDB db, CurrentUser adminUser) : Controller
             Phone = x.Phone,
             Email = x.Email,
             Provider = x.Provider,
+            Sub = x.Sub,
+            ApiKeyEnabled = x.ApiKeyEnabled,
             Enabled = x.Enabled,
             CreatedAt = x.CreatedAt,
             UserModelCount = x.UserModels.Count(),
@@ -236,6 +276,12 @@ public class AdminUserController(ChatsDB db, CurrentUser adminUser) : Controller
                     break;
                 case "loginType":
                     AddColumn("Login Type", ResolveLoginTypeLabel(row.Provider));
+                    break;
+                case "sub":
+                    AddColumn("SSO Sub", row.Sub);
+                    break;
+                case "apiKeyEnabled":
+                    AddColumn("API Key Enabled", row.ApiKeyEnabled);
                     break;
                 case "balance":
                     AddColumn("Balance", row.Balance);

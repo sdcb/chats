@@ -18,17 +18,6 @@ namespace Chats.BE.UnitTest.ChatServices.GoogleAI;
 
 public class GoogleAI2ChatServiceTest
 {
-    private const string TestDataPath = "ChatServices/GoogleAI/FiddlerDump";
-
-    /// <summary>
-    /// 基于 Fiddler dump 文件创建模拟的 HttpClientFactory
-    /// </summary>
-    private static IHttpClientFactory CreateMockHttpClientFactory(FiddlerHttpDumpParser.HttpDump dump)
-    {
-        HttpStatusCode statusCode = (HttpStatusCode)dump.Response.StatusCode;
-        return new FiddlerDumpHttpClientFactory(dump.Response.Chunks, statusCode, dump.Request.Body);
-    }
-
     private sealed class DummyHttpClientFactory : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => new();
@@ -309,17 +298,30 @@ public class GoogleAI2ChatServiceTest
     [Fact]
     public async Task CodeExecute_ShouldReturnCodeExecutionResult()
     {
-        // Arrange
-        var filePath = Path.Combine(TestDataPath, "CodeExecute.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        var httpClientFactory = CreateMockHttpClientFactory(dump);
+        const string response = """
+            [
+              {
+                "candidates": [{
+                  "content": {"parts": [
+                    {"text": "Calculating...", "thought": true},
+                    {"executableCode": {"language": "PYTHON", "code": "1234 / 5432"}},
+                    {"codeExecutionResult": {"outcome": "OUTCOME_OK", "output": "0.2272"}},
+                    {"text": "The result is 0.2272."}
+                  ]},
+                  "finishReason": "STOP"
+                }],
+                "usageMetadata": {"promptTokenCount": 1, "candidatesTokenCount": 2, "thoughtsTokenCount": 1, "totalTokenCount": 4}
+              }
+            ]
+            """;
+        var httpClientFactory = new ReplayHttpClientFactory(response);
 
         ChatCompletionService chatCompletionService = new(httpClientFactory);
         GoogleAI2ChatService service = new(httpClientFactory);
 
         var request = CreateBaseChatRequest("gemini-2.5-flash", "调用内置工具，计算1234/5432=?", cfg =>
         {
-            cfg.SystemPrompt = GoogleAiDumpExtractors.TryGetSystemPrompt(dump.Request.Body);
+            cfg.SystemPrompt = "You are a helpful assistant.";
         });
         request.ModelProviderCodeExecutionEnabled = true;
 
@@ -369,18 +371,27 @@ public class GoogleAI2ChatServiceTest
     [Fact]
     public async Task ToolCall_ShouldReturnFunctionCall()
     {
-        // Arrange
-        var filePath = Path.Combine(TestDataPath, "ToolCall.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        var httpClientFactory = CreateMockHttpClientFactory(dump);
+        const string response = """
+            [
+              {
+                "candidates": [{
+                  "content": {"parts": [{
+                    "functionCall": {"id": "call_1", "name": "run_code", "args": {"code": "1234 / 5432", "timeout": 30}}
+                  }]},
+                  "finishReason": "STOP"
+                }],
+                "usageMetadata": {"promptTokenCount": 1, "candidatesTokenCount": 1, "totalTokenCount": 2}
+              }
+            ]
+            """;
+        var httpClientFactory = new ReplayHttpClientFactory(response);
 
         ChatCompletionService chatCompletionService = new(httpClientFactory);
         GoogleAI2ChatService service = new(httpClientFactory);
 
         var request = CreateBaseChatRequest("gemini-2.5-flash", "调用C#工具，计算1234/5432=?", cfg =>
         {
-            // 添加工具定义
-            cfg.SystemPrompt = GoogleAiDumpExtractors.TryGetSystemPrompt(dump.Request.Body);
+            cfg.SystemPrompt = "You can call the provided C# tool.";
         });
         request = request with
         {
@@ -389,7 +400,7 @@ public class GoogleAI2ChatServiceTest
                 new FunctionTool
                 {
                     FunctionName = "run_code",
-                    FunctionDescription = GoogleAiDumpExtractors.TryGetFirstFunctionDescription(dump.Request.Body) ?? "执行C#代码",
+                    FunctionDescription = "执行C#代码",
                     FunctionParameters = """{"type":"object","properties":{"code":{"type":"string"},"timeout":{"type":"integer"}},"required":["code"]}"""
                 }
             ]
@@ -421,10 +432,21 @@ public class GoogleAI2ChatServiceTest
     [Fact]
     public async Task WebSearch_ShouldReturnSearchResults()
     {
-        // Arrange
-        var filePath = Path.Combine(TestDataPath, "WebSearch.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        var httpClientFactory = CreateMockHttpClientFactory(dump);
+        const string response = """
+            [
+              {
+                "candidates": [{
+                  "content": {"parts": [
+                    {"text": "Searching for news...", "thought": true},
+                    {"text": "Here is the latest news."}
+                  ]},
+                  "finishReason": "STOP"
+                }],
+                "usageMetadata": {"promptTokenCount": 1, "candidatesTokenCount": 1, "thoughtsTokenCount": 1, "totalTokenCount": 3}
+              }
+            ]
+            """;
+        var httpClientFactory = new ReplayHttpClientFactory(response);
 
         ChatCompletionService chatCompletionService = new(httpClientFactory);
         GoogleAI2ChatService service = new(httpClientFactory);
@@ -432,7 +454,7 @@ public class GoogleAI2ChatServiceTest
         var request = CreateBaseChatRequest("gemini-2.5-flash", "今天有什么新闻？", cfg =>
         {
             cfg.WebSearchEnabled = true;
-            cfg.SystemPrompt = GoogleAiDumpExtractors.TryGetSystemPrompt(dump.Request.Body);
+            cfg.SystemPrompt = "Use web search when needed.";
         });
 
         // Act
@@ -466,15 +488,26 @@ public class GoogleAI2ChatServiceTest
     [Fact]
     public async Task ImageGenerate_ShouldReturnImage()
     {
-        // Arrange
-        var filePath = Path.Combine(TestDataPath, "ImageGenerate.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        var httpClientFactory = CreateMockHttpClientFactory(dump);
+        const string response = """
+            [
+              {
+                "candidates": [{
+                  "content": {"parts": [
+                    {"text": "Here is a cat."},
+                    {"inlineData": {"mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9J8x8AAAAASUVORK5CYII="}}
+                  ]},
+                  "finishReason": "STOP"
+                }],
+                "usageMetadata": {"promptTokenCount": 1, "candidatesTokenCount": 1, "totalTokenCount": 2}
+              }
+            ]
+            """;
+        var httpClientFactory = new ReplayHttpClientFactory(response);
 
         ChatCompletionService chatCompletionService = new(httpClientFactory);
         GoogleAI2ChatService service = new(httpClientFactory);
 
-        // 使用与录制 Fiddler dump 一致的图片生成模型名称
+        // 使用支持图片生成的测试模型名称
         var request = CreateBaseChatRequest("gemini-2.5-flash-image", "生成一张小猫的图片");
 
         // Act
@@ -507,10 +540,10 @@ public class GoogleAI2ChatServiceTest
     [Fact]
     public async Task Error404_ShouldThrowRawChatServiceException()
     {
-        // Arrange
-        var filePath = Path.Combine(TestDataPath, "Error_404.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        var httpClientFactory = CreateMockHttpClientFactory(dump);
+        const string response = """
+            {"error":{"status":"NOT_FOUND","message":"Model is not found for API version v1beta."}}
+            """;
+        var httpClientFactory = new ReplayHttpClientFactory(response, HttpStatusCode.NotFound);
 
         ChatCompletionService chatCompletionService = new(httpClientFactory);
         GoogleAI2ChatService service = new(httpClientFactory);
@@ -522,7 +555,7 @@ public class GoogleAI2ChatServiceTest
                 new FunctionTool
                 {
                     FunctionName = "run_code",
-                    FunctionDescription = GoogleAiDumpExtractors.TryGetFirstFunctionDescription(dump.Request.Body) ?? "执行C#代码",
+                    FunctionDescription = "执行C#代码",
                     FunctionParameters = """{"type":"object","properties":{"code":{"type":"string"},"timeout":{"type":"integer"}},"required":["code"]}"""
                 }
             ]
@@ -545,10 +578,10 @@ public class GoogleAI2ChatServiceTest
     [Fact]
     public async Task Error429_ShouldThrowRawChatServiceException()
     {
-        // Arrange
-        var filePath = Path.Combine(TestDataPath, "Error_429.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        var httpClientFactory = CreateMockHttpClientFactory(dump);
+        const string response = """
+            {"error":{"status":"RESOURCE_EXHAUSTED","message":"You exceeded your current quota."}}
+            """;
+        var httpClientFactory = new ReplayHttpClientFactory(response, HttpStatusCode.TooManyRequests);
 
         ChatCompletionService chatCompletionService = new(httpClientFactory);
         GoogleAI2ChatService service = new(httpClientFactory);
@@ -560,7 +593,7 @@ public class GoogleAI2ChatServiceTest
                 new FunctionTool
                 {
                     FunctionName = "run_code",
-                    FunctionDescription = GoogleAiDumpExtractors.TryGetFirstFunctionDescription(dump.Request.Body) ?? "执行C#代码",
+                    FunctionDescription = "执行C#代码",
                     FunctionParameters = """{"type":"object","properties":{"code":{"type":"string"},"timeout":{"type":"integer"}},"required":["code"]}"""
                 }
             ]
@@ -583,16 +616,24 @@ public class GoogleAI2ChatServiceTest
     [Fact]
     public async Task ThoughtSignature_ShouldBeDiscardedIfAfterText()
     {
-        // Arrange
-        var filePath = Path.Combine(TestDataPath, "ThoughtSignature.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        var httpClientFactory = CreateMockHttpClientFactory(dump);
+        const string response = """
+            [
+              {"candidates": [{"content": {"parts": [
+                {"text": "reasoning", "thought": true},
+                {"text": "answer"}
+              ]}}]},
+              {"candidates": [{"content": {"parts": [
+                {"thoughtSignature": "c2lnbmF0dXJl"}
+              ]}, "finishReason": "STOP"}]}
+            ]
+            """;
+        var httpClientFactory = new ReplayHttpClientFactory(response);
 
         GoogleAI2ChatService service = new(httpClientFactory);
 
         var request = CreateBaseChatRequest("gemini-3-flash-preview", "你好，你是谁？", cfg =>
         {
-            cfg.SystemPrompt = GoogleAiDumpExtractors.TryGetSystemPrompt(dump.Request.Body);
+            cfg.SystemPrompt = "Answer briefly.";
             cfg.MaxOutputTokens = 65536;
             cfg.Effort = ReasoningEfforts.Minimal;
         });
@@ -615,81 +656,5 @@ public class GoogleAI2ChatServiceTest
         int lastTextIndex = segments.FindLastIndex(s => s is TextChatSegment);
         int lastThinkIndex = segments.FindLastIndex(s => s is ThinkChatSegment);
         Assert.True(lastThinkIndex < lastTextIndex, "Think segment should not appear after text segment");
-    }
-}
-
-internal static class GoogleAiDumpExtractors
-{
-    public static string? TryGetSystemPrompt(string? requestBodyJson)
-    {
-        if (string.IsNullOrWhiteSpace(requestBodyJson))
-        {
-            return null;
-        }
-
-        try
-        {
-            using JsonDocument doc = JsonDocument.Parse(requestBodyJson);
-            if (!doc.RootElement.TryGetProperty("systemInstruction", out JsonElement sys))
-            {
-                return null;
-            }
-
-            if (!sys.TryGetProperty("parts", out JsonElement parts) || parts.ValueKind != JsonValueKind.Array || parts.GetArrayLength() == 0)
-            {
-                return null;
-            }
-
-            JsonElement first = parts[0];
-            if (!first.TryGetProperty("text", out JsonElement text) || text.ValueKind != JsonValueKind.String)
-            {
-                return null;
-            }
-
-            return text.GetString();
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-    }
-
-    public static string? TryGetFirstFunctionDescription(string? requestBodyJson)
-    {
-        if (string.IsNullOrWhiteSpace(requestBodyJson))
-        {
-            return null;
-        }
-
-        try
-        {
-            using JsonDocument doc = JsonDocument.Parse(requestBodyJson);
-            if (!doc.RootElement.TryGetProperty("tools", out JsonElement tools) || tools.ValueKind != JsonValueKind.Array)
-            {
-                return null;
-            }
-
-            foreach (JsonElement tool in tools.EnumerateArray())
-            {
-                if (!tool.TryGetProperty("functionDeclarations", out JsonElement decls) || decls.ValueKind != JsonValueKind.Array || decls.GetArrayLength() == 0)
-                {
-                    continue;
-                }
-
-                JsonElement decl = decls[0];
-                if (!decl.TryGetProperty("description", out JsonElement desc) || desc.ValueKind != JsonValueKind.String)
-                {
-                    return null;
-                }
-
-                return desc.GetString();
-            }
-
-            return null;
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Chats.BE.DB.Jsons;
 
 namespace Chats.BE.Controllers.Admin.InitialConfigs.Dtos;
 
@@ -26,6 +27,12 @@ public class UserInitialConfigDto
 
     [JsonPropertyName("invitationCode")]
     public required string InvitationCode { get; init; }
+
+    [JsonPropertyName("mcps")]
+    public required JsonInitialMcp[] Mcps { get; init; }
+
+    [JsonPropertyName("apiKeyEnabled")]
+    public required bool ApiKeyEnabled { get; init; }
 }
 
 public class UserInitialConfigDtoTemp
@@ -44,6 +51,10 @@ public class UserInitialConfigDtoTemp
 
     public required string InvitationCode { get; init; }
 
+    public required string Mcps { get; init; }
+
+    public required bool ApiKeyEnabled { get; init; }
+
     internal UserInitialConfigDto ToDto()
     {
         return new UserInitialConfigDto
@@ -54,7 +65,9 @@ public class UserInitialConfigDtoTemp
             Models = [.. JsonSerializer.Deserialize<JsonArray>(Models)!.Select(x => x!)],
             Price = Price.ToString(),
             InvitationCodeId = InvitationCodeId?.ToString() ?? "-",
-            InvitationCode = InvitationCode
+            InvitationCode = InvitationCode,
+            Mcps = JsonSerializer.Deserialize<JsonInitialMcp[]>(Mcps) ?? [],
+            ApiKeyEnabled = ApiKeyEnabled,
         };
     }
 }

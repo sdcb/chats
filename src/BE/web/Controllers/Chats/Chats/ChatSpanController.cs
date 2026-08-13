@@ -263,8 +263,9 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         }
 
         ChatPreset? preset = await db.ChatPresets
-            .Include(x => x.ChatPresetSpans).ThenInclude(x => x.ChatConfig)
-            .FirstOrDefaultAsync(x => x.Id == idEncryption.DecryptChatPresetId(presetId) && x.UserId == currentUser.Id, cancellationToken);
+            .Include(x => x.ChatPresetSpans).ThenInclude(x => x.ChatConfig).ThenInclude(x => x.ChatConfigMcps)
+            .FirstOrDefaultAsync(x => x.Id == idEncryption.DecryptChatPresetId(presetId) &&
+                (x.IsSystem || x.UserId == currentUser.Id), cancellationToken);
         if (preset == null)
         {
             return NotFound();
@@ -275,6 +276,22 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         if (userModels.Count != requiredModelIds.Count)
         {
             return BadRequest("Not all models available");
+        }
+
+        HashSet<int> requiredMcpIds = [.. preset.ChatPresetSpans
+            .SelectMany(x => x.ChatConfig.ChatConfigMcps)
+            .Select(x => x.McpServerId)];
+        if (requiredMcpIds.Count > 0)
+        {
+            int availableMcpCount = await db.UserMcps
+                .Where(x => x.UserId == currentUser.Id && requiredMcpIds.Contains(x.McpServerId))
+                .Select(x => x.McpServerId)
+                .Distinct()
+                .CountAsync(cancellationToken);
+            if (availableMcpCount != requiredMcpIds.Count)
+            {
+                return BadRequest("Not all MCP servers available");
+            }
         }
 
         Dictionary<byte, ChatSpan> dbSpans = chat.ChatSpans.ToDictionary(x => x.SpanId, v => v);

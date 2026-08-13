@@ -20,46 +20,19 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
     [HttpGet]
     public async Task<ActionResult<ChatPresetDto[]>> ListChatPreset(CancellationToken cancellationToken)
     {
-        ChatPresetDto[] result = await db.ChatPresets
-            .Where(x => x.UserId == currentUser.Id)
-            .OrderBy(x => x.Order).ThenByDescending(x => x.Id)
-            .Select(x => new ChatPresetDto
-            {
-                Id = idEncryption.EncryptChatPresetId(x.Id),
-                Name = x.Name,
-                UpdatedAt = x.UpdatedAt,
-                Spans = x.ChatPresetSpans.Select(x => new ChatSpanDto()
-                {
-                    SpanId = x.SpanId,
-                    Enabled = x.Enabled,
-                    SystemPrompt = x.ChatConfig.SystemPrompt,
-                    ModelId = x.ChatConfig.ModelId,
-                    ModelName = x.ChatConfig.Model.CurrentSnapshot.Name,
-                    ModelProviderId = x.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
-                    Temperature = x.ChatConfig.Temperature,
-                    WebSearchEnabled = x.ChatConfig.WebSearchEnabled,
-                    CodeExecutionEnabled = x.ChatConfig.CodeExecutionEnabled,
-                    MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = x.ChatConfig.Effort,
-                    ImageSize = x.ChatConfig.ImageSize,
-                    Format = x.ChatConfig.Format,
-                    Compression = x.ChatConfig.Compression,
-                    ThinkingBudget = x.ChatConfig.ThinkingBudget,
-                    Mcps = x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
-                    {
-                        Id = mcp.McpServerId,
-                        CustomHeaders = mcp.CustomHeaders
-                    }).ToArray()
-                }).ToArray()
-            })
+        ChatPreset[] presets = await VisiblePresetsQuery()
+            .OrderByDescending(x => x.IsSystem)
+            .ThenBy(x => x.Order)
+            .ThenByDescending(x => x.Id)
             .ToArrayAsync(cancellationToken);
+        ChatPresetDto[] result = [.. presets.Select(x => ChatPresetDto.FromDB(x, idEncryption))];
         return Ok(result);
     }
 
     [HttpPatch("{presetId}/name")]
     public async Task<ActionResult<ChatPresetDto>> UpdateChatPresetName(string presetId, [FromBody] string name, CancellationToken cancellationToken)
     {
-        ChatPreset? preset = await LoadOneChatPreset(presetId, cancellationToken);
+        ChatPreset? preset = await LoadEditableChatPreset(presetId, cancellationToken);
         if (preset == null)
         {
             return NotFound();
@@ -102,12 +75,17 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         {
             return BadRequest("Model not available");
         }
+        if (!await HasMcpPermissions(req.Spans.SelectMany(x => x.Mcps ?? []), cancellationToken))
+        {
+            return BadRequest("MCP server not available");
+        }
 
         ChatPreset preset = new()
         {
             Name = req.Name,
             UserId = currentUser.Id,
             UpdatedAt = DateTime.UtcNow,
+            IsSystem = currentUser.IsAdmin && req.IsSystem,
             ChatPresetSpans = [.. req.Spans.Select((x, i) => x.ToDB(userModels[x.ModelId].Model, (byte)i))],
         };
         db.ChatPresets.Add(preset);
@@ -138,14 +116,24 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         {
             return BadRequest("Model not available");
         }
+        if (!await HasMcpPermissions(req.Spans.SelectMany(x => x.Mcps ?? []), cancellationToken))
+        {
+            return BadRequest("MCP server not available");
+        }
 
-        ChatPreset? preset = await LoadOneChatPreset(presetId, cancellationToken);
+        ChatPreset? preset = await LoadEditableChatPreset(presetId, cancellationToken);
         if (preset == null)
         {
             return NotFound();
         }
 
         preset.Name = req.Name;
+        bool nextIsSystem = currentUser.IsAdmin && req.IsSystem;
+        if (preset.IsSystem && !nextIsSystem)
+        {
+            preset.UserId = currentUser.Id;
+        }
+        preset.IsSystem = nextIsSystem;
         Dictionary<byte, ChatPresetSpan> dbSpans = preset.ChatPresetSpans.ToDictionary(x => x.SpanId, v => v);
         HashSet<byte> spanIds = [.. Enumerable.Range(0, req.Spans.Length).Select(x => (byte)x), .. dbSpans.Keys];
         // Compare and update/insert/delete spans
@@ -184,7 +172,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
     [HttpDelete("{presetId}")]
     public async Task<ActionResult> DeleteChatPreset(string presetId, CancellationToken cancellationToken)
     {
-        ChatPreset? preset = await LoadOneChatPreset(presetId, cancellationToken);
+        ChatPreset? preset = await LoadEditableChatPreset(presetId, cancellationToken);
         if (preset == null)
         {
             return NotFound();
@@ -199,7 +187,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
     [HttpPost("{presetId}/clone")]
     public async Task<ActionResult<ChatPresetDto>> ClonePreset(string presetId, CancellationToken cancellationToken)
     {
-        ChatPreset? existingOne = await LoadOneChatPreset(presetId, cancellationToken);
+        ChatPreset? existingOne = await LoadVisibleChatPreset(presetId, cancellationToken);
         if (existingOne == null)
         {
             return NotFound();
@@ -210,6 +198,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
             Name = existingOne.Name,
             UserId = currentUser.Id,
             UpdatedAt = DateTime.UtcNow,
+            IsSystem = false,
             ChatPresetSpans = [.. existingOne.ChatPresetSpans.Select(x => new ChatPresetSpan
             {
                 SpanId = x.SpanId,
@@ -224,6 +213,9 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
                     Effort = x.ChatConfig.Effort,
                     ImageSize = x.ChatConfig.ImageSize,
+                    Format = x.ChatConfig.Format,
+                    Compression = x.ChatConfig.Compression,
+                    ThinkingBudget = x.ChatConfig.ThinkingBudget,
                     ChatConfigMcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatConfigMcp
                     {
                         McpServerId = mcp.McpServerId,
@@ -243,7 +235,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         [FromServices] UserModelManager userModelManager,
         CancellationToken cancellationToken)
     {
-        ChatPreset? preset = await LoadOneChatPreset(presetId, cancellationToken);
+        ChatPreset? preset = await LoadEditableChatPreset(presetId, cancellationToken);
         if (preset == null)
         {
             return NotFound();
@@ -292,9 +284,13 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         CancellationToken cancellationToken)
     {
         ChatPresetSpan? span = await db.ChatPresetSpans
+            .Include(x => x.ChatPreset)
             .Include(x => x.ChatConfig)
                 .ThenInclude(x => x.Model)
-            .Where(x => x.ChatPresetId == idEncryption.DecryptChatPresetId(presetId) && x.SpanId == spanId && x.ChatPreset.UserId == currentUser.Id)
+            .Include(x => x.ChatConfig)
+                .ThenInclude(x => x.ChatConfigMcps)
+            .Where(x => x.ChatPresetId == idEncryption.DecryptChatPresetId(presetId) && x.SpanId == spanId &&
+                (x.ChatPreset.UserId == currentUser.Id && !x.ChatPreset.IsSystem || currentUser.IsAdmin && x.ChatPreset.IsSystem))
             .FirstOrDefaultAsync(cancellationToken);
         if (span == null)
         {
@@ -306,6 +302,10 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         if (um == null)
         {
             return BadRequest("Model not available");
+        }
+        if (!await HasMcpPermissions(dto.Mcps ?? [], cancellationToken))
+        {
+            return BadRequest("MCP server not available");
         }
 
         dto.ApplyTo(span, um.Model);
@@ -324,7 +324,8 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
     {
         ChatPresetSpan? span = await db.ChatPresetSpans
             .Include(x => x.ChatPreset)
-            .Where(x => x.ChatPresetId == idEncryption.DecryptChatPresetId(presetId) && x.SpanId == spanId && x.ChatPreset.UserId == currentUser.Id)
+            .Where(x => x.ChatPresetId == idEncryption.DecryptChatPresetId(presetId) && x.SpanId == spanId &&
+                (x.ChatPreset.UserId == currentUser.Id && !x.ChatPreset.IsSystem || currentUser.IsAdmin && x.ChatPreset.IsSystem))
             .FirstOrDefaultAsync(cancellationToken);
         if (span == null)
         {
@@ -343,7 +344,8 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         
         // 验证被移动的 ChatPreset 是否存在
         ChatPreset? sourcePreset = await db.ChatPresets
-            .FirstOrDefaultAsync(x => x.Id == decryptedRequest.SourceId && x.UserId == currentUser.Id, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == decryptedRequest.SourceId &&
+                (x.IsSystem ? currentUser.IsAdmin : x.UserId == currentUser.Id), cancellationToken);
         if (sourcePreset == null)
         {
             return NotFound("Source preset not found");
@@ -356,7 +358,8 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         if (decryptedRequest.PreviousId != null)
         {
             previousPreset = await db.ChatPresets
-                .FirstOrDefaultAsync(x => x.Id == decryptedRequest.PreviousId && x.UserId == currentUser.Id, cancellationToken);
+                .FirstOrDefaultAsync(x => x.Id == decryptedRequest.PreviousId && x.IsSystem == sourcePreset.IsSystem &&
+                    (x.IsSystem ? currentUser.IsAdmin : x.UserId == currentUser.Id), cancellationToken);
             if (previousPreset == null)
             {
                 return NotFound("Previous preset not found");
@@ -366,7 +369,8 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         if (decryptedRequest.NextId != null)
         {
             nextPreset = await db.ChatPresets
-                .FirstOrDefaultAsync(x => x.Id == decryptedRequest.NextId && x.UserId == currentUser.Id, cancellationToken);
+                .FirstOrDefaultAsync(x => x.Id == decryptedRequest.NextId && x.IsSystem == sourcePreset.IsSystem &&
+                    (x.IsSystem ? currentUser.IsAdmin : x.UserId == currentUser.Id), cancellationToken);
             if (nextPreset == null)
             {
                 return NotFound("Next preset not found");
@@ -396,7 +400,8 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         {
             // 需要重新排序，重排序当前用户的所有 ChatPresets
             ChatPreset[] allUserPresets = await db.ChatPresets
-                .Where(x => x.UserId == currentUser.Id)
+                .Where(x => x.IsSystem == sourcePreset.IsSystem &&
+                    (x.IsSystem ? currentUser.IsAdmin : x.UserId == currentUser.Id))
                 .OrderBy(x => x.Order).ThenByDescending(x => x.Id)
                 .ToArrayAsync(cancellationToken);
             
@@ -429,17 +434,47 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         ReorderHelper.Default.ReorderEntities(existingPresets);
     }
 
-    async Task<ChatPreset?> LoadOneChatPreset(string presetId, CancellationToken cancellationToken)
+    private IQueryable<ChatPreset> PresetsWithDetails()
     {
-        return await db.ChatPresets
+        return db.ChatPresets
             .Include(x => x.ChatPresetSpans)
                 .ThenInclude(x => x.ChatConfig)
                 .ThenInclude(x => x.Model)
+                .ThenInclude(x => x.CurrentSnapshot)
+                .ThenInclude(x => x.ModelKeySnapshot)
             .Include(x => x.ChatPresetSpans)
                 .ThenInclude(x => x.ChatConfig)
                 .ThenInclude(x => x.ChatConfigMcps)
-            .Where(x => x.Id == idEncryption.DecryptChatPresetId(presetId) && x.UserId == currentUser.Id)
-            .AsSingleQuery()
-            .FirstOrDefaultAsync(cancellationToken);
+            .AsSingleQuery();
+    }
+
+    private IQueryable<ChatPreset> VisiblePresetsQuery()
+    {
+        return PresetsWithDetails().Where(x => x.IsSystem || x.UserId == currentUser.Id);
+    }
+
+    private Task<ChatPreset?> LoadVisibleChatPreset(string presetId, CancellationToken cancellationToken)
+    {
+        int id = idEncryption.DecryptChatPresetId(presetId);
+        return VisiblePresetsQuery().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+    }
+
+    private Task<ChatPreset?> LoadEditableChatPreset(string presetId, CancellationToken cancellationToken)
+    {
+        int id = idEncryption.DecryptChatPresetId(presetId);
+        return PresetsWithDetails().FirstOrDefaultAsync(x => x.Id == id &&
+            (x.UserId == currentUser.Id && !x.IsSystem || currentUser.IsAdmin && x.IsSystem), cancellationToken);
+    }
+
+    private async Task<bool> HasMcpPermissions(IEnumerable<ChatSpanMcp> requestedMcps, CancellationToken cancellationToken)
+    {
+        HashSet<int> required = [.. requestedMcps.Select(x => x.Id)];
+        if (required.Count == 0) return true;
+        int availableCount = await db.UserMcps
+            .Where(x => x.UserId == currentUser.Id && required.Contains(x.McpServerId))
+            .Select(x => x.McpServerId)
+            .Distinct()
+            .CountAsync(cancellationToken);
+        return availableCount == required.Count;
     }
 }

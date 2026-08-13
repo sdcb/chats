@@ -5,19 +5,16 @@ import { useRouter } from 'next/router';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { IconPencil } from '@/components/Icons';
-
-import { getApiUrl } from '@/utils/common';
 import { copyTextToClipboard } from '@/utils/clipboard';
+import { getApiUrl } from '@/utils/common';
 import { formatDate } from '@/utils/date';
 
 import { GetUserApiKeyResult } from '@/types/clientApis';
 
+import CopyButton from '@/components/Button/CopyButton';
+import { IconPencil } from '@/components/Icons';
 import DeletePopover from '@/components/Popover/DeletePopover';
 import Tips from '@/components/Tips/Tips';
-import ApiKeyDialog from './ApiKeyDialog';
-
-import CopyButton from '@/components/Button/CopyButton';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -29,12 +26,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
+import ApiKeyDialog from './ApiKeyDialog';
+
 import {
   deleteUserApiKey,
   getUserApiKey,
   postUserApiKey,
   putUserApiKey,
 } from '@/apis/clientApis';
+import { useUserInfo } from '@/providers/UserProvider';
 
 export default function BuildApiKeyPage() {
   const { t } = useTranslation();
@@ -46,9 +46,12 @@ export default function BuildApiKeyPage() {
   const [createExpires, setCreateExpires] = useState('');
   const [creating, setCreating] = useState(false);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const user = useUserInfo();
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<GetUserApiKeyResult | null>(null);
+  const [editTarget, setEditTarget] = useState<GetUserApiKeyResult | null>(
+    null,
+  );
   const [editComment, setEditComment] = useState('');
   const [editExpires, setEditExpires] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
@@ -78,7 +81,11 @@ export default function BuildApiKeyPage() {
   };
 
   useEffect(() => {
-    initData();
+    if (user?.apiKeyEnabled) {
+      initData();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const openCreateDialog = () => {
@@ -158,6 +165,19 @@ export default function BuildApiKeyPage() {
 
   const apiUrl = (getApiUrl() || location.origin) + '/v1';
 
+  if (!user?.apiKeyEnabled) {
+    return (
+      <Card className="border-none p-8 text-center">
+        <h2 className="text-lg font-semibold">{t('API Key is disabled')}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {t(
+            'Your administrator has disabled API Key access for this account.',
+          )}
+        </p>
+      </Card>
+    );
+  }
+
   return (
     <div className="w-full">
       <div className="flex justify-between items-center gap-4 px-2 bg-card rounded-md mb-4">
@@ -168,7 +188,9 @@ export default function BuildApiKeyPage() {
               <CopyButton value={apiUrl} />
             </div>
             <div className="text-muted-foreground mt-1">
-              {t('API keys are credentials for accessing Chats API with full account permissions. Please keep them secure.')}
+              {t(
+                'API keys are credentials for accessing Chats API with full account permissions. Please keep them secure.',
+              )}
             </div>
           </div>
         </div>
@@ -204,11 +226,15 @@ export default function BuildApiKeyPage() {
                 </div>
                 <div className="flex items-center justify-between mb-2 text-xs">
                   <div className="font-medium">{t('Key')}</div>
-                  <div className="w-3/4 truncate text-right font-mono">{x.key}</div>
+                  <div className="w-3/4 truncate text-right font-mono">
+                    {x.key}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between mb-2 text-xs">
                   <div className="font-medium">{t('Expires')}</div>
-                  <div className="h-9 flex items-center">{formatDate(x.expires)}</div>
+                  <div className="h-9 flex items-center">
+                    {formatDate(x.expires)}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between mb-2 text-xs">
                   <div className="font-medium">{t('LastUsedAt')}</div>
@@ -271,7 +297,9 @@ export default function BuildApiKeyPage() {
                     <TableCell className="py-2 min-w-[140px] max-w-[260px] font-mono overflow-hidden text-ellipsis whitespace-nowrap">
                       {x.key}
                     </TableCell>
-                    <TableCell className="py-2">{formatDate(x.expires)}</TableCell>
+                    <TableCell className="py-2">
+                      {formatDate(x.expires)}
+                    </TableCell>
                     <TableCell className="py-2 min-w-[128px] max-w-[150px]">
                       {x.lastUsedAt ? formatDate(x.lastUsedAt) : '-'}
                     </TableCell>
@@ -315,7 +343,9 @@ export default function BuildApiKeyPage() {
         expires={createExpires}
         onExpiresChange={setCreateExpires}
         submitting={creating}
-        submitText={creating ? t('Creating...') || 'Creating...' : t('Create') || 'Create'}
+        submitText={
+          creating ? t('Creating...') || 'Creating...' : t('Create') || 'Create'
+        }
         onSubmit={submitCreate}
         onCancel={() => setCreateDialogOpen(false)}
         createdKey={createdKey}
@@ -343,7 +373,9 @@ export default function BuildApiKeyPage() {
         expires={editExpires}
         onExpiresChange={setEditExpires}
         submitting={savingEdit}
-        submitText={savingEdit ? t('Saving...') || 'Saving...' : t('Save') || 'Save'}
+        submitText={
+          savingEdit ? t('Saving...') || 'Saving...' : t('Save') || 'Save'
+        }
         onSubmit={submitEdit}
         onCancel={() => {
           setEditDialogOpen(false);

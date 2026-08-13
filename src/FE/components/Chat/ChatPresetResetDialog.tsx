@@ -19,10 +19,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-import { setChats } from '@/actions/chat.actions';
-import HomeContext from '@/contexts/home.context';
+import SystemPresetBadge from './SystemPresetBadge';
 
+import { setChats } from '@/actions/chat.actions';
 import { getChatPreset, postApplyChatPreset } from '@/apis/clientApis';
+import HomeContext from '@/contexts/home.context';
 import { cn } from '@/lib/utils';
 
 interface ChatPresetResetDialogProps {
@@ -52,7 +53,7 @@ const ChatPresetResetDialog = ({
 
   const handleSelectChatPreset = async (item: GetChatPresetResult) => {
     if (!selectedChat || item.spans.length === 0) return;
-    
+
     try {
       await postApplyChatPreset(selectedChat.id, item.id);
       const updatedChats = chats.map((c) => {
@@ -84,9 +85,15 @@ const ChatPresetResetDialog = ({
               onClick={() => handleSelectChatPreset(item)}
             >
               <div className="flex justify-between items-start mb-2">
-                <span className="text-sm text-ellipsis whitespace-nowrap overflow-hidden">
-                  {item.name}
-                </span>
+                <div className="flex min-w-0 items-center gap-1">
+                  <SystemPresetBadge
+                    isSystem={item.isSystem}
+                    className="inline-flex shrink-0"
+                  />
+                  <span className="text-sm text-ellipsis whitespace-nowrap overflow-hidden">
+                    {item.name}
+                  </span>
+                </div>
               </div>
               <div className="flex justify-end items-end h-8">
                 {item.spans.map((s) => (

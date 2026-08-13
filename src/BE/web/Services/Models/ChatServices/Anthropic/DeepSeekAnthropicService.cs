@@ -5,6 +5,7 @@ namespace Chats.BE.Services.Models.ChatServices.Anthropic;
 public class DeepSeekAnthropicService(IHttpClientFactory httpClientFactory) : AnthropicChatService(httpClientFactory)
 {
     protected override bool SupportsHostedWebSearch => true;
+    protected override bool SupportsRedactedThinking => false;
 
     protected override (string url, string apiKey) GetEndpointAndKey(ModelKeySnapshot modelKey)
     {

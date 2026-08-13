@@ -1,4 +1,3 @@
-using System.Net;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
@@ -13,22 +12,18 @@ namespace Chats.BE.UnitTest.ChatServices;
 
 public class ThinkTagParserTests
 {
-    private const string TestDataPath = "ChatServices/ChatCompletions/FiddlerDump";
-
-    private static IHttpClientFactory CreateMockHttpClientFactory(FiddlerHttpDumpParser.HttpDump dump, bool validateRequest = true)
-    {
-        HttpStatusCode statusCode = (HttpStatusCode)dump.Response.StatusCode;
-        List<string> chunksWithNewlines = dump.Response.Chunks.Select(c => c + "\n").ToList();
-        return new FiddlerDumpHttpClientFactory(chunksWithNewlines, statusCode, validateRequest ? dump.Request.Body : null);
-    }
-
     [Fact]
     public async Task TokenPonyMinimaxM25Dump_ShouldParseThinkTagIntoReasoningSegment()
     {
-        // Arrange
-        var filePath = Path.Combine(TestDataPath, "TokenPony-MinimaxM2.5.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        var httpClientFactory = CreateMockHttpClientFactory(dump, validateRequest: false);
+        const string sse = """
+            data: {"id":"chat_1","choices":[{"index":0,"delta":{"content":"<think>Calculate the ratio."},"finish_reason":null}]}
+
+            data: {"id":"chat_1","choices":[{"index":0,"delta":{"content":"</think>0.2272"},"finish_reason":"stop"}]}
+
+            data: [DONE]
+
+            """;
+        var httpClientFactory = new ReplayHttpClientFactory(sse);
         TokenPonyChatService service = new(httpClientFactory);
         DateTime now = DateTime.UtcNow;
 

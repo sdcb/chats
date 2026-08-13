@@ -120,8 +120,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
 
             if (!response.IsSuccessStatusCode)
             {
-                string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                throw new RawChatServiceException((int)response.StatusCode, errorBody);
+                throw await RawChatServiceException.CreateAsync(response, cancellationToken);
             }
 
             await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -152,8 +151,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
 
             if (!response.IsSuccessStatusCode)
             {
-                string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                throw new RawChatServiceException((int)response.StatusCode, errorBody);
+                throw await RawChatServiceException.CreateAsync(response, cancellationToken);
             }
 
             await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -221,8 +219,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                throw new RawChatServiceException((int)response.StatusCode, errorBody);
+                throw await RawChatServiceException.CreateAsync(response, cancellationToken);
             }
 
             string responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -241,8 +238,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                throw new RawChatServiceException((int)response.StatusCode, errorBody);
+                throw await RawChatServiceException.CreateAsync(response, cancellationToken);
             }
 
             string responseJson = await response.Content.ReadAsStringAsync(cancellationToken);

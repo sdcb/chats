@@ -15,4 +15,7 @@ public record LoginResponse
 
     [JsonPropertyName("canReCharge")]
     public required bool CanReCharge { get; init; }
+
+    [JsonPropertyName("apiKeyEnabled")]
+    public required bool ApiKeyEnabled { get; init; }
 }

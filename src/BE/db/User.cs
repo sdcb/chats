@@ -47,6 +47,8 @@ public partial class User
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool ApiKeyEnabled { get; set; }
+
     [InverseProperty("CreditUser")]
     public virtual ICollection<BalanceTransaction> BalanceTransactionCreditUsers { get; set; } = new List<BalanceTransaction>();
 

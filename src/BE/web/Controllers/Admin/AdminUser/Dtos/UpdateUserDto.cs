@@ -12,6 +12,15 @@ public record UpdateUserDto
     [JsonPropertyName("password")]
     public string? Password { get; init; }
 
+    [JsonPropertyName("confirmPassword")]
+    public string? ConfirmPassword { get; init; }
+
+    [JsonPropertyName("sub")]
+    public string? Sub { get; init; }
+
+    [JsonPropertyName("apiKeyEnabled")]
+    public bool? ApiKeyEnabled { get; init; }
+
     [JsonPropertyName("username")]
     public string? UserName { get; init; }
 
@@ -39,6 +48,10 @@ public record UpdateUserDto
         if (Enabled != null)
         {
             user.Enabled = Enabled.Value;
+        }
+        if (ApiKeyEnabled != null)
+        {
+            user.ApiKeyEnabled = ApiKeyEnabled.Value;
         }
         if (Phone != null)
         {

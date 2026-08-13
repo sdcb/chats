@@ -125,7 +125,7 @@ public sealed class CaptureSettings
     {
       for (DirectoryInfo? current = new(candidate); current is not null; current = current.Parent)
       {
-        if (File.Exists(Path.Combine(current.FullName, "Chats.sln"))
+        if (File.Exists(Path.Combine(current.FullName, "Chats.slnx"))
           && Directory.Exists(Path.Combine(current.FullName, "src", "FE")))
         {
           return current.FullName;

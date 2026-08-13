@@ -67,6 +67,7 @@ const TEXTAREA_MIN_HEIGHT =
   TEXTAREA_LINE_HEIGHT * TEXTAREA_MIN_ROWS + TEXTAREA_PADDING_Y; // 40px
 const TEXTAREA_MAX_HEIGHT =
   TEXTAREA_LINE_HEIGHT * TEXTAREA_MAX_ROWS + TEXTAREA_PADDING_Y; // 256px
+const PROMPT_TRIGGER_PATTERN = /\/([^\s/]*)$/;
 
 interface Props {
   onSend: (message: Message) => void;
@@ -122,16 +123,16 @@ const ChatInput = ({
 
   // 定义所有需要在hooks规则下的callbacks和effects
   const updatePromptListVisibility = useCallback((text: string) => {
-    const match = text.match(/\/\w*$/);
-    const textLength = text.length;
-    const t = textLength > 0 ? text[textLength - 1] : '';
+    const match = text.match(PROMPT_TRIGGER_PATTERN);
 
-    if (match && t === '/') {
+    if (match) {
       setShowPromptList(true);
-      setPromptInputValue(match[0].slice(1));
+      setPromptInputValue(match[1]);
+      setActivePromptIndex(0);
     } else {
       setShowPromptList(false);
       setPromptInputValue('');
+      setActivePromptIndex(0);
     }
   }, []);
 
@@ -325,11 +326,11 @@ const ChatInput = ({
       return;
     }
 
-    if (showPromptList) {
+    if (showPromptList && filteredPrompts.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         setActivePromptIndex((prevIndex) =>
-          prevIndex < prompts.length - 1 ? prevIndex + 1 : prevIndex,
+          prevIndex < filteredPrompts.length - 1 ? prevIndex + 1 : prevIndex,
         );
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
@@ -339,7 +340,7 @@ const ChatInput = ({
       } else if (e.key === 'Tab') {
         e.preventDefault();
         setActivePromptIndex((prevIndex) =>
-          prevIndex < prompts.length - 1 ? prevIndex + 1 : 0,
+          prevIndex < filteredPrompts.length - 1 ? prevIndex + 1 : 0,
         );
       } else if (e.key === 'Enter') {
         e.preventDefault();
@@ -355,7 +356,7 @@ const ChatInput = ({
       if (isMobile() && e.key === 'Enter' && !e.shiftKey) {
         return; // 让移动端用户必须点击发送按钮
       }
-      
+
       // Alt+S 发送
       if (e.altKey && e.key.toLowerCase() === 's') {
         e.preventDefault();
@@ -413,19 +414,26 @@ const ChatInput = ({
     if (parsedVariables.length > 0) {
       setIsModalVisible(true);
     } else {
-      const text = contentText?.replace(/\/\w*$/, formatted);
+      const text = contentText?.replace(
+        PROMPT_TRIGGER_PATTERN,
+        () => formatted,
+      );
       setContentText(text);
 
       updatePromptListVisibility(formatted);
     }
   };
 
-  const handleInitModal = () => {
-    const selectedPrompt = filteredPrompts[activePromptIndex];
+  const handleInitModal = (index?: number) => {
+    const promptIndex = index ?? activePromptIndex;
+    const selectedPrompt = filteredPrompts[promptIndex];
     selectedPrompt &&
       getUserPromptDetail(selectedPrompt.id).then((data) => {
         setContentText((prevContent) => {
-          return prevContent?.replace(/\/\w*$/, data.content);
+          return prevContent?.replace(
+            PROMPT_TRIGGER_PATTERN,
+            () => data.content,
+          );
         });
         handlePromptSelect(data);
         setShowPromptList(false);
@@ -528,7 +536,12 @@ const ChatInput = ({
   return (
     <div
       ref={rootContainerRef}
-      className="absolute bottom-0 left-0 w-full z-20 overflow-hidden pointer-events-none min-h-[48px]"
+      className={cn(
+        'absolute bottom-0 left-0 w-full z-20 pointer-events-none min-h-[48px]',
+        showPromptList && filteredPrompts.length > 0
+          ? 'overflow-visible'
+          : 'overflow-hidden',
+      )}
     >
       {/* 展开状态的 ChatInput */}
       {(renderExpanded || animationState !== 'idle') && (
@@ -850,7 +863,7 @@ const ChatInput = ({
               </div>
 
               {showPromptList && filteredPrompts.length > 0 && (
-                <div className="absolute bottom-12 w-full">
+                <div className="absolute bottom-12 z-30 w-full">
                   <PromptList
                     activePromptIndex={activePromptIndex}
                     prompts={filteredPrompts}

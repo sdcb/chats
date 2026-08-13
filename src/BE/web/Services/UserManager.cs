@@ -8,7 +8,7 @@ using System.Text.Json;
 
 namespace Chats.BE.Services;
 
-public class UserManager(ChatsDB db)
+public class UserManager(ChatsDB db, ILogger<UserManager> logger)
 {
     public async Task<User?> FindUserBySub(string sub, CancellationToken cancellationToken)
     {
@@ -52,11 +52,10 @@ public class UserManager(ChatsDB db)
         };
 
         provider ??= "-";
-        UserInitialConfig? config = await db.UserInitialConfigs
-            .OrderByDescending(x =>
-                x.LoginType == provider ? 10 : 1 +
-                x.InvitationCode!.Value == invitationCode ? 10 : 1)
+        UserInitialConfig? config = await BuildInitialConfigQuery(db.UserInitialConfigs, provider, invitationCode)
             .FirstOrDefaultAsync(cancellationToken);
+
+        newUser.ApiKeyEnabled = config?.ApiKeyEnabled ?? true;
 
         if (provider == KnownLoginProviders.Phone && config == null)
         {
@@ -91,6 +90,9 @@ public class UserManager(ChatsDB db)
                     return toReturn;
                 })
                 .ToArray();
+
+            await ApplyInitialMcps(newUser, config, cancellationToken);
+
             BalanceTransaction bt = new()
             {
                 User = newUser,
@@ -109,5 +111,72 @@ public class UserManager(ChatsDB db)
             }
             db.BalanceTransactions.Add(bt);
         }
+    }
+
+    internal static IQueryable<UserInitialConfig> BuildInitialConfigQuery(
+        IQueryable<UserInitialConfig> configs,
+        string provider,
+        string? invitationCode)
+    {
+        return configs
+            .Where(x =>
+                (x.LoginType == null || x.LoginType == "-" || x.LoginType == provider) &&
+                (x.InvitationCodeId == null || x.InvitationCode!.Value == invitationCode))
+            .OrderByDescending(x =>
+                x.InvitationCodeId != null && x.LoginType != null && x.LoginType != "-" ? 3 :
+                x.InvitationCodeId != null ? 2 :
+                x.LoginType != null && x.LoginType != "-" ? 1 : 0)
+            .ThenByDescending(x => x.UpdatedAt)
+            .ThenByDescending(x => x.Id);
+    }
+
+    private async Task ApplyInitialMcps(User newUser, UserInitialConfig config, CancellationToken cancellationToken)
+    {
+        JsonInitialMcp[] configuredMcps;
+        try
+        {
+            configuredMcps = JsonSerializer.Deserialize<JsonInitialMcp[]>(config.Mcps) ?? [];
+        }
+        catch (JsonException ex)
+        {
+            logger.LogWarning(ex, "Ignoring invalid MCP JSON in user initial config {ConfigId}", config.Id);
+            return;
+        }
+
+        if (configuredMcps.Length == 0)
+        {
+            return;
+        }
+
+        int[] mcpServerIds = [.. configuredMcps.Select(x => x.McpServerId).Distinct()];
+        Dictionary<int, McpServer> servers = await db.McpServers
+            .Where(x => mcpServerIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
+
+        List<UserMcp> assignments = [];
+        foreach (JsonInitialMcp configuredMcp in configuredMcps.DistinctBy(x => x.McpServerId))
+        {
+            if (!servers.TryGetValue(configuredMcp.McpServerId, out McpServer? server))
+            {
+                logger.LogWarning(
+                    "Skipping missing MCP server {McpServerId} from user initial config {ConfigId}",
+                    configuredMcp.McpServerId,
+                    config.Id);
+                continue;
+            }
+
+            assignments.Add(new UserMcp
+            {
+                User = newUser,
+                McpServer = server,
+                McpServerId = server.Id,
+                ShowShortcut = configuredMcp.ShowShortcut,
+                CustomHeaders = string.IsNullOrWhiteSpace(configuredMcp.CustomHeaders)
+                    ? null
+                    : configuredMcp.CustomHeaders.Trim(),
+            });
+        }
+
+        newUser.UserMcps = assignments;
     }
 }

@@ -13,11 +13,15 @@ public class CurrentUser
         Id = idEncryption.DecryptUserIdOrNull(httpContext.User.FindFirstValue(JwtPropertyKeys.UserId)) ?? throw new InvalidOperationException("Failed to decrypt UserId.");
         UserName = httpContext.User.FindFirstValue(JwtPropertyKeys.UserName) ?? throw new InvalidOperationException("User name is null");
         Role = httpContext.User.FindFirstValue(JwtPropertyKeys.Role) ?? throw new InvalidOperationException("User role is null");
+        ApiKeyEnabled = bool.TryParse(
+            httpContext.User.FindFirstValue(JwtPropertyKeys.ApiKeyEnabled),
+            out bool apiKeyEnabled) && apiKeyEnabled;
     }
 
     public int Id { get; }
     public string UserName { get; }
     public string Role { get; }
+    public bool ApiKeyEnabled { get; }
 
     public bool IsAdmin => Role == "admin";
 }

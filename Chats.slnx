@@ -1,0 +1,40 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/.files/">
+    <File Path=".gitignore" />
+    <File Path="README.md" />
+    <File Path="README_EN.md" />
+  </Folder>
+  <Folder Name="/.files/github-actions/">
+    <File Path=".github/workflows/build.yml" />
+    <File Path=".github/workflows/code-interpreter.yml" />
+  </Folder>
+  <Folder Name="/.files/github-actions/code-interpreter/">
+    <File Path=".github/workflows/code-interpreter/create-manifest-latest.sh" />
+    <File Path=".github/workflows/code-interpreter/create-manifest-run-number.sh" />
+    <File Path=".github/workflows/code-interpreter/Dockerfile" />
+    <File Path=".github/workflows/code-interpreter/download-nuget.sh" />
+    <File Path=".github/workflows/code-interpreter/NuGet.Config" />
+    <File Path=".github/workflows/code-interpreter/render-skills.py" />
+    <File Path=".github/workflows/code-interpreter/skills.md" />
+    <File Path=".github/workflows/code-interpreter/smoke-test.sh" />
+  </Folder>
+  <Folder Name="/eng/">
+    <Project Path="eng/AzureFileMigrator/AzureFileMigrator.csproj" />
+    <Project Path="eng/Chats.Capture/Chats.Capture.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/BE/db/Chats.DB.csproj" />
+    <Project Path="src/BE/docker/Chats.DockerInterface.csproj" />
+    <Project Path="src/BE/web/Chats.BE.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="src/BE/tests/Chats.BE.ApiTest/Chats.BE.ApiTest.csproj" />
+    <Project Path="src/BE/tests/Chats.BE.UnitTest/Chats.BE.UnitTest.csproj" />
+  </Folder>
+  <Project Path="src/scripts/scripts.csproj" />
+</Solution>

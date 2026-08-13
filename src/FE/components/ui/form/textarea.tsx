@@ -9,6 +9,7 @@ const FormTextarea = ({
   hidden,
   rows,
   className,
+  disabled,
 }: {
   label?: string;
   options?: Partial<IFormFieldOption>;
@@ -16,6 +17,7 @@ const FormTextarea = ({
   hidden?: boolean;
   rows?: number;
   className?: string;
+  disabled?: boolean;
 }) => {
   return (
     <FormItem className="py-1" hidden={hidden}>
@@ -26,6 +28,7 @@ const FormTextarea = ({
           placeholder={options?.placeholder}
           className={className}
           {...field}
+          disabled={disabled}
         />
       </FormControl>
       <FormMessage />

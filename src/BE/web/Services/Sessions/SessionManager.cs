@@ -62,6 +62,7 @@ public class SessionManager(JwtKeyManager jwtKeyManager, IConfiguration configur
             UserId = user.Id,
             UserName = user.DisplayName,
             Role = user.Role,
+            ApiKeyEnabled = user.ApiKeyEnabled,
         };
         JwtSecurityToken token = new(
             issuer: ValidIssuer,
@@ -78,6 +79,7 @@ public class SessionManager(JwtKeyManager jwtKeyManager, IConfiguration configur
             UserName = user.DisplayName,
             Role = user.Role,
             CanReCharge = hasPayService,
+            ApiKeyEnabled = user.ApiKeyEnabled,
         });
     }
 }

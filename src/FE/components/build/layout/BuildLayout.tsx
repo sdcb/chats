@@ -14,7 +14,9 @@ import {
   IconLayoutSidebar,
   IconNotes,
 } from '@/components/Icons/index';
-import UserMenuPopover, { PageType } from '@/components/UserMenuPopover/UserMenuPopover';
+import UserMenuPopover, {
+  PageType,
+} from '@/components/UserMenuPopover/UserMenuPopover';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Sidebar,
@@ -91,9 +93,7 @@ const BuildLayout = ({
   const menus: MenuItem[] = [
     {
       url: '/build/api-key',
-      icon: (stroke?: string) => (
-        <IconKey strokeWidth={1.2} stroke={stroke} />
-      ),
+      icon: (stroke?: string) => <IconKey strokeWidth={1.2} stroke={stroke} />,
       title: t('API Key'),
     },
     {
@@ -110,7 +110,7 @@ const BuildLayout = ({
       ),
       title: t('API Usage Records'),
     },
-  ];
+  ].filter((menu) => menu.url !== '/build/api-key' || user?.apiKeyEnabled);
 
   useEffect(() => {
     setSelectedMenu(menus.find((menu) => isActive(menu.url)));
@@ -144,9 +144,7 @@ const BuildLayout = ({
                         alt="Chats Logo"
                         src="/icons/logo.png"
                       />
-                      <span className="text-base font-semibold">
-                        Chats API
-                      </span>
+                      <span className="text-base font-semibold">Chats API</span>
                     </div>
                   </Link>
                 </SidebarMenuButton>

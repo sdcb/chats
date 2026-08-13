@@ -7,7 +7,21 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.13.0](1.13.0.md) - 2026-08-05 ⭐ Latest Release
+## [1.14.0](1.14.0.md) - 2026-08-13 ⭐ Latest Release
+
+**Core Highlights**: user text and model context separation · system preset model groups · enhanced administrator and initial account configuration · reliable MCP tool naming and shortcuts · transient model request retries
+
+- 🧊 **Context Snapshots**: preserves UI-visible user text in `Content` while storing frozen model context in `ContextTemplate`, with no historical-data backfill required
+- 🌐 **System Presets**: administrators can maintain preset model groups visible to every signed-in user, while regular users can apply or clone them
+- 👤 **User Controls**: expands SSO Sub, password reset, API Key permission, and initial account configuration management
+- 🧩 **MCP Reliability**: provides deterministic aliases for conflicting tool names and atomically updates MCP shortcuts across tool-capable spans
+- 🔁 **Transient Retries**: retries 408, 429, common 5xx responses, and network errors before the first text output; `Retry429Times` is deprecated and will be removed in 1.15
+
+[View Full Release Notes →](1.14.0.md)
+
+---
+
+## [1.13.0](1.13.0.md) - 2026-08-05
 
 **Core Highlights**: MCP shortcuts and Server Instructions · Smart Search for OpenAI/Azure Responses, DeepSeek, and MiMo · Reasoning order and LAN clipboard fixes · Node.js 24 and MCP SDK 2.0 · SQL Server/SQLite migrations
 
@@ -157,7 +171,7 @@ This page indexes all major version release notes for the Chats project, from th
 - 🎨 **UI Optimizations**: Admin on-demand lazy loading, skeleton screens, separated preset configs
 - 🛠️ **Image Processing Refactor**: ImageSharp replaces hand-written parsers (-1,217 lines)
 
-[View Full Release Notes →](1.8.0.md) | [API Changes](../1.8.0-api-changes.md)
+[View Full Release Notes →](1.8.0.md)
 
 ---
 
@@ -331,5 +345,5 @@ Starting from 1.0.0, Chats follows Semantic Versioning:
 ---
 
 <p align="center">
-  <sub>Last updated: 2026-08-05</sub>
+  <sub>Last updated: 2026-08-13</sub>
 </p>

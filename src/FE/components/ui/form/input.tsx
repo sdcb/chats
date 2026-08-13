@@ -33,10 +33,10 @@ const FormInput = ({
       <FormControl>
         <Input
           autoComplete={autocomplete}
-          disabled={disabled}
           type={type}
           placeholder={options?.placeholder}
           {...field}
+          disabled={disabled}
         />
       </FormControl>
       <FormMessage />

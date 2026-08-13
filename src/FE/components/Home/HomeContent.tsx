@@ -499,7 +499,7 @@ const HomeContent = () => {
         getChatsByGroup,
       }}
     >
-      <div className="flex h-screen w-screen flex-col text-sm">
+      <div className="flex h-screen w-screen flex-col overflow-hidden text-sm">
         <div className="flex h-full w-full bg-background chat-background">
           <Chatbar />
           <Chat />

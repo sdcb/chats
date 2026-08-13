@@ -7,10 +7,8 @@ using Chats.BE.Services.Common;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
-using Chats.BE.Services.Options;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using System.Diagnostics;
 
 namespace Chats.BE.Services.Models;
@@ -19,7 +17,7 @@ public class ChatRunService(
     IServiceScopeFactory serviceScopeFactory,
     ChatFactory chatFactory,
     BalanceService balanceService,
-    IOptions<ChatOptions> chatOptions,
+    ChatRetryPolicy retryPolicy,
     ILogger<ChatRunService> logger)
 {
     public async Task<ChatRunResult> RunAsync(
@@ -54,8 +52,7 @@ public class ChatRunService(
                 chatService,
                 request.ChatRequest,
                 fileUrlProvider,
-                chatOptions.Value.Retry429Times,
-                logger,
+                retryPolicy,
                 async (segment, ct) =>
                 {
                     await onSegment(new ChatRunSegmentContext
@@ -127,38 +124,19 @@ public class ChatRunService(
             ChatService chatService,
             ChatRequest request,
             FileUrlProvider fileUrlProvider,
-            int? retry429Times,
-            ILogger<ChatRunService> logger,
+            ChatRetryPolicy retryPolicy,
             Func<ChatSegment, CancellationToken, Task> onSegment,
             CancellationToken cancellationToken)
         {
-            int attempt = 0;
-
-            while (true)
+            DBApiType apiType = (DBApiType)request.ChatConfig.Model.CurrentSnapshot.ApiTypeId;
+            await retryPolicy.ExecuteAsync(apiType, async (markYielded, ct) =>
             {
-                bool yieldedAny = false;
-
-                try
+                await RunAttemptAsync(balance, chatService, request, fileUrlProvider, async (segment, segmentCancellationToken) =>
                 {
-                    await RunAttemptAsync(balance, chatService, request, fileUrlProvider, async (segment, ct) =>
-                    {
-                        yieldedAny = true;
-                        await onSegment(segment, ct);
-                    }, cancellationToken);
-                    return;
-                }
-                catch (RawChatServiceException ex) when (
-                    !yieldedAny &&
-                    retry429Times is int maxRetries &&
-                    maxRetries > 0 &&
-                    attempt < maxRetries &&
-                    ex.StatusCode == 429)
-                {
-                    attempt++;
-                    logger.LogWarning(ex, "Retrying chat run after upstream 429. Attempt {Attempt}", attempt);
-                    await Task.Delay(GetExponentialBackoffDelay(attempt), cancellationToken);
-                }
-            }
+                    markYielded();
+                    await onSegment(segment, segmentCancellationToken);
+                }, ct);
+            }, cancellationToken);
         }
 
         public void RecordFailure(Exception exception, ChatRequest request)
@@ -444,12 +422,6 @@ public class ChatRunService(
             };
         }
 
-        private static TimeSpan GetExponentialBackoffDelay(int attempt)
-        {
-            double seconds = Math.Min(30, Math.Pow(2, attempt - 1));
-            int jitterMs = Random.Shared.Next(0, 250);
-            return TimeSpan.FromSeconds(seconds) + TimeSpan.FromMilliseconds(jitterMs);
-        }
     }
 
     private sealed class SingleModelBalanceCalculator

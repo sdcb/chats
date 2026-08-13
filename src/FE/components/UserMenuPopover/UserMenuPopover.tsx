@@ -90,7 +90,7 @@ const UserMenuPopover = ({
             }}
           />
         )}
-        {pageType !== PageType.Build && (
+        {pageType !== PageType.Build && user?.apiKeyEnabled && (
           <SidebarLink
             text="API"
             href="/build/api-key"

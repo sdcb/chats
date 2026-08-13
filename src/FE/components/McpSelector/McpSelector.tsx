@@ -1,13 +1,23 @@
-import { FC, useState, useEffect } from 'react';
+import { FC, useEffect, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
-import { getMcpServers } from '@/apis/clientApis';
-import { McpServerListItemDto, ChatSpanMcp } from '@/types/clientApis';
 
-import { IconPlus, IconTrash, IconTools } from '../Icons';
+import { getMcpDisplayLabel } from '@/utils/mcp';
+
+import { ChatSpanMcp, McpServerListItemDto } from '@/types/clientApis';
+
+import { IconPlus, IconTools, IconTrash } from '../Icons';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
+
+import { getMcpServers } from '@/apis/clientApis';
 
 interface Props {
   value: ChatSpanMcp[];
@@ -31,18 +41,21 @@ const McpSelector: FC<Props> = ({
   const validateMcps = (): string | null => {
     for (let i = 0; i < value.length; i++) {
       const mcp = value[i];
-      
+
       // 检查是否选择了工具
       if (!mcp.id || mcp.id === 0) {
         return t('Please select a tool for MCP entry') + ` ${i + 1}`;
       }
-      
+
       // 检查自定义Header是否为有效JSON
       if (mcp.customHeaders && mcp.customHeaders.trim()) {
         try {
           JSON.parse(mcp.customHeaders);
         } catch (error) {
-          return t('Invalid JSON format in custom headers for MCP entry') + ` ${i + 1}`;
+          return (
+            t('Invalid JSON format in custom headers for MCP entry') +
+            ` ${i + 1}`
+          );
         }
       }
     }
@@ -83,24 +96,34 @@ const McpSelector: FC<Props> = ({
     if (mcpServersLoaded && mcpServers.length === 0 && !isLoading) {
       await fetchMcpServers();
     }
-    
+
     // 获取已选择的服务器ID
-    const selectedIds = value.map(mcp => mcp.id);
-    
-  // 找到第一个未被选择的服务器
-  const availableServer = mcpServers.find(server => !selectedIds.includes(server.id));
-    
+    const selectedIds = value.map((mcp) => mcp.id);
+
+    // 找到第一个未被选择的服务器
+    const availableServer = mcpServers.find(
+      (server) => !selectedIds.includes(server.id),
+    );
+
     // 添加一个新的MCP项
     const newMcp: ChatSpanMcp = {
-      id: availableServer ? availableServer.id : (mcpServers.length > 0 ? mcpServers[0].id : 0),
+      id: availableServer
+        ? availableServer.id
+        : mcpServers.length > 0
+        ? mcpServers[0].id
+        : 0,
       customHeaders: '',
     };
     onValueChange([...value, newMcp]);
   };
 
-  const handleUpdateMcp = (index: number, field: keyof ChatSpanMcp, newValue: string | number) => {
-    const updatedMcps = value.map((mcp, i) => 
-      i === index ? { ...mcp, [field]: newValue } : mcp
+  const handleUpdateMcp = (
+    index: number,
+    field: keyof ChatSpanMcp,
+    newValue: string | number,
+  ) => {
+    const updatedMcps = value.map((mcp, i) =>
+      i === index ? { ...mcp, [field]: newValue } : mcp,
     );
     onValueChange(updatedMcps);
   };
@@ -112,20 +135,20 @@ const McpSelector: FC<Props> = ({
 
   const getAvailableServers = (currentIndex: number) => {
     const selectedIds = value
-      .map((mcp, index) => index !== currentIndex ? mcp.id : null)
-      .filter(id => id !== null);
-    
-    return mcpServers.filter(server => !selectedIds.includes(server.id));
+      .map((mcp, index) => (index !== currentIndex ? mcp.id : null))
+      .filter((id) => id !== null);
+
+    return mcpServers.filter((server) => !selectedIds.includes(server.id));
   };
 
   const getServerLabel = (id: number) => {
-    const server = mcpServers.find(s => s.id === id);
-    return server ? server.label : `Server ${id}`;
+    const server = mcpServers.find((s) => s.id === id);
+    return server ? getMcpDisplayLabel(server, mcpServers) : `Server ${id}`;
   };
 
   const hasAvailableServers = () => {
-    const selectedIds = value.map(mcp => mcp.id);
-    return mcpServers.some(server => !selectedIds.includes(server.id));
+    const selectedIds = value.map((mcp) => mcp.id);
+    return mcpServers.some((server) => !selectedIds.includes(server.id));
   };
 
   return (
@@ -145,20 +168,31 @@ const McpSelector: FC<Props> = ({
           <IconPlus size={20} />
         </Button>
       </div>
-      
+
       {value.length > 0 && (
         <div className="flex flex-col gap-2">
           {value.map((mcp, index) => (
-            <div key={index} className="flex items-center gap-2 p-2 border rounded">
+            <div
+              key={index}
+              className="flex items-center gap-2 p-2 border rounded"
+            >
               <div className="flex-1">
-                <div className="text-xs text-gray-500 mb-1">{t('Tool Name')}</div>
+                <div className="text-xs text-gray-500 mb-1">
+                  {t('Tool Name')}
+                </div>
                 <Select
-                  value={mcp.id > 0 ? mcp.id.toString() : ""}
-                  onValueChange={(newValue) => handleUpdateMcp(index, 'id', parseInt(newValue))}
+                  value={mcp.id > 0 ? mcp.id.toString() : ''}
+                  onValueChange={(newValue) =>
+                    handleUpdateMcp(index, 'id', parseInt(newValue))
+                  }
                   disabled={isLoading}
                 >
                   <SelectTrigger className="h-8">
-                    <SelectValue placeholder={isLoading ? t('Loading...') : t('Select Tool')} />
+                    <SelectValue
+                      placeholder={
+                        isLoading ? t('Loading...') : t('Select Tool')
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {isLoading ? (
@@ -167,25 +201,32 @@ const McpSelector: FC<Props> = ({
                       </SelectItem>
                     ) : (
                       getAvailableServers(index).map((server) => (
-                        <SelectItem key={server.id} value={server.id.toString()}>
-                          {server.label}
+                        <SelectItem
+                          key={server.id}
+                          value={server.id.toString()}
+                        >
+                          {getMcpDisplayLabel(server, mcpServers)}
                         </SelectItem>
                       ))
                     )}
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="flex-1">
-                <div className="text-xs text-gray-500 mb-1">{t('Custom Headers (JSON)')}</div>
+                <div className="text-xs text-gray-500 mb-1">
+                  {t('Custom Headers (JSON)')}
+                </div>
                 <Input
                   value={mcp.customHeaders || ''}
-                  onChange={(e) => handleUpdateMcp(index, 'customHeaders', e.target.value)}
+                  onChange={(e) =>
+                    handleUpdateMcp(index, 'customHeaders', e.target.value)
+                  }
                   placeholder='{"key": "value"}'
                   className="h-8"
                 />
               </div>
-              
+
               <Button
                 variant="ghost"
                 size="sm"

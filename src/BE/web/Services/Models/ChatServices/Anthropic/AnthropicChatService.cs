@@ -19,6 +19,7 @@ namespace Chats.BE.Services.Models.ChatServices.Anthropic;
 public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatService
 {
     protected virtual bool SupportsHostedWebSearch => false;
+    protected virtual bool SupportsRedactedThinking => true;
 
     private sealed class HostedWebSearchCallState
     {
@@ -43,8 +44,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
         if (!response.IsSuccessStatusCode)
         {
-            string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new RawChatServiceException((int)response.StatusCode, errorBody);
+            throw await RawChatServiceException.CreateAsync(response, cancellationToken);
         }
 
         using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -395,7 +395,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         {
             ["max_tokens"] = request.ChatConfig.Model.CurrentSnapshot.MaxResponseTokens,
             ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
-            ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks, request.Source, SupportsHostedWebSearch),
+            ["messages"] = ConvertMessages(FilterUnsupportedThinkingBlocks(request.Messages), allowThinkingBlocks, request.Source, SupportsHostedWebSearch),
             ["stream"] = true,
         };
 
@@ -573,7 +573,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         JsonObject body = new()
         {
             ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
-            ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks, request.Source, SupportsHostedWebSearch),
+            ["messages"] = ConvertMessages(FilterUnsupportedThinkingBlocks(request.Messages), allowThinkingBlocks, request.Source, SupportsHostedWebSearch),
         };
 
         AddSystemPrompt(body, request);
@@ -652,31 +652,11 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                     yield break;
                 }
 
-                NeutralMessage toolMessage = new()
+                yield return new NeutralMessage
                 {
-                    Role = NeutralChatRole.Tool,
+                    Role = NeutralChatRole.User,
                     Contents = [.. toolBuffer],
                 };
-
-                IReadOnlyList<NeutralToolResponseGroup> toolResponseGroups = toolMessage.GetToolResponseGroups();
-                if (toolResponseGroups.Count == 0)
-                {
-                    yield return new NeutralMessage
-                    {
-                        Role = NeutralChatRole.User,
-                        Contents = [.. toolBuffer],
-                    };
-                    yield break;
-                }
-
-                foreach (NeutralToolResponseGroup group in toolResponseGroups)
-                {
-                    yield return new NeutralMessage
-                    {
-                        Role = NeutralChatRole.User,
-                        Contents = [group.ToolResponse, .. group.AttachedContents],
-                    };
-                }
             }
         }
 
@@ -894,5 +874,21 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                 }
             }
         }
+    }
+
+    private IList<NeutralMessage> FilterUnsupportedThinkingBlocks(IList<NeutralMessage> messages)
+    {
+        if (SupportsRedactedThinking)
+        {
+            return messages;
+        }
+
+        return [.. messages
+            .Select(message => message with
+            {
+                Contents = [.. message.Contents.Where(content =>
+                    content is not NeutralThinkContent think || !string.IsNullOrEmpty(think.Content))]
+            })
+            .Where(message => message.Contents.Count > 0)];
     }
 }

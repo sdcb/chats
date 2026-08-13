@@ -116,4 +116,63 @@ public class AnthropicChatServiceRequestTests
         Assert.Equal("image", (string?)nestedContent[1]?["type"]);
         Assert.Equal("https://example.com/chart.png", (string?)nestedContent[1]?["source"]?["url"]);
     }
+
+    [Fact]
+    public void ConvertMessages_ParallelToolResults_MergesIntoSingleFollowingUserMessage()
+    {
+        MethodInfo method = typeof(AnthropicChatService).GetMethod("ConvertMessages", BindingFlags.Static | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("ConvertMessages method not found.");
+
+        IList<NeutralMessage> messages =
+        [
+            NeutralMessage.FromAssistant(
+                NeutralToolCallContent.Create("call_1", "create_docker_session", "{}"),
+                NeutralToolCallContent.Create("call_2", "download_chat_files", "{}")),
+            NeutralMessage.FromTool(
+                NeutralToolCallResponseContent.Create("call_1", "sessionId: abc")),
+            NeutralMessage.FromTool(
+                NeutralToolCallResponseContent.Create("call_2", "Session not found", isSuccess: false)),
+        ];
+
+        JsonArray result = (JsonArray?)method.Invoke(null, [messages, true, UsageSource.Api, false])
+            ?? throw new InvalidOperationException("ConvertMessages returned null.");
+
+        Assert.Equal(2, result.Count);
+        JsonObject userMessage = Assert.IsType<JsonObject>(result[1]);
+        Assert.Equal("user", (string?)userMessage["role"]);
+        JsonArray content = Assert.IsType<JsonArray>(userMessage["content"]);
+        Assert.Equal(["call_1", "call_2"], content.Select(x => (string?)x!["tool_use_id"]));
+        Assert.Null(content[0]?["is_error"]);
+        Assert.Equal(true, (bool?)content[1]?["is_error"]);
+    }
+
+    [Fact]
+    public void ConvertMessages_ParallelToolResultsWithImages_PreservesGroupOrderAndAttachments()
+    {
+        MethodInfo method = typeof(AnthropicChatService).GetMethod("ConvertMessages", BindingFlags.Static | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("ConvertMessages method not found.");
+
+        IList<NeutralMessage> messages =
+        [
+            NeutralMessage.FromAssistant(
+                NeutralToolCallContent.Create("call_1", "view_image", "{}"),
+                NeutralToolCallContent.Create("call_2", "view_image", "{}")),
+            NeutralMessage.FromTool(
+                NeutralToolCallResponseContent.Create("call_1", "first image"),
+                NeutralFileUrlContent.Create("https://example.com/first.png")),
+            NeutralMessage.FromTool(
+                NeutralToolCallResponseContent.Create("call_2", "second image"),
+                NeutralFileUrlContent.Create("https://example.com/second.png")),
+        ];
+
+        JsonArray result = (JsonArray?)method.Invoke(null, [messages, true, UsageSource.Api, false])
+            ?? throw new InvalidOperationException("ConvertMessages returned null.");
+
+        JsonArray content = Assert.IsType<JsonArray>(result[1]!["content"]);
+        Assert.Equal(2, content.Count);
+        Assert.Equal("call_1", (string?)content[0]?["tool_use_id"]);
+        Assert.Equal("https://example.com/first.png", (string?)content[0]?["content"]?[1]?["source"]?["url"]);
+        Assert.Equal("call_2", (string?)content[1]?["tool_use_id"]);
+        Assert.Equal("https://example.com/second.png", (string?)content[1]?["content"]?[1]?["source"]?["url"]);
+    }
 }

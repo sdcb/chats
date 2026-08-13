@@ -45,7 +45,7 @@ git clone https://github.com/sdcb/chats.git
 
 #### 1. Open the Solution with Visual Studio
 
-Locate the `Chats.sln` solution file in the root directory and open it. In Visual Studio, you'll see a website project named `Chats.BE`.
+Locate the `Chats.slnx` solution file in the root directory and open it. In Visual Studio, you'll see a website project named `Chats.BE`.
 
 #### 2. Run the Project
 
@@ -252,7 +252,7 @@ dotnet run
 
 **Using Visual Studio:**
 
-1. Open `Chats.sln` solution
+1. Open `Chats.slnx` solution
 2. Select `Chats.BE` project
 3. Press `F5` to start debugging
 

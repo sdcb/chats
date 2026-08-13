@@ -51,7 +51,7 @@ export interface AdminModelDto {
   inputFreshTokenPrice1M: number;
   outputTokenPrice1M: number;
   inputCachedTokenPrice1M: number;
-  
+
   // === 1.8.0 新增字段（全部必填）===
   allowSearch: boolean;
   allowVision: boolean;
@@ -60,21 +60,21 @@ export interface AdminModelDto {
   allowCodeExecution: boolean;
   allowToolCall: boolean;
   thinkTagParserEnabled: boolean;
-  
+
   minTemperature: number;
   maxTemperature: number;
-  
+
   contextWindow: number;
   maxResponseTokens: number;
   maxThinkingBudget: number | null;
-  
+
   supportedEfforts: string[];
   supportedImageSizes: string[];
   supportedFormats: string[];
   overrideUrl: string | null;
   customHeaders: string | null;
   customBody: string | null;
-  
+
   apiType: number;
   useAsyncApi: boolean;
   useMaxCompletionTokens: boolean;
@@ -89,7 +89,7 @@ export interface UpdateModelDto {
   inputFreshTokenPrice1M: number;
   outputTokenPrice1M: number;
   inputCachedTokenPrice1M: number;
-  
+
   // === 1.8.0 新增字段（全部必填）===
   allowSearch: boolean;
   allowVision: boolean;
@@ -98,21 +98,21 @@ export interface UpdateModelDto {
   allowCodeExecution: boolean;
   allowToolCall: boolean;
   thinkTagParserEnabled: boolean;
-  
+
   minTemperature: number;
   maxTemperature: number;
-  
+
   contextWindow: number;
   maxResponseTokens: number;
   maxThinkingBudget: number | null;
-  
+
   supportedEfforts: string[];
   supportedImageSizes: string[];
   supportedFormats: string[];
   overrideUrl: string | null;
   customHeaders: string | null;
   customBody: string | null;
-  
+
   apiType: number;
   useAsyncApi: boolean;
   useMaxCompletionTokens: boolean;
@@ -123,10 +123,17 @@ export interface PostUserParams {
   username: string;
   password: string;
   role: string;
+  enabled?: boolean;
+  phone?: string | null;
+  email?: string | null;
 }
 
-export interface PutUserParams extends PostUserParams {
+export interface PutUserParams extends Omit<PostUserParams, 'password'> {
   id: string;
+  password?: string;
+  confirmPassword?: string;
+  sub?: string;
+  apiKeyEnabled?: boolean;
 }
 
 export interface PutUserBalanceParams {
@@ -170,6 +177,8 @@ export interface GetUsersResult {
   phone: string | null;
   balance: number;
   provider: string | null;
+  sub: string | null;
+  apiKeyEnabled: boolean;
   createdAt: string;
   updatedAt: string;
   enabled: boolean;
@@ -549,6 +558,8 @@ export interface GetUserInitialConfigResult {
   invitationCodeId: string;
   invitationCode: string;
   models: UserInitialModel[];
+  mcps: UserInitialMcp[];
+  apiKeyEnabled: boolean;
 }
 
 export interface PostUserInitialConfigParams {
@@ -557,6 +568,8 @@ export interface PostUserInitialConfigParams {
   loginType: string;
   invitationCodeId: string | null;
   models: UserInitialModel[];
+  mcps: UserInitialMcp[];
+  apiKeyEnabled: boolean;
 }
 
 export interface PutUserInitialConfigParams {
@@ -566,6 +579,8 @@ export interface PutUserInitialConfigParams {
   loginType: string;
   invitationCodeId: string | null;
   models: UserInitialModel[];
+  mcps: UserInitialMcp[];
+  apiKeyEnabled: boolean;
 }
 
 export interface UserInitialModel {
@@ -573,6 +588,12 @@ export interface UserInitialModel {
   tokens: number;
   counts: number;
   expires: string;
+}
+
+export interface UserInitialMcp {
+  mcpServerId: number;
+  showShortcut: boolean;
+  customHeaders: string | null;
 }
 
 export interface UserModelDisplayDto {
@@ -692,5 +713,5 @@ export interface ChatCountStatisticsByDateResult {
 export interface ReorderRequest {
   sourceId: number;
   previousId: number | null; // 新位置的前一个元素
-  nextId: number | null;     // 新位置的后一个元素
+  nextId: number | null; // 新位置的后一个元素
 }

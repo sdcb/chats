@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
+
 import { useRouter } from 'next/router';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 
 import useTranslation from '@/hooks/useTranslation';
+
 import { clearUserInfo, clearUserSession, getLoginUrl } from '@/utils/user';
 
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,8 @@ import FormPasswordInput from '@/components/ui/form/passwordInput';
 import { FormFieldType, IFormFieldOption } from '@/components/ui/form/type';
 
 import { changeUserPassword } from '@/apis/clientApis';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 const AccountTab = () => {
   const { t } = useTranslation();
@@ -26,30 +28,30 @@ const AccountTab = () => {
     newPassword: z
       .string()
       .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)|(?=.*[a-z])(?=.*[A-Z])(?=.*\W)|(?=.*[a-z])(?=.*\d)(?=.*\W)|(?=.*[A-Z])(?=.*\d)(?=.*\W).{6,}$/,
+        /^(?=.{8,}$)(?:(?=.*[a-z])(?=.*[A-Z])(?=.*\d)|(?=.*[a-z])(?=.*[A-Z])(?=.*\W)|(?=.*[a-z])(?=.*\d)(?=.*\W)|(?=.*[A-Z])(?=.*\d)(?=.*\W)).*$/,
         t(
-          'It must contain at least 6 characters, and 3 of the 4 must be upper case, lower case, special characters, and numbers.',
+          'It must contain at least 8 characters, and 3 of the 4 must be upper case, lower case, special characters, and numbers.',
         )!,
       )
       .min(
-        6,
+        8,
         t('Must contain at least {{length}} character(s)', {
-          length: 6,
+          length: 8,
         })!,
       )
       .max(18, t('Contain at most {{length}} character(s)', { length: 18 })!),
     confirmPassword: z
       .string()
       .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)|(?=.*[a-z])(?=.*[A-Z])(?=.*\W)|(?=.*[a-z])(?=.*\d)(?=.*\W)|(?=.*[A-Z])(?=.*\d)(?=.*\W).{6,}$/,
+        /^(?=.{8,}$)(?:(?=.*[a-z])(?=.*[A-Z])(?=.*\d)|(?=.*[a-z])(?=.*[A-Z])(?=.*\W)|(?=.*[a-z])(?=.*\d)(?=.*\W)|(?=.*[A-Z])(?=.*\d)(?=.*\W)).*$/,
         t(
-          'It must contain at least 6 characters, and 3 of the 4 must be upper case, lower case, special characters, and numbers.',
+          'It must contain at least 8 characters, and 3 of the 4 must be upper case, lower case, special characters, and numbers.',
         )!,
       )
       .min(
-        6,
+        8,
         t('Must contain at least {{length}} character(s)', {
-          length: 6,
+          length: 8,
         })!,
       )
       .max(18, t('Contain at most {{length}} character(s)', { length: 18 })!),
@@ -95,8 +97,8 @@ const AccountTab = () => {
                 control={form.control}
                 name="oldPassword"
                 render={({ field }) => (
-                  <FormPasswordInput 
-                    label={t('Old Password')} 
+                  <FormPasswordInput
+                    label={t('Old Password')}
                     field={field}
                     autocomplete="current-password"
                   />
@@ -106,8 +108,8 @@ const AccountTab = () => {
                 control={form.control}
                 name="newPassword"
                 render={({ field }) => (
-                  <FormPasswordInput 
-                    label={t('New Password')} 
+                  <FormPasswordInput
+                    label={t('New Password')}
                     field={field}
                     autocomplete="new-password"
                   />
@@ -117,15 +119,19 @@ const AccountTab = () => {
                 control={form.control}
                 name="confirmPassword"
                 render={({ field }) => (
-                  <FormPasswordInput 
-                    label={t('Confirm Password')} 
+                  <FormPasswordInput
+                    label={t('Confirm Password')}
                     field={field}
                     autocomplete="new-password"
                   />
                 )}
               />
               <div className="pt-4">
-                <Button disabled={loading} type="submit" className="w-full sm:w-auto">
+                <Button
+                  disabled={loading}
+                  type="submit"
+                  className="w-full sm:w-auto"
+                >
                   {t('Confirm')}
                 </Button>
               </div>
@@ -137,4 +143,4 @@ const AccountTab = () => {
   );
 };
 
-export default AccountTab; 
+export default AccountTab;

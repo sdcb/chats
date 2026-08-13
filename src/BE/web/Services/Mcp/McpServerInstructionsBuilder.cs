@@ -10,11 +10,18 @@ public static class McpServerInstructionsBuilder
 {
     private static string? BuildInstructionsText(IEnumerable<McpServer> servers)
     {
-        string[] parts = servers
+        McpServer[] withInstructions = [.. servers
             .Where(s => !string.IsNullOrWhiteSpace(s.ServerInstructions))
             .OrderBy(x => x.Label, StringComparer.OrdinalIgnoreCase)
-            .Select(s => $"### MCP: {s.Label}\n{s.ServerInstructions!.Trim()}")
-            .ToArray();
+            .ThenBy(x => x.Id)];
+        Dictionary<string, int> labelCounts = withInstructions
+            .GroupBy(x => x.Label, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(x => x.Key, x => x.Count(), StringComparer.OrdinalIgnoreCase);
+        string[] parts = [.. withInstructions.Select(s =>
+        {
+            string displayLabel = labelCounts[s.Label] > 1 ? $"{s.Label} (#{s.Id})" : s.Label;
+            return $"### MCP: {displayLabel}\n{s.ServerInstructions!.Trim()}";
+        })];
 
         return parts.Length == 0 ? null : string.Join("\n\n", parts);
     }

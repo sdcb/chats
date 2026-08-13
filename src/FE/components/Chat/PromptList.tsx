@@ -1,4 +1,4 @@
-import { MutableRefObject } from 'react';
+import { MutableRefObject, useEffect } from 'react';
 
 import { PromptSlim } from '@/types/prompt';
 
@@ -17,10 +17,29 @@ const PromptList = ({
   onSelect,
   onMouseOver,
 }: Props) => {
+  useEffect(() => {
+    const list = promptListRef.current;
+    const activeItem = list?.children.item(
+      activePromptIndex,
+    ) as HTMLElement | null;
+    if (!list || !activeItem) return;
+
+    const itemTop = activeItem.offsetTop;
+    const itemBottom = itemTop + activeItem.offsetHeight;
+    const visibleTop = list.scrollTop;
+    const visibleBottom = visibleTop + list.clientHeight;
+
+    if (itemTop < visibleTop) {
+      list.scrollTop = itemTop;
+    } else if (itemBottom > visibleBottom) {
+      list.scrollTop = itemBottom - list.clientHeight;
+    }
+  }, [activePromptIndex, promptListRef, prompts.length]);
+
   return (
     <ul
       ref={promptListRef}
-      className="z-10 max-h-52 w-full overflow-y-auto bg-background rounded-md border border-black/10 shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:border-neutral-500 dark:text-white dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]"
+      className="relative z-30 max-h-52 w-full overflow-y-auto bg-background rounded-md border border-black/10 shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:border-neutral-500 dark:text-white dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]"
     >
       {prompts.map((prompt, index) => (
         <li

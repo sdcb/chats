@@ -116,8 +116,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                throw new RawChatServiceException((int)response.StatusCode, errorBody);
+                throw await RawChatServiceException.CreateAsync(response, cancellationToken);
             }
 
             string responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -320,8 +319,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                throw new RawChatServiceException((int)response.StatusCode, errorBody);
+                throw await RawChatServiceException.CreateAsync(response, cancellationToken);
             }
 
             await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);

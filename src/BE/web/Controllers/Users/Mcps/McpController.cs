@@ -49,10 +49,15 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
     }
 
     [HttpGet("management")]
-    public async Task<ActionResult<ManagementMcpServerDto[]>> ListAllMcpServersForManagement(CancellationToken cancellationToken)
+    public async Task<ActionResult<ManagementMcpServerDto[]>> ListAllMcpServersForManagement(
+        [FromQuery] bool mineOnly = true,
+        CancellationToken cancellationToken = default)
     {
-        IQueryable<McpServer> query = db.McpServers;
-        query = ApplyAdminFilter(query);
+        IQueryable<McpServer> query = ApplyManagementScope(
+            db.McpServers,
+            currentUser.Id,
+            currentUser.IsAdmin,
+            mineOnly);
 
         ManagementMcpServerDto[] data = await query
                 .OrderBy(x => x.OwnerUserId == currentUser.Id ? 0 : 1) // own first
@@ -76,6 +81,34 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
                 })
                 .ToArrayAsync(cancellationToken);
         return Ok(data);
+    }
+
+    internal static IQueryable<McpServer> ApplyManagementScope(
+        IQueryable<McpServer> query,
+        int currentUserId,
+        bool isAdmin,
+        bool mineOnly)
+    {
+        if (!isAdmin || mineOnly)
+        {
+            query = query.Where(x =>
+                x.OwnerUserId == currentUserId ||
+                x.UserMcps.Any(um => um.UserId == currentUserId));
+        }
+
+        return query;
+    }
+
+    internal static IQueryable<McpServer> FindLabelConflicts(
+        IQueryable<McpServer> query,
+        int ownerUserId,
+        string label,
+        int? excludedMcpServerId = null)
+    {
+        return query.Where(x =>
+            x.OwnerUserId == ownerUserId &&
+            x.Label == label &&
+            (!excludedMcpServerId.HasValue || x.Id != excludedMcpServerId.Value));
     }
 
     IQueryable<McpServer> ApplyAdminFilter(IQueryable<McpServer> query)
@@ -133,14 +166,21 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             return BadRequest(ModelState);
         }
 
+        string label = request.Label?.Trim() ?? string.Empty;
+        if (label.Length == 0)
+        {
+            return BadRequest("Label cannot be empty");
+        }
+
         // Validate label cannot contain ASCII colon ':'
-        if (!string.IsNullOrWhiteSpace(request.Label) && request.Label.Contains(':'))
+        if (label.Contains(':'))
         {
             return BadRequest("Label cannot contain ':'");
         }
 
-        // Validate label must be globally unique
-        bool labelExists = await db.McpServers.AnyAsync(x => x.Label == request.Label, cancellationToken);
+        // A label only needs to be unique within the owner's MCP servers.
+        bool labelExists = await FindLabelConflicts(db.McpServers, currentUser.Id, label)
+            .AnyAsync(cancellationToken);
         if (labelExists)
         {
             return BadRequest("This label is already taken, please choose another one");
@@ -175,7 +215,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
 
         McpServer server = new()
         {
-            Label = request.Label,
+            Label = label,
             Url = request.Url,
             Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers,
             ServerInstructions = NormalizeOptionalText(request.ServerInstructions),
@@ -212,17 +252,16 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             return BadRequest(ModelState);
         }
 
-        // Validate label cannot contain ASCII colon ':'
-        if (!string.IsNullOrWhiteSpace(request.Label) && request.Label.Contains(':'))
+        string label = request.Label?.Trim() ?? string.Empty;
+        if (label.Length == 0)
         {
-            return BadRequest("Label cannot contain ':'");
+            return BadRequest("Label cannot be empty");
         }
 
-        // Validate label must be globally unique (exclude current server)
-        bool labelExists = await db.McpServers.AnyAsync(x => x.Label == request.Label && x.Id != mcpId, cancellationToken);
-        if (labelExists)
+        // Validate label cannot contain ASCII colon ':'
+        if (label.Contains(':'))
         {
-            return BadRequest("This label is already taken, please choose another one");
+            return BadRequest("Label cannot contain ':'");
         }
 
         IQueryable<McpServer> finder = db.McpServers
@@ -237,6 +276,13 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
         if (server == null)
         {
             return NotFound();
+        }
+
+        bool labelExists = await FindLabelConflicts(db.McpServers, server.OwnerUserId, label, mcpId)
+            .AnyAsync(cancellationToken);
+        if (labelExists)
+        {
+            return BadRequest("This label is already taken, please choose another one");
         }
 
         if (!Uri.IsWellFormedUriString(request.Url, UriKind.Absolute))
@@ -266,11 +312,11 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             }
         }
 
-        server.Label = request.Label;
+        server.Label = label;
         server.Url = request.Url;
         server.Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers;
         server.ServerInstructions = NormalizeOptionalText(request.ServerInstructions);
-        if (!server.UserMcps.Any(um => um.UserId == currentUser.Id))
+        if (server.OwnerUserId == currentUser.Id && !server.UserMcps.Any(um => um.UserId == currentUser.Id))
         {
             server.UserMcps.Add(new UserMcp
             {

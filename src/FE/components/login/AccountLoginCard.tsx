@@ -9,10 +9,7 @@ import { saveUserInfo, setUserSession } from '@/utils/user';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Form,
-  FormField,
-} from '@/components/ui/form';
+import { Form, FormField } from '@/components/ui/form';
 import FormInput from '@/components/ui/form/input';
 import FormPasswordInput from '@/components/ui/form/passwordInput';
 import { FormFieldType, IFormFieldOption } from '@/components/ui/form/type';
@@ -48,9 +45,9 @@ const AccountLoginCard = (props: {
       label: t('Your password'),
       defaultValue: '',
       render: (options: IFormFieldOption, field: FormFieldType) => (
-        <FormPasswordInput 
-          autocomplete="current-password" 
-          label={options.label} 
+        <FormPasswordInput
+          autocomplete="current-password"
+          label={options.label}
           field={field}
         />
       ),
@@ -80,6 +77,7 @@ const AccountLoginCard = (props: {
         saveUserInfo({
           role: response.role,
           username: response.username,
+          apiKeyEnabled: response.apiKeyEnabled,
         });
         router.push('/');
       })
@@ -92,7 +90,7 @@ const AccountLoginCard = (props: {
     <Card>
       <CardContent className="space-y-2">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='mt-4'>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4">
             {formFields.map((item) => (
               <FormField
                 key={item.name}

@@ -3,25 +3,48 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
-import { exportUsers, getUsers } from '@/apis/adminApis';
+import useTranslation from '@/hooks/useTranslation';
+
+import { toFixed } from '@/utils/common';
+
+import { GetUsersResult } from '@/types/adminApis';
+import { PageResult } from '@/types/page';
+
 import ExportButton from '@/components/Button/ExportButtom';
+import { IconPencil, IconRefresh, IconUserPlus } from '@/components/Icons';
+import Tips from '@/components/Tips/Tips';
 import EditUserBalanceModal from '@/components/admin/Users/EditUserBalanceModel';
 import UserModal from '@/components/admin/Users/UserModal';
-import { IconPencil, IconRefresh, IconUserPlus } from '@/components/Icons';
-import { UnifiedColumnSelector, UnifiedTable, UnifiedTableColumn, buildColumnQuery, getFirstQueryValue, parseColumnQuery, parseQueryPage, UNIFIED_TABLE_PAGE_SIZE } from '@/components/table/UnifiedTable';
-import Tips from '@/components/Tips/Tips';
+import {
+  UNIFIED_TABLE_PAGE_SIZE,
+  UnifiedColumnSelector,
+  UnifiedTable,
+  UnifiedTableColumn,
+  buildColumnQuery,
+  getFirstQueryValue,
+  parseColumnQuery,
+  parseQueryPage,
+} from '@/components/table/UnifiedTable';
+import { useTextFilterDraft } from '@/components/table/useTextFilterDraft';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useTextFilterDraft } from '@/components/table/useTextFilterDraft';
-import useTranslation from '@/hooks/useTranslation';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+
+import { exportUsers, getUsers } from '@/apis/adminApis';
 import { cn } from '@/lib/utils';
-import { GetUsersResult } from '@/types/adminApis';
-import { PageResult } from '@/types/page';
-import { toFixed } from '@/utils/common';
 
 type UserLoginTypeFilter = '' | 'password' | 'phone' | 'keycloak';
 
@@ -30,6 +53,8 @@ type UserTableColumnKey =
   | 'username'
   | 'account'
   | 'loginType'
+  | 'sub'
+  | 'apiKeyEnabled'
   | 'role'
   | 'phone'
   | 'email'
@@ -52,6 +77,8 @@ const ALL_COLUMN_KEYS: UserTableColumnKey[] = [
   'username',
   'account',
   'loginType',
+  'sub',
+  'apiKeyEnabled',
   'role',
   'phone',
   'email',
@@ -95,10 +122,9 @@ const getProviderBadgeTone = (provider: string | null | undefined) => {
   return 'bg-muted text-muted-foreground';
 };
 
-const getUserLoginType = (provider: string | null | undefined): Exclude<
-  UserLoginTypeFilter,
-  ''
-> => {
+const getUserLoginType = (
+  provider: string | null | undefined,
+): Exclude<UserLoginTypeFilter, ''> => {
   if (!provider) {
     return 'password';
   }
@@ -122,7 +148,9 @@ const areFiltersEqual = (left: Filters, right: Filters) =>
   left.loginType === right.loginType;
 
 const parseLoginTypeFilter = (value: string | undefined): UserLoginTypeFilter =>
-  value === 'password' || value === 'phone' || value === 'keycloak' ? value : '';
+  value === 'password' || value === 'phone' || value === 'keycloak'
+    ? value
+    : '';
 
 const pickTextFilters = (filters: Filters): TextFilters => ({
   id: filters.id,
@@ -177,7 +205,11 @@ export default function Users() {
   }, []);
 
   const pushQuery = useCallback(
-    (nextPage: number, nextFilters: Filters, nextColumns: UserTableColumnKey[]) => {
+    (
+      nextPage: number,
+      nextFilters: Filters,
+      nextColumns: UserTableColumnKey[],
+    ) => {
       if (!router.isReady) {
         return;
       }
@@ -230,7 +262,9 @@ export default function Users() {
       username: getFirstQueryValue(router.query.username) || '',
       phone: getFirstQueryValue(router.query.phone) || '',
       email: getFirstQueryValue(router.query.email) || '',
-      loginType: parseLoginTypeFilter(getFirstQueryValue(router.query.loginType)),
+      loginType: parseLoginTypeFilter(
+        getFirstQueryValue(router.query.loginType),
+      ),
     };
     const nextColumns = parseColumnQuery(
       getFirstQueryValue(router.query.columns),
@@ -239,7 +273,9 @@ export default function Users() {
     );
 
     setPage((prev) => (prev === nextPage ? prev : nextPage));
-    setFilters((prev) => (areFiltersEqual(prev, nextFilters) ? prev : nextFilters));
+    setFilters((prev) =>
+      areFiltersEqual(prev, nextFilters) ? prev : nextFilters,
+    );
     setSelectedColumns((prev) =>
       prev.join(',') === nextColumns.join(',') ? prev : nextColumns,
     );
@@ -275,7 +311,15 @@ export default function Users() {
           setLoading(false);
         });
     },
-    [filters.email, filters.id, filters.loginType, filters.phone, filters.username, page, router.isReady],
+    [
+      filters.email,
+      filters.id,
+      filters.loginType,
+      filters.phone,
+      filters.username,
+      page,
+      router.isReady,
+    ],
   );
 
   useEffect(() => {
@@ -407,11 +451,33 @@ export default function Users() {
         cell: (item) => {
           const loginType = getUserLoginType(item.provider);
           return (
-            <Badge className={cn('capitalize', getProviderBadgeTone(item.provider))}>
+            <Badge
+              className={cn('capitalize', getProviderBadgeTone(item.provider))}
+            >
               {getLoginTypeLabel(loginType)}
             </Badge>
           );
         },
+      },
+      {
+        key: 'sub',
+        title: 'SSO Sub',
+        cell: (item) => item.sub || '-',
+      },
+      {
+        key: 'apiKeyEnabled',
+        title: t('API Key'),
+        cell: (item) => (
+          <Badge
+            className={
+              item.apiKeyEnabled
+                ? 'bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300'
+                : 'bg-muted text-muted-foreground'
+            }
+          >
+            {item.apiKeyEnabled ? t('Enabled') : t('Disabled')}
+          </Badge>
+        ),
       },
       {
         key: 'role',
@@ -452,7 +518,9 @@ export default function Users() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href={`/admin/user-models?username=${encodeURIComponent(item.username)}`}
+                  href={`/admin/user-models?username=${encodeURIComponent(
+                    item.username,
+                  )}`}
                   className="cursor-pointer text-primary underline hover:text-primary/80"
                 >
                   {item.userModelCount}
@@ -506,7 +574,9 @@ export default function Users() {
               className="w-[140px]"
               placeholder={t('User Id')!}
               value={draft.id}
-              onChange={(event) => handleTextFilterChange('id', event.target.value)}
+              onChange={(event) =>
+                handleTextFilterChange('id', event.target.value)
+              }
             />
             <Input
               className="w-[180px]"
@@ -520,13 +590,17 @@ export default function Users() {
               className="w-[180px]"
               placeholder={t('Phone')!}
               value={draft.phone}
-              onChange={(event) => handleTextFilterChange('phone', event.target.value)}
+              onChange={(event) =>
+                handleTextFilterChange('phone', event.target.value)
+              }
             />
             <Input
               className="w-[200px]"
               placeholder={t('E-Mail')!}
               value={draft.email}
-              onChange={(event) => handleTextFilterChange('email', event.target.value)}
+              onChange={(event) =>
+                handleTextFilterChange('email', event.target.value)
+              }
             />
             <div className="w-[180px]">
               <Select
@@ -665,7 +739,10 @@ export default function Users() {
           ) : (
             <div className="space-y-2">
               {users.rows.map((item) => (
-                <div key={item.id} className="space-y-2 rounded-md bg-card p-3 shadow-sm">
+                <div
+                  key={item.id}
+                  className="space-y-2 rounded-md bg-card p-3 shadow-sm"
+                >
                   {visibleColumns
                     .filter((column) => column.key !== 'actions')
                     .map((column) => (

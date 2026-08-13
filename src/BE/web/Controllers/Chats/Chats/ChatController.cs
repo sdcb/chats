@@ -20,7 +20,6 @@ using ModelContextProtocol.Protocol;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.ChatServices.Anthropic;
 using System.Diagnostics;
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Channels;
 using EmptyResult = Microsoft.AspNetCore.Mvc.EmptyResult;
@@ -33,6 +32,7 @@ using Chats.BE.Services.Mcp;
 using Chats.BE.Services.Options;
 using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.TitleSummary;
+using Chats.BE.Services.UserContext;
 using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Controllers.Chats.Chats;
@@ -271,6 +271,44 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         LinkedList<ChatTurn> messageTreeNoContent = GetMessageTree(existingMessages, req.LastMessageId);
         Step[] messageTree = await FillContents(messageTreeNoContent, db, cancellationToken);
 
+        if (newDbUserTurn != null)
+        {
+            DateTime utcNow = DateTime.UtcNow;
+            TimeSpan userOffset = TimeSpan.FromMinutes(-req.TimezoneOffset);
+            DateTimeOffset userLocalTime = new DateTimeOffset(utcNow, TimeSpan.Zero).ToOffset(userOffset);
+
+            List<UserContextContribution> contributions = [.. toGenerateSpans.Select(span =>
+                new UserContextContribution(
+                    "model",
+                    userModels[span.ChatConfig.ModelId].Model.CurrentSnapshot.Name,
+                    [span.SpanId]))];
+            byte[] codeInterpreterSpanIds = [.. toGenerateSpans
+                .Where(x => x.ChatConfig.CodeExecutionEnabled)
+                .Select(x => x.SpanId)
+                .Distinct()
+                .Order()];
+
+            if (codeInterpreterSpanIds.Length > 0)
+            {
+                IEnumerable<ChatTurn> contextTurns = messageTreeNoContent.Append(newDbUserTurn);
+                string? codeInterpreterContext = CodeInterpreterExecutor.BuildCodeInterpreterContextPrefix(contextTurns, utcNow);
+                if (!string.IsNullOrWhiteSpace(codeInterpreterContext))
+                {
+                    contributions.Add(new UserContextContribution(
+                        "code_interpreter",
+                        codeInterpreterContext,
+                        codeInterpreterSpanIds));
+                }
+            }
+
+            StepContentText primaryText = newDbUserTurn.Steps
+                .SelectMany(x => x.StepContents)
+                .Where(x => x.ContentType == DBStepContentType.Text)
+                .Select(x => x.StepContentText!)
+                .First();
+            primaryText.ContextTemplate = UserContextTemplate.Build(userLocalTime, contributions);
+        }
+
         Response.Headers.ContentType = "text/event-stream";
         Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
         Response.Headers.Connection = "keep-alive";
@@ -503,23 +541,12 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         // Combine message tree and user message steps, then convert to neutral format
         List<Step> allSteps = [.. messageTree, .. dbUserMessage?.Steps ?? []];
 
-        // Include dbUserMessage in the turns for CollectActiveSessions to find dangling sessions bound to it
-        IEnumerable<ChatTurn> allTurns = dbUserMessage != null
-            ? messageTurns.Append(dbUserMessage)
-            : messageTurns;
-
         bool codeExecutionEnabled = chatSpan.ChatConfig.CodeExecutionEnabled;
 
-        string? ciPrefix = codeExecutionEnabled
-            ? codeInterpreter.BuildCodeInterpreterContextPrefix(allTurns)
-            : null;
-
         IReadOnlyList<Step> filteredHistorySteps = RemoveNonMatchingHistoricalTurnThinkingBlocks(messageTurns, userModel.ModelId);
-        IList<NeutralMessage> neutralMessages = CodeInterpreterContextMessageBuilder.BuildMessages(
-            historySteps: filteredHistorySteps,
-            currentRoundSteps: dbUserMessage?.Steps ?? [],
-            codeExecutionEnabled: codeExecutionEnabled,
-            contextPrefix: ciPrefix);
+        IList<NeutralMessage> neutralMessages = filteredHistorySteps
+            .Concat(dbUserMessage?.Steps ?? [])
+            .ToNeutral(chatSpan.SpanId);
         NeutralSystemMessage? systemMessage = chatSpan.ChatConfig.CodeExecutionEnabled
             ? codeInterpreter.BuildSystemMessage(chatSpan.ChatConfig.SystemPrompt)
             : string.IsNullOrWhiteSpace(chatSpan.ChatConfig.SystemPrompt)
@@ -539,37 +566,24 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             Source = UsageSource.WebChat,
         };
 
-        // Build a name mapping for tools to avoid collisions while keeping names clean
+        // Build a stable name mapping for tools to avoid collisions while keeping names clean.
         Dictionary<string, (int serverId, string originalToolName)> toolNameMap = new(StringComparer.Ordinal);
-        HashSet<string> usedToolNames = new(StringComparer.Ordinal);
+        string[] reservedToolNames = codeExecutionEnabled ? CodeInterpreterExecutor.ToolNames : [];
 
         if (codeExecutionEnabled)
         {
-            // Reserve CI tool names to avoid collisions with MCP tools.
-            foreach (string n in CodeInterpreterExecutor.ToolNames)
-            {
-                usedToolNames.Add(n);
-            }
             codeInterpreter.AddTools(csr.Tools, chatSpan.ChatConfig.Model.CurrentSnapshot.AllowVision);
         }
-        foreach (McpTool tool in chatSpan.ChatConfig.ChatConfigMcps.SelectMany(x => x.McpServer.McpTools))
+        IReadOnlyList<McpToolNameMapping> mcpToolMappings = McpToolNameMapper.Build(
+            chatSpan.ChatConfig.ChatConfigMcps.SelectMany(x => x.McpServer.McpTools),
+            reservedToolNames);
+        foreach (McpToolNameMapping mapping in mcpToolMappings)
         {
-            string finalName = tool.ToolName;
-            if (!usedToolNames.Add(finalName))
-            {
-                // Duplicate detected, generate a non-digit-leading 8-char random prefix
-                string prefix;
-                do
-                {
-                    prefix = GenerateAlphaFirstToken(8);
-                    finalName = prefix + "_" + tool.ToolName;
-                } while (!usedToolNames.Add(finalName));
-            }
-
-            toolNameMap[finalName] = (tool.McpServerId, tool.ToolName);
+            McpTool tool = mapping.Tool;
+            toolNameMap[mapping.ExposedName] = (tool.McpServerId, tool.ToolName);
             csr.Tools.Add(new FunctionTool
             {
-                FunctionName = finalName,
+                FunctionName = mapping.ExposedName,
                 FunctionDescription = tool.Description,
                 FunctionParameters = tool.Parameters,
             });
@@ -858,7 +872,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
 
         void WriteStep(Step step)
         {
-            csr.Messages.Add(step.ToNeutral());
+            csr.Messages.Add(step.ToNeutral(chatSpan.SpanId));
             writer.TryWrite(new EndStepInternal(chatSpan.SpanId, step));
         }
 
@@ -1113,18 +1127,4 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         }
     }
 
-    private static string GenerateAlphaFirstToken(int length)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
-        const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-        const string alphanum = letters + "0123456789";
-
-        Span<char> buffer = stackalloc char[length];
-        buffer[0] = letters[RandomNumberGenerator.GetInt32(letters.Length)];
-        for (int i = 1; i < length; i++)
-        {
-            buffer[i] = alphanum[RandomNumberGenerator.GetInt32(alphanum.Length)];
-        }
-        return new string(buffer);
-    }
 }

@@ -1,6 +1,7 @@
 export interface UserInfo {
   username: string;
   role: string;
+  apiKeyEnabled: boolean;
 }
 
 export const saveUserInfo = (user: UserInfo) => {
