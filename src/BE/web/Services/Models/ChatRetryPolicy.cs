@@ -37,16 +37,6 @@ public sealed class ChatRetryPolicy
             return;
         }
 
-#pragma warning disable CS0618 // Compatibility fallback until Chats 1.15.
-        if (options.Retry429Times is int retry429Times)
-        {
-            MaxRetries = Math.Max(0, retry429Times);
-            _logger.LogWarning(
-                "Chat:Retry429Times is deprecated. Use Chat:MaxTransientRetries instead. Retry429Times will be removed in Chats 1.15.");
-            return;
-        }
-#pragma warning restore CS0618
-
         MaxRetries = DefaultMaxRetries;
     }
 
