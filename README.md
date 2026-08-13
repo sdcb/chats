@@ -18,17 +18,18 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 22+ 主流 
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
-## 🆕 最新版本（1.13.0）
+## 🆕 最新版本（1.14.0）
 
-- 📅 发布日期：2026-08-05
-- ⚡ MCP 快捷按钮：常用 MCP 可固定到聊天输入框，并按用户分别管理是否显示
-- 🧠 MCP Server Instructions：自动获取服务端指令，并追加到启用该 MCP 的模型上下文
-- 🌐 智能搜索：支持 OpenAI/Azure Responses、DeepSeek Messages 和小米 MiMo 的原生联网搜索与引用展示
-- 🛠️ 稳定性修复：修复多次搜索配对、推理片段顺序和局域网 HTTP 环境复制失败问题
-- 📦 工程升级：升级 Node.js 24、npm 12、MCP SDK 2.0 以及多项前后端依赖
-- ⬆️ 升级重点：SQL Server 和 SQLite 均需运行 1.13.0 迁移，新增 `McpServer.ServerInstructions` 与 `UserMcp.ShowShortcut`
+- 📅 发布日期：2026-08-13
+- 🧊 上下文快照：分离用户原文与模型上下文，冻结时间、模型和 Code Interpreter 等动态信息
+- 🌐 系统预设：管理员可维护对所有用户可见的预设模型组，普通用户可应用和克隆
+- 👤 用户管理：增强 SSO Sub、密码重置、API Key 权限和账号初始配置管理
+- 🧩 MCP 稳定性：支持同名工具的确定性别名，并以聊天级接口原子更新快捷开关
+- 🔁 请求重试：文本模型在首段输出前自动重试 408、429、常见 5xx 和网络瞬态错误
+- 🛠️ Provider 修复：改进 OpenAI 兼容流式工具调用、DeepSeek 多轮工具调用和 Anthropic 并行工具结果
+- ⬆️ 升级重点：SQL Server 和 SQLite 部署需运行对应的 `1.14.0` 数据库迁移脚本
 
-👉 [查看 1.13.0 发布说明](./doc/zh-CN/release-notes/1.13.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
+👉 [查看 1.14.0 发布说明](./doc/zh-CN/release-notes/1.14.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
 
 ## 快速开始
 

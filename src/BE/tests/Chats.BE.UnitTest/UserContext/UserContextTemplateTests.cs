@@ -69,7 +69,7 @@ public sealed class UserContextTemplateTests
             </code_interpreter>
             </context>
             <user_request>hello</user_request>
-            """, rendered);
+            """.ReplaceLineEndings("\n"), rendered);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public sealed class UserContextTemplateTests
             </second_span_context>
             </context>
             <user_request>hello</user_request>
-            """, rendered);
+            """.ReplaceLineEndings("\n"), rendered);
         Assert.DoesNotContain("\n\n", rendered);
     }
 
