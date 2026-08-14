@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { preprocessLaTeX } from '@/utils/chats';
 import {
   getCachedStepGenerateInfo,
   requestStepGenerateInfo,
@@ -205,7 +204,7 @@ const ThinkingMessage = (props: Props) => {
           <div className="px-2 text-gray-400 text-sm mt-2">
             {(() => {
               const renderedMarkdown = appendStreamingCursor(
-                preprocessLaTeX(content!),
+                content!,
                 finished === false,
               );
 

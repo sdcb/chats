@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import useTranslation from '@/hooks/useTranslation';
 import useMathCopy from '@/hooks/useMathCopy';
 
-import { isChatting, preprocessLaTeX } from '@/utils/chats';
+import { isChatting } from '@/utils/chats';
 import { copyTextToClipboard } from '@/utils/clipboard';
 
 import {
@@ -534,7 +534,7 @@ const ResponseMessage = (props: Props) => {
                   ) : (
                     (() => {
                       const renderedMarkdown = appendStreamingCursor(
-                        preprocessLaTeX(c.c!),
+                        c.c!,
                         (messageStatus === ChatSpanStatus.Pending ||
                           messageStatus === ChatSpanStatus.Chatting) &&
                           index === processedContent.length - 1 &&

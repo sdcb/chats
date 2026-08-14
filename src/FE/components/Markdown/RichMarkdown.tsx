@@ -25,7 +25,11 @@ const RichMarkdown: FC<RichMarkdownProps> = ({ className, content }) => {
   return (
     <MemoizedReactMarkdown
       className={className}
-      remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
+      remarkPlugins={[
+        [remarkMath, { singleDollarTextMath: false }],
+        remarkGfm,
+        remarkBreaks,
+      ]}
       rehypePlugins={[rehypeKatex as any, rehypeKatexDataMath]}
       components={markdownComponents}
     >
