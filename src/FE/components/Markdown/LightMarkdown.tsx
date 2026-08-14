@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 
 import { MemoizedReactMarkdown } from './MemoizedReactMarkdown';
 import { markdownComponents } from './markdownShared';
+import { rehypeStreamingCursor } from './rehypeStreamingCursor';
 
 interface LightMarkdownProps {
   className?: string;
@@ -13,24 +14,16 @@ interface LightMarkdownProps {
 }
 
 const LightMarkdown: FC<LightMarkdownProps> = ({ className, content, showCursor }) => {
-  const markdown = (
+  return (
     <MemoizedReactMarkdown
+      key={showCursor ? 'streaming' : 'complete'}
+      className={className}
       remarkPlugins={[remarkGfm, remarkBreaks]}
+      rehypePlugins={[[rehypeStreamingCursor, { enabled: showCursor }]]}
       components={markdownComponents}
     >
       {content}
     </MemoizedReactMarkdown>
-  );
-
-  if (!className && !showCursor) {
-    return markdown;
-  }
-
-  return (
-    <div className={`${className ?? ''}${showCursor ? ' markdown-streaming' : ''}`}>
-      {markdown}
-      {showCursor && <span className="animate-pulse cursor-default">▍</span>}
-    </div>
   );
 };
 

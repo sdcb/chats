@@ -9,6 +9,7 @@ import { MemoizedReactMarkdown } from './MemoizedReactMarkdown';
 import { ensureKatexStylesLoaded } from './katexAssetLoader';
 import { rehypeKatexDataMath } from './rehypeKatexWithCopy';
 import { markdownComponents } from './markdownShared';
+import { rehypeStreamingCursor } from './rehypeStreamingCursor';
 
 interface RichMarkdownProps {
   className?: string;
@@ -23,29 +24,24 @@ const RichMarkdown: FC<RichMarkdownProps> = ({ className, content, showCursor })
     });
   }, []);
 
-  const markdown = (
+  return (
     <MemoizedReactMarkdown
+      key={showCursor ? 'streaming' : 'complete'}
+      className={className}
       remarkPlugins={[
         [remarkMath, { singleDollarTextMath: false }],
         remarkGfm,
         remarkBreaks,
       ]}
-      rehypePlugins={[rehypeKatex as any, rehypeKatexDataMath]}
+      rehypePlugins={[
+        rehypeKatex as any,
+        rehypeKatexDataMath,
+        [rehypeStreamingCursor, { enabled: showCursor }],
+      ]}
       components={markdownComponents}
     >
       {content}
     </MemoizedReactMarkdown>
-  );
-
-  if (!className && !showCursor) {
-    return markdown;
-  }
-
-  return (
-    <div className={`${className ?? ''}${showCursor ? ' markdown-streaming' : ''}`}>
-      {markdown}
-      {showCursor && <span className="animate-pulse cursor-default">▍</span>}
-    </div>
   );
 };
 
