@@ -13,18 +13,18 @@ import { markdownComponents } from './markdownShared';
 interface RichMarkdownProps {
   className?: string;
   content: string;
+  showCursor?: boolean;
 }
 
-const RichMarkdown: FC<RichMarkdownProps> = ({ className, content }) => {
+const RichMarkdown: FC<RichMarkdownProps> = ({ className, content, showCursor }) => {
   useEffect(() => {
     void ensureKatexStylesLoaded().catch((error) => {
       console.error('Failed to load KaTeX assets:', error);
     });
   }, []);
 
-  return (
+  const markdown = (
     <MemoizedReactMarkdown
-      className={className}
       remarkPlugins={[
         [remarkMath, { singleDollarTextMath: false }],
         remarkGfm,
@@ -35,6 +35,17 @@ const RichMarkdown: FC<RichMarkdownProps> = ({ className, content }) => {
     >
       {content}
     </MemoizedReactMarkdown>
+  );
+
+  if (!className && !showCursor) {
+    return markdown;
+  }
+
+  return (
+    <div className={`${className ?? ''}${showCursor ? ' markdown-streaming' : ''}`}>
+      {markdown}
+      {showCursor && <span className="animate-pulse cursor-default">▍</span>}
+    </div>
   );
 };
 

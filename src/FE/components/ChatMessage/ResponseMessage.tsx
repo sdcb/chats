@@ -20,12 +20,8 @@ import {
 import { IChatMessage, IStep, getMessageContents } from '@/types/chatMessage';
 
 import { loadComponentOnce } from '@/components/common/loadComponentOnce';
-import LightMarkdown from '@/components/Markdown/LightMarkdown';
-import {
-  MarkdownLoadingFallback,
-  appendStreamingCursor,
-  hasMathMarkdown,
-} from '@/components/Markdown/markdownShared';
+import MarkdownRenderer from '@/components/Markdown/MarkdownRenderer';
+import { MarkdownLoadingFallback } from '@/components/Markdown/markdownShared';
 import ImagePreview from '@/components/ImagePreview/ImagePreview';
 import FilePreview from '@/components/FilePreview/FilePreview';
 import StepInfoBubble from './StepInfoBubble';
@@ -37,17 +33,6 @@ import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 
 import { cn } from '@/lib/utils';
-
-interface DeferredMarkdownProps {
-  className?: string;
-  content: string;
-}
-
-const RichMarkdown = loadComponentOnce<DeferredMarkdownProps>({
-  cacheKey: 'Markdown/RichMarkdown',
-  loader: () => import('@/components/Markdown/RichMarkdown').then((mod) => mod.default),
-  renderFallback: () => <MarkdownLoadingFallback />,
-});
 
 const ToolCallBlock = loadComponentOnce<{
   toolCall: ToolCallContent;
@@ -533,25 +518,19 @@ const ResponseMessage = (props: Props) => {
                     </div>
                   ) : (
                     (() => {
-                      const renderedMarkdown = appendStreamingCursor(
-                        c.c!,
+                      const showCursor =
                         (messageStatus === ChatSpanStatus.Pending ||
                           messageStatus === ChatSpanStatus.Chatting) &&
-                          index === processedContent.length - 1 &&
-                          c.$type === MessageContentType.text,
-                      );
+                        index === processedContent.length - 1 &&
+                        c.$type === MessageContentType.text;
                       const markdownClassName =
                         'prose dark:prose-invert [--tw-prose-body:#000] [--tw-prose-headings:#000] leading-4 font-normal prose-p:text-sm prose-p:leading-4 prose-p:font-normal prose-li:text-sm prose-li:leading-4 prose-li:font-normal';
 
-                      return hasMathMarkdown(c.c ?? '') ? (
-                        <RichMarkdown
+                      return (
+                        <MarkdownRenderer
                           className={markdownClassName}
-                          content={renderedMarkdown}
-                        />
-                      ) : (
-                        <LightMarkdown
-                          className={markdownClassName}
-                          content={renderedMarkdown}
+                          content={c.c!}
+                          showCursor={showCursor}
                         />
                       );
                     })()
