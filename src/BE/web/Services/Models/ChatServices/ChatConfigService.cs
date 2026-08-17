@@ -85,12 +85,12 @@ public class ChatConfigService(ChatsDB db)
             return null;
         }
 
-        string[] labels = [.. await db.McpServers
+        string[] names = [.. await db.McpServers
             .Where(x => mcpIds.Contains(x.Id))
-            .Select(x => x.Label)
+            .Select(x => x.Name)
             .OrderBy(x => x)
             .ToArrayAsync(cancellationToken)];
 
-        return labels.Length == 0 ? null : string.Join(',', labels);
+        return names.Length == 0 ? null : string.Join(',', names);
     }
 }

@@ -5,6 +5,7 @@ using Chats.DB;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Chats.BE.Services.Mcp;
 
 namespace Chats.BE.Controllers.Chats.Chats;
 
@@ -64,6 +65,21 @@ public class ChatMcpController(ChatsDB db, IUrlEncryptionService idEncryption, C
             .Where(x => x.ChatConfig.Model.CurrentSnapshot.AllowToolCall)
             .GroupBy(x => x.ChatConfigId)
             .Select(x => x.First().ChatConfig)];
+
+        if (enabled)
+        {
+            foreach (ChatConfig config in targetConfigs)
+            {
+                string? conflict = await McpServerNameConflictValidator.FindConflictAsync(
+                    db,
+                    config.ChatConfigMcps.Select(x => x.McpServerId).Append(mcpServerId),
+                    cancellationToken);
+                if (conflict is not null)
+                {
+                    return BadRequest(conflict);
+                }
+            }
+        }
 
         ApplyMcpState(targetConfigs, mcpServerId, enabled);
 

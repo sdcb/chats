@@ -757,6 +757,7 @@ const ChatView = memo(() => {
     toolCallId: string,
     toolName: string,
     parameters: string,
+    displayName?: string,
   ): IChatMessage[][] => {
     const lastMessageGroupIndex = selectedMsgs.length - 1;
     const messageList = selectedMsgs[lastMessageGroupIndex];
@@ -779,6 +780,7 @@ const ChatView = memo(() => {
           newContent[callIndex] = {
             ...existingToolCall,
             n: toolName || existingToolCall.n,
+            d: displayName || existingToolCall.d,
             p: (existingToolCall.p || '') + parameters,
           };
         } else {
@@ -788,6 +790,7 @@ const ChatView = memo(() => {
             $type: MessageContentType.toolCall,
             u: toolCallId,
             n: toolName,
+            d: displayName,
             p: parameters,
           };
           if (respIndex >= 0) {
@@ -1171,7 +1174,7 @@ const ChatView = memo(() => {
           selectedMessageList = changeSelectedResponseFileFinal(selectedMessageList, msgId, r);
         } else if (value.k === SseResponseKind.CallingTool) {
           // 13 事件：u 仅在首个片段非空，后续片段 u/r 可能为 null，只携带 p（参数增量）
-          const { u, r: toolName, p: parameters, i: spanId } = value;
+          const { u, r: toolName, p: parameters, d: displayName, i: spanId } = value;
           if (u) {
             currentToolCallIdBySpan.set(spanId, u);
           }
@@ -1189,6 +1192,7 @@ const ChatView = memo(() => {
             toolCallId,
             toolName ?? '',
             parameters ?? '',
+            displayName,
           );
         } else if (value.k === SseResponseKind.ToolCompleted) {
           const { u: toolCallId, r: result, i: spanId } = value as any;

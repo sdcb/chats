@@ -9,6 +9,7 @@ using System.Text.Json;
 using ModelContextProtocol.Protocol;
 using Chats.BE.Services;
 using Chats.BE.Services.RequestTracing;
+using Chats.BE.Services.Mcp;
 
 namespace Chats.BE.Controllers.Users.Mcps;
 
@@ -41,7 +42,8 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             .Select(um => new McpServerListItemDto
             {
                 Id = um.McpServer.Id,
-                Label = um.McpServer.Label,
+                Name = um.McpServer.Name,
+                DisplayName = um.McpServer.DisplayName,
                 ShowShortcut = um.ShowShortcut,
             })
             .ToArrayAsync(cancellationToken);
@@ -65,7 +67,8 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
                 .Select(x => new ManagementMcpServerDto
                 {
                     Id = x.Id,
-                    Label = x.Label,
+                    Name = x.Name,
+                    DisplayName = x.DisplayName,
                     Url = x.Url,
                     CreatedAt = x.CreatedAt,
                     UpdatedAt = x.UpdatedAt,
@@ -99,15 +102,16 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
         return query;
     }
 
-    internal static IQueryable<McpServer> FindLabelConflicts(
+    internal static IQueryable<McpServer> FindNameConflicts(
         IQueryable<McpServer> query,
         int ownerUserId,
-        string label,
+        string name,
         int? excludedMcpServerId = null)
     {
+        string normalizedName = name.ToUpper();
         return query.Where(x =>
             x.OwnerUserId == ownerUserId &&
-            x.Label == label &&
+            x.Name.ToUpper() == normalizedName &&
             (!excludedMcpServerId.HasValue || x.Id != excludedMcpServerId.Value));
     }
 
@@ -131,7 +135,8 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             .Select(x => new McpServerDetailsDto
             {
                 Id = x.Id,
-                Label = x.Label,
+                Name = x.Name,
+                DisplayName = x.DisplayName,
                 Url = x.Url,
                 Headers = x.Headers,
                 ServerInstructions = x.ServerInstructions,
@@ -146,8 +151,13 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
                     .Select(t => new McpToolBasicInfo
                     {
                         Name = t.ToolName,
+                        Title = t.Title,
                         Description = t.Description,
                         Parameters = t.Parameters,
+                        Destructive = t.Destructive,
+                        Idempotent = t.Idempotent,
+                        OpenWorld = t.OpenWorld,
+                        ReadOnly = t.ReadOnly,
                     }).ToList(),
             })
             .FirstOrDefaultAsync(cancellationToken);
@@ -166,24 +176,17 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             return BadRequest(ModelState);
         }
 
-        string label = request.Label?.Trim() ?? string.Empty;
-        if (label.Length == 0)
+        string name = request.Name?.Trim() ?? string.Empty;
+        if (!McpProtocolName.IsValidServerName(name))
         {
-            return BadRequest("Label cannot be empty");
+            return BadRequest("Name must match ^[A-Za-z0-9_-]{1,50}$");
         }
 
-        // Validate label cannot contain ASCII colon ':'
-        if (label.Contains(':'))
-        {
-            return BadRequest("Label cannot contain ':'");
-        }
-
-        // A label only needs to be unique within the owner's MCP servers.
-        bool labelExists = await FindLabelConflicts(db.McpServers, currentUser.Id, label)
+        bool nameExists = await FindNameConflicts(db.McpServers, currentUser.Id, name)
             .AnyAsync(cancellationToken);
-        if (labelExists)
+        if (nameExists)
         {
-            return BadRequest("This label is already taken, please choose another one");
+            return BadRequest("This name is already taken, please choose another one");
         }
 
         if (!Uri.IsWellFormedUriString(request.Url, UriKind.Absolute))
@@ -194,6 +197,12 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
         if (!request.ValidateToolNameUnique())
         {
             return BadRequest("Tool names must be unique within the server");
+        }
+
+        string? toolNameError = McpProtocolName.ValidateTools(name, request.Tools.Select(x => x.Name));
+        if (toolNameError is not null)
+        {
+            return BadRequest(toolNameError);
         }
 
         // Validate headers: allow null/empty/whitespace; non-empty must be a valid JSON object
@@ -215,7 +224,8 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
 
         McpServer server = new()
         {
-            Label = label,
+            Name = name,
+            DisplayName = NormalizeOptionalText(request.DisplayName),
             Url = request.Url,
             Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers,
             ServerInstructions = NormalizeOptionalText(request.ServerInstructions),
@@ -239,7 +249,21 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
         }
 
         db.McpServers.Add(server);
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            bool conflict = await FindNameConflicts(db.McpServers, currentUser.Id, name)
+                .AnyAsync(cancellationToken);
+            if (conflict)
+            {
+                return BadRequest("This name is already taken, please choose another one");
+            }
+
+            throw;
+        }
 
         return await GetMcpServerDetails(server.Id, cancellationToken);
     }
@@ -252,16 +276,10 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             return BadRequest(ModelState);
         }
 
-        string label = request.Label?.Trim() ?? string.Empty;
-        if (label.Length == 0)
+        string name = request.Name?.Trim() ?? string.Empty;
+        if (!McpProtocolName.IsValidServerName(name))
         {
-            return BadRequest("Label cannot be empty");
-        }
-
-        // Validate label cannot contain ASCII colon ':'
-        if (label.Contains(':'))
-        {
-            return BadRequest("Label cannot contain ':'");
+            return BadRequest("Name must match ^[A-Za-z0-9_-]{1,50}$");
         }
 
         IQueryable<McpServer> finder = db.McpServers
@@ -278,11 +296,22 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             return NotFound();
         }
 
-        bool labelExists = await FindLabelConflicts(db.McpServers, server.OwnerUserId, label, mcpId)
+        bool nameExists = await FindNameConflicts(db.McpServers, server.OwnerUserId, name, mcpId)
             .AnyAsync(cancellationToken);
-        if (labelExists)
+        if (nameExists)
         {
-            return BadRequest("This label is already taken, please choose another one");
+            return BadRequest("This name is already taken, please choose another one");
+        }
+
+        bool configNameConflict = await McpServerNameConflictValidator.HasRenameConflictAsync(
+            db,
+            mcpId,
+            name,
+            cancellationToken);
+        if (configNameConflict)
+        {
+            return BadRequest(
+                $"Renaming this MCP server to '{name}' would create duplicate names in an existing chat configuration.");
         }
 
         if (!Uri.IsWellFormedUriString(request.Url, UriKind.Absolute))
@@ -293,6 +322,12 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
         if (!request.ValidateToolNameUnique())
         {
             return BadRequest("Tool names must be unique within the server");
+        }
+
+        string? toolNameError = McpProtocolName.ValidateTools(name, request.Tools.Select(x => x.Name));
+        if (toolNameError is not null)
+        {
+            return BadRequest(toolNameError);
         }
 
         // Validate headers: allow null/empty/whitespace; non-empty must be a valid JSON object
@@ -312,7 +347,8 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             }
         }
 
-        server.Label = label;
+        server.Name = name;
+        server.DisplayName = NormalizeOptionalText(request.DisplayName);
         server.Url = request.Url;
         server.Headers = string.IsNullOrWhiteSpace(request.Headers) ? null : request.Headers;
         server.ServerInstructions = NormalizeOptionalText(request.ServerInstructions);
@@ -333,7 +369,21 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             server.UpdatedAt = DateTime.UtcNow;
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            bool conflict = await FindNameConflicts(db.McpServers, server.OwnerUserId, name, mcpId)
+                .AnyAsync(cancellationToken);
+            if (conflict)
+            {
+                return BadRequest("This name is already taken, please choose another one");
+            }
+
+            throw;
+        }
         return await GetMcpServerDetails(mcpId, cancellationToken);
     }
 
@@ -355,8 +405,13 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
         foreach (McpTool? existingTool in toolsToUpdate)
         {
             McpToolBasicInfo requestTool = requestToolsDict[existingTool.ToolName];
+            existingTool.Title = requestTool.GetNormalizedTitle();
             existingTool.Description = requestTool.Description;
             existingTool.Parameters = requestTool.Parameters;
+            existingTool.Destructive = requestTool.Destructive;
+            existingTool.Idempotent = requestTool.Idempotent;
+            existingTool.OpenWorld = requestTool.OpenWorld;
+            existingTool.ReadOnly = requestTool.ReadOnly;
         }
 
         // Find tools to remove (exist in database but not in request)
@@ -434,12 +489,7 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             ListToolsResult mcpToolsResp = await client.ListToolsAsync(new ListToolsRequestParams(), cancellationToken);
             foreach (Tool tool in mcpToolsResp.Tools)
             {
-                tools.Add(new McpToolBasicInfo
-                {
-                    Name = tool.Name,
-                    Description = tool.Description,
-                    Parameters = JSON.Serialize(tool.InputSchema),
-                });
+                tools.Add(MapTool(tool));
             }
             return Ok(new FetchToolsResponse
             {
@@ -453,6 +503,19 @@ public class McpController(ChatsDB db, CurrentUser currentUser) : ControllerBase
             return BadRequest(ex.Message);
         }
     }
+
+    internal static McpToolBasicInfo MapTool(Tool tool)
+        => new()
+        {
+            Name = tool.Name,
+            Title = tool.Title ?? tool.Annotations?.Title,
+            Description = tool.Description,
+            Parameters = JSON.Serialize(tool.InputSchema),
+            Destructive = tool.Annotations?.DestructiveHint ?? false,
+            Idempotent = tool.Annotations?.IdempotentHint ?? false,
+            OpenWorld = tool.Annotations?.OpenWorldHint ?? false,
+            ReadOnly = tool.Annotations?.ReadOnlyHint ?? false,
+        };
 
     // 用户分配相关的API端点
 

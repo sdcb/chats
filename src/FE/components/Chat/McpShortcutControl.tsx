@@ -77,7 +77,7 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
     return mcpServers
       .filter((server) => server.showShortcut)
       .slice()
-      .sort((a, b) => a.label.localeCompare(b.label) || a.id - b.id);
+      .sort((a, b) => a.name.localeCompare(b.name) || a.id - b.id);
   }, [mcpServers]);
 
   if (toolCapableSpans.length === 0 || shortcutServers.length === 0) {
@@ -87,6 +87,17 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
   const isMcpEnabled = (mcpId: number) => {
     return toolCapableSpans.some((span) =>
       (span.mcps || []).some((mcp) => mcp.id === mcpId),
+    );
+  };
+
+  const hasNameConflict = (server: McpServerListItemDto) => {
+    const normalizedName = server.name.toLowerCase();
+    return toolCapableSpans.some((span) =>
+      (span.mcps || []).some((mcp) => {
+        if (mcp.id === server.id) return false;
+        return mcpServers.find((candidate) => candidate.id === mcp.id)
+          ?.name.toLowerCase() === normalizedName;
+      }),
     );
   };
 
@@ -123,14 +134,15 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
     <div className="flex items-center gap-2 h-9">
       {shortcutServers.map((server) => {
         const enabled = isMcpEnabled(server.id);
-        const displayLabel = getMcpDisplayLabel(server, shortcutServers);
+        const nameConflict = !enabled && hasNameConflict(server);
+        const displayLabel = getMcpDisplayLabel(server);
 
         return (
           <Tips
             key={server.id}
             trigger={
               <button
-                disabled={disabled || updatingMcpId !== null}
+                disabled={disabled || updatingMcpId !== null || nameConflict}
                 className={cn(
                   'h-full px-3 rounded-md flex items-center justify-center gap-1.5 transition-colors',
                   'text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed',
@@ -147,6 +159,8 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
             content={
               enabled
                 ? t('MCP shortcut enabled: {{label}}', { label: displayLabel })
+                : nameConflict
+                ? t('An MCP server with the same name is already enabled')
                 : t('MCP shortcut disabled: {{label}}', { label: displayLabel })
             }
           />

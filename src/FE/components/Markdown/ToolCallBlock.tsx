@@ -157,6 +157,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         displayParams: string 
     } => {
         const obj = getToolCallJsonObject();
+        const baseDisplayName = toolCall.d ?? toolCall.n;
         
         // 根据工具名称选择图标
         let headerIcon = '🔧'; // 默认图标
@@ -304,7 +305,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
             const path = obj.path;
             if (typeof path === 'string' && path.trim().length > 0) {
                 return { 
-                    header: `${toolCall.n}: ${path}`, 
+                    header: `${baseDisplayName}: ${path}`,
                     headerIcon, 
                     metadataLine: null, 
                     displayParams: toolCall.p 
@@ -313,7 +314,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         }
 
         // 默认情况
-        return { header: toolCall.n, headerIcon, metadataLine: null, displayParams: toolCall.p };
+        return { header: baseDisplayName, headerIcon, metadataLine: null, displayParams: toolCall.p };
     };
 
     const { header, headerIcon, metadataLine, displayParams } = getDisplayInfo();

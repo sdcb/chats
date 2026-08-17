@@ -145,7 +145,8 @@ const McpTab = () => {
   useEffect(() => {
     const filtered = mcpServers.filter(
       (server) =>
-        server.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        server.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (server.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
         server.url.toLowerCase().includes(searchTerm.toLowerCase()),
     );
     setFilteredServers(filtered);
@@ -367,7 +368,8 @@ const McpTab = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('Label')}</TableHead>
+                  <TableHead>{t('Display Name')}</TableHead>
+                  <TableHead>{t('Name')}</TableHead>
                   <TableHead>{t('URL')}</TableHead>
                   <TableHead>{t('Tool Count')}</TableHead>
                   <TableHead>{t('Assigned Users')}</TableHead>
@@ -386,7 +388,7 @@ const McpTab = () => {
                 {filteredServers.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={isAdmin ? 9 : 8}
+                      colSpan={isAdmin ? 10 : 9}
                       className="text-center py-8"
                     >
                       {searchTerm
@@ -398,8 +400,9 @@ const McpTab = () => {
                   filteredServers.map((server) => (
                     <TableRow key={server.id}>
                       <TableCell className="font-medium">
-                        {server.label}
+                        {server.displayName || server.name}
                       </TableCell>
+                      <TableCell className="font-mono text-xs">{server.name}</TableCell>
                       <TableCell
                         className="max-w-xs truncate"
                         title={server.url}

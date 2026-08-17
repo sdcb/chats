@@ -33,6 +33,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
 
 import { fetchMcpTools } from '@/apis/clientApis';
 import { isEmptyOrJsonObject } from '@/utils/json';
@@ -52,7 +53,8 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
   const { t } = useTranslation();
   const { theme } = useTheme();
   const [formData, setFormData] = useState({
-    label: '',
+    name: '',
+    displayName: '',
     url: '',
     headers: '',
     serverInstructions: '',
@@ -60,7 +62,7 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
   const [tools, setTools] = useState<McpToolBasicInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchingTools, setFetchingTools] = useState(false);
-  const [labelError, setLabelError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
   const user = getUserInfo();
   const isAdmin = user?.role === 'admin';
 
@@ -70,7 +72,8 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
   useEffect(() => {
     if (server && !isCreateMode) {
       setFormData({
-        label: server.label,
+        name: server.name,
+        displayName: server.displayName || '',
         url: server.url,
         headers: server.headers || '',
         serverInstructions: server.serverInstructions || '',
@@ -78,7 +81,8 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
       setTools(server.tools);
     } else {
       setFormData({
-        label: '',
+        name: '',
+        displayName: '',
         url: '',
         headers: '',
         serverInstructions: '',
@@ -93,12 +97,12 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
       [field]: value,
     }));
 
-    if (field === 'label') {
-      if (value && value.includes(':')) {
-        setLabelError(t("Label cannot contain ':'"));
-      } else {
-        setLabelError(null);
-      }
+    if (field === 'name') {
+      setNameError(
+        value && !/^[A-Za-z0-9_-]{1,50}$/.test(value)
+          ? t('Name must contain only letters, numbers, underscores, or hyphens (max 50)')
+          : null,
+      );
     }
   };
 
@@ -153,8 +157,13 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
       ...prev,
       {
         name: '',
+        title: '',
         description: '',
         parameters: '',
+        destructive: false,
+        idempotent: false,
+        openWorld: false,
+        readOnly: false,
       }
     ]);
   };
@@ -164,14 +173,11 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
   };
 
   const handleSubmit = async () => {
-    if (!formData.label.trim()) {
-      toast.error(t('Please enter a label'));
-      return;
-    }
-
-    if (formData.label.includes(':')) {
-      toast.error(t("Label cannot contain ':'"));
-      setLabelError(t("Label cannot contain ':'"));
+    const serverName = formData.name.trim();
+    if (!/^[A-Za-z0-9_-]{1,50}$/.test(serverName)) {
+      const message = t('Name must contain only letters, numbers, underscores, or hyphens (max 50)');
+      toast.error(message);
+      setNameError(message);
       return;
     }
 
@@ -188,18 +194,15 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
 
     // If in create mode and tools are empty, auto-fetch tools first, then proceed to save regardless of result
     let toolsToSave = tools;
-    let skipToolValidation = false;
     if (isCreateMode && tools.length === 0) {
       const fetchedTools = await fetchToolsInternal(true); // silent fetch, shows fetching state on button
       if (fetchedTools) {
         toolsToSave = fetchedTools;
       }
-      skipToolValidation = true;
     }
 
-    if (!skipToolValidation) {
-      // Validate tools
-      for (const tool of toolsToSave) {
+    // Validate tools
+    for (const tool of toolsToSave) {
         if (!tool.name.trim()) {
           toast.error(t('All tools must have a name'));
           return;
@@ -210,21 +213,30 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
           toast.error(t('Invalid JSON format in tool parameters'));
           return;
         }
+
+        const protocolName = `mcp__${serverName}__${tool.name}`;
+        if (!/^[A-Za-z0-9_-]{1,64}$/.test(protocolName)) {
+          toast.error(
+            t('Tool {{name}} produces an invalid or too-long model tool name', {
+              name: tool.name,
+            }),
+          );
+          return;
+        }
       }
 
-      // Check for duplicate tool names
-      const toolNames = toolsToSave.map(t => t.name);
-      const uniqueNames = new Set(toolNames);
-      if (toolNames.length !== uniqueNames.size) {
-        toast.error(t('Tool names must be unique'));
-        return;
-      }
+    const toolNames = toolsToSave.map(t => t.name);
+    const uniqueNames = new Set(toolNames);
+    if (toolNames.length !== uniqueNames.size) {
+      toast.error(t('Tool names must be unique'));
+      return;
     }
 
     setLoading(true);
     try {
       await onSave({
-        label: formData.label.trim(),
+        name: serverName,
+        displayName: formData.displayName.trim() || undefined,
         url: formData.url.trim(),
         headers: formData.headers.trim() || undefined,
         serverInstructions: formData.serverInstructions.trim() || undefined,
@@ -262,18 +274,34 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
               </div>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="label">{t('Label')}</Label>
+                  <Label htmlFor="name">{t('Name')}</Label>
                   <Input
-                    id="label"
-                    value={formData.label}
-                    onChange={(e) => handleInputChange('label', e.target.value)}
-                    placeholder={t('Enter server label')}
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    placeholder="my_server"
                     disabled={isReadOnly}
-                    className={labelError ? 'border-red-500 focus:border-red-500' : ''}
+                    className={nameError ? 'border-red-500 focus:border-red-500' : ''}
                   />
-                  {labelError && (
-                    <p className="text-xs text-red-500 mt-1">{labelError}</p>
+                  {nameError && (
+                    <p className="text-xs text-red-500 mt-1">{nameError}</p>
                   )}
+                  {!isCreateMode && !isReadOnly && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      {t('Changing Name changes every model-facing MCP tool name.')}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="displayName">{t('Display Name')}</Label>
+                  <Input
+                    id="displayName"
+                    value={formData.displayName}
+                    onChange={(e) => handleInputChange('displayName', e.target.value)}
+                    placeholder={t('Optional name shown to users')}
+                    disabled={isReadOnly}
+                  />
                 </div>
 
                 <div>
@@ -352,44 +380,58 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <Table className="table-compact">
+                  <Table className="table-compact min-w-[840px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="px-2">{t('Name')}</TableHead>
-                        <TableHead className="px-2">{t('Description')}</TableHead>
-                        <TableHead className="px-2">{t('Parameters (JSON)')}</TableHead>
-                        <TableHead className="px-2">{t('Actions')}</TableHead>
+                        <TableHead className="w-36 px-1.5">{t('Name')}</TableHead>
+                        <TableHead className="w-40 px-1.5">{t('Title')}</TableHead>
+                        <TableHead className="w-52 px-1.5">{t('Description')}</TableHead>
+                        <TableHead className="w-72 px-1.5">{t('Parameters')}</TableHead>
+                        <TableHead className="w-20 px-1.5 text-center">{t('Read Only')}</TableHead>
+                        <TableHead className="w-20 px-1.5 text-center">{t('Idempotent')}</TableHead>
+                        <TableHead className="w-14 px-1.5">{t('Actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {tools.map((tool, index) => (
                         <TableRow key={index}>
-                          <TableCell className="px-2">
+                          <TableCell className="px-1.5 py-1.5">
                             <Input
                               value={tool.name}
                               onChange={(e) => handleToolChange(index, 'name', e.target.value)}
                               placeholder={t('Tool name')}
-                              className="w-32"
+                              className="h-8 w-32"
                               disabled={isReadOnly}
                             />
                           </TableCell>
-                          <TableCell className="px-2">
+                          <TableCell className="px-1.5 py-1.5">
+                            <Input
+                              value={tool.title || ''}
+                              onChange={(e) => handleToolChange(index, 'title', e.target.value)}
+                              placeholder={t('Display title')}
+                              className="h-8 w-36"
+                              disabled={isReadOnly}
+                            />
+                          </TableCell>
+                          <TableCell className="px-1.5 py-1.5">
                             <Textarea
                               value={tool.description || ''}
                               onChange={(e) => handleToolChange(index, 'description', e.target.value)}
                               placeholder={t('Tool description')}
-                              rows={3}
-                              className="min-w-[200px]"
+                              rows={1}
+                              wrap="off"
+                              className="h-8 min-h-8 w-48 resize-none overflow-auto whitespace-pre py-1.5"
                               disabled={isReadOnly}
                             />
                           </TableCell>
-                          <TableCell className="px-2">
+                          <TableCell className="px-1.5 py-1.5">
                             <Textarea
                               value={tool.parameters || ''}
                               onChange={(e) => handleToolChange(index, 'parameters', e.target.value)}
                               placeholder='{"type": "object", "properties": {...}}'
-                              rows={3}
-                              className={`min-w-[400px] text-sm font-mono ${tool.parameters && !validateJSON(tool.parameters)
+                              rows={1}
+                              wrap="off"
+                              className={`h-8 min-h-8 w-64 resize-none overflow-auto whitespace-pre py-1.5 text-sm font-mono ${tool.parameters && !validateJSON(tool.parameters)
                                   ? 'border-red-500 focus:border-red-500'
                                   : ''
                                 }`}
@@ -399,7 +441,23 @@ const McpModal = ({ isOpen, onClose, onSave, server, isCreateMode, isReadOnly = 
                               <p className="text-sm text-red-500 mt-1">{t('Invalid JSON format')}</p>
                             )}
                           </TableCell>
-                          <TableCell className="px-2">
+                          <TableCell className="px-1.5 py-1.5 text-center">
+                            <Switch
+                              checked={tool.readOnly}
+                              onCheckedChange={(checked) => handleToolChange(index, 'readOnly', checked)}
+                              disabled={isReadOnly}
+                              aria-label={t('Read Only')}
+                            />
+                          </TableCell>
+                          <TableCell className="px-1.5 py-1.5 text-center">
+                            <Switch
+                              checked={tool.idempotent}
+                              onCheckedChange={(checked) => handleToolChange(index, 'idempotent', checked)}
+                              disabled={isReadOnly}
+                              aria-label={t('Idempotent')}
+                            />
+                          </TableCell>
+                          <TableCell className="px-1.5 py-1.5">
                             {!isReadOnly && (
                               <Button
                                 variant="ghost"

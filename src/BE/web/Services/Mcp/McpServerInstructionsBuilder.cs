@@ -12,15 +12,15 @@ public static class McpServerInstructionsBuilder
     {
         McpServer[] withInstructions = [.. servers
             .Where(s => !string.IsNullOrWhiteSpace(s.ServerInstructions))
-            .OrderBy(x => x.Label, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(x => x.Id)];
-        Dictionary<string, int> labelCounts = withInstructions
-            .GroupBy(x => x.Label, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(x => x.Key, x => x.Count(), StringComparer.OrdinalIgnoreCase);
         string[] parts = [.. withInstructions.Select(s =>
         {
-            string displayLabel = labelCounts[s.Label] > 1 ? $"{s.Label} (#{s.Id})" : s.Label;
-            return $"### MCP: {displayLabel}\n{s.ServerInstructions!.Trim()}";
+            string title = string.IsNullOrWhiteSpace(s.DisplayName) ||
+                string.Equals(s.DisplayName, s.Name, StringComparison.Ordinal)
+                ? s.Name
+                : $"{s.DisplayName} ({s.Name})";
+            return $"### MCP: {title}\n{s.ServerInstructions!.Trim()}";
         })];
 
         return parts.Length == 0 ? null : string.Join("\n\n", parts);

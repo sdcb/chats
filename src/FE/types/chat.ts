@@ -92,6 +92,7 @@ export type ToolCallContent = {
   $type: MessageContentType.toolCall;
   u: string; // ToolCallId
   n: string; // Name
+  d?: string; // DisplayName
   p: string; // Parameters
 };
 

@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Chats.DB;
+using Chats.BE.Services.Mcp;
 
 namespace Chats.BE.Controllers.Chats.ChatPresets;
 
@@ -79,6 +80,11 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         {
             return BadRequest("MCP server not available");
         }
+        foreach (UpdateChatSpanRequest span in req.Spans)
+        {
+            string? conflict = await McpServerNameConflictValidator.FindConflictAsync(db, span.Mcps.Select(x => x.Id), cancellationToken);
+            if (conflict is not null) return BadRequest(conflict);
+        }
 
         ChatPreset preset = new()
         {
@@ -119,6 +125,11 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         if (!await HasMcpPermissions(req.Spans.SelectMany(x => x.Mcps ?? []), cancellationToken))
         {
             return BadRequest("MCP server not available");
+        }
+        foreach (UpdateChatSpanRequest span in req.Spans)
+        {
+            string? conflict = await McpServerNameConflictValidator.FindConflictAsync(db, span.Mcps.Select(x => x.Id), cancellationToken);
+            if (conflict is not null) return BadRequest(conflict);
         }
 
         ChatPreset? preset = await LoadEditableChatPreset(presetId, cancellationToken);
@@ -306,6 +317,14 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
         if (!await HasMcpPermissions(dto.Mcps ?? [], cancellationToken))
         {
             return BadRequest("MCP server not available");
+        }
+        string? mcpNameConflict = await McpServerNameConflictValidator.FindConflictAsync(
+            db,
+            (dto.Mcps ?? []).Select(x => x.Id),
+            cancellationToken);
+        if (mcpNameConflict is not null)
+        {
+            return BadRequest(mcpNameConflict);
         }
 
         dto.ApplyTo(span, um.Model);

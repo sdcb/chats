@@ -39,6 +39,13 @@ const McpSelector: FC<Props> = ({
 
   // 验证MCP配置
   const validateMcps = (): string | null => {
+    const selectedNames = value
+      .map((mcp) => mcpServers.find((server) => server.id === mcp.id)?.name.toLowerCase())
+      .filter((name): name is string => !!name);
+    if (new Set(selectedNames).size !== selectedNames.length) {
+      return t('MCP servers with the same name cannot be enabled together');
+    }
+
     for (let i = 0; i < value.length; i++) {
       const mcp = value[i];
 
@@ -99,10 +106,15 @@ const McpSelector: FC<Props> = ({
 
     // 获取已选择的服务器ID
     const selectedIds = value.map((mcp) => mcp.id);
+    const selectedNames = new Set(
+      value
+        .map((mcp) => mcpServers.find((server) => server.id === mcp.id)?.name.toLowerCase())
+        .filter((name): name is string => !!name),
+    );
 
     // 找到第一个未被选择的服务器
     const availableServer = mcpServers.find(
-      (server) => !selectedIds.includes(server.id),
+      (server) => !selectedIds.includes(server.id) && !selectedNames.has(server.name.toLowerCase()),
     );
 
     // 添加一个新的MCP项
@@ -141,14 +153,29 @@ const McpSelector: FC<Props> = ({
     return mcpServers.filter((server) => !selectedIds.includes(server.id));
   };
 
+  const hasNameConflict = (server: McpServerListItemDto, currentIndex: number) => {
+    return value.some((mcp, index) => {
+      if (index === currentIndex) return false;
+      const selected = mcpServers.find((candidate) => candidate.id === mcp.id);
+      return selected?.name.toLowerCase() === server.name.toLowerCase();
+    });
+  };
+
   const getServerLabel = (id: number) => {
     const server = mcpServers.find((s) => s.id === id);
-    return server ? getMcpDisplayLabel(server, mcpServers) : `Server ${id}`;
+    return server ? getMcpDisplayLabel(server) : `Server ${id}`;
   };
 
   const hasAvailableServers = () => {
     const selectedIds = value.map((mcp) => mcp.id);
-    return mcpServers.some((server) => !selectedIds.includes(server.id));
+    const selectedNames = new Set(
+      value
+        .map((mcp) => mcpServers.find((server) => server.id === mcp.id)?.name.toLowerCase())
+        .filter((name): name is string => !!name),
+    );
+    return mcpServers.some(
+      (server) => !selectedIds.includes(server.id) && !selectedNames.has(server.name.toLowerCase()),
+    );
   };
 
   return (
@@ -204,8 +231,9 @@ const McpSelector: FC<Props> = ({
                         <SelectItem
                           key={server.id}
                           value={server.id.toString()}
+                          disabled={hasNameConflict(server, index)}
                         >
-                          {getMcpDisplayLabel(server, mcpServers)}
+                          {getMcpDisplayLabel(server)}
                         </SelectItem>
                       ))
                     )}

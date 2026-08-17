@@ -22,6 +22,7 @@ using Microsoft.Extensions.Options;
 using Chats.BE.Services.Keycloak;
 using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.TitleSummary;
+using Chats.BE.Services.Mcp;
 
 namespace Chats.BE;
 
@@ -114,6 +115,10 @@ public class Program
         builder.Services.AddScoped<ClientInfoManager>();
         builder.Services.AddScoped<FileUrlProvider>();
         builder.Services.AddScoped<ChatConfigService>();
+        builder.Services.AddSingleton<McpToolExecutionPlanner>();
+        builder.Services.AddSingleton<IMcpRetryDelay, McpRetryDelay>();
+        builder.Services.AddScoped<IMcpToolAttemptExecutor, McpToolAttemptExecutor>();
+        builder.Services.AddScoped<McpToolExecutionService>();
         builder.Services.AddSingleton<ChatRetryPolicy>();
         builder.Services.AddScoped<ChatRunService>();
         builder.Services.AddScoped<DBFileService>();

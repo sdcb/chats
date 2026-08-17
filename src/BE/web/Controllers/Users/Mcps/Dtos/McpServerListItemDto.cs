@@ -5,7 +5,8 @@ namespace Chats.BE.Controllers.Users.Mcps.Dtos;
 public record McpServerListItemDto
 {
     [JsonPropertyName("id")] public required int Id { get; init; }
-    [JsonPropertyName("label")] public required string Label { get; init; }
+    [JsonPropertyName("name")] public required string Name { get; init; }
+    [JsonPropertyName("displayName")] public string? DisplayName { get; init; }
     [JsonPropertyName("showShortcut")] public bool ShowShortcut { get; init; }
 }
 
