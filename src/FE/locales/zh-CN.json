@@ -622,6 +622,7 @@
   "Optional MCP server instructions for the model": "可选的 MCP 服务器全局提示词，会在对话时注入到系统提示中",
   "Fetched automatically when available. You can edit before saving.": "获取工具时如有返回会自动填充，保存前可自行修改。",
   "Show Shortcut": "显示快捷方式",
+  "Shortcut": "快捷方式",
   "Show this MCP as a shortcut button in chat input": "在聊天输入框中显示该 MCP 的快捷按钮",
   "Show shortcut updated": "快捷方式设置已更新",
   "Failed to update show shortcut": "更新快捷方式设置失败",
