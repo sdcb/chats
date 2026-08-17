@@ -46,6 +46,7 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
                 DBModelProvider.SiliconFlow => sp.GetRequiredService<SiliconFlowChatService>(),
              DBModelProvider.TokenPony => sp.GetRequiredService<TokenPonyChatService>(),
              DBModelProvider.OpenRouter => sp.GetRequiredService<OpenRouterChatService>(),
+             DBModelProvider.Requesty => sp.GetRequiredService<RequestyChatService>(),
              DBModelProvider.Novita => sp.GetRequiredService<NovitaChatService>(),
              _ => sp.GetRequiredService<ChatCompletionService>() // Fallback to OpenAI-compatible
             },

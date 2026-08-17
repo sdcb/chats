@@ -156,6 +156,12 @@ public static class ModelProviderInfo
              "https://api.novita.ai/openai",
              ""
          ),
+         [DBModelProvider.Requesty] = new(
+             DBModelProvider.Requesty,
+             "Requesty",
+             "https://router.requesty.ai/v1",
+             "rqsty-sk-***"
+         ),
      };
 
     private static readonly Dictionary<string, DBModelProvider> _nameToIdMap = _providers

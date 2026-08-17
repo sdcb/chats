@@ -81,6 +81,7 @@ public class Program
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.SiliconFlowChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.TokenPonyChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.OpenRouterChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.RequestyChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.ResponseApiService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.AzureResponseApiService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.MiniMaxChatService>();
