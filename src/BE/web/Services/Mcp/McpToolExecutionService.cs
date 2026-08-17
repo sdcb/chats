@@ -1,9 +1,10 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
 using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Infrastructure;
-using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.Models;
+using Chats.BE.Services.RequestTracing;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
@@ -11,6 +12,7 @@ using ModelContextProtocol.Protocol;
 namespace Chats.BE.Services.Mcp;
 
 public sealed record McpToolExecutionRequest(
+    int ServerId,
     string ServerName,
     string ServerUrl,
     IReadOnlyDictionary<string, string> Headers,
@@ -22,9 +24,146 @@ public sealed record McpToolAttemptResult(bool IsSuccess, string Result, bool Re
 
 public sealed record McpToolExecutionResult(bool IsSuccess, string Result, int DurationMs, int Attempts);
 
+public interface IMcpToolClient : IAsyncDisposable
+{
+    ValueTask<CallToolResult> CallToolAsync(
+        string toolName,
+        IReadOnlyDictionary<string, object?>? arguments,
+        IProgress<ProgressNotificationValue>? progress,
+        CancellationToken cancellationToken);
+}
+
+public interface IMcpToolClientFactory
+{
+    Task<IMcpToolClient> CreateAsync(McpToolExecutionRequest request, CancellationToken cancellationToken);
+}
+
+public sealed class McpToolClientFactory(
+    IHttpClientFactory httpClientFactory,
+    ILoggerFactory loggerFactory) : IMcpToolClientFactory
+{
+    public async Task<IMcpToolClient> CreateAsync(
+        McpToolExecutionRequest request,
+        CancellationToken cancellationToken)
+    {
+        HttpClientTransport transport = new(
+            new HttpClientTransportOptions
+            {
+                Endpoint = new Uri(request.ServerUrl),
+                AdditionalHeaders = new Dictionary<string, string>(request.Headers),
+            },
+            httpClientFactory.CreateClient(HttpClientNames.ChatControllerMcp),
+            loggerFactory,
+            ownsHttpClient: false);
+
+        try
+        {
+            McpClient client = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken);
+            return new McpToolClient(client, transport);
+        }
+        catch
+        {
+            await transport.DisposeAsync();
+            throw;
+        }
+    }
+
+    private sealed class McpToolClient(McpClient client, HttpClientTransport transport) : IMcpToolClient
+    {
+        public ValueTask<CallToolResult> CallToolAsync(
+            string toolName,
+            IReadOnlyDictionary<string, object?>? arguments,
+            IProgress<ProgressNotificationValue>? progress,
+            CancellationToken cancellationToken)
+            => client.CallToolAsync(toolName, arguments, progress, cancellationToken: cancellationToken);
+
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                await client.DisposeAsync();
+            }
+            finally
+            {
+                await transport.DisposeAsync();
+            }
+        }
+    }
+}
+
+public sealed class McpToolExecutionScope(
+    IMcpToolClientFactory clientFactory,
+    ILogger logger) : IAsyncDisposable
+{
+    private readonly ConcurrentDictionary<int, ClientEntry> clients = [];
+    private readonly ConcurrentBag<IMcpToolClient> createdClients = [];
+    private int disposed;
+
+    internal async Task<ClientLease> GetClientAsync(
+        McpToolExecutionRequest request,
+        CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+
+        ClientEntry entry = clients.GetOrAdd(
+            request.ServerId,
+            _ => new ClientEntry(new Lazy<Task<IMcpToolClient>>(
+                () => CreateClientAsync(request, cancellationToken),
+                LazyThreadSafetyMode.ExecutionAndPublication)));
+
+        try
+        {
+            return new ClientLease(entry, await entry.Client.Value);
+        }
+        catch
+        {
+            Invalidate(request.ServerId, entry);
+            throw;
+        }
+    }
+
+    internal void Invalidate(int serverId, ClientEntry entry)
+    {
+        ((ICollection<KeyValuePair<int, ClientEntry>>)clients)
+            .Remove(new KeyValuePair<int, ClientEntry>(serverId, entry));
+    }
+
+    private async Task<IMcpToolClient> CreateClientAsync(
+        McpToolExecutionRequest request,
+        CancellationToken cancellationToken)
+    {
+        IMcpToolClient client = await clientFactory.CreateAsync(request, cancellationToken);
+        createdClients.Add(client);
+        return client;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref disposed, 1) != 0) return;
+
+        while (createdClients.TryTake(out IMcpToolClient? client))
+        {
+            try
+            {
+                await client.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to dispose MCP client at the end of a tool-call step");
+            }
+        }
+
+        clients.Clear();
+    }
+
+    internal sealed record ClientEntry(Lazy<Task<IMcpToolClient>> Client);
+    internal sealed record ClientLease(ClientEntry Entry, IMcpToolClient Client);
+}
+
 public interface IMcpToolAttemptExecutor
 {
     Task<McpToolAttemptResult> ExecuteAsync(
+        McpToolExecutionScope scope,
         McpToolExecutionRequest request,
         Action<ToolProgressDelta> reportProgress,
         CancellationToken cancellationToken);
@@ -46,11 +185,10 @@ public sealed class McpRetryDelay : IMcpRetryDelay
 }
 
 public sealed class McpToolAttemptExecutor(
-    IHttpClientFactory httpClientFactory,
-    ILoggerFactory loggerFactory,
     ILogger<McpToolAttemptExecutor> logger) : IMcpToolAttemptExecutor
 {
     public async Task<McpToolAttemptResult> ExecuteAsync(
+        McpToolExecutionScope scope,
         McpToolExecutionRequest request,
         Action<ToolProgressDelta> reportProgress,
         CancellationToken cancellationToken)
@@ -65,19 +203,11 @@ public sealed class McpToolAttemptExecutor(
             return new(false, ex.Message, false);
         }
 
+        McpToolExecutionScope.ClientLease? lease = null;
         try
         {
-            await using HttpClientTransport transport = new(
-                new HttpClientTransportOptions
-                {
-                    Endpoint = new Uri(request.ServerUrl),
-                    AdditionalHeaders = new Dictionary<string, string>(request.Headers),
-                },
-                httpClientFactory.CreateClient(HttpClientNames.ChatControllerMcp),
-                loggerFactory,
-                ownsHttpClient: false);
-            await using McpClient client = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken);
-            CallToolResult result = await client.CallToolAsync(
+            lease = await scope.GetClientAsync(request, cancellationToken);
+            CallToolResult result = await lease.Client.CallToolAsync(
                 request.ToolName,
                 arguments,
                 new ProgressReporter(progress =>
@@ -96,7 +226,7 @@ public sealed class McpToolAttemptExecutor(
                         // MCP progress is optional and may use a server-specific payload.
                     }
                 }),
-                cancellationToken: cancellationToken);
+                cancellationToken);
 
             bool success = result.IsError is not true;
             string text = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(x => x.Text));
@@ -108,6 +238,10 @@ public sealed class McpToolAttemptExecutor(
         }
         catch (Exception ex) when (IsRetryableTransportFailure(ex, cancellationToken))
         {
+            if (lease is not null)
+            {
+                scope.Invalidate(request.ServerId, lease.Entry);
+            }
             logger.LogWarning(ex, "Retryable MCP transport failure calling {ServerName}/{ToolName}", request.ServerName, request.ToolName);
             return new(false, ex.Message, true);
         }
@@ -140,9 +274,13 @@ public sealed class McpToolAttemptExecutor(
 public sealed class McpToolExecutionService(
     IMcpToolAttemptExecutor attemptExecutor,
     IMcpRetryDelay retryDelay,
+    IMcpToolClientFactory clientFactory,
     ILogger<McpToolExecutionService> logger)
 {
+    public McpToolExecutionScope CreateScope() => new(clientFactory, logger);
+
     public async Task<McpToolExecutionResult> ExecuteAsync(
+        McpToolExecutionScope scope,
         McpToolExecutionRequest request,
         Action<ToolProgressDelta> reportProgress,
         CancellationToken cancellationToken)
@@ -153,7 +291,7 @@ public sealed class McpToolExecutionService(
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            last = await attemptExecutor.ExecuteAsync(request, reportProgress, cancellationToken);
+            last = await attemptExecutor.ExecuteAsync(scope, request, reportProgress, cancellationToken);
             if (last.IsSuccess || !last.Retryable || attempt == maxAttempts)
             {
                 return new(last.IsSuccess, last.Result, (int)stopwatch.ElapsedMilliseconds, attempt);

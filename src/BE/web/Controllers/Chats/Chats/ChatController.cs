@@ -684,6 +684,7 @@ public class ChatController(
                     userMcp.CustomHeaders,
                     chatConfigHeaders);
                 McpToolExecutionRequest executionRequest = new(
+                    server.Id,
                     server.Name,
                     server.Url,
                     headers,
@@ -697,6 +698,7 @@ public class ChatController(
 
             if (hasUnfinishedToolCalls)
             {
+                await using McpToolExecutionScope mcpExecutionScope = mcpToolExecutionService.CreateScope();
                 IReadOnlyList<ToolExecutionBatch<ResolvedToolCall>> batches = mcpToolExecutionPlanner.Plan(
                     resolvedCalls.Select(x => new ToolExecutionPlanItem<ResolvedToolCall>(x, x.Kind, x.ReadOnly)));
                 foreach (ToolExecutionBatch<ResolvedToolCall> batch in batches)
@@ -704,11 +706,11 @@ public class ChatController(
                     ExecutedToolCall[] completed;
                     if (batch.IsParallel)
                     {
-                        completed = await Task.WhenAll(batch.Items.Select(x => ExecuteMcpCall(x.Value)));
+                        completed = await Task.WhenAll(batch.Items.Select(x => ExecuteMcpCall(x.Value, mcpExecutionScope)));
                     }
                     else
                     {
-                        completed = [await ExecuteCall(batch.Items[0].Value)];
+                        completed = [await ExecuteCall(batch.Items[0].Value, mcpExecutionScope)];
                     }
 
                     foreach (ExecutedToolCall result in completed.OrderBy(x => x.Index))
@@ -744,17 +746,19 @@ public class ChatController(
             }
         }
 
-        async Task<ExecutedToolCall> ExecuteCall(ResolvedToolCall call)
+        async Task<ExecutedToolCall> ExecuteCall(ResolvedToolCall call, McpToolExecutionScope mcpExecutionScope)
         {
             return call.Kind switch
             {
-                ToolExecutionKind.Mcp => await ExecuteMcpCall(call),
+                ToolExecutionKind.Mcp => await ExecuteMcpCall(call, mcpExecutionScope),
                 ToolExecutionKind.CodeInterpreter => await ExecuteCodeInterpreterCall(call),
                 _ => CompleteUnknownCall(call),
             };
         }
 
-        async Task<ExecutedToolCall> ExecuteMcpCall(ResolvedToolCall call)
+        async Task<ExecutedToolCall> ExecuteMcpCall(
+            ResolvedToolCall call,
+            McpToolExecutionScope mcpExecutionScope)
         {
             McpToolExecutionRequest request = call.McpRequest
                 ?? throw new InvalidOperationException("Resolved MCP call has no execution request");
@@ -764,6 +768,7 @@ public class ChatController(
                 request.ServerUrl,
                 request.ToolName);
             McpToolExecutionResult result = await mcpToolExecutionService.ExecuteAsync(
+                mcpExecutionScope,
                 request,
                 delta => writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId, delta)),
                 cancellationToken);

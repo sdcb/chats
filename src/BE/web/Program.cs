@@ -117,6 +117,7 @@ public class Program
         builder.Services.AddScoped<ChatConfigService>();
         builder.Services.AddSingleton<McpToolExecutionPlanner>();
         builder.Services.AddSingleton<IMcpRetryDelay, McpRetryDelay>();
+        builder.Services.AddSingleton<IMcpToolClientFactory, McpToolClientFactory>();
         builder.Services.AddScoped<IMcpToolAttemptExecutor, McpToolAttemptExecutor>();
         builder.Services.AddScoped<McpToolExecutionService>();
         builder.Services.AddSingleton<ChatRetryPolicy>();

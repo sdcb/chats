@@ -2,7 +2,6 @@ import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { getMcpDisplayLabel } from '@/utils/mcp';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatSpanDto, McpServerListItemDto } from '@/types/clientApis';
@@ -135,7 +134,7 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
       {shortcutServers.map((server) => {
         const enabled = isMcpEnabled(server.id);
         const nameConflict = !enabled && hasNameConflict(server);
-        const displayLabel = getMcpDisplayLabel(server);
+        const displayLabel = server.displayName?.trim() || server.name;
 
         return (
           <Tips
