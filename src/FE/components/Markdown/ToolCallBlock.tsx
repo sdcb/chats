@@ -1,4 +1,4 @@
-import { FC, memo, useState, useEffect } from 'react';
+import { FC, memo, useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/cjs/styles/prism';
@@ -7,18 +7,16 @@ import useTranslation from '@/hooks/useTranslation';
 import { ChatSpanStatus, ToolCallContent, ToolResponseContent, ToolProgressDelta } from '@/types/chat';
 import { IconCheck, IconChevronRight, IconClipboard } from '@/components/Icons/index';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { isChatting } from '@/utils/chats';
 import { copyTextToClipboard } from '@/utils/clipboard';
 
 interface ToolCallBlockProps {
     toolCall: ToolCallContent;
     toolResponse?: ToolResponseContent;
     chatStatus?: ChatSpanStatus;
-    /**
-     * 当后续有任何内容（包括另一个 tool call）开始输出后，自动收起。
-     * 注意：不会覆盖用户手动展开/收起。
-     */
-    nextMessageContentStarted?: boolean;
 }
+
+const COMPLETED_AUTO_CLOSE_DELAY_MS = 1000;
 
 interface WebSearchResult {
     type?: string;
@@ -35,23 +33,55 @@ interface WebSearchCallAction {
     pattern?: string;
 }
 
-export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolResponse, chatStatus, nextMessageContentStarted }) => {
+export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolResponse, chatStatus }) => {
     const { t } = useTranslation();
     const { resolvedTheme } = useTheme();
     const [isParamsCopied, setIsParamsCopied] = useState<boolean>(false);
     const [isResponseCopied, setIsResponseCopied] = useState<boolean>(false);
-    // 计算 finished 状态：有 toolResponse 或者 聊天状态不是 Chatting (即已结束或失败)
-    const finished = !!toolResponse || (chatStatus !== ChatSpanStatus.Chatting);
+    const isLive = chatStatus !== undefined && isChatting(chatStatus);
+    const hasCompleted = toolResponse !== undefined && toolResponse.progress === undefined;
+    const isActive = isLive && !hasCompleted;
 
-    const [isOpen, setIsOpen] = useState<boolean>(!(nextMessageContentStarted ?? false));
+    const [isOpen, setIsOpen] = useState<boolean>(isActive);
     const [isManuallyToggled, setIsManuallyToggled] = useState<boolean>(false);
+    const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hasBeenLiveRef = useRef(isLive);
 
-    // 自动开合逻辑（不覆盖用户手动动作）
-    // 目标：在下一个 message content（非 tool）开始前保持展开。
     useEffect(() => {
+        if (isLive) {
+            hasBeenLiveRef.current = true;
+        }
+    }, [isLive]);
+
+    // 每个工具块按自身生命周期独立开合，并始终尊重用户的手动选择。
+    useEffect(() => {
+        if (autoCloseTimerRef.current !== null) {
+            clearTimeout(autoCloseTimerRef.current);
+            autoCloseTimerRef.current = null;
+        }
+
         if (isManuallyToggled) return;
-        setIsOpen(!(nextMessageContentStarted ?? false));
-    }, [nextMessageContentStarted, isManuallyToggled]);
+
+        if (isActive) {
+            setIsOpen(true);
+        } else if (hasCompleted && hasBeenLiveRef.current) {
+            // 保留最终结果一小段时间，然后自动收起。
+            setIsOpen(true);
+            autoCloseTimerRef.current = setTimeout(() => {
+                autoCloseTimerRef.current = null;
+                setIsOpen(false);
+            }, COMPLETED_AUTO_CLOSE_DELAY_MS);
+        } else {
+            setIsOpen(false);
+        }
+
+        return () => {
+            if (autoCloseTimerRef.current !== null) {
+                clearTimeout(autoCloseTimerRef.current);
+                autoCloseTimerRef.current = null;
+            }
+        };
+    }, [hasCompleted, isActive, isManuallyToggled]);
 
     const baseTheme = resolvedTheme === 'dark' ? oneDark : oneLight;
 
@@ -320,8 +350,12 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
     const { header, headerIcon, metadataLine, displayParams } = getDisplayInfo();
 
     const toggleOpen = () => {
-        setIsOpen(!isOpen);
+        if (autoCloseTimerRef.current !== null) {
+            clearTimeout(autoCloseTimerRef.current);
+            autoCloseTimerRef.current = null;
+        }
         setIsManuallyToggled(true);
+        setIsOpen((currentlyOpen) => !currentlyOpen);
     };
 
     const renderWebSearchResultsTable = (results: WebSearchResult[]) => {

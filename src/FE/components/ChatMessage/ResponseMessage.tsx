@@ -38,7 +38,6 @@ const ToolCallBlock = loadComponentOnce<{
   toolCall: ToolCallContent;
   toolResponse?: ToolResponseContent;
   chatStatus?: ChatSpanStatus;
-  nextMessageContentStarted?: boolean;
 }>({
   cacheKey: 'Markdown/ToolCallBlock',
   loader: () => import('@/components/Markdown/ToolCallBlock').then((mod) => mod.default),
@@ -215,18 +214,12 @@ const ResponseMessage = (props: Props) => {
     const { toolCall, toolResponse } = toolGroup;
     const showStepInfo = showPerStepActions && stepInfo?.isLastInStep && !stepInfo.step.edited && stepInfo.step.id;
 
-    // 用于驱动 ToolCallBlock 的“自动收起”行为：
-    // 在该 toolGroup 之后有任何内容（包括另一个 toolGroup）时，自动收起。
-    const processedIndex = processedContent.findIndex((c) => c === toolGroup);
-    const nextMessageContentStarted = processedIndex >= 0 && processedIndex + 1 < processedContent.length;
-
     return (
       <div key={`tool-group-${index}`} className={cn("relative group/item", index > 0 ? "my-1" : "")}>
         <ToolCallBlock
           toolCall={toolCall}
           toolResponse={toolResponse}
           chatStatus={messageStatus}
-          nextMessageContentStarted={nextMessageContentStarted}
         />
         {showStepInfo && (
           <div className={cn(
