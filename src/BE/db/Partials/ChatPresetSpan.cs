@@ -25,24 +25,35 @@ public partial class ChatPresetSpan
         config.Compression = ChatConfig.Compression;
         config.ThinkingBudget = ChatConfig.ThinkingBudget;
 
-        // Update ChatConfigMcp associations
-        HashSet<int> existingMcpIds = [.. config.ChatConfigMcps.Select(x => x.McpServerId)];
-        HashSet<int> newMcpIds = [.. ChatConfig.ChatConfigMcps.Select(x => x.McpServerId)];
+        Dictionary<int, ChatConfigMcp> desiredMcps = ChatConfig.ChatConfigMcps
+            .GroupBy(x => x.McpServerId)
+            .ToDictionary(x => x.Key, x => x.First());
+        HashSet<int> retainedMcpIds = [];
 
-        // Remove associations that are no longer needed
-        List<ChatConfigMcp> toRemove = [.. config.ChatConfigMcps.Where(x => !newMcpIds.Contains(x.McpServerId))];
-        foreach (ChatConfigMcp? item in toRemove)
+        foreach (ChatConfigMcp existing in config.ChatConfigMcps.ToArray())
         {
-            config.ChatConfigMcps.Remove(item);
+            if (!desiredMcps.TryGetValue(existing.McpServerId, out ChatConfigMcp? desired) ||
+                !retainedMcpIds.Add(existing.McpServerId))
+            {
+                config.ChatConfigMcps.Remove(existing);
+                continue;
+            }
+
+            existing.CustomHeaders = desired.CustomHeaders;
         }
 
-        // Add new associations
-        foreach (int mcpId in newMcpIds.Where(id => !existingMcpIds.Contains(id)))
+        foreach ((int mcpServerId, ChatConfigMcp desired) in desiredMcps)
         {
+            if (retainedMcpIds.Contains(mcpServerId))
+            {
+                continue;
+            }
+
             config.ChatConfigMcps.Add(new ChatConfigMcp
             {
                 ChatConfig = config,
-                McpServerId = mcpId
+                McpServerId = mcpServerId,
+                CustomHeaders = desired.CustomHeaders,
             });
         }
     }
@@ -79,7 +90,8 @@ public partial class ChatPresetSpan
             chatConfig.ChatConfigMcps.Add(new ChatConfigMcp
             {
                 ChatConfig = chatConfig,
-                McpServerId = mcpAssoc.McpServerId
+                McpServerId = mcpAssoc.McpServerId,
+                CustomHeaders = mcpAssoc.CustomHeaders,
             });
         }
 

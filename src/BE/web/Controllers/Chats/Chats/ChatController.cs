@@ -575,9 +575,12 @@ public class ChatController(
             : string.IsNullOrWhiteSpace(chatSpan.ChatConfig.SystemPrompt)
                 ? null
                 : NeutralSystemMessage.FromText(chatSpan.ChatConfig.SystemPrompt);
+        McpServer[] enabledMcpServers = [.. chatSpan.ChatConfig.ChatConfigMcps
+            .Select(x => x.McpServer)
+            .DistinctBy(x => x.Id)];
         systemMessage = McpServerInstructionsBuilder.MergeSystemMessage(
             systemMessage,
-            chatSpan.ChatConfig.ChatConfigMcps.Select(x => x.McpServer));
+            enabledMcpServers);
 
         ChatRequest csr = new()
         {
@@ -598,7 +601,7 @@ public class ChatController(
             codeInterpreter.AddTools(csr.Tools, chatSpan.ChatConfig.Model.CurrentSnapshot.AllowVision);
         }
         IReadOnlyList<McpToolNameMapping> mcpToolMappings = McpToolNameMapper.Build(
-            chatSpan.ChatConfig.ChatConfigMcps.SelectMany(x => x.McpServer.McpTools),
+            enabledMcpServers.SelectMany(x => x.McpTools),
             reservedToolNames);
         foreach (McpToolNameMapping mapping in mcpToolMappings)
         {
