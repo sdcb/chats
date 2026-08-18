@@ -27,6 +27,10 @@ public sealed record ToolCallSegment : ChatSegment
     // 原 function.arguments（此处往往是 JSON 片段）
     [JsonPropertyName("arguments")]
     public string? Arguments { get; init; }
+
+    // Hosted tools can finish before their presentation result (for example, citations) is available.
+    [JsonPropertyName("completed")]
+    public bool IsCompleted { get; init; }
 }
 
 public sealed record ToolCallResponseSegment : ChatSegment

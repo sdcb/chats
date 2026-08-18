@@ -188,7 +188,8 @@ public static class ChatSegmentExtensions
                 {
                     Arguments = (existingTool.Arguments ?? "") + (curTool.Arguments ?? ""),
                     Id = existingTool.Id ?? curTool.Id,
-                    Name = existingTool.Name ?? curTool.Name
+                    Name = existingTool.Name ?? curTool.Name,
+                    IsCompleted = existingTool.IsCompleted || curTool.IsCompleted,
                 };
                 return;
             }

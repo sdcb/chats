@@ -94,6 +94,7 @@ export type ToolCallContent = {
   n: string; // Name
   d?: string; // DisplayName
   p: string; // Parameters
+  completed?: boolean; // Tool execution finished; the presentation result may arrive later
 };
 
 export type StdOutToolProgressDelta = {

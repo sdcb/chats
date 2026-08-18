@@ -946,7 +946,13 @@ public class ChatController(
                                 && toolNameMap.TryGetValue(toolCall.Name, out McpTool? streamedMcpTool)
                                 ? streamedMcpTool.Title ?? streamedMcpTool.ToolName
                                 : null;
-                            writer.TryWrite(new CallingToolLine(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolArguments, displayName));
+                            writer.TryWrite(new CallingToolLine(
+                                chatSpan.SpanId,
+                                toolCall.Id!,
+                                toolCall.Name!,
+                                toolArguments,
+                                displayName,
+                                toolCall.IsCompleted));
                             break;
                         case ToolCallResponseSegment toolCallResponse:
                             string toolResponse = toolCallResponse.Response!;

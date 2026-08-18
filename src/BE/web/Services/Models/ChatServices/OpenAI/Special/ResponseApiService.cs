@@ -32,6 +32,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
     private sealed record WebSearchCall(string Id, string Status, JsonObject? Action)
     {
         public bool IsSearch => string.Equals(Action?["type"]?.GetValue<string>(), "search", StringComparison.Ordinal);
+        public bool IsCompleted => string.Equals(Status, "completed", StringComparison.OrdinalIgnoreCase);
 
         public string ToToolArguments()
         {
@@ -259,6 +260,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                                     Id = call.Id,
                                     Name = WebSearchCallType,
                                     Arguments = call.ToToolArguments(),
+                                    IsCompleted = call.IsCompleted,
                                 };
                             }
                         }
@@ -486,6 +488,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                                     Id = call.Id,
                                     Name = WebSearchCallType,
                                     Arguments = call.ToToolArguments(),
+                                    IsCompleted = call.IsCompleted,
                                 };
                             }
                         }

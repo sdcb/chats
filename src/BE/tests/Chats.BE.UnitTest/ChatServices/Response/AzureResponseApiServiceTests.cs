@@ -437,6 +437,7 @@ public class AzureResponseApiServiceTests
             .Where(x => x.Name == "web_search_call")
             .ToArray();
         Assert.Equal(4, webSearchCalls.Length);
+        Assert.All(webSearchCalls, call => Assert.True(call.IsCompleted));
 
         string[] actionTypes = webSearchCalls.Select(x =>
         {

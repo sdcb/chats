@@ -39,7 +39,8 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
     const [isParamsCopied, setIsParamsCopied] = useState<boolean>(false);
     const [isResponseCopied, setIsResponseCopied] = useState<boolean>(false);
     const isLive = chatStatus !== undefined && isChatting(chatStatus);
-    const hasCompleted = toolResponse !== undefined && toolResponse.progress === undefined;
+    const hasCompleted = toolCall.completed === true
+        || (toolResponse !== undefined && toolResponse.progress === undefined);
     const isActive = isLive && !hasCompleted;
 
     const [isOpen, setIsOpen] = useState<boolean>(isActive);

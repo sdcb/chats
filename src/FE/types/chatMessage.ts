@@ -104,6 +104,7 @@ interface SseResponseLineCallingTool {
   r: string; // ToolName
   p: string; // Parameters (流式输出的参数)
   d?: string; // DisplayName
+  c?: boolean; // Tool execution completed; result content may arrive later
 }
 
 interface SseResponseLineToolProgress {

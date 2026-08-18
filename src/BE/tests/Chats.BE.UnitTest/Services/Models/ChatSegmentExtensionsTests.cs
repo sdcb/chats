@@ -28,6 +28,7 @@ public sealed class ChatSegmentExtensionsTests
         {
             Index = 0,
             Arguments = "536870912}",
+            IsCompleted = true,
         });
 
         Assert.Collection(
@@ -39,6 +40,7 @@ public sealed class ChatSegmentExtensionsTests
                 Assert.Equal("call_a8326c11b3744411bc42065a", toolCall.Id);
                 Assert.Equal("create_docker_session", toolCall.Name);
                 Assert.Equal("{\"memoryBytes\": 536870912}", toolCall.Arguments);
+                Assert.True(toolCall.IsCompleted);
             },
             segment => Assert.IsType<TextChatSegment>(segment));
     }
