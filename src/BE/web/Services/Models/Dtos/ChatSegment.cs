@@ -209,6 +209,12 @@ public static class ChatSegmentExtensions
                 break;
 
             case ThinkChatSegment lastThink when item is ThinkChatSegment curThink:
+                if (!string.IsNullOrEmpty(lastThink.Signature))
+                {
+                    items.Add(item);
+                    break;
+                }
+
                 string? signature = lastThink.Signature switch
                 {
                     null => curThink.Signature,

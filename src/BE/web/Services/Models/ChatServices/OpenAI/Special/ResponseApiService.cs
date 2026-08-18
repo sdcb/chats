@@ -1169,53 +1169,53 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
             }
             else if (message.Role == NeutralChatRole.Assistant)
             {
-                // Preserve thinking signature for multi-step tool calls (Response API).
-                foreach (NeutralThinkContent think in message.Contents.OfType<NeutralThinkContent>())
+                List<NeutralContent> assistantMessageContents = [];
+                foreach (NeutralContent content in message.Contents)
                 {
-                    if (!string.IsNullOrWhiteSpace(think.Signature))
+                    if (content is NeutralThinkContent think)
                     {
+                        if (string.IsNullOrWhiteSpace(think.Signature))
+                        {
+                            continue;
+                        }
+
+                        FlushAssistantMessageContents(input, assistantMessageContents);
                         input.Add(new JsonObject
                         {
                             ["type"] = "reasoning",
                             ["encrypted_content"] = think.Signature,
                             ["summary"] = new JsonArray(),
                         });
-                    }
-                }
-
-                // Handle tool calls in assistant message
-                foreach (NeutralToolCallContent tc in message.Contents.OfType<NeutralToolCallContent>())
-                {
-                    if (string.Equals(tc.Name, WebSearchCallType, StringComparison.Ordinal))
-                    {
-                        if (TryCreateWebSearchCallInput(tc, out JsonObject? webSearchCall))
-                        {
-                            webSearchToolCallIds.Add(tc.Id);
-                            input.Add(webSearchCall);
-                        }
                         continue;
                     }
 
-                    input.Add(new JsonObject
+                    if (content is NeutralToolCallContent toolCall)
                     {
-                        ["type"] = "function_call",
-                        ["call_id"] = tc.Id,
-                        ["name"] = tc.Name,
-                        ["arguments"] = NormalizeToolCallArguments(tc.Parameters)
-                    });
+                        FlushAssistantMessageContents(input, assistantMessageContents);
+                        if (string.Equals(toolCall.Name, WebSearchCallType, StringComparison.Ordinal))
+                        {
+                            if (TryCreateWebSearchCallInput(toolCall, out JsonObject? webSearchCall))
+                            {
+                                webSearchToolCallIds.Add(toolCall.Id);
+                                input.Add(webSearchCall);
+                            }
+                            continue;
+                        }
+
+                        input.Add(new JsonObject
+                        {
+                            ["type"] = "function_call",
+                            ["call_id"] = toolCall.Id,
+                            ["name"] = toolCall.Name,
+                            ["arguments"] = NormalizeToolCallArguments(toolCall.Parameters)
+                        });
+                        continue;
+                    }
+
+                    assistantMessageContents.Add(content);
                 }
 
-                // Handle text content
-                List<NeutralContent> nonToolCallContents = [.. message.Contents.Where(c => c is not NeutralToolCallContent && c is not NeutralThinkContent)];
-                if (nonToolCallContents.Count > 0)
-                {
-                    input.Add(new JsonObject
-                    {
-                        ["type"] = "message",
-                        ["role"] = "assistant",
-                        ["content"] = ContentToOutputParts(nonToolCallContents)
-                    });
-                }
+                FlushAssistantMessageContents(input, assistantMessageContents);
             }
             else if (message.Role == NeutralChatRole.Tool)
             {
@@ -1237,6 +1237,22 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         }
 
         return input;
+    }
+
+    private static void FlushAssistantMessageContents(JsonArray input, List<NeutralContent> contents)
+    {
+        if (contents.Count == 0)
+        {
+            return;
+        }
+
+        input.Add(new JsonObject
+        {
+            ["type"] = "message",
+            ["role"] = "assistant",
+            ["content"] = ContentToOutputParts(contents)
+        });
+        contents.Clear();
     }
 
     private static string NormalizeToolCallArguments(string? parameters)
