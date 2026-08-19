@@ -396,19 +396,26 @@ export interface GetUserFilesResult {
 // MCP related types
 export interface McpToolBasicInfo {
   name: string;
-  description?: string;
-  parameters?: string;
+  title: string | null;
+  description: string | null;
+  parameters: string | null;
+  destructive: boolean;
+  idempotent: boolean;
+  openWorld: boolean;
+  readOnly: boolean;
 }
 
 export interface McpServerListItemDto {
   id: number;
-  label: string;
+  name: string;
+  displayName: string | null;
   showShortcut: boolean;
 }
 
 export interface McpServerListManagementItemDto {
   id: number;
-  label: string;
+  name: string;
+  displayName: string | null;
   url: string;
   createdAt: string;
   updatedAt: string;
@@ -427,7 +434,8 @@ export interface McpServerDetailsDto extends McpServerListManagementItemDto {
 }
 
 export interface UpdateMcpServerRequest {
-  label: string;
+  name: string;
+  displayName?: string | null;
   url: string;
   headers?: string;
   serverInstructions?: string;

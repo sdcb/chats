@@ -62,37 +62,6 @@ public abstract partial class ChatService
     {
         ChatRequest final = request;
 
-        // Apply system prompt template replacements
-        if (request.Source == UsageSource.WebChat)
-        {
-            string? effectiveSystemPrompt = final.GetEffectiveSystemPrompt();
-            if (effectiveSystemPrompt != null)
-            {
-                string processedPrompt = effectiveSystemPrompt
-                    .Replace("{{MODEL_NAME}}", request.ChatConfig.Model.CurrentSnapshot.Name)
-                    .Replace("{{CURRENT_DATE}}", DateTime.UtcNow.ToString("yyyy/MM/dd"))
-                    .Replace("{{CURRENT_TIME}}", DateTime.UtcNow.ToString("HH:mm:ss"));
-
-                // If we have a System property, update it; otherwise update ChatConfig.SystemPrompt
-                if (final.System != null)
-                {
-                    // For now, just update the first content block with the processed prompt
-                    // A more sophisticated approach could preserve cache control settings
-                    final = final with
-                    {
-                        System = NeutralSystemMessage.FromText(processedPrompt)
-                    };
-                }
-                else
-                {
-                    final = final with
-                    {
-                        ChatConfig = final.ChatConfig.WithSystemPrompt(processedPrompt)
-                    };
-                }
-            }
-        }
-
         float? temperature = final.ChatConfig.Temperature;
         string? effort = final.ChatConfig.Effort;
         if (request.Source == UsageSource.WebChat)

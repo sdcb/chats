@@ -137,7 +137,9 @@ public sealed record CallingToolLine(
     [property: JsonPropertyName("i")] byte SpanId,
     [property: JsonPropertyName("u")] string ToolCallId,
     [property: JsonPropertyName("r")] string ToolName,
-    [property: JsonPropertyName("p")] string Parameters
+    [property: JsonPropertyName("p")] string Parameters,
+    [property: JsonPropertyName("d")] string? DisplayName = null,
+    [property: JsonPropertyName("c")] bool Completed = false
 ) : SseResponseLine;
 
 public sealed record ToolProgressLine(

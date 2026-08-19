@@ -7,41 +7,49 @@ namespace Chats.BE.UnitTest.Services.Mcp;
 public sealed class McpToolNameMapperTests
 {
     [Fact]
-    public void Build_PreservesUniqueNamesAndDeterministicallyAliasesConflicts()
+    public void Build_UsesFixedNamespaceAndStableOrdering()
     {
         McpTool[] tools =
         [
-            Tool(3, "unique"),
-            Tool(2, "search"),
-            Tool(1, "search"),
-            Tool(4, "view_image"),
+            Tool(3, "gamma", "unique"),
+            Tool(2, "beta", "search"),
+            Tool(1, "alpha", "search"),
+            Tool(4, "delta", "view_image"),
         ];
 
         IReadOnlyList<McpToolNameMapping> first = McpToolNameMapper.Build(tools, ["view_image"]);
         IReadOnlyList<McpToolNameMapping> second = McpToolNameMapper.Build(tools.Reverse(), ["view_image"]);
 
         Assert.Equal(
-            ["mcp_1_search", "mcp_2_search", "unique", "mcp_4_view_image"],
+            ["mcp__alpha__search", "mcp__beta__search", "mcp__delta__view_image", "mcp__gamma__unique"],
             first.Select(x => x.ExposedName));
         Assert.Equal(first.Select(x => x.ExposedName), second.Select(x => x.ExposedName));
+        Assert.Equal(["search", "search", "view_image", "unique"], first.Select(x => x.Tool.ToolName));
     }
 
     [Fact]
-    public void Build_AvoidsCollisionWithAnUnchangedOriginalName()
+    public void Build_RejectsReservedProtocolName()
     {
-        McpTool[] tools =
-        [
-            Tool(1, "search"),
-            Tool(2, "search"),
-            Tool(3, "mcp_1_search"),
-        ];
+        McpTool tool = Tool(1, "alpha", "search");
 
-        IReadOnlyList<McpToolNameMapping> mappings = McpToolNameMapper.Build(tools, []);
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => McpToolNameMapper.Build([tool], ["mcp__alpha__search"]));
 
-        Assert.Equal(
-            ["mcp_1_search_2", "mcp_2_search", "mcp_1_search"],
-            mappings.Select(x => x.ExposedName));
-        Assert.Equal(3, mappings.Select(x => x.ExposedName).Distinct(StringComparer.Ordinal).Count());
+        Assert.Contains("duplicated or reserved", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("bad.name", "search")]
+    [InlineData("alpha", "bad.name")]
+    [InlineData("abcdefghijklmnopqrstuvwxyz0123456789abcdefghij", "tool_name_that_is_too_long")]
+    public void Build_RejectsInvalidOrOverlongProtocolName(string serverName, string toolName)
+    {
+        McpTool tool = Tool(1, serverName, toolName);
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => McpToolNameMapper.Build([tool], []));
+
+        Assert.Contains(toolName, ex.Message);
     }
 
     [Fact]
@@ -70,43 +78,47 @@ public sealed class McpToolNameMapperTests
     }
 
     [Fact]
-    public void FindLabelConflicts_OnlyMatchesTheTargetOwnerAndExcludesCurrentServer()
+    public void FindNameConflicts_IsCaseInsensitiveWithinOwnerAndExcludesCurrentServer()
     {
         McpServer[] servers =
         [
-            Server(1, ownerUserId: 7, label: "Shared"),
-            Server(2, ownerUserId: 8, label: "Shared"),
-            Server(3, ownerUserId: 7, label: "Other"),
+            Server(1, ownerUserId: 7, name: "Shared"),
+            Server(2, ownerUserId: 8, name: "Shared"),
+            Server(3, ownerUserId: 7, name: "Other"),
         ];
 
         int[] conflicts = [.. McpController
-            .FindLabelConflicts(servers.AsQueryable(), 7, "Shared")
+            .FindNameConflicts(servers.AsQueryable(), 7, "shared")
             .Select(x => x.Id)];
         int[] excludingCurrent = [.. McpController
-            .FindLabelConflicts(servers.AsQueryable(), 7, "Shared", excludedMcpServerId: 1)
+            .FindNameConflicts(servers.AsQueryable(), 7, "SHARED", excludedMcpServerId: 1)
             .Select(x => x.Id)];
 
         Assert.Equal([1], conflicts);
         Assert.Empty(excludingCurrent);
     }
 
-    private static McpTool Tool(int serverId, string name)
-        => new()
+    private static McpTool Tool(int serverId, string serverName, string toolName)
+    {
+        McpServer server = Server(serverId, ownerUserId: serverId, name: serverName);
+        return new()
         {
             McpServerId = serverId,
-            ToolName = name,
+            McpServer = server,
+            ToolName = toolName,
         };
+    }
 
     private static McpServer Server(
         int id,
         int ownerUserId,
         int? assignedUserId = null,
-        string? label = null)
+        string? name = null)
         => new()
         {
             Id = id,
             OwnerUserId = ownerUserId,
-            Label = label ?? $"server-{id}",
+            Name = name ?? $"server-{id}",
             Url = "https://example.com",
             UserMcps = assignedUserId.HasValue
                 ? [new UserMcp { UserId = assignedUserId.Value, McpServerId = id }]

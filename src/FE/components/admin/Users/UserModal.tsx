@@ -83,19 +83,11 @@ const UserModal = (props: IProps) => {
         <FormSwitch options={options} field={field} />
       ),
     },
-    {
-      name: 'password',
-      label: user ? t('New Password') : t('Password'),
-      defaultValue: '',
-      render: (options: IFormFieldOption, field: FormFieldType) => (
-        <FormInput type="password" options={options} field={field} />
-      ),
-    },
-    ...(user
+    ...(!user
       ? [
           {
-            name: 'confirmPassword',
-            label: t('Confirm Password'),
+            name: 'password',
+            label: t('Password'),
             defaultValue: '',
             render: (options: IFormFieldOption, field: FormFieldType) => (
               <FormInput type="password" options={options} field={field} />
@@ -153,66 +145,35 @@ const UserModal = (props: IProps) => {
       : []),
   ];
 
-  const isStrongPassword = (value: string) => {
-    if (value.length < 8) return false;
-    const types = [
-      /[a-z]/.test(value),
-      /[A-Z]/.test(value),
-      /\d/.test(value),
-      /[^A-Za-z0-9]/.test(value),
-    ];
-    return types.filter(Boolean).length >= 3;
-  };
-  const formSchema = z
-    .object({
-      account: z.string().optional(),
-      provider: z.string().optional(),
-      username: z
-        .string()
-        .min(
-          2,
-          t('Must contain at least {{length}} character(s)', {
-            length: 2,
-          })!,
-        )
-        .max(20, t('Contain at most {{length}} character(s)', { length: 20 })!),
-      enabled: z.boolean().optional(),
-      phone: z.string().nullable().default(null),
-      email: z.string().nullable().default(null),
-      password: !user
-        ? z
-            .string()
-            .min(
-              6,
-              t('Must contain at least {{length}} character(s)', {
-                length: 6,
-              })!,
-            )
-            .max(
-              18,
-              t('Contain at most {{length}} character(s)', { length: 18 })!,
-            )
-        : z
-            .string()
-            .refine(
-              (value) => !value || isStrongPassword(value),
-              t(
-                'Password should be at least 8 characters and contain at least three character types.',
-              )!,
-            ),
-      confirmPassword: z.string().optional(),
-      sub: z.string().optional(),
-      apiKeyEnabled: z.boolean().optional(),
-      role: z.string().optional(),
-    })
-    .refine(
-      (values) =>
-        !user || !values.password || values.password === values.confirmPassword,
-      {
-        path: ['confirmPassword'],
-        message: t('The two password inputs are inconsistent')!,
-      },
-    );
+  const formSchema = z.object({
+    account: z.string().optional(),
+    provider: z.string().optional(),
+    username: z
+      .string()
+      .min(
+        2,
+        t('Must contain at least {{length}} character(s)', {
+          length: 2,
+        })!,
+      )
+      .max(20, t('Contain at most {{length}} character(s)', { length: 20 })!),
+    enabled: z.boolean().optional(),
+    phone: z.string().nullable().default(null),
+    email: z.string().nullable().default(null),
+    password: z
+      .string()
+      .min(
+        6,
+        t('Must contain at least {{length}} character(s)', {
+          length: 6,
+        })!,
+      )
+      .max(18, t('Contain at most {{length}} character(s)', { length: 18 })!)
+      .optional(),
+    sub: z.string().optional(),
+    apiKeyEnabled: z.boolean().optional(),
+    role: z.string().optional(),
+  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -236,8 +197,6 @@ const UserModal = (props: IProps) => {
       form.setValue('provider', user.provider || t('Account password login'));
       form.setValue('sub', user.sub || '');
       form.setValue('apiKeyEnabled', user.apiKeyEnabled);
-      form.setValue('password', '');
-      form.setValue('confirmPassword', '');
     }
   }, [isOpen]);
 
@@ -254,10 +213,6 @@ const UserModal = (props: IProps) => {
     if (user) {
       delete params.account;
       delete params.provider;
-      if (!params.password) {
-        delete params.password;
-        delete params.confirmPassword;
-      }
       if (user.provider?.toLowerCase() !== 'keycloak') {
         delete params.sub;
       }
@@ -278,21 +233,26 @@ const UserModal = (props: IProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="flex h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:h-auto sm:max-w-lg">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{user ? t('Edit User') : t('Add User')}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            {formFields.map((item) => (
-              <FormField
-                key={item.name}
-                control={form.control}
-                name={item.name as never}
-                render={({ field }) => item.render(item, field)}
-              />
-            ))}
-            <DialogFooter className="pt-4">
+          <form
+            className="flex min-h-0 flex-1 flex-col"
+            onSubmit={form.handleSubmit(onSubmit)}
+          >
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              {formFields.map((item) => (
+                <FormField
+                  key={item.name}
+                  control={form.control}
+                  name={item.name as never}
+                  render={({ field }) => item.render(item, field)}
+                />
+              ))}
+            </div>
+            <DialogFooter className="shrink-0 border-t bg-background pt-4">
               <Button disabled={submit} type="submit">
                 {t('Save')}
               </Button>

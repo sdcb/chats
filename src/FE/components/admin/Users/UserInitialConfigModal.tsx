@@ -581,7 +581,7 @@ const UserInitialConfigModal = (props: IProps) => {
                             key={server.id}
                             onClick={() => addMcp(server.id)}
                           >
-                            {getMcpDisplayLabel(server, mcpServers)}
+                            {getMcpDisplayLabel(server)}
                           </DropdownMenuItem>
                         ))
                       )}
@@ -618,7 +618,7 @@ const UserInitialConfigModal = (props: IProps) => {
                             <TableRow key={mcp.mcpServerId}>
                               <TableCell>
                                 {server
-                                  ? getMcpDisplayLabel(server, mcpServers)
+                                  ? getMcpDisplayLabel(server)
                                   : `MCP #${mcp.mcpServerId}`}
                               </TableCell>
                               <TableCell>

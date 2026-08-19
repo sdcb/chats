@@ -43,7 +43,7 @@ Chats reads configuration based on the .NET configuration system, with priority 
 | [`RequestTraceCleanup:Enabled`](#92-requesttracecleanupenabled)                                                                  | `true`                                  | Controls whether scheduled auto-delete runs   |
 | [`JwtValidPeriod`](#71-jwtvalidperiod)                                                                                           | `1.00:00:00`                            | 1 day, JWT validity period                    |
 | [`JwtSecretKey`](#72-jwtsecretkey)                                                                                               | `null`                                  | Recommended to set stable key in production   |
-| [`Chat:Retry429Times`](#81-chatretry429times)                                                                                    | `5`                                     | HTTP 429 retry count                          |
+| [`Chat:MaxTransientRetries`](#81-chatmaxtransientretries)                                                                        | `5`                                     | Transient model request retry count           |
 
 ## 1. General Configuration
 
@@ -346,18 +346,20 @@ The `CodeInterpreter` configuration group controls: the default sandbox image to
 
 ## 8. Chat Request Retry
 
-### 8.1 `Chat:Retry429Times`
+### 8.1 `Chat:MaxTransientRetries`
 
 - **Type**: Integer
 - **Default**: `5`
-- **Purpose**: Number of retries when the upstream model service returns HTTP 429 (rate limiting).
+- **Purpose**: Controls the maximum number of retries after transient upstream failures for text model requests.
 - **Behavior**:
-  - Retry is only triggered when "this request has not yet produced any output fragments (streaming hasn't started yet)".
+  - Retryable HTTP status codes are 408, 429, 500, 502, 503, and 504.
+  - Network errors, I/O errors, and internal timeouts not caused by user cancellation are also retried.
+  - Retries only occur before the request has produced any output, preventing duplicate streamed output.
   - Uses exponential backoff: 1s, 2s, 4s, 8s... up to a maximum of 30s, with 0~250ms random jitter.
-  - Configured as `0` or not configured (`null`) means no 429 retry.
+  - Set to `0` to disable retries. Negative values are clamped to `0`. If omitted, the default is `5`.
 
-- **Environment variable syntax**: `Chat__Retry429Times=5`
-- **Command-line syntax**: `--Chat:Retry429Times=5`
+- **Environment variable syntax**: `Chat__MaxTransientRetries=5`
+- **Command-line syntax**: `--Chat:MaxTransientRetries=5`
 
 ---
 

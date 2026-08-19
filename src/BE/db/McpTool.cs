@@ -22,6 +22,17 @@ public partial class McpTool
 
     public string? Parameters { get; set; }
 
+    [StringLength(200)]
+    public string? Title { get; set; }
+
+    public bool Destructive { get; set; }
+
+    public bool Idempotent { get; set; }
+
+    public bool OpenWorld { get; set; }
+
+    public bool ReadOnly { get; set; }
+
     [ForeignKey("McpServerId")]
     [InverseProperty("McpTools")]
     public virtual McpServer McpServer { get; set; } = null!;

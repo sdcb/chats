@@ -9,6 +9,7 @@ using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Chats.BE.Services.Mcp;
 
 namespace Chats.BE.Controllers.Chats.Chats;
 
@@ -202,6 +203,15 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
             return BadRequest("Duplicate MCP servers are not allowed");
         }
 
+        string? mcpNameConflict = await McpServerNameConflictValidator.FindConflictAsync(
+            db,
+            request.Mcps.Select(x => x.Id),
+            cancellationToken);
+        if (mcpNameConflict is not null)
+        {
+            return BadRequest(mcpNameConflict);
+        }
+
         int chatId = idEncryption.DecryptChatId(encryptedChatId);
         ChatSpan? span = await db.ChatSpans
             .Include(x => x.ChatConfig)
@@ -256,6 +266,8 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         int chatId = idEncryption.DecryptChatId(encryptedChatId);
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig).ThenInclude(x => x.ChatSpans)
+            .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig).ThenInclude(x => x.ChatConfigMcps)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == chatId && x.UserId == currentUser.Id && !x.IsArchived, cancellationToken);
         if (chat == null)
         {
@@ -281,6 +293,15 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         HashSet<int> requiredMcpIds = [.. preset.ChatPresetSpans
             .SelectMany(x => x.ChatConfig.ChatConfigMcps)
             .Select(x => x.McpServerId)];
+        string? mcpNameConflict = await McpServerNameConflictValidator.FindConflictAsync(
+            db,
+            requiredMcpIds,
+            cancellationToken);
+        if (mcpNameConflict is not null)
+        {
+            return BadRequest(mcpNameConflict);
+        }
+
         if (requiredMcpIds.Count > 0)
         {
             int availableMcpCount = await db.UserMcps

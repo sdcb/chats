@@ -188,7 +188,8 @@ public static class ChatSegmentExtensions
                 {
                     Arguments = (existingTool.Arguments ?? "") + (curTool.Arguments ?? ""),
                     Id = existingTool.Id ?? curTool.Id,
-                    Name = existingTool.Name ?? curTool.Name
+                    Name = existingTool.Name ?? curTool.Name,
+                    IsCompleted = existingTool.IsCompleted || curTool.IsCompleted,
                 };
                 return;
             }
@@ -208,6 +209,12 @@ public static class ChatSegmentExtensions
                 break;
 
             case ThinkChatSegment lastThink when item is ThinkChatSegment curThink:
+                if (!string.IsNullOrEmpty(lastThink.Signature))
+                {
+                    items.Add(item);
+                    break;
+                }
+
                 string? signature = lastThink.Signature switch
                 {
                     null => curThink.Signature,

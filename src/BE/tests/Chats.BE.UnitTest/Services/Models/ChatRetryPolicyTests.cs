@@ -155,34 +155,6 @@ public class ChatRetryPolicyTests
     }
 
     [Fact]
-    public void Constructor_UsesNewSettingBeforeLegacySetting()
-    {
-        RecordingLogger<ChatRetryPolicy> logger = new();
-#pragma warning disable CS0618 // Verifies compatibility behavior until Chats 1.15.
-        ChatOptions options = new() { MaxTransientRetries = 2, Retry429Times = 4 };
-#pragma warning restore CS0618
-
-        ChatRetryPolicy policy = CreatePolicy(options, logger: logger);
-
-        Assert.Equal(2, policy.MaxRetries);
-        Assert.Equal(0, logger.WarningCount);
-    }
-
-    [Fact]
-    public void Constructor_LegacySettingLogsDeprecationWarning()
-    {
-        RecordingLogger<ChatRetryPolicy> logger = new();
-#pragma warning disable CS0618 // Verifies compatibility behavior until Chats 1.15.
-        ChatOptions options = new() { Retry429Times = 3 };
-#pragma warning restore CS0618
-
-        ChatRetryPolicy policy = CreatePolicy(options, logger: logger);
-
-        Assert.Equal(3, policy.MaxRetries);
-        Assert.Equal(1, logger.WarningCount);
-    }
-
-    [Fact]
     public void Constructor_UsesDefaultAndClampsNegativeValues()
     {
         ChatRetryPolicy defaultPolicy = CreatePolicy(new ChatOptions());

@@ -128,7 +128,8 @@ export interface PostUserParams {
   email?: string | null;
 }
 
-export interface PutUserParams extends Omit<PostUserParams, 'password'> {
+export interface PutUserParams
+  extends Partial<Omit<PostUserParams, 'password'>> {
   id: string;
   password?: string;
   confirmPassword?: string;

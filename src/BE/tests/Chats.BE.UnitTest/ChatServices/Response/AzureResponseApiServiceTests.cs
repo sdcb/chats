@@ -230,6 +230,60 @@ public class AzureResponseApiServiceTests
     }
 
     [Fact]
+    public async Task ResponseApiService_ShouldReplayAssistantResponseItemsInOriginalOrder()
+    {
+        const string sse =
+            "event: response.completed\n" +
+            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n";
+        const string webSearchArguments =
+            "{\"type\":\"web_search_call\",\"status\":\"completed\",\"action\":{\"type\":\"search\",\"query\":\"q\"}}";
+        string? capturedBody = null;
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
+        {
+            capturedBody = req.Content == null ? null : req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        });
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        ChatRequest request = CreateBaseChatRequest() with
+        {
+            Messages =
+            [
+                NeutralMessage.FromAssistant(
+                    NeutralThinkContent.Create("", "sig_1"),
+                    NeutralToolCallContent.Create("ws_1", "web_search_call", webSearchArguments),
+                    NeutralThinkContent.Create("", "sig_2"),
+                    NeutralThinkContent.Create("", "sig_3"),
+                    NeutralToolCallContent.Create("ws_2", "web_search_call", webSearchArguments),
+                    NeutralThinkContent.Create("", "sig_4"),
+                    NeutralTextContent.Create("answer")),
+                NeutralMessage.FromUserText("continue"),
+            ]
+        };
+
+        await foreach (ChatSegment _ in service.ChatStreamed(request, CancellationToken.None))
+        {
+            // drain
+        }
+
+        Assert.False(string.IsNullOrWhiteSpace(capturedBody));
+        using JsonDocument doc = JsonDocument.Parse(capturedBody!);
+        JsonElement[] replayedItems = doc.RootElement.GetProperty("input")
+            .EnumerateArray()
+            .Where(item =>
+                item.GetProperty("type").GetString() is "reasoning" or "web_search_call"
+                || item.TryGetProperty("role", out JsonElement role) && role.GetString() == "assistant")
+            .ToArray();
+
+        Assert.Equal(
+            ["reasoning", "web_search_call", "reasoning", "reasoning", "web_search_call", "reasoning", "message"],
+            replayedItems.Select(item => item.GetProperty("type").GetString()));
+        Assert.Equal(
+            ["sig_1", "sig_2", "sig_3", "sig_4"],
+            replayedItems
+                .Where(item => item.GetProperty("type").GetString() == "reasoning")
+                .Select(item => item.GetProperty("encrypted_content").GetString()));
+    }
+
+    [Fact]
     public async Task ResponseApiService_ShouldSendOuterAndInnerSystemMessagesInOrder()
     {
         // Arrange
@@ -437,6 +491,7 @@ public class AzureResponseApiServiceTests
             .Where(x => x.Name == "web_search_call")
             .ToArray();
         Assert.Equal(4, webSearchCalls.Length);
+        Assert.All(webSearchCalls, call => Assert.True(call.IsCompleted));
 
         string[] actionTypes = webSearchCalls.Select(x =>
         {

@@ -11,7 +11,6 @@ import toast from 'react-hot-toast';
 import useTranslation from '@/hooks/useTranslation';
 
 import { isMobile } from '@/utils/common';
-import { formatPrompt } from '@/utils/promptVariable';
 
 import {
   ChatRole,
@@ -48,7 +47,6 @@ import DragUpload from '../DragUpload/DragUpload';
 import FilesPopover from '../Popover/FilesPopover';
 import FilePreview from '@/components/FilePreview/FilePreview';
 import PromptList from './PromptList';
-import VariableModal from './VariableModal';
 
 import { defaultFileConfig } from '@/apis/adminApis';
 import { getUserPromptDetail } from '@/apis/clientApis';
@@ -102,8 +100,6 @@ const ChatInput = ({
   const [showPromptList, setShowPromptList] = useState(false);
   const [activePromptIndex, setActivePromptIndex] = useState(0);
   const [promptInputValue, setPromptInputValue] = useState('');
-  const [variables, setVariables] = useState<string[]>([]);
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [isFullWriting, setIsFullWriting] = useState(false);
   const [isCollapsedByChat, setIsCollapsedByChat] = useState(false);
   const [textareaHeight, setTextareaHeight] = useState<number | 'full'>(TEXTAREA_MIN_HEIGHT);
@@ -393,64 +389,17 @@ const ChatInput = ({
     }
   };
 
-  const parseVariables = (content: string) => {
-    const regex = /{{(.*?)}}/g;
-    const foundVariables = [];
-    let match;
-
-    while ((match = regex.exec(content)) !== null) {
-      foundVariables.push(match[1]);
-    }
-
-    return foundVariables;
-  };
-
-  const handlePromptSelect = (prompt: Prompt) => {
-    const formatted = formatPrompt(prompt.content);
-    const parsedVariables = parseVariables(formatted);
-    onChangePrompt(prompt);
-    setVariables(parsedVariables);
-
-    if (parsedVariables.length > 0) {
-      setIsModalVisible(true);
-    } else {
-      const text = contentText?.replace(
-        PROMPT_TRIGGER_PATTERN,
-        () => formatted,
-      );
-      setContentText(text);
-
-      updatePromptListVisibility(formatted);
-    }
-  };
-
   const handleInitModal = (index?: number) => {
     const promptIndex = index ?? activePromptIndex;
     const selectedPrompt = filteredPrompts[promptIndex];
     selectedPrompt &&
       getUserPromptDetail(selectedPrompt.id).then((data) => {
-        setContentText((prevContent) => {
-          return prevContent?.replace(
-            PROMPT_TRIGGER_PATTERN,
-            () => data.content,
-          );
-        });
-        handlePromptSelect(data);
+        setContentText((prevContent) =>
+          prevContent.replace(PROMPT_TRIGGER_PATTERN, () => data.content),
+        );
+        onChangePrompt(data);
         setShowPromptList(false);
       });
-  };
-
-  const handleSubmit = (updatedVariables: string[]) => {
-    const newContent = contentText?.replace(/{{(.*?)}}/g, (_, variable) => {
-      const index = variables.indexOf(variable);
-      return updatedVariables[index];
-    });
-
-    setContentText(newContent);
-
-    if (textareaRef && textareaRef.current) {
-      textareaRef.current.focus();
-    }
   };
 
   const canUploadFile = () => {
@@ -874,14 +823,6 @@ const ChatInput = ({
                 </div>
               )}
 
-              {isModalVisible && (
-                <VariableModal
-                  prompt={filteredPrompts[activePromptIndex]}
-                  variables={variables}
-                  onSubmit={handleSubmit}
-                  onClose={() => setIsModalVisible(false)}
-                />
-              )}
             </div>
           </div>
         </div>

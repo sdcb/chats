@@ -9,23 +9,19 @@ import {
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { formatPrompt, PromptVariables } from '@/utils/promptVariable';
-
-import { AdminModelDto } from '@/types/adminApis';
 import { Prompt, PromptSlim } from '@/types/prompt';
 
 import { IconMessage } from '@/components/Icons';
 import PromptList from './PromptList';
-import VariableModal from './VariableModal';
 
 import { getUserPromptDetail } from '@/apis/clientApis';
 
 const TEXTAREA_MAX_HEIGHT = 300;
+const PROMPT_TRIGGER_PATTERN = /\/([^\s/]*)$/;
 
 interface Props {
   currentPrompt: string | null;
   prompts: PromptSlim[];
-  model: AdminModelDto;
   onChangePromptText: (prompt: string) => void;
   onChangePrompt: (prompt: Prompt) => void;
 }
@@ -33,26 +29,17 @@ interface Props {
 const SystemPrompt: FC<Props> = ({
   currentPrompt,
   prompts,
-  model,
   onChangePromptText,
   onChangePrompt,
 }) => {
   const { t } = useTranslation();
 
-  const [rawValue, setRawValue] = useState<string>(''); // 原始内容（未格式化）
+  const [rawValue, setRawValue] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false); // 编辑模式状态
   const [activePromptIndex, setActivePromptIndex] = useState(0);
   const [showPromptList, setShowPromptList] = useState(false);
   const [promptInputValue, setPromptInputValue] = useState('');
-  const [variables, setVariables] = useState<string[]>([]);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null); // 当前选中的prompt
   const [isScrollable, setIsScrollable] = useState(false);
-
-  // 获取渲染文本的函数
-  const getRenderedText = () => {
-    return formatPrompt(rawValue, { model });
-  };
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const promptListRef = useRef<HTMLUListElement | null>(null);
@@ -75,91 +62,36 @@ const SystemPrompt: FC<Props> = ({
     const selectedPrompt = filteredPrompts[promptIndex];
     selectedPrompt &&
       getUserPromptDetail(selectedPrompt.id).then((data) => {
-        setRawValue((prevContent: string) => {
-          return prevContent?.replace(/\/\w*$/, data.content);
-        });
-        handlePromptSelect(data);
-        setShowPromptList(false);
+        const updatedContent = rawValue.replace(
+          PROMPT_TRIGGER_PATTERN,
+          () => data.content,
+        );
+        setRawValue(updatedContent);
+        onChangePromptText(updatedContent);
         onChangePrompt(data);
+        setShowPromptList(false);
       });
   };
 
-  const parseVariables = (content: string) => {
-    const regex = /{{(.*?)}}/g;
-    const foundVariables = [];
-    let match;
-
-    while ((match = regex.exec(content)) !== null) {
-      foundVariables.push(match[1]);
-    }
-
-    // 过滤掉预定义的变量，只返回用户需要输入的变量
-    const predefinedVariableNames = Object.keys(PromptVariables).map(key => 
-      key.replace(/{{|}}/g, '')
-    );
-    
-    return foundVariables.filter(variable => 
-      !predefinedVariableNames.includes(variable)
-    );
-  };
-
   const updatePromptListVisibility = useCallback((text: string) => {
-    const match = text.match(/\/\w*$/);
+    const match = text.match(PROMPT_TRIGGER_PATTERN);
     if (match) {
       setShowPromptList(true);
-      setPromptInputValue(match[0].slice(1));
+      setPromptInputValue(match[1]);
+      setActivePromptIndex(0);
     } else {
       setShowPromptList(false);
       setPromptInputValue('');
+      setActivePromptIndex(0);
     }
   }, []);
-
-  const handlePromptSelect = (prompt: Prompt) => {
-    // 保存当前选中的prompt
-    setSelectedPrompt(prompt);
-    
-    // 解析变量时只考虑非预定义的变量
-    const parsedVariables = parseVariables(prompt.content);
-    setVariables(parsedVariables);
-
-    if (parsedVariables.length > 0) {
-      setIsModalVisible(true);
-    } else {
-      // 如果没有需要用户输入的变量，直接应用原始内容（保留预定义变量的占位符）
-      const updatedContent = rawValue?.replace(/\/\w*$/, prompt.content);
-
-      onChangePromptText(updatedContent);
-      setRawValue(updatedContent);
-
-      updatePromptListVisibility(prompt.content);
-    }
-  };
-
-  const handleSubmit = (updatedVariables: string[]) => {
-    const newContent = rawValue?.replace(/{{(.*?)}}/g, (_: string, variable: string) => {
-      const index = variables.indexOf(variable);
-      // 只替换用户自定义的变量，保持预定义变量的占位符不变
-      if (index !== -1) {
-        return updatedVariables[index];
-      } else {
-        // 保持预定义变量的占位符不变
-        return `{{${variable}}}`;
-      }
-    });
-
-    setRawValue(newContent);
-    onChangePromptText(newContent);
-
-    // 进入编辑模式以便用户继续编辑
-    setIsEditing(true);
-  };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (showPromptList) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         setActivePromptIndex((prevIndex) =>
-          prevIndex < prompts.length - 1 ? prevIndex + 1 : prevIndex,
+          prevIndex < filteredPrompts.length - 1 ? prevIndex + 1 : prevIndex,
         );
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
@@ -169,7 +101,7 @@ const SystemPrompt: FC<Props> = ({
       } else if (e.key === 'Tab') {
         e.preventDefault();
         setActivePromptIndex((prevIndex) =>
-          prevIndex < prompts.length - 1 ? prevIndex + 1 : 0,
+          prevIndex < filteredPrompts.length - 1 ? prevIndex + 1 : 0,
         );
       } else if (e.key === 'Enter') {
         e.preventDefault();
@@ -209,9 +141,7 @@ const SystemPrompt: FC<Props> = ({
     if (rawValue !== rawContent) {
       setRawValue(rawContent);
     }
-  }, [currentPrompt, model, rawValue]);
-
-  // 移除了模式切换的useEffect，因为displayValue现在是计算值
+  }, [currentPrompt, rawValue]);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -270,7 +200,7 @@ const SystemPrompt: FC<Props> = ({
           }}
           onClick={() => setIsEditing(true)}
         >
-          {getRenderedText() || (
+          {rawValue || (
             <span className="text-neutral-400">
               {t(`Enter a prompt or type "/" to select a prompt...`) || ''}
             </span>
@@ -288,15 +218,6 @@ const SystemPrompt: FC<Props> = ({
             promptListRef={promptListRef}
           />
         </div>
-      )}
-
-      {isModalVisible && selectedPrompt && (
-        <VariableModal
-          prompt={selectedPrompt}
-          variables={variables}
-          onSubmit={handleSubmit}
-          onClose={() => setIsModalVisible(false)}
-        />
       )}
     </div>
   );

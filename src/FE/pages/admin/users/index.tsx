@@ -11,8 +11,14 @@ import { GetUsersResult } from '@/types/adminApis';
 import { PageResult } from '@/types/page';
 
 import ExportButton from '@/components/Button/ExportButtom';
-import { IconPencil, IconRefresh, IconUserPlus } from '@/components/Icons';
+import {
+  IconKey,
+  IconPencil,
+  IconRefresh,
+  IconUserPlus,
+} from '@/components/Icons';
 import Tips from '@/components/Tips/Tips';
+import ChangeUserPasswordModal from '@/components/admin/Users/ChangeUserPasswordModal';
 import EditUserBalanceModal from '@/components/admin/Users/EditUserBalanceModel';
 import UserModal from '@/components/admin/Users/UserModal';
 import {
@@ -167,6 +173,7 @@ export default function Users() {
     edit: false,
     create: false,
     recharge: false,
+    password: false,
   });
   const [selectedUser, setSelectedUser] = useState<GetUsersResult | null>(null);
   const [users, setUsers] = useState<PageResult<GetUsersResult[]>>({
@@ -200,6 +207,7 @@ export default function Users() {
       edit: false,
       create: false,
       recharge: false,
+      password: false,
     });
     setSelectedUser(null);
   }, []);
@@ -373,6 +381,7 @@ export default function Users() {
       edit: false,
       create: true,
       recharge: false,
+      password: false,
     });
   };
 
@@ -382,6 +391,7 @@ export default function Users() {
       edit: true,
       create: false,
       recharge: false,
+      password: false,
     });
   };
 
@@ -391,6 +401,17 @@ export default function Users() {
       edit: false,
       create: false,
       recharge: true,
+      password: false,
+    });
+  };
+
+  const handleShowChangePasswordModal = (user: GetUsersResult) => {
+    setSelectedUser(user);
+    setIsOpenModal({
+      edit: false,
+      create: false,
+      recharge: false,
+      password: true,
     });
   };
 
@@ -537,19 +558,36 @@ export default function Users() {
         key: 'actions',
         title: t('Actions'),
         cell: (item) => (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            title={t('Edit User')}
-            onClick={(event) => {
-              event.stopPropagation();
-              handleShowEditModal(item);
-            }}
-          >
-            <IconPencil size={16} />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              aria-label={t('Edit User')}
+              title={t('Edit User')}
+              onClick={(event) => {
+                event.stopPropagation();
+                handleShowEditModal(item);
+              }}
+            >
+              <IconPencil size={16} />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              aria-label={t('Change Password')}
+              title={t('Change Password')}
+              onClick={(event) => {
+                event.stopPropagation();
+                handleShowChangePasswordModal(item);
+              }}
+            >
+              <IconKey size={16} />
+            </Button>
+          </div>
         ),
       },
     ],
@@ -758,7 +796,7 @@ export default function Users() {
                         </div>
                       </div>
                     ))}
-                  <div className="flex justify-end gap-2 pt-2">
+                  <div className="flex flex-wrap justify-end gap-2 pt-2">
                     <Button
                       type="button"
                       variant="ghost"
@@ -775,6 +813,15 @@ export default function Users() {
                     >
                       <IconPencil size={14} className="mr-1" />
                       {t('Edit User')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleShowChangePasswordModal(item)}
+                    >
+                      <IconKey size={14} className="mr-1" />
+                      {t('Change Password')}
                     </Button>
                   </div>
                 </div>
@@ -796,6 +843,12 @@ export default function Users() {
         userId={selectedUser?.id}
         userBalance={selectedUser?.balance}
         isOpen={isOpenModal.recharge}
+      />
+      <ChangeUserPasswordModal
+        user={selectedUser}
+        onSuccessful={handleSuccessful}
+        onClose={handleClose}
+        isOpen={isOpenModal.password}
       />
     </>
   );

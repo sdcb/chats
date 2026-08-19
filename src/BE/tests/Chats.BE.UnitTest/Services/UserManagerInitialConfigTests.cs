@@ -57,7 +57,7 @@ public sealed class UserManagerInitialConfigTests
         McpServer server = new()
         {
             Id = 7,
-            Label = "test",
+            Name = "test",
             Url = "https://example.com/mcp",
             OwnerUserId = 1,
             CreatedAt = DateTime.UtcNow,

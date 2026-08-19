@@ -1,24 +1,6 @@
 import { ChatSpanStatus, ChatStatus, IChat } from '@/types/chat';
 import { IChatMessage } from '@/types/chatMessage';
 
-export function preprocessLaTeX(content?: string) {
-  if (!content) {
-    return '';
-  }
-  // Replace block-level LaTeX delimiters \[ \] with $$ $$
-
-  const blockProcessedContent = content.replace(
-    /\\\[(.*?)\\\]/gs,
-    (_, equation) => `$$${equation}$$`,
-  );
-  // Replace inline LaTeX delimiters \( \) with $ $
-  const inlineProcessedContent = blockProcessedContent.replace(
-    /\\\((.*?)\\\)/gs,
-    (_, equation) => `$${equation}$`,
-  );
-  return inlineProcessedContent;
-}
-
 export const chatsGroupByUpdatedAt = (data: IChat[]): Map<string, IChat[]> => {
   const groupedData = new Map<string, IChat[]>();
   const now = new Date();

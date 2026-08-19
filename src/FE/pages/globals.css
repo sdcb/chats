@@ -217,6 +217,11 @@ select:focus {
   margin     : .2em 0 !important;
 }
 
+.prose > .md-p + h1,
+.prose > .md-p + h2 {
+  margin-top: .8em !important;
+}
+
 .prose img {
   margin: .2em 0 !important;
 }

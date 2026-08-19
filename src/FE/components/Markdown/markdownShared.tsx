@@ -1,7 +1,4 @@
 import { ReactNode } from 'react';
-
-import { CodeBlock } from './CodeBlock';
-
 import type { Components as MarkdownComponents } from 'react-markdown';
 import type {
   CodeProps,
@@ -10,29 +7,17 @@ import type {
   TableHeaderCellProps,
 } from 'react-markdown/lib/ast-to-react';
 
-const INLINE_MATH_REGEX = /(^|[^\\])\$[^$\n]+\$/;
+import { CodeBlock } from './CodeBlock';
+
 const BLOCK_MATH_REGEX = /(^|[^\\])\$\$[\s\S]+?\$\$/;
-const KATEX_ESCAPE_REGEX = /\\\(|\\\)|\\\[|\\\]/;
 
-export const hasMathMarkdown = (value: string) =>
-  KATEX_ESCAPE_REGEX.test(value) ||
-  BLOCK_MATH_REGEX.test(value) ||
-  INLINE_MATH_REGEX.test(value);
-
-export const appendStreamingCursor = (
-  value: string,
-  showCursor: boolean,
-) => `${value}${showCursor ? '▍' : ''}`;
+export const hasMathMarkdown = (value: string) => BLOCK_MATH_REGEX.test(value);
 
 export const markdownComponents = {
   pre({ children }: ReactMarkdownProps) {
     return <div className="not-prose my-2">{children}</div>;
   },
   code({ className, inline, children, ...props }: CodeProps) {
-    if (children.length && children[0] == '▍') {
-      return <span className="mt-1 animate-pulse cursor-default">▍</span>;
-    }
-
     const match = /language-(\w+)/.exec(className || '');
 
     return !inline ? (

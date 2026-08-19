@@ -18,18 +18,18 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 22+ 主流 
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
-## 🆕 最新版本（1.14.0）
+## 🆕 最新版本（1.15.0）
 
-- 📅 发布日期：2026-08-13
-- 🧊 上下文快照：分离用户原文与模型上下文，冻结时间、模型和 Code Interpreter 等动态信息
-- 🌐 系统预设：管理员可维护对所有用户可见的预设模型组，普通用户可应用和克隆
-- 👤 用户管理：增强 SSO Sub、密码重置、API Key 权限和账号初始配置管理
-- 🧩 MCP 稳定性：支持同名工具的确定性别名，并以聊天级接口原子更新快捷开关
-- 🔁 请求重试：文本模型在首段输出前自动重试 408、429、常见 5xx 和网络瞬态错误
-- 🛠️ Provider 修复：改进 OpenAI 兼容流式工具调用、DeepSeek 多轮工具调用和 Anthropic 并行工具结果
-- ⬆️ 升级重点：SQL Server 和 SQLite 部署需运行对应的 `1.14.0` 数据库迁移脚本
+- 📅 发布日期：2026-08-19
+- 📝 Prompt 收敛：保留 Prompt 管理和 `/xxx` 快捷选择，选中内容原样插入，并移除所有 `{{...}}` 变量替换
+- 🧩 MCP 元数据：分离协议名称与显示名称，支持工具元数据编辑和四个 annotation hint 同步
+- ⚡ MCP 执行优化：只读工具最多四个并行，幂等失败有限重试，并保持调用顺序稳定
+- 🧰 工具调用展示：并行工具独立展开，参数和 progress 期间保持展开，完成后延时收起
+- 🧠 Responses 推理回传：保留 reasoning signature 边界及 reasoning/tool/message 原始顺序，避免密文拼接错误
+- 👥 MCP 用户分配：紧凑四列表格、长用户名省略、多行 JSON 请求头和可用用户列表即时更新
+- ⬆️ 升级重点：SQL Server 和 SQLite 部署需运行对应的 `1.15.0` 数据库迁移脚本
 
-👉 [查看 1.14.0 发布说明](./doc/zh-CN/release-notes/1.14.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
+👉 [查看 1.15.0 发布说明](./doc/zh-CN/release-notes/1.15.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
 
 ## 快速开始
 
@@ -77,7 +77,7 @@ Chats 使用 `C#`/`TypeScript` 开发，以下是完整的文档资源：
 
 - **GitHub Issues**：[https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
 - **QQ 群**：498452653 [![加入QQ群](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=flat&logo=tencent-qq)](https://qm.qq.com/q/AM8tY9cAsS)
-- **微信群** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0813) 如果微信群已满，请加 QQ 群获取临时入群二维码。
+- **微信群** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0819) 如果微信群已满，请加 QQ 群获取临时入群二维码。
 
 ---
 

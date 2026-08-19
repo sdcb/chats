@@ -1,3 +1,4 @@
+using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.Services;
 using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models;
@@ -5,6 +6,7 @@ using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
 using Chats.BE.Services.UrlEncryption;
 using Chats.DB;
+using Chats.DB.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,11 +17,52 @@ public sealed class ChatServiceVisionFilterTests
 {
     private sealed class TestChatService : ChatService
     {
+        public ChatRequest? CapturedRequest { get; private set; }
+
         public override IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, CancellationToken cancellationToken)
-            => throw new NotImplementedException();
+        {
+            CapturedRequest = request;
+            return EmptySegments();
+        }
 
         public Task<IList<NeutralMessage>> FilterAsync(bool supportsVisionLink, bool allowVision, IList<NeutralMessage> messages, FileUrlProvider fup, CancellationToken cancellationToken)
             => RewriteVisionMessages(supportsVisionLink, allowVision, messages, fup, cancellationToken);
+
+        private static async IAsyncEnumerable<ChatSegment> EmptySegments()
+        {
+            await Task.CompletedTask;
+            yield break;
+        }
+    }
+
+    [Fact]
+    public async Task ChatEntry_WebChatSystemPrompt_PreservesTemplateLikeText()
+    {
+        const string systemPrompt = "{{CURRENT_DATE}} {{CURRENT_TIME}} {{MODEL_NAME}} {{name}}";
+        ModelSnapshot modelSnapshot = new()
+        {
+            Name = "Test model",
+            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+        };
+        Model model = new()
+        {
+            CurrentSnapshot = modelSnapshot,
+        };
+        modelSnapshot.Model = model;
+        ChatRequest request = new()
+        {
+            Messages = [NeutralMessage.FromUserText("Hello")],
+            System = NeutralSystemMessage.FromText(systemPrompt),
+            ChatConfig = new ChatConfig { Model = model },
+            Source = UsageSource.WebChat,
+        };
+        TestChatService service = new();
+
+        await foreach (ChatSegment _ in service.ChatEntry(request, null!, CancellationToken.None))
+        {
+        }
+
+        Assert.Equal(systemPrompt, service.CapturedRequest?.GetEffectiveSystemPrompt());
     }
 
     private static FileUrlProvider CreateFileUrlProvider()

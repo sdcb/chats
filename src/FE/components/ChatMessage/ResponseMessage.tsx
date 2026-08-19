@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import useTranslation from '@/hooks/useTranslation';
 import useMathCopy from '@/hooks/useMathCopy';
 
-import { isChatting, preprocessLaTeX } from '@/utils/chats';
+import { isChatting } from '@/utils/chats';
 import { copyTextToClipboard } from '@/utils/clipboard';
 
 import {
@@ -20,12 +20,8 @@ import {
 import { IChatMessage, IStep, getMessageContents } from '@/types/chatMessage';
 
 import { loadComponentOnce } from '@/components/common/loadComponentOnce';
-import LightMarkdown from '@/components/Markdown/LightMarkdown';
-import {
-  MarkdownLoadingFallback,
-  appendStreamingCursor,
-  hasMathMarkdown,
-} from '@/components/Markdown/markdownShared';
+import MarkdownRenderer from '@/components/Markdown/MarkdownRenderer';
+import { MarkdownLoadingFallback } from '@/components/Markdown/markdownShared';
 import ImagePreview from '@/components/ImagePreview/ImagePreview';
 import FilePreview from '@/components/FilePreview/FilePreview';
 import StepInfoBubble from './StepInfoBubble';
@@ -38,22 +34,10 @@ import { Textarea } from '../ui/textarea';
 
 import { cn } from '@/lib/utils';
 
-interface DeferredMarkdownProps {
-  className?: string;
-  content: string;
-}
-
-const RichMarkdown = loadComponentOnce<DeferredMarkdownProps>({
-  cacheKey: 'Markdown/RichMarkdown',
-  loader: () => import('@/components/Markdown/RichMarkdown').then((mod) => mod.default),
-  renderFallback: () => <MarkdownLoadingFallback />,
-});
-
 const ToolCallBlock = loadComponentOnce<{
   toolCall: ToolCallContent;
   toolResponse?: ToolResponseContent;
   chatStatus?: ChatSpanStatus;
-  nextMessageContentStarted?: boolean;
 }>({
   cacheKey: 'Markdown/ToolCallBlock',
   loader: () => import('@/components/Markdown/ToolCallBlock').then((mod) => mod.default),
@@ -230,18 +214,12 @@ const ResponseMessage = (props: Props) => {
     const { toolCall, toolResponse } = toolGroup;
     const showStepInfo = showPerStepActions && stepInfo?.isLastInStep && !stepInfo.step.edited && stepInfo.step.id;
 
-    // 用于驱动 ToolCallBlock 的“自动收起”行为：
-    // 在该 toolGroup 之后有任何内容（包括另一个 toolGroup）时，自动收起。
-    const processedIndex = processedContent.findIndex((c) => c === toolGroup);
-    const nextMessageContentStarted = processedIndex >= 0 && processedIndex + 1 < processedContent.length;
-
     return (
       <div key={`tool-group-${index}`} className={cn("relative group/item", index > 0 ? "my-1" : "")}>
         <ToolCallBlock
           toolCall={toolCall}
           toolResponse={toolResponse}
           chatStatus={messageStatus}
-          nextMessageContentStarted={nextMessageContentStarted}
         />
         {showStepInfo && (
           <div className={cn(
@@ -533,25 +511,19 @@ const ResponseMessage = (props: Props) => {
                     </div>
                   ) : (
                     (() => {
-                      const renderedMarkdown = appendStreamingCursor(
-                        preprocessLaTeX(c.c!),
+                      const showCursor =
                         (messageStatus === ChatSpanStatus.Pending ||
                           messageStatus === ChatSpanStatus.Chatting) &&
-                          index === processedContent.length - 1 &&
-                          c.$type === MessageContentType.text,
-                      );
+                        index === processedContent.length - 1 &&
+                        c.$type === MessageContentType.text;
                       const markdownClassName =
                         'prose dark:prose-invert [--tw-prose-body:#000] [--tw-prose-headings:#000] leading-4 font-normal prose-p:text-sm prose-p:leading-4 prose-p:font-normal prose-li:text-sm prose-li:leading-4 prose-li:font-normal';
 
-                      return hasMathMarkdown(c.c ?? '') ? (
-                        <RichMarkdown
+                      return (
+                        <MarkdownRenderer
                           className={markdownClassName}
-                          content={renderedMarkdown}
-                        />
-                      ) : (
-                        <LightMarkdown
-                          className={markdownClassName}
-                          content={renderedMarkdown}
+                          content={c.c!}
+                          showCursor={showCursor}
                         />
                       );
                     })()

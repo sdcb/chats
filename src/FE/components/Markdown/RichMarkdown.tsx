@@ -9,13 +9,15 @@ import { MemoizedReactMarkdown } from './MemoizedReactMarkdown';
 import { ensureKatexStylesLoaded } from './katexAssetLoader';
 import { rehypeKatexDataMath } from './rehypeKatexWithCopy';
 import { markdownComponents } from './markdownShared';
+import { rehypeStreamingCursor } from './rehypeStreamingCursor';
 
 interface RichMarkdownProps {
   className?: string;
   content: string;
+  showCursor?: boolean;
 }
 
-const RichMarkdown: FC<RichMarkdownProps> = ({ className, content }) => {
+const RichMarkdown: FC<RichMarkdownProps> = ({ className, content, showCursor }) => {
   useEffect(() => {
     void ensureKatexStylesLoaded().catch((error) => {
       console.error('Failed to load KaTeX assets:', error);
@@ -24,9 +26,18 @@ const RichMarkdown: FC<RichMarkdownProps> = ({ className, content }) => {
 
   return (
     <MemoizedReactMarkdown
+      key={showCursor ? 'streaming' : 'complete'}
       className={className}
-      remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
-      rehypePlugins={[rehypeKatex as any, rehypeKatexDataMath]}
+      remarkPlugins={[
+        [remarkMath, { singleDollarTextMath: false }],
+        remarkGfm,
+        remarkBreaks,
+      ]}
+      rehypePlugins={[
+        rehypeKatex as any,
+        rehypeKatexDataMath,
+        [rehypeStreamingCursor, { enabled: showCursor }],
+      ]}
       components={markdownComponents}
     >
       {content}

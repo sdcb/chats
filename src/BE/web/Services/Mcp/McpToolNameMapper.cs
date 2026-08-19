@@ -11,40 +11,24 @@ public static class McpToolNameMapper
         IEnumerable<string> reservedNames)
     {
         McpTool[] orderedTools = [.. tools
-            .OrderBy(x => x.McpServerId)
+            .OrderBy(x => x.McpServer.Name, StringComparer.Ordinal)
             .ThenBy(x => x.ToolName, StringComparer.Ordinal)
             .ThenBy(x => x.Id)];
         HashSet<string> reserved = new(reservedNames, StringComparer.Ordinal);
-        Dictionary<string, int> counts = orderedTools
-            .GroupBy(x => x.ToolName, StringComparer.Ordinal)
-            .ToDictionary(x => x.Key, x => x.Count(), StringComparer.Ordinal);
-
         HashSet<string> usedNames = new(reserved, StringComparer.Ordinal);
-        foreach (McpTool tool in orderedTools)
-        {
-            if (counts[tool.ToolName] == 1 && !reserved.Contains(tool.ToolName))
-            {
-                usedNames.Add(tool.ToolName);
-            }
-        }
 
         List<McpToolNameMapping> mappings = [];
         foreach (McpTool tool in orderedTools)
         {
-            string exposedName;
-            if (counts[tool.ToolName] == 1 && !reserved.Contains(tool.ToolName))
+            string exposedName = McpProtocolName.BuildExposedToolName(tool.McpServer.Name, tool.ToolName);
+            if (!McpProtocolName.IsValidExposedToolName(exposedName))
             {
-                exposedName = tool.ToolName;
+                throw new InvalidOperationException(
+                    $"MCP tool '{tool.ToolName}' on server '{tool.McpServer.Name}' produces invalid protocol name '{exposedName}'.");
             }
-            else
+            if (!usedNames.Add(exposedName))
             {
-                string baseName = $"mcp_{tool.McpServerId}_{tool.ToolName}";
-                exposedName = baseName;
-                int suffix = 2;
-                while (!usedNames.Add(exposedName))
-                {
-                    exposedName = $"{baseName}_{suffix++}";
-                }
+                throw new InvalidOperationException($"MCP tool protocol name '{exposedName}' is duplicated or reserved.");
             }
 
             mappings.Add(new McpToolNameMapping(tool, exposedName));

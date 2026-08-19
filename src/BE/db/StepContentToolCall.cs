@@ -21,6 +21,9 @@ public partial class StepContentToolCall
 
     public string Parameters { get; set; } = null!;
 
+    [StringLength(200)]
+    public string? DisplayName { get; set; }
+
     [ForeignKey("Id")]
     [InverseProperty("StepContentToolCall")]
     public virtual StepContent IdNavigation { get; set; } = null!;

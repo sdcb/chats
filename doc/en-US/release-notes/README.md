@@ -7,7 +7,23 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.14.0](1.14.0.md) - 2026-08-13 ⭐ Latest Release
+## [1.15.0](1.15.0.md) - 2026-08-19 ⭐ Latest Release
+
+**Core Highlights**: Prompt convergence to plain-text shortcuts · MCP Server/tool metadata and parallel retries · independent parallel tool-call expansion and completion collapse · compact MCP user assignment · removal of the legacy retry setting · .NET dependency security updates
+
+- 📝 **Prompt Convergence**: Prompt management and `/xxx` shortcuts remain, while selected content is inserted verbatim and all `{{...}}` substitutions are removed
+- 🧩 **MCP Metadata**: separates protocol and display names, adds editable tool metadata, and synchronizes four annotation hints
+- ⚡ **MCP Execution**: read-only tools run in batches of up to four, with bounded retries for idempotent failures and stable call ordering
+- 🧰 **Tool-Call UX**: keeps tools expanded during streamed arguments/progress, delays completion collapse, and supports independent parallel cards
+- 🧠 **Responses Reasoning**: preserves reasoning signature boundaries and original reasoning/tool/message order to prevent corrupted encrypted content
+- 👥 **MCP User Assignment**: compact four-column layout, long-name truncation, multiline JSON headers, and immediate available-list updates
+- 📦 **Dependency Maintenance**: upgrades .NET, EF Core, Npgsql, Playwright, AWS S3 SDK, and test SDK, while removing the redundant SQLite native-library reference
+
+[View Full Release Notes →](1.15.0.md)
+
+---
+
+## [1.14.0](1.14.0.md) - 2026-08-13
 
 **Core Highlights**: user text and model context separation · system preset model groups · enhanced administrator and initial account configuration · reliable MCP tool naming and shortcuts · transient model request retries
 
@@ -345,5 +361,5 @@ Starting from 1.0.0, Chats follows Semantic Versioning:
 ---
 
 <p align="center">
-  <sub>Last updated: 2026-08-13</sub>
+  <sub>Last updated: 2026-08-19</sub>
 </p>

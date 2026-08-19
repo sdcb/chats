@@ -18,18 +18,18 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 
 <img alt="chats-en" src="https://github.com/user-attachments/assets/40d2376e-58a0-4309-a2f5-5ed8262a0c2e" />
 
-## 🆕 Latest Release (1.14.0)
+## 🆕 Latest Release (1.15.0)
 
-- 📅 Release Date: 2026-08-13
-- 🧊 Context snapshots: separates original user text from model context and freezes dynamic time, model, and Code Interpreter information
-- 🌐 System presets: administrators can maintain preset model groups visible to every user, while regular users can apply and clone them
-- 👤 User management: expands SSO Sub, password reset, API Key permission, and initial account configuration controls
-- 🧩 MCP reliability: provides deterministic aliases for duplicate tool names and atomically updates chat-level shortcut associations
-- 🔁 Request retries: retries 408, 429, common 5xx responses, and transient network errors before the first text output
-- 🛠️ Provider fixes: improves OpenAI-compatible streaming tool calls, DeepSeek multi-turn tool calls, and Anthropic parallel tool results
-- ⬆️ Upgrade focus: SQL Server and SQLite deployments must run the corresponding `1.14.0` database migration
+- 📅 Release Date: 2026-08-19
+- 📝 Prompt convergence: keeps Prompt management and `/xxx` shortcuts, inserts selected content verbatim, and removes all `{{...}}` substitutions
+- 🧩 MCP metadata: separates protocol/display names, supports editable tool metadata, and synchronizes four annotation hints
+- ⚡ MCP execution: runs up to four read-only tools in parallel, retries idempotent failures within bounds, and preserves call order
+- 🧰 Tool-call UX: expands parallel tools independently, stays open during streamed arguments/progress, and collapses after completion
+- 🧠 Responses reasoning: preserves reasoning signature boundaries and original reasoning/tool/message order to prevent corrupted encrypted content
+- 👥 MCP user assignment: compact four-column table, long-name truncation, multiline JSON headers, and immediate available-list updates
+- ⬆️ Upgrade focus: SQL Server and SQLite deployments must run the corresponding `1.15.0` database migration
 
-👉 [View 1.14.0 Release Notes](./doc/en-US/release-notes/1.14.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
+👉 [View 1.15.0 Release Notes](./doc/en-US/release-notes/1.15.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
 
 ## Quick Start
 
@@ -77,7 +77,7 @@ Please submit issues or suggestions via [GitHub Issues](https://github.com/sdcb/
 
 - **GitHub Issues**: [https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
 - **QQ Group**: 498452653 [![Join QQ Group](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=flat&logo=tencent-qq)](https://qm.qq.com/q/AM8tY9cAsS)
-- **WeChat Group** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0813) If the WeChat group is full, please join the QQ group to get a temporary invitation QR code.
+- **WeChat Group** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0819) If the WeChat group is full, please join the QQ group to get a temporary invitation QR code.
 
 ---
 

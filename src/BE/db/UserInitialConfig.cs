@@ -30,9 +30,9 @@ public partial class UserInitialConfig
 
     public int? InvitationCodeId { get; set; }
 
-    public bool ApiKeyEnabled { get; set; }
-
     public string Mcps { get; set; } = null!;
+
+    public bool ApiKeyEnabled { get; set; }
 
     [ForeignKey("InvitationCodeId")]
     [InverseProperty("UserInitialConfigs")]

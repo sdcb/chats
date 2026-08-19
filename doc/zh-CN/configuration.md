@@ -45,7 +45,7 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 | [`RequestTraceCleanup:Enabled`](#92-requesttracecleanupenabled)                                                                  | `true`                                  | 控制定时自动删除是否启用    |
 | [`JwtValidPeriod`](#71-jwtvalidperiod)                                                                                           | `1.00:00:00`                            | 1天，JWT有效期              |
 | [`JwtSecretKey`](#72-jwtsecretkey)                                                                                               | `null`                                  | 生产环境建议设置稳定密钥    |
-| [`Chat:Retry429Times`](#81-chatretry429times)                                                                                    | `5`                                     | HTTP 429重试次数            |
+| [`Chat:MaxTransientRetries`](#81-chatmaxtransientretries)                                                                        | `5`                                     | 模型请求瞬态错误重试次数    |
 
 ---
 
@@ -350,18 +350,20 @@ Chats 基于 .NET 配置系统读取配置，优先级从高到低为：
 
 ## 8. 聊天请求重试
 
-### 8.1 `Chat:Retry429Times`
+### 8.1 `Chat:MaxTransientRetries`
 
 - **类型**：整数
 - **默认值**：`5`
-- **用途**：当上游模型服务返回 HTTP 429（限流）时的重试次数。
+- **用途**：控制文本模型请求在瞬态上游故障后的最大重试次数。
 - **行为说明**：
-  - 仅在“本次请求尚未产生任何输出片段（还没开始流式返回）”时才会触发重试。
+  - 可重试 HTTP 状态码为 408、429、500、502、503 和 504。
+  - 网络错误、I/O 错误和非用户主动取消导致的内部超时也会重试。
+  - 仅在本次请求尚未产生任何输出片段时重试，避免产生重复输出。
   - 采用指数退避：1s、2s、4s、8s……最大 30s，并带 0~250ms 随机抖动。
-  - 配置为 `0` 或不配置（为 `null`）则不进行 429 重试。
+  - 配置为 `0` 可禁用重试；负数会按 `0` 处理；不配置时使用默认值 `5`。
 
-- **环境变量写法**：`Chat__Retry429Times=5`
-- **命令行写法**：`--Chat:Retry429Times=5`
+- **环境变量写法**：`Chat__MaxTransientRetries=5`
+- **命令行写法**：`--Chat:MaxTransientRetries=5`
 
 ---
 

@@ -48,6 +48,7 @@ public abstract record ContentResponseItem
             {
                 Id = encryptedMessageContentId,
                 Name = content.StepContentToolCall!.Name,
+                DisplayName = content.StepContentToolCall!.DisplayName,
                 ToolCallId = content.StepContentToolCall!.ToolCallId!,
                 Parameters = CreateToolCallPresentation(content.StepContentToolCall),
             },
@@ -110,6 +111,9 @@ public record ToolCallingResponseItem : ContentResponseItem
 
     [JsonPropertyName("n")]
     public required string Name { get; init; }
+
+    [JsonPropertyName("d")]
+    public string? DisplayName { get; init; }
 
     [JsonPropertyName("p")]
     public required string Parameters { get; init; }

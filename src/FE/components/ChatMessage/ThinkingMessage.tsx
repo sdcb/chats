@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { preprocessLaTeX } from '@/utils/chats';
 import {
   getCachedStepGenerateInfo,
   requestStepGenerateInfo,
@@ -13,24 +12,10 @@ import {
 import { ChatStatus } from '@/types/chat';
 import { IStepGenerateInfo, ResponseMessageTempId } from '@/types/chatMessage';
 
-import { loadComponentOnce } from '@/components/common/loadComponentOnce';
-import LightMarkdown from '@/components/Markdown/LightMarkdown';
-import {
-  MarkdownLoadingFallback,
-  appendStreamingCursor,
-  hasMathMarkdown,
-} from '@/components/Markdown/markdownShared';
+import MarkdownRenderer from '@/components/Markdown/MarkdownRenderer';
+import { MarkdownLoadingFallback } from '@/components/Markdown/markdownShared';
 
 import { IconChevronRight, IconThink } from '../Icons';
-
-const RichMarkdown = loadComponentOnce<{
-  className?: string;
-  content: string;
-}>({
-  cacheKey: 'Markdown/RichMarkdown',
-  loader: () => import('@/components/Markdown/RichMarkdown').then((mod) => mod.default),
-  renderFallback: () => <MarkdownLoadingFallback />,
-});
 
 interface Props {
   readonly?: boolean;
@@ -204,15 +189,11 @@ const ThinkingMessage = (props: Props) => {
         <div className="overflow-hidden">
           <div className="px-2 text-gray-400 text-sm mt-2">
             {(() => {
-              const renderedMarkdown = appendStreamingCursor(
-                preprocessLaTeX(content!),
-                finished === false,
-              );
-
-              return hasMathMarkdown(content ?? '') ? (
-                <RichMarkdown content={renderedMarkdown} />
-              ) : (
-                <LightMarkdown content={renderedMarkdown} />
+              return (
+                <MarkdownRenderer
+                  content={content!}
+                  showCursor={finished === false}
+                />
               );
             })()}
           </div>

@@ -78,7 +78,6 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
       <SystemPrompt
         currentPrompt={systemPrompt}
         prompts={prompts}
-        model={model}
         onChangePromptText={onChangePromptText}
         onChangePrompt={onChangePrompt}
       />

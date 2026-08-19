@@ -633,6 +633,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             Index = 100000,
             Id = callId,
             Name = "web_search_call",
+            IsCompleted = true,
             Arguments = new JsonObject
             {
                 ["type"] = "web_search_call",
