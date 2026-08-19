@@ -1,5 +1,4 @@
 import { useContext, useState } from 'react';
-import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
 
@@ -261,10 +260,6 @@ const ChatHeader = () => {
                             (!span.enabled || !modelAvailable) && 'opacity-50',
                           )}
                           onClick={() => {
-                            if (!modelAvailable) {
-                              toast.error(t('Model not available'));
-                              return;
-                            }
                             setSelectedSpanId(span.spanId);
                           }}
                         >
@@ -316,10 +311,6 @@ const ChatHeader = () => {
                                 !span.enabled && 'opacity-50',
                               )}
                               onClick={() => {
-                                if (!modelAvailable) {
-                                  toast.error(t('Model not available'));
-                                  return;
-                                }
                                 setSelectedSpanId(span.spanId);
                               }}
                             >

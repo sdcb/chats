@@ -49,9 +49,9 @@ public partial class ChatConfig
             }
         }
 
-        // 1. ModelId: short 型 2 字节
+        // 1. ModelId: short 型 2 字节；null 使用保留值，保持已有非空 ModelId 的哈希不变
         Span<byte> shortBuffer = stackalloc byte[2];
-        BitConverter.TryWriteBytes(shortBuffer, ModelId);
+        BitConverter.TryWriteBytes(shortBuffer, ModelId ?? short.MinValue);
         AppendField(shortBuffer);
 
         // 2. SystemPrompt：先写入字符个数（int 4字节）

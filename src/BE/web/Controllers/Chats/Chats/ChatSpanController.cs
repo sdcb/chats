@@ -283,7 +283,12 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
             return NotFound();
         }
 
-        HashSet<short> requiredModelIds = [.. preset.ChatPresetSpans.Select(x => x.ChatConfig.ModelId)];
+        if (preset.ChatPresetSpans.Any(x => !x.ChatConfig.ModelId.HasValue))
+        {
+            return BadRequest("Not all models available");
+        }
+
+        HashSet<short> requiredModelIds = [.. preset.ChatPresetSpans.Select(x => x.ChatConfig.ModelId!.Value)];
         Dictionary<short, UserModel> userModels = await userModelManager.GetUserModels(currentUser.Id, requiredModelIds, cancellationToken);
         if (userModels.Count != requiredModelIds.Count)
         {
@@ -327,7 +332,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
             if (existingSpan != null && toUpdate != null)
             {
                 // update existing span
-                toUpdate.ApplyTo(existingSpan, userModels[toUpdate.ChatConfig.ModelId].Model);
+                toUpdate.ApplyTo(existingSpan, userModels[toUpdate.ChatConfig.ModelId!.Value].Model);
             }
             else if (existingSpan != null)
             {
@@ -341,7 +346,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
             else if (toUpdate != null)
             {
                 // insert new span
-                chat.ChatSpans.Add(toUpdate.ToChatSpan(userModels[toUpdate.ChatConfig.ModelId].Model, spanId));
+                chat.ChatSpans.Add(toUpdate.ToChatSpan(userModels[toUpdate.ChatConfig.ModelId!.Value].Model, spanId));
             }
         }
         if (db.ChangeTracker.HasChanges())

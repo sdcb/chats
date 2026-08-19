@@ -34,8 +34,8 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     Enabled = span.Enabled,
                     SystemPrompt = span.ChatConfig.SystemPrompt,
                     ModelId = span.ChatConfig.ModelId,
-                    ModelName = span.ChatConfig.Model.CurrentSnapshot.Name,
-                    ModelProviderId = span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
+                    ModelName = span.ChatConfig.Model == null ? null : span.ChatConfig.Model.CurrentSnapshot.Name,
+                    ModelProviderId = span.ChatConfig.Model == null ? null : span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
                     Temperature = span.ChatConfig.Temperature,
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
@@ -88,8 +88,8 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     Enabled = span.Enabled,
                     SystemPrompt = span.ChatConfig.SystemPrompt,
                     ModelId = span.ChatConfig.ModelId,
-                    ModelName = span.ChatConfig.Model.CurrentSnapshot.Name,
-                    ModelProviderId = span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
+                    ModelName = span.ChatConfig.Model == null ? null : span.ChatConfig.Model.CurrentSnapshot.Name,
+                    ModelProviderId = span.ChatConfig.Model == null ? null : span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
                     Temperature = span.ChatConfig.Temperature,
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
@@ -135,8 +135,8 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     Enabled = span.Enabled,
                     SystemPrompt = span.ChatConfig.SystemPrompt,
                     ModelId = span.ChatConfig.ModelId,
-                    ModelName = span.ChatConfig.Model.CurrentSnapshot.Name,
-                    ModelProviderId = span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
+                    ModelName = span.ChatConfig.Model == null ? null : span.ChatConfig.Model.CurrentSnapshot.Name,
+                    ModelProviderId = span.ChatConfig.Model == null ? null : span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
                     Temperature = span.ChatConfig.Temperature,
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
@@ -193,7 +193,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             .Where(x => x.UserId == currentUser.Id && !x.IsArchived && x.ChatSpans.Any())
             .OrderByDescending(x => x.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
-        if (lastChat != null && lastChat.ChatSpans.All(cs => validModels.ContainsKey(cs.ChatConfig.ModelId)))
+        if (lastChat != null && lastChat.ChatSpans.All(cs => cs.ChatConfig.ModelId.HasValue && validModels.ContainsKey(cs.ChatConfig.ModelId.Value)))
         {
             chat.ChatSpans = [.. lastChat.ChatSpans.Select((cs, i) =>
             {
@@ -204,7 +204,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     SpanId = (byte)i,
                 };
                 newCs.ChatConfig.Id = 0;
-                newCs.ChatConfig.Model = validModels[cs.ChatConfig.ModelId].Model;
+                newCs.ChatConfig.Model = validModels[cs.ChatConfig.ModelId!.Value].Model;
                 return newCs;
             })];
         }

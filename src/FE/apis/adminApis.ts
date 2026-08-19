@@ -163,7 +163,7 @@ export const putModels = (
   });
 };
 
-export const deleteModels = (id: number): Promise<any> => {
+export const deleteModels = (id: number): Promise<void> => {
   const fetchService = createFetchClient();
   return fetchService.delete(`/api/admin/models/${id}`);
 };

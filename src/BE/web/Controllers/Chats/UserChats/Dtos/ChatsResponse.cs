@@ -69,13 +69,13 @@ public record ChatSpanDto
     public required string? SystemPrompt { get; init; }
 
     [JsonPropertyName("modelId")]
-    public required int ModelId { get; init; }
+    public required int? ModelId { get; init; }
 
     [JsonPropertyName("modelName")]
-    public required string ModelName { get; init; }
+    public required string? ModelName { get; init; }
 
     [JsonPropertyName("modelProviderId")]
-    public required short ModelProviderId { get; init; }
+    public required short? ModelProviderId { get; init; }
 
     [JsonPropertyName("temperature")]
     public required float? Temperature { get; init; }
@@ -113,8 +113,8 @@ public record ChatSpanDto
         Enabled = span.Enabled,
         SystemPrompt = span.ChatConfig.SystemPrompt,
         ModelId = span.ChatConfig.ModelId,
-        ModelName = span.ChatConfig.Model.CurrentSnapshot.Name,
-        ModelProviderId = span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
+        ModelName = span.ChatConfig.Model?.CurrentSnapshot.Name,
+        ModelProviderId = span.ChatConfig.Model?.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
         Temperature = span.ChatConfig.Temperature,
         WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
         CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
@@ -138,8 +138,8 @@ public record ChatSpanDto
         Enabled = span.Enabled,
         SystemPrompt = span.ChatConfig.SystemPrompt,
         ModelId = span.ChatConfig.ModelId,
-        ModelName = span.ChatConfig.Model.CurrentSnapshot.Name,
-        ModelProviderId = span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
+        ModelName = span.ChatConfig.Model == null ? null : span.ChatConfig.Model.CurrentSnapshot.Name,
+        ModelProviderId = span.ChatConfig.Model == null ? null : span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
         Temperature = span.ChatConfig.Temperature,
         WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
         CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
