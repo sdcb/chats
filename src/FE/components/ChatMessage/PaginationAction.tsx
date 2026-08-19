@@ -1,5 +1,7 @@
 import { IconChevronLeft, IconChevronRight } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { MouseEvent, useState } from 'react';
 
 interface Props {
   hidden?: boolean;
@@ -7,8 +9,14 @@ interface Props {
   disabledNext?: boolean;
   currentSelectIndex: number;
   messageIds: string[];
-  onChangeMessage?: (messageId: string) => void;
+  onChangeMessage?: (messageId: string) => void | Promise<void>;
 }
+
+const PaginationLoader = () => (
+  <span className="inline-flex animate-spin" aria-hidden="true">
+    <Loader2 size={20} />
+  </span>
+);
 
 export const PaginationAction = (props: Props) => {
   const {
@@ -19,6 +27,22 @@ export const PaginationAction = (props: Props) => {
     onChangeMessage,
     hidden,
   } = props;
+  const [loadingDirection, setLoadingDirection] = useState<'prev' | 'next' | null>(null);
+
+  const handleChange = async (
+    direction: 'prev' | 'next',
+    messageId: string,
+    event: MouseEvent<HTMLButtonElement>,
+  ) => {
+    event.stopPropagation();
+    if (!onChangeMessage || loadingDirection !== null) return;
+    setLoadingDirection(direction);
+    try {
+      await onChangeMessage(messageId);
+    } finally {
+      setLoadingDirection(null);
+    }
+  };
 
   const Render = () => {
     return (
@@ -26,16 +50,17 @@ export const PaginationAction = (props: Props) => {
         <Button
           variant="ghost"
           className="p-1 m-0 h-7 w-7 disabled:opacity-50"
-          disabled={disabledPrev}
+          disabled={disabledPrev || loadingDirection !== null}
           onClick={(e) => {
-            if (onChangeMessage) {
-              const index = currentSelectIndex - 1;
-              onChangeMessage(messageIds[index]);
-              e.stopPropagation();
-            }
+            const index = currentSelectIndex - 1;
+            void handleChange('prev', messageIds[index], e);
           }}
         >
-          <IconChevronLeft />
+          {loadingDirection === 'prev' ? (
+            <PaginationLoader />
+          ) : (
+            <IconChevronLeft size={20} />
+          )}
         </Button>
         <span className="font-bold">
           {`${currentSelectIndex + 1}/${messageIds.length}`}
@@ -43,16 +68,17 @@ export const PaginationAction = (props: Props) => {
         <Button
           variant="ghost"
           className="p-1 m-0 h-7 w-7"
-          disabled={disabledNext}
+          disabled={disabledNext || loadingDirection !== null}
           onClick={(e) => {
-            if (onChangeMessage) {
-              const index = currentSelectIndex + 1;
-              onChangeMessage(messageIds[index]);
-            }
-            e.stopPropagation();
+            const index = currentSelectIndex + 1;
+            void handleChange('next', messageIds[index], e);
           }}
         >
-          <IconChevronRight />
+          {loadingDirection === 'next' ? (
+            <PaginationLoader />
+          ) : (
+            <IconChevronRight size={20} />
+          )}
         </Button>
       </div>
     );

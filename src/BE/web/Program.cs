@@ -115,6 +115,7 @@ public class Program
         builder.Services.AddScoped<ClientInfoManager>();
         builder.Services.AddScoped<FileUrlProvider>();
         builder.Services.AddScoped<ChatConfigService>();
+        builder.Services.AddScoped<Controllers.Chats.Messages.ChatMessageViewService>();
         builder.Services.AddSingleton<McpToolExecutionPlanner>();
         builder.Services.AddSingleton<IMcpRetryDelay, McpRetryDelay>();
         builder.Services.AddSingleton<IMcpToolClientFactory, McpToolClientFactory>();

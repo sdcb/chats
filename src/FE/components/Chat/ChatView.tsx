@@ -19,6 +19,7 @@ import {
   generateResponseMessage,
   generateResponseMessages,
   generateUserMessage,
+  mergeLoadedMessages,
 } from '@/utils/message';
 import { throttle } from '@/utils/throttle';
 
@@ -71,6 +72,7 @@ import NoModel from './NoModel';
 
 import {
   deleteMessage,
+  getChatMessageSubtree,
   putChats,
   putMessageReactionClear,
   putMessageReactionUp,
@@ -99,6 +101,7 @@ const ChatView = memo(() => {
     messageDispatch,
   } = useContext(HomeContext);
   const chatsRef = useRef<IChat[]>(chats);
+  const branchRequestIdRef = useRef(0);
   useEffect(() => {
     chatsRef.current = chats;
   }, [chats]);
@@ -1274,7 +1277,7 @@ const ChatView = memo(() => {
     // to do
   };
 
-  const handleChangeChatLeafMessageId = (messageId: string) => {
+  const handleChangeChatLeafMessageId = async (messageId: string) => {
     if (!selectedChat) return;
     if (selectedChat.status === ChatStatus.Chatting) return;
     for (const levelMessages of selectedMessages) {
@@ -1284,8 +1287,22 @@ const ChatView = memo(() => {
         }
       }
     }
-    const leafId = findLastLeafId(messages, messageId);
-    const selectedMsgs = findSelectedMessageByLeafId(messages, leafId);
+    const requestId = ++branchRequestIdRef.current;
+    let data;
+    try {
+      data = await getChatMessageSubtree(selectedChat.id, messageId);
+    } catch {
+      if (requestId === branchRequestIdRef.current) {
+        toast.error(t('Failed to load messages'));
+      }
+      return;
+    }
+    if (requestId !== branchRequestIdRef.current || !data.leafMessageId) return;
+
+    const mergedMessages = mergeLoadedMessages(messages, data.messages);
+    const leafId = data.leafMessageId;
+    const selectedMsgs = findSelectedMessageByLeafId(mergedMessages, leafId);
+    messageDispatch(setMessages(mergedMessages));
     messageDispatch(setSelectedMessages(selectedMsgs));
 
     const updatedAt = currentISODateString();
@@ -1539,17 +1556,40 @@ const ChatView = memo(() => {
       }
     }
 
-    const leafId = nextMsgId ? findLastLeafId(msgs, nextMsgId) : null;
-    await deleteMessage(messageId, leafId);
-    const selectedMsgs = leafId ? findSelectedMessageByLeafId(msgs, leafId) : [];
+    const requestedLeafId = nextMsgId || null;
+    const deletedIds = await deleteMessage(messageId, requestedLeafId);
+    const deletedIdSet = new Set(deletedIds);
+    msgs = msgs.filter((message) => !deletedIdSet.has(message.id));
+
+    let leafId: string | null = null;
+    let selectedMsgs: IChatMessage[][] = [];
+    if (nextMsgId && selectedChat) {
+      try {
+        const view = await getChatMessageSubtree(selectedChat.id, nextMsgId);
+        msgs = mergeLoadedMessages(msgs, view.messages);
+        leafId = view.leafMessageId;
+        selectedMsgs = leafId ? findSelectedMessageByLeafId(msgs, leafId) : [];
+        if (leafId !== requestedLeafId) {
+          await putChats(selectedChat.id, {
+            setsLeafMessageId: true,
+            leafMessageId: leafId ?? undefined,
+          });
+        }
+      } catch {
+        leafId = msgs.some((message) => message.id === nextMsgId)
+          ? findLastLeafId(msgs, nextMsgId)
+          : null;
+        selectedMsgs = leafId ? findSelectedMessageByLeafId(msgs, leafId) : [];
+      }
+    }
 
     // 更新chats中的leafMessageId
-    if (selectedChat && leafId) {
+    if (selectedChat) {
       const updatedAt = currentISODateString();
       updateChatsState((prevChats) =>
         prevChats.map((x) =>
           x.id === selectedChat.id
-            ? { ...x, leafMessageId: leafId, updatedAt }
+            ? { ...x, leafMessageId: leafId ?? undefined, updatedAt }
             : x,
         ),
       );

@@ -71,9 +71,11 @@ export function findSelectedMessageByLeafId(
     let prevUserMessage: ChatMessageNode | null = null;
 
     if (currentMessage.role === ChatRole.User) {
-      const siblingIds = messages
-        .filter((m) => m.parentId === parentId && m.role === ChatRole.User)
-        .map((x) => x.id);
+      const siblingIds = currentMessage.siblingIds.length > 0
+        ? currentMessage.siblingIds
+        : messages
+          .filter((m) => m.parentId === parentId && m.role === ChatRole.User)
+          .map((x) => x.id);
 
       const currentOutputMessage: ChatMessageNode = {
         ...currentMessage,
@@ -89,7 +91,9 @@ export function findSelectedMessageByLeafId(
 
       const group: ChatMessageNode[] = [];
       groupedSiblings.forEach((siblingGroup) => {
-        const siblingIds = siblingGroup.map((x) => x.id);
+        const siblingIds = siblingGroup[0]?.siblingIds.length > 0
+          ? siblingGroup[0].siblingIds
+          : siblingGroup.map((x) => x.id);
         let selectedMessage: ChatMessageNode | null = null;
 
         siblingGroup.forEach((x) => {
@@ -170,6 +174,18 @@ export function generateResponseMessages(
         status,
       );
     });
+}
+
+export function mergeLoadedMessages(
+  existing: IChatMessage[],
+  incoming: IChatMessage[],
+): IChatMessage[] {
+  const merged = new Map(existing.map((message) => [message.id, message]));
+  incoming.forEach((message) => {
+    const current = merged.get(message.id);
+    merged.set(message.id, current ? { ...current, ...message } : message);
+  });
+  return Array.from(merged.values());
 }
 
 export function generateResponseMessage(

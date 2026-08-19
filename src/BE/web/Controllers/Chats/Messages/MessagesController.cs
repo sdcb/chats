@@ -16,48 +16,6 @@ namespace Chats.BE.Controllers.Chats.Messages;
 [Route("api/messages"), Authorize]
 public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncryptionService urlEncryption) : ControllerBase
 {
-    [HttpGet("{chatId}")]
-    public async Task<ActionResult<TurnDto[]>> GetTurns(string chatId, [FromServices] FileUrlProvider fup, CancellationToken cancellationToken)
-    {
-        TurnDto[] messages = await db.ChatTurns
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentBlob)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileImageInfo)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentText)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentThink)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCallResponse)
-            .Where(m => m.ChatId == urlEncryption.DecryptChatId(chatId) && m.Chat.UserId == currentUser.Id && m.Steps.Any())
-            .Select(x => new ChatMessageTemp()
-            {
-                Id = x.Id,
-                ParentId = x.ParentId,
-                Role = x.IsUser ? DBChatRole.User : DBChatRole.Assistant,
-                Steps = x.Steps
-                    .OrderBy(s => s.Id)
-                    .ToArray(),
-                CreatedAt = x.Steps.First().CreatedAt,
-                SpanId = x.SpanId,
-                Usage = x.IsUser || x.Steps.First().Usage == null ? null : new ChatMessageTempUsage()
-                {
-                    ModelId = x.Steps.First().Usage!.ModelSnapshot.ModelId,
-                    ModelName = x.Steps.First().Usage!.ModelSnapshot.Name,
-                    ModelProviderId = x.Steps.First().Usage!.ModelSnapshot.ModelKeySnapshot.ModelProviderId,
-                },
-                Reaction = x.ReactionId,
-            })
-            .OrderBy(x => x.CreatedAt)
-            .Select(x => x.ToDto(urlEncryption, fup))
-            .ToArrayAsync(cancellationToken);
-
-        if (EtagCacheHelper.TryHandleNotModified(this, "messages-turns", messages, CreateDownloadUrlRequest.GetCurrentRefreshBucket()))
-        {
-            return StatusCode(StatusCodes.Status304NotModified);
-        }
-
-        return Ok(messages);
-    }
-
     [HttpGet("{chatId}/{encryptedTurnId}/generate-info")]
     public async Task<ActionResult<StepGenerateInfoDto[]>> GetTurnGenerateInfo(string chatId, string encryptedTurnId, CancellationToken cancellationToken)
     {

@@ -250,8 +250,16 @@ export interface GetChatShareResult {
   spans: ChatSpanDto[];
   groupId: string;
   tags: string[];
-  leafMessageId: string;
+  leafMessageId?: string;
   updatedAt: string;
+}
+
+export interface ChatMessageViewResult {
+  messages: IChatMessage[];
+  leafMessageId: string | null;
+}
+
+export interface GetAdminChatDetailsResult extends GetChatShareResult {
   messages: IChatMessage[];
 }
 
