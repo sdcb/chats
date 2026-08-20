@@ -255,7 +255,7 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
           </div>
 
           <div
-            className={`relative max-h-5 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm break-all text-left text-[12.5px] leading-4 ${
+            className={`relative max-h-5 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm break-all text-left text-[12.5px] ${
               selectChatId === chat.id ? 'pr-12' : 'pr-1'
             }`}
           >
