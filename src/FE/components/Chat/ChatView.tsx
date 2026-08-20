@@ -718,7 +718,7 @@ const ChatView = memo(() => {
     return newSelectedMsgs;
   };
 
-  // 标记当前消息中最近的一段 reasoning 为已完成（离开 ReasoningSegment）
+  // 在收到下一个非 reasoning 事件时结束最近一段 reasoning；空 reasoning 不展示。
   const changeSelectedResponseReasoningFinish = (
     selectedMsgs: IChatMessage[][],
     messageId: string,
@@ -733,8 +733,9 @@ const ChatView = memo(() => {
           const c = newContent[i];
           if (c.$type === MessageContentType.reasoning) {
             const r = c as ReasoningContent;
-            // 只在尚未标记完成时进行更新
-            if (r.finished !== true) {
+            if (!r.c || r.c.trim() === '') {
+              newContent.splice(i, 1);
+            } else if (r.finished !== true) {
               newContent[i] = {
                 ...r,
                 finished: true,
@@ -1117,7 +1118,29 @@ const ChatView = memo(() => {
       let messageList = [...messages];
       // 用于跟踪每个 span 最近一次非空的工具调用 ID，便于将 u 为 null 的参数片段归并
       const currentToolCallIdBySpan = new Map<number, string>();
-      for await (const value of stream) {
+      const finishReasoningForAllSpans = () => {
+        const lastMessageGroupIndex = selectedMessageList.length - 1;
+        const lastMessageGroup = selectedMessageList[lastMessageGroupIndex] ?? [];
+        for (const message of lastMessageGroup) {
+          if (message.id.startsWith(ResponseMessageTempId)) {
+            selectedMessageList = changeSelectedResponseReasoningFinish(
+              selectedMessageList,
+              message.id,
+            );
+          }
+        }
+      };
+
+      try {
+        for await (const value of stream) {
+          if (value.k !== SseResponseKind.ReasoningSegment && 'i' in value) {
+            const msgId = `${ResponseMessageTempId}-${value.i}`;
+            selectedMessageList = changeSelectedResponseReasoningFinish(
+              selectedMessageList,
+              msgId,
+            );
+          }
+
         if (value.k === SseResponseKind.StopId) {
           chatDispatch(setStopIds([value.r]));
         } else if (value.k === SseResponseKind.ReasoningSegment) {
@@ -1127,8 +1150,6 @@ const ChatView = memo(() => {
         } else if (value.k === SseResponseKind.Segment) {
           const { r: msg, i: spanId } = value;
           const msgId = `${ResponseMessageTempId}-${spanId}`;
-          // 离开 ReasoningSegment，完成上一段 reasoning
-          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
           selectedMessageList = changeSelectedResponseMessage(
             selectedMessageList,
             msgId,
@@ -1138,8 +1159,6 @@ const ChatView = memo(() => {
         } else if (value.k === SseResponseKind.Error) {
           const { r: msg, i: spanId } = value;
           const msgId = `${ResponseMessageTempId}-${spanId}`;
-          // 离开 ReasoningSegment，完成上一段 reasoning
-          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
           selectedMessageList = changeSelectedResponseMessage(
             selectedMessageList,
             msgId,
@@ -1151,8 +1170,6 @@ const ChatView = memo(() => {
         } else if (value.k === SseResponseKind.ResponseMessage) {
           const { r: msg, i: spanId } = value;
           const msgId = `${ResponseMessageTempId}-${spanId}`;
-          // 离开 ReasoningSegment，完成上一段 reasoning
-          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
           selectedMessageList = changeSelectedResponseMessage(
             selectedMessageList,
             msgId,
@@ -1162,21 +1179,14 @@ const ChatView = memo(() => {
           selectedMessageList = changeSelectedResponseMessageInfo(selectedMessageList, spanId, msg);
           messageList.push(msg);
         } else if (value.k === SseResponseKind.StartResponse) {
-          const { i: spanId } = value;
-          const msgId = `${ResponseMessageTempId}-${spanId}`;
-          // 离开 ReasoningSegment，完成上一段 reasoning
-          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
+          // StartResponse only carries response timing metadata.
         } else if (value.k === SseResponseKind.FileGenerating) {
           const { r, i: spanId } = value;
           const msgId = `${ResponseMessageTempId}-${spanId}`;
-          // 离开 ReasoningSegment，完成上一段 reasoning
-          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
           selectedMessageList = changeSelectedResponseFilePreview(selectedMessageList, msgId, r);
         } else if (value.k === SseResponseKind.FileGenerated) {
           const { r, i: spanId } = value;
           const msgId = `${ResponseMessageTempId}-${spanId}`;
-          // 离开 ReasoningSegment，完成上一段 reasoning
-          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
           selectedMessageList = changeSelectedResponseFileFinal(selectedMessageList, msgId, r);
         } else if (value.k === SseResponseKind.CallingTool) {
           // 13 事件：u 仅在首个片段非空，后续片段 u/r 可能为 null，只携带 p（参数增量）
@@ -1190,8 +1200,6 @@ const ChatView = memo(() => {
             continue;
           }
           const msgId = `${ResponseMessageTempId}-${spanId}`;
-          // 离开 ReasoningSegment，完成上一段 reasoning
-          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
           selectedMessageList = changeSelectedResponseToolCall(
             selectedMessageList,
             msgId,
@@ -1204,8 +1212,6 @@ const ChatView = memo(() => {
         } else if (value.k === SseResponseKind.ToolCompleted) {
           const { u: toolCallId, r: result, i: spanId } = value as any;
           const msgId = `${ResponseMessageTempId}-${spanId}`;
-          // 离开 ReasoningSegment，完成上一段 reasoning
-          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
           selectedMessageList = changeSelectedResponseToolResult(
             selectedMessageList,
             msgId,
@@ -1219,8 +1225,6 @@ const ChatView = memo(() => {
         } else if (value.k === SseResponseKind.ToolProgress) {
           const { u: toolCallId, r: progress, i: spanId } = value;
           const msgId = `${ResponseMessageTempId}-${spanId}`;
-          // 离开 ReasoningSegment，完成上一段 reasoning
-          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
           selectedMessageList = changeSelectedResponseToolProgress(
             selectedMessageList,
             msgId,
@@ -1230,8 +1234,7 @@ const ChatView = memo(() => {
         } else if (value.k === SseResponseKind.EndStep) {
           const { r: stepData, i: spanId } = value;
           const msgId = `${ResponseMessageTempId}-${spanId}`;
-          // End current step and start a new one
-          selectedMessageList = changeSelectedResponseReasoningFinish(selectedMessageList, msgId);
+          // End current step and start a new one. The boundary handler above closes reasoning.
           selectedMessageList = changeSelectedResponseEndStep(selectedMessageList, msgId, stepData);
         } else if (value.k === SseResponseKind.UpdateTitle) {
           changeChatTitle(value.r);
@@ -1240,6 +1243,9 @@ const ChatView = memo(() => {
         } else {
           console.log('Unknown message', value);
         }
+        }
+      } finally {
+        finishReasoningForAllSpans();
       }
 
       const leafMessageId = messageList[messageList.length - 1].id;
