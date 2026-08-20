@@ -76,7 +76,13 @@ public abstract record ContentResponseItem
 
     public static ContentResponseItem[] FromContent(StepContent[] contents, FileUrlProvider fup, IUrlEncryptionService urlEncryption)
     {
-        return [.. contents.Select(x => FromContent(x, fup, urlEncryption))];
+        // Signature-only Think blocks are required for subsequent model context, so they remain
+        // in the database and are still consumed by model conversions. They are not user-visible
+        // reasoning, however, so omit empty Think items only from the response DTO sent to the UI.
+        return [.. contents
+            .Where(x => (DBStepContentType)x.ContentTypeId != DBStepContentType.Think
+                || !string.IsNullOrWhiteSpace(x.StepContentThink?.Content))
+            .Select(x => FromContent(x, fup, urlEncryption))];
     }
 }
 
