@@ -7,6 +7,12 @@ using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Messages.Dtos;
 
+public record EditUserMessageRequest
+{
+    [JsonPropertyName("contents")]
+    public required ContentRequestItem[] Contents { get; init; }
+}
+
 [JsonPolymorphic]
 [JsonDerivedType(typeof(TextContentRequestItem), typeDiscriminator: (int)DBStepContentType.Text)]
 [JsonDerivedType(typeof(FileContentRequestItem), typeDiscriminator: (int)DBStepContentType.FileId)]
@@ -22,16 +28,16 @@ public abstract record ContentRequestItem
             .ToArrayAsync(cancellationToken);
     }
 
-    public static ContentRequestItem FromDB(StepContent mc, IUrlEncryptionService idEncryption)
+    public static ContentRequestItem FromDB(StepContent content, IUrlEncryptionService urlEncryption)
     {
-        return (DBStepContentType)mc.ContentTypeId switch
+        return (DBStepContentType)content.ContentTypeId switch
         {
             DBStepContentType.Text => new TextContentRequestItem
             {
-                Text = mc.StepContentText!.Content,
-                ContextTemplate = mc.StepContentText.ContextTemplate,
+                Text = content.StepContentText!.Content,
+                ContextTemplate = content.StepContentText.ContextTemplate,
             },
-            DBStepContentType.FileId => new FileContentRequestItem { FileId = idEncryption.EncryptFileId(mc.StepContentFile!.FileId) },
+            DBStepContentType.FileId => new FileContentRequestItem { FileId = urlEncryption.EncryptFileId(content.StepContentFile!.FileId) },
             _ => throw new NotSupportedException(),
         };
     }
@@ -42,24 +48,24 @@ public abstract record ContentRequestItem
         DBStepContentType.FileId,
     ];
 
-    public static ContentRequestItem[] FromDB(ICollection<StepContent> mcs, IUrlEncryptionService idEncryption)
+    public static ContentRequestItem[] FromDB(ICollection<StepContent> contents, IUrlEncryptionService urlEncryption)
     {
-        return [.. mcs
+        return [.. contents
             .Where(x => AllowedContentTypes.Contains((DBStepContentType)x.ContentTypeId))
-            .Select(mc => FromDB(mc, idEncryption))];
+            .Select(content => FromDB(content, urlEncryption))];
     }
 
-    public static ContentRequestItem[] FromDB(ICollection<StepContent> mcs, IUrlEncryptionService idEncryption, long patchContentId, TextContentRequestItem patchText)
+    public static ContentRequestItem[] FromDB(ICollection<StepContent> contents, IUrlEncryptionService urlEncryption, long targetContentId, TextContentRequestItem replacementText)
     {
-        return [.. mcs
+        return [.. contents
             .Where(x => AllowedContentTypes.Contains((DBStepContentType)x.ContentTypeId))
-            .Select(mc => mc.Id switch 
+            .Select(content => content.Id switch
             {
-                var x when x == patchContentId => patchText with
+                var x when x == targetContentId => replacementText with
                 {
-                    ContextTemplate = mc.StepContentText?.ContextTemplate,
+                    ContextTemplate = content.StepContentText?.ContextTemplate,
                 },
-                _ => FromDB(mc, idEncryption),
+                _ => FromDB(content, urlEncryption),
             })];
     }
 }

@@ -41,7 +41,7 @@ export interface Props {
     content: ResponseContent,
     isCopy?: boolean,
   ) => void;
-  onEditUserMessage?: (messageId: string, content: ResponseContent) => void;
+  onEditUserMessage?: (messageId: string, content: ResponseContent[]) => Promise<void> | void;
   onDeleteMessage?: (messageId: string) => Promise<void>;
   onChangeDisplayType?: (messageId: string, type: MessageDisplayType) => void;
   onRegenerateAllAssistant?: (messageId: string, modelId: number) => void;

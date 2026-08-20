@@ -353,13 +353,6 @@ const ChatInput = ({
         return; // 让移动端用户必须点击发送按钮
       }
 
-      // Alt+S 发送
-      if (e.altKey && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        handleSend();
-        return;
-      }
-
       // 根据模式处理 Enter 键
       if (e.key === 'Enter' && !isTyping) {
         if (sendMode === 'enter' && !e.shiftKey && !e.ctrlKey) {
@@ -370,6 +363,14 @@ const ChatInput = ({
           handleSend();
         }
       }
+    }
+  };
+
+  const handleContainerKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.altKey && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleSend();
     }
   };
 
@@ -496,6 +497,7 @@ const ChatInput = ({
       {(renderExpanded || animationState !== 'idle') && (
         <div
           ref={inputContainerRef}
+          onKeyDown={handleContainerKeyDown}
           className="w-full border-transparent bg-background pointer-events-auto transition-transform ease-out pd-0 md:pb-2"
           style={{
             transform: inputTransform,
@@ -751,6 +753,7 @@ const ChatInput = ({
                   {canUpload && (
                     <PasteUpload
                       fileConfig={defaultFileConfig}
+                      containerRef={inputContainerRef}
                       allowAllFiles={hasCodeExecutionUploadCapability}
                       onUploading={handleUploading}
                       onFailed={handleUploadFailed}

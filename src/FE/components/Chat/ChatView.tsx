@@ -76,6 +76,7 @@ import {
   putChats,
   putMessageReactionClear,
   putMessageReactionUp,
+  patchUserMessageEdit,
   putResponseMessageEditAndSaveNew,
   putResponseMessageEditInPlace,
   responseContentToRequest,
@@ -1455,48 +1456,20 @@ const ChatView = memo(() => {
 
   const handleUpdateUserMessage = async (
     messageId: string,
-    content: ResponseContent,
+    content: ResponseContent[],
   ) => {
-    const params = {
+    const updated = await patchUserMessageEdit({
       messageId,
-      contentId: content.i,
-      c: ('c' in content ? content.c : '') as string,
-    };
-    await putResponseMessageEditInPlace(params);
-
-    const msgs = messages.map((x) => {
-      if (x.id === messageId && x.role === ChatRole.User) {
-        const newSteps = x.steps.map((step) => ({
-          ...step,
-          contents: step.contents.map((c) => {
-            if (c.i === content.i) return content;
-            return c;
-          }),
-        }));
-        return { ...x, steps: newSteps };
-      }
-      return x;
+      contents: responseContentToRequest(content),
     });
-
-    const selectedMsgs = selectedMessages.map((msg) => {
-      return msg.map((m) => {
-        if (m.id === messageId && m.role === ChatRole.User) {
-          const newSteps = m.steps.map((step) => ({
-            ...step,
-            contents: step.contents.map((c) => {
-              if (c.i === content.i) return content;
-              return c;
-            }),
-          }));
-          return {
-            ...m,
-            steps: newSteps,
-          };
-        }
-        return m;
-      });
-    });
-
+    const existing = messages.find((message) => message.id === messageId);
+    const updatedWithMetadata = existing
+      ? { ...existing, ...updated, siblingIds: existing.siblingIds }
+      : updated;
+    const msgs = messages.map((message) => message.id === messageId ? updatedWithMetadata : message);
+    const selectedMsgs = selectedMessages.map((group) => group.map((message) =>
+      message.id === messageId ? { ...updatedWithMetadata, siblingIds: message.siblingIds } : message,
+    ));
     messageDispatch(setMessages(msgs));
     messageDispatch(setSelectedMessages(selectedMsgs));
   };

@@ -52,6 +52,7 @@ import {
   PutMoveChatGroupParams,
   PutResponseMessageEditAndSaveNewParams,
   PutResponseMessageEditInPlaceParams,
+  EditUserMessageParams,
   SingInParams,
   SingInResult,
   TitleSummaryConfig,
@@ -522,6 +523,20 @@ export const putResponseMessageEditInPlace = (
       body: { c: params.c },
     },
   );
+};
+
+export const patchUserMessageEdit = (params: EditUserMessageParams): Promise<IChatMessage> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.patch<IChatMessage>(`/api/messages/${params.messageId}/edit`, {
+    body: { contents: params.contents },
+  });
+};
+
+export const patchUserMessageEditAndSaveNew = (params: EditUserMessageParams): Promise<IChatMessage> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.patch<IChatMessage>(`/api/messages/${params.messageId}/edit-and-save-new`, {
+    body: { contents: params.contents },
+  });
 };
 
 export const deleteMessage = (messageId: string, leafId: string | null) => {
