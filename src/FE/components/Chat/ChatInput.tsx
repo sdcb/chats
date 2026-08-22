@@ -649,9 +649,9 @@ const ChatInput = ({
               </div>
 
               {/* 底部工具行 - 智能搜索/Agent控制 + 发送按钮 */}
-              <div className="flex items-center px-2 py-2 border-t border-border/40">
+              <div className="flex items-center gap-1 sm:gap-2 px-1 sm:px-2 py-2 border-t border-border/40">
                 {/* 左侧: 智能搜索 + Agent 代码执行控制 */}
-                <div className="flex items-center gap-2 flex-1">
+                <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1 sm:gap-2 overflow-hidden">
                   {showUploadMenu && (
                     <Popover>
                       <PopoverTrigger asChild>

@@ -133,7 +133,7 @@ const CodeExecutionControl: React.FC<CodeExecutionControlProps> = ({
 
   return (
     <>
-      <div className="flex items-center h-9">
+      <div className="flex shrink-0 items-center h-9">
         <div
           className={cn(
             'flex items-center h-full rounded-md overflow-hidden transition-all duration-300 ease-out',
@@ -148,8 +148,8 @@ const CodeExecutionControl: React.FC<CodeExecutionControlProps> = ({
               <button
                 disabled={disabled || isUpdating}
                 className={cn(
-                  'h-full px-3 flex items-center justify-center transition-colors',
-                  'font-mono text-sm font-medium',
+                  'h-full px-2 sm:px-3 flex items-center justify-center transition-colors whitespace-nowrap',
+                  'font-mono text-xs sm:text-sm font-medium',
                   'disabled:opacity-50 disabled:cursor-not-allowed',
                   isAnyCodeExecutionEnabled
                     ? 'hover:bg-primary/90'

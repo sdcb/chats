@@ -101,14 +101,14 @@ const WebSearchControl: React.FC<WebSearchControlProps> = ({
   };
 
   return (
-    <div className="flex items-center h-9">
+    <div className="flex shrink-0 items-center h-9">
       <Tips
         trigger={
           <button
             disabled={disabled || isUpdating}
             className={cn(
-              'h-full px-3 rounded-md flex items-center justify-center gap-1.5 transition-colors',
-              'text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed',
+              'h-full px-2 sm:px-3 rounded-md flex items-center justify-center gap-1 sm:gap-1.5 transition-colors whitespace-nowrap',
+              'text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed',
               isAnyWebSearchEnabled
                 ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                 : 'bg-transparent border border-input hover:bg-accent hover:text-accent-foreground'
