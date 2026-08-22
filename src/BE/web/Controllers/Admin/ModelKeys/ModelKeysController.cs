@@ -265,13 +265,17 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
             ChatService service = cf.CreateChatService(dummyModel);
             string[] models = await service.ListModels(modelKey.CurrentSnapshot, cancellationToken);
             
-            // 构建 deploymentName -> Model 的映射
-            Dictionary<string, Model[]> existingModelsMap = await db.Models
+            // 先让 EF Core 只负责翻译数据库部分，再在内存中使用 Ordinal comparer 分组。
+            // Queryable.GroupBy 的 comparer 参数不能被 EF Core 翻译为 SQL，会导致该端点在执行时抛出 InvalidOperationException。
+            Model[] existingModels = await db.Models
                 .Include(x => x.CurrentSnapshot)
                 .ThenInclude(x => x.ModelKeySnapshot)
                 .Where(x => x.CurrentSnapshot.ModelKeyId == modelKey.Id)
+                .ToArrayAsync(cancellationToken);
+
+            Dictionary<string, Model[]> existingModelsMap = existingModels
                 .GroupBy(x => x.CurrentSnapshot.DeploymentName, StringComparer.Ordinal)
-                .ToDictionaryAsync(x => x.Key, v => v.ToArray(), cancellationToken);
+                .ToDictionary(x => x.Key, x => x.ToArray(), StringComparer.Ordinal);
 
             PossibleModelDto[] result = [.. models.Select(model => 
             {
