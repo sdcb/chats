@@ -35,13 +35,39 @@ const waitForLayout = () =>
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
   });
 
-const validateRasterSize = (element: HTMLElement) => {
-  const width = Math.ceil(element.scrollWidth || element.getBoundingClientRect().width);
-  const height = Math.ceil(element.scrollHeight || element.getBoundingClientRect().height);
-  const maxSide = 16384;
-  const maxArea = 268_000_000;
+const MAX_RASTER_SIDE = 16384;
+const MAX_RASTER_AREA = 268_000_000;
 
-  if (width > maxSide || height > maxSide || width * height > maxArea) {
+const getCaptureDpr = (element: HTMLElement) => {
+  const width = Math.max(
+    1,
+    Math.ceil(element.scrollWidth || element.getBoundingClientRect().width),
+  );
+  const height = Math.max(
+    1,
+    Math.ceil(element.scrollHeight || element.getBoundingClientRect().height),
+  );
+  const requestedDpr =
+    typeof window !== 'undefined' && Number.isFinite(window.devicePixelRatio)
+      ? window.devicePixelRatio
+      : 1;
+  const maxDprBySide = Math.min(
+    MAX_RASTER_SIDE / width,
+    MAX_RASTER_SIDE / height,
+  );
+  const maxDprByArea = Math.sqrt(MAX_RASTER_AREA / (width * height));
+
+  return Math.max(
+    0.01,
+    Math.min(requestedDpr > 0 ? requestedDpr : 1, maxDprBySide, maxDprByArea),
+  );
+};
+
+const validateRasterSize = (element: HTMLElement, dpr: number) => {
+  const width = Math.ceil(element.scrollWidth || element.getBoundingClientRect().width) * dpr;
+  const height = Math.ceil(element.scrollHeight || element.getBoundingClientRect().height) * dpr;
+
+  if (width > MAX_RASTER_SIDE || height > MAX_RASTER_SIDE || width * height > MAX_RASTER_AREA) {
     throw new Error('Response is too tall to export as one PNG');
   }
 };
@@ -57,12 +83,13 @@ export const downloadResponsePng = async (
   await document.fonts.ready;
   await waitForImages(element);
   await waitForLayout();
-  validateRasterSize(element);
+  const dpr = getCaptureDpr(element);
+  validateRasterSize(element, dpr);
 
   const { snapdom } = await loadSnapdom();
   const blob = await snapdom.toBlob(element, {
     type: 'png',
-    dpr: 1,
+    dpr,
     embedFonts: false,
     exclude: ['[data-export-ignore]'],
   });
