@@ -201,7 +201,11 @@ export const ChatMessage: FC<Props> = memo(
                                 'flex w-full bg-background mb-1 rounded-md',
                               )}
                             >
-                              <div className="rounded-r-md min-w-0 flex-1 leading-4 font-normal px-1">
+                              <div
+                                id={`response-export-${message.id}`}
+                                data-response-export-target={message.id}
+                                className="rounded-r-md min-w-0 flex-1 leading-4 font-normal px-1 bg-background"
+                              >
                                 <ResponseMessage
                                   key={'response-message-' + message.id + '-' + message.spanId}
                                   chatStatus={selectedChat.status}
@@ -222,6 +226,7 @@ export const ChatMessage: FC<Props> = memo(
                               selectedChat={selectedChat}
                               message={message}
                               chatShareId={chatShareId}
+                              exportTargetId={`response-export-${message.id}`}
                               isAdminView={isAdminView}
                               onChangeMessage={onChangeChatLeafMessageId}
                               onReactionMessage={onReactionMessage}
