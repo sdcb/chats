@@ -183,7 +183,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
     [HttpDelete("{modelKeyId}")]
     public async Task<ActionResult> DeleteModelKey(short modelKeyId, CancellationToken cancellationToken)
     {
-        if (await db.Models.AnyAsync(m => m.CurrentSnapshot.ModelKeyId == modelKeyId, cancellationToken))
+        if (await db.Models.AnyAsync(m => m.Enabled && m.CurrentSnapshot.ModelKeyId == modelKeyId, cancellationToken))
         {
             return BadRequest("Model key is in use");
         }
@@ -193,6 +193,26 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
         if (modelKey == null)
         {
             return NotFound();
+        }
+
+        Model[] disabledModels = await db.Models
+            .Include(x => x.ApiKeys)
+            .AsSplitQuery()
+            .Where(x => !x.Enabled && x.CurrentSnapshot.ModelKeyId == modelKeyId)
+            .ToArrayAsync(cancellationToken);
+
+        if (disabledModels.Length > 0)
+        {
+            short[] disabledModelIds = disabledModels.Select(x => x.Id).ToArray();
+            db.UserModels.RemoveRange(db.UserModels.Where(x => disabledModelIds.Contains(x.ModelId)));
+            db.UserApiCaches.RemoveRange(db.UserApiCaches.Where(x => disabledModelIds.Contains(x.ModelId)));
+
+            foreach (Model model in disabledModels)
+            {
+                model.ApiKeys.Clear();
+            }
+
+            db.Models.RemoveRange(disabledModels);
         }
 
         db.ModelKeys.Remove(modelKey);

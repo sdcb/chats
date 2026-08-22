@@ -137,9 +137,14 @@ export default function ModelKey({
             className="h-5 w-5"
             onClick={() => onEdit(modelKey)}
           />
-          {modelKey.totalModelCount === 0 && (
+          {modelKey.enabledModelCount === 0 && (
             <div onClick={(e) => e.stopPropagation()} title={t('Delete')}>
-              <DeletePopover onDelete={() => onDelete(modelKey.id)} />
+              <DeletePopover
+                onDelete={() => onDelete(modelKey.id)}
+                tooltip={t('Delete')}
+                className="h-5 w-5"
+                iconSize={16}
+              />
             </div>
           )}
         </div>

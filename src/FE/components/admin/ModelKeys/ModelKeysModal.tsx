@@ -319,7 +319,7 @@ const ModelKeysModal = (props: IProps) => {
             />
             <DialogFooter className="pt-4">
               <div className="flex gap-4">
-                {selected && selected.totalModelCount === 0 && (
+                {selected && selected.enabledModelCount === 0 && (
                   <Button
                     type="button"
                     variant="destructive"

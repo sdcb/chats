@@ -272,9 +272,9 @@ export default function ModelManager() {
   };
 
   const handleDeleteKey = async (keyId: number) => {
-    const count = (modelsByKey[keyId] || []).length;
-    if (count > 0) {
-      toast.error(t('Cannot delete: models exist under this key'));
+    const enabledCount = (modelsByKey[keyId] || []).filter((model) => model.enabled).length;
+    if (enabledCount > 0) {
+      toast.error(t('Cannot delete: enabled models exist under this key'));
       return;
     }
     await deleteModelKeys(keyId);

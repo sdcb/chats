@@ -804,6 +804,8 @@
   "Failed to add model": "添加模型失败",
   "Failed to remove model": "删除模型失败",
   "Remove Model": "删除模型",
+  "Delete Model": "删除模型",
+  "Cannot delete: enabled models exist under this key": "无法删除：此密钥下仍有启用的模型",
   "User Model Permissions": "用户模型权限",
   "By User": "按用户",
   "By Model": "按模型",
