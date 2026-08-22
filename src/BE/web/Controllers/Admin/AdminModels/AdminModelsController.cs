@@ -133,7 +133,7 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
     }
 
     [HttpDelete("{modelId:int}")]
-    public async Task<ActionResult<DeleteModelResponse>> DeleteModel(short modelId, CancellationToken cancellationToken)
+    public async Task<ActionResult> DeleteModel(short modelId, CancellationToken cancellationToken)
     {
         Model? cm = await db.Models
             .Include(x => x.ApiKeys)
@@ -141,23 +141,13 @@ public class AdminModelsController(ChatsDB db) : ControllerBase
             .FirstOrDefaultAsync(x => x.Id == modelId, cancellationToken);
         if (cm == null) return NotFound();
 
-        bool hasChatConfigs = await db.ChatConfigs.AnyAsync(x => x.ModelId == modelId, cancellationToken);
-        if (hasChatConfigs)
-        {
-            cm.Enabled = false;
-            cm.UpdatedAt = DateTime.UtcNow;
-            await db.SaveChangesAsync(cancellationToken);
-            
-            return Ok(DeleteModelResponse.CreateSoftDeleted());
-        }
-
         db.UserModels.RemoveRange(db.UserModels.Where(x => x.ModelId == modelId));
         db.UserApiCaches.RemoveRange(db.UserApiCaches.Where(x => x.ModelId == modelId));
         cm.ApiKeys.Clear();
 
         db.Models.Remove(cm);
         await db.SaveChangesAsync(cancellationToken);
-        return Ok(DeleteModelResponse.CreateHardDeleted());
+        return NoContent();
     }
 
     [HttpPost("validate")]

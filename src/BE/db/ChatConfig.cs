@@ -13,7 +13,7 @@ public partial class ChatConfig
     [Key]
     public int Id { get; set; }
 
-    public short ModelId { get; set; }
+    public short? ModelId { get; set; }
 
     public string? SystemPrompt { get; set; }
 
@@ -51,5 +51,5 @@ public partial class ChatConfig
 
     [ForeignKey("ModelId")]
     [InverseProperty("ChatConfigs")]
-    public virtual Model Model { get; set; } = null!;
+    public virtual Model? Model { get; set; }
 }

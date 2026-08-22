@@ -1,5 +1,7 @@
 import { isChatting } from '@/utils/chats';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
+import useTranslation from '@/hooks/useTranslation';
 
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatSpanDto } from '@/types/clientApis';
@@ -12,6 +14,10 @@ import TurnInfoBubble from './TurnInfoBubble';
 import PaginationAction from './PaginationAction';
 import ReactionAction from './ReactionAction';
 import RegenerateWithModelAction from './RegenerateWithModelAction';
+import { IconDownload, IconLoader } from '@/components/Icons';
+import Tips from '@/components/Tips/Tips';
+import { Button } from '@/components/ui/button';
+import { downloadResponsePng } from '@/utils/downloadResponsePng';
 
 const getCopyableMessageText = (message: IChatMessage): string => {
   const contents = getMessageContents(message);
@@ -39,6 +45,7 @@ interface Props {
   onRegenerate?: (messageId: string, modelId: number) => void;
   onReactionMessage?: (type: ReactionMessageType, messageId: string) => void;
   onDeleteMessage?: (messageId: string) => Promise<void>;
+  exportTargetId?: string;
 }
 
 const ResponseMessageActions = (props: Props) => {
@@ -54,7 +61,9 @@ const ResponseMessageActions = (props: Props) => {
     onRegenerate,
     onReactionMessage,
     onDeleteMessage,
+    exportTargetId,
   } = props;
+  const { t } = useTranslation();
 
   const {
     id: messageId,
@@ -68,6 +77,7 @@ const ResponseMessageActions = (props: Props) => {
 
   const chatting = isChatting(chatStatus);
   const messageReceiving = isChatting(messageStatus);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // 根据"当前位置对应的 span（顶部设置）"确定重新生成所用模型；
   // 若无法对应（例如 span 被删），则禁用重新生成按钮。
@@ -93,6 +103,27 @@ const ResponseMessageActions = (props: Props) => {
     onReactionMessage && onReactionMessage(type, messageId);
   };
 
+  const handleDownload = async () => {
+    if (!exportTargetId || isDownloading) return;
+
+    const target = document.getElementById(exportTargetId);
+    if (!target) {
+      toast.error(t('Download failed'));
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      await downloadResponsePng(target, `chats-response-${messageId}.png`);
+      toast.success(t('Download'));
+    } catch (error) {
+      console.error('Failed to download response PNG', error);
+      toast.error(t('Download failed'));
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="flex gap-1 flex-wrap">
       <PaginationAction
@@ -106,6 +137,28 @@ const ResponseMessageActions = (props: Props) => {
       <div className="flex gap-0 items-center">
         <CopyAction
           text={getCopyableMessageText(message)}
+        />
+
+        <Tips
+          side="bottom"
+          content={t('Download')}
+          trigger={
+            <Button
+              variant="ghost"
+              className="p-1 m-0 h-7 w-7"
+              disabled={isDownloading || messageReceiving || chatting}
+              onClick={(event) => {
+                event.stopPropagation();
+                void handleDownload();
+              }}
+            >
+              {isDownloading ? (
+                <IconLoader />
+              ) : (
+                <IconDownload />
+              )}
+            </Button>
+          }
         />
 
         <DeleteAction

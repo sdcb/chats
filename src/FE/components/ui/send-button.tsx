@@ -1,4 +1,4 @@
-import { KeyboardEvent, useEffect } from 'react';
+import { KeyboardEvent } from 'react';
 import useTranslation from '@/hooks/useTranslation';
 import { useSendMode, SendMode } from '@/hooks/useSendMode';
 import { useIsMobile } from '@/hooks/useMobile';
@@ -33,19 +33,6 @@ export const SendButton = ({
   const { sendMode, updateSendMode } = useSendMode();
   const isMobile = useIsMobile();
 
-  // 处理 Alt+S 快捷键
-  useEffect(() => {
-    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.altKey && e.key.toLowerCase() === 's' && !disabled) {
-        e.preventDefault();
-        onSend();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onSend, disabled]);
-
   const sendText = t('Send');
   const buttonBgClass =
     'bg-primary/90 hover:bg-primary/80 active:bg-primary/75 text-primary-foreground';
@@ -56,7 +43,7 @@ export const SendButton = ({
       <Button
         className={cn('h-auto py-1.5', buttonBgClass, className)}
         onClick={onSend}
-        disabled={isSending}
+        disabled={disabled || isSending}
         size={size}
       >
         {isSending ? (
@@ -81,7 +68,7 @@ export const SendButton = ({
           className
         )}
         onClick={onSend}
-        disabled={isSending}
+        disabled={disabled || isSending}
         size={size}
       >
         {isSending ? (
@@ -100,7 +87,7 @@ export const SendButton = ({
             className={cn('rounded-l-none px-2 border-l-0', buttonBgClass)}
             variant="default"
             size={size}
-            disabled={isSending}
+            disabled={disabled || isSending}
           >
             <IconChevronDown size={20} className="text-primary-foreground" />
           </Button>

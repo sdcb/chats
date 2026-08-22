@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { type RefObject, useEffect } from 'react';
 
 import { checkFileSizeCanUpload, uploadFile } from '@/utils/uploadFile';
 
@@ -7,6 +7,7 @@ import { ChatModelFileConfig } from '@/types/model';
 
 interface IPasteUploadProps {
   fileConfig: ChatModelFileConfig;
+  containerRef: RefObject<HTMLElement | null>;
   allowAllFiles?: boolean; // 是否允许粘贴所有类型的文件（用于code execution）
   onUploading?: () => void;
   onSuccessful?: (def: FileDef) => void;
@@ -14,10 +15,28 @@ interface IPasteUploadProps {
 }
 
 const PasteUpload = (props: IPasteUploadProps) => {
-  const { fileConfig, allowAllFiles = false, onUploading, onSuccessful, onFailed } = props;
-  const uploadRef = useRef<HTMLDivElement>(null);
+  const {
+    fileConfig,
+    containerRef,
+    allowAllFiles = false,
+    onUploading,
+    onSuccessful,
+    onFailed,
+  } = props;
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleFileUpload = (file: File) => {
+      const { maxSize } = fileConfig || { maxSize: 0 };
+      if (checkFileSizeCanUpload(maxSize, file.size)) {
+        onFailed?.('File is too large.');
+        return;
+      }
+      uploadFile(file, onUploading, onSuccessful, onFailed);
+    };
+
     const handlePaste = (event: ClipboardEvent) => {
       const items = event.clipboardData?.items;
       if (items) {
@@ -28,6 +47,7 @@ const PasteUpload = (props: IPasteUploadProps) => {
           if (isImage || allowAllFiles) {
             const file = item.getAsFile();
             if (file) {
+              event.stopPropagation();
               // 如果是image content类型的图片（默认文件名为image.png），重命名为时间格式
               let processedFile = file;
               if (file.name === 'image.png') {
@@ -45,23 +65,21 @@ const PasteUpload = (props: IPasteUploadProps) => {
       }
     };
 
-    document.addEventListener('paste', handlePaste);
+    container.addEventListener('paste', handlePaste);
 
     return () => {
-      document.removeEventListener('paste', handlePaste);
+      container.removeEventListener('paste', handlePaste);
     };
-  }, []);
+  }, [
+    allowAllFiles,
+    containerRef,
+    fileConfig,
+    onFailed,
+    onSuccessful,
+    onUploading,
+  ]);
 
-  const handleFileUpload = (file: File) => {
-    const { maxSize } = fileConfig || { maxSize: 0 };
-    if (checkFileSizeCanUpload(maxSize, file.size)) {
-      onFailed && onFailed('File is too large.');
-      return;
-    }
-    uploadFile(file, onUploading, onSuccessful, onFailed);
-  };
-
-  return <div ref={uploadRef} hidden></div>;
+  return null;
 };
 
 export default PasteUpload;

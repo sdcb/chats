@@ -170,7 +170,7 @@ export default function SessionFileEditor({
                       disabled={saving}
                     >
                       {saving ? (
-                        <IconLoader className="animate-spin" stroke="currentColor" size={18} />
+                      <IconLoader stroke="currentColor" size={18} />
                       ) : (
                         <IconCheck stroke="currentColor" size={18} />
                       )}

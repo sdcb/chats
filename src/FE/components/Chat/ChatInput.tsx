@@ -353,13 +353,6 @@ const ChatInput = ({
         return; // 让移动端用户必须点击发送按钮
       }
 
-      // Alt+S 发送
-      if (e.altKey && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        handleSend();
-        return;
-      }
-
       // 根据模式处理 Enter 键
       if (e.key === 'Enter' && !isTyping) {
         if (sendMode === 'enter' && !e.shiftKey && !e.ctrlKey) {
@@ -370,6 +363,14 @@ const ChatInput = ({
           handleSend();
         }
       }
+    }
+  };
+
+  const handleContainerKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.altKey && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleSend();
     }
   };
 
@@ -496,6 +497,7 @@ const ChatInput = ({
       {(renderExpanded || animationState !== 'idle') && (
         <div
           ref={inputContainerRef}
+          onKeyDown={handleContainerKeyDown}
           className="w-full border-transparent bg-background pointer-events-auto transition-transform ease-out pd-0 md:pb-2"
           style={{
             transform: inputTransform,
@@ -647,9 +649,9 @@ const ChatInput = ({
               </div>
 
               {/* 底部工具行 - 智能搜索/Agent控制 + 发送按钮 */}
-              <div className="flex items-center px-2 py-2 border-t border-border/40">
+              <div className="flex items-center gap-1 sm:gap-2 px-1 sm:px-2 py-2 border-t border-border/40">
                 {/* 左侧: 智能搜索 + Agent 代码执行控制 */}
-                <div className="flex items-center gap-2 flex-1">
+                <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1 sm:gap-2 overflow-hidden">
                   {showUploadMenu && (
                     <Popover>
                       <PopoverTrigger asChild>
@@ -744,13 +746,14 @@ const ChatInput = ({
                       size="xs"
                       className="m-0.5 h-8 w-8 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
                     >
-                      <IconLoader className="animate-spin" size={20} />
+                      <IconLoader size={20} />
                     </Button>
                   )}
 
                   {canUpload && (
                     <PasteUpload
                       fileConfig={defaultFileConfig}
+                      containerRef={inputContainerRef}
                       allowAllFiles={hasCodeExecutionUploadCapability}
                       onUploading={handleUploading}
                       onFailed={handleUploadFailed}

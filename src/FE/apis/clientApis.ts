@@ -15,6 +15,7 @@ import {
   AssignedUserDetailsDto,
   AssignedUserNameDto,
   ChatPresetReorderRequest,
+  ChatMessageViewResult,
   ChatResult,
   ChatSpanDto,
   FetchToolsRequest,
@@ -51,6 +52,7 @@ import {
   PutMoveChatGroupParams,
   PutResponseMessageEditAndSaveNewParams,
   PutResponseMessageEditInPlaceParams,
+  EditUserMessageParams,
   SingInParams,
   SingInResult,
   TitleSummaryConfig,
@@ -73,9 +75,17 @@ export const changeUserPassword = (params: PostUserPassword) => {
   });
 };
 
-export const getUserMessages = (chatId: string): Promise<IChatMessage[]> => {
+export const getChatMessages = (chatId: string): Promise<ChatMessageViewResult> => {
   const fetchService = createFetchClient();
-  return fetchService.get(`/api/messages/${chatId}`);
+  return fetchService.get(`/api/chats/${chatId}/messages`);
+};
+
+export const getChatMessageSubtree = (
+  chatId: string,
+  turnId: string,
+): Promise<ChatMessageViewResult> => {
+  const fetchService = createFetchClient();
+  return fetchService.get(`/api/chats/${chatId}/messages/${turnId}/subtree`);
 };
 
 export const getTurnGenerateInfo = (
@@ -477,6 +487,21 @@ export const getChatShare = (encryptedChatShareId: string) => {
   );
 };
 
+export const getSharedChatMessages = (
+  encryptedChatShareId: string,
+): Promise<ChatMessageViewResult> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get(`/api/public/chat-share/${encryptedChatShareId}/messages`);
+};
+
+export const getSharedChatMessageSubtree = (
+  encryptedChatShareId: string,
+  turnId: string,
+): Promise<ChatMessageViewResult> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get(`/api/public/chat-share/${encryptedChatShareId}/messages/${turnId}/subtree`);
+};
+
 export const putResponseMessageEditAndSaveNew = (
   params: PutResponseMessageEditAndSaveNewParams,
 ) => {
@@ -500,10 +525,24 @@ export const putResponseMessageEditInPlace = (
   );
 };
 
+export const patchUserMessageEdit = (params: EditUserMessageParams): Promise<IChatMessage> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.patch<IChatMessage>(`/api/messages/${params.messageId}/edit`, {
+    body: { contents: params.contents },
+  });
+};
+
+export const patchUserMessageEditAndSaveNew = (params: EditUserMessageParams): Promise<IChatMessage> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.patch<IChatMessage>(`/api/messages/${params.messageId}/edit-and-save-new`, {
+    body: { contents: params.contents },
+  });
+};
+
 export const deleteMessage = (messageId: string, leafId: string | null) => {
   const fetchServer = createFetchClient();
   const encryptedLeafMessageId = leafId || '';
-  return fetchServer.delete(
+  return fetchServer.delete<string[]>(
     `/api/messages/${messageId}?encryptedLeafMessageId=${encryptedLeafMessageId}&recursive=true`,
   );
 };

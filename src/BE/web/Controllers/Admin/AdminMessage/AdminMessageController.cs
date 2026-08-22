@@ -50,8 +50,8 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     Enabled = span.Enabled,
                     SystemPrompt = span.ChatConfig.SystemPrompt,
                     ModelId = span.ChatConfig.ModelId,
-                    ModelName = span.ChatConfig.Model.CurrentSnapshot.Name,
-                    ModelProviderId = span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
+                    ModelName = span.ChatConfig.Model == null ? null : span.ChatConfig.Model.CurrentSnapshot.Name,
+                    ModelProviderId = span.ChatConfig.Model == null ? null : span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
                     Temperature = span.ChatConfig.Temperature,
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
@@ -81,7 +81,42 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
 
     internal static async Task<ChatsResponseWithMessage?> InternalGetChatWithMessages(ChatsDB db, IUrlEncryptionService urlEncryption, int chatId, FileUrlProvider fup, CancellationToken cancellationToken)
     {
-        ChatsResponse? chats = await db.Chats
+        ChatsResponse? chats = await InternalGetChat(db, urlEncryption, chatId, cancellationToken);
+
+        if (chats == null) return null;
+
+        return chats.WithMessages(await db.ChatTurns
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentBlob)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileImageInfo)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentText)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentThink)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCallResponse)
+            .Where(m => m.ChatId == chatId && m.Steps.Any())
+            .Select(x => new ChatMessageTemp()
+            {
+                Id = x.Id,
+                ParentId = x.ParentId,
+                Role = x.IsUser ? DBChatRole.User : DBChatRole.Assistant,
+                Steps = x.Steps.OrderBy(s => s.Id).ToArray(),
+                CreatedAt = x.Steps.First().CreatedAt,
+                SpanId = x.SpanId,
+                Usage = x.IsUser ? null : new ChatMessageTempUsage()
+                {
+                    ModelId = x.Steps.First().Usage!.ModelSnapshot.ModelId,
+                    ModelName = x.Steps.First().Usage!.ModelSnapshot.Name,
+                    ModelProviderId = x.Steps.First().Usage!.ModelSnapshot.ModelKeySnapshot.ModelProviderId,
+                },
+                Reaction = x.ReactionId,
+            })
+            .OrderBy(x => x.CreatedAt)
+            .Select(x => x.ToDto(urlEncryption, fup))
+            .ToArrayAsync(cancellationToken));
+    }
+
+    internal static Task<ChatsResponse?> InternalGetChat(ChatsDB db, IUrlEncryptionService urlEncryption, int chatId, CancellationToken cancellationToken) =>
+        db.Chats
             .Where(x => x.Id == chatId)
             .Select(x => new ChatsResponse()
             {
@@ -97,8 +132,8 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     Enabled = span.Enabled,
                     SystemPrompt = span.ChatConfig.SystemPrompt,
                     ModelId = span.ChatConfig.ModelId,
-                    ModelName = span.ChatConfig.Model.CurrentSnapshot.Name,
-                    ModelProviderId = span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
+                    ModelName = span.ChatConfig.Model == null ? null : span.ChatConfig.Model.CurrentSnapshot.Name,
+                    ModelProviderId = span.ChatConfig.Model == null ? null : span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
                     Temperature = span.ChatConfig.Temperature,
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
@@ -119,38 +154,4 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
             })
             .AsSplitQuery()
             .FirstOrDefaultAsync(cancellationToken);
-
-        if (chats == null) return null;
-
-        return chats.WithMessages(await db.ChatTurns
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentBlob)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileImageInfo)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentText)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentThink)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCallResponse)
-            .Where(m => m.ChatId == chatId && m.Steps.Any())
-            .Select(x => new ChatMessageTemp()
-            {
-                Id = x.Id,
-                ParentId = x.ParentId,
-                Role = x.IsUser ? DBChatRole.User : DBChatRole.Assistant,
-                Steps = x.Steps
-                    .OrderBy(s => s.Id)
-                    .ToArray(),
-                CreatedAt = x.Steps.First().CreatedAt,
-                SpanId = x.SpanId,
-                Usage = x.IsUser ? null : new ChatMessageTempUsage()
-                {
-                    ModelId = x.Steps.First().Usage!.ModelSnapshot.ModelId,
-                    ModelName = x.Steps.First().Usage!.ModelSnapshot.Name,
-                    ModelProviderId = x.Steps.First().Usage!.ModelSnapshot.ModelKeySnapshot.ModelProviderId,
-                },
-                Reaction = x.ReactionId,
-            })
-            .OrderBy(x => x.CreatedAt)
-            .Select(x => x.ToDto(urlEncryption, fup))
-            .ToArrayAsync(cancellationToken));
-    }
 }

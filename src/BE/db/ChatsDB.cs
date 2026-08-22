@@ -178,7 +178,7 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<ChatConfig>(entity =>
         {
             entity.HasOne(d => d.Model).WithMany(p => p.ChatConfigs)
-                .OnDelete(DeleteBehavior.ClientSetNull)
+                .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_ChatConfig_Model");
         });
 
@@ -516,9 +516,7 @@ public partial class ChatsDB : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserApiCache_ClientInfoId");
 
-            entity.HasOne(d => d.Model).WithMany(p => p.UserApiCaches)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_UserApiCache_ModelId");
+            entity.HasOne(d => d.Model).WithMany(p => p.UserApiCaches).HasConstraintName("FK_UserApiCache_ModelId");
 
             entity.HasOne(d => d.UserApiKey).WithMany(p => p.UserApiCaches).HasConstraintName("FK_UserApiCache_UserApiKeyId");
         });
@@ -548,7 +546,6 @@ public partial class ChatsDB : DbContext
                     "UserApiModel",
                     r => r.HasOne<Model>().WithMany()
                         .HasForeignKey("ModelId")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
                         .HasConstraintName("FK_ApiKeyModel2_Model"),
                     l => l.HasOne<UserApiKey>().WithMany()
                         .HasForeignKey("ApiKeyId")
@@ -605,9 +602,7 @@ public partial class ChatsDB : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK_UserModel2");
 
-            entity.HasOne(d => d.Model).WithMany(p => p.UserModels)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_UserModel2_Model");
+            entity.HasOne(d => d.Model).WithMany(p => p.UserModels).HasConstraintName("FK_UserModel2_Model");
 
             entity.HasOne(d => d.User).WithMany(p => p.UserModels)
                 .OnDelete(DeleteBehavior.ClientSetNull)

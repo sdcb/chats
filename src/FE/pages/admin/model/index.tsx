@@ -272,9 +272,9 @@ export default function ModelManager() {
   };
 
   const handleDeleteKey = async (keyId: number) => {
-    const count = (modelsByKey[keyId] || []).length;
-    if (count > 0) {
-      toast.error(t('Cannot delete: models exist under this key'));
+    const enabledCount = (modelsByKey[keyId] || []).filter((model) => model.enabled).length;
+    if (enabledCount > 0) {
+      toast.error(t('Cannot delete: enabled models exist under this key'));
       return;
     }
     await deleteModelKeys(keyId);
@@ -293,20 +293,16 @@ export default function ModelManager() {
   };
 
   const handleDeleteModel = async (modelId: number) => {
-    const result = await deleteModels(modelId);
-    
-    // 检查是否为软删除
-    if (result?.softDeleted) {
-      toast.success(t('Model is in use and has been disabled'));
-    } else {
-      toast.success(t('Deleted successful'));
-    }
+    await deleteModels(modelId);
+    toast.success(t('Deleted successful'));
     
     // 找到该 model 所属的 key 并刷新
     for (const [keyId, models] of Object.entries(modelsByKey)) {
-      if (models.some(m => m.modelId === modelId)) {
+      const deletedModel = models.find(m => m.modelId === modelId);
+      if (deletedModel) {
         await Promise.all([
           refreshProviders(),
+          refreshProviderKeys(deletedModel.modelProviderId),
           refreshKeyModels(Number(keyId))
         ]);
         break;

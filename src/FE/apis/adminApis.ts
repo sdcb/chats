@@ -68,7 +68,7 @@ import {
   ValidateModelParams,
   SmsAttemptLog,
 } from '@/types/adminApis';
-import { GetChatShareResult, GetChatVersionResult } from '@/types/clientApis';
+import { GetAdminChatDetailsResult, GetChatVersionResult } from '@/types/clientApis';
 import { IKeyCount } from '@/types/common';
 import { ChatModelFileConfig, DBModelProvider } from '@/types/model';
 import { PageResult } from '@/types/page';
@@ -163,7 +163,7 @@ export const putModels = (
   });
 };
 
-export const deleteModels = (id: number): Promise<any> => {
+export const deleteModels = (id: number): Promise<void> => {
   const fetchService = createFetchClient();
   return fetchService.delete(`/api/admin/models/${id}`);
 };
@@ -607,7 +607,7 @@ export const postModelValidate = (params: ValidateModelParams) => {
 
 export const getAdminMessage = (chatId: string) => {
   const fetchServer = createFetchClient();
-  return fetchServer.get<GetChatShareResult>(
+  return fetchServer.get<GetAdminChatDetailsResult>(
     `/api/admin/message-details?chatId=${chatId}`,
   );
 };

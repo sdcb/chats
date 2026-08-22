@@ -53,7 +53,7 @@ const DeleteAction = (props: Props) => {
               }
             }}
           >
-            {isDeleting ? <IconLoader className="animate-spin" /> : <IconTrash />}
+            {isDeleting ? <IconLoader /> : <IconTrash />}
           </Button>
         }
         content={t('Delete message')!}

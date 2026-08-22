@@ -423,7 +423,7 @@ export default function SessionEnvVarEditor({
                     title={t('Save')}
                   >
                     {saving ? (
-                      <IconLoader size={18} className="animate-spin" />
+                    <IconLoader size={18} />
                     ) : (
                       <IconCheck size={18} />
                     )}

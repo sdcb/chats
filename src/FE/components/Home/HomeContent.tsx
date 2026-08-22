@@ -17,7 +17,7 @@ import {
   IChatPaging,
 } from '@/types/chat';
 import { IChatMessage } from '@/types/chatMessage';
-import { ChatResult, GetChatsParams } from '@/types/clientApis';
+import { ChatMessageViewResult, ChatResult, GetChatsParams } from '@/types/clientApis';
 import { IChatGroup } from '@/types/group';
 
 import {
@@ -62,7 +62,7 @@ import {
   getChatsByPaging,
   getDefaultPrompt,
   getUserChatGroupWithMessages,
-  getUserMessages,
+  getChatMessages,
   getUserModels,
   getUserPromptBrief,
   postChats,
@@ -173,13 +173,14 @@ const HomeContent = () => {
     initialState,
   });
 
-  const selectChatMessage = (
-    messages: IChatMessage[],
-    leafMessageId?: string,
-  ) => {
+  const selectChatMessage = ({ messages, leafMessageId }: ChatMessageViewResult) => {
     messageDispatch(setMessages(messages));
-    let leafMsgId = leafMessageId;
+    let leafMsgId = leafMessageId ?? undefined;
     if (!leafMsgId) {
+      if (messages.length === 0) {
+        messageDispatch(setSelectedMessages([]));
+        return;
+      }
       const messageCount = messages.length - 1;
       leafMsgId = messages[messageCount].id;
     }
@@ -214,9 +215,9 @@ const HomeContent = () => {
       messageDispatch(setMessages([]));
       messageDispatch(setSelectedMessages([]));
 
-      getUserMessages(chat.id).then((data) => {
-        if (data.length > 0) {
-          selectChatMessage(data, chat.leafMessageId);
+      getChatMessages(chat.id).then((data) => {
+        if (data.messages.length > 0) {
+          selectChatMessage(data);
         } else {
           messageDispatch(setMessages([]));
           messageDispatch(setSelectedMessages([]));
@@ -256,9 +257,9 @@ const HomeContent = () => {
     chatDispatch(setIsMessagesLoading(true));
     messageDispatch(setMessages([]));
     messageDispatch(setSelectedMessages([]));
-    getUserMessages(chat.id).then((data) => {
-      if (data.length > 0) {
-        selectChatMessage(data, chat.leafMessageId);
+    getChatMessages(chat.id).then((data) => {
+      if (data.messages.length > 0) {
+        selectChatMessage(data);
       } else {
         messageDispatch(setMessages([]));
         messageDispatch(setSelectedMessages([]));

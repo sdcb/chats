@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 import useTranslation from '@/hooks/useTranslation';
 
 import { getQueryId } from '@/utils/common';
-import { findLastLeafId, findSelectedMessageByLeafId } from '@/utils/message';
+import { findSelectedMessageByLeafId, mergeLoadedMessages } from '@/utils/message';
 
 import { ChatStatus, IChat } from '@/types/chat';
 import { IChatMessage, IStepGenerateInfo } from '@/types/chatMessage';
@@ -16,7 +16,7 @@ import { IconArrowCompactDown } from '@/components/Icons/index';
 import PageNotFound from '@/components/PageNotFound/PageNotFound';
 import { Button } from '@/components/ui/button';
 
-import { getChatShare } from '@/apis/clientApis';
+import { getChatShare, getSharedChatMessages, getSharedChatMessageSubtree } from '@/apis/clientApis';
 
 export default function ShareMessage() {
   const { t } = useTranslation();
@@ -39,9 +39,12 @@ export default function ShareMessage() {
     setShowBottomBar(!showBottomBar);
   };
 
-  const handleChangeChatLeafMessageId = (messageId: string) => {
-    const leafId = findLastLeafId(messages, messageId);
-    const selectedMsgs = findSelectedMessageByLeafId(messages, leafId);
+  const handleChangeChatLeafMessageId = async (messageId: string) => {
+    const data = await getSharedChatMessageSubtree(chatShareId, messageId);
+    if (!data.leafMessageId) return;
+    const mergedMessages = mergeLoadedMessages(messages, data.messages);
+    const selectedMsgs = findSelectedMessageByLeafId(mergedMessages, data.leafMessageId);
+    setMessages(mergedMessages);
     setSelectedMessages(selectedMsgs);
   };
 
@@ -49,18 +52,18 @@ export default function ShareMessage() {
   useEffect(() => {
     if (!router.isReady) return;
     const shareId = getQueryId(router)!;
-    getChatShare(shareId).then((data) => {
-      setSelectedChat({ ...data, status: ChatStatus.None });
-      setMessages(data.messages);
+    Promise.all([getChatShare(shareId), getSharedChatMessages(shareId)]).then(([chat, view]) => {
+      setSelectedChat({ ...chat, leafMessageId: view.leafMessageId ?? undefined, status: ChatStatus.None });
+      setMessages(view.messages);
       let selectedMsgs = findSelectedMessageByLeafId(
-        data.messages,
-        data.leafMessageId!,
+        view.messages,
+        view.leafMessageId!,
       );
-      if (selectedMsgs.length === 0 && data.messages.length > 0) {
-        const messageCount = data.messages.length - 1;
+      if (selectedMsgs.length === 0 && view.messages.length > 0) {
+        const messageCount = view.messages.length - 1;
         selectedMsgs = findSelectedMessageByLeafId(
-          data.messages,
-          data.messages[messageCount].id,
+          view.messages,
+          view.messages[messageCount].id,
         );
       }
       setSelectedMessages(selectedMsgs);

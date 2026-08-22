@@ -16,48 +16,6 @@ namespace Chats.BE.Controllers.Chats.Messages;
 [Route("api/messages"), Authorize]
 public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncryptionService urlEncryption) : ControllerBase
 {
-    [HttpGet("{chatId}")]
-    public async Task<ActionResult<TurnDto[]>> GetTurns(string chatId, [FromServices] FileUrlProvider fup, CancellationToken cancellationToken)
-    {
-        TurnDto[] messages = await db.ChatTurns
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentBlob)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileService)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File).ThenInclude(x => x.FileImageInfo)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentText)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentThink)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCallResponse)
-            .Where(m => m.ChatId == urlEncryption.DecryptChatId(chatId) && m.Chat.UserId == currentUser.Id && m.Steps.Any())
-            .Select(x => new ChatMessageTemp()
-            {
-                Id = x.Id,
-                ParentId = x.ParentId,
-                Role = x.IsUser ? DBChatRole.User : DBChatRole.Assistant,
-                Steps = x.Steps
-                    .OrderBy(s => s.Id)
-                    .ToArray(),
-                CreatedAt = x.Steps.First().CreatedAt,
-                SpanId = x.SpanId,
-                Usage = x.IsUser || x.Steps.First().Usage == null ? null : new ChatMessageTempUsage()
-                {
-                    ModelId = x.Steps.First().Usage!.ModelSnapshot.ModelId,
-                    ModelName = x.Steps.First().Usage!.ModelSnapshot.Name,
-                    ModelProviderId = x.Steps.First().Usage!.ModelSnapshot.ModelKeySnapshot.ModelProviderId,
-                },
-                Reaction = x.ReactionId,
-            })
-            .OrderBy(x => x.CreatedAt)
-            .Select(x => x.ToDto(urlEncryption, fup))
-            .ToArrayAsync(cancellationToken);
-
-        if (EtagCacheHelper.TryHandleNotModified(this, "messages-turns", messages, CreateDownloadUrlRequest.GetCurrentRefreshBucket()))
-        {
-            return StatusCode(StatusCodes.Status304NotModified);
-        }
-
-        return Ok(messages);
-    }
-
     [HttpGet("{chatId}/{encryptedTurnId}/generate-info")]
     public async Task<ActionResult<StepGenerateInfoDto[]>> GetTurnGenerateInfo(string chatId, string encryptedTurnId, CancellationToken cancellationToken)
     {
@@ -190,8 +148,225 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         return Ok();
     }
 
+    [HttpPatch("{turnId}/edit")]
+    public async Task<ActionResult<TurnDto>> PatchUserMessageInPlace(string turnId, [FromBody] EditUserMessageRequest request,
+        [FromServices] FileUrlProvider fup,
+        CancellationToken cancellationToken)
+    {
+        ChatTurn? sourceTurn = await LoadTurnForEdit(turnId, cancellationToken);
+        ActionResult? editValidation = ValidateEditTarget(sourceTurn, expectUserMessage: true);
+        if (editValidation != null)
+        {
+            return editValidation;
+        }
+        ChatTurn editableTurn = sourceTurn!;
+
+        string? validationError = await ValidateEditRequest(request, cancellationToken);
+        if (validationError != null)
+        {
+            return BadRequest(validationError);
+        }
+
+        Step step = editableTurn.Steps.OrderBy(x => x.Id).First();
+        StepContent[] existingContents = [.. step.StepContents];
+        TextContentRequestItem normalizedText = request.Contents.OfType<TextContentRequestItem>().Single() with
+        {
+            ContextTemplate = existingContents.FirstOrDefault(x => x.ContentType == DBStepContentType.Text)?.StepContentText?.ContextTemplate,
+        };
+        ContentRequestItem[] requestedContents = [.. request.Contents.Select(x => x is TextContentRequestItem ? normalizedText : x)];
+        StepContent[] convertedContents = await ContentRequestItem.ToMessageContents(requestedContents, fup, cancellationToken);
+
+        db.StepContents.RemoveRange(existingContents);
+        step.StepContents.Clear();
+        foreach (StepContent convertedContent in convertedContents)
+        {
+            step.StepContents.Add(convertedContent);
+        }
+        step.Edited = true;
+        editableTurn.Chat.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+
+        ChatMessageTemp temp = ChatMessageTemp.FromDB(editableTurn);
+        return Ok(temp.ToDto(urlEncryption, fup));
+    }
+
+    [HttpPatch("{turnId}/edit-and-save-new")]
+    public async Task<ActionResult<TurnDto>> PatchUserMessageAndSaveNew(string turnId, [FromBody] EditUserMessageRequest request,
+        [FromServices] FileUrlProvider fup,
+        [FromServices] ClientInfoManager clientInfoManager,
+        CancellationToken cancellationToken)
+    {
+        ChatTurn? sourceTurn = await LoadTurnForEdit(turnId, cancellationToken);
+        ActionResult? editValidation = ValidateEditTarget(sourceTurn, expectUserMessage: true);
+        if (editValidation != null)
+        {
+            return editValidation;
+        }
+        ChatTurn editableTurn = sourceTurn!;
+
+        string? validationError = await ValidateEditRequest(request, cancellationToken);
+        if (validationError != null)
+        {
+            return BadRequest(validationError);
+        }
+
+        StepContent[] existingContents = [.. editableTurn.Steps.SelectMany(x => x.StepContents)];
+        TextContentRequestItem normalizedText = request.Contents.OfType<TextContentRequestItem>().Single() with
+        {
+            ContextTemplate = existingContents.FirstOrDefault(x => x.ContentType == DBStepContentType.Text)?.StepContentText?.ContextTemplate,
+        };
+        ContentRequestItem[] requestedContents = [.. request.Contents.Select(x => x is TextContentRequestItem ? normalizedText : x)];
+        StepContent[] convertedContents = await ContentRequestItem.ToMessageContents(requestedContents, fup, cancellationToken);
+        int clientInfoId = await clientInfoManager.GetClientInfoId(cancellationToken);
+        ChatTurn editedTurn = BuildEditedTurn(editableTurn, convertedContents, true, normalizedText.Text, clientInfoId);
+        db.ChatTurns.Add(editedTurn);
+        editableTurn.Chat.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+        ChatMessageTemp temp = ChatMessageTemp.FromDB(editedTurn);
+        return Ok(temp.ToDto(urlEncryption, fup));
+    }
+
+    private async Task<ChatTurn?> LoadTurnForEdit(string turnId, CancellationToken cancellationToken)
+    {
+        return await db.ChatTurns
+            .Include(x => x.Chat)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentText)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile).ThenInclude(x => x!.File)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentThink)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentBlob)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
+            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCallResponse)
+            .Include(x => x.Steps).ThenInclude(x => x.Usage!).ThenInclude(x => x.ModelSnapshot).ThenInclude(x => x.ModelKeySnapshot)
+            .FirstOrDefaultAsync(x => x.Id == urlEncryption.DecryptTurnId(turnId), cancellationToken);
+    }
+
+    private ActionResult? ValidateEditTarget(ChatTurn? message, bool expectUserMessage)
+    {
+        if (message == null)
+        {
+            return NotFound();
+        }
+        if (message.Chat.UserId != currentUser.Id)
+        {
+            return Forbid();
+        }
+        if (message.IsUser != expectUserMessage)
+        {
+            return BadRequest(expectUserMessage
+                ? "Only user messages can be edited with this endpoint"
+                : "Only response messages can be edited with this endpoint");
+        }
+        return null;
+    }
+
+    private UserModelUsage? BuildEditedUsage(ChatTurn sourceTurn, string editedText, int clientInfoId)
+    {
+        UserModelUsage? sourceUsage = sourceTurn.Steps.FirstOrDefault()?.Usage;
+        if (sourceUsage == null)
+        {
+            return null;
+        }
+
+        return new UserModelUsage
+        {
+            ModelSnapshotId = sourceUsage.ModelSnapshotId,
+            ModelSnapshot = sourceUsage.ModelSnapshot,
+            UserId = currentUser.Id,
+            FinishReasonId = (byte)DBFinishReason.Success,
+            SegmentCount = 1,
+            InputFreshTokens = sourceUsage.InputFreshTokens,
+            InputCachedTokens = sourceUsage.InputCachedTokens,
+            OutputTokens = ChatService.Tokenizer.CountTokens(editedText),
+            ClientInfoId = clientInfoId,
+            ReasoningTokens = 0,
+            IsUsageReliable = false,
+            PreprocessDurationMs = 0,
+            FirstResponseDurationMs = 0,
+            PostprocessDurationMs = 0,
+            TotalDurationMs = 0,
+            InputFreshCost = 0,
+            OutputCost = 0,
+            InputCachedCost = 0,
+            BalanceTransactionId = null,
+            UsageTransactionId = null,
+            SourceId = sourceUsage.SourceId,
+        };
+    }
+
+    private ChatTurn BuildEditedTurn(ChatTurn sourceTurn, StepContent[] editedContents, bool isUserMessage, string editedText, int clientInfoId)
+    {
+        IEnumerable<Step> sourceSteps = isUserMessage ? [new Step()] : sourceTurn.Steps;
+        return new ChatTurn
+        {
+            SpanId = sourceTurn.SpanId,
+            ChatId = sourceTurn.ChatId,
+            ParentId = sourceTurn.ParentId,
+            IsUser = isUserMessage,
+            Steps = [.. sourceSteps.Select(_ => new Step
+            {
+                StepContents = [.. editedContents],
+                Edited = true,
+                ChatRoleId = isUserMessage ? (byte)DBChatRole.User : (byte)DBChatRole.Assistant,
+                CreatedAt = DateTime.UtcNow,
+                Usage = BuildEditedUsage(sourceTurn, editedText, clientInfoId),
+            })],
+            ChatConfigSnapshotId = sourceTurn.ChatConfigSnapshotId,
+        };
+    }
+
+    private async Task<string?> ValidateEditRequest(EditUserMessageRequest request, CancellationToken cancellationToken)
+    {
+        if (request.Contents == null || request.Contents.Length == 0)
+        {
+            return "Message contents are required";
+        }
+        TextContentRequestItem[] textContents = [.. request.Contents.OfType<TextContentRequestItem>()];
+        FileContentRequestItem[] fileContents = [.. request.Contents.OfType<FileContentRequestItem>()];
+        if (textContents.Length != 1 || string.IsNullOrWhiteSpace(textContents[0].Text))
+        {
+            return "Exactly one non-empty text content is required";
+        }
+        if (request.Contents.Length != textContents.Length + fileContents.Length)
+        {
+            return "Unsupported message content type";
+        }
+        if (fileContents.Length > 5)
+        {
+            return "Too many attachments";
+        }
+
+        int[] fileIds;
+        try
+        {
+            fileIds = [.. fileContents.Select(x => urlEncryption.DecryptFileId(x.FileId))];
+        }
+        catch (Exception)
+        {
+            return "Invalid file ID";
+        }
+        if (fileIds.Distinct().Count() != fileIds.Length)
+        {
+            return "Duplicate file ID";
+        }
+        if (fileIds.Length == 0)
+        {
+            return null;
+        }
+
+        var files = await db.Files.Where(x => fileIds.Contains(x.Id)).ToListAsync(cancellationToken);
+        if (files.Count != fileIds.Length || files.Any(x => x.CreateUserId != currentUser.Id && !currentUser.IsAdmin))
+        {
+            return "File not found or not accessible";
+        }
+        if (files.Any(x => !x.MediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)))
+        {
+            return "Only image attachments are supported";
+        }
+        return null;
+    }
+
     [HttpPatch("{turnId}/{contentId}/text")]
-    public async Task<ActionResult<ContentResponseItem>> PatchTextInPlace(string turnId, string contentId, [FromBody] TextContentRequestItem content,
+    public async Task<ActionResult<ContentResponseItem>> PatchResponseTextInPlace(string turnId, string contentId, [FromBody] TextContentRequestItem content,
         [FromServices] FileUrlProvider fup,
         [FromServices] IUrlEncryptionService urlEncryption,
         CancellationToken cancellationToken)
@@ -208,9 +383,10 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         {
             return BadRequest("Content is not text");
         }
-        if (messageContent.Step.Turn.Chat.UserId != currentUser.Id)
+        ActionResult? editValidation = ValidateEditTarget(messageContent.Step.Turn, expectUserMessage: false);
+        if (editValidation != null)
         {
-            return Forbid();
+            return editValidation;
         }
 
         messageContent.StepContentText!.Content = content.Text;
@@ -223,88 +399,38 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
     }
 
     [HttpPatch("{turnId}/{contentId}/text-and-save-new")]
-    public async Task<ActionResult<ResponseMessageDto>> PatchTextAndSaveNew(string turnId, string contentId, [FromBody] TextContentRequestItem content,
+    public async Task<ActionResult<ResponseMessageDto>> PatchResponseTextAndSaveNew(string turnId, string contentId, [FromBody] TextContentRequestItem content,
         [FromServices] FileUrlProvider fup,
         [FromServices] IUrlEncryptionService urlEncryption,
         [FromServices] ClientInfoManager clientInfoManager,
         CancellationToken cancellationToken)
     {
-        ChatTurn? message = await db.ChatTurns
-            .Include(x => x.Chat)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentText)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentThink)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentBlob)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
-            .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCallResponse)
-            .Include(x => x.Steps).ThenInclude(x => x.Usage!).ThenInclude(x => x.ModelSnapshot).ThenInclude(x => x.ModelKeySnapshot)
-            .FirstOrDefaultAsync(x => x.Id == urlEncryption.DecryptTurnId(turnId), cancellationToken);
-        if (message == null)
+        ChatTurn? sourceTurn = await LoadTurnForEdit(turnId, cancellationToken);
+        ActionResult? editValidation = ValidateEditTarget(sourceTurn, expectUserMessage: false);
+        if (editValidation != null)
+        {
+            return editValidation;
+        }
+        ChatTurn sourceResponse = sourceTurn!;
+        StepContent? targetTextContent = sourceResponse.Steps.SelectMany(x => x.StepContents).FirstOrDefault(x => x.Id == urlEncryption.DecryptMessageContentId(contentId));
+        if (targetTextContent == null)
         {
             return NotFound();
         }
-        if (message.Chat.UserId != currentUser.Id)
-        {
-            return Forbid();
-        }
-        StepContent? textContent = message.Steps.SelectMany(x => x.StepContents).FirstOrDefault(x => x.Id == urlEncryption.DecryptMessageContentId(contentId));
-        if (textContent == null)
-        {
-            return NotFound();
-        }
-        if (textContent.StepContentText == null)
+        if (targetTextContent.StepContentText == null)
         {
             return BadRequest("Content is not text");
         }
 
-        ContentRequestItem[] newContent = [.. ContentRequestItem.FromDB([.. message.Steps.SelectMany(x => x.StepContents)], urlEncryption, textContent.Id, content)];
+        ContentRequestItem[] patchedContents = [.. ContentRequestItem.FromDB([.. sourceResponse.Steps.SelectMany(x => x.StepContents)], urlEncryption, targetTextContent.Id, content)];
 
-        StepContent[] stepContents = await StepContentExtensions.FromRequest(newContent, fup, cancellationToken);
+        StepContent[] convertedContents = await StepContentExtensions.FromRequest(patchedContents, fup, cancellationToken);
         int clientInfoId = await clientInfoManager.GetClientInfoId(cancellationToken);
-        UserModelUsage? sourceUsage = message.Steps.First().Usage;
-        ChatTurn turn = new()
-        {
-            SpanId = message.SpanId,
-            ChatId = message.ChatId,
-            ParentId = message.ParentId,
-            IsUser = message.IsUser,
-            Steps = [.. message.Steps.Select(x => new Step()
-            {
-                StepContents = [.. stepContents],
-                Edited = true, // Mark as edited since we are creating a new message
-                ChatRoleId = message.IsUser ? (byte)DBChatRole.User : (byte)DBChatRole.Assistant,
-                CreatedAt = DateTime.UtcNow,
-                Usage = sourceUsage != null ? new UserModelUsage()
-                {
-                    ModelSnapshotId = sourceUsage.ModelSnapshotId,
-                    ModelSnapshot = sourceUsage.ModelSnapshot,
-                    UserId = currentUser.Id,
-                    FinishReasonId = (byte)DBFinishReason.Success,
-                    SegmentCount = 1,
-                    InputFreshTokens = sourceUsage.InputFreshTokens,
-                    InputCachedTokens = sourceUsage.InputCachedTokens,
-                    OutputTokens = ChatService.Tokenizer.CountTokens(content.Text),
-                    ClientInfoId = clientInfoId, // Use FK instead of navigation property to avoid EF Core collection modification issue
-                    ReasoningTokens = 0,
-                    IsUsageReliable = false,
-                    PreprocessDurationMs = 0,
-                    FirstResponseDurationMs = 0,
-                    PostprocessDurationMs = 0,
-                    TotalDurationMs = 0,
-                    InputFreshCost = 0,
-                    OutputCost = 0,
-                    InputCachedCost = 0,
-                    BalanceTransactionId = null,
-                    UsageTransactionId = null,
-                    SourceId = sourceUsage.SourceId,
-                } : null,
-            })],
-            ChatConfigSnapshotId = message.ChatConfigSnapshotId,
-        };
-        db.ChatTurns.Add(turn);
-        message.Chat.UpdatedAt = DateTime.UtcNow;
+        ChatTurn editedTurn = BuildEditedTurn(sourceResponse, convertedContents, false, content.Text, clientInfoId);
+        db.ChatTurns.Add(editedTurn);
+        sourceResponse.Chat.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
-        ChatMessageTemp temp = ChatMessageTemp.FromDB(turn);
+        ChatMessageTemp temp = ChatMessageTemp.FromDB(editedTurn);
         return Ok(temp.ToDto(urlEncryption, fup));
     }
 

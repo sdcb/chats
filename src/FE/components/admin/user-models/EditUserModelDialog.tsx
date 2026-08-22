@@ -114,7 +114,7 @@ export default function EditUserModelDialog({ open, onOpenChange, model, onSave 
           <Button onClick={handleSave} disabled={saving || !expiresDate}>
             {saving ? (
               <>
-                <IconLoader size={16} className="animate-spin mr-2" />
+                <IconLoader size={16} className="mr-2" />
                 {t('Saving...')}
               </>
             ) : (

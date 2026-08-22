@@ -650,7 +650,7 @@ export default function UserModelTree({
                           <IconChevronDown size={14} />
                         </div>
                         {isProviderPending ? (
-                          <IconLoader size={20} className="animate-spin text-muted-foreground" />
+                          <IconLoader size={20} className="text-muted-foreground" />
                         ) : (
                           <TriStateCheckbox
                             state={providerCheckState}
@@ -718,7 +718,7 @@ export default function UserModelTree({
                                     <IconChevronDown size={12} />
                                   </div>
                                   {isKeyPending ? (
-                                    <IconLoader size={16} className="animate-spin text-muted-foreground" />
+                                    <IconLoader size={16} className="text-muted-foreground" />
                                   ) : (
                                     <TriStateCheckbox
                                       state={keyCheckState}
@@ -779,7 +779,7 @@ export default function UserModelTree({
                                       >
                                         <div className="flex items-center gap-2 flex-1 min-w-0">
                                           {isPending ? (
-                                            <IconLoader size={14} className="animate-spin text-muted-foreground flex-shrink-0" />
+                                        <IconLoader size={14} className="text-muted-foreground flex-shrink-0" />
                                           ) : (
                                             <TriStateCheckbox
                                               state={model.isAssigned ? 'checked' : 'unchecked'}

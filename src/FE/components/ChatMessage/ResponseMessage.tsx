@@ -444,7 +444,11 @@ const ResponseMessage = (props: Props) => {
           );
         } else if (c.$type === MessageContentType.text) {
           return editId === c.i ? (
-            <div className="flex relative" key={'edit-text-' + c.i}>
+            <div
+              className="flex relative"
+              onClick={(event) => event.stopPropagation()}
+              key={'edit-text-' + c.i}
+            >
               <div className="flex w-full flex-col flex-wrap rounded-md bg-muted">
                 <Textarea
                   ref={textareaRef}

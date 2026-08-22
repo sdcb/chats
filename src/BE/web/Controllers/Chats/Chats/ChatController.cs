@@ -219,10 +219,15 @@ public class ChatController(
             return BadRequest("Invalid MCP server permission");
         }
 
-        Dictionary<short, UserModel> userModels = await userModelManager.GetUserModels(currentUser.Id, [.. toGenerateSpans.Select(x => x.ChatConfig.ModelId)], cancellationToken);
+        if (toGenerateSpans.Any(x => !x.ChatConfig.ModelId.HasValue))
+        {
+            return BadRequest("Model has been deleted");
+        }
+
+        Dictionary<short, UserModel> userModels = await userModelManager.GetUserModels(currentUser.Id, [.. toGenerateSpans.Select(x => x.ChatConfig.ModelId!.Value)], cancellationToken);
         {
             // ensure userModels contains all models that in toGenerateSpans
-            HashSet<short> requestedModels = [.. toGenerateSpans.Select(x => x.ChatConfig.ModelId)];
+            HashSet<short> requestedModels = [.. toGenerateSpans.Select(x => x.ChatConfig.ModelId!.Value)];
             HashSet<short> existingModels = [.. userModels.Keys];
             if (!requestedModels.SetEquals(existingModels))
             {
@@ -303,7 +308,7 @@ public class ChatController(
             List<UserContextContribution> contributions = [.. toGenerateSpans.Select(span =>
                 new UserContextContribution(
                     "model",
-                    userModels[span.ChatConfig.ModelId].Model.CurrentSnapshot.Name,
+                    userModels[span.ChatConfig.ModelId!.Value].Model.CurrentSnapshot.Name,
                     [span.SpanId]))];
             byte[] codeInterpreterSpanIds = [.. toGenerateSpans
                 .Where(x => x.ChatConfig.CodeExecutionEnabled)
@@ -344,7 +349,7 @@ public class ChatController(
         // Ensure Model navigation is populated on the controller thread to avoid cross-thread mutation of tracked entities.
         foreach (ChatSpan span in toGenerateSpans)
         {
-            span.ChatConfig.Model = userModels[span.ChatConfig.ModelId].Model;
+            span.ChatConfig.Model = userModels[span.ChatConfig.ModelId!.Value].Model;
         }
 
         List<Task> streamTasks = [.. toGenerateSpans.Select((span, index) => ProcessChatSpan(
@@ -356,7 +361,7 @@ public class ChatController(
             span,
             req,
             chat,
-            userModels[span.ChatConfig.ModelId],
+            userModels[span.ChatConfig.ModelId!.Value],
             userMcps,
             messageTreeNoContent,
             messageTree,
@@ -382,7 +387,7 @@ public class ChatController(
             streamTasks.Add(chatTitleSummaryService.StreamTitleAsync(
                 chat.Id,
                 firstSpan.ChatConfig.SystemPrompt,
-                userModels[firstSpan.ChatConfig.ModelId],
+                userModels[firstSpan.ChatConfig.ModelId!.Value],
                 firstTextItem.Text,
                 titleChannel.Writer,
                 cancellationToken));

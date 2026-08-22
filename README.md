@@ -18,18 +18,18 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 22+ 主流 
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
-## 🆕 最新版本（1.15.0）
+## 🆕 最新版本（1.16.0）
 
-- 📅 发布日期：2026-08-19
-- 📝 Prompt 收敛：保留 Prompt 管理和 `/xxx` 快捷选择，选中内容原样插入，并移除所有 `{{...}}` 变量替换
-- 🧩 MCP 元数据：分离协议名称与显示名称，支持工具元数据编辑和四个 annotation hint 同步
-- ⚡ MCP 执行优化：只读工具最多四个并行，幂等失败有限重试，并保持调用顺序稳定
-- 🧰 工具调用展示：并行工具独立展开，参数和 progress 期间保持展开，完成后延时收起
-- 🧠 Responses 推理回传：保留 reasoning signature 边界及 reasoning/tool/message 原始顺序，避免密文拼接错误
-- 👥 MCP 用户分配：紧凑四列表格、长用户名省略、多行 JSON 请求头和可用用户列表即时更新
-- ⬆️ 升级重点：SQL Server 和 SQLite 部署需运行对应的 `1.15.0` 数据库迁移脚本
+- 📅 发布日期：2026-08-22
+- 🌳 聊天分支懒加载：首次只加载当前可见消息路径，其他分支按需获取
+- 🖼️ 消息图片编辑：支持文本与图片一起编辑，以及上传、粘贴、拖拽和远程文件选择
+- 🗑️ 模型生命周期：支持物理删除 Model 和 Model Key，同时保留历史快照并清理活动关联
+- 🖼️ 回答长图导出：助手回答可导出为跟随主题的 PNG 长图，保留公式、流程图、代码、表格和图片
+- 🔄 交互体验：统一加载动画，优化移动端工具栏，并修复会话标题裁切
+- 🐛 稳定性修复：修复 Responses 推理内容展示和 Model Key 可用模型查询问题
+- ⬆️ 升级重点：SQL Server 和 SQLite 部署需运行对应的 `1.16.0` 数据库迁移脚本
 
-👉 [查看 1.15.0 发布说明](./doc/zh-CN/release-notes/1.15.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
+👉 [查看 1.16.0 发布说明](./doc/zh-CN/release-notes/1.16.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
 
 ## 快速开始
 
@@ -77,7 +77,7 @@ Chats 使用 `C#`/`TypeScript` 开发，以下是完整的文档资源：
 
 - **GitHub Issues**：[https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
 - **QQ 群**：498452653 [![加入QQ群](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=flat&logo=tencent-qq)](https://qm.qq.com/q/AM8tY9cAsS)
-- **微信群** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0819) 如果微信群已满，请加 QQ 群获取临时入群二维码。
+- **微信群** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0822) 如果微信群已满，请加 QQ 群获取临时入群二维码。
 
 ---
 

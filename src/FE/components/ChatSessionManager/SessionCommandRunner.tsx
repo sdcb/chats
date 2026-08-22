@@ -186,7 +186,7 @@ export default function SessionCommandRunner({
             className="gap-2"
           >
             {running ? (
-              <IconLoader className="animate-spin stroke-primary-foreground" size={16} />
+              <IconLoader className="stroke-primary-foreground" size={16} />
             ) : (
               <IconBolt className="stroke-primary-foreground" size={16} />
             )}

@@ -39,7 +39,6 @@ const ChatModelSettingModal = (props: Props) => {
   const {
     state: { modelMap, prompts, models, chats },
     selectedChat,
-    hasModel,
     chatDispatch,
   } = useContext(HomeContext);
   const [span, setSpan] = useState<ChatSpanDto>();
@@ -215,6 +214,11 @@ const ChatModelSettingModal = (props: Props) => {
   const handleSave = async () => {
     if (!span || !selectedChat) return;
 
+    if (span.modelId == null || !model) {
+      toast.error(t('Model not available'));
+      return;
+    }
+
     // 验证MCP工具设置
     if (span.mcps && span.mcps.length > 0) {
       for (const mcp of span.mcps) {
@@ -272,7 +276,7 @@ const ChatModelSettingModal = (props: Props) => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-full sm:w-[560px] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogTitle></DialogTitle>
-        {span && model && hasModel() && (
+        {span && (
           <div className="flex-1 overflow-y-auto p-4 mt-5">
             <div className="space-y-3 rounded-lg">
               <div className="flex flex-col gap-1">
@@ -285,8 +289,10 @@ const ChatModelSettingModal = (props: Props) => {
                   models={models}
                   content={
                     <div className="flex gap-2 items-center">
-                      <ModelProviderIcon providerId={span.modelProviderId} />
-                      {span.modelName}
+                      {span.modelProviderId != null && (
+                        <ModelProviderIcon providerId={span.modelProviderId} />
+                      )}
+                      {model?.name || span.modelName || t('Model not available')}
                     </div>
                   }
                   hideIcon={true}
@@ -294,7 +300,7 @@ const ChatModelSettingModal = (props: Props) => {
                     onChangeModel(model);
                   }}
                 />
-                <ChatModelInfo modelId={span.modelId} />
+                {span.modelId != null && <ChatModelInfo modelId={span.modelId} />}
               </div>
               
               {/* 根据模型的 API 类型显示不同的配置组件 */}

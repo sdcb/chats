@@ -161,7 +161,7 @@ export default function CreateSessionPane({
           disabled={creating}
         >
           {creating ? (
-            <IconLoader className="animate-spin" size={16} />
+            <IconLoader size={16} />
           ) : (
             t('Create')
           )}

@@ -29,6 +29,9 @@ public abstract record TurnDto
 
     [JsonPropertyName("spanId")]
     public required byte? SpanId { get; init; }
+
+    [JsonPropertyName("siblingIds")]
+    public string[] SiblingIds { get; init; } = [];
 }
 
 public record RequestMessageDto : TurnDto
@@ -96,9 +99,9 @@ public record ChatMessageTemp
     public required ChatMessageTempUsage? Usage { get; init; }
     public required bool? Reaction { get; init; }
 
-    public TurnDto ToDto(IUrlEncryptionService urlEncryption, FileUrlProvider fup)
+    public TurnDto ToDto(IUrlEncryptionService urlEncryption, FileUrlProvider fup, IReadOnlyList<long>? siblingIds = null)
     {
-        if (Usage == null)
+        if (Role == DBChatRole.User)
         {
             return new RequestMessageDto()
             {
@@ -108,6 +111,7 @@ public record ChatMessageTemp
                 Steps = StepDto.FromDB(Steps, fup, urlEncryption),
                 CreatedAt = CreatedAt,
                 SpanId = SpanId,
+                SiblingIds = EncryptSiblingIds(siblingIds, urlEncryption),
             };
         }
         else
@@ -121,13 +125,17 @@ public record ChatMessageTemp
                 CreatedAt = CreatedAt,
                 SpanId = SpanId,
 
-                ModelId = Usage.ModelId,
-                ModelName = Usage.ModelName,
-                ModelProviderId = Usage.ModelProviderId,
+                ModelId = Usage?.ModelId ?? 0,
+                ModelName = Usage?.ModelName,
+                ModelProviderId = Usage?.ModelProviderId ?? 0,
                 Reaction = Reaction,
+                SiblingIds = EncryptSiblingIds(siblingIds, urlEncryption),
             };
         }
     }
+
+    private static string[] EncryptSiblingIds(IReadOnlyList<long>? siblingIds, IUrlEncryptionService urlEncryption) =>
+        siblingIds == null ? [] : [.. siblingIds.Select(urlEncryption.EncryptTurnId)];
 
     public static ChatMessageTemp FromDB(ChatTurn assistantMessage)
     {
@@ -154,8 +162,7 @@ public record ChatMessageTemp
                 .FirstOrDefault()?
                 .ModelSnapshot;
             ModelSnapshot? chatConfigModelSnapshot = assistantMessage.ChatConfigSnapshot?.ModelSnapshot;
-            ModelSnapshot resolvedModelSnapshot = usageModelSnapshot ?? chatConfigModelSnapshot
-                ?? throw new InvalidOperationException("Assistant message usage model is missing.");
+            ModelSnapshot? resolvedModelSnapshot = usageModelSnapshot ?? chatConfigModelSnapshot;
 
             return new()
             {
@@ -165,11 +172,11 @@ public record ChatMessageTemp
                 ParentId = assistantMessage.ParentId,
                 Role = DBChatRole.Assistant,
                 SpanId = assistantMessage.SpanId,
-                Usage = new ChatMessageTempUsage()
+                Usage = resolvedModelSnapshot == null ? null : new ChatMessageTempUsage()
                 {
-                    ModelId = resolvedModelSnapshot.ModelId,
-                    ModelName = resolvedModelSnapshot.Name,
-                    ModelProviderId = resolvedModelSnapshot.ModelKeySnapshot.ModelProviderId,
+                    ModelId = resolvedModelSnapshot?.ModelId ?? 0,
+                    ModelName = resolvedModelSnapshot?.Name ?? string.Empty,
+                    ModelProviderId = resolvedModelSnapshot?.ModelKeySnapshot.ModelProviderId ?? 0,
                 },
                 Reaction = assistantMessage.ReactionId,
             };
