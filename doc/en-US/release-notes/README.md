@@ -7,7 +7,22 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.15.0](1.15.0.md) - 2026-08-19 ⭐ Latest Release
+## [1.16.0](1.16.0.md) - 2026-08-22 ⭐ Latest Release
+
+**Core Highlights**: lazy loading for branching chats · physical Model and Model Key deletion · rich message/image editing · themed assistant-answer PNG export · unified loading and mobile toolbar UX
+
+- 🌳 **Branching Chat Loading**: loads only the visible message path initially and fetches other branches on demand
+- 🖼️ **Message Image Editing**: edits text and images together with upload, paste, drag-and-drop, and remote-file selection
+- 🗑️ **Model Lifecycle**: physically deletes Models and Model Keys while preserving historical snapshots and cleaning active associations
+- 🖼️ **Answer Export**: exports assistant answers as theme-aware PNG long images with formulas, diagrams, code, tables, and images
+- 🔄 **Interaction Polish**: unifies loading animations, fixes clipped session titles, and keeps mobile tool controls on one line
+- 🐛 **Stability Fixes**: fixes Responses reasoning display and the Model Key possible-models query
+
+[View Full Release Notes →](1.16.0.md)
+
+---
+
+## [1.15.0](1.15.0.md) - 2026-08-19
 
 **Core Highlights**: Prompt convergence to plain-text shortcuts · MCP Server/tool metadata and parallel retries · independent parallel tool-call expansion and completion collapse · compact MCP user assignment · removal of the legacy retry setting · .NET dependency security updates
 
