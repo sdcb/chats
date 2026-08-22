@@ -153,7 +153,7 @@ const ResponseMessageActions = (props: Props) => {
               }}
             >
               {isDownloading ? (
-                <IconLoader className="animate-spin" />
+                <IconLoader />
               ) : (
                 <IconDownload />
               )}

@@ -317,7 +317,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
               title={t('Save')}
             >
               {savingFolder ? (
-                <IconLoader className="animate-spin" size={14} />
+                <IconLoader size={14} />
               ) : (
                 <IconCheck size={14} />
               )}
@@ -339,7 +339,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
       if (loading) {
         return (
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground h-full">
-            <IconLoader className="animate-spin" size={16} /> {t('Loading...')}
+            <IconLoader size={16} /> {t('Loading...')}
           </div>
         );
       }
@@ -413,7 +413,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
                     title={t('Delete')}
                   >
                     {deletingPath === e.path ? (
-                      <IconLoader className="animate-spin" size={14} />
+                      <IconLoader size={14} />
                     ) : (
                       <IconTrash size={14} />
                     )}
@@ -489,7 +489,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
               title={t('Upload files')}
             >
               {uploading ? (
-                <IconLoader className="animate-spin" size={16} />
+                <IconLoader size={16} />
               ) : (
                 <IconPaperclip size={16} />
               )}

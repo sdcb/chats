@@ -224,7 +224,6 @@ export default function SessionInfoCard({ chatId, session, onRefreshTimes }: Pro
                   <IconLoader
                     size={14}
                     stroke="currentColor"
-                    className="animate-spin"
                   />
                 ) : (
                   <IconRefresh size={14} stroke="currentColor" />

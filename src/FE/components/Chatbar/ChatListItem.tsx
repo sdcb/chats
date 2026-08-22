@@ -268,7 +268,7 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
         <div className="absolute right-1 z-10 flex text-gray-300">
           <SidebarActionButton handleClick={handleConfirm} disabled={isConfirming}>
             {isConfirming ? (
-              <IconLoader size={18} className="animate-spin" />
+              <IconLoader size={18} />
             ) : (
               <IconCheck size={18} />
             )}

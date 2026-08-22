@@ -209,7 +209,7 @@ const Sidebar = <T,>({
           className="p-1 m-0 h-auto"
         >
           {isCreating ? (
-            <IconLoader size={26} className="animate-spin" />
+            <IconLoader size={26} />
           ) : (
             <IconSquarePlus size={26} />
           )}

@@ -367,7 +367,7 @@ export default function ModelUserList({ model, isExpanded, onToggle, onAssignedU
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           {isPending ? (
-                            <IconLoader size={14} className="animate-spin text-muted-foreground flex-shrink-0" />
+                            <IconLoader size={14} className="text-muted-foreground flex-shrink-0" />
                           ) : (
                             <TriStateCheckbox
                               state={user.isAssigned ? 'checked' : 'unchecked'}

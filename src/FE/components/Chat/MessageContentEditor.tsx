@@ -174,7 +174,7 @@ const MessageContentEditor = ({ selectedChat, initialContent, onSave, onSend, on
               </PopoverContent>
             </Popover>
           )}
-          {uploading && <Button disabled size="xs" className="h-8 w-8 bg-transparent p-0"><IconLoader className="animate-spin" size={20} /></Button>}
+          {uploading && <Button disabled size="xs" className="h-8 w-8 bg-transparent p-0"><IconLoader size={20} /></Button>}
           {canUpload && <PasteUpload fileConfig={defaultFileConfig} containerRef={inputContainerRef} onUploading={handleUploading} onFailed={handleUploadFailed} onSuccessful={handleUploadSuccessful} />}
           {canUpload && <DragUpload fileConfig={defaultFileConfig} onUploading={handleUploading} onFailed={handleUploadFailed} onSuccessful={handleUploadSuccessful} containerRef={inputContainerRef as React.RefObject<HTMLElement>} />}
         </div>

@@ -245,7 +245,7 @@ export default function ChatSessionManagerWindow({
                         title={t('Confirm')}
                       >
                         {deletingLabel === s.label ? (
-                          <IconLoader size={14} className="animate-spin" />
+                          <IconLoader size={14} />
                         ) : (
                           <IconCheck size={14} />
                         )}

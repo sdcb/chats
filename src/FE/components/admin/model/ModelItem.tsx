@@ -149,7 +149,7 @@ export default function ModelItem({ model, onEditClick, onDeleteClick, onGoToUsa
               disabled={!model.enabled || batchPending}
             >
               {batchPending ? (
-                <IconLoader size={18} className="animate-spin text-muted-foreground" />
+                <IconLoader size={18} className="text-muted-foreground" />
               ) : (
                 <TriStateCheckbox
                   state={checkState as TriStateCheckboxState}
@@ -200,7 +200,7 @@ export default function ModelItem({ model, onEditClick, onDeleteClick, onGoToUsa
         <div className="flex items-center gap-2 ml-3" data-no-expand>
           {/* Toggle switch with loading state */}
           <div className="flex items-center gap-1.5">
-            {isToggling && <IconLoader size={14} className="animate-spin text-muted-foreground" />}
+            {isToggling && <IconLoader size={14} className="text-muted-foreground" />}
             <button
               type="button"
               role="switch"

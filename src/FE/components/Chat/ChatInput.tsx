@@ -746,7 +746,7 @@ const ChatInput = ({
                       size="xs"
                       className="m-0.5 h-8 w-8 p-0 bg-transparent hover:bg-muted flex items-center justify-center"
                     >
-                      <IconLoader className="animate-spin" size={20} />
+                      <IconLoader size={20} />
                     </Button>
                   )}
 
