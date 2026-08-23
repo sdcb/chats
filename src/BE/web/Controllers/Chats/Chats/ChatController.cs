@@ -326,11 +326,10 @@ public class ChatController(
             TimeSpan userOffset = TimeSpan.FromMinutes(-req.TimezoneOffset);
             DateTimeOffset userLocalTime = new DateTimeOffset(utcNow, TimeSpan.Zero).ToOffset(userOffset);
 
-            List<UserContextContribution> contributions = [.. toGenerateSpans.Select(span =>
-                new UserContextContribution(
-                    "model",
-                    userModels[span.ChatConfig.ModelId!.Value].Model.CurrentSnapshot.Name,
-                    [span.SpanId]))];
+            // The model identity is already part of the provider request metadata.
+            // Keep it out of the user-facing context prompt; only dynamic runtime
+            // context (such as the current time and code-interpreter state) belongs here.
+            List<UserContextContribution> contributions = [];
             byte[] codeInterpreterSpanIds = [.. toGenerateSpans
                 .Where(x => x.ChatConfig.CodeExecutionEnabled)
                 .Select(x => x.SpanId)
@@ -593,11 +592,13 @@ public class ChatController(
         List<Step> allSteps = [.. messageTree, .. dbUserMessage?.Steps ?? []];
 
         bool codeExecutionEnabled = chatSpan.ChatConfig.CodeExecutionEnabled;
+        bool applyContextTemplate = (DBApiType)chatSpan.ChatConfig.Model!.CurrentSnapshot.ApiTypeId
+            != DBApiType.OpenAIImageGeneration;
 
         IReadOnlyList<Step> filteredHistorySteps = RemoveNonMatchingHistoricalTurnThinkingBlocks(messageTurns, userModel.ModelId);
         IList<NeutralMessage> neutralMessages = filteredHistorySteps
             .Concat(dbUserMessage?.Steps ?? [])
-            .ToNeutral(chatSpan.SpanId);
+            .ToNeutral(chatSpan.SpanId, applyContextTemplate);
         NeutralSystemMessage? systemMessage = chatSpan.ChatConfig.CodeExecutionEnabled
             ? codeInterpreter.BuildSystemMessage(chatSpan.ChatConfig.SystemPrompt)
             : string.IsNullOrWhiteSpace(chatSpan.ChatConfig.SystemPrompt)
@@ -920,7 +921,7 @@ public class ChatController(
 
         void WriteStep(Step step)
         {
-            csr.Messages.Add(step.ToNeutral(chatSpan.SpanId));
+            csr.Messages.Add(step.ToNeutral(chatSpan.SpanId, applyContextTemplate));
             writer.TryWrite(new EndStepInternal(chatSpan.SpanId, step));
         }
 
