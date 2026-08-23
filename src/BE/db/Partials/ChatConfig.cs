@@ -22,6 +22,7 @@ public partial class ChatConfig
             ThinkingBudget = ThinkingBudget,
             Format = Format,
             Compression = Compression,
+            Background = Background,
             ChatConfigMcps = [..ChatConfigMcps.Select(x => new ChatConfigMcp
                 {
                     McpServerId = x.McpServerId,
@@ -174,6 +175,15 @@ public partial class ChatConfig
         {
             flagBuffer[0] = Compression.Value;
             AppendField(flagBuffer);
+        }
+
+        if (!string.IsNullOrEmpty(Background))
+        {
+            int backgroundLength = Background.Length;
+            BitConverter.TryWriteBytes(intBuffer, backgroundLength);
+            AppendField(intBuffer);
+            ReadOnlySpan<byte> backgroundBytes = MemoryMarshal.AsBytes(Background.AsSpan());
+            AppendField(backgroundBytes);
         }
 
         // 计算 SHA256 哈希，取前 8 字节转换为 long 类型

@@ -1,5 +1,6 @@
 using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
+using Chats.BE.Controllers.Chats.Messages;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.Infrastructure;
 using Chats.BE.Services;
@@ -182,6 +183,26 @@ public class ChatController(
 
         Dictionary<long, ChatTurn> existingMessages = chat.ChatTurns.ToDictionary(x => x.Id, x => x);
         bool isEmptyChat = existingMessages.Count == 0;
+
+        async Task<long[]> GetSiblingIds(long turnId)
+        {
+            var rows = await db.ChatTurns
+                .Where(x => x.ChatId == chat.Id && x.Steps.Any())
+                .Select(x => new
+                {
+                    x.Id,
+                    x.ParentId,
+                    x.IsUser,
+                    x.SpanId,
+                    CreatedAt = x.Steps.Min(s => s.CreatedAt),
+                })
+                .ToArrayAsync(CancellationToken.None);
+            ChatMessageViewService.TurnMeta[] turns = [.. rows.Select(x =>
+                new ChatMessageViewService.TurnMeta(
+                    x.Id, x.ParentId, x.IsUser, x.SpanId, x.CreatedAt))];
+            ChatMessageViewService.TurnMeta? turn = turns.FirstOrDefault(x => x.Id == turnId);
+            return turn is null ? [] : ChatMessageViewService.GetSiblingIds(turns, turn);
+        }
 
         // ensure chat.ChatSpan contains all span ids that in request, otherwise return error
         ChatSpan[] toGenerateSpans = null!;
@@ -414,10 +435,12 @@ public class ChatController(
 
                 if (newDbUserTurn != null && !dbUserMessageYield)
                 {
-                    await YieldResponse(SseResponseLine.UserTurn(newDbUserTurn, idEncryption, fup));
+                    long[] userSiblingIds = await GetSiblingIds(newDbUserTurn.Id);
+                    await YieldResponse(SseResponseLine.UserTurn(newDbUserTurn, idEncryption, fup, userSiblingIds));
                     dbUserMessageYield = true;
                 }
-                await YieldResponse(SseResponseLine.ResponseMessage(allEnd.SpanId, allEnd.Turn, idEncryption, fup));
+                long[] responseSiblingIds = await GetSiblingIds(allEnd.Turn.Id);
+                await YieldResponse(SseResponseLine.ResponseMessage(allEnd.SpanId, allEnd.Turn, idEncryption, fup, responseSiblingIds));
                 if (isLast)
                 {
                     await YieldResponse(SseResponseLine.ChatLeafTurnId(chat.LeafTurnId!.Value, idEncryption));

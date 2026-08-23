@@ -101,6 +101,9 @@ public record ChatSpanDto
     [JsonPropertyName("compression")]
     public required byte? Compression { get; init; }
 
+    [JsonPropertyName("background")]
+    public required string? Background { get; init; }
+
     [JsonPropertyName("thinkingBudget")]
     public required int? ThinkingBudget { get; init; }
 
@@ -123,6 +126,7 @@ public record ChatSpanDto
         ImageSize = span.ChatConfig.ImageSize,
         Format = span.ChatConfig.Format,
         Compression = span.ChatConfig.Compression,
+        Background = span.ChatConfig.Background,
         ThinkingBudget = span.ChatConfig.ThinkingBudget,
         Mcps = [.. span.ChatConfig.ChatConfigMcps.Select(
             x => new ChatSpanMcp
@@ -148,6 +152,7 @@ public record ChatSpanDto
         ImageSize = span.ChatConfig.ImageSize,
         Format = span.ChatConfig.Format,
         Compression = span.ChatConfig.Compression,
+        Background = span.ChatConfig.Background,
         ThinkingBudget = span.ChatConfig.ThinkingBudget,
         Mcps = [.. span.ChatConfig.ChatConfigMcps.Select(
             x => new ChatSpanMcp

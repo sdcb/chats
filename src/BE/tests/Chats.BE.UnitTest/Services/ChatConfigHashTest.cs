@@ -18,6 +18,7 @@ public class ChatConfigHashTests
         yield return HashCase("NullReasoningEffort", c => c.Effort = null, c => c.Effort = ReasoningEfforts.Minimal);
         yield return HashCase("ImageSize", c => c.ImageSize = null, c => c.ImageSize = "1024x1024");
         yield return HashCase("DifferentImageSizes", c => c.ImageSize = "1024x1024", c => c.ImageSize = "1792x1024");
+        yield return HashCase("Background", c => c.Background = "transparent", c => c.Background = "opaque");
         yield return HashCase("McpIds", c => c.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 1 }), c => c.ChatConfigMcps.Add(new ChatConfigMcp { McpServerId = 2 }));
         yield return HashCase(
             "McpIdCombinations",

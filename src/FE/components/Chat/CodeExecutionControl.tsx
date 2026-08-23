@@ -97,6 +97,7 @@ const CodeExecutionControl: React.FC<CodeExecutionControlProps> = ({
             imageSize: span.imageSize,
             format: span.format,
             compression: span.compression,
+            background: span.background,
             thinkingBudget: span.thinkingBudget,
             mcps: span.mcps,
           })

@@ -40,6 +40,10 @@ public partial class ChatConfig
 
     public byte? Compression { get; set; }
 
+    [StringLength(20)]
+    [Unicode(false)]
+    public string? Background { get; set; }
+
     [InverseProperty("ChatConfig")]
     public virtual ICollection<ChatConfigMcp> ChatConfigMcps { get; set; } = new List<ChatConfigMcp>();
 

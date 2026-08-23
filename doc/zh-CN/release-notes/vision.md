@@ -5,13 +5,6 @@
 
 Chats 计划把 Code Interpreter 从“会话级临时容器”逐步演进为可治理、可跨会话复用的个人运行环境，并补齐 Agent 在需求澄清、断线恢复和多轮文件处理方面的基础能力。本页记录长期产品愿景和需要继续确定的设计问题，不绑定具体版本，也不代表功能已经交付。
 
-## 图像生成背景模式
-
-- 为图像生成模型的 ChatConfig 增加 `background` 选项，支持 `transparent`、`opaque` 和 `auto`；不设置时保持 API 默认的 `auto` 行为。
-- `transparent` 仅允许与 `png` 或 `webp` 输出格式组合，避免生成请求被上游拒绝；前端配置界面需要展示该约束。
-- 该选项需要贯穿 ChatConfig、ChatConfigSnapshot、聊天/预设配置接口和图像生成请求体，并纳入配置快照及哈希计算。
-- 这是一个小范围但包含数据库结构变更的功能，正式实现前必须提供 SQL Server 和 SQLite 数据迁移，并验证旧配置默认行为不变。
-
 ## 永久 Docker 与资源治理
 
 - Docker 从当前 Chat 级 session 演进为由用户拥有、可跨会话复用的持久化 Docker；现有临时会话级 Docker 继续保留，并拥有独立的生命周期和清理策略。

@@ -23,6 +23,7 @@ public partial class ChatPresetSpan
         config.ImageSize = ChatConfig.ImageSize;
         config.Format = ChatConfig.Format;
         config.Compression = ChatConfig.Compression;
+        config.Background = ChatConfig.Background;
         config.ThinkingBudget = ChatConfig.ThinkingBudget;
 
         Dictionary<int, ChatConfigMcp> desiredMcps = ChatConfig.ChatConfigMcps
@@ -73,6 +74,7 @@ public partial class ChatPresetSpan
             ImageSize = ChatConfig.ImageSize,
             Format = ChatConfig.Format,
             Compression = ChatConfig.Compression,
+            Background = ChatConfig.Background,
             ThinkingBudget = ChatConfig.ThinkingBudget,
         };
 

@@ -88,6 +88,7 @@ const ChatPresetModal = (props: Props) => {
         ...span,
         mcps: span.mcps || [],
         thinkingBudget: span.thinkingBudget ?? null,
+        background: span.background ?? null,
       }));
       setName(chatPreset.name);
       setSpans(normalizedSpans);
@@ -134,6 +135,7 @@ const ChatPresetModal = (props: Props) => {
             imageSize: null,
             format: null,
             compression: null,
+            background: null,
             mcps: [],
             thinkingBudget: null,
           });
@@ -184,6 +186,7 @@ const ChatPresetModal = (props: Props) => {
         imageSize: span.imageSize,
         format: span.format,
         compression: span.compression,
+        background: span.background,
         thinkingBudget: span.thinkingBudget,
         mcps: span.mcps || [],
       })),
@@ -224,6 +227,7 @@ const ChatPresetModal = (props: Props) => {
       imageSize: null,
       format: null,
       compression: null,
+      background: null,
       mcps: [],
       thinkingBudget: null,
     };
@@ -451,17 +455,36 @@ const ChatPresetModal = (props: Props) => {
   };
 
   const onChangeFormat = (value: string | null) => {
+    const nextFormat = selectedSpan?.background === 'transparent' && value !== 'png' && value !== 'webp'
+      ? 'png'
+      : value;
     setSpans((prev) => {
       return prev.map((span) => {
         if (selectedSpan?.spanId === span.spanId) {
           const s = {
             ...span!,
-            format: value,
-            compression: value === null ? null : span.compression,
+            format: nextFormat,
+            compression: nextFormat === null ? null : span.compression,
           };
           setSelectedSpan({
             ...s,
           });
+          return s;
+        }
+        return span;
+      });
+    });
+  };
+
+  const onChangeBackground = (value: string | null) => {
+    setSpans((prev) => {
+      return prev.map((span) => {
+        if (selectedSpan?.spanId === span.spanId) {
+          const nextFormat = value === 'transparent' && span.format !== 'png' && span.format !== 'webp'
+            ? 'png'
+            : span.format;
+          const s = { ...span, background: value, format: nextFormat };
+          setSelectedSpan(s);
           return s;
         }
         return span;
@@ -657,11 +680,13 @@ const ChatPresetModal = (props: Props) => {
                             reasoningEffort={selectedSpan.reasoningEffort}
                             format={selectedSpan.format}
                             compression={selectedSpan.compression}
+                            background={selectedSpan.background}
                             maxOutputTokens={selectedSpan.maxOutputTokens}
                             onChangeImageSize={onChangeImageSize}
                             onChangeImageQuality={onChangeImageQuality}
                             onChangeFormat={onChangeFormat}
                             onChangeCompression={onChangeCompression}
+                            onChangeBackground={onChangeBackground}
                             onChangeMaxOutputTokens={onChangeMaxOutputTokens}
                           />
                         )}

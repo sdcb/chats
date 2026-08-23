@@ -91,50 +91,34 @@ export function findSelectedMessageByLeafId(
 
       const group: ChatMessageNode[] = [];
       groupedSiblings.forEach((siblingGroup) => {
-        const siblingIds = siblingGroup[0]?.siblingIds.length > 0
-          ? siblingGroup[0].siblingIds
-          : siblingGroup.map((x) => x.id);
-        let selectedMessage: ChatMessageNode | null = null;
-
-        siblingGroup.forEach((x) => {
-          const messageIsError = !!getMessageContents(x).find(
-            (c) => c.$type === MessageContentType.error,
-          );
-          if (x.id === currentMessage!.id) {
-            selectedMessage = {
-              ...x,
-              siblingIds,
-              isActive: true,
-              status: messageIsError
-                ? ChatSpanStatus.Failed
-                : ChatSpanStatus.None,
-            };
-          } else if (prevUserMessage && prevUserMessage.parentId === x.id) {
-            selectedMessage = {
-              ...x,
-              siblingIds,
-              isActive: true,
-              status: messageIsError
-                ? ChatSpanStatus.Failed
-                : ChatSpanStatus.None,
-            };
-          }
-        });
-
-        if (!selectedMessage) {
-          const lastMessage = siblingGroup[siblingGroup.length - 1];
-          const messageIsError = !!getMessageContents(lastMessage).find(
-            (c) => c.$type === MessageContentType.error,
-          );
-          selectedMessage = {
-            ...lastMessage,
-            siblingIds,
-            isActive: false,
-            status: messageIsError
-              ? ChatSpanStatus.Failed
-              : ChatSpanStatus.None,
-          };
-        }
+        // Select the message that represents this branch before choosing siblingIds.
+        // The selected message may be the freshly returned SSE message, whose
+        // siblingIds include a newly generated sibling that older messages do not.
+        const selectedByCurrentMessage = siblingGroup.find(
+          (x) => x.id === currentMessage!.id,
+        );
+        const selectedByChildMessage = !selectedByCurrentMessage && prevUserMessage
+          ? siblingGroup.find((x) => prevUserMessage!.parentId === x.id)
+          : undefined;
+        const selectedSource = selectedByCurrentMessage
+          ?? selectedByChildMessage
+          ?? siblingGroup[siblingGroup.length - 1];
+        const siblingIds = selectedSource?.siblingIds.length > 0
+          ? selectedSource.siblingIds
+          : siblingGroup.find((x) => x.siblingIds.length > 0)?.siblingIds
+            ?? siblingGroup.map((x) => x.id);
+        const messageIsError = !!getMessageContents(selectedSource).find(
+          (c) => c.$type === MessageContentType.error,
+        );
+        const isActive = !!selectedByCurrentMessage || !!selectedByChildMessage;
+        const selectedMessage: ChatMessageNode = {
+          ...selectedSource,
+          siblingIds,
+          isActive,
+          status: messageIsError
+            ? ChatSpanStatus.Failed
+            : ChatSpanStatus.None,
+        };
 
         group.push(selectedMessage);
       });

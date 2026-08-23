@@ -36,20 +36,22 @@ public abstract record SseResponseLine
         byte spanId,
         ChatTurn assistantTurn,
         IUrlEncryptionService urlEncryptionService,
-        FileUrlProvider fup)
+        FileUrlProvider fup,
+        IReadOnlyList<long>? siblingIds = null)
     {
         ChatMessageTemp assistantTemp = ChatMessageTemp.FromDB(assistantTurn);
-        TurnDto dto = assistantTemp.ToDto(urlEncryptionService, fup);
+        TurnDto dto = assistantTemp.ToDto(urlEncryptionService, fup, siblingIds);
         return new(spanId, dto);
     }
 
     public static UserTurnLine UserTurn(
         ChatTurn userTurn,
         IUrlEncryptionService urlEncryptionService,
-        FileUrlProvider fup)
+        FileUrlProvider fup,
+        IReadOnlyList<long>? siblingIds = null)
     {
         ChatMessageTemp userTemp = ChatMessageTemp.FromDB(userTurn);
-        TurnDto dto = userTemp.ToDto(urlEncryptionService, fup);
+        TurnDto dto = userTemp.ToDto(urlEncryptionService, fup, siblingIds);
         return new(dto);
     }
 

@@ -226,6 +226,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     ImageSize = x.ChatConfig.ImageSize,
                     Format = x.ChatConfig.Format,
                     Compression = x.ChatConfig.Compression,
+                    Background = x.ChatConfig.Background,
                     ThinkingBudget = x.ChatConfig.ThinkingBudget,
                     ChatConfigMcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatConfigMcp
                     {

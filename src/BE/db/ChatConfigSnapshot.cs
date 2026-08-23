@@ -48,6 +48,10 @@ public partial class ChatConfigSnapshot
 
     public byte? Compression { get; set; }
 
+    [StringLength(20)]
+    [Unicode(false)]
+    public string? Background { get; set; }
+
     [InverseProperty("ChatConfigSnapshot")]
     public virtual ICollection<ChatTurn> ChatTurns { get; set; } = new List<ChatTurn>();
 

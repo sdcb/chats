@@ -99,6 +99,11 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
                 requestBody["output_compression"] = request.ChatConfig.Compression.Value;
             }
 
+            if (!string.IsNullOrEmpty(request.ChatConfig.Background))
+            {
+                requestBody["background"] = request.ChatConfig.Background;
+            }
+
             if (request.EndUserId != null)
             {
                 requestBody["user"] = request.EndUserId;
@@ -136,6 +141,10 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             using MultipartFormDataContent form = ModelRequestOverrides.ApplyMultipartBody(baseForm, model.CurrentSnapshot);
             form.Add(new StringContent("true"), "stream");
             form.Add(new StringContent("3"), "partial_images");
+            if (!string.IsNullOrEmpty(request.ChatConfig.Background))
+            {
+                form.Add(new StringContent(request.ChatConfig.Background), "background");
+            }
 
             using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/images/edits");
             AddAuthorizationHeader(httpRequest, modelKey);
@@ -202,6 +211,11 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             if (request.ChatConfig.Compression.HasValue)
             {
                 requestBody["output_compression"] = request.ChatConfig.Compression.Value;
+            }
+
+            if (!string.IsNullOrEmpty(request.ChatConfig.Background))
+            {
+                requestBody["background"] = request.ChatConfig.Background;
             }
 
             if (request.EndUserId != null)
@@ -385,6 +399,11 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
         if (request.ChatConfig.Compression.HasValue)
         {
             form.Add(new StringContent(request.ChatConfig.Compression.Value.ToString()), "output_compression");
+        }
+
+        if (!string.IsNullOrEmpty(request.ChatConfig.Background))
+        {
+            form.Add(new StringContent(request.ChatConfig.Background), "background");
         }
 
         return form;
