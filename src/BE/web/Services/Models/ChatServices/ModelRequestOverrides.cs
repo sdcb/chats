@@ -45,6 +45,15 @@ internal static class ModelRequestOverrides
         return resolved.TrimEnd('/');
     }
 
+    public static string ResolveOpenAIImageEndpoint(ModelSnapshot snapshot, string operation)
+    {
+        string endpoint = ResolveEndpoint(snapshot);
+        string imagePath = operation.Trim('/');
+        return endpoint.EndsWith("/v1", StringComparison.Ordinal)
+            ? $"{endpoint}/{imagePath}"
+            : $"{endpoint}/v1/{imagePath}";
+    }
+
     private static string NormalizeBaseUrl(string baseUrl, DBModelProvider provider, DBApiType apiType)
     {
         if (provider != DBModelProvider.AzureAIFoundry || string.IsNullOrWhiteSpace(baseUrl))
