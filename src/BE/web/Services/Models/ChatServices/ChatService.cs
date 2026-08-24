@@ -29,10 +29,11 @@ public abstract partial class ChatService
 
     public async IAsyncEnumerable<ChatSegment> ChatEntry(ChatRequest request, FileUrlProvider fup, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        Model model = request.GetRequiredModel();
         ChatRequest finalRequest = await PreProcess(request, fup, cancellationToken);
         IAsyncEnumerable<ChatSegment> stream = ChatStreamed(finalRequest, cancellationToken);
 
-        if (request.ChatConfig.Model.CurrentSnapshot.ThinkTagParserEnabled)
+        if (model.CurrentSnapshot.ThinkTagParserEnabled)
         {
             stream = ApplyThinkTagParser(stream, cancellationToken);
         }
@@ -61,14 +62,15 @@ public abstract partial class ChatService
     protected virtual async Task<ChatRequest> PreProcess(ChatRequest request, FileUrlProvider fup, CancellationToken cancellationToken)
     {
         ChatRequest final = request;
+        Model model = request.GetRequiredModel();
 
         float? temperature = final.ChatConfig.Temperature;
         string? effort = final.ChatConfig.Effort;
         if (request.Source == UsageSource.WebChat)
         {
-            temperature = request.ChatConfig.Model.ClampTemperature(temperature);
-            effort = request.ChatConfig.Model.ClampEffort(effort);
-            if ((DBApiType)request.ChatConfig.Model.CurrentSnapshot.ApiTypeId == DBApiType.AnthropicMessages && final.ChatConfig.ThinkingBudget != null)
+            temperature = model.ClampTemperature(temperature);
+            effort = model.ClampEffort(effort);
+            if ((DBApiType)model.CurrentSnapshot.ApiTypeId == DBApiType.AnthropicMessages && final.ChatConfig.ThinkingBudget != null)
             {
                 // invalid_request_error
                 // `temperature` may only be set to 1 when thinking is enabled.
@@ -82,8 +84,8 @@ public abstract partial class ChatService
         {
             ChatConfig = final.ChatConfig.WithClamps(temperature, effort),
             Messages = await RewriteVisionMessages(
-                request.ChatConfig.Model.CurrentSnapshot.SupportsVisionLink,
-                request.ChatConfig.Model.CurrentSnapshot.AllowVision,
+                model.CurrentSnapshot.SupportsVisionLink,
+                model.CurrentSnapshot.AllowVision,
                 final.Messages,
                 fup,
                 cancellationToken)

@@ -8,8 +8,9 @@ public class SiliconFlowChatService(IHttpClientFactory httpClientFactory) : Chat
     protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
         JsonObject body = base.BuildRequestBody(request, stream);
+        Model model = request.GetRequiredModel();
 
-        if (Model.GetSupportedEffortsAsArray(request.ChatConfig.Model.CurrentSnapshot.SupportedEfforts).Length != 0)
+        if (Model.GetSupportedEffortsAsArray(model.CurrentSnapshot.SupportedEfforts).Length != 0)
         {
             if (ReasoningEfforts.IsLowOrMinimal(request.ChatConfig.Effort))
             {

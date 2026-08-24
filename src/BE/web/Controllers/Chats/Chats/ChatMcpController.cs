@@ -50,7 +50,7 @@ public class ChatMcpController(ChatsDB db, IUrlEncryptionService idEncryption, C
                 .ThenInclude(x => x.ChatConfig)
                     .ThenInclude(x => x.ChatConfigMcps)
             .Include(x => x.ChatSpans)
-                .ThenInclude(x => x.ChatConfig.Model.CurrentSnapshot)
+                .ThenInclude(x => x.ChatConfig.Model!.CurrentSnapshot)
                     .ThenInclude(x => x.ModelKeySnapshot)
             .AsSplitQuery()
             .FirstOrDefaultAsync(
@@ -62,7 +62,7 @@ public class ChatMcpController(ChatsDB db, IUrlEncryptionService idEncryption, C
         }
 
         ChatConfig[] targetConfigs = [.. chat.ChatSpans
-            .Where(x => x.ChatConfig.Model.CurrentSnapshot.AllowToolCall)
+            .Where(x => x.ChatConfig.Model?.CurrentSnapshot.AllowToolCall == true)
             .GroupBy(x => x.ChatConfigId)
             .Select(x => x.First().ChatConfig)];
 

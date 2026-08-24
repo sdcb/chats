@@ -13,7 +13,8 @@ public class MimoChatService(IHttpClientFactory httpClientFactory) : ChatComplet
     protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
         JsonObject body = base.BuildRequestBody(request, stream);
-        if (!request.ChatConfig.Model.CurrentSnapshot.AllowSearch || !request.ChatConfig.WebSearchEnabled)
+        var model = request.GetRequiredModel();
+        if (!model.CurrentSnapshot.AllowSearch || !request.ChatConfig.WebSearchEnabled)
         {
             return body;
         }

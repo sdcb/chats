@@ -62,7 +62,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             yield break;
         }
 
-        Model model = request.ChatConfig.Model;
+        Model model = request.GetRequiredModel();
         ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
 
         if (images.Length == 0)
@@ -71,7 +71,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             JsonObject requestBody = new()
             {
                 ["prompt"] = prompt,
-                ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
+                ["model"] = model.CurrentSnapshot.DeploymentName,
                 ["n"] = n,
                 ["stream"] = true,
                 ["partial_images"] = 3,
@@ -176,7 +176,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
     {
         string prompt = GetPromptStatic(request.Messages);
         NeutralContent[] images = GetImagesStatic(request.Messages);
-        Model model = request.ChatConfig.Model;
+        Model model = request.GetRequiredModel();
         ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
 
         using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceImageGeneration);
@@ -188,7 +188,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             JsonObject requestBody = new()
             {
                 ["prompt"] = prompt,
-                ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
+                ["model"] = model.CurrentSnapshot.DeploymentName,
                 ["n"] = request.ChatConfig.MaxOutputTokens ?? 1,
                 ["moderation"] = "low"
             };
@@ -374,7 +374,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
 
         form.Add(new StringContent(prompt), "prompt");
         form.Add(new StringContent((request.ChatConfig.MaxOutputTokens ?? 1).ToString()), "n");
-        form.Add(new StringContent(request.ChatConfig.Model.CurrentSnapshot.DeploymentName), "model");
+        form.Add(new StringContent(request.GetRequiredModel().CurrentSnapshot.DeploymentName), "model");
 
         if (!string.IsNullOrEmpty(request.ChatConfig.ImageSize))
         {

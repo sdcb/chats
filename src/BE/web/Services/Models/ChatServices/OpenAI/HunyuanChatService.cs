@@ -7,8 +7,9 @@ public class HunyuanChatService(IHttpClientFactory httpClientFactory) : ChatComp
     protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
         JsonObject body = base.BuildRequestBody(request, stream);
+        var model = request.GetRequiredModel();
 
-        if (request.ChatConfig.Model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
+        if (model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
             body["enable_enhancement"] = true;
             body["force_search_enhancement"] = true;

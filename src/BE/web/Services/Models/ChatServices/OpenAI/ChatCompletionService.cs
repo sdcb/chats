@@ -171,7 +171,8 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        if (!request.ChatConfig.Model.CurrentSnapshot.AllowStreaming || !request.Streamed)
+        Model model = request.GetRequiredModel();
+        if (!model.CurrentSnapshot.AllowStreaming || !request.Streamed)
         {
             await foreach (ChatSegment segment in ChatNonStreaming(request, cancellationToken))
             {
@@ -180,7 +181,6 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             yield break;
         }
 
-        Model model = request.ChatConfig.Model;
         ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
         string url = GetEndpoint(model);
         JsonObject requestBody = BuildRequestBody(request, stream: true);
@@ -418,7 +418,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
     private async IAsyncEnumerable<ChatSegment> ChatNonStreaming(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        Model model = request.ChatConfig.Model;
+        Model model = request.GetRequiredModel();
         ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
         string url = GetEndpoint(model);
         JsonObject requestBody = BuildRequestBody(request, stream: false);
@@ -550,7 +550,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
     {
         JsonObject body = new()
         {
-            ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
+            ["model"] = request.GetRequiredModel().CurrentSnapshot.DeploymentName,
             ["messages"] = BuildMessages(request),
             ["stream"] = stream,
         };
@@ -567,7 +567,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         if (request.ChatConfig.MaxOutputTokens.HasValue)
         {
-            if (request.ChatConfig.Model.CurrentSnapshot.UseMaxCompletionTokens)
+            if (request.GetRequiredModel().CurrentSnapshot.UseMaxCompletionTokens)
             {
                 body["max_completion_tokens"] = request.ChatConfig.MaxOutputTokens.Value;
             }

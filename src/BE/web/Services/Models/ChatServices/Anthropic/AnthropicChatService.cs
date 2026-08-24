@@ -30,7 +30,8 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        (string url, string apiKey) = GetMessagesEndpointAndKey(request.ChatConfig.Model.CurrentSnapshot);
+        Model model = request.GetRequiredModel();
+        (string url, string apiKey) = GetMessagesEndpointAndKey(model.CurrentSnapshot);
         JsonObject requestBody = BuildRequestBody(request);
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, url);
@@ -363,7 +364,8 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
     public override async Task<int> CountTokenAsync(ChatRequest request, CancellationToken cancellationToken)
     {
-        (string url, string apiKey) = GetCountTokensEndpointAndKey(request.ChatConfig.Model.CurrentSnapshot);
+        Model model = request.GetRequiredModel();
+        (string url, string apiKey) = GetCountTokensEndpointAndKey(model.CurrentSnapshot);
         JsonObject requestBody = BuildCountTokensRequestBody(request);
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, url);
@@ -388,13 +390,14 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
     private JsonObject BuildRequestBody(ChatRequest request)
     {
+        Model model = request.GetRequiredModel();
         // Determine thinking block handling
         (bool allowThinkingBlocks, bool allowThinking) = DetermineThinkingSettings(request);
 
         JsonObject body = new()
         {
-            ["max_tokens"] = request.ChatConfig.Model.CurrentSnapshot.MaxResponseTokens,
-            ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
+            ["max_tokens"] = model.CurrentSnapshot.MaxResponseTokens,
+            ["model"] = model.CurrentSnapshot.DeploymentName,
             ["messages"] = ConvertMessages(FilterUnsupportedThinkingBlocks(request.Messages), allowThinkingBlocks, request.Source, SupportsHostedWebSearch),
             ["stream"] = true,
         };
@@ -420,7 +423,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
         JsonArray tools = BuildToolsArray(request.Tools);
         if (SupportsHostedWebSearch
-            && request.ChatConfig.Model.CurrentSnapshot.AllowSearch
+            && model.CurrentSnapshot.AllowSearch
             && request.ChatConfig.WebSearchEnabled
             && !tools.Any(DeepSeekHostedWebSearch.IsToolDefinition))
         {
@@ -568,11 +571,12 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
     private JsonObject BuildCountTokensRequestBody(ChatRequest request)
     {
+        Model model = request.GetRequiredModel();
         (bool allowThinkingBlocks, bool allowThinking) = DetermineThinkingSettings(request);
 
         JsonObject body = new()
         {
-            ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
+            ["model"] = model.CurrentSnapshot.DeploymentName,
             ["messages"] = ConvertMessages(FilterUnsupportedThinkingBlocks(request.Messages), allowThinkingBlocks, request.Source, SupportsHostedWebSearch),
         };
 
@@ -589,7 +593,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
         JsonArray tools = BuildToolsArray(request.Tools);
         if (SupportsHostedWebSearch
-            && request.ChatConfig.Model.CurrentSnapshot.AllowSearch
+            && model.CurrentSnapshot.AllowSearch
             && request.ChatConfig.WebSearchEnabled
             && !tools.Any(DeepSeekHostedWebSearch.IsToolDefinition))
         {

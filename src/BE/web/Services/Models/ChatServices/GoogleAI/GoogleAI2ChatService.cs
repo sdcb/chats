@@ -34,15 +34,16 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        bool allowImageGeneration = AllowImageGeneration(request.ChatConfig.Model);
+        Model model = request.GetRequiredModel();
+        bool allowImageGeneration = AllowImageGeneration(model);
         JsonObject requestBody = BuildNativeRequestBody(request, allowImageGeneration);
 
-        string modelPath = NormalizeModelName(request.ChatConfig.Model.CurrentSnapshot.DeploymentName);
-        string endpoint = $"{GetBaseUrl(request.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot)}/{modelPath}:streamGenerateContent";
+        string modelPath = NormalizeModelName(model.CurrentSnapshot.DeploymentName);
+        string endpoint = $"{GetBaseUrl(model.CurrentSnapshot.ModelKeySnapshot)}/{modelPath}:streamGenerateContent";
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, endpoint);
         httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        httpRequest.Headers.TryAddWithoutValidation("x-goog-api-key", request.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.Secret ?? throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Google AI API key is required."));
+        httpRequest.Headers.TryAddWithoutValidation("x-goog-api-key", model.CurrentSnapshot.ModelKeySnapshot.Secret ?? throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Google AI API key is required."));
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
 
         using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceGemini);
@@ -279,9 +280,10 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
 
     private JsonObject BuildNativeRequestBody(ChatRequest request, bool allowImageGeneration)
     {
+        Model model = request.GetRequiredModel();
         JsonObject body = new()
         {
-            ["model"] = NormalizeModelName(request.ChatConfig.Model.CurrentSnapshot.DeploymentName),
+            ["model"] = NormalizeModelName(model.CurrentSnapshot.DeploymentName),
             ["contents"] = ConvertMessages(request.Messages),
             ["safetySettings"] = BuildSafetySettings()
         };
@@ -323,6 +325,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
 
     private static JsonObject? BuildGenerationConfig(ChatRequest request, bool allowImageGeneration)
     {
+        Model model = request.GetRequiredModel();
         JsonObject config = [];
         JsonArray modalities =
         [
@@ -344,18 +347,18 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
             config["topP"] = topP;
         }
 
-        int? maxTokens = request.ChatConfig.MaxOutputTokens ?? request.ChatConfig.Model.CurrentSnapshot.MaxResponseTokens;
+        int? maxTokens = request.ChatConfig.MaxOutputTokens ?? model.CurrentSnapshot.MaxResponseTokens;
         if (maxTokens.HasValue && maxTokens.Value > 0)
         {
             config["maxOutputTokens"] = maxTokens.Value;
         }
 
-        if (!allowImageGeneration && !request.ChatConfig.Model.CurrentSnapshot.DeploymentName.Contains("2.5-pro", StringComparison.OrdinalIgnoreCase))
+        if (!allowImageGeneration && !model.CurrentSnapshot.DeploymentName.Contains("2.5-pro", StringComparison.OrdinalIgnoreCase))
         {
             config["enableEnhancedCivicAnswers"] = true;
         }
 
-        if (Model.GetSupportedEffortsAsArray(request.ChatConfig.Model.CurrentSnapshot.SupportedEfforts).Length > 0)
+        if (Model.GetSupportedEffortsAsArray(model.CurrentSnapshot.SupportedEfforts).Length > 0)
         {
             JsonObject thinkingConfig = new()
             {
@@ -398,6 +401,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
 
     private static JsonArray? BuildTools(ChatRequest request)
     {
+        Model model = request.GetRequiredModel();
         JsonArray tools = [];
 
         JsonObject? functionTool = BuildFunctionDeclarations(request);
@@ -406,7 +410,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
             tools.Add(functionTool);
         }
 
-        if (request.ModelProviderCodeExecutionEnabled && request.ChatConfig.Model.CurrentSnapshot.AllowCodeExecution)
+        if (request.ModelProviderCodeExecutionEnabled && model.CurrentSnapshot.AllowCodeExecution)
         {
             tools.Add(new JsonObject
             {
@@ -414,7 +418,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
             });
         }
 
-        if (request.ChatConfig.WebSearchEnabled && request.ChatConfig.Model.CurrentSnapshot.AllowSearch)
+        if (request.ChatConfig.WebSearchEnabled && model.CurrentSnapshot.AllowSearch)
         {
             tools.Add(new JsonObject
             {
@@ -427,7 +431,8 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
 
     private static JsonObject? BuildFunctionDeclarations(ChatRequest request)
     {
-        if (!request.ChatConfig.Model.CurrentSnapshot.AllowToolCall)
+        Model model = request.GetRequiredModel();
+        if (!model.CurrentSnapshot.AllowToolCall)
         {
             return null;
         }

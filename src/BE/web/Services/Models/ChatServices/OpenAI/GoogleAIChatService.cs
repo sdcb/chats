@@ -10,8 +10,9 @@ public class GoogleAIChatService(IHttpClientFactory httpClientFactory) : ChatCom
     protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
         JsonObject body = base.BuildRequestBody(request, stream);
+        var model = request.GetRequiredModel();
 
-        if (request.ChatConfig.Model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
+        if (model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
             body["tools"] = new JsonArray
             {

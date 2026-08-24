@@ -7,8 +7,9 @@ public class XAIChatService(IHttpClientFactory httpClientFactory) : ChatCompleti
     protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
         JsonObject body = base.BuildRequestBody(request, stream);
+        var model = request.GetRequiredModel();
 
-        if (request.ChatConfig.Model.CurrentSnapshot.AllowSearch)
+        if (model.CurrentSnapshot.AllowSearch)
         {
             body["search_parameters"] = new JsonObject
             {

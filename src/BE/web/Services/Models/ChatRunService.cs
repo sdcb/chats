@@ -128,7 +128,8 @@ public class ChatRunService(
             Func<ChatSegment, CancellationToken, Task> onSegment,
             CancellationToken cancellationToken)
         {
-            DBApiType apiType = (DBApiType)request.ChatConfig.Model.CurrentSnapshot.ApiTypeId;
+            Model model = request.GetRequiredModel();
+            DBApiType apiType = (DBApiType)model.CurrentSnapshot.ApiTypeId;
             await retryPolicy.ExecuteAsync(apiType, async (markYielded, ct) =>
             {
                 await RunAttemptAsync(balance, chatService, request, fileUrlProvider, async (segment, segmentCancellationToken) =>

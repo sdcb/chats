@@ -7,9 +7,10 @@ public class TokenPonyChatService(IHttpClientFactory httpClientFactory) : ChatCo
     protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
         JsonObject body = base.BuildRequestBody(request, stream);
+        var model = request.GetRequiredModel();
 
         // TokenPony 的 deepseek-v3.2 模型需要通过 chat_template_kwargs 传递 thinking 参数
-        if (request.ChatConfig.ThinkingBudget.HasValue && request.ChatConfig.Model.CurrentSnapshot.DeploymentName.StartsWith("deepseek-v3."))
+        if (request.ChatConfig.ThinkingBudget.HasValue && model.CurrentSnapshot.DeploymentName.StartsWith("deepseek-v3."))
         {
             body["chat_template_kwargs"] = new JsonObject
             {

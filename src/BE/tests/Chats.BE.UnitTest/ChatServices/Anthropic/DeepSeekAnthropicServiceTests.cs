@@ -187,7 +187,7 @@ public class DeepSeekAnthropicServiceTests
     {
         DeepSeekAnthropicService service = new(CreateMockHttpClientFactory());
         ChatRequest request = CreateRequest();
-        request.ChatConfig.Model.CurrentSnapshot.AllowSearch = true;
+        request.GetRequiredModel().CurrentSnapshot.AllowSearch = true;
         request.ChatConfig.WebSearchEnabled = true;
 
         MethodInfo method = typeof(AnthropicChatService).GetMethod("BuildRequestBody", BindingFlags.Instance | BindingFlags.NonPublic)
