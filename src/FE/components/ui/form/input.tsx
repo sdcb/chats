@@ -17,6 +17,7 @@ const FormInput = ({
   type,
   hidden,
   disabled,
+  readOnly,
   autocomplete,
 }: {
   label?: string;
@@ -25,6 +26,7 @@ const FormInput = ({
   type?: HTMLInputTypeAttribute;
   hidden?: boolean;
   disabled?: boolean;
+  readOnly?: boolean;
   autocomplete?: string;
 }) => {
   return (
@@ -37,6 +39,7 @@ const FormInput = ({
           placeholder={options?.placeholder}
           {...field}
           disabled={disabled}
+          readOnly={readOnly}
         />
       </FormControl>
       <FormMessage />

@@ -21,6 +21,7 @@ import Tips from '@/components/Tips/Tips';
 import ChangeUserPasswordModal from '@/components/admin/Users/ChangeUserPasswordModal';
 import EditUserBalanceModal from '@/components/admin/Users/EditUserBalanceModel';
 import UserModal from '@/components/admin/Users/UserModal';
+import EditUserModal from '@/components/admin/Users/EditUserModal';
 import {
   UNIFIED_TABLE_PAGE_SIZE,
   UnifiedColumnSelector,
@@ -832,11 +833,18 @@ export default function Users() {
       />
 
       <UserModal
-        user={selectedUser}
         onSuccessful={handleSuccessful}
         onClose={handleClose}
-        isOpen={isOpenModal.create || isOpenModal.edit}
+        isOpen={isOpenModal.create}
       />
+      {selectedUser && (
+        <EditUserModal
+          user={selectedUser}
+          onSuccessful={handleSuccessful}
+          onClose={handleClose}
+          isOpen={isOpenModal.edit}
+        />
+      )}
       <EditUserBalanceModal
         onSuccessful={handleSuccessful}
         onClose={handleClose}
