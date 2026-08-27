@@ -20,7 +20,7 @@ Directory.SetCurrentDirectory(projectFolder);
 		"--output-dir ../db",
 		"--verbose",
 		"--namespace Chats.DB",
-		$"--no-onconfiguring",
+		"--no-onconfiguring",
 	});
 	Run($"dotnet ef dbcontext scaffold Name={connectionStringName} {provider} {options}".Dump());
 }
