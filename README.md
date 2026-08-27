@@ -29,7 +29,7 @@ Sdcb Chats 是一个强大且灵活的大语言模型前端，支持 22+ 主流 
 - 🐛 稳定性修复：修复图像接口重复 `/v1`、缺少模型校验并增加回归测试
 - ⬆️ 升级重点：SQL Server 和 SQLite 部署需运行对应的 `1.17.0` 数据库迁移脚本
 
-👉 [查看 1.17.0 发布说明](./doc/zh-CN/release-notes/1.17.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
+👉 [查看 1.17.0 发布说明](./doc/zh-CN/release-notes/1.x/1.17.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
 
 ## 快速开始
 

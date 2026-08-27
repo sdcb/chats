@@ -29,7 +29,7 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 - 🐛 Stability fixes: corrects duplicated `/v1` image endpoints, validates missing models, and adds regression coverage
 - ⬆️ Upgrade focus: SQL Server and SQLite deployments must run the corresponding `1.17.0` database migration
 
-👉 [View 1.17.0 Release Notes](./doc/en-US/release-notes/1.17.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
+👉 [View 1.17.0 Release Notes](./doc/en-US/release-notes/1.x/1.17.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
 
 ## Quick Start
 
