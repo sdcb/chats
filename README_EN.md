@@ -18,18 +18,18 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 
 <img alt="chats-en" src="https://github.com/user-attachments/assets/40d2376e-58a0-4309-a2f5-5ed8262a0c2e" />
 
-## 🆕 Latest Release (1.16.0)
+## 🆕 Latest Release (1.17.0)
 
-- 📅 Release Date: 2026-08-22
-- 🌳 Branching chat loading: loads only the visible message path initially and fetches other branches on demand
-- 🖼️ Rich message editing: edit user text and images together with upload, paste, drag-and-drop, and remote-file selection
-- 🗑️ Model lifecycle: physically delete Models and Model Keys while preserving historical snapshots and cleaning active associations
-- 🖼️ Assistant answer export: download theme-aware PNG long images with formulas, diagrams, code, tables, and images
-- 🔄 Interaction polish: unified loading animations, improved mobile toolbars, and fixed clipped session-list titles
-- 🐛 Stability fixes: corrected Responses reasoning display and the Model Key possible-models query
-- ⬆️ Upgrade focus: SQL Server and SQLite deployments must run the corresponding `1.16.0` database migration
+- 📅 Release Date: 2026-08-27
+- ⚡ Response speed: token speed excludes first-token (TTFT) latency and measures generation only
+- 🖼️ Image-generation backgrounds: supports provider default, `auto`, `opaque`, and `transparent`
+- 🧠 Context prompts: sends original user text to image-generation models and preserves required runtime context
+- 🌳 Branching stability: fixes live SSE branch metadata and invalid subtree requests
+- 👥 User management: separates user-edit and password-change forms and improves password-manager compatibility
+- 🐛 Stability fixes: corrects duplicated `/v1` image endpoints, validates missing models, and adds regression coverage
+- ⬆️ Upgrade focus: SQL Server and SQLite deployments must run the corresponding `1.17.0` database migration
 
-👉 [View 1.16.0 Release Notes](./doc/en-US/release-notes/1.16.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
+👉 [View 1.17.0 Release Notes](./doc/en-US/release-notes/1.17.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
 
 ## Quick Start
 

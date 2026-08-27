@@ -7,7 +7,22 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.16.0](1.16.0.md) - 2026-08-22 ⭐ Latest Release
+## [1.17.0](1.17.0.md) - 2026-08-27 ⭐ Latest Release
+
+**Release status**: 1.17.0 is released.
+
+- ⚡ **Response Speed**: measures token speed after TTFT instead of including first-token latency
+- 🖼️ **Image Backgrounds**: adds provider-default, `auto`, `opaque`, and `transparent` background options with SQL Server/SQLite migrations
+- 🧠 **Context Prompts**: sends original user text to image-generation models and keeps runtime context focused for text and Agent models
+- 🌳 **Branching Stability**: fixes missing sibling metadata in live SSE responses and invalid subtree requests
+- 👥 **User Management**: separates user-edit and password-change forms and improves password-manager compatibility
+- 🐛 **Configuration Stability**: fixes duplicated `/v1` image endpoints, validates missing models, and adds regression coverage
+
+[View Full Release Notes →](1.17.0.md)
+
+---
+
+## [1.16.0](1.16.0.md) - 2026-08-22
 
 **Core Highlights**: lazy loading for branching chats · physical Model and Model Key deletion · rich message/image editing · themed assistant-answer PNG export · unified loading and mobile toolbar UX
 
@@ -376,5 +391,5 @@ Starting from 1.0.0, Chats follows Semantic Versioning:
 ---
 
 <p align="center">
-  <sub>Last updated: 2026-08-19</sub>
+  <sub>Last updated: 2026-08-27</sub>
 </p>
