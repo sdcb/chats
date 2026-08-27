@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormField } from '@/components/ui/form';
 import FormInput from '@/components/ui/form/input';
+import FormPasswordInput from '@/components/ui/form/passwordInput';
 
 import { putUser } from '@/apis/adminApis';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -49,6 +50,7 @@ const ChangeUserPasswordModal = ({
   const [submit, setSubmit] = useState(false);
   const formSchema = z
     .object({
+      username: z.string(),
       password: z
         .string()
         .refine(
@@ -67,6 +69,7 @@ const ChangeUserPasswordModal = ({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      username: '',
       password: '',
       confirmPassword: '',
     },
@@ -74,12 +77,18 @@ const ChangeUserPasswordModal = ({
 
   useEffect(() => {
     if (isOpen) {
-      form.reset();
+      form.reset({
+        username: user?.account || '',
+        password: '',
+        confirmPassword: '',
+      });
     }
   }, [form, isOpen]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (!user || !form.formState.isValid) return;
+    // handleSubmit has already run the resolver; do not rely on the
+    // potentially stale formState.isValid value here.
+    if (!user) return;
 
     setSubmit(true);
     putUser({
@@ -110,10 +119,21 @@ const ChangeUserPasswordModal = ({
             <div className="min-h-0 flex-1 overflow-y-auto pr-1">
               <FormField
                 control={form.control}
-                name="password"
+                name="username"
                 render={({ field }) => (
                   <FormInput
-                    type="password"
+                    label={t('Account')!}
+                    field={field}
+                    readOnly
+                    autocomplete="username"
+                  />
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormPasswordInput
                     label={t('New Password')!}
                     field={field}
                     autocomplete="new-password"
@@ -124,8 +144,7 @@ const ChangeUserPasswordModal = ({
                 control={form.control}
                 name="confirmPassword"
                 render={({ field }) => (
-                  <FormInput
-                    type="password"
+                  <FormPasswordInput
                     label={t('Confirm Password')!}
                     field={field}
                     autocomplete="new-password"

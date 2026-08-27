@@ -15,11 +15,12 @@ public class OpenRouterChatService(IHttpClientFactory httpClientFactory, HostUrl
     protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
         JsonObject body = base.BuildRequestBody(request, stream);
+        Model model = request.GetRequiredModel();
 
         body["reasoning"] = new JsonObject();
         body["provider"] = new JsonObject { ["sort"] = "throughput" };
 
-        if (request.ChatConfig.Model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
+        if (model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
             body["plugins"] = new JsonArray
             {

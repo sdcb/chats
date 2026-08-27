@@ -8,13 +8,14 @@ public class QwenChatService(IHttpClientFactory httpClientFactory) : ChatComplet
     protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
         JsonObject body = base.BuildRequestBody(request, stream);
+        Model model = request.GetRequiredModel();
 
-        if (request.ChatConfig.Model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
+        if (model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
             body["enable_search"] = true;
         }
 
-        if (Model.GetSupportedEffortsAsArray(request.ChatConfig.Model.CurrentSnapshot.SupportedEfforts).Length != 0)
+        if (Model.GetSupportedEffortsAsArray(model.CurrentSnapshot.SupportedEfforts).Length != 0)
         {
             if (ReasoningEfforts.IsLowOrMinimal(request.ChatConfig.Effort))
             {

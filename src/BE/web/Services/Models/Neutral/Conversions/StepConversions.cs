@@ -12,7 +12,10 @@ public static class StepConversions
     /// <summary>
     /// Converts a Step to a NeutralMessage.
     /// </summary>
-    public static NeutralMessage ToNeutral(this Step step, byte? targetSpanId = null)
+    public static NeutralMessage ToNeutral(
+        this Step step,
+        byte? targetSpanId = null,
+        bool applyContextTemplate = true)
     {
         List<StepContent> orderedContents = [.. step.StepContents.OrderBy(sc => sc.Id)];
         if (targetSpanId != null)
@@ -31,16 +34,21 @@ public static class StepConversions
         return new NeutralMessage
         {
             Role = step.ChatRole.ToNeutral(),
-            Contents = orderedContents.Select(sc => sc.ToNeutral(targetSpanId)).ToList()
+            Contents = orderedContents
+                .Select(sc => sc.ToNeutral(targetSpanId, applyContextTemplate))
+                .ToList()
         };
     }
 
     /// <summary>
     /// Converts a collection of Steps to a list of NeutralMessages.
     /// </summary>
-    public static IList<NeutralMessage> ToNeutral(this IEnumerable<Step> steps, byte? targetSpanId = null)
+    public static IList<NeutralMessage> ToNeutral(
+        this IEnumerable<Step> steps,
+        byte? targetSpanId = null,
+        bool applyContextTemplate = true)
     {
-        return steps.Select(s => s.ToNeutral(targetSpanId)).ToList();
+        return steps.Select(s => s.ToNeutral(targetSpanId, applyContextTemplate)).ToList();
     }
 
     /// <summary>
@@ -60,11 +68,14 @@ public static class StepConversions
     /// <summary>
     /// Converts a StepContent to a NeutralContent.
     /// </summary>
-    public static NeutralContent ToNeutral(this StepContent stepContent, byte? targetSpanId = null)
+    public static NeutralContent ToNeutral(
+        this StepContent stepContent,
+        byte? targetSpanId = null,
+        bool applyContextTemplate = true)
     {
         return (DBStepContentType)stepContent.ContentTypeId switch
         {
-            DBStepContentType.Text => NeutralTextContent.Create(targetSpanId == null
+            DBStepContentType.Text => NeutralTextContent.Create(targetSpanId == null || !applyContextTemplate
                 ? stepContent.StepContentText!.Content
                 : UserContextTemplate.Render(
                     stepContent.StepContentText!.ContextTemplate,

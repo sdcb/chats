@@ -28,7 +28,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
 
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans.OrderBy(x => x.SpanId)).ThenInclude(x => x.ChatConfig.ChatConfigMcps)
-            .Include(x => x.ChatSpans.OrderBy(x => x.SpanId)).ThenInclude(x => x.ChatConfig.Model.CurrentSnapshot).ThenInclude(x => x.ModelKeySnapshot)
+            .Include(x => x.ChatSpans.OrderBy(x => x.SpanId)).ThenInclude(x => x.ChatConfig.Model!.CurrentSnapshot).ThenInclude(x => x.ModelKeySnapshot)
             .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == idEncryption.DecryptChatId(encryptedChatId) && x.UserId == currentUser.Id && !x.IsArchived, cancellationToken);
         if (chat == null)

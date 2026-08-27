@@ -85,6 +85,7 @@ const ChatModelSettingModal = (props: Props) => {
       reasoningEffort: originalSpan.reasoningEffort ?? null,
       format: originalSpan.format ?? null,
       compression: originalSpan.compression ?? null,
+      background: originalSpan.background ?? null,
     };
     setSpan(normalizedSpan);
     setModel(modelMap[normalizedSpan.modelId]);
@@ -138,6 +139,7 @@ const ChatModelSettingModal = (props: Props) => {
       imageSize: nextImageSize,
       format: nextFormat,
       compression: nextFormat ? span?.compression ?? null : null,
+      background: span?.background ?? null,
       thinkingBudget: nextThinkingBudget,
     });
   };
@@ -181,15 +183,30 @@ const ChatModelSettingModal = (props: Props) => {
   };
 
   const onChangeFormat = (value: string | null) => {
+    const nextFormat = span?.background === 'transparent' && value !== 'png' && value !== 'webp'
+      ? 'png'
+      : value;
     setSpan({
       ...span!,
-      format: value,
-      compression: value === null ? null : span?.compression ?? null,
+      format: nextFormat,
+      compression: nextFormat === null ? null : span?.compression ?? null,
     });
   };
 
   const onChangeCompression = (value: number | null) => {
     setSpan({ ...span!, compression: value });
+  };
+
+  const onChangeBackground = (value: string | null) => {
+    setSpan({
+      ...span!,
+      background: value === 'transparent' && span?.format !== 'png' && span?.format !== 'webp'
+        ? 'transparent'
+        : value,
+      format: value === 'transparent' && span?.format !== 'png' && span?.format !== 'webp'
+        ? 'png'
+        : span?.format ?? null,
+    });
   };
 
   const onChangeThinkingBudget = (value: number | null) => {
@@ -250,6 +267,7 @@ const ChatModelSettingModal = (props: Props) => {
         imageSize: span.imageSize ?? null,
         format: span.format ?? null,
         compression: span.compression ?? null,
+        background: span.background ?? null,
         thinkingBudget: span.thinkingBudget ?? null,
         mcps: span.mcps,
       });
@@ -341,11 +359,13 @@ const ChatModelSettingModal = (props: Props) => {
                       reasoningEffort={span.reasoningEffort}
                       format={span.format}
                       compression={span.compression}
+                      background={span.background}
                       maxOutputTokens={span.maxOutputTokens}
                       onChangeImageSize={onChangeImageSize}
                       onChangeImageQuality={onChangeImageQuality}
                       onChangeFormat={onChangeFormat}
                       onChangeCompression={onChangeCompression}
+                      onChangeBackground={onChangeBackground}
                       onChangeMaxOutputTokens={onChangeMaxOutputTokens}
                     />
                   )}

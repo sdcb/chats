@@ -3,6 +3,7 @@ import { FC } from 'react';
 import useTranslation from '@/hooks/useTranslation';
 
 import { IconReasoning } from '../Icons';
+import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 
@@ -18,24 +19,17 @@ const ImageQualityRadio: FC<Props> = ({
   availableOptions,
 }) => {
   const { t } = useTranslation();
-  const defaultValue = '__default__';
-
   const allOptions = [
-    { value: defaultValue, id: 'default', label: t('Default') },
-    { value: 'low', id: 'low', label: t('Low') },
-    { value: 'medium', id: 'medium', label: t('Medium') },
-    { value: 'high', id: 'high', label: t('High') },
+    { value: 'low', id: 'low', label: t('low') },
+    { value: 'medium', id: 'medium', label: t('medium') },
+    { value: 'high', id: 'high', label: t('high') },
   ];
 
-  const filteredOptions = allOptions.filter(option => {
-    if (option.value === defaultValue) {
-      return true;
-    }
-    return availableOptions.includes(option.value);
-  });
+  const filteredOptions = allOptions.filter(option => availableOptions.includes(option.value));
 
   return (
-    <div className="flex justify-between items-center">
+    <div className="flex flex-col gap-2">
+      <div className="flex justify-between items-center">
       <label
         className={
           'text-left text-neutral-700 dark:text-neutral-400 flex gap-1 items-center'
@@ -44,23 +38,32 @@ const ImageQualityRadio: FC<Props> = ({
         <IconReasoning size={20} />
         {t('Image Quality')}
       </label>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onValueChange(value == null ? filteredOptions[0]?.value ?? '' : '')}
+          className="h-6 px-2 text-sm"
+        >
+          {value == null ? t('Default') : t('Custom')}
+        </Button>
+      </div>
 
-      <RadioGroup
-        className="flex gap-4"
-        value={value ?? defaultValue}
-        onValueChange={(nextValue) => {
-          onValueChange(nextValue === defaultValue ? '' : nextValue);
-        }}
-      >
-        {filteredOptions.map((option) => (
-          <div key={option.value} className="flex items-center space-x-2">
-            <RadioGroupItem value={option.value} id={option.id} />
-            <Label className="text-base" htmlFor={option.id}>
-              {option.label}
-            </Label>
-          </div>
-        ))}
-      </RadioGroup>
+      {value != null && (
+        <RadioGroup
+          className="flex flex-wrap gap-4 px-2"
+          value={value}
+          onValueChange={onValueChange}
+        >
+          {filteredOptions.map((option) => (
+            <div key={option.value} className="flex items-center space-x-2">
+              <RadioGroupItem value={option.value} id={option.id} />
+              <Label className="text-base" htmlFor={option.id}>
+                {option.label}
+              </Label>
+            </div>
+          ))}
+        </RadioGroup>
+      )}
     </div>
   );
 };

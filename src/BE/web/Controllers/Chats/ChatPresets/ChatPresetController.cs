@@ -226,6 +226,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     ImageSize = x.ChatConfig.ImageSize,
                     Format = x.ChatConfig.Format,
                     Compression = x.ChatConfig.Compression,
+                    Background = x.ChatConfig.Background,
                     ThinkingBudget = x.ChatConfig.ThinkingBudget,
                     ChatConfigMcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatConfigMcp
                     {
@@ -459,7 +460,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
             .Include(x => x.ChatPresetSpans)
                 .ThenInclude(x => x.ChatConfig)
                 .ThenInclude(x => x.Model)
-                .ThenInclude(x => x.CurrentSnapshot)
+                .ThenInclude(x => x!.CurrentSnapshot)
                 .ThenInclude(x => x.ModelKeySnapshot)
             .Include(x => x.ChatPresetSpans)
                 .ThenInclude(x => x.ChatConfig)

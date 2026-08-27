@@ -97,6 +97,43 @@ public class ModelRequestOverridesTests
         Assert.Equal(["admin"], textFields["metadata"]);
     }
 
+    [Fact]
+    public void ResolveOpenAIImageEndpoint_ShouldNotDuplicateV1()
+    {
+        ModelSnapshot snapshot = CreateSnapshot();
+        snapshot.ModelKeySnapshot.ModelProviderId = 5;
+        snapshot.ModelKeySnapshot.Host = "https://example.com/v1";
+
+        Assert.Equal(
+            "https://example.com/v1/images/generations",
+            ModelRequestOverrides.ResolveOpenAIImageEndpoint(snapshot, "images/generations"));
+    }
+
+    [Fact]
+    public void ResolveOpenAIImageEndpoint_ShouldAppendV1WhenMissing()
+    {
+        ModelSnapshot snapshot = CreateSnapshot();
+        snapshot.ModelKeySnapshot.ModelProviderId = 5;
+        snapshot.ModelKeySnapshot.Host = "https://example.com";
+
+        Assert.Equal(
+            "https://example.com/v1/images/edits",
+            ModelRequestOverrides.ResolveOpenAIImageEndpoint(snapshot, "images/edits"));
+    }
+
+    [Fact]
+    public void ResolveOpenAIImageEndpoint_ShouldPreferModelOverrideUrl()
+    {
+        ModelSnapshot snapshot = CreateSnapshot();
+        snapshot.ModelKeySnapshot.ModelProviderId = 5;
+        snapshot.ModelKeySnapshot.Host = "https://key.example.com";
+        snapshot.OverrideUrl = "https://model.example.com/v1";
+
+        Assert.Equal(
+            "https://model.example.com/v1/images/generations",
+            ModelRequestOverrides.ResolveOpenAIImageEndpoint(snapshot, "images/generations"));
+    }
+
     private static ModelSnapshot CreateSnapshot(string? keyHeaders = null, string? modelHeaders = null, string? keyBody = null, string? modelBody = null)
     {
         return new ModelSnapshot

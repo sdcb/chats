@@ -61,6 +61,15 @@ export const GenerateInfoPopoverContent = ({
   const showOutputCost = (!!info && outputPrice > 0) || loading;
   const totalCost = totalInputPrice + outputPrice;
 
+  // Response speed measures generation after the first token (TTFT),
+  // excluding the latency spent waiting for that first token.
+  const generationDuration = info
+    ? info.duration - info.firstTokenLatency
+    : 0;
+  const responseSpeed = info && generationDuration > 0
+    ? `${toFixed((info.outputTokens / generationDuration) * 1000)} token/s`
+    : '-';
+
   return (
     <div className="min-w-[180px]">
       <div className="mb-2 pb-1.5 border-b">
@@ -128,7 +137,7 @@ export const GenerateInfoPopoverContent = ({
         )}
         <GenerateInfoItem
           name={'response speed'}
-          value={info && info.duration ? `${toFixed((info.outputTokens / info.duration) * 1000)} token/s` : '-'}
+          value={responseSpeed}
           icon="🚀"
           loading={loading}
         />

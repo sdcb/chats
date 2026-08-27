@@ -60,6 +60,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     ImageSize = span.ChatConfig.ImageSize,
                     Format = span.ChatConfig.Format,
                     Compression = span.ChatConfig.Compression,
+                    Background = span.ChatConfig.Background,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                     {
@@ -142,6 +143,7 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     ImageSize = span.ChatConfig.ImageSize,
                     Format = span.ChatConfig.Format,
                     Compression = span.ChatConfig.Compression,
+                    Background = span.ChatConfig.Background,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                     {

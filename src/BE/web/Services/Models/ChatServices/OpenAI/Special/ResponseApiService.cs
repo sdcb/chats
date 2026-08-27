@@ -93,13 +93,13 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        Model model = request.ChatConfig.Model;
+        Model model = request.GetRequiredModel();
         ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
         string endpoint = GetEndpoint(model);
         string responsesUrl = BuildApiUrl(endpoint, "responses");
         bool hasTools = false;
 
-        if (request.ChatConfig.Model.CurrentSnapshot.UseAsyncApi)
+        if (model.CurrentSnapshot.UseAsyncApi)
         {
             // Background mode
             Stopwatch sw = Stopwatch.StartNew();
@@ -1051,7 +1051,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
     {
         JsonObject body = new()
         {
-            ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
+            ["model"] = request.GetRequiredModel().CurrentSnapshot.DeploymentName,
             ["input"] = BuildInputArray(request),
             ["stream"] = stream,
             ["store"] = false,
@@ -1110,7 +1110,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         {
             functionTools.Add(tool.ToResponseToolCall());
         }
-        if (request.ChatConfig.Model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
+        if (request.GetRequiredModel().CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
             functionTools.Add(new JsonObject
             {

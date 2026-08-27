@@ -1,4 +1,5 @@
 import React from 'react';
+import toast from 'react-hot-toast';
 import { AdminModelDto } from '@/types/adminApis';
 import useTranslation from '@/hooks/useTranslation';
 
@@ -17,11 +18,13 @@ interface ImageGenerationPresetConfigProps {
   reasoningEffort: string | null;
   format: string | null;
   compression: number | null;
+  background: string | null;
   maxOutputTokens: number | null;
   onChangeImageSize: (value: string | null) => void;
   onChangeImageQuality: (value: string) => void;
   onChangeFormat: (value: string | null) => void;
   onChangeCompression: (value: number | null) => void;
+  onChangeBackground: (value: string | null) => void;
   onChangeMaxOutputTokens: (value: number | null) => void;
 }
 
@@ -34,11 +37,13 @@ const ImageGenerationPresetConfig: React.FC<ImageGenerationPresetConfigProps> = 
   reasoningEffort,
   format,
   compression,
+  background,
   maxOutputTokens,
   onChangeImageSize,
   onChangeImageQuality,
   onChangeFormat,
   onChangeCompression,
+  onChangeBackground,
   onChangeMaxOutputTokens,
 }) => {
   const { t } = useTranslation();
@@ -92,7 +97,13 @@ const ImageGenerationPresetConfig: React.FC<ImageGenerationPresetConfigProps> = 
                   key={item}
                   type="button"
                   variant={format === item ? 'default' : 'outline'}
-                  onClick={() => onChangeFormat(item)}
+                  onClick={() => {
+                    if (background === 'transparent' && ['jpeg', 'jpg'].includes(item.toLowerCase())) {
+                      toast.error(t('Transparent background only supports PNG or WebP'));
+                      return;
+                    }
+                    onChangeFormat(item);
+                  }}
                   className="capitalize"
                 >
                   {item}
@@ -150,6 +161,41 @@ const ImageGenerationPresetConfig: React.FC<ImageGenerationPresetConfigProps> = 
           )}
         </div>
       )}
+
+      {/* Image Background */}
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-between">
+          <div className="text-neutral-700 dark:text-neutral-400">
+            {t('Image Background')}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onChangeBackground(background === null ? 'auto' : null)}
+            className="h-6 px-2 text-sm"
+          >
+            {background === null ? t('Default') : t('Custom')}
+          </Button>
+        </div>
+        {background !== null && (
+          <div className="flex flex-wrap gap-2 px-2">
+            {[
+              { value: 'auto', label: t('Auto') },
+              { value: 'opaque', label: t('Opaque') },
+              { value: 'transparent', label: t('Transparent') },
+            ].map((item) => (
+              <Button
+                key={item.value}
+                type="button"
+                variant={background === item.value ? 'default' : 'outline'}
+                onClick={() => onChangeBackground(item.value)}
+              >
+                {item.label}
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Batch Image Count (使用 maxOutputTokens 字段存储) */}
       <div className="flex flex-col gap-4">

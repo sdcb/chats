@@ -7,8 +7,9 @@ public class GithubModelsChatService(IHttpClientFactory httpClientFactory) : Cha
     protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
         JsonObject body = base.BuildRequestBody(request, stream);
+        var model = request.GetRequiredModel();
 
-        if (request.ChatConfig.Model.CurrentSnapshot.DeploymentName.Contains("Mistral", StringComparison.OrdinalIgnoreCase))
+        if (model.CurrentSnapshot.DeploymentName.Contains("Mistral", StringComparison.OrdinalIgnoreCase))
         {
             // Mistral model does not support user field
             body.Remove("user");

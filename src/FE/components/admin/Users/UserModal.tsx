@@ -160,6 +160,13 @@ const UserModal = (props: IProps) => {
     enabled: z.boolean().optional(),
     phone: z.string().nullable().default(null),
     email: z.string().nullable().default(null),
+    password: z.string().optional(),
+    sub: z.string().optional(),
+    apiKeyEnabled: z.boolean().optional(),
+    role: z.string().optional(),
+  });
+
+  const createFormSchema = formSchema.extend({
     password: z
       .string()
       .min(
@@ -168,15 +175,20 @@ const UserModal = (props: IProps) => {
           length: 6,
         })!,
       )
-      .max(18, t('Contain at most {{length}} character(s)', { length: 18 })!)
-      .optional(),
-    sub: z.string().optional(),
-    apiKeyEnabled: z.boolean().optional(),
-    role: z.string().optional(),
+      .max(18, t('Contain at most {{length}} character(s)', { length: 18 })!),
   });
 
+  // Password changes are handled by ChangeUserPasswordModal. The optional
+  // empty value only accommodates the stale default retained by
+  // react-hook-form when switching from create to edit.
+  const editFormSchema = formSchema.extend({
+    password: z.literal('').optional(),
+  });
+
+  const activeFormSchema = user ? editFormSchema : createFormSchema;
+
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(activeFormSchema),
     defaultValues: formFields.reduce((obj: any, field) => {
       obj[field.name] = field.defaultValue;
       return obj;
@@ -201,7 +213,6 @@ const UserModal = (props: IProps) => {
   }, [isOpen]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (!form.formState.isValid) return;
     setSubmit(true);
     let p = null;
     const params: any = {
@@ -213,6 +224,10 @@ const UserModal = (props: IProps) => {
     if (user) {
       delete params.account;
       delete params.provider;
+      if (!params.password) {
+        delete params.password;
+        delete params.confirmPassword;
+      }
       if (user.provider?.toLowerCase() !== 'keycloak') {
         delete params.sub;
       }

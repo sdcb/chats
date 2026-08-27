@@ -344,7 +344,7 @@ public class AzureResponseApiServiceTests
 
         AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest();
-        request.ChatConfig.Model.CurrentSnapshot.AllowSearch = true;
+        request.GetRequiredModel().CurrentSnapshot.AllowSearch = true;
         request.ChatConfig.WebSearchEnabled = true;
 
         // Act
@@ -384,7 +384,7 @@ public class AzureResponseApiServiceTests
         {
             Tools = [FunctionTool.Create("run_code", "Run code", "{\"type\":\"object\"}")]
         };
-        request.ChatConfig.Model.CurrentSnapshot.AllowSearch = true;
+        request.GetRequiredModel().CurrentSnapshot.AllowSearch = true;
         request.ChatConfig.WebSearchEnabled = true;
 
         // Act
@@ -416,7 +416,7 @@ public class AzureResponseApiServiceTests
 
         AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest();
-        request.ChatConfig.Model.CurrentSnapshot.AllowSearch = false;
+        request.GetRequiredModel().CurrentSnapshot.AllowSearch = false;
         request.ChatConfig.WebSearchEnabled = true;
 
         // Act
@@ -843,8 +843,8 @@ public class AzureResponseApiServiceTests
         Uri? requestUri = null;
         CapturingHttpClientFactory factory = new(HttpStatusCode.OK, sse, request => requestUri = request.RequestUri);
         ChatRequest request = CreateBaseChatRequest();
-        request.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId = (short)DBModelProvider.DeepSeek;
-        request.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.Host = "https://api.deepseek.com/v1";
+        request.GetRequiredModel().CurrentSnapshot.ModelKeySnapshot.ModelProviderId = (short)DBModelProvider.DeepSeek;
+        request.GetRequiredModel().CurrentSnapshot.ModelKeySnapshot.Host = "https://api.deepseek.com/v1";
         ResponseApiService service = new(factory, NullLogger<ResponseApiService>.Instance);
 
         await foreach (ChatSegment _ in service.ChatStreamed(request, CancellationToken.None))
@@ -928,7 +928,7 @@ public class AzureResponseApiServiceTests
         CapturingHttpClientFactory factory = new(HttpStatusCode.OK, responseJson, _ => { });
         ResponseApiService service = new(factory, NullLogger<ResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest();
-        request.ChatConfig.Model.CurrentSnapshot.UseAsyncApi = true;
+        request.GetRequiredModel().CurrentSnapshot.UseAsyncApi = true;
         List<ChatSegment> segments = [];
 
         await foreach (ChatSegment segment in service.ChatStreamed(request, CancellationToken.None))

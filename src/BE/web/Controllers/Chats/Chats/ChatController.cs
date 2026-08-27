@@ -1,5 +1,6 @@
 using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
+using Chats.BE.Controllers.Chats.Messages;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.Infrastructure;
 using Chats.BE.Services;
@@ -183,6 +184,26 @@ public class ChatController(
         Dictionary<long, ChatTurn> existingMessages = chat.ChatTurns.ToDictionary(x => x.Id, x => x);
         bool isEmptyChat = existingMessages.Count == 0;
 
+        async Task<long[]> GetSiblingIds(long turnId)
+        {
+            var rows = await db.ChatTurns
+                .Where(x => x.ChatId == chat.Id && x.Steps.Any())
+                .Select(x => new
+                {
+                    x.Id,
+                    x.ParentId,
+                    x.IsUser,
+                    x.SpanId,
+                    CreatedAt = x.Steps.Min(s => s.CreatedAt),
+                })
+                .ToArrayAsync(CancellationToken.None);
+            ChatMessageViewService.TurnMeta[] turns = [.. rows.Select(x =>
+                new ChatMessageViewService.TurnMeta(
+                    x.Id, x.ParentId, x.IsUser, x.SpanId, x.CreatedAt))];
+            ChatMessageViewService.TurnMeta? turn = turns.FirstOrDefault(x => x.Id == turnId);
+            return turn is null ? [] : ChatMessageViewService.GetSiblingIds(turns, turn);
+        }
+
         // ensure chat.ChatSpan contains all span ids that in request, otherwise return error
         ChatSpan[] toGenerateSpans = null!;
         if (req is RegenerateAssistantMessageRequest rr)
@@ -305,11 +326,10 @@ public class ChatController(
             TimeSpan userOffset = TimeSpan.FromMinutes(-req.TimezoneOffset);
             DateTimeOffset userLocalTime = new DateTimeOffset(utcNow, TimeSpan.Zero).ToOffset(userOffset);
 
-            List<UserContextContribution> contributions = [.. toGenerateSpans.Select(span =>
-                new UserContextContribution(
-                    "model",
-                    userModels[span.ChatConfig.ModelId!.Value].Model.CurrentSnapshot.Name,
-                    [span.SpanId]))];
+            // The model identity is already part of the provider request metadata.
+            // Keep it out of the user-facing context prompt; only dynamic runtime
+            // context (such as the current time and code-interpreter state) belongs here.
+            List<UserContextContribution> contributions = [];
             byte[] codeInterpreterSpanIds = [.. toGenerateSpans
                 .Where(x => x.ChatConfig.CodeExecutionEnabled)
                 .Select(x => x.SpanId)
@@ -414,10 +434,12 @@ public class ChatController(
 
                 if (newDbUserTurn != null && !dbUserMessageYield)
                 {
-                    await YieldResponse(SseResponseLine.UserTurn(newDbUserTurn, idEncryption, fup));
+                    long[] userSiblingIds = await GetSiblingIds(newDbUserTurn.Id);
+                    await YieldResponse(SseResponseLine.UserTurn(newDbUserTurn, idEncryption, fup, userSiblingIds));
                     dbUserMessageYield = true;
                 }
-                await YieldResponse(SseResponseLine.ResponseMessage(allEnd.SpanId, allEnd.Turn, idEncryption, fup));
+                long[] responseSiblingIds = await GetSiblingIds(allEnd.Turn.Id);
+                await YieldResponse(SseResponseLine.ResponseMessage(allEnd.SpanId, allEnd.Turn, idEncryption, fup, responseSiblingIds));
                 if (isLast)
                 {
                     await YieldResponse(SseResponseLine.ChatLeafTurnId(chat.LeafTurnId!.Value, idEncryption));
@@ -570,11 +592,13 @@ public class ChatController(
         List<Step> allSteps = [.. messageTree, .. dbUserMessage?.Steps ?? []];
 
         bool codeExecutionEnabled = chatSpan.ChatConfig.CodeExecutionEnabled;
+        bool applyContextTemplate = (DBApiType)chatSpan.ChatConfig.Model!.CurrentSnapshot.ApiTypeId
+            != DBApiType.OpenAIImageGeneration;
 
         IReadOnlyList<Step> filteredHistorySteps = RemoveNonMatchingHistoricalTurnThinkingBlocks(messageTurns, userModel.ModelId);
         IList<NeutralMessage> neutralMessages = filteredHistorySteps
             .Concat(dbUserMessage?.Steps ?? [])
-            .ToNeutral(chatSpan.SpanId);
+            .ToNeutral(chatSpan.SpanId, applyContextTemplate);
         NeutralSystemMessage? systemMessage = chatSpan.ChatConfig.CodeExecutionEnabled
             ? codeInterpreter.BuildSystemMessage(chatSpan.ChatConfig.SystemPrompt)
             : string.IsNullOrWhiteSpace(chatSpan.ChatConfig.SystemPrompt)
@@ -897,7 +921,7 @@ public class ChatController(
 
         void WriteStep(Step step)
         {
-            csr.Messages.Add(step.ToNeutral(chatSpan.SpanId));
+            csr.Messages.Add(step.ToNeutral(chatSpan.SpanId, applyContextTemplate));
             writer.TryWrite(new EndStepInternal(chatSpan.SpanId, step));
         }
 

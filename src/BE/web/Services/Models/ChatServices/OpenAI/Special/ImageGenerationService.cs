@@ -62,9 +62,8 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             yield break;
         }
 
-        Model model = request.ChatConfig.Model;
+        Model model = request.GetRequiredModel();
         ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
-        string endpoint = GetEndpoint(model);
 
         if (images.Length == 0)
         {
@@ -72,7 +71,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             JsonObject requestBody = new()
             {
                 ["prompt"] = prompt,
-                ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
+                ["model"] = model.CurrentSnapshot.DeploymentName,
                 ["n"] = n,
                 ["stream"] = true,
                 ["partial_images"] = 3,
@@ -99,6 +98,11 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
                 requestBody["output_compression"] = request.ChatConfig.Compression.Value;
             }
 
+            if (!string.IsNullOrEmpty(request.ChatConfig.Background))
+            {
+                requestBody["background"] = request.ChatConfig.Background;
+            }
+
             if (request.EndUserId != null)
             {
                 requestBody["user"] = request.EndUserId;
@@ -106,7 +110,8 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
 
             ModelRequestOverrides.ApplyBody(requestBody, model.CurrentSnapshot);
 
-            using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/images/generations");
+            string imageEndpoint = ModelRequestOverrides.ResolveOpenAIImageEndpoint(model.CurrentSnapshot, "images/generations");
+            using HttpRequestMessage httpRequest = new(HttpMethod.Post, imageEndpoint);
             AddAuthorizationHeader(httpRequest, modelKey);
             httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
             ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
@@ -136,8 +141,13 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             using MultipartFormDataContent form = ModelRequestOverrides.ApplyMultipartBody(baseForm, model.CurrentSnapshot);
             form.Add(new StringContent("true"), "stream");
             form.Add(new StringContent("3"), "partial_images");
+            if (!string.IsNullOrEmpty(request.ChatConfig.Background))
+            {
+                form.Add(new StringContent(request.ChatConfig.Background), "background");
+            }
 
-            using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/images/edits");
+            string imageEndpoint = ModelRequestOverrides.ResolveOpenAIImageEndpoint(model.CurrentSnapshot, "images/edits");
+            using HttpRequestMessage httpRequest = new(HttpMethod.Post, imageEndpoint);
             AddAuthorizationHeader(httpRequest, modelKey);
             httpRequest.Content = form;
             ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
@@ -166,9 +176,8 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
     {
         string prompt = GetPromptStatic(request.Messages);
         NeutralContent[] images = GetImagesStatic(request.Messages);
-        Model model = request.ChatConfig.Model;
+        Model model = request.GetRequiredModel();
         ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
-        string endpoint = GetEndpoint(model);
 
         using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceImageGeneration);
         httpClient.Timeout = NetworkTimeout;
@@ -179,7 +188,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             JsonObject requestBody = new()
             {
                 ["prompt"] = prompt,
-                ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
+                ["model"] = model.CurrentSnapshot.DeploymentName,
                 ["n"] = request.ChatConfig.MaxOutputTokens ?? 1,
                 ["moderation"] = "low"
             };
@@ -204,6 +213,11 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
                 requestBody["output_compression"] = request.ChatConfig.Compression.Value;
             }
 
+            if (!string.IsNullOrEmpty(request.ChatConfig.Background))
+            {
+                requestBody["background"] = request.ChatConfig.Background;
+            }
+
             if (request.EndUserId != null)
             {
                 requestBody["user"] = request.EndUserId;
@@ -211,7 +225,8 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
 
             ModelRequestOverrides.ApplyBody(requestBody, model.CurrentSnapshot);
 
-            using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/images/generations");
+            string imageEndpoint = ModelRequestOverrides.ResolveOpenAIImageEndpoint(model.CurrentSnapshot, "images/generations");
+            using HttpRequestMessage httpRequest = new(HttpMethod.Post, imageEndpoint);
             AddAuthorizationHeader(httpRequest, modelKey);
             httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
             ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
@@ -230,7 +245,8 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             using MultipartFormDataContent baseForm = await BuildImageEditFormAsync(images, prompt, request, cancellationToken);
             using MultipartFormDataContent form = ModelRequestOverrides.ApplyMultipartBody(baseForm, model.CurrentSnapshot);
 
-            using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/images/edits");
+            string imageEndpoint = ModelRequestOverrides.ResolveOpenAIImageEndpoint(model.CurrentSnapshot, "images/edits");
+            using HttpRequestMessage httpRequest = new(HttpMethod.Post, imageEndpoint);
             AddAuthorizationHeader(httpRequest, modelKey);
             httpRequest.Content = form;
             ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
@@ -358,7 +374,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
 
         form.Add(new StringContent(prompt), "prompt");
         form.Add(new StringContent((request.ChatConfig.MaxOutputTokens ?? 1).ToString()), "n");
-        form.Add(new StringContent(request.ChatConfig.Model.CurrentSnapshot.DeploymentName), "model");
+        form.Add(new StringContent(request.GetRequiredModel().CurrentSnapshot.DeploymentName), "model");
 
         if (!string.IsNullOrEmpty(request.ChatConfig.ImageSize))
         {
@@ -385,6 +401,11 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
         if (request.ChatConfig.Compression.HasValue)
         {
             form.Add(new StringContent(request.ChatConfig.Compression.Value.ToString()), "output_compression");
+        }
+
+        if (!string.IsNullOrEmpty(request.ChatConfig.Background))
+        {
+            form.Add(new StringContent(request.ChatConfig.Background), "background");
         }
 
         return form;

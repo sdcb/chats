@@ -1,4 +1,7 @@
 using Chats.DB;
+using Chats.DB.Enums;
+using Chats.BE.Controllers.Chats.Chats;
+using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Controllers.Users.Usages.Dtos;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Neutral;
@@ -8,6 +11,14 @@ namespace Chats.BE.Services.Models;
 
 public record ChatRequest
 {
+    public Model GetRequiredModel()
+    {
+        return ChatConfig.Model
+            ?? throw new CustomChatServiceException(
+                DBFinishReason.InternalConfigIssue,
+                "Chat model is not configured.");
+    }
+
     /// <summary>
     /// Chat messages in neutral format (independent of any third-party SDK or database model).
     /// </summary>

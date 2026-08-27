@@ -150,7 +150,7 @@ public class MimoChatServiceTest
         CapturingHttpClientFactory factory = new(sse, request =>
             capturedBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult());
         ChatConfig config = CreateChatConfig();
-        config.Model.CurrentSnapshot.AllowSearch = true;
+        config.Model!.CurrentSnapshot.AllowSearch = true;
         config.WebSearchEnabled = true;
         MimoChatService service = new(factory);
 
@@ -185,7 +185,7 @@ public class MimoChatServiceTest
             "data: [DONE]\n\n";
         CapturingHttpClientFactory factory = new(sse, _ => { });
         ChatConfig config = CreateChatConfig();
-        config.Model.CurrentSnapshot.AllowSearch = true;
+        config.Model!.CurrentSnapshot.AllowSearch = true;
         config.WebSearchEnabled = true;
         MimoChatService service = new(factory);
         List<ChatSegment> segments = [];
@@ -222,8 +222,8 @@ public class MimoChatServiceTest
             """;
         CapturingHttpClientFactory factory = new(responseJson, _ => { });
         ChatConfig config = CreateChatConfig();
-        config.Model.CurrentSnapshot.AllowStreaming = false;
-        config.Model.CurrentSnapshot.AllowSearch = true;
+        config.Model!.CurrentSnapshot.AllowStreaming = false;
+        config.Model!.CurrentSnapshot.AllowSearch = true;
         config.WebSearchEnabled = true;
         MimoChatService service = new(factory);
         List<ChatSegment> segments = [];
@@ -260,7 +260,7 @@ public class MimoChatServiceTest
             """;
         IHttpClientFactory factory = new ReplayHttpClientFactory(sse);
         ChatConfig config = CreateChatConfig();
-        config.Model.CurrentSnapshot.AllowSearch = true;
+        config.Model!.CurrentSnapshot.AllowSearch = true;
         config.WebSearchEnabled = true;
         MimoChatService service = new(factory);
         List<ChatSegment> segments = [];

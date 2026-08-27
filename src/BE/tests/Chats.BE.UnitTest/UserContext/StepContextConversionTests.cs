@@ -64,6 +64,28 @@ public sealed class StepContextConversionTests
     }
 
     [Fact]
+    public void ToNeutral_WhenContextTemplateDisabled_ShouldExposeRawContent()
+    {
+        const string rawContent = "<context>keep this as user input</context>";
+        Step step = new()
+        {
+            ChatRoleId = (byte)DBChatRole.User,
+            CreatedAt = DateTime.UtcNow,
+            StepContents =
+            [
+                StepContent.FromText(rawContent, UserContextTemplate.Build(FixedTime,
+                [
+                    new("model", "text-model", [1]),
+                ])),
+            ],
+        };
+
+        NeutralMessage message = step.ToNeutral(targetSpanId: 1, applyContextTemplate: false);
+
+        Assert.Equal(rawContent, Assert.IsType<NeutralTextContent>(message.Contents[0]).Content);
+    }
+
+    [Fact]
     public void Clone_ShouldPreserveContextTemplate()
     {
         StepContent original = StepContent.FromText("hello", "before {{USER_CONTENT}} after");

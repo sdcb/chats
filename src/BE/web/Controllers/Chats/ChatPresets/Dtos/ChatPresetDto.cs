@@ -45,6 +45,7 @@ public record ChatPresetDto
                 ImageSize = x.ChatConfig.ImageSize,
                 Format = x.ChatConfig.Format,
                 Compression = x.ChatConfig.Compression,
+                Background = x.ChatConfig.Background,
                 ThinkingBudget = x.ChatConfig.ThinkingBudget,
                 Mcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                 {

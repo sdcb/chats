@@ -22,8 +22,9 @@ public class QianFanChatService(IHttpClientFactory httpClientFactory) : ChatComp
     protected override JsonObject BuildRequestBody(ChatRequest request, bool stream)
     {
         JsonObject body = base.BuildRequestBody(request, stream);
+        Model model = request.GetRequiredModel();
 
-        if (request.ChatConfig.Model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
+        if (model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
             body["web_search"] = new JsonObject
             {
