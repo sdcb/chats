@@ -102,12 +102,18 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
     }
 
     [HttpGet("templates")]
-    public async Task<ActionResult<IReadOnlyList<ContainerResourceTemplate>>> Templates(CancellationToken cancellationToken)
-        => await _db.ContainerResourceTemplates.Include(x => x.RuntimeNode).OrderBy(x => x.Name).ToListAsync(cancellationToken);
+    public async Task<ActionResult<IReadOnlyList<ContainerResourceTemplateDto>>> Templates(CancellationToken cancellationToken)
+    {
+        return await ProjectTemplates(_db.ContainerResourceTemplates.OrderBy(x => x.Name))
+            .ToListAsync(cancellationToken);
+    }
 
     [HttpGet("templates/available")]
-    public async Task<ActionResult<IReadOnlyList<ContainerResourceTemplate>>> AvailableTemplates(CancellationToken cancellationToken)
-        => await _db.ContainerResourceTemplates.Include(x => x.RuntimeNode).Where(x => (x.Visibility & 1) != 0).OrderBy(x => x.Name).ToListAsync(cancellationToken);
+    public async Task<ActionResult<IReadOnlyList<ContainerResourceTemplateDto>>> AvailableTemplates(CancellationToken cancellationToken)
+    {
+        return await ProjectTemplates(_db.ContainerResourceTemplates.Where(x => (x.Visibility & 1) != 0).OrderBy(x => x.Name))
+            .ToListAsync(cancellationToken);
+    }
 
     [HttpPost("templates")]
     public async Task<IActionResult> CreateTemplate([FromBody] TemplateRequest request, CancellationToken cancellationToken)
@@ -197,4 +203,13 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
             WarningCode = imageEnabled ? null : "TemplateImageNotInEnabledCatalog",
         };
     }
+
+    private static IQueryable<ContainerResourceTemplateDto> ProjectTemplates(IQueryable<ContainerResourceTemplate> query)
+        => query.Select(x => new ContainerResourceTemplateDto(
+            x.Id, x.Name, x.RuntimeNodeId, x.Image, x.CpuCores, x.MemoryBytes,
+            x.MaxProcesses, x.BackendNetworkName, x.DefaultVolumeBytes, x.Visibility,
+            x.RuntimeNode == null ? null : new RuntimeNodeDto(
+                x.RuntimeNode.Id, x.RuntimeNode.Name, x.RuntimeNode.AiName,
+                x.RuntimeNode.Description, x.RuntimeNode.BackendType,
+                x.RuntimeNode.Endpoint, x.RuntimeNode.IsEnabled)));
 }

@@ -13,6 +13,7 @@ import { GetChatVersionResult } from '@/types/clientApis';
 
 import {
   IconChartPie,
+  IconDocker,
   IconFiles,
   IconIdBadge,
   IconLayoutSidebar,
@@ -145,6 +146,13 @@ const AdminLayout = ({
         <IconSettingsCog strokeWidth={1.2} stroke={stroke} />
       ),
       title: t('Model Configs'),
+    },
+    {
+      url: '/admin/containers',
+      icon: (stroke?: string) => (
+        <IconDocker strokeWidth={1.2} stroke={stroke} />
+      ),
+      title: t('Container Management'),
     },
     {
       url: '/admin/users',

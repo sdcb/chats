@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { createFetchClient } from '@/hooks/createFetchClient';
 import useTranslation from '@/hooks/useTranslation';
@@ -57,7 +57,9 @@ const blankTemplate = {
 
 export default function AdminContainersPage() {
   const { t } = useTranslation();
-  const client = createFetchClient();
+  // Keep the client identity stable; refresh depends on it and otherwise the
+  // effect below would issue requests again after every render.
+  const client = useMemo(() => createFetchClient(), []);
   const [nodes, setNodes] = useState<RuntimeNode[]>([]);
   const [images, setImages] = useState<ImageEntry[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
