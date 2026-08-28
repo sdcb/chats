@@ -1,20 +1,34 @@
 /*
     Chats 2.0 - persistent containers and resource governance (SQL Server)
 
-    This script is intentionally idempotent.  It only changes the database;
+    Table creation is idempotent, but Step 1.1 drops the 1.x ChatDockerSession
+    table and is therefore a one-way operation.  It only changes the database;
     administrators must remove 1.x containers from the runtime before running it.
     Connection credentials are stored as plain text for now and are expected to
     move to a secret/configuration provider in a later migration.
+
+    Enum-like columns (NetworkPolicy) are stored as lower-case strings.  Their
+    CHECK constraints use a binary collation so that a case-insensitive database
+    collation cannot let 'None' or 'NONE' slip in next to 'none'.  The ordering
+    of network policies (none < egress < public) is NOT expressible in SQL and
+    must be evaluated in C#; never push a quota comparison down to the database.
 */
 
+SET XACT_ABORT ON;
 SET NOCOUNT ON;
+GO
 
 PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
+GO
 
-    IF OBJECT_ID(N'dbo.[User]', N'U') IS NULL
-        THROW 52000, N'dbo.[User] is required by the first-step migration.', 1;
-    IF OBJECT_ID(N'dbo.Chat', N'U') IS NULL
-        THROW 52001, N'dbo.Chat is required by the first-step migration.', 1;
+IF OBJECT_ID(N'dbo.[User]', N'U') IS NULL
+    THROW 52000, N'dbo.[User] is required by the first-step migration.', 1;
+IF OBJECT_ID(N'dbo.Chat', N'U') IS NULL
+    THROW 52001, N'dbo.Chat is required by the first-step migration.', 1;
+IF OBJECT_ID(N'dbo.ChatTurn', N'U') IS NULL
+    THROW 52002, N'dbo.ChatTurn is required by the first-step migration.', 1;
+GO
+
 
     /* Step 1.1: remove the 1.x temporary-session model during the outage. */
     PRINT N'[Step 1.1] 删除 dbo.ChatDockerSession（若存在）';
@@ -30,6 +44,7 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         IF @dropSql <> N'' EXEC sys.sp_executesql @dropSql;
         DROP TABLE dbo.ChatDockerSession;
     END;
+GO
 
     /* Step 1.2: Docker daemon, Windows Docker, Kubernetes, or another backend. */
     PRINT N'[Step 1.2] 创建 dbo.ContainerRuntimeNode（若不存在）';
@@ -45,7 +60,12 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             Credential           NVARCHAR(4000) NULL,
             IsEnabled            BIT NOT NULL CONSTRAINT DF_ContainerRuntimeNode_IsEnabled DEFAULT (1),
             SupportsDynamicResources BIT NOT NULL CONSTRAINT DF_ContainerRuntimeNode_Dynamic DEFAULT (0),
-            SupportsNetworkPolicy BIT NOT NULL CONSTRAINT DF_ContainerRuntimeNode_Network DEFAULT (0),
+            -- Network levels this node can actually deliver, as an inclusive range
+            -- over none < egress < public.  Windows Docker cannot honour 'none'
+            -- (it silently falls back to 'nat'), so such a node must declare
+            -- MinNetworkPolicy = 'egress' instead of downgrading requests silently.
+            MinNetworkPolicy     VARCHAR(16) NOT NULL CONSTRAINT DF_ContainerRuntimeNode_MinNetwork DEFAULT ('none'),
+            MaxNetworkPolicy     VARCHAR(16) NOT NULL CONSTRAINT DF_ContainerRuntimeNode_MaxNetwork DEFAULT ('public'),
             SupportsManagedVolumes BIT NOT NULL CONSTRAINT DF_ContainerRuntimeNode_Volumes DEFAULT (0),
             PhysicalCpuCores     REAL NULL,
             PhysicalMemoryBytes  BIGINT NULL,
@@ -55,12 +75,17 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             CONSTRAINT PK_ContainerRuntimeNode PRIMARY KEY CLUSTERED (Id),
             CONSTRAINT UQ_ContainerRuntimeNode_Name UNIQUE (Name),
             CONSTRAINT CK_ContainerRuntimeNode_BackendType CHECK (BackendType IN (1, 2, 3, 4)),
+            CONSTRAINT CK_ContainerRuntimeNode_MinNetworkPolicy CHECK
+                (MinNetworkPolicy COLLATE Latin1_General_BIN2 IN ('none', 'egress', 'public')),
+            CONSTRAINT CK_ContainerRuntimeNode_MaxNetworkPolicy CHECK
+                (MaxNetworkPolicy COLLATE Latin1_General_BIN2 IN ('none', 'egress', 'public')),
             CONSTRAINT CK_ContainerRuntimeNode_Capacity CHECK
                 ((PhysicalCpuCores IS NULL OR PhysicalCpuCores >= 0) AND
                  (PhysicalMemoryBytes IS NULL OR PhysicalMemoryBytes >= 0) AND
                  (MaxContainerCount IS NULL OR MaxContainerCount >= 0))
         );
     END;
+GO
 
     /* Step 1.3: common resource record for permanent and temporary containers. */
     PRINT N'[Step 1.3] 创建 dbo.ContainerResource 及索引（若不存在）';
@@ -71,6 +96,15 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             Id                  BIGINT NOT NULL IDENTITY(1,1),
             OwnerUserId         INT NOT NULL,
             OwnerChatId         INT NULL,
+            -- Set when the agent created the container inside a specific turn.
+            -- Such a container is only visible along that turn's parent chain, so
+            -- sibling branches of the same chat never share it.  NULL means the
+            -- container was created from the chat-level session manager and is
+            -- visible to the whole chat.  Ownership consistency between
+            -- OwnerChatId / OwnerTurnId / IsPermanent is enforced by the
+            -- application, not by CHECK constraints, because deleting a chat
+            -- de-associates both columns and leaves orphaned containers behind.
+            OwnerTurnId         BIGINT NULL,
             RuntimeNodeId       INT NOT NULL,
             -- 0=temporary, 1=permanent
             IsPermanent         BIT NOT NULL CONSTRAINT DF_ContainerResource_IsPermanent DEFAULT (0),
@@ -78,11 +112,18 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             Name                NVARCHAR(128) NOT NULL,
             Image               NVARCHAR(512) NOT NULL,
             ShellPrefix         NVARCHAR(128) NULL,
+            Ip                  VARCHAR(45) NULL,
             CpuCores            REAL NULL,
             MemoryBytes         BIGINT NULL,
             MaxProcesses        INT NULL,
-            -- NetworkPolicy: 0=None, 1=Egress, 2=Public
-            NetworkPolicy       TINYINT NOT NULL,
+            -- Requested/authorised network level: 'none' < 'egress' < 'public'.
+            -- This is the intent used for quota and auditing; compare it in C#.
+            NetworkPolicy       VARCHAR(16) NOT NULL,
+            -- The network name actually handed to the backend ('none', 'bridge',
+            -- 'host', 'nat', 'l2bridge', or a custom network).  Recording it is
+            -- what makes a silent downgrade (e.g. 'none' -> 'nat' on Windows)
+            -- detectable after the fact.
+            BackendNetworkName  VARCHAR(128) NULL,
             -- Status: 1=Running, 2=Stopped, 3=Pending, 4=Deleted
             Status              TINYINT NOT NULL,
             CreatedAt           DATETIME2(7) NOT NULL CONSTRAINT DF_ContainerResource_CreatedAt DEFAULT (SYSUTCDATETIME()),
@@ -96,8 +137,10 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             CONSTRAINT PK_ContainerResource PRIMARY KEY CLUSTERED (Id),
             CONSTRAINT FK_ContainerResource_User FOREIGN KEY (OwnerUserId) REFERENCES dbo.[User](Id),
             CONSTRAINT FK_ContainerResource_Chat FOREIGN KEY (OwnerChatId) REFERENCES dbo.Chat(Id),
+            CONSTRAINT FK_ContainerResource_Turn FOREIGN KEY (OwnerTurnId) REFERENCES dbo.ChatTurn(Id),
             CONSTRAINT FK_ContainerResource_RuntimeNode FOREIGN KEY (RuntimeNodeId) REFERENCES dbo.ContainerRuntimeNode(Id),
-            CONSTRAINT CK_ContainerResource_NetworkPolicy CHECK (NetworkPolicy IN (0, 1, 2)),
+            CONSTRAINT CK_ContainerResource_NetworkPolicy CHECK
+                (NetworkPolicy COLLATE Latin1_General_BIN2 IN ('none', 'egress', 'public')),
             CONSTRAINT CK_ContainerResource_Status CHECK (Status IN (1, 2, 3, 4)),
             CONSTRAINT CK_ContainerResource_Limits CHECK
                 ((CpuCores IS NULL OR CpuCores >= 0) AND
@@ -116,6 +159,18 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         CREATE INDEX IX_ContainerResource_RuntimeNode_Status ON dbo.ContainerResource (RuntimeNodeId, Status);
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResource') AND name = N'IX_ContainerResource_CleanupAt')
         CREATE INDEX IX_ContainerResource_CleanupAt ON dbo.ContainerResource (CleanupAt) WHERE CleanupAt IS NOT NULL AND Status <> 4;
+    /* Chat-scoped and branch-scoped lookups of temporary containers. */
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResource') AND name = N'IX_ContainerResource_OwnerChatId')
+        CREATE INDEX IX_ContainerResource_OwnerChatId ON dbo.ContainerResource (OwnerChatId) WHERE OwnerChatId IS NOT NULL;
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResource') AND name = N'IX_ContainerResource_OwnerTurnId')
+        CREATE INDEX IX_ContainerResource_OwnerTurnId ON dbo.ContainerResource (OwnerTurnId) WHERE OwnerTurnId IS NOT NULL;
+    /* One live database row per backend container, and reverse lookup by container id. */
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResource') AND name = N'UX_ContainerResource_Backend')
+        CREATE UNIQUE INDEX UX_ContainerResource_Backend ON dbo.ContainerResource (RuntimeNodeId, BackendResourceId) WHERE BackendResourceId IS NOT NULL AND Status <> 4;
+    /* Permanent containers are addressed by name, so the name must be stable per owner. */
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResource') AND name = N'UX_ContainerResource_Owner_Name')
+        CREATE UNIQUE INDEX UX_ContainerResource_Owner_Name ON dbo.ContainerResource (OwnerUserId, Name) WHERE IsPermanent = 1 AND Status <> 4;
+GO
 
     /* Step 1.4: first-class volumes. */
     PRINT N'[Step 1.4] 创建 dbo.ContainerVolume 及索引（若不存在）';
@@ -155,6 +210,7 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         CREATE UNIQUE INDEX UX_ContainerVolume_InternalContainer ON dbo.ContainerVolume (ContainerResourceId) WHERE IsStandalone = 0 AND ContainerResourceId IS NOT NULL;
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerVolume') AND name = N'IX_ContainerVolume_OwnerUser_Active')
         CREATE INDEX IX_ContainerVolume_OwnerUser_Active ON dbo.ContainerVolume (OwnerUserId, IsActive, IsStandalone);
+GO
 
     PRINT N'[Step 1.5] 创建 dbo.ContainerVolumeMount 及索引（若不存在）';
     IF OBJECT_ID(N'dbo.ContainerVolumeMount', N'U') IS NULL
@@ -181,28 +237,32 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         CREATE UNIQUE INDEX UX_ContainerVolumeMount_ActivePath ON dbo.ContainerVolumeMount (VolumeId, ContainerResourceId, ContainerPath) WHERE IsActive = 1;
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerVolumeMount') AND name = N'IX_ContainerVolumeMount_Container_Active')
         CREATE INDEX IX_ContainerVolumeMount_Container_Active ON dbo.ContainerVolumeMount (ContainerResourceId, IsActive);
+GO
 
     PRINT N'[Step 1.6] 创建 dbo.ChatContainerResourceAccess 及索引（若不存在）';
     IF OBJECT_ID(N'dbo.ChatContainerResourceAccess', N'U') IS NULL
     BEGIN
+        /* Chat-level authorisation for PERMANENT containers only.  Temporary
+           containers are not granted here: they carry their own scope through
+           ContainerResource.OwnerChatId / OwnerTurnId.  Access is a mutable user
+           setting, so it deliberately has no turn linkage - turns get deleted,
+           regenerated and edited, and a grant must not disappear with them. */
         CREATE TABLE dbo.ChatContainerResourceAccess
         (
             Id                  BIGINT NOT NULL IDENTITY(1,1),
             ChatId              INT NOT NULL,
             ContainerResourceId BIGINT NOT NULL,
-            -- NULL means chat-wide access; otherwise access starts at this turn's branch.
-            GrantedFromTurnId   BIGINT NULL,
             GrantedAt           DATETIME2(7) NOT NULL CONSTRAINT DF_ChatContainerAccess_GrantedAt DEFAULT (SYSUTCDATETIME()),
             CONSTRAINT PK_ChatContainerResourceAccess PRIMARY KEY CLUSTERED (Id),
             CONSTRAINT FK_ChatContainerAccess_Chat FOREIGN KEY (ChatId) REFERENCES dbo.Chat(Id),
             CONSTRAINT FK_ChatContainerAccess_Container FOREIGN KEY (ContainerResourceId) REFERENCES dbo.ContainerResource(Id),
-            CONSTRAINT FK_ChatContainerAccess_GrantedFromTurn FOREIGN KEY (GrantedFromTurnId) REFERENCES dbo.ChatTurn(Id),
             CONSTRAINT UQ_ChatContainerAccess_ChatContainer UNIQUE (ChatId, ContainerResourceId)
         );
     END;
 
-    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ChatContainerResourceAccess') AND name = N'IX_ChatContainerAccess_GrantedFromTurn')
-        CREATE INDEX IX_ChatContainerAccess_GrantedFromTurn ON dbo.ChatContainerResourceAccess (GrantedFromTurnId) WHERE GrantedFromTurnId IS NOT NULL;
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ChatContainerResourceAccess') AND name = N'IX_ChatContainerAccess_Container')
+        CREATE INDEX IX_ChatContainerAccess_Container ON dbo.ChatContainerResourceAccess (ContainerResourceId);
+GO
 
     PRINT N'[Step 1.7] 创建 dbo.UserContainerQuota（若不存在）';
     IF OBJECT_ID(N'dbo.UserContainerQuota', N'U') IS NULL
@@ -238,6 +298,7 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         CREATE UNIQUE INDEX UX_UserContainerQuota_User ON dbo.UserContainerQuota (UserId) WHERE UserId IS NOT NULL;
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.UserContainerQuota') AND name = N'UX_UserContainerQuota_Default')
         CREATE UNIQUE INDEX UX_UserContainerQuota_Default ON dbo.UserContainerQuota (UserId) WHERE UserId IS NULL;
+GO
 
     PRINT N'[Step 1.8] 创建 dbo.ContainerResourceTemplate 及索引（若不存在）';
     IF OBJECT_ID(N'dbo.ContainerResourceTemplate', N'U') IS NULL
@@ -250,8 +311,8 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             CpuCores            REAL NOT NULL,
             MemoryBytes         BIGINT NOT NULL,
             MaxProcesses        INT NOT NULL,
-            -- NetworkPolicy: 0=None, 1=Egress, 2=Public
-            NetworkPolicy       TINYINT NOT NULL,
+            -- 'none' < 'egress' < 'public'; ordering is maintained in C#.
+            NetworkPolicy       VARCHAR(16) NOT NULL,
             DefaultVolumeBytes  BIGINT NULL,
             IsEnabled           BIT NOT NULL CONSTRAINT DF_ContainerTemplate_Enabled DEFAULT (1),
             IsDefault           BIT NOT NULL CONSTRAINT DF_ContainerTemplate_Default DEFAULT (0),
@@ -259,13 +320,15 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             UpdatedAt           DATETIME2(7) NOT NULL CONSTRAINT DF_ContainerTemplate_UpdatedAt DEFAULT (SYSUTCDATETIME()),
             CONSTRAINT PK_ContainerResourceTemplate PRIMARY KEY CLUSTERED (Id),
             CONSTRAINT UQ_ContainerResourceTemplate_Name UNIQUE (Name),
-            CONSTRAINT CK_ContainerTemplate_NetworkPolicy CHECK (NetworkPolicy IN (0, 1, 2)),
+            CONSTRAINT CK_ContainerTemplate_NetworkPolicy CHECK
+                (NetworkPolicy COLLATE Latin1_General_BIN2 IN ('none', 'egress', 'public')),
             CONSTRAINT CK_ContainerTemplate_Values CHECK
                 (CpuCores >= 0 AND MemoryBytes >= 0 AND MaxProcesses >= 0 AND (DefaultVolumeBytes IS NULL OR DefaultVolumeBytes >= 0))
         );
     END;
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResourceTemplate') AND name = N'UX_ContainerResourceTemplate_Default')
         CREATE UNIQUE INDEX UX_ContainerResourceTemplate_Default ON dbo.ContainerResourceTemplate (IsDefault) WHERE IsDefault = 1;
+GO
 
 /* Step 1.9: idempotent post-migration verification. */
 PRINT N'[Step 1.9] 执行第一步结构校验';
