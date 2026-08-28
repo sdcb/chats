@@ -45,29 +45,33 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             Name                NVARCHAR(128) NOT NULL,
             -- 1=Docker, 2=Windows Docker, 3=Kubernetes, 4=Other
             BackendType         TINYINT NOT NULL,
-            Endpoint            NVARCHAR(2048) NOT NULL,
+            Endpoint            VARCHAR(2048) NOT NULL,
             Credential           NVARCHAR(4000) NULL,
             IsEnabled            BIT NOT NULL CONSTRAINT DF_ContainerRuntimeNode_IsEnabled DEFAULT (1),
-            SupportsDynamicResources BIT NOT NULL CONSTRAINT DF_ContainerRuntimeNode_Dynamic DEFAULT (0),
-            SupportsNetworkPolicy BIT NOT NULL CONSTRAINT DF_ContainerRuntimeNode_Network DEFAULT (0),
-            SupportsManagedVolumes BIT NOT NULL CONSTRAINT DF_ContainerRuntimeNode_Volumes DEFAULT (0),
-            PhysicalCpuCores     REAL NULL,
-            PhysicalMemoryBytes  BIGINT NULL,
-            MaxContainerCount    INT NULL,
             CreatedAt            DATETIME2(7) NOT NULL CONSTRAINT DF_ContainerRuntimeNode_CreatedAt DEFAULT (SYSUTCDATETIME()),
             UpdatedAt            DATETIME2(7) NOT NULL CONSTRAINT DF_ContainerRuntimeNode_UpdatedAt DEFAULT (SYSUTCDATETIME()),
             CONSTRAINT PK_ContainerRuntimeNode PRIMARY KEY CLUSTERED (Id),
             CONSTRAINT UQ_ContainerRuntimeNode_Name UNIQUE (Name),
-            CONSTRAINT CK_ContainerRuntimeNode_BackendType CHECK (BackendType IN (1, 2, 3, 4)),
-            CONSTRAINT CK_ContainerRuntimeNode_Capacity CHECK
-                ((PhysicalCpuCores IS NULL OR PhysicalCpuCores >= 0) AND
-                 (PhysicalMemoryBytes IS NULL OR PhysicalMemoryBytes >= 0) AND
-                 (MaxContainerCount IS NULL OR MaxContainerCount >= 0))
+            CONSTRAINT CK_ContainerRuntimeNode_BackendType CHECK (BackendType IN (1, 2, 3, 4))
         );
     END;
     ELSE
     BEGIN
         PRINT N'    -> ContainerRuntimeNode 表已存在，跳过创建';
+    END;
+
+    PRINT N'[Step 1.2.1] 插入默认 Docker RuntimeNode（若不存在）';
+    IF NOT EXISTS (SELECT 1 FROM dbo.ContainerRuntimeNode WHERE Name = N'default-docker')
+    BEGIN
+        INSERT INTO dbo.ContainerRuntimeNode
+            (Name, BackendType, Endpoint, Credential, IsEnabled)
+        VALUES
+            (N'default-docker', 1, 'unix:///var/run/docker.sock', NULL, 1);
+        PRINT N'    -> 已插入 default-docker RuntimeNode';
+    END;
+    ELSE
+    BEGIN
+        PRINT N'    -> default-docker RuntimeNode 已存在，跳过插入';
     END;
 
     /* Step 1.3: common resource record for permanent and temporary containers. */
@@ -154,10 +158,9 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             ContainerResourceId  BIGINT NULL,
             -- 0=internal (owned by a container), 1=standalone
             IsStandalone         BIT NOT NULL CONSTRAINT DF_ContainerVolume_IsStandalone DEFAULT (0),
-            BackendVolumeId      NVARCHAR(256) NULL,
+            BackendVolumeId      VARCHAR(256) NULL,
             Name                NVARCHAR(128) NOT NULL,
             DeclaredBytes       BIGINT NULL,
-            UsedBytes           BIGINT NULL,
             IsActive             BIT NOT NULL CONSTRAINT DF_ContainerVolume_IsActive DEFAULT (1),
             CreatedAt           DATETIME2(7) NOT NULL CONSTRAINT DF_ContainerVolume_CreatedAt DEFAULT (SYSUTCDATETIME()),
             UpdatedAt           DATETIME2(7) NOT NULL CONSTRAINT DF_ContainerVolume_UpdatedAt DEFAULT (SYSUTCDATETIME()),
@@ -167,7 +170,7 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             CONSTRAINT FK_ContainerVolume_RuntimeNode FOREIGN KEY (RuntimeNodeId) REFERENCES dbo.ContainerRuntimeNode(Id),
             CONSTRAINT FK_ContainerVolume_Container FOREIGN KEY (ContainerResourceId) REFERENCES dbo.ContainerResource(Id),
             CONSTRAINT CK_ContainerVolume_Size CHECK
-                ((DeclaredBytes IS NULL OR DeclaredBytes >= 0) AND (UsedBytes IS NULL OR UsedBytes >= 0)),
+                (DeclaredBytes IS NULL OR DeclaredBytes >= 0),
             CONSTRAINT CK_ContainerVolume_Ownership CHECK
                 ((IsStandalone = 0 AND ContainerResourceId IS NOT NULL) OR
                  (IsStandalone = 1 AND ContainerResourceId IS NULL)),
