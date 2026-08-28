@@ -91,33 +91,84 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
     }
 
     [HttpGet("images")]
-    public async Task<ActionResult<IReadOnlyList<ContainerImage>>> Images(CancellationToken cancellationToken)
-        => await _db.ContainerImages.OrderBy(x => x.Image).ToListAsync(cancellationToken);
+    public async Task<ActionResult<IReadOnlyList<ContainerImageDto>>> Images(CancellationToken cancellationToken)
+        => await _db.ContainerImages
+            .OrderBy(x => x.Image)
+            .Select(x => new ContainerImageDto(x.Id, x.Image, x.Description, x.IsEnabled))
+            .ToListAsync(cancellationToken);
 
-    [HttpPut("images/{*image}")]
-    public async Task<IActionResult> UpsertImage(string image, [FromBody] ImageRequest request, CancellationToken cancellationToken)
+    [HttpPost("images")]
+    public async Task<IActionResult> CreateImage([FromBody] ImageRequest request, CancellationToken cancellationToken)
     {
-        ContainerImage? entity = await _db.ContainerImages.SingleOrDefaultAsync(x => x.Image == image, cancellationToken);
-        if (entity is null)
+        string? image = NormalizeImageName(request.Image);
+        if (image is null)
+            return BadRequest(new { Code = "InvalidImageName", Message = "Image name is required." });
+        if (await _db.ContainerImages.AnyAsync(x => x.Image == image, cancellationToken))
+            return Conflict(new { Code = "ImageAlreadyExists", Message = "An image with this name already exists." });
+
+        ContainerImage entity = new()
         {
-            entity = new ContainerImage { Image = image };
-            _db.ContainerImages.Add(entity);
-        }
-        entity.Description = request.Description;
-        entity.IsEnabled = request.IsEnabled;
+            Image = image,
+            Description = NormalizeDescription(request.Description),
+            IsEnabled = request.IsEnabled,
+        };
+        _db.ContainerImages.Add(entity);
         await _db.SaveChangesAsync(cancellationToken);
-        return Ok(entity);
+        return Ok(new ContainerImageDto(entity.Id, entity.Image, entity.Description, entity.IsEnabled));
     }
 
-    [HttpDelete("images/{*image}")]
-    public async Task<IActionResult> DeleteImage(string image, CancellationToken cancellationToken)
+    [HttpPut("images/{id:int}")]
+    public async Task<IActionResult> UpdateImage(int id, [FromBody] ImageRequest request, CancellationToken cancellationToken)
     {
-        ContainerImage? entity = await _db.ContainerImages.SingleOrDefaultAsync(x => x.Image == image, cancellationToken);
-        if (entity is not null)
+        ContainerImage? entity = await _db.ContainerImages.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (entity is null) return NotFound();
+
+        string? image = NormalizeImageName(request.Image);
+        if (image is null)
+            return BadRequest(new { Code = "InvalidImageName", Message = "Image name is required." });
+        if (await _db.ContainerImages.AnyAsync(x => x.Id != id && x.Image == image, cancellationToken))
+            return Conflict(new { Code = "ImageAlreadyExists", Message = "An image with this name already exists." });
+
+        string previousImage = entity.Image;
+        entity.Image = image;
+        entity.Description = NormalizeDescription(request.Description);
+        entity.IsEnabled = request.IsEnabled;
+
+        // Templates keep the selected image name as their runtime input. Keep
+        // those references in sync when an administrator renames a catalog
+        // entry, while existing container resources retain their historical
+        // image snapshot.
+        if (!String.Equals(previousImage, image, StringComparison.Ordinal))
         {
-            _db.ContainerImages.Remove(entity);
-            await _db.SaveChangesAsync(cancellationToken);
+            DateTime now = DateTime.UtcNow;
+            List<ContainerResourceTemplate> templates = await _db.ContainerResourceTemplates
+                .Where(x => x.Image == previousImage)
+                .ToListAsync(cancellationToken);
+            foreach (ContainerResourceTemplate template in templates)
+            {
+                template.Image = image;
+                template.UpdatedAt = now;
+            }
         }
+
+        await _db.SaveChangesAsync(cancellationToken);
+        return Ok(new ContainerImageDto(entity.Id, entity.Image, entity.Description, entity.IsEnabled));
+    }
+
+    [HttpDelete("images/{id:int}")]
+    public async Task<IActionResult> DeleteImage(int id, CancellationToken cancellationToken)
+    {
+        ContainerImage? entity = await _db.ContainerImages.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (entity is null) return NoContent();
+        if (await _db.ContainerResourceTemplates.AnyAsync(x => x.Image == entity.Image, cancellationToken))
+            return Conflict(new
+            {
+                Code = "ImageInUse",
+                Message = "The image is still referenced by one or more resource templates.",
+            });
+
+        _db.ContainerImages.Remove(entity);
+        await _db.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
 
@@ -257,4 +308,14 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
             .Select(x => new RuntimeNodeDto(x.Id, x.Name, x.AiName, x.Description, x.BackendType,
                 x.Endpoint, x.Credential != null, x.IsEnabled, x.CreatedAt, x.UpdatedAt))
             .SingleOrDefaultAsync(cancellationToken);
+
+    private static string? NormalizeImageName(string? image)
+    {
+        if (string.IsNullOrWhiteSpace(image)) return null;
+        string normalized = image.Trim();
+        return normalized.Length > 512 ? null : normalized;
+    }
+
+    private static string? NormalizeDescription(string? description)
+        => string.IsNullOrWhiteSpace(description) ? null : description.Trim();
 }

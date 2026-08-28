@@ -326,11 +326,13 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         PRINT N'[Step 1.8] 创建 dbo.ContainerImage';
         CREATE TABLE dbo.ContainerImage
         (
+            Id          INT NOT NULL IDENTITY(1,1),
             Image       VARCHAR(512) NOT NULL,
             Description NVARCHAR(1000) NULL,
             IsEnabled   BIT NOT NULL CONSTRAINT DF_ContainerImage_IsEnabled DEFAULT (1),
-            CONSTRAINT PK_ContainerImage PRIMARY KEY CLUSTERED (Image),
-            CONSTRAINT CK_ContainerImage_Image CHECK (LEN(Image) > 0)
+            CONSTRAINT PK_ContainerImage PRIMARY KEY CLUSTERED (Id),
+            CONSTRAINT UQ_ContainerImage_Image UNIQUE (Image),
+            CONSTRAINT CK_ContainerImage_Image CHECK (LEN(LTRIM(RTRIM(Image))) > 0)
         );
     END;
     ELSE

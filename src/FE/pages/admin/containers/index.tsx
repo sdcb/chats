@@ -74,6 +74,7 @@ type RuntimeTemplate = {
   runtimeNode?: RuntimeNode | null;
 };
 type ImageEntry = {
+  id: number;
   image: string;
   description: string | null;
   isEnabled: boolean;
@@ -211,7 +212,7 @@ export default function AdminContainersPage() {
   const [templateDialog, setTemplateDialog] = useState<number | 'new' | null>(
     null,
   );
-  const [imageDialog, setImageDialog] = useState<string | 'new' | null>(null);
+  const [imageDialog, setImageDialog] = useState<number | 'new' | null>(null);
   const [quotaDialog, setQuotaDialog] = useState<number | null>(null);
   const [runtimeForm, setRuntimeForm] = useState<RuntimeForm>(emptyRuntime);
   const [templateForm, setTemplateForm] = useState<TemplateForm>(emptyTemplate);
@@ -301,7 +302,7 @@ export default function AdminContainersPage() {
       description: item.description || '',
       isEnabled: item.isEnabled,
     });
-    setImageDialog(item.image);
+    setImageDialog(item.id);
   };
   const openEditQuota = (quota: Quota) => {
     const asText = (value: number | null) =>
@@ -387,17 +388,17 @@ export default function AdminContainersPage() {
     if (!imageForm.image.trim()) return;
     setSaving(true);
     try {
-      await client.put(
-        `/api/admin/container-catalog/images/${encodeURIComponent(
-          imageForm.image.trim(),
-        )}`,
-        {
-          body: {
-            description: imageForm.description.trim() || null,
-            isEnabled: imageForm.isEnabled,
-          },
-        },
-      );
+      const body = {
+        image: imageForm.image.trim(),
+        description: imageForm.description.trim() || null,
+        isEnabled: imageForm.isEnabled,
+      };
+      if (imageDialog === 'new')
+        await client.post('/api/admin/container-catalog/images', { body });
+      else if (imageDialog != null)
+        await client.put(`/api/admin/container-catalog/images/${imageDialog}`, {
+          body,
+        });
       toast.success(t('Save successful'));
       setImageDialog(null);
       await refresh();
@@ -461,11 +462,7 @@ export default function AdminContainersPage() {
           `/api/admin/container-catalog/templates/${target.id}`,
         );
       if (target.kind === 'image')
-        await client.delete(
-          `/api/admin/container-catalog/images/${encodeURIComponent(
-            String(target.id),
-          )}`,
-        );
+        await client.delete(`/api/admin/container-catalog/images/${target.id}`);
       toast.success(t('Deleted successful'));
       setPendingDelete(null);
       await refresh();
@@ -760,7 +757,7 @@ export default function AdminContainersPage() {
             variant="ghost"
             title={t('Delete')}
             onClick={() =>
-              setPendingDelete({ kind: 'image', id: x.image, label: x.image })
+              setPendingDelete({ kind: 'image', id: x.id, label: x.image })
             }
           >
             <IconTrash size={16} />
@@ -1013,7 +1010,7 @@ export default function AdminContainersPage() {
             loading={loading}
             page={imagePage}
             totalCount={filteredImages.length}
-            rowKey={(x) => x.image}
+            rowKey={(x) => x.id}
             onPageChange={setImagePage}
             emptyText={t('No images found.')}
           />
@@ -1345,16 +1342,19 @@ export default function AdminContainersPage() {
               {imageDialog === 'new' ? t('Add image') : t('Edit image')}
             </DialogTitle>
             <DialogDescription>
-              {t(
-                'Images must be enabled in the catalog before templates can use them.',
-              )}
+              {imageDialog === 'new'
+                ? t(
+                    'Images must be enabled in the catalog before templates can use them.',
+                  )
+                : t(
+                    'Renaming an image updates references in resource templates.',
+                  )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <Label>
               {t('Image')}
               <Input
-                disabled={imageDialog !== 'new'}
                 value={imageForm.image}
                 placeholder="registry.example.com/image:tag"
                 onChange={(e) =>

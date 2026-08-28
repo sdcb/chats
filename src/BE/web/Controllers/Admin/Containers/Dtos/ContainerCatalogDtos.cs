@@ -40,6 +40,7 @@ public sealed record ContainerQuotaDto(
     long? MaxContainerMemoryBytes,
     long? MaxVolumeBytesPerVolume,
     DateTime UpdatedAt);
-public sealed record ImageRequest(string? Description, bool IsEnabled);
+public sealed record ContainerImageDto(int Id, string Image, string? Description, bool IsEnabled);
+public sealed record ImageRequest(string Image, string? Description, bool IsEnabled);
 public sealed record QuotaRequest(bool AllowCustomImage, string AllowedNetworkModes, int? MaxContainerCount, float? MaxCpuCores, long? MaxMemoryBytes, int? MaxContainerProcesses, long? MaxVolumeBytes, float? MaxContainerCpuCores, long? MaxContainerMemoryBytes, long? MaxVolumeBytesPerVolume);
 public sealed record TemplateRequest(string Name, int RuntimeNodeId, string Image, float CpuCores, long MemoryBytes, int MaxProcesses, string? BackendNetworkName, long? DefaultVolumeBytes, byte Visibility);
