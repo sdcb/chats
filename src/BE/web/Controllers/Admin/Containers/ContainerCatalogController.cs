@@ -51,7 +51,7 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
         node.AiName = request.AIName.Trim();
         node.Description = request.Description?.Trim();
         node.BackendType = request.BackendType;
-        node.Endpoint = request.Endpoint.Trim();
+        node.Endpoint = request.Endpoint?.Trim();
         node.Credential = request.Credential;
         node.IsEnabled = request.IsEnabled;
         node.UpdatedAt = DateTime.UtcNow;

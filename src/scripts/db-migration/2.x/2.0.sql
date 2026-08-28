@@ -54,7 +54,7 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             Description         NVARCHAR(1000) NULL,
             -- 1=Docker, 2=Windows Docker, 3=Kubernetes, 4=Other
             BackendType         TINYINT NOT NULL,
-            Endpoint            VARCHAR(2048) NOT NULL,
+            Endpoint            VARCHAR(2048) NULL,
             Credential          VARCHAR(4000) NULL,
             IsEnabled            BIT NOT NULL CONSTRAINT DF_ContainerRuntimeNode_IsEnabled DEFAULT (1),
             CreatedAt            DATETIME2(7) NOT NULL CONSTRAINT DF_ContainerRuntimeNode_CreatedAt DEFAULT (SYSUTCDATETIME()),
@@ -76,7 +76,7 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         INSERT INTO dbo.ContainerRuntimeNode
             (Name, AiName, Description, BackendType, Endpoint, Credential, IsEnabled)
         VALUES
-            (N'default-docker', 'linux', N'Default Linux Docker runtime', 1, 'unix:///var/run/docker.sock', NULL, 1);
+            (N'default-docker', 'linux', N'Default Linux Docker runtime', 1, NULL, NULL, 1);
         PRINT N'    -> 已插入 default-docker RuntimeNode';
     END;
     ELSE

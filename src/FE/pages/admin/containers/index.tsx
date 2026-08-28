@@ -13,7 +13,7 @@ type RuntimeNode = {
   aiName: string;
   description: string | null;
   backendType: number;
-  endpoint: string;
+  endpoint: string | null;
   credential: string | null;
   isEnabled: boolean;
 };
@@ -112,6 +112,7 @@ export default function AdminContainersPage() {
       body: {
         ...nodeForm,
         aiName: nodeForm.aiName || nodeForm.name,
+        endpoint: nodeForm.endpoint.trim() || null,
         description: null,
         backendType: 1,
         credential: null,
@@ -207,6 +208,9 @@ export default function AdminContainersPage() {
               setNodeForm({ ...nodeForm, endpoint: e.target.value })
             }
           />
+          <p className="text-xs text-muted-foreground sm:col-span-3">
+            {t('Leave endpoint blank to use the host operating system default.')}
+          </p>
           <Button onClick={() => saveNode().catch(() => null)}>
             {t('Add')}
           </Button>
@@ -220,7 +224,8 @@ export default function AdminContainersPage() {
               className="flex justify-between border-b py-2 text-sm"
             >
               <span>
-                {node.name} ({node.aiName}) · {node.endpoint}
+                {node.name} ({node.aiName}) ·{' '}
+                {node.endpoint ?? t('System default')}
               </span>
               <Button
                 size="sm"

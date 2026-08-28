@@ -14,7 +14,7 @@ public class CodePodConfig
 
     /// <summary>
     /// Docker 服务端点地址。
-    /// 如果为 null，将根据操作系统自动选择默认地址：
+    /// 如果为 null，将根据宿主机操作系统自动选择默认地址：
     /// - Windows: npipe://./pipe/docker_engine
     /// - Linux/macOS: unix:///var/run/docker.sock
     /// </summary>
@@ -31,8 +31,9 @@ public class CodePodConfig
             return new Uri(DockerEndpoint);
         }
 
-        // 不依赖当前宿主机操作系统；仅基于配置的容器平台做默认选择
-        return IsWindowsContainer
+        // Docker daemon 与 BE 假设运行在同一台机器上，因此端点默认跟随宿主机 OS，
+        // 而不是容器内核（Windows 主机上的 Docker Desktop 通常仍运行 Linux 容器）。
+        return OperatingSystem.IsWindows()
             ? new Uri("npipe://./pipe/docker_engine")
             : new Uri("unix:///var/run/docker.sock");
     }

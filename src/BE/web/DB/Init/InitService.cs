@@ -38,7 +38,8 @@ public class InitService(IServiceScopeFactory scopeFactory)
             AiName = "linux",
             Description = "Default Linux Docker runtime",
             BackendType = 1,
-            Endpoint = "unix:///var/run/docker.sock",
+            // Null lets CodePodConfig select npipe (Windows) or unix socket (Linux/macOS).
+            Endpoint = null,
             Credential = null,
             IsEnabled = true,
             CreatedAt = now,

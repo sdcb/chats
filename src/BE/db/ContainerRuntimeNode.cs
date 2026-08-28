@@ -28,7 +28,7 @@ public partial class ContainerRuntimeNode
 
     [StringLength(2048)]
     [Unicode(false)]
-    public string Endpoint { get; set; } = null!;
+    public string? Endpoint { get; set; }
 
     [StringLength(4000)]
     [Unicode(false)]
