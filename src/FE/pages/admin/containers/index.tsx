@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 
+import { useRouter } from 'next/router';
+
 import { createFetchClient } from '@/hooks/createFetchClient';
 import useTranslation from '@/hooks/useTranslation';
 
 import {
   IconDocker,
   IconFiles,
-  IconInfo,
   IconRefresh,
   IconSettings,
   IconWorld,
@@ -17,10 +18,10 @@ import QuotasTab from '@/components/admin/containers/QuotasTab';
 import RuntimeNodesTab from '@/components/admin/containers/RuntimeNodesTab';
 import TemplatesTab from '@/components/admin/containers/TemplatesTab';
 import {
+  ContainerTab,
   DeleteTarget,
   ImageEntry,
   ImageForm,
-  PAGE_SIZE,
   Quota,
   QuotaForm,
   RuntimeForm,
@@ -31,6 +32,7 @@ import {
   emptyQuota,
   emptyRuntime,
   emptyTemplate,
+  isContainerTab,
 } from '@/components/admin/containers/types';
 import {
   AlertDialog,
@@ -49,20 +51,26 @@ import { cn } from '@/lib/utils';
 
 export default function AdminContainersPage() {
   const { t } = useTranslation();
+  const router = useRouter();
   const client = useMemo(() => createFetchClient(), []);
   const [nodes, setNodes] = useState<RuntimeNode[]>([]);
   const [templates, setTemplates] = useState<RuntimeTemplate[]>([]);
   const [images, setImages] = useState<ImageEntry[]>([]);
   const [quotas, setQuotas] = useState<Quota[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [runtimePage, setRuntimePage] = useState(1);
-  const [templatePage, setTemplatePage] = useState(1);
-  const [imagePage, setImagePage] = useState(1);
-  const [quotaPage, setQuotaPage] = useState(1);
-  const [activeTab, setActiveTab] = useState('runtime');
-  const [runtimeSearch, setRuntimeSearch] = useState('');
-  const [templateSearch, setTemplateSearch] = useState('');
-  const [imageSearch, setImageSearch] = useState('');
+  const [loadingTabs, setLoadingTabs] = useState<Record<ContainerTab, boolean>>(
+    {
+      runtime: false,
+      templates: false,
+      images: false,
+      quotas: false,
+    },
+  );
+  const [loadedTabs, setLoadedTabs] = useState<Record<ContainerTab, boolean>>({
+    runtime: false,
+    templates: false,
+    images: false,
+    quotas: false,
+  });
   const [runtimeDialog, setRuntimeDialog] = useState<number | 'new' | null>(
     null,
   );
@@ -78,41 +86,87 @@ export default function AdminContainersPage() {
   const [saving, setSaving] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<DeleteTarget | null>(null);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [nextNodes, nextTemplates, nextImages, nextQuotas] =
-        await Promise.all([
-          client.get<RuntimeNode[]>(
-            '/api/admin/container-catalog/runtime-nodes',
-          ),
-          client.get<RuntimeTemplate[]>(
-            '/api/admin/container-catalog/templates',
-          ),
-          client.get<ImageEntry[]>('/api/admin/container-catalog/images'),
-          client.get<Quota[]>('/api/admin/container-catalog/quotas'),
-        ]);
-      setNodes(nextNodes);
-      setTemplates(nextTemplates);
-      setImages(nextImages);
-      setQuotas(nextQuotas);
-      setRuntimePage(1);
-      setTemplatePage(1);
-      setImagePage(1);
-      setQuotaPage(1);
-      setTemplateForm((current) =>
-        current.runtimeNodeId || !nextNodes.length
-          ? current
-          : { ...current, runtimeNodeId: nextNodes[0].id },
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [client]);
+  const loadTab = useCallback(
+    async (tab: ContainerTab, force = false) => {
+      if (!force && loadedTabs[tab]) return;
+      setLoadingTabs((current) => ({ ...current, [tab]: true }));
+      try {
+        switch (tab) {
+          case 'runtime': {
+            const nextNodes = await client.get<RuntimeNode[]>(
+              '/api/admin/container-catalog/runtime-nodes',
+            );
+            setNodes(nextNodes);
+            setTemplateForm((current) =>
+              current.runtimeNodeId || !nextNodes.length
+                ? current
+                : { ...current, runtimeNodeId: nextNodes[0].id },
+            );
+            break;
+          }
+          case 'templates':
+            setTemplates(
+              await client.get<RuntimeTemplate[]>(
+                '/api/admin/container-catalog/templates',
+              ),
+            );
+            break;
+          case 'images':
+            setImages(
+              await client.get<ImageEntry[]>(
+                '/api/admin/container-catalog/images',
+              ),
+            );
+            break;
+          case 'quotas':
+            setQuotas(
+              await client.get<Quota[]>('/api/admin/container-catalog/quotas'),
+            );
+            break;
+        }
+        setLoadedTabs((current) => ({ ...current, [tab]: true }));
+      } finally {
+        setLoadingTabs((current) => ({ ...current, [tab]: false }));
+      }
+    },
+    [client, loadedTabs],
+  );
+
+  const tabQueryValue = Array.isArray(router.query.tab)
+    ? router.query.tab[0]
+    : router.query.tab;
+  const activeTab: ContainerTab = isContainerTab(tabQueryValue)
+    ? tabQueryValue
+    : 'runtime';
 
   useEffect(() => {
-    refresh().catch(() => setLoading(false));
-  }, [refresh]);
+    if (!router.isReady) return;
+    if (!isContainerTab(tabQueryValue)) {
+      void router.replace(
+        {
+          pathname: router.pathname,
+          query: { ...router.query, tab: 'runtime' },
+        },
+        undefined,
+        { shallow: true },
+      );
+    }
+    loadTab(activeTab).catch(() => null);
+  }, [activeTab, loadTab, router.isReady, router.pathname, tabQueryValue]);
+
+  const handleTabChange = (value: string) => {
+    if (!router.isReady || !isContainerTab(value)) return;
+    void router.push(
+      {
+        pathname: router.pathname,
+        query: { ...router.query, tab: value },
+      },
+      undefined,
+      { shallow: true },
+    );
+  };
+
+  const refreshActiveTab = () => loadTab(activeTab, true);
 
   const openNewRuntime = () => {
     setRuntimeForm(emptyRuntime);
@@ -214,7 +268,7 @@ export default function AdminContainersPage() {
       }
       toast.success(t('Save successful'));
       setRuntimeDialog(null);
-      await refresh();
+      await loadTab('runtime', true);
     } finally {
       setSaving(false);
     }
@@ -245,7 +299,7 @@ export default function AdminContainersPage() {
       }
       toast.success(t('Save successful'));
       setTemplateDialog(null);
-      await refresh();
+      await loadTab('templates', true);
     } finally {
       setSaving(false);
     }
@@ -269,7 +323,8 @@ export default function AdminContainersPage() {
       }
       toast.success(t('Save successful'));
       setImageDialog(null);
-      await refresh();
+      await loadTab('images', true);
+      if (loadedTabs.templates) await loadTab('templates', true);
     } finally {
       setSaving(false);
     }
@@ -305,7 +360,7 @@ export default function AdminContainersPage() {
       });
       toast.success(t('Save successful'));
       setQuotaDialog(null);
-      await refresh();
+      await loadTab('quotas', true);
     } finally {
       setSaving(false);
     }
@@ -316,7 +371,7 @@ export default function AdminContainersPage() {
       `/api/admin/container-catalog/runtime-nodes/${node.id}/enabled`,
       { body: { isEnabled: !node.isEnabled } },
     );
-    await refresh();
+    await loadTab('runtime', true);
   };
 
   const performDelete = async () => {
@@ -337,141 +392,104 @@ export default function AdminContainersPage() {
       }
       toast.success(t('Deleted successful'));
       setPendingDelete(null);
-      await refresh();
+      const tab: ContainerTab =
+        target.kind === 'runtime'
+          ? 'runtime'
+          : target.kind === 'template'
+          ? 'templates'
+          : 'images';
+      await loadTab(tab, true);
+      if (target.kind === 'image' && loadedTabs.templates)
+        await loadTab('templates', true);
     } finally {
       setSaving(false);
     }
   };
 
-  const filteredNodes = useMemo(
-    () =>
-      nodes.filter((x) =>
-        `${x.name} ${x.aiName} ${x.endpoint || ''}`
-          .toLowerCase()
-          .includes(runtimeSearch.toLowerCase()),
-      ),
-    [nodes, runtimeSearch],
-  );
-  const filteredTemplates = useMemo(
-    () =>
-      templates.filter((x) =>
-        `${x.name} ${x.image} ${x.runtimeNode?.aiName || ''}`
-          .toLowerCase()
-          .includes(templateSearch.toLowerCase()),
-      ),
-    [templates, templateSearch],
-  );
-  const filteredImages = useMemo(
-    () =>
-      images.filter((x) =>
-        `${x.image} ${x.description || ''}`
-          .toLowerCase()
-          .includes(imageSearch.toLowerCase()),
-      ),
-    [images, imageSearch],
-  );
-
-  useEffect(() => setRuntimePage(1), [runtimeSearch]);
-  useEffect(() => setTemplatePage(1), [templateSearch]);
-  useEffect(() => setImagePage(1), [imageSearch]);
-
-  const pagedNodes = filteredNodes.slice(
-    (runtimePage - 1) * PAGE_SIZE,
-    runtimePage * PAGE_SIZE,
-  );
-  const pagedTemplates = filteredTemplates.slice(
-    (templatePage - 1) * PAGE_SIZE,
-    templatePage * PAGE_SIZE,
-  );
-  const pagedImages = filteredImages.slice(
-    (imagePage - 1) * PAGE_SIZE,
-    imagePage * PAGE_SIZE,
-  );
-  const pagedQuotas = quotas.slice(
-    (quotaPage - 1) * PAGE_SIZE,
-    quotaPage * PAGE_SIZE,
-  );
-
   return (
     <main className="mx-auto max-w-[1600px] space-y-5 p-4 sm:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <IconDocker size={26} />
-            <h1 className="text-2xl font-semibold">
-              {t('Container administration')}
-            </h1>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t(
-              'Manage Docker runtimes, images, templates and resource quotas.',
-            )}
-          </p>
+      <div className="relative flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <IconDocker size={26} />
+          <h1 className="text-2xl font-semibold">
+            {t('Container administration')}
+          </h1>
         </div>
         <Button
           variant="outline"
-          onClick={() => refresh().catch(() => null)}
-          disabled={loading}
+          size="sm"
+          className="absolute right-0 top-1/2 -translate-y-1/2"
+          aria-label={t('Refresh')}
+          onClick={() => refreshActiveTab().catch(() => null)}
+          disabled={loadingTabs[activeTab]}
         >
           <IconRefresh
             size={16}
-            className={cn('mr-2', loading && 'animate-spin')}
+            className={cn('sm:mr-2', loadingTabs[activeTab] && 'animate-spin')}
           />
-          {t('Refresh')}
+          <span className="hidden sm:inline">{t('Refresh')}</span>
         </Button>
       </div>
 
       <Tabs
         value={activeTab}
-        onValueChange={setActiveTab}
+        onValueChange={handleTabChange}
         className="flex-col gap-4 border-none p-0 text-foreground"
       >
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-lg border bg-muted p-1 sm:grid-cols-4">
-          <TabsTrigger value="runtime" className="gap-2">
-            <IconDocker size={16} />
-            {t('Runtime nodes')}
-            <span className="text-xs text-muted-foreground">
-              {nodes.length}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="gap-2">
-            <IconSettings size={16} />
-            {t('Resource templates')}
-            <span className="text-xs text-muted-foreground">
-              {templates.length}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="images" className="gap-2">
-            <IconFiles size={16} />
-            {t('Image catalog')}
-            <span className="text-xs text-muted-foreground">
-              {images.length}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="quotas" className="gap-2">
-            <IconWorld size={16} />
-            {t('Quotas')}
-            <span className="text-xs text-muted-foreground">
-              {quotas.length}
-            </span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex w-full justify-center overflow-x-auto">
+          <TabsList className="inline-flex h-auto flex-row items-center justify-center gap-0 rounded-full border border-border/60 bg-muted p-1 shadow-sm">
+            <TabsTrigger
+              value="runtime"
+              className="flex items-center gap-2 rounded-full px-5 py-2 text-sm transition-colors hover:text-foreground/90 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=active]:bg-background data-[state=active]:text-foreground"
+            >
+              <IconDocker size={16} />
+              <span>{t('Runtime nodes')}</span>
+              <span className="text-xs text-muted-foreground">
+                {nodes.length}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="templates"
+              className="flex items-center gap-2 rounded-full px-5 py-2 text-sm transition-colors hover:text-foreground/90 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=active]:bg-background data-[state=active]:text-foreground"
+            >
+              <IconSettings size={16} />
+              <span>{t('Resource templates')}</span>
+              <span className="text-xs text-muted-foreground">
+                {templates.length}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="images"
+              className="flex items-center gap-2 rounded-full px-5 py-2 text-sm transition-colors hover:text-foreground/90 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=active]:bg-background data-[state=active]:text-foreground"
+            >
+              <IconFiles size={16} />
+              <span>{t('Image catalog')}</span>
+              <span className="text-xs text-muted-foreground">
+                {images.length}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="quotas"
+              className="flex items-center gap-2 rounded-full px-5 py-2 text-sm transition-colors hover:text-foreground/90 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=active]:bg-background data-[state=active]:text-foreground"
+            >
+              <IconWorld size={16} />
+              <span>{t('Quotas')}</span>
+              <span className="text-xs text-muted-foreground">
+                {quotas.length}
+              </span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="runtime">
           <RuntimeNodesTab
             nodes={nodes}
             templates={templates}
-            rows={pagedNodes}
-            loading={loading}
+            loading={loadingTabs.runtime}
             saving={saving}
-            search={runtimeSearch}
-            page={runtimePage}
-            totalCount={filteredNodes.length}
             dialog={runtimeDialog}
             form={runtimeForm}
             setForm={setRuntimeForm}
-            onSearchChange={setRuntimeSearch}
-            onPageChange={setRuntimePage}
             onDialogChange={setRuntimeDialog}
             onNew={openNewRuntime}
             onEdit={openEditRuntime}
@@ -483,17 +501,12 @@ export default function AdminContainersPage() {
         <TabsContent value="templates">
           <TemplatesTab
             nodes={nodes}
-            rows={pagedTemplates}
-            loading={loading}
+            templates={templates}
+            loading={loadingTabs.templates}
             saving={saving}
-            search={templateSearch}
-            page={templatePage}
-            totalCount={filteredTemplates.length}
             dialog={templateDialog}
             form={templateForm}
             setForm={setTemplateForm}
-            onSearchChange={setTemplateSearch}
-            onPageChange={setTemplatePage}
             onDialogChange={setTemplateDialog}
             onNew={openNewTemplate}
             onEdit={openEditTemplate}
@@ -503,17 +516,12 @@ export default function AdminContainersPage() {
         </TabsContent>
         <TabsContent value="images">
           <ImagesTab
-            rows={pagedImages}
-            loading={loading}
+            images={images}
+            loading={loadingTabs.images}
             saving={saving}
-            search={imageSearch}
-            page={imagePage}
-            totalCount={filteredImages.length}
             dialog={imageDialog}
             form={imageForm}
             setForm={setImageForm}
-            onSearchChange={setImageSearch}
-            onPageChange={setImagePage}
             onDialogChange={setImageDialog}
             onNew={openNewImage}
             onEdit={openEditImage}
@@ -524,15 +532,11 @@ export default function AdminContainersPage() {
         <TabsContent value="quotas">
           <QuotasTab
             quotas={quotas}
-            rows={pagedQuotas}
-            loading={loading}
+            loading={loadingTabs.quotas}
             saving={saving}
-            page={quotaPage}
-            totalCount={quotas.length}
             dialog={quotaDialog}
             form={quotaForm}
             setForm={setQuotaForm}
-            onPageChange={setQuotaPage}
             onDialogChange={setQuotaDialog}
             onEdit={openEditQuota}
             onNew={openNewQuota}
@@ -572,15 +576,6 @@ export default function AdminContainersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <div className="flex items-start gap-2 rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
-        <IconInfo size={16} className="mt-0.5 shrink-0" />
-        <span>
-          {t(
-            'Runtime nodes point to Docker daemons. Templates control what users and AI can create; quotas enforce per-user resource limits.',
-          )}
-        </span>
-      </div>
     </main>
   );
 }

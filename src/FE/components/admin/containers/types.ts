@@ -98,6 +98,13 @@ export type DeleteTarget = {
   label: string;
 };
 
+export type ContainerTab = 'runtime' | 'templates' | 'images' | 'quotas';
+
+export const isContainerTab = (value: string | string[] | undefined): value is ContainerTab => {
+  const tab = Array.isArray(value) ? value[0] : value;
+  return tab === 'runtime' || tab === 'templates' || tab === 'images' || tab === 'quotas';
+};
+
 export const PAGE_SIZE = 20;
 export const EMPTY_VALUE = '-';
 

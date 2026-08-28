@@ -2,19 +2,12 @@ import { Dispatch, SetStateAction } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import {
-  IconCheck,
-  IconDocker,
-  IconEdit,
-  IconPlus,
-  IconTrash,
-} from '@/components/Icons';
-import {
-  UnifiedTable,
-  UnifiedTableColumn,
-} from '@/components/table/UnifiedTable';
+import { IconDocker, IconEdit, IconPlus, IconTrash } from '@/components/Icons';
+import CatalogCardField from '@/components/admin/containers/CatalogCardField';
+import IconActionButton from '@/components/common/IconActionButton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -39,17 +32,11 @@ import {
 type Props = {
   nodes: RuntimeNode[];
   templates: RuntimeTemplate[];
-  rows: RuntimeNode[];
   loading: boolean;
   saving: boolean;
-  search: string;
-  page: number;
-  totalCount: number;
   dialog: number | 'new' | null;
   form: RuntimeForm;
   setForm: Dispatch<SetStateAction<RuntimeForm>>;
-  onSearchChange: (value: string) => void;
-  onPageChange: (page: number) => void;
   onDialogChange: (dialog: number | 'new' | null) => void;
   onNew: () => void;
   onEdit: (node: RuntimeNode) => void;
@@ -61,17 +48,11 @@ type Props = {
 export default function RuntimeNodesTab({
   nodes,
   templates,
-  rows,
   loading,
   saving,
-  search,
-  page,
-  totalCount,
   dialog,
   form,
   setForm,
-  onSearchChange,
-  onPageChange,
   onDialogChange,
   onNew,
   onEdit,
@@ -81,143 +62,132 @@ export default function RuntimeNodesTab({
 }: Props) {
   const { t } = useTranslation();
 
-  const columns: UnifiedTableColumn<RuntimeNode>[] = [
-    {
-      key: 'name',
-      title: t('Name'),
-      cell: (x) => (
-        <div>
-          <div className="font-medium text-foreground">{x.name}</div>
-          <div className="text-xs text-muted-foreground">{x.aiName}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'backend',
-      title: t('Backend'),
-      cell: (x) => (
-        <Badge variant="outline">
-          <IconDocker size={13} className="mr-1" />
-          {x.backendType === 1 ? t('Docker') : t('Other')}
-        </Badge>
-      ),
-    },
-    {
-      key: 'endpoint',
-      title: t('Endpoint'),
-      className: 'min-w-56',
-      cell: (x) => (
-        <code className="text-xs">{x.endpoint || t('System default')}</code>
-      ),
-    },
-    {
-      key: 'description',
-      title: t('Description'),
-      className: 'min-w-48',
-      cell: (x) => x.description || EMPTY_VALUE,
-    },
-    {
-      key: 'credential',
-      title: t('Credential'),
-      cell: (x) => (x.hasCredential ? t('Configured') : EMPTY_VALUE),
-    },
-    {
-      key: 'status',
-      title: t('Status'),
-      cell: (x) => (
-        <Badge variant={x.isEnabled ? 'default' : 'secondary'}>
-          {x.isEnabled ? t('Enabled') : t('Disabled')}
-        </Badge>
-      ),
-    },
-    {
-      key: 'templates',
-      title: t('Templates'),
-      cell: (x) =>
-        templates.filter((item) => item.runtimeNodeId === x.id).length,
-    },
-    {
-      key: 'updated',
-      title: t('Updated'),
-      cell: (x) => formatDateTime(x.updatedAt),
-    },
-    {
-      key: 'created',
-      title: t('Created'),
-      cell: (x) => formatDateTime(x.createdAt),
-    },
-    {
-      key: 'actions',
-      title: t('Actions'),
-      className: 'w-32',
-      cell: (x) => (
-        <div className="flex gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            title={t('Edit')}
-            onClick={() => onEdit(x)}
-          >
-            <IconEdit size={16} />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            title={x.isEnabled ? t('Disable') : t('Enable')}
-            onClick={() => onToggle(x).catch(() => null)}
-          >
-            <IconCheck size={16} />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            title={t('Delete')}
-            onClick={() =>
-              onDeleteRequest({ kind: 'runtime', id: x.id, label: x.name })
-            }
-          >
-            <IconTrash size={16} />
-          </Button>
-        </div>
-      ),
-    },
-  ];
-
   return (
     <>
-      <UnifiedTable
-        filters={
-          <Input
-            className="w-full sm:w-72"
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            placeholder={t('Search runtime nodes')}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">{t('Runtime nodes')}</h2>
+            <p className="text-sm text-muted-foreground">
+              {t(
+                'Configure the Docker daemon connection and runtime identity.',
+              )}
+            </p>
+          </div>
+          <IconActionButton
+            label={t('Add runtime node')}
+            icon={<IconPlus size={18} />}
+            onClick={onNew}
           />
-        }
-        actions={[
-          {
-            key: 'add',
-            element: (
-              <Button onClick={onNew}>
-                <IconPlus
-                  size={16}
-                  className="mr-2"
-                  stroke="hsl(var(--primary-foreground))"
-                />
-                {t('Add runtime node')}
-              </Button>
-            ),
-          },
-        ]}
-        columns={columns}
-        rows={rows}
-        loading={loading}
-        page={page}
-        totalCount={totalCount}
-        rowKey={(x) => x.id}
-        onPageChange={onPageChange}
-        emptyText={t('No runtime nodes found.')}
-      />
+        </div>
+
+        {loading ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {[1, 2].map((item) => (
+              <Card key={item} className="animate-pulse">
+                <CardHeader className="h-20" />
+                <CardContent className="h-36" />
+              </Card>
+            ))}
+          </div>
+        ) : nodes.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+            {t('No runtime nodes found.')}
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {nodes.map((node) => {
+              const templateCount = templates.filter(
+                (template) => template.runtimeNodeId === node.id,
+              ).length;
+              return (
+                <Card key={node.id}>
+                  <CardHeader className="flex flex-row items-start justify-between space-y-0 p-4">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <IconDocker size={18} className="shrink-0" />
+                        <h3 className="truncate font-semibold">{node.name}</h3>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {node.aiName}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <LabelSwitch
+                        checked={node.isEnabled}
+                        onCheckedChange={(checked) => {
+                          if (checked !== node.isEnabled) {
+                            onToggle(node).catch(() => null);
+                          }
+                        }}
+                        label={node.isEnabled ? t('Enabled') : t('Disabled')}
+                        className="gap-1"
+                        labelClassName="text-xs"
+                        switchClassName="scale-75"
+                      />
+                      <IconActionButton
+                        label={t('Edit')}
+                        icon={<IconEdit size={15} />}
+                        className="h-8 w-8"
+                        onClick={() => onEdit(node)}
+                      />
+                      <IconActionButton
+                        label={t('Delete')}
+                        icon={<IconTrash size={15} />}
+                        className="h-8 w-8"
+                        onClick={() =>
+                          onDeleteRequest({
+                            kind: 'runtime',
+                            id: node.id,
+                            label: node.name,
+                          })
+                        }
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                      <CatalogCardField label={t('Backend')}>
+                        <Badge variant="outline">
+                          <IconDocker size={12} className="mr-1" />
+                          {node.backendType === 1 ? t('Docker') : t('Other')}
+                        </Badge>
+                      </CatalogCardField>
+                      <CatalogCardField label={t('Status')}>
+                        {node.isEnabled ? t('Enabled') : t('Disabled')}
+                      </CatalogCardField>
+                      <CatalogCardField label={t('Endpoint')} mono>
+                        {node.endpoint || t('System default')}
+                      </CatalogCardField>
+                      <CatalogCardField label={t('Credential')}>
+                        {node.hasCredential ? t('Configured') : EMPTY_VALUE}
+                      </CatalogCardField>
+                      <CatalogCardField label={t('Templates')}>
+                        {templateCount}
+                      </CatalogCardField>
+                      <CatalogCardField label={t('Updated')}>
+                        {formatDateTime(node.updatedAt)}
+                      </CatalogCardField>
+                      <CatalogCardField
+                        label={t('Created')}
+                        className="col-span-2"
+                      >
+                        {formatDateTime(node.createdAt)}
+                      </CatalogCardField>
+                      <CatalogCardField
+                        label={t('Description')}
+                        className="col-span-2"
+                      >
+                        {node.description || EMPTY_VALUE}
+                      </CatalogCardField>
+                    </dl>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       <Dialog
         open={dialog !== null}
@@ -240,6 +210,8 @@ export default function RuntimeNodesTab({
             <Label>
               {t('Name')}
               <Input
+                name="runtime-node-name"
+                autoComplete="off"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
@@ -247,6 +219,8 @@ export default function RuntimeNodesTab({
             <Label>
               {t('AI name')}
               <Input
+                name="runtime-node-ai-name"
+                autoComplete="off"
                 value={form.aiName}
                 onChange={(e) => setForm({ ...form, aiName: e.target.value })}
               />
@@ -269,6 +243,9 @@ export default function RuntimeNodesTab({
             <Label>
               {t('Endpoint')}
               <Input
+                name="runtime-node-endpoint"
+                autoComplete="off"
+                spellCheck={false}
                 value={form.endpoint}
                 placeholder="npipe://./pipe/docker_engine"
                 onChange={(e) => setForm({ ...form, endpoint: e.target.value })}
@@ -291,6 +268,8 @@ export default function RuntimeNodesTab({
               {t('Credential')}
               <Input
                 type="password"
+                name="runtime-node-credential"
+                autoComplete="new-password"
                 value={form.credential}
                 onChange={(e) =>
                   setForm({ ...form, credential: e.target.value })

@@ -151,13 +151,6 @@ const AdminLayout = ({
       title: t('Model Configs'),
     },
     {
-      url: '/admin/containers',
-      icon: (stroke?: string) => (
-        <IconDocker strokeWidth={1.2} stroke={stroke} />
-      ),
-      title: t('Container Management'),
-    },
-    {
       url: '/admin/users',
       icon: (stroke?: string) => (
         <IconUsers strokeWidth={1.2} stroke={stroke} />
@@ -220,6 +213,13 @@ const AdminLayout = ({
         <IconUserCog strokeWidth={1.2} stroke={stroke} />
       ),
       title: t('Account Initial Config'),
+    },
+    {
+      url: '/admin/containers',
+      icon: (stroke?: string) => (
+        <IconDocker strokeWidth={1.2} stroke={stroke} />
+      ),
+      title: t('Container Management'),
     },
     {
       url: '/admin/global-configs',

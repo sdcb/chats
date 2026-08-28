@@ -2,13 +2,12 @@ import { Dispatch, SetStateAction } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { IconEdit, IconPlus, IconTrash } from '@/components/Icons';
-import {
-  UnifiedTable,
-  UnifiedTableColumn,
-} from '@/components/table/UnifiedTable';
+import { IconEdit, IconFiles, IconPlus, IconTrash } from '@/components/Icons';
+import CatalogCardField from '@/components/admin/containers/CatalogCardField';
+import IconActionButton from '@/components/common/IconActionButton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -24,17 +23,12 @@ import { LabelSwitch } from '@/components/ui/label-switch';
 import { DeleteTarget, EMPTY_VALUE, ImageEntry, ImageForm } from './types';
 
 type Props = {
-  rows: ImageEntry[];
+  images: ImageEntry[];
   loading: boolean;
   saving: boolean;
-  search: string;
-  page: number;
-  totalCount: number;
   dialog: number | 'new' | null;
   form: ImageForm;
   setForm: Dispatch<SetStateAction<ImageForm>>;
-  onSearchChange: (value: string) => void;
-  onPageChange: (page: number) => void;
   onDialogChange: (dialog: number | 'new' | null) => void;
   onNew: () => void;
   onEdit: (image: ImageEntry) => void;
@@ -43,17 +37,12 @@ type Props = {
 };
 
 export default function ImagesTab({
-  rows,
+  images,
   loading,
   saving,
-  search,
-  page,
-  totalCount,
   dialog,
   form,
   setForm,
-  onSearchChange,
-  onPageChange,
   onDialogChange,
   onNew,
   onEdit,
@@ -62,94 +51,95 @@ export default function ImagesTab({
 }: Props) {
   const { t } = useTranslation();
 
-  const columns: UnifiedTableColumn<ImageEntry>[] = [
-    {
-      key: 'image',
-      title: t('Image'),
-      className: 'min-w-64',
-      cell: (x) => (
-        <code className="text-xs font-medium text-foreground">{x.image}</code>
-      ),
-    },
-    {
-      key: 'description',
-      title: t('Description'),
-      className: 'min-w-64',
-      cell: (x) => x.description || EMPTY_VALUE,
-    },
-    {
-      key: 'status',
-      title: t('Status'),
-      cell: (x) => (
-        <Badge variant={x.isEnabled ? 'default' : 'secondary'}>
-          {x.isEnabled ? t('Enabled') : t('Disabled')}
-        </Badge>
-      ),
-    },
-    {
-      key: 'actions',
-      title: t('Actions'),
-      className: 'w-28',
-      cell: (x) => (
-        <div className="flex gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            title={t('Edit')}
-            onClick={() => onEdit(x)}
-          >
-            <IconEdit size={16} />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            title={t('Delete')}
-            onClick={() =>
-              onDeleteRequest({ kind: 'image', id: x.id, label: x.image })
-            }
-          >
-            <IconTrash size={16} />
-          </Button>
-        </div>
-      ),
-    },
-  ];
-
   return (
     <>
-      <UnifiedTable
-        filters={
-          <Input
-            className="w-full sm:w-72"
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            placeholder={t('Search images')}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">{t('Image catalog')}</h2>
+            <p className="text-sm text-muted-foreground">
+              {t(
+                'Images must be enabled in the catalog before templates can use them.',
+              )}
+            </p>
+          </div>
+          <IconActionButton
+            label={t('Add image')}
+            icon={<IconPlus size={18} />}
+            onClick={onNew}
           />
-        }
-        actions={[
-          {
-            key: 'add',
-            element: (
-              <Button onClick={onNew}>
-                <IconPlus
-                  size={16}
-                  className="mr-2"
-                  stroke="hsl(var(--primary-foreground))"
-                />
-                {t('Add image')}
-              </Button>
-            ),
-          },
-        ]}
-        columns={columns}
-        rows={rows}
-        loading={loading}
-        page={page}
-        totalCount={totalCount}
-        rowKey={(x) => x.id}
-        onPageChange={onPageChange}
-        emptyText={t('No images found.')}
-      />
+        </div>
+
+        {loading ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {[1, 2, 3].map((item) => (
+              <Card key={item} className="animate-pulse">
+                <CardHeader className="h-20" />
+                <CardContent className="h-28" />
+              </Card>
+            ))}
+          </div>
+        ) : images.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+            {t('No images found.')}
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {images.map((image) => (
+              <Card key={image.id}>
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 p-4">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <IconFiles size={18} className="mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <h3 className="break-all font-semibold">{image.image}</h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {image.isEnabled ? t('Enabled') : t('Disabled')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <IconActionButton
+                      label={t('Edit')}
+                      icon={<IconEdit size={15} />}
+                      className="h-8 w-8"
+                      onClick={() => onEdit(image)}
+                    />
+                    <IconActionButton
+                      label={t('Delete')}
+                      icon={<IconTrash size={15} />}
+                      className="h-8 w-8"
+                      onClick={() =>
+                        onDeleteRequest({
+                          kind: 'image',
+                          id: image.id,
+                          label: image.image,
+                        })
+                      }
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <dl className="grid gap-y-3">
+                    <CatalogCardField label={t('Status')}>
+                      <Badge
+                        variant={image.isEnabled ? 'default' : 'secondary'}
+                      >
+                        {image.isEnabled ? t('Enabled') : t('Disabled')}
+                      </Badge>
+                    </CatalogCardField>
+                    <CatalogCardField label={t('Description')}>
+                      {image.description || EMPTY_VALUE}
+                    </CatalogCardField>
+                    <CatalogCardField label={t('ID')}>
+                      {image.id}
+                    </CatalogCardField>
+                  </dl>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
 
       <Dialog
         open={dialog !== null}

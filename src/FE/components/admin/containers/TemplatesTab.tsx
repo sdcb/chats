@@ -3,12 +3,11 @@ import { Dispatch, SetStateAction } from 'react';
 import useTranslation from '@/hooks/useTranslation';
 
 import { IconEdit, IconPlus, IconTrash } from '@/components/Icons';
-import {
-  UnifiedTable,
-  UnifiedTableColumn,
-} from '@/components/table/UnifiedTable';
+import CatalogCardField from '@/components/admin/containers/CatalogCardField';
+import IconActionButton from '@/components/common/IconActionButton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -31,17 +30,12 @@ import {
 
 type Props = {
   nodes: RuntimeNode[];
-  rows: RuntimeTemplate[];
+  templates: RuntimeTemplate[];
   loading: boolean;
   saving: boolean;
-  search: string;
-  page: number;
-  totalCount: number;
   dialog: number | 'new' | null;
   form: TemplateForm;
   setForm: Dispatch<SetStateAction<TemplateForm>>;
-  onSearchChange: (value: string) => void;
-  onPageChange: (page: number) => void;
   onDialogChange: (dialog: number | 'new' | null) => void;
   onNew: () => void;
   onEdit: (template: RuntimeTemplate) => void;
@@ -51,17 +45,12 @@ type Props = {
 
 export default function TemplatesTab({
   nodes,
-  rows,
+  templates,
   loading,
   saving,
-  search,
-  page,
-  totalCount,
   dialog,
   form,
   setForm,
-  onSearchChange,
-  onPageChange,
   onDialogChange,
   onNew,
   onEdit,
@@ -70,138 +59,115 @@ export default function TemplatesTab({
 }: Props) {
   const { t } = useTranslation();
 
-  const columns: UnifiedTableColumn<RuntimeTemplate>[] = [
-    {
-      key: 'name',
-      title: t('Name'),
-      cell: (x) => (
-        <span className="font-medium text-foreground">{x.name}</span>
-      ),
-    },
-    {
-      key: 'image',
-      title: t('Image'),
-      className: 'min-w-48',
-      cell: (x) => <code className="text-xs">{x.image}</code>,
-    },
-    {
-      key: 'runtime',
-      title: t('Runtime node'),
-      cell: (x) => x.runtimeNode?.aiName || `#${x.runtimeNodeId}`,
-    },
-    {
-      key: 'resources',
-      title: t('Resources'),
-      cell: (x) => (
-        <div className="whitespace-nowrap">
-          {x.cpuCores} {t('CPU cores')} · {formatBytes(x.memoryBytes)}
-        </div>
-      ),
-    },
-    {
-      key: 'processes',
-      title: t('Max processes'),
-      cell: (x) => x.maxProcesses,
-    },
-    {
-      key: 'network',
-      title: t('Network'),
-      cell: (x) => x.backendNetworkName || t('Default'),
-    },
-    {
-      key: 'volume',
-      title: t('Default volume bytes'),
-      cell: (x) => formatBytes(x.defaultVolumeBytes),
-    },
-    {
-      key: 'visibility',
-      title: t('Visibility'),
-      cell: (x) => (
-        <Badge variant="outline">
-          {x.visibility === 3
-            ? t('Users and AI')
-            : x.visibility === 1
-            ? t('Users')
-            : x.visibility === 2
-            ? t('AI')
-            : t('Hidden')}
-        </Badge>
-      ),
-    },
-    {
-      key: 'updated',
-      title: t('Updated'),
-      cell: (x) => formatDateTime(x.updatedAt),
-    },
-    {
-      key: 'created',
-      title: t('Created'),
-      cell: (x) => formatDateTime(x.createdAt),
-    },
-    {
-      key: 'actions',
-      title: t('Actions'),
-      className: 'w-24',
-      cell: (x) => (
-        <div className="flex gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            title={t('Edit')}
-            onClick={() => onEdit(x)}
-          >
-            <IconEdit size={16} />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            title={t('Delete')}
-            onClick={() =>
-              onDeleteRequest({ kind: 'template', id: x.id, label: x.name })
-            }
-          >
-            <IconTrash size={16} />
-          </Button>
-        </div>
-      ),
-    },
-  ];
-
   return (
     <>
-      <UnifiedTable
-        filters={
-          <Input
-            className="w-full sm:w-72"
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            placeholder={t('Search templates')}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">{t('Resource templates')}</h2>
+            <p className="text-sm text-muted-foreground">
+              {t(
+                'Define the image, resource limits and visibility for container creation.',
+              )}
+            </p>
+          </div>
+          <IconActionButton
+            label={t('Add template')}
+            icon={<IconPlus size={18} />}
+            onClick={onNew}
           />
-        }
-        actions={[
-          {
-            key: 'add',
-            element: (
-              <Button onClick={onNew}>
-                <IconPlus
-                  size={16}
-                  className="mr-2"
-                  stroke="hsl(var(--primary-foreground))"
-                />
-                {t('Add template')}
-              </Button>
-            ),
-          },
-        ]}
-        columns={columns}
-        rows={rows}
-        loading={loading}
-        page={page}
-        totalCount={totalCount}
-        rowKey={(x) => x.id}
-        onPageChange={onPageChange}
-        emptyText={t('No resource templates found.')}
-      />
+        </div>
+
+        {loading ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {[1, 2, 3].map((item) => (
+              <Card key={item} className="animate-pulse">
+                <CardHeader className="h-20" />
+                <CardContent className="h-44" />
+              </Card>
+            ))}
+          </div>
+        ) : templates.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+            {t('No resource templates found.')}
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {templates.map((template) => (
+              <Card key={template.id}>
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 p-4">
+                  <div className="min-w-0">
+                    <h3 className="truncate font-semibold">{template.name}</h3>
+                    <code className="mt-1 block truncate text-xs text-muted-foreground">
+                      {template.image}
+                    </code>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <IconActionButton
+                      label={t('Edit')}
+                      icon={<IconEdit size={15} />}
+                      className="h-8 w-8"
+                      onClick={() => onEdit(template)}
+                    />
+                    <IconActionButton
+                      label={t('Delete')}
+                      icon={<IconTrash size={15} />}
+                      className="h-8 w-8"
+                      onClick={() =>
+                        onDeleteRequest({
+                          kind: 'template',
+                          id: template.id,
+                          label: template.name,
+                        })
+                      }
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                    <CatalogCardField label={t('Runtime node')}>
+                      {template.runtimeNode?.aiName ||
+                        `#${template.runtimeNodeId}`}
+                    </CatalogCardField>
+                    <CatalogCardField label={t('Visibility')}>
+                      <Badge variant="outline">
+                        {template.visibility === 3
+                          ? t('Users and AI')
+                          : template.visibility === 1
+                          ? t('Users')
+                          : template.visibility === 2
+                          ? t('AI')
+                          : t('Hidden')}
+                      </Badge>
+                    </CatalogCardField>
+                    <CatalogCardField label={t('CPU cores')}>
+                      {template.cpuCores}
+                    </CatalogCardField>
+                    <CatalogCardField label={t('Memory bytes')}>
+                      {formatBytes(template.memoryBytes)}
+                    </CatalogCardField>
+                    <CatalogCardField label={t('Max processes')}>
+                      {template.maxProcesses}
+                    </CatalogCardField>
+                    <CatalogCardField label={t('Network')}>
+                      {template.backendNetworkName || t('Default')}
+                    </CatalogCardField>
+                    <CatalogCardField label={t('Default volume bytes')}>
+                      {formatBytes(template.defaultVolumeBytes)}
+                    </CatalogCardField>
+                    <CatalogCardField label={t('Updated')}>
+                      {formatDateTime(template.updatedAt)}
+                    </CatalogCardField>
+                    <CatalogCardField label={t('Created')}>
+                      {formatDateTime(template.createdAt)}
+                    </CatalogCardField>
+                  </dl>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
 
       <Dialog
         open={dialog !== null}
