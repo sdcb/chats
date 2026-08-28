@@ -6,7 +6,7 @@ BEGIN TRY
     -- 恢复Chats3到ChatsDEV
     RESTORE DATABASE [ChatsDEV]
     FROM URL = 's3://io.starworks.cc:88/cv-private/2025/chats/backup-latest.bak'
-    WITH REPLACE,
+    WITH REPLACE, STATS = 4,
     MOVE 'Chats3' TO '/var/opt/mssql/data/ChatsDEV.mdf',
     MOVE 'Chats3_log' TO '/var/opt/mssql/data/ChatsDEV.ldf';
 END TRY
