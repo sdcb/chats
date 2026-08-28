@@ -18,7 +18,7 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
     {
         return await _db.ContainerRuntimeNodes
             .OrderBy(x => x.Name)
-            .Select(x => new RuntimeNodeDto(x.Id, x.Name, x.AiName, x.Description, x.BackendType, x.Endpoint, x.IsEnabled))
+            .Select(x => new RuntimeNodeDto(x.Id, x.Name, x.AiName, x.Description, x.BackendType, x.Endpoint, x.Credential != null, x.IsEnabled, x.CreatedAt, x.UpdatedAt))
             .ToListAsync(cancellationToken);
     }
 
@@ -27,19 +27,19 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
     {
         ContainerRuntimeNode node = new()
         {
-            Name = request.Name,
-            AiName = request.AIName,
-            Description = request.Description,
+            Name = request.Name.Trim(),
+            AiName = request.AIName.Trim(),
+            Description = request.Description?.Trim(),
             BackendType = request.BackendType,
-            Endpoint = request.Endpoint,
-            Credential = request.Credential,
+            Endpoint = string.IsNullOrWhiteSpace(request.Endpoint) ? null : request.Endpoint.Trim(),
+            Credential = string.IsNullOrWhiteSpace(request.Credential) ? null : request.Credential.Trim(),
             IsEnabled = request.IsEnabled,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
         _db.ContainerRuntimeNodes.Add(node);
         await _db.SaveChangesAsync(cancellationToken);
-        return Ok(node);
+        return Ok(await GetRuntimeNodeDtoAsync(node.Id, cancellationToken));
     }
 
     [HttpPut("runtime-nodes/{id:int}")]
@@ -52,11 +52,16 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
         node.Description = request.Description?.Trim();
         node.BackendType = request.BackendType;
         node.Endpoint = request.Endpoint?.Trim();
-        node.Credential = request.Credential;
+        // Credentials are intentionally never returned by the API. An omitted or
+        // blank credential on update therefore means "keep the existing value".
+        // Send an explicit non-empty value to replace it, or null from a future
+        // dedicated reset flow if clearing is required.
+        if (request.Credential is not null && !string.IsNullOrWhiteSpace(request.Credential))
+            node.Credential = request.Credential.Trim();
         node.IsEnabled = request.IsEnabled;
         node.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
-        return Ok(node);
+        return Ok(await GetRuntimeNodeDtoAsync(node.Id, cancellationToken));
     }
 
     [HttpPatch("runtime-nodes/{id:int}/enabled")]
@@ -68,6 +73,21 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
         node.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new { node.Id, node.IsEnabled });
+    }
+
+    [HttpDelete("runtime-nodes/{id:int}")]
+    public async Task<IActionResult> DeleteRuntimeNode(int id, CancellationToken cancellationToken)
+    {
+        ContainerRuntimeNode? node = await _db.ContainerRuntimeNodes.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (node is null) return NoContent();
+        bool inUse = await _db.ContainerResourceTemplates.AnyAsync(x => x.RuntimeNodeId == id, cancellationToken)
+            || await _db.ContainerResources.AnyAsync(x => x.RuntimeNodeId == id, cancellationToken)
+            || await _db.ContainerVolumes.AnyAsync(x => x.RuntimeNodeId == id, cancellationToken);
+        if (inUse)
+            return Conflict(new { Code = "RuntimeNodeInUse", Message = "The runtime node is still referenced by templates or resources." });
+        _db.ContainerRuntimeNodes.Remove(node);
+        await _db.SaveChangesAsync(cancellationToken);
+        return NoContent();
     }
 
     [HttpGet("images")]
@@ -148,8 +168,16 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
     }
 
     [HttpGet("quotas")]
-    public async Task<ActionResult<IReadOnlyList<UserContainerQuotum>>> Quotas(CancellationToken cancellationToken)
-        => await _db.UserContainerQuota.Include(x => x.User).OrderBy(x => x.UserId).ToListAsync(cancellationToken);
+    public async Task<ActionResult<IReadOnlyList<ContainerQuotaDto>>> Quotas(CancellationToken cancellationToken)
+        => await _db.UserContainerQuota
+            .OrderBy(x => x.UserId)
+            .Select(x => new ContainerQuotaDto(
+                x.Id, x.UserId, x.User == null ? null : x.User.UserName,
+                x.AllowCustomImage, x.AllowedNetworkModes, x.MaxContainerCount,
+                x.MaxCpuCores, x.MaxMemoryBytes, x.MaxContainerProcesses,
+                x.MaxVolumeBytes, x.MaxContainerCpuCores, x.MaxContainerMemoryBytes,
+                x.MaxVolumeBytesPerVolume, x.UpdatedAt))
+            .ToListAsync(cancellationToken);
 
     [HttpPut("quotas/{userId:int?}")]
     public async Task<IActionResult> UpsertQuota(int? userId, [FromBody] QuotaRequest request, CancellationToken cancellationToken)
@@ -172,7 +200,12 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
         quota.MaxVolumeBytesPerVolume = request.MaxVolumeBytesPerVolume;
         quota.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
-        return Ok(quota);
+        return Ok(new ContainerQuotaDto(
+            quota.Id, quota.UserId, null, quota.AllowCustomImage,
+            quota.AllowedNetworkModes, quota.MaxContainerCount, quota.MaxCpuCores,
+            quota.MaxMemoryBytes, quota.MaxContainerProcesses, quota.MaxVolumeBytes,
+            quota.MaxContainerCpuCores, quota.MaxContainerMemoryBytes,
+            quota.MaxVolumeBytesPerVolume, quota.UpdatedAt));
     }
 
     private async Task<IActionResult?> ApplyTemplateAsync(ContainerResourceTemplate template, TemplateRequest request, CancellationToken cancellationToken)
@@ -197,9 +230,12 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
     private async Task<object> ToTemplateResultAsync(ContainerResourceTemplate template, CancellationToken cancellationToken)
     {
         bool imageEnabled = await _db.ContainerImages.AnyAsync(x => x.Image == template.Image && x.IsEnabled, cancellationToken);
+        ContainerResourceTemplateDto result = await ProjectTemplates(
+            _db.ContainerResourceTemplates.Where(x => x.Id == template.Id))
+            .SingleAsync(cancellationToken);
         return new
         {
-            Template = template,
+            Template = result,
             WarningCode = imageEnabled ? null : "TemplateImageNotInEnabledCatalog",
         };
     }
@@ -208,8 +244,17 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
         => query.Select(x => new ContainerResourceTemplateDto(
             x.Id, x.Name, x.RuntimeNodeId, x.Image, x.CpuCores, x.MemoryBytes,
             x.MaxProcesses, x.BackendNetworkName, x.DefaultVolumeBytes, x.Visibility,
+            x.CreatedAt, x.UpdatedAt,
             x.RuntimeNode == null ? null : new RuntimeNodeDto(
                 x.RuntimeNode.Id, x.RuntimeNode.Name, x.RuntimeNode.AiName,
                 x.RuntimeNode.Description, x.RuntimeNode.BackendType,
-                x.RuntimeNode.Endpoint, x.RuntimeNode.IsEnabled)));
+                x.RuntimeNode.Endpoint, x.RuntimeNode.Credential != null, x.RuntimeNode.IsEnabled,
+                x.RuntimeNode.CreatedAt, x.RuntimeNode.UpdatedAt)));
+
+    private Task<RuntimeNodeDto?> GetRuntimeNodeDtoAsync(int id, CancellationToken cancellationToken)
+        => _db.ContainerRuntimeNodes
+            .Where(x => x.Id == id)
+            .Select(x => new RuntimeNodeDto(x.Id, x.Name, x.AiName, x.Description, x.BackendType,
+                x.Endpoint, x.Credential != null, x.IsEnabled, x.CreatedAt, x.UpdatedAt))
+            .SingleOrDefaultAsync(cancellationToken);
 }

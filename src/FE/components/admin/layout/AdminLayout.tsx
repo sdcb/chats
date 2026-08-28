@@ -26,7 +26,10 @@ import {
   IconUserCog,
   IconUsers,
 } from '@/components/Icons/index';
-import UserMenuPopover, { PageType } from '@/components/UserMenuPopover/UserMenuPopover';
+import UserMenuPopover, {
+  PageType,
+} from '@/components/UserMenuPopover/UserMenuPopover';
+import RequestTracePageTitle from '@/components/admin/request-trace/RequestTracePageTitle';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -45,8 +48,6 @@ import { Toaster } from '@/components/ui/toaster';
 
 import { postChatsVersion } from '@/apis/adminApis';
 import { useUserInfo } from '@/providers/UserProvider';
-
-import RequestTracePageTitle from '@/components/admin/request-trace/RequestTracePageTitle';
 
 interface MenuItem {
   url: string;
@@ -107,7 +108,9 @@ const AdminHeaderBar = ({
         icon={<IconLayoutSidebar size={26} strokeWidth={1} />}
       />
       <h1 className="font-medium">
-        {selectedMenu?.headerTitle || selectedMenu?.title || t('Chats Admin Panel')}
+        {selectedMenu?.headerTitle ||
+          selectedMenu?.title ||
+          t('Chats Admin Panel')}
       </h1>
     </div>
   );
