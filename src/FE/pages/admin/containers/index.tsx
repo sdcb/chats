@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { LabelSwitch } from '@/components/ui/label-switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { cn } from '@/lib/utils';
@@ -135,6 +136,7 @@ type DeleteTarget = {
 };
 
 const PAGE_SIZE = 20;
+const EMPTY_VALUE = '-';
 
 const emptyRuntime: RuntimeForm = {
   name: '',
@@ -171,12 +173,12 @@ const emptyQuota: QuotaForm = {
 };
 
 const formatDateTime = (value?: string) => {
-  if (!value) return '—';
+  if (!value) return EMPTY_VALUE;
   const date = new Date(value);
   return Number.isNaN(date.valueOf()) ? value : date.toLocaleString();
 };
 const formatBytes = (value: number | null | undefined) => {
-  if (value == null) return '—';
+  if (value == null) return EMPTY_VALUE;
   if (value === 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const index = Math.min(
@@ -188,7 +190,7 @@ const formatBytes = (value: number | null | undefined) => {
   }`;
 };
 const limitText = (value: number | null | undefined, suffix = '') =>
-  value == null ? '—' : `${value}${suffix}`;
+  value == null ? EMPTY_VALUE : `${value}${suffix}`;
 
 export default function AdminContainersPage() {
   const { t } = useTranslation();
@@ -550,12 +552,12 @@ export default function AdminContainersPage() {
       key: 'description',
       title: t('Description'),
       className: 'min-w-48',
-      cell: (x) => x.description || '—',
+      cell: (x) => x.description || EMPTY_VALUE,
     },
     {
       key: 'credential',
       title: t('Credential'),
-      cell: (x) => (x.hasCredential ? t('Configured') : '—'),
+      cell: (x) => (x.hasCredential ? t('Configured') : EMPTY_VALUE),
     },
     {
       key: 'status',
@@ -727,7 +729,7 @@ export default function AdminContainersPage() {
       key: 'description',
       title: t('Description'),
       className: 'min-w-64',
-      cell: (x) => x.description || '—',
+      cell: (x) => x.description || EMPTY_VALUE,
     },
     {
       key: 'status',
@@ -786,7 +788,7 @@ export default function AdminContainersPage() {
     {
       key: 'networks',
       title: t('Allowed networks'),
-      cell: (x) => x.allowedNetworkModes || '—',
+      cell: (x) => x.allowedNetworkModes || EMPTY_VALUE,
     },
     {
       key: 'containers',
@@ -1143,19 +1145,14 @@ export default function AdminContainersPage() {
                 {t('Leave blank to keep the current credential.')}
               </span>
             </Label>
-            <label className="flex items-center gap-2 text-sm sm:col-span-2">
-              <input
-                type="checkbox"
-                checked={runtimeForm.isEnabled}
-                onChange={(e) =>
-                  setRuntimeForm({
-                    ...runtimeForm,
-                    isEnabled: e.target.checked,
-                  })
-                }
-              />
-              {t('Enabled')}
-            </label>
+            <LabelSwitch
+              checked={runtimeForm.isEnabled}
+              onCheckedChange={(checked) =>
+                setRuntimeForm({ ...runtimeForm, isEnabled: checked })
+              }
+              label={t('Enabled')}
+              className="sm:col-span-2"
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRuntimeDialog(null)}>
@@ -1372,16 +1369,13 @@ export default function AdminContainersPage() {
                 }
               />
             </Label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={imageForm.isEnabled}
-                onChange={(e) =>
-                  setImageForm({ ...imageForm, isEnabled: e.target.checked })
-                }
-              />
-              {t('Enabled')}
-            </label>
+            <LabelSwitch
+              checked={imageForm.isEnabled}
+              onCheckedChange={(checked) =>
+                setImageForm({ ...imageForm, isEnabled: checked })
+              }
+              label={t('Enabled')}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setImageDialog(null)}>
@@ -1445,19 +1439,14 @@ export default function AdminContainersPage() {
                 />
               </Label>
             ))}
-            <label className="flex items-center gap-2 text-sm sm:col-span-3">
-              <input
-                type="checkbox"
-                checked={quotaForm.allowCustomImage}
-                onChange={(e) =>
-                  setQuotaForm({
-                    ...quotaForm,
-                    allowCustomImage: e.target.checked,
-                  })
-                }
-              />
-              {t('Allow custom images')}
-            </label>
+            <LabelSwitch
+              checked={quotaForm.allowCustomImage}
+              onCheckedChange={(checked) =>
+                setQuotaForm({ ...quotaForm, allowCustomImage: checked })
+              }
+              label={t('Allow custom images')}
+              className="sm:col-span-3"
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setQuotaDialog(null)}>

@@ -146,7 +146,8 @@ const McpTab = () => {
     const filtered = mcpServers.filter(
       (server) =>
         server.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (server.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+        (server.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ??
+          false) ||
         server.url.toLowerCase().includes(searchTerm.toLowerCase()),
     );
     setFilteredServers(filtered);
@@ -402,7 +403,9 @@ const McpTab = () => {
                       <TableCell className="font-medium">
                         {server.displayName || server.name}
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{server.name}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {server.name}
+                      </TableCell>
                       <TableCell
                         className="max-w-xs truncate"
                         title={server.url}
@@ -436,7 +439,7 @@ const McpTab = () => {
                           />
                         ) : (
                           <span className="text-xs text-muted-foreground">
-                            —
+                            -
                           </span>
                         )}
                       </TableCell>
