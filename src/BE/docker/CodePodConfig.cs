@@ -112,11 +112,6 @@ public class CodePodConfig
     public ResourceLimits DefaultResourceLimits { get; set; } = ResourceLimits.Standard;
 
     /// <summary>
-    /// 默认网络模式。推荐使用 None 以获得最佳安全性
-    /// </summary>
-    public NetworkMode DefaultNetworkMode { get; set; } = NetworkMode.None;
-
-    /// <summary>
     /// 输出配置
     /// </summary>
     public OutputOptions OutputOptions { get; set; } = new();

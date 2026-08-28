@@ -1,16 +1,8 @@
 using Chats.BE.Infrastructure.Functional;
-using Chats.BE.Services;
 using Chats.BE.Services.CodeInterpreter;
-using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
-using Chats.BE.Services.UrlEncryption;
 using Chats.DB;
-using Chats.DockerInterface;
-using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
@@ -21,121 +13,38 @@ public sealed class CodeInterpreterViewImageTests
 {
     private static readonly byte[] ValidPngBytes = CreateValidPngBytes();
 
-    private static ServiceProvider CreateServiceProvider(string dbName)
-    {
-        ServiceCollection services = new();
-        services.AddDbContext<ChatsDB>(o => o.UseInMemoryDatabase(dbName));
-        return services.BuildServiceProvider();
-    }
-
-    private static byte[] CreateValidPngBytes()
-    {
-        using Image<Rgba32> image = new(1, 1);
-        image[0, 0] = new Rgba32(255, 0, 0, 255);
-
-        using MemoryStream ms = new();
-        image.Save(ms, new PngEncoder());
-        return ms.ToArray();
-    }
-
-    private static CodeInterpreterExecutor CreateExecutor(ServiceProvider sp, FakeDockerService docker, CodeInterpreterOptions? options = null)
-    {
-        IHttpContextAccessor accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
-        HostUrlService host = new(accessor);
-        IFileServiceFactory fsf = new FileServiceFactory(host, new NoOpUrlEncryptionService());
-
-        return new CodeInterpreterExecutor(
-            docker,
-            fsf,
-            new FileImageInfoService(NullLogger<FileImageInfoService>.Instance),
-            sp.GetRequiredService<IServiceScopeFactory>(),
-            Options.Create(new CodePodConfig()),
-            Options.Create(options ?? new CodeInterpreterOptions()),
-            NullLogger<CodeInterpreterExecutor>.Instance);
-    }
-
-    private static async Task<ChatDockerSession> SeedSessionAsync(ServiceProvider sp, string label, string containerId)
-    {
-        using IServiceScope scope = sp.CreateScope();
-        ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
-
-        db.ChatTurns.Add(new ChatTurn
-        {
-            Id = 1,
-            ChatId = 1,
-            ParentId = null,
-            IsUser = false,
-            Chat = null!,
-        });
-
-        DateTime now = DateTime.UtcNow;
-        ChatDockerSession session = new()
-        {
-            OwnerTurnId = 1,
-            Label = label,
-            ContainerId = containerId,
-            Image = "mcr.microsoft.com/dotnet/sdk:10.0",
-            ShellPrefix = "/bin/sh,-lc",
-            NetworkMode = 0,
-            CreatedAt = now.AddMinutes(-10),
-            LastActiveAt = now.AddMinutes(-5),
-            ExpiresAt = now.AddMinutes(30),
-        };
-
-        db.ChatDockerSessions.Add(session);
-        await db.SaveChangesAsync();
-        return session;
-    }
-
-    private static CodeInterpreterExecutor.TurnContext CreateContext(ChatDockerSession session)
-    {
-        return new CodeInterpreterExecutor.TurnContext
-        {
-            MessageTurns = [new ChatTurn { Id = 1, ChatDockerSessions = [session] }],
-            MessageSteps = [],
-            CurrentAssistantTurn = new ChatTurn { Id = 1, ChatId = 1, Chat = null! },
-            ClientInfoId = 1,
-        };
-    }
-
     [Fact]
     public void AddTools_ShouldHideViewImage_WhenVisionDisabled()
     {
-        using ServiceProvider sp = CreateServiceProvider(nameof(AddTools_ShouldHideViewImage_WhenVisionDisabled));
-        FakeDockerService docker = new();
-        CodeInterpreterExecutor executor = CreateExecutor(sp, docker);
-
+        using ServiceProvider serviceProvider = CodeInterpreterToolTestHelper.CreateServiceProvider(nameof(AddTools_ShouldHideViewImage_WhenVisionDisabled));
+        CodeInterpreterExecutor executor = CodeInterpreterToolTestHelper.CreateExecutor(serviceProvider, new FakeDockerService());
         List<ChatTool> tools = [];
+
         executor.AddTools(tools, allowVision: false);
 
-        Assert.DoesNotContain(tools.OfType<FunctionTool>(), x => x.FunctionName == CodeInterpreterExecutor.ViewImageToolName);
+        Assert.DoesNotContain(tools.OfType<FunctionTool>(), tool => tool.FunctionName == CodeInterpreterExecutor.ViewImageToolName);
     }
 
     [Fact]
     public void AddTools_ShouldIncludeViewImage_WhenVisionEnabled()
     {
-        using ServiceProvider sp = CreateServiceProvider(nameof(AddTools_ShouldIncludeViewImage_WhenVisionEnabled));
-        FakeDockerService docker = new();
-        CodeInterpreterExecutor executor = CreateExecutor(sp, docker);
-
+        using ServiceProvider serviceProvider = CodeInterpreterToolTestHelper.CreateServiceProvider(nameof(AddTools_ShouldIncludeViewImage_WhenVisionEnabled));
+        CodeInterpreterExecutor executor = CodeInterpreterToolTestHelper.CreateExecutor(serviceProvider, new FakeDockerService());
         List<ChatTool> tools = [];
+
         executor.AddTools(tools, allowVision: true);
 
-        Assert.Contains(tools.OfType<FunctionTool>(), x => x.FunctionName == CodeInterpreterExecutor.ViewImageToolName);
+        Assert.Contains(tools.OfType<FunctionTool>(), tool => tool.FunctionName == CodeInterpreterExecutor.ViewImageToolName);
     }
 
     [Fact]
     public async Task ViewImage_ShouldQueueArtifact_WhenImageIsValid()
     {
-        using ServiceProvider sp = CreateServiceProvider(nameof(ViewImage_ShouldQueueArtifact_WhenImageIsValid));
-        FakeDockerService docker = new();
-        CodeInterpreterExecutor executor = CreateExecutor(sp, docker);
-        ChatDockerSession session = await SeedSessionAsync(sp, "s1", "container-123");
-        CodeInterpreterExecutor.TurnContext ctx = CreateContext(session);
-        docker.AddFile(session.ContainerId, "/app/chart.png", ValidPngBytes);
+        (CodeInterpreterExecutor executor, CodeInterpreterExecutor.TurnContext context, FakeDockerService docker, ContainerResource resource) = await CreateScenarioAsync(nameof(ViewImage_ShouldQueueArtifact_WhenImageIsValid));
+        docker.AddFile(resource.BackendResourceId, "/app/chart.png", ValidPngBytes);
 
-        Result<string> result = await executor.ViewImage(ctx, session.Label, "/app/chart.png", CancellationToken.None);
-        List<CodeInterpreterExecutor.PendingFileArtifact> artifacts = executor.DrainPendingArtifacts(ctx);
+        Result<string> result = await executor.ViewImage(context, resource.Name, "/app/chart.png", CancellationToken.None);
+        List<CodeInterpreterExecutor.PendingFileArtifact> artifacts = executor.DrainPendingArtifacts(context);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(string.Empty, result.Value);
@@ -148,51 +57,60 @@ public sealed class CodeInterpreterViewImageTests
     [Fact]
     public async Task ViewImage_ShouldRejectNonImageExtension()
     {
-        using ServiceProvider sp = CreateServiceProvider(nameof(ViewImage_ShouldRejectNonImageExtension));
-        FakeDockerService docker = new();
-        CodeInterpreterExecutor executor = CreateExecutor(sp, docker);
-        ChatDockerSession session = await SeedSessionAsync(sp, "s1", "container-123");
-        CodeInterpreterExecutor.TurnContext ctx = CreateContext(session);
-        docker.AddFile(session.ContainerId, "/app/chart.txt", ValidPngBytes);
+        (CodeInterpreterExecutor executor, CodeInterpreterExecutor.TurnContext context, FakeDockerService docker, ContainerResource resource) = await CreateScenarioAsync(nameof(ViewImage_ShouldRejectNonImageExtension));
+        docker.AddFile(resource.BackendResourceId, "/app/chart.txt", ValidPngBytes);
 
-        Result<string> result = await executor.ViewImage(ctx, session.Label, "/app/chart.txt", CancellationToken.None);
+        Result<string> result = await executor.ViewImage(context, resource.Name, "/app/chart.txt", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("does not look like an image", result.Error);
-        Assert.Empty(executor.DrainPendingArtifacts(ctx));
+        Assert.Empty(executor.DrainPendingArtifacts(context));
     }
 
     [Fact]
     public async Task ViewImage_ShouldRejectEmptyFile()
     {
-        using ServiceProvider sp = CreateServiceProvider(nameof(ViewImage_ShouldRejectEmptyFile));
-        FakeDockerService docker = new();
-        CodeInterpreterExecutor executor = CreateExecutor(sp, docker);
-        ChatDockerSession session = await SeedSessionAsync(sp, "s1", "container-123");
-        CodeInterpreterExecutor.TurnContext ctx = CreateContext(session);
-        docker.AddFile(session.ContainerId, "/app/chart.png", []);
+        (CodeInterpreterExecutor executor, CodeInterpreterExecutor.TurnContext context, FakeDockerService docker, ContainerResource resource) = await CreateScenarioAsync(nameof(ViewImage_ShouldRejectEmptyFile));
+        docker.AddFile(resource.BackendResourceId, "/app/chart.png", []);
 
-        Result<string> result = await executor.ViewImage(ctx, session.Label, "/app/chart.png", CancellationToken.None);
+        Result<string> result = await executor.ViewImage(context, resource.Name, "/app/chart.png", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("is empty", result.Error);
-        Assert.Empty(executor.DrainPendingArtifacts(ctx));
+        Assert.Empty(executor.DrainPendingArtifacts(context));
     }
 
     [Fact]
     public async Task ViewImage_ShouldRejectTooLargeImage()
     {
-        using ServiceProvider sp = CreateServiceProvider(nameof(ViewImage_ShouldRejectTooLargeImage));
-        FakeDockerService docker = new();
-        CodeInterpreterExecutor executor = CreateExecutor(sp, docker, new CodeInterpreterOptions { MaxSingleUploadBytes = 8 });
-        ChatDockerSession session = await SeedSessionAsync(sp, "s1", "container-123");
-        CodeInterpreterExecutor.TurnContext ctx = CreateContext(session);
-        docker.AddFile(session.ContainerId, "/app/chart.png", ValidPngBytes);
+        CodeInterpreterOptions options = new() { MaxSingleUploadBytes = 8 };
+        (CodeInterpreterExecutor executor, CodeInterpreterExecutor.TurnContext context, FakeDockerService docker, ContainerResource resource) = await CreateScenarioAsync(nameof(ViewImage_ShouldRejectTooLargeImage), options);
+        docker.AddFile(resource.BackendResourceId, "/app/chart.png", ValidPngBytes);
 
-        Result<string> result = await executor.ViewImage(ctx, session.Label, "/app/chart.png", CancellationToken.None);
+        Result<string> result = await executor.ViewImage(context, resource.Name, "/app/chart.png", CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("too large", result.Error);
-        Assert.Empty(executor.DrainPendingArtifacts(ctx));
+        Assert.Empty(executor.DrainPendingArtifacts(context));
+    }
+
+    private static async Task<(CodeInterpreterExecutor Executor, CodeInterpreterExecutor.TurnContext Context, FakeDockerService Docker, ContainerResource Resource)> CreateScenarioAsync(
+        string databaseName,
+        CodeInterpreterOptions? options = null)
+    {
+        ServiceProvider serviceProvider = CodeInterpreterToolTestHelper.CreateServiceProvider(databaseName);
+        FakeDockerService docker = new();
+        CodeInterpreterExecutor executor = CodeInterpreterToolTestHelper.CreateExecutor(serviceProvider, docker, options: options);
+        ContainerResource resource = await CodeInterpreterToolTestHelper.SeedResourceAsync(serviceProvider, "s1", "container-123");
+        return (executor, CodeInterpreterToolTestHelper.CreateContext(resource), docker, resource);
+    }
+
+    private static byte[] CreateValidPngBytes()
+    {
+        using Image<Rgba32> image = new(1, 1);
+        image[0, 0] = new Rgba32(255, 0, 0, 255);
+        using MemoryStream stream = new();
+        image.Save(stream, new PngEncoder());
+        return stream.ToArray();
     }
 }

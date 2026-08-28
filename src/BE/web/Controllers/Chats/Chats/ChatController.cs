@@ -171,9 +171,9 @@ public class ChatController(
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig)
                 .ThenInclude(x => x.ChatConfigMcps).ThenInclude(x => x.McpServer.McpTools)
-            .Include(x => x.ChatTurns).ThenInclude(x => x.ChatDockerSessions.Where(s => s.TerminatedAt == null && s.ExpiresAt > DateTime.UtcNow))
+            .Include(x => x.ChatTurns).ThenInclude(x => x.ContainerResources.Where(s => s.DeletedAt == null && (s.IsPermanent || s.CleanupAt > DateTime.UtcNow)))
             .Include(x => x.ChatTurns).ThenInclude(x => x.ChatConfigSnapshot).ThenInclude(x => x!.ModelSnapshot)
-            .Include(x => x.ChatDockerSessions.Where(s => s.TerminatedAt == null && s.ExpiresAt > DateTime.UtcNow))
+            .Include(x => x.ContainerResources.Where(s => s.DeletedAt == null && (s.IsPermanent || s.CleanupAt > DateTime.UtcNow)))
             .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == req.ChatId && x.UserId == currentUser.Id, cancellationToken);
         if (chat == null)
@@ -294,13 +294,13 @@ public class ChatController(
             if (anyCodeExecutionEnabled)
             {
                 DateTime nowUtc = DateTime.UtcNow;
-                List<ChatDockerSession> danglingSessions = [.. chat.ChatDockerSessions.Where(x => x.OwnerTurnId == null)];
+                List<ContainerResource> danglingResources = [.. chat.ContainerResources.Where(x => x.OwnerTurnId == null && !x.IsPermanent)];
 
-                foreach (ChatDockerSession session in danglingSessions)
+                foreach (ContainerResource resource in danglingResources)
                 {
-                    session.OwnerTurn = newDbUserTurn;
+                    resource.OwnerTurn = newDbUserTurn;
                     // Also add to the collection so CollectActiveSessions can find it via newDbUserTurn
-                    newDbUserTurn.ChatDockerSessions.Add(session);
+                    newDbUserTurn.ContainerResources.Add(resource);
                 }
             }
         }
@@ -600,7 +600,7 @@ public class ChatController(
             .Concat(dbUserMessage?.Steps ?? [])
             .ToNeutral(chatSpan.SpanId, applyContextTemplate);
         NeutralSystemMessage? systemMessage = chatSpan.ChatConfig.CodeExecutionEnabled
-            ? codeInterpreter.BuildSystemMessage(chatSpan.ChatConfig.SystemPrompt)
+            ? await codeInterpreter.BuildSystemMessageAsync(chatSpan.ChatConfig.SystemPrompt, chat.UserId, cancellationToken)
             : string.IsNullOrWhiteSpace(chatSpan.ChatConfig.SystemPrompt)
                 ? null
                 : NeutralSystemMessage.FromText(chatSpan.ChatConfig.SystemPrompt);

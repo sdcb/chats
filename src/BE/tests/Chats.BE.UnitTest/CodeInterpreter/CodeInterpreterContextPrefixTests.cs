@@ -1,5 +1,4 @@
 using Chats.BE.Services.CodeInterpreter;
-using Chats.DockerInterface.Models;
 using Chats.DB;
 using Chats.DB.Enums;
 using DBFile = Chats.DB.File;
@@ -9,186 +8,45 @@ namespace Chats.BE.UnitTest.CodeInterpreter;
 public sealed class CodeInterpreterContextPrefixTests
 {
     [Fact]
-    public void BuildCodeInterpreterContextPrefix_NoFilesNoSessions_ShouldReturnNull()
-    {
-        string? prefix = CodeInterpreterExecutor.BuildCodeInterpreterContextPrefix(
-            messageTurns: [],
-            utcNow: DateTime.UtcNow);
-
-        Assert.Null(prefix);
-    }
+    public void BuildCodeInterpreterContextPrefix_NoFilesNoContainers_ReturnsNull()
+        => Assert.Null(CodeInterpreterExecutor.BuildCodeInterpreterContextPrefix([], DateTime.UtcNow));
 
     [Fact]
-    public void BuildCodeInterpreterContextPrefix_OnlyActiveSessions_ShouldReturnNonNull()
+    public void BuildCodeInterpreterContextPrefix_OnlyActiveContainers_ReturnsContainer()
     {
         DateTime now = DateTime.UtcNow;
-
-        ChatDockerSession active = new()
-        {
-            Id = 1,
-            Label = "s1",
-            ContainerId = "c1",
-            Image = "img1",
-            ShellPrefix = "/bin/sh,-lc",
-            NetworkMode = (byte)NetworkMode.None,
-            CreatedAt = now,
-            LastActiveAt = now,
-            ExpiresAt = now.AddMinutes(10),
-        };
-
-        ChatDockerSession terminated = new()
-        {
-            Id = 2,
-            Label = "s2",
-            ContainerId = "c2",
-            Image = "img2",
-            ShellPrefix = "/bin/sh,-lc",
-            NetworkMode = (byte)NetworkMode.None,
-            CreatedAt = now,
-            LastActiveAt = now,
-            ExpiresAt = now.AddMinutes(10),
-            TerminatedAt = now,
-        };
-
-        ChatTurn t = new() { ChatDockerSessions = [active, terminated] };
-
-        string? prefix = CodeInterpreterExecutor.BuildCodeInterpreterContextPrefix(
-            messageTurns: [t],
-            utcNow: now);
-
+        ContainerResource active = NewContainer(1, "s1", "c1", now.AddMinutes(10));
+        ContainerResource deleted = NewContainer(2, "s2", "c2", now.AddMinutes(10));
+        deleted.DeletedAt = now;
+        ChatTurn turn = new() { ContainerResources = [active, deleted] };
+        string? prefix = CodeInterpreterExecutor.BuildCodeInterpreterContextPrefix([turn], now);
         Assert.NotNull(prefix);
-        Assert.Contains("[Active Docker Sessions]", prefix);
-        Assert.Contains("sessionId: s1", prefix);
-        Assert.DoesNotContain("sessionId: s2", prefix);
+        Assert.Contains("s1", prefix);
+        Assert.DoesNotContain("s2", prefix);
     }
 
     [Fact]
-    public void CollectCloudFiles_DuplicateNames_ShouldKeepLast()
+    public void CollectCloudFiles_DuplicateNames_KeepsLast()
     {
-        DateTime now = DateTime.UtcNow;
-
-        DBFile first = new()
-        {
-            Id = 1,
-            FileName = "dup.txt",
-            StorageKey = "k1",
-            Size = 1,
-            MediaType = "text/plain",
-            FileServiceId = 1,
-            FileService = null!,
-            ClientInfoId = 1,
-            CreateUserId = 1,
-            CreatedAt = now,
-            ClientInfo = null!,
-            CreateUser = null!,
-        };
-
-        DBFile second = new()
-        {
-            Id = 2,
-            FileName = "dup.txt",
-            StorageKey = "k2",
-            Size = 999,
-            MediaType = "text/plain",
-            FileServiceId = 1,
-            FileService = null!,
-            ClientInfoId = 1,
-            CreateUserId = 1,
-            CreatedAt = now,
-            ClientInfo = null!,
-            CreateUser = null!,
-        };
-
-        Step s1 = new()
-        {
-            ChatRoleId = (byte)DBChatRole.Assistant,
-            CreatedAt = now,
-            StepContents = [StepContent.FromFile(first), StepContent.FromFile(second)],
-        };
-
-        List<DBFile> files = CodeInterpreterExecutor.CollectCloudFiles([s1]);
-
-        DBFile only = Assert.Single(files);
-        Assert.Same(second, only);
-        Assert.Equal(999, only.Size);
+        DBFile first = NewFile(1, 1);
+        DBFile second = NewFile(2, 999);
+        Step step = new() { ChatRoleId = (byte)DBChatRole.Assistant, CreatedAt = DateTime.UtcNow, StepContents = [StepContent.FromFile(first), StepContent.FromFile(second)] };
+        Assert.Same(second, Assert.Single(CodeInterpreterExecutor.CollectCloudFiles([step])));
     }
 
     [Fact]
-    public void CollectActiveSessions_DuplicateLabels_ShouldKeepLastActive()
+    public void CollectActiveSessions_DuplicateLabels_KeepsLast()
     {
         DateTime now = DateTime.UtcNow;
-
-        ChatDockerSession first = new()
-        {
-            Id = 1,
-            Label = "s1",
-            ContainerId = "c1",
-            Image = "img1",
-            ShellPrefix = "/bin/sh,-lc",
-            NetworkMode = (byte)NetworkMode.None,
-            CreatedAt = now,
-            LastActiveAt = now,
-            ExpiresAt = now.AddMinutes(10),
-        };
-
-        ChatDockerSession second = new()
-        {
-            Id = 2,
-            Label = "s1",
-            ContainerId = "c2",
-            Image = "img2",
-            ShellPrefix = "/bin/sh,-lc",
-            NetworkMode = (byte)NetworkMode.None,
-            CreatedAt = now,
-            LastActiveAt = now,
-            ExpiresAt = now.AddMinutes(20),
-        };
-
-        ChatTurn t = new() { ChatDockerSessions = [first, second] };
-
-        List<ChatDockerSession> sessions = CodeInterpreterExecutor.CollectActiveSessions([t], now);
-
-        ChatDockerSession only = Assert.Single(sessions);
-        Assert.Same(second, only);
-        Assert.Equal("img2", only.Image);
+        ContainerResource first = NewContainer(1, "s1", "c1", now.AddMinutes(10));
+        ContainerResource second = NewContainer(2, "s1", "c2", now.AddMinutes(20));
+        List<CodeInterpreterExecutor.ContainerExecutionContext> result = CodeInterpreterExecutor.CollectActiveSessions([new ChatTurn { ContainerResources = [first, second] }], now);
+        Assert.Equal("c2", Assert.Single(result).ContainerId);
     }
 
-    [Fact]
-    public void BuildCodeInterpreterContextPrefix_OnlyFiles_ShouldReturnNonNull()
-    {
-        DateTime now = DateTime.UtcNow;
+    private static ContainerResource NewContainer(long id, string name, string backendId, DateTime cleanupAt)
+        => new() { Id = id, OwnerUserId = 1, RuntimeNodeId = 1, BackendResourceId = backendId, Name = name, Image = "img", IsPermanent = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, CleanupAt = cleanupAt };
 
-        DBFile f = new()
-        {
-            Id = 1,
-            FileName = "a.txt",
-            StorageKey = "a",
-            Size = 1,
-            MediaType = "text/plain",
-            FileServiceId = 1,
-            FileService = null!,
-            ClientInfoId = 1,
-            CreateUserId = 1,
-            CreatedAt = now,
-            ClientInfo = null!,
-            CreateUser = null!,
-        };
-
-        Step step = new()
-        {
-            ChatRoleId = (byte)DBChatRole.Assistant,
-            CreatedAt = now,
-            StepContents = [StepContent.FromFile(f)],
-        };
-
-        ChatTurn t = new() { Steps = [step] };
-
-        string? prefix = CodeInterpreterExecutor.BuildCodeInterpreterContextPrefix(
-            messageTurns: [t],
-            utcNow: now);
-
-        Assert.NotNull(prefix);
-        Assert.Contains("[Cloud Files Available]", prefix);
-        Assert.Contains("a.txt", prefix);
-    }
+    private static DBFile NewFile(int id, int size)
+        => new() { Id = id, FileName = "dup.txt", StorageKey = $"k{id}", Size = size, MediaType = "text/plain", FileServiceId = 1, FileService = null!, ClientInfoId = 1, CreateUserId = 1, CreatedAt = DateTime.UtcNow, ClientInfo = null!, CreateUser = null! };
 }

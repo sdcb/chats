@@ -82,7 +82,7 @@ public sealed class FakeDockerService : IDockerService
     /// <summary>
     /// 自定义 CreateContainerAsync 返回的容器信息
     /// </summary>
-    public Func<string, ResourceLimits?, NetworkMode?, int, ContainerInfo>? CreateContainerHandler { get; set; }
+    public Func<string, ResourceLimits?, string?, int, ContainerInfo>? CreateContainerHandler { get; set; }
 
     #endregion
 
@@ -124,7 +124,7 @@ public sealed class FakeDockerService : IDockerService
         await Task.CompletedTask;
     }
 
-    public Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default)
+    public Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits = null, string? networkName = null, CancellationToken cancellationToken = default)
     {
         CreateContainerCalled = true;
         CreateContainerCalls++;
@@ -136,7 +136,7 @@ public sealed class FakeDockerService : IDockerService
 
         if (CreateContainerHandler != null)
         {
-            return Task.FromResult(CreateContainerHandler(image, resourceLimits, networkMode, CreateContainerCalls));
+            return Task.FromResult(CreateContainerHandler(image, resourceLimits, networkName, CreateContainerCalls));
         }
 
         return Task.FromResult(new ContainerInfo
@@ -160,6 +160,15 @@ public sealed class FakeDockerService : IDockerService
         => Task.FromResult<ContainerInfo?>(null);
 
     public Task DeleteContainerAsync(string containerId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    public Task StartContainerAsync(string containerId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    public Task StopContainerAsync(string containerId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    public Task UpdateContainerResourcesAsync(string containerId, ResourceLimits resourceLimits, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
     public Task DeleteAllManagedContainersAsync(CancellationToken cancellationToken = default)

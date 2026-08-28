@@ -2,7 +2,15 @@ import { ReactElement, useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
-import { DockerSessionDto } from '@/types/dockerSessions';
+
+import { copyTextToClipboard } from '@/utils/clipboard';
+import {
+  formatAbsoluteTime,
+  formatRelativeWithinHour,
+} from '@/utils/relativeTime';
+
+import { ContainerSessionDto } from '@/types/containers';
+
 import {
   IconArchive,
   IconBolt,
@@ -13,21 +21,20 @@ import {
   IconIdBadge,
   IconLoader,
   IconNotes,
+  IconPin,
   IconPlus,
   IconRefresh,
   IconSettings,
   IconWorld,
-  IconPin,
 } from '@/components/Icons';
 import Tips from '@/components/Tips/Tips';
-import { touchDockerSession } from '@/apis/dockerSessionsApi';
 import { Button } from '@/components/ui/button';
-import { copyTextToClipboard } from '@/utils/clipboard';
-import { formatAbsoluteTime, formatRelativeWithinHour } from '@/utils/relativeTime';
+
+import { touchContainer } from '@/apis/containersApi';
 
 type Props = {
   chatId: string;
-  session: DockerSessionDto;
+  session: ContainerSessionDto;
   onRefreshTimes: () => Promise<void>;
 };
 
@@ -35,11 +42,16 @@ function formatBytes(bytes: number | null): string {
   if (bytes === null) return '-';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-export default function SessionInfoCard({ chatId, session, onRefreshTimes }: Props) {
+export default function SessionInfoCard({
+  chatId,
+  session,
+  onRefreshTimes,
+}: Props) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [touching, setTouching] = useState(false);
@@ -64,8 +76,8 @@ export default function SessionInfoCard({ chatId, session, onRefreshTimes }: Pro
     }> = [
       {
         label: t('Label'),
-        value: session.label,
-        toCopyValue: session.label,
+        value: session.name,
+        toCopyValue: session.name,
         icon: <IconNotes size={16} />,
         group: 'basic',
       },
@@ -78,16 +90,20 @@ export default function SessionInfoCard({ chatId, session, onRefreshTimes }: Pro
       },
       {
         label: t('Turn Binding'),
-        value: !session.isBoundToTurn
-          ? t('Unbound')
-          : session.boundTurnSpanId === null
+        value:
+          !session.ownerTurnId !== null
+            ? t('Unbound')
+            : session.ownerTurnId === null
             ? t('Bound (no position)')
-            : t('Bound to position{{spanId}}', { spanId: session.boundTurnSpanId }),
-        toCopyValue: !session.isBoundToTurn
-          ? t('Unbound')
-          : session.boundTurnSpanId === null
+            : t('Bound to position{{spanId}}', {
+                spanId: session.ownerTurnId,
+              }),
+        toCopyValue:
+          !session.ownerTurnId !== null
+            ? t('Unbound')
+            : session.ownerTurnId === null
             ? t('Bound (no position)')
-            : String(session.boundTurnSpanId),
+            : String(session.ownerTurnId),
         icon: <IconSettings size={16} />,
         group: 'basic',
       },
@@ -109,18 +125,37 @@ export default function SessionInfoCard({ chatId, session, onRefreshTimes }: Pro
       },
       {
         label: t('Delete Time'),
-        value: formatRelativeWithinHour(session.expiresAt, now, t),
-        toCopyValue: formatAbsoluteTime(session.expiresAt),
-        title: formatAbsoluteTime(session.expiresAt),
+        value: session.cleanupAt
+          ? formatRelativeWithinHour(session.cleanupAt, now, t)
+          : t('Permanent'),
+        toCopyValue: session.cleanupAt
+          ? formatAbsoluteTime(session.cleanupAt)
+          : t('Permanent'),
+        title: session.cleanupAt
+          ? formatAbsoluteTime(session.cleanupAt)
+          : t('Permanent'),
         icon: <IconArchive size={16} />,
         group: 'time',
       },
       {
         label: t('CPU'),
-        value: session.cpuCores !== null ? `${session.cpuCores} ${t('cores')}` : t('Unlimited'),
-        toCopyValue: session.cpuCores !== null ? `${session.cpuCores} ${t('cores')}` : t('Unlimited'),
+        value:
+          session.cpuCores !== null
+            ? `${session.cpuCores} ${t('cores')}`
+            : t('Unlimited'),
+        toCopyValue:
+          session.cpuCores !== null
+            ? `${session.cpuCores} ${t('cores')}`
+            : t('Unlimited'),
         icon: <IconBolt size={16} />,
         group: 'resource',
+      },
+      {
+        label: t('Status'),
+        value: session.isStopped ? t('Stopped') : t('Running'),
+        toCopyValue: session.isStopped ? t('Stopped') : t('Running'),
+        icon: <IconSettings size={16} />,
+        group: 'basic',
       },
       {
         label: t('Memory'),
@@ -131,25 +166,31 @@ export default function SessionInfoCard({ chatId, session, onRefreshTimes }: Pro
       },
       {
         label: t('PID Limit'),
-        value: session.maxProcesses !== null ? String(session.maxProcesses) : t('Unlimited'),
-        toCopyValue: session.maxProcesses !== null ? String(session.maxProcesses) : t('Unlimited'),
+        value:
+          session.maxProcesses !== null
+            ? String(session.maxProcesses)
+            : t('Unlimited'),
+        toCopyValue:
+          session.maxProcesses !== null
+            ? String(session.maxProcesses)
+            : t('Unlimited'),
         icon: <IconIdBadge size={16} />,
         group: 'resource',
       },
       {
         label: t('Network'),
-        value: session.networkMode,
-        toCopyValue: session.networkMode,
+        value: session.backendNetworkName ?? 'bridge',
+        toCopyValue: session.backendNetworkName ?? 'bridge',
         icon: <IconWorld size={16} />,
         group: 'resource',
       },
     ];
 
-    if (session.networkMode === 'bridge' && session.ipAddress) {
+    if ((session.backendNetworkName ?? 'bridge') === 'bridge' && session.ip) {
       items.push({
         label: t('IP Address'),
-        value: session.ipAddress,
-        toCopyValue: session.ipAddress,
+        value: session.ip,
+        toCopyValue: session.ip,
         icon: <IconPin size={16} />,
         group: 'resource',
       });
@@ -159,7 +200,9 @@ export default function SessionInfoCard({ chatId, session, onRefreshTimes }: Pro
   }, [now, session, t]);
 
   const copyText = useMemo(() => {
-    return basicItems.map((item) => `${item.label}: ${item.toCopyValue}`).join('\n');
+    return basicItems
+      .map((item) => `${item.label}: ${item.toCopyValue}`)
+      .join('\n');
   }, [basicItems]);
 
   const groupedItems = useMemo(() => {
@@ -193,14 +236,14 @@ export default function SessionInfoCard({ chatId, session, onRefreshTimes }: Pro
     if (touching) return;
     setTouching(true);
     try {
-      await touchDockerSession(chatId, session.encryptedSessionId);
+      await touchContainer(chatId, session.encryptedId);
       await onRefreshTimes();
     } catch (e: any) {
       toast.error(e?.message || t('Failed to refresh session time'));
     } finally {
       setTouching(false);
     }
-  }, [chatId, onRefreshTimes, session.encryptedSessionId, t, touching]);
+  }, [chatId, onRefreshTimes, session.encryptedId, t, touching]);
 
   return (
     <div className="h-full flex flex-col">
@@ -221,10 +264,7 @@ export default function SessionInfoCard({ chatId, session, onRefreshTimes }: Pro
                 className="h-8 w-8 p-0"
               >
                 {touching ? (
-                  <IconLoader
-                    size={14}
-                    stroke="currentColor"
-                  />
+                  <IconLoader size={14} stroke="currentColor" />
                 ) : (
                   <IconRefresh size={14} stroke="currentColor" />
                 )}
@@ -251,7 +291,10 @@ export default function SessionInfoCard({ chatId, session, onRefreshTimes }: Pro
 
       <div className="space-y-3 overflow-auto pr-1">
         {groupedItems.map((section) => (
-          <section key={section.key} className="rounded-lg border border-border/70">
+          <section
+            key={section.key}
+            className="rounded-lg border border-border/70"
+          >
             <h4 className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/40 border-b border-border/70">
               {section.title}
             </h4>
@@ -261,7 +304,9 @@ export default function SessionInfoCard({ chatId, session, onRefreshTimes }: Pro
                   key={`item-${item.label}`}
                   className="flex items-center gap-3 px-3 py-2.5"
                 >
-                  <div className="shrink-0 text-muted-foreground">{item.icon}</div>
+                  <div className="shrink-0 text-muted-foreground">
+                    {item.icon}
+                  </div>
                   <dt className="shrink-0 text-xs text-muted-foreground w-24 sm:w-28">
                     {item.label}
                   </dt>

@@ -32,8 +32,8 @@ public partial class Chat
 
     public DateTime UpdatedAt { get; set; }
 
-    [InverseProperty("OwnerChat")]
-    public virtual ICollection<ChatDockerSession> ChatDockerSessions { get; set; } = new List<ChatDockerSession>();
+    [InverseProperty("Chat")]
+    public virtual ICollection<ChatContainerResourceAccess> ChatContainerResourceAccesses { get; set; } = new List<ChatContainerResourceAccess>();
 
     [ForeignKey("ChatGroupId")]
     [InverseProperty("Chats")]
@@ -47,6 +47,9 @@ public partial class Chat
 
     [InverseProperty("Chat")]
     public virtual ICollection<ChatTurn> ChatTurns { get; set; } = new List<ChatTurn>();
+
+    [InverseProperty("OwnerChat")]
+    public virtual ICollection<ContainerResource> ContainerResources { get; set; } = new List<ContainerResource>();
 
     [ForeignKey("LeafTurnId")]
     [InverseProperty("Chats")]

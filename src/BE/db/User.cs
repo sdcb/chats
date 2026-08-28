@@ -64,6 +64,12 @@ public partial class User
     [InverseProperty("User")]
     public virtual ICollection<Chat> Chats { get; set; } = new List<Chat>();
 
+    [InverseProperty("OwnerUser")]
+    public virtual ICollection<ContainerResource> ContainerResources { get; set; } = new List<ContainerResource>();
+
+    [InverseProperty("OwnerUser")]
+    public virtual ICollection<ContainerVolume> ContainerVolumes { get; set; } = new List<ContainerVolume>();
+
     [InverseProperty("CreateUser")]
     public virtual ICollection<File> Files { get; set; } = new List<File>();
 
@@ -93,6 +99,9 @@ public partial class User
 
     [InverseProperty("User")]
     public virtual ICollection<UserConfig> UserConfigs { get; set; } = new List<UserConfig>();
+
+    [InverseProperty("User")]
+    public virtual UserContainerQuotum? UserContainerQuotum { get; set; }
 
     [InverseProperty("User")]
     public virtual ICollection<UserMcp> UserMcps { get; set; } = new List<UserMcp>();

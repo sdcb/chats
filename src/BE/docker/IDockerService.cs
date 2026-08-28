@@ -22,7 +22,7 @@ public interface IDockerService : IDisposable
     /// 调用前需先调用 EnsureImageAsync 确保镜像存在。
     /// </summary>
     /// <param name="image">Docker镜像名称</param>
-    Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default);
+    Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits = null, string? networkName = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 获取所有受管理的容器
@@ -43,6 +43,12 @@ public interface IDockerService : IDisposable
     /// 删除容器
     /// </summary>
     Task DeleteContainerAsync(string containerId, CancellationToken cancellationToken = default);
+
+    Task StartContainerAsync(string containerId, CancellationToken cancellationToken = default);
+
+    Task StopContainerAsync(string containerId, CancellationToken cancellationToken = default);
+
+    Task UpdateContainerResourcesAsync(string containerId, ResourceLimits resourceLimits, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 删除所有受管理的容器

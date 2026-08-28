@@ -120,7 +120,7 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
             .ToList();
     }
 
-    public async Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits = null, NetworkMode? networkMode = null, CancellationToken cancellationToken = default)
+    public async Task<ContainerInfo> CreateContainerCoreAsync(string image, ResourceLimits? resourceLimits = null, string? networkName = null, CancellationToken cancellationToken = default)
     {
         // 使用指定的资源限制或默认值
         ResourceLimits limits = resourceLimits ?? config.DefaultResourceLimits;
@@ -128,7 +128,7 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
         limits.Validate(config.MaxResourceLimits);
 
         // 使用指定的网络模式或默认值
-        NetworkMode network = networkMode ?? config.DefaultNetworkMode;
+        string network = string.IsNullOrWhiteSpace(networkName) ? "bridge" : networkName.Trim();
 
         string containerName = $"{config.LabelPrefix}-{Guid.NewGuid():N}";
         Dictionary<string, string> labels = new()
@@ -138,13 +138,13 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
             [$"{config.LabelPrefix}.memory"] = limits.MemoryBytes.ToString(),
             [$"{config.LabelPrefix}.cpu"] = limits.CpuCores.ToString("F2"),
             [$"{config.LabelPrefix}.pids"] = limits.MaxProcesses.ToString(),
-            [$"{config.LabelPrefix}.network"] = network.ToString().ToLower()
+            [$"{config.LabelPrefix}.network"] = network
         };
 
         // 构建 HostConfig，Windows 容器不支持某些选项
         HostConfig hostConfig = new()
         {
-            NetworkMode = network.ToDockerNetworkMode(config.IsWindowsContainer),
+            NetworkMode = network,
             Memory = limits.MemoryBytes,
             NanoCPUs = (long)(limits.CpuCores * 1_000_000_000) // 1e9 = 1 CPU
         };
@@ -205,6 +205,27 @@ public class DockerService(CodePodConfig config, ILogger<DockerService>? logger 
             ShellPrefix = shellPrefix,
             Ip = ip
         };
+    }
+
+    public async Task StartContainerAsync(string containerId, CancellationToken cancellationToken = default)
+    {
+        await _client.Containers.StartContainerAsync(containerId, new ContainerStartParameters(), cancellationToken);
+    }
+
+    public async Task StopContainerAsync(string containerId, CancellationToken cancellationToken = default)
+    {
+        await _client.Containers.StopContainerAsync(containerId, new ContainerStopParameters(), cancellationToken);
+    }
+
+    public async Task UpdateContainerResourcesAsync(string containerId, ResourceLimits resourceLimits, CancellationToken cancellationToken = default)
+    {
+        resourceLimits.Validate(config.MaxResourceLimits);
+        await _client.Containers.UpdateContainerAsync(containerId, new ContainerUpdateParameters
+        {
+            Memory = resourceLimits.MemoryBytes,
+            NanoCPUs = (long)(resourceLimits.CpuCores * 1_000_000_000),
+            PidsLimit = config.IsWindowsContainer ? null : resourceLimits.MaxProcesses,
+        }, cancellationToken);
     }
 
     public async Task<List<ContainerInfo>> GetManagedContainersAsync(CancellationToken cancellationToken = default)

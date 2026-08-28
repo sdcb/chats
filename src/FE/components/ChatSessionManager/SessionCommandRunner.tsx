@@ -2,10 +2,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
+
 import { copyTextToClipboard } from '@/utils/clipboard';
+
+import { CommandStreamLine } from '@/types/containers';
+
+import {
+  IconBolt,
+  IconCheck,
+  IconClipboard,
+  IconLoader,
+} from '@/components/Icons';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { IconBolt, IconCheck, IconClipboard, IconLoader } from '@/components/Icons';
 import { useSendKeyHandler } from '@/components/ui/send-button';
 import {
   Tooltip,
@@ -14,12 +22,12 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-import { streamRunDockerCommand } from '@/apis/dockerSessionsApi';
-import { CommandStreamLine } from '@/types/dockerSessions';
+import { streamRunContainerCommand } from '@/apis/containersApi';
+import { cn } from '@/lib/utils';
 
 type Props = {
   chatId: string;
-  encryptedSessionId: string;
+  encryptedId: string;
   onFinished?: (ok: boolean) => void;
 };
 
@@ -34,7 +42,7 @@ type OutputLine =
 
 export default function SessionCommandRunner({
   chatId,
-  encryptedSessionId,
+  encryptedId,
   onFinished,
 }: Props) {
   const { t } = useTranslation();
@@ -55,7 +63,8 @@ export default function SessionCommandRunner({
       TEXTAREA_MAX_HEIGHT,
     );
     el.style.height = `${height}px`;
-    el.style.overflow = el.scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden';
+    el.style.overflow =
+      el.scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden';
   }, []);
 
   useEffect(() => {
@@ -70,7 +79,7 @@ export default function SessionCommandRunner({
 
     let ok = true;
     try {
-      for await (const line of streamRunDockerCommand(chatId, encryptedSessionId, {
+      for await (const line of streamRunContainerCommand(chatId, encryptedId, {
         command: cmd,
       })) {
         setOutput((prev) => appendOutput(prev, line));
@@ -95,7 +104,7 @@ export default function SessionCommandRunner({
       }
       onFinished?.(ok);
     }
-  }, [canRun, chatId, command, onFinished, encryptedSessionId, t]);
+  }, [canRun, chatId, command, onFinished, encryptedId, t]);
 
   const { handleKeyDown } = useSendKeyHandler(run, false, !canRun);
 
@@ -179,12 +188,7 @@ export default function SessionCommandRunner({
           placeholder={t('Enter a shell command...')}
         />
         <div className="absolute right-3 bottom-3">
-          <Button
-            size="sm"
-            onClick={run}
-            disabled={!canRun}
-            className="gap-2"
-          >
+          <Button size="sm" onClick={run} disabled={!canRun} className="gap-2">
             {running ? (
               <IconLoader className="stroke-primary-foreground" size={16} />
             ) : (
@@ -197,9 +201,7 @@ export default function SessionCommandRunner({
 
       {/* 输出区域 - 占据剩余空间 */}
       <div className="relative rounded-lg border bg-black flex-1 min-h-0 group">
-        <div className="p-4 h-full overflow-auto">
-          {outputView}
-        </div>
+        <div className="p-4 h-full overflow-auto">{outputView}</div>
         {output.length > 0 && (
           <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <TooltipProvider>
@@ -228,11 +230,20 @@ export default function SessionCommandRunner({
   );
 }
 
-function appendOutput(prev: OutputLine[], line: CommandStreamLine): OutputLine[] {
+function appendOutput(
+  prev: OutputLine[],
+  line: CommandStreamLine,
+): OutputLine[] {
   if (line.kind === 'stdout') return [...prev, { t: 'stdout', v: line.data }];
   if (line.kind === 'stderr') return [...prev, { t: 'stderr', v: line.data }];
   if (line.kind === 'exit') {
-    return [...prev, { t: 'exit', v: { exitCode: line.exitCode, executionTimeMs: line.executionTimeMs } }];
+    return [
+      ...prev,
+      {
+        t: 'exit',
+        v: { exitCode: line.exitCode, executionTimeMs: line.executionTimeMs },
+      },
+    ];
   }
   return [...prev, { t: 'error', v: line.message }];
 }

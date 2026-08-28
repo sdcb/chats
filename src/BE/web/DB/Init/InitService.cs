@@ -31,6 +31,54 @@ public class InitService(IServiceScopeFactory scopeFactory)
 
         DateTime now = DateTime.UtcNow;
 
+        // Add default Linux container runtime node for Docker
+        ContainerRuntimeNode runtimeNode = new()
+        {
+            Name = "default-docker",
+            AIName = "linux",
+            Description = "Default Linux Docker runtime",
+            BackendType = 1,
+            Endpoint = "unix:///var/run/docker.sock",
+            Credential = null,
+            IsEnabled = true,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+        db.ContainerRuntimeNodes.Add(runtimeNode);
+        await db.SaveChangesAsync(cancellationToken);
+
+        // Add default container image for code interpreter
+        db.ContainerImages.Add(new ContainerImage
+        {
+            Image = "code-interpreter:latest",
+            Description = "Pre-installed with common packages, suitable for most daily tasks",
+            IsEnabled = true,
+        });
+        // Add default container resource template for code interpreter
+        db.ContainerResourceTemplates.Add(new ContainerResourceTemplate
+        {
+            Name = "default-code-interpreter",
+            RuntimeNodeId = runtimeNode.Id,
+            Image = "code-interpreter:latest",
+            CpuCores = 2.0f,
+            MemoryBytes = 2_147_483_648,
+            MaxProcesses = 200,
+            BackendNetworkName = "bridge",
+            DefaultVolumeBytes = null,
+            Visibility = 3,
+            CreatedAt = now,
+            UpdatedAt = now,
+        });
+        // Add global user container quota which applies to all users by default (UserId = null)
+        db.UserContainerQuota.Add(new UserContainerQuotum
+        {
+            UserId = null,
+            AllowCustomImage = false,
+            AllowedNetworkModes = "none,bridge",
+            UpdatedAt = now,
+        });
+        await db.SaveChangesAsync(cancellationToken);
+
         ModelKey modelKey = new()
         {
             UpdatedAt = now,

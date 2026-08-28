@@ -23,6 +23,7 @@ using Chats.BE.Services.Keycloak;
 using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.TitleSummary;
 using Chats.BE.Services.Mcp;
+using Chats.BE.Services.Containers;
 
 namespace Chats.BE;
 
@@ -127,6 +128,8 @@ public class Program
         builder.Services.AddScoped<LoginRateLimiter>();
         builder.Services.AddScoped<TitleSummaryConfigService>();
         builder.Services.AddScoped<ChatTitleSummaryService>();
+        builder.Services.AddScoped<ContainerResourceService>();
+        builder.Services.AddSingleton<ContainerBackendFactory>();
 
         builder.Services.Configure<CodePodConfig>(builder.Configuration.GetSection("CodePod"));
         builder.Services.Configure<RequestTraceQueueOptions>(builder.Configuration.GetSection("RequestTraceQueue"));
@@ -142,7 +145,7 @@ public class Program
             .Bind(builder.Configuration.GetSection("CodeInterpreterPolicy"))
             .ValidateOnStart();
         builder.Services.AddScoped<CodeInterpreterExecutor>();
-        builder.Services.AddHostedService<ChatDockerSessionCleanupService>();
+        builder.Services.AddHostedService<ContainerResourceCleanupService>();
         builder.Services.AddHostedService<RequestTraceConfigRefreshService>();
         builder.Services.AddHostedService<RequestTracePersistService>();
         builder.Services.AddHostedService<RequestTraceScheduledDeleteService>();

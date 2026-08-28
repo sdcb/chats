@@ -2,9 +2,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
+
+import { getApiErrorMessage } from '@/utils/apiError';
 import { copyTextToClipboard } from '@/utils/clipboard';
+
+import {
+  IconCheck,
+  IconClipboard,
+  IconEdit,
+  IconLoader,
+  IconX,
+} from '@/components/Icons';
 import { Skeleton } from '@/components/ui/skeleton';
-import { IconCheck, IconClipboard, IconEdit, IconLoader, IconX } from '@/components/Icons';
 import {
   Tooltip,
   TooltipContent,
@@ -12,19 +21,21 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-import { readDockerTextFile, saveDockerTextFile } from '@/apis/dockerSessionsApi';
-import { getApiErrorMessage } from '@/utils/apiError';
+import {
+  readContainerTextFile,
+  saveContainerTextFile,
+} from '@/apis/containersApi';
 
 type Props = {
   chatId: string;
-  encryptedSessionId: string;
+  encryptedId: string;
   path: string;
   onSaved: () => void;
 };
 
 export default function SessionFileEditor({
   chatId,
-  encryptedSessionId,
+  encryptedId,
   path,
   onSaved,
 }: Props) {
@@ -44,7 +55,7 @@ export default function SessionFileEditor({
     setText('');
     setOriginal('');
 
-    readDockerTextFile(chatId, encryptedSessionId, path)
+    readContainerTextFile(chatId, encryptedId, path)
       .then((res) => {
         if (cancelled) return;
         if (!res.isText || res.text == null) {
@@ -67,13 +78,16 @@ export default function SessionFileEditor({
     return () => {
       cancelled = true;
     };
-  }, [chatId, encryptedSessionId, path]);
+  }, [chatId, encryptedId, path]);
 
   useEffect(() => {
     return loadFile();
   }, [loadFile]);
 
-  const dirty = useMemo(() => isText && text !== original, [isText, original, text]);
+  const dirty = useMemo(
+    () => isText && text !== original,
+    [isText, original, text],
+  );
 
   const handleCopy = useCallback(async () => {
     if (!text) return;
@@ -87,7 +101,7 @@ export default function SessionFileEditor({
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      await saveDockerTextFile(chatId, encryptedSessionId, { path, text });
+      await saveContainerTextFile(chatId, encryptedId, { path, text });
       setSaving(false);
       setOriginal(text);
       onSaved();
@@ -95,10 +109,14 @@ export default function SessionFileEditor({
       toast.error(getApiErrorMessage(e, t('Save failed')));
       setSaving(false);
     }
-  }, [chatId, encryptedSessionId, onSaved, path, t, text]);
+  }, [chatId, encryptedId, onSaved, path, t, text]);
 
   const handleDiscard = useCallback(() => {
-    if (confirm(t('You have unsaved changes. Are you sure you want to discard them?'))) {
+    if (
+      confirm(
+        t('You have unsaved changes. Are you sure you want to discard them?'),
+      )
+    ) {
       setText(original);
     }
   }, [original, t]);
@@ -156,9 +174,7 @@ export default function SessionFileEditor({
                       <IconX stroke="currentColor" size={18} />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    {t('Cancel')}
-                  </TooltipContent>
+                  <TooltipContent>{t('Cancel')}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               <TooltipProvider>
@@ -170,15 +186,13 @@ export default function SessionFileEditor({
                       disabled={saving}
                     >
                       {saving ? (
-                      <IconLoader stroke="currentColor" size={18} />
+                        <IconLoader stroke="currentColor" size={18} />
                       ) : (
                         <IconCheck stroke="currentColor" size={18} />
                       )}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    {t('Save')}
-                  </TooltipContent>
+                  <TooltipContent>{t('Save')}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </>

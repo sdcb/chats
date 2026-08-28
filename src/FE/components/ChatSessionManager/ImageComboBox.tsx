@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { cn } from '@/lib/utils';
 import useTranslation from '@/hooks/useTranslation';
+
 import { IconChevronDown } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+
+import { cn } from '@/lib/utils';
 
 type Props = {
   value: string;

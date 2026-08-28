@@ -10,10 +10,13 @@ import React, {
 import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+
+import { getApiErrorMessage } from '@/utils/apiError';
+
+import { DirectoryListResponse, FileEntry } from '@/types/containers';
+
 import {
+  IconArrowUp,
   IconCheck,
   IconDownload,
   IconFile,
@@ -23,20 +26,20 @@ import {
   IconPaperclip,
   IconRefresh,
   IconTrash,
-  IconArrowUp,
   IconX,
 } from '@/components/Icons';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 import {
-  deleteDockerFile,
-  getDockerFileDownloadUrl,
-  listDockerDirectory,
-  mkdirDockerDir,
-  readDockerTextFile,
-  uploadDockerFiles,
-} from '@/apis/dockerSessionsApi';
-import { DirectoryListResponse, FileEntry } from '@/types/dockerSessions';
-import { getApiErrorMessage } from '@/utils/apiError';
+  deleteContainerFile,
+  getContainerFileDownloadUrl,
+  listContainerDirectory,
+  mkdirContainerDirectory,
+  readContainerTextFile,
+  uploadContainerFiles,
+} from '@/apis/containersApi';
+import { cn } from '@/lib/utils';
 
 export type FileManagerHandle = {
   refresh: () => void;
@@ -44,7 +47,7 @@ export type FileManagerHandle = {
 
 type Props = {
   chatId: string;
-  encryptedSessionId: string;
+  encryptedId: string;
   refreshKey?: number;
   onSelectFile: (entry: FileEntry | null) => void;
   onEditFile: (path: string) => void;
@@ -54,12 +57,13 @@ type Props = {
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 const SessionFileManager = forwardRef<FileManagerHandle, Props>(
-  ({ chatId, encryptedSessionId, refreshKey, onSelectFile, onEditFile }, ref) => {
+  ({ chatId, encryptedId, refreshKey, onSelectFile, onEditFile }, ref) => {
     const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -84,7 +88,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
         setLoading(true);
         try {
           const target = path ?? currentDir;
-          const res = await listDockerDirectory(chatId, encryptedSessionId, target);
+          const res = await listContainerDirectory(chatId, encryptedId, target);
           setData(res);
           setCurrentDir(res.path);
           setInputDir(res.path);
@@ -98,16 +102,19 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
           setLoading(false);
         }
       },
-      [chatId, currentDir, encryptedSessionId, t],
+      [chatId, currentDir, encryptedId, t],
     );
 
-    useImperativeHandle(ref, () => ({ refresh: () => load(currentDir) }), [currentDir, load]);
+    useImperativeHandle(ref, () => ({ refresh: () => load(currentDir) }), [
+      currentDir,
+      load,
+    ]);
 
     // 初始加载 - 当 session 变化时
     useEffect(() => {
       load(null);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [chatId, encryptedSessionId]);
+    }, [chatId, encryptedId]);
 
     // refreshKey 变化时刷新（跳过初始值 0）
     const prevRefreshKeyRef = useRef(refreshKey);
@@ -126,7 +133,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
         if (files.length === 0) return;
         setUploading(true);
         try {
-          await uploadDockerFiles(chatId, encryptedSessionId, currentDir, files);
+          await uploadContainerFiles(chatId, encryptedId, currentDir, files);
           toast.success(t('Upload successful'));
           await load(currentDir);
         } catch (e: any) {
@@ -135,17 +142,21 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
           setUploading(false);
         }
       },
-      [chatId, currentDir, load, encryptedSessionId, t],
+      [chatId, currentDir, load, encryptedId, t],
     );
 
     const handleDownload = useCallback(
       (e: React.MouseEvent, entry: FileEntry) => {
         e.stopPropagation();
         if (entry.isDirectory) return;
-        const url = getDockerFileDownloadUrl(chatId, encryptedSessionId, entry.path);
+        const url = getContainerFileDownloadUrl(
+          chatId,
+          encryptedId,
+          entry.path,
+        );
         window.open(url, '_blank');
       },
-      [chatId, encryptedSessionId],
+      [chatId, encryptedId],
     );
 
     const handleDelete = useCallback(
@@ -157,7 +168,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
         if (!ok) return;
         setDeletingPath(entry.path);
         try {
-          await deleteDockerFile(chatId, encryptedSessionId, entry.path);
+          await deleteContainerFile(chatId, encryptedId, entry.path);
           toast.success(t('Deleted successful'));
           await load(currentDir);
         } catch (e: any) {
@@ -166,7 +177,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
           setDeletingPath(null);
         }
       },
-      [chatId, currentDir, encryptedSessionId, load, t],
+      [chatId, currentDir, encryptedId, load, t],
     );
 
     const onDrop = useCallback(
@@ -213,21 +224,33 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
         }
         // 调用API判断是否为文本文件
         try {
-          const res = await readDockerTextFile(chatId, encryptedSessionId, entry.path);
+          const res = await readContainerTextFile(
+            chatId,
+            encryptedId,
+            entry.path,
+          );
           if (res.isText) {
             onEditFile(entry.path);
           } else {
             // 非文本文件，下载
-            const url = getDockerFileDownloadUrl(chatId, encryptedSessionId, entry.path);
+            const url = getContainerFileDownloadUrl(
+              chatId,
+              encryptedId,
+              entry.path,
+            );
             window.open(url, '_blank');
           }
         } catch {
           // 出错时默认下载
-          const url = getDockerFileDownloadUrl(chatId, encryptedSessionId, entry.path);
+          const url = getContainerFileDownloadUrl(
+            chatId,
+            encryptedId,
+            entry.path,
+          );
           window.open(url, '_blank');
         }
       },
-      [chatId, encryptedSessionId, load, onEditFile],
+      [chatId, encryptedId, load, onEditFile],
     );
 
     const handleStartCreateFolder = useCallback(() => {
@@ -252,17 +275,23 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
       const path = `${currentDir.replace(/\/+$/, '')}/${folderName}`;
       setSavingFolder(true);
       try {
-        await mkdirDockerDir(chatId, encryptedSessionId, path);
+        await mkdirContainerDirectory(chatId, encryptedId, path);
         setCreatingFolder(false);
         setNewFolderName('');
         // 重新加载并选中新建的文件夹
-        const res = await listDockerDirectory(chatId, encryptedSessionId, currentDir);
+        const res = await listContainerDirectory(
+          chatId,
+          encryptedId,
+          currentDir,
+        );
         setData(res);
         setCurrentDir(res.path);
         setInputDir(res.path);
         setDirError(null);
         // 找到新建的文件夹并选中
-        const newFolder = res.entries.find(e => e.name === folderName && e.isDirectory);
+        const newFolder = res.entries.find(
+          (e) => e.name === folderName && e.isDirectory,
+        );
         if (newFolder) {
           setSelected(newFolder);
           onSelectFile(newFolder);
@@ -274,7 +303,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
       } finally {
         setSavingFolder(false);
       }
-    }, [chatId, currentDir, encryptedSessionId, newFolderName, onSelectFile, t]);
+    }, [chatId, currentDir, encryptedId, newFolderName, onSelectFile, t]);
 
     const newFolderRow = useMemo(() => {
       if (!creatingFolder) return null;
@@ -288,7 +317,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
           <div className="shrink-0 text-muted-foreground">
             <IconFolder size={16} />
           </div>
-          
+
           {/* 输入框 */}
           <div className="flex-1 min-w-0">
             <Input
@@ -307,7 +336,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
               disabled={savingFolder}
             />
           </div>
-          
+
           {/* 操作按钮 */}
           <div className="shrink-0 flex items-center gap-1">
             <button
@@ -333,7 +362,14 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
           </div>
         </div>
       );
-    }, [creatingFolder, handleCancelCreateFolder, handleSaveNewFolder, newFolderName, savingFolder, t]);
+    }, [
+      creatingFolder,
+      handleCancelCreateFolder,
+      handleSaveNewFolder,
+      newFolderName,
+      savingFolder,
+      t,
+    ]);
 
     const listView = useMemo(() => {
       if (loading) {
@@ -381,19 +417,23 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
             >
               {/* 图标 */}
               <div className="shrink-0 text-muted-foreground">
-                {e.isDirectory ? <IconFolder size={16} /> : <IconFile size={16} />}
+                {e.isDirectory ? (
+                  <IconFolder size={16} />
+                ) : (
+                  <IconFile size={16} />
+                )}
               </div>
-              
+
               {/* 文件名 */}
               <div className="flex-1 min-w-0">
                 <span className="text-sm truncate block">{e.name}</span>
               </div>
-              
+
               {/* 文件大小 */}
               <div className="shrink-0 text-xs text-muted-foreground w-20 text-right">
                 {e.isDirectory ? '-' : formatFileSize(e.size)}
               </div>
-              
+
               {/* 操作按钮 */}
               <div className="shrink-0 flex items-center gap-1">
                 {!e.isDirectory && (
@@ -424,7 +464,19 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
           ))}
         </div>
       );
-    }, [creatingFolder, entries, deletingPath, handleDelete, handleDoubleClickFile, handleDownload, loading, newFolderRow, onSelectFile, selected?.path, t]);
+    }, [
+      creatingFolder,
+      entries,
+      deletingPath,
+      handleDelete,
+      handleDoubleClickFile,
+      handleDownload,
+      loading,
+      newFolderRow,
+      onSelectFile,
+      selected?.path,
+      t,
+    ]);
 
     return (
       <div className="h-full flex flex-col gap-3">
@@ -538,9 +590,7 @@ const SessionFileManager = forwardRef<FileManagerHandle, Props>(
               <div className="flex-1 p-3" />
             </div>
           ) : (
-            <div className="p-3 flex-1">
-              {listView}
-            </div>
+            <div className="p-3 flex-1">{listView}</div>
           )}
         </div>
       </div>

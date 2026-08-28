@@ -15,6 +15,8 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         THROW 52000, N'dbo.[User] is required by the first-step migration.', 1;
     IF OBJECT_ID(N'dbo.Chat', N'U') IS NULL
         THROW 52001, N'dbo.Chat is required by the first-step migration.', 1;
+    IF OBJECT_ID(N'dbo.ChatTurn', N'U') IS NULL
+        THROW 52002, N'dbo.ChatTurn is required by the first-step migration.', 1;
 
     /* Step 1.1: remove the 1.x temporary-session model during the outage. */
     PRINT N'[Step 1.1] 删除 dbo.ChatDockerSession（若存在）';
@@ -43,15 +45,18 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         (
             Id                  INT NOT NULL IDENTITY(1,1),
             Name                NVARCHAR(128) NOT NULL,
+            AIName              VARCHAR(128) NOT NULL,
+            Description         NVARCHAR(1000) NULL,
             -- 1=Docker, 2=Windows Docker, 3=Kubernetes, 4=Other
             BackendType         TINYINT NOT NULL,
             Endpoint            VARCHAR(2048) NOT NULL,
-            Credential           NVARCHAR(4000) NULL,
+            Credential          VARCHAR(4000) NULL,
             IsEnabled            BIT NOT NULL CONSTRAINT DF_ContainerRuntimeNode_IsEnabled DEFAULT (1),
             CreatedAt            DATETIME2(7) NOT NULL CONSTRAINT DF_ContainerRuntimeNode_CreatedAt DEFAULT (SYSUTCDATETIME()),
             UpdatedAt            DATETIME2(7) NOT NULL CONSTRAINT DF_ContainerRuntimeNode_UpdatedAt DEFAULT (SYSUTCDATETIME()),
             CONSTRAINT PK_ContainerRuntimeNode PRIMARY KEY CLUSTERED (Id),
             CONSTRAINT UQ_ContainerRuntimeNode_Name UNIQUE (Name),
+            CONSTRAINT UQ_ContainerRuntimeNode_AIName UNIQUE (AIName),
             CONSTRAINT CK_ContainerRuntimeNode_BackendType CHECK (BackendType IN (1, 2, 3, 4))
         );
     END;
@@ -64,9 +69,9 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
     IF NOT EXISTS (SELECT 1 FROM dbo.ContainerRuntimeNode WHERE Name = N'default-docker')
     BEGIN
         INSERT INTO dbo.ContainerRuntimeNode
-            (Name, BackendType, Endpoint, Credential, IsEnabled)
+            (Name, AIName, Description, BackendType, Endpoint, Credential, IsEnabled)
         VALUES
-            (N'default-docker', 1, 'unix:///var/run/docker.sock', NULL, 1);
+            (N'default-docker', 'linux', N'Default Linux Docker runtime', 1, 'unix:///var/run/docker.sock', NULL, 1);
         PRINT N'    -> 已插入 default-docker RuntimeNode';
     END;
     ELSE
@@ -348,6 +353,7 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         (
             Id                  INT NOT NULL IDENTITY(1,1),
             Name                NVARCHAR(128) NOT NULL,
+            RuntimeNodeId       INT NOT NULL,
             Image               VARCHAR(512) NOT NULL,
             CpuCores            REAL NOT NULL,
             MemoryBytes         BIGINT NOT NULL,
@@ -357,11 +363,11 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             DefaultVolumeBytes  BIGINT NULL,
             -- 0=disabled, 1=user-visible, 2=AI-visible, 3=both.
             Visibility          TINYINT NOT NULL CONSTRAINT DF_ContainerTemplate_Visibility DEFAULT (3),
-            IsDefault           BIT NOT NULL CONSTRAINT DF_ContainerTemplate_Default DEFAULT (0),
             CreatedAt           DATETIME2(7) NOT NULL CONSTRAINT DF_ContainerTemplate_CreatedAt DEFAULT (SYSUTCDATETIME()),
             UpdatedAt           DATETIME2(7) NOT NULL CONSTRAINT DF_ContainerTemplate_UpdatedAt DEFAULT (SYSUTCDATETIME()),
             CONSTRAINT PK_ContainerResourceTemplate PRIMARY KEY CLUSTERED (Id),
             CONSTRAINT UQ_ContainerResourceTemplate_Name UNIQUE (Name),
+            CONSTRAINT FK_ContainerResourceTemplate_RuntimeNode FOREIGN KEY (RuntimeNodeId) REFERENCES dbo.ContainerRuntimeNode(Id),
             CONSTRAINT CK_ContainerTemplate_Values CHECK
                 (CpuCores >= 0 AND MemoryBytes >= 0 AND MaxProcesses >= 0 AND (DefaultVolumeBytes IS NULL OR DefaultVolumeBytes >= 0)),
             CONSTRAINT CK_ContainerTemplate_Visibility CHECK (Visibility IN (0, 1, 2, 3))
@@ -371,22 +377,17 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
     BEGIN
         PRINT N'    -> ContainerResourceTemplate 表已存在，跳过创建';
     END;
-    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResourceTemplate') AND name = N'UX_ContainerResourceTemplate_Default')
-        CREATE UNIQUE INDEX UX_ContainerResourceTemplate_Default ON dbo.ContainerResourceTemplate (IsDefault) WHERE IsDefault = 1 AND Visibility <> 0;
-    ELSE
-        PRINT N'    -> 索引 UX_ContainerResourceTemplate_Default 已存在，跳过';
-
     PRINT N'[Step 1.8.3] 插入默认 ContainerResourceTemplate（若不存在）';
     IF NOT EXISTS (SELECT 1 FROM dbo.ContainerResourceTemplate WHERE Name = N'default-code-interpreter')
     BEGIN
-        DECLARE @defaultTemplate bit = CASE
-            WHEN EXISTS (SELECT 1 FROM dbo.ContainerResourceTemplate WHERE IsDefault = 1 AND Visibility <> 0) THEN 0
-            ELSE 1
-        END;
+        DECLARE @defaultRuntimeNodeId int = (SELECT Id FROM dbo.ContainerRuntimeNode WHERE Name = N'default-docker');
+        IF @defaultRuntimeNodeId IS NULL
+            THROW 52011, N'default-docker RuntimeNode is required by the default container template.', 1;
+
         INSERT INTO dbo.ContainerResourceTemplate
-            (Name, Image, CpuCores, MemoryBytes, MaxProcesses, BackendNetworkName, DefaultVolumeBytes, Visibility, IsDefault)
+            (Name, RuntimeNodeId, Image, CpuCores, MemoryBytes, MaxProcesses, BackendNetworkName, DefaultVolumeBytes, Visibility)
         VALUES
-            (N'default-code-interpreter', 'code-interpreter:latest', 2.0, 2147483648, 200, 'bridge', NULL, 3, @defaultTemplate);
+            (N'default-code-interpreter', @defaultRuntimeNodeId, 'code-interpreter:latest', 2.0, 2147483648, 200, 'bridge', NULL, 3);
         PRINT N'    -> 已插入默认 ContainerResourceTemplate';
     END;
     ELSE

@@ -1,24 +1,16 @@
-
 using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Services.CodeInterpreter;
 using Chats.BE.Services.FileServices;
-using Chats.BE.Services.UrlEncryption;
 using Chats.DB;
 using Chats.DB.Enums;
 using Chats.DockerInterface;
-using Chats.DockerInterface.Models;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using DBFile = Chats.DB.File;
 
 namespace Chats.BE.UnitTest.CodeInterpreter;
 
 public sealed class DownloadChatFilesToolTests
 {
-
-
     private sealed class FakeFileServiceFactory(IReadOnlyDictionary<string, byte[]> blobs) : IFileServiceFactory
     {
         public IFileService Create(FileService dbfs) => new InMemoryFileService(blobs);
@@ -26,186 +18,38 @@ public sealed class DownloadChatFilesToolTests
 
     private sealed class InMemoryFileService(IReadOnlyDictionary<string, byte[]> blobs) : IFileService
     {
-        public Task<string> Upload(FileUploadRequest request, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-
+        public Task<string> Upload(FileUploadRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<Stream> Download(string storageKey, CancellationToken cancellationToken = default)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!blobs.TryGetValue(storageKey, out byte[]? bytes))
-            {
-                throw new FileNotFoundException($"Missing storageKey: {storageKey}");
-            }
+            if (!blobs.TryGetValue(storageKey, out byte[]? bytes)) throw new FileNotFoundException(storageKey);
             return Task.FromResult<Stream>(new MemoryStream(bytes, writable: false));
         }
-
-        public string CreateDownloadUrl(CreateDownloadUrlRequest request)
-            => throw new NotImplementedException();
-
-        public Task<bool> Delete(string storageKey, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
-    }
-
-
-
-    private sealed class ThrowingUrlEncryptionService : IUrlEncryptionService
-    {
-        public int DecryptAsInt32(string encrypted, EncryptionPurpose purpose) => throw new NotImplementedException();
-        public long DecryptAsInt64(string encrypted, EncryptionPurpose purpose) => throw new NotImplementedException();
-        public string Encrypt(int id, EncryptionPurpose purpose) => throw new NotImplementedException();
-        public string Encrypt(long id, EncryptionPurpose purpose) => throw new NotImplementedException();
-        public string CreateSignedPath(TimedId timedId, EncryptionPurpose purpose) => throw new NotImplementedException();
-        public Result<int> DecodeSignedPathAsInt32(string path, long validBefore, string hash, EncryptionPurpose purpose) => throw new NotImplementedException();
-    }
-
-    private static ServiceProvider CreateServiceProvider(string dbName)
-    {
-        ServiceCollection services = new();
-        services.AddDbContext<ChatsDB>(o => o.UseInMemoryDatabase(dbName));
-        return services.BuildServiceProvider();
-    }
-
-    private static CodeInterpreterExecutor CreateExecutor(ServiceProvider sp, FakeDockerService docker, IReadOnlyDictionary<string, byte[]> blobs, CodePodConfig? codePodConfig = null)
-    {
-        IFileServiceFactory fsf = new FakeFileServiceFactory(blobs);
-
-        return new CodeInterpreterExecutor(
-            docker,
-            fsf,
-            new FileImageInfoService(NullLogger<FileImageInfoService>.Instance),
-            sp.GetRequiredService<IServiceScopeFactory>(),
-            Options.Create(codePodConfig ?? new CodePodConfig()),
-            Options.Create(new CodeInterpreterOptions()),
-            NullLogger<CodeInterpreterExecutor>.Instance);
-    }
-
-    private static CodeInterpreterExecutor.TurnContext CreateCtx(ChatDockerSession session, Step[] steps)
-    {
-        ChatTurn assistantTurn = new() { Id = 123, ChatId = 1, Chat = null! };
-        CodeInterpreterExecutor.TurnContext ctx = new()
-        {
-            MessageTurns = Array.Empty<ChatTurn>(),
-            MessageSteps = steps,
-            CurrentAssistantTurn = assistantTurn,
-            ClientInfoId = 1,
-        };
-
-        ctx.SessionsBySessionId[session.Label] = new CodeInterpreterExecutor.TurnContext.SessionState
-        {
-            DbSession = session,
-            ShellPrefix = ["/bin/sh", "-lc"],
-            UsedInThisTurn = false,
-            ArtifactsSnapshot = new Dictionary<string, FileEntry>(StringComparer.Ordinal),
-            SnapshotTaken = true,
-        };
-
-        return ctx;
+        public string CreateDownloadUrl(CreateDownloadUrlRequest request) => throw new NotImplementedException();
+        public Task<bool> Delete(string storageKey, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 
     [Fact]
     public async Task DownloadChatFiles_ShouldOnlyListAndUploadMatchedFiles()
     {
-        string dbName = Guid.NewGuid().ToString();
-        using ServiceProvider sp = CreateServiceProvider(dbName);
-
-        FileService localFs = new()
-        {
-            Id = 1,
-            FileServiceTypeId = (byte)DBFileServiceType.Local,
-            Name = "local",
-            Configs = "in-memory",
-            IsDefault = true,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-        };
-
         byte[] zipBytes = [0x50, 0x4B, 0x03, 0x04, 0x00];
         byte[] pngBytes = [0x89, 0x50, 0x4E, 0x47, 0x0D];
+        Dictionary<string, byte[]> blobs = new(StringComparer.Ordinal) { ["maze_game.zip"] = zipBytes, ["maze.png"] = pngBytes };
+        FileService localFs = new() { Id = 1, FileServiceTypeId = (byte)DBFileServiceType.Local, Name = "local", Configs = "in-memory", IsDefault = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        DBFile zip = new() { Id = 1, FileName = "maze_game.zip", StorageKey = "maze_game.zip", Size = zipBytes.Length, MediaType = "application/zip", FileServiceId = 1, FileService = localFs, ClientInfoId = 1, CreateUserId = 1, CreatedAt = DateTime.UtcNow, ClientInfo = null!, CreateUser = null! };
+        DBFile png = new() { Id = 2, FileName = "maze.png", StorageKey = "maze.png", Size = pngBytes.Length, MediaType = "image/png", FileServiceId = 1, FileService = localFs, ClientInfoId = 1, CreateUserId = 1, CreatedAt = DateTime.UtcNow, ClientInfo = null!, CreateUser = null! };
+        Step step = new() { TurnId = 1, ChatRoleId = 1, CreatedAt = DateTime.UtcNow, Turn = new ChatTurn { Id = 1, ChatId = 1, Chat = null! }, StepContents = [StepContent.FromFile(png), StepContent.FromFile(zip)] };
 
-        string zipStorageKey = "maze_game.zip";
-        string pngStorageKey = "maze.png";
-        Dictionary<string, byte[]> blobs = new(StringComparer.Ordinal)
-        {
-            [zipStorageKey] = zipBytes,
-            [pngStorageKey] = pngBytes,
-        };
+        using ServiceProvider serviceProvider = CodeInterpreterToolTestHelper.CreateServiceProvider(nameof(DownloadChatFiles_ShouldOnlyListAndUploadMatchedFiles));
+        ContainerResource resource = await CodeInterpreterToolTestHelper.SeedResourceAsync(serviceProvider, "s1", "container-1");
+        FakeDockerService docker = new() { Config = new CodePodConfig { WorkDir = "/workspace" } };
+        CodeInterpreterExecutor executor = CodeInterpreterToolTestHelper.CreateExecutor(serviceProvider, docker, new CodePodConfig { WorkDir = "/workspace" }, fileServiceFactory: new FakeFileServiceFactory(blobs));
+        CodeInterpreterExecutor.TurnContext context = CodeInterpreterToolTestHelper.CreateContext(resource, [step]);
 
-        DBFile zip = new()
-        {
-            Id = 1,
-            FileName = "maze_game.zip",
-            StorageKey = zipStorageKey,
-            Size = zipBytes.Length,
-            MediaType = "application/zip",
-            FileServiceId = localFs.Id,
-            FileService = localFs,
-            ClientInfoId = 1,
-            CreateUserId = 1,
-            CreatedAt = DateTime.UtcNow,
-            ClientInfo = null!,
-            CreateUser = null!,
-        };
+        Result<string> result = await executor.DownloadChatFiles(context, resource.Name, ["maze_game.zip"], CancellationToken.None);
 
-        DBFile png = new()
-        {
-            Id = 2,
-            FileName = "maze.png",
-            StorageKey = pngStorageKey,
-            Size = pngBytes.Length,
-            MediaType = "image/png",
-            FileServiceId = localFs.Id,
-            FileService = localFs,
-            ClientInfoId = 1,
-            CreateUserId = 1,
-            CreatedAt = DateTime.UtcNow,
-            ClientInfo = null!,
-            CreateUser = null!,
-        };
-
-        Step step = new()
-        {
-            TurnId = 1,
-            ChatRoleId = 1,
-            CreatedAt = DateTime.UtcNow,
-            Turn = new ChatTurn { Id = 1, ChatId = 1, Chat = null! },
-            StepContents = new List<StepContent>
-                {
-                    StepContent.FromFile(png),
-                    StepContent.FromFile(zip),
-                }
-        };
-
-        DateTime now = DateTime.UtcNow;
-        ChatDockerSession session = new()
-        {
-            Id = 1,
-            Label = "s1",
-            ContainerId = "container-1",
-            Image = "mcr.microsoft.com/dotnet/sdk:10.0",
-            ShellPrefix = "/bin/sh,-lc",
-            NetworkMode = (byte)NetworkMode.None,
-            CreatedAt = now,
-            LastActiveAt = now,
-            ExpiresAt = now.AddMinutes(10),
-        };
-
-        using (IServiceScope scope = sp.CreateScope())
-        {
-            ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
-            db.ChatDockerSessions.Add(session);
-            await db.SaveChangesAsync();
-        }
-
-        FakeDockerService docker = new();
-        CodeInterpreterExecutor exec = CreateExecutor(sp, docker, blobs, new CodePodConfig { WorkDir = "/workspace" });
-        CodeInterpreterExecutor.TurnContext ctx = CreateCtx(session, [step]);
-
-        Result<string> done = await exec.DownloadChatFiles(ctx, session.Label, ["maze_game.zip"], CancellationToken.None);
-
-        Assert.True(done.IsSuccess);
-        Assert.Contains("maze_game.zip", done.Value);
-        Assert.DoesNotContain("maze.png", done.Value);
-
+        Assert.True(result.IsSuccess);
+        Assert.Contains("maze_game.zip", result.Value);
+        Assert.DoesNotContain("maze.png", result.Value);
         Assert.Single(docker.Uploads);
         Assert.Equal("container-1", docker.Uploads[0].ContainerId);
         Assert.Equal("/workspace/maze_game.zip", docker.Uploads[0].Path);

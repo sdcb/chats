@@ -21,7 +21,7 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<ChatConfigSnapshot> ChatConfigSnapshots { get; set; }
 
-    public virtual DbSet<ChatDockerSession> ChatDockerSessions { get; set; }
+    public virtual DbSet<ChatContainerResourceAccess> ChatContainerResourceAccesses { get; set; }
 
     public virtual DbSet<ChatGroup> ChatGroups { get; set; }
 
@@ -44,6 +44,18 @@ public partial class ChatsDB : DbContext
     public virtual DbSet<ClientUserAgent> ClientUserAgents { get; set; }
 
     public virtual DbSet<Config> Configs { get; set; }
+
+    public virtual DbSet<ContainerImage> ContainerImages { get; set; }
+
+    public virtual DbSet<ContainerResource> ContainerResources { get; set; }
+
+    public virtual DbSet<ContainerResourceTemplate> ContainerResourceTemplates { get; set; }
+
+    public virtual DbSet<ContainerRuntimeNode> ContainerRuntimeNodes { get; set; }
+
+    public virtual DbSet<ContainerVolume> ContainerVolumes { get; set; }
+
+    public virtual DbSet<ContainerVolumeMount> ContainerVolumeMounts { get; set; }
 
     public virtual DbSet<File> Files { get; set; }
 
@@ -123,6 +135,8 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<UserConfig> UserConfigs { get; set; }
 
+    public virtual DbSet<UserContainerQuotum> UserContainerQuota { get; set; }
+
     public virtual DbSet<UserInitialConfig> UserInitialConfigs { get; set; }
 
     public virtual DbSet<UserMcp> UserMcps { get; set; }
@@ -196,11 +210,15 @@ public partial class ChatsDB : DbContext
                 .HasConstraintName("FK_ChatConfigSnapshot_ModelSnapshot");
         });
 
-        modelBuilder.Entity<ChatDockerSession>(entity =>
+        modelBuilder.Entity<ChatContainerResourceAccess>(entity =>
         {
-            entity.HasOne(d => d.OwnerChat).WithMany(p => p.ChatDockerSessions).HasConstraintName("FK_ChatDockerSession_Chat");
+            entity.HasOne(d => d.Chat).WithMany(p => p.ChatContainerResourceAccesses)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ChatContainerAccess_Chat");
 
-            entity.HasOne(d => d.OwnerTurn).WithMany(p => p.ChatDockerSessions).HasConstraintName("FK_ChatDockerSession_ChatTurn");
+            entity.HasOne(d => d.ContainerResource).WithMany(p => p.ChatContainerResourceAccesses)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ChatContainerAccess_Container");
         });
 
         modelBuilder.Entity<ChatGroup>(entity =>
@@ -263,6 +281,54 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<Config>(entity =>
         {
             entity.HasKey(e => e.Key).HasName("PK_Configs");
+        });
+
+        modelBuilder.Entity<ContainerResource>(entity =>
+        {
+            entity.HasOne(d => d.OwnerChat).WithMany(p => p.ContainerResources).HasConstraintName("FK_ContainerResource_Chat");
+
+            entity.HasOne(d => d.OwnerTurn).WithMany(p => p.ContainerResources)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_ContainerResource_Turn");
+
+            entity.HasOne(d => d.OwnerUser).WithMany(p => p.ContainerResources)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ContainerResource_User");
+
+            entity.HasOne(d => d.RuntimeNode).WithMany(p => p.ContainerResources)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ContainerResource_RuntimeNode");
+        });
+
+        modelBuilder.Entity<ContainerResourceTemplate>(entity =>
+        {
+            entity.HasOne(d => d.RuntimeNode).WithMany(p => p.ContainerResourceTemplates)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ContainerResourceTemplate_RuntimeNode");
+        });
+
+        modelBuilder.Entity<ContainerVolume>(entity =>
+        {
+            entity.HasOne(d => d.ContainerResource).WithOne(p => p.ContainerVolume).HasConstraintName("FK_ContainerVolume_Container");
+
+            entity.HasOne(d => d.OwnerUser).WithMany(p => p.ContainerVolumes)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ContainerVolume_User");
+
+            entity.HasOne(d => d.RuntimeNode).WithMany(p => p.ContainerVolumes)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ContainerVolume_RuntimeNode");
+        });
+
+        modelBuilder.Entity<ContainerVolumeMount>(entity =>
+        {
+            entity.HasOne(d => d.ContainerResource).WithMany(p => p.ContainerVolumeMounts)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ContainerVolumeMount_Container");
+
+            entity.HasOne(d => d.Volume).WithMany(p => p.ContainerVolumeMounts)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ContainerVolumeMount_Volume");
         });
 
         modelBuilder.Entity<File>(entity =>
@@ -580,6 +646,11 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<UserConfig>(entity =>
         {
             entity.HasOne(d => d.User).WithMany(p => p.UserConfigs).HasConstraintName("FK_UserConfig_User");
+        });
+
+        modelBuilder.Entity<UserContainerQuotum>(entity =>
+        {
+            entity.HasOne(d => d.User).WithOne(p => p.UserContainerQuotum).HasConstraintName("FK_UserContainerQuota_User");
         });
 
         modelBuilder.Entity<UserInitialConfig>(entity =>

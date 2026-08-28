@@ -462,7 +462,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         long turnId = urlEncryption.DecryptTurnId(encryptedTurnId);
         long? leafTurnId = urlEncryption.DecryptTurnIdOrEmpty(encryptedLeafMessageId);
         ChatTurn? turn = await db.ChatTurns
-            .Include(x => x.Chat.ChatTurns).ThenInclude(turn => turn.ChatDockerSessions)
+            .Include(x => x.Chat.ChatTurns).ThenInclude(turn => turn.ContainerResources)
             .FirstOrDefaultAsync(x => x.Id == turnId, cancellationToken);
         if (turn == null)
         {
@@ -495,8 +495,11 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         }
         foreach (ChatTurn toDeleteTurn in toDeleteTurns)
         {
-            // Deassociate docker sessions
-            toDeleteTurn.ChatDockerSessions.Clear();
+            // Keep resources as historical records; clear turn ownership before deleting the turn.
+            foreach (ContainerResource resource in toDeleteTurn.ContainerResources)
+            {
+                resource.OwnerTurnId = null;
+            }
             turn.Chat.ChatTurns.Remove(toDeleteTurn);
         }
         turn.Chat.LeafTurnId = leafTurnId;

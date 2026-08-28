@@ -1,21 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { IconLoader } from '@/components/Icons';
+import useTranslation from '@/hooks/useTranslation';
+
+import { getApiErrorMessage } from '@/utils/apiError';
 
 import {
-  CreateDockerSessionRequest,
+  CreateContainerSessionRequest,
   MemoryLimitResponse,
   NetworkModesResponse,
   ResourceLimitResponse,
-} from '@/types/dockerSessions';
+} from '@/types/containers';
+
+import { IconLoader } from '@/components/Icons';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
 import ImageComboBox from './ImageComboBox';
-import { getApiErrorMessage } from '@/utils/apiError';
-import useTranslation from '@/hooks/useTranslation';
 
 type Props = {
   defaultImage: string;
@@ -24,7 +33,7 @@ type Props = {
   memoryLimits: MemoryLimitResponse | null;
   networkModes: NetworkModesResponse | null;
   onCancel: () => void;
-  onCreate: (req: CreateDockerSessionRequest) => Promise<void>;
+  onCreate: (req: CreateContainerSessionRequest) => Promise<void>;
 };
 
 export default function CreateSessionPane({
@@ -42,6 +51,7 @@ export default function CreateSessionPane({
   const [cpuCores, setCpuCores] = useState<string>('');
   const [memoryBytes, setMemoryBytes] = useState<string>('');
   const [networkMode, setNetworkMode] = useState<string>('');
+  const [isPermanent, setIsPermanent] = useState(false);
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -81,6 +91,15 @@ export default function CreateSessionPane({
             placeholder={t('Leave empty to use container id prefix (12 chars)')}
           />
         </div>
+        <div className="flex items-center gap-2">
+          <input
+            id="permanent-container"
+            type="checkbox"
+            checked={isPermanent}
+            onChange={(e) => setIsPermanent(e.target.checked)}
+          />
+          <Label htmlFor="permanent-container">Permanent container</Label>
+        </div>
 
         <div className="space-y-2">
           <Label>{t('Image name')}</Label>
@@ -100,7 +119,9 @@ export default function CreateSessionPane({
             placeholder={cpuLimits ? String(cpuLimits.defaultValue) : ''}
             inputMode="decimal"
           />
-          {hintCpu && <div className="text-xs text-muted-foreground">{hintCpu}</div>}
+          {hintCpu && (
+            <div className="text-xs text-muted-foreground">{hintCpu}</div>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -111,7 +132,9 @@ export default function CreateSessionPane({
             placeholder={memoryLimits ? String(memoryLimits.defaultBytes) : ''}
             inputMode="numeric"
           />
-          {hintMem && <div className="text-xs text-muted-foreground">{hintMem}</div>}
+          {hintMem && (
+            <div className="text-xs text-muted-foreground">{hintMem}</div>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -144,12 +167,14 @@ export default function CreateSessionPane({
           onClick={async () => {
             setCreating(true);
             try {
-              const req: CreateDockerSessionRequest = {
-                label: label.trim() || null,
+              const req: CreateContainerSessionRequest = {
+                name: label.trim() || null,
                 image: image.trim() || null,
                 cpuCores: cpuCores.trim() ? Number(cpuCores) : null,
                 memoryBytes: memoryBytes.trim() ? Number(memoryBytes) : null,
-                networkMode: networkMode || null,
+                backendNetworkName: networkMode || null,
+                isPermanent,
+                templateId: 1,
               };
               await onCreate(req);
             } catch (e: any) {
@@ -160,11 +185,7 @@ export default function CreateSessionPane({
           }}
           disabled={creating}
         >
-          {creating ? (
-            <IconLoader size={16} />
-          ) : (
-            t('Create')
-          )}
+          {creating ? <IconLoader size={16} /> : t('Create')}
         </Button>
       </div>
     </div>

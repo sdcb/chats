@@ -3,50 +3,50 @@ import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import FloatingWindow from '@/components/ui/floating-window/FloatingWindow';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
 import {
-  IconCheck,
-  IconDocker,
-  IconLoader,
-  IconPlus,
-  IconTrash,
-  IconX,
-  IconInfo,
-  IconBolt,
-  IconFolder,
-  IconEdit,
-  IconSettings,
-} from '@/components/Icons';
-
-import {
-  createChatDockerSession,
-  deleteChatDockerSession,
-  getChatDockerSessions,
-  getDockerCpuLimits,
-  getDockerDefaultImage,
-  getDockerImages,
-  getDockerMemoryLimits,
-  getDockerNetworkModes,
-} from '@/apis/dockerSessionsApi';
-
-import {
-  CreateDockerSessionRequest,
-  DockerSessionDto,
+  ContainerSessionDto,
+  CreateContainerSessionRequest,
   FileEntry,
   ImageListResponse,
   MemoryLimitResponse,
   NetworkModesResponse,
   ResourceLimitResponse,
-} from '@/types/dockerSessions';
+} from '@/types/containers';
+
+import {
+  IconBolt,
+  IconCheck,
+  IconDocker,
+  IconEdit,
+  IconFolder,
+  IconInfo,
+  IconLoader,
+  IconPlus,
+  IconSettings,
+  IconTrash,
+  IconX,
+} from '@/components/Icons';
+import { Button } from '@/components/ui/button';
+import FloatingWindow from '@/components/ui/floating-window/FloatingWindow';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import CreateSessionPane from './CreateSessionPane';
 import SessionCommandRunner from './SessionCommandRunner';
-import SessionFileManager, { FileManagerHandle } from './SessionFileManager';
-import SessionFileEditor from './SessionFileEditor';
-import SessionInfoCard from './SessionInfoCard';
 import SessionEnvVarEditor from './SessionEnvVarEditor';
+import SessionFileEditor from './SessionFileEditor';
+import SessionFileManager, { FileManagerHandle } from './SessionFileManager';
+import SessionInfoCard from './SessionInfoCard';
+
+import {
+  createChatContainer,
+  deleteChatContainer,
+  grantContainerToChat,
+  listChatContainers,
+  revokeContainerFromChat,
+  startContainer,
+  stopContainer,
+} from '@/apis/containersApi';
+import { listContainerTemplates } from '@/apis/containersApi';
 import { cn } from '@/lib/utils';
 
 type Mode = 'view' | 'create';
@@ -65,15 +65,19 @@ export default function ChatSessionManagerWindow({
 }: Props) {
   const { t } = useTranslation();
   const [loadingSessions, setLoadingSessions] = useState(false);
-  const [sessions, setSessions] = useState<DockerSessionDto[]>([]);
+  const [sessions, setSessions] = useState<ContainerSessionDto[]>([]);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>('view');
   const [deletingLabel, setDeletingLabel] = useState<string | null>(null);
-  const [confirmDeleteLabel, setConfirmDeleteLabel] = useState<string | null>(null);
+  const [confirmDeleteLabel, setConfirmDeleteLabel] = useState<string | null>(
+    null,
+  );
 
   const [defaultImage, setDefaultImage] = useState<string>('');
   const [images, setImages] = useState<ImageListResponse>({ images: [] });
-  const [cpuLimits, setCpuLimits] = useState<ResourceLimitResponse | null>(null);
+  const [cpuLimits, setCpuLimits] = useState<ResourceLimitResponse | null>(
+    null,
+  );
   const [memoryLimits, setMemoryLimits] = useState<MemoryLimitResponse | null>(
     null,
   );
@@ -81,6 +85,7 @@ export default function ChatSessionManagerWindow({
     null,
   );
   const [createDefaultsLoaded, setCreateDefaultsLoaded] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileEntry | null>(null);
@@ -91,27 +96,30 @@ export default function ChatSessionManagerWindow({
   const [activeTab, setActiveTab] = useState<TabType>('info');
 
   const selectedSession = useMemo(
-    () => sessions.find((s) => s.label === selectedLabel) ?? null,
+    () => sessions.find((s) => s.name === selectedLabel) ?? null,
     [selectedLabel, sessions],
   );
 
   // 编辑 tab 只有在有文件被选中时才启用
   const isEditorTabEnabled = !!selectedFile && !selectedFile.isDirectory;
 
-  const handleTabChange = useCallback((newTab: TabType) => {
-    // 如果编辑 tab 未启用，不允许切换
-    if (newTab === 'editor' && !isEditorTabEnabled) return;
-    setActiveTab(newTab);
-  }, [isEditorTabEnabled]);
+  const handleTabChange = useCallback(
+    (newTab: TabType) => {
+      // 如果编辑 tab 未启用，不允许切换
+      if (newTab === 'editor' && !isEditorTabEnabled) return;
+      setActiveTab(newTab);
+    },
+    [isEditorTabEnabled],
+  );
 
   const loadSessions = useCallback(async () => {
     setLoadingSessions(true);
     try {
-      const s = await getChatDockerSessions(chatId);
+      const s = await listChatContainers(chatId);
       setSessions(s);
       setSelectedLabel((prev) => {
-        if (prev && s.some((x) => x.label === prev)) return prev;
-        return s.length > 0 ? s[0].label : null;
+        if (prev && s.some((x) => x.name === prev)) return prev;
+        return s.length > 0 ? s[0].name : null;
       });
     } finally {
       setLoadingSessions(false);
@@ -119,18 +127,23 @@ export default function ChatSessionManagerWindow({
   }, [chatId]);
 
   const loadCreateDefaults = useCallback(async () => {
-    const [img, list, cpu, mem, net] = await Promise.all([
-      getDockerDefaultImage(),
-      getDockerImages(),
-      getDockerCpuLimits(),
-      getDockerMemoryLimits(),
-      getDockerNetworkModes(),
-    ]);
-    setDefaultImage(img.defaultImage);
-    setImages(list);
-    setCpuLimits(cpu);
-    setMemoryLimits(mem);
-    setNetworkModes(net);
+    const templates = await listContainerTemplates();
+    const first = templates[0];
+    setDefaultImage(first?.image ?? 'code-interpreter:latest');
+    setImages({ images: templates.map((x) => x.image) });
+    setCpuLimits(
+      first ? { defaultValue: first.cpuCores, maxValue: first.cpuCores } : null,
+    );
+    setMemoryLimits(
+      first
+        ? { defaultBytes: first.memoryBytes, maxBytes: first.memoryBytes }
+        : null,
+    );
+    setNetworkModes({
+      defaultNetworkMode: first?.backendNetworkName ?? 'bridge',
+      maxAllowedNetworkMode: '*',
+      allowedNetworkModes: ['none', 'bridge', 'host'],
+    });
     setCreateDefaultsLoaded(true);
   }, []);
 
@@ -156,10 +169,10 @@ export default function ChatSessionManagerWindow({
   }, [createDefaultsLoaded, loadCreateDefaults, mode, open]);
 
   const handleCreate = useCallback(
-    async (req: CreateDockerSessionRequest) => {
-      const created = await createChatDockerSession(chatId, req);
+    async (req: CreateContainerSessionRequest) => {
+      const created = await createChatContainer(chatId, req);
       setSessions((prev) => [...prev, created]);
-      setSelectedLabel(created.label);
+      setSelectedLabel(created.name);
       setMode('view');
     },
     [chatId],
@@ -167,17 +180,17 @@ export default function ChatSessionManagerWindow({
 
   const handleDelete = useCallback(
     async (label: string) => {
-      const session = sessions.find((s) => s.label === label);
+      const session = sessions.find((s) => s.name === label);
       if (!session) return;
       setDeletingLabel(label);
       try {
-        await deleteChatDockerSession(chatId, session.encryptedSessionId);
+        await deleteChatContainer(chatId, session.encryptedId);
         // 请求成功，直接更新前端列表
-        setSessions((prev) => prev.filter((s) => s.label !== label));
+        setSessions((prev) => prev.filter((s) => s.name !== label));
         if (selectedLabel === label) {
           setSelectedLabel((prev) => {
-            const remaining = sessions.filter((s) => s.label !== label);
-            return remaining.length > 0 ? remaining[0].label : null;
+            const remaining = sessions.filter((s) => s.name !== label);
+            return remaining.length > 0 ? remaining[0].name : null;
           });
         }
       } catch {
@@ -193,14 +206,67 @@ export default function ChatSessionManagerWindow({
   );
 
   const showEmpty = !loadingSessions && sessions.length === 0;
+  const toggleSharing = useCallback(async () => {
+    if (!selectedSession || !selectedSession.isPermanent || sharing) return;
+    setSharing(true);
+    try {
+      if (selectedSession.grantedChatIds.includes(chatId))
+        await revokeContainerFromChat(selectedSession.encryptedId, chatId);
+      else await grantContainerToChat(selectedSession.encryptedId, chatId);
+      await loadSessions();
+    } finally {
+      setSharing(false);
+    }
+  }, [chatId, loadSessions, selectedSession, sharing]);
 
-  const tabs = useMemo(() => [
-    { id: 'info' as TabType, label: t('Basic Info'), icon: <IconInfo size={18} />, disabled: false },
-    { id: 'env' as TabType, label: t('Environment Variables'), icon: <IconSettings size={18} />, disabled: false },
-    { id: 'command' as TabType, label: t('Run command'), icon: <IconBolt size={18} />, disabled: false },
-    { id: 'files' as TabType, label: t('File manager'), icon: <IconFolder size={18} />, disabled: false },
-    { id: 'editor' as TabType, label: t('File editor'), icon: <IconEdit size={18} />, disabled: !isEditorTabEnabled },
-  ], [isEditorTabEnabled, t]);
+  const toggleRunning = useCallback(async () => {
+    if (!selectedSession || sharing) return;
+    setSharing(true);
+    try {
+      if (selectedSession.isStopped)
+        await startContainer(selectedSession.encryptedId);
+      else await stopContainer(selectedSession.encryptedId);
+      await loadSessions();
+    } finally {
+      setSharing(false);
+    }
+  }, [loadSessions, selectedSession, sharing]);
+
+  const tabs = useMemo(
+    () => [
+      {
+        id: 'info' as TabType,
+        label: t('Basic Info'),
+        icon: <IconInfo size={18} />,
+        disabled: false,
+      },
+      {
+        id: 'env' as TabType,
+        label: t('Environment Variables'),
+        icon: <IconSettings size={18} />,
+        disabled: false,
+      },
+      {
+        id: 'command' as TabType,
+        label: t('Run command'),
+        icon: <IconBolt size={18} />,
+        disabled: false,
+      },
+      {
+        id: 'files' as TabType,
+        label: t('File manager'),
+        icon: <IconFolder size={18} />,
+        disabled: false,
+      },
+      {
+        id: 'editor' as TabType,
+        label: t('File editor'),
+        icon: <IconEdit size={18} />,
+        disabled: !isEditorTabEnabled,
+      },
+    ],
+    [isEditorTabEnabled, t],
+  );
 
   return (
     <FloatingWindow
@@ -227,24 +293,24 @@ export default function ChatSessionManagerWindow({
             <>
               {sessions.map((s) => (
                 <div
-                  key={s.encryptedSessionId}
+                  key={s.encryptedId}
                   className={cn(
                     'shrink-0 h-8 rounded-md border text-sm flex items-center',
-                    selectedLabel === s.label
+                    selectedLabel === s.name
                       ? 'bg-accent'
                       : 'bg-background hover:bg-accent/60',
                   )}
                 >
-                  {confirmDeleteLabel === s.label ? (
+                  {confirmDeleteLabel === s.name ? (
                     <div className="flex items-center px-2 gap-1">
-                      <span className="text-xs mr-1">{s.label}</span>
+                      <span className="text-xs mr-1">{s.name}</span>
                       <button
                         className="p-1 hover:bg-accent rounded"
-                        onClick={() => handleDelete(s.label)}
-                        disabled={deletingLabel === s.label}
+                        onClick={() => handleDelete(s.name)}
+                        disabled={deletingLabel === s.name}
                         title={t('Confirm')}
                       >
-                        {deletingLabel === s.label ? (
+                        {deletingLabel === s.name ? (
                           <IconLoader size={14} />
                         ) : (
                           <IconCheck size={14} />
@@ -253,7 +319,7 @@ export default function ChatSessionManagerWindow({
                       <button
                         className="p-1 hover:bg-accent rounded"
                         onClick={() => setConfirmDeleteLabel(null)}
-                        disabled={deletingLabel === s.label}
+                        disabled={deletingLabel === s.name}
                         title={t('Cancel')}
                       >
                         <IconX size={14} />
@@ -264,20 +330,20 @@ export default function ChatSessionManagerWindow({
                       <button
                         className="h-full px-3"
                         onClick={() => {
-                          setSelectedLabel(s.label);
+                          setSelectedLabel(s.name);
                           setMode('view');
                           setActiveFilePath(null);
                           setActiveTab('info');
                         }}
                         title={s.image}
                       >
-                        {s.label}
+                        {s.name}
                       </button>
                       <button
                         className="pr-2 pl-1 h-full hover:text-destructive"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setConfirmDeleteLabel(s.label);
+                          setConfirmDeleteLabel(s.name);
                         }}
                         title={t('Delete')}
                       >
@@ -314,7 +380,7 @@ export default function ChatSessionManagerWindow({
                 networkModes={networkModes}
                 onCancel={() => {
                   setMode('view');
-                  setSelectedLabel((prev) => prev ?? sessions[0]?.label ?? null);
+                  setSelectedLabel((prev) => prev ?? sessions[0]?.name ?? null);
                 }}
                 onCreate={handleCreate}
               />
@@ -325,13 +391,50 @@ export default function ChatSessionManagerWindow({
             </div>
           ) : selectedSession ? (
             <div className="h-full flex flex-col">
+              <div className="flex items-center justify-between gap-2 border-b px-3 py-2 text-sm">
+                <span className="text-muted-foreground">
+                  {selectedSession.isPermanent
+                    ? t('Permanent Docker')
+                    : t('Temporary Docker')}{' '}
+                  · {selectedSession.isStopped ? t('Stopped') : t('Running')}
+                </span>
+                <div className="flex gap-2">
+                  {selectedSession.isPermanent && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={sharing}
+                      onClick={() => toggleSharing().catch(() => null)}
+                    >
+                      {selectedSession.grantedChatIds.includes(chatId)
+                        ? t('Revoke access')
+                        : t('Allow this chat')}
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={sharing}
+                    onClick={() => toggleRunning().catch(() => null)}
+                  >
+                    {selectedSession.isStopped ? t('Start') : t('Stop')}
+                  </Button>
+                </div>
+              </div>
+              {selectedSession.isStopped && (
+                <div className="px-3 py-2 text-xs text-amber-600 border-b">
+                  {t('Start this Docker to use commands and files.')}
+                </div>
+              )}
               {/* Tab content with animation */}
               <div className="flex-1 overflow-hidden relative">
                 {/* Info tab */}
                 <div
                   className={cn(
                     'h-full overflow-auto p-3 absolute inset-0',
-                    activeTab === 'info' ? 'visible' : 'invisible pointer-events-none',
+                    activeTab === 'info'
+                      ? 'visible'
+                      : 'invisible pointer-events-none',
                   )}
                 >
                   <SessionInfoCard
@@ -345,12 +448,14 @@ export default function ChatSessionManagerWindow({
                 <div
                   className={cn(
                     'h-full overflow-auto p-3 absolute inset-0',
-                    activeTab === 'env' ? 'visible' : 'invisible pointer-events-none',
+                    activeTab === 'env'
+                      ? 'visible'
+                      : 'invisible pointer-events-none',
                   )}
                 >
                   <SessionEnvVarEditor
                     chatId={chatId}
-                    encryptedSessionId={selectedSession.encryptedSessionId}
+                    encryptedId={selectedSession.encryptedId}
                   />
                 </div>
 
@@ -358,12 +463,14 @@ export default function ChatSessionManagerWindow({
                 <div
                   className={cn(
                     'h-full overflow-auto p-3 absolute inset-0',
-                    activeTab === 'command' ? 'visible' : 'invisible pointer-events-none',
+                    activeTab === 'command'
+                      ? 'visible'
+                      : 'invisible pointer-events-none',
                   )}
                 >
                   <SessionCommandRunner
                     chatId={chatId}
-                    encryptedSessionId={selectedSession.encryptedSessionId}
+                    encryptedId={selectedSession.encryptedId}
                     onFinished={(ok) => {
                       if (ok) {
                         setRefreshFilesKey((k) => k + 1);
@@ -377,13 +484,15 @@ export default function ChatSessionManagerWindow({
                 <div
                   className={cn(
                     'h-full overflow-auto p-3 absolute inset-0',
-                    activeTab === 'files' ? 'visible' : 'invisible pointer-events-none',
+                    activeTab === 'files'
+                      ? 'visible'
+                      : 'invisible pointer-events-none',
                   )}
                 >
                   <SessionFileManager
                     ref={fileManagerRef}
                     chatId={chatId}
-                    encryptedSessionId={selectedSession.encryptedSessionId}
+                    encryptedId={selectedSession.encryptedId}
                     refreshKey={refreshFilesKey}
                     onSelectFile={(entry) => {
                       setSelectedFile(entry);
@@ -402,13 +511,15 @@ export default function ChatSessionManagerWindow({
                 <div
                   className={cn(
                     'h-full overflow-auto p-3 absolute inset-0',
-                    activeTab === 'editor' ? 'visible' : 'invisible pointer-events-none',
+                    activeTab === 'editor'
+                      ? 'visible'
+                      : 'invisible pointer-events-none',
                   )}
                 >
                   {activeFilePath ? (
                     <SessionFileEditor
                       chatId={chatId}
-                      encryptedSessionId={selectedSession.encryptedSessionId}
+                      encryptedId={selectedSession.encryptedId}
                       path={activeFilePath}
                       onSaved={() => {
                         setRefreshFilesKey((k) => k + 1);

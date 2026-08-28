@@ -34,11 +34,11 @@ public partial class ChatTurn
     [InverseProperty("ChatTurns")]
     public virtual ChatConfigSnapshot? ChatConfigSnapshot { get; set; }
 
-    [InverseProperty("OwnerTurn")]
-    public virtual ICollection<ChatDockerSession> ChatDockerSessions { get; set; } = new List<ChatDockerSession>();
-
     [InverseProperty("LeafTurn")]
     public virtual ICollection<Chat> Chats { get; set; } = new List<Chat>();
+
+    [InverseProperty("OwnerTurn")]
+    public virtual ICollection<ContainerResource> ContainerResources { get; set; } = new List<ContainerResource>();
 
     [InverseProperty("Parent")]
     public virtual ICollection<ChatTurn> InverseParent { get; set; } = new List<ChatTurn>();

@@ -2,6 +2,7 @@ using Chats.BE.Controllers.Chats.Chats.Dtos;
 using Chats.BE.DB.Extensions;
 using Chats.BE.Infrastructure.Functional;
 using Chats.BE.Services.FileServices;
+using Chats.BE.Services.Containers;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Neutral;
 using Chats.DB;
@@ -26,7 +27,9 @@ public sealed class CodeInterpreterExecutor(
     IServiceScopeFactory scopeFactory,
     IOptions<CodePodConfig> codePodConfig,
     IOptions<CodeInterpreterOptions> options,
-    ILogger<CodeInterpreterExecutor> logger)
+    ILogger<CodeInterpreterExecutor> logger,
+    ChatsDB? db = null,
+    ContainerBackendFactory? backends = null)
 {
     private static readonly AttributedToolRegistry _toolRegistry = new(typeof(CodeInterpreterExecutor));
     internal const string ViewImageToolName = "view_image";
@@ -39,6 +42,8 @@ public sealed class CodeInterpreterExecutor(
     private readonly CodePodConfig _codePodConfig = codePodConfig.Value;
     private readonly CodeInterpreterOptions _options = options.Value;
     private readonly ILogger<CodeInterpreterExecutor> _logger = logger;
+    private readonly ChatsDB? _db = db;
+    private readonly ContainerBackendFactory? _backends = backends;
 
     public sealed record PendingFileArtifact(string SourcePath, string FileName, string ContentType, byte[] Bytes);
 
@@ -61,18 +66,21 @@ public sealed class CodeInterpreterExecutor(
 
     private Dictionary<string, string> BuildPlaceholderReplacements()
     {
-        ResourceLimits defaultLimits = _options.BuildDefaultResourceLimits();
-        string defaultMemoryBytesStr = FormatDefaultMemoryBytes(defaultLimits.MemoryBytes);
-        string defaultCpuCoresStr = FormatDefaultCpuCores(defaultLimits.CpuCores);
-        string defaultMaxProcessesStr = FormatDefaultMaxProcesses(defaultLimits.MaxProcesses);
-        string networkModeStr = _options.GetDefaultNetworkMode().ToString().ToLowerInvariant();
-        string allowedNetworkModesStr = _options.GetAllowedNetworkModesDisplay();
+        string defaultMemoryBytesStr = "template-defined";
+        string defaultCpuCoresStr = "template-defined";
+        string defaultMaxProcessesStr = "template-defined";
         string timeoutStr = _options.DefaultTimeoutSeconds?.ToString() ?? "unlimited";
 
-        string defaultImageDisplay = _options.DefaultImage;
-        if (!string.IsNullOrWhiteSpace(_options.DefaultImageDescription))
+        string defaultImageDisplay = "code-interpreter:latest";
+        if (_db is not null)
         {
-            defaultImageDisplay = $"{defaultImageDisplay} ({_options.DefaultImageDescription})";
+            string? catalogDefault = _db.ContainerResourceTemplates
+                .AsNoTracking()
+                .Where(x => (x.Visibility & 2) != 0)
+                .OrderBy(x => x.Name)
+                .Select(x => x.Image)
+                .FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(catalogDefault)) defaultImageDisplay = catalogDefault;
         }
 
         return new Dictionary<string, string>(StringComparer.Ordinal)
@@ -81,8 +89,6 @@ public sealed class CodeInterpreterExecutor(
             ["{defaultMemoryBytes}"] = defaultMemoryBytesStr,
             ["{defaultCpuCores}"] = defaultCpuCoresStr,
             ["{defaultMaxProcesses}"] = defaultMaxProcessesStr,
-            ["{defaultNetworkMode}"] = networkModeStr,
-            ["{allowedNetworkModes}"] = allowedNetworkModesStr,
             ["{defaultImage}"] = defaultImageDisplay,
         };
     }
@@ -150,6 +156,19 @@ public sealed class CodeInterpreterExecutor(
     public bool IsCodeInterpreterTool(string toolName)
         => _toolRegistry.Contains(toolName);
 
+    [ToolFunction("List Docker resources authorized for this chat")]
+    internal async Task<Result<string>> ListAuthorizedDockerResources(TurnContext ctx, CancellationToken cancellationToken)
+    {
+        if (_db is null) return Result.Ok("No persistent container catalog is available.");
+        List<ContainerResource> resources = await _db.ContainerResources
+            .Where(x => x.OwnerUserId == ctx.CurrentAssistantTurn.Chat.UserId && x.IsPermanent && x.DeletedAt == null && x.StoppedAt == null &&
+                (x.OwnerChatId == ctx.CurrentAssistantTurn.ChatId || x.ChatContainerResourceAccesses.Any(a => a.ChatId == ctx.CurrentAssistantTurn.ChatId)))
+            .OrderBy(x => x.Name)
+            .ToListAsync(cancellationToken);
+        if (resources.Count == 0) return Result.Ok("No running permanent Docker resources are authorized for this chat.");
+        return Result.Ok(string.Join("\n", resources.Select(x => $"{x.Name}: image={x.Image}, network={x.BackendNetworkName ?? "default"}, containerId={x.BackendResourceId}")));
+    }
+
     public NeutralSystemMessage BuildSystemMessage(string? existingSystemPrompt)
     {
         StringBuilder sb = new();
@@ -165,6 +184,37 @@ public sealed class CodeInterpreterExecutor(
         sb.AppendLine("- Call create_docker_session to get a sessionId.");
 
         return NeutralSystemMessage.FromText(sb.ToString());
+    }
+
+    public async Task<NeutralSystemMessage> BuildSystemMessageAsync(string? existingSystemPrompt, int userId, CancellationToken cancellationToken = default)
+    {
+        NeutralSystemMessage message = BuildSystemMessage(existingSystemPrompt);
+        if (_db is null) return message;
+
+        List<string> lines = [];
+        List<ContainerImage> images = await _db.ContainerImages.Where(x => x.IsEnabled).OrderBy(x => x.Image).ToListAsync(cancellationToken);
+        if (images.Count > 0)
+        {
+            lines.Add("Available Docker images:");
+            lines.AddRange(images.Select(x => $"- {x.Image}: {x.Description ?? "no description"}"));
+        }
+        List<ContainerResourceTemplate> templates = await _db.ContainerResourceTemplates
+            .Include(x => x.RuntimeNode)
+            .Where(x => (x.Visibility & 2) != 0)
+            .OrderBy(x => x.Name)
+            .ToListAsync(cancellationToken);
+        if (templates.Count > 0)
+        {
+            lines.Add("AI-visible container templates:");
+            lines.AddRange(templates.Select(x => $"- {x.Name}: image={x.Image}, runtime={x.RuntimeNode.AIName}, cpu={x.CpuCores:0.##}, memory={x.MemoryBytes}, maxProcesses={x.MaxProcesses}, network={x.BackendNetworkName ?? "default"}"));
+        }
+        UserContainerQuotum? quota = await _db.UserContainerQuota.FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken)
+            ?? await _db.UserContainerQuota.FirstOrDefaultAsync(x => x.UserId == null, cancellationToken);
+        lines.Add(quota?.AllowCustomImage == true
+            ? "Custom images are allowed in addition to the catalog."
+            : "Only images listed in the catalog may be used; custom images are not allowed.");
+        if (lines.Count == 0) return message;
+        return NeutralSystemMessage.FromText((message.GetCombinedText() ?? string.Empty) + "\n" + string.Join("\n", lines));
     }
 
     public string? BuildCloudFilesContextPrefix(IEnumerable<Step> messageSteps)
@@ -192,9 +242,9 @@ public sealed class CodeInterpreterExecutor(
     internal static string? BuildCodeInterpreterContextPrefix(IEnumerable<ChatTurn> messageTurns, DateTime utcNow)
     {
         List<DBFile> cloudFiles = CollectCloudFiles(messageTurns.SelectMany(t => t.Steps));
-        List<ChatDockerSession> activeSessions = CollectActiveSessions(messageTurns, utcNow);
+        List<ContainerExecutionContext> activeResources = CollectActiveSessions(messageTurns, utcNow);
 
-        if (cloudFiles.Count == 0 && activeSessions.Count == 0)
+        if (cloudFiles.Count == 0 && activeResources.Count == 0)
         {
             return null;
         }
@@ -212,12 +262,12 @@ public sealed class CodeInterpreterExecutor(
             sb.AppendLine();
         }
 
-        if (activeSessions.Count > 0)
+        if (activeResources.Count > 0)
         {
             sb.AppendLine("[Active Docker Sessions]");
-            foreach (ChatDockerSession s in activeSessions)
+            foreach (ContainerExecutionContext s in activeResources)
             {
-                sb.AppendLine($"- {s.AIReableDockerInfo}");
+                sb.AppendLine($"- {s.AIReadableDockerInfo}");
             }
             sb.AppendLine("Use the sessionId above when calling code interpreter tools.");
         }
@@ -261,7 +311,7 @@ public sealed class CodeInterpreterExecutor(
 
         public sealed class SessionState
         {
-            public required ChatDockerSession DbSession { get; init; }
+            public required ContainerExecutionContext DbSession { get; init; }
             public required string[] ShellPrefix { get; init; }
             public Dictionary<string, FileEntry> ArtifactsSnapshot { get; set; } = new(StringComparer.Ordinal);
             public bool SnapshotTaken { get; set; }
@@ -270,6 +320,26 @@ public sealed class CodeInterpreterExecutor(
             public HashSet<string> PendingArtifactPaths { get; } = new(StringComparer.Ordinal);
             public long PendingArtifactsBytesThisTurn { get; set; }
         }
+    }
+
+    public sealed class ContainerExecutionContext
+    {
+        public required ContainerResource Resource { get; init; }
+        public long Id => Resource.Id;
+        public string ContainerId => Resource.BackendResourceId;
+        public string Label => Resource.Name;
+        public string Image => Resource.Image;
+        public string? ShellPrefix => Resource.ShellPrefix;
+        public string? Ip => Resource.Ip;
+        public float? CpuCores => Resource.CpuCores;
+        public long? MemoryBytes => Resource.MemoryBytes;
+        public int? MaxProcesses => Resource.MaxProcesses;
+        public DateTime CreatedAt => Resource.CreatedAt;
+        public DateTime? LastActiveAt => Resource.LastActiveAt;
+        public DateTime? ExpiresAt => Resource.CleanupAt;
+        public DateTime? TerminatedAt => Resource.DeletedAt;
+        public bool IsPermanent => Resource.IsPermanent;
+        public string AIReadableDockerInfo => $"{Label}: image={Image}, cpu={CpuCores?.ToString(CultureInfo.InvariantCulture) ?? "unlimited"}, memory={MemoryBytes?.ToString(CultureInfo.InvariantCulture) ?? "unlimited"}, max processes={MaxProcesses?.ToString(CultureInfo.InvariantCulture) ?? "unlimited"}, network={Resource.BackendNetworkName ?? "default"}";
     }
 
     private static string[] ParseShellPrefixCsv(string? csv, bool isWindowsContainer)
@@ -509,118 +579,48 @@ public sealed class CodeInterpreterExecutor(
         double? cpuCores,
         [ToolParam("Max processes (null means use server default: {defaultMaxProcesses}). 0 means unlimited.")]
         long? maxProcesses,
-        [ToolParam("Network mode. One of: {allowedNetworkModes}. null means use server default: {defaultNetworkMode}.")]
-        [EnumDataType(typeof(NetworkMode))]
+        [ToolParam("Network mode name. null means use the template default.")]
         string? networkMode,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
+        [ToolParam("AI runtime node name. null means use the default AI-visible runtime node.")]
+        string? runtimeNode = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         bool hasLabel = !string.IsNullOrWhiteSpace(label);
-
-        // Reuse from in-memory first (only possible when label provided).
         if (hasLabel && ctx.SessionsBySessionId.TryGetValue(label!, out TurnContext.SessionState? existing))
         {
             existing.UsedInThisTurn = true;
-            yield return new ToolCompletedToolProgressDelta { Result = Result.Ok(existing.DbSession.AIReableDockerInfo) };
+            yield return new ToolCompletedToolProgressDelta { Result = Result.Ok(existing.DbSession.AIReadableDockerInfo) };
             yield break;
         }
 
-        // Resolve from DB along the ParentId chain of the current generating turn.
-        DateTime nowUtc = DateTime.UtcNow;
-        ChatDockerSession? dbSession = null;
+        if (_db is null || _backends is null)
+        {
+            yield return new ToolCompletedToolProgressDelta { Result = Result.Fail<string>("Container resource catalog is unavailable.") };
+            yield break;
+        }
+
         if (hasLabel)
         {
-            dbSession = ctx.MessageTurns
-                .SelectMany(t => t.ChatDockerSessions)
-                .LastOrDefault(s => s.TerminatedAt == null && s.ExpiresAt > nowUtc && s.Label == label);
-        }
-
-        if (dbSession == null)
-        {
-            // Build effective limits/network mode.
-            ResourceLimits limits = _options.BuildDefaultResourceLimits();
-            ResourceLimits max = _options.BuildMaxResourceLimits();
-            limits.Validate(max);
-
-            NetworkMode effectiveNetworkMode = _options.GetDefaultNetworkMode();
-            if (!string.IsNullOrWhiteSpace(networkMode))
+            ContainerResource? existingResource = await _db.ContainerResources.AsNoTracking()
+                .Where(x => x.OwnerUserId == ctx.CurrentAssistantTurn.Chat.UserId && x.Name == label && x.DeletedAt == null && x.StoppedAt == null &&
+                    (x.IsPermanent && (x.OwnerChatId == ctx.CurrentAssistantTurn.ChatId || x.ChatContainerResourceAccesses.Any(a => a.ChatId == ctx.CurrentAssistantTurn.ChatId))))
+                .OrderByDescending(x => x.Id).FirstOrDefaultAsync(cancellationToken);
+            if (existingResource is not null)
             {
-                effectiveNetworkMode = ParseNetworkMode(networkMode);
-            }
-
-            NetworkMode maxAllowedNetworkMode = _options.GetMaxAllowedNetworkMode();
-            if ((int)effectiveNetworkMode > (int)maxAllowedNetworkMode)
-            {
-                string allowed = _options.GetAllowedNetworkModesDisplay();
-                yield return new ToolCompletedToolProgressDelta
-                {
-                    Result = Result.Fail<string>(
-                        $"Requested networkMode '{effectiveNetworkMode.ToString().ToLowerInvariant()}' exceeds MaxAllowedNetworkMode " +
-                        $"'{maxAllowedNetworkMode.ToString().ToLowerInvariant()}'. Allowed: {allowed}.")
-                };
+                ContainerExecutionContext stateResource = new() { Resource = existingResource };
+                ctx.SessionsBySessionId[label!] = new TurnContext.SessionState { DbSession = stateResource, ShellPrefix = ParseShellPrefixCsv(existingResource.ShellPrefix, _codePodConfig.IsWindowsContainer), UsedInThisTurn = true };
+                yield return new ToolCompletedToolProgressDelta { Result = Result.Ok(stateResource.AIReadableDockerInfo) };
                 yield break;
             }
-
-            if (memoryBytes != null || cpuCores != null || maxProcesses != null)
-            {
-                limits = MergeLimitsWithDefaults(memoryBytes, cpuCores, maxProcesses);
-                limits.Validate(max);
-            }
-
-            string effectiveImage = string.IsNullOrWhiteSpace(image) ? _options.DefaultImage : image;
-
-            // 流式输出镜像拉取进度
-            await foreach (CommandOutputEvent ev in _docker.EnsureImageAsync(effectiveImage, cancellationToken))
-            {
-                switch (ev)
-                {
-                    case CommandStdoutEvent o:
-                        yield return new StdOutToolProgressDelta { StdOutput = o.Data };
-                        break;
-                    case CommandStderrEvent e:
-                        yield return new StdErrorToolProgressDelta { StdError = e.Data };
-                        break;
-                }
-            }
-
-            ContainerInfo container = await _docker.CreateContainerCoreAsync(effectiveImage, limits, effectiveNetworkMode, cancellationToken);
-
-            if (!hasLabel)
-            {
-                label = ComputeSessionIdFromContainerId(container.ContainerId);
-
-                // Ultra defensive: avoid collisions (extremely unlikely).
-                if (ctx.SessionsBySessionId.ContainsKey(label))
-                {
-                    label = $"{label}{GenerateAlphaFirstToken(4)}";
-                }
-            }
-
-            DateTime now = nowUtc;
-            dbSession = new ChatDockerSession
-            {
-                OwnerTurnId = ctx.CurrentAssistantTurn.Id,
-                OwnerChatId = ctx.CurrentAssistantTurn.ChatId,
-                Label = label!,
-                ContainerId = container.ContainerId,
-                Image = effectiveImage,
-                ShellPrefix = ToShellPrefixCsv(container.ShellPrefix),
-                Ip = container.Ip,
-                MemoryBytes = limits.MemoryBytes == 0 ? null : limits.MemoryBytes,
-                CpuCores = limits.CpuCores == 0 ? null : (float)limits.CpuCores,
-                MaxProcesses = limits.MaxProcesses == 0 ? null : (short)Math.Min(short.MaxValue, limits.MaxProcesses),
-                NetworkMode = (byte)effectiveNetworkMode,
-                CreatedAt = now,
-                LastActiveAt = now,
-                ExpiresAt = now.AddSeconds(_options.SessionIdleTimeoutSeconds),
-            };
-
-            using (IServiceScope scope = _scopeFactory.CreateScope())
-            {
-                ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
-                db.ChatDockerSessions.Add(dbSession);
-                await db.SaveChangesAsync(cancellationToken);
-            }
         }
+
+        ContainerExecutionContext? dbSession = await CreateContainerResourceAsync(ctx, image, label, memoryBytes, cpuCores, maxProcesses, networkMode, runtimeNode, cancellationToken);
+        if (dbSession is null)
+        {
+            yield return new ToolCompletedToolProgressDelta { Result = Result.Fail<string>("Failed to create container resource.") };
+            yield break;
+        }
+        label ??= dbSession.Label;
 
         TurnContext.SessionState state = new()
         {
@@ -636,7 +636,7 @@ public sealed class CodeInterpreterExecutor(
             state.SnapshotTaken = true;
         }
 
-        string info = dbSession.AIReableDockerInfo;
+        string info = dbSession.AIReadableDockerInfo;
         try
         {
             // Try to read skills.md for the AI model (only for newly created/loaded sessions)
@@ -669,6 +669,17 @@ public sealed class CodeInterpreterExecutor(
         }
         TurnContext.SessionState state = ensureResult.Value!;
 
+        if (_db is not null)
+        {
+            ContainerResource? resource = await _db.ContainerResources
+                .AsNoTracking()
+                .SingleOrDefaultAsync(x => x.BackendResourceId == state.DbSession.ContainerId && x.DeletedAt == null, cancellationToken);
+            if (resource?.IsPermanent == true)
+            {
+                return Result.Fail<string>("AI cannot destroy a permanent Docker resource; stop or delete it from the user interface.");
+            }
+        }
+
         try
         {
             await _docker.DeleteContainerAsync(state.DbSession.ContainerId, cancellationToken);
@@ -678,8 +689,7 @@ public sealed class CodeInterpreterExecutor(
             // best-effort
         }
 
-        state.DbSession.TerminatedAt = DateTime.UtcNow;
-        await TerminateSession(state.DbSession.Id, cancellationToken);
+        await DeleteResourceRecordAsync(state.DbSession.Resource.Id, cancellationToken);
 
         ctx.SessionsBySessionId.Remove(sessionId);
 
@@ -774,7 +784,7 @@ public sealed class CodeInterpreterExecutor(
         // RunCommand 只负责把 CommandExitEvent 格式化为旧 run_command 的文本输出。
         string output = CommandExitEventFormatter.FormatForRunCommand(exit);
 
-        await TouchSession(state.DbSession.Id, cancellationToken);
+        await TouchResourceAsync(state.DbSession.Id, cancellationToken);
         await SyncArtifactsAfterToolCall(ctx, state, cancellationToken);
 
         yield return new ToolCompletedToolProgressDelta
@@ -805,7 +815,7 @@ public sealed class CodeInterpreterExecutor(
         string resolvedPath = ResolveContainerPath(path);
         byte[] bytes = Encoding.UTF8.GetBytes(text);
         await _docker.UploadFileAsync(state.DbSession.ContainerId, resolvedPath, bytes, cancellationToken);
-        await TouchSession(state.DbSession.Id, cancellationToken);
+        await TouchResourceAsync(state.DbSession.Id, cancellationToken);
 
         await SyncArtifactsAfterToolCall(ctx, state, cancellationToken);
 
@@ -853,7 +863,7 @@ public sealed class CodeInterpreterExecutor(
             downloaded.Add(file);
         }
 
-        await TouchSession(state.DbSession.Id, cancellationToken);
+        await TouchResourceAsync(state.DbSession.Id, cancellationToken);
 
         if (downloaded.Count == 0)
         {
@@ -959,7 +969,7 @@ public sealed class CodeInterpreterExecutor(
         state.PendingArtifacts.Add(new PendingFileArtifact(resolvedPath, fileName, contentType, bytes));
         state.PendingArtifactsBytesThisTurn += bytes.Length;
 
-        await TouchSession(state.DbSession.Id, cancellationToken);
+        await TouchResourceAsync(state.DbSession.Id, cancellationToken);
 
         return Result.Ok(string.Empty);
     }
@@ -982,14 +992,16 @@ public sealed class CodeInterpreterExecutor(
         return [.. result.Values];
     }
 
-    internal static List<ChatDockerSession> CollectActiveSessions(IEnumerable<ChatTurn> turns, DateTime utcNow)
+    internal static List<ContainerExecutionContext> CollectActiveSessions(IEnumerable<ChatTurn> turns, DateTime utcNow)
     {
-        Dictionary<string, ChatDockerSession> byLabel = new(StringComparer.Ordinal);
+        Dictionary<string, ContainerExecutionContext> byLabel = new(StringComparer.Ordinal);
 
-        foreach (ChatDockerSession s in turns.SelectMany(t => t.ChatDockerSessions))
+        foreach (ContainerResource resource in turns.SelectMany(t => t.ContainerResources))
         {
+            ContainerExecutionContext s = new() { Resource = resource };
             if (string.IsNullOrWhiteSpace(s.Label)) continue;
             if (s.TerminatedAt != null) continue;
+            if (resource.StoppedAt != null) continue;
             if (s.ExpiresAt <= utcNow) continue;
 
             // keep the last one by traversal order
@@ -1009,13 +1021,25 @@ public sealed class CodeInterpreterExecutor(
         if (!ctx.SessionsBySessionId.TryGetValue(sessionId, out TurnContext.SessionState? state))
         {
             // First, check if session exists (regardless of state)
-            ChatDockerSession? dbSession = ctx.MessageTurns
-                .SelectMany(t => t.ChatDockerSessions)
-                .LastOrDefault(s => s.Label == sessionId);
+            ContainerExecutionContext? dbSession = ctx.MessageTurns
+                .SelectMany(t => t.ContainerResources)
+                .Where(s => s.Name == sessionId)
+                .Select(s => new ContainerExecutionContext { Resource = s })
+                .LastOrDefault();
 
             if (dbSession == null)
             {
-                return Result.Fail<TurnContext.SessionState>($"Session not found in this turn: {sessionId}. Call create_docker_session first.");
+                if (_db is not null)
+                {
+                    long[] turnIds = ctx.MessageTurns.Select(x => x.Id).ToArray();
+                    ContainerResource? modern = await _db.ContainerResources
+                        .AsNoTracking()
+                        .Where(x => x.OwnerUserId == ctx.CurrentAssistantTurn.Chat.UserId && x.DeletedAt == null && x.StoppedAt == null && x.Name == sessionId && turnIds.Contains(x.OwnerTurnId ?? -1))
+                        .OrderByDescending(x => x.Id)
+                        .FirstOrDefaultAsync(cancellationToken);
+                    if (modern is not null) dbSession = new ContainerExecutionContext { Resource = modern };
+                }
+                if (dbSession == null) return Result.Fail<TurnContext.SessionState>($"Session not found in this turn: {sessionId}. Call create_docker_session first.");
             }
 
             DateTime nowUtc = DateTime.UtcNow;
@@ -1071,72 +1095,122 @@ public sealed class CodeInterpreterExecutor(
         return v[..len];
     }
 
-    private ResourceLimits MergeLimitsWithDefaults(long? memoryBytes, double? cpuCores, long? maxProcesses)
+    private async Task<ContainerExecutionContext> CreateContainerResourceAsync(
+        TurnContext ctx,
+        string? image,
+        string? label,
+        long? memoryBytes,
+        double? cpuCores,
+        long? maxProcesses,
+        string? networkMode,
+        string? runtimeNode,
+        CancellationToken cancellationToken)
     {
-        ResourceLimits defaults = _options.BuildDefaultResourceLimits();
-        ResourceLimits merged = defaults.Clone();
-
-        // null means use server default (not unlimited) per user request.
-        if (memoryBytes != null) merged.MemoryBytes = memoryBytes.Value;
-        if (cpuCores != null) merged.CpuCores = cpuCores.Value;
-        if (maxProcesses != null) merged.MaxProcesses = maxProcesses.Value;
-
-        // If config default is unlimited (0), keep it.
-        return merged;
+        IQueryable<ContainerResourceTemplate> templateQuery = _db!.ContainerResourceTemplates
+            .Include(x => x.RuntimeNode)
+            .Where(x => (x.Visibility & 2) != 0)
+            .OrderBy(x => x.Name);
+        if (!string.IsNullOrWhiteSpace(runtimeNode)) templateQuery = templateQuery.Where(x => x.RuntimeNode.AIName == runtimeNode.Trim());
+        ContainerResourceTemplate template = await templateQuery.FirstOrDefaultAsync(cancellationToken)
+            ?? throw new InvalidOperationException("No AI-visible container template is configured.");
+        UserContainerQuotum? quota = await _db.UserContainerQuota.FirstOrDefaultAsync(x => x.UserId == ctx.CurrentAssistantTurn.Chat.UserId, cancellationToken)
+            ?? await _db.UserContainerQuota.FirstOrDefaultAsync(x => x.UserId == null, cancellationToken);
+        string effectiveImage = string.IsNullOrWhiteSpace(image) ? template.Image : image.Trim();
+        if (quota?.AllowCustomImage == false && !await _db.ContainerImages.AnyAsync(x => x.Image == effectiveImage && x.IsEnabled, cancellationToken))
+            throw new InvalidOperationException("The requested image is not enabled in the image catalog.");
+        string? effectiveNetwork = string.IsNullOrWhiteSpace(networkMode) ? template.BackendNetworkName : networkMode.Trim();
+        if (quota is not null && quota.AllowedNetworkModes != "*")
+        {
+            string[] allowed = quota.AllowedNetworkModes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (effectiveNetwork is not null && !allowed.Contains(effectiveNetwork, StringComparer.OrdinalIgnoreCase))
+                throw new InvalidOperationException("The requested network mode is not allowed for this user.");
+        }
+        ResourceLimits limits = new()
+        {
+            CpuCores = cpuCores ?? template.CpuCores,
+            MemoryBytes = memoryBytes ?? template.MemoryBytes,
+            MaxProcesses = maxProcesses ?? template.MaxProcesses,
+        };
+        IQueryable<ContainerResource> existing = _db.ContainerResources.Where(x => x.OwnerUserId == ctx.CurrentAssistantTurn.Chat.UserId && x.DeletedAt == null);
+        if (quota?.MaxContainerCount is not null && await existing.CountAsync(cancellationToken) + 1 > quota.MaxContainerCount)
+            throw new InvalidOperationException("Container quota exceeded.");
+        if (quota?.MaxContainerCpuCores is not null && limits.CpuCores > quota.MaxContainerCpuCores || quota?.MaxContainerMemoryBytes is not null && limits.MemoryBytes > quota.MaxContainerMemoryBytes || quota?.MaxContainerProcesses is not null && limits.MaxProcesses > quota.MaxContainerProcesses)
+            throw new InvalidOperationException("Per-container quota exceeded.");
+        if (quota?.MaxCpuCores is not null && await existing.Where(x => x.StoppedAt == null).SumAsync(x => (double?)(x.CpuCores ?? 0), cancellationToken) + limits.CpuCores > quota.MaxCpuCores)
+            throw new InvalidOperationException("CPU quota exceeded.");
+        if (quota?.MaxMemoryBytes is not null && await existing.Where(x => x.StoppedAt == null).SumAsync(x => (long?)(x.MemoryBytes ?? 0), cancellationToken) + limits.MemoryBytes > quota.MaxMemoryBytes)
+            throw new InvalidOperationException("Memory quota exceeded.");
+        IDockerService backend = _backends!.Get(template.RuntimeNode);
+        if (!template.RuntimeNode.IsEnabled || template.RuntimeNode.BackendType != 1)
+            throw new InvalidOperationException("The selected runtime node is unavailable.");
+        await foreach (CommandOutputEvent _ in backend.EnsureImageAsync(effectiveImage, cancellationToken)) { }
+        ContainerInfo container = await backend.CreateContainerCoreAsync(effectiveImage, limits, effectiveNetwork, cancellationToken);
+        DateTime now = DateTime.UtcNow;
+        ContainerResource resource = new()
+        {
+            OwnerUserId = ctx.CurrentAssistantTurn.Chat.UserId,
+            OwnerChatId = ctx.CurrentAssistantTurn.ChatId,
+            OwnerTurnId = ctx.CurrentAssistantTurn.Id,
+            RuntimeNodeId = template.RuntimeNodeId,
+            IsPermanent = false,
+            BackendResourceId = container.ContainerId,
+            Ip = container.Ip,
+            Name = string.IsNullOrWhiteSpace(label) ? ComputeSessionIdFromContainerId(container.ContainerId) : label.Trim(),
+            Image = effectiveImage,
+            ShellPrefix = container.ShellPrefix is null ? null : string.Join(',', container.ShellPrefix),
+            CpuCores = limits.CpuCores == 0 ? null : (float)limits.CpuCores,
+            MemoryBytes = limits.MemoryBytes == 0 ? null : limits.MemoryBytes,
+            MaxProcesses = limits.MaxProcesses == 0 ? null : checked((int)limits.MaxProcesses),
+            BackendNetworkName = effectiveNetwork,
+            CreatedAt = now,
+            UpdatedAt = now,
+            LastActiveAt = now,
+            CleanupAt = now.AddSeconds(_options.SessionIdleTimeoutSeconds),
+        };
+        _db.ContainerResources.Add(resource);
+        await _db.SaveChangesAsync(cancellationToken);
+        return new ContainerExecutionContext { Resource = resource };
     }
 
-    private async Task TouchSession(long dockerSessionId, CancellationToken cancellationToken)
+    private async Task TouchResourceAsync(long resourceId, CancellationToken cancellationToken)
+    {
+        DateTime now = DateTime.UtcNow;
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
+        if (db.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+        {
+            ContainerResource? resource = await db.ContainerResources.FirstOrDefaultAsync(x => x.Id == resourceId, cancellationToken);
+            if (resource is null) return;
+            resource.LastActiveAt = now;
+            resource.UpdatedAt = now;
+            if (!resource.IsPermanent) resource.CleanupAt = now.AddSeconds(_options.SessionIdleTimeoutSeconds);
+            await db.SaveChangesAsync(cancellationToken);
+            return;
+        }
+        await db.ContainerResources.Where(x => x.Id == resourceId && x.DeletedAt == null)
+            .ExecuteUpdateAsync(x => x.SetProperty(v => v.LastActiveAt, now).SetProperty(v => v.UpdatedAt, now)
+                .SetProperty(v => v.CleanupAt, now.AddSeconds(_options.SessionIdleTimeoutSeconds)), cancellationToken);
+    }
+
+    private async Task DeleteResourceRecordAsync(long resourceId, CancellationToken cancellationToken)
     {
         DateTime now = DateTime.UtcNow;
         using IServiceScope scope = _scopeFactory.CreateScope();
         ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
 
-        // In-Memory provider doesn't support ExecuteUpdateAsync, use fallback
         if (db.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
         {
-            ChatDockerSession? session = await db.ChatDockerSessions
-                .FirstOrDefaultAsync(x => x.Id == dockerSessionId, cancellationToken);
-            if (session != null)
+            ContainerResource? resource = await db.ContainerResources.FirstOrDefaultAsync(x => x.Id == resourceId, cancellationToken);
+            if (resource is not null)
             {
-                session.LastActiveAt = now;
-                session.ExpiresAt = now.AddSeconds(_options.SessionIdleTimeoutSeconds);
+                resource.DeletedAt = now;
+                resource.UpdatedAt = now;
                 await db.SaveChangesAsync(cancellationToken);
             }
+            return;
         }
-        else
-        {
-            await db.ChatDockerSessions
-                .Where(x => x.Id == dockerSessionId)
-                .ExecuteUpdateAsync(x => x
-                    .SetProperty(v => v.LastActiveAt, now)
-                    .SetProperty(v => v.ExpiresAt, now.AddSeconds(_options.SessionIdleTimeoutSeconds)), cancellationToken);
-        }
-    }
-
-    private async Task TerminateSession(long dockerSessionId, CancellationToken cancellationToken)
-    {
-        DateTime now = DateTime.UtcNow;
-        using IServiceScope scope = _scopeFactory.CreateScope();
-        ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
-
-        // In-Memory provider doesn't support ExecuteUpdateAsync, use fallback
-        if (db.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
-        {
-            ChatDockerSession? session = await db.ChatDockerSessions
-                .FirstOrDefaultAsync(x => x.Id == dockerSessionId, cancellationToken);
-            if (session != null)
-            {
-                session.TerminatedAt = now;
-                await db.SaveChangesAsync(cancellationToken);
-            }
-        }
-        else
-        {
-            await db.ChatDockerSessions
-                .Where(x => x.Id == dockerSessionId)
-                .ExecuteUpdateAsync(x => x
-                    .SetProperty(v => v.TerminatedAt, now), cancellationToken);
-        }
+        await db.ContainerResources.Where(x => x.Id == resourceId && x.DeletedAt == null)
+            .ExecuteUpdateAsync(x => x.SetProperty(v => v.DeletedAt, now).SetProperty(v => v.UpdatedAt, now), cancellationToken);
     }
 
     private async Task<Dictionary<string, FileEntry>> SnapshotArtifacts(string containerId, CancellationToken cancellationToken)
@@ -1237,22 +1311,6 @@ public sealed class CodeInterpreterExecutor(
     {
         FileExtensionContentTypeProvider p = new();
         return p.TryGetContentType(fileName, out string? ct) ? ct! : "application/octet-stream";
-    }
-
-    private static NetworkMode ParseNetworkMode(string v)
-    {
-        if (string.IsNullOrWhiteSpace(v))
-        {
-            throw new InvalidOperationException("networkMode must be a string: none|bridge|host");
-        }
-
-        return v.Trim().ToLowerInvariant() switch
-        {
-            "none" => NetworkMode.None,
-            "bridge" => NetworkMode.Bridge,
-            "host" => NetworkMode.Host,
-            _ => throw new InvalidOperationException($"Invalid networkMode '{v}'. Expected: none|bridge|host")
-        };
     }
 
     private static string GenerateAlphaFirstToken(int length)

@@ -2,13 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
+
 import { copyTextToClipboard } from '@/utils/clipboard';
-import { cn } from '@/lib/utils';
-import Tips from '@/components/Tips/Tips';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
+
+import { EnvironmentVariable } from '@/types/containers';
+
 import {
   IconCheck,
   IconClipboard,
@@ -17,16 +15,21 @@ import {
   IconTrash,
   IconX,
 } from '@/components/Icons';
+import Tips from '@/components/Tips/Tips';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 
 import {
-  getDockerEnvironmentVariables,
-  saveDockerUserEnvironmentVariables,
-} from '@/apis/dockerSessionsApi';
-import { EnvironmentVariable } from '@/types/dockerSessions';
+  getContainerEnvironmentVariables,
+  saveContainerUserEnvironmentVariables,
+} from '@/apis/containersApi';
+import { cn } from '@/lib/utils';
 
 type Props = {
   chatId: string;
-  encryptedSessionId: string;
+  encryptedId: string;
 };
 
 type EditableEnvVar = EnvironmentVariable & { id: string };
@@ -75,10 +78,7 @@ function parseRawEnvText(raw: string) {
   return { variables, errorLine: null as number | null };
 }
 
-export default function SessionEnvVarEditor({
-  chatId,
-  encryptedSessionId,
-}: Props) {
+export default function SessionEnvVarEditor({ chatId, encryptedId }: Props) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -86,17 +86,24 @@ export default function SessionEnvVarEditor({
   const [editMode, setEditMode] = useState<EditMode>('table');
   const [systemVars, setSystemVars] = useState<EnvironmentVariable[]>([]);
   const [userVars, setUserVars] = useState<EditableEnvVar[]>([]);
-  const [originalUserVars, setOriginalUserVars] = useState<EnvironmentVariable[]>([]);
+  const [originalUserVars, setOriginalUserVars] = useState<
+    EnvironmentVariable[]
+  >([]);
   const [rawText, setRawText] = useState('');
   const [rawError, setRawError] = useState<string | null>(null);
-  const [activeBlock, setActiveBlock] = useState<'user' | 'system' | null>(null);
+  const [activeBlock, setActiveBlock] = useState<'user' | 'system' | null>(
+    null,
+  );
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const loadEnvVars = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await getDockerEnvironmentVariables(chatId, encryptedSessionId);
+      const result = await getContainerEnvironmentVariables(
+        chatId,
+        encryptedId,
+      );
       setSystemVars(result.systemVariables);
       const editableUserVars = result.userVariables.map((v) => ({
         ...v,
@@ -111,7 +118,7 @@ export default function SessionEnvVarEditor({
     } finally {
       setLoading(false);
     }
-  }, [chatId, encryptedSessionId, t]);
+  }, [chatId, encryptedId, t]);
 
   useEffect(() => {
     loadEnvVars();
@@ -119,10 +126,15 @@ export default function SessionEnvVarEditor({
 
   const hasChanges = useMemo(() => {
     if (isEditing && editMode === 'raw') {
-      return normalizeRawEnvText(rawText) !== normalizeRawEnvText(serializeEnvVars(originalUserVars));
+      return (
+        normalizeRawEnvText(rawText) !==
+        normalizeRawEnvText(serializeEnvVars(originalUserVars))
+      );
     }
     // 过滤掉空行后再比较
-    const currentVars = userVars.filter((v) => v.key.trim() !== '' || v.value.trim() !== '');
+    const currentVars = userVars.filter(
+      (v) => v.key.trim() !== '' || v.value.trim() !== '',
+    );
     if (currentVars.length !== originalUserVars.length) return true;
     const currentSorted = [...currentVars]
       .map((v) => `${v.key}=${v.value}`)
@@ -140,7 +152,9 @@ export default function SessionEnvVarEditor({
     setRawError(null);
     // 自动添加一个空行
     setUserVars((prev) => {
-      const hasEmptyRow = prev.some((v) => v.key.trim() === '' && v.value.trim() === '');
+      const hasEmptyRow = prev.some(
+        (v) => v.key.trim() === '' && v.value.trim() === '',
+      );
       if (!hasEmptyRow) {
         return [...prev, { id: generateId(), key: '', value: '' }];
       }
@@ -159,7 +173,11 @@ export default function SessionEnvVarEditor({
 
   const handleCancelClick = useCallback(() => {
     if (hasChanges) {
-      if (confirm(t('You have unsaved changes. Are you sure you want to discard them?'))) {
+      if (
+        confirm(
+          t('You have unsaved changes. Are you sure you want to discard them?'),
+        )
+      ) {
         handleCancelEdit();
       }
     } else {
@@ -170,9 +188,13 @@ export default function SessionEnvVarEditor({
   const handleUpdateUserVar = useCallback(
     (id: string, field: 'key' | 'value', newValue: string) => {
       setUserVars((prev) => {
-        const updated = prev.map((v) => (v.id === id ? { ...v, [field]: newValue } : v));
+        const updated = prev.map((v) =>
+          v.id === id ? { ...v, [field]: newValue } : v,
+        );
         // 检查是否还有空行，如果没有则添加一个
-        const hasEmptyRow = updated.some((v) => v.key.trim() === '' && v.value.trim() === '');
+        const hasEmptyRow = updated.some(
+          (v) => v.key.trim() === '' && v.value.trim() === '',
+        );
         if (!hasEmptyRow) {
           return [...updated, { id: generateId(), key: '', value: '' }];
         }
@@ -200,7 +222,10 @@ export default function SessionEnvVarEditor({
       }
 
       setRawError(null);
-      const nextRows = parsed.variables.map((v) => ({ ...v, id: generateId() }));
+      const nextRows = parsed.variables.map((v) => ({
+        ...v,
+        id: generateId(),
+      }));
       const hasEmptyRow = nextRows.some(
         (v) => v.key.trim() === '' && v.value.trim() === '',
       );
@@ -241,7 +266,10 @@ export default function SessionEnvVarEditor({
       }
 
       setRawError(null);
-      const nextRows = parsed.variables.map((v) => ({ ...v, id: generateId() }));
+      const nextRows = parsed.variables.map((v) => ({
+        ...v,
+        id: generateId(),
+      }));
       const hasEmptyRow = nextRows.some(
         (v) => v.key.trim() === '' && v.value.trim() === '',
       );
@@ -294,8 +322,11 @@ export default function SessionEnvVarEditor({
 
     setSaving(true);
     try {
-      const normalizedVars = validVars.map((v) => ({ key: v.key.trim(), value: v.value }));
-      await saveDockerUserEnvironmentVariables(chatId, encryptedSessionId, {
+      const normalizedVars = validVars.map((v) => ({
+        key: v.key.trim(),
+        value: v.value,
+      }));
+      await saveContainerUserEnvironmentVariables(chatId, encryptedId, {
         variables: normalizedVars,
       });
       // Optimistic update: update originalUserVars to match current state
@@ -313,22 +344,28 @@ export default function SessionEnvVarEditor({
     } finally {
       setSaving(false);
     }
-  }, [chatId, editMode, encryptedSessionId, rawText, t, userVars]);
+  }, [chatId, editMode, encryptedId, rawText, t, userVars]);
 
-  const handleCopyRow = useCallback(async (id: string, key: string, value: string) => {
-    if (!(await copyTextToClipboard(`${key}=${value}`))) return;
+  const handleCopyRow = useCallback(
+    async (id: string, key: string, value: string) => {
+      if (!(await copyTextToClipboard(`${key}=${value}`))) return;
 
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  }, []);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    },
+    [],
+  );
 
-  const handleCopyAll = useCallback(async (blockId: string, vars: EnvironmentVariable[]) => {
-    const text = vars.map((v) => `${v.key}=${v.value}`).join('\n');
-    if (!(await copyTextToClipboard(text))) return;
+  const handleCopyAll = useCallback(
+    async (blockId: string, vars: EnvironmentVariable[]) => {
+      const text = vars.map((v) => `${v.key}=${v.value}`).join('\n');
+      if (!(await copyTextToClipboard(text))) return;
 
-    setCopiedId(blockId);
-    setTimeout(() => setCopiedId(null), 2000);
-  }, []);
+      setCopiedId(blockId);
+      setTimeout(() => setCopiedId(null), 2000);
+    },
+    [],
+  );
 
   const handleCopyAllKeys = useCallback(
     async (blockId: string, vars: EnvironmentVariable[]) => {
@@ -359,7 +396,10 @@ export default function SessionEnvVarEditor({
     <div className="space-y-4">
       {/* User variables - 放在上面 */}
       <div
-        className={cn('space-y-2 group/user', activeBlock === 'user' && 'is-active')}
+        className={cn(
+          'space-y-2 group/user',
+          activeBlock === 'user' && 'is-active',
+        )}
         onClick={() => {
           setActiveBlock('user');
           setActiveRowId(null);
@@ -371,9 +411,7 @@ export default function SessionEnvVarEditor({
               {t('User Variables')}
             </h4>
             {isEditing && hasChanges && (
-              <span className="text-xs text-orange-500">
-                ({t('Modified')})
-              </span>
+              <span className="text-xs text-orange-500">({t('Modified')})</span>
             )}
           </div>
           <div className="flex items-center gap-1">
@@ -423,7 +461,7 @@ export default function SessionEnvVarEditor({
                     title={t('Save')}
                   >
                     {saving ? (
-                    <IconLoader size={18} />
+                      <IconLoader size={18} />
                     ) : (
                       <IconCheck size={18} />
                     )}
@@ -486,9 +524,7 @@ export default function SessionEnvVarEditor({
                 className="font-mono text-xs"
               />
               {rawError && (
-                <div className="text-xs text-destructive">
-                  {rawError}
-                </div>
+                <div className="text-xs text-destructive">{rawError}</div>
               )}
             </>
           ) : (
@@ -512,7 +548,10 @@ export default function SessionEnvVarEditor({
                               className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 group-[.is-active]/user:opacity-100 transition-opacity"
                             >
                               {copiedId === 'user-keys' ? (
-                                <IconCheck size={18} className="text-green-500" />
+                                <IconCheck
+                                  size={18}
+                                  className="text-green-500"
+                                />
                               ) : (
                                 <IconClipboard size={18} />
                               )}
@@ -665,7 +704,10 @@ export default function SessionEnvVarEditor({
       {/* System variables - 放在下面 */}
       {systemVars.length > 0 && (
         <div
-          className={cn('space-y-2 group/system', activeBlock === 'system' && 'is-active')}
+          className={cn(
+            'space-y-2 group/system',
+            activeBlock === 'system' && 'is-active',
+          )}
           onClick={() => {
             setActiveBlock('system');
             setActiveRowId(null);

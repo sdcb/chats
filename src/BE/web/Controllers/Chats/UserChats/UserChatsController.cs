@@ -263,14 +263,14 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
 
         if (currentUser.IsAdmin)
         {
-            // Deassociate docker sessions before deleting chat
-            await db.ChatDockerSessions
+            // Preserve container resources while detaching them from the deleted chat.
+            await db.ContainerResources
                 .Where(x => x.OwnerChatId == chatId)
                 .ExecuteUpdateAsync(x => x.SetProperty(p => p.OwnerChatId, (int?)null), cancellationToken);
 
-            await db.ChatDockerSessions
+            await db.ContainerResources
                 .Where(x => x.OwnerTurn!.ChatId == chatId)
-                .ExecuteUpdateAsync(x => x.SetProperty(p => p.OwnerTurnId, (int?)null), cancellationToken);
+                .ExecuteUpdateAsync(x => x.SetProperty(p => p.OwnerTurnId, (long?)null), cancellationToken);
 
             await db.Chats
                 .Where(x => x.Id == chatId)
