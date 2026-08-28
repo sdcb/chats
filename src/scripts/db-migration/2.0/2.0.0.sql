@@ -30,6 +30,10 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         IF @dropSql <> N'' EXEC sys.sp_executesql @dropSql;
         DROP TABLE dbo.ChatDockerSession;
     END;
+    ELSE
+    BEGIN
+        PRINT N'    -> ChatDockerSession 表不存在，跳过删除';
+    END;
 
     /* Step 1.2: Docker daemon, Windows Docker, Kubernetes, or another backend. */
     PRINT N'[Step 1.2] 创建 dbo.ContainerRuntimeNode（若不存在）';
@@ -61,6 +65,10 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
                  (MaxContainerCount IS NULL OR MaxContainerCount >= 0))
         );
     END;
+    ELSE
+    BEGIN
+        PRINT N'    -> ContainerRuntimeNode 表已存在，跳过创建';
+    END;
 
     /* Step 1.3: common resource record for permanent and temporary containers. */
     PRINT N'[Step 1.3] 创建 dbo.ContainerResource 及索引（若不存在）';
@@ -71,51 +79,68 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             Id                  BIGINT NOT NULL IDENTITY(1,1),
             OwnerUserId         INT NOT NULL,
             OwnerChatId         INT NULL,
+            OwnerTurnId         BIGINT NULL,
             RuntimeNodeId       INT NOT NULL,
             -- 0=temporary, 1=permanent
             IsPermanent         BIT NOT NULL CONSTRAINT DF_ContainerResource_IsPermanent DEFAULT (0),
-            BackendResourceId   NVARCHAR(256) NULL,
+            BackendResourceId   VARCHAR(256) NOT NULL,
+            Ip                  VARCHAR(45) NULL,
             Name                NVARCHAR(128) NOT NULL,
-            Image               NVARCHAR(512) NOT NULL,
-            ShellPrefix         NVARCHAR(128) NULL,
+            Image               VARCHAR(512) NOT NULL,
+            ShellPrefix         VARCHAR(128) NULL,
             CpuCores            REAL NULL,
             MemoryBytes         BIGINT NULL,
             MaxProcesses        INT NULL,
-            -- NetworkPolicy: 0=None, 1=Egress, 2=Public
-            NetworkPolicy       TINYINT NOT NULL,
-            -- Status: 1=Running, 2=Stopped, 3=Pending, 4=Deleted
-            Status              TINYINT NOT NULL,
+            -- Backend-specific network name; NULL uses the backend default network.
+            BackendNetworkName  VARCHAR(128) NULL,
             CreatedAt           DATETIME2(7) NOT NULL CONSTRAINT DF_ContainerResource_CreatedAt DEFAULT (SYSUTCDATETIME()),
             UpdatedAt           DATETIME2(7) NOT NULL CONSTRAINT DF_ContainerResource_UpdatedAt DEFAULT (SYSUTCDATETIME()),
             LastActiveAt        DATETIME2(7) NULL,
             StoppedAt           DATETIME2(7) NULL,
             DeletedAt           DATETIME2(7) NULL,
             CleanupAt           DATETIME2(7) NULL,
-            LastError           NVARCHAR(4000) NULL,
-            LastErrorAt         DATETIME2(7) NULL,
             CONSTRAINT PK_ContainerResource PRIMARY KEY CLUSTERED (Id),
             CONSTRAINT FK_ContainerResource_User FOREIGN KEY (OwnerUserId) REFERENCES dbo.[User](Id),
             CONSTRAINT FK_ContainerResource_Chat FOREIGN KEY (OwnerChatId) REFERENCES dbo.Chat(Id),
+            CONSTRAINT FK_ContainerResource_Turn FOREIGN KEY (OwnerTurnId) REFERENCES dbo.ChatTurn(Id) ON DELETE SET NULL,
             CONSTRAINT FK_ContainerResource_RuntimeNode FOREIGN KEY (RuntimeNodeId) REFERENCES dbo.ContainerRuntimeNode(Id),
-            CONSTRAINT CK_ContainerResource_NetworkPolicy CHECK (NetworkPolicy IN (0, 1, 2)),
-            CONSTRAINT CK_ContainerResource_Status CHECK (Status IN (1, 2, 3, 4)),
             CONSTRAINT CK_ContainerResource_Limits CHECK
                 ((CpuCores IS NULL OR CpuCores >= 0) AND
                  (MemoryBytes IS NULL OR MemoryBytes >= 0) AND
                  (MaxProcesses IS NULL OR MaxProcesses >= 0)),
             CONSTRAINT CK_ContainerResource_Cleanup CHECK
-                (IsPermanent = 1 OR CleanupAt IS NOT NULL OR Status = 4),
-            CONSTRAINT CK_ContainerResource_DeletedState CHECK
-                ((Status = 4 AND DeletedAt IS NOT NULL) OR (Status <> 4 AND DeletedAt IS NULL))
+                (IsPermanent = 1 OR CleanupAt IS NOT NULL OR DeletedAt IS NOT NULL)
         );
     END;
+    ELSE
+    BEGIN
+        PRINT N'    -> ContainerResource 表已存在，跳过创建';
+    END;
 
-    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResource') AND name = N'IX_ContainerResource_OwnerUser_Status')
-        CREATE INDEX IX_ContainerResource_OwnerUser_Status ON dbo.ContainerResource (OwnerUserId, Status, IsPermanent);
-    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResource') AND name = N'IX_ContainerResource_RuntimeNode_Status')
-        CREATE INDEX IX_ContainerResource_RuntimeNode_Status ON dbo.ContainerResource (RuntimeNodeId, Status);
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResource') AND name = N'IX_ContainerResource_OwnerUser_Deleted_Stopped')
+        CREATE INDEX IX_ContainerResource_OwnerUser_Deleted_Stopped ON dbo.ContainerResource (OwnerUserId, DeletedAt, StoppedAt, IsPermanent);
+    ELSE
+        PRINT N'    -> 索引 IX_ContainerResource_OwnerUser_Deleted_Stopped 已存在，跳过';
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResource') AND name = N'IX_ContainerResource_OwnerTurn_Name')
+        CREATE INDEX IX_ContainerResource_OwnerTurn_Name ON dbo.ContainerResource (OwnerTurnId, Name) WHERE OwnerTurnId IS NOT NULL;
+    ELSE
+        PRINT N'    -> 索引 IX_ContainerResource_OwnerTurn_Name 已存在，跳过';
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResource') AND name = N'IX_ContainerResource_OwnerChat_Turn_Deleted_Stopped')
+        CREATE INDEX IX_ContainerResource_OwnerChat_Turn_Deleted_Stopped ON dbo.ContainerResource (OwnerChatId, OwnerTurnId, DeletedAt, StoppedAt) WHERE OwnerChatId IS NOT NULL;
+    ELSE
+        PRINT N'    -> 索引 IX_ContainerResource_OwnerChat_Turn_Deleted_Stopped 已存在，跳过';
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResource') AND name = N'UX_ContainerResource_RuntimeNode_BackendResource')
+        CREATE UNIQUE INDEX UX_ContainerResource_RuntimeNode_BackendResource ON dbo.ContainerResource (RuntimeNodeId, BackendResourceId);
+    ELSE
+        PRINT N'    -> 索引 UX_ContainerResource_RuntimeNode_BackendResource 已存在，跳过';
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResource') AND name = N'IX_ContainerResource_RuntimeNode_Deleted_Stopped')
+        CREATE INDEX IX_ContainerResource_RuntimeNode_Deleted_Stopped ON dbo.ContainerResource (RuntimeNodeId, DeletedAt, StoppedAt);
+    ELSE
+        PRINT N'    -> 索引 IX_ContainerResource_RuntimeNode_Deleted_Stopped 已存在，跳过';
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResource') AND name = N'IX_ContainerResource_CleanupAt')
-        CREATE INDEX IX_ContainerResource_CleanupAt ON dbo.ContainerResource (CleanupAt) WHERE CleanupAt IS NOT NULL AND Status <> 4;
+        CREATE INDEX IX_ContainerResource_CleanupAt ON dbo.ContainerResource (CleanupAt) WHERE CleanupAt IS NOT NULL AND DeletedAt IS NULL;
+    ELSE
+        PRINT N'    -> 索引 IX_ContainerResource_CleanupAt 已存在，跳过';
 
     /* Step 1.4: first-class volumes. */
     PRINT N'[Step 1.4] 创建 dbo.ContainerVolume 及索引（若不存在）';
@@ -150,11 +175,19 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
                 ((IsActive = 1 AND DeletedAt IS NULL) OR (IsActive = 0 AND DeletedAt IS NOT NULL))
         );
     END;
+    ELSE
+    BEGIN
+        PRINT N'    -> ContainerVolume 表已存在，跳过创建';
+    END;
 
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerVolume') AND name = N'UX_ContainerVolume_InternalContainer')
         CREATE UNIQUE INDEX UX_ContainerVolume_InternalContainer ON dbo.ContainerVolume (ContainerResourceId) WHERE IsStandalone = 0 AND ContainerResourceId IS NOT NULL;
+    ELSE
+        PRINT N'    -> 索引 UX_ContainerVolume_InternalContainer 已存在，跳过';
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerVolume') AND name = N'IX_ContainerVolume_OwnerUser_Active')
         CREATE INDEX IX_ContainerVolume_OwnerUser_Active ON dbo.ContainerVolume (OwnerUserId, IsActive, IsStandalone);
+    ELSE
+        PRINT N'    -> 索引 IX_ContainerVolume_OwnerUser_Active 已存在，跳过';
 
     PRINT N'[Step 1.5] 创建 dbo.ContainerVolumeMount 及索引（若不存在）';
     IF OBJECT_ID(N'dbo.ContainerVolumeMount', N'U') IS NULL
@@ -177,10 +210,18 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             CONSTRAINT CK_ContainerVolumeMount_State CHECK ((IsActive = 1 AND UnmountedAt IS NULL) OR (IsActive = 0 AND UnmountedAt IS NOT NULL))
         );
     END;
+    ELSE
+    BEGIN
+        PRINT N'    -> ContainerVolumeMount 表已存在，跳过创建';
+    END;
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerVolumeMount') AND name = N'UX_ContainerVolumeMount_ActivePath')
         CREATE UNIQUE INDEX UX_ContainerVolumeMount_ActivePath ON dbo.ContainerVolumeMount (VolumeId, ContainerResourceId, ContainerPath) WHERE IsActive = 1;
+    ELSE
+        PRINT N'    -> 索引 UX_ContainerVolumeMount_ActivePath 已存在，跳过';
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerVolumeMount') AND name = N'IX_ContainerVolumeMount_Container_Active')
         CREATE INDEX IX_ContainerVolumeMount_Container_Active ON dbo.ContainerVolumeMount (ContainerResourceId, IsActive);
+    ELSE
+        PRINT N'    -> 索引 IX_ContainerVolumeMount_Container_Active 已存在，跳过';
 
     PRINT N'[Step 1.6] 创建 dbo.ChatContainerResourceAccess 及索引（若不存在）';
     IF OBJECT_ID(N'dbo.ChatContainerResourceAccess', N'U') IS NULL
@@ -190,19 +231,22 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             Id                  BIGINT NOT NULL IDENTITY(1,1),
             ChatId              INT NOT NULL,
             ContainerResourceId BIGINT NOT NULL,
-            -- NULL means chat-wide access; otherwise access starts at this turn's branch.
-            GrantedFromTurnId   BIGINT NULL,
             GrantedAt           DATETIME2(7) NOT NULL CONSTRAINT DF_ChatContainerAccess_GrantedAt DEFAULT (SYSUTCDATETIME()),
             CONSTRAINT PK_ChatContainerResourceAccess PRIMARY KEY CLUSTERED (Id),
             CONSTRAINT FK_ChatContainerAccess_Chat FOREIGN KEY (ChatId) REFERENCES dbo.Chat(Id),
             CONSTRAINT FK_ChatContainerAccess_Container FOREIGN KEY (ContainerResourceId) REFERENCES dbo.ContainerResource(Id),
-            CONSTRAINT FK_ChatContainerAccess_GrantedFromTurn FOREIGN KEY (GrantedFromTurnId) REFERENCES dbo.ChatTurn(Id),
             CONSTRAINT UQ_ChatContainerAccess_ChatContainer UNIQUE (ChatId, ContainerResourceId)
         );
     END;
+    ELSE
+    BEGIN
+        PRINT N'    -> ChatContainerResourceAccess 表已存在，跳过创建';
+    END;
 
-    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ChatContainerResourceAccess') AND name = N'IX_ChatContainerAccess_GrantedFromTurn')
-        CREATE INDEX IX_ChatContainerAccess_GrantedFromTurn ON dbo.ChatContainerResourceAccess (GrantedFromTurnId) WHERE GrantedFromTurnId IS NOT NULL;
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ChatContainerResourceAccess') AND name = N'IX_ChatContainerAccess_Container')
+        CREATE INDEX IX_ChatContainerAccess_Container ON dbo.ChatContainerResourceAccess (ContainerResourceId);
+    ELSE
+        PRINT N'    -> 索引 IX_ChatContainerAccess_Container 已存在，跳过';
 
     PRINT N'[Step 1.7] 创建 dbo.UserContainerQuota（若不存在）';
     IF OBJECT_ID(N'dbo.UserContainerQuota', N'U') IS NULL
@@ -234,10 +278,18 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
                  (MaxVolumeBytesPerVolume IS NULL OR MaxVolumeBytesPerVolume >= 0))
         );
     END;
+    ELSE
+    BEGIN
+        PRINT N'    -> UserContainerQuota 表已存在，跳过创建';
+    END;
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.UserContainerQuota') AND name = N'UX_UserContainerQuota_User')
         CREATE UNIQUE INDEX UX_UserContainerQuota_User ON dbo.UserContainerQuota (UserId) WHERE UserId IS NOT NULL;
+    ELSE
+        PRINT N'    -> 索引 UX_UserContainerQuota_User 已存在，跳过';
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.UserContainerQuota') AND name = N'UX_UserContainerQuota_Default')
         CREATE UNIQUE INDEX UX_UserContainerQuota_Default ON dbo.UserContainerQuota (UserId) WHERE UserId IS NULL;
+    ELSE
+        PRINT N'    -> 索引 UX_UserContainerQuota_Default 已存在，跳过';
 
     PRINT N'[Step 1.8] 创建 dbo.ContainerResourceTemplate 及索引（若不存在）';
     IF OBJECT_ID(N'dbo.ContainerResourceTemplate', N'U') IS NULL
@@ -246,12 +298,12 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         (
             Id                  INT NOT NULL IDENTITY(1,1),
             Name                NVARCHAR(128) NOT NULL,
-            Image               NVARCHAR(512) NOT NULL,
+            Image               VARCHAR(512) NOT NULL,
             CpuCores            REAL NOT NULL,
             MemoryBytes         BIGINT NOT NULL,
             MaxProcesses        INT NOT NULL,
-            -- NetworkPolicy: 0=None, 1=Egress, 2=Public
-            NetworkPolicy       TINYINT NOT NULL,
+            -- Backend-specific network name; NULL uses the backend default network.
+            BackendNetworkName  VARCHAR(128) NULL,
             DefaultVolumeBytes  BIGINT NULL,
             IsEnabled           BIT NOT NULL CONSTRAINT DF_ContainerTemplate_Enabled DEFAULT (1),
             IsDefault           BIT NOT NULL CONSTRAINT DF_ContainerTemplate_Default DEFAULT (0),
@@ -259,28 +311,24 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             UpdatedAt           DATETIME2(7) NOT NULL CONSTRAINT DF_ContainerTemplate_UpdatedAt DEFAULT (SYSUTCDATETIME()),
             CONSTRAINT PK_ContainerResourceTemplate PRIMARY KEY CLUSTERED (Id),
             CONSTRAINT UQ_ContainerResourceTemplate_Name UNIQUE (Name),
-            CONSTRAINT CK_ContainerTemplate_NetworkPolicy CHECK (NetworkPolicy IN (0, 1, 2)),
             CONSTRAINT CK_ContainerTemplate_Values CHECK
                 (CpuCores >= 0 AND MemoryBytes >= 0 AND MaxProcesses >= 0 AND (DefaultVolumeBytes IS NULL OR DefaultVolumeBytes >= 0))
         );
     END;
+    ELSE
+    BEGIN
+        PRINT N'    -> ContainerResourceTemplate 表已存在，跳过创建';
+    END;
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.ContainerResourceTemplate') AND name = N'UX_ContainerResourceTemplate_Default')
         CREATE UNIQUE INDEX UX_ContainerResourceTemplate_Default ON dbo.ContainerResourceTemplate (IsDefault) WHERE IsDefault = 1;
+    ELSE
+        PRINT N'    -> 索引 UX_ContainerResourceTemplate_Default 已存在，跳过';
 
 /* Step 1.9: idempotent post-migration verification. */
 PRINT N'[Step 1.9] 执行第一步结构校验';
 IF OBJECT_ID(N'dbo.ChatDockerSession', N'U') IS NOT NULL
     THROW 52010, N'ChatDockerSession still exists after the first-step migration.', 1;
-
-SELECT name AS TableName
-FROM sys.tables
-WHERE name IN
-(
-    'ContainerRuntimeNode', 'ContainerResource', 'ContainerVolume',
-    'ContainerVolumeMount', 'ChatContainerResourceAccess',
-    'UserContainerQuota', 'ContainerResourceTemplate'
-)
-ORDER BY name;
+PRINT N'    -> 结构校验通过，旧 ChatDockerSession 不存在';
 
 PRINT N'[第一步] 持久化 Docker 与资源治理基础结构创建完成';
 GO
