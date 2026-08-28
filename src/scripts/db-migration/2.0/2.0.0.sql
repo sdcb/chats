@@ -259,6 +259,9 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             Id                  INT NOT NULL IDENTITY(1,1),
             -- NULL identifies the single global fallback quota; a value identifies a user quota.
             UserId              INT NULL,
+            AllowCustomImage    BIT NOT NULL CONSTRAINT DF_UserContainerQuota_AllowCustomImage DEFAULT (0),
+            -- Comma-separated backend network modes/names; '*' means unrestricted.
+            AllowedNetworkModes VARCHAR(1024) NOT NULL CONSTRAINT DF_UserContainerQuota_AllowedNetworkModes DEFAULT ('none,bridge'),
             MaxContainerCount   INT NULL,
             MaxCpuCores         REAL NULL,
             MaxMemoryBytes      BIGINT NULL,
@@ -294,7 +297,51 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
     ELSE
         PRINT N'    -> 索引 UX_UserContainerQuota_Default 已存在，跳过';
 
-    PRINT N'[Step 1.8] 创建 dbo.ContainerResourceTemplate 及索引（若不存在）';
+    PRINT N'[Step 1.7.1] 插入全局默认用户容器配额（若不存在）';
+    IF NOT EXISTS (SELECT 1 FROM dbo.UserContainerQuota WHERE UserId IS NULL)
+    BEGIN
+        INSERT INTO dbo.UserContainerQuota
+            (UserId, AllowCustomImage, AllowedNetworkModes)
+        VALUES
+            (NULL, 0, 'none,bridge');
+        PRINT N'    -> 已插入全局默认用户容器配额';
+    END;
+    ELSE
+    BEGIN
+        PRINT N'    -> 全局默认用户容器配额已存在，跳过插入';
+    END;
+
+    PRINT N'[Step 1.8] 创建 dbo.ContainerImage（若不存在）';
+    IF OBJECT_ID(N'dbo.ContainerImage', N'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.ContainerImage
+        (
+            Image       VARCHAR(512) NOT NULL,
+            Description NVARCHAR(1000) NULL,
+            IsEnabled   BIT NOT NULL CONSTRAINT DF_ContainerImage_IsEnabled DEFAULT (1),
+            CONSTRAINT PK_ContainerImage PRIMARY KEY CLUSTERED (Image),
+            CONSTRAINT CK_ContainerImage_Image CHECK (LEN(Image) > 0)
+        );
+    END;
+    ELSE
+    BEGIN
+        PRINT N'    -> ContainerImage 表已存在，跳过创建';
+    END;
+
+    PRINT N'[Step 1.8.1] 插入内置镜像 code-interpreter:latest（若不存在）';
+    IF NOT EXISTS (SELECT 1 FROM dbo.ContainerImage WHERE Image = 'code-interpreter:latest')
+    BEGIN
+        INSERT INTO dbo.ContainerImage (Image, Description, IsEnabled)
+        VALUES
+            ('code-interpreter:latest', N'Pre-installed with common packages, suitable for most daily tasks', 1);
+        PRINT N'    -> 已插入内置镜像 code-interpreter:latest';
+    END;
+    ELSE
+    BEGIN
+        PRINT N'    -> 内置镜像 code-interpreter:latest 已存在，跳过插入';
+    END;
+
+    PRINT N'[Step 1.8.2] 创建 dbo.ContainerResourceTemplate 及索引（若不存在）';
     IF OBJECT_ID(N'dbo.ContainerResourceTemplate', N'U') IS NULL
     BEGIN
         CREATE TABLE dbo.ContainerResourceTemplate
@@ -326,6 +373,24 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         CREATE UNIQUE INDEX UX_ContainerResourceTemplate_Default ON dbo.ContainerResourceTemplate (IsDefault) WHERE IsDefault = 1;
     ELSE
         PRINT N'    -> 索引 UX_ContainerResourceTemplate_Default 已存在，跳过';
+
+    PRINT N'[Step 1.8.3] 插入默认 ContainerResourceTemplate（若不存在）';
+    IF NOT EXISTS (SELECT 1 FROM dbo.ContainerResourceTemplate WHERE Name = N'default-code-interpreter')
+    BEGIN
+        DECLARE @defaultTemplate bit = CASE
+            WHEN EXISTS (SELECT 1 FROM dbo.ContainerResourceTemplate WHERE IsDefault = 1) THEN 0
+            ELSE 1
+        END;
+        INSERT INTO dbo.ContainerResourceTemplate
+            (Name, Image, CpuCores, MemoryBytes, MaxProcesses, BackendNetworkName, DefaultVolumeBytes, IsEnabled, IsDefault)
+        VALUES
+            (N'default-code-interpreter', 'code-interpreter:latest', 2.0, 2147483648, 200, 'bridge', NULL, 1, @defaultTemplate);
+        PRINT N'    -> 已插入默认 ContainerResourceTemplate';
+    END;
+    ELSE
+    BEGIN
+        PRINT N'    -> 默认 ContainerResourceTemplate 已存在，跳过插入';
+    END;
 
 /* Step 1.9: idempotent post-migration verification. */
 PRINT N'[Step 1.9] 执行第一步结构校验';

@@ -139,7 +139,7 @@ public class Program
 
         builder.Services.AddSingleton<IValidateOptions<CodeInterpreterOptions>, CodeInterpreterOptionsValidator>();
         builder.Services.AddOptions<CodeInterpreterOptions>()
-            .Bind(builder.Configuration.GetSection("CodeInterpreter"))
+            .Bind(builder.Configuration.GetSection("CodeInterpreterPolicy"))
             .ValidateOnStart();
         builder.Services.AddScoped<CodeInterpreterExecutor>();
         builder.Services.AddHostedService<ChatDockerSessionCleanupService>();
