@@ -5,21 +5,33 @@ import { createFetchClient } from '@/hooks/createFetchClient';
 import useTranslation from '@/hooks/useTranslation';
 
 import {
-  IconCheck,
   IconDocker,
-  IconEdit,
   IconFiles,
   IconInfo,
-  IconPlus,
   IconRefresh,
   IconSettings,
-  IconTrash,
   IconWorld,
 } from '@/components/Icons';
+import ImagesTab from '@/components/admin/containers/ImagesTab';
+import QuotasTab from '@/components/admin/containers/QuotasTab';
+import RuntimeNodesTab from '@/components/admin/containers/RuntimeNodesTab';
+import TemplatesTab from '@/components/admin/containers/TemplatesTab';
 import {
-  UnifiedTable,
-  UnifiedTableColumn,
-} from '@/components/table/UnifiedTable';
+  DeleteTarget,
+  ImageEntry,
+  ImageForm,
+  PAGE_SIZE,
+  Quota,
+  QuotaForm,
+  RuntimeForm,
+  RuntimeNode,
+  RuntimeTemplate,
+  TemplateForm,
+  emptyImage,
+  emptyQuota,
+  emptyRuntime,
+  emptyTemplate,
+} from '@/components/admin/containers/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,167 +42,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { LabelSwitch } from '@/components/ui/label-switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { cn } from '@/lib/utils';
-
-type RuntimeNode = {
-  id: number;
-  name: string;
-  aiName: string;
-  description: string | null;
-  backendType: number;
-  endpoint: string | null;
-  hasCredential: boolean;
-  isEnabled: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-type RuntimeTemplate = {
-  id: number;
-  name: string;
-  runtimeNodeId: number;
-  image: string;
-  cpuCores: number;
-  memoryBytes: number;
-  maxProcesses: number;
-  backendNetworkName: string | null;
-  defaultVolumeBytes: number | null;
-  visibility: number;
-  createdAt: string;
-  updatedAt: string;
-  runtimeNode?: RuntimeNode | null;
-};
-type ImageEntry = {
-  id: number;
-  image: string;
-  description: string | null;
-  isEnabled: boolean;
-};
-type Quota = {
-  id: number;
-  userId: number | null;
-  userName: string | null;
-  allowCustomImage: boolean;
-  allowedNetworkModes: string;
-  maxContainerCount: number | null;
-  maxCpuCores: number | null;
-  maxMemoryBytes: number | null;
-  maxContainerProcesses: number | null;
-  maxVolumeBytes: number | null;
-  maxContainerCpuCores: number | null;
-  maxContainerMemoryBytes: number | null;
-  maxVolumeBytesPerVolume: number | null;
-  updatedAt: string;
-};
-type RuntimeForm = {
-  name: string;
-  aiName: string;
-  description: string;
-  backendType: number;
-  endpoint: string;
-  credential: string;
-  isEnabled: boolean;
-};
-type TemplateForm = {
-  name: string;
-  runtimeNodeId: number;
-  image: string;
-  cpuCores: number;
-  memoryBytes: number;
-  maxProcesses: number;
-  backendNetworkName: string;
-  defaultVolumeBytes: number | null;
-  visibility: number;
-};
-type ImageForm = { image: string; description: string; isEnabled: boolean };
-type QuotaForm = {
-  allowCustomImage: boolean;
-  allowedNetworkModes: string;
-  maxContainerCount: string;
-  maxCpuCores: string;
-  maxMemoryBytes: string;
-  maxContainerProcesses: string;
-  maxVolumeBytes: string;
-  maxContainerCpuCores: string;
-  maxContainerMemoryBytes: string;
-  maxVolumeBytesPerVolume: string;
-};
-type DeleteTarget = {
-  kind: 'runtime' | 'template' | 'image';
-  id: number | string;
-  label: string;
-};
-
-const PAGE_SIZE = 20;
-const EMPTY_VALUE = '-';
-
-const emptyRuntime: RuntimeForm = {
-  name: '',
-  aiName: '',
-  description: '',
-  backendType: 1,
-  endpoint: '',
-  credential: '',
-  isEnabled: true,
-};
-const emptyTemplate: TemplateForm = {
-  name: '',
-  runtimeNodeId: 0,
-  image: 'code-interpreter:latest',
-  cpuCores: 2,
-  memoryBytes: 2147483648,
-  maxProcesses: 200,
-  backendNetworkName: 'bridge',
-  defaultVolumeBytes: null,
-  visibility: 3,
-};
-const emptyImage: ImageForm = { image: '', description: '', isEnabled: true };
-const emptyQuota: QuotaForm = {
-  allowCustomImage: false,
-  allowedNetworkModes: 'none,bridge',
-  maxContainerCount: '',
-  maxCpuCores: '',
-  maxMemoryBytes: '',
-  maxContainerProcesses: '',
-  maxVolumeBytes: '',
-  maxContainerCpuCores: '',
-  maxContainerMemoryBytes: '',
-  maxVolumeBytesPerVolume: '',
-};
-
-const formatDateTime = (value?: string) => {
-  if (!value) return EMPTY_VALUE;
-  const date = new Date(value);
-  return Number.isNaN(date.valueOf()) ? value : date.toLocaleString();
-};
-const formatBytes = (value: number | null | undefined) => {
-  if (value == null) return EMPTY_VALUE;
-  if (value === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const index = Math.min(
-    Math.floor(Math.log(value) / Math.log(1024)),
-    units.length - 1,
-  );
-  return `${(value / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${
-    units[index]
-  }`;
-};
-const limitText = (value: number | null | undefined, suffix = '') =>
-  value == null ? EMPTY_VALUE : `${value}${suffix}`;
 
 export default function AdminContainersPage() {
   const { t } = useTranslation();
@@ -254,6 +109,7 @@ export default function AdminContainersPage() {
       setLoading(false);
     }
   }, [client]);
+
   useEffect(() => {
     refresh().catch(() => setLoading(false));
   }, [refresh]);
@@ -262,6 +118,7 @@ export default function AdminContainersPage() {
     setRuntimeForm(emptyRuntime);
     setRuntimeDialog('new');
   };
+
   const openEditRuntime = (node: RuntimeNode) => {
     setRuntimeForm({
       name: node.name,
@@ -269,17 +126,17 @@ export default function AdminContainersPage() {
       description: node.description || '',
       backendType: node.backendType,
       endpoint: node.endpoint || '',
-      // The API deliberately exposes only whether a credential exists. Keep
-      // the password field blank so an edit cannot leak or overwrite it.
       credential: '',
       isEnabled: node.isEnabled,
     });
     setRuntimeDialog(node.id);
   };
+
   const openNewTemplate = () => {
     setTemplateForm({ ...emptyTemplate, runtimeNodeId: nodes[0]?.id || 0 });
     setTemplateDialog('new');
   };
+
   const openEditTemplate = (item: RuntimeTemplate) => {
     setTemplateForm({
       name: item.name,
@@ -294,10 +151,12 @@ export default function AdminContainersPage() {
     });
     setTemplateDialog(item.id);
   };
+
   const openNewImage = () => {
     setImageForm(emptyImage);
     setImageDialog('new');
   };
+
   const openEditImage = (item: ImageEntry) => {
     setImageForm({
       image: item.image,
@@ -306,6 +165,7 @@ export default function AdminContainersPage() {
     });
     setImageDialog(item.id);
   };
+
   const openEditQuota = (quota: Quota) => {
     const asText = (value: number | null) =>
       value == null ? '' : String(value);
@@ -323,6 +183,7 @@ export default function AdminContainersPage() {
     });
     setQuotaDialog(quota.id);
   };
+
   const openNewQuota = () => {
     setQuotaForm(emptyQuota);
     setQuotaDialog(0);
@@ -341,15 +202,16 @@ export default function AdminContainersPage() {
         credential: runtimeForm.credential.trim() || null,
         isEnabled: runtimeForm.isEnabled,
       };
-      if (runtimeDialog === 'new')
+      if (runtimeDialog === 'new') {
         await client.post('/api/admin/container-catalog/runtime-nodes', {
           body,
         });
-      else if (runtimeDialog != null)
+      } else if (runtimeDialog != null) {
         await client.put(
           `/api/admin/container-catalog/runtime-nodes/${runtimeDialog}`,
           { body },
         );
+      }
       toast.success(t('Save successful'));
       setRuntimeDialog(null);
       await refresh();
@@ -357,6 +219,7 @@ export default function AdminContainersPage() {
       setSaving(false);
     }
   };
+
   const saveTemplate = async () => {
     if (
       !templateForm.name.trim() ||
@@ -372,13 +235,14 @@ export default function AdminContainersPage() {
         image: templateForm.image.trim(),
         backendNetworkName: templateForm.backendNetworkName.trim() || null,
       };
-      if (templateDialog === 'new')
+      if (templateDialog === 'new') {
         await client.post('/api/admin/container-catalog/templates', { body });
-      else if (templateDialog != null)
+      } else if (templateDialog != null) {
         await client.put(
           `/api/admin/container-catalog/templates/${templateDialog}`,
           { body },
         );
+      }
       toast.success(t('Save successful'));
       setTemplateDialog(null);
       await refresh();
@@ -386,6 +250,7 @@ export default function AdminContainersPage() {
       setSaving(false);
     }
   };
+
   const saveImage = async () => {
     if (!imageForm.image.trim()) return;
     setSaving(true);
@@ -395,12 +260,13 @@ export default function AdminContainersPage() {
         description: imageForm.description.trim() || null,
         isEnabled: imageForm.isEnabled,
       };
-      if (imageDialog === 'new')
+      if (imageDialog === 'new') {
         await client.post('/api/admin/container-catalog/images', { body });
-      else if (imageDialog != null)
+      } else if (imageDialog != null) {
         await client.put(`/api/admin/container-catalog/images/${imageDialog}`, {
           body,
         });
+      }
       toast.success(t('Save successful'));
       setImageDialog(null);
       await refresh();
@@ -408,6 +274,7 @@ export default function AdminContainersPage() {
       setSaving(false);
     }
   };
+
   const saveQuota = async () => {
     const numberOrNull = (value: string) =>
       value.trim() ? Number(value) : null;
@@ -443,6 +310,7 @@ export default function AdminContainersPage() {
       setSaving(false);
     }
   };
+
   const toggleNode = async (node: RuntimeNode) => {
     await client.patch(
       `/api/admin/container-catalog/runtime-nodes/${node.id}/enabled`,
@@ -450,21 +318,23 @@ export default function AdminContainersPage() {
     );
     await refresh();
   };
+
   const performDelete = async () => {
     if (!pendingDelete) return;
     const target = pendingDelete;
     setSaving(true);
     try {
-      if (target.kind === 'runtime')
+      if (target.kind === 'runtime') {
         await client.delete(
           `/api/admin/container-catalog/runtime-nodes/${target.id}`,
         );
-      if (target.kind === 'template')
+      } else if (target.kind === 'template') {
         await client.delete(
           `/api/admin/container-catalog/templates/${target.id}`,
         );
-      if (target.kind === 'image')
+      } else {
         await client.delete(`/api/admin/container-catalog/images/${target.id}`);
+      }
       toast.success(t('Deleted successful'));
       setPendingDelete(null);
       await refresh();
@@ -500,9 +370,11 @@ export default function AdminContainersPage() {
       ),
     [images, imageSearch],
   );
+
   useEffect(() => setRuntimePage(1), [runtimeSearch]);
   useEffect(() => setTemplatePage(1), [templateSearch]);
   useEffect(() => setImagePage(1), [imageSearch]);
+
   const pagedNodes = filteredNodes.slice(
     (runtimePage - 1) * PAGE_SIZE,
     runtimePage * PAGE_SIZE,
@@ -518,371 +390,6 @@ export default function AdminContainersPage() {
   const pagedQuotas = quotas.slice(
     (quotaPage - 1) * PAGE_SIZE,
     quotaPage * PAGE_SIZE,
-  );
-  const runtimeColumns: UnifiedTableColumn<RuntimeNode>[] = [
-    {
-      key: 'name',
-      title: t('Name'),
-      cell: (x) => (
-        <div>
-          <div className="font-medium text-foreground">{x.name}</div>
-          <div className="text-xs text-muted-foreground">{x.aiName}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'backend',
-      title: t('Backend'),
-      cell: (x) => (
-        <Badge variant="outline">
-          <IconDocker size={13} className="mr-1" />
-          {x.backendType === 1 ? t('Docker') : t('Other')}
-        </Badge>
-      ),
-    },
-    {
-      key: 'endpoint',
-      title: t('Endpoint'),
-      className: 'min-w-56',
-      cell: (x) => (
-        <code className="text-xs">{x.endpoint || t('System default')}</code>
-      ),
-    },
-    {
-      key: 'description',
-      title: t('Description'),
-      className: 'min-w-48',
-      cell: (x) => x.description || EMPTY_VALUE,
-    },
-    {
-      key: 'credential',
-      title: t('Credential'),
-      cell: (x) => (x.hasCredential ? t('Configured') : EMPTY_VALUE),
-    },
-    {
-      key: 'status',
-      title: t('Status'),
-      cell: (x) => (
-        <Badge variant={x.isEnabled ? 'default' : 'secondary'}>
-          {x.isEnabled ? t('Enabled') : t('Disabled')}
-        </Badge>
-      ),
-    },
-    {
-      key: 'templates',
-      title: t('Templates'),
-      cell: (x) =>
-        templates.filter((item) => item.runtimeNodeId === x.id).length,
-    },
-    {
-      key: 'updated',
-      title: t('Updated'),
-      cell: (x) => formatDateTime(x.updatedAt),
-    },
-    {
-      key: 'created',
-      title: t('Created'),
-      cell: (x) => formatDateTime(x.createdAt),
-    },
-    {
-      key: 'actions',
-      title: t('Actions'),
-      className: 'w-32',
-      cell: (x) => (
-        <div className="flex gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            title={t('Edit')}
-            onClick={() => openEditRuntime(x)}
-          >
-            <IconEdit size={16} />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            title={x.isEnabled ? t('Disable') : t('Enable')}
-            onClick={() => toggleNode(x).catch(() => null)}
-          >
-            <IconCheck size={16} />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            title={t('Delete')}
-            onClick={() =>
-              setPendingDelete({ kind: 'runtime', id: x.id, label: x.name })
-            }
-          >
-            <IconTrash size={16} />
-          </Button>
-        </div>
-      ),
-    },
-  ];
-  const templateColumns: UnifiedTableColumn<RuntimeTemplate>[] = [
-    {
-      key: 'name',
-      title: t('Name'),
-      cell: (x) => (
-        <span className="font-medium text-foreground">{x.name}</span>
-      ),
-    },
-    {
-      key: 'image',
-      title: t('Image'),
-      className: 'min-w-48',
-      cell: (x) => <code className="text-xs">{x.image}</code>,
-    },
-    {
-      key: 'runtime',
-      title: t('Runtime node'),
-      cell: (x) => x.runtimeNode?.aiName || `#${x.runtimeNodeId}`,
-    },
-    {
-      key: 'resources',
-      title: t('Resources'),
-      cell: (x) => (
-        <div className="whitespace-nowrap">
-          {x.cpuCores} {t('CPU cores')} · {formatBytes(x.memoryBytes)}
-        </div>
-      ),
-    },
-    {
-      key: 'processes',
-      title: t('Max processes'),
-      cell: (x) => x.maxProcesses,
-    },
-    {
-      key: 'network',
-      title: t('Network'),
-      cell: (x) => x.backendNetworkName || t('Default'),
-    },
-    {
-      key: 'volume',
-      title: t('Default volume bytes'),
-      cell: (x) => formatBytes(x.defaultVolumeBytes),
-    },
-    {
-      key: 'visibility',
-      title: t('Visibility'),
-      cell: (x) => (
-        <Badge variant="outline">
-          {x.visibility === 3
-            ? t('Users and AI')
-            : x.visibility === 1
-            ? t('Users')
-            : x.visibility === 2
-            ? t('AI')
-            : t('Hidden')}
-        </Badge>
-      ),
-    },
-    {
-      key: 'updated',
-      title: t('Updated'),
-      cell: (x) => formatDateTime(x.updatedAt),
-    },
-    {
-      key: 'created',
-      title: t('Created'),
-      cell: (x) => formatDateTime(x.createdAt),
-    },
-    {
-      key: 'actions',
-      title: t('Actions'),
-      className: 'w-24',
-      cell: (x) => (
-        <div className="flex gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            title={t('Edit')}
-            onClick={() => openEditTemplate(x)}
-          >
-            <IconEdit size={16} />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            title={t('Delete')}
-            onClick={() =>
-              setPendingDelete({ kind: 'template', id: x.id, label: x.name })
-            }
-          >
-            <IconTrash size={16} />
-          </Button>
-        </div>
-      ),
-    },
-  ];
-  const imageColumns: UnifiedTableColumn<ImageEntry>[] = [
-    {
-      key: 'image',
-      title: t('Image'),
-      className: 'min-w-64',
-      cell: (x) => (
-        <code className="text-xs font-medium text-foreground">{x.image}</code>
-      ),
-    },
-    {
-      key: 'description',
-      title: t('Description'),
-      className: 'min-w-64',
-      cell: (x) => x.description || EMPTY_VALUE,
-    },
-    {
-      key: 'status',
-      title: t('Status'),
-      cell: (x) => (
-        <Badge variant={x.isEnabled ? 'default' : 'secondary'}>
-          {x.isEnabled ? t('Enabled') : t('Disabled')}
-        </Badge>
-      ),
-    },
-    {
-      key: 'actions',
-      title: t('Actions'),
-      className: 'w-28',
-      cell: (x) => (
-        <div className="flex gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            title={t('Edit')}
-            onClick={() => openEditImage(x)}
-          >
-            <IconEdit size={16} />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            title={t('Delete')}
-            onClick={() =>
-              setPendingDelete({ kind: 'image', id: x.id, label: x.image })
-            }
-          >
-            <IconTrash size={16} />
-          </Button>
-        </div>
-      ),
-    },
-  ];
-  const quotaColumns: UnifiedTableColumn<Quota>[] = [
-    {
-      key: 'scope',
-      title: t('Scope'),
-      cell: (x) => (
-        <div>
-          <div className="font-medium text-foreground">
-            {x.userId == null
-              ? t('Global default')
-              : x.userName || `User #${x.userId}`}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {t('Updated')}: {formatDateTime(x.updatedAt)}
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'networks',
-      title: t('Allowed networks'),
-      cell: (x) => x.allowedNetworkModes || EMPTY_VALUE,
-    },
-    {
-      key: 'containers',
-      title: t('Container limit'),
-      cell: (x) => limitText(x.maxContainerCount),
-    },
-    {
-      key: 'cpu',
-      title: t('CPU limit'),
-      cell: (x) => limitText(x.maxCpuCores, ` ${t('cores')}`),
-    },
-    {
-      key: 'memory',
-      title: t('Memory limit'),
-      cell: (x) => formatBytes(x.maxMemoryBytes),
-    },
-    {
-      key: 'volumes',
-      title: t('Volume limit'),
-      cell: (x) => (
-        <div className="whitespace-nowrap">
-          {formatBytes(x.maxVolumeBytes)}
-          <span className="text-xs text-muted-foreground">
-            {' '}
-            / {formatBytes(x.maxVolumeBytesPerVolume)}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: 'perContainer',
-      title: t('Per-container limits'),
-      cell: (x) => (
-        <div className="whitespace-nowrap">
-          {limitText(x.maxContainerCpuCores, ` ${t('cores')}`)}
-          <span className="text-xs text-muted-foreground">
-            {' '}
-            · {formatBytes(x.maxContainerMemoryBytes)}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: 'processes',
-      title: t('Process limit'),
-      cell: (x) => limitText(x.maxContainerProcesses),
-    },
-    {
-      key: 'custom',
-      title: t('Images'),
-      cell: (x) =>
-        x.allowCustomImage ? (
-          <Badge>{t('Custom allowed')}</Badge>
-        ) : (
-          <Badge variant="outline">{t('Catalog only')}</Badge>
-        ),
-    },
-    {
-      key: 'actions',
-      title: t('Actions'),
-      className: 'w-20',
-      cell: (x) => (
-        <Button
-          size="icon"
-          variant="ghost"
-          title={t('Edit')}
-          onClick={() => openEditQuota(x)}
-        >
-          <IconEdit size={16} />
-        </Button>
-      ),
-    },
-  ];
-  const tableFilters = (
-    value: string,
-    setValue: (value: string) => void,
-    placeholder: string,
-  ) => (
-    <Input
-      className="w-full sm:w-72"
-      value={value}
-      onChange={(event) => setValue(event.target.value)}
-      placeholder={placeholder}
-    />
-  );
-  const tableActions = (label: string, onClick: () => void) => (
-    <Button onClick={onClick}>
-      <IconPlus
-        size={16}
-        className="mr-2"
-        stroke="hsl(var(--primary-foreground))"
-      />
-      {label}
-    </Button>
   );
 
   return (
@@ -913,6 +420,7 @@ export default function AdminContainersPage() {
           {t('Refresh')}
         </Button>
       </div>
+
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
@@ -948,519 +456,91 @@ export default function AdminContainersPage() {
             </span>
           </TabsTrigger>
         </TabsList>
+
         <TabsContent value="runtime">
-          <UnifiedTable
-            filters={tableFilters(
-              runtimeSearch,
-              setRuntimeSearch,
-              t('Search runtime nodes'),
-            )}
-            actions={[
-              {
-                key: 'add',
-                element: tableActions(t('Add runtime node'), openNewRuntime),
-              },
-            ]}
-            columns={runtimeColumns}
+          <RuntimeNodesTab
+            nodes={nodes}
+            templates={templates}
             rows={pagedNodes}
             loading={loading}
+            saving={saving}
+            search={runtimeSearch}
             page={runtimePage}
             totalCount={filteredNodes.length}
-            rowKey={(x) => x.id}
+            dialog={runtimeDialog}
+            form={runtimeForm}
+            setForm={setRuntimeForm}
+            onSearchChange={setRuntimeSearch}
             onPageChange={setRuntimePage}
-            emptyText={t('No runtime nodes found.')}
+            onDialogChange={setRuntimeDialog}
+            onNew={openNewRuntime}
+            onEdit={openEditRuntime}
+            onToggle={toggleNode}
+            onSave={saveRuntime}
+            onDeleteRequest={setPendingDelete}
           />
         </TabsContent>
         <TabsContent value="templates">
-          <UnifiedTable
-            filters={tableFilters(
-              templateSearch,
-              setTemplateSearch,
-              t('Search templates'),
-            )}
-            actions={[
-              {
-                key: 'add',
-                element: tableActions(t('Add template'), openNewTemplate),
-              },
-            ]}
-            columns={templateColumns}
+          <TemplatesTab
+            nodes={nodes}
             rows={pagedTemplates}
             loading={loading}
+            saving={saving}
+            search={templateSearch}
             page={templatePage}
             totalCount={filteredTemplates.length}
-            rowKey={(x) => x.id}
+            dialog={templateDialog}
+            form={templateForm}
+            setForm={setTemplateForm}
+            onSearchChange={setTemplateSearch}
             onPageChange={setTemplatePage}
-            emptyText={t('No resource templates found.')}
+            onDialogChange={setTemplateDialog}
+            onNew={openNewTemplate}
+            onEdit={openEditTemplate}
+            onSave={saveTemplate}
+            onDeleteRequest={setPendingDelete}
           />
         </TabsContent>
         <TabsContent value="images">
-          <UnifiedTable
-            filters={tableFilters(
-              imageSearch,
-              setImageSearch,
-              t('Search images'),
-            )}
-            actions={[
-              {
-                key: 'add',
-                element: tableActions(t('Add image'), openNewImage),
-              },
-            ]}
-            columns={imageColumns}
+          <ImagesTab
             rows={pagedImages}
             loading={loading}
+            saving={saving}
+            search={imageSearch}
             page={imagePage}
             totalCount={filteredImages.length}
-            rowKey={(x) => x.id}
+            dialog={imageDialog}
+            form={imageForm}
+            setForm={setImageForm}
+            onSearchChange={setImageSearch}
             onPageChange={setImagePage}
-            emptyText={t('No images found.')}
+            onDialogChange={setImageDialog}
+            onNew={openNewImage}
+            onEdit={openEditImage}
+            onSave={saveImage}
+            onDeleteRequest={setPendingDelete}
           />
         </TabsContent>
         <TabsContent value="quotas">
-          <UnifiedTable
-            filters={
-              <span className="text-sm text-muted-foreground">
-                {t(
-                  'Quotas control per-user container resources and image access.',
-                )}
-              </span>
-            }
-            actions={[
-              {
-                key: 'edit',
-                element: tableActions(
-                  quotas.find((x) => x.userId == null)
-                    ? t('Edit global quota')
-                    : t('Configure global quota'),
-                  () => {
-                    const globalQuota = quotas.find((x) => x.userId == null);
-                    if (globalQuota) openEditQuota(globalQuota);
-                    else openNewQuota();
-                  },
-                ),
-              },
-            ]}
-            columns={quotaColumns}
+          <QuotasTab
+            quotas={quotas}
             rows={pagedQuotas}
             loading={loading}
+            saving={saving}
             page={quotaPage}
             totalCount={quotas.length}
-            rowKey={(x) => x.id}
+            dialog={quotaDialog}
+            form={quotaForm}
+            setForm={setQuotaForm}
             onPageChange={setQuotaPage}
-            emptyText={t('No quota policies found.')}
+            onDialogChange={setQuotaDialog}
+            onEdit={openEditQuota}
+            onNew={openNewQuota}
+            onSave={saveQuota}
           />
         </TabsContent>
       </Tabs>
-      <Dialog
-        open={runtimeDialog !== null}
-        onOpenChange={(open) => !open && setRuntimeDialog(null)}
-      >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {runtimeDialog === 'new'
-                ? t('Add runtime node')
-                : t('Edit runtime node')}
-            </DialogTitle>
-            <DialogDescription>
-              {t(
-                'Configure the Docker daemon connection and runtime identity.',
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Label>
-              {t('Name')}
-              <Input
-                value={runtimeForm.name}
-                onChange={(e) =>
-                  setRuntimeForm({ ...runtimeForm, name: e.target.value })
-                }
-              />
-            </Label>
-            <Label>
-              {t('AI name')}
-              <Input
-                value={runtimeForm.aiName}
-                onChange={(e) =>
-                  setRuntimeForm({ ...runtimeForm, aiName: e.target.value })
-                }
-              />
-            </Label>
-            <Label>
-              {t('Backend')}
-              <select
-                className="h-10 w-full rounded-md border bg-background px-3"
-                value={runtimeForm.backendType}
-                onChange={(e) =>
-                  setRuntimeForm({
-                    ...runtimeForm,
-                    backendType: Number(e.target.value),
-                  })
-                }
-              >
-                <option value={1}>{t('Docker')}</option>
-                <option value={2}>{t('Windows Docker')}</option>
-                <option value={3}>{t('Kubernetes')}</option>
-                <option value={4}>{t('Other')}</option>
-              </select>
-            </Label>
-            <Label>
-              {t('Endpoint')}
-              <Input
-                value={runtimeForm.endpoint}
-                placeholder="npipe://./pipe/docker_engine"
-                onChange={(e) =>
-                  setRuntimeForm({ ...runtimeForm, endpoint: e.target.value })
-                }
-              />
-              <span className="text-xs text-muted-foreground">
-                {t('Leave blank to use the host operating system default.')}
-              </span>
-            </Label>
-            <Label className="sm:col-span-2">
-              {t('Description')}
-              <textarea
-                className="min-h-20 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                value={runtimeForm.description}
-                onChange={(e) =>
-                  setRuntimeForm({
-                    ...runtimeForm,
-                    description: e.target.value,
-                  })
-                }
-              />
-            </Label>
-            <Label className="sm:col-span-2">
-              {t('Credential')}
-              <Input
-                type="password"
-                value={runtimeForm.credential}
-                onChange={(e) =>
-                  setRuntimeForm({ ...runtimeForm, credential: e.target.value })
-                }
-              />
-              <span className="text-xs text-muted-foreground">
-                {t('Leave blank to keep the current credential.')}
-              </span>
-            </Label>
-            <LabelSwitch
-              checked={runtimeForm.isEnabled}
-              onCheckedChange={(checked) =>
-                setRuntimeForm({ ...runtimeForm, isEnabled: checked })
-              }
-              label={t('Enabled')}
-              className="sm:col-span-2"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRuntimeDialog(null)}>
-              {t('Cancel')}
-            </Button>
-            <Button
-              disabled={saving}
-              onClick={() => saveRuntime().catch(() => null)}
-            >
-              {t('Save')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog
-        open={templateDialog !== null}
-        onOpenChange={(open) => !open && setTemplateDialog(null)}
-      >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {templateDialog === 'new'
-                ? t('Add resource template')
-                : t('Edit resource template')}
-            </DialogTitle>
-            <DialogDescription>
-              {t(
-                'Define the image, resource limits and visibility for container creation.',
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Label>
-              {t('Name')}
-              <Input
-                value={templateForm.name}
-                onChange={(e) =>
-                  setTemplateForm({ ...templateForm, name: e.target.value })
-                }
-              />
-            </Label>
-            <Label>
-              {t('Image')}
-              <Input
-                value={templateForm.image}
-                onChange={(e) =>
-                  setTemplateForm({ ...templateForm, image: e.target.value })
-                }
-              />
-            </Label>
-            <Label>
-              {t('Runtime node')}
-              <select
-                className="h-10 w-full rounded-md border bg-background px-3"
-                value={templateForm.runtimeNodeId}
-                onChange={(e) =>
-                  setTemplateForm({
-                    ...templateForm,
-                    runtimeNodeId: Number(e.target.value),
-                  })
-                }
-              >
-                {nodes.map((node) => (
-                  <option key={node.id} value={node.id}>
-                    {node.name} ({node.aiName})
-                  </option>
-                ))}
-              </select>
-            </Label>
-            <Label>
-              {t('CPU cores')}
-              <Input
-                type="number"
-                min="0"
-                step="0.1"
-                value={templateForm.cpuCores}
-                onChange={(e) =>
-                  setTemplateForm({
-                    ...templateForm,
-                    cpuCores: Number(e.target.value),
-                  })
-                }
-              />
-            </Label>
-            <Label>
-              {t('Memory bytes')}
-              <Input
-                type="number"
-                min="0"
-                value={templateForm.memoryBytes}
-                onChange={(e) =>
-                  setTemplateForm({
-                    ...templateForm,
-                    memoryBytes: Number(e.target.value),
-                  })
-                }
-              />
-              <span className="text-xs text-muted-foreground">
-                {formatBytes(templateForm.memoryBytes)}
-              </span>
-            </Label>
-            <Label>
-              {t('Max processes')}
-              <Input
-                type="number"
-                min="0"
-                value={templateForm.maxProcesses}
-                onChange={(e) =>
-                  setTemplateForm({
-                    ...templateForm,
-                    maxProcesses: Number(e.target.value),
-                  })
-                }
-              />
-            </Label>
-            <Label>
-              {t('Network')}
-              <Input
-                value={templateForm.backendNetworkName}
-                placeholder="bridge"
-                onChange={(e) =>
-                  setTemplateForm({
-                    ...templateForm,
-                    backendNetworkName: e.target.value,
-                  })
-                }
-              />
-            </Label>
-            <Label>
-              {t('Default volume bytes')}
-              <Input
-                type="number"
-                min="0"
-                value={templateForm.defaultVolumeBytes ?? ''}
-                onChange={(e) =>
-                  setTemplateForm({
-                    ...templateForm,
-                    defaultVolumeBytes: e.target.value
-                      ? Number(e.target.value)
-                      : null,
-                  })
-                }
-              />
-            </Label>
-            <Label>
-              {t('Visibility')}
-              <select
-                className="h-10 w-full rounded-md border bg-background px-3"
-                value={templateForm.visibility}
-                onChange={(e) =>
-                  setTemplateForm({
-                    ...templateForm,
-                    visibility: Number(e.target.value),
-                  })
-                }
-              >
-                <option value={0}>{t('Hidden')}</option>
-                <option value={1}>{t('Users')}</option>
-                <option value={2}>{t('AI')}</option>
-                <option value={3}>{t('Users and AI')}</option>
-              </select>
-            </Label>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTemplateDialog(null)}>
-              {t('Cancel')}
-            </Button>
-            <Button
-              disabled={saving}
-              onClick={() => saveTemplate().catch(() => null)}
-            >
-              {t('Save')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog
-        open={imageDialog !== null}
-        onOpenChange={(open) => !open && setImageDialog(null)}
-      >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {imageDialog === 'new' ? t('Add image') : t('Edit image')}
-            </DialogTitle>
-            <DialogDescription>
-              {imageDialog === 'new'
-                ? t(
-                    'Images must be enabled in the catalog before templates can use them.',
-                  )
-                : t(
-                    'Renaming an image updates references in resource templates.',
-                  )}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Label>
-              {t('Image')}
-              <Input
-                value={imageForm.image}
-                placeholder="registry.example.com/image:tag"
-                onChange={(e) =>
-                  setImageForm({ ...imageForm, image: e.target.value })
-                }
-              />
-            </Label>
-            <Label>
-              {t('Description')}
-              <textarea
-                className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                value={imageForm.description}
-                onChange={(e) =>
-                  setImageForm({ ...imageForm, description: e.target.value })
-                }
-              />
-            </Label>
-            <LabelSwitch
-              checked={imageForm.isEnabled}
-              onCheckedChange={(checked) =>
-                setImageForm({ ...imageForm, isEnabled: checked })
-              }
-              label={t('Enabled')}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setImageDialog(null)}>
-              {t('Cancel')}
-            </Button>
-            <Button
-              disabled={saving}
-              onClick={() => saveImage().catch(() => null)}
-            >
-              {t('Save')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog
-        open={quotaDialog !== null}
-        onOpenChange={(open) => !open && setQuotaDialog(null)}
-      >
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>{t('Edit quota policy')}</DialogTitle>
-            <DialogDescription>
-              {t('Leave a limit blank for unlimited.')}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Label className="sm:col-span-3">
-              {t('Allowed network modes')}
-              <Input
-                value={quotaForm.allowedNetworkModes}
-                placeholder="none,bridge"
-                onChange={(e) =>
-                  setQuotaForm({
-                    ...quotaForm,
-                    allowedNetworkModes: e.target.value,
-                  })
-                }
-              />
-            </Label>
-            {(
-              [
-                ['maxContainerCount', 'Max containers'],
-                ['maxCpuCores', 'Max CPU cores'],
-                ['maxMemoryBytes', 'Max memory bytes'],
-                ['maxContainerProcesses', 'Max processes'],
-                ['maxVolumeBytes', 'Max volume bytes'],
-                ['maxContainerCpuCores', 'Max CPU per container'],
-                ['maxContainerMemoryBytes', 'Max memory per container'],
-                ['maxVolumeBytesPerVolume', 'Max volume bytes per volume'],
-              ] as const
-            ).map(([key, label]) => (
-              <Label key={key}>
-                {t(label)}
-                <Input
-                  type="number"
-                  min="0"
-                  value={quotaForm[key]}
-                  onChange={(e) =>
-                    setQuotaForm({ ...quotaForm, [key]: e.target.value })
-                  }
-                />
-              </Label>
-            ))}
-            <LabelSwitch
-              checked={quotaForm.allowCustomImage}
-              onCheckedChange={(checked) =>
-                setQuotaForm({ ...quotaForm, allowCustomImage: checked })
-              }
-              label={t('Allow custom images')}
-              className="sm:col-span-3"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setQuotaDialog(null)}>
-              {t('Cancel')}
-            </Button>
-            <Button
-              disabled={saving}
-              onClick={() => saveQuota().catch(() => null)}
-            >
-              {t('Save')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
       <AlertDialog
         open={pendingDelete !== null}
         onOpenChange={(open) => !open && setPendingDelete(null)}
@@ -1492,6 +572,7 @@ export default function AdminContainersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
       <div className="flex items-start gap-2 rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
         <IconInfo size={16} className="mt-0.5 shrink-0" />
         <span>
