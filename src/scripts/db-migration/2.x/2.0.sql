@@ -7,6 +7,11 @@
     move to a secret/configuration provider in a later migration.
 */
 
+IF DB_NAME() <> N'ChatsDEV'
+BEGIN
+    THROW 52012, N'This migration must be executed against the ChatsDEV database.', 1;
+END;
+
 SET NOCOUNT ON;
 
 PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
@@ -19,9 +24,9 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         THROW 52002, N'dbo.ChatTurn is required by the first-step migration.', 1;
 
     /* Step 1.1: remove the 1.x temporary-session model during the outage. */
-    PRINT N'[Step 1.1] 删除 dbo.ChatDockerSession（若存在）';
     IF OBJECT_ID(N'dbo.ChatDockerSession', N'U') IS NOT NULL
     BEGIN
+        PRINT N'[Step 1.1] 删除 dbo.ChatDockerSession';
         DECLARE @dropSql nvarchar(max) = N'';
         SELECT @dropSql = @dropSql +
             N'ALTER TABLE ' + QUOTENAME(OBJECT_SCHEMA_NAME(fk.parent_object_id)) + N'.' +
@@ -38,14 +43,14 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
     END;
 
     /* Step 1.2: Docker daemon, Windows Docker, Kubernetes, or another backend. */
-    PRINT N'[Step 1.2] 创建 dbo.ContainerRuntimeNode（若不存在）';
     IF OBJECT_ID(N'dbo.ContainerRuntimeNode', N'U') IS NULL
     BEGIN
+        PRINT N'[Step 1.2] 创建 dbo.ContainerRuntimeNode';
         CREATE TABLE dbo.ContainerRuntimeNode
         (
             Id                  INT NOT NULL IDENTITY(1,1),
             Name                NVARCHAR(128) NOT NULL,
-            AIName              VARCHAR(128) NOT NULL,
+            AiName              VARCHAR(128) NOT NULL,
             Description         NVARCHAR(1000) NULL,
             -- 1=Docker, 2=Windows Docker, 3=Kubernetes, 4=Other
             BackendType         TINYINT NOT NULL,
@@ -56,7 +61,7 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
             UpdatedAt            DATETIME2(7) NOT NULL CONSTRAINT DF_ContainerRuntimeNode_UpdatedAt DEFAULT (SYSUTCDATETIME()),
             CONSTRAINT PK_ContainerRuntimeNode PRIMARY KEY CLUSTERED (Id),
             CONSTRAINT UQ_ContainerRuntimeNode_Name UNIQUE (Name),
-            CONSTRAINT UQ_ContainerRuntimeNode_AIName UNIQUE (AIName),
+            CONSTRAINT UQ_ContainerRuntimeNode_AiName UNIQUE (AiName),
             CONSTRAINT CK_ContainerRuntimeNode_BackendType CHECK (BackendType IN (1, 2, 3, 4))
         );
     END;
@@ -65,11 +70,11 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         PRINT N'    -> ContainerRuntimeNode 表已存在，跳过创建';
     END;
 
-    PRINT N'[Step 1.2.1] 插入默认 Docker RuntimeNode（若不存在）';
     IF NOT EXISTS (SELECT 1 FROM dbo.ContainerRuntimeNode WHERE Name = N'default-docker')
     BEGIN
+        PRINT N'[Step 1.2.1] 插入默认 Docker RuntimeNode';
         INSERT INTO dbo.ContainerRuntimeNode
-            (Name, AIName, Description, BackendType, Endpoint, Credential, IsEnabled)
+            (Name, AiName, Description, BackendType, Endpoint, Credential, IsEnabled)
         VALUES
             (N'default-docker', 'linux', N'Default Linux Docker runtime', 1, 'unix:///var/run/docker.sock', NULL, 1);
         PRINT N'    -> 已插入 default-docker RuntimeNode';
@@ -80,9 +85,9 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
     END;
 
     /* Step 1.3: common resource record for permanent and temporary containers. */
-    PRINT N'[Step 1.3] 创建 dbo.ContainerResource 及索引（若不存在）';
     IF OBJECT_ID(N'dbo.ContainerResource', N'U') IS NULL
     BEGIN
+        PRINT N'[Step 1.3] 创建 dbo.ContainerResource 及索引';
         CREATE TABLE dbo.ContainerResource
         (
             Id                  BIGINT NOT NULL IDENTITY(1,1),
@@ -152,9 +157,9 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         PRINT N'    -> 索引 IX_ContainerResource_CleanupAt 已存在，跳过';
 
     /* Step 1.4: first-class volumes. */
-    PRINT N'[Step 1.4] 创建 dbo.ContainerVolume 及索引（若不存在）';
     IF OBJECT_ID(N'dbo.ContainerVolume', N'U') IS NULL
     BEGIN
+        PRINT N'[Step 1.4] 创建 dbo.ContainerVolume 及索引';
         CREATE TABLE dbo.ContainerVolume
         (
             Id                  BIGINT NOT NULL IDENTITY(1,1),
@@ -197,9 +202,9 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
     ELSE
         PRINT N'    -> 索引 IX_ContainerVolume_OwnerUser_Active 已存在，跳过';
 
-    PRINT N'[Step 1.5] 创建 dbo.ContainerVolumeMount 及索引（若不存在）';
     IF OBJECT_ID(N'dbo.ContainerVolumeMount', N'U') IS NULL
     BEGIN
+        PRINT N'[Step 1.5] 创建 dbo.ContainerVolumeMount 及索引';
         CREATE TABLE dbo.ContainerVolumeMount
         (
             Id                  BIGINT NOT NULL IDENTITY(1,1),
@@ -231,9 +236,9 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
     ELSE
         PRINT N'    -> 索引 IX_ContainerVolumeMount_Container_Active 已存在，跳过';
 
-    PRINT N'[Step 1.6] 创建 dbo.ChatContainerResourceAccess 及索引（若不存在）';
     IF OBJECT_ID(N'dbo.ChatContainerResourceAccess', N'U') IS NULL
     BEGIN
+        PRINT N'[Step 1.6] 创建 dbo.ChatContainerResourceAccess 及索引';
         CREATE TABLE dbo.ChatContainerResourceAccess
         (
             Id                  BIGINT NOT NULL IDENTITY(1,1),
@@ -256,9 +261,9 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
     ELSE
         PRINT N'    -> 索引 IX_ChatContainerAccess_Container 已存在，跳过';
 
-    PRINT N'[Step 1.7] 创建 dbo.UserContainerQuota（若不存在）';
     IF OBJECT_ID(N'dbo.UserContainerQuota', N'U') IS NULL
     BEGIN
+        PRINT N'[Step 1.7] 创建 dbo.UserContainerQuota';
         CREATE TABLE dbo.UserContainerQuota
         (
             Id                  INT NOT NULL IDENTITY(1,1),
@@ -302,9 +307,9 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
     ELSE
         PRINT N'    -> 索引 UX_UserContainerQuota_Default 已存在，跳过';
 
-    PRINT N'[Step 1.7.1] 插入全局默认用户容器配额（若不存在）';
     IF NOT EXISTS (SELECT 1 FROM dbo.UserContainerQuota WHERE UserId IS NULL)
     BEGIN
+        PRINT N'[Step 1.7.1] 插入全局默认用户容器配额';
         INSERT INTO dbo.UserContainerQuota
             (UserId, AllowCustomImage, AllowedNetworkModes)
         VALUES
@@ -316,9 +321,9 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         PRINT N'    -> 全局默认用户容器配额已存在，跳过插入';
     END;
 
-    PRINT N'[Step 1.8] 创建 dbo.ContainerImage（若不存在）';
     IF OBJECT_ID(N'dbo.ContainerImage', N'U') IS NULL
     BEGIN
+        PRINT N'[Step 1.8] 创建 dbo.ContainerImage';
         CREATE TABLE dbo.ContainerImage
         (
             Image       VARCHAR(512) NOT NULL,
@@ -333,9 +338,9 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         PRINT N'    -> ContainerImage 表已存在，跳过创建';
     END;
 
-    PRINT N'[Step 1.8.1] 插入内置镜像 code-interpreter:latest（若不存在）';
     IF NOT EXISTS (SELECT 1 FROM dbo.ContainerImage WHERE Image = 'code-interpreter:latest')
     BEGIN
+        PRINT N'[Step 1.8.1] 插入内置镜像 code-interpreter:latest';
         INSERT INTO dbo.ContainerImage (Image, Description, IsEnabled)
         VALUES
             ('code-interpreter:latest', N'Pre-installed with common packages, suitable for most daily tasks', 1);
@@ -346,9 +351,9 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         PRINT N'    -> 内置镜像 code-interpreter:latest 已存在，跳过插入';
     END;
 
-    PRINT N'[Step 1.8.2] 创建 dbo.ContainerResourceTemplate 及索引（若不存在）';
     IF OBJECT_ID(N'dbo.ContainerResourceTemplate', N'U') IS NULL
     BEGIN
+        PRINT N'[Step 1.8.2] 创建 dbo.ContainerResourceTemplate 及索引';
         CREATE TABLE dbo.ContainerResourceTemplate
         (
             Id                  INT NOT NULL IDENTITY(1,1),
@@ -377,9 +382,9 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
     BEGIN
         PRINT N'    -> ContainerResourceTemplate 表已存在，跳过创建';
     END;
-    PRINT N'[Step 1.8.3] 插入默认 ContainerResourceTemplate（若不存在）';
     IF NOT EXISTS (SELECT 1 FROM dbo.ContainerResourceTemplate WHERE Name = N'default-code-interpreter')
     BEGIN
+        PRINT N'[Step 1.8.3] 插入默认 ContainerResourceTemplate';
         DECLARE @defaultRuntimeNodeId int = (SELECT Id FROM dbo.ContainerRuntimeNode WHERE Name = N'default-docker');
         IF @defaultRuntimeNodeId IS NULL
             THROW 52011, N'default-docker RuntimeNode is required by the default container template.', 1;

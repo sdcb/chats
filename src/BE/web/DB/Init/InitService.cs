@@ -35,7 +35,7 @@ public class InitService(IServiceScopeFactory scopeFactory)
         ContainerRuntimeNode runtimeNode = new()
         {
             Name = "default-docker",
-            AIName = "linux",
+            AiName = "linux",
             Description = "Default Linux Docker runtime",
             BackendType = 1,
             Endpoint = "unix:///var/run/docker.sock",

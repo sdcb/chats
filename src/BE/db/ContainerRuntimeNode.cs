@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Chats.DB;
 
 [Table("ContainerRuntimeNode")]
-[Index("AIName", Name = "UQ_ContainerRuntimeNode_AIName", IsUnique = true)]
+[Index("AiName", Name = "UQ_ContainerRuntimeNode_AiName", IsUnique = true)]
 [Index("Name", Name = "UQ_ContainerRuntimeNode_Name", IsUnique = true)]
 public partial class ContainerRuntimeNode
 {
@@ -19,7 +19,7 @@ public partial class ContainerRuntimeNode
 
     [StringLength(128)]
     [Unicode(false)]
-    public string AIName { get; set; } = null!;
+    public string AiName { get; set; } = null!;
 
     [StringLength(1000)]
     public string? Description { get; set; }

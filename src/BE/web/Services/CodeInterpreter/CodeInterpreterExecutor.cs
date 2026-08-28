@@ -206,7 +206,8 @@ public sealed class CodeInterpreterExecutor(
         if (templates.Count > 0)
         {
             lines.Add("AI-visible container templates:");
-            lines.AddRange(templates.Select(x => $"- {x.Name}: image={x.Image}, runtime={x.RuntimeNode.AIName}, cpu={x.CpuCores:0.##}, memory={x.MemoryBytes}, maxProcesses={x.MaxProcesses}, network={x.BackendNetworkName ?? "default"}"));
+            lines.AddRange(templates
+                .Select(x => $"- {x.Name}: image={x.Image}, runtime={x.RuntimeNode.AiName}, cpu={x.CpuCores:0.##}, memory={x.MemoryBytes}, maxProcesses={x.MaxProcesses}, network={x.BackendNetworkName ?? "default"}"));
         }
         UserContainerQuotum? quota = await _db.UserContainerQuota.FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken)
             ?? await _db.UserContainerQuota.FirstOrDefaultAsync(x => x.UserId == null, cancellationToken);
@@ -1110,7 +1111,7 @@ public sealed class CodeInterpreterExecutor(
             .Include(x => x.RuntimeNode)
             .Where(x => (x.Visibility & 2) != 0)
             .OrderBy(x => x.Name);
-        if (!string.IsNullOrWhiteSpace(runtimeNode)) templateQuery = templateQuery.Where(x => x.RuntimeNode.AIName == runtimeNode.Trim());
+        if (!string.IsNullOrWhiteSpace(runtimeNode)) templateQuery = templateQuery.Where(x => x.RuntimeNode.AiName == runtimeNode.Trim());
         ContainerResourceTemplate template = await templateQuery.FirstOrDefaultAsync(cancellationToken)
             ?? throw new InvalidOperationException("No AI-visible container template is configured.");
         UserContainerQuotum? quota = await _db.UserContainerQuota.FirstOrDefaultAsync(x => x.UserId == ctx.CurrentAssistantTurn.Chat.UserId, cancellationToken)

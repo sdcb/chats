@@ -15,7 +15,12 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
 
     [HttpGet("runtime-nodes")]
     public async Task<ActionResult<IReadOnlyList<RuntimeNodeDto>>> RuntimeNodes(CancellationToken cancellationToken)
-        => await _db.ContainerRuntimeNodes.OrderBy(x => x.Name).Select(x => new RuntimeNodeDto(x.Id, x.Name, x.AIName, x.Description, x.BackendType, x.Endpoint, x.IsEnabled)).ToListAsync(cancellationToken);
+    {
+        return await _db.ContainerRuntimeNodes
+            .OrderBy(x => x.Name)
+            .Select(x => new RuntimeNodeDto(x.Id, x.Name, x.AiName, x.Description, x.BackendType, x.Endpoint, x.IsEnabled))
+            .ToListAsync(cancellationToken);
+    }
 
     [HttpPost("runtime-nodes")]
     public async Task<IActionResult> CreateRuntimeNode([FromBody] RuntimeNodeRequest request, CancellationToken cancellationToken)
@@ -23,7 +28,7 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
         ContainerRuntimeNode node = new()
         {
             Name = request.Name,
-            AIName = request.AIName,
+            AiName = request.AIName,
             Description = request.Description,
             BackendType = request.BackendType,
             Endpoint = request.Endpoint,
@@ -43,7 +48,7 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
         ContainerRuntimeNode? node = await _db.ContainerRuntimeNodes.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null) return NotFound();
         node.Name = request.Name.Trim();
-        node.AIName = request.AIName.Trim();
+        node.AiName = request.AIName.Trim();
         node.Description = request.Description?.Trim();
         node.BackendType = request.BackendType;
         node.Endpoint = request.Endpoint.Trim();

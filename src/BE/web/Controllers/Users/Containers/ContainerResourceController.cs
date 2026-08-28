@@ -28,7 +28,9 @@ public sealed class ContainerResourceController(
     public async Task<ActionResult<IReadOnlyList<ContainerTemplateDto>>> Templates(CancellationToken cancellationToken)
     {
         IReadOnlyList<ContainerResourceTemplate> templates = await _resources.ListTemplatesAsync(false, cancellationToken);
-        return templates.Select(x => new ContainerTemplateDto(x.Id, x.Name, x.RuntimeNodeId, x.RuntimeNode.AIName, x.Image, x.CpuCores, x.MemoryBytes, x.MaxProcesses, x.BackendNetworkName, x.DefaultVolumeBytes, x.Visibility)).ToArray();
+        return templates
+            .Select(x => new ContainerTemplateDto(x.Id, x.Name, x.RuntimeNodeId, x.RuntimeNode.AiName, x.Image, x.CpuCores, x.MemoryBytes, x.MaxProcesses, x.BackendNetworkName, x.DefaultVolumeBytes, x.Visibility))
+            .ToArray();
     }
 
     [HttpGet("for-chat/{encryptedChatId}")]
@@ -162,7 +164,7 @@ public sealed class ContainerResourceController(
         resource.MemoryBytes,
         resource.MaxProcesses,
         resource.BackendNetworkName,
-        resource.RuntimeNode?.AIName,
+        resource.RuntimeNode?.AiName,
         resource.Ip,
         resource.DeletedAt is not null,
         resource.StoppedAt is not null,
