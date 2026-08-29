@@ -365,6 +365,41 @@ public sealed class ContainerCatalogController(ChatsDB db) : ControllerBase
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"container-quotas-{DateTime.UtcNow:yyyyMMdd-HHmmss}.xlsx");
     }
 
+    [HttpGet("quota-users")]
+    public async Task<ActionResult<PagedResult<QuotaUserOptionDto>>> QuotaUsers(
+        [FromQuery] string? query,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 20);
+        IQueryable<User> users = _db.Users.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            string keyword = query.Trim();
+            bool hasId = int.TryParse(keyword, out int id);
+            users = users.Where(x =>
+                (hasId && x.Id == id) ||
+                EF.Functions.Like(x.UserName, $"%{keyword}%") ||
+                (x.DisplayName != null && EF.Functions.Like(x.DisplayName, $"%{keyword}%")) ||
+                (x.Email != null && EF.Functions.Like(x.Email, $"%{keyword}%")));
+        }
+
+        IQueryable<QuotaUserOptionDto> rows = users
+            .OrderBy(x => x.DisplayName ?? x.UserName)
+            .ThenBy(x => x.Id)
+            .Select(x => new QuotaUserOptionDto(
+                x.Id,
+                x.UserName,
+                x.DisplayName,
+                x.UserContainerQuotum != null));
+        return await PagedResult.FromQuery(
+            rows,
+            new PagingRequest { Page = page, PageSize = pageSize },
+            cancellationToken);
+    }
+
     [HttpPut("quotas/{userId:int?}")]
     public async Task<IActionResult> UpsertQuota(int? userId, [FromBody] QuotaRequest request, CancellationToken cancellationToken)
     {

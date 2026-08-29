@@ -91,6 +91,29 @@ export const getAdminQuotas = (filters: QuotaFilters): Promise<Quota[]> =>
     }),
   });
 
+export type QuotaUserOption = {
+  id: number;
+  userName: string;
+  displayName: string | null;
+  hasQuota: boolean;
+};
+
+export const searchQuotaUsers = (
+  query: string,
+  page = 1,
+  pageSize = 20,
+): Promise<PageResult<QuotaUserOption[]>> =>
+  createFetchClient().get<PageResult<QuotaUserOption[]>>(
+    '/api/admin/container-catalog/quota-users',
+    {
+      params: {
+        query: query || undefined,
+        page,
+        pageSize,
+      },
+    },
+  );
+
 export const ADMIN_RUNTIME_NODES_EXPORT_URL =
   '/api/admin/container-catalog/runtime-nodes/export';
 export const ADMIN_TEMPLATES_EXPORT_URL =

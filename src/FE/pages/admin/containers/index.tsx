@@ -55,6 +55,38 @@ type CatalogFilters = {
   quotas: QuotaFilters;
 };
 
+type RouterQuery = Record<string, string | string[] | undefined>;
+
+const readQueryValue = (query: RouterQuery, key: string) => {
+  const value = query[key];
+  return Array.isArray(value) ? value[0] || '' : value || '';
+};
+
+const readEnumQueryValue = <T extends string>(
+  query: RouterQuery,
+  key: string,
+  values: readonly T[],
+): T | '' => {
+  const value = readQueryValue(query, key);
+  return values.includes(value as T) ? (value as T) : '';
+};
+
+const readPositiveIntegerQueryValue = (query: RouterQuery, key: string) => {
+  const value = readQueryValue(query, key);
+  return /^\d+$/.test(value) ? value : '';
+};
+
+const buildCatalogFilterQuery = <T extends keyof CatalogFilters>(
+  tab: T,
+  filters: CatalogFilters[T],
+) => {
+  const query: Record<string, string> = { tab };
+  Object.entries(filters as Record<string, string>).forEach(([key, value]) => {
+    if (value) query[key] = value;
+  });
+  return query;
+};
+
 export default function AdminContainersPage() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -202,11 +234,16 @@ export default function AdminContainersPage() {
       else if (tab === 'images') setImageFilters(filters as ImageFilters);
       else if (tab === 'quotas') setQuotaFilters(filters as QuotaFilters);
 
-      void loadTab(tab, true, {
-        [tab]: filters,
-      } as Partial<CatalogFilters>).catch(() => null);
+      void router.replace(
+        {
+          pathname: router.pathname,
+          query: buildCatalogFilterQuery(tab, filters),
+        },
+        undefined,
+        { shallow: true },
+      );
     },
-    [loadTab],
+    [router],
   );
 
   const tabQueryValue = Array.isArray(router.query.tab)
@@ -215,6 +252,20 @@ export default function AdminContainersPage() {
   const activeTab: ContainerTab = isContainerTab(tabQueryValue)
     ? tabQueryValue
     : 'resources';
+
+  const catalogUrlKey = useMemo(() => {
+    const keys = ['tab'];
+    if (activeTab === 'runtime') keys.push('query', 'backendType', 'enabled');
+    else if (activeTab === 'templates')
+      keys.push('query', 'runtimeNodeId', 'visibility');
+    else if (activeTab === 'images') keys.push('query', 'enabled');
+    else if (activeTab === 'quotas')
+      keys.push('query', 'allowCustomImage', 'scope');
+    return JSON.stringify(
+      keys.map((key) => [key, readQueryValue(router.query, key)]),
+    );
+  }, [activeTab, router.query]);
+  const appliedCatalogUrlKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -236,16 +287,84 @@ export default function AdminContainersPage() {
         { shallow: true },
       );
     }
-    loadTab(activeTab).catch(() => null);
-  }, [activeTab, loadTab, router.isReady, router.pathname, tabQueryValue]);
+
+    if (appliedCatalogUrlKeyRef.current === catalogUrlKey) return;
+    appliedCatalogUrlKeyRef.current = catalogUrlKey;
+
+    if (activeTab === 'runtime') {
+      const nextFilters: RuntimeNodeFilters = {
+        query: readQueryValue(router.query, 'query'),
+        backendType: readEnumQueryValue(router.query, 'backendType', [
+          '1',
+          '2',
+          '3',
+          '4',
+        ]),
+        enabled: readEnumQueryValue(router.query, 'enabled', ['true', 'false']),
+      };
+      setRuntimeFilters(nextFilters);
+      void loadTab('runtime', true, { runtime: nextFilters }).catch(() => null);
+    } else if (activeTab === 'templates') {
+      const nextFilters: TemplateFilters = {
+        query: readQueryValue(router.query, 'query'),
+        runtimeNodeId: readPositiveIntegerQueryValue(
+          router.query,
+          'runtimeNodeId',
+        ),
+        visibility: readEnumQueryValue(router.query, 'visibility', [
+          '0',
+          '1',
+          '2',
+          '3',
+        ]),
+      };
+      setTemplateFilters(nextFilters);
+      void loadTab('templates', true, { templates: nextFilters }).catch(
+        () => null,
+      );
+    } else if (activeTab === 'images') {
+      const nextFilters: ImageFilters = {
+        query: readQueryValue(router.query, 'query'),
+        enabled: readEnumQueryValue(router.query, 'enabled', ['true', 'false']),
+      };
+      setImageFilters(nextFilters);
+      void loadTab('images', true, { images: nextFilters }).catch(() => null);
+    } else if (activeTab === 'quotas') {
+      const nextFilters: QuotaFilters = {
+        query: readQueryValue(router.query, 'query'),
+        allowCustomImage: readEnumQueryValue(router.query, 'allowCustomImage', [
+          'true',
+          'false',
+        ]),
+        scope: readEnumQueryValue(router.query, 'scope', ['default', 'user']),
+      };
+      setQuotaFilters(nextFilters);
+      void loadTab('quotas', true, { quotas: nextFilters }).catch(() => null);
+    }
+  }, [
+    activeTab,
+    catalogUrlKey,
+    loadTab,
+    router.isReady,
+    router.pathname,
+    router.query,
+    tabQueryValue,
+  ]);
 
   const handleTabChange = (value: string) => {
     if (!router.isReady || !isContainerTab(value)) return;
 
     // Catalog tabs do not share the resource list's paging/filter/column
-    // state. Start each catalog tab with a short, tab-only URL.
-    const nextQuery: Record<string, string> =
-      value === 'resources' ? {} : { tab: value };
+    // state. Carry the selected catalog tab's filters in its URL.
+    let nextQuery: Record<string, string> = {};
+    if (value === 'runtime')
+      nextQuery = buildCatalogFilterQuery('runtime', runtimeFilters);
+    else if (value === 'templates')
+      nextQuery = buildCatalogFilterQuery('templates', templateFilters);
+    else if (value === 'images')
+      nextQuery = buildCatalogFilterQuery('images', imageFilters);
+    else if (value === 'quotas')
+      nextQuery = buildCatalogFilterQuery('quotas', quotaFilters);
 
     void router.push(
       {

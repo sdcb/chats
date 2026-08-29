@@ -52,6 +52,7 @@ public sealed record ImageQuery(string? Query, bool? Enabled);
 public sealed record ImageExportQuery(string? Query, bool? Enabled, string? Columns);
 public sealed record QuotaQuery(string? Query, bool? AllowCustomImage, string? Scope);
 public sealed record QuotaExportQuery(string? Query, bool? AllowCustomImage, string? Scope, string? Columns);
+public sealed record QuotaUserOptionDto(int Id, string UserName, string? DisplayName, bool HasQuota);
 
 public sealed record ContainerResourceAdminDto(
     long Id,

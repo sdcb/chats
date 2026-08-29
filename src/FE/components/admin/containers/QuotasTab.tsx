@@ -40,6 +40,7 @@ import {
   SelectTrigger,
 } from '@/components/ui/select';
 
+import QuotaUserPicker from './QuotaUserPicker';
 import {
   DeleteTarget,
   EMPTY_VALUE,
@@ -129,6 +130,13 @@ export default function QuotasTab({
   });
   const updateFilters = (next: Partial<QuotaFilters>) =>
     onFiltersChange({ ...filters, ...next });
+  const existingUserIds = useMemo(
+    () =>
+      new Set(
+        quotas.flatMap((quota) => (quota.userId == null ? [] : [quota.userId])),
+      ),
+    [quotas],
+  );
 
   const allColumns = useMemo<UnifiedTableColumn<Quota, QuotaColumnKey>[]>(
     () => [
@@ -426,14 +434,11 @@ export default function QuotasTab({
           <div className="grid gap-4 sm:grid-cols-3">
             {dialog === 'new' && (
               <Label className="sm:col-span-3">
-                {t('User ID')}
-                <Input
-                  name="quota-user-id"
-                  inputMode="numeric"
-                  autoComplete="off"
+                {t('User')}
+                <QuotaUserPicker
                   value={form.userId}
-                  placeholder={t('Enter user ID')!}
-                  onChange={(e) => setForm({ ...form, userId: e.target.value })}
+                  existingUserIds={existingUserIds}
+                  onChange={(userId) => setForm({ ...form, userId })}
                 />
               </Label>
             )}
