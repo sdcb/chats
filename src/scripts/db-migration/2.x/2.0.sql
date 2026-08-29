@@ -313,7 +313,7 @@ PRINT N'[第一步] 开始创建持久化 Docker 与资源治理基础结构';
         INSERT INTO dbo.UserContainerQuota
             (UserId, AllowCustomImage, AllowedNetworkModes)
         VALUES
-            (NULL, 0, 'none,bridge');
+            (NULL, 1, 'none,bridge');
         PRINT N'    -> 已插入全局默认用户容器配额';
     END;
     ELSE

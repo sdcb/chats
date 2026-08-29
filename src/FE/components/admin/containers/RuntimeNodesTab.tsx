@@ -1,13 +1,27 @@
-import { Dispatch, SetStateAction } from 'react';
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useMemo,
+  useState,
+} from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { IconDocker, IconEdit, IconPlus, IconTrash } from '@/components/Icons';
-import CatalogCardField from '@/components/admin/containers/CatalogCardField';
+import { getUserSession } from '@/utils/user';
+
+import ExportButton from '@/components/Button/ExportButtom';
+import { IconEdit, IconPlus, IconRefresh } from '@/components/Icons';
+import DeletePopover from '@/components/Popover/DeletePopover';
+import Tips from '@/components/Tips/Tips';
 import IconActionButton from '@/components/common/IconActionButton';
-import { Badge } from '@/components/ui/badge';
+import {
+  UnifiedColumnSelector,
+  UnifiedTable,
+  UnifiedTableColumn,
+} from '@/components/table/UnifiedTable';
+import { useTextFilterDraft } from '@/components/table/useTextFilterDraft';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -19,15 +33,49 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LabelSwitch } from '@/components/ui/label-switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from '@/components/ui/select';
 
 import {
   DeleteTarget,
   EMPTY_VALUE,
   RuntimeForm,
   RuntimeNode,
+  RuntimeNodeFilters,
   RuntimeTemplate,
   formatDateTime,
 } from './types';
+
+import { ADMIN_RUNTIME_NODES_EXPORT_URL } from '@/apis/adminContainersApi';
+
+type RuntimeDataColumnKey =
+  | 'id'
+  | 'name'
+  | 'aiName'
+  | 'backend'
+  | 'status'
+  | 'endpoint'
+  | 'credential'
+  | 'templates'
+  | 'description'
+  | 'createdAt'
+  | 'updatedAt';
+
+type RuntimeColumnKey = RuntimeDataColumnKey | 'actions';
+
+const DEFAULT_COLUMNS: RuntimeDataColumnKey[] = [
+  'name',
+  'aiName',
+  'backend',
+  'status',
+  'endpoint',
+  'templates',
+  'updatedAt',
+];
 
 type Props = {
   nodes: RuntimeNode[];
@@ -42,7 +90,10 @@ type Props = {
   onEdit: (node: RuntimeNode) => void;
   onToggle: (node: RuntimeNode) => Promise<void>;
   onSave: () => Promise<void>;
-  onDeleteRequest: (target: DeleteTarget) => void;
+  onDelete: (target: DeleteTarget) => Promise<void>;
+  filters: RuntimeNodeFilters;
+  onFiltersChange: (filters: RuntimeNodeFilters) => void;
+  onRefresh: () => Promise<void>;
 };
 
 export default function RuntimeNodesTab({
@@ -58,135 +109,310 @@ export default function RuntimeNodesTab({
   onEdit,
   onToggle,
   onSave,
-  onDeleteRequest,
+  onDelete,
+  filters,
+  onFiltersChange,
+  onRefresh,
 }: Props) {
   const { t } = useTranslation();
+  const [selectedColumns, setSelectedColumns] =
+    useState<RuntimeDataColumnKey[]>(DEFAULT_COLUMNS);
+  const committedTextFilters = useMemo(
+    () => ({ query: filters.query }),
+    [filters.query],
+  );
+  const commitTextFilters = useCallback(
+    (next: { query: string }) => onFiltersChange({ ...filters, ...next }),
+    [filters, onFiltersChange],
+  );
+  const { draft, setDraft, flushDraft, hasPendingDraft } = useTextFilterDraft({
+    committed: committedTextFilters,
+    onCommit: commitTextFilters,
+  });
+  const updateFilters = (next: Partial<RuntimeNodeFilters>) =>
+    onFiltersChange({ ...filters, ...next });
+
+  const allColumns = useMemo<
+    UnifiedTableColumn<RuntimeNode, RuntimeColumnKey>[]
+  >(
+    () => [
+      { key: 'id', title: t('Runtime Node ID'), cell: (row) => row.id },
+      { key: 'name', title: t('Name'), cell: (row) => row.name },
+      { key: 'aiName', title: t('AI name'), cell: (row) => row.aiName },
+      {
+        key: 'backend',
+        title: t('Backend'),
+        cell: (row) =>
+          row.backendType === 1
+            ? t('Docker')
+            : row.backendType === 2
+            ? t('Windows Docker')
+            : row.backendType === 3
+            ? t('Kubernetes')
+            : t('Other'),
+      },
+      {
+        key: 'status',
+        title: t('Status'),
+        cell: (row) =>
+          row.isEnabled ? (
+            <span className="text-green-600 dark:text-green-400">
+              {t('Enabled')}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">{t('Disabled')}</span>
+          ),
+      },
+      {
+        key: 'endpoint',
+        title: t('Endpoint'),
+        className: 'max-w-64',
+        cell: (row) => (
+          <code className="break-all text-xs">
+            {row.endpoint || t('System default')}
+          </code>
+        ),
+      },
+      {
+        key: 'credential',
+        title: t('Credential'),
+        cell: (row) => (row.hasCredential ? t('Configured') : EMPTY_VALUE),
+      },
+      {
+        key: 'templates',
+        title: t('Templates'),
+        cell: (row) =>
+          templates.filter((template) => template.runtimeNodeId === row.id)
+            .length,
+      },
+      {
+        key: 'description',
+        title: t('Description'),
+        className: 'max-w-72',
+        cell: (row) => row.description || EMPTY_VALUE,
+      },
+      {
+        key: 'createdAt',
+        title: t('Created'),
+        cell: (row) => formatDateTime(row.createdAt),
+      },
+      {
+        key: 'updatedAt',
+        title: t('Updated'),
+        cell: (row) => formatDateTime(row.updatedAt),
+      },
+      {
+        key: 'actions',
+        title: t('Actions'),
+        cell: (row) => (
+          <div className="flex items-center gap-1">
+            <LabelSwitch
+              checked={row.isEnabled}
+              onCheckedChange={(checked) => {
+                if (checked !== row.isEnabled) onToggle(row).catch(() => null);
+              }}
+              label={row.isEnabled ? t('Enabled') : t('Disabled')}
+              className="mr-1 gap-1"
+              labelClassName="text-xs"
+              switchClassName="scale-75"
+            />
+            <IconActionButton
+              label={t('Edit')}
+              icon={<IconEdit size={15} />}
+              className="h-8 w-8"
+              onClick={() => onEdit(row)}
+            />
+            <DeletePopover
+              onDelete={() =>
+                onDelete({ kind: 'runtime', id: row.id, label: row.name })
+              }
+              tooltip={t('Delete')}
+              className="h-8 w-8"
+              iconSize={15}
+            />
+          </div>
+        ),
+      },
+    ],
+    [onDelete, onEdit, onToggle, t, templates],
+  );
+
+  const visibleColumns = useMemo(
+    () => [
+      ...allColumns.filter(
+        (
+          column,
+        ): column is UnifiedTableColumn<RuntimeNode, RuntimeDataColumnKey> =>
+          column.key !== 'actions' && selectedColumns.includes(column.key),
+      ),
+      allColumns.find((column) => column.key === 'actions')!,
+    ],
+    [allColumns, selectedColumns],
+  );
+
+  const exportParams = useMemo(
+    () => ({
+      token: getUserSession(),
+      query: filters.query || undefined,
+      backendType: filters.backendType || undefined,
+      enabled: filters.enabled || undefined,
+      columns: selectedColumns.join('~'),
+    }),
+    [filters, selectedColumns],
+  );
 
   return (
     <>
-      <section className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">{t('Runtime nodes')}</h2>
-            <p className="text-sm text-muted-foreground">
-              {t(
-                'Configure the Docker daemon connection and runtime identity.',
-              )}
-            </p>
-          </div>
-          <IconActionButton
-            label={t('Add runtime node')}
-            icon={<IconPlus size={18} />}
-            onClick={onNew}
-          />
-        </div>
-
-        {loading ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            {[1, 2].map((item) => (
-              <Card key={item} className="animate-pulse">
-                <CardHeader className="h-20" />
-                <CardContent className="h-36" />
-              </Card>
-            ))}
-          </div>
-        ) : nodes.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            {t('No runtime nodes found.')}
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {nodes.map((node) => {
-              const templateCount = templates.filter(
-                (template) => template.runtimeNodeId === node.id,
-              ).length;
-              return (
-                <Card key={node.id}>
-                  <CardHeader className="flex flex-row items-start justify-between space-y-0 p-4">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <IconDocker size={18} className="shrink-0" />
-                        <h3 className="truncate font-semibold">{node.name}</h3>
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {node.aiName}
-                      </p>
+      <section>
+        <UnifiedTable
+          filters={
+            <>
+              <Input
+                className="w-[240px]"
+                placeholder={t('Search runtime nodes')!}
+                value={draft.query}
+                onChange={(event) => setDraft({ query: event.target.value })}
+              />
+              <div className="w-[160px]">
+                <Select
+                  value={filters.backendType}
+                  onValueChange={(value) =>
+                    updateFilters({
+                      backendType: value as RuntimeNodeFilters['backendType'],
+                    })
+                  }
+                >
+                  <SelectTrigger
+                    value={filters.backendType}
+                    onReset={() => updateFilters({ backendType: '' })}
+                  >
+                    {filters.backendType === '1'
+                      ? t('Docker')
+                      : filters.backendType === '2'
+                      ? t('Windows Docker')
+                      : filters.backendType === '3'
+                      ? t('Kubernetes')
+                      : filters.backendType === '4'
+                      ? t('Other')
+                      : t('All backends')}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">{t('Docker')}</SelectItem>
+                    <SelectItem value="2">{t('Windows Docker')}</SelectItem>
+                    <SelectItem value="3">{t('Kubernetes')}</SelectItem>
+                    <SelectItem value="4">{t('Other')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-[150px]">
+                <Select
+                  value={filters.enabled}
+                  onValueChange={(value) =>
+                    updateFilters({
+                      enabled: value as RuntimeNodeFilters['enabled'],
+                    })
+                  }
+                >
+                  <SelectTrigger
+                    value={filters.enabled}
+                    onReset={() => updateFilters({ enabled: '' })}
+                  >
+                    {filters.enabled === 'true'
+                      ? t('Enabled')
+                      : filters.enabled === 'false'
+                      ? t('Disabled')
+                      : t('All statuses')}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">{t('Enabled')}</SelectItem>
+                    <SelectItem value="false">{t('Disabled')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={loading}
+                aria-label={t('Refresh')}
+                title={t('Refresh')}
+                onClick={() => {
+                  if (hasPendingDraft) flushDraft();
+                  else void onRefresh().catch(() => null);
+                }}
+              >
+                <IconRefresh size={18} />
+              </Button>
+            </>
+          }
+          actions={[
+            {
+              key: 'columns',
+              element: (
+                <UnifiedColumnSelector
+                  allColumns={allColumns
+                    .filter((column) => column.key !== 'actions')
+                    .map((column) => ({
+                      key: column.key,
+                      title: column.title,
+                    }))}
+                  selectedColumns={selectedColumns}
+                  onToggleColumn={(key, checked) => {
+                    const next = new Set(selectedColumns);
+                    const dataKey = key as RuntimeDataColumnKey;
+                    if (checked) next.add(dataKey);
+                    else if (next.size > 1) next.delete(dataKey);
+                    else return;
+                    setSelectedColumns(
+                      allColumns
+                        .filter((column) => column.key !== 'actions')
+                        .map((column) => column.key as RuntimeDataColumnKey)
+                        .filter((column) => next.has(column)),
+                    );
+                  }}
+                />
+              ),
+            },
+            {
+              key: 'export',
+              element: (
+                <Tips
+                  trigger={
+                    <div>
+                      <ExportButton
+                        exportUrl={ADMIN_RUNTIME_NODES_EXPORT_URL}
+                        params={exportParams}
+                        className="h-9 w-9"
+                        disabled={loading}
+                      />
                     </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <LabelSwitch
-                        checked={node.isEnabled}
-                        onCheckedChange={(checked) => {
-                          if (checked !== node.isEnabled) {
-                            onToggle(node).catch(() => null);
-                          }
-                        }}
-                        label={node.isEnabled ? t('Enabled') : t('Disabled')}
-                        className="gap-1"
-                        labelClassName="text-xs"
-                        switchClassName="scale-75"
-                      />
-                      <IconActionButton
-                        label={t('Edit')}
-                        icon={<IconEdit size={15} />}
-                        className="h-8 w-8"
-                        onClick={() => onEdit(node)}
-                      />
-                      <IconActionButton
-                        label={t('Delete')}
-                        icon={<IconTrash size={15} />}
-                        className="h-8 w-8"
-                        onClick={() =>
-                          onDeleteRequest({
-                            kind: 'runtime',
-                            id: node.id,
-                            label: node.name,
-                          })
-                        }
-                      />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-                      <CatalogCardField label={t('Backend')}>
-                        <Badge variant="outline">
-                          <IconDocker size={12} className="mr-1" />
-                          {node.backendType === 1 ? t('Docker') : t('Other')}
-                        </Badge>
-                      </CatalogCardField>
-                      <CatalogCardField label={t('Status')}>
-                        {node.isEnabled ? t('Enabled') : t('Disabled')}
-                      </CatalogCardField>
-                      <CatalogCardField label={t('Endpoint')} mono>
-                        {node.endpoint || t('System default')}
-                      </CatalogCardField>
-                      <CatalogCardField label={t('Credential')}>
-                        {node.hasCredential ? t('Configured') : EMPTY_VALUE}
-                      </CatalogCardField>
-                      <CatalogCardField label={t('Templates')}>
-                        {templateCount}
-                      </CatalogCardField>
-                      <CatalogCardField label={t('Updated')}>
-                        {formatDateTime(node.updatedAt)}
-                      </CatalogCardField>
-                      <CatalogCardField
-                        label={t('Created')}
-                        className="col-span-2"
-                      >
-                        {formatDateTime(node.createdAt)}
-                      </CatalogCardField>
-                      <CatalogCardField
-                        label={t('Description')}
-                        className="col-span-2"
-                      >
-                        {node.description || EMPTY_VALUE}
-                      </CatalogCardField>
-                    </dl>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+                  }
+                  side="bottom"
+                  content={t('Export to Excel')}
+                />
+              ),
+            },
+            {
+              key: 'add',
+              element: (
+                <IconActionButton
+                  label={t('Add runtime node')}
+                  icon={<IconPlus size={18} />}
+                  onClick={onNew}
+                />
+              ),
+            },
+          ]}
+          columns={visibleColumns}
+          rows={nodes}
+          loading={loading}
+          page={1}
+          totalCount={nodes.length}
+          rowKey={(row) => row.id}
+          onPageChange={() => undefined}
+          pagination={false}
+          emptyText={t('No runtime nodes found.')}
+        />
       </section>
 
       <Dialog

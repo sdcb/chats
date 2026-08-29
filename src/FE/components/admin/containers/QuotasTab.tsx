@@ -1,13 +1,27 @@
-import { Dispatch, SetStateAction } from 'react';
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useMemo,
+  useState,
+} from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { IconEdit, IconPlus, IconWorld } from '@/components/Icons';
-import CatalogCardField from '@/components/admin/containers/CatalogCardField';
+import { getUserSession } from '@/utils/user';
+
+import ExportButton from '@/components/Button/ExportButtom';
+import { IconEdit, IconPlus, IconRefresh } from '@/components/Icons';
+import DeletePopover from '@/components/Popover/DeletePopover';
+import Tips from '@/components/Tips/Tips';
 import IconActionButton from '@/components/common/IconActionButton';
-import { Badge } from '@/components/ui/badge';
+import {
+  UnifiedColumnSelector,
+  UnifiedTable,
+  UnifiedTableColumn,
+} from '@/components/table/UnifiedTable';
+import { useTextFilterDraft } from '@/components/table/useTextFilterDraft';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -19,26 +33,67 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LabelSwitch } from '@/components/ui/label-switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from '@/components/ui/select';
 
 import {
+  DeleteTarget,
   EMPTY_VALUE,
   Quota,
+  QuotaFilters,
   QuotaForm,
   formatBytes,
   formatDateTime,
 } from './types';
 
+import { ADMIN_QUOTAS_EXPORT_URL } from '@/apis/adminContainersApi';
+
+type QuotaDataColumnKey =
+  | 'id'
+  | 'user'
+  | 'allowedNetworkModes'
+  | 'allowCustomImage'
+  | 'maxContainerCount'
+  | 'maxContainerProcesses'
+  | 'maxCpuCores'
+  | 'maxMemoryBytes'
+  | 'maxVolumeBytes'
+  | 'maxContainerCpuCores'
+  | 'maxContainerMemoryBytes'
+  | 'maxVolumeBytesPerVolume'
+  | 'updatedAt';
+
+type QuotaColumnKey = QuotaDataColumnKey | 'actions';
+
+const DEFAULT_COLUMNS: QuotaDataColumnKey[] = [
+  'user',
+  'allowedNetworkModes',
+  'allowCustomImage',
+  'maxContainerCount',
+  'maxCpuCores',
+  'maxMemoryBytes',
+  'updatedAt',
+];
+
 type Props = {
   quotas: Quota[];
   loading: boolean;
   saving: boolean;
-  dialog: number | null;
+  dialog: number | 'new' | null;
   form: QuotaForm;
   setForm: Dispatch<SetStateAction<QuotaForm>>;
-  onDialogChange: (dialog: number | null) => void;
+  onDialogChange: (dialog: number | 'new' | null) => void;
   onEdit: (quota: Quota) => void;
   onNew: () => void;
   onSave: () => Promise<void>;
+  onDelete: (target: DeleteTarget) => Promise<void>;
+  filters: QuotaFilters;
+  onFiltersChange: (filters: QuotaFilters) => void;
+  onRefresh: () => Promise<void>;
 };
 
 export default function QuotasTab({
@@ -52,118 +107,303 @@ export default function QuotasTab({
   onEdit,
   onNew,
   onSave,
+  onDelete,
+  filters,
+  onFiltersChange,
+  onRefresh,
 }: Props) {
   const { t } = useTranslation();
-  const globalQuota = quotas.find((quota) => quota.userId == null);
+  const [selectedColumns, setSelectedColumns] =
+    useState<QuotaDataColumnKey[]>(DEFAULT_COLUMNS);
+  const committedTextFilters = useMemo(
+    () => ({ query: filters.query }),
+    [filters.query],
+  );
+  const commitTextFilters = useCallback(
+    (next: { query: string }) => onFiltersChange({ ...filters, ...next }),
+    [filters, onFiltersChange],
+  );
+  const { draft, setDraft, flushDraft, hasPendingDraft } = useTextFilterDraft({
+    committed: committedTextFilters,
+    onCommit: commitTextFilters,
+  });
+  const updateFilters = (next: Partial<QuotaFilters>) =>
+    onFiltersChange({ ...filters, ...next });
+
+  const allColumns = useMemo<UnifiedTableColumn<Quota, QuotaColumnKey>[]>(
+    () => [
+      { key: 'id', title: t('Quota ID'), cell: (row) => row.id },
+      {
+        key: 'user',
+        title: t('Owner'),
+        cell: (row) =>
+          row.userId == null
+            ? t('Default inherited quota')
+            : row.userName || `User #${row.userId}`,
+      },
+      {
+        key: 'allowedNetworkModes',
+        title: t('Allowed networks'),
+        cell: (row) => row.allowedNetworkModes || EMPTY_VALUE,
+      },
+      {
+        key: 'allowCustomImage',
+        title: t('Images'),
+        cell: (row) =>
+          row.allowCustomImage ? t('Custom allowed') : t('Catalog only'),
+      },
+      {
+        key: 'maxContainerCount',
+        title: t('Container limit'),
+        cell: (row) => row.maxContainerCount ?? EMPTY_VALUE,
+      },
+      {
+        key: 'maxContainerProcesses',
+        title: t('Process limit'),
+        cell: (row) => row.maxContainerProcesses ?? EMPTY_VALUE,
+      },
+      {
+        key: 'maxCpuCores',
+        title: t('CPU limit'),
+        cell: (row) =>
+          row.maxCpuCores == null
+            ? EMPTY_VALUE
+            : `${row.maxCpuCores} ${t('cores')}`,
+      },
+      {
+        key: 'maxMemoryBytes',
+        title: t('Memory limit'),
+        cell: (row) => formatBytes(row.maxMemoryBytes),
+      },
+      {
+        key: 'maxVolumeBytes',
+        title: t('Volume limit'),
+        cell: (row) => formatBytes(row.maxVolumeBytes),
+      },
+      {
+        key: 'maxContainerCpuCores',
+        title: t('Max CPU per container'),
+        cell: (row) =>
+          row.maxContainerCpuCores == null
+            ? EMPTY_VALUE
+            : `${row.maxContainerCpuCores} ${t('cores')}`,
+      },
+      {
+        key: 'maxContainerMemoryBytes',
+        title: t('Max memory per container'),
+        cell: (row) => formatBytes(row.maxContainerMemoryBytes),
+      },
+      {
+        key: 'maxVolumeBytesPerVolume',
+        title: t('Max volume bytes per volume'),
+        cell: (row) => formatBytes(row.maxVolumeBytesPerVolume),
+      },
+      {
+        key: 'updatedAt',
+        title: t('Updated'),
+        cell: (row) => formatDateTime(row.updatedAt),
+      },
+      {
+        key: 'actions',
+        title: t('Actions'),
+        cell: (row) => (
+          <div className="flex items-center gap-1">
+            <IconActionButton
+              label={t('Edit')}
+              icon={<IconEdit size={15} />}
+              className="h-8 w-8"
+              onClick={() => onEdit(row)}
+            />
+            {row.userId != null && (
+              <DeletePopover
+                onDelete={() =>
+                  onDelete({
+                    kind: 'quota',
+                    id: row.userId!,
+                    label: row.userName || `User #${row.userId}`,
+                  })
+                }
+                tooltip={t('Delete')}
+                className="h-8 w-8"
+                iconSize={15}
+              />
+            )}
+          </div>
+        ),
+      },
+    ],
+    [onDelete, onEdit, t],
+  );
+
+  const visibleColumns = useMemo(
+    () => [
+      ...allColumns.filter(
+        (column): column is UnifiedTableColumn<Quota, QuotaDataColumnKey> =>
+          column.key !== 'actions' && selectedColumns.includes(column.key),
+      ),
+      allColumns.find((column) => column.key === 'actions')!,
+    ],
+    [allColumns, selectedColumns],
+  );
+
+  const exportParams = useMemo(
+    () => ({
+      token: getUserSession(),
+      query: filters.query || undefined,
+      allowCustomImage: filters.allowCustomImage || undefined,
+      scope: filters.scope || undefined,
+      columns: selectedColumns.join('~'),
+    }),
+    [filters, selectedColumns],
+  );
 
   return (
     <>
-      <section className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">{t('Quotas')}</h2>
-            <p className="text-sm text-muted-foreground">
-              {t(
-                'Quotas control per-user container resources and image access.',
-              )}
-            </p>
-          </div>
-          <IconActionButton
-            label={
-              globalQuota ? t('Edit global quota') : t('Configure global quota')
-            }
-            icon={globalQuota ? <IconEdit size={18} /> : <IconPlus size={18} />}
-            onClick={() => (globalQuota ? onEdit(globalQuota) : onNew())}
-          />
-        </div>
-
-        {loading ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {[1, 2].map((item) => (
-              <Card key={item} className="animate-pulse">
-                <CardHeader className="h-20" />
-                <CardContent className="h-44" />
-              </Card>
-            ))}
-          </div>
-        ) : quotas.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            {t('No quota policies found.')}
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {quotas.map((quota) => (
-              <Card key={quota.id}>
-                <CardHeader className="flex flex-row items-start justify-between space-y-0 p-4">
-                  <div className="flex min-w-0 items-start gap-2">
-                    <IconWorld size={18} className="mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <h3 className="truncate font-semibold">
-                        {quota.userId == null
-                          ? t('Global default')
-                          : quota.userName || `User #${quota.userId}`}
-                      </h3>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {t('Updated')}: {formatDateTime(quota.updatedAt)}
-                      </p>
+      <section>
+        <UnifiedTable
+          filters={
+            <>
+              <Input
+                className="w-[240px]"
+                placeholder={t('Search quota policies')!}
+                value={draft.query}
+                onChange={(event) => setDraft({ query: event.target.value })}
+              />
+              <div className="w-[170px]">
+                <Select
+                  value={filters.allowCustomImage}
+                  onValueChange={(value) =>
+                    updateFilters({
+                      allowCustomImage:
+                        value as QuotaFilters['allowCustomImage'],
+                    })
+                  }
+                >
+                  <SelectTrigger
+                    value={filters.allowCustomImage}
+                    onReset={() => updateFilters({ allowCustomImage: '' })}
+                  >
+                    {filters.allowCustomImage === 'true'
+                      ? t('Custom allowed')
+                      : filters.allowCustomImage === 'false'
+                      ? t('Catalog only')
+                      : t('All image policies')}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">{t('Custom allowed')}</SelectItem>
+                    <SelectItem value="false">{t('Catalog only')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-[170px]">
+                <Select
+                  value={filters.scope}
+                  onValueChange={(value) =>
+                    updateFilters({ scope: value as QuotaFilters['scope'] })
+                  }
+                >
+                  <SelectTrigger
+                    value={filters.scope}
+                    onReset={() => updateFilters({ scope: '' })}
+                  >
+                    {filters.scope === 'default'
+                      ? t('Default inherited quota')
+                      : filters.scope === 'user'
+                      ? t('User quotas')
+                      : t('All quota scopes')}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">
+                      {t('Default inherited quota')}
+                    </SelectItem>
+                    <SelectItem value="user">{t('User quotas')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={loading}
+                aria-label={t('Refresh')}
+                title={t('Refresh')}
+                onClick={() => {
+                  if (hasPendingDraft) flushDraft();
+                  else void onRefresh().catch(() => null);
+                }}
+              >
+                <IconRefresh size={18} />
+              </Button>
+            </>
+          }
+          actions={[
+            {
+              key: 'columns',
+              element: (
+                <UnifiedColumnSelector
+                  allColumns={allColumns
+                    .filter((column) => column.key !== 'actions')
+                    .map((column) => ({
+                      key: column.key as QuotaDataColumnKey,
+                      title: column.title,
+                    }))}
+                  selectedColumns={selectedColumns}
+                  onToggleColumn={(key, checked) => {
+                    const next = new Set(selectedColumns);
+                    const dataKey = key as QuotaDataColumnKey;
+                    if (checked) next.add(dataKey);
+                    else if (next.size > 1) next.delete(dataKey);
+                    else return;
+                    setSelectedColumns(
+                      allColumns
+                        .filter((column) => column.key !== 'actions')
+                        .map((column) => column.key as QuotaDataColumnKey)
+                        .filter((column) => next.has(column)),
+                    );
+                  }}
+                />
+              ),
+            },
+            {
+              key: 'export',
+              element: (
+                <Tips
+                  trigger={
+                    <div>
+                      <ExportButton
+                        exportUrl={ADMIN_QUOTAS_EXPORT_URL}
+                        params={exportParams}
+                        className="h-9 w-9"
+                        disabled={loading}
+                      />
                     </div>
-                  </div>
-                  <IconActionButton
-                    label={t('Edit')}
-                    icon={<IconEdit size={15} />}
-                    className="h-8 w-8"
-                    onClick={() => onEdit(quota)}
-                  />
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-                    <CatalogCardField
-                      label={t('Allowed networks')}
-                      className="col-span-2"
-                    >
-                      {quota.allowedNetworkModes || EMPTY_VALUE}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Container limit')}>
-                      {quota.maxContainerCount ?? EMPTY_VALUE}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Process limit')}>
-                      {quota.maxContainerProcesses ?? EMPTY_VALUE}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('CPU limit')}>
-                      {quota.maxCpuCores == null
-                        ? EMPTY_VALUE
-                        : `${quota.maxCpuCores} ${t('cores')}`}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Memory limit')}>
-                      {formatBytes(quota.maxMemoryBytes)}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Volume limit')}>
-                      {formatBytes(quota.maxVolumeBytes)}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Max volume bytes per volume')}>
-                      {formatBytes(quota.maxVolumeBytesPerVolume)}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Max CPU per container')}>
-                      {quota.maxContainerCpuCores == null
-                        ? EMPTY_VALUE
-                        : `${quota.maxContainerCpuCores} ${t('cores')}`}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Max memory per container')}>
-                      {formatBytes(quota.maxContainerMemoryBytes)}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Images')}>
-                      {quota.allowCustomImage ? (
-                        <Badge>{t('Custom allowed')}</Badge>
-                      ) : (
-                        <Badge variant="outline">{t('Catalog only')}</Badge>
-                      )}
-                    </CatalogCardField>
-                  </dl>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                  }
+                  side="bottom"
+                  content={t('Export to Excel')}
+                />
+              ),
+            },
+            {
+              key: 'add',
+              element: (
+                <IconActionButton
+                  label={t('Add user quota')}
+                  icon={<IconPlus size={18} />}
+                  onClick={onNew}
+                />
+              ),
+            },
+          ]}
+          columns={visibleColumns}
+          rows={quotas}
+          loading={loading}
+          page={1}
+          totalCount={quotas.length}
+          rowKey={(row) => row.id}
+          onPageChange={() => undefined}
+          pagination={false}
+          emptyText={t('No quota policies found.')}
+        />
       </section>
 
       <Dialog
@@ -172,12 +412,31 @@ export default function QuotasTab({
       >
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{t('Edit quota policy')}</DialogTitle>
+            <DialogTitle>
+              {dialog === 'new' ? t('Add user quota') : t('Edit quota policy')}
+            </DialogTitle>
             <DialogDescription>
-              {t('Leave a limit blank for unlimited.')}
+              {dialog === 'new'
+                ? t(
+                    'Create a user-specific quota that overrides the default inherited quota.',
+                  )
+                : t('Leave a limit blank for unlimited.')}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-3">
+            {dialog === 'new' && (
+              <Label className="sm:col-span-3">
+                {t('User ID')}
+                <Input
+                  name="quota-user-id"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={form.userId}
+                  placeholder={t('Enter user ID')!}
+                  onChange={(e) => setForm({ ...form, userId: e.target.value })}
+                />
+              </Label>
+            )}
             <Label className="sm:col-span-3">
               {t('Allowed network modes')}
               <Input

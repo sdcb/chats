@@ -13,7 +13,7 @@ import { GetChatVersionResult } from '@/types/clientApis';
 
 import {
   IconChartPie,
-  IconDocker,
+  IconDesktop,
   IconFiles,
   IconIdBadge,
   IconLayoutSidebar,
@@ -217,7 +217,7 @@ const AdminLayout = ({
     {
       url: '/admin/containers',
       icon: (stroke?: string) => (
-        <IconDocker strokeWidth={1.2} stroke={stroke} />
+        <IconDesktop strokeWidth={1.2} stroke={stroke} />
       ),
       title: t('Container Management'),
     },

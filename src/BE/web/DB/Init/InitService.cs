@@ -70,11 +70,11 @@ public class InitService(IServiceScopeFactory scopeFactory)
             CreatedAt = now,
             UpdatedAt = now,
         });
-        // Add global user container quota which applies to all users by default (UserId = null)
+        // Add the default inherited user container quota (UserId = null).
         db.UserContainerQuota.Add(new UserContainerQuotum
         {
             UserId = null,
-            AllowCustomImage = false,
+            AllowCustomImage = true,
             AllowedNetworkModes = "none,bridge",
             UpdatedAt = now,
         });

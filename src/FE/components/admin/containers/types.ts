@@ -11,6 +11,12 @@ export type RuntimeNode = {
   updatedAt: string;
 };
 
+export type RuntimeNodeFilters = {
+  query: string;
+  backendType: '' | '1' | '2' | '3' | '4';
+  enabled: '' | 'true' | 'false';
+};
+
 export type RuntimeTemplate = {
   id: number;
   name: string;
@@ -27,11 +33,22 @@ export type RuntimeTemplate = {
   runtimeNode?: RuntimeNode | null;
 };
 
+export type TemplateFilters = {
+  query: string;
+  runtimeNodeId: string;
+  visibility: '' | '0' | '1' | '2' | '3';
+};
+
 export type ImageEntry = {
   id: number;
   image: string;
   description: string | null;
   isEnabled: boolean;
+};
+
+export type ImageFilters = {
+  query: string;
+  enabled: '' | 'true' | 'false';
 };
 
 export type Quota = {
@@ -49,6 +66,55 @@ export type Quota = {
   maxContainerMemoryBytes: number | null;
   maxVolumeBytesPerVolume: number | null;
   updatedAt: string;
+};
+
+export type QuotaFilters = {
+  query: string;
+  allowCustomImage: '' | 'true' | 'false';
+  scope: '' | 'default' | 'user';
+};
+
+export type AdminContainerResource = {
+  id: number;
+  ownerUserId: number;
+  ownerUserName: string | null;
+  ownerDisplayName: string | null;
+  ownerChatId: number | null;
+  ownerChatTitle: string | null;
+  ownerTurnId: number | null;
+  runtimeNodeId: number;
+  runtimeNodeName: string | null;
+  runtimeNodeAIName: string | null;
+  isPermanent: boolean;
+  backendResourceId: string;
+  ip: string | null;
+  name: string;
+  image: string;
+  shellPrefix: string | null;
+  cpuCores: number | null;
+  memoryBytes: number | null;
+  maxProcesses: number | null;
+  backendNetworkName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lastActiveAt: string | null;
+  stoppedAt: string | null;
+  deletedAt: string | null;
+  cleanupAt: string | null;
+  volumeDeclaredBytes: number | null;
+  volumeMountCount: number;
+  chatAccessCount: number;
+};
+
+export type ContainerResourceStatus = '' | 'active' | 'stopped' | 'deleted';
+
+export type ContainerResourceFilters = {
+  id: string;
+  query: string;
+  owner: string;
+  runtimeNodeId: string;
+  status: ContainerResourceStatus;
+  permanent: '' | 'true' | 'false';
 };
 
 export type RuntimeForm = {
@@ -80,6 +146,7 @@ export type ImageForm = {
 };
 
 export type QuotaForm = {
+  userId: string;
   allowCustomImage: boolean;
   allowedNetworkModes: string;
   maxContainerCount: string;
@@ -93,16 +160,29 @@ export type QuotaForm = {
 };
 
 export type DeleteTarget = {
-  kind: 'runtime' | 'template' | 'image';
+  kind: 'runtime' | 'template' | 'image' | 'quota';
   id: number;
   label: string;
 };
 
-export type ContainerTab = 'runtime' | 'templates' | 'images' | 'quotas';
+export type ContainerTab =
+  | 'resources'
+  | 'runtime'
+  | 'templates'
+  | 'images'
+  | 'quotas';
 
-export const isContainerTab = (value: string | string[] | undefined): value is ContainerTab => {
+export const isContainerTab = (
+  value: string | string[] | undefined,
+): value is ContainerTab => {
   const tab = Array.isArray(value) ? value[0] : value;
-  return tab === 'runtime' || tab === 'templates' || tab === 'images' || tab === 'quotas';
+  return (
+    tab === 'resources' ||
+    tab === 'runtime' ||
+    tab === 'templates' ||
+    tab === 'images' ||
+    tab === 'quotas'
+  );
 };
 
 export const PAGE_SIZE = 20;
@@ -137,6 +217,7 @@ export const emptyImage: ImageForm = {
 };
 
 export const emptyQuota: QuotaForm = {
+  userId: '',
   allowCustomImage: false,
   allowedNetworkModes: 'none,bridge',
   maxContainerCount: '',

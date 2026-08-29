@@ -1,13 +1,27 @@
-import { Dispatch, SetStateAction } from 'react';
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useMemo,
+  useState,
+} from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { IconEdit, IconPlus, IconTrash } from '@/components/Icons';
-import CatalogCardField from '@/components/admin/containers/CatalogCardField';
+import { getUserSession } from '@/utils/user';
+
+import ExportButton from '@/components/Button/ExportButtom';
+import { IconEdit, IconPlus, IconRefresh } from '@/components/Icons';
+import DeletePopover from '@/components/Popover/DeletePopover';
+import Tips from '@/components/Tips/Tips';
 import IconActionButton from '@/components/common/IconActionButton';
-import { Badge } from '@/components/ui/badge';
+import {
+  UnifiedColumnSelector,
+  UnifiedTable,
+  UnifiedTableColumn,
+} from '@/components/table/UnifiedTable';
+import { useTextFilterDraft } from '@/components/table/useTextFilterDraft';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -18,15 +32,51 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from '@/components/ui/select';
 
 import {
   DeleteTarget,
   RuntimeNode,
   RuntimeTemplate,
+  TemplateFilters,
   TemplateForm,
   formatBytes,
   formatDateTime,
 } from './types';
+
+import { ADMIN_TEMPLATES_EXPORT_URL } from '@/apis/adminContainersApi';
+
+type TemplateDataColumnKey =
+  | 'id'
+  | 'name'
+  | 'runtimeNode'
+  | 'image'
+  | 'visibility'
+  | 'cpuCores'
+  | 'memoryBytes'
+  | 'maxProcesses'
+  | 'backendNetworkName'
+  | 'defaultVolumeBytes'
+  | 'createdAt'
+  | 'updatedAt';
+
+type TemplateColumnKey = TemplateDataColumnKey | 'actions';
+
+const DEFAULT_COLUMNS: TemplateDataColumnKey[] = [
+  'name',
+  'runtimeNode',
+  'image',
+  'visibility',
+  'cpuCores',
+  'memoryBytes',
+  'maxProcesses',
+  'updatedAt',
+];
 
 type Props = {
   nodes: RuntimeNode[];
@@ -40,7 +90,10 @@ type Props = {
   onNew: () => void;
   onEdit: (template: RuntimeTemplate) => void;
   onSave: () => Promise<void>;
-  onDeleteRequest: (target: DeleteTarget) => void;
+  onDelete: (target: DeleteTarget) => Promise<void>;
+  filters: TemplateFilters;
+  onFiltersChange: (filters: TemplateFilters) => void;
+  onRefresh: () => Promise<void>;
 };
 
 export default function TemplatesTab({
@@ -55,118 +108,286 @@ export default function TemplatesTab({
   onNew,
   onEdit,
   onSave,
-  onDeleteRequest,
+  onDelete,
+  filters,
+  onFiltersChange,
+  onRefresh,
 }: Props) {
   const { t } = useTranslation();
+  const [selectedColumns, setSelectedColumns] =
+    useState<TemplateDataColumnKey[]>(DEFAULT_COLUMNS);
+  const committedTextFilters = useMemo(
+    () => ({ query: filters.query, runtimeNodeId: filters.runtimeNodeId }),
+    [filters.query, filters.runtimeNodeId],
+  );
+  const commitTextFilters = useCallback(
+    (next: { query: string; runtimeNodeId: string }) =>
+      onFiltersChange({ ...filters, ...next }),
+    [filters, onFiltersChange],
+  );
+  const { draft, setDraft, flushDraft, hasPendingDraft } = useTextFilterDraft({
+    committed: committedTextFilters,
+    onCommit: commitTextFilters,
+  });
+  const updateFilters = (next: Partial<TemplateFilters>) =>
+    onFiltersChange({ ...filters, ...next });
+
+  const allColumns = useMemo<
+    UnifiedTableColumn<RuntimeTemplate, TemplateColumnKey>[]
+  >(
+    () => [
+      { key: 'id', title: t('Template ID'), cell: (row) => row.id },
+      { key: 'name', title: t('Name'), cell: (row) => row.name },
+      {
+        key: 'runtimeNode',
+        title: t('Runtime node'),
+        cell: (row) => row.runtimeNode?.aiName || `#${row.runtimeNodeId}`,
+      },
+      {
+        key: 'image',
+        title: t('Image'),
+        className: 'max-w-64',
+        cell: (row) => <code className="break-all text-xs">{row.image}</code>,
+      },
+      {
+        key: 'visibility',
+        title: t('Visibility'),
+        cell: (row) =>
+          row.visibility === 3
+            ? t('Users and AI')
+            : row.visibility === 1
+            ? t('Users')
+            : row.visibility === 2
+            ? t('AI')
+            : t('Hidden'),
+      },
+      { key: 'cpuCores', title: t('CPU cores'), cell: (row) => row.cpuCores },
+      {
+        key: 'memoryBytes',
+        title: t('Memory bytes'),
+        cell: (row) => formatBytes(row.memoryBytes),
+      },
+      {
+        key: 'maxProcesses',
+        title: t('Max processes'),
+        cell: (row) => row.maxProcesses,
+      },
+      {
+        key: 'backendNetworkName',
+        title: t('Network'),
+        cell: (row) => row.backendNetworkName || t('Default'),
+      },
+      {
+        key: 'defaultVolumeBytes',
+        title: t('Default volume bytes'),
+        cell: (row) => formatBytes(row.defaultVolumeBytes),
+      },
+      {
+        key: 'createdAt',
+        title: t('Created'),
+        cell: (row) => formatDateTime(row.createdAt),
+      },
+      {
+        key: 'updatedAt',
+        title: t('Updated'),
+        cell: (row) => formatDateTime(row.updatedAt),
+      },
+      {
+        key: 'actions',
+        title: t('Actions'),
+        cell: (row) => (
+          <div className="flex items-center gap-1">
+            <IconActionButton
+              label={t('Edit')}
+              icon={<IconEdit size={15} />}
+              className="h-8 w-8"
+              onClick={() => onEdit(row)}
+            />
+            <DeletePopover
+              onDelete={() =>
+                onDelete({ kind: 'template', id: row.id, label: row.name })
+              }
+              tooltip={t('Delete')}
+              className="h-8 w-8"
+              iconSize={15}
+            />
+          </div>
+        ),
+      },
+    ],
+    [onDelete, onEdit, t],
+  );
+
+  const visibleColumns = useMemo(
+    () => [
+      ...allColumns.filter(
+        (
+          column,
+        ): column is UnifiedTableColumn<
+          RuntimeTemplate,
+          TemplateDataColumnKey
+        > => column.key !== 'actions' && selectedColumns.includes(column.key),
+      ),
+      allColumns.find((column) => column.key === 'actions')!,
+    ],
+    [allColumns, selectedColumns],
+  );
+
+  const exportParams = useMemo(
+    () => ({
+      token: getUserSession(),
+      query: filters.query || undefined,
+      runtimeNodeId: filters.runtimeNodeId || undefined,
+      visibility: filters.visibility || undefined,
+      columns: selectedColumns.join('~'),
+    }),
+    [filters, selectedColumns],
+  );
 
   return (
     <>
-      <section className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">{t('Resource templates')}</h2>
-            <p className="text-sm text-muted-foreground">
-              {t(
-                'Define the image, resource limits and visibility for container creation.',
-              )}
-            </p>
-          </div>
-          <IconActionButton
-            label={t('Add template')}
-            icon={<IconPlus size={18} />}
-            onClick={onNew}
-          />
-        </div>
-
-        {loading ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {[1, 2, 3].map((item) => (
-              <Card key={item} className="animate-pulse">
-                <CardHeader className="h-20" />
-                <CardContent className="h-44" />
-              </Card>
-            ))}
-          </div>
-        ) : templates.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            {t('No resource templates found.')}
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {templates.map((template) => (
-              <Card key={template.id}>
-                <CardHeader className="flex flex-row items-start justify-between space-y-0 p-4">
-                  <div className="min-w-0">
-                    <h3 className="truncate font-semibold">{template.name}</h3>
-                    <code className="mt-1 block truncate text-xs text-muted-foreground">
-                      {template.image}
-                    </code>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <IconActionButton
-                      label={t('Edit')}
-                      icon={<IconEdit size={15} />}
-                      className="h-8 w-8"
-                      onClick={() => onEdit(template)}
-                    />
-                    <IconActionButton
-                      label={t('Delete')}
-                      icon={<IconTrash size={15} />}
-                      className="h-8 w-8"
-                      onClick={() =>
-                        onDeleteRequest({
-                          kind: 'template',
-                          id: template.id,
-                          label: template.name,
-                        })
-                      }
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-                    <CatalogCardField label={t('Runtime node')}>
-                      {template.runtimeNode?.aiName ||
-                        `#${template.runtimeNodeId}`}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Visibility')}>
-                      <Badge variant="outline">
-                        {template.visibility === 3
-                          ? t('Users and AI')
-                          : template.visibility === 1
-                          ? t('Users')
-                          : template.visibility === 2
-                          ? t('AI')
-                          : t('Hidden')}
-                      </Badge>
-                    </CatalogCardField>
-                    <CatalogCardField label={t('CPU cores')}>
-                      {template.cpuCores}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Memory bytes')}>
-                      {formatBytes(template.memoryBytes)}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Max processes')}>
-                      {template.maxProcesses}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Network')}>
-                      {template.backendNetworkName || t('Default')}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Default volume bytes')}>
-                      {formatBytes(template.defaultVolumeBytes)}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Updated')}>
-                      {formatDateTime(template.updatedAt)}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Created')}>
-                      {formatDateTime(template.createdAt)}
-                    </CatalogCardField>
-                  </dl>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+      <section>
+        <UnifiedTable
+          filters={
+            <>
+              <Input
+                className="w-[240px]"
+                placeholder={t('Search resource templates')!}
+                value={draft.query}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    query: event.target.value,
+                  }))
+                }
+              />
+              <Input
+                className="w-[150px]"
+                inputMode="numeric"
+                placeholder={t('Runtime Node ID')!}
+                value={draft.runtimeNodeId}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    runtimeNodeId: event.target.value,
+                  }))
+                }
+              />
+              <div className="w-[150px]">
+                <Select
+                  value={filters.visibility}
+                  onValueChange={(value) =>
+                    updateFilters({
+                      visibility: value as TemplateFilters['visibility'],
+                    })
+                  }
+                >
+                  <SelectTrigger
+                    value={filters.visibility}
+                    onReset={() => updateFilters({ visibility: '' })}
+                  >
+                    {filters.visibility === '0'
+                      ? t('Hidden')
+                      : filters.visibility === '1'
+                      ? t('Users')
+                      : filters.visibility === '2'
+                      ? t('AI')
+                      : filters.visibility === '3'
+                      ? t('Users and AI')
+                      : t('All visibility')}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">{t('Hidden')}</SelectItem>
+                    <SelectItem value="1">{t('Users')}</SelectItem>
+                    <SelectItem value="2">{t('AI')}</SelectItem>
+                    <SelectItem value="3">{t('Users and AI')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={loading}
+                aria-label={t('Refresh')}
+                title={t('Refresh')}
+                onClick={() => {
+                  if (hasPendingDraft) flushDraft();
+                  else void onRefresh().catch(() => null);
+                }}
+              >
+                <IconRefresh size={18} />
+              </Button>
+            </>
+          }
+          actions={[
+            {
+              key: 'columns',
+              element: (
+                <UnifiedColumnSelector
+                  allColumns={allColumns
+                    .filter((column) => column.key !== 'actions')
+                    .map((column) => ({
+                      key: column.key as TemplateDataColumnKey,
+                      title: column.title,
+                    }))}
+                  selectedColumns={selectedColumns}
+                  onToggleColumn={(key, checked) => {
+                    const next = new Set(selectedColumns);
+                    const dataKey = key as TemplateDataColumnKey;
+                    if (checked) next.add(dataKey);
+                    else if (next.size > 1) next.delete(dataKey);
+                    else return;
+                    setSelectedColumns(
+                      allColumns
+                        .filter((column) => column.key !== 'actions')
+                        .map((column) => column.key as TemplateDataColumnKey)
+                        .filter((column) => next.has(column)),
+                    );
+                  }}
+                />
+              ),
+            },
+            {
+              key: 'export',
+              element: (
+                <Tips
+                  trigger={
+                    <div>
+                      <ExportButton
+                        exportUrl={ADMIN_TEMPLATES_EXPORT_URL}
+                        params={exportParams}
+                        className="h-9 w-9"
+                        disabled={loading}
+                      />
+                    </div>
+                  }
+                  side="bottom"
+                  content={t('Export to Excel')}
+                />
+              ),
+            },
+            {
+              key: 'add',
+              element: (
+                <IconActionButton
+                  label={t('Add template')}
+                  icon={<IconPlus size={18} />}
+                  onClick={onNew}
+                />
+              ),
+            },
+          ]}
+          columns={visibleColumns}
+          rows={templates}
+          loading={loading}
+          page={1}
+          totalCount={templates.length}
+          rowKey={(row) => row.id}
+          onPageChange={() => undefined}
+          pagination={false}
+          emptyText={t('No resource templates found.')}
+        />
       </section>
 
       <Dialog

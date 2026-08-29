@@ -1,5 +1,7 @@
 import { ReactNode } from 'react';
 
+import useTranslation from '@/hooks/useTranslation';
+
 import { IconColumns } from '@/components/Icons';
 import PaginationContainer from '@/components/Pagination/Pagination';
 import Tips from '@/components/Tips/Tips';
@@ -20,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import useTranslation from '@/hooks/useTranslation';
+
 import { cn } from '@/lib/utils';
 
 export const UNIFIED_TABLE_PAGE_SIZE = 20;
@@ -39,7 +41,10 @@ export interface UnifiedTableAction {
   desktopOnly?: boolean;
 }
 
-export interface UnifiedTableQueryState<TFilters, TColumnKey extends string = string> {
+export interface UnifiedTableQueryState<
+  TFilters,
+  TColumnKey extends string = string,
+> {
   page: number;
   filters: TFilters;
   columns: TColumnKey[];
@@ -65,9 +70,8 @@ export const parseColumnQuery = <TColumnKey extends string>(
   const keys = value
     .split(COLUMN_QUERY_SEPARATOR)
     .map((item) => item.trim())
-    .filter(
-      (item): item is TColumnKey =>
-        allColumns.some((column) => column.key === item),
+    .filter((item): item is TColumnKey =>
+      allColumns.some((column) => column.key === item),
     );
 
   return keys.length > 0 ? keys : defaultColumns;
@@ -90,7 +94,7 @@ type UnifiedColumnSelectorProps<TColumnKey extends string> = {
   onToggleColumn: (key: TColumnKey, checked: boolean) => void;
 };
 
-export const UnifiedColumnSelector = <TColumnKey extends string,>({
+export const UnifiedColumnSelector = <TColumnKey extends string>({
   allColumns,
   selectedColumns,
   onToggleColumn,
@@ -139,7 +143,7 @@ export const UnifiedColumnSelector = <TColumnKey extends string,>({
 };
 
 type UnifiedTableProps<T, TColumnKey extends string> = {
-  filters: ReactNode;
+  filters?: ReactNode;
   actions?: UnifiedTableAction[];
   columns: Array<UnifiedTableColumn<T, TColumnKey>>;
   rows: T[];
@@ -154,6 +158,7 @@ type UnifiedTableProps<T, TColumnKey extends string> = {
   onRowClick?: (row: T) => void;
   emptyText?: ReactNode;
   tableCardClassName?: string;
+  pagination?: boolean;
 };
 
 export const UnifiedTable = <T, TColumnKey extends string>({
@@ -172,26 +177,29 @@ export const UnifiedTable = <T, TColumnKey extends string>({
   onRowClick,
   emptyText,
   tableCardClassName,
+  pagination = true,
 }: UnifiedTableProps<T, TColumnKey>) => {
   return (
     <div className="space-y-4">
-      <Card className="border-none p-3">
-        <div className="flex flex-wrap items-end gap-3">
-          {filters}
-          {actions.length > 0 && (
-            <div className="ml-auto flex items-center gap-2 self-end">
-              {actions.map((action) => (
-                <div
-                  key={action.key}
-                  className={cn(action.desktopOnly && 'hidden sm:block')}
-                >
-                  {action.element}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </Card>
+      {(filters || actions.length > 0) && (
+        <Card className="border-none p-3">
+          <div className="flex flex-wrap items-end gap-3">
+            {filters}
+            {actions.length > 0 && (
+              <div className="ml-auto flex items-center gap-2 self-end">
+                {actions.map((action) => (
+                  <div
+                    key={action.key}
+                    className={cn(action.desktopOnly && 'hidden sm:block')}
+                  >
+                    {action.element}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
 
       {mobileContent && <div className="block sm:hidden">{mobileContent}</div>}
 
@@ -250,7 +258,7 @@ export const UnifiedTable = <T, TColumnKey extends string>({
             {footer}
           </Table>
 
-          {rows.length > 0 && (
+          {pagination && rows.length > 0 && (
             <PaginationContainer
               page={page}
               pageSize={UNIFIED_TABLE_PAGE_SIZE}

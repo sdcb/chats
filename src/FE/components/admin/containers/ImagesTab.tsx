@@ -1,13 +1,27 @@
-import { Dispatch, SetStateAction } from 'react';
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useMemo,
+  useState,
+} from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { IconEdit, IconFiles, IconPlus, IconTrash } from '@/components/Icons';
-import CatalogCardField from '@/components/admin/containers/CatalogCardField';
+import { getUserSession } from '@/utils/user';
+
+import ExportButton from '@/components/Button/ExportButtom';
+import { IconEdit, IconPlus, IconRefresh } from '@/components/Icons';
+import DeletePopover from '@/components/Popover/DeletePopover';
+import Tips from '@/components/Tips/Tips';
 import IconActionButton from '@/components/common/IconActionButton';
-import { Badge } from '@/components/ui/badge';
+import {
+  UnifiedColumnSelector,
+  UnifiedTable,
+  UnifiedTableColumn,
+} from '@/components/table/UnifiedTable';
+import { useTextFilterDraft } from '@/components/table/useTextFilterDraft';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -19,8 +33,31 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LabelSwitch } from '@/components/ui/label-switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from '@/components/ui/select';
 
-import { DeleteTarget, EMPTY_VALUE, ImageEntry, ImageForm } from './types';
+import {
+  DeleteTarget,
+  EMPTY_VALUE,
+  ImageEntry,
+  ImageFilters,
+  ImageForm,
+} from './types';
+
+import { ADMIN_IMAGES_EXPORT_URL } from '@/apis/adminContainersApi';
+
+type ImageDataColumnKey = 'id' | 'image' | 'description' | 'status';
+type ImageColumnKey = ImageDataColumnKey | 'actions';
+
+const DEFAULT_COLUMNS: ImageDataColumnKey[] = [
+  'image',
+  'status',
+  'description',
+];
 
 type Props = {
   images: ImageEntry[];
@@ -33,7 +70,10 @@ type Props = {
   onNew: () => void;
   onEdit: (image: ImageEntry) => void;
   onSave: () => Promise<void>;
-  onDeleteRequest: (target: DeleteTarget) => void;
+  onDelete: (target: DeleteTarget) => Promise<void>;
+  filters: ImageFilters;
+  onFiltersChange: (filters: ImageFilters) => void;
+  onRefresh: () => Promise<void>;
 };
 
 export default function ImagesTab({
@@ -47,98 +87,212 @@ export default function ImagesTab({
   onNew,
   onEdit,
   onSave,
-  onDeleteRequest,
+  onDelete,
+  filters,
+  onFiltersChange,
+  onRefresh,
 }: Props) {
   const { t } = useTranslation();
+  const [selectedColumns, setSelectedColumns] =
+    useState<ImageDataColumnKey[]>(DEFAULT_COLUMNS);
+  const committedTextFilters = useMemo(
+    () => ({ query: filters.query }),
+    [filters.query],
+  );
+  const commitTextFilters = useCallback(
+    (next: { query: string }) => onFiltersChange({ ...filters, ...next }),
+    [filters, onFiltersChange],
+  );
+  const { draft, setDraft, flushDraft, hasPendingDraft } = useTextFilterDraft({
+    committed: committedTextFilters,
+    onCommit: commitTextFilters,
+  });
+  const updateFilters = (next: Partial<ImageFilters>) =>
+    onFiltersChange({ ...filters, ...next });
+
+  const allColumns = useMemo<UnifiedTableColumn<ImageEntry, ImageColumnKey>[]>(
+    () => [
+      { key: 'id', title: t('Image ID'), cell: (row) => row.id },
+      { key: 'image', title: t('Image'), cell: (row) => row.image },
+      {
+        key: 'description',
+        title: t('Description'),
+        className: 'max-w-96',
+        cell: (row) => row.description || EMPTY_VALUE,
+      },
+      {
+        key: 'status',
+        title: t('Status'),
+        cell: (row) => (row.isEnabled ? t('Enabled') : t('Disabled')),
+      },
+      {
+        key: 'actions',
+        title: t('Actions'),
+        cell: (row) => (
+          <div className="flex items-center gap-1">
+            <IconActionButton
+              label={t('Edit')}
+              icon={<IconEdit size={15} />}
+              className="h-8 w-8"
+              onClick={() => onEdit(row)}
+            />
+            <DeletePopover
+              onDelete={() =>
+                onDelete({ kind: 'image', id: row.id, label: row.image })
+              }
+              tooltip={t('Delete')}
+              className="h-8 w-8"
+              iconSize={15}
+            />
+          </div>
+        ),
+      },
+    ],
+    [onDelete, onEdit, t],
+  );
+
+  const visibleColumns = useMemo(
+    () => [
+      ...allColumns.filter(
+        (
+          column,
+        ): column is UnifiedTableColumn<ImageEntry, ImageDataColumnKey> =>
+          column.key !== 'actions' && selectedColumns.includes(column.key),
+      ),
+      allColumns.find((column) => column.key === 'actions')!,
+    ],
+    [allColumns, selectedColumns],
+  );
+
+  const exportParams = useMemo(
+    () => ({
+      token: getUserSession(),
+      query: filters.query || undefined,
+      enabled: filters.enabled || undefined,
+      columns: selectedColumns.join('~'),
+    }),
+    [filters, selectedColumns],
+  );
 
   return (
     <>
-      <section className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">{t('Image catalog')}</h2>
-            <p className="text-sm text-muted-foreground">
-              {t(
-                'Images must be enabled in the catalog before templates can use them.',
-              )}
-            </p>
-          </div>
-          <IconActionButton
-            label={t('Add image')}
-            icon={<IconPlus size={18} />}
-            onClick={onNew}
-          />
-        </div>
-
-        {loading ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {[1, 2, 3].map((item) => (
-              <Card key={item} className="animate-pulse">
-                <CardHeader className="h-20" />
-                <CardContent className="h-28" />
-              </Card>
-            ))}
-          </div>
-        ) : images.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            {t('No images found.')}
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {images.map((image) => (
-              <Card key={image.id}>
-                <CardHeader className="flex flex-row items-start justify-between space-y-0 p-4">
-                  <div className="flex min-w-0 items-start gap-2">
-                    <IconFiles size={18} className="mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <h3 className="break-all font-semibold">{image.image}</h3>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {image.isEnabled ? t('Enabled') : t('Disabled')}
-                      </p>
+      <section>
+        <UnifiedTable
+          filters={
+            <>
+              <Input
+                className="w-[240px]"
+                placeholder={t('Search images')!}
+                value={draft.query}
+                onChange={(event) => setDraft({ query: event.target.value })}
+              />
+              <div className="w-[150px]">
+                <Select
+                  value={filters.enabled}
+                  onValueChange={(value) =>
+                    updateFilters({ enabled: value as ImageFilters['enabled'] })
+                  }
+                >
+                  <SelectTrigger
+                    value={filters.enabled}
+                    onReset={() => updateFilters({ enabled: '' })}
+                  >
+                    {filters.enabled === 'true'
+                      ? t('Enabled')
+                      : filters.enabled === 'false'
+                      ? t('Disabled')
+                      : t('All statuses')}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">{t('Enabled')}</SelectItem>
+                    <SelectItem value="false">{t('Disabled')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={loading}
+                aria-label={t('Refresh')}
+                title={t('Refresh')}
+                onClick={() => {
+                  if (hasPendingDraft) flushDraft();
+                  else void onRefresh().catch(() => null);
+                }}
+              >
+                <IconRefresh size={18} />
+              </Button>
+            </>
+          }
+          actions={[
+            {
+              key: 'columns',
+              element: (
+                <UnifiedColumnSelector
+                  allColumns={allColumns
+                    .filter((column) => column.key !== 'actions')
+                    .map((column) => ({
+                      key: column.key as ImageDataColumnKey,
+                      title: column.title,
+                    }))}
+                  selectedColumns={selectedColumns}
+                  onToggleColumn={(key, checked) => {
+                    const next = new Set(selectedColumns);
+                    const dataKey = key as ImageDataColumnKey;
+                    if (checked) next.add(dataKey);
+                    else if (next.size > 1) next.delete(dataKey);
+                    else return;
+                    setSelectedColumns(
+                      allColumns
+                        .filter((column) => column.key !== 'actions')
+                        .map((column) => column.key as ImageDataColumnKey)
+                        .filter((column) => next.has(column)),
+                    );
+                  }}
+                />
+              ),
+            },
+            {
+              key: 'export',
+              element: (
+                <Tips
+                  trigger={
+                    <div>
+                      <ExportButton
+                        exportUrl={ADMIN_IMAGES_EXPORT_URL}
+                        params={exportParams}
+                        className="h-9 w-9"
+                        disabled={loading}
+                      />
                     </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <IconActionButton
-                      label={t('Edit')}
-                      icon={<IconEdit size={15} />}
-                      className="h-8 w-8"
-                      onClick={() => onEdit(image)}
-                    />
-                    <IconActionButton
-                      label={t('Delete')}
-                      icon={<IconTrash size={15} />}
-                      className="h-8 w-8"
-                      onClick={() =>
-                        onDeleteRequest({
-                          kind: 'image',
-                          id: image.id,
-                          label: image.image,
-                        })
-                      }
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <dl className="grid gap-y-3">
-                    <CatalogCardField label={t('Status')}>
-                      <Badge
-                        variant={image.isEnabled ? 'default' : 'secondary'}
-                      >
-                        {image.isEnabled ? t('Enabled') : t('Disabled')}
-                      </Badge>
-                    </CatalogCardField>
-                    <CatalogCardField label={t('Description')}>
-                      {image.description || EMPTY_VALUE}
-                    </CatalogCardField>
-                    <CatalogCardField label={t('ID')}>
-                      {image.id}
-                    </CatalogCardField>
-                  </dl>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                  }
+                  side="bottom"
+                  content={t('Export to Excel')}
+                />
+              ),
+            },
+            {
+              key: 'add',
+              element: (
+                <IconActionButton
+                  label={t('Add image')}
+                  icon={<IconPlus size={18} />}
+                  onClick={onNew}
+                />
+              ),
+            },
+          ]}
+          columns={visibleColumns}
+          rows={images}
+          loading={loading}
+          page={1}
+          totalCount={images.length}
+          rowKey={(row) => row.id}
+          onPageChange={() => undefined}
+          pagination={false}
+          emptyText={t('No images found.')}
+        />
       </section>
 
       <Dialog
