@@ -156,6 +156,12 @@ public static class ModelProviderInfo
              "https://api.novita.ai/openai",
              ""
          ),
+        [DBModelProvider.LiteLLM] = new(
+            DBModelProvider.LiteLLM,
+            "LiteLLM",
+            "http://localhost:4000/v1",
+            "sk-"
+        ),
      };
 
     private static readonly Dictionary<string, DBModelProvider> _nameToIdMap = _providers
