@@ -14,11 +14,17 @@ public class FileImageInfoServiceTests
     private static readonly byte[] ValidJpegBytes =
         Convert.FromBase64String("/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=");
 
-    private static readonly byte[] ValidBmpBytes =
-        Convert.FromBase64String("Qk06AAAAAAAAADYAAAAoAAAAAQAAAAEAAAABABgAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////AA==");
+    // WebP extended format (VP8X)
+    private static readonly byte[] ValidWebpVp8XBytes =
+        Convert.FromBase64String("UklGRtwAAABXRUJQVlA4WAoAAAAIAAAAAAAAAAAAVlA4TAkAAAAvAAAAAIiI/gcARVhJRqwAAABJSSoACAAAAAYAEgEDAAEAAAABAAAAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAKAEDAAEAAAACAAAAMQECABAAAABmAAAAaYcEAAEAAAB2AAAAAAAAAGAAAAABAAAAYAAAAAEAAABwYWludC5uZXQgNC4yLjUABAAAkAcABAAAADAyMzABoAMAAQAAAAEAAAACoAQAAQAAAAEAAAADoAQAAQAAAAEAAAAAAAAA");
 
-    private static readonly byte[] ValidGifBytes =
-        Convert.FromBase64String("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
+    // WebP lossless format (VP8L)
+    private static readonly byte[] ValidWebpVp8LBytes =
+        Convert.FromBase64String("UklGRhoAAABXRUJQVlA4TAUAAAAvAAAAAAA=");
+
+    // WebP lossy format (VP8 )
+    private static readonly byte[] ValidWebpVp8Bytes =
+        Convert.FromBase64String("UklGRh4AAABXRUJQVlA4IAoAAAAAAACdASoBAAEA");
 
     [Fact]
     public void GetImageInfo_ValidPng_ReturnsDimensions()
@@ -41,9 +47,9 @@ public class FileImageInfoServiceTests
     }
 
     [Fact]
-    public void GetImageInfo_ValidBmp_ReturnsDimensions()
+    public void GetImageInfo_ValidWebp_Extended_ReturnsDimensions()
     {
-        FileImageInfo? result = _service.GetImageInfo("test.bmp", "image/bmp", ValidBmpBytes);
+        FileImageInfo? result = _service.GetImageInfo("test.webp", "image/webp", ValidWebpVp8XBytes);
 
         Assert.NotNull(result);
         Assert.Equal(1, result.Width);
@@ -51,9 +57,19 @@ public class FileImageInfoServiceTests
     }
 
     [Fact]
-    public void GetImageInfo_ValidGif_ReturnsDimensions()
+    public void GetImageInfo_ValidWebp_Lossless_ReturnsDimensions()
     {
-        FileImageInfo? result = _service.GetImageInfo("test.gif", "image/gif", ValidGifBytes);
+        FileImageInfo? result = _service.GetImageInfo("test.webp", "image/webp", ValidWebpVp8LBytes);
+
+        Assert.NotNull(result);
+        Assert.Equal(1, result.Width);
+        Assert.Equal(1, result.Height);
+    }
+
+    [Fact]
+    public void GetImageInfo_ValidWebp_Lossy_ReturnsDimensions()
+    {
+        FileImageInfo? result = _service.GetImageInfo("test.webp", "image/webp", ValidWebpVp8Bytes);
 
         Assert.NotNull(result);
         Assert.Equal(1, result.Width);
