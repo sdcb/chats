@@ -1,5 +1,5 @@
 ﻿using Chats.DB;
-using SixLabors.ImageSharp;
+using StbImageSharp;
 
 namespace Chats.BE.Services.FileServices;
 
@@ -28,7 +28,8 @@ public class FileImageInfoService(ILogger<FileImageInfoService> logger)
 
         try
         {
-            ImageInfo image = Image.Identify(imageBytes);
+            using MemoryStream ms = new(imageBytes);
+            ImageInfo? image = ImageInfo.FromStream(ms);
             if (image == null)
             {
                 logger.LogWarning("Failed to identify image for {fileName}({contentType})", fileName, contentType);
@@ -37,8 +38,8 @@ public class FileImageInfoService(ILogger<FileImageInfoService> logger)
 
             return new FileImageInfo
             {
-                Width = image.Width,
-                Height = image.Height
+                Width = image.Value.Width,
+                Height = image.Value.Height
             };
         }
         catch (Exception e)

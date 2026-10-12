@@ -11,9 +11,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace Chats.BE.UnitTest.CodeInterpreter;
 
@@ -30,12 +27,7 @@ public sealed class CodeInterpreterViewImageTests
 
     private static byte[] CreateValidPngBytes()
     {
-        using Image<Rgba32> image = new(1, 1);
-        image[0, 0] = new Rgba32(255, 0, 0, 255);
-
-        using MemoryStream ms = new();
-        image.Save(ms, new PngEncoder());
-        return ms.ToArray();
+        return Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
     }
 
     private static CodeInterpreterExecutor CreateExecutor(ServiceProvider sp, FakeDockerService docker, CodeInterpreterOptions? options = null)
