@@ -29,6 +29,7 @@ Sdcb Chats supports 22+ mainstream AI model providers. Here is the complete list
 | 20  | Anthropic        | [2025-11-24](https://github.com/sdcb/chats/commit/22ebef98) | ✅                    |
 | 21  | Xiaomi Mimo      | [2025-12-17](https://github.com/sdcb/chats/commit/026f1a4e) | ✅                    |
 | 22  | Novita AI        | [2026-03-13](https://github.com/sdcb/chats/commit/cecfc66d) | ✅                    |
+| 23  | Requesty         | [2026-07-04](https://requesty.ai)                           | ❓                    |
 
 ## Notes
 
