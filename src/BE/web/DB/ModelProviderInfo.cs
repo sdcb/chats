@@ -156,6 +156,12 @@ public static class ModelProviderInfo
              "https://api.novita.ai/openai",
              ""
          ),
+         [DBModelProvider.CheaperInference] = new(
+             DBModelProvider.CheaperInference,
+             "Cheaper Inference",
+             "https://api.cheaperinference.com/v1",
+             "ci_live_"
+         ),
      };
 
     private static readonly Dictionary<string, DBModelProvider> _nameToIdMap = _providers
