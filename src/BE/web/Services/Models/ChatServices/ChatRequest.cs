@@ -91,7 +91,7 @@ public record ChatRequest
                 NeutralTextContent text => tokenizer.CountTokens(text.Content),
                 NeutralErrorContent error => tokenizer.CountTokens(error.Content),
                 NeutralThinkContent think => tokenizer.CountTokens(think.Content),
-                NeutralFileUrlContent or NeutralFileBlobContent or NeutralFileContent => TokensPerImage,
+                NeutralFileUrlContent or NeutralFileBlobContent or NeutralFileContent or NeutralProviderFileContent => TokensPerImage,
                 NeutralToolCallContent toolCall => tokenizer.CountTokens(toolCall.Id) + tokenizer.CountTokens(toolCall.Name) + tokenizer.CountTokens(toolCall.Parameters) + TokenPerToolCall,
                 NeutralToolCallResponseContent toolResp => tokenizer.CountTokens(toolResp.Response),
                 _ => 0

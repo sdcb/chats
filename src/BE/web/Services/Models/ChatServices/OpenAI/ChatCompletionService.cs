@@ -861,8 +861,18 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             NeutralThinkContent => null, // ChatCompletion API does not support "think" content type
             NeutralToolCallContent => null, // Tool calls are handled separately
             NeutralToolCallResponseContent => null, // Tool responses are handled separately
+            NeutralProviderFileContent providerFile => ToOpenAIProviderFilePart(providerFile),
             NeutralFileContent => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "FileId content type should be converted to FileUrl or FileBlob before sending to OpenAI API in PreProcess."),
             _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Content type {content.GetType().Name} is not supported.")
         };
     }
+
+    /// <summary>
+    /// OpenAI Chat Completions file part: {"type":"file","file":{"file_id":"..."}}.
+    /// </summary>
+    protected virtual JsonObject ToOpenAIProviderFilePart(NeutralProviderFileContent providerFile) => new()
+    {
+        ["type"] = "file",
+        ["file"] = new JsonObject { ["file_id"] = providerFile.RemoteFileId }
+    };
 }

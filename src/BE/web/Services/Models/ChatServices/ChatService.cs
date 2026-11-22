@@ -6,6 +6,7 @@ using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
+using Chats.BE.Services.ProviderFiles;
 using Microsoft.ML.Tokenizers;
 using System.Runtime.CompilerServices;
 using Tokenizer = Microsoft.ML.Tokenizers.Tokenizer;
@@ -30,19 +31,74 @@ public abstract partial class ChatService
     public async IAsyncEnumerable<ChatSegment> ChatEntry(ChatRequest request, FileUrlProvider fup, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         Model model = request.GetRequiredModel();
-        ChatRequest finalRequest = await PreProcess(request, fup, cancellationToken);
-        IAsyncEnumerable<ChatSegment> stream = ChatStreamed(finalRequest, cancellationToken);
+        ProviderFileRequestContext? providerFiles = fup?.ProviderFiles?.CreateRequestContext(model.CurrentSnapshot, SupportsProviderFileReferences);
 
-        if (model.CurrentSnapshot.ThinkTagParserEnabled)
+        for (int attempt = 0; ; attempt++)
         {
-            stream = ApplyThinkTagParser(stream, cancellationToken);
-        }
+            providerFiles?.BeginAttempt();
+            ChatRequest finalRequest = await PreProcess(request, fup!, providerFiles, cancellationToken);
+            IAsyncEnumerable<ChatSegment> stream = ChatStreamed(finalRequest, cancellationToken);
 
-        await foreach (ChatSegment seg in stream.WithCancellation(cancellationToken))
-        {
-            yield return seg;
+            if (model.CurrentSnapshot.ThinkTagParserEnabled)
+            {
+                stream = ApplyThinkTagParser(stream, cancellationToken);
+            }
+
+            if (providerFiles == null || providerFiles.UsedReferences.Count == 0)
+            {
+                await foreach (ChatSegment seg in stream.WithCancellation(cancellationToken))
+                {
+                    yield return seg;
+                }
+                yield break;
+            }
+
+            // Provider file ids were used: if the upstream rejects them before anything was streamed,
+            // invalidate the mappings and retry (re-upload once, then inline fallback).
+            bool yieldedAny = false;
+            ProviderFileRetryAction retry = ProviderFileRetryAction.None;
+            Exception? failure = null;
+            await using (IAsyncEnumerator<ChatSegment> enumerator = stream.GetAsyncEnumerator(cancellationToken))
+            {
+                while (true)
+                {
+                    bool hasNext;
+                    try
+                    {
+                        hasNext = await enumerator.MoveNextAsync();
+                    }
+                    catch (Exception ex) when ((retry = providerFiles.Decide(ex, yieldedAny, attempt, cancellationToken.IsCancellationRequested)) != ProviderFileRetryAction.None)
+                    {
+                        failure = ex;
+                        break;
+                    }
+
+                    if (!hasNext)
+                    {
+                        break;
+                    }
+
+                    yieldedAny = true;
+                    yield return enumerator.Current;
+                }
+            }
+
+            if (failure == null)
+            {
+                yield break;
+            }
+
+            await providerFiles.ApplyRetryAsync(retry, failure, cancellationToken);
         }
     }
+
+    /// <summary>
+    /// True when the service can render <see cref="NeutralProviderFileContent"/> (provider Files API file ids).
+    /// </summary>
+    protected virtual bool SupportsProviderFileReferences => false;
+
+    protected static bool ContainsProviderFileReferences(ChatRequest request)
+        => request.Messages.Any(m => m.Contents.Any(c => c is NeutralProviderFileContent));
 
     protected virtual async IAsyncEnumerable<ChatSegment> ApplyThinkTagParser(
         IAsyncEnumerable<ChatSegment> segments,
@@ -59,7 +115,10 @@ public abstract partial class ChatService
         "*"
     ];
 
-    protected virtual async Task<ChatRequest> PreProcess(ChatRequest request, FileUrlProvider fup, CancellationToken cancellationToken)
+    protected virtual Task<ChatRequest> PreProcess(ChatRequest request, FileUrlProvider fup, CancellationToken cancellationToken)
+        => PreProcess(request, fup, providerFiles: null, cancellationToken);
+
+    protected virtual async Task<ChatRequest> PreProcess(ChatRequest request, FileUrlProvider fup, ProviderFileRequestContext? providerFiles, CancellationToken cancellationToken)
     {
         ChatRequest final = request;
         Model model = request.GetRequiredModel();
@@ -83,18 +142,29 @@ public abstract partial class ChatService
         final = final with
         {
             ChatConfig = final.ChatConfig.WithClamps(temperature, effort),
-            Messages = await RewriteVisionMessages(
-                model.CurrentSnapshot.SupportsVisionLink,
-                model.CurrentSnapshot.AllowVision,
-                final.Messages,
-                fup,
-                cancellationToken)
+            Messages = providerFiles is { RemoteEnabled: true }
+                ? await RewriteVisionMessagesCore(
+                    model.CurrentSnapshot.SupportsVisionLink,
+                    model.CurrentSnapshot.AllowVision,
+                    final.Messages,
+                    fup,
+                    providerFiles,
+                    cancellationToken)
+                : await RewriteVisionMessages(
+                    model.CurrentSnapshot.SupportsVisionLink,
+                    model.CurrentSnapshot.AllowVision,
+                    final.Messages,
+                    fup,
+                    cancellationToken)
         };
 
         return final;
     }
 
-    protected virtual async Task<IList<NeutralMessage>> RewriteVisionMessages(bool supportsVisionLink, bool allowVision, IList<NeutralMessage> messages, FileUrlProvider fup, CancellationToken cancellationToken)
+    protected virtual Task<IList<NeutralMessage>> RewriteVisionMessages(bool supportsVisionLink, bool allowVision, IList<NeutralMessage> messages, FileUrlProvider fup, CancellationToken cancellationToken)
+        => RewriteVisionMessagesCore(supportsVisionLink, allowVision, messages, fup, providerFiles: null, cancellationToken);
+
+    protected async Task<IList<NeutralMessage>> RewriteVisionMessagesCore(bool supportsVisionLink, bool allowVision, IList<NeutralMessage> messages, FileUrlProvider fup, ProviderFileRequestContext? providerFiles, CancellationToken cancellationToken)
     {
         List<NeutralMessage> filteredMessages = new(messages.Count);
 
@@ -185,6 +255,15 @@ public abstract partial class ChatService
             FileUrlProvider fileUrlProvider,
             CancellationToken ct)
         {
+            if (providerFiles != null
+                && allowVision
+                && content is NeutralFileContent providerCandidate
+                && (SupportedContentTypes.Contains("*") || SupportedContentTypes.Contains(providerCandidate.File.MediaType ?? ""))
+                && await providerFiles.TryCreateContentAsync(providerCandidate.File, providerCandidate.CacheControl, ct) is NeutralContent providerContent)
+            {
+                return providerContent;
+            }
+
             return content switch
             {
                 NeutralFileContent file when allowVision => file.File.MediaType switch

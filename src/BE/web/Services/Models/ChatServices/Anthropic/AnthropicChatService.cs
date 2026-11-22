@@ -3,6 +3,7 @@ using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.Models.Neutral;
+using Chats.BE.Services.ProviderFiles;
 using Chats.BE.Services.RequestTracing;
 using System.Net.Http.Headers;
 using ChatTokenUsage = Chats.BE.Services.Models.Dtos.ChatTokenUsage;
@@ -36,6 +37,10 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, url);
         AddApiKeyHeader(httpRequest, apiKey);
+        if (ContainsProviderFileReferences(request))
+        {
+            AnthropicProviderFileClient.AddFilesBetaHeader(httpRequest);
+        }
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
         httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
@@ -315,6 +320,14 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         request.Headers.Add("x-api-key", apiKey);
         request.Headers.Add("anthropic-version", "2023-06-01");
     }
+
+    protected override bool SupportsProviderFileReferences => true;
+
+    private static JsonObject CreateProviderFileBlock(NeutralProviderFileContent providerFile) => new()
+    {
+        ["type"] = providerFile.IsImage ? "image" : "document",
+        ["source"] = new JsonObject { ["type"] = "file", ["file_id"] = providerFile.RemoteFileId }
+    };
 
     protected virtual JsonNode? BuildThinkingNode(ChatRequest request, bool allowThinking)
     {
@@ -773,6 +786,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                             ["data"] = Convert.ToBase64String(fileBlob.Data)
                         }
                     },
+                    NeutralProviderFileContent providerFile => CreateProviderFileBlock(providerFile),
                     NeutralFileContent => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "FileId should be converted to FileUrl/FileBlob before conversion."),
                     _ => null
                 };
@@ -838,6 +852,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
                             ToolResponse = toolResp,
                             AttachedContents = []
                         }),
+                        NeutralProviderFileContent providerFile => CreateProviderFileBlock(providerFile),
                         NeutralFileContent => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "FileId should be converted to FileUrl/FileBlob before conversion."),
                         _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Unsupported content type: {content.GetType().Name}")
                     };

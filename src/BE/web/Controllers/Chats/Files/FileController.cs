@@ -1,6 +1,7 @@
 ﻿using Chats.BE.Infrastructure;
 using Chats.BE.Services;
 using Chats.BE.Services.FileServices;
+using Chats.BE.Services.ProviderFiles;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -233,6 +234,7 @@ public class FileController(ChatsDB db, IFileServiceFactory fileServiceFactory, 
     [HttpDelete("file/{encryptedFileId}")]
     public async Task<ActionResult> DeleteFile(string encryptedFileId,
         [FromServices] CurrentUser currentUser,
+        [FromServices] ProviderFileService providerFileService,
         CancellationToken cancellationToken)
     {
         int fileId = urlEncryption.DecryptFileId(encryptedFileId);
@@ -254,6 +256,9 @@ public class FileController(ChatsDB db, IFileServiceFactory fileServiceFactory, 
         {
             return BadRequest("File is used in messages, cannot delete.");
         }
+
+        // Best-effort: remote copies in model providers' Files APIs; mapping rows are removed by FK cascade.
+        await providerFileService.ReleaseForFileAsync(file.Id, cancellationToken);
 
         IFileService fs = fileServiceFactory.Create(file.FileService);
         bool deleted = await fs.Delete(file.StorageKey, cancellationToken);

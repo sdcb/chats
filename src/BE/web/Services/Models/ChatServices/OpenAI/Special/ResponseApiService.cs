@@ -49,6 +49,8 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
         }
     }
 
+    protected override bool SupportsProviderFileReferences => true;
+
     protected override HashSet<string> SupportedContentTypes =>
     [
         "image/jpeg",
@@ -1305,6 +1307,14 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                 {
                     ["type"] = "input_image",
                     ["image_url"] = $"data:{blob.MediaType};base64,{Convert.ToBase64String(blob.Data)}"
+                });
+            }
+            else if (content is NeutralProviderFileContent providerFile)
+            {
+                parts.Add(new JsonObject
+                {
+                    ["type"] = providerFile.IsImage ? "input_image" : "input_file",
+                    ["file_id"] = providerFile.RemoteFileId
                 });
             }
             else if (content is NeutralErrorContent error)

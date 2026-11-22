@@ -9,6 +9,15 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 /// </summary>
 public class DeepSeekChatService(IHttpClientFactory httpClientFactory) : ChatCompletionService(httpClientFactory)
 {
+    protected override bool SupportsProviderFileReferences => true;
+
+    // DeepSeek references Files API uploads with a flat {"type":"file","file_id":"..."} block.
+    protected override JsonObject ToOpenAIProviderFilePart(NeutralProviderFileContent providerFile) => new()
+    {
+        ["type"] = "file",
+        ["file_id"] = providerFile.RemoteFileId
+    };
+
     protected override IEnumerable<JsonObject> ToOpenAIMessages(NeutralMessage message)
     {
         foreach (JsonObject upstreamMessage in base.ToOpenAIMessages(message))

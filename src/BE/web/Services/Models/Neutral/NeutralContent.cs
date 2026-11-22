@@ -16,7 +16,7 @@ public abstract record NeutralContent
     /// <summary>
     /// Returns true if this content represents a file (FileUrl, FileBlob, or FileId).
     /// </summary>
-    public bool IsFile => this is NeutralFileUrlContent or NeutralFileBlobContent or NeutralFileContent;
+    public bool IsFile => this is NeutralFileUrlContent or NeutralFileBlobContent or NeutralFileContent or NeutralProviderFileContent;
 }
 
 /// <summary>
@@ -64,6 +64,21 @@ public record NeutralFileContent : NeutralContent
 
     public static NeutralFileContent Create(DBFile file)
         => new() { File = file };
+}
+
+/// <summary>
+/// A file that has already been uploaded to the model provider's Files API and is referenced by its remote file id.
+/// Only produced in PreProcess for services that can render provider file references.
+/// </summary>
+public record NeutralProviderFileContent : NeutralContent
+{
+    public required string RemoteFileId { get; init; }
+    public required string MediaType { get; init; }
+
+    public bool IsImage => MediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+    public static NeutralProviderFileContent Create(string remoteFileId, string mediaType, NeutralCacheControl? cacheControl = null)
+        => new() { RemoteFileId = remoteFileId, MediaType = mediaType, CacheControl = cacheControl };
 }
 
 /// <summary>

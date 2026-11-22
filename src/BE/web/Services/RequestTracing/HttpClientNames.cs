@@ -8,6 +8,7 @@ public static class HttpClientNames
     public const string ChatServiceResponseApi = "ChatService.ResponseApi";
     public const string ChatServiceImageGeneration = "ChatService.ImageGeneration";
     public const string ChatServiceImageDownload = "ChatService.ImageDownload";
+    public const string ChatServiceProviderFiles = "ChatService.ProviderFiles";
     public const string SecurityKeycloakOAuth = "Security.KeycloakOAuth";
     public const string FileServiceUrlProvider = "FileService.UrlProvider";
     public const string AdminGitHubReleaseChecker = "Admin.GitHubReleaseChecker";
@@ -23,6 +24,7 @@ public static class HttpClientNames
         ChatServiceResponseApi,
         ChatServiceImageGeneration,
         ChatServiceImageDownload,
+        ChatServiceProviderFiles,
         SecurityKeycloakOAuth,
         FileServiceUrlProvider,
         AdminGitHubReleaseChecker,

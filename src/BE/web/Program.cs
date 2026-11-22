@@ -24,6 +24,7 @@ using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.TitleSummary;
 using Chats.BE.Services.Mcp;
 using Chats.BE.Services.Containers;
+using Chats.BE.Services.ProviderFiles;
 
 namespace Chats.BE;
 
@@ -154,6 +155,7 @@ public class Program
         builder.Services.AddHostedService<RequestTraceScheduledDeleteService>();
         builder.Services.AddHostedService<Services.AgentRuns.ChatRunCleanupService>();
         builder.Services.Configure<ChatOptions>(builder.Configuration.GetSection("Chat"));
+        builder.Services.AddProviderFiles(builder.Configuration);
 
         builder.Services.AddUrlEncryption();
         builder.Services.AddHttpContextAccessor();

@@ -6,6 +6,7 @@ using Chats.BE.Infrastructure;
 using Chats.BE.Services.Common;
 using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.Services.ProviderFiles;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Chats.DB;
@@ -181,7 +182,7 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
     }
 
     [HttpDelete("{modelKeyId}")]
-    public async Task<ActionResult> DeleteModelKey(short modelKeyId, CancellationToken cancellationToken)
+    public async Task<ActionResult> DeleteModelKey(short modelKeyId, [FromServices] ProviderFileService providerFileService, CancellationToken cancellationToken)
     {
         if (await db.Models.AnyAsync(m => m.Enabled && m.CurrentSnapshot.ModelKeyId == modelKeyId, cancellationToken))
         {
@@ -214,6 +215,9 @@ public class ModelKeysController(ChatsDB db) : ControllerBase
 
             db.Models.RemoveRange(disabledModels);
         }
+
+        // Best-effort remote cleanup while the key's credentials still exist; mapping rows cascade with the key.
+        await providerFileService.ReleaseForModelKeyAsync(modelKeyId, cancellationToken);
 
         db.ModelKeys.Remove(modelKey);
         await db.SaveChangesAsync(cancellationToken);

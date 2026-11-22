@@ -3,6 +3,7 @@ using Chats.DB.Enums;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
 using Chats.BE.DB.Extensions;
 using Chats.BE.Services.Models.Neutral;
+using Chats.BE.Services.ProviderFiles;
 using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.EntityFrameworkCore;
@@ -10,8 +11,11 @@ using DBFile = Chats.DB.File;
 
 namespace Chats.BE.Services.FileServices;
 
-public class FileUrlProvider(ChatsDB db, IFileServiceFactory fileServiceFactory, IUrlEncryptionService urlEncryptionService, IHttpClientFactory httpClientFactory)
+public class FileUrlProvider(ChatsDB db, IFileServiceFactory fileServiceFactory, IUrlEncryptionService urlEncryptionService, IHttpClientFactory httpClientFactory, ProviderFileService? providerFileService = null)
 {
+    /// <summary>Provider Files API integration; null when not registered (e.g. in unit tests).</summary>
+    public ProviderFileService? ProviderFiles => providerFileService;
+
     public async Task<(byte[] Bytes, string ContentType)> DownloadUrlBytesAsync(string url, CancellationToken cancellationToken)
     {
         using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.FileServiceUrlProvider);
