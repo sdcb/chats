@@ -185,7 +185,7 @@ jobs:
 
       - name: Build container
         run: |
-          dotnet publish ./be-src/web/Chats.BE.csproj -c Release --os ${{ matrix.os }} --arch ${{ matrix.arch }} /t:PublishContainer /p:ContainerRepository=chats ${{ needs.build-fe.outputs.msbuild_args }} ${{ matrix.args }}
+          dotnet publish ./be-src/web/Chats.BE.csproj -c Release --os ${{ matrix.os }} --arch ${{ matrix.arch }} /t:PublishContainer /p:ContainerRepository=chats /p:LocalRegistry=Docker ${{ needs.build-fe.outputs.msbuild_args }} ${{ matrix.args }}
 
       - name: Tag container with run number
         run: |
@@ -342,9 +342,11 @@ jobs:
           sha256sum *.zip > sha256sum.txt
 
       - name: Get changes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           CURRENT_REV=$(git rev-parse HEAD)
-          PREVIOUS_REV=$(curl --silent "https://api.github.com/repos/${{ github.repository }}/releases/latest" | jq -r ".tag_name")
+          PREVIOUS_REV=$(gh api repos/${{ github.repository }}/releases/latest --jq .tag_name)
           cat <<END >> RELEASE.md
           <details>
     
